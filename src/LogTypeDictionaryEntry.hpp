@@ -1,0 +1,172 @@
+#ifndef LOGTYPEDICTIONARYENTRY_HPP
+#define LOGTYPEDICTIONARYENTRY_HPP
+
+// C++ standard libraries
+#include <vector>
+
+// Project headers
+#include "Defs.h"
+#include "DictionaryEntry.hpp"
+#include "ErrorCode.hpp"
+#include "FileReader.hpp"
+#include "streaming_compression/zstd/Compressor.hpp"
+#include "streaming_compression/zstd/Decompressor.hpp"
+#include "TraceableException.hpp"
+
+/**
+ * Class representing a logtype dictionary entry
+ */
+class LogTypeDictionaryEntry : public DictionaryEntry<logtype_dictionary_id_t> {
+public:
+    // Types
+    class OperationFailed : public TraceableException {
+    public:
+        // Constructors
+        OperationFailed (ErrorCode error_code, const char* const filename, int line_number) : TraceableException (error_code, filename, line_number) {}
+
+        // Methods
+        const char* what () const noexcept override {
+            return "LogTypeDictionaryEntry operation failed";
+        }
+    };
+
+    // Constants
+    enum class VarDelim {
+        // NOTE: These values are used within logtypes to denote variables, so care must be taken when changing them
+        NonDouble = 17,
+        Double = 18,
+        Length = 2,
+    };
+
+    // Double can only represent 15 digits precisely
+    static constexpr size_t cMaxDigitsInRepresentableDoubleVar = 15;
+
+    // Constructors
+    LogTypeDictionaryEntry () : m_verbosity(LogVerbosity_Length) {}
+    // Use default copy constructor
+    LogTypeDictionaryEntry (const LogTypeDictionaryEntry&) = default;
+
+    // Assignment operators
+    // Use default
+    LogTypeDictionaryEntry& operator= (const LogTypeDictionaryEntry&) = default;
+
+    // Methods
+    /**
+     * Adds a non-double variable delimiter to the given logtype
+     * @param logtype
+     */
+    static void add_non_double_var (std::string& logtype) { logtype += (char)VarDelim::NonDouble; }
+    /**
+     * Adds a double variable delimiter and precision to the given logtype
+     * @param num_integer_digits
+     * @param num_fractional_digits
+     * @param logtype
+     */
+    static void add_double_var (uint8_t num_integer_digits, uint8_t num_fractional_digits, std::string& logtype);
+    /**
+     * Adds a double variable delimiter and wildcard (in place of the double's precision) to the given logtype
+     * @param logtype
+     */
+    static void add_wildcard_double_var (std::string& logtype);
+
+    size_t get_num_vars () const { return m_var_positions.size(); }
+    /**
+     * Gets all info about a variable in the logtype (including decoding the precision if it's a double variable)
+     * @param var_ix The index of the variable to get the info for
+     * @param var_delim
+     * @param num_integer_digits
+     * @param num_fractional_digits
+     * @return The variable's position in the logtype, or SIZE_MAX if var_ix is out of bounds
+     */
+    size_t get_var_info (size_t var_ix, VarDelim& var_delim, uint8_t& num_integer_digits, uint8_t& num_fractional_digits) const;
+    /**
+     * Gets the variable delimiter at the given index
+     * @param var_ix The index of the variable delimiter to get
+     * @return The variable delimiter, or LogTypeDictionaryEntry::VarDelim::Length if var_ix is out of bounds
+     */
+    VarDelim get_var_delim (size_t var_ix) const;
+    /**
+     * Gets the length of the specified variable's representation in the logtype
+     * @param var_ix The index of the variable
+     * @return The length
+     */
+    size_t get_var_length_in_logtype (size_t var_ix) const;
+
+    /**
+     * Gets the size (in-memory) of the data contained in this entry
+     * @return Size of the data contained in this entry
+     */
+    size_t get_data_size () const;
+
+    /**
+     * Adds a constant to the logtype
+     * @param value_containing_constant
+     * @param begin_pos Start of the constant in value_containing_constant
+     * @param length
+     */
+    void add_constant (const std::string& value_containing_constant, size_t begin_pos, size_t length);
+    /**
+     * Adds a non-double variable delimiter
+     */
+    void add_non_double_var ();
+    /**
+     * Adds a double variable delimiter and precision
+     * @param num_integer_digits
+     * @param num_fractional_digits
+     */
+    void add_double_var (uint8_t num_integer_digits, uint8_t num_fractional_digits);
+
+    /**
+     * Parses next variable from a message, constructing the constant part of the message's logtype as well
+     * @param msg
+     * @param var_begin_pos Beginning position of last variable. Changes to beginning position of current variable.
+     * @param next_delim_pos Position of delimiter after token
+     * @param last_var_end_pos End position of last variable
+     * @param var
+     * @return true if another variable was found, false otherwise
+     */
+    bool parse_next_var (const std::string& msg, size_t& var_begin_pos, size_t& next_delim_pos, size_t& last_var_end_pos, std::string& var);
+
+    /**
+     * Reserves space for a constant of the given length
+     * @param length
+     */
+    void reserve_constant_length (size_t length) { m_value.reserve(length); }
+    void set_id (logtype_dictionary_id_t id) { m_id = id; }
+    void set_verbosity (LogVerbosity verbosity) { m_verbosity = verbosity; }
+
+    void clear ();
+
+    /**
+     * Writes an entry to file
+     * @param compressor
+     */
+    void write_to_file (streaming_compression::zstd::Compressor& compressor) const;
+    /**
+     * Tries to read an entry from the given decompressor
+     * @param decompressor
+     * @return Same as streaming_compression::zstd::Decompressor::try_read_numeric_value
+     * @return Same as streaming_compression::zstd::Decompressor::try_read_string
+     */
+    ErrorCode try_read_from_file (streaming_compression::zstd::Decompressor& decompressor);
+    /**
+     * Reads an entry from the given decompressor
+     * @param decompressor
+     */
+    void read_from_file (streaming_compression::zstd::Decompressor& decompressor);
+
+private:
+    // Methods
+    /**
+     * Escapes any variable delimiters that don't correspond to the positions of variables in the logtype entry's value
+     * @param escaped_logtype_value
+     */
+    void get_value_with_unfounded_variables_escaped (std::string& escaped_logtype_value) const;
+
+    // Variables
+    LogVerbosity m_verbosity;
+    std::vector<size_t> m_var_positions;
+};
+
+
+#endif // LOGTYPEDICTIONARYENTRY_HPP

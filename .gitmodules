@@ -1,0 +1,6 @@
+[submodule "submodules/Catch2"]
+	path = submodules/Catch2
+	url = https://github.com/catchorg/Catch2.git
+[submodule "submodules/date"]
+	path = submodules/date
+	url = https://github.com/HowardHinnant/date.git
