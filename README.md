@@ -36,7 +36,6 @@ tools/scripts/deps-download/download-all.sh
 This will download:
 * [Catch2](https://github.com/catchorg/Catch2.git) (v2.13.6)
 * [date](https://github.com/HowardHinnant/date.git) (v3.0.1)
-* [json](https://github.com/nlohmann/json.git) (v3.9.1)
 * [SQLite3](https://www.sqlite.org/download.html) (v3.36.0)
 
 ## Packages
