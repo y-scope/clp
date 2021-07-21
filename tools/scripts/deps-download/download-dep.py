@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import hashlib
+import json
 import logging
 import mmap
 import pathlib
@@ -9,7 +10,6 @@ import sys
 import uuid
 import urllib.parse
 import urllib.request
-import yaml
 
 # Setup logging
 # Create logger
@@ -31,14 +31,6 @@ def hash_file(algo: str, path: pathlib.Path):
         return hasher.hexdigest()
 
 
-def read_yaml_config_file(yaml_config_file_path):
-    with open(yaml_config_file_path, 'r') as yaml_config_file:
-        yaml_configs = yaml.safe_load(yaml_config_file)
-    if yaml_configs is None:
-        raise Exception("Unable to parse the configuration from " + str(yaml_config_file_path) + '.')
-    return yaml_configs
-
-
 def main(argv):
     script_dir = pathlib.Path(__file__).parent.resolve()
     project_root_dir = script_dir.parent.parent.parent
@@ -50,7 +42,8 @@ def main(argv):
     config_file_path = pathlib.Path(parsed_args["config-file"]).resolve()
 
     # Load configurations
-    config = read_yaml_config_file(config_file_path)
+    with open(config_file_path) as f:
+        config = json.load(f)
 
     target_url = config["url"]
     parsed_url = urllib.parse.urlparse(target_url)
