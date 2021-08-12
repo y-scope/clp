@@ -43,7 +43,7 @@ If you're using apt-get, you can use the following command to install all:
 ```shell
 sudo apt-get install -y ca-certificates checkinstall cmake build-essential \
 libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev \
-libssl-dev wget zlib1g-dev
+libssl-dev pkg-config wget zlib1g-dev
 ```
 
 This will download:
@@ -55,6 +55,7 @@ This will download:
 * libboost-iostreams-dev
 * libboost-program-options-dev
 * libssl-dev
+* pkg-config
 * wget
 * zlib1g-dev
 

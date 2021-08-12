@@ -11,6 +11,7 @@ RUN apt update && \
         libboost-iostreams-dev \
         libboost-program-options-dev \
         libssl-dev \
+        pkg-config \
         wget \
         zlib1g-dev
 

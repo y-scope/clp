@@ -12,9 +12,11 @@
 # - Variables only for use within the script are prefixed with "libarchive_"
 # - Variables that should be externally visible are prefixed with "LibArchive_"
 
+set(libarchive_LIBNAME "archive")
+
 # Run pkg-config
 find_package(PkgConfig)
-pkg_check_modules(libarchive_PKGCONF QUIET libarchive)
+pkg_check_modules(libarchive_PKGCONF QUIET "lib${libarchive_LIBNAME}")
 
 # Set include directory
 find_path(LibArchive_INCLUDE_DIR archive.h
@@ -33,7 +35,7 @@ endif()
 
 # Find library
 find_library(LibArchive_LIBRARY
-        NAMES archive
+        NAMES ${libarchive_LIBNAME}
         HINTS ${libarchive_PKGCONF_LIBDIR}
         PATH_SUFFIXES lib
         )
@@ -42,32 +44,38 @@ if (LibArchive_LIBRARY)
     set(LibArchive_FOUND ON)
 endif()
 
-find_package(ZLIB REQUIRED)
-
 if(LibArchive_USE_STATIC_LIBS)
+    # NOTE: libc, libm, libpthread, and librt should be dynamically linked
+    set(libarchive_UNLINKABLE_LIBS "c;m;pthread;rt;${libarchive_LIBNAME}")
+
+    # Get absolute path of dependent libraries
+    foreach(libarchive_LIBNAME ${libarchive_PKGCONF_STATIC_LIBRARIES})
+        # Skip unlinkable libs
+        set(libarchive_IS_UNLINKABLE_LIB FALSE)
+        foreach(libarchive_UNLINKABLE_LIBNAME ${libarchive_UNLINKABLE_LIBS})
+            if (${libarchive_LIBNAME} STREQUAL ${libarchive_UNLINKABLE_LIBNAME})
+                set(libarchive_IS_UNLINKABLE_LIB TRUE)
+            endif()
+        endforeach()
+        if(libarchive_IS_UNLINKABLE_LIB)
+            continue()
+        endif()
+
+        find_library(libarchive_${libarchive_LIBNAME}_LIBRARY
+                NAMES ${libarchive_LIBNAME}
+                PATH_SUFFIXES lib
+                )
+        if(libarchive_${libarchive_LIBNAME}_LIBRARY)
+            list(APPEND libarchive_EXTERNAL_DEPENDENCIES "${libarchive_${libarchive_LIBNAME}_LIBRARY}")
+        else()
+            message(SEND_ERROR "Static ${libarchive_LIBNAME} library not found")
+        endif()
+    endforeach()
+
     # Restore original value of CMAKE_FIND_LIBRARY_SUFFIXES
     set(CMAKE_FIND_LIBRARY_SUFFIXES ${libarchive_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
     unset(libarchive_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
 endif()
-
-# Find LZ4 Library
-if(LibArchive_USE_STATIC_LIBS)
-    set(LZ4_USE_STATIC_LIBS ON)
-endif()
-find_package(LZ4 REQUIRED)
-
-# Find OpenSSL Library
-if(LibArchive_USE_STATIC_LIBS)
-    set(OPENSSL_USE_STATIC_LIBS ON)
-endif()
-find_package(OpenSSL REQUIRED)
-
-# Set external dependencies
-set(libarchive_EXTERNAL_DEPENDENCIES
-        LZ4::LZ4
-        OpenSSL::Crypto
-        ZLIB::ZLIB
-        )
 
 # Set version
 set(LibArchive_VERSION ${libarchive_PKGCONF_VERSION})
