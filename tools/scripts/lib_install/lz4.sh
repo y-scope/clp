@@ -3,6 +3,13 @@
 # Exit on any error
 set -e
 
+cUsage="Usage: ${BASH_SOURCE[0]} <version>"
+if [ "$#" -lt 1 ] ; then
+    echo $cUsage
+    exit
+fi
+version=$1
+
 echo "Checking for elevated privileges..."
 if [ ${EUID:-$(id -u)} -ne 0 ] ; then
   sudo echo "Script can elevate privileges."
@@ -11,36 +18,33 @@ fi
 # Get number of cpu cores
 num_cpus=$(grep -c ^processor /proc/cpuinfo)
 
+package_name=liblz4
+
 # Create temp dir for installation
-temp_dir=/tmp/zstandard-installation
+temp_dir=/tmp/${package_name}-installation
 mkdir -p $temp_dir
 
 # Check if already installed
-package_name=libzstd
 set +e
 dpkg -l ${package_name}
 installed=$?
 set -e
 
 # Install if necessary
-version=1.4.9
 if [ $installed -ne 0 ] ; then
   # Download and build
   cd $temp_dir
-  extracted_dir=${temp_dir}/zstd-${version}
+  extracted_dir=${temp_dir}/lz4-${version}
   if [ ! -e ${extracted_dir} ] ; then
-    tar_filename=zstd-${version}.tar.gz
+    tar_filename=v${version}.tar.gz
     if [ ! -e ${tar_filename} ] ; then
-      wget https://github.com/facebook/zstd/releases/download/v${version}/${tar_filename}
+      wget https://github.com/lz4/lz4/archive/${tar_filename}
     fi
 
     tar -xf ${tar_filename}
   fi
 
-  cd ${extracted_dir}/build/cmake
-  mkdir cmake-build-release
-  cd cmake-build-release
-  cmake ../
+  cd ${extracted_dir}
   make -j${num_cpus}
 
   # Install

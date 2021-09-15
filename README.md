@@ -63,10 +63,10 @@ This will download:
 The latest versions of some packages are not offered by apt repositories,
 so we've included some scripts to download, compile, and install them:
 ```shell
-./tools/scripts/lib_install/libarchive_3.5.1.sh
-./tools/scripts/lib_install/lz4_1.8.2.sh
-./tools/scripts/lib_install/spdlog_1.8.2.sh
-./tools/scripts/lib_install/zstandard_1.4.9.sh
+./tools/scripts/lib_install/libarchive.sh 3.5.1
+./tools/scripts/lib_install/lz4.sh 1.8.2
+./tools/scripts/lib_install/spdlog.sh 1.8.2
+./tools/scripts/lib_install/zstandard.sh 1.4.9
 ```
 This will install:
 * libarchive v3.5.1
