@@ -108,6 +108,7 @@ size_t LogTypeDictionaryEntry::get_var_length_in_logtype (size_t var_ix) const {
         case VarDelim::Double:
             return 2;
         case VarDelim::Length:
+        default:
             throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
 }
