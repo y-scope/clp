@@ -84,6 +84,11 @@ else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
 endif()
 
+# sqlite dependencies
+set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
+include(cmake/Modules/FindLibraryDependencies.cmake)
+FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
+
 set(SOURCE_FILES_clp
         src/clp/clp.cpp
         src/clp/CommandLineArguments.cpp
@@ -208,8 +213,8 @@ add_executable(clp ${SOURCE_FILES_clp})
 target_link_libraries(clp
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
-        ${CMAKE_DL_LIBS}
         spdlog::spdlog
+        ${sqlite_LIBRARY_DEPENDENCIES}
         LibArchive::LibArchive
         ZStd::ZStd
         )
@@ -310,8 +315,8 @@ add_executable(clg ${SOURCE_FILES_clg})
 target_link_libraries(clg
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
-        ${CMAKE_DL_LIBS}
         spdlog::spdlog
+        ${sqlite_LIBRARY_DEPENDENCIES}
         ZStd::ZStd
         )
 target_compile_features(clg
@@ -417,7 +422,7 @@ add_executable(unitTest ${SOURCE_FILES_unitTest})
 target_link_libraries(unitTest
         PRIVATE
         Boost::filesystem Boost::iostreams
-        ${CMAKE_DL_LIBS}
+        ${sqlite_LIBRARY_DEPENDENCIES}
         ZStd::ZStd
         )
 target_compile_features(unitTest

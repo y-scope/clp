@@ -11,9 +11,11 @@
 # - Variables only for use within the script are prefixed with "lz4_"
 # - Variables that should be externally visible are prefixed with "LZ4_"
 
+set(lz4_LIBNAME "lz4")
+
 # Run pkg-config
 find_package(PkgConfig)
-pkg_check_modules(lz4_PKGCONF QUIET liblz4)
+pkg_check_modules(lz4_PKGCONF QUIET "lib${lz4_LIBNAME}")
 
 # Set include directory
 find_path(LZ4_INCLUDE_DIR lz4.h
@@ -32,7 +34,7 @@ endif()
 
 # Find library
 find_library(LZ4_LIBRARY
-        NAMES lz4
+        NAMES ${lz4_LIBNAME}
         HINTS ${lz4_PKGCONF_LIBDIR}
         PATH_SUFFIXES lib
         )
@@ -41,11 +43,16 @@ if (LZ4_LIBRARY)
     set(LZ4_FOUND ON)
 endif()
 
+include(cmake/Modules/FindLibraryDependencies.cmake)
+FindStaticLibraryDependencies(${lz4_LIBNAME} lz4 "${lz4_PKGCONF_STATIC_LIBRARIES}")
+
 if(LZ4_USE_STATIC_LIBS)
     # Restore original value of CMAKE_FIND_LIBRARY_SUFFIXES
     set(CMAKE_FIND_LIBRARY_SUFFIXES ${lz4_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
     unset(lz4_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
 endif()
+
+FindDynamicLibraryDependencies(lz4 "${lz4_DYNAMIC_LIBS}")
 
 # Set version
 set(LZ4_VERSION ${lz4_PKGCONF_VERSION})
@@ -82,5 +89,13 @@ if(NOT TARGET LZ4::LZ4)
                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
                 IMPORTED_LOCATION "${LZ4_LIBRARY}"
                 )
+
+        # Add component's dependencies for linking
+        if(lz4_LIBRARY_DEPENDENCIES)
+            set_target_properties(LZ4::LZ4
+                    PROPERTIES
+                    INTERFACE_LINK_LIBRARIES "${lz4_LIBRARY_DEPENDENCIES}"
+                    )
+        endif()
     endif()
 endif()

@@ -44,38 +44,16 @@ if (LibArchive_LIBRARY)
     set(LibArchive_FOUND ON)
 endif()
 
+include(cmake/Modules/FindLibraryDependencies.cmake)
+FindStaticLibraryDependencies(${libarchive_LIBNAME} libarchive "${libarchive_PKGCONF_STATIC_LIBRARIES}")
+
 if(LibArchive_USE_STATIC_LIBS)
-    # NOTE: libc, libm, libpthread, and librt should be dynamically linked
-    set(libarchive_UNLINKABLE_LIBS "c;m;pthread;rt;${libarchive_LIBNAME}")
-
-    # Get absolute path of dependent libraries
-    foreach(libarchive_LIBNAME ${libarchive_PKGCONF_STATIC_LIBRARIES})
-        # Skip unlinkable libs
-        set(libarchive_IS_UNLINKABLE_LIB FALSE)
-        foreach(libarchive_UNLINKABLE_LIBNAME ${libarchive_UNLINKABLE_LIBS})
-            if (${libarchive_LIBNAME} STREQUAL ${libarchive_UNLINKABLE_LIBNAME})
-                set(libarchive_IS_UNLINKABLE_LIB TRUE)
-            endif()
-        endforeach()
-        if(libarchive_IS_UNLINKABLE_LIB)
-            continue()
-        endif()
-
-        find_library(libarchive_${libarchive_LIBNAME}_LIBRARY
-                NAMES ${libarchive_LIBNAME}
-                PATH_SUFFIXES lib
-                )
-        if(libarchive_${libarchive_LIBNAME}_LIBRARY)
-            list(APPEND libarchive_EXTERNAL_DEPENDENCIES "${libarchive_${libarchive_LIBNAME}_LIBRARY}")
-        else()
-            message(SEND_ERROR "Static ${libarchive_LIBNAME} library not found")
-        endif()
-    endforeach()
-
     # Restore original value of CMAKE_FIND_LIBRARY_SUFFIXES
     set(CMAKE_FIND_LIBRARY_SUFFIXES ${libarchive_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
     unset(libarchive_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
 endif()
+
+FindDynamicLibraryDependencies(libarchive "${libarchive_DYNAMIC_LIBS}")
 
 # Set version
 set(LibArchive_VERSION ${libarchive_PKGCONF_VERSION})
@@ -114,10 +92,10 @@ if(NOT TARGET LibArchive::LibArchive)
                 )
 
         # Add component's dependencies for linking
-        if(libarchive_EXTERNAL_DEPENDENCIES)
+        if(libarchive_LIBRARY_DEPENDENCIES)
             set_target_properties(LibArchive::LibArchive
                     PROPERTIES
-                    INTERFACE_LINK_LIBRARIES "${libarchive_EXTERNAL_DEPENDENCIES}"
+                    INTERFACE_LINK_LIBRARIES "${libarchive_LIBRARY_DEPENDENCIES}"
                     )
         endif()
     endif()

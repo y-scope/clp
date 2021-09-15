@@ -11,9 +11,11 @@
 # - Variables only for use within the script are prefixed with "zstd_"
 # - Variables that should be externally visible are prefixed with "ZStd_"
 
+set(zstd_LIBNAME "zstd")
+
 # Run pkg-config
 find_package(PkgConfig)
-pkg_check_modules(zstd_PKGCONF QUIET libzstd)
+pkg_check_modules(zstd_PKGCONF QUIET lib${zstd_LIBNAME})
 
 # Set include directory
 find_path(ZStd_INCLUDE_DIR zstd.h
@@ -41,7 +43,8 @@ if (ZStd_LIBRARY)
     set(ZStd_FOUND ON)
 endif()
 
-find_package(Threads)
+include(cmake/Modules/FindLibraryDependencies.cmake)
+FindStaticLibraryDependencies(${zstd_LIBNAME} zstd "${zstd_PKGCONF_STATIC_LIBRARIES}")
 
 if(ZStd_USE_STATIC_LIBS)
     # Restore original value of CMAKE_FIND_LIBRARY_SUFFIXES
@@ -49,8 +52,10 @@ if(ZStd_USE_STATIC_LIBS)
     unset(zstd_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
 endif()
 
-# Set external dependencies
-set(zstd_EXTERNAL_DEPENDENCIES Threads::Threads)
+# Add pthread manually since zstd's pkgconfig doesn't include it
+list(APPEND zstd_DYNAMIC_LIBS "pthread")
+
+FindDynamicLibraryDependencies(zstd "${zstd_DYNAMIC_LIBS}")
 
 # Set version
 set(ZStd_VERSION ${zstd_PKGCONF_VERSION})
@@ -89,10 +94,10 @@ if(NOT TARGET ZStd::ZStd)
                 )
 
         # Add component's dependencies for linking
-        if(zstd_EXTERNAL_DEPENDENCIES)
+        if(zstd_LIBRARY_DEPENDENCIES)
             set_target_properties(ZStd::ZStd
                     PROPERTIES
-                    INTERFACE_LINK_LIBRARIES "${zstd_EXTERNAL_DEPENDENCIES}"
+                    INTERFACE_LINK_LIBRARIES "${zstd_LIBRARY_DEPENDENCIES}"
                     )
         endif()
     endif()
