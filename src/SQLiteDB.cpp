@@ -27,10 +27,10 @@ bool SQLiteDB::close () {
     return true;
 }
 
-SQLitePreparedStatement SQLiteDB::prepare_statement (const string& statement) {
+SQLitePreparedStatement SQLiteDB::prepare_statement (const char* statement, size_t statement_length) {
     if (nullptr == m_db_handle) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
-    return SQLitePreparedStatement(statement, m_db_handle);
+    return {statement, statement_length, m_db_handle};
 }

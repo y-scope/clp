@@ -8,10 +8,10 @@
 
 using std::string;
 
-SQLitePreparedStatement::SQLitePreparedStatement (const string& statement, sqlite3* db_handle) {
-    auto return_value = sqlite3_prepare_v2(db_handle, statement.c_str(), statement.length() + 1, &m_statement_handle, nullptr);
+SQLitePreparedStatement::SQLitePreparedStatement (const char* statement, size_t statement_length, sqlite3* db_handle) {
+    auto return_value = sqlite3_prepare_v2(db_handle, statement, statement_length, &m_statement_handle, nullptr);
     if (SQLITE_OK != return_value) {
-        SPDLOG_ERROR("SQLitePreparedStatement: Failed to prepare statement '{}' - {}", statement.c_str(), sqlite3_errmsg(db_handle));
+        SPDLOG_ERROR("SQLitePreparedStatement: Failed to prepare statement '{:.{}}' - {}", statement, statement_length, sqlite3_errmsg(db_handle));
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
     m_db_handle = db_handle;

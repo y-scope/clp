@@ -4,10 +4,14 @@
 #include <tuple>
 #include <utility>
 
+// fmt
+#include <fmt/core.h>
+
 // spdlog
 #include <spdlog/spdlog.h>
 
 // Project headers
+#include "database_utils.hpp"
 #include "Defs.h"
 #include "streaming_archive/Constants.hpp"
 #include "Utils.hpp"
@@ -25,7 +29,6 @@ enum class ArchivesTableFieldIndexes : uint16_t {
 enum class UpdateArchiveSizeStmtFieldIndexes : uint16_t {
     UncompressedSize = 0,
     Size,
-    Id,
     Length,
 };
 enum class FilesTableFieldIndexes : uint16_t {
@@ -49,69 +52,60 @@ using std::vector;
 static void create_tables (const vector<std::pair<string, string>>& archive_field_names_and_types,
                            const vector<pair<string, string>>& file_field_names_and_types, SQLiteDB& db)
 {
-    string statement_string = "CREATE TABLE IF NOT EXISTS " STREAMING_ARCHIVE_METADATA_DB_ARCHIVES_TABLE_NAME " (";
-    for (const auto& field_name_and_type : archive_field_names_and_types) {
-        statement_string += field_name_and_type.first;
-        statement_string += ' ';
-        statement_string += field_name_and_type.second;
-        statement_string += ',';
-    }
-    // Trim extra trailing comma
-    statement_string.resize(statement_string.length() - 1);
-    statement_string += ") WITHOUT ROWID";
-    auto create_archives_table = db.prepare_statement(statement_string);
+    fmt::memory_buffer statement_buffer;
+    auto statement_buffer_ix = std::back_inserter(statement_buffer);
+
+    fmt::format_to(statement_buffer_ix, "CREATE TABLE IF NOT EXISTS {} ({}) WITHOUT ROWID", streaming_archive::cMetadataDB::ArchivesTableName,
+                   get_field_names_and_types_sql(archive_field_names_and_types));
+    SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
+    auto create_archives_table = db.prepare_statement(statement_buffer.data(), statement_buffer.size());
     create_archives_table.step();
+    statement_buffer.clear();
 
-    statement_string = "CREATE INDEX IF NOT EXISTS archives_creation_order ON " STREAMING_ARCHIVE_METADATA_DB_ARCHIVES_TABLE_NAME " ("
-            STREAMING_ARCHIVE_METADATA_DB_ARCHIVE_CREATOR_ID "," STREAMING_ARCHIVE_METADATA_DB_ARCHIVE_CREATION_IX
-            ")";
-    auto create_archives_index = db.prepare_statement(statement_string);
+    fmt::format_to(statement_buffer_ix, "CREATE INDEX IF NOT EXISTS archives_creation_order ON {} ({},{})", streaming_archive::cMetadataDB::ArchivesTableName,
+                   streaming_archive::cMetadataDB::Archive::CreatorId, streaming_archive::cMetadataDB::Archive::CreationIx);
+    SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
+    auto create_archives_index = db.prepare_statement(statement_buffer.data(), statement_buffer.size());
     create_archives_index.step();
+    statement_buffer.clear();
 
-    statement_string = "CREATE TABLE IF NOT EXISTS " STREAMING_ARCHIVE_METADATA_DB_FILES_TABLE_NAME " (";
-    for (const auto& field_name_and_type : file_field_names_and_types) {
-        statement_string += field_name_and_type.first;
-        statement_string += ' ';
-        statement_string += field_name_and_type.second;
-        statement_string += ',';
-    }
-    // Trim extra trailing comma
-    statement_string.resize(statement_string.length() - 1);
-    statement_string += ") WITHOUT ROWID";
-    auto create_files_table = db.prepare_statement(statement_string);
+    fmt::format_to(statement_buffer_ix, "CREATE TABLE IF NOT EXISTS {} ({}) WITHOUT ROWID", streaming_archive::cMetadataDB::FilesTableName,
+                   get_field_names_and_types_sql(file_field_names_and_types));
+    SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
+    auto create_files_table = db.prepare_statement(statement_buffer.data(), statement_buffer.size());
     create_files_table.step();
+    statement_buffer.clear();
 
-    statement_string = "CREATE INDEX IF NOT EXISTS files_path ON " STREAMING_ARCHIVE_METADATA_DB_FILES_TABLE_NAME " ("
-                       STREAMING_ARCHIVE_METADATA_DB_FILE_PATH
-                       ")";
-    auto create_files_path_index = db.prepare_statement(statement_string);
+    fmt::format_to(statement_buffer_ix, "CREATE INDEX IF NOT EXISTS files_path ON {} ({})", streaming_archive::cMetadataDB::FilesTableName,
+                   streaming_archive::cMetadataDB::File::Path);
+    SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
+    auto create_files_path_index = db.prepare_statement(statement_buffer.data(), statement_buffer.size());
     create_files_path_index.step();
+    statement_buffer.clear();
 
-    statement_string = "CREATE INDEX IF NOT EXISTS files_archive_id ON " STREAMING_ARCHIVE_METADATA_DB_FILES_TABLE_NAME " ("
-                       STREAMING_ARCHIVE_METADATA_DB_FILE_ARCHIVE_ID
-                       ")";
-    auto create_files_archive_id_index = db.prepare_statement(statement_string);
+    fmt::format_to(statement_buffer_ix, "CREATE INDEX IF NOT EXISTS files_archive_id ON {} ({})", streaming_archive::cMetadataDB::FilesTableName,
+                   streaming_archive::cMetadataDB::File::ArchiveId);
+    SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
+    auto create_files_archive_id_index = db.prepare_statement(statement_buffer.data(), statement_buffer.size());
     create_files_archive_id_index.step();
 }
 
 static SQLitePreparedStatement get_archives_select_statement (SQLiteDB& db) {
-    string statement_string = "SELECT " STREAMING_ARCHIVE_METADATA_DB_ARCHIVE_ID
-            " FROM " STREAMING_ARCHIVE_METADATA_DB_ARCHIVES_TABLE_NAME;
-
-    return db.prepare_statement(statement_string);
+    auto statement_string = fmt::format("SELECT {} FROM {}", streaming_archive::cMetadataDB::Archive::Id, streaming_archive::cMetadataDB::ArchivesTableName);
+    SPDLOG_DEBUG("{}", statement_string);
+    return db.prepare_statement(statement_string.c_str(), statement_string.length());
 }
 
 static SQLitePreparedStatement get_archives_for_file_select_statement (SQLiteDB& db, const string& file_path) {
-    string statement_string = "SELECT DISTINCT " STREAMING_ARCHIVE_METADATA_DB_ARCHIVES_TABLE_NAME "." STREAMING_ARCHIVE_METADATA_DB_ARCHIVE_ID
-            " FROM " STREAMING_ARCHIVE_METADATA_DB_ARCHIVES_TABLE_NAME
-            " JOIN " STREAMING_ARCHIVE_METADATA_DB_FILES_TABLE_NAME
-            " ON " STREAMING_ARCHIVE_METADATA_DB_ARCHIVES_TABLE_NAME "." STREAMING_ARCHIVE_METADATA_DB_ARCHIVE_ID
-            " = " STREAMING_ARCHIVE_METADATA_DB_FILES_TABLE_NAME "." STREAMING_ARCHIVE_METADATA_DB_FILE_ARCHIVE_ID
-            " WHERE " STREAMING_ARCHIVE_METADATA_DB_FILES_TABLE_NAME "." STREAMING_ARCHIVE_METADATA_DB_FILE_PATH
-            " = ?"
-            " ORDER BY " STREAMING_ARCHIVE_METADATA_DB_ARCHIVE_CREATOR_ID " ASC, " STREAMING_ARCHIVE_METADATA_DB_ARCHIVE_CREATION_IX " ASC";
-
-    auto statement = db.prepare_statement(statement_string);
+    auto statement_string = fmt::format("SELECT DISTINCT {}.{} FROM {} JOIN {} ON {}.{} = {}.{} WHERE {}.{} = ? ORDER BY {} ASC, {} ASC",
+                                        streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::Archive::Id,
+                                        streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::FilesTableName,
+                                        streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::Archive::Id,
+                                        streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::ArchiveId,
+                                        streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::Path,
+                                        streaming_archive::cMetadataDB::Archive::CreatorId, streaming_archive::cMetadataDB::Archive::CreationIx);
+    SPDLOG_DEBUG("{}", statement_string);
+    auto statement = db.prepare_statement(statement_string.c_str(), statement_string.length());
     statement.bind_text(1, file_path, true);
 
     return statement;
@@ -146,125 +140,86 @@ void GlobalMetadataDB::open (const string& path) {
     m_db.open(path);
 
     vector<pair<string, string>> archive_field_names_and_types(enum_to_underlying_type(ArchivesTableFieldIndexes::Length));
-    archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::Id)].first = STREAMING_ARCHIVE_METADATA_DB_ARCHIVE_ID;
+    archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::Id)].first = streaming_archive::cMetadataDB::Archive::Id;
     archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::Id)].second = "TEXT PRIMARY KEY";
 
     archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::StorageId)].first =
-            STREAMING_ARCHIVE_METADATA_DB_ARCHIVE_STORAGE_ID;
+            streaming_archive::cMetadataDB::Archive::StorageId;
     archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::StorageId)].second = "TEXT";
 
     archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::UncompressedSize)].first =
-            STREAMING_ARCHIVE_METADATA_DB_ARCHIVE_UNCOMPRESSED_SIZE;
+            streaming_archive::cMetadataDB::Archive::UncompressedSize;
     archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::UncompressedSize)].second = "INTEGER";
 
-    archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::Size)].first = STREAMING_ARCHIVE_METADATA_DB_ARCHIVE_SIZE;
+    archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::Size)].first = streaming_archive::cMetadataDB::Archive::Size;
     archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::Size)].second = "INTEGER";
 
     archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::CreatorId)].first =
-            STREAMING_ARCHIVE_METADATA_DB_ARCHIVE_CREATOR_ID;
+            streaming_archive::cMetadataDB::Archive::CreatorId;
     archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::CreatorId)].second = "TEXT";
 
     archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::CreationIx)].first =
-            STREAMING_ARCHIVE_METADATA_DB_ARCHIVE_CREATION_IX;
+            streaming_archive::cMetadataDB::Archive::CreationIx;
     archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::CreationIx)].second = "INTEGER";
 
     vector<pair<string, string>> file_field_names_and_types(enum_to_underlying_type(FilesTableFieldIndexes::Length));
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::Id)].first = STREAMING_ARCHIVE_METADATA_DB_FILE_ID;
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::Id)].first = streaming_archive::cMetadataDB::File::Id;
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::Id)].second = "TEXT PRIMARY KEY";
 
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::OrigFileId)].first = STREAMING_ARCHIVE_METADATA_DB_FILE_ORIG_FILE_ID;
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::OrigFileId)].first = streaming_archive::cMetadataDB::File::OrigFileId;
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::OrigFileId)].second = "TEXT";
 
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::Path)].first = STREAMING_ARCHIVE_METADATA_DB_FILE_PATH;
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::Path)].first = streaming_archive::cMetadataDB::File::Path;
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::Path)].second = "TEXT";
 
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginTimestamp)].first = STREAMING_ARCHIVE_METADATA_DB_FILE_BEGIN_TIMESTAMP;
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginTimestamp)].first = streaming_archive::cMetadataDB::File::BeginTimestamp;
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginTimestamp)].second = "INTEGER";
 
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::EndTimestamp)].first = STREAMING_ARCHIVE_METADATA_DB_FILE_END_TIMESTAMP;
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::EndTimestamp)].first = streaming_archive::cMetadataDB::File::EndTimestamp;
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::EndTimestamp)].second = "INTEGER";
 
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)].first =
-            STREAMING_ARCHIVE_METADATA_DB_FILE_NUM_UNCOMPRESSED_BYTES;
+            streaming_archive::cMetadataDB::File::NumUncompressedBytes;
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)].second = "INTEGER";
 
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)].first = STREAMING_ARCHIVE_METADATA_DB_FILE_NUM_MESSAGES;
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)].first = streaming_archive::cMetadataDB::File::NumMessages;
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)].second = "INTEGER";
 
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::ArchiveId)].first = STREAMING_ARCHIVE_METADATA_DB_FILE_ARCHIVE_ID;
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::ArchiveId)].first = streaming_archive::cMetadataDB::File::ArchiveId;
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::ArchiveId)].second = "TEXT";
 
     create_tables(archive_field_names_and_types, file_field_names_and_types, m_db);
 
-    string statement_string = "INSERT INTO " STREAMING_ARCHIVE_METADATA_DB_ARCHIVES_TABLE_NAME " (";
-    for (const auto& field_name_and_type : archive_field_names_and_types) {
-        statement_string += field_name_and_type.first;
-        statement_string += ',';
-    }
-    // Remove trailing comma
-    statement_string.resize(statement_string.length() - 1);
-    statement_string += ") VALUES (";
-    for (size_t i = 0; i < archive_field_names_and_types.size(); ++i) {
-        statement_string += "?,";
-    }
-    // Remove trailing comma
-    statement_string.resize(statement_string.length() - 1);
-    statement_string += ")";
+    fmt::memory_buffer statement_buffer;
+    auto statement_buffer_ix = std::back_inserter(statement_buffer);
 
-    m_insert_archive_statement = std::make_unique<SQLitePreparedStatement>(m_db.prepare_statement(statement_string));
+    fmt::format_to(statement_buffer_ix, "INSERT INTO {} ({}) VALUES ({})", streaming_archive::cMetadataDB::ArchivesTableName,
+                   get_field_names_sql(archive_field_names_and_types), get_placeholders_sql(archive_field_names_and_types.size()));
+    SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
+    m_insert_archive_statement = std::make_unique<SQLitePreparedStatement>(m_db.prepare_statement(statement_buffer.data(), statement_buffer.size()));
+    statement_buffer.clear();
 
     vector<string> update_archive_size_stmt_field_names(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Length));
-    update_archive_size_stmt_field_names[enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Id)] =
-            STREAMING_ARCHIVE_METADATA_DB_ARCHIVE_ID;
     update_archive_size_stmt_field_names[enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::UncompressedSize)] =
-            STREAMING_ARCHIVE_METADATA_DB_ARCHIVE_UNCOMPRESSED_SIZE;
+            streaming_archive::cMetadataDB::Archive::UncompressedSize;
     update_archive_size_stmt_field_names[enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Size)] =
-            STREAMING_ARCHIVE_METADATA_DB_ARCHIVE_SIZE;
-    statement_string = "UPDATE " STREAMING_ARCHIVE_METADATA_DB_ARCHIVES_TABLE_NAME " SET ";
-    for (size_t i = 0; i < update_archive_size_stmt_field_names.size() - 1; ++i) {
-        const auto& field_name = update_archive_size_stmt_field_names[i];
-        statement_string += field_name;
-        statement_string += " = ?";
-        statement_string += to_string(i + 1);
-        statement_string += ',';
-    }
-    // Remove trailing comma
-    statement_string.resize(statement_string.length() - 1);
-    statement_string += " WHERE ";
-    statement_string += update_archive_size_stmt_field_names[enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Id)];
-    statement_string += " = ?";
-    statement_string += to_string(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Id) + 1);
+            streaming_archive::cMetadataDB::Archive::Size;
 
-    m_update_archive_size_statement = std::make_unique<SQLitePreparedStatement>(m_db.prepare_statement(statement_string));
+    fmt::format_to(statement_buffer_ix, "UPDATE {} SET {} WHERE {} = ?{}", streaming_archive::cMetadataDB::ArchivesTableName,
+                   get_numbered_set_field_sql(update_archive_size_stmt_field_names, 0), streaming_archive::cMetadataDB::Archive::Id,
+                   enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Length) + 1);
+    SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
+    m_update_archive_size_statement = std::make_unique<SQLitePreparedStatement>(m_db.prepare_statement(statement_buffer.data(), statement_buffer.size()));
+    statement_buffer.clear();
 
-    statement_string = "INSERT INTO " STREAMING_ARCHIVE_METADATA_DB_FILES_TABLE_NAME " (";
-    for (const auto& field_name_and_type : file_field_names_and_types) {
-        statement_string += field_name_and_type.first;
-        statement_string += ',';
-    }
-    // Remove trailing comma
-    statement_string.resize(statement_string.length() - 1);
-    statement_string += ") VALUES (";
-    for (size_t i = 0; i < file_field_names_and_types.size(); ++i) {
-        statement_string += '?';
-        statement_string += to_string(i + 1);
-        statement_string += ',';
-    }
-    // Remove trailing comma
-    statement_string.resize(statement_string.length() - 1);
-    statement_string += ") ON CONFLICT (" STREAMING_ARCHIVE_METADATA_DB_FILE_ID ") DO UPDATE SET ";
-    // Set all fields except the ID
-    for (size_t i = enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1; i < file_field_names_and_types.size(); ++i) {
-        const auto& field_name = file_field_names_and_types[i].first;
-        statement_string += field_name;
-        statement_string += " = ?";
-        statement_string += to_string(i + 1);
-        statement_string += ',';
-    }
-    // Remove trailing comma
-    statement_string.resize(statement_string.length() - 1);
+    // Insert or on conflict, set all fields except the ID
+    fmt::format_to(statement_buffer_ix, "INSERT INTO {} ({}) VALUES ({}) ON CONFLICT ({}) DO UPDATE SET {}", streaming_archive::cMetadataDB::FilesTableName,
+                   get_field_names_sql(file_field_names_and_types), get_numbered_placeholders_sql(file_field_names_and_types.size()),
+                   streaming_archive::cMetadataDB::File::Id,
+                   get_numbered_set_field_sql(file_field_names_and_types, enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1));
+    SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
+    m_upsert_file_statement = std::make_unique<SQLitePreparedStatement>(m_db.prepare_statement(statement_buffer.data(), statement_buffer.size()));
 
-    m_upsert_file_statement = std::make_unique<SQLitePreparedStatement>(m_db.prepare_statement(statement_string));
     m_upsert_files_transaction_begin_statement = std::make_unique<SQLitePreparedStatement>(m_db.prepare_statement("BEGIN TRANSACTION"));
     m_upsert_files_transaction_end_statement = std::make_unique<SQLitePreparedStatement>(m_db.prepare_statement("END TRANSACTION"));
 
@@ -307,7 +262,7 @@ void GlobalMetadataDB::update_archive_size (const string& archive_id, size_t unc
 
     m_update_archive_size_statement->bind_int64(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::UncompressedSize) + 1, (int64_t)uncompressed_size);
     m_update_archive_size_statement->bind_int64(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Size) + 1, (int64_t)size);
-    m_update_archive_size_statement->bind_text(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Id) + 1, archive_id, false);
+    m_update_archive_size_statement->bind_text(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Length) + 1, archive_id, false);
     m_update_archive_size_statement->step();
     m_update_archive_size_statement->reset();
 }

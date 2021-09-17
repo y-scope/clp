@@ -33,7 +33,8 @@ public:
     void open (const std::string& path);
     bool close ();
 
-    SQLitePreparedStatement prepare_statement (const std::string& statement);
+    SQLitePreparedStatement prepare_statement (const char* statement, size_t statement_length);
+    SQLitePreparedStatement prepare_statement (const std::string& statement) { return prepare_statement(statement.c_str(), statement.length()); }
 
     const char* get_error_message () { return sqlite3_errmsg(m_db_handle); }
 

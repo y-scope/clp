@@ -63,16 +63,12 @@ This will download:
 The latest versions of some packages are not offered by apt repositories,
 so we've included some scripts to download, compile, and install them:
 ```shell
+./tools/scripts/lib_install/fmtlib.sh 8.0.1
 ./tools/scripts/lib_install/libarchive.sh 3.5.1
 ./tools/scripts/lib_install/lz4.sh 1.8.2
-./tools/scripts/lib_install/spdlog.sh 1.8.2
+./tools/scripts/lib_install/spdlog.sh 1.9.2
 ./tools/scripts/lib_install/zstandard.sh 1.4.9
 ```
-This will install:
-* libarchive v3.5.1
-* LZ4 v1.8.2
-* spdlog v1.8.2
-* Zstandard v1.4.9
 
 ## Build
 * Configure the cmake project:

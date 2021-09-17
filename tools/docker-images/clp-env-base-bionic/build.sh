@@ -3,6 +3,7 @@
 project_root="../../.."
 
 scripts=()
+scripts+=(fmtlib.sh)
 scripts+=(libarchive.sh)
 scripts+=(lz4.sh)
 scripts+=(spdlog.sh)

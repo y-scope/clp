@@ -17,6 +17,9 @@ add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
 # Profiling options
 add_definitions(-DPROF_ENABLED=0)
 
+# Compile-in debug logging statements
+#add_definitions(-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG)
+
 # Flush to disk switch
 add_definitions(-DFLUSH_TO_DISK_ENABLED=1)
 
@@ -53,9 +56,22 @@ else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Boost")
 endif()
 
+# Find and setup fmt
+# NOTE:
+# - We only try to link to the static library
+# - spdlog uses fmt, so their versions need to be kept in-sync
+find_package(fmt 8.0.1 REQUIRED)
+if(fmt_FOUND)
+    message(STATUS "Found fmt ${fmt_VERSION}")
+else()
+    message(FATAL_ERROR "Could not find static libraries for fmt")
+endif()
+
 # Find and setup spdlog
 # NOTE: spdlog only builds a static library
-find_package(spdlog REQUIRED)
+find_package(spdlog 1.9.2 REQUIRED)
+# Don't use spdlog's internal fmtlib since it will conflict with the external fmtlib
+add_definitions(-DSPDLOG_FMT_EXTERNAL=1)
 if(spdlog_FOUND)
     message(STATUS "Found spdlog ${spdlog_VERSION}")
 else()
@@ -107,6 +123,8 @@ set(SOURCE_FILES_clp
         src/clp/StructuredFileToCompress.hpp
         src/clp/utils.cpp
         src/clp/utils.hpp
+        src/database_utils.cpp
+        src/database_utils.hpp
         src/Defs.h
         src/dictionary_utils.cpp
         src/dictionary_utils.hpp
@@ -213,6 +231,7 @@ add_executable(clp ${SOURCE_FILES_clp})
 target_link_libraries(clp
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
+        fmt::fmt
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
         LibArchive::LibArchive
@@ -226,6 +245,8 @@ set(SOURCE_FILES_clg
         src/clg/clg.cpp
         src/clg/CommandLineArguments.cpp
         src/clg/CommandLineArguments.hpp
+        src/database_utils.cpp
+        src/database_utils.hpp
         src/Defs.h
         src/dictionary_utils.cpp
         src/dictionary_utils.hpp
@@ -315,6 +336,7 @@ add_executable(clg ${SOURCE_FILES_clg})
 target_link_libraries(clg
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
+        fmt::fmt
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
         ZStd::ZStd
@@ -324,6 +346,8 @@ target_compile_features(clg
         )
 
 set(SOURCE_FILES_unitTest
+        src/database_utils.cpp
+        src/database_utils.hpp
         src/Defs.h
         src/dictionary_utils.cpp
         src/dictionary_utils.hpp
@@ -422,6 +446,7 @@ add_executable(unitTest ${SOURCE_FILES_unitTest})
 target_link_libraries(unitTest
         PRIVATE
         Boost::filesystem Boost::iostreams
+        fmt::fmt
         ${sqlite_LIBRARY_DEPENDENCIES}
         ZStd::ZStd
         )

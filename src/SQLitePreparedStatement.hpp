@@ -26,7 +26,7 @@ public:
     };
 
     // Constructors
-    SQLitePreparedStatement (const std::string& statement, sqlite3* db_handle);
+    SQLitePreparedStatement (const char* statement, size_t statement_length, sqlite3* db_handle);
     ~SQLitePreparedStatement ();
 
     // Delete copy constructor and assignment
