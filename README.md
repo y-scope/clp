@@ -21,6 +21,7 @@ CLP is currently released as source, so you'll need to build it before running i
 # Requirements
 * We have built and tested CLP on **Ubuntu 18.04 (bionic)** and **Ubuntu 20.04 (focal)**.
   * If you have trouble building for another OS, file an issue and we may be able to help.
+* A compiler that supports c++14
 * By default, CLP is built with static linking, so you shouldn't need to install any other 
   dependencies to run it.
 
