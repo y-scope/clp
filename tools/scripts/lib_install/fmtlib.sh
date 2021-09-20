@@ -52,11 +52,26 @@ if [ $installed -ne 0 ] ; then
   cmake ../
   make -j${num_cpus}
 
+  # Check if checkinstall is installed
+  set +e
+  command -v checkinstall
+  checkinstall_installed=$?
+  set -e
+
   # Install
-  if [ ${EUID:-$(id -u)} -ne 0 ] ; then
-    sudo checkinstall --pkgname "${package_name}" --pkgversion "${version}" --provides "${package_name}" --nodoc -y
+  if [ $checkinstall_installed -ne 0 ] ; then
+    # checkinstall is not installed, so install without building a deb package
+    if [ ${EUID:-$(id -u)} -ne 0 ] ; then
+      sudo make install
+    else
+      make install
+    fi
   else
-    checkinstall --pkgname "${package_name}" --pkgversion "${version}" --provides "${package_name}" --nodoc -y
+    if [ ${EUID:-$(id -u)} -ne 0 ] ; then
+      sudo checkinstall --pkgname "${package_name}" --pkgversion "${version}" --provides "${package_name}" --nodoc -y
+    else
+      checkinstall --pkgname "${package_name}" --pkgversion "${version}" --provides "${package_name}" --nodoc -y
+    fi
   fi
 fi
 
