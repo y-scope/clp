@@ -1,6 +1,8 @@
 CLP is a tool capable of losslessly compressing text logs and searching the compressed logs without decompression.
 To learn more about it, you can read our [paper](https://www.usenix.org/system/files/osdi21-rodrigues.pdf).
 
+clp-core is part of a larger CLP package that can be built from [clp-packager](https://github.com/y-scope/clp-packager).
+
 # Contents
 * [Getting Started](#getting-started)
 * [Requirements](#requirements)
