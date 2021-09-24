@@ -13,7 +13,8 @@
 // Project headers
 #include "../ErrorCode.hpp"
 #include "../FileWriter.hpp"
-#include "../GlobalMetadataDB.hpp"
+#include "../GlobalMySQLMetadataDB.hpp"
+#include "../GlobalSQLiteMetadataDB.hpp"
 #include "../streaming_archive/reader/Archive.hpp"
 #include "../TraceableException.hpp"
 #include "../Utils.hpp"
@@ -41,9 +42,22 @@ namespace clp {
 
         try {
             auto archives_dir = boost::filesystem::path(command_line_args.get_archives_dir());
-            auto global_metadata_db_path = archives_dir / streaming_archive::cMetadataDBFileName;
-            GlobalMetadataDB global_metadata_db;
-            global_metadata_db.open(global_metadata_db_path.string());
+            const auto& global_metadata_db_config = command_line_args.get_metadata_db_config();
+            std::unique_ptr<GlobalMetadataDB> global_metadata_db;
+            switch (global_metadata_db_config.get_metadata_db_type()) {
+                case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
+                    auto global_metadata_db_path = archives_dir / streaming_archive::cMetadataDBFileName;
+                    global_metadata_db = std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
+                    break;
+                }
+                case GlobalMetadataDBConfig::MetadataDBType::MySQL:
+                    global_metadata_db = std::make_unique<GlobalMySQLMetadataDB>(global_metadata_db_config.get_metadata_db_host(),
+                                                                                 global_metadata_db_config.get_metadata_db_port(),
+                                                                                 global_metadata_db_config.get_metadata_db_username(),
+                                                                                 global_metadata_db_config.get_metadata_db_password(),
+                                                                                 global_metadata_db_config.get_metadata_db_name());
+                    break;
+            }
 
             streaming_archive::reader::Archive archive_reader;
 
@@ -54,10 +68,19 @@ namespace clp {
             string archive_id;
             string orig_path;
             std::unordered_map<string, string> temp_path_to_final_path;
+            global_metadata_db->open();
             if (files_to_decompress.empty()) {
-                for (auto archive_ix = global_metadata_db.get_archive_iterator(); archive_ix.has_next(); archive_ix.next()) {
-                    archive_ix.get_id(archive_id);
+                for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(global_metadata_db->get_archive_iterator());
+                        archive_ix->contains_element(); archive_ix->get_next())
+                {
+                    archive_ix->get_id(archive_id);
                     auto archive_path = archives_dir / archive_id;
+
+                    if (false == boost::filesystem::exists(archive_path)) {
+                        SPDLOG_WARN("Archive {} does not exist in '{}'.", archive_id, command_line_args.get_archives_dir());
+                        continue;
+                    }
+
                     archive_reader.open(archive_path.string());
                     archive_reader.refresh_dictionaries();
 
@@ -81,8 +104,10 @@ namespace clp {
                 }
             } else if (files_to_decompress.size() == 1) {
                 const auto& file_path = *files_to_decompress.begin();
-                for (auto archive_ix = global_metadata_db.get_archive_iterator_for_file_path(file_path); archive_ix.has_next(); archive_ix.next()) {
-                    archive_ix.get_id(archive_id);
+                for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(global_metadata_db->get_archive_iterator_for_file_path(file_path));
+                         archive_ix->contains_element(); archive_ix->get_next())
+                {
+                    archive_ix->get_id(archive_id);
                     auto archive_path = archives_dir / archive_id;
                     archive_reader.open(archive_path.string());
                     archive_reader.refresh_dictionaries();
@@ -103,8 +128,10 @@ namespace clp {
                     archive_reader.close();
                 }
             } else { // files_to_decompress.size() > 1
-                for (auto archive_ix = global_metadata_db.get_archive_iterator(); archive_ix.has_next(); archive_ix.next()) {
-                    archive_ix.get_id(archive_id);
+                for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(global_metadata_db->get_archive_iterator());
+                        archive_ix->contains_element(); archive_ix->get_next())
+                {
+                    archive_ix->get_id(archive_id);
                     auto archive_path = archives_dir / archive_id;
                     archive_reader.open(archive_path.string());
                     archive_reader.refresh_dictionaries();
@@ -130,6 +157,7 @@ namespace clp {
                     archive_reader.close();
                 }
             }
+            global_metadata_db->close();
 
             string final_path;
             boost::system::error_code boost_error_code;
@@ -150,8 +178,6 @@ namespace clp {
                     return false;
                 }
             }
-
-            global_metadata_db.close();
         } catch (TraceableException& e) {
             error_code = e.get_error_code();
             if (ErrorCode_errno == error_code) {

@@ -14,7 +14,8 @@
 // Project headers
 #include "../Defs.h"
 #include "../Grep.hpp"
-#include "../GlobalMetadataDB.hpp"
+#include "../GlobalMySQLMetadataDB.hpp"
+#include "../GlobalSQLiteMetadataDB.hpp"
 #include "../Profiler.hpp"
 #include "../streaming_archive/Constants.hpp"
 #include "../Utils.hpp"
@@ -88,9 +89,9 @@ static void print_result_binary (const string& orig_file_path, const Message& co
  * @param file_path
  * @return An archive iterator
  */
-static GlobalMetadataDB::ArchiveIterator get_archive_iterator (GlobalMetadataDB& global_metadata_db, const std::string& file_path);
+static GlobalMetadataDB::ArchiveIterator* get_archive_iterator (GlobalMetadataDB& global_metadata_db, const std::string& file_path);
 
-static GlobalMetadataDB::ArchiveIterator get_archive_iterator (GlobalMetadataDB& global_metadata_db, const std::string& file_path) {
+static GlobalMetadataDB::ArchiveIterator* get_archive_iterator (GlobalMetadataDB& global_metadata_db, const std::string& file_path) {
     if (file_path.empty()) {
         return global_metadata_db.get_archive_iterator();
     } else {
@@ -361,15 +362,36 @@ int main (int argc, const char* argv[]) {
         return -1;
     }
 
-    auto global_metadata_db_path = archives_dir / streaming_archive::cMetadataDBFileName;
-    GlobalMetadataDB global_metadata_db;
-    global_metadata_db.open(global_metadata_db_path.string());
+    const auto& global_metadata_db_config = command_line_args.get_metadata_db_config();
+    std::unique_ptr<GlobalMetadataDB> global_metadata_db;
+    switch (global_metadata_db_config.get_metadata_db_type()) {
+        case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
+            auto global_metadata_db_path = archives_dir / streaming_archive::cMetadataDBFileName;
+            global_metadata_db = std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
+            break;
+        }
+        case GlobalMetadataDBConfig::MetadataDBType::MySQL:
+            global_metadata_db = std::make_unique<GlobalMySQLMetadataDB>(global_metadata_db_config.get_metadata_db_host(),
+                                                                         global_metadata_db_config.get_metadata_db_port(),
+                                                                         global_metadata_db_config.get_metadata_db_username(),
+                                                                         global_metadata_db_config.get_metadata_db_password(),
+                                                                         global_metadata_db_config.get_metadata_db_name());
+            break;
+    }
+    global_metadata_db->open();
 
     string archive_id;
     Archive archive_reader;
-    for (auto archive_ix = get_archive_iterator(global_metadata_db, command_line_args.get_file_path()); archive_ix.has_next(); archive_ix.next()) {
-        archive_ix.get_id(archive_id);
+    for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(get_archive_iterator(*global_metadata_db, command_line_args.get_file_path()));
+            archive_ix->contains_element(); archive_ix->get_next())
+    {
+        archive_ix->get_id(archive_id);
         auto archive_path = archives_dir / archive_id;
+
+        if (false == boost::filesystem::exists(archive_path)) {
+            SPDLOG_WARN("Archive {} does not exist in '{}'.", archive_id, command_line_args.get_archives_dir());
+            continue;
+        }
 
         // Perform search
         if (!open_archive(archive_path.string(), archive_reader)) {
@@ -380,6 +402,8 @@ int main (int argc, const char* argv[]) {
         }
         archive_reader.close();
     }
+
+    global_metadata_db->close();
 
     return 0;
 }

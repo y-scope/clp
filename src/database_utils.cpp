@@ -79,6 +79,20 @@ string get_numbered_placeholders_sql (size_t num_placeholders) {
     return {buffer.data(), buffer.size()};
 }
 
+string get_set_field_sql (const vector<string>& field_names, size_t begin_ix, size_t end_ix) {
+    fmt::memory_buffer buffer;
+    auto buffer_ix = std::back_inserter(buffer);
+
+    size_t i = begin_ix;
+    fmt::format_to(buffer_ix, "{} = ?", field_names[i]);
+    ++i;
+    for (; i < end_ix; ++i) {
+        fmt::format_to(buffer_ix, ",{} = ?", field_names[i]);
+    }
+
+    return {buffer.data(), buffer.size()};
+}
+
 string get_numbered_set_field_sql (const vector<pair<string, string>>& field_names_and_types, size_t begin_ix) {
     fmt::memory_buffer buffer;
     auto buffer_ix = std::back_inserter(buffer);

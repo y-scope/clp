@@ -89,6 +89,21 @@ else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for LibArchive")
 endif()
 
+# Find and setup MariaDBClient library
+if(CLP_USE_STATIC_LIBS)
+    # NOTE: We can't statically link to MariaDBClient since it's GPL
+    message(AUTHOR_WARNING "MariaDBClient cannot be statically linked due to its license.")
+endif()
+find_package(MariaDBClient 3.1.0 REQUIRED)
+if(MariaDBClient_FOUND)
+    message(STATUS "Found MariaDBClient ${MariaDBClient_VERSION}")
+else()
+    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for MariaDBClient")
+endif()
+
+# Add yaml-cpp
+add_subdirectory(submodules/yaml-cpp EXCLUDE_FROM_ALL)
+
 # Find and setup ZStd Library
 if(CLP_USE_STATIC_LIBS)
     set(ZStd_USE_STATIC_LIBS ON)
@@ -141,8 +156,14 @@ set(SOURCE_FILES_clp
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
-        src/GlobalMetadataDB.hpp
         src/GlobalMetadataDB.cpp
+        src/GlobalMetadataDB.hpp
+        src/GlobalMetadataDBConfig.cpp
+        src/GlobalMetadataDBConfig.hpp
+        src/GlobalMySQLMetadataDB.cpp
+        src/GlobalMySQLMetadataDB.hpp
+        src/GlobalSQLiteMetadataDB.cpp
+        src/GlobalSQLiteMetadataDB.hpp
         src/LibarchiveFileReader.cpp
         src/LibarchiveFileReader.hpp
         src/LibarchiveReader.cpp
@@ -155,6 +176,12 @@ set(SOURCE_FILES_clp
         src/LogTypeDictionaryWriter.hpp
         src/MessageParser.cpp
         src/MessageParser.hpp
+        src/MySQLDB.cpp
+        src/MySQLDB.hpp
+        src/MySQLParamBindings.cpp
+        src/MySQLParamBindings.hpp
+        src/MySQLPreparedStatement.cpp
+        src/MySQLPreparedStatement.hpp
         src/PageAllocatedVector.cpp
         src/PageAllocatedVector.hpp
         src/ParsedMessage.cpp
@@ -224,6 +251,7 @@ set(SOURCE_FILES_clp
         src/WriterInterface.cpp
         src/WriterInterface.hpp
         submodules/date/include/date/date.h
+        submodules/json/single_include/nlohmann/json.hpp
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         )
@@ -235,6 +263,8 @@ target_link_libraries(clp
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
         LibArchive::LibArchive
+        MariaDBClient::MariaDBClient
+        yaml-cpp::yaml-cpp
         ZStd::ZStd
         )
 target_compile_features(clp
@@ -261,14 +291,26 @@ set(SOURCE_FILES_clg
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
-        src/GlobalMetadataDB.hpp
         src/GlobalMetadataDB.cpp
+        src/GlobalMetadataDB.hpp
+        src/GlobalMetadataDBConfig.cpp
+        src/GlobalMetadataDBConfig.hpp
+        src/GlobalMySQLMetadataDB.cpp
+        src/GlobalMySQLMetadataDB.hpp
+        src/GlobalSQLiteMetadataDB.cpp
+        src/GlobalSQLiteMetadataDB.hpp
         src/Grep.cpp
         src/Grep.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
         src/LogTypeDictionaryReader.hpp
+        src/MySQLDB.cpp
+        src/MySQLDB.hpp
+        src/MySQLParamBindings.cpp
+        src/MySQLParamBindings.hpp
+        src/MySQLPreparedStatement.cpp
+        src/MySQLPreparedStatement.hpp
         src/PageAllocatedVector.cpp
         src/PageAllocatedVector.hpp
         src/ParsedMessage.cpp
@@ -337,8 +379,10 @@ target_link_libraries(clg
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
+        MariaDBClient::MariaDBClient
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
+        yaml-cpp::yaml-cpp
         ZStd::ZStd
         )
 target_compile_features(clg
@@ -362,6 +406,8 @@ set(SOURCE_FILES_unitTest
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
+        src/GlobalMetadataDB.cpp
+        src/GlobalMetadataDB.hpp
         src/Grep.cpp
         src/Grep.hpp
         src/LogTypeDictionaryEntry.cpp

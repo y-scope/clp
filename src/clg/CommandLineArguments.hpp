@@ -11,6 +11,7 @@
 // Project headers
 #include "../CommandLineArgumentsBase.hpp"
 #include "../Defs.h"
+#include "../GlobalMetadataDBConfig.hpp"
 
 namespace clg {
     class CommandLineArguments : public CommandLineArgumentsBase {
@@ -36,6 +37,7 @@ namespace clg {
         OutputMethod get_output_method () const { return m_output_method; }
         epochtime_t get_search_begin_ts () const { return m_search_begin_ts; }
         epochtime_t get_search_end_ts () const { return m_search_end_ts; }
+        const GlobalMetadataDBConfig& get_metadata_db_config () const { return m_metadata_db_config; }
 
     private:
         // Methods
@@ -49,6 +51,7 @@ namespace clg {
         std::string m_file_path;
         OutputMethod m_output_method;
         epochtime_t m_search_begin_ts, m_search_end_ts;
+        GlobalMetadataDBConfig m_metadata_db_config;
     };
 }
 

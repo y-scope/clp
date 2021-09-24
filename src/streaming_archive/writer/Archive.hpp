@@ -35,6 +35,7 @@ namespace streaming_archive { namespace writer {
          * @param compression_level Compression level of the compressor being opened
          * @param output_dir Output directory
          * @param global_metadata_db
+         * @param print_archive_stats_progress Enable printing statistics about the archive as it's compressed
          */
         struct UserConfig {
             boost::uuids::uuid id;
@@ -45,6 +46,7 @@ namespace streaming_archive { namespace writer {
             int compression_level;
             std::string output_dir;
             GlobalMetadataDB* global_metadata_db;
+            bool print_archive_stats_progress;
         };
 
         class OperationFailed : public TraceableException {
@@ -306,6 +308,8 @@ namespace streaming_archive { namespace writer {
         FileWriter m_metadata_file_writer;
 
         GlobalMetadataDB* m_global_metadata_db;
+
+        bool m_print_archive_stats_progress;
     };
 } }
 

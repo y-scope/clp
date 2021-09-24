@@ -12,6 +12,7 @@ RUN apt update && \
         libboost-program-options-dev \
         libssl-dev \
         pkg-config \
+        rsync \
         wget \
         zlib1g-dev
 
@@ -22,6 +23,8 @@ COPY libarchive.sh /root/
 RUN /root/libarchive.sh 3.5.1
 COPY lz4.sh /root/
 RUN /root/lz4.sh 1.8.2
+COPY mariadb-connector-c.sh /root/
+RUN /root/mariadb-connector-c.sh 3.2.3
 COPY spdlog.sh /root/
 RUN /root/spdlog.sh 1.9.2
 COPY zstandard.sh /root/

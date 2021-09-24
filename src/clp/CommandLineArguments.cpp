@@ -44,11 +44,15 @@ namespace clp {
             config_file_path += '/';
         }
         config_file_path += cDefaultConfigFilename;
+        string global_metadata_db_config_file_path;
         options_general.add_options()
                 ("help,h", "Print help")
                 ("version,V", "Print version")
                 ("config-file", po::value<string>(&config_file_path)->value_name("FILE")->default_value(config_file_path),
                         "Use configuration options from FILE")
+                ("db-config-file",
+                        po::value<string>(&global_metadata_db_config_file_path)->value_name("FILE")->default_value(global_metadata_db_config_file_path),
+                        "Global metadata DB YAML config")
                 ;
 
         // Define functional options
@@ -105,6 +109,16 @@ namespace clp {
             if (parsed_command_line_options.count("version")) {
                 cerr << cVersion << endl;
                 return ParsingResult::InfoCommand;
+            }
+
+            // Parse and validate global metadata DB config
+            if (false == global_metadata_db_config_file_path.empty()) {
+                try {
+                    m_metadata_db_config.parse_config_file(global_metadata_db_config_file_path);
+                } catch (std::exception& e) {
+                    SPDLOG_ERROR("Failed to validate metadata database config - {}", e.what());
+                    return ParsingResult::Failure;
+                }
             }
 
             // Validate command
@@ -219,7 +233,8 @@ namespace clp {
                                 "Target size (B) for the dictionaries before a new archive is created")
                         ("compression-level", po::value<int>(&m_compression_level)->value_name("LEVEL")->default_value(m_compression_level),
                                 "1 (fast/low compression) to 9 (slow/high compression)")
-                        ("print-archive-ids", po::bool_switch(&m_print_archive_ids), "Print ID of each new archive")
+                        ("print-archive-stats-progress", po::bool_switch(&m_print_archive_stats_progress), "Print statistics (ndjson) about each archive as "
+                                                                                                           "it's compressed")
                         ("progress", po::bool_switch(&m_show_progress), "Show progress during compression")
                         ;
 

@@ -79,7 +79,7 @@ static void write_message_to_encoded_file (const ParsedMessage& msg, streaming_a
 
 namespace clp {
     bool FileCompressor::compress_file (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
-                                        bool print_archive_ids, size_t target_encoded_file_size, const FileToCompress& file_to_compress,
+                                        size_t target_encoded_file_size, const FileToCompress& file_to_compress,
                                         streaming_archive::writer::Archive& archive_writer)
     {
         m_file_reader.open(file_to_compress.get_path());
@@ -95,11 +95,11 @@ namespace clp {
 
         bool succeeded = true;
         if (is_utf8_sequence(m_utf8_validation_buf_length, m_utf8_validation_buf)) {
-            parse_and_encode(target_data_size_of_dicts, archive_user_config, print_archive_ids, target_encoded_file_size,
-                             file_to_compress.get_path_for_compression(), file_to_compress.get_group_id(), archive_writer, m_file_reader);
+            parse_and_encode(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, file_to_compress.get_path_for_compression(),
+                             file_to_compress.get_group_id(), archive_writer, m_file_reader);
         } else {
-            if (false == try_compressing_as_archive(target_data_size_of_dicts, archive_user_config, print_archive_ids, target_encoded_file_size,
-                                                    file_to_compress, archive_writer))
+            if (false == try_compressing_as_archive(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, file_to_compress,
+                                                    archive_writer))
             {
                 succeeded = false;
             }
@@ -111,7 +111,7 @@ namespace clp {
     }
 
     void FileCompressor::parse_and_encode (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
-                                           bool print_archive_ids, size_t target_encoded_file_size, const string& path_for_compression, group_id_t group_id,
+                                           size_t target_encoded_file_size, const string& path_for_compression, group_id_t group_id,
                                            streaming_archive::writer::Archive& archive_writer, ReaderInterface& reader)
     {
         m_parsed_message.clear();
@@ -123,8 +123,7 @@ namespace clp {
         size_t buf_pos = 0;
         while (m_message_parser.parse_next_message(false, m_utf8_validation_buf_length, m_utf8_validation_buf, buf_pos, m_parsed_message)) {
             if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
-                split_file_and_archive(archive_user_config, print_archive_ids, path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer,
-                                       file);
+                split_file_and_archive(archive_user_config, path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer, file);
             } else if (file->get_encoded_size_in_bytes() >= target_encoded_file_size) {
                 split_file(path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer, file);
             }
@@ -135,8 +134,7 @@ namespace clp {
         // Parse remaining content from file
         while (m_message_parser.parse_next_message(true, reader, m_parsed_message)) {
             if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
-                split_file_and_archive(archive_user_config, print_archive_ids, path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer,
-                                       file);
+                split_file_and_archive(archive_user_config, path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer, file);
             } else if (file->get_encoded_size_in_bytes() >= target_encoded_file_size) {
                 split_file(path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer, file);
             }
@@ -148,7 +146,7 @@ namespace clp {
     }
 
     bool FileCompressor::try_compressing_as_archive (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
-                                                     bool print_archive_ids, size_t target_encoded_file_size, const FileToCompress& file_to_compress,
+                                                     size_t target_encoded_file_size, const FileToCompress& file_to_compress,
                                                      streaming_archive::writer::Archive& archive_writer)
     {
         auto file_boost_path = boost::filesystem::path(file_to_compress.get_path_for_compression());
@@ -207,7 +205,7 @@ namespace clp {
             }
 
             if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
-                split_archive(archive_user_config, print_archive_ids, archive_writer);
+                split_archive(archive_user_config, archive_writer);
             }
 
             m_libarchive_reader.open_file_reader(m_libarchive_file_reader);
@@ -224,8 +222,8 @@ namespace clp {
             }
             if (is_utf8_sequence(m_utf8_validation_buf_length, m_utf8_validation_buf)) {
                 auto boost_path_for_compression = parent_boost_path / m_libarchive_reader.get_path();
-                parse_and_encode(target_data_size_of_dicts, archive_user_config, print_archive_ids, target_encoded_file_size,
-                                 boost_path_for_compression.string(), file_to_compress.get_group_id(), archive_writer, m_libarchive_file_reader);
+                parse_and_encode(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, boost_path_for_compression.string(),
+                                 file_to_compress.get_group_id(), archive_writer, m_libarchive_file_reader);
             } else {
                 SPDLOG_ERROR("Cannot compress {} - not UTF-8 encoded.", m_libarchive_reader.get_path());
                 succeeded = false;

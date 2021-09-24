@@ -12,6 +12,7 @@ To learn more about it, you can read our [paper](https://www.usenix.org/system/f
 * [Running](#running)
   * [`clp`](#clp)
   * [`clg`](#clg)
+* [Parallel Compression](#parallel-compression)
 * [Next Steps](#next-steps)
   
 
@@ -22,8 +23,6 @@ CLP is currently released as source, so you'll need to build it before running i
 * We have built and tested CLP on **Ubuntu 18.04 (bionic)** and **Ubuntu 20.04 (focal)**.
   * If you have trouble building for another OS, file an issue and we may be able to help.
 * A compiler that supports c++14
-* By default, CLP is built with static linking, so you shouldn't need to install any other 
-  dependencies to run it.
 
 # Building
 * To build, we require some source dependencies, packages from package managers, and libraries built from source.
@@ -37,14 +36,16 @@ tools/scripts/deps-download/download-all.sh
 This will download:
 * [Catch2](https://github.com/catchorg/Catch2.git) (v2.13.6)
 * [date](https://github.com/HowardHinnant/date.git) (v3.0.1)
+* [json](https://github.com/nlohmann/json.git) (v3.10.2)
 * [SQLite3](https://www.sqlite.org/download.html) (v3.36.0)
+* [yaml-cpp](https://github.com/jbeder/yaml-cpp.git) (v0.7.0)
 
 ## Packages
 If you're using apt-get, you can use the following command to install all:
 ```shell
 sudo apt-get install -y ca-certificates checkinstall cmake build-essential \
 libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev \
-libssl-dev pkg-config wget zlib1g-dev
+libssl-dev pkg-config rsync wget zlib1g-dev
 ```
 
 This will download:
@@ -57,6 +58,7 @@ This will download:
 * libboost-program-options-dev
 * libssl-dev
 * pkg-config
+* rsync
 * wget
 * zlib1g-dev
 
@@ -67,6 +69,7 @@ so we've included some scripts to download, compile, and install them:
 ./tools/scripts/lib_install/fmtlib.sh 8.0.1
 ./tools/scripts/lib_install/libarchive.sh 3.5.1
 ./tools/scripts/lib_install/lz4.sh 1.8.2
+./tools/scripts/lib_install/mariadb-connector-c.sh 3.2.3
 ./tools/scripts/lib_install/spdlog.sh 1.9.2
 ./tools/scripts/lib_install/zstandard.sh 1.4.9
 ```
@@ -136,7 +139,31 @@ More usage instructions can be found by running:
 ./clg --help
 ```
 
+# Parallel Compression
+By default, `clp` uses an embedded SQLite database, so each directory containing archives can only
+be accessed by a single `clp` instance.
+
+To enable parallel compression to the same archives directory, `clp`/`clg` can be configured to
+use a MySQL-type database (MariaDB) as follows: 
+
+* Install and configure MariaDB using the instructions for your platform
+* Create a user that has privileges to create databases, create tables, insert records, and delete
+  records.
+* Copy and change `config/metadata-db.yml`, setting the type to `mysql` and uncommenting the MySQL 
+  parameters.
+* Install the MariaDB and PyYAML Python packages `pip3 install mariadb PyYAML`
+  * This is necessary to run the database initialization script. If you prefer, you can run the 
+    SQL statements in `tools/scripts/db/init-db.py` directly.
+* Run `tools/scripts/db/init-db.py` with the updated config file. This will initialize the 
+  database CLP requires.
+* Run `clp` or `clg` as before, with the addition of the `--db-config-file` option pointing at 
+  the updated config file.
+* To compress in parallel, simply run another instance of `clp` concurrently.
+
+Note that currently, decompression (`clp x`) and search (`clg`) can only be run with a single 
+instance. We are in the process of open-sourcing parallelizable versions of these as well.
+
 # Next Steps
-This is our initial open-source release which we will be constantly updating with bug fixes, features, etc.
+This is our open-source release which we will be constantly updating with bug fixes, features, etc.
 If you would like a feature or want to report a bug, please file an issue and we'll be happy to engage.
 We also welcome any contributions!

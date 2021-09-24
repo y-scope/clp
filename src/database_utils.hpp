@@ -38,6 +38,13 @@ std::string get_placeholders_sql (size_t num_placeholders);
 std::string get_numbered_placeholders_sql (size_t num_placeholders);
 
 /**
+ * Gets the SQL to set a list of fields to placeholders in the form "field_name1 = ?,field_name2 = ?,..."
+ * @param field_names
+ * @param begin_ix Which field to start from
+ * @return The SQL
+ */
+std::string get_set_field_sql (const std::vector<std::string>& field_names, size_t begin_ix, size_t end_ix);
+/**
  * Gets the SQL to set a list of fields to numbered placeholders in the form "field_name1 = ?1,field_name2 = ?2,..."
  * @param field_names_and_types
  * @param begin_ix Which field to start from

@@ -13,6 +13,9 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
+// json
+#include "../../../submodules/json/single_include/nlohmann/json.hpp"
+
 // spdlog
 #include <spdlog/spdlog.h>
 
@@ -54,6 +57,7 @@ namespace streaming_archive { namespace writer {
         m_creator_id = user_config.creator_id;
         m_creator_id_as_string = boost::uuids::to_string(m_creator_id);
         m_creation_num = user_config.creation_num;
+        m_print_archive_stats_progress = user_config.print_archive_stats_progress;
 
         boost::system::error_code boost_error_code;
 
@@ -146,8 +150,11 @@ namespace streaming_archive { namespace writer {
         }
 
         m_global_metadata_db = user_config.global_metadata_db;
+
+        m_global_metadata_db->open();
         m_global_metadata_db->add_archive(m_id_as_string, user_config.storage_id, m_stable_uncompressed_size, m_stable_size, m_creator_id_as_string,
                                           m_creation_num);
+        m_global_metadata_db->close();
 
         // Open log-type dictionary
         string logtype_dict_path = archive_path_string + '/' + cLogTypeDictFilename;
@@ -431,7 +438,7 @@ namespace streaming_archive { namespace writer {
 
         m_metadata_db.update_files(files);
 
-        m_global_metadata_db->update_files(m_id_as_string, files);
+        m_global_metadata_db->update_metadata_for_files(m_id_as_string, files);
 
         // Mark files' metadata as clean
         for (auto file : files) {
@@ -468,15 +475,16 @@ namespace streaming_archive { namespace writer {
             m_stable_uncompressed_size += file->get_num_uncompressed_bytes();
         }
 
+        m_global_metadata_db->open();
         persist_file_metadata(files);
+        update_metadata();
+        m_global_metadata_db->close();
 
         for (auto file : files) {
             file->cleanup_after_segment_insertion();
             delete file;
         }
         files.clear();
-
-        update_metadata();
     }
 
     void Archive::add_empty_directories (const vector<string>& empty_directory_paths) {
@@ -531,5 +539,13 @@ namespace streaming_archive { namespace writer {
         m_metadata_file_writer.write_numeric_value(stable_size);
 
         m_global_metadata_db->update_archive_size(m_id_as_string, stable_uncompressed_size, stable_size);
+
+        if (m_print_archive_stats_progress) {
+            nlohmann::json json_msg;
+            json_msg["id"] = m_id_as_string;
+            json_msg["uncompressed_size"] = stable_uncompressed_size;
+            json_msg["size"] = stable_size;
+            std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore) << std::endl;
+        }
     }
 } }

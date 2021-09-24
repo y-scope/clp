@@ -29,13 +29,12 @@ namespace clp {
          * Compresses a file with the given path into the archive
          * @param target_data_size_of_dicts
          * @param archive_user_config
-         * @param print_archive_ids
          * @param target_encoded_file_size
          * @param file_to_compress
          * @param archive_writer
          * @return true if the file was compressed successfully, false otherwise
          */
-        bool compress_file (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config, bool print_archive_ids,
+        bool compress_file (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
                             size_t target_encoded_file_size, const FileToCompress& file_to_compress, streaming_archive::writer::Archive& archive_writer);
 
     private:
@@ -44,14 +43,13 @@ namespace clp {
          * Parses and encodes content from the given reader into the given archive_writer
          * @param target_data_size_of_dicts
          * @param archive_user_config
-         * @param print_archive_ids
          * @param target_encoded_file_size
          * @param path_for_compression
          * @param group_id
          * @param archive_writer
          * @param reader
          */
-        void parse_and_encode (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config, bool print_archive_ids,
+        void parse_and_encode (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
                                size_t target_encoded_file_size, const std::string& path_for_compression, group_id_t group_id,
                                streaming_archive::writer::Archive& archive_writer, ReaderInterface& reader);
 
@@ -59,14 +57,13 @@ namespace clp {
          * Tries to compress the given file as if it were a generic archive_writer
          * @param target_data_size_of_dicts
          * @param archive_user_config
-         * @param print_archive_ids
          * @param target_encoded_file_size
          * @param file_to_compress
          * @param archive_writer
          * @return true if all files were compressed successfully, false otherwise
          */
         bool try_compressing_as_archive (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
-                                         bool print_archive_ids, size_t target_encoded_file_size, const FileToCompress& file_to_compress,
+                                         size_t target_encoded_file_size, const FileToCompress& file_to_compress,
                                          streaming_archive::writer::Archive& archive_writer);
 
         // Variables

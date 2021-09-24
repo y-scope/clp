@@ -14,7 +14,8 @@
 #include <spdlog/spdlog.h>
 
 // Project headers
-#include "../GlobalMetadataDB.hpp"
+#include "../GlobalMySQLMetadataDB.hpp"
+#include "../GlobalSQLiteMetadataDB.hpp"
 #include "../streaming_archive/writer/Archive.hpp"
 #include "../Utils.hpp"
 #include "FileCompressor.hpp"
@@ -55,8 +56,6 @@ namespace clp {
     bool compress (CommandLineArguments& command_line_args, vector<FileToCompress>& files_to_compress, const vector<string>& empty_directory_paths,
                    vector<FileToCompress>& grouped_files_to_compress, size_t target_encoded_file_size)
     {
-        GlobalMetadataDB global_metadata_db;
-
         auto output_dir = boost::filesystem::path(command_line_args.get_output_dir());
 
         // Create output directory in case it doesn't exist
@@ -66,8 +65,22 @@ namespace clp {
             return false;
         }
 
-        auto db_path = output_dir / streaming_archive::cMetadataDBFileName;
-        global_metadata_db.open(db_path.string());
+        const auto& global_metadata_db_config = command_line_args.get_metadata_db_config();
+        std::unique_ptr<GlobalMetadataDB> global_metadata_db;
+        switch (global_metadata_db_config.get_metadata_db_type()) {
+            case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
+                auto global_metadata_db_path = output_dir / streaming_archive::cMetadataDBFileName;
+                global_metadata_db = std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
+                break;
+            }
+            case GlobalMetadataDBConfig::MetadataDBType::MySQL:
+                global_metadata_db = std::make_unique<GlobalMySQLMetadataDB>(global_metadata_db_config.get_metadata_db_host(),
+                                                                             global_metadata_db_config.get_metadata_db_port(),
+                                                                             global_metadata_db_config.get_metadata_db_username(),
+                                                                             global_metadata_db_config.get_metadata_db_password(),
+                                                                             global_metadata_db_config.get_metadata_db_name());
+                break;
+        }
 
         auto uuid_generator = boost::uuids::random_generator();
 
@@ -80,14 +93,12 @@ namespace clp {
         archive_user_config.target_segment_uncompressed_size = command_line_args.get_target_segment_uncompressed_size();
         archive_user_config.compression_level = command_line_args.get_compression_level();
         archive_user_config.output_dir = command_line_args.get_output_dir();
-        archive_user_config.global_metadata_db = &global_metadata_db;
+        archive_user_config.global_metadata_db = global_metadata_db.get();
+        archive_user_config.print_archive_stats_progress = command_line_args.print_archive_stats_progress();
 
         // Open archive
         streaming_archive::writer::Archive archive_writer;
         archive_writer.open(archive_user_config);
-        if (command_line_args.print_archive_ids()) {
-            cout << archive_writer.get_id_as_string() << endl;
-        }
 
         archive_writer.add_empty_directories(empty_directory_paths);
 
@@ -104,12 +115,10 @@ namespace clp {
         sort(files_to_compress.begin(), files_to_compress.end(), file_lt_last_write_time_comparator);
         for (auto rit = files_to_compress.crbegin(); rit != files_to_compress.crend(); ++rit) {
             if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dictionaries) {
-                split_archive(archive_user_config, command_line_args.print_archive_ids(), archive_writer);
+                split_archive(archive_user_config, archive_writer);
             }
 
-            if (false == file_compressor.compress_file(target_data_size_of_dictionaries, archive_user_config, command_line_args.print_archive_ids(),
-                                                       target_encoded_file_size, *rit, archive_writer))
-            {
+            if (false == file_compressor.compress_file(target_data_size_of_dictionaries, archive_user_config, target_encoded_file_size, *rit, archive_writer)) {
                 all_files_compressed_successfully = false;
             }
             if (command_line_args.show_progress()) {
@@ -123,11 +132,11 @@ namespace clp {
         // Compress grouped files
         for (const auto& file_to_compress : grouped_files_to_compress) {
             if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dictionaries) {
-                split_archive(archive_user_config, command_line_args.print_archive_ids(), archive_writer);
+                split_archive(archive_user_config, archive_writer);
             }
 
-            if (false == file_compressor.compress_file(target_data_size_of_dictionaries, archive_user_config, command_line_args.print_archive_ids(),
-                                                       target_encoded_file_size, file_to_compress, archive_writer))
+            if (false == file_compressor.compress_file(target_data_size_of_dictionaries, archive_user_config, target_encoded_file_size, file_to_compress,
+                                                       archive_writer))
             {
                 all_files_compressed_successfully = false;
             }
@@ -139,11 +148,8 @@ namespace clp {
 
         archive_writer.close();
 
-        global_metadata_db.close();
-
         return all_files_compressed_successfully;
     }
-
 
     bool read_and_validate_grouped_file_list (const boost::filesystem::path& path_prefix_to_remove, const string& list_path,
                                               vector<FileToCompress>& grouped_files)
