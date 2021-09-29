@@ -1,9 +1,12 @@
-CLP is a tool capable of losslessly compressing text logs and searching the compressed logs without decompression.
+# CLP
+
+Compressed Log Processor (CLP) is a tool capable of losslessly compressing text logs and searching the compressed logs without decompression.
 To learn more about it, you can read our [paper](https://www.usenix.org/system/files/osdi21-rodrigues.pdf).
 
-clp-core is part of a larger CLP package that can be built from [clp-packager](https://github.com/y-scope/clp-packager).
+🔔 clp-core is part of a larger CLP package that can be built from [clp-packager](https://github.com/y-scope/clp-packager).
 
-# Contents
+## Contents
+
 * [Getting Started](#getting-started)
 * [Requirements](#requirements)
 * [Building](#building)
@@ -18,18 +21,22 @@ clp-core is part of a larger CLP package that can be built from [clp-packager](h
 * [Next Steps](#next-steps)
   
 
-# Getting Started
+## Getting Started
+
 CLP is currently released as source, so you'll need to build it before running it.
 
-# Requirements
+## Requirements
+
 * We have built and tested CLP on **Ubuntu 18.04 (bionic)** and **Ubuntu 20.04 (focal)**.
   * If you have trouble building for another OS, file an issue and we may be able to help.
 * A compiler that supports c++14
 
-# Building
+## Building
+
 * To build, we require some source dependencies, packages from package managers, and libraries built from source.
 
-## Source Dependencies
+### Source Dependencies
+
 We use both git submodules and third-party source packages. To download all, you can run this script:
 ```shell
 tools/scripts/deps-download/download-all.sh
@@ -42,7 +49,8 @@ This will download:
 * [SQLite3](https://www.sqlite.org/download.html) (v3.36.0)
 * [yaml-cpp](https://github.com/jbeder/yaml-cpp.git) (v0.7.0)
 
-## Packages
+### Packages
+
 If you're using apt-get, you can use the following command to install all:
 ```shell
 sudo apt-get install -y ca-certificates checkinstall cmake build-essential \
@@ -64,7 +72,8 @@ This will download:
 * wget
 * zlib1g-dev
 
-## Libraries
+### Libraries
+
 The latest versions of some packages are not offered by apt repositories,
 so we've included some scripts to download, compile, and install them:
 ```shell
@@ -76,7 +85,8 @@ so we've included some scripts to download, compile, and install them:
 ./tools/scripts/lib_install/zstandard.sh 1.4.9
 ```
 
-## Build
+### Build
+
 * Configure the cmake project:
   ```shell
   mkdir build
@@ -89,12 +99,14 @@ so we've included some scripts to download, compile, and install them:
   make
   ```
 
-# Running
+## Running
+
 * CLP contains two executables: `clp` and `clg`
     * `clp` is used for compressing and extracting logs
     * `clg` is used for performing wildcard searches on the compressed logs
 
-## `clp`
+### `clp`
+
 To compress some logs:
 ```shell
 ./clp c archives-dir /home/my/logs
@@ -122,7 +134,8 @@ More usage instructions can be found by running:
 ./clp --help
 ```
 
-## `clg`
+### `clg`
+
 To search the compressed logs:
 ```shell
 ./clg archives-dir " a *wildcard* search phrase "
@@ -141,7 +154,8 @@ More usage instructions can be found by running:
 ./clg --help
 ```
 
-# Parallel Compression
+## Parallel Compression
+
 By default, `clp` uses an embedded SQLite database, so each directory containing archives can only
 be accessed by a single `clp` instance.
 
@@ -165,7 +179,8 @@ use a MySQL-type database (MariaDB) as follows:
 Note that currently, decompression (`clp x`) and search (`clg`) can only be run with a single 
 instance. We are in the process of open-sourcing parallelizable versions of these as well.
 
-# Next Steps
+## Next Steps
+
 This is our open-source release which we will be constantly updating with bug fixes, features, etc.
 If you would like a feature or want to report a bug, please file an issue and we'll be happy to engage.
 We also welcome any contributions!
