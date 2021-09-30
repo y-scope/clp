@@ -1,7 +1,6 @@
 #!/bin/bash
 echo "Installing CLP core"
-cd ${WORKING_DIR}/clp-core
-tools/scripts/deps-download/download-all.sh
+cd ${WORKING_DIR}/core
 mkdir build
 cd build
 cmake ../

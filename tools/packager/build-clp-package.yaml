@@ -1,25 +1,16 @@
-working-dir: out
-artifact-name: clp-package-ubuntu-focal
-build-parallelism: 0   # 0 -> attempt to compile with available cores on the machine
-builder-dockerhub-image: whywhywhywhywhywhy/builders:x86-ubuntu-focal-20210915
+working_dir: out
+version: 0.0.0
+artifact_name: clp-package-ubuntu-focal
+build_parallelism: 0   # 0 -> attempt to compile with available cores on the machine
+builder_dockerhub_image: whywhywhywhywhywhy/builders:x86-ubuntu-focal-20210915
 components:
-  clp-package-base:
-    type: git
-    url: https://github.com/y-scope/clp-package-base.git
-    branch: main
-  clp-compression-job-handler:
-    type: git
-    url: https://github.com/y-scope/clp-compression-job-handler.git
-    branch: main
-  clp-job-orchestration:
-    type: git
-    url: https://github.com/y-scope/clp-job-orchestration.git
-    branch: main
-  clp-py-utils:
-    type: git
-    url: https://github.com/y-scope/clp-py-utils.git
-    branch: main
-  clp-core:
-    type: git
-    url: https://github.com/y-scope/clp-core.git
-    branch: main
+  - name: package-base
+    type: local
+  - name: compression-job-handler
+    type: local
+  - name: job-orchestration
+    type: local
+  - name: clp-py-utils
+    type: local
+  - name: core
+    type: local

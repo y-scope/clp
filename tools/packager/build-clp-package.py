@@ -1,13 +1,16 @@
 import logging
 import pathlib
+import platform
 import shutil
 import subprocess
 import sys
+import typing
 import uuid
 from concurrent.futures import ProcessPoolExecutor
 
 import psutil
 import yaml
+from pydantic import BaseModel, validator
 from yaml.loader import SafeLoader
 
 # Setup logging
@@ -19,6 +22,48 @@ logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s')
 logging_console_handler.setFormatter(logging_formatter)
 log.addHandler(logging_console_handler)
+
+
+class ClpComponent(BaseModel):
+    name: str
+    type: str
+    url: str = None
+    branch: str = None
+    commit: str = None
+
+    @validator('name', always=True)
+    def component_name_validation(cls, v):
+        currently_supported_component_names = \
+            ['package-base', 'compression-job-handler', 'job-orchestration', 'clp-py-utils', 'core']
+        if v not in currently_supported_component_names:
+            raise ValueError(f'The specified clp component name "{v}" not supported')
+        return v
+
+    @validator('type', always=True)
+    def component_type_validation(cls, v, values, **kwargs):
+        if 'git' == v:
+            if not values['url']:
+                raise ValueError('git url must be specified')
+            parameter_count = int(values['branch']) + int(values['commit'])
+            if 0 == parameter_count:
+                raise ValueError('git branch or commit must be specified')
+            elif 2 == parameter_count:
+                raise ValueError('can only specify either git branch or commit')
+        elif 'local' == v:
+            pass  # Nothing needs to be validated
+        else:
+            raise ValueError(f'The specified clp component type "{v}" not supported')
+        return v
+
+
+class PackagingConfig(BaseModel):
+    working_dir: str
+    version: str
+    arch: str = platform.machine()
+    artifact_name: str
+    build_parallelism: int
+    builder_dockerhub_image: str
+    components: typing.List[ClpComponent]
 
 
 def check_dependencies():
@@ -36,9 +81,13 @@ def check_dependencies():
         raise EnvironmentError
 
 
-def clone_and_checkout(component_name, component, working_dir):
-    git_clone_command = ['git', 'clone', '-b', component['branch'], '--depth', '1', component['url'], component_name]
-    subprocess.run(git_clone_command, cwd=working_dir, check=True)
+def clone_and_checkout(component: ClpComponent, working_dir: pathlib.Path):
+    if component.branch:
+        subprocess.run(['git', 'clone', '-b', component.branch, '--depth', '1', component.url, component.name],
+                       cwd=working_dir, check=True)
+    elif component.commit:
+        subprocess.run(['git', 'clone', component.url, component.name], cwd=working_dir, check=True)
+        subprocess.run(['git', 'checkout', component.commit], cwd=working_dir / component.name, check=True)
 
 
 def main(argv):
@@ -50,16 +99,20 @@ def main(argv):
 
     # Parse yaml file
     with open('build-clp-package.yaml') as config_file:
-        config = yaml.load(config_file, Loader=SafeLoader)
+        try:
+            packaging_config = PackagingConfig.parse_obj(yaml.load(config_file, Loader=SafeLoader))
+        except Exception as ex:
+            log.error(ex)
+            return -1
 
     # Limit maximum build parallelization degree to minimize chance of running out of RAM
     # Minimum 2GB per core to ensure successful compilation
-    if int(config['build-parallelism']) == 0:
+    if int(packaging_config.build_parallelism) == 0:
         build_parallelization = min(int(psutil.virtual_memory().total / (2 * 1024 * 1024 * 1024)), psutil.cpu_count())
-    elif int(config['build-parallelism']) > 0:
-        build_parallelization = int(config['build-parallelism'])
+    elif int(packaging_config.build_parallelism) > 0:
+        build_parallelization = int(packaging_config.build_parallelism)
     else:
-        log.error(f'Unsupported parallelization: {str(config["build-parallelism"])}')
+        log.error(f'Unsupported parallelization: {str(packaging_config.build_parallelism)}')
         return
 
     # Infer install scripts directory
@@ -67,7 +120,7 @@ def main(argv):
     container_install_scripts_dir = pathlib.PurePath('/tmp/install-scripts')
 
     # Remove existing out directory to ensure clean state prior to cloning directories
-    host_working_dir = pathlib.Path(config['working-dir'])
+    host_working_dir = pathlib.Path(packaging_config.working_dir).resolve()
     try:
         shutil.rmtree(host_working_dir)
     except FileNotFoundError:
@@ -78,29 +131,38 @@ def main(argv):
         return
 
     host_working_dir.mkdir(parents=True, exist_ok=True)
-    host_working_dir = host_working_dir.resolve()
     container_working_directory = pathlib.PurePath('/tmp/out')
+    versioned_artifact_name = f'{packaging_config.artifact_name}-{packaging_config.arch}-v{packaging_config.version}'
+    artifact_dir = (host_working_dir / versioned_artifact_name).resolve()
 
-    # # Clone and check out in parallel
+    # Download or copy source code to build working directory
     with ProcessPoolExecutor() as executor:
-        for component_name, component in config['components'].items():
-            executor.submit(clone_and_checkout, component_name, component, host_working_dir)
+        for component in packaging_config.components:
+            if 'git' == component.type:
+                # For "git" type components, clone and checkout
+                executor.submit(clone_and_checkout, component, host_working_dir)
+            elif 'local' == component.type:
+                # For "local" type components, copy
+                shutil.copytree(f'../../components/{component.name}', host_working_dir / component.name)
 
-    # # Create a copy of the base package & clean up misc files
-    artifact_dir = (host_working_dir / config['artifact-name']).resolve()
-    shutil.copytree(host_working_dir / 'clp-package-base', artifact_dir)
-    shutil.rmtree(artifact_dir / '.git', ignore_errors=True)
+    # For CLP core, we must download all the dependencies in addition to cloning/copying the repository
+    log.info('Cloning clp core dependencies')
+    subprocess.run(['./download-all.sh'], cwd=host_working_dir / 'core' / 'tools' / 'scripts' / 'deps-download')
+
+    # Make a copy of package-base and name it as the {artifact_name}-{version}
+    shutil.copytree(host_working_dir / 'package-base', artifact_dir)
+    shutil.rmtree(artifact_dir / 'package-base' / '.git', ignore_errors=True)
 
     # Start build environment container
     build_environment_container_name = f'clp-builder-{str(uuid.uuid4())}'
-
+    log.info(f'Starting build environment container {build_environment_container_name}')
     try:
         build_environment_startup_cmd = [
             'docker', 'run', '-di',
             '--name', build_environment_container_name,
             '-v', f'{str(host_working_dir)}:{str(container_working_directory)}',
             '-v', f'{str(host_install_scripts_dir)}:{str(container_install_scripts_dir)}',
-            config['builder-dockerhub-image']
+            packaging_config.builder_dockerhub_image
         ]
         subprocess.run(build_environment_startup_cmd, check=True)
 
@@ -108,7 +170,7 @@ def main(argv):
             'docker', 'exec', '-it',
             '-e', f'WORKING_DIR={str(container_working_directory)}',
             '-e', f'INSTALL_SCRIPT_DIR={str(container_install_scripts_dir)}',
-            '-e', f'ARTIFACT_NAME={config["artifact-name"]}',
+            '-e', f'ARTIFACT_NAME={versioned_artifact_name}',
             '-e', f'BUILD_PARALLELISM={str(build_parallelization)}',
             '-w', str(container_working_directory),
             build_environment_container_name
@@ -119,24 +181,25 @@ def main(argv):
             'install-compression-job-handler.sh',
             'install-job-orchestration.sh',
             'install-clp-py-utils.sh',
-            'install-clp-core.sh'
+            'install-core.sh'
         ]
         subprocess.run(container_exec_prefix +
                        ['chmod', 'ugo+x', '-R', f'{str(container_install_scripts_dir)}'], check=True)
         for script in scripts:
             container_exec_cmd = container_exec_prefix + [str(container_install_scripts_dir / script)]
+            log.info(' '.join(container_exec_cmd))
             subprocess.run(container_exec_cmd, check=True)
 
         # Invoke left-over commands
         cmds = [
             'pip3 install celery==5.1.2',
-            f'cp /usr/local/bin/celery {config["artifact-name"]}/bin/',
-            f'chmod -R ugo+rw {str(container_working_directory)}/clp-core',
-            f'chmod -R ugo+x {config["artifact-name"]}',
-            f'chmod -R ugo+x {config["artifact-name"]}/sbin',
-            f'chmod -R ugo+rw {config["artifact-name"]}',
-            f'tar -czf {config["artifact-name"]}.tar.gz {config["artifact-name"]}',
-            f'chmod ugo+rw {config["artifact-name"]}.tar.gz'
+            f'cp /usr/local/bin/celery {versioned_artifact_name}/bin/',
+            f'chmod -R ugo+rw {str(container_working_directory)}/core',
+            f'chmod -R ugo+x {versioned_artifact_name}',
+            f'chmod -R ugo+x {versioned_artifact_name}/sbin',
+            f'chmod -R ugo+rw {versioned_artifact_name}',
+            f'tar -czf {versioned_artifact_name}.tar.gz {versioned_artifact_name}',
+            f'chmod ugo+rw {versioned_artifact_name}.tar.gz'
         ]
         for cmd in cmds:
             container_exec_cmd = container_exec_prefix + cmd.split()
@@ -157,7 +220,7 @@ def main(argv):
             pass
 
         # Verify whether artifact is generated
-        artifact_tarball_path = artifact_dir.parent / f'{config["artifact-name"]}.tar.gz'
+        artifact_tarball_path = host_working_dir / f'{versioned_artifact_name}.tar.gz'
         if artifact_tarball_path.exists():
             log.info(f'Artifact built successfully: {str(artifact_tarball_path)}')
         else:
