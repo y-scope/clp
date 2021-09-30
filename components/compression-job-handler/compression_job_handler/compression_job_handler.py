@@ -11,6 +11,8 @@ import msgpack
 import mysql.connector
 import zstandard
 import zstandard as zstd
+from pydantic import ValidationError
+
 from clp_py_utils.clp_config import CLPConfig
 from clp_py_utils.clp_io_config import PathsToCompress, InputConfig, OutputConfig, ClpIoConfig
 from clp_py_utils.compression import FileMetadata, FilesPartition, \
@@ -18,8 +20,6 @@ from clp_py_utils.compression import FileMetadata, FilesPartition, \
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.sql_adapter import SQL_Adapter
-from pydantic import ValidationError
-
 from .utils.common import JobCompletionStatus
 
 # Setup logging

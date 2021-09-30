@@ -5,10 +5,10 @@ import sys
 from contextlib import closing
 
 from pydantic import ValidationError
+from sql_adapter import SQL_Adapter
 
 from clp_py_utils.clp_config import CLPConfig
 from clp_py_utils.core import read_yaml_config_file
-from sql_adapter import SQL_Adapter
 
 # Setup logging
 # Create logger

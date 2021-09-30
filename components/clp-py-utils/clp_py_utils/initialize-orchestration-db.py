@@ -5,10 +5,10 @@ import sys
 from contextlib import closing
 
 from pydantic import ValidationError
+from sql_adapter import SQL_Adapter
 
 from clp_py_utils.clp_config import CLPConfig
 from clp_py_utils.core import read_yaml_config_file
-from sql_adapter import SQL_Adapter
 
 # Setup logging
 # Create logger
@@ -50,7 +50,8 @@ def main(argv):
                     INDEX `JOB_STATUS` (`job_status`) USING BTREE
                 ) ROW_FORMAT=DYNAMIC
                 ;
-            """)
+                """
+            )
 
             scheduling_db_cursor.execute("""
                 CREATE TABLE IF NOT EXISTS `compression_tasks` (
@@ -72,7 +73,8 @@ def main(argv):
                     REFERENCES `compression_jobs` (`job_id`) ON UPDATE NO ACTION ON DELETE NO ACTION
                 ) ROW_FORMAT=DYNAMIC
                 ;
-            """)
+                """
+            )
 
             scheduling_db.commit()
             logger.info('Successfully created compression_jobs and compression_tasks orchestration tables')

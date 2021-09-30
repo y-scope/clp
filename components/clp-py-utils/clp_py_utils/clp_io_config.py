@@ -1,5 +1,7 @@
-from pydantic import BaseModel
 import typing
+
+from pydantic import BaseModel
+
 
 class PathsToCompress(BaseModel):
     file_paths: typing.List[str]

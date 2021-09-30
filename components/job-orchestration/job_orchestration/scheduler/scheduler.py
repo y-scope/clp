@@ -12,12 +12,12 @@ from contextlib import closing
 import zstandard
 from pydantic import ValidationError
 
+from clp_py_utils.clp_config import CLPConfig, Database
+from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compression.task import compress
 from job_orchestration.scheduler.results_consumer import ReconnectingResultsConsumer
 from job_orchestration.scheduler.scheduler_data \
     import Job, Task, TaskUpdate, TaskCompletionUpdate, TaskFailureUpdate
-from clp_py_utils.clp_config import CLPConfig, Database
-from clp_py_utils.sql_adapter import SQL_Adapter
 
 # Setup logging
 # Create logger
