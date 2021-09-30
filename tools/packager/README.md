@@ -19,7 +19,9 @@ compiling, and bundling it.
 pip3 install -r requirements.txt
 python3 build-clp-package.py --config ../../config/build-clp-package.yaml
 ```
-The package should be available at `out/<versioned artifact name>.tar.gz`
+
+* After a successful build, the package will be available at `out/<versioned artifact name>.tar.gz`.
+* The package README.md is copied from [package-base](../../components/package-base).
 
 
 ## Common Problems
