@@ -6,7 +6,7 @@ This repository contains scripts that automatically download CLP's source, compi
 
 * An OS capable of running a Linux-based docker
 * 10GB of disk space
-* Over 2GB of RAM per CPU core
+* At least 2GB of RAM
 * An active internet connection
 * `docker`, `python3`, `pip`, and `git` pre-installed and available on the user's path
   * `docker` must be runnable [without superuser privileges](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user)
@@ -17,19 +17,7 @@ This repository contains scripts that automatically download CLP's source, compi
 
 ```bash
 pip3 install -r requirements.txt
-python3 build-clp-package.py
+python3 build-clp-package.py --config ../../config/build-clp-package.yaml
 ```
-The package will be available at `out/clp-package-ubuntu-focal.tar.gz`
+The package should be available at `out/<versioned artifact name>.tar.gz`
 
-## Common build problems
-
-### Not enough memory to build CLP
-
-```bash
-compilation terminated.
-...
-c++: fatal error: Killed signal terminated program cc1plus
-```
-
-**Solution:** Set `build-parallelism` in `build-clp-package.yaml` to a value that corresponds to
-`<available RAM (GB)> / 2`.

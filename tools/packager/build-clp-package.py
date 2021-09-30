@@ -1,3 +1,4 @@
+import argparse
 import logging
 import pathlib
 import platform
@@ -91,6 +92,9 @@ def clone_and_checkout(component: ClpComponent, working_dir: pathlib.Path):
 
 
 def main(argv):
+    args_parser = argparse.ArgumentParser(description='CLP package builder')
+    args_parser.add_argument('--config', '-c', required=True, help='CLP configuration file.')
+
     try:
         check_dependencies()
     except EnvironmentError:
@@ -98,7 +102,7 @@ def main(argv):
         return
 
     # Parse yaml file
-    with open('build-clp-package.yaml') as config_file:
+    with open('../../config/build-clp-package.yaml') as config_file:
         try:
             packaging_config = PackagingConfig.parse_obj(yaml.load(config_file, Loader=SafeLoader))
         except Exception as ex:
