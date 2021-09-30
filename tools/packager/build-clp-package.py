@@ -90,10 +90,16 @@ def clone_and_checkout(component: ClpComponent, working_dir: pathlib.Path):
         subprocess.run(['git', 'clone', component.url, component.name], cwd=working_dir, check=True)
         subprocess.run(['git', 'checkout', component.commit], cwd=working_dir / component.name, check=True)
 
+    # For CLP core, we must download all the dependencies in addition to cloning/copying the repository
+    if 'core' == component.name:
+        log.info('Cloning clp core submodule dependencies')
+        subprocess.run(['./download-all.sh'], cwd=working_dir / 'core' / 'tools' / 'scripts' / 'deps-download')
+
 
 def main(argv):
     args_parser = argparse.ArgumentParser(description='CLP package builder')
     args_parser.add_argument('--config', '-c', required=True, help='CLP configuration file.')
+    parsed_args = args_parser.parse_args(argv[1:])
 
     try:
         check_dependencies()
@@ -102,7 +108,7 @@ def main(argv):
         return
 
     # Parse yaml file
-    with open('../../config/build-clp-package.yaml') as config_file:
+    with open(parsed_args.config, 'r') as config_file:
         try:
             packaging_config = PackagingConfig.parse_obj(yaml.load(config_file, Loader=SafeLoader))
         except Exception as ex:
@@ -146,12 +152,15 @@ def main(argv):
                 # For "git" type components, clone and checkout
                 executor.submit(clone_and_checkout, component, host_working_dir)
             elif 'local' == component.type:
+                # For CLP core, we must download all the dependencies in addition to cloning/copying the repository
+                if 'core' == component.name:
+                    log.info('Cloning clp core submodule dependencies')
+                    subprocess.run(['./download-all.sh'],
+                                   cwd=host_working_dir / 'core' / 'tools' / 'scripts' / 'deps-download')
+
                 # For "local" type components, copy
                 shutil.copytree(f'../../components/{component.name}', host_working_dir / component.name)
 
-    # For CLP core, we must download all the dependencies in addition to cloning/copying the repository
-    log.info('Cloning clp core dependencies')
-    subprocess.run(['./download-all.sh'], cwd=host_working_dir / 'core' / 'tools' / 'scripts' / 'deps-download')
 
     # Make a copy of package-base and name it as the {artifact_name}-{version}
     shutil.copytree(host_working_dir / 'package-base', artifact_dir)
