@@ -21,3 +21,26 @@ python3 build-clp-package.py --config ../../config/build-clp-package.yaml
 ```
 The package should be available at `out/<versioned artifact name>.tar.gz`
 
+
+## Common Problems
+
+### ModuleNotFoundError
+
+**Error message**: ```ModuleNotFoundError: No module named 'dataclasses'```
+
+**Cause**: When starting the package on some older platforms like Ubuntu 18.04, some required Python modules are not in 
+the standard library
+
+**Solution**: `pip install -r requirements-pre-3.7.txt`
+
+
+### Difficulties with docker installation
+#### Ubuntu 18.04 or 20.04
+```shell
+sudo apt-get update
+sudo apt-get install -y snapd
+sudo snap install docker
+sudo groupadd docker
+sudo usermod -aG docker $USER
+newgrp docker
+```
