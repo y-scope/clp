@@ -1,4 +1,5 @@
 from celery import Celery
+
 from . import celeryconfig
 
 app = Celery('clp_scheduler')

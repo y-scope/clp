@@ -53,7 +53,7 @@ if clp_home is None:
     sys.exit(-1)
 load_bundled_python_lib_path(clp_home)
 
-from clp.package_utils import check_env, prepare_package_and_config
+from clp.package_utils import check_env
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.clp_package_config import CLPPackageConfig
 from clp_py_utils.clp_config import CLPConfig
