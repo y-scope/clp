@@ -55,7 +55,7 @@ if clp_home is None:
     sys.exit(-1)
 load_bundled_python_lib_path(clp_home)
 
-from clp.package_utils import prepare_package_and_config
+from clp.package_utils import prepare_package_and_config, check_dependencies
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.clp_package_config import CLPPackageConfig, ArchiveOutput as PackageArchiveOutput
 from clp_py_utils.clp_config import Database, ArchiveOutput, CLPConfig, Scheduler
@@ -242,6 +242,12 @@ def main(argv):
 
     parsed_args = args_parser.parse_args(argv[1:])
 
+    # Check required system dependencies
+    try:
+        check_dependencies()
+    except EnvironmentError as ex:
+        log.error(ex)
+
     # Infer components to enable
     startup_component_count = parsed_args.start_scheduler_only + parsed_args.start_worker_only
     if startup_component_count > 1:
@@ -409,7 +415,8 @@ def main(argv):
     except subprocess.CalledProcessError as ex:
         log.error(ex.stdout.decode('utf-8'))
         log.error(f'Failed to provision "{clp_package_config.cluster_name}"')
-    except EnvironmentError:
+    except EnvironmentError as ex:
+        log.error(ex)
         log.error(f'Failed to provision "{clp_package_config.cluster_name}"')
 
 
