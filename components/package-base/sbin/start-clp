@@ -59,7 +59,6 @@ from clp.package_utils import prepare_package_and_config
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.clp_package_config import CLPPackageConfig, ArchiveOutput as PackageArchiveOutput
 from clp_py_utils.clp_config import Database, ArchiveOutput, CLPConfig, Scheduler
-from pydantic import ValidationError
 
 
 def provision_docker_network_bridge(clp_cluster_name: str):
@@ -171,13 +170,14 @@ def provision_rabbitmq(cluster_name: str, clp_config: CLPConfig):
 def start_scheduler(cluster_name: str, clp_config: CLPConfig, container_config_file_path: str):
     scheduler_startup_cmd = ['python3', '-u', '-m', 'job_orchestration.scheduler.scheduler',
                              '--config', container_config_file_path]
-    log.info("Starting scheduler service")
-    docker_exec_cmd = ['docker', 'exec', '--detach', '--workdir', '/root/clp',
-                       '-e', 'PYTHONPATH=/root/clp/lib/python3/site-packages',
-                       '-e',
-                       f'BROKER_URL=amqp://{clp_config.scheduler.username}:{clp_config.scheduler.password}@localhost:5672',
-                       # rabbitmq runs on scheduler node
-                       cluster_name]
+    log.info('Starting scheduler service')
+    docker_exec_cmd = [
+        'docker', 'exec', '--detach', '--workdir', '/root/clp',
+        '-e', 'PYTHONPATH=/root/clp/lib/python3/site-packages',
+        '-e', f'BROKER_URL=amqp://{clp_config.scheduler.username}:{clp_config.scheduler.password}@localhost:5672',
+        # rabbitmq runs on scheduler node
+        cluster_name
+    ]
     docker_exec_cmd += scheduler_startup_cmd
     log.debug(docker_exec_cmd)
     try:
@@ -193,17 +193,19 @@ def start_worker(cluster_name: str, clp_config: CLPConfig, num_cpus: int):
                           '--loglevel', 'WARNING',
                           '-Q', 'compression']
     log.info("Starting CLP worker")
-    docker_exec_cmd = ['docker', 'exec', '--detach',
-                       '--workdir', '/root/clp',
-                       '-e', 'CLP_HOME=/root/clp',
-                       '-e', f'CLP_DATA_DIR={clp_config.data_directory}',
-                       '-e', f'CLP_LOGS_DIR={clp_config.logs_directory}',
-                       '-e', 'PYTHONPATH=/root/clp/lib/python3/site-packages',
-                       '-e',
-                       f'BROKER_URL=amqp://{clp_config.scheduler.username}:{clp_config.scheduler.password}@{clp_config.scheduler.host}:5672',
-                       '-e',
-                       f'RESULT_BACKEND=rpc://{clp_config.scheduler.username}:{clp_config.scheduler.password}@{clp_config.scheduler.host}:5672',
-                       cluster_name]
+    docker_exec_cmd = [
+        'docker', 'exec', '--detach',
+        '--workdir', '/root/clp',
+        '-e', 'CLP_HOME=/root/clp',
+        '-e', f'CLP_DATA_DIR={clp_config.data_directory}',
+        '-e', f'CLP_LOGS_DIR={clp_config.logs_directory}',
+        '-e', 'PYTHONPATH=/root/clp/lib/python3/site-packages',
+        '-e', f'BROKER_URL=amqp://{clp_config.scheduler.username}:{clp_config.scheduler.password}'
+              f'@{clp_config.scheduler.host}:5672',
+        '-e', f'RESULT_BACKEND=rpc://{clp_config.scheduler.username}:{clp_config.scheduler.password}'
+              f'@{clp_config.scheduler.host}:5672',
+        cluster_name
+    ]
     docker_exec_cmd += worker_startup_cmd
     log.debug(docker_exec_cmd)
     try:
@@ -261,7 +263,7 @@ def main(argv):
     # Validate uncompressed-log-dir
     uncompressed_log_dir = pathlib.Path(parsed_args.uncompressed_logs_dir).resolve()
     if not (uncompressed_log_dir.exists() and uncompressed_log_dir.is_dir()):
-        log.error(f'The specified uncompressed log directory path is invalid: {str(uncompressed_log_dir)}')
+        log.error(f'The specified uncompressed log directory path is invalid: {uncompressed_log_dir}')
         return
 
     # Infer config file path
@@ -272,7 +274,7 @@ def main(argv):
             if not default_clp_package_config_file.exists():
                 log.info('Generating a default config file.')
                 generate_default_package_config(default_clp_package_config_file)
-            log.info(f'Using default config file at {str(default_clp_package_config_file)}')
+            log.info(f'Using default config file at {default_clp_package_config_file.relative_to(pathlib.Path.cwd())}')
             package_config_file_path = default_clp_package_config_file
         else:
             # Provided a config file
@@ -369,7 +371,7 @@ def main(argv):
             '--network', clp_package_config.cluster_name,
             '--hostname', f'{clp_package_config.cluster_name}',
             '--name', f'{clp_package_config.cluster_name}',
-            '-v', f'{str(clp_home)}:/root/clp',
+            '-v', f'{clp_home}:/root/clp',
             '-v', f'{uncompressed_log_dir}:{uncompressed_log_dir}'
         ]
         if parsed_args.publish_ports:

@@ -59,9 +59,9 @@ def update_task_metadata(db_cursor, task_id, kv: typing.Dict[str, typing.Any]):
         log.error("Must specify at least one field to update")
         raise ValueError
 
-    field_set_expressions = [f'{str(k)}="{str(v)}"' for k, v in kv.items()]
+    field_set_expressions = [f'{k}="{v}"' for k, v in kv.items()]
     query = f'UPDATE compression_tasks SET {", ".join(field_set_expressions)} ' \
-            f'WHERE task_id={str(task_id)};'
+            f'WHERE task_id={task_id};'
     db_cursor.execute(query)
 
 
@@ -70,9 +70,9 @@ def update_job_metadata(db_cursor, job_id, kv):
         log.error("Must specify at least one field to update")
         raise ValueError
 
-    field_set_expressions = [f'{str(k)}="{str(v)}"' for k, v in kv.items()]
+    field_set_expressions = [f'{k}="{v}"' for k, v in kv.items()]
     query = f'UPDATE compression_jobs SET {", ".join(field_set_expressions)} ' \
-            f'WHERE job_id={str(job_id)};'
+            f'WHERE job_id={job_id};'
     db_cursor.execute(query)
 
 
@@ -81,9 +81,9 @@ def increment_job_metadata(db_cursor, job_id, kv):
         log.error("Must specify at least one field to increment")
         raise ValueError
 
-    field_set_expressions = [f'{str(k)}={str(k)}+{str(v)}' for k, v in kv.items()]
+    field_set_expressions = [f'{k}={k}+{v}' for k, v in kv.items()]
     query = f'UPDATE compression_jobs SET {", ".join(field_set_expressions)} ' \
-            f'WHERE job_id={str(job_id)};'
+            f'WHERE job_id={job_id};'
     db_cursor.execute(query)
 
 
@@ -227,7 +227,7 @@ def task_results_consumer(sql_adapter: SQL_Adapter, celery_broker_url):
                     task_duration = max(int((now - task.task_start_time).total_seconds()), 1)
 
                     log.info(f'Task job-{task_update.job_id}-task-{task_update.task_id} '
-                             f'completed in {str(task_duration)} second.')
+                             f'completed in {task_duration} second.')
 
                     update_task_metadata(db_cursor, task_update.task_id, dict(
                         task_status=task_update.status,
@@ -304,7 +304,7 @@ def main(argv):
         pass
     else:
         # Collect new jobs from the database
-        log.info("Starting CLP job scheduler")
+        log.info('Starting CLP job scheduler')
         sql_adapter = SQL_Adapter(clp_config.database)
 
         results_consumer = task_results_consumer(sql_adapter, celery_broker_url)
@@ -317,13 +317,13 @@ def main(argv):
                     search_and_schedule_new_tasks(db_conn, db_cursor, sql_adapter.database_config)
                     update_completed_jobs(db_conn, db_cursor)
             except Exception as ex:
-                log.error("Error in scheduling: ")
+                log.error('Error in scheduling: ')
                 log.error(ex)
             finally:
                 try:
                     time.sleep(clp_config.scheduler.jobs_poll_delay)
                 except KeyboardInterrupt:
-                    log.info("Gracefully shutting down")
+                    log.info('Gracefully shutting down')
                     break
 
         if results_consumer:

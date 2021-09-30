@@ -110,17 +110,17 @@ def validate_path_and_get_info(required_parent_dir: pathlib.Path, path: pathlib.
 
     # Verify that path is absolute
     if not path.is_absolute():
-        raise ValueError(f"'{str(path)}' is not absolute.")
+        raise ValueError(f'"{path}" is not absolute.')
 
     # Verify that path exists
     if not path.exists():
-        raise ValueError(f"'{str(path)}' does not exist.")
+        raise ValueError(f'"{path}" does not exist.')
 
     # Verify that path points to a file/dir within required parent dir
     try:
         path.resolve().relative_to(required_parent_dir)
     except ValueError:
-        raise ValueError(f"'{str(path)}' is not within {str(required_parent_dir)}")
+        raise ValueError(f'"{path}" is not within {required_parent_dir}')
 
     # Convert path to a path within required parent dir if necessary
     # (e.g., if path is a symlink outside parent dir, but points to a file/dir inside parent dir)

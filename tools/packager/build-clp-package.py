@@ -74,20 +74,16 @@ class PackagingConfig(BaseModel):
 
 def check_dependencies():
     try:
-        subprocess.run('command -v git', shell=True, stdout=subprocess.PIPE,
-                       stderr=subprocess.STDOUT, check=True)
+        subprocess.run('command -v git', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
     except subprocess.CalledProcessError:
         log.error('git is not installed on the path.')
         raise EnvironmentError
 
     try:
-        subprocess.run('command -v docker', shell=True, stdout=subprocess.PIPE,
-                       stderr=subprocess.STDOUT, check=True)
-        subprocess.run(['docker', 'ps'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                       check=True)
+        subprocess.run('command -v docker', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
+        subprocess.run(['docker', 'ps'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
     except subprocess.CalledProcessError:
-        log.error('docker is not installed on the path or cannot run without superuser privileges '
-                  '(sudo).')
+        log.error('docker is not installed on the path or cannot run without superuser privileges (sudo).')
         raise EnvironmentError
 
 
@@ -107,22 +103,18 @@ def replace_clp_core_version(project_dir: pathlib.Path, version: str):
 
 def clone_and_checkout(component: ClpComponent, working_dir: pathlib.Path):
     if component.branch:
-        subprocess.run(['git', 'clone', '-b', component.branch, '--depth', '1', component.url,
-                        component.name],
+        subprocess.run(['git', 'clone', '-b', component.branch, '--depth', '1', component.url, component.name],
                        cwd=working_dir, check=True)
     elif component.commit:
-        subprocess.run(['git', 'clone', component.url, component.name], cwd=working_dir,
-                       check=True)
-        subprocess.run(['git', 'checkout', component.commit], cwd=working_dir / component.name,
-                       check=True)
+        subprocess.run(['git', 'clone', component.url, component.name], cwd=working_dir, check=True)
+        subprocess.run(['git', 'checkout', component.commit], cwd=working_dir / component.name, check=True)
 
 
 def clone_and_checkout_clp_core(component: ClpComponent, working_dir: pathlib.Path, version: str):
     clone_and_checkout(component, working_dir)
 
     log.info('Downloading clp core\'s submodules...')
-    subprocess.run(['./download-all.sh'], cwd=working_dir / 'core' / 'tools' / 'scripts' /
-                                              'deps-download')
+    subprocess.run(['./download-all.sh'], cwd=working_dir / 'core' / 'tools' / 'scripts' / 'deps-download')
 
     replace_clp_core_version(working_dir / 'core', version)
 
@@ -149,8 +141,7 @@ def main(argv):
     # Limit maximum build parallelization degree to minimize chance of running out of RAM
     # Minimum 2GB per core to ensure successful compilation
     if packaging_config.build_parallelism == 0:
-        build_parallelization = min(int(psutil.virtual_memory().total / (2 * 1024 * 1024 * 1024)),
-                                    psutil.cpu_count())
+        build_parallelization = min(int(psutil.virtual_memory().total / (2 * 1024 * 1024 * 1024)), psutil.cpu_count())
     elif packaging_config.build_parallelism > 0:
         build_parallelization = int(packaging_config.build_parallelism)
     else:
@@ -174,8 +165,7 @@ def main(argv):
 
     host_working_dir.mkdir(parents=True, exist_ok=True)
     container_working_directory = pathlib.PurePath('/tmp/out')
-    versioned_artifact_name = f'{packaging_config.artifact_name}-{packaging_config.arch}-' \
-                              f'v{packaging_config.version}'
+    versioned_artifact_name = f'{packaging_config.artifact_name}-{packaging_config.arch}-v{packaging_config.version}'
     artifact_dir = (host_working_dir / versioned_artifact_name).resolve()
 
     # Download or copy source code to build working directory
@@ -185,24 +175,20 @@ def main(argv):
             if 'git' == component.type:
                 # For "git" type components, clone and checkout
                 if 'core' == component.name:
-                    executor.submit(clone_and_checkout_clp_core, component, host_working_dir,
-                                    packaging_config.version)
+                    executor.submit(clone_and_checkout_clp_core, component, host_working_dir, packaging_config.version)
                 else:
                     executor.submit(clone_and_checkout, component, host_working_dir)
             elif 'local' == component.type:
                 if 'core' == component.name:
                     log.info('Downloading clp core\'s submodules...')
-                    subprocess.run(['./download-all.sh'], cwd=project_root / 'components' / 'core'
-                                                              / 'tools' / 'scripts' /
-                                                              'deps-download')
+                    cwd = project_root / 'components' / 'core' / 'tools' / 'scripts' / 'deps-download'
+                    subprocess.run(['./download-all.sh'], cwd=cwd)
 
                 # For "local" type components, copy
-                shutil.copytree(project_root / 'components' / component.name,
-                                host_working_dir / component.name)
+                shutil.copytree(project_root / 'components' / component.name, host_working_dir / component.name)
 
                 if 'core' == component.name:
-                    replace_clp_core_version(host_working_dir / component.name,
-                                             packaging_config.version)
+                    replace_clp_core_version(host_working_dir / component.name, packaging_config.version)
 
     # Make a copy of package-base and name it as the {artifact_name}-{version}
     shutil.copytree(host_working_dir / 'package-base', artifact_dir)
@@ -234,10 +220,8 @@ def main(argv):
         install_cmds = [
             [str(container_install_scripts_dir / 'install-celery.sh')],
             [str(container_install_scripts_dir / 'install-python-component.sh'), 'clp-py-utils'],
-            [str(container_install_scripts_dir / 'install-python-component.sh'),
-             'compression-job-handler'],
-            [str(container_install_scripts_dir / 'install-python-component.sh'),
-             'job-orchestration'],
+            [str(container_install_scripts_dir / 'install-python-component.sh'), 'compression-job-handler'],
+            [str(container_install_scripts_dir / 'install-python-component.sh'), 'job-orchestration'],
             [str(container_install_scripts_dir / 'install-core.sh')],
         ]
         for cmd in install_cmds:
@@ -247,7 +231,7 @@ def main(argv):
 
         # Set current user as owner of built files and build tar
         cmds = [
-            f'chown -R {os.getuid()}:{os.getgid()} {versioned_artifact_name}',
+            f'chown -R {os.getuid()}:{os.getgid()} {host_working_dir}',
             f'tar -czf {versioned_artifact_name}.tar.gz {versioned_artifact_name}',
             f'chown -R {os.getuid()}:{os.getgid()} {versioned_artifact_name}.tar.gz'
         ]
@@ -274,6 +258,7 @@ def main(argv):
             log.info(f'Artifact built successfully: {artifact_tarball_path}')
         else:
             log.error('Artifact build failure')
+            return -1
 
     return 0
 

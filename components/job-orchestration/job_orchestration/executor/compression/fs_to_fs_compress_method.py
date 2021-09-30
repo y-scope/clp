@@ -75,9 +75,9 @@ def compress(clp_config: ClpIoConfig, clp_home_str: str, data_dir_str: str, logs
         compression_cmd.append(celery.utils.nodenames.gethostname())
     else:
         # Mark as globally-accessible
-        compression_cmd.append("*")
+        compression_cmd.append('*')
     if path_prefix_to_remove:
-        compression_cmd.append("--remove-path-prefix")
+        compression_cmd.append('--remove-path-prefix')
         compression_cmd.append(path_prefix_to_remove)
 
     # Prepare list of paths to compress for clp
@@ -115,16 +115,16 @@ def compress(clp_config: ClpIoConfig, clp_home_str: str, data_dir_str: str, logs
         if not line:
             break
         stats = json.loads(line.decode('ascii'))
-        if last_archive_stats is not None and stats["id"] != last_archive_stats["id"]:
+        if last_archive_stats is not None and stats['id'] != last_archive_stats['id']:
             # We've started a new archive so add the previous archive's last
             # reported size to the total
-            total_uncompressed_size += last_archive_stats["uncompressed_size"]
-            total_compressed_size += last_archive_stats["size"]
+            total_uncompressed_size += last_archive_stats['uncompressed_size']
+            total_compressed_size += last_archive_stats['size']
         last_archive_stats = stats
     if last_archive_stats is not None:
         # Add the last archive's last reported size
-        total_uncompressed_size += last_archive_stats["uncompressed_size"]
-        total_compressed_size += last_archive_stats["size"]
+        total_uncompressed_size += last_archive_stats['uncompressed_size']
+        total_compressed_size += last_archive_stats['size']
 
     # Wait for compression to finish
     return_code = proc.wait()
@@ -148,6 +148,4 @@ def compress(clp_config: ClpIoConfig, clp_home_str: str, data_dir_str: str, logs
             'total_compressed_size': total_compressed_size,
         }
     else:
-        return compression_successful, {
-            'error_message': f'See logs {str(stderr_log_path)}'
-        }
+        return compression_successful, {'error_message': f'See logs {stderr_log_path}'}

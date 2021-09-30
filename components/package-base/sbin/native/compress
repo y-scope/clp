@@ -65,8 +65,7 @@ def main(argv):
     args_parser = argparse.ArgumentParser(description='Compress log files.')
     args_parser.add_argument('--config', '-c', required=True, help='CLP configuration file.')
     args_parser.add_argument('paths', metavar='PATH', nargs='*', help='Paths to compress.')
-    args_parser.add_argument('-f', '--input-list', dest='input_list',
-                             help='A file listing all paths to compress.')
+    args_parser.add_argument('-f', '--input-list', dest='input_list', help='A file listing all paths to compress.')
     args_parser.add_argument('--remove-path-prefix', metavar='DIR',
                              help='Remove the given path prefix from each compressed file/dir.')
     args_parser.add_argument('--no-progress-reporting', action='store_true', help='Disables progress reporting.')

@@ -104,10 +104,9 @@ def decompress_paths(paths, list_path: pathlib.Path, clp_config: CLPConfig,
 def main(argv):
     args_parser = argparse.ArgumentParser(description='Decompresses logs')
     args_parser.add_argument('--config', '-c', required=True, help='CLP configuration file.')
-    args_parser.add_argument('paths', metavar='PATH', nargs='*', help="Paths to decompress.")
+    args_parser.add_argument('paths', metavar='PATH', nargs='*', help='Paths to decompress.')
     args_parser.add_argument('-f', '--files-from', help='Decompress all paths in the given list.')
-    args_parser.add_argument('-d', '--extraction-dir', metavar='DIR',
-                             help='Decompress files into DIR', default='.')
+    args_parser.add_argument('-d', '--extraction-dir', metavar='DIR', help='Decompress files into DIR', default='.')
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate paths were specified using only one method
@@ -133,11 +132,10 @@ def main(argv):
         return -1
 
     logs_dir = make_config_path_absolute(clp_home, pathlib.Path(clp_config.logs_directory))
-    archives_dir = make_config_path_absolute(clp_home,
-                                             pathlib.Path(clp_config.archive_output.directory))
+    archives_dir = make_config_path_absolute(clp_home, pathlib.Path(clp_config.archive_output.directory))
 
-    return_code = decompress_paths(parsed_args.paths, parsed_args.files_from, clp_config,
-                                   archives_dir, logs_dir, extraction_dir)
+    return_code = \
+        decompress_paths(parsed_args.paths, parsed_args.files_from, clp_config, archives_dir, logs_dir, extraction_dir)
     return return_code
 
 

@@ -22,8 +22,7 @@ logger.addHandler(logging_console_handler)
 
 
 def main(argv):
-    args_parser = argparse.ArgumentParser(
-        description='Setup metadata tables for job orchestration.')
+    args_parser = argparse.ArgumentParser(description='Setup metadata tables for job orchestration.')
     args_parser.add_argument('--config', required=True, help='CLP package config file.')
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -88,5 +87,5 @@ def main(argv):
     return 0
 
 
-if "__main__" == __name__:
+if '__main__' == __name__:
     sys.exit(main(sys.argv))

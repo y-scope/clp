@@ -84,7 +84,7 @@ def main(argv):
             default_clp_package_config_file = clp_home / 'etc' / 'clp-config.yaml'
             if not default_clp_package_config_file.exists():
                 raise FileNotFoundError
-            log.info(f'Using default config file at {str(default_clp_package_config_file)}')
+            log.info(f'Using default config file at {default_clp_package_config_file.relative_to(pathlib.Path.cwd())}')
             package_config_file_path = default_clp_package_config_file
         else:
             # Provided a config file

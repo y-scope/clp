@@ -63,10 +63,9 @@ from pydantic import ValidationError
 def main(argv):
     args_parser = argparse.ArgumentParser(description='Script to decompress logs')
     args_parser.add_argument('--config', '-c', type=str, help='CLP package configuration file.')
-    args_parser.add_argument('paths', metavar='PATH', nargs='*', help='Paths to compress.')
+    args_parser.add_argument('paths', metavar='PATH', nargs='*', help='Paths to decompress.')
     args_parser.add_argument('-f', '--files-from', help='A file listing all files to decompress.')
-    args_parser.add_argument('-d', '--extraction-dir', metavar='DIR',
-                             help='Decompress files into DIR', default='.')
+    args_parser.add_argument('-d', '--extraction-dir', metavar='DIR', default='.', help='Decompress files into DIR')
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Infer config file path
@@ -76,7 +75,7 @@ def main(argv):
             default_clp_package_config_file = clp_home / 'etc' / 'clp-config.yaml'
             if not default_clp_package_config_file.exists():
                 raise FileNotFoundError
-            log.info(f'Using default config file at {str(default_clp_package_config_file)}')
+            log.info(f'Using default config file at {default_clp_package_config_file.relative_to(pathlib.Path.cwd())}')
             package_config_file_path = default_clp_package_config_file
         else:
             # Provided a config file
@@ -136,11 +135,12 @@ def main(argv):
 
     host_data_directory = clp_home / pathlib.Path(clp_config.data_directory).relative_to(docker_clp_home)
     host_log_directory = clp_home / pathlib.Path(clp_config.logs_directory).relative_to(docker_clp_home)
-    host_archive_out_directory = clp_home / pathlib.Path(clp_config.archive_output.directory).relative_to(docker_clp_home)
+    host_archive_out_directory = \
+        clp_home / pathlib.Path(clp_config.archive_output.directory).relative_to(docker_clp_home)
 
     # Start execution environment
     clp_execution_env_container = 'whywhywhywhywhywhy/clp-execution-env:x86-ubuntu-focal-20210919'
-    container_name = f'{clp_cluster_name}-decompressor'
+    container_name = f'{clp_cluster_name}-decompressor-{uuid.uuid4()}'
     clp_execution_env_startup_cmd = [
         'docker', 'run', '-di',
         '--rm',
@@ -166,9 +166,7 @@ def main(argv):
 
     try:
         # Copy config file into container
-        copy_cmd = [
-            'docker', 'cp', host_config_file_path, f'{container_name}:{container_config_file_path}'
-        ]
+        copy_cmd = ['docker', 'cp', host_config_file_path, f'{container_name}:{container_config_file_path}']
         subprocess.run(copy_cmd)
 
         docker_exec_cmd = [
@@ -189,13 +187,12 @@ def main(argv):
 
             docker_exec_cmd.append('--files-from')
             docker_exec_cmd.append(pathlib.Path(clp_config.logs_directory) / temp_list_name)
+        logging.info(docker_exec_cmd)
         subprocess.run(docker_exec_cmd)
         if files_to_decompress_path:
             temporary_files_to_decompress_path.unlink()
     finally:
-        docker_stop_cmd = [
-            'docker', 'stop', container_name,
-        ]
+        docker_stop_cmd = ['docker', 'stop', container_name]
         subprocess.run(docker_stop_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     return 0

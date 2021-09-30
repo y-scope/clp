@@ -27,11 +27,7 @@ def compress(job_id: int, task_id: int, clp_io_config_json: str, paths_to_compre
     clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
     paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
 
-    message = {
-        'job_id': job_id,
-        'task_id': task_id,
-        'status': 'COMPRESSING',
-    }
+    message = {'job_id': job_id, 'task_id': task_id, 'status': 'COMPRESSING'}
 
     with closing(pika.BlockingConnection(pika.URLParameters(celery_broker_url))) as conn:
         with closing(conn.channel()) as channel:
@@ -62,7 +58,6 @@ def compress(job_id: int, task_id: int, clp_io_config_json: str, paths_to_compre
     with closing(pika.BlockingConnection(pika.URLParameters(celery_broker_url))) as conn:
         with closing(conn.channel()) as channel:
             channel.tx_select()
-            channel.basic_publish(exchange='', routing_key='results',
-                                  body=json.dumps(message).encode('utf-8'))
+            channel.basic_publish(exchange='', routing_key='results', body=json.dumps(message).encode('utf-8'))
             channel.tx_commit()
             logger.info(f'COMPRESSION COMPLETED job_id={job_id} task_id={task_id}')

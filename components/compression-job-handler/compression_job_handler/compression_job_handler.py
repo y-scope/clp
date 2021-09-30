@@ -11,14 +11,15 @@ import msgpack
 import mysql.connector
 import zstandard
 import zstandard as zstd
-from pydantic import ValidationError
-
 from clp_py_utils.clp_config import CLPConfig
 from clp_py_utils.clp_io_config import PathsToCompress, InputConfig, OutputConfig, ClpIoConfig
 from clp_py_utils.compression import FileMetadata, FilesPartition, \
     group_files_by_similar_filenames, validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
+from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.sql_adapter import SQL_Adapter
+from pydantic import ValidationError
+
 from .utils.common import JobCompletionStatus
 
 # Setup logging
@@ -30,14 +31,6 @@ logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s')
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
-
-
-def pretty_size(num, suffix='B'):
-    for unit in ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']:
-        if abs(num) < 1024.0:
-            return "%3.2f%s%s" % (num, unit, suffix)
-        num /= 1024.0
-    return "%.2f%s%s" % (num, 'Yi', suffix)
 
 
 class PathsToCompressBuffer:
@@ -249,7 +242,7 @@ def handle_job(scheduling_db, scheduling_db_cursor, clp_io_config: ClpIoConfig, 
             scheduling_job_id = scheduling_db_cursor.lastrowid
 
             # Create job-specific logger
-            job_str = f'job-{str(scheduling_job_id)}'
+            job_str = f'job-{scheduling_job_id}'
             job_logger = logging.getLogger(job_str)
             job_logger.setLevel(logging.INFO)
             combined_log_file_path = f'{logs_dir_abs}/{job_str}.log'
@@ -258,7 +251,7 @@ def handle_job(scheduling_db, scheduling_db_cursor, clp_io_config: ClpIoConfig, 
             job_logger.addHandler(logging_console_handler)
             job_logger.addHandler(job_logger_file_handler)
 
-            job_logger.debug(f'Starting job {str(scheduling_job_id)}')
+            job_logger.debug(f'Starting job {scheduling_job_id}')
 
             paths_to_compress_buffer = PathsToCompressBuffer(
                 scheduler_db_cursor=scheduling_db_cursor,
@@ -317,25 +310,25 @@ def handle_job(scheduling_db, scheduling_db_cursor, clp_io_config: ClpIoConfig, 
         # in the job row has been updated and committed
         scheduling_db_cursor.execute(
             f'UPDATE compression_jobs '
-            f'SET num_tasks={str(paths_to_compress_buffer.num_tasks)}, job_status="SCHEDULED" '
-            f'WHERE job_id={str(scheduling_job_id)};'
+            f'SET num_tasks={paths_to_compress_buffer.num_tasks}, job_status="SCHEDULED" '
+            f'WHERE job_id={scheduling_job_id};'
         )
         scheduling_db.commit()
 
         # TODO: what happens when commit fails, log error and crash ASAP
 
         # Wait for jobs to finish
-        job_logger.info(f'Waiting for {str(paths_to_compress_buffer.num_tasks)} task(s) to finish.')
+        job_logger.info(f'Waiting for {paths_to_compress_buffer.num_tasks} task(s) to finish.')
 
         # Simply poll the job_status in the job scheduling table
         if no_progress_reporting:
             polling_query = \
                 f'SELECT job_status, job_status_msg FROM compression_jobs ' \
-                f'WHERE job_id={str(scheduling_job_id)};'
+                f'WHERE job_id={scheduling_job_id};'
         else:
             polling_query = \
                 f'SELECT job_status, job_status_msg, job_uncompressed_size, job_compressed_size ' \
-                f'FROM compression_jobs WHERE job_id={str(scheduling_job_id)};'
+                f'FROM compression_jobs WHERE job_id={scheduling_job_id};'
 
         completion_query = \
             f'SELECT job_duration, job_uncompressed_size, job_compressed_size ' \
@@ -433,9 +426,8 @@ def handle_jobs(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, logs_dir_a
 
 def main(argv):
     args_parser = argparse.ArgumentParser(description='Wait for and run compression jobs.')
-    args_parser.add_argument('--fs-logs-required-parent-dir',
-                             help='The required parent for any logs ingested from the filesystem.',
-                             default="/nonexistent")
+    args_parser.add_argument('--fs-logs-required-parent-dir', default="/nonexistent",
+                             help='The required parent for any logs ingested from the filesystem.')
     args_parser.add_argument('--no-progress-reporting', action='store_true', help='Disables progress reporting.')
     args_parser.add_argument('--config', '-c', required=True, help='CLP configuration file.')
     args_parser.add_argument('--log-list-path', required=True, help='File containing list of input files to compress')
@@ -470,5 +462,5 @@ def main(argv):
     return 0
 
 
-if "__main__" == __name__:
+if '__main__' == __name__:
     sys.exit(main(sys.argv))
