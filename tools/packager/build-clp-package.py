@@ -82,6 +82,19 @@ def check_dependencies():
         raise EnvironmentError
 
 
+def replace_clp_core_version(project_dir: pathlib.Path, version: str):
+    target_replacement_line = 'constexpr char cVersion[] = '
+    target_replacement_file_path = project_dir / 'src' / 'version.hpp'
+    log.info(f'Updating clp core version to {version} in {str(target_replacement_file_path)}')
+    with open(target_replacement_file_path, 'r') as version_file:
+        version_file_lines = version_file.readlines()
+    for idx, line in enumerate(version_file_lines):
+        if line.startswith(target_replacement_line):
+            version_file_lines[idx] = f'{target_replacement_line}"{version}";'
+    with open(target_replacement_file_path, 'w') as version_file:
+        version_file.write('\n'.join(version_file_lines))
+
+
 def clone_and_checkout(component: ClpComponent, working_dir: pathlib.Path):
     if component.branch:
         subprocess.run(['git', 'clone', '-b', component.branch, '--depth', '1', component.url, component.name],
@@ -90,10 +103,14 @@ def clone_and_checkout(component: ClpComponent, working_dir: pathlib.Path):
         subprocess.run(['git', 'clone', component.url, component.name], cwd=working_dir, check=True)
         subprocess.run(['git', 'checkout', component.commit], cwd=working_dir / component.name, check=True)
 
+
+def clone_and_checkout_clp_core(component: ClpComponent, working_dir: pathlib.Path, version: str):
+    clone_and_checkout(ClpComponent, working_dir)
     # For CLP core, we must download all the dependencies in addition to cloning/copying the repository
-    if 'core' == component.name:
-        log.info('Cloning clp core submodule dependencies')
-        subprocess.run(['./download-all.sh'], cwd=working_dir / 'core' / 'tools' / 'scripts' / 'deps-download')
+    # We also need to modify the version name in src/version.hpp to the build-time specified one
+    log.info('Cloning clp core submodule dependencies')
+    subprocess.run(['./download-all.sh'], cwd=working_dir / 'core' / 'tools' / 'scripts' / 'deps-download')
+    replace_clp_core_version(working_dir / 'core', version)
 
 
 def main(argv):
@@ -150,9 +167,13 @@ def main(argv):
         for component in packaging_config.components:
             if 'git' == component.type:
                 # For "git" type components, clone and checkout
-                executor.submit(clone_and_checkout, component, host_working_dir)
+                if 'core' == component.name:
+                    executor.submit(clone_and_checkout_clp_core, component, host_working_dir, packaging_config.version)
+                else:
+                    executor.submit(clone_and_checkout, component, host_working_dir)
             elif 'local' == component.type:
                 # For CLP core, we must download all the dependencies in addition to cloning/copying the repository
+
                 if 'core' == component.name:
                     log.info('Cloning clp core submodule dependencies')
                     subprocess.run(['./download-all.sh'],
@@ -161,6 +182,9 @@ def main(argv):
                 # For "local" type components, copy
                 shutil.copytree(f'../../components/{component.name}', host_working_dir / component.name)
 
+                # We also need to modify the version name in src/version.hpp to the build-time specified one
+                if 'core' == component.name:
+                    replace_clp_core_version(host_working_dir / component.name, packaging_config.version)
 
     # Make a copy of package-base and name it as the {artifact_name}-{version}
     shutil.copytree(host_working_dir / 'package-base', artifact_dir)
