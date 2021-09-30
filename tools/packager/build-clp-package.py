@@ -156,7 +156,7 @@ def main(argv):
                 if 'core' == component.name:
                     log.info('Cloning clp core submodule dependencies')
                     subprocess.run(['./download-all.sh'],
-                                   cwd=host_working_dir / 'core' / 'tools' / 'scripts' / 'deps-download')
+                                   cwd=f'../../components/core/tools/scripts/deps-download')
 
                 # For "local" type components, copy
                 shutil.copytree(f'../../components/{component.name}', host_working_dir / component.name)
