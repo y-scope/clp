@@ -3,9 +3,6 @@
 This Python module contains CLP's scheduler and worker to handle distributed compression. 
 CLP's Compression Job Handler can be used to interface and submit compression jobs to the CLP scheduler.
 
-🔔 clp-job-orchestration is part of a larger CLP package that can be built from 
-[clp-packager](https://github.com/y-scope/clp-packager).
-
 ## Installation
 
 ```bash

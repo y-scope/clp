@@ -2,9 +2,6 @@
 
 This python module contains utilities imported by other Python modules in the CLP package.
 
-🔔 To build the complete CLP package, head over to 
-[clp-packager](https://github.com/y-scope/clp-packager).
-
 ## Installation
 
 ```bash

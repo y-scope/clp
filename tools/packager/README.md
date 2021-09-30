@@ -1,10 +1,10 @@
-# CLP Packaging
+# Packager
 
-This repository contains scripts that automatically download CLP's source, compile it, and generate a runnable package.
+Packager is a tool for generating a runnable CLP package by automatically downloading CLP's source, 
+compiling, and bundling it.
 
 ## Requirements
 
-* An OS capable of running a Linux-based docker
 * 10GB of disk space
 * At least 2GB of RAM
 * An active internet connection

@@ -2,9 +2,6 @@
 
 This Python module submits compression jobs to the CLP compression scheduler.
 
-🔔 clp-compression-job-handler is part of a larger CLP package that can be built from
-[clp-packager](https://github.com/y-scope/clp-packager).
-
 ## Installation
 
 ```bash

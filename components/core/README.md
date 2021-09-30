@@ -1,9 +1,6 @@
-# CLP
+# CLP Core
 
-Compressed Log Processor (CLP) is a tool capable of losslessly compressing text logs and searching the compressed logs without decompression.
-To learn more about it, you can read our [paper](https://www.usenix.org/system/files/osdi21-rodrigues.pdf).
-
-🔔 clp-core is part of a larger CLP package that can be built from [clp-packager](https://github.com/y-scope/clp-packager).
+CLP's core is the low-level component that performs compression, decompression, and search.
 
 ## Contents
 
@@ -19,11 +16,6 @@ To learn more about it, you can read our [paper](https://www.usenix.org/system/f
   * [`clg`](#clg)
 * [Parallel Compression](#parallel-compression)
 * [Next Steps](#next-steps)
-  
-
-## Getting Started
-
-CLP is currently released as source, so you'll need to build it before running it.
 
 ## Requirements
 
@@ -178,9 +170,3 @@ use a MySQL-type database (MariaDB) as follows:
 
 Note that currently, decompression (`clp x`) and search (`clg`) can only be run with a single 
 instance. We are in the process of open-sourcing parallelizable versions of these as well.
-
-## Next Steps
-
-This is our open-source release which we will be constantly updating with bug fixes, features, etc.
-If you would like a feature or want to report a bug, please file an issue and we'll be happy to engage.
-We also welcome any contributions!
