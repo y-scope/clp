@@ -231,7 +231,7 @@ def main(argv):
 
         # Set current user as owner of built files and build tar
         cmds = [
-            f'chown -R {os.getuid()}:{os.getgid()} {host_working_dir}',
+            f'chown -R {os.getuid()}:{os.getgid()} {container_working_directory}',
             f'tar -czf {versioned_artifact_name}.tar.gz {versioned_artifact_name}',
             f'chown -R {os.getuid()}:{os.getgid()} {versioned_artifact_name}.tar.gz'
         ]
