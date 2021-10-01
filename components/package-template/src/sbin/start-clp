@@ -346,7 +346,7 @@ def main(argv):
         container_config_file_path = f'/root/{container_clp_config_file_name}'
 
         # Persist config file used for container
-        if not host_config_file_path.exists() or need_to_start_scheduler:
+        if not host_config_file_path.exists() and need_to_start_scheduler:
             host_data_directory, host_log_directory, host_archive_out_directory, clp_config = \
                 prepare_package_and_config(clp_config, clp_home, docker_clp_home)
             with open(host_config_file_path, 'w') as config_file:
