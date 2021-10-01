@@ -4,7 +4,7 @@ artifact_name: clp-package-ubuntu-focal
 build_parallelism: 0   # 0 -> attempt to compile with available cores on the machine
 builder_dockerhub_image: whywhywhywhywhywhy/builders:x86-ubuntu-focal-20210915
 components:
-  - name: package-base
+  - name: package-template
     type: local
   - name: compression-job-handler
     type: local
