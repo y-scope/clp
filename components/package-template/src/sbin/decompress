@@ -104,10 +104,11 @@ def main(argv):
         files_to_decompress_path = pathlib.Path(parsed_args.files_from).resolve(strict=True)
 
     # Validate extraction directory
-    extraction_dir = pathlib.Path(parsed_args.extraction_dir).resolve(strict=True)
-    if not extraction_dir.is_dir():
+    extraction_dir = pathlib.Path(parsed_args.extraction_dir).resolve()
+    if extraction_dir.exists() and not extraction_dir.is_dir():
         log.error(f'extraction-dir ({extraction_dir}) is not a valid directory.')
         return -1
+    extraction_dir.mkdir(exist_ok=True)
 
     clp_cluster_name = clp_package_config.cluster_name
     try:
