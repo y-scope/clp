@@ -104,7 +104,7 @@ CLP supports two wildcard characters:
 
 For more options, run the script with the `--help` option.
 
-## Common Problems
+## Troubleshooting
 
 ### ModuleNotFoundError
 
@@ -114,17 +114,3 @@ For more options, run the script with the `--help` option.
 the standard library
 
 **Solution**: `pip install -r requirements-pre-3.7.txt`
-
-
-### Difficulties with docker installation
-#### Ubuntu 18.04 or 20.04
-```shell
-sudo apt-get update
-sudo apt-get install -y snapd
-sudo snap install docker
-sudo groupadd docker
-sudo usermod -aG docker $USER
-newgrp docker
-```
-
-
