@@ -22,7 +22,7 @@ directory:
   logs, and search compressed logs.
 * [job-orchestration](components/job-orchestration) contains code to schedule compression jobs on
   the cluster.
-* [package-template](components/package-template/src) contains the base directory structure and files of the 
+* [package-template](components/package-template) contains the base directory structure and files of the 
   CLP package.
 
 ## Next Steps
