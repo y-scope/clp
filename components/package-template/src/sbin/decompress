@@ -140,7 +140,7 @@ def main(argv):
 
     # Start execution environment
     clp_execution_env_container = 'whywhywhywhywhywhy/clp-execution-env:x86-ubuntu-focal-20210919'
-    container_name = f'{clp_cluster_name}-decompressor-{uuid.uuid4()}'
+    container_name = f'{clp_cluster_name}-decompressor-{uuid.uuid4()}'[:62]   # max docker hostname = 63 chars
     clp_execution_env_startup_cmd = [
         'docker', 'run', '-di',
         '--rm',
@@ -161,9 +161,7 @@ def main(argv):
         clp_execution_env_startup_cmd.append(
             f'{host_archive_out_directory}:{clp_config.archive_output.directory}')
     clp_execution_env_startup_cmd.append(clp_execution_env_container)
-    subprocess.run(clp_execution_env_startup_cmd, stdout=subprocess.PIPE,
-                   stderr=subprocess.PIPE, check=True)
-
+    subprocess.run(clp_execution_env_startup_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
     try:
         # Copy config file into container
         copy_cmd = ['docker', 'cp', host_config_file_path, f'{container_name}:{container_config_file_path}']
