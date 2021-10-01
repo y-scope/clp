@@ -23,7 +23,7 @@ python3 build-clp-package.py --config ../../config/build-clp-package.yaml
 ```
 
 * After a successful build, the package will be available at `out/<versioned artifact name>.tar.gz`.
-* The package README.md is copied from [package-base](../../components/package-base).
+* The package README.md is copied from [package-template](../../components/package-template).
 
 
 ## Troubleshooting
