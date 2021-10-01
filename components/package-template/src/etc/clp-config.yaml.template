@@ -1,0 +1,14 @@
+clp_cluster_name: clp-mini-cluster
+
+archive_output:
+  # How much data CLP should try to compress into each archive
+  target_archive_size: 268435456  # 256MB
+
+  # How large the dictionaries should be allowed to get before the archive is closed and a new one is created
+  target_dictionaries_size: 33554432  # 32MB
+
+  # How large each encoded file should be before being split into a new encoded file
+  target_encoded_file_size: 268435456 # 256MB
+
+  # How much data CLP should try to fit into each segment within an archive
+  target_segment_size: 268435456  # 256MB

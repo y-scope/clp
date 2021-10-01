@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+
+import argparse
+import json
+import logging
+import os
+import pathlib
+import subprocess
+import sys
+
+# Setup logging
+# Create logger
+log = logging.getLogger('clp')
+log.setLevel(logging.INFO)
+# Setup console logging
+logging_console_handler = logging.StreamHandler()
+logging_formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s')
+logging_console_handler.setFormatter(logging_formatter)
+log.addHandler(logging_console_handler)
+
+
+def get_clp_home():
+    clp_home = None
+    if 'CLP_HOME' in os.environ:
+        clp_home = pathlib.Path(os.environ['CLP_HOME'])
+    else:
+        for path in pathlib.Path(__file__).resolve().parents:
+            if 'sbin' == path.name:
+                clp_home = path.parent
+                break
+
+    if clp_home is None:
+        log.error('CLP_HOME is not set and could not be determined automatically.')
+        return None
+    elif not clp_home.exists():
+        log.error('CLP_HOME does not exist.')
+        return None
+
+    return clp_home.resolve()
+
+
+def load_bundled_python_lib_path(clp_home):
+    python_site_packages_path = clp_home / 'lib' / 'python3' / 'site-packages'
+    if not python_site_packages_path.is_dir():
+        log.error('Failed to load python3 packages bundled with CLP.')
+        return -1
+    # Add packages to the front of the path
+    sys.path.insert(0, str(python_site_packages_path))
+
+
+clp_home = get_clp_home()
+if clp_home is None:
+    sys.exit(-1)
+load_bundled_python_lib_path(clp_home)
+
+from clp_py_utils.core import read_yaml_config_file
+from clp_py_utils.clp_package_config import CLPPackageConfig
+from pydantic import ValidationError
+
+
+def inspect_docker_network_bridge(clp_cluster_name: str):
+    cmd = ['docker', 'network', 'inspect', clp_cluster_name]
+    log.info('Inspecting docker network bridge')
+    log.debug(' '.join(cmd))
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if 0 != proc.returncode:
+        log.error(f'Cluster "{clp_cluster_name}" has not been provisioned.')
+        raise EnvironmentError
+
+    bridge_bridge_specification = json.loads(proc.stdout.decode('utf-8'))[0]
+
+    return bridge_bridge_specification
+
+
+def main(argv):
+    args_parser = argparse.ArgumentParser(description='Startup script for CLP')
+    args_parser.add_argument('--config', '-c', type=str, help='CLP package configuration file.')
+    parsed_args = args_parser.parse_args(argv[1:])
+
+    # Infer config file path
+    try:
+        if not parsed_args.config:
+            # Did not provide a config file
+            default_clp_package_config_file = clp_home / 'etc' / 'clp-config.yaml'
+            if not default_clp_package_config_file.exists():
+                raise FileNotFoundError
+            log.info(f'Using default config file at {default_clp_package_config_file.relative_to(pathlib.Path.cwd())}')
+            package_config_file_path = default_clp_package_config_file
+        else:
+            # Provided a config file
+            package_config_file_path = pathlib.Path(parsed_args.config).resolve(strict=True)
+    except FileNotFoundError:
+        log.error('Did not provide a clp package config file or the specified config file does not exist.')
+        return
+
+    try:
+        clp_package_config = CLPPackageConfig.parse_obj(read_yaml_config_file(package_config_file_path))
+    except ValidationError as err:
+        log.error(err)
+        return
+    except Exception as ex:
+        # read_yaml_config_file already logs the parsing error inside
+        return
+
+    clp_cluster_name = clp_package_config.cluster_name
+    try:
+        bridge_bridge_specification = inspect_docker_network_bridge(clp_cluster_name)
+        for container_id in bridge_bridge_specification['Containers']:
+            # Stop and remove container
+            log.debug(f'Removing container {container_id}')
+            subprocess.run(['docker', 'stop', container_id], stdout=subprocess.DEVNULL)
+            subprocess.run(['docker', 'rm', container_id], stdout=subprocess.DEVNULL)
+        log.debug(f'Removing docker network bridge {clp_cluster_name}')
+        subprocess.run(['docker', 'network', 'rm', clp_cluster_name], stdout=subprocess.DEVNULL)
+    except EnvironmentError:
+        log.error(f'Failed to decommission "{clp_cluster_name}"')
+    else:
+        log.info(f'Successfully decommissioned "{clp_cluster_name}"')
+
+
+if '__main__' == __name__:
+    main(sys.argv)

@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+import argparse
+import logging
+import os
+import pathlib
+import subprocess
+import sys
+
+# Setup logging
+# Create logger
+log = logging.getLogger('clp')
+log.setLevel(logging.DEBUG)
+# Setup console logging
+logging_console_handler = logging.StreamHandler()
+logging_formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s')
+logging_console_handler.setFormatter(logging_formatter)
+log.addHandler(logging_console_handler)
+
+
+def get_clp_home():
+    clp_home = None
+    if 'CLP_HOME' in os.environ:
+        clp_home = pathlib.Path(os.environ['CLP_HOME'])
+    else:
+        for path in pathlib.Path(__file__).resolve().parents:
+            if 'sbin' == path.name:
+                clp_home = path.parent
+                break
+
+    if clp_home is None:
+        log.error('CLP_HOME is not set and could not be determined automatically.')
+        return None
+    elif not clp_home.exists():
+        log.error('CLP_HOME does not exist.')
+        return None
+
+    return clp_home.resolve()
+
+
+def load_bundled_python_lib_path(clp_home):
+    python_site_packages_path = clp_home / 'lib' / 'python3' / 'site-packages'
+    if not python_site_packages_path.is_dir():
+        log.error('Failed to load python3 packages bundled with CLP.')
+        return -1
+    # Add packages to the front of the path
+    sys.path.insert(0, str(python_site_packages_path))
+
+
+clp_home = get_clp_home()
+if clp_home is None:
+    sys.exit(-1)
+load_bundled_python_lib_path(clp_home)
+
+from clp.package_utils import check_env
+from clp_py_utils.core import read_yaml_config_file
+from clp_py_utils.clp_package_config import CLPPackageConfig
+from pydantic import ValidationError
+
+
+def main(argv):
+    args_parser = argparse.ArgumentParser(description='Startup script for CLP')
+    args_parser.add_argument('--config', '-c', type=str, help='CLP package configuration file.')
+    args_parser.add_argument('paths', metavar='PATH', nargs='*', help='Paths to compress.')
+    args_parser.add_argument('-f', '--input-list', dest='input_list', help='A file listing all paths to compress.')
+    parsed_args = args_parser.parse_args(argv[1:])
+
+    # Infer config file path
+    try:
+        if not parsed_args.config:
+            # Did not provide a config file
+            default_clp_package_config_file = clp_home / 'etc' / 'clp-config.yaml'
+            if not default_clp_package_config_file.exists():
+                raise FileNotFoundError
+            log.info(f'Using default config file at {default_clp_package_config_file.relative_to(pathlib.Path.cwd())}')
+            package_config_file_path = default_clp_package_config_file
+        else:
+            # Provided a config file
+            package_config_file_path = pathlib.Path(parsed_args.config).resolve(strict=True)
+    except FileNotFoundError:
+        log.error('Did not provide a clp package config file or the specified config file does not exist.')
+        return
+
+    try:
+        clp_package_config = CLPPackageConfig.parse_obj(read_yaml_config_file(package_config_file_path))
+    except ValidationError as err:
+        log.error(err)
+        return
+    except Exception as ex:
+        # read_yaml_config_file already logs the parsing error inside
+        return
+
+    clp_cluster_name = clp_package_config.cluster_name
+    try:
+        check_env(clp_cluster_name)
+    except EnvironmentError as ex:
+        logging.error(ex)
+        return -1
+
+    # TODO: check path and perform path conversion
+    docker_exec_cmd = [
+        'docker', 'exec',
+        '--workdir', '/root/clp',
+        clp_package_config.cluster_name,
+        'sbin/native/compress', '--config', f'/root/.{clp_package_config.cluster_name}.yaml'
+    ]
+    for path in parsed_args.paths:
+        docker_exec_cmd.append(path)
+    if parsed_args.input_list is not None:
+        docker_exec_cmd.append('--input-list')
+        docker_exec_cmd.append(parsed_args.input_list)
+    logging.info(docker_exec_cmd)
+    subprocess.run(docker_exec_cmd)
+
+    return 0
+
+
+if '__main__' == __name__:
+    sys.exit(main(sys.argv))

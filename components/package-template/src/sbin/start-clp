@@ -1,0 +1,425 @@
+#!/usr/bin/env python3
+import argparse
+import logging
+import multiprocessing
+import os
+import pathlib
+import secrets
+import socket
+import subprocess
+import sys
+import time
+
+# Setup logging
+# Create logger
+log = logging.getLogger('clp')
+log.setLevel(logging.INFO)
+# Setup console logging
+logging_console_handler = logging.StreamHandler()
+logging_formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s')
+logging_console_handler.setFormatter(logging_formatter)
+log.addHandler(logging_console_handler)
+
+
+def get_clp_home():
+    clp_home = None
+    if 'CLP_HOME' in os.environ:
+        clp_home = pathlib.Path(os.environ['CLP_HOME'])
+    else:
+        for path in pathlib.Path(__file__).resolve().parents:
+            if 'sbin' == path.name:
+                clp_home = path.parent
+                break
+
+    if clp_home is None:
+        log.error('CLP_HOME is not set and could not be determined automatically.')
+        return None
+    elif not clp_home.exists():
+        log.error('CLP_HOME does not exist.')
+        return None
+
+    return clp_home.resolve()
+
+
+def load_bundled_python_lib_path(clp_home):
+    python_site_packages_path = clp_home / 'lib' / 'python3' / 'site-packages'
+    if not python_site_packages_path.is_dir():
+        log.error('Failed to load python3 packages bundled with CLP.')
+        return -1
+    # Add packages to the front of the path
+    sys.path.insert(0, str(python_site_packages_path))
+
+
+clp_home = get_clp_home()
+if clp_home is None:
+    sys.exit(-1)
+load_bundled_python_lib_path(clp_home)
+
+from clp.package_utils import prepare_package_and_config, check_dependencies
+from clp_py_utils.core import read_yaml_config_file
+from clp_py_utils.clp_package_config import CLPPackageConfig, ArchiveOutput as PackageArchiveOutput
+from clp_py_utils.clp_config import Database, ArchiveOutput, CLPConfig, Scheduler
+
+
+def provision_docker_network_bridge(clp_cluster_name: str):
+    cmd = ['docker', 'network', 'create', '--driver', 'bridge', clp_cluster_name]
+    log.info('Provision docker network bridge')
+    log.debug(' '.join(cmd))
+    try:
+        subprocess.run(cmd, stdout=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError:
+        log.error(f'Cluster "{clp_cluster_name}" has already been provisioned.')
+        raise EnvironmentError
+
+
+def start_sql_db(cluster_name: str, clp_config: CLPConfig, host_data_directory: pathlib.Path, publish_ports: bool):
+    log.info(f'Starting scheduler {clp_config.database.type} database')
+
+    persistent_storage_path = host_data_directory / 'db'
+    persistent_storage_path.mkdir(exist_ok=True, parents=True)
+
+    database_startup_cmd = [
+        'docker', 'run', '-d',
+        '--network', cluster_name,
+        '--hostname', f'{clp_config.database.host}',
+        '--name', f'{clp_config.database.host}',
+        '-v', f'{str(persistent_storage_path)}:/var/lib/mysql',
+        '-e', f'MYSQL_ROOT_PASSWORD={clp_config.database.password}',
+        '-e', f'MYSQL_USER={clp_config.database.username}',
+        '-e', f'MYSQL_PASSWORD={clp_config.database.password}',
+        '-e', f'MYSQL_DATABASE=initial_database'
+    ]
+    if publish_ports:
+        database_startup_cmd.append('-p')
+        database_startup_cmd.append(f'{str(clp_config.database.port)}:{str(clp_config.database.port)}')
+    if 'mysql' == clp_config.database.type:
+        database_startup_cmd.append('mysql:8.0.23')
+    elif 'mariadb' == clp_config.database.type:
+        database_startup_cmd.append('mariadb:10.6.4-focal')
+    log.debug(' '.join(database_startup_cmd))
+    try:
+        subprocess.run(database_startup_cmd, stdout=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError:
+        log.error(f'Unable to start "{clp_config.database.type}" inside docker')
+        raise EnvironmentError
+
+
+def create_sql_db_tables(cluster_name: str, container_config_file_path: str):
+    # Initialize database tables
+    log.info('Initializing scheduler database tables')
+    database_table_creation_commands = [
+        ['python3', '/root/clp/lib/python3/site-packages/clp_py_utils/initialize-clp-metadata-db.py',
+         '--config', container_config_file_path],
+        ['python3', '/root/clp/lib/python3/site-packages/clp_py_utils/initialize-orchestration-db.py',
+         '--config', container_config_file_path]
+    ]
+    for command in database_table_creation_commands:
+        docker_exec_cmd = ['docker', 'exec', '-it',
+                           '-e', 'PYTHONPATH=/root/clp/lib/python3/site-packages', cluster_name]
+        docker_exec_cmd += command
+        log.debug(' '.join(docker_exec_cmd))
+        max_attempts = 20
+        for attempt in range(max_attempts + 1):
+            if attempt == max_attempts:
+                log.error('Unable to connect to the database with the provided credentials')
+                raise EnvironmentError
+            try:
+                subprocess.run(docker_exec_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            except subprocess.CalledProcessError:
+                log.debug('Waiting for database to be ready')
+                time.sleep(1)  # database not ready
+            else:
+                break
+    log.debug('Scheduler database tables initialization completed')
+
+
+def provision_rabbitmq(cluster_name: str, clp_config: CLPConfig):
+    log.info('Starting scheduler queue')
+
+    # Start rabbitmq
+    docker_exec_cmd = ['docker', 'exec', '-d', '-e', 'RABBITMQ_PID_FILE=/tmp/rabbitmq.pid', cluster_name,
+                       'rabbitmq-server']
+    log.debug(' '.join(docker_exec_cmd))
+    try:
+        subprocess.run(docker_exec_cmd, stdout=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError:
+        log.error(f'Unable to start rabbitmq inside docker')
+        raise EnvironmentError
+
+    # Wait for rabbitmq to be available
+    docker_exec_cmd = ['docker', 'exec', '-e', 'RABBITMQ_PID_FILE=/tmp/rabbitmq.pid', cluster_name] + \
+                      'rabbitmqctl wait ${RABBITMQ_PID_FILE}'.split()
+    log.debug(' '.join(docker_exec_cmd))
+    subprocess.run(docker_exec_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    # Initialize rabbitmq
+    log.info('Initializing scheduler queue')
+    rabbitmq_provisioning_commands = [
+        f'rabbitmqctl add_user {clp_config.scheduler.username} {clp_config.scheduler.password}',
+        f'rabbitmqctl set_user_tags {clp_config.scheduler.username} administrator',
+        f'rabbitmqctl set_permissions -p / {clp_config.scheduler.username} .* .* .*'
+    ]
+    for command in rabbitmq_provisioning_commands:
+        docker_exec_cmd = ['docker', 'exec', '-e', 'RABBITMQ_PID_FILE=/tmp/rabbitmq.pid',
+                           cluster_name] + command.split()
+        log.debug(' '.join(docker_exec_cmd))
+        proc = subprocess.run(docker_exec_cmd, stdout=subprocess.PIPE)
+        log.debug(proc.stdout.decode('utf-8'))
+
+
+def start_scheduler(cluster_name: str, clp_config: CLPConfig, container_config_file_path: str):
+    scheduler_startup_cmd = ['python3', '-u', '-m', 'job_orchestration.scheduler.scheduler',
+                             '--config', container_config_file_path]
+    log.info('Starting scheduler service')
+    docker_exec_cmd = [
+        'docker', 'exec', '--detach', '--workdir', '/root/clp',
+        '-e', 'PYTHONPATH=/root/clp/lib/python3/site-packages',
+        '-e', f'BROKER_URL=amqp://{clp_config.scheduler.username}:{clp_config.scheduler.password}@localhost:5672',
+        # rabbitmq runs on scheduler node
+        cluster_name
+    ]
+    docker_exec_cmd += scheduler_startup_cmd
+    log.debug(docker_exec_cmd)
+    try:
+        subprocess.run(docker_exec_cmd)
+    except subprocess.CalledProcessError:
+        log.error('Failed to start clp scheduler service')
+        raise EnvironmentError
+
+
+def start_worker(cluster_name: str, clp_config: CLPConfig, num_cpus: int):
+    worker_startup_cmd = ['/root/clp/bin/celery', '-A', 'job_orchestration.executor', 'worker',
+                          '--concurrency', str(num_cpus),
+                          '--loglevel', 'WARNING',
+                          '-Q', 'compression']
+    log.info("Starting CLP worker")
+    docker_exec_cmd = [
+        'docker', 'exec', '--detach',
+        '--workdir', '/root/clp',
+        '-e', 'CLP_HOME=/root/clp',
+        '-e', f'CLP_DATA_DIR={clp_config.data_directory}',
+        '-e', f'CLP_LOGS_DIR={clp_config.logs_directory}',
+        '-e', 'PYTHONPATH=/root/clp/lib/python3/site-packages',
+        '-e', f'BROKER_URL=amqp://{clp_config.scheduler.username}:{clp_config.scheduler.password}'
+              f'@{clp_config.scheduler.host}:5672',
+        '-e', f'RESULT_BACKEND=rpc://{clp_config.scheduler.username}:{clp_config.scheduler.password}'
+              f'@{clp_config.scheduler.host}:5672',
+        cluster_name
+    ]
+    docker_exec_cmd += worker_startup_cmd
+    log.debug(docker_exec_cmd)
+    try:
+        subprocess.run(docker_exec_cmd)
+    except subprocess.CalledProcessError:
+        log.error('Failed to start CLP worker')
+        raise EnvironmentError
+
+
+def generate_default_package_config(package_config_file_path: pathlib.Path):
+    clp_package_config = CLPPackageConfig(
+        cluster_name='clp-mini-cluster',
+        archive_output=PackageArchiveOutput(
+            target_archive_size=268435456,  # 256MB
+            target_dictionaries_size=33554432,  # 32MB
+            target_encoded_file_size=268435456,  # 256MB
+            target_segment_size=268435456  # 256MB
+        )
+    )
+    with open(package_config_file_path, 'w') as config_file:
+        config_file.write(clp_package_config.generate_package_config_file_content_with_comments())
+
+
+def main(argv):
+    args_parser = argparse.ArgumentParser(description='Startup script for CLP')
+    args_parser.add_argument('--uncompressed-logs-dir', type=str, required=True,
+                             help='The directory containing uncompressed logs.')
+    args_parser.add_argument('--config', '-c', type=str, help='CLP package configuration file.')
+    args_parser.add_argument('--num-cpus', type=int, default=0,
+                             help='Number of logical CPU cores to use for compression')
+    args_parser.add_argument('--publish-ports', action='store_true', help='Publish container ports to the host port')
+    args_parser.add_argument('--start-scheduler-only', action='store_true', help='Start only scheduler service')
+    args_parser.add_argument('--start-worker-only', action='store_true', help='Start only worker service')
+
+    parsed_args = args_parser.parse_args(argv[1:])
+
+    # Check required system dependencies
+    try:
+        check_dependencies()
+    except EnvironmentError as ex:
+        log.error(ex)
+        return
+
+    # Infer components to enable
+    startup_component_count = parsed_args.start_scheduler_only + parsed_args.start_worker_only
+    if startup_component_count > 1:
+        log.error('--start-scheduler-only and --start-worker-only are mutually exclusive')
+        return
+    if not parsed_args.start_scheduler_only and not parsed_args.start_worker_only:
+        need_to_start_scheduler = True
+        need_to_start_worker = True
+    else:
+        need_to_start_scheduler = parsed_args.start_scheduler_only
+        need_to_start_worker = parsed_args.start_worker_only
+
+
+    # Infer number of CPU cores used for compression
+    num_cpus = parsed_args.num_cpus
+    if 0 == num_cpus:
+        num_cpus = multiprocessing.cpu_count()
+
+    # Validate uncompressed-log-dir
+    uncompressed_log_dir = pathlib.Path(parsed_args.uncompressed_logs_dir).resolve()
+    if not (uncompressed_log_dir.exists() and uncompressed_log_dir.is_dir()):
+        log.error(f'The specified uncompressed log directory path is invalid: {uncompressed_log_dir}')
+        return
+
+    # Infer config file path
+    try:
+        if not parsed_args.config:
+            # Did not provide a config file
+            default_clp_package_config_file = clp_home / 'etc' / 'clp-config.yaml'
+            if not default_clp_package_config_file.exists():
+                log.info('Generating a default config file.')
+                generate_default_package_config(default_clp_package_config_file)
+            log.info(f'Using default config file at {default_clp_package_config_file.relative_to(pathlib.Path.cwd())}')
+            package_config_file_path = default_clp_package_config_file
+        else:
+            # Provided a config file
+            package_config_file_path = pathlib.Path(parsed_args.config).resolve(strict=True)
+    except FileNotFoundError:
+        log.error('Did not provide a clp package config file or the specified config file does not exist.')
+        return
+
+    # Parse and validate config file path
+    try:
+        clp_package_config = CLPPackageConfig.parse_obj(read_yaml_config_file(package_config_file_path))
+
+        if need_to_start_scheduler:
+            # Generate a clp config from a clp package config (a reduced set of clp config)
+            # This config file will be used to start CLP
+            clp_config = CLPConfig(
+                input_logs_dfs_path=str(uncompressed_log_dir),
+                database=Database(
+                    type='mariadb',
+                    host=f'{clp_package_config.cluster_name}-db',
+                    port=3306,
+                    username='clp-user',
+                    password=f'clp-{secrets.token_urlsafe(8)}',
+                    name='initial_database'
+                ),
+                scheduler=Scheduler(
+                    host=f'{clp_package_config.cluster_name}',
+                    username='clp-user',
+                    password=f'clp-{secrets.token_urlsafe(8)}',
+                    jobs_poll_delay=1
+                ),
+                archive_output=ArchiveOutput(
+                    type='fs',
+                    directory=f'var/data/{clp_package_config.cluster_name}/archives',
+                    storage_is_node_specific=True,
+                    target_archive_size=clp_package_config.archive_output.target_archive_size,
+                    target_dictionaries_size=clp_package_config.archive_output.target_dictionaries_size,
+                    target_encoded_file_size=clp_package_config.archive_output.target_encoded_file_size,
+                    target_segment_size=clp_package_config.archive_output.target_segment_size
+                ),
+                data_directory=f'var/data/{clp_package_config.cluster_name}',
+                logs_directory=f'var/log/{clp_package_config.cluster_name}'
+            )
+
+            # If ports are published, user wants to run CLP in distributed mode
+            # Host parameter will be the "host"'s hostname instead of docker network hostname
+            if parsed_args.publish_ports:
+                host_hostname = socket.gethostname()
+                clp_config.database.host = host_hostname
+                clp_config.scheduler.host = host_hostname
+    except Exception as ex:
+        log.error(ex)
+        return
+
+    try:
+        # Create temporary clp config file which we mount into the container
+        # Prepare package and initialize all required directories if necessary
+        # Note: config file is also updated with absolute path
+        docker_clp_home = pathlib.Path('/') / 'root' / 'clp'
+        container_clp_config_file_name = f'.{clp_package_config.cluster_name}.yaml'
+        host_config_file_path = clp_home / container_clp_config_file_name
+        container_config_file_path = f'/root/{container_clp_config_file_name}'
+
+        # Persist config file used for container
+        if not host_config_file_path.exists() and need_to_start_scheduler:
+            host_data_directory, host_log_directory, host_archive_out_directory, clp_config = \
+                prepare_package_and_config(clp_config, clp_home, docker_clp_home)
+            with open(host_config_file_path, 'w') as config_file:
+                config_file.write(clp_config.generate_config_file_content_with_comments())
+        else:
+            try:
+                clp_config = CLPConfig.parse_obj(read_yaml_config_file(host_config_file_path))
+                host_data_directory = clp_home / pathlib.Path(clp_config.data_directory).relative_to(docker_clp_home)
+                host_log_directory = clp_home / pathlib.Path(clp_config.logs_directory).relative_to(docker_clp_home)
+                host_archive_out_directory = \
+                    clp_home / pathlib.Path(clp_config.archive_output.directory).relative_to(docker_clp_home)
+            except Exception as ex:
+                log.error(ex)
+                return
+
+        # Setup basic networking infrastructure
+        provision_docker_network_bridge(clp_package_config.cluster_name)
+
+        if need_to_start_scheduler:
+            # Optimize, start database as early as possible (slow process)
+            log.info('Starting CLP scheduler')
+            log.debug('Starting CLP scheduler database service')
+            start_sql_db(clp_package_config.cluster_name, clp_config, host_data_directory, parsed_args.publish_ports)
+
+        # Start execution environment
+        clp_execution_env_container = 'whywhywhywhywhywhy/clp-execution-env:x86-ubuntu-focal-20210919'
+        clp_execution_env_startup_cmd = [
+            'docker', 'run', '-di',
+            '--network', clp_package_config.cluster_name,
+            '--hostname', f'{clp_package_config.cluster_name}',
+            '--name', f'{clp_package_config.cluster_name}',
+            '-v', f'{clp_home}:/root/clp',
+            '-v', f'{uncompressed_log_dir}:{uncompressed_log_dir}'
+        ]
+        if parsed_args.publish_ports:
+            ports_to_publish = [
+                '-p', '5672:5672'  # Rabbitmq
+            ]
+            clp_execution_env_startup_cmd += ports_to_publish
+
+        # Mount data, logs, archive output directory if it is outside of the package
+        if not clp_config.data_directory.startswith('/root/clp'):
+            clp_execution_env_startup_cmd.append('-v')
+            clp_execution_env_startup_cmd.append(f'{host_data_directory}:{clp_config.data_directory}')
+        if not clp_config.logs_directory.startswith('/root/clp'):
+            clp_execution_env_startup_cmd.append('-v')
+            clp_execution_env_startup_cmd.append(f'{host_log_directory}:{clp_config.logs_directory}')
+        if not clp_config.archive_output.directory.startswith('/root/clp'):
+            clp_execution_env_startup_cmd.append('-v')
+            clp_execution_env_startup_cmd.append(f'{host_archive_out_directory}:{clp_config.archive_output.directory}')
+        clp_execution_env_startup_cmd.append(clp_execution_env_container)
+        log.debug(' '.join(clp_execution_env_startup_cmd))
+        subprocess.run(clp_execution_env_startup_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
+
+        # Copy config file into container
+        copy_cmd = ['docker', 'cp', str(host_config_file_path),
+                    f'{clp_package_config.cluster_name}:{container_config_file_path}']
+        log.debug(' '.join(copy_cmd))
+        subprocess.run(copy_cmd)
+
+        if need_to_start_scheduler:
+            provision_rabbitmq(clp_package_config.cluster_name, clp_config)
+            create_sql_db_tables(clp_package_config.cluster_name, container_config_file_path)
+            start_scheduler(clp_package_config.cluster_name, clp_config, container_config_file_path)
+        if need_to_start_worker:
+            start_worker(clp_package_config.cluster_name, clp_config, num_cpus)
+    except subprocess.CalledProcessError as ex:
+        log.error(ex.stdout.decode('utf-8'))
+        log.error(f'Failed to provision "{clp_package_config.cluster_name}"')
+    except EnvironmentError as ex:
+        log.error(ex)
+        log.error(f'Failed to provision "{clp_package_config.cluster_name}"')
+
+
+if '__main__' == __name__:
+    main(sys.argv)

@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+import argparse
+import logging
+import os
+import pathlib
+import subprocess
+import sys
+import uuid
+
+# Setup logging
+# Create logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+# Setup console logging
+logging_console_handler = logging.StreamHandler()
+logging_formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s')
+logging_console_handler.setFormatter(logging_formatter)
+logger.addHandler(logging_console_handler)
+
+
+def get_clp_home():
+    clp_home = None
+    if 'CLP_HOME' in os.environ:
+        clp_home = pathlib.Path(os.environ['CLP_HOME'])
+    else:
+        for path in pathlib.Path(__file__).resolve().parents:
+            if 'sbin' == path.name:
+                clp_home = path.parent
+                break
+
+    if clp_home is None:
+        logger.error('CLP_HOME is not set and could not be determined automatically.')
+        return None
+    elif not clp_home.exists():
+        logger.error('CLP_HOME does not exist.')
+        return None
+
+    return clp_home.resolve()
+
+
+def load_bundled_python_lib_path(clp_home):
+    python_site_packages_path = clp_home / 'lib' / 'python3' / 'site-packages'
+    if not python_site_packages_path.is_dir():
+        logger.error('Failed to load python3 packages bundled with CLP.')
+        sys.exit(-1)
+    # Add packages to the front of the path
+    sys.path.insert(0, str(python_site_packages_path))
+
+
+clp_home = get_clp_home()
+if clp_home is None:
+    sys.exit(-1)
+load_bundled_python_lib_path(clp_home)
+
+from clp.package_utils import make_config_path_absolute
+from clp_py_utils.clp_config import CLPConfig
+from clp_py_utils.core import read_yaml_config_file
+import yaml
+
+
+def decompress_paths(paths, list_path: pathlib.Path, clp_config: CLPConfig,
+                     archives_dir: pathlib.Path, logs_dir: pathlib.Path,
+                     extraction_dir: pathlib.Path):
+    # Generate database config file for clp
+    db_config_file_path = logs_dir / f'decompress-db-config-{uuid.uuid4()}.yml'
+    db_config_file = open(db_config_file_path, 'w')
+    yaml.safe_dump(clp_config.database.get_clp_connection_params_and_type(), db_config_file)
+    db_config_file.close()
+
+    decompression_cmd = [
+        str(clp_home / 'bin' / 'clp'),
+        'x', str(archives_dir), str(extraction_dir),
+        '--db-config-file', str(db_config_file_path),
+    ]
+    files_to_decompress_list_path = None
+    if list_path is not None:
+        decompression_cmd.append("-f")
+        decompression_cmd.append(str(list_path))
+    elif len(paths) > 0:
+        # Write paths to file
+        files_to_decompress_list_path = logs_dir / f'paths-to-decompress-{uuid.uuid4()}.txt'
+        with open(files_to_decompress_list_path, 'w') as stream:
+            for path in paths:
+                stream.write(path + '\n')
+
+        decompression_cmd.append('-f')
+        decompression_cmd.append(str(files_to_decompress_list_path))
+
+    proc = subprocess.run(decompression_cmd, close_fds=True)
+    return_code = proc.returncode
+    if 0 != return_code:
+        logger.error(f'Decompression failed, return_code={return_code}')
+        return return_code
+
+    # Remove generated files
+    if files_to_decompress_list_path is not None:
+        # Remove path list
+        files_to_decompress_list_path.unlink()
+    db_config_file_path.unlink()
+
+    return 0
+
+
+def main(argv):
+    args_parser = argparse.ArgumentParser(description='Decompresses logs')
+    args_parser.add_argument('--config', '-c', required=True, help='CLP configuration file.')
+    args_parser.add_argument('paths', metavar='PATH', nargs='*', help='Paths to decompress.')
+    args_parser.add_argument('-f', '--files-from', help='Decompress all paths in the given list.')
+    args_parser.add_argument('-d', '--extraction-dir', metavar='DIR', help='Decompress files into DIR', default='.')
+    parsed_args = args_parser.parse_args(argv[1:])
+
+    # Validate paths were specified using only one method
+    if len(parsed_args.paths) > 0 and parsed_args.files_from is not None:
+        args_parser.error('Paths cannot be specified both on the command line and through a file.')
+        return -1
+
+    # Validate extraction directory
+    extraction_dir = pathlib.Path(parsed_args.extraction_dir)
+    if not extraction_dir.is_dir():
+        logger.error(f'extraction-dir ({extraction_dir}) is not a valid directory.')
+        return -1
+
+    # Load configuration
+    clp_config_file_path = pathlib.Path(parsed_args.config)
+    try:
+        clp_config = CLPConfig.parse_obj(read_yaml_config_file(clp_config_file_path))
+    except FileNotFoundError:
+        logger.error(f'CLP config file not found at "{clp_config_file_path}"')
+        return -1
+    except Exception as ex:
+        logger.error(ex)
+        return -1
+
+    logs_dir = make_config_path_absolute(clp_home, pathlib.Path(clp_config.logs_directory))
+    archives_dir = make_config_path_absolute(clp_home, pathlib.Path(clp_config.archive_output.directory))
+
+    return_code = \
+        decompress_paths(parsed_args.paths, parsed_args.files_from, clp_config, archives_dir, logs_dir, extraction_dir)
+    return return_code
+
+
+if '__main__' == __name__:
+    sys.exit(main(sys.argv))

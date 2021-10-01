@@ -1,7 +1,7 @@
 #!/bin/bash
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-project_root_dir=${script_dir}/../../../
+project_root_dir=${script_dir}/../../../../../
 
 cd ${project_root_dir}
 git submodule update --init --recursive
