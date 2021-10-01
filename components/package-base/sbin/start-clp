@@ -247,6 +247,7 @@ def main(argv):
         check_dependencies()
     except EnvironmentError as ex:
         log.error(ex)
+        return
 
     # Infer components to enable
     startup_component_count = parsed_args.start_scheduler_only + parsed_args.start_worker_only
