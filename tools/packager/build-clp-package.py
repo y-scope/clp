@@ -190,9 +190,8 @@ def main(argv):
                 if 'core' == component.name:
                     replace_clp_core_version(host_working_dir / component.name, packaging_config.version)
 
-    # Make a copy of src and name it as the {artifact_name}-{version}
-    shutil.copytree(host_working_dir / 'src', artifact_dir)
-    shutil.rmtree(artifact_dir / 'src' / '.git', ignore_errors=True)
+    # Make a copy of package-template/src directory and name it as the {artifact_name}-{version}
+    shutil.copytree(host_working_dir / 'package-template' / 'src', artifact_dir)
 
     # Start build environment container
     build_environment_container_name = f'clp-builder-{uuid.uuid4()}'
