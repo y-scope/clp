@@ -6,7 +6,7 @@ the compressed logs without decompression. To learn more about it, you can read 
 
 ## Getting Started
 
-You can download a release from the [releases](TODO) page or you can build the latest by using the
+You can download a release from the [releases](https://github.com/y-scope/clp/releases) page or you can build the latest by using the
 [packager](tools/packager/README.md).
 
 ## Project Structure
