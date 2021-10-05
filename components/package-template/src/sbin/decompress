@@ -53,7 +53,7 @@ if clp_home is None:
     sys.exit(-1)
 load_bundled_python_lib_path(clp_home)
 
-from clp.package_utils import check_env
+from clp.package_utils import check_env, CONTAINER_CLP_INSTALL_PREFIX
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.clp_package_config import CLPPackageConfig
 from clp_py_utils.clp_config import CLPConfig
@@ -120,7 +120,7 @@ def main(argv):
     # Parse and validate config file
     container_clp_config_file_name = f'.{clp_package_config.cluster_name}.yaml'
     host_config_file_path = clp_home / container_clp_config_file_name
-    container_config_file_path = f'/root/{container_clp_config_file_name}'
+    container_config_file_path = f'{CONTAINER_CLP_INSTALL_PREFIX}/{container_clp_config_file_name}'
 
     try:
         clp_config = CLPConfig.parse_obj(read_yaml_config_file(host_config_file_path))
@@ -131,7 +131,7 @@ def main(argv):
         log.error(ex)
         return -1
 
-    docker_clp_home = pathlib.Path('/') / 'root' / 'clp'
+    docker_clp_home = pathlib.Path(CONTAINER_CLP_INSTALL_PREFIX) / 'clp'
     docker_extraction_dir = pathlib.Path('/') / 'mnt' / '_extraction_dir_'
 
     host_data_directory = clp_home / pathlib.Path(clp_config.data_directory).relative_to(docker_clp_home)
@@ -149,15 +149,16 @@ def main(argv):
         '--hostname', container_name,
         '--name', container_name,
         '-v', f'{clp_home}:{docker_clp_home}',
-        '-v', f'{extraction_dir}:{docker_extraction_dir}'
+        '-v', f'{extraction_dir}:{docker_extraction_dir}',
+        '-u', f'{os.getuid()}:{os.getgid()}'
     ]
-    if not clp_config.data_directory.startswith('/root/clp'):
+    if not clp_config.data_directory.startswith(f'{CONTAINER_CLP_INSTALL_PREFIX}/clp'):
         clp_execution_env_startup_cmd.append('-v')
         clp_execution_env_startup_cmd.append(f'{host_data_directory}:{clp_config.data_directory}')
-    if not clp_config.logs_directory.startswith('/root/clp'):
+    if not clp_config.logs_directory.startswith(f'{CONTAINER_CLP_INSTALL_PREFIX}/clp'):
         clp_execution_env_startup_cmd.append('-v')
         clp_execution_env_startup_cmd.append(f'{host_log_directory}:{clp_config.logs_directory}')
-    if not clp_config.archive_output.directory.startswith('/root/clp'):
+    if not clp_config.archive_output.directory.startswith(f'{CONTAINER_CLP_INSTALL_PREFIX}/clp'):
         clp_execution_env_startup_cmd.append('-v')
         clp_execution_env_startup_cmd.append(
             f'{host_archive_out_directory}:{clp_config.archive_output.directory}')

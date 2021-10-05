@@ -164,6 +164,7 @@ def main(argv):
         return -1
 
     host_working_dir.mkdir(parents=True, exist_ok=True)
+    pip_cache_directory = pathlib.PurePath('/tmp')
     container_working_directory = pathlib.PurePath('/tmp/out')
     versioned_artifact_name = f'{packaging_config.artifact_name}-{packaging_config.arch}-v{packaging_config.version}'
     artifact_dir = (host_working_dir / versioned_artifact_name).resolve()
@@ -209,34 +210,28 @@ def main(argv):
         container_exec_prefix = [
             'docker', 'exec', '-it',
             '-e', f'WORKING_DIR={container_working_directory}',
+            '-e', f'CACHE_DIR={pip_cache_directory}',
             '-e', f'ARTIFACT_NAME={versioned_artifact_name}',
             '-e', f'BUILD_PARALLELISM={build_parallelization}',
             '-w', str(container_working_directory),
+            '-u', f'{os.getuid()}:{os.getgid()}',
             build_environment_container_name
         ]
 
         # Run the component installation scripts
         install_cmds = [
-            [str(container_install_scripts_dir / 'install-celery.sh')],
+            [str(container_install_scripts_dir / 'install-python-component.sh'), 'job-orchestration'],
             [str(container_install_scripts_dir / 'install-python-component.sh'), 'clp-py-utils'],
             [str(container_install_scripts_dir / 'install-python-component.sh'), 'compression-job-handler'],
-            [str(container_install_scripts_dir / 'install-python-component.sh'), 'job-orchestration'],
-            [str(container_install_scripts_dir / 'install-core.sh')],
+            [str(container_install_scripts_dir / 'install-core.sh')]
         ]
         for cmd in install_cmds:
             container_exec_cmd = container_exec_prefix + cmd
             log.info(' '.join(container_exec_cmd))
             subprocess.run(container_exec_cmd, check=True)
 
-        # Set current user as owner of built files and build tar
-        cmds = [
-            f'chown -R {os.getuid()}:{os.getgid()} {container_working_directory}',
-            f'tar -czf {versioned_artifact_name}.tar.gz {versioned_artifact_name}',
-            f'chown -R {os.getuid()}:{os.getgid()} {versioned_artifact_name}.tar.gz'
-        ]
-        for cmd in cmds:
-            container_exec_cmd = container_exec_prefix + cmd.split()
-            subprocess.run(container_exec_cmd, check=True)
+        archive_cmd = f'tar -czf {versioned_artifact_name}.tar.gz {versioned_artifact_name}'
+        subprocess.run(container_exec_prefix + archive_cmd.split(), check=True)
     except subprocess.CalledProcessError as ex:
         print(ex.stdout)
         log.error('Failed to build CLP')
