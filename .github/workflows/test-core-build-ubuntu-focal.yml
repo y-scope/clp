@@ -38,22 +38,26 @@ jobs:
           wget
 
       - name: Download submodules
-        run: ${{github.workspace}}/components/core/tools/scripts/deps-download/download-all.sh
+        run: ./tools/scripts/deps-download/download-all.sh
+        working-directory: ${{github.workspace}}/components/core
 
       - name: Install packages from source
         run: |
-          ${{github.workspace}}/components/core/tools/scripts/lib_install/fmtlib.sh 8.0.1
-          ${{github.workspace}}/components/core/tools/scripts/lib_install/libarchive.sh 3.5.1
-          ${{github.workspace}}/components/core/tools/scripts/lib_install/lz4.sh 1.8.2
-          ${{github.workspace}}/components/core/tools/scripts/lib_install/mariadb-connector-c.sh 3.2.3
-          ${{github.workspace}}/components/core/tools/scripts/lib_install/spdlog.sh 1.9.2
-          ${{github.workspace}}/components/core/tools/scripts/lib_install/zstandard.sh 1.4.9
+          ./tools/scripts/lib_install/fmtlib.sh 8.0.1
+          ./tools/scripts/lib_install/libarchive.sh 3.5.1
+          ./tools/scripts/lib_install/lz4.sh 1.8.2
+          ./tools/scripts/lib_install/mariadb-connector-c.sh 3.2.3
+          ./tools/scripts/lib_install/spdlog.sh 1.9.2
+          ./tools/scripts/lib_install/zstandard.sh 1.4.9
+        working-directory: ${{github.workspace}}/components/core
 
       - name: Configure CMake
         # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
         # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
         run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+        working-directory: ${{github.workspace}}/components/core
 
       - name: Build
         # Build your program with the given configuration
         run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+        working-directory: ${{github.workspace}}/components/core
