@@ -1,0 +1,53 @@
+name: Test Building Core on Ubuntu Focal
+
+on:
+  push:
+    branches: [ actions-test-2 ]
+  pull_request:
+    branches: [ actions-test-2 ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - run: sudo apt update
+      - run: >
+          sudo apt install -y
+          ca-certificates
+          checkinstall
+          cmake
+          build-essential
+          libboost-filesystem-dev
+          libboost-iostreams-dev
+          libboost-program-options-dev
+          libssl-dev
+          rsync
+          wget
+
+      - name: Download submodules
+        run: ${{github.workspace}}/tools/scripts/deps-download/download-all.sh
+
+      - name: Install packages from source
+        run: |
+          ${{github.workspace}}/tools/scripts/lib_install/fmtlib.sh 8.0.1
+          ${{github.workspace}}/tools/scripts/lib_install/libarchive.sh 3.5.1
+          ${{github.workspace}}/tools/scripts/lib_install/lz4.sh 1.8.2
+          ${{github.workspace}}/tools/scripts/lib_install/mariadb-connector-c.sh 3.2.3
+          ${{github.workspace}}/tools/scripts/lib_install/spdlog.sh 1.9.2
+          ${{github.workspace}}/tools/scripts/lib_install/zstandard.sh 1.4.9
+
+      - name: Configure CMake
+        # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+        # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+      - name: Build
+        # Build your program with the given configuration
+        run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
