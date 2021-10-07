@@ -5,10 +5,12 @@ on:
     branches: [ actions-test-2 ]
     paths:
       - 'components/core/**'
+      - '.github/workflows/test-core-build-ubuntu-focal.yml'
   pull_request:
     branches: [ actions-test-2 ]
     paths:
       - 'components/core/**'
+      - '.github/workflows/test-core-build-ubuntu-focal.yml'
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
