@@ -1,21 +1,6 @@
 #!/bin/bash
 
-project_root="../../.."
+script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+component_root=${script_dir}/../../../
 
-scripts=()
-scripts+=(fmtlib.sh)
-scripts+=(libarchive.sh)
-scripts+=(mariadb-connector-c.sh)
-scripts+=(lz4.sh)
-scripts+=(spdlog.sh)
-scripts+=(zstandard.sh)
-
-# Copy package installation scripts into working directory so docker can access them
-for script in ${scripts[@]} ; do
-  cp ${project_root}/tools/scripts/lib_install/${script} .
-done
-
-docker build -t clp-env-base:focal .
-
-# Delete package installation scripts
-rm ${scripts[@]}
+docker build -t clp-env-base:focal ${component_root} --file ${script_dir}/Dockerfile
