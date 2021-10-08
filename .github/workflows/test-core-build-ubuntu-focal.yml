@@ -2,12 +2,12 @@ name: Test Building Core on Ubuntu 20.04
 
 on:
   push:
-    branches: [ actions-test-2 ]
+    branches: [ main ]
     paths:
       - 'components/core/**'
       - '.github/workflows/test-core-build-ubuntu-focal.yml'
   pull_request:
-    branches: [ actions-test-2 ]
+    branches: [ main ]
     paths:
       - 'components/core/**'
       - '.github/workflows/test-core-build-ubuntu-focal.yml'
