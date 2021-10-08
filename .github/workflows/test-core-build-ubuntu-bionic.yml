@@ -25,8 +25,8 @@ jobs:
 
       - name: Setup build environment
         run: |
-          ./tools/docker-images/clp-env-base-bionic/scripts/install-prebuilt-packages.sh
-          ./tools/docker-images/clp-env-base-bionic/scripts/install-packages-from-source.sh
+          ./tools/docker-images/clp-env-base-bionic/setup-scripts/install-prebuilt-packages.sh
+          ./tools/docker-images/clp-env-base-bionic/setup-scripts/install-packages-from-source.sh
         working-directory: ${{github.workspace}}/components/core
 
       - name: Download submodules
