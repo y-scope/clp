@@ -1,0 +1,45 @@
+name: Test Building Core on Ubuntu 20.04
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'components/core/**'
+      - '.github/workflows/test-core-build-ubuntu-focal.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'components/core/**'
+      - '.github/workflows/test-core-build-ubuntu-focal.yml'
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup build environment
+        run: |
+          sudo ./tools/docker-images/clp-env-base-focal/setup-scripts/install-prebuilt-packages.sh
+          sudo ./tools/docker-images/clp-env-base-focal/setup-scripts/install-packages-from-source.sh
+        working-directory: ${{github.workspace}}/components/core
+
+      - name: Download submodules
+        run: ./tools/scripts/deps-download/download-all.sh
+        working-directory: ${{github.workspace}}/components/core
+
+      - name: Configure CMake
+        # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+        # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+        working-directory: ${{github.workspace}}/components/core
+
+      - name: Build
+        # Build your program with the given configuration
+        run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+        working-directory: ${{github.workspace}}/components/core
