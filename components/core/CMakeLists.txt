@@ -499,3 +499,5 @@ target_link_libraries(unitTest
 target_compile_features(unitTest
         PRIVATE cxx_std_14
         )
+
+include(cmake/utils.cmake)
