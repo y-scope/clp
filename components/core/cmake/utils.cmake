@@ -1,0 +1,46 @@
+set(SOURCE_FILES_make-dictionaries-readable
+        ../src/dictionary_utils.cpp
+        ../src/dictionary_utils.hpp
+        ../src/DictionaryEntry.cpp
+        ../src/DictionaryEntry.hpp
+        ../src/DictionaryReader.cpp
+        ../src/DictionaryReader.hpp
+        ../src/FileReader.cpp
+        ../src/FileReader.hpp
+        ../src/FileWriter.cpp
+        ../src/FileWriter.hpp
+        ../src/LogTypeDictionaryEntry.cpp
+        ../src/LogTypeDictionaryEntry.hpp
+        ../src/LogTypeDictionaryReader.cpp
+        ../src/LogTypeDictionaryReader.hpp
+        ../src/ParsedMessage.cpp
+        ../src/ParsedMessage.hpp
+        ../src/ReaderInterface.cpp
+        ../src/ReaderInterface.hpp
+        ../src/streaming_compression/Decompressor.cpp
+        ../src/streaming_compression/Decompressor.hpp
+        ../src/streaming_compression/zstd/Decompressor.cpp
+        ../src/streaming_compression/zstd/Decompressor.hpp
+        ../src/Utils.cpp
+        ../src/Utils.hpp
+        ../src/utils/make_dictionaries_readable/CommandLineArguments.cpp
+        ../src/utils/make_dictionaries_readable/CommandLineArguments.hpp
+        ../src/utils/make_dictionaries_readable/make-dictionaries-readable.cpp
+        ../src/VariableDictionaryEntry.cpp
+        ../src/VariableDictionaryEntry.hpp
+        ../src/VariableDictionaryReader.cpp
+        ../src/VariableDictionaryReader.hpp
+        ../src/WriterInterface.cpp
+        ../src/WriterInterface.hpp
+        ../submodules/date/include/date/date.h
+        )
+add_executable(make-dictionaries-readable ${SOURCE_FILES_make-dictionaries-readable})
+target_link_libraries(make-dictionaries-readable
+        PRIVATE
+        Boost::filesystem Boost::iostreams Boost::program_options
+        spdlog::spdlog
+        ZStd::ZStd
+        )
+target_compile_features(make-dictionaries-readable
+        PRIVATE cxx_std_14
+        )
