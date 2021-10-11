@@ -52,8 +52,9 @@ public:
     };
 
     // Constructors
-    GlobalMySQLMetadataDB (const std::string& host, int port, const std::string& username, const std::string& password, const std::string& database_name) :
-            m_host(host), m_port(port), m_username(username), m_password(password), m_database_name(database_name) {}
+    GlobalMySQLMetadataDB (const std::string& host, int port, const std::string& username, const std::string& password, const std::string& database_name,
+                           const std::string& table_prefix) : m_host(host), m_port(port), m_username(username), m_password(password),
+                                                              m_database_name(database_name), m_table_prefix(table_prefix) {}
 
     // Methods
     void open () override;
@@ -74,6 +75,7 @@ private:
     std::string m_username;
     std::string m_password;
     std::string m_database_name;
+    std::string m_table_prefix;
 
     MySQLDB m_db;
 

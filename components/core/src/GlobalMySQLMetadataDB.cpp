@@ -62,7 +62,7 @@ void GlobalMySQLMetadataDB::open () {
     fmt::memory_buffer statement_buffer;
     auto statement_buffer_ix = std::back_inserter(statement_buffer);
 
-    fmt::format_to(statement_buffer_ix, "INSERT INTO {} ({}) VALUES ({})", streaming_archive::cMetadataDB::ArchivesTableName,
+    fmt::format_to(statement_buffer_ix, "INSERT INTO {}{} ({}) VALUES ({})", m_table_prefix, streaming_archive::cMetadataDB::ArchivesTableName,
                    get_field_names_sql(archive_field_names), get_placeholders_sql(archive_field_names.size()));
     SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
     m_insert_archive_statement = std::make_unique<MySQLPreparedStatement>(m_db.prepare_statement(statement_buffer.data(), statement_buffer.size()));
@@ -74,7 +74,7 @@ void GlobalMySQLMetadataDB::open () {
     update_archive_size_stmt_field_names[enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Size)] =
             streaming_archive::cMetadataDB::Archive::Size;
 
-    fmt::format_to(statement_buffer_ix, "UPDATE {} SET {} WHERE {} = ?", streaming_archive::cMetadataDB::ArchivesTableName,
+    fmt::format_to(statement_buffer_ix, "UPDATE {}{} SET {} WHERE {} = ?", m_table_prefix, streaming_archive::cMetadataDB::ArchivesTableName,
                    get_set_field_sql(update_archive_size_stmt_field_names, 0, enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Length)),
                    streaming_archive::cMetadataDB::Archive::Id);
     SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
@@ -93,8 +93,8 @@ void GlobalMySQLMetadataDB::open () {
     file_field_names[enum_to_underlying_type(FilesTableFieldIndexes::ArchiveId)] = streaming_archive::cMetadataDB::File::ArchiveId;
 
     // Insert or on conflict, set all fields except the ID
-    fmt::format_to(statement_buffer_ix, "INSERT INTO {} ({}) VALUES ({}) ON DUPLICATE KEY UPDATE {}", streaming_archive::cMetadataDB::FilesTableName,
-                   get_field_names_sql(file_field_names), get_placeholders_sql(file_field_names.size()),
+    fmt::format_to(statement_buffer_ix, "INSERT INTO {}{} ({}) VALUES ({}) ON DUPLICATE KEY UPDATE {}", m_table_prefix,
+                   streaming_archive::cMetadataDB::FilesTableName, get_field_names_sql(file_field_names), get_placeholders_sql(file_field_names.size()),
                    get_set_field_sql(file_field_names, enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1,
                                      enum_to_underlying_type(FilesTableFieldIndexes::Length)));
     SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
@@ -198,9 +198,11 @@ void GlobalMySQLMetadataDB::update_metadata_for_files (const std::string& archiv
 }
 
 GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator () {
-    if (false == m_db.execute_query(
-            fmt::format("SELECT {} FROM {}", streaming_archive::cMetadataDB::Archive::Id, streaming_archive::cMetadataDB::ArchivesTableName)))
-    {
+    auto statement_string = fmt::format("SELECT {} FROM {}{}", streaming_archive::cMetadataDB::Archive::Id, m_table_prefix,
+                                        streaming_archive::cMetadataDB::ArchivesTableName);
+    SPDLOG_DEBUG("{}", statement_string);
+
+    if (false == m_db.execute_query(statement_string)) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
 
@@ -208,13 +210,15 @@ GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator (
 }
 
 GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator_for_file_path (const string& file_path) {
-    auto statement_string = fmt::format("SELECT DISTINCT {}.{} FROM {} JOIN {} ON {}.{} = {}.{} WHERE {}.{} = '{}' ORDER BY {} ASC, {} ASC",
-                                        streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::Archive::Id,
-                                        streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::FilesTableName,
-                                        streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::Archive::Id,
-                                        streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::ArchiveId,
-                                        streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::Path, file_path,
+    auto statement_string = fmt::format("SELECT DISTINCT {}{}.{} FROM {}{} JOIN {}{} ON {}{}.{} = {}{}.{} WHERE {}{}.{} = '{}' ORDER BY {} ASC, {} ASC",
+                                        m_table_prefix, streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::Archive::Id,
+                                        m_table_prefix, streaming_archive::cMetadataDB::ArchivesTableName,
+                                        m_table_prefix, streaming_archive::cMetadataDB::FilesTableName,
+                                        m_table_prefix, streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::Archive::Id,
+                                        m_table_prefix, streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::ArchiveId,
+                                        m_table_prefix, streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::Path, file_path,
                                         streaming_archive::cMetadataDB::Archive::CreatorId, streaming_archive::cMetadataDB::Archive::CreationIx);
+    SPDLOG_DEBUG("{}", statement_string);
 
     if (false == m_db.execute_query(statement_string)) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);

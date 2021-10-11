@@ -90,6 +90,18 @@ void GlobalMetadataDBConfig::parse_config_file (const string& config_file_path) 
         if (m_metadata_db_password.empty()) {
             throw invalid_argument("Database 'password' not specified or empty.");
         }
+
+        if (!config["table_prefix"]) {
+            throw get_yaml_missing_key_exception("table_prefix");
+        }
+        try {
+            m_metadata_table_prefix = config["table_prefix"].as<string>();
+        } catch (YAML::BadConversion& e) {
+            throw get_yaml_unconvertable_value_exception("table_prefix", "string");
+        }
+        if (m_metadata_table_prefix.empty()) {
+            throw invalid_argument("Database 'table_prefix' not specified or empty.");
+        }
     } else {
         throw invalid_argument("Unknown type");
     }
