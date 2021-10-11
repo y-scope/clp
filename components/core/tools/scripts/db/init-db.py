@@ -38,6 +38,7 @@ def main(argv):
     username = config["username"]
     password = config["password"]
     db_name = config["name"]
+    table_prefix = config["table_prefix"]
 
     try:
         mysql_conn = mariadb.connect(host=host, port=port, username=username, password=password)
@@ -63,7 +64,7 @@ def main(argv):
 
         # Create tables
         try:
-            mysql_cursor.execute(f"""CREATE TABLE IF NOT EXISTS `archives` (
+            mysql_cursor.execute(f"""CREATE TABLE IF NOT EXISTS `{table_prefix}archives` (
                 `pagination_id` BIGINT unsigned NOT NULL AUTO_INCREMENT,
                 `id` VARCHAR(64) NOT NULL,
                 `storage_id` VARCHAR(64) NOT NULL,
@@ -76,7 +77,7 @@ def main(argv):
                 PRIMARY KEY (`pagination_id`)
             )""")
 
-            mysql_cursor.execute(f"""CREATE TABLE IF NOT EXISTS `files` (
+            mysql_cursor.execute(f"""CREATE TABLE IF NOT EXISTS `{table_prefix}files` (
                 `id` VARCHAR(64) NOT NULL,
                 `orig_file_id` VARCHAR(64) NOT NULL,
                 `path` VARCHAR(12288) NOT NULL,

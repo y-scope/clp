@@ -375,7 +375,8 @@ int main (int argc, const char* argv[]) {
                                                                          global_metadata_db_config.get_metadata_db_port(),
                                                                          global_metadata_db_config.get_metadata_db_username(),
                                                                          global_metadata_db_config.get_metadata_db_password(),
-                                                                         global_metadata_db_config.get_metadata_db_name());
+                                                                         global_metadata_db_config.get_metadata_db_name(),
+                                                                         global_metadata_db_config.get_metadata_table_prefix());
             break;
     }
     global_metadata_db->open();

@@ -61,6 +61,7 @@ class Database(BaseModel):
             'username': self.username,
             'password': self.password,
             'name': self.name,
+            'table_prefix': 'clp_',
             'compress': self.compress,
             'autocommit': self.auto_commit
         }

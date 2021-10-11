@@ -30,6 +30,8 @@ public:
     const std::string& get_metadata_db_username () const { return m_metadata_db_username; }
     const std::string& get_metadata_db_password () const { return m_metadata_db_password; }
 
+    const std::string& get_metadata_table_prefix () const { return m_metadata_table_prefix; }
+
 private:
     // Variables
     MetadataDBType m_metadata_db_type;
@@ -40,6 +42,8 @@ private:
 
     std::string m_metadata_db_username;
     std::string m_metadata_db_password;
+
+    std::string m_metadata_table_prefix;
 };
 
 #endif // GLOBALMETADATADBCONFIG_HPP

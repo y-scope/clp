@@ -29,10 +29,12 @@ def main(argv):
     try:
         clp_config = CLPConfig.parse_obj(read_yaml_config_file(parsed_args.config))
         sql_adapter = SQL_Adapter(clp_config.database)
+        clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type()
+        table_prefix = clp_db_connection_params['table_prefix']
         with closing(sql_adapter.create_connection()) as metadata_db, \
                 closing(metadata_db.cursor(dictionary=True)) as metadata_db_cursor:
-            metadata_db_cursor.execute("""
-                CREATE TABLE IF NOT EXISTS `archives` (
+            metadata_db_cursor.execute(f"""
+                CREATE TABLE IF NOT EXISTS `{table_prefix}archives` (
                     `pagination_id` BIGINT unsigned NOT NULL AUTO_INCREMENT,
                     `id` VARCHAR(64) NOT NULL,
                     `storage_id` VARCHAR(64) NOT NULL,
@@ -47,8 +49,8 @@ def main(argv):
                 """
             )
 
-            metadata_db_cursor.execute("""
-                CREATE TABLE IF NOT EXISTS `files` (
+            metadata_db_cursor.execute(f"""
+                CREATE TABLE IF NOT EXISTS `{table_prefix}files` (
                     `id` VARCHAR(64) NOT NULL,
                     `orig_file_id` VARCHAR(64) NOT NULL,
                     `path` VARCHAR(12288) NOT NULL,
