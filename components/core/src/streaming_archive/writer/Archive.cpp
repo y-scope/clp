@@ -472,7 +472,6 @@ namespace streaming_archive { namespace writer {
 
         for (auto file : files) {
             file->mark_as_in_committed_segment();
-            m_stable_uncompressed_size += file->get_num_uncompressed_bytes();
         }
 
         m_global_metadata_db->open();
@@ -482,6 +481,7 @@ namespace streaming_archive { namespace writer {
 
         for (auto file : files) {
             file->cleanup_after_segment_insertion();
+            m_stable_uncompressed_size += file->get_num_uncompressed_bytes();
             delete file;
         }
         files.clear();
