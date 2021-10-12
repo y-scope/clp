@@ -4,7 +4,8 @@ on:
   push:
     branches: ['main']
     paths:
-      - 'components/core/tools/docker-images/clp-env-base-focal/*'
+      - 'components/core/tools/docker-images/clp-env-base-focal/**'
+      - 'components/core/tools/scripts/lib_install/**'
       - '.github/workflows/clp-dependency-image-build.yaml'
 
 env:
