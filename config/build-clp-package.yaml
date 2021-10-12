@@ -1,5 +1,5 @@
 working_dir: out
-version: 0.0.0
+version: 0.0.1
 artifact_name: clp-package-ubuntu-focal
 build_parallelism: 0   # 0 -> attempt to compile with available cores on the machine
 builder_dockerhub_image: whywhywhywhywhywhy/builders:x86-ubuntu-focal-20210915
