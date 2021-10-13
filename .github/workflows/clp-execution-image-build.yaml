@@ -36,8 +36,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
         with:
-          context: components/core/
-          file: components/core/tools/docker-images/clp-execution-base-focal/Dockerfile
-          push: true
+          context: ./
+          file: ./tools/docker-images/clp-execution-base-focal/Dockerfile
+          push: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
