@@ -51,7 +51,7 @@ if clp_home is None:
     sys.exit(-1)
 load_bundled_python_lib_path(clp_home)
 
-from clp.package_utils import check_env
+from clp.package_utils import check_env, CONTAINER_CLP_INSTALL_PREFIX
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.clp_package_config import CLPPackageConfig
 from pydantic import ValidationError
@@ -98,9 +98,10 @@ def main(argv):
 
     docker_exec_cmd = [
         'docker', 'exec',
-        '--workdir', '/root/clp',
+        '--workdir', f'{CONTAINER_CLP_INSTALL_PREFIX}/clp',
+        '-u', f'{os.getuid()}:{os.getgid()}',
         clp_cluster_name,
-        'sbin/native/search', '--config', f'/root/.{clp_cluster_name}.yaml',
+        'sbin/native/search', '--config', f'{CONTAINER_CLP_INSTALL_PREFIX}/.{clp_cluster_name}.yaml',
         parsed_args.wildcard_query
     ]
     if parsed_args.file_path:
