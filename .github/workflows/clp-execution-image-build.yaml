@@ -26,3 +26,5 @@ jobs:
           image_name: ${{env.IMAGE_NAME}}
           context: ./
           file: ./tools/docker-images/clp-execution-base-focal/Dockerfile
+          github_token: ${{secrets.GITHUB_TOKEN}}
+

@@ -16,6 +16,9 @@ inputs:
     description: "Dockerfile path"
     required: false
     default: ./Dockerfile
+  github_token:
+    description: "Github token for pushing to ghcr"
+    required: true
 
 
 
@@ -27,7 +30,7 @@ runs:
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
-        password: ${{ github.token }}
+        password: ${{ inputs.github_token }}
 
     - name: Extract metadata (tags, labels) for Docker
       id: meta
