@@ -18,6 +18,7 @@ inputs:
     default: ${{inputs.context}}/Dockerfile
 
 
+
 runs:
   using: "composite"
   steps:
@@ -26,7 +27,7 @@ runs:
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+        password: ${{ github.token }}
 
     - name: Extract metadata (tags, labels) for Docker
       id: meta
