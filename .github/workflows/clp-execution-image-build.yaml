@@ -38,6 +38,6 @@ jobs:
         with:
           context: ./
           file: ./tools/docker-images/clp-execution-base-focal/Dockerfile
-          push: false
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
