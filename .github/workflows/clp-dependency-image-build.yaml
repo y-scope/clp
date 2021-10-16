@@ -20,6 +20,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      
+      - name: Log in to the Github Packages Container registry
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
     
       - name: Build and Push Ubuntu Focal Docker Image
         uses: ./.github/actions/clp-docker-build-push-action
@@ -27,7 +34,6 @@ jobs:
           image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-focal
           context: components/core/
           file: components/core/tools/docker-images/clp-env-base-focal/Dockerfile
-          github_token: ${{secrets.GITHUB_TOKEN}}
 
       - name: Build and Push Ubuntu Bionic Docker Image
         uses: ./.github/actions/clp-docker-build-push-action
@@ -35,7 +41,6 @@ jobs:
           image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-focal
           context: components/core/
           file: components/core/tools/docker-images/clp-env-base-bionic/Dockerfile
-          github_token: ${{secrets.GITHUB_TOKEN}}
 
 
       - name: Build and Push Centos7.4 Docker Image
@@ -44,5 +49,4 @@ jobs:
           image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-focal
           context: components/core/
           file: components/core/tools/docker-images/clp-env-base-centos7.4/Dockerfile
-          github_token: ${{secrets.GITHUB_TOKEN}}
 
