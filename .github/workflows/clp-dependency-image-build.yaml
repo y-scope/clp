@@ -2,7 +2,7 @@ name: Build and Publish Image with Dependencies to Build CLP Core
 
 on:
   push:
-#    branches: ['main']
+    branches: ['main']
     paths:
       - 'components/core/tools/docker-images/clp-env-base-focal/**'
       - 'components/core/tools/scripts/lib_install/**'
@@ -11,32 +11,33 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{github.repository}}/clp-core-dependencies-x86-ubuntu-focal
+  IMAGE_NAME_BASE: ${{github.repository}}/clp-core-dependencies-x86
 
 jobs:
   build:
     runs-on: ubuntu-20.04
     name: Build Image
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
     
       - name: Build and Push Ubuntu Focal Docker Image
         uses: ./.github/actions/clp-docker-build-push-action
         with:
-          image_name: ${{env.IMAGE_NAME}}
+          image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-focal
           context: components/core/
           file: components/core/tools/docker-images/clp-env-base-focal/Dockerfile
 
       - name: Build and Push Ubuntu Bionic Docker Image
         uses: ./.github/actions/clp-docker-build-push-action
         with:
-          image_name: ${{env.IMAGE_NAME}}
+          image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-focal
           context: components/core/
           file: components/core/tools/docker-images/clp-env-base-focal/Dockerfile
 
       - name: Build and Push Centos7.4 Docker Image
         uses: ./.github/actions/clp-docker-build-push-action
         with:
-          image_name: ${{env.IMAGE_NAME}}
+          image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-focal
           context: components/core/
           file: components/core/tools/docker-images/clp-env-base-focal/Dockerfile
