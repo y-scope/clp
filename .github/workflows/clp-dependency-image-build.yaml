@@ -2,7 +2,7 @@ name: Build and Publish Image with Dependencies to Build CLP Core
 
 on:
   push:
-    branches: ['main']
+#    branches: ['main']
     paths:
       - 'components/core/tools/docker-images/clp-env-base-focal/**'
       - 'components/core/tools/scripts/lib_install/**'
