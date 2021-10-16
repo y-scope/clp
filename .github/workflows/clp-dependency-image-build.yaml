@@ -38,7 +38,7 @@ jobs:
       - name: Build and Push Ubuntu Bionic Docker Image
         uses: ./.github/actions/clp-docker-build-push-action
         with:
-          image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-focal
+          image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-bionic
           context: components/core/
           file: components/core/tools/docker-images/clp-env-base-bionic/Dockerfile
 
@@ -46,7 +46,7 @@ jobs:
       - name: Build and Push Centos7.4 Docker Image
         uses: ./.github/actions/clp-docker-build-push-action
         with:
-          image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-focal
+          image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-centos7.4
           context: components/core/
           file: components/core/tools/docker-images/clp-env-base-centos7.4/Dockerfile
 
