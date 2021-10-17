@@ -29,14 +29,14 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
     
       - name: Build and Push Ubuntu Focal Docker Image
-        uses: .github/actions/clp-docker-build-push-action
+        uses: ./.github/actions/clp-docker-build-push-action
         with:
           image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-focal
           context: components/core/
           file: components/core/tools/docker-images/clp-env-base-focal/Dockerfile
 
       - name: Build and Push Ubuntu Bionic Docker Image
-        uses: .github/actions/clp-docker-build-push-action
+        uses: ./.github/actions/clp-docker-build-push-action
         with:
           image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-bionic
           context: components/core/
@@ -44,7 +44,7 @@ jobs:
 
 
       - name: Build and Push Centos7.4 Docker Image
-        uses: .github/actions/clp-docker-build-push-action
+        uses: ./.github/actions/clp-docker-build-push-action
         with:
           image_name: ${{env.IMAGE_NAME_BASE}}-centos7.4
           context: components/core/
