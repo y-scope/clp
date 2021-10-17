@@ -149,17 +149,16 @@ More usage instructions can be found by running:
 
 ### `make-dictionaries-readable`
 
-If you'd like to convert the dictionaries of an individual archive into a 
-human-readable form, you can use `make-dictionaries-readable`.
+If you'd like to convert the dictionaries of an individual archive into a human-readable form, you 
+can use `make-dictionaries-readable`.
 
 ```shell
 ./make-dictionaries-readable archive-path <output dir>
 ```
 * `archive-path` is a path to a specific archive (inside `archives-dir`)
 
-See the `make-dictionaries-readable` 
-[README](src/utils/make_dictionaries_readable/README.md) for details on the 
-output format. 
+See the `make-dictionaries-readable` [README](src/utils/make_dictionaries_readable/README.md) for 
+details on the output format. 
 
 ## Parallel Compression
 
