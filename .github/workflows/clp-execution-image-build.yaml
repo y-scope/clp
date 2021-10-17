@@ -4,9 +4,10 @@ on:
   push:
     branches: ['main']
     paths:
-      - 'components/core/tools/docker-images/clp-execution-base-focal/**'
+      - './tools/docker-images/clp-execution-base-focal/**'
       - 'components/core/tools/scripts/lib_install/**'
       - '.github/workflows/clp-execution-image-build.yaml'
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -20,24 +21,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Log in to the Container registry
+      - name: Log in to the Github Packages Container registry
         uses: docker/login-action@v1
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v2
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-
       - name: Build and push Docker image
-        uses: docker/build-push-action@v2
+        uses: ./.github/actions/clp-docker-build-push-action
         with:
-          context: ./
+          image_name: ${{env.IMAGE_NAME}}
           file: ./tools/docker-images/clp-execution-base-focal/Dockerfile
-          push: false
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}

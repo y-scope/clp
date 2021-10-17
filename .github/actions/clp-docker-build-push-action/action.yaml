@@ -1,0 +1,37 @@
+name: "Build and Push Docker Image"
+description: "Pushes built Docker image to Github Packages"
+
+env:
+  REGISTRY: ghcr.io
+
+inputs:
+  image_name:
+    description: "Name of Docker image to be pushed"
+    required: true
+  context:
+    description: "Docker build context"
+    required: false
+    default: ./
+  file:
+    description: "Dockerfile path"
+    required: false
+    default: ./Dockerfile
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@v2
+      with:
+        images: ${{ env.REGISTRY }}/${{ inputs.image_name }}
+        
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v2
+      with:
+        context: ${{inputs.context}}
+        file: ${{inputs.file}}
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}

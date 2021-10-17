@@ -29,8 +29,12 @@ directory:
 The packages held by this [repository](https://github.com/orgs/y-scope/packages?repo_name=clp) are: 
 
 1. Docker Image `clp/clp-core-dependencies-x86-ubuntu-focal`
-    - A docker image containing all the necessary dependencies to build CLP core in an x86 environment
-2. Docker Image `clp/clp-execution-x86-ubuntu-focal`
+    - A docker image containing all the necessary dependencies to build CLP core in an Ubuntu Focal x86 environment
+2. Docker Image `clp/clp-core-dependencies-x86-ubuntu-bionic`
+    - A docker image containing all the necessary dependencies to build CLP core in an Ubuntu Bionic x86 environment
+3. Docker Image `clp/clp-core-dependencies-x86-centos7.4`
+    - A docker image containing all the necessary dependencies to build CLP core in a Centos 7.4 x86 environment
+4. Docker Image `clp/clp-execution-x86-ubuntu-focal`
     - A docker image containing all the necessary dependencies to run the full CLP package in an x86 environment
 
 ## Next Steps
