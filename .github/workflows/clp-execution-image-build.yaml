@@ -29,9 +29,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
-        uses: ./.github/actions/clp-docker-build-push-action
+        uses: .github/actions/clp-docker-build-push-action
         with:
           image_name: ${{env.IMAGE_NAME}}
-          context: ./
           file: ./tools/docker-images/clp-execution-base-focal/Dockerfile
 

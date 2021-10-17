@@ -1,4 +1,4 @@
-name: "Build and Push Docker images"
+name: "Build and Push Docker image"
 description: "Pushes built Docker image to Github Packages"
 
 env:
@@ -6,7 +6,7 @@ env:
 
 inputs:
   image_name:
-    description: "Docker image name to be pushed as"
+    description: "Name of Docker image to be pushed"
     required: true
   context:
     description: "Docker build context"
@@ -16,8 +16,6 @@ inputs:
     description: "Dockerfile path"
     required: false
     default: ./Dockerfile
-
-
 
 runs:
   using: "composite"
@@ -37,4 +35,3 @@ runs:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
-    
