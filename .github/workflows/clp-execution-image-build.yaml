@@ -33,4 +33,3 @@ jobs:
         with:
           image_name: ${{env.IMAGE_NAME}}
           file: ./tools/docker-images/clp-execution-base-focal/Dockerfile
-
