@@ -5,12 +5,12 @@ on:
     branches: [ main ]
     paths:
       - 'components/core/**'
-      - '.github/workflows/clp-core-build.yml'
+      - '.github/workflows/clp-core-build.yaml'
   pull_request:
     branches: [ main ]
     paths:
       - 'components/core/**'
-      - '.github/workflows/clp-core-build.yml'
+      - '.github/workflows/clp-core-build.yaml'
 
 jobs:
   build-focal:
