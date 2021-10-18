@@ -1,0 +1,47 @@
+name: Test Building CLP Core on Ubuntu Focal, Bionic and Centos 7.4
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'components/core/**'
+      - '.github/workflows/clp-core-build.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'components/core/**'
+      - '.github/workflows/clp-core-build.yml'
+
+jobs:
+  build-focal:
+    runs-on: ubuntu-20.04
+    container:
+      image: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build CLP Core
+        uses: ./.github/actions/clp-core-build
+
+  build-bionic:
+    runs-on: ubuntu-20.04
+    container:
+      image: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-bionic:main
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build CLP Core
+        uses: ./.github/actions/clp-core-build
+
+  build-centos:
+    runs-on: ubuntu-20.04
+    container:
+      image: ghcr.io/y-scope/clp/clp-core-dependencies-x86-centos7.4:main
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build CLP Core
+        uses: ./.github/actions/clp-core-build
