@@ -104,16 +104,18 @@ namespace streaming_archive { namespace reader {
 
         void decompress_empty_directories (const std::string& output_dir);
 
-        MetadataDB::FileIterator get_file_iterator () {
+        std::unique_ptr<MetadataDB::FileIterator> get_file_iterator () {
             return m_metadata_db.get_file_iterator(cEpochTimeMin, cEpochTimeMax, "", false, cInvalidSegmentId);
         }
-        MetadataDB::FileIterator get_file_iterator (const std::string& file_path) {
+        std::unique_ptr<MetadataDB::FileIterator> get_file_iterator (const std::string& file_path) {
             return m_metadata_db.get_file_iterator(cEpochTimeMin, cEpochTimeMax, file_path, false, cInvalidSegmentId);
         }
-        MetadataDB::FileIterator get_file_iterator (epochtime_t begin_ts, epochtime_t end_ts, const std::string& file_path) {
+        std::unique_ptr<MetadataDB::FileIterator> get_file_iterator (epochtime_t begin_ts, epochtime_t end_ts, const std::string& file_path) {
             return m_metadata_db.get_file_iterator(begin_ts, end_ts, file_path, false, cInvalidSegmentId);
         }
-        MetadataDB::FileIterator get_file_iterator (epochtime_t begin_ts, epochtime_t end_ts, const std::string& file_path, segment_id_t segment_id) {
+        std::unique_ptr<MetadataDB::FileIterator> get_file_iterator (epochtime_t begin_ts, epochtime_t end_ts, const std::string& file_path,
+                                                                     segment_id_t segment_id)
+        {
             return m_metadata_db.get_file_iterator(begin_ts, end_ts, file_path, true, segment_id);
         }
 

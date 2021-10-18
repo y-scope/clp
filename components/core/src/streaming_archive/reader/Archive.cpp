@@ -200,7 +200,8 @@ namespace streaming_archive { namespace reader {
         boost::filesystem::path output_dir_path = boost::filesystem::path(output_dir);
 
         string path;
-        for (auto ix = m_metadata_db.get_empty_directory_iterator(); ix.has_next(); ix.next()) {
+        auto ix_ptr = m_metadata_db.get_empty_directory_iterator();
+        for (auto& ix = *ix_ptr; ix.has_next(); ix.next()) {
             ix.get_path(path);
             auto empty_directory_path = output_dir_path / path;
             auto error_code = create_directory_structure(empty_directory_path.string(), 0700);

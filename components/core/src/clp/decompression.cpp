@@ -88,7 +88,8 @@ namespace clp {
                     archive_reader.decompress_empty_directories(command_line_args.get_output_dir());
 
                     // Decompress files
-                    for (auto file_metadata_ix = archive_reader.get_file_iterator(); file_metadata_ix.has_next(); file_metadata_ix.next()) {
+                    auto file_metadata_ix_ptr = archive_reader.get_file_iterator();
+                    for (auto& file_metadata_ix = *file_metadata_ix_ptr; file_metadata_ix.has_next(); file_metadata_ix.next()) {
                         file_metadata_ix.get_path(orig_path);
 
                         // Decompress file
@@ -100,6 +101,7 @@ namespace clp {
                         file_metadata_ix.get_path(orig_path);
                         decompressed_files.insert(orig_path);
                     }
+                    file_metadata_ix_ptr.reset(nullptr);
 
                     archive_reader.close();
                 }
@@ -114,7 +116,8 @@ namespace clp {
                     archive_reader.refresh_dictionaries();
 
                     // Decompress all splits with the given path
-                    for (auto file_metadata_ix = archive_reader.get_file_iterator(file_path); file_metadata_ix.has_next(); file_metadata_ix.next()) {
+                    auto file_metadata_ix_ptr = archive_reader.get_file_iterator(file_path);
+                    for (auto& file_metadata_ix = *file_metadata_ix_ptr; file_metadata_ix.has_next(); file_metadata_ix.next()) {
                         file_metadata_ix.get_path(orig_path);
 
                         // Decompress file
@@ -125,6 +128,7 @@ namespace clp {
                         }
                         decompressed_files.insert(file_path);
                     }
+                    file_metadata_ix_ptr.reset(nullptr);
 
                     archive_reader.close();
                 }
@@ -138,7 +142,8 @@ namespace clp {
                     archive_reader.refresh_dictionaries();
 
                     // Decompress files
-                    for (auto file_metadata_ix = archive_reader.get_file_iterator(); file_metadata_ix.has_next(); file_metadata_ix.next()) {
+                    auto file_metadata_ix_ptr = archive_reader.get_file_iterator();
+                    for (auto& file_metadata_ix = *file_metadata_ix_ptr; file_metadata_ix.has_next(); file_metadata_ix.next()) {
                         file_metadata_ix.get_path(orig_path);
                         if (files_to_decompress.count(orig_path) == 0) {
                             // Skip files that aren't in the list of files to decompress
@@ -154,6 +159,7 @@ namespace clp {
                         file_metadata_ix.get_path(orig_path);
                         decompressed_files.insert(orig_path);
                     }
+                    file_metadata_ix_ptr.reset(nullptr);
 
                     archive_reader.close();
                 }
