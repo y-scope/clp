@@ -125,12 +125,12 @@ namespace streaming_archive {
         void update_files (const std::vector<writer::File*>& files);
         void add_empty_directories (const std::vector<std::string>& empty_directory_paths);
 
-        FileIterator get_file_iterator (epochtime_t begin_ts, epochtime_t end_ts, const std::string& file_path, bool in_specific_segment,
-                                        segment_id_t segment_id)
+        std::unique_ptr<FileIterator> get_file_iterator (epochtime_t begin_ts, epochtime_t end_ts, const std::string& file_path, bool in_specific_segment,
+                                                         segment_id_t segment_id)
         {
-            return MetadataDB::FileIterator(m_db, begin_ts, end_ts, file_path, in_specific_segment, segment_id);
+            return std::make_unique<FileIterator>(m_db, begin_ts, end_ts, file_path, in_specific_segment, segment_id);
         }
-        EmptyDirectoryIterator get_empty_directory_iterator () { return MetadataDB::EmptyDirectoryIterator(m_db); }
+        std::unique_ptr<EmptyDirectoryIterator> get_empty_directory_iterator () { return std::make_unique<EmptyDirectoryIterator>(m_db); }
 
     private:
         // Variables
