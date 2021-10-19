@@ -11,6 +11,7 @@ on:
     paths:
       - 'components/core/**'
       - '.github/workflows/clp-core-build.yaml'
+  workflow_dispatch:
 
 jobs:
   build-focal:
