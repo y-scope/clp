@@ -23,7 +23,6 @@ runs:
     
     - name: Build
       # Build your program with the given configuration
-      #run: cmake --build ${{github.workspace}}/build --config Release
-      run: cmake --clean
+      run: cmake --build ${{github.workspace}}/build --config Release
       working-directory: ${{github.workspace}}/components/core
       shell: bash
