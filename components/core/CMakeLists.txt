@@ -389,6 +389,108 @@ target_compile_features(clg
         PRIVATE cxx_std_14
         )
 
+set(SOURCE_FILES_clo
+        src/clo/clo.cpp
+        src/clo/CommandLineArguments.cpp
+        src/clo/CommandLineArguments.hpp
+        src/database_utils.cpp
+        src/database_utils.hpp
+        src/Defs.h
+        src/dictionary_utils.cpp
+        src/dictionary_utils.hpp
+        src/DictionaryEntry.cpp
+        src/DictionaryEntry.hpp
+        src/DictionaryReader.cpp
+        src/DictionaryReader.hpp
+        src/EncodedVariableInterpreter.cpp
+        src/EncodedVariableInterpreter.hpp
+        src/ErrorCode.hpp
+        src/FileReader.cpp
+        src/FileReader.hpp
+        src/FileWriter.cpp
+        src/FileWriter.hpp
+        src/Grep.cpp
+        src/Grep.hpp
+        src/LogTypeDictionaryEntry.cpp
+        src/LogTypeDictionaryEntry.hpp
+        src/LogTypeDictionaryReader.cpp
+        src/LogTypeDictionaryReader.hpp
+        src/PageAllocatedVector.cpp
+        src/PageAllocatedVector.hpp
+        src/ParsedMessage.cpp
+        src/ParsedMessage.hpp
+        src/Profiler.cpp
+        src/Profiler.hpp
+        src/Query.cpp
+        src/Query.hpp
+        src/ReaderInterface.cpp
+        src/ReaderInterface.hpp
+        src/SQLiteDB.cpp
+        src/SQLiteDB.hpp
+        src/SQLitePreparedStatement.cpp
+        src/SQLitePreparedStatement.hpp
+        src/Stopwatch.cpp
+        src/Stopwatch.hpp
+        src/streaming_archive/Constants.hpp
+        src/streaming_archive/MetadataDB.cpp
+        src/streaming_archive/MetadataDB.hpp
+        src/streaming_archive/reader/Archive.cpp
+        src/streaming_archive/reader/Archive.hpp
+        src/streaming_archive/reader/File.cpp
+        src/streaming_archive/reader/File.hpp
+        src/streaming_archive/reader/Message.cpp
+        src/streaming_archive/reader/Message.hpp
+        src/streaming_archive/reader/Segment.cpp
+        src/streaming_archive/reader/Segment.hpp
+        src/streaming_archive/reader/SegmentManager.cpp
+        src/streaming_archive/reader/SegmentManager.hpp
+        src/streaming_archive/writer/File.cpp
+        src/streaming_archive/writer/File.hpp
+        src/streaming_compression/Constants.hpp
+        src/streaming_compression/Decompressor.cpp
+        src/streaming_compression/Decompressor.hpp
+        src/streaming_compression/passthrough/Compressor.cpp
+        src/streaming_compression/passthrough/Compressor.hpp
+        src/streaming_compression/passthrough/Decompressor.cpp
+        src/streaming_compression/passthrough/Decompressor.hpp
+        src/streaming_compression/zstd/Compressor.cpp
+        src/streaming_compression/zstd/Compressor.hpp
+        src/streaming_compression/zstd/Constants.hpp
+        src/streaming_compression/zstd/Decompressor.cpp
+        src/streaming_compression/zstd/Decompressor.hpp
+        src/TimestampPattern.cpp
+        src/TimestampPattern.hpp
+        src/TraceableException.cpp
+        src/TraceableException.hpp
+        src/Utils.cpp
+        src/Utils.hpp
+        src/VariableDictionaryEntry.cpp
+        src/VariableDictionaryEntry.hpp
+        src/VariableDictionaryReader.cpp
+        src/VariableDictionaryReader.hpp
+        src/VariableDictionaryWriter.cpp
+        src/VariableDictionaryWriter.hpp
+        src/version.hpp
+        src/WriterInterface.cpp
+        src/WriterInterface.hpp
+        submodules/date/include/date/date.h
+        submodules/sqlite3/sqlite3.c
+        submodules/sqlite3/sqlite3.h
+        submodules/sqlite3/sqlite3ext.h
+        )
+add_executable(clo ${SOURCE_FILES_clo})
+target_link_libraries(clo
+        PRIVATE
+        Boost::filesystem Boost::iostreams Boost::program_options
+        fmt::fmt
+        spdlog::spdlog
+        ${sqlite_LIBRARY_DEPENDENCIES}
+        ZStd::ZStd
+        )
+target_compile_features(clo
+        PRIVATE cxx_std_14
+        )
+
 set(SOURCE_FILES_unitTest
         src/database_utils.cpp
         src/database_utils.hpp

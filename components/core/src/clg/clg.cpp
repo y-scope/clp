@@ -172,9 +172,10 @@ static bool search (const vector<string>& search_strings, CommandLineArguments& 
             size_t num_matches;
             if (is_superseding_query) {
                 auto file_metadata_ix = archive.get_file_iterator(search_begin_ts, search_end_ts, command_line_args.get_file_path());
-                num_matches = search_files(queries, command_line_args.get_output_method(), archive, file_metadata_ix);
+                num_matches = search_files(queries, command_line_args.get_output_method(), archive, *file_metadata_ix);
             } else {
-                auto file_metadata_ix = archive.get_file_iterator(search_begin_ts, search_end_ts, command_line_args.get_file_path(), cInvalidSegmentId);
+                auto file_metadata_ix_ptr = archive.get_file_iterator(search_begin_ts, search_end_ts, command_line_args.get_file_path(), cInvalidSegmentId);
+                auto& file_metadata_ix = *file_metadata_ix_ptr;
                 num_matches = search_files(queries, command_line_args.get_output_method(), archive, file_metadata_ix);
                 for (auto segment_id : ids_of_segments_to_search) {
                     file_metadata_ix.set_segment_id(segment_id);
