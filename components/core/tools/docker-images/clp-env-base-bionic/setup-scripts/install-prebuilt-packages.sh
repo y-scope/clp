@@ -6,7 +6,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   checkinstall \
   cmake \
   build-essential \
-  git \
+  software-properties-common \
   libboost-filesystem-dev \
   libboost-iostreams-dev \
   libboost-program-options-dev \
@@ -14,3 +14,8 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   python3 \
   rsync \
   wget
+
+# Install latest version of git
+add-apt-repository -y ppa:git-core/ppa
+apt update
+apt install -y git
