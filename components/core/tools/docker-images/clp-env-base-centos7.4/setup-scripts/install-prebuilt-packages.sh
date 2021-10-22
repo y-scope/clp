@@ -13,6 +13,7 @@ yum install -y \
   wget \
   zlib-static
 
-# NOTE: We can only install the devtoolset after centos-release-scl
-yum install -y devtoolset-7 \
+# Install packages from CentOS' software collections repository (centos-release-scl)
+yum install -y \
+  devtoolset-7 \
   rh-git227
