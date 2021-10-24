@@ -14,3 +14,6 @@ ENV PKG_CONFIG_PATH /usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig
 
 # Enable gcc 7
 RUN echo -e "\nsource /opt/rh/devtoolset-7/enable" >> /root/.bashrc
+
+# Enable git 2.27
+RUN echo -e "\nsource /opt/rh/rh-git227/enable" >> /root/.bashrc
