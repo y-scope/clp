@@ -17,3 +17,6 @@ RUN echo -e "\nsource /opt/rh/devtoolset-7/enable" >> /root/.bashrc
 
 # Enable git 2.27
 RUN echo -e "\nsource /opt/rh/rh-git227/enable" >> /root/.bashrc
+
+# Load .bashrc for non-interactive bash shells
+ENV BASH_ENV=/root/.bashrc
