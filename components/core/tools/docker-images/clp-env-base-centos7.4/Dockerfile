@@ -13,7 +13,10 @@ RUN cd /root && ./tools/docker-images/clp-env-base-centos7.4/setup-scripts/insta
 ENV PKG_CONFIG_PATH /usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig
 
 # Enable gcc 7
-RUN echo -e "\nsource /opt/rh/devtoolset-7/enable" >> /root/.bashrc
+RUN ln -s /opt/rh/devtoolset-7/enable /etc/profile.d/devtoolset.sh
 
 # Enable git 2.27
-RUN echo -e "\nsource /opt/rh/rh-git227/enable" >> /root/.bashrc
+RUN ln -s /opt/rh/rh-git227/enable /etc/profile.d/git.sh
+
+# Load .bashrc for non-interactive bash shells
+ENV BASH_ENV=/root/.bashrc
