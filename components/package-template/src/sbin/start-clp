@@ -58,7 +58,7 @@ load_bundled_python_lib_path(clp_home)
 from clp.package_utils import prepare_package_and_config, check_dependencies, CONTAINER_CLP_INSTALL_PREFIX
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.clp_package_config import CLPPackageConfig, ArchiveOutput as PackageArchiveOutput
-from clp_py_utils.clp_config import Database, ArchiveOutput, CLPConfig, Scheduler
+from clp_py_utils.clp_config import Database, ArchiveOutput, CLPConfig, Scheduler, SchedulerQueue
 
 
 def provision_docker_network_bridge(clp_cluster_name: str):
@@ -116,8 +116,7 @@ def create_sql_db_tables(cluster_name: str, container_config_file_path: str):
     ]
     for command in database_table_creation_commands:
         docker_exec_cmd = ['docker', 'exec', '-it',
-                           '-e', f'PYTHONPATH={CONTAINER_CLP_INSTALL_PREFIX}/clp/lib/python3/site-packages', 
-                           '-u', f'{os.getuid()}:{os.getgid()}',
+                           '-e', f'PYTHONPATH={CONTAINER_CLP_INSTALL_PREFIX}/clp/lib/python3/site-packages',
                            cluster_name]
         docker_exec_cmd += command
         log.debug(' '.join(docker_exec_cmd))
@@ -136,38 +135,51 @@ def create_sql_db_tables(cluster_name: str, container_config_file_path: str):
     log.debug('Scheduler database tables initialization completed')
 
 
-def provision_rabbitmq(cluster_name: str, clp_config: CLPConfig):
+def start_scheduler_queue(host_config_file_path: pathlib.Path, cluster_name: str, clp_config: CLPConfig,
+                          host_logs_dir: pathlib.Path, publish_ports: bool):
     log.info('Starting scheduler queue')
 
-    # Start rabbitmq
-    docker_exec_cmd = ['docker', 'exec', '-d', '-e', 'RABBITMQ_PID_FILE=/tmp/rabbitmq.pid', cluster_name,
-                       'rabbitmq-server']
-    log.debug(' '.join(docker_exec_cmd))
-    try:
-        subprocess.run(docker_exec_cmd, stdout=subprocess.PIPE, check=True)
-    except subprocess.CalledProcessError:
-        log.error(f'Unable to start rabbitmq inside docker')
-        raise EnvironmentError
+    log_filename = 'rabbitmq.log'
 
-    # Wait for rabbitmq to be available
-    docker_exec_cmd = ['docker', 'exec', '-e', 'RABBITMQ_PID_FILE=/tmp/rabbitmq.pid', cluster_name] + \
-                      'rabbitmqctl wait ${RABBITMQ_PID_FILE}'.split()
-    log.debug(' '.join(docker_exec_cmd))
-    subprocess.run(docker_exec_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # Generate config file
+    with open(host_config_file_path, 'w') as f:
+        f.write(f"listeners.tcp.default = {clp_config.scheduler_queue.port}\n")
+        f.write(f"default_user = {clp_config.scheduler_queue.username}\n")
+        f.write(f"default_pass = {clp_config.scheduler_queue.password}\n")
+        f.write(f"log.file = {log_filename}\n")
 
-    # Initialize rabbitmq
-    log.info('Initializing scheduler queue')
-    rabbitmq_provisioning_commands = [
-        f'rabbitmqctl add_user {clp_config.scheduler.username} {clp_config.scheduler.password}',
-        f'rabbitmqctl set_user_tags {clp_config.scheduler.username} administrator',
-        f'rabbitmqctl set_permissions -p / {clp_config.scheduler.username} .* .* .*'
+    # Create logs directory that can be mounted into rabbitmq container
+    host_rabbitmq_logs_dir = host_logs_dir / "rabbitmq"
+    host_rabbitmq_logs_dir.mkdir(parents=True, exist_ok=True)
+
+    # Start container
+    rabbitmq_logs_dir = pathlib.Path('/') / 'var' / 'log' / 'rabbitmq'
+    cmd = [
+        'docker', 'run',
+        '-di',
+        '--network', cluster_name,
+        '--hostname', clp_config.scheduler_queue.host,
+        '--name', f'{cluster_name}-rabbitmq',
+        # Override RABBITMQ_LOGS since the image sets it to *only* log to stdout
+        '--env', f'RABBITMQ_LOGS={rabbitmq_logs_dir / log_filename}',
+        # Mount the config file into the container
+        '--mount', f'type=bind,src={host_config_file_path},dst=/etc/rabbitmq/rabbitmq.conf,readonly',
+        # Mount the logs directory in the container so logs are persisted on the host
+        '--mount', f'type=bind,src={host_rabbitmq_logs_dir},dst={rabbitmq_logs_dir}',
+        '-u', f'{os.getuid()}:{os.getgid()}',
     ]
-    for command in rabbitmq_provisioning_commands:
-        docker_exec_cmd = ['docker', 'exec', '-e', 'RABBITMQ_PID_FILE=/tmp/rabbitmq.pid',
-                           cluster_name] + command.split()
-        log.debug(' '.join(docker_exec_cmd))
-        proc = subprocess.run(docker_exec_cmd, stdout=subprocess.PIPE)
-        log.debug(proc.stdout.decode('utf-8'))
+    if publish_ports:
+        cmd.append('-p')
+        cmd.append(f'{clp_config.scheduler_queue.port}:{clp_config.scheduler_queue.port}')
+    cmd.append('rabbitmq:3')
+    log.debug(' '.join(cmd))
+    try:
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+    except subprocess.CalledProcessError:
+        logging.exception("Unable to start scheduler queue")
+        return False
+
+    return True
 
 
 def start_scheduler(cluster_name: str, clp_config: CLPConfig, container_config_file_path: str):
@@ -177,9 +189,8 @@ def start_scheduler(cluster_name: str, clp_config: CLPConfig, container_config_f
     docker_exec_cmd = [
         'docker', 'exec', '--detach', '--workdir', f'{CONTAINER_CLP_INSTALL_PREFIX}/clp',
         '-e', f'PYTHONPATH={CONTAINER_CLP_INSTALL_PREFIX}/clp/lib/python3/site-packages',
-        '-e', f'BROKER_URL=amqp://{clp_config.scheduler.username}:{clp_config.scheduler.password}@localhost:5672',
-        # rabbitmq runs on scheduler node
-        '-u', f'{os.getuid()}:{os.getgid()}',
+        '-e', f'BROKER_URL=amqp://{clp_config.scheduler_queue.username}:{clp_config.scheduler_queue.password}'
+              f'@{clp_config.scheduler_queue.host}:{clp_config.scheduler_queue.port}',
         cluster_name
     ]
     docker_exec_cmd += scheduler_startup_cmd
@@ -205,11 +216,10 @@ def start_worker(cluster_name: str, clp_config: CLPConfig, num_cpus: int):
         '-e', f'CLP_DATA_DIR={clp_config.data_directory}',
         '-e', f'CLP_LOGS_DIR={clp_config.logs_directory}',
         '-e', f'PYTHONPATH={CONTAINER_CLP_INSTALL_PREFIX}/clp/lib/python3/site-packages',
-        '-e', f'BROKER_URL=amqp://{clp_config.scheduler.username}:{clp_config.scheduler.password}'
-              f'@{clp_config.scheduler.host}:5672',
-        '-e', f'RESULT_BACKEND=rpc://{clp_config.scheduler.username}:{clp_config.scheduler.password}'
-              f'@{clp_config.scheduler.host}:5672',
-        '-u', f'{os.getuid()}:{os.getgid()}',
+        '-e', f'BROKER_URL=amqp://{clp_config.scheduler_queue.username}:{clp_config.scheduler_queue.password}'
+              f'@{clp_config.scheduler_queue.host}:{clp_config.scheduler_queue.port}',
+        '-e', f'RESULT_BACKEND=rpc://{clp_config.scheduler_queue.username}:{clp_config.scheduler_queue.password}'
+              f'@{clp_config.scheduler_queue.host}:{clp_config.scheduler_queue.port}',
         cluster_name
     ]
     docker_exec_cmd += worker_startup_cmd
@@ -315,9 +325,13 @@ def main(argv):
                 ),
                 scheduler=Scheduler(
                     host=f'{clp_package_config.cluster_name}',
-                    username='clp-user',
-                    password=f'clp-{secrets.token_urlsafe(8)}',
                     jobs_poll_delay=1
+                ),
+                scheduler_queue=SchedulerQueue(
+                    host=f'{clp_package_config.cluster_name}-queue',
+                    port=5672,
+                    username='clp-user',
+                    password=f'clp-{secrets.token_urlsafe(8)}'
                 ),
                 archive_output=ArchiveOutput(
                     type='fs',
@@ -378,20 +392,16 @@ def main(argv):
             start_sql_db(clp_package_config.cluster_name, clp_config, host_data_directory, parsed_args.publish_ports)
 
         # Start execution environment
-        clp_execution_env_container = 'whywhywhywhywhywhy/clp-execution-env:x86-ubuntu-focal-20210919'
+        clp_execution_env_container = 'ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-focal:main'
         clp_execution_env_startup_cmd = [
             'docker', 'run', '-di',
             '--network', clp_package_config.cluster_name,
             '--hostname', f'{clp_package_config.cluster_name}',
             '--name', f'{clp_package_config.cluster_name}',
             '-v', f'{clp_home}:{CONTAINER_CLP_INSTALL_PREFIX}/clp',
-            '-v', f'{uncompressed_log_dir}:{uncompressed_log_dir}'
+            '-v', f'{uncompressed_log_dir}:{uncompressed_log_dir}',
+            '-u', f'{os.getuid()}:{os.getgid()}',
         ]
-        if parsed_args.publish_ports:
-            ports_to_publish = [
-                '-p', '5672:5672'  # Rabbitmq
-            ]
-            clp_execution_env_startup_cmd += ports_to_publish
 
         # Mount data, logs, archive output directory if it is outside of the package
         if not clp_config.data_directory.startswith(f'{CONTAINER_CLP_INSTALL_PREFIX}/clp'):
@@ -414,7 +424,10 @@ def main(argv):
         subprocess.run(copy_cmd)
 
         if need_to_start_scheduler:
-            provision_rabbitmq(clp_package_config.cluster_name, clp_config)
+            rabbitmq_config_file_path = clp_home / ".rabbitmq.conf"
+            if not start_scheduler_queue(rabbitmq_config_file_path, clp_package_config.cluster_name, clp_config,
+                                         host_log_directory, parsed_args.publish_ports):
+                return -1
             create_sql_db_tables(clp_package_config.cluster_name, container_config_file_path)
             start_scheduler(clp_package_config.cluster_name, clp_config, container_config_file_path)
         if need_to_start_worker:
@@ -426,6 +439,8 @@ def main(argv):
         log.error(ex)
         log.error(f'Failed to provision "{clp_package_config.cluster_name}"')
 
+    return 0
+
 
 if '__main__' == __name__:
-    main(sys.argv)
+    sys.exit(main(sys.argv))

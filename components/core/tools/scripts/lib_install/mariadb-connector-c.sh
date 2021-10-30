@@ -77,6 +77,9 @@ if [ $installed -ne 0 ] ; then
       checkinstall --pkgname "${package_name}" --pkgversion "${version}" --provides "${package_name}" --nodoc -y rsync -a . ${install_dir}/
     fi
   fi
+
+  # Update ld cache
+  ldconfig ${install_dir}/lib/mariadb
 fi
 
 # Clean up
