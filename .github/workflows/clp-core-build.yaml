@@ -15,9 +15,8 @@ on:
 
 jobs:
   build-focal:
-    runs-on: ubuntu-20.04
-    container:
-      image: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main
+    runs-on: ubuntu-latest
+    container: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -26,9 +25,8 @@ jobs:
         uses: ./.github/actions/clp-core-build
 
   build-bionic:
-    runs-on: ubuntu-20.04
-    container:
-      image: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-bionic:main
+    runs-on: ubuntu-latest
+    container: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-bionic:main
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -37,9 +35,8 @@ jobs:
         uses: ./.github/actions/clp-core-build
 
   build-centos:
-    runs-on: ubuntu-20.04
-    container:
-      image: ghcr.io/y-scope/clp/clp-core-dependencies-x86-centos7.4:main
+    runs-on: ubuntu-latest
+    container: ghcr.io/y-scope/clp/clp-core-dependencies-x86-centos7.4:main
     steps:
       - name: Checkout
         uses: actions/checkout@v2

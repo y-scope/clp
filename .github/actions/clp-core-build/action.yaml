@@ -1,5 +1,5 @@
 name: "Build CLP Core"
-description: "Configures CMAKE and uses CMAKE to build CLP Core"
+description: "Configures CMake and uses CMake to build CLP Core"
 
 inputs:
   build_type:
