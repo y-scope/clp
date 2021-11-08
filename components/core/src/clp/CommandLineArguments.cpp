@@ -218,8 +218,6 @@ namespace clp {
                 // Define compression-specific options
                 po::options_description options_compression("Compression Options");
                 options_compression.add_options()
-                        ("storage-id", po::value<string>(&m_archive_storage_id)->value_name("ID")->default_value(m_archive_storage_id),
-                                "Indicate that archives are stored on STORAGE_ID")
                         ("remove-path-prefix", po::value<string>(&m_path_prefix_to_remove)->value_name("DIR")->default_value(m_path_prefix_to_remove),
                                 "Remove the given path prefix from each compressed file/dir.")
                         ("target-encoded-file-size",
@@ -270,11 +268,6 @@ namespace clp {
                 // Validate at least one input path should exist (we validate that the file isn't empty later)
                 if (m_input_paths.empty() && m_path_list_path.empty()) {
                     throw invalid_argument("No input paths specified.");
-                }
-
-                // Validate storage_id is not empty
-                if (m_archive_storage_id.empty()) {
-                    throw invalid_argument("storage-id cannot be empty.");
                 }
 
                 if (m_target_encoded_file_size < 1) {

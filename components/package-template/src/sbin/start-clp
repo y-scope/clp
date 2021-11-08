@@ -322,7 +322,6 @@ def main(argv):
                 archive_output=ArchiveOutput(
                     type='fs',
                     directory=f'var/data/{clp_package_config.cluster_name}/archives',
-                    storage_is_node_specific=True,
                     target_archive_size=clp_package_config.archive_output.target_archive_size,
                     target_dictionaries_size=clp_package_config.archive_output.target_dictionaries_size,
                     target_encoded_file_size=clp_package_config.archive_output.target_encoded_file_size,

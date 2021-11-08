@@ -67,7 +67,6 @@ def main(argv):
             mysql_cursor.execute(f"""CREATE TABLE IF NOT EXISTS `{table_prefix}archives` (
                 `pagination_id` BIGINT unsigned NOT NULL AUTO_INCREMENT,
                 `id` VARCHAR(64) NOT NULL,
-                `storage_id` VARCHAR(64) NOT NULL,
                 `uncompressed_size` BIGINT NOT NULL,
                 `size` BIGINT NOT NULL,
                 `creator_id` VARCHAR(64) NOT NULL,

@@ -90,7 +90,6 @@ namespace clp {
         archive_user_config.id = uuid_generator();
         archive_user_config.creator_id = uuid_generator();
         archive_user_config.creation_num = 0;
-        archive_user_config.storage_id = command_line_args.get_archive_storage_id();
         archive_user_config.target_segment_uncompressed_size = command_line_args.get_target_segment_uncompressed_size();
         archive_user_config.compression_level = command_line_args.get_compression_level();
         archive_user_config.output_dir = command_line_args.get_output_dir();

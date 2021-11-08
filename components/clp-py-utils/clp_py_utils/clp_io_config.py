@@ -22,7 +22,6 @@ class OutputConfig(BaseModel):
     target_dictionaries_size: int
     target_segment_size: int
     target_encoded_file_size: int
-    storage_is_node_specific: bool
 
 
 class ClpIoConfig(BaseModel):

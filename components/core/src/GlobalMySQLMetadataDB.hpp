@@ -60,8 +60,7 @@ public:
     void open () override;
     void close () override;
 
-    void add_archive (const std::string& id, const std::string& storage_id, size_t uncompressed_size, size_t size, const std::string& creator_id,
-                      size_t creation_num) override;
+    void add_archive (const std::string& id, size_t uncompressed_size, size_t size, const std::string& creator_id, size_t creation_num) override;
     void update_archive_size (const std::string& archive_id, size_t uncompressed_size, size_t size) override;
     void update_metadata_for_files (const std::string& archive_id, const std::vector<streaming_archive::writer::File*>& files) override;
 

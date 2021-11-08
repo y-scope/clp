@@ -44,14 +44,12 @@ public:
     /**
      * Adds an archive to the global metadata database
      * @param id
-     * @param storage_id
      * @param uncompressed_size
      * @param size
      * @param creator_id
      * @param creation_num
      */
-    virtual void add_archive (const std::string& id, const std::string& storage_id, size_t uncompressed_size, size_t size, const std::string& creator_id,
-                              size_t creation_num) = 0;
+    virtual void add_archive (const std::string& id, size_t uncompressed_size, size_t size, const std::string& creator_id, size_t creation_num) = 0;
     /**
      * Updates the size of the archive identified by the given ID in the global metadata database
      * @param archive_id

@@ -68,14 +68,8 @@ def compress(clp_config: ClpIoConfig, clp_home_str: str, data_dir_str: str, logs
         str(clp_config.output.target_dictionaries_size),
         '--target-segment-size', str(clp_config.output.target_segment_size),
         '--target-encoded-file-size', str(clp_config.output.target_encoded_file_size),
-        '--storage-id',
         '--db-config-file', str(db_config_file_path)
     ]
-    if clp_config.output.storage_is_node_specific:
-        compression_cmd.append(celery.utils.nodenames.gethostname())
-    else:
-        # Mark as globally-accessible
-        compression_cmd.append('*')
     if path_prefix_to_remove:
         compression_cmd.append('--remove-path-prefix')
         compression_cmd.append(path_prefix_to_remove)
