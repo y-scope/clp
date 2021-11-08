@@ -57,11 +57,12 @@ def main(argv):
     urllib.request.urlretrieve(target_url, str(file_path))
     shutil.unpack_archive(str(file_path), extraction_dir)
 
-    # Verify hash
-    hash = hash_file(config["hash"]["algo"], file_path)
-    if hash != config["hash"]["digest"]:
-        logger.fatal("Hash mismatch.")
-        return -1
+    if "hash" in config:
+        # Verify hash
+        hash = hash_file(config["hash"]["algo"], file_path)
+        if hash != config["hash"]["digest"]:
+            logger.fatal("Hash mismatch.")
+            return -1
 
     for target in config["targets"]:
         target_source_path = extraction_dir / target["source"]
@@ -78,6 +79,8 @@ def main(argv):
 
         # Copy destination to target
         shutil.copytree(target_source_path, target_dest_path)
+
+    shutil.rmtree(extraction_dir)
 
     return 0
 

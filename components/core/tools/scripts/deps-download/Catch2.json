@@ -1,0 +1,9 @@
+{
+  "url": "https://github.com/catchorg/Catch2/archive/refs/tags/v2.13.7.zip",
+  "targets": [
+    {
+      "source": "Catch2-2.13.7",
+      "destination": "submodules/Catch2"
+    }
+  ]
+}

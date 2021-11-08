@@ -1,0 +1,9 @@
+{
+  "url": "https://github.com/HowardHinnant/date/archive/refs/tags/v3.0.1.zip",
+  "targets": [
+    {
+      "source": "date-3.0.1",
+      "destination": "submodules/date"
+    }
+  ]
+}
