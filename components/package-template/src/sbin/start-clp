@@ -143,13 +143,13 @@ def start_scheduler_queue(host_config_file_path: pathlib.Path, cluster_name: str
 
     # Generate config file
     with open(host_config_file_path, 'w') as f:
-        f.write(f"listeners.tcp.default = {clp_config.scheduler_queue.port}\n")
-        f.write(f"default_user = {clp_config.scheduler_queue.username}\n")
-        f.write(f"default_pass = {clp_config.scheduler_queue.password}\n")
-        f.write(f"log.file = {log_filename}\n")
+        f.write(f'listeners.tcp.default = {clp_config.scheduler_queue.port}\n')
+        f.write(f'default_user = {clp_config.scheduler_queue.username}\n')
+        f.write(f'default_pass = {clp_config.scheduler_queue.password}\n')
+        f.write(f'log.file = {log_filename}\n')
 
     # Create logs directory that can be mounted into rabbitmq container
-    host_rabbitmq_logs_dir = host_logs_dir / "rabbitmq"
+    host_rabbitmq_logs_dir = host_logs_dir / 'rabbitmq'
     host_rabbitmq_logs_dir.mkdir(parents=True, exist_ok=True)
 
     # Start container
@@ -171,12 +171,12 @@ def start_scheduler_queue(host_config_file_path: pathlib.Path, cluster_name: str
     if publish_ports:
         cmd.append('-p')
         cmd.append(f'{clp_config.scheduler_queue.port}:{clp_config.scheduler_queue.port}')
-    cmd.append('rabbitmq:3')
+    cmd.append('rabbitmq:3.9.8')
     log.debug(' '.join(cmd))
     try:
         subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
     except subprocess.CalledProcessError:
-        logging.exception("Unable to start scheduler queue")
+        logging.exception('Unable to start scheduler queue')
         return False
 
     return True
@@ -424,7 +424,7 @@ def main(argv):
         subprocess.run(copy_cmd)
 
         if need_to_start_scheduler:
-            rabbitmq_config_file_path = clp_home / ".rabbitmq.conf"
+            rabbitmq_config_file_path = clp_home / '.rabbitmq.conf'
             if not start_scheduler_queue(rabbitmq_config_file_path, clp_package_config.cluster_name, clp_config,
                                          host_log_directory, parsed_args.publish_ports):
                 return -1
