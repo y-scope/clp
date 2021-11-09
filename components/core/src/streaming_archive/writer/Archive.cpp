@@ -152,8 +152,7 @@ namespace streaming_archive { namespace writer {
         m_global_metadata_db = user_config.global_metadata_db;
 
         m_global_metadata_db->open();
-        m_global_metadata_db->add_archive(m_id_as_string, user_config.storage_id, m_stable_uncompressed_size, m_stable_size, m_creator_id_as_string,
-                                          m_creation_num);
+        m_global_metadata_db->add_archive(m_id_as_string, m_stable_uncompressed_size, m_stable_size, m_creator_id_as_string, m_creation_num);
         m_global_metadata_db->close();
 
         // Open log-type dictionary

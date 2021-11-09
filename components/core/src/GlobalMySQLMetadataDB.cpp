@@ -15,7 +15,6 @@ using std::vector;
 // Types
 enum class ArchivesTableFieldIndexes : uint16_t {
     Id = 0,
-    StorageId,
     UncompressedSize,
     Size,
     CreatorId,
@@ -53,7 +52,6 @@ void GlobalMySQLMetadataDB::open () {
 
     vector<string> archive_field_names(enum_to_underlying_type(ArchivesTableFieldIndexes::Length));
     archive_field_names[enum_to_underlying_type(ArchivesTableFieldIndexes::Id)] = streaming_archive::cMetadataDB::Archive::Id;
-    archive_field_names[enum_to_underlying_type(ArchivesTableFieldIndexes::StorageId)] = streaming_archive::cMetadataDB::Archive::StorageId;
     archive_field_names[enum_to_underlying_type(ArchivesTableFieldIndexes::UncompressedSize)] = streaming_archive::cMetadataDB::Archive::UncompressedSize;
     archive_field_names[enum_to_underlying_type(ArchivesTableFieldIndexes::Size)] = streaming_archive::cMetadataDB::Archive::Size;
     archive_field_names[enum_to_underlying_type(ArchivesTableFieldIndexes::CreatorId)] = streaming_archive::cMetadataDB::Archive::CreatorId;
@@ -109,16 +107,13 @@ void GlobalMySQLMetadataDB::close () {
     m_is_open = false;
 }
 
-void GlobalMySQLMetadataDB::add_archive (const string& id, const string& storage_id, size_t uncompressed_size, size_t size, const string& creator_id,
-                                         size_t creation_num)
-{
+void GlobalMySQLMetadataDB::add_archive (const string& id, size_t uncompressed_size, size_t size, const string& creator_id, size_t creation_num) {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
     auto& statement_bindings = m_insert_archive_statement->get_statement_bindings();
     statement_bindings.bind_varchar(enum_to_underlying_type(ArchivesTableFieldIndexes::Id), id.c_str(), id.length());
-    statement_bindings.bind_varchar(enum_to_underlying_type(ArchivesTableFieldIndexes::StorageId), storage_id.c_str(), storage_id.length());
     statement_bindings.bind_uint64(enum_to_underlying_type(ArchivesTableFieldIndexes::UncompressedSize), uncompressed_size);
     statement_bindings.bind_uint64(enum_to_underlying_type(ArchivesTableFieldIndexes::Size), size);
     statement_bindings.bind_varchar(enum_to_underlying_type(ArchivesTableFieldIndexes::CreatorId), creator_id.c_str(), creator_id.length());

@@ -30,7 +30,6 @@ namespace streaming_archive { namespace writer {
          * @param id
          * @param creator_id
          * @param creation_num
-         * @param storage_id ID of the storage where the archive will be stored
          * @param target_segment_uncompressed_size
          * @param compression_level Compression level of the compressor being opened
          * @param output_dir Output directory
@@ -41,7 +40,6 @@ namespace streaming_archive { namespace writer {
             boost::uuids::uuid id;
             boost::uuids::uuid creator_id;
             size_t creation_num;
-            std::string storage_id;
             size_t target_segment_uncompressed_size;
             int compression_level;
             std::string output_dir;
