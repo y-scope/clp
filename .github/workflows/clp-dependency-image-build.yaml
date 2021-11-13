@@ -13,6 +13,8 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME_BASE: ${{github.repository}}/clp-core-dependencies-x86
 
+concurrency: build-${{github.ref}} 
+
 jobs:
   build:
     runs-on: ubuntu-20.04

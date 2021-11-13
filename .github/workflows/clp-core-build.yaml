@@ -13,6 +13,8 @@ on:
       - '.github/workflows/clp-core-build.yaml'
   workflow_dispatch:
 
+concurrency: build-${{github.ref}} 
+
 jobs:
   build-focal:
     runs-on: ubuntu-latest
