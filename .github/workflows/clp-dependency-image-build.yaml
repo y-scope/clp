@@ -1,4 +1,4 @@
-name: Build and Publish Image with Dependencies to Build CLP Core
+name: generate-build-dependency-image
 
 on:
   push:

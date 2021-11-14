@@ -1,4 +1,4 @@
-name: Build and Publish Image with Execution Dependencies
+name: generate-execution-dependency-image
 
 on:
   push:

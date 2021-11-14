@@ -1,4 +1,4 @@
-name: Test Building CLP Core on Ubuntu Focal, Bionic and Centos 7.4
+name: build-clp-core
 
 on:
   push:
@@ -13,7 +13,7 @@ on:
       - '.github/workflows/clp-core-build.yaml'
   workflow_dispatch:
   workflow_run:
-    workflows: ["Build and Publish Image with Dependencies to Build CLP Core"]
+    workflows: ["generate-build-dependency-image"]
     branches: [main]
     types:
       - completed
