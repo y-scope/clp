@@ -12,6 +12,11 @@ on:
       - 'components/core/**'
       - '.github/workflows/clp-core-build.yaml'
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Build and Publish Image with Dependencies to Build CLP Core"]
+    branches: [main]
+    types:
+      - completed
 
 concurrency: build-${{github.ref}} 
 
