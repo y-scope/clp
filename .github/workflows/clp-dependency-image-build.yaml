@@ -1,4 +1,4 @@
-name: Build and Publish Image with Dependencies to Build CLP Core
+name: generate-build-dependency-image
 
 on:
   push:
@@ -12,6 +12,8 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME_BASE: ${{github.repository}}/clp-core-dependencies-x86
+
+concurrency: build-${{github.ref}}
 
 jobs:
   build:
