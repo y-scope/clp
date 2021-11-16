@@ -68,7 +68,7 @@ class PackagingConfig(BaseModel):
     arch: str = platform.machine()
     artifact_name: str
     build_parallelism: int
-    builder_dockerhub_image: str
+    builder_image: str
     components: typing.List[ClpComponent]
 
 
@@ -203,7 +203,7 @@ def main(argv):
             '--name', build_environment_container_name,
             '-v', f'{host_working_dir}:{container_working_directory}',
             '-v', f'{host_install_scripts_dir}:{container_install_scripts_dir}',
-            packaging_config.builder_dockerhub_image
+            packaging_config.builder_image
         ]
         subprocess.run(build_environment_startup_cmd, check=True)
 
