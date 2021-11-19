@@ -120,111 +120,112 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
 
     SECTION("Test convert_string_to_representable_double_var") {
         string value;
-        uint8_t num_integer_digits;
-        uint8_t num_fractional_digits;
         encoded_variable_t encoded_var;
         double var_as_double;
 
         // Test basic conversions
         value = "0.0";
-        REQUIRE(EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
-        var_as_double = *reinterpret_cast<const double*>(&encoded_var);
-        REQUIRE(0.0 == var_as_double);
+        REQUIRE(EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
+        EncodedVariableInterpreter::convert_encoded_double_to_string(encoded_var, value);
+        REQUIRE("0.0" == value);
 
         value = "-1.0";
-        REQUIRE(EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
-        var_as_double = *reinterpret_cast<const double*>(&encoded_var);
-        REQUIRE(-1.0 == var_as_double);
+        REQUIRE(EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
+        EncodedVariableInterpreter::convert_encoded_double_to_string(encoded_var, value);
+        REQUIRE("-1.0" == value);
 
         value = "1.0";
-        REQUIRE(EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
-        var_as_double = *reinterpret_cast<const double*>(&encoded_var);
-        REQUIRE(1.0 == var_as_double);
-
-        value = "1.";
-        REQUIRE(EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
-        var_as_double = *reinterpret_cast<const double*>(&encoded_var);
-        REQUIRE(1.0 == var_as_double);
+        REQUIRE(EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
+        EncodedVariableInterpreter::convert_encoded_double_to_string(encoded_var, value);
+        REQUIRE("1.0" == value);
 
         value = ".1";
-        REQUIRE(EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
-        var_as_double = *reinterpret_cast<const double*>(&encoded_var);
-        REQUIRE(0.1 == var_as_double);
+        REQUIRE(EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
+        EncodedVariableInterpreter::convert_encoded_double_to_string(encoded_var, value);
+        REQUIRE(".1" == value);
 
         value = "-00.00";
-        REQUIRE(EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
-        var_as_double = *reinterpret_cast<const double*>(&encoded_var);
-        REQUIRE(-00.00 == var_as_double);
+        REQUIRE(EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
+        EncodedVariableInterpreter::convert_encoded_double_to_string(encoded_var, value);
+        REQUIRE("-00.00" == value);
 
         // Test edges of representable range
-        value = "-9.99999999999999";
-        REQUIRE(EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
-        var_as_double = *reinterpret_cast<const double*>(&encoded_var);
-        REQUIRE(-9.99999999999999 == var_as_double);
+        value = "-999999999999999.9";
+        REQUIRE(EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
+        EncodedVariableInterpreter::convert_encoded_double_to_string(encoded_var, value);
+        REQUIRE("-999999999999999.9" == value);
 
-        value = "9.99999999999999";
-        REQUIRE(EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
-        var_as_double = *reinterpret_cast<const double*>(&encoded_var);
-        REQUIRE(9.99999999999999 == var_as_double);
+        value = "-.9999999999999999";
+        REQUIRE(EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
+        EncodedVariableInterpreter::convert_encoded_double_to_string(encoded_var, value);
+        REQUIRE("-.9999999999999999" == value);
+
+        value = ".9999999999999999";
+        REQUIRE(EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
+        EncodedVariableInterpreter::convert_encoded_double_to_string(encoded_var, value);
+        REQUIRE(".9999999999999999" == value);
 
         // Test non-doubles
         value = "";
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
 
         value = "a";
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
 
         value = "-";
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
 
         value = "+";
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
 
         value = "-a";
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
 
         value = "+a";
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
 
         value = "--";
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
 
         value = "++";
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
 
         // Test unrepresentable values
         value = ".";
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
+
+        value = "1.";
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
 
         value = " 1.0";
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
 
         value = "- 1.0";
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
 
         value = "1.0 ";
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
 
         value = "+1.0";
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
 
         value = "1.0f";
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
 
         value = "1.0F";
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
 
         value = "1.0l";
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
 
         value = "1.0L";
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
 
         value = to_string(EncodedVariableInterpreter::get_var_dict_id_range_begin());
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
 
         value = to_string(EncodedVariableInterpreter::get_var_dict_id_range_end());
-        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, num_integer_digits, num_fractional_digits, encoded_var));
+        REQUIRE(!EncodedVariableInterpreter::convert_string_to_representable_double_var(value, encoded_var));
     }
 
     SECTION("Test encoding and decoding") {

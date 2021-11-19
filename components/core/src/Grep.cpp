@@ -121,17 +121,10 @@ QueryToken::QueryToken (const string& query_string, const size_t begin_pos, cons
 
             encoded_variable_t encoded_var;
             bool converts_to_non_dict_var = false;
-            if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(value_without_wildcards, encoded_var)) {
+            if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(value_without_wildcards, encoded_var) ||
+                EncodedVariableInterpreter::convert_string_to_representable_double_var(value_without_wildcards, encoded_var))
+            {
                 converts_to_non_dict_var = true;
-            } else {
-                // Doesn't convert to an integer variable, so might be a double or dictionary variable
-                uint8_t num_integer_digits;
-                uint8_t num_fractional_digits;
-                if (EncodedVariableInterpreter::convert_string_to_representable_double_var(value_without_wildcards, num_integer_digits, num_fractional_digits,
-                                                                                           encoded_var))
-                {
-                    converts_to_non_dict_var = true;
-                }
             }
 
             if (!converts_to_non_dict_var) {
@@ -271,7 +264,7 @@ static bool process_var_token (const QueryToken& query_token, const Archive& arc
         }
 
         if (query_token.is_double_var()) {
-            LogTypeDictionaryEntry::add_wildcard_double_var(logtype);
+            LogTypeDictionaryEntry::add_double_var(logtype);
         } else {
             LogTypeDictionaryEntry::add_non_double_var(logtype);
 

@@ -61,23 +61,18 @@ int main (int argc, const char* argv[]) {
         size_t constant_begin_pos = 0;
         for (size_t var_ix = 0; var_ix < entry.get_num_vars(); ++var_ix) {
             LogTypeDictionaryEntry::VarDelim var_delim;
-            uint8_t num_integer_digits, num_fractional_digits;
-            size_t var_pos = entry.get_var_info(var_ix, var_delim, num_integer_digits, num_fractional_digits);
+            size_t var_pos = entry.get_var_info(var_ix, var_delim);
 
             // Add the constant that's between the last variable and this one, with newlines escaped
             human_readable_value.append(value, constant_begin_pos, var_pos - constant_begin_pos);
 
             if (LogTypeDictionaryEntry::VarDelim::NonDouble == var_delim) {
                 human_readable_value += "\\v";
-
-                // Move past the variable delimiter
-                constant_begin_pos = var_pos + 1;
             } else { // LogTypeDictionaryEntry::VarDelim::Double == var_delim
-                human_readable_value += "\\ff";
-
-                // Move past the variable delimiter and the double's precision
-                constant_begin_pos = var_pos + 2;
+                human_readable_value += "\\f";
             }
+            // Move past the variable delimiter
+            constant_begin_pos = var_pos + 1;
         }
         // Append remainder of value, if any
         if (constant_begin_pos < value.length()) {
