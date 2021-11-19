@@ -227,12 +227,13 @@ def main(argv):
             [str(container_install_scripts_dir / 'install-core.sh')]
         ]
         for cmd in install_cmds:
-            container_exec_cmd = container_exec_prefix + cmd
+            joined_cmd = ' '.join(cmd)
+            container_exec_cmd = [*container_exec_prefix, joined_cmd]
             log.info(' '.join(container_exec_cmd))
             subprocess.run(container_exec_cmd, check=True)
 
         archive_cmd = f'tar -czf {versioned_artifact_name}.tar.gz {versioned_artifact_name}'
-        subprocess.run(container_exec_prefix + archive_cmd.split(), check=True)
+        subprocess.run([*container_exec_prefix, archive_cmd], check=True)
     except subprocess.CalledProcessError as ex:
         print(ex.stdout)
         log.error('Failed to build CLP')
