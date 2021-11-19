@@ -193,8 +193,9 @@ void GlobalMySQLMetadataDB::update_metadata_for_files (const std::string& archiv
 }
 
 GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator () {
-    auto statement_string = fmt::format("SELECT {} FROM {}{}", streaming_archive::cMetadataDB::Archive::Id, m_table_prefix,
-                                        streaming_archive::cMetadataDB::ArchivesTableName);
+    auto statement_string = fmt::format("SELECT {} FROM {}{} ORDER BY {} ASC, {} ASC", streaming_archive::cMetadataDB::Archive::Id, m_table_prefix,
+                                        streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::Archive::CreatorId,
+                                        streaming_archive::cMetadataDB::Archive::CreationIx);
     SPDLOG_DEBUG("{}", statement_string);
 
     if (false == m_db.execute_query(statement_string)) {
