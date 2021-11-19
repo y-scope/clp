@@ -90,7 +90,9 @@ static void create_tables (const vector<std::pair<string, string>>& archive_fiel
 }
 
 static SQLitePreparedStatement get_archives_select_statement (SQLiteDB& db) {
-    auto statement_string = fmt::format("SELECT {} FROM {}", streaming_archive::cMetadataDB::Archive::Id, streaming_archive::cMetadataDB::ArchivesTableName);
+    auto statement_string = fmt::format("SELECT {} FROM {} ORDER BY {} ASC, {} ASC", streaming_archive::cMetadataDB::Archive::Id,
+                                        streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::Archive::CreatorId,
+                                        streaming_archive::cMetadataDB::Archive::CreationIx);
     SPDLOG_DEBUG("{}", statement_string);
     return db.prepare_statement(statement_string.c_str(), statement_string.length());
 }
