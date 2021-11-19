@@ -23,4 +23,4 @@ RUN ln -s /opt/rh/devtoolset-7/enable /etc/profile.d/devtoolset.sh
 RUN cp ./tools/docker-images/clp-env-base-centos7.4/setup-scripts/git /usr/bin/git
 
 # Load .bashrc for non-interactive bash shells
-ENV BASH_ENV=/root/.bashrc
+ENV BASH_ENV=/etc/bashrc

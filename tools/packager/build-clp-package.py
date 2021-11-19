@@ -215,7 +215,8 @@ def main(argv):
             '-e', f'BUILD_PARALLELISM={build_parallelization}',
             '-w', str(container_working_directory),
             '-u', f'{os.getuid()}:{os.getgid()}',
-            build_environment_container_name
+            build_environment_container_name,
+            'bash', '-c'
         ]
 
         # Run the component installation scripts
