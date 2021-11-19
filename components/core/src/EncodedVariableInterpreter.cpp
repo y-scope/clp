@@ -15,10 +15,6 @@ using std::string;
 using std::unordered_set;
 using std::vector;
 
-// Constants
-// 1 sign + LogTypeDictionaryEntry::cMaxDigitsInRepresentableDoubleVar + 1 decimal point
-static const size_t cMaxCharsInRepresentableDoubleVar = LogTypeDictionaryEntry::cMaxDigitsInRepresentableDoubleVar + 2;
-
 encoded_variable_t EncodedVariableInterpreter::get_var_dict_id_range_begin () {
     return m_var_dict_id_range_begin;
 }
@@ -75,66 +71,135 @@ bool EncodedVariableInterpreter::convert_string_to_representable_integer_var (co
     return true;
 }
 
-bool EncodedVariableInterpreter::convert_string_to_representable_double_var (const string& value, uint8_t& num_integer_digits, uint8_t& num_fractional_digits,
-                                                                             encoded_variable_t& encoded_var)
-{
-    size_t length = value.length();
-
-    // Check for preceding negative sign
-    size_t first_digit_pos = 0;
-    if (first_digit_pos < length && '-' == value[first_digit_pos]) {
-        ++first_digit_pos;
-
-        if (length > cMaxCharsInRepresentableDoubleVar) {
-            // Too many characters besides sign to represent precisely
-            return false;
-        }
-    } else {
-        // No negative sign, so check against max size - 1
-        if (length > cMaxCharsInRepresentableDoubleVar - 1) {
-            // Too many characters to represent precisely
-            return false;
-        }
+bool EncodedVariableInterpreter::convert_string_to_representable_double_var (const string& value, encoded_variable_t& encoded_var) {
+    if (value.empty()) {
+        // Can't convert an empty string
+        return false;
     }
 
-    // Find decimal point
+    size_t pos = 0;
+    constexpr size_t cMaxDigitsInRepresentableDoubleVar = 16;
+    // +1 for decimal point
+    size_t max_length = cMaxDigitsInRepresentableDoubleVar + 1;
+
+    // Check for a negative sign
+    bool is_negative = false;
+    if ('-' == value[pos]) {
+        is_negative = true;
+        ++pos;
+        // Include sign in max length
+        ++max_length;
+    }
+
+    // Check if value can be represented in encoded format
+    if (value.length() > max_length) {
+        return false;
+    }
+
+    size_t num_digits = 0;
     size_t decimal_point_pos = string::npos;
-    for (size_t i = first_digit_pos; i < length; ++i) {
-        char c = value[i];
-        if ('.' == c) {
-            decimal_point_pos = i;
-            break;
-        } else if (!('0' <= c && c <= '9')) {
-            // Unrepresentable double character
+    uint64_t digits = 0;
+    for (; pos < value.length(); ++pos) {
+        auto c = value[pos];
+        if ('0' <= c && c <= '9') {
+            digits *= 10;
+            digits += (c - '0');
+            ++num_digits;
+        } else if (string::npos == decimal_point_pos && '.' == c) {
+            decimal_point_pos = value.length() - 1 - pos;
+        } else {
+            // Invalid character
             return false;
         }
     }
-    if (string::npos == decimal_point_pos) {
-        // Decimal point doesn't exist
+    if (string::npos == decimal_point_pos || 0 == decimal_point_pos || 0 == num_digits) {
+        // No decimal point found, decimal point is after all digits, or no digits found
         return false;
     }
 
-    num_integer_digits = decimal_point_pos - first_digit_pos;
-
-    // Check that remainder of string is purely numbers
-    for (size_t i = decimal_point_pos + 1; i < length; ++i) {
-        char c = value[i];
-        if (!('0' <= c && c <= '9')) {
-            return false;
-        }
+    // Encode into 64 bits with the following format (from MSB to LSB):
+    // -  1 bit : is negative
+    // -  4 bits: # of decimal digits minus 1
+    //     - This format can represent doubles with between 1 and 16 decimal digits, so we use 4 bits and map the range [1, 16] to [0x0, 0xF]
+    // -  4 bits: position of the decimal from the right minus 1
+    //     - To see why the position is taken from the right, consider (1) "-123456789012345.6", (2) "-.1234567890123456", and (3) ".1234567890123456"
+    //         - For (1), the decimal point is at index 16 from the left and index 1 from the right.
+    //         - For (2), the decimal point is at index 1 from the left and index 16 from the right.
+    //         - For (3), the decimal point is at index 0 from the left and index 16 from the right.
+    //         - So if we take the decimal position from the left, it can range from 0 to 16 because of the negative sign. Whereas from the right, the
+    //           negative sign is inconsequential.
+    //     - Thus, we use 4 bits and map the range [1, 16] to [0x0, 0xF].
+    // -  1 bit : unused
+    // - 54 bits: The digits of the double without the decimal, as an integer
+    uint64_t encoded_double = 0;
+    if (is_negative) {
+        encoded_double = 1;
     }
-
-    num_fractional_digits = length - (decimal_point_pos + 1);
-
-    double result;
-    if (false == convert_string_to_double(value, result)) {
-        // Conversion failed
-        return false;
-    } else {
-        encoded_var = *reinterpret_cast<encoded_variable_t*>(&result);
-    }
+    encoded_double <<= 4;
+    encoded_double |= (num_digits - 1) & 0x0F;
+    encoded_double <<= 4;
+    encoded_double |= (decimal_point_pos - 1) & 0x0F;
+    encoded_double <<= 55;
+    encoded_double |= digits & 0x003FFFFFFFFFFFFF;
+    static_assert(sizeof(encoded_var) == sizeof(encoded_double), "sizeof(encoded_var) != sizeof(encoded_double)");
+    // NOTE: We use memcpy rather than reinterpret_cast to avoid violating strict aliasing; a smart compiler should optimize it to a register move
+    std::memcpy(&encoded_var, &encoded_double, sizeof(encoded_double));
 
     return true;
+}
+
+void EncodedVariableInterpreter::convert_encoded_double_to_string (encoded_variable_t encoded_var, string& value) {
+    uint64_t encoded_double;
+    static_assert(sizeof(encoded_double) == sizeof(encoded_var), "sizeof(encoded_double) != sizeof(encoded_var)");
+    // NOTE: We use memcpy rather than reinterpret_cast to avoid violating strict aliasing; a smart compiler should optimize it to a register move
+    std::memcpy(&encoded_double, &encoded_var, sizeof(encoded_var));
+
+    // Decode according to the format described in EncodedVariableInterpreter::convert_string_to_representable_double_var
+    uint64_t digits = encoded_double & 0x003FFFFFFFFFFFFF;
+    encoded_double >>= 55;
+    uint8_t decimal_pos = (encoded_double & 0x0F) + 1;
+    encoded_double >>= 4;
+    uint8_t num_digits = (encoded_double & 0x0F) + 1;
+    encoded_double >>= 4;
+    bool is_negative = encoded_double > 0;
+
+    size_t value_length = num_digits + 1 + is_negative;
+    value.resize(value_length);
+    size_t num_chars_to_process = value_length;
+
+    // Add sign
+    if (is_negative) {
+        value[0] = '-';
+        --num_chars_to_process;
+    }
+
+    // Decode until the decimal or the non-zero digits are exhausted
+    size_t pos = value_length - 1;
+    for (; pos > (value_length - 1 - decimal_pos) && digits > 0; --pos) {
+        value[pos] = (char)('0' + (digits % 10));
+        digits /= 10;
+        --num_chars_to_process;
+    }
+
+    if (digits > 0) {
+        // Skip decimal since it's added at the end
+        --pos;
+        --num_chars_to_process;
+
+        while (digits > 0) {
+            value[pos--] = (char)('0' + (digits % 10));
+            digits /= 10;
+            --num_chars_to_process;
+        }
+    }
+
+    // Add remaining zeros
+    for (; num_chars_to_process > 0; --num_chars_to_process) {
+        value[pos--] = '0';
+    }
+
+    // Add decimal
+    value[value_length - 1 - decimal_pos] = '.';
 }
 
 void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& message, LogTypeDictionaryEntry& logtype_dict_entry,
@@ -151,12 +216,10 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& mes
     while (logtype_dict_entry.parse_next_var(message, tok_begin_pos, next_delim_pos, last_var_end_pos, var_str)) {
         // Encode variable
         encoded_variable_t encoded_var;
-        uint8_t num_integer_digits;
-        uint8_t num_fractional_digits;
         if (convert_string_to_representable_integer_var(var_str, encoded_var)) {
             logtype_dict_entry.add_non_double_var();
-        } else if (convert_string_to_representable_double_var(var_str, num_integer_digits, num_fractional_digits, encoded_var)) {
-            logtype_dict_entry.add_double_var(num_integer_digits, num_fractional_digits);
+        } else if (convert_string_to_representable_double_var(var_str, encoded_var)) {
+            logtype_dict_entry.add_double_var();
         } else {
             // Variable string looks like a dictionary variable, so encode it as so
             variable_dictionary_id_t id;
@@ -184,12 +247,10 @@ bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDic
     }
 
     LogTypeDictionaryEntry::VarDelim var_delim;
-    uint8_t num_integer_digits;
-    uint8_t num_fractional_digits;
     size_t constant_begin_pos = 0;
-    char double_str[cMaxCharsInRepresentableDoubleVar + 1];
+    string double_str;
     for (size_t i = 0; i < num_vars_in_logtype; ++i) {
-        size_t var_position = logtype_dict_entry.get_var_info(i, var_delim, num_integer_digits, num_fractional_digits);
+        size_t var_position = logtype_dict_entry.get_var_info(i, var_delim);
 
         // Add the constant that's between the last variable and this one
         decompressed_msg.append(logtype_value, constant_begin_pos, var_position - constant_begin_pos);
@@ -201,22 +262,13 @@ bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDic
                 auto var_dict_id = decode_var_dict_id(encoded_vars[i]);
                 decompressed_msg += var_dict.get_value(var_dict_id);
             }
-
-            // Move past the variable delimiter
-            constant_begin_pos = var_position + 1;
         } else { // LogTypeDictionaryEntry::VarDelim::Double == var_delim
-            double var_as_double = *reinterpret_cast<const double*>(&encoded_vars[i]);
-            int double_str_length = num_integer_digits + 1 + num_fractional_digits;
-            if (std::signbit(var_as_double)) {
-                ++double_str_length;
-            }
-            snprintf(double_str, sizeof(double_str), "%0*.*f", double_str_length, num_fractional_digits, var_as_double);
+            convert_encoded_double_to_string(encoded_vars[i], double_str);
 
             decompressed_msg += double_str;
-
-            // Move past the variable delimiter and the double's precision
-            constant_begin_pos = var_position + 2;
         }
+        // Move past the variable delimiter
+        constant_begin_pos = var_position + 1;
     }
     // Append remainder of logtype, if any
     if (constant_begin_pos < logtype_value.length()) {
@@ -234,14 +286,12 @@ bool EncodedVariableInterpreter::encode_and_search_dictionary (const string& var
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
 
-    uint8_t num_integer_digits;
-    uint8_t num_fractional_digits;
     encoded_variable_t encoded_var;
     if (convert_string_to_representable_integer_var(var_str, encoded_var)) {
         LogTypeDictionaryEntry::add_non_double_var(logtype);
         sub_query.add_non_dict_var(encoded_var);
-    } else if (convert_string_to_representable_double_var(var_str, num_integer_digits, num_fractional_digits, encoded_var)) {
-        LogTypeDictionaryEntry::add_double_var(num_integer_digits, num_fractional_digits, logtype);
+    } else if (convert_string_to_representable_double_var(var_str, encoded_var)) {
+        LogTypeDictionaryEntry::add_double_var(logtype);
         sub_query.add_non_dict_var(encoded_var);
     } else {
         auto entry = var_dict.get_entry_matching_value(var_str, ignore_case);

@@ -10,22 +10,6 @@ static constexpr char cEscapeChar = '\\';
 
 // Local function prototypes
 /**
- * Encodes the given precision specifiers for the double value into a single char.
- * NOTE: num_integer_digits and num_fractional_digits must each be less than or equal to 0xF, or else they will be truncated to 4-bits each.
- * @param num_integer_digits
- * @param num_fractional_digits
- * @return Encoded precision specifiers
- */
-static char encode_precision_of_double_value (uint8_t num_integer_digits, uint8_t num_fractional_digits);
-/**
- * Decodes the given character into precision specifiers for a double value
- * @param encoded_value
- * @param num_integer_digits
- * @param num_fractional_digits
- */
-static void decode_precision_of_double_value (char encoded_value, uint8_t& num_integer_digits, uint8_t& num_fractional_digits);
-
-/**
  * Escapes any variable delimiters in the identified portion of the given value
  * @param value
  * @param begin_ix
@@ -33,19 +17,6 @@ static void decode_precision_of_double_value (char encoded_value, uint8_t& num_i
  * @param escaped_value
  */
 static void escape_variable_delimiters (const std::string& value, size_t begin_ix, size_t end_ix, std::string& escaped_value);
-
-static char encode_precision_of_double_value (uint8_t num_integer_digits, uint8_t num_fractional_digits) {
-    uint8_t encoded_value = num_integer_digits;
-    encoded_value <<= 4ULL;
-    encoded_value |= (num_fractional_digits & 0x0FU);
-    return (char)encoded_value;
-}
-
-static void decode_precision_of_double_value (char encoded_value, uint8_t& num_integer_digits, uint8_t& num_fractional_digits) {
-    auto decoded_value = (uint8_t)encoded_value;
-    num_integer_digits = decoded_value >> 4U;
-    num_fractional_digits = decoded_value & 0x0FU;
-}
 
 static void escape_variable_delimiters (const string& value, size_t begin_ix, size_t end_ix, string& escaped_value) {
     for (size_t i = begin_ix; i < end_ix; ++i) {
@@ -61,32 +32,13 @@ static void escape_variable_delimiters (const string& value, size_t begin_ix, si
     }
 }
 
-void LogTypeDictionaryEntry::add_double_var (uint8_t num_integer_digits, uint8_t num_fractional_digits, string& logtype) {
-    if (num_integer_digits + num_fractional_digits > cMaxDigitsInRepresentableDoubleVar) {
-        throw LogTypeDictionaryEntry::OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
-
-    logtype += (char)VarDelim::Double;
-    logtype += encode_precision_of_double_value(num_integer_digits, num_fractional_digits);
-}
-
-void LogTypeDictionaryEntry::add_wildcard_double_var (string& logtype) {
-    logtype += (char)VarDelim::Double;
-    logtype += '?';
-}
-
-size_t LogTypeDictionaryEntry::get_var_info (size_t var_ix, VarDelim& var_delim, uint8_t& num_integer_digits, uint8_t& num_fractional_digits) const {
+size_t LogTypeDictionaryEntry::get_var_info (size_t var_ix, VarDelim& var_delim) const {
     if (var_ix >= m_var_positions.size()) {
         return SIZE_MAX;
     }
 
     auto var_position = m_var_positions[var_ix];
     var_delim = (VarDelim)m_value[var_position];
-
-    if (VarDelim::Double == var_delim) {
-        auto encoded_value = m_value[var_position + 1];
-        decode_precision_of_double_value(encoded_value, num_integer_digits, num_fractional_digits);
-    }
 
     return m_var_positions[var_ix];
 }
@@ -128,9 +80,9 @@ void LogTypeDictionaryEntry::add_non_double_var () {
     add_non_double_var(m_value);
 }
 
-void LogTypeDictionaryEntry::add_double_var (uint8_t num_integer_digits, uint8_t num_fractional_digits) {
+void LogTypeDictionaryEntry::add_double_var () {
     m_var_positions.push_back(m_value.length());
-    add_double_var(num_integer_digits, num_fractional_digits, m_value);
+    add_double_var(m_value);
 }
 
 bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begin_pos, size_t& next_delim_pos, size_t& last_var_end_pos, string& var) {
@@ -216,15 +168,7 @@ ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::zst
                 add_constant(constant, 0, constant.length());
                 constant.clear();
 
-                if (i + 1 == escaped_value_length) {
-                    throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
-                }
-                ++i;
-                uint8_t num_integer_digits;
-                uint8_t num_fractional_digits;
-                // Decode and re-encode the precision so we can ensure it hasn't been corrupted
-                decode_precision_of_double_value(escaped_value[i], num_integer_digits, num_fractional_digits);
-                add_double_var(num_integer_digits, num_fractional_digits);
+                add_double_var();
             } else {
                 constant += c;
             }
@@ -254,14 +198,8 @@ void LogTypeDictionaryEntry::get_value_with_unfounded_variables_escaped (string&
 
         escape_variable_delimiters(m_value, begin_ix, end_ix, escaped_logtype_value);
 
-        // Add variable
-        if ((char)LogTypeDictionaryEntry::VarDelim::NonDouble == m_value[end_ix]) {
-            escaped_logtype_value += (char)LogTypeDictionaryEntry::VarDelim::NonDouble;
-        } else { // (char)LogTypeDictionaryEntry::VarDelim::Double == value[end_ix]
-            escaped_logtype_value += (char)LogTypeDictionaryEntry::VarDelim::Double;
-            ++end_ix;
-            escaped_logtype_value += m_value[end_ix];
-        }
+        // Add variable delimiter
+        escaped_logtype_value += m_value[end_ix];
 
         // Move begin to start of next portion of logtype between variables
         begin_ix = end_ix + 1;

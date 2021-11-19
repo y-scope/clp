@@ -38,9 +38,6 @@ public:
         Length = 2,
     };
 
-    // Double can only represent 15 digits precisely
-    static constexpr size_t cMaxDigitsInRepresentableDoubleVar = 15;
-
     // Constructors
     LogTypeDictionaryEntry () : m_verbosity(LogVerbosity_Length) {}
     // Use default copy constructor
@@ -57,28 +54,19 @@ public:
      */
     static void add_non_double_var (std::string& logtype) { logtype += (char)VarDelim::NonDouble; }
     /**
-     * Adds a double variable delimiter and precision to the given logtype
-     * @param num_integer_digits
-     * @param num_fractional_digits
+     * Adds a double variable delimiter to the given logtype
      * @param logtype
      */
-    static void add_double_var (uint8_t num_integer_digits, uint8_t num_fractional_digits, std::string& logtype);
-    /**
-     * Adds a double variable delimiter and wildcard (in place of the double's precision) to the given logtype
-     * @param logtype
-     */
-    static void add_wildcard_double_var (std::string& logtype);
+    static void add_double_var (std::string& logtype) { logtype += (char)VarDelim::Double; }
 
     size_t get_num_vars () const { return m_var_positions.size(); }
     /**
-     * Gets all info about a variable in the logtype (including decoding the precision if it's a double variable)
+     * Gets all info about a variable in the logtype
      * @param var_ix The index of the variable to get the info for
      * @param var_delim
-     * @param num_integer_digits
-     * @param num_fractional_digits
      * @return The variable's position in the logtype, or SIZE_MAX if var_ix is out of bounds
      */
-    size_t get_var_info (size_t var_ix, VarDelim& var_delim, uint8_t& num_integer_digits, uint8_t& num_fractional_digits) const;
+    size_t get_var_info (size_t var_ix, VarDelim& var_delim) const;
     /**
      * Gets the variable delimiter at the given index
      * @param var_ix The index of the variable delimiter to get
@@ -110,11 +98,9 @@ public:
      */
     void add_non_double_var ();
     /**
-     * Adds a double variable delimiter and precision
-     * @param num_integer_digits
-     * @param num_fractional_digits
+     * Adds a double variable delimiter
      */
-    void add_double_var (uint8_t num_integer_digits, uint8_t num_fractional_digits);
+    void add_double_var ();
 
     /**
      * Parses next variable from a message, constructing the constant part of the message's logtype as well
