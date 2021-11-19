@@ -9,6 +9,7 @@ yum install -y \
   openssl-devel \
   openssl-static \
   python3 \
+  python3-pip \
   rsync \
   wget \
   zlib-static

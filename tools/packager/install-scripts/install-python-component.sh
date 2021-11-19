@@ -3,7 +3,7 @@
 cUsage="Usage: ${BASH_SOURCE[0]} <component-name>"
 if [ "$#" -lt 1 ] ; then
     echo $cUsage
-    exit
+    exit 1
 fi
 component_name=$1
 python_package_name=${component_name//-/_}

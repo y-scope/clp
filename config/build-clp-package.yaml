@@ -2,7 +2,7 @@ working_dir: out
 version: 0.0.1
 artifact_name: clp-package-ubuntu-focal
 build_parallelism: 0   # 0 -> attempt to compile with available cores on the machine
-builder_dockerhub_image: whywhywhywhywhywhy/builders:x86-ubuntu-focal-20210915
+builder_image: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main
 components:
   - name: package-template
     type: local

@@ -11,6 +11,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   libboost-program-options-dev \
   libssl-dev \
   python3 \
+  python3-pip \
   rsync \
   software-properties-common \
   wget

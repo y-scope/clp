@@ -13,6 +13,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   libssl-dev \
   pkg-config \
   python3 \
+  python3-pip \
   rsync \
   wget \
   zlib1g-dev

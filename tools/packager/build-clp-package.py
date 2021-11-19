@@ -68,7 +68,7 @@ class PackagingConfig(BaseModel):
     arch: str = platform.machine()
     artifact_name: str
     build_parallelism: int
-    builder_dockerhub_image: str
+    builder_image: str
     components: typing.List[ClpComponent]
 
 
@@ -203,7 +203,7 @@ def main(argv):
             '--name', build_environment_container_name,
             '-v', f'{host_working_dir}:{container_working_directory}',
             '-v', f'{host_install_scripts_dir}:{container_install_scripts_dir}',
-            packaging_config.builder_dockerhub_image
+            packaging_config.builder_image
         ]
         subprocess.run(build_environment_startup_cmd, check=True)
 
@@ -215,7 +215,8 @@ def main(argv):
             '-e', f'BUILD_PARALLELISM={build_parallelization}',
             '-w', str(container_working_directory),
             '-u', f'{os.getuid()}:{os.getgid()}',
-            build_environment_container_name
+            build_environment_container_name,
+            'bash', '-c'
         ]
 
         # Run the component installation scripts
@@ -226,12 +227,13 @@ def main(argv):
             [str(container_install_scripts_dir / 'install-core.sh')]
         ]
         for cmd in install_cmds:
-            container_exec_cmd = container_exec_prefix + cmd
+            joined_cmd = ' '.join(cmd)
+            container_exec_cmd = [*container_exec_prefix, joined_cmd]
             log.info(' '.join(container_exec_cmd))
             subprocess.run(container_exec_cmd, check=True)
 
         archive_cmd = f'tar -czf {versioned_artifact_name}.tar.gz {versioned_artifact_name}'
-        subprocess.run(container_exec_prefix + archive_cmd.split(), check=True)
+        subprocess.run([*container_exec_prefix, archive_cmd], check=True)
     except subprocess.CalledProcessError as ex:
         print(ex.stdout)
         log.error('Failed to build CLP')
