@@ -13,13 +13,13 @@
 #include "../../Defs.h"
 #include "../../ErrorCode.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
+#include "../../PageAllocatedVector.hpp"
 #include "../../TimestampPattern.hpp"
 #include "Segment.hpp"
 
 namespace streaming_archive { namespace writer {
     /**
-     * Abstract class representing a compressed log file encoded into three columns - timestamps, logtype IDs, and variables. Implementations need only
-     * define how the column data is stored on disk.
+     * Class representing a log file encoded in three columns - timestamps, logtype IDs, and variables.
      */
     class File {
     public:
@@ -54,23 +54,37 @@ namespace streaming_archive { namespace writer {
                 m_segment_variables_pos(0),
                 m_is_split(split_ix > 0),
                 m_split_ix(split_ix),
+                m_segmentation_state(SegmentationState_NotInSegment),
                 m_is_metadata_clean(false),
-                m_segmentation_state(SegmentationState_NotInSegment)
+                m_is_written_out(false),
+                m_is_open(false)
         {}
 
         // Destructor
         virtual ~File () = default;
 
         // Methods
-        virtual bool is_open () const = 0;
-        virtual void open () = 0;
-        virtual void close () = 0;
-        virtual void append_to_segment (const LogTypeDictionaryWriter& logtype_dict, Segment& segment,
-                                        std::unordered_set<logtype_dictionary_id_t>& segment_logtype_ids,
-                                        std::unordered_set<variable_dictionary_id_t>& segment_var_ids) = 0;
-        virtual void cleanup_after_segment_insertion () = 0;
-        virtual void write_encoded_msg (epochtime_t timestamp, logtype_dictionary_id_t logtype_id, const std::vector<encoded_variable_t>& encoded_vars,
-                size_t num_uncompressed_bytes) = 0;
+        bool is_open () const { return m_is_open; }
+        void open ();
+        void close () { m_is_open = false; }
+        /**
+         * Appends the file's columns to the given segment
+         * @param logtype_dict
+         * @param segment
+         * @param segment_logtype_ids
+         * @param segment_var_ids
+         */
+        void append_to_segment (const LogTypeDictionaryWriter& logtype_dict, Segment& segment, std::unordered_set<logtype_dictionary_id_t>& segment_logtype_ids,
+                                std::unordered_set<variable_dictionary_id_t>& segment_var_ids);
+        /**
+         * Writes an encoded message to the respective columns and updates the metadata of the file
+         * @param timestamp
+         * @param logtype_id
+         * @param encoded_vars
+         * @param num_uncompressed_bytes
+         */
+        void write_encoded_msg (epochtime_t timestamp, logtype_dictionary_id_t logtype_id, const std::vector<encoded_variable_t>& encoded_vars,
+                                size_t num_uncompressed_bytes);
 
         /**
          * Changes timestamp pattern in use at current message in file
@@ -94,7 +108,7 @@ namespace streaming_archive { namespace writer {
          * Gets the file's encoded size in bytes
          * @return Encoded size in bytes
          */
-        size_t get_encoded_size_in_bytes () {
+        size_t get_encoded_size_in_bytes () const {
             return m_num_messages * sizeof(epochtime_t) + m_num_messages * sizeof(logtype_dictionary_id_t) + m_num_variables * sizeof(encoded_variable_t);
         }
 
@@ -149,7 +163,7 @@ namespace streaming_archive { namespace writer {
         bool is_split () const { return m_is_split; }
         size_t get_split_ix () const { return m_split_ix; }
 
-    protected:
+    private:
         // Types
         typedef enum {
             SegmentationState_NotInSegment = 0,
@@ -173,15 +187,6 @@ namespace streaming_archive { namespace writer {
                                                                 std::unordered_set<logtype_dictionary_id_t>& segment_logtype_ids,
                                                                 std::unordered_set<variable_dictionary_id_t>& segment_var_ids);
 
-
-        void increment_num_uncompressed_bytes (size_t num_bytes);
-        /**
-         * Increments the number of messages and the number of variables by the given values
-         * @param num_messages_to_add
-         * @param num_variables_to_add
-         */
-        void increment_num_messages_and_variables (size_t num_messages_to_add, size_t num_variables_to_add);
-        void set_last_message_timestamp (epochtime_t timestamp);
         /**
          * Sets segment-related metadata to the given values
          * @param segment_id
@@ -192,10 +197,6 @@ namespace streaming_archive { namespace writer {
         void set_segment_metadata (segment_id_t segment_id, uint64_t segment_timestamps_uncompressed_pos, uint64_t segment_logtypes_uncompressed_pos,
                                    uint64_t segment_variables_uncompressed_pos);
 
-        // Variables
-        SegmentationState m_segmentation_state;
-
-    private:
         // Variables
         // Metadata
         boost::uuids::uuid m_id;
@@ -224,8 +225,16 @@ namespace streaming_archive { namespace writer {
         bool m_is_split;
         size_t m_split_ix;
 
+        // Data variables
+        PageAllocatedVector<epochtime_t> m_timestamps;
+        PageAllocatedVector<logtype_dictionary_id_t> m_logtypes;
+        PageAllocatedVector<encoded_variable_t> m_variables;
+
         // State variables
+        SegmentationState m_segmentation_state;
         bool m_is_metadata_clean;
+        bool m_is_written_out;
+        bool m_is_open;
     };
 } }
 

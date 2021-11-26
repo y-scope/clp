@@ -8,6 +8,66 @@ using std::to_string;
 using std::unordered_set;
 
 namespace streaming_archive { namespace writer {
+    void File::open () {
+        if (m_is_written_out) {
+            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+        }
+
+        m_is_open = true;
+    }
+
+    void File::append_to_segment (const LogTypeDictionaryWriter& logtype_dict, Segment& segment, unordered_set<logtype_dictionary_id_t>& segment_logtype_ids,
+                                  unordered_set<variable_dictionary_id_t>& segment_var_ids)
+    {
+        if (m_is_open) {
+            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+        }
+
+        // Add file's logtype and variable IDs to respective segment sets
+        auto logtype_ids = m_logtypes.data();
+        auto variables = m_variables.data();
+        append_logtype_and_var_ids_to_segment_sets(logtype_dict, logtype_ids, m_logtypes.size(), variables, m_variables.size(), segment_logtype_ids,
+                                                   segment_var_ids);
+
+        // Append files to segment
+        uint64_t segment_timestamps_uncompressed_pos;
+        segment.append(reinterpret_cast<const char*>(m_timestamps.data()), m_timestamps.size_in_bytes(), segment_timestamps_uncompressed_pos);
+        uint64_t segment_logtypes_uncompressed_pos;
+        segment.append(reinterpret_cast<const char*>(m_logtypes.data()), m_logtypes.size_in_bytes(), segment_logtypes_uncompressed_pos);
+        uint64_t segment_variables_uncompressed_pos;
+        segment.append(reinterpret_cast<const char*>(m_variables.data()), m_variables.size_in_bytes(), segment_variables_uncompressed_pos);
+        set_segment_metadata(segment.get_id(), segment_timestamps_uncompressed_pos, segment_logtypes_uncompressed_pos, segment_variables_uncompressed_pos);
+        m_segmentation_state = SegmentationState_MovingToSegment;
+
+        // Mark file as written out and clear in-memory columns
+        m_is_written_out = true;
+        m_timestamps.clear();
+        m_logtypes.clear();
+        m_variables.clear();
+    }
+
+    void File::write_encoded_msg (epochtime_t timestamp, logtype_dictionary_id_t logtype_id, const std::vector<encoded_variable_t>& encoded_vars,
+                                  size_t num_uncompressed_bytes)
+    {
+        m_timestamps.push_back(timestamp);
+        m_logtypes.push_back(logtype_id);
+        m_variables.push_back_all(encoded_vars);
+
+        // Update metadata
+        ++m_num_messages;
+        m_num_variables += encoded_vars.size();
+
+        if (timestamp < m_begin_ts) {
+            m_begin_ts = timestamp;
+        }
+        if (timestamp > m_end_ts) {
+            m_end_ts = timestamp;
+        }
+
+        m_num_uncompressed_bytes += num_uncompressed_bytes;
+        m_is_metadata_clean = false;
+    }
+
     void File::change_ts_pattern (const TimestampPattern* pattern) {
         if (nullptr == pattern) {
             m_timestamp_patterns.emplace_back(m_num_messages, TimestampPattern());
@@ -82,28 +142,6 @@ namespace streaming_archive { namespace writer {
                     }
                 }
             }
-        }
-    }
-
-    void File::increment_num_uncompressed_bytes (size_t num_bytes) {
-        m_num_uncompressed_bytes += num_bytes;
-        m_is_metadata_clean = false;
-    }
-
-    void File::increment_num_messages_and_variables (size_t num_messages_to_add, size_t num_variables_to_add) {
-        m_num_messages += num_messages_to_add;
-        m_num_variables += num_variables_to_add;
-        m_is_metadata_clean = false;
-    }
-
-    void File::set_last_message_timestamp (const epochtime_t timestamp) {
-        if (timestamp < m_begin_ts) {
-            m_begin_ts = timestamp;
-            m_is_metadata_clean = false;
-        }
-        if (timestamp > m_end_ts) {
-            m_end_ts = timestamp;
-            m_is_metadata_clean = false;
         }
     }
 

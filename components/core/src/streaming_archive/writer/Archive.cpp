@@ -240,17 +240,9 @@ namespace streaming_archive { namespace writer {
         m_path.clear();
     }
 
-    File* Archive::create_in_memory_file (const string& path, const group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix) {
-        auto file = new InMemoryFile(m_uuid_generator(), orig_file_id, path, m_logs_dir_path, group_id, split_ix);
+    File* Archive::create_file (const string& path, const group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix) {
+        auto file = new File(m_uuid_generator(), orig_file_id, path, group_id, split_ix);
         m_mutable_files.insert(file);
-
-        return file;
-    }
-
-    File* Archive::create_on_disk_file (const string& path, const group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix) {
-        auto file = new OnDiskFile(m_uuid_generator(), orig_file_id, path, m_logs_dir_path, group_id, split_ix);
-        m_mutable_files.insert(file);
-        m_on_disk_files.insert(file);
 
         return file;
     }
@@ -283,20 +275,6 @@ namespace streaming_archive { namespace writer {
     }
 
     void Archive::write_dir_snapshot () {
-        // Flush and collect OnDiskFiles with dirty metadata
-        vector<File*> files_with_dirty_metadata;
-        for (auto file : m_on_disk_files) {
-            if (file->is_metadata_dirty()) {
-                file->flush();
-                files_with_dirty_metadata.emplace_back(file);
-            }
-        }
-
-        // Collect released files with dirty metadata
-        for (auto file : m_released_but_dirty_files) {
-            files_with_dirty_metadata.emplace_back(file);
-        }
-
         #if FLUSH_TO_DISK_ENABLED
             // fsync logs directory to flush new files' directory entries
             if (0 != fsync(m_logs_dir_fd)) {
@@ -308,81 +286,6 @@ namespace streaming_archive { namespace writer {
         // Flush dictionaries
         m_logtype_dict.write_uncommitted_entries_to_disk();
         m_var_dict.write_uncommitted_entries_to_disk();
-
-        // Persist files with dirty metadata
-        persist_file_metadata(files_with_dirty_metadata);
-
-        // Delete files that have been released
-        for (auto file : m_released_but_dirty_files) {
-            delete file;
-        }
-    }
-
-    void Archive::release_and_write_in_memory_file_to_disk (File*& file) {
-        // Ensure file has been closed
-        if (file->is_open()) {
-            SPDLOG_ERROR("An open file cannot be released.");
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
-        }
-
-        // Ensure file pointer is a mutable file in this archive
-        if (m_mutable_files.count(file) == 0) {
-            SPDLOG_ERROR("Given file pointer is not mutable or does not exist in this archive.");
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
-        }
-
-        // Remove pointer from mutable files
-        m_mutable_files.erase(file);
-
-        // Write file to disk
-        auto in_memory_file = reinterpret_cast<InMemoryFile*>(file);
-        in_memory_file->write_to_disk();
-
-        // Save file for persistence
-        m_released_but_dirty_files.push_back(file);
-
-        // Update archive's stable size
-        m_stable_uncompressed_size += file->get_num_uncompressed_bytes();
-        m_stable_size += file->get_encoded_size_in_bytes();
-
-        // Remove external access to file
-        file = nullptr;
-    }
-
-    void Archive::release_on_disk_file (File*& file) {
-        // Ensure file has been closed
-        if (file->is_open()) {
-            SPDLOG_ERROR("An open file cannot be released.");
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
-        }
-
-        // Ensure file pointer is an on-disk mutable file in this archive
-        if (m_mutable_files.count(file) == 0) {
-            SPDLOG_ERROR("Given file pointer is not mutable or does not exist in this archive.");
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
-        }
-        auto on_disk_file = reinterpret_cast<OnDiskFile*>(file);
-        if (m_on_disk_files.count(on_disk_file) == 0) {
-            SPDLOG_ERROR("Given file pointer is not an OnDiskFile.");
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
-        }
-
-        // Remove pointer from containers of mutable and on-disk files
-        m_mutable_files.erase(file);
-        m_on_disk_files.erase(on_disk_file);
-
-        m_stable_uncompressed_size += file->get_num_uncompressed_bytes();
-        m_stable_size += file->get_encoded_size_in_bytes();
-
-        // Save file for persistence if necessary
-        if (file->is_metadata_dirty()) {
-            m_released_but_dirty_files.push_back(file);
-        } else {
-            delete file;
-        }
-
-        // Remove external access to file
-        file = nullptr;
     }
 
     void Archive::append_file_to_segment (File*& file, Segment& segment, unordered_set<logtype_dictionary_id_t>& logtype_ids_in_segment,
@@ -479,7 +382,6 @@ namespace streaming_archive { namespace writer {
         m_global_metadata_db->close();
 
         for (auto file : files) {
-            file->cleanup_after_segment_insertion();
             m_stable_uncompressed_size += file->get_num_uncompressed_bytes();
             delete file;
         }
@@ -497,11 +399,6 @@ namespace streaming_archive { namespace writer {
     size_t Archive::get_stable_uncompressed_size () const {
         size_t uncompressed_size = m_stable_uncompressed_size;
 
-        // Add size of on-disk files
-        for (auto file : m_on_disk_files) {
-            uncompressed_size += file->get_num_uncompressed_bytes();
-        }
-
         // Add size of files in an unclosed segment
         for (auto file : m_files_with_timestamps_in_segment) {
             uncompressed_size += file->get_num_uncompressed_bytes();
@@ -515,11 +412,6 @@ namespace streaming_archive { namespace writer {
 
     size_t Archive::get_stable_size () const {
         size_t on_disk_size = m_stable_size + m_logtype_dict.get_on_disk_size() + m_var_dict.get_on_disk_size();
-
-        // Add size of on-disk files
-        for (auto file : m_on_disk_files) {
-            on_disk_size += file->get_encoded_size_in_bytes();
-        }
 
         // Add size of unclosed segment
         if (m_segment_for_files_without_timestamps.is_open()) {

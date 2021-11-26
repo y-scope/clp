@@ -180,10 +180,10 @@ namespace clp {
         return all_paths_exist;
     }
 
-    streaming_archive::writer::File* create_and_open_in_memory_file (streaming_archive::writer::Archive& archive_writer, const string& path_for_compression,
-                                                                     group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix)
+    streaming_archive::writer::File* create_and_open_file (streaming_archive::writer::Archive& archive_writer, const string& path_for_compression,
+                                                           group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix)
     {
-        auto* file = archive_writer.create_in_memory_file(path_for_compression, group_id, orig_file_id, split_ix);
+        auto* file = archive_writer.create_file(path_for_compression, group_id, orig_file_id, split_ix);
         archive_writer.open_file(*file);
         return file;
     }
@@ -208,7 +208,7 @@ namespace clp {
         file->set_is_split(true);
         close_file_and_mark_ready_for_segment(archive_writer, file);
 
-        file = create_and_open_in_memory_file(archive_writer, path_for_compression, group_id, orig_file_id, ++split_ix);
+        file = create_and_open_file(archive_writer, path_for_compression, group_id, orig_file_id, ++split_ix);
         // Initialize the file's timestamp pattern to the previous split's pattern
         archive_writer.change_ts_pattern(*file, last_timestamp_pattern);
     }
@@ -224,7 +224,7 @@ namespace clp {
 
         split_archive(archive_user_config, archive_writer);
 
-        file = create_and_open_in_memory_file(archive_writer, path_for_compression, group_id, orig_file_id, ++split_ix);
+        file = create_and_open_file(archive_writer, path_for_compression, group_id, orig_file_id, ++split_ix);
         // Initialize the file's timestamp pattern to the previous split's pattern
         archive_writer.change_ts_pattern(*file, last_timestamp_pattern);
     }
