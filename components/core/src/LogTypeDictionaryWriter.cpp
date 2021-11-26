@@ -29,7 +29,6 @@ void LogTypeDictionaryWriter::open_and_preload (const std::string& dictionary_pa
         logtype_dict_entry_wrapper->read_from_file(dictionary_decompressor);
         add_occurrence(logtype_dict_entry_wrapper, id);
     }
-    m_uncommitted_entries.clear();
 
     segment_index_decompressor.close();
     segment_index_file_reader.close();
@@ -56,11 +55,10 @@ bool LogTypeDictionaryWriter::add_occurrence (std::unique_ptr<LogTypeDictionaryE
     bool is_new_entry = false;
 
     const string& value = entry.get_value();
-    const auto ix = m_value_to_entry.find(value);
-    if (m_value_to_entry.end() != ix) {
-        // Entry exists so increment its count
-        auto& existing_entry = ix->second;
-        logtype_id = existing_entry->get_id();
+    const auto ix = m_value_to_id.find(value);
+    if (m_value_to_id.end() != ix) {
+        // Entry exists so get its ID
+        logtype_id = ix->second;
     } else {
         // Dictionary entry doesn't exist so create it
 
@@ -90,16 +88,17 @@ bool LogTypeDictionaryWriter::add_occurrence (std::unique_ptr<LogTypeDictionaryE
 
         // Insert new entry into dictionary
         auto entry_ptr = entry_wrapper.release();
-        m_value_to_entry[value] = entry_ptr;
-        m_id_to_entry[logtype_id] = entry_ptr;
-
-        // Mark ID as dirty
-        m_uncommitted_entries.emplace_back(entry_ptr);
+        m_value_to_id[value] = logtype_id;
 
         is_new_entry = true;
 
         // TODO: This doesn't account for the segment index that's constantly updated
+        // Nor does it account that compression doesn't store the whole entry in the memory
         m_data_size += entry_ptr->get_data_size();
+
+        // write the new entry to the compressor and free up the memory
+        entry_ptr->write_to_file(m_dictionary_compressor);
+        delete entry_ptr;
     }
     return is_new_entry;
 }

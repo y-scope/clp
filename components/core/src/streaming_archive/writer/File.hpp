@@ -57,7 +57,8 @@ namespace streaming_archive { namespace writer {
                 m_segmentation_state(SegmentationState_NotInSegment),
                 m_is_metadata_clean(false),
                 m_is_written_out(false),
-                m_is_open(false)
+                m_is_open(false),
+                m_variable_ids(nullptr)
         {}
 
         // Destructor
@@ -84,7 +85,7 @@ namespace streaming_archive { namespace writer {
          * @param num_uncompressed_bytes
          */
         void write_encoded_msg (epochtime_t timestamp, logtype_dictionary_id_t logtype_id, const std::vector<encoded_variable_t>& encoded_vars,
-                                size_t num_uncompressed_bytes);
+                                const std::vector<variable_dictionary_id_t>& added_vars_ids, size_t num_uncompressed_bytes);
 
         /**
          * Changes timestamp pattern in use at current message in file
@@ -182,7 +183,7 @@ namespace streaming_archive { namespace writer {
          * @param segment_logtype_ids
          * @param segment_var_ids
          */
-        static void append_logtype_and_var_ids_to_segment_sets (const LogTypeDictionaryWriter& logtype_dict, const logtype_dictionary_id_t* logtype_ids,
+        void append_logtype_and_var_ids_to_segment_sets (const LogTypeDictionaryWriter& logtype_dict, const logtype_dictionary_id_t* logtype_ids,
                                                                 size_t num_logtypes, const encoded_variable_t* vars, size_t num_vars,
                                                                 std::unordered_set<logtype_dictionary_id_t>& segment_logtype_ids,
                                                                 std::unordered_set<variable_dictionary_id_t>& segment_var_ids);
@@ -229,6 +230,7 @@ namespace streaming_archive { namespace writer {
         PageAllocatedVector<epochtime_t> m_timestamps;
         PageAllocatedVector<logtype_dictionary_id_t> m_logtypes;
         PageAllocatedVector<encoded_variable_t> m_variables;
+        std::unordered_set<variable_dictionary_id_t> * m_variable_ids;
 
         // State variables
         SegmentationState m_segmentation_state;

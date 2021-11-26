@@ -53,16 +53,9 @@ public:
     void close ();
 
     /**
-     * Gets the entry with the given ID
-     * @param id
-     * @return Pointer to the entry with the given ID
+     * Writes dict_type count and flush compressors to file
      */
-    const EntryType* get_entry (DictionaryIdType id) const;
-
-    /**
-     * Writes uncommitted dictionary entries to file
-     */
-    void write_uncommitted_entries_to_disk ();
+    void write_dictionary_info_to_disk ();
 
     /**
      * Adds the given segment and IDs to the segment index
@@ -85,22 +78,19 @@ public:
 
 protected:
     // Types
-    typedef std::unordered_map<std::string, EntryType*> value_to_entry_t;
-    typedef std::unordered_map<DictionaryIdType, EntryType*> id_to_entry_t;
+    typedef std::unordered_map<std::string, DictionaryIdType> value_to_id_t;
 
     // Variables
     bool m_is_open;
 
     // Variables related to on-disk storage
-    std::vector<EntryType*> m_uncommitted_entries;
     FileWriter m_dictionary_file_writer;
     streaming_compression::zstd::Compressor m_dictionary_compressor;
     FileWriter m_segment_index_file_writer;
     streaming_compression::zstd::Compressor m_segment_index_compressor;
     size_t m_num_segments_in_index;
 
-    value_to_entry_t m_value_to_entry;
-    id_to_entry_t  m_id_to_entry;
+    value_to_id_t m_value_to_id;
     DictionaryIdType m_next_id;
     DictionaryIdType m_max_id;
 
@@ -110,12 +100,7 @@ protected:
 
 template <typename DictionaryIdType, typename EntryType>
 DictionaryWriter<DictionaryIdType, EntryType>::~DictionaryWriter () {
-    if (false == m_uncommitted_entries.empty()) {
-        SPDLOG_ERROR("DictionaryWriter contains uncommitted entries while being destroyed - possible data loss.");
-    }
-    for (const auto& value_entry_pair : m_value_to_entry) {
-        delete value_entry_pair.second;
-    }
+    // Do nothing
 }
 
 template <typename DictionaryIdType, typename EntryType>
@@ -151,60 +136,34 @@ void DictionaryWriter<DictionaryIdType, EntryType>::close () {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
-    write_uncommitted_entries_to_disk();
+    write_dictionary_info_to_disk();
     m_segment_index_compressor.close();
     m_segment_index_file_writer.close();
     m_dictionary_compressor.close();
     m_dictionary_file_writer.close();
 
-    // Delete entries and clear maps
-    for (const auto& value_entry_pair : m_value_to_entry) {
-        delete value_entry_pair.second;
-    }
-    m_id_to_entry.clear();
-    m_value_to_entry.clear();
+    // clear maps
+    m_value_to_id.clear();
 
     m_is_open = false;
 }
 
 template <typename DictionaryIdType, typename EntryType>
-const EntryType* DictionaryWriter<DictionaryIdType, EntryType>::get_entry (DictionaryIdType id) const {
+void DictionaryWriter<DictionaryIdType, EntryType>::write_dictionary_info_to_disk () {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
-    }
-
-    if (m_id_to_entry.count(id) == 0) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
-    return m_id_to_entry.at(id);
-}
-
-template <typename DictionaryIdType, typename EntryType>
-void DictionaryWriter<DictionaryIdType, EntryType>::write_uncommitted_entries_to_disk () {
-    if (false == m_is_open) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
-    }
-
-    if (m_uncommitted_entries.empty()) {
-        // Nothing to do
-        return;
-    }
-
-    for (auto entry : m_uncommitted_entries) {
-        entry->write_to_file(m_dictionary_compressor);
     }
 
     // Update header
     auto dictionary_file_writer_pos = m_dictionary_file_writer.get_pos();
     m_dictionary_file_writer.seek_from_begin(0);
-    m_dictionary_file_writer.write_numeric_value<uint64_t>(m_id_to_entry.size());
+    m_dictionary_file_writer.write_numeric_value<uint64_t>(m_value_to_id.size());
     m_dictionary_file_writer.seek_from_begin(dictionary_file_writer_pos);
 
     m_segment_index_compressor.flush();
     m_segment_index_file_writer.flush();
     m_dictionary_compressor.flush();
     m_dictionary_file_writer.flush();
-    m_uncommitted_entries.clear();
 }
 
 template <typename DictionaryIdType, typename EntryType>

@@ -12,7 +12,7 @@ namespace streaming_archive { namespace writer {
         if (m_is_written_out) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
-
+        m_variable_ids = new std::unordered_set<variable_dictionary_id_t>;
         m_is_open = true;
     }
 
@@ -44,14 +44,25 @@ namespace streaming_archive { namespace writer {
         m_timestamps.clear();
         m_logtypes.clear();
         m_variables.clear();
+
+        // release the memory
+        m_variable_ids->clear();
+        delete m_variable_ids;
+        m_variable_ids = nullptr;
     }
 
     void File::write_encoded_msg (epochtime_t timestamp, logtype_dictionary_id_t logtype_id, const std::vector<encoded_variable_t>& encoded_vars,
-                                  size_t num_uncompressed_bytes)
+                                  const std::vector<variable_dictionary_id_t>& added_var_ids, size_t num_uncompressed_bytes)
     {
         m_timestamps.push_back(timestamp);
         m_logtypes.push_back(logtype_id);
         m_variables.push_back_all(encoded_vars);
+
+        // insert ids seen from log message to the file
+        // duplicate ids will be handled by unordered_set internally
+        for(const auto& id : added_var_ids){
+            m_variable_ids->emplace(id);
+        }
 
         // Update metadata
         ++m_num_messages;
@@ -117,31 +128,14 @@ namespace streaming_archive { namespace writer {
                                                            unordered_set<logtype_dictionary_id_t>& segment_logtype_ids,
                                                            unordered_set<variable_dictionary_id_t>& segment_var_ids)
     {
-        size_t var_ix = 0;
+        // Add logtype to set
         for (size_t i = 0; i < num_logtypes; ++i) {
-            // Add logtype to set
             auto logtype_id = logtype_ids[i];
             segment_logtype_ids.emplace(logtype_id);
-
-            // Get logtype dictionary entry
-            auto logtype_dict_entry_ptr = logtype_dict.get_entry(logtype_id);
-            auto& logtype_dict_entry = *logtype_dict_entry_ptr;
-
-            // Get number of variables in logtype
-            auto msg_num_vars = logtype_dict_entry.get_num_vars();
-            if (var_ix + msg_num_vars > num_vars) {
-                throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
-            }
-
-            // If variable is a variable dictionary ID, decode it and add it to the set
-            for (size_t msg_var_ix = 0; msg_var_ix < msg_num_vars; ++msg_var_ix, ++var_ix) {
-                if (LogTypeDictionaryEntry::VarDelim::NonDouble == logtype_dict_entry.get_var_delim(msg_var_ix)) {
-                    auto var = vars[var_ix];
-                    if (EncodedVariableInterpreter::is_var_dict_id(var)) {
-                        segment_var_ids.emplace(EncodedVariableInterpreter::decode_var_dict_id(var));
-                    }
-                }
-            }
+        }
+        // Add vartype to set
+        for(const variable_dictionary_id_t& id : *m_variable_ids){
+            segment_var_ids.emplace(id);
         }
     }
 

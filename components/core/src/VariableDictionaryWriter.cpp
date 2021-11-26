@@ -32,7 +32,6 @@ void VariableDictionaryWriter::open_and_preload (const string& dictionary_path, 
         var_dict_entry.read_from_file(dictionary_decompressor);
         add_occurrence(var_dict_entry.get_value(), id);
     }
-    m_uncommitted_entries.clear();
 
     segment_index_decompressor.close();
     segment_index_file_reader.close();
@@ -53,9 +52,9 @@ void VariableDictionaryWriter::open_and_preload (const string& dictionary_path, 
 bool VariableDictionaryWriter::add_occurrence (const string& value, variable_dictionary_id_t& id) {
     bool new_entry = false;
 
-    const auto ix = m_value_to_entry.find(value);
-    if (m_value_to_entry.end() != ix) {
-        id = ix->second->get_id();
+    const auto ix = m_value_to_id.find(value);
+    if (m_value_to_id.end() != ix) {
+        id = ix->second;
     } else {
         // Entry doesn't exist so create it
 
@@ -70,16 +69,17 @@ bool VariableDictionaryWriter::add_occurrence (const string& value, variable_dic
 
         // Insert the ID obtained from the database into the dictionary
         auto* entry = new VariableDictionaryEntry(value, id);
-        m_value_to_entry[value] = entry;
-        m_id_to_entry[id] = entry;
-
-        // Mark ID as dirty
-        m_uncommitted_entries.emplace_back(entry);
+        m_value_to_id[value] = id;
 
         new_entry = true;
 
         // TODO: This doesn't account for the segment index that's constantly updated
+        // Nor does it account that compression doesn't store the whole entry in the memory
         m_data_size += entry->get_data_size();
+
+        // write the new entry to the compressor and free up the memory
+        entry->write_to_file(m_dictionary_compressor);
+        delete entry;
     }
     return new_entry;
 }
