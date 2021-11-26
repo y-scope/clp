@@ -18,8 +18,6 @@
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
 #include "../MetadataDB.hpp"
-#include "InMemoryFile.hpp"
-#include "OnDiskFile.hpp"
 
 namespace streaming_archive { namespace writer {
     class Archive {
@@ -90,16 +88,7 @@ namespace streaming_archive { namespace writer {
          * @param split_ix
          * @return Pointer to the new file
          */
-        File* create_in_memory_file (const std::string& path, group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix);
-        /**
-         * Creates a file with the given path (should not already exist)
-         * @param path
-         * @param group_id
-         * @param orig_file_id
-         * @param split_ix
-         * @return Pointer to the new file
-         */
-        File* create_on_disk_file (const std::string& path, group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix);
+        File* create_file (const std::string& path, group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix);
 
         /**
          * Wrapper for streaming_archive::writer::File::open
@@ -138,17 +127,6 @@ namespace streaming_archive { namespace writer {
          * @throw Same as streaming_archive::writer::Archive::persist_file_metadata
          */
         void write_dir_snapshot ();
-
-        /**
-         * Releases and writes the given streaming_archive::writer::InMemoryFile to disk
-         * @param file
-         */
-        void release_and_write_in_memory_file_to_disk (File*& file);
-        /**
-         * Releases the given streaming_archive::writer::OnDiskFile
-         * @param file
-         */
-        void release_on_disk_file (File*& file);
 
         /**
          * Mark files ready for segment and it will be added to the segment at a convenient time.
@@ -228,7 +206,6 @@ namespace streaming_archive { namespace writer {
          * @param segment_var_ids
          * @throw Same as streaming_archive::writer::Segment::close
          * @throw Same as streaming_archive::writer::Archive::persist_file_metadata
-         * @throw Same as streaming_archive::writer::File::cleanup_after_segment_insertion
          */
         void close_segment_and_persist_file_metadata (Segment& segment, std::vector<File*>& files,
                                                       const std::unordered_set<logtype_dictionary_id_t>& segment_logtype_ids,
@@ -276,14 +253,8 @@ namespace streaming_archive { namespace writer {
         std::unordered_set<File*> m_mutable_files;
         // Since we batch metadata persistence operations, we need to keep track of files whose metadata should be persisted
         // Accordingly:
-        // - m_on_disk_files contains OnDiskFiles that 1) have not been released and 2) are not ready for a segment
-        // - m_released_but_dirty_files contains files that 1) have been released and 2) are not ready for a segment
-        //   NOTE: These files must already be stored on disk (regardless of whether they were created as InMemoryFiles)
         // - m_files_with_timestamps_in_segment contains files that 1) have been moved to an open segment and 2) contain timestamps
         // - m_files_without_timestamps_in_segment contains files that 1) have been moved to an open segment and 2) do not contain timestamps
-        std::unordered_set<OnDiskFile*> m_on_disk_files;
-        std::vector<File*> m_released_but_dirty_files;
-
         segment_id_t m_next_segment_id;
         std::vector<File*> m_files_with_timestamps_in_segment;
         std::vector<File*> m_files_without_timestamps_in_segment;

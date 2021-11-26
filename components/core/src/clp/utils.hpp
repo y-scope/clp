@@ -60,16 +60,16 @@ namespace clp {
     bool validate_paths_exist (const std::vector<std::string>& paths);
 
     /**
-     * Creates and opens an in-memory file within the given archive
+     * Creates and opens a file within the given archive
      * @param archive
      * @param path_for_compression
      * @param group_id
      * @param orig_file_id
      * @param split_ix
-     * @return A pointer to the in-memory file
+     * @return A pointer to the file
      */
-    streaming_archive::writer::File* create_and_open_in_memory_file (streaming_archive::writer::Archive& archive, const std::string& path_for_compression,
-                                                                     group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix);
+    streaming_archive::writer::File* create_and_open_file (streaming_archive::writer::Archive& archive, const std::string& path_for_compression,
+                                                           group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix);
 
     /**
      * Closes the given encoded file and marks it ready for a segment
