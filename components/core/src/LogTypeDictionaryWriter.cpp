@@ -22,12 +22,12 @@ void LogTypeDictionaryWriter::open_and_preload (const std::string& dictionary_pa
 
     auto num_dictionary_entries = read_dictionary_header(dictionary_file_reader);
 
-    // Read new dictionary entries
-    logtype_dictionary_id_t id;
+    // Add new dictionary entries values into hash map
+    LogTypeDictionaryEntry logtype_entry;
     for (size_t i = 0; i < num_dictionary_entries; ++i) {
-        auto logtype_dict_entry_wrapper = std::make_unique<LogTypeDictionaryEntry>();
-        logtype_dict_entry_wrapper->read_from_file(dictionary_decompressor);
-        add_occurrence(logtype_dict_entry_wrapper, id);
+        logtype_entry.read_from_file(dictionary_decompressor);
+        insert_non_duplicate_value_into_hash_map(logtype_entry);
+        logtype_entry.clear();
     }
 
     segment_index_decompressor.close();
@@ -46,15 +46,14 @@ void LogTypeDictionaryWriter::open_and_preload (const std::string& dictionary_pa
     m_is_open = true;
 }
 
-bool LogTypeDictionaryWriter::add_occurrence (std::unique_ptr<LogTypeDictionaryEntry>& entry_wrapper, logtype_dictionary_id_t& logtype_id) {
-    if (nullptr == entry_wrapper) {
+bool LogTypeDictionaryWriter::add_occurrence (LogTypeDictionaryEntry& logtype_entry, logtype_dictionary_id_t& logtype_id) {
+    if (logtype_entry.get_value().empty()) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
-    auto& entry = *entry_wrapper;
 
     bool is_new_entry = false;
 
-    const string& value = entry.get_value();
+    const string& value = logtype_entry.get_value();
     const auto ix = m_value_to_id.find(value);
     if (m_value_to_id.end() != ix) {
         // Entry exists so get its ID
@@ -79,24 +78,22 @@ bool LogTypeDictionaryWriter::add_occurrence (std::unique_ptr<LogTypeDictionaryE
         } else {
             verbosity = LogVerbosity_UNKNOWN;
         }
-        entry.set_verbosity(verbosity);
+        logtype_entry.set_verbosity(verbosity);
 
         // Assign ID
         logtype_id = m_next_id;
         ++m_next_id;
-        entry.set_id(logtype_id);
+        logtype_entry.set_id(logtype_id);
 
         // Insert new entry into dictionary
-        auto entry_ptr = entry_wrapper.release();
         m_value_to_id[value] = logtype_id;
 
         is_new_entry = true;
 
         // TODO: This doesn't account for the segment index that's constantly updated
-        m_data_size += entry_ptr->get_data_size();
+        m_data_size += logtype_entry.get_data_size();
 
-        entry_ptr->write_to_file(m_dictionary_compressor);
-        delete entry_ptr;
+        logtype_entry.write_to_file(m_dictionary_compressor);
     }
     return is_new_entry;
 }

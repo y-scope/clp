@@ -25,12 +25,12 @@ void VariableDictionaryWriter::open_and_preload (const string& dictionary_path, 
 
     auto num_dictionary_entries = read_dictionary_header(dictionary_file_reader);
 
-    // Read new dictionary entries
-    variable_dictionary_id_t id;
+    // Add new dictionary entries values into hash map
     VariableDictionaryEntry var_dict_entry;
     for (size_t i = 0; i < num_dictionary_entries; ++i) {
         var_dict_entry.read_from_file(dictionary_decompressor);
-        add_occurrence(var_dict_entry.get_value(), id);
+        insert_non_duplicate_value_into_hash_map(var_dict_entry);
+        var_dict_entry.clear();
     }
 
     segment_index_decompressor.close();
@@ -68,16 +68,15 @@ bool VariableDictionaryWriter::add_occurrence (const string& value, variable_dic
         ++m_next_id;
 
         // Insert the ID obtained from the database into the dictionary
-        auto* entry = new VariableDictionaryEntry(value, id);
+        auto entry = VariableDictionaryEntry(value, id);
         m_value_to_id[value] = id;
 
         new_entry = true;
 
         // TODO: This doesn't account for the segment index that's constantly updated
-        m_data_size += entry->get_data_size();
+        m_data_size += entry.get_data_size();
 
-        entry->write_to_file(m_dictionary_compressor);
-        delete entry;
+        entry.write_to_file(m_dictionary_compressor);
     }
     return new_entry;
 }

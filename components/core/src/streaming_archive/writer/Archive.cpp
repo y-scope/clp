@@ -266,11 +266,10 @@ namespace streaming_archive { namespace writer {
     void Archive::write_msg (File& file, epochtime_t timestamp, const string& message, size_t num_uncompressed_bytes) {
         vector<encoded_variable_t> encoded_vars;
         vector<variable_dictionary_id_t> var_ids;
-        EncodedVariableInterpreter::encode_and_add_to_dictionary(message, *m_logtype_dict_entry_wrapper, m_var_dict, encoded_vars, var_ids);
+        LogTypeDictionaryEntry logtype_entry;
+        EncodedVariableInterpreter::encode_and_add_to_dictionary(message, logtype_entry, m_var_dict, encoded_vars, var_ids);
         logtype_dictionary_id_t logtype_id;
-        if (m_logtype_dict.add_occurrence(m_logtype_dict_entry_wrapper, logtype_id)) {
-            m_logtype_dict_entry_wrapper = make_unique<LogTypeDictionaryEntry>();
-        }
+        m_logtype_dict.add_occurrence(logtype_entry, logtype_id);
 
         file.write_encoded_msg(timestamp, logtype_id, encoded_vars, var_ids, num_uncompressed_bytes);
     }

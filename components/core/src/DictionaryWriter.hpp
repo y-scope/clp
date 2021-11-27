@@ -58,6 +58,13 @@ public:
     void write_header_and_flush_to_disk ();
 
     /**
+     * Adds the str_value of entry into the str_to_id map.
+     * Raises an error if the entry already exists in the map
+     * @param entry
+     */
+    void insert_non_duplicate_value_into_hash_map (const EntryType& entry);
+
+    /**
      * Adds the given segment and IDs to the segment index
      * @param segment_id
      * @param ids
@@ -158,6 +165,25 @@ void DictionaryWriter<DictionaryIdType, EntryType>::write_header_and_flush_to_di
     m_segment_index_file_writer.flush();
     m_dictionary_compressor.flush();
     m_dictionary_file_writer.flush();
+}
+
+template <typename DictionaryIdType, typename EntryType>
+void DictionaryWriter<DictionaryIdType, EntryType>::insert_non_duplicate_value_into_hash_map (const EntryType& entry) {
+
+    const auto& str_value = entry.get_value();
+    if (m_value_to_id.find(str_value) != m_value_to_id.end()) {
+        SPDLOG_ERROR("entry value already exists");
+        throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
+    }
+    if (m_next_id > m_max_id) {
+        SPDLOG_ERROR("DictionaryWriter ran out of IDs.");
+        throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);
+    }
+
+    // Assign ID
+    DictionaryIdType id = m_next_id;
+    m_next_id++;
+    m_value_to_id[str_value] = id;
 }
 
 template <typename DictionaryIdType, typename EntryType>
