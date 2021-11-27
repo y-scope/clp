@@ -26,8 +26,7 @@ namespace streaming_archive { namespace writer {
         // Add file's logtype and variable IDs to respective segment sets
         auto logtype_ids = m_logtypes.data();
         auto variables = m_variables.data();
-        append_logtype_and_var_ids_to_segment_sets(logtype_dict, logtype_ids, m_logtypes.size(), variables, m_variables.size(), segment_logtype_ids,
-                                                   segment_var_ids);
+        append_logtype_and_var_ids_to_segment_sets(logtype_ids, m_logtypes.size(), segment_logtype_ids, segment_var_ids);
 
         // Append files to segment
         uint64_t segment_timestamps_uncompressed_pos;
@@ -58,7 +57,7 @@ namespace streaming_archive { namespace writer {
         m_variables.push_back_all(encoded_vars);
 
         // Insert message's variable IDs into the file's variable ID set
-        for(const auto& id : added_var_ids){
+        for (const auto& id : added_var_ids) {
             m_variable_ids->emplace(id);
         }
 
@@ -121,17 +120,16 @@ namespace streaming_archive { namespace writer {
         return encoded_timestamp_patterns;
     }
 
-    void File::append_logtype_and_var_ids_to_segment_sets (const LogTypeDictionaryWriter& logtype_dict, const logtype_dictionary_id_t* logtype_ids,
-                                                           size_t num_logtypes, const encoded_variable_t* vars, size_t num_vars,
+    void File::append_logtype_and_var_ids_to_segment_sets (const logtype_dictionary_id_t* logtype_ids, size_t num_logtypes,
                                                            unordered_set<logtype_dictionary_id_t>& segment_logtype_ids,
                                                            unordered_set<variable_dictionary_id_t>& segment_var_ids)
     {
-        // Add logtype to set
+        // Add logtype IDs
         for (size_t i = 0; i < num_logtypes; ++i) {
             auto logtype_id = logtype_ids[i];
             segment_logtype_ids.emplace(logtype_id);
         }
-        // Add vartype to set
+        // Add variable IDs
         for (const variable_dictionary_id_t& id : *m_variable_ids) {
             segment_var_ids.emplace(id);
         }

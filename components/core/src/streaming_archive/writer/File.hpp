@@ -176,16 +176,12 @@ namespace streaming_archive { namespace writer {
         // Methods
         /**
          * Takes logtype and variable IDs from a file's logtype and variable columns and appends them to the given sets
-         * @param logtype_dict
          * @param logtype_ids
          * @param num_logtypes
-         * @param vars
-         * @param num_vars
          * @param segment_logtype_ids
          * @param segment_var_ids
          */
-        void append_logtype_and_var_ids_to_segment_sets (const LogTypeDictionaryWriter& logtype_dict, const logtype_dictionary_id_t* logtype_ids,
-                                                         size_t num_logtypes, const encoded_variable_t* vars, size_t num_vars,
+        void append_logtype_and_var_ids_to_segment_sets (const logtype_dictionary_id_t* logtype_ids, size_t num_logtypes,
                                                          std::unordered_set<logtype_dictionary_id_t>& segment_logtype_ids,
                                                          std::unordered_set<variable_dictionary_id_t>& segment_var_ids);
 
