@@ -20,15 +20,7 @@ void LogTypeDictionaryWriter::open_and_preload (const std::string& dictionary_pa
     open_dictionary_for_reading(dictionary_path, segment_index_path, cDecompressorFileReadBufferCapacity, dictionary_file_reader, dictionary_decompressor,
                                 segment_index_file_reader, segment_index_decompressor);
 
-    auto num_dictionary_entries = read_dictionary_header(dictionary_file_reader);
-
-    // Add new dictionary entries values into hash map
-    LogTypeDictionaryEntry logtype_entry;
-    for (size_t i = 0; i < num_dictionary_entries; ++i) {
-        logtype_entry.read_from_file(dictionary_decompressor);
-        insert_non_duplicate_value_into_hash_map(logtype_entry);
-        logtype_entry.clear();
-    }
+    preload_dictionary_value_to_map(dictionary_decompressor, dictionary_file_reader);
 
     segment_index_decompressor.close();
     segment_index_file_reader.close();

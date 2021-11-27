@@ -14,6 +14,7 @@
 #include "FileWriter.hpp"
 #include "streaming_compression/zstd/Compressor.hpp"
 #include "TraceableException.hpp"
+#include "dictionary_utils.hpp"
 
 /**
  * Template class for performing operations on dictionaries and writing them to disk
@@ -58,11 +59,13 @@ public:
     void write_header_and_flush_to_disk ();
 
     /**
-     * Adds the str_value of entry into the str_to_id map.
-     * Raises an error if the entry already exists in the map
-     * @param entry
+     * Preload dictionary and populate the hash map with str values
+     * From the input dictionary
+     * @param dictionary_decompressor
+     * @param dictionary_file_reader
      */
-    void insert_non_duplicate_value_into_hash_map (const EntryType& entry);
+    void preload_dictionary_value_to_map (streaming_compression::zstd::Decompressor& dictionary_decompressor,
+                                          FileReader& dictionary_file_reader);
 
     /**
      * Adds the given segment and IDs to the segment index
@@ -168,22 +171,29 @@ void DictionaryWriter<DictionaryIdType, EntryType>::write_header_and_flush_to_di
 }
 
 template <typename DictionaryIdType, typename EntryType>
-void DictionaryWriter<DictionaryIdType, EntryType>::insert_non_duplicate_value_into_hash_map (const EntryType& entry) {
+void DictionaryWriter<DictionaryIdType, EntryType>::preload_dictionary_value_to_map (streaming_compression::zstd::Decompressor& dictionary_decompressor,
+                                                                                     FileReader& dictionary_file_reader) {
 
-    const auto& str_value = entry.get_value();
-    if (m_value_to_id.find(str_value) != m_value_to_id.end()) {
-        SPDLOG_ERROR("entry value already exists");
-        throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
-    }
-    if (m_next_id > m_max_id) {
-        SPDLOG_ERROR("DictionaryWriter ran out of IDs.");
-        throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);
-    }
+    auto num_dictionary_entries = read_dictionary_header(dictionary_file_reader);
+    EntryType entry;
+    for (size_t i = 0; i < num_dictionary_entries; ++i) {
+        entry.read_from_file(dictionary_decompressor);
+        const auto& str_value = entry.get_value();
+        if (m_value_to_id.find(str_value) != m_value_to_id.end()) {
+            SPDLOG_ERROR("entry value already exists");
+            throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
+        }
+        if (m_next_id > m_max_id) {
+            SPDLOG_ERROR("DictionaryWriter ran out of IDs.");
+            throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);
+        }
 
-    // Assign ID
-    DictionaryIdType id = m_next_id;
-    m_next_id++;
-    m_value_to_id[str_value] = id;
+        DictionaryIdType id = m_next_id;
+        m_next_id++;
+        m_value_to_id[str_value] = id;
+
+        entry.clear();
+    }
 }
 
 template <typename DictionaryIdType, typename EntryType>
