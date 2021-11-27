@@ -38,7 +38,7 @@ public:
     // Constructors
     DictionaryWriter () : m_is_open(false) {}
 
-    ~DictionaryWriter ();
+    ~DictionaryWriter () = default;
 
     // Methods
     /**
@@ -53,9 +53,9 @@ public:
     void close ();
 
     /**
-     * Writes dict_type count and flush compressors to file
+     * Writes the dictionary's header and flushes unwritten content to disk
      */
-    void write_dictionary_info_to_disk ();
+    void write_header_and_flush_to_disk ();
 
     /**
      * Adds the given segment and IDs to the segment index
@@ -99,11 +99,6 @@ protected:
 };
 
 template <typename DictionaryIdType, typename EntryType>
-DictionaryWriter<DictionaryIdType, EntryType>::~DictionaryWriter () {
-    // Do nothing
-}
-
-template <typename DictionaryIdType, typename EntryType>
 void DictionaryWriter<DictionaryIdType, EntryType>::open (const std::string& dictionary_path, const std::string& segment_index_path, DictionaryIdType max_id) {
     if (m_is_open) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
@@ -136,20 +131,19 @@ void DictionaryWriter<DictionaryIdType, EntryType>::close () {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
-    write_dictionary_info_to_disk();
+    write_header_and_flush_to_disk();
     m_segment_index_compressor.close();
     m_segment_index_file_writer.close();
     m_dictionary_compressor.close();
     m_dictionary_file_writer.close();
 
-    // clear maps
     m_value_to_id.clear();
 
     m_is_open = false;
 }
 
 template <typename DictionaryIdType, typename EntryType>
-void DictionaryWriter<DictionaryIdType, EntryType>::write_dictionary_info_to_disk () {
+void DictionaryWriter<DictionaryIdType, EntryType>::write_header_and_flush_to_disk () {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }

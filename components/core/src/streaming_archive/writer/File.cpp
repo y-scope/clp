@@ -46,7 +46,6 @@ namespace streaming_archive { namespace writer {
         m_variables.clear();
 
         // release the memory
-        m_variable_ids->clear();
         delete m_variable_ids;
         m_variable_ids = nullptr;
     }
@@ -58,8 +57,7 @@ namespace streaming_archive { namespace writer {
         m_logtypes.push_back(logtype_id);
         m_variables.push_back_all(encoded_vars);
 
-        // insert ids seen from log message to the file
-        // duplicate ids will be handled by unordered_set internally
+        // Insert message's variable IDs into the file's variable ID set
         for(const auto& id : added_var_ids){
             m_variable_ids->emplace(id);
         }
@@ -134,7 +132,7 @@ namespace streaming_archive { namespace writer {
             segment_logtype_ids.emplace(logtype_id);
         }
         // Add vartype to set
-        for(const variable_dictionary_id_t& id : *m_variable_ids){
+        for (const variable_dictionary_id_t& id : *m_variable_ids) {
             segment_var_ids.emplace(id);
         }
     }

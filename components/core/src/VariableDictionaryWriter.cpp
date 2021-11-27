@@ -74,7 +74,6 @@ bool VariableDictionaryWriter::add_occurrence (const string& value, variable_dic
         new_entry = true;
 
         // TODO: This doesn't account for the segment index that's constantly updated
-        // Nor does it account that compression doesn't store the whole entry in the memory
         m_data_size += entry->get_data_size();
 
         // write the new entry to the compressor and free up the memory

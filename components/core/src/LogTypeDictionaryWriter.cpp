@@ -93,10 +93,8 @@ bool LogTypeDictionaryWriter::add_occurrence (std::unique_ptr<LogTypeDictionaryE
         is_new_entry = true;
 
         // TODO: This doesn't account for the segment index that's constantly updated
-        // Nor does it account that compression doesn't store the whole entry in the memory
         m_data_size += entry_ptr->get_data_size();
 
-        // write the new entry to the compressor and free up the memory
         entry_ptr->write_to_file(m_dictionary_compressor);
         delete entry_ptr;
     }
