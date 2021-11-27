@@ -12,7 +12,7 @@ namespace streaming_archive { namespace writer {
         if (m_is_written_out) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
-        m_variable_ids = new std::unordered_set<variable_dictionary_id_t>;
+        m_variable_ids = std::make_unique<std::unordered_set<variable_dictionary_id_t>>();
         m_is_open = true;
     }
 
@@ -25,7 +25,6 @@ namespace streaming_archive { namespace writer {
 
         // Add file's logtype and variable IDs to respective segment sets
         auto logtype_ids = m_logtypes.data();
-        auto variables = m_variables.data();
         append_logtype_and_var_ids_to_segment_sets(logtype_ids, m_logtypes.size(), segment_logtype_ids, segment_var_ids);
 
         // Append files to segment
@@ -38,15 +37,12 @@ namespace streaming_archive { namespace writer {
         set_segment_metadata(segment.get_id(), segment_timestamps_uncompressed_pos, segment_logtypes_uncompressed_pos, segment_variables_uncompressed_pos);
         m_segmentation_state = SegmentationState_MovingToSegment;
 
-        // Mark file as written out and clear in-memory columns
+        // Mark file as written out and clear in-memory columns and clear the in-memory data (except metadata)
         m_is_written_out = true;
         m_timestamps.clear();
         m_logtypes.clear();
         m_variables.clear();
-
-        // release the memory
-        delete m_variable_ids;
-        m_variable_ids = nullptr;
+        m_variable_ids.reset(nullptr);
     }
 
     void File::write_encoded_msg (epochtime_t timestamp, logtype_dictionary_id_t logtype_id, const std::vector<encoded_variable_t>& encoded_vars,
@@ -57,9 +53,7 @@ namespace streaming_archive { namespace writer {
         m_variables.push_back_all(encoded_vars);
 
         // Insert message's variable IDs into the file's variable ID set
-        for (const auto& id : added_var_ids) {
-            m_variable_ids->emplace(id);
-        }
+        m_variable_ids->insert(added_var_ids.cbegin(), added_var_ids.cend());
 
         // Update metadata
         ++m_num_messages;
@@ -130,9 +124,7 @@ namespace streaming_archive { namespace writer {
             segment_logtype_ids.emplace(logtype_id);
         }
         // Add variable IDs
-        for (const variable_dictionary_id_t& id : *m_variable_ids) {
-            segment_var_ids.emplace(id);
-        }
+        segment_var_ids.insert(m_variable_ids->cbegin(), m_variable_ids->cend());
     }
 
     void File::set_segment_metadata (segment_id_t segment_id, uint64_t segment_timestamps_uncompressed_pos, uint64_t segment_logtypes_uncompressed_pos,

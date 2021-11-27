@@ -227,7 +227,7 @@ namespace streaming_archive { namespace writer {
         PageAllocatedVector<epochtime_t> m_timestamps;
         PageAllocatedVector<logtype_dictionary_id_t> m_logtypes;
         PageAllocatedVector<encoded_variable_t> m_variables;
-        std::unordered_set<variable_dictionary_id_t>* m_variable_ids;
+        std::unique_ptr<std::unordered_set<variable_dictionary_id_t>> m_variable_ids;
 
         // State variables
         SegmentationState m_segmentation_state;
