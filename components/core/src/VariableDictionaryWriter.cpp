@@ -6,7 +6,7 @@
 // Project headers
 #include "dictionary_utils.hpp"
 
-bool VariableDictionaryWriter::add_occurrence (const std::string& value, variable_dictionary_id_t& id) {
+bool VariableDictionaryWriter::add_entry (const std::string& value, variable_dictionary_id_t& id) {
     bool new_entry = false;
 
     const auto ix = m_value_to_id.find(value);

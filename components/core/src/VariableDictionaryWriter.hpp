@@ -28,7 +28,7 @@ public:
      * @param value
      * @param id ID of the vartype matching the given entry
      */
-    bool add_occurrence (const std::string& value, variable_dictionary_id_t& id);
+    bool add_entry (const std::string& value, variable_dictionary_id_t& id);
 };
 
 #endif // VARIABLEDICTIONARYWRITER_HPP

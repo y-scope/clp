@@ -189,12 +189,11 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload (const std:
                                 segment_index_file_reader, segment_index_decompressor);
 
     auto num_dictionary_entries = read_dictionary_header(dictionary_file_reader);
-    m_next_id = num_dictionary_entries;
-    if (m_next_id > m_max_id) {
+    if (num_dictionary_entries > m_max_id) {
         SPDLOG_ERROR("DictionaryWriter ran out of IDs.");
         throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);
     }
-    // Loads entries from the given decompressor and file
+    // Loads entries from the given dictionary file
     EntryType entry;
     for (size_t i = 0; i < num_dictionary_entries; ++i) {
         entry.read_from_file(dictionary_decompressor);
@@ -209,6 +208,8 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload (const std:
         m_data_size += entry.get_data_size();
         entry.clear();
     }
+
+    m_next_id = num_dictionary_entries;
 
     segment_index_decompressor.close();
     segment_index_file_reader.close();

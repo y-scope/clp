@@ -265,7 +265,7 @@ namespace streaming_archive { namespace writer {
         vector<variable_dictionary_id_t> var_ids;
         EncodedVariableInterpreter::encode_and_add_to_dictionary(message, m_logtype_dict_entry, m_var_dict, encoded_vars, var_ids);
         logtype_dictionary_id_t logtype_id;
-        m_logtype_dict.add_occurrence(m_logtype_dict_entry, logtype_id);
+        m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
 
         file.write_encoded_msg(timestamp, logtype_id, encoded_vars, var_ids, num_uncompressed_bytes);
     }

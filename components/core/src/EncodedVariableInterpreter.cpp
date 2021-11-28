@@ -224,7 +224,7 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& mes
         } else {
             // Variable string looks like a dictionary variable, so encode it as so
             variable_dictionary_id_t id;
-            var_dict.add_occurrence(var_str, id);
+            var_dict.add_entry(var_str, id);
             encoded_var = encode_var_dict_id(id);
             var_ids.push_back(id);
 
