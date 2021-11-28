@@ -244,7 +244,7 @@ namespace streaming_archive { namespace writer {
 
         LogTypeDictionaryWriter m_logtype_dict;
         // Holds preallocated logtype dictionary entry for performance
-        LogTypeDictionaryEntry  m_logtype_dict_entry;
+        LogTypeDictionaryEntry m_logtype_dict_entry;
         VariableDictionaryWriter m_var_dict;
 
         boost::uuids::random_generator m_uuid_generator;

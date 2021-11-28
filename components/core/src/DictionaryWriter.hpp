@@ -65,7 +65,7 @@ public:
      * @param segment_index_path
      * @param max_id
      */
-    void open_and_preload (const std::string& dictionary_path, const std::string& segment_index_path, const variable_dictionary_id_t max_id);
+    void open_and_preload (const std::string& dictionary_path, const std::string& segment_index_path, variable_dictionary_id_t max_id);
 
     /**
      * Adds the given segment and IDs to the segment index
@@ -196,6 +196,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload (const std:
     // Loads entries from the given dictionary file
     EntryType entry;
     for (size_t i = 0; i < num_dictionary_entries; ++i) {
+        entry.clear();
         entry.read_from_file(dictionary_decompressor);
         const auto& str_value = entry.get_value();
         if (m_value_to_id.count(str_value)) {
@@ -203,10 +204,8 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload (const std:
             throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
         }
 
-        auto id = entry.get_id();
-        m_value_to_id[str_value] = id;
+        m_value_to_id[str_value] = entry.get_id();;
         m_data_size += entry.get_data_size();
-        entry.clear();
     }
 
     m_next_id = num_dictionary_entries;

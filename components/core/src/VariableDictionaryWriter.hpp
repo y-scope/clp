@@ -24,9 +24,9 @@ public:
     };
 
     /**
-     * Adds the given vartype string to the dictionary if it doesn't exist.
+     * Adds the given variable to the dictionary if it doesn't exist.
      * @param value
-     * @param id ID of the vartype matching the given entry
+     * @param id ID of the variable matching the given entry
      */
     bool add_entry (const std::string& value, variable_dictionary_id_t& id);
 };
