@@ -211,6 +211,7 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& mes
     size_t next_delim_pos = 0;
     size_t last_var_end_pos = 0;
     string var_str;
+    logtype_dict_entry.clear();
     // To avoid reallocating the logtype as we append to it, reserve enough space to hold the entire message
     logtype_dict_entry.reserve_constant_length(message.length());
     while (logtype_dict_entry.parse_next_var(message, tok_begin_pos, next_delim_pos, last_var_end_pos, var_str)) {

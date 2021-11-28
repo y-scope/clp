@@ -24,9 +24,9 @@ public:
     };
 
     /**
-     * Adds an entry to the dictionary if it doesn't exist, or increases its occurrence count if it does
+     * Adds the given vartype string to the dictionary if it doesn't exist.
      * @param value
-     * @param id
+     * @param id ID of the vartype matching the given entry
      */
     bool add_occurrence (const std::string& value, variable_dictionary_id_t& id);
 };

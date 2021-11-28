@@ -29,8 +29,7 @@ public:
 
     // Methods
     /**
-     * Adds an entry to the dictionary if it doesn't exist, or increases its occurrence count if it does. If the entry does not exist, the entry pointer is
-     * released from entry_wrapper and stored in the dictionary.
+     * Adds the given entry to the dictionary if it doesn't exist
      * @param logtype_entry
      * @param logtype_id ID of the logtype matching the given entry
      */

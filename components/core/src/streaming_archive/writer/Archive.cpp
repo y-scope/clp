@@ -160,9 +160,6 @@ namespace streaming_archive { namespace writer {
         string logtype_dict_segment_index_path = archive_path_string + '/' + cLogTypeSegmentIndexFilename;
         m_logtype_dict.open(logtype_dict_path, logtype_dict_segment_index_path, cLogtypeDictionaryIdMax);
 
-        // Preallocate logtype dictionary entry
-        m_logtype_dict_entry_wrapper = make_unique<LogTypeDictionaryEntry>();
-
         // Open variable dictionary
         string var_dict_path = archive_path_string + '/' + cVarDictFilename;
         string var_dict_segment_index_path = archive_path_string + '/' + cVarSegmentIndexFilename;
@@ -209,7 +206,7 @@ namespace streaming_archive { namespace writer {
         write_dir_snapshot();
 
         m_logtype_dict.close();
-        m_logtype_dict_entry_wrapper.reset(nullptr);
+        m_logtype_dict_entry.clear();
         m_var_dict.close();
 
         if (::close(m_segments_dir_fd) != 0) {
@@ -266,10 +263,9 @@ namespace streaming_archive { namespace writer {
     void Archive::write_msg (File& file, epochtime_t timestamp, const string& message, size_t num_uncompressed_bytes) {
         vector<encoded_variable_t> encoded_vars;
         vector<variable_dictionary_id_t> var_ids;
-        LogTypeDictionaryEntry logtype_entry;
-        EncodedVariableInterpreter::encode_and_add_to_dictionary(message, logtype_entry, m_var_dict, encoded_vars, var_ids);
+        EncodedVariableInterpreter::encode_and_add_to_dictionary(message, m_logtype_dict_entry, m_var_dict, encoded_vars, var_ids);
         logtype_dictionary_id_t logtype_id;
-        m_logtype_dict.add_occurrence(logtype_entry, logtype_id);
+        m_logtype_dict.add_occurrence(m_logtype_dict_entry, logtype_id);
 
         file.write_encoded_msg(timestamp, logtype_id, encoded_vars, var_ids, num_uncompressed_bytes);
     }
