@@ -160,9 +160,6 @@ namespace streaming_archive { namespace writer {
         string logtype_dict_segment_index_path = archive_path_string + '/' + cLogTypeSegmentIndexFilename;
         m_logtype_dict.open(logtype_dict_path, logtype_dict_segment_index_path, cLogtypeDictionaryIdMax);
 
-        // Preallocate logtype dictionary entry
-        m_logtype_dict_entry_wrapper = make_unique<LogTypeDictionaryEntry>();
-
         // Open variable dictionary
         string var_dict_path = archive_path_string + '/' + cVarDictFilename;
         string var_dict_segment_index_path = archive_path_string + '/' + cVarSegmentIndexFilename;
@@ -209,7 +206,7 @@ namespace streaming_archive { namespace writer {
         write_dir_snapshot();
 
         m_logtype_dict.close();
-        m_logtype_dict_entry_wrapper.reset(nullptr);
+        m_logtype_dict_entry.clear();
         m_var_dict.close();
 
         if (::close(m_segments_dir_fd) != 0) {
@@ -265,13 +262,12 @@ namespace streaming_archive { namespace writer {
 
     void Archive::write_msg (File& file, epochtime_t timestamp, const string& message, size_t num_uncompressed_bytes) {
         vector<encoded_variable_t> encoded_vars;
-        EncodedVariableInterpreter::encode_and_add_to_dictionary(message, *m_logtype_dict_entry_wrapper, m_var_dict, encoded_vars);
+        vector<variable_dictionary_id_t> var_ids;
+        EncodedVariableInterpreter::encode_and_add_to_dictionary(message, m_logtype_dict_entry, m_var_dict, encoded_vars, var_ids);
         logtype_dictionary_id_t logtype_id;
-        if (m_logtype_dict.add_occurrence(m_logtype_dict_entry_wrapper, logtype_id)) {
-            m_logtype_dict_entry_wrapper = make_unique<LogTypeDictionaryEntry>();
-        }
+        m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
 
-        file.write_encoded_msg(timestamp, logtype_id, encoded_vars, num_uncompressed_bytes);
+        file.write_encoded_msg(timestamp, logtype_id, encoded_vars, var_ids, num_uncompressed_bytes);
     }
 
     void Archive::write_dir_snapshot () {
@@ -284,8 +280,8 @@ namespace streaming_archive { namespace writer {
         #endif
 
         // Flush dictionaries
-        m_logtype_dict.write_uncommitted_entries_to_disk();
-        m_var_dict.write_uncommitted_entries_to_disk();
+        m_logtype_dict.write_header_and_flush_to_disk();
+        m_var_dict.write_header_and_flush_to_disk();
     }
 
     void Archive::append_file_to_segment (File*& file, Segment& segment, unordered_set<logtype_dictionary_id_t>& logtype_ids_in_segment,
@@ -369,8 +365,8 @@ namespace streaming_archive { namespace writer {
         #endif
 
         // Flush dictionaries
-        m_logtype_dict.write_uncommitted_entries_to_disk();
-        m_var_dict.write_uncommitted_entries_to_disk();
+        m_logtype_dict.write_header_and_flush_to_disk();
+        m_var_dict.write_header_and_flush_to_disk();
 
         for (auto file : files) {
             file->mark_as_in_committed_segment();

@@ -6,13 +6,14 @@
 using std::string;
 using std::to_string;
 using std::unordered_set;
+using std::vector;
 
 namespace streaming_archive { namespace writer {
     void File::open () {
         if (m_is_written_out) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
-
+        m_variable_ids = std::make_unique<unordered_set<variable_dictionary_id_t>>();
         m_is_open = true;
     }
 
@@ -25,9 +26,7 @@ namespace streaming_archive { namespace writer {
 
         // Add file's logtype and variable IDs to respective segment sets
         auto logtype_ids = m_logtypes.data();
-        auto variables = m_variables.data();
-        append_logtype_and_var_ids_to_segment_sets(logtype_dict, logtype_ids, m_logtypes.size(), variables, m_variables.size(), segment_logtype_ids,
-                                                   segment_var_ids);
+        append_logtype_and_var_ids_to_segment_sets(logtype_ids, m_logtypes.size(), segment_logtype_ids, segment_var_ids);
 
         // Append files to segment
         uint64_t segment_timestamps_uncompressed_pos;
@@ -39,19 +38,23 @@ namespace streaming_archive { namespace writer {
         set_segment_metadata(segment.get_id(), segment_timestamps_uncompressed_pos, segment_logtypes_uncompressed_pos, segment_variables_uncompressed_pos);
         m_segmentation_state = SegmentationState_MovingToSegment;
 
-        // Mark file as written out and clear in-memory columns
+        // Mark file as written out and clear in-memory columns and clear the in-memory data (except metadata)
         m_is_written_out = true;
         m_timestamps.clear();
         m_logtypes.clear();
         m_variables.clear();
+        m_variable_ids.reset(nullptr);
     }
 
-    void File::write_encoded_msg (epochtime_t timestamp, logtype_dictionary_id_t logtype_id, const std::vector<encoded_variable_t>& encoded_vars,
-                                  size_t num_uncompressed_bytes)
+    void File::write_encoded_msg (epochtime_t timestamp, logtype_dictionary_id_t logtype_id, const vector<encoded_variable_t>& encoded_vars,
+                                  const vector<variable_dictionary_id_t>& var_ids, size_t num_uncompressed_bytes)
     {
         m_timestamps.push_back(timestamp);
         m_logtypes.push_back(logtype_id);
         m_variables.push_back_all(encoded_vars);
+
+        // Insert message's variable IDs into the file's variable ID set
+        m_variable_ids->insert(var_ids.cbegin(), var_ids.cend());
 
         // Update metadata
         ++m_num_messages;
@@ -112,37 +115,17 @@ namespace streaming_archive { namespace writer {
         return encoded_timestamp_patterns;
     }
 
-    void File::append_logtype_and_var_ids_to_segment_sets (const LogTypeDictionaryWriter& logtype_dict, const logtype_dictionary_id_t* logtype_ids,
-                                                           size_t num_logtypes, const encoded_variable_t* vars, size_t num_vars,
+    void File::append_logtype_and_var_ids_to_segment_sets (const logtype_dictionary_id_t* logtype_ids, size_t num_logtypes,
                                                            unordered_set<logtype_dictionary_id_t>& segment_logtype_ids,
                                                            unordered_set<variable_dictionary_id_t>& segment_var_ids)
     {
-        size_t var_ix = 0;
+        // Add logtype IDs
         for (size_t i = 0; i < num_logtypes; ++i) {
-            // Add logtype to set
             auto logtype_id = logtype_ids[i];
             segment_logtype_ids.emplace(logtype_id);
-
-            // Get logtype dictionary entry
-            auto logtype_dict_entry_ptr = logtype_dict.get_entry(logtype_id);
-            auto& logtype_dict_entry = *logtype_dict_entry_ptr;
-
-            // Get number of variables in logtype
-            auto msg_num_vars = logtype_dict_entry.get_num_vars();
-            if (var_ix + msg_num_vars > num_vars) {
-                throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
-            }
-
-            // If variable is a variable dictionary ID, decode it and add it to the set
-            for (size_t msg_var_ix = 0; msg_var_ix < msg_num_vars; ++msg_var_ix, ++var_ix) {
-                if (LogTypeDictionaryEntry::VarDelim::NonDouble == logtype_dict_entry.get_var_delim(msg_var_ix)) {
-                    auto var = vars[var_ix];
-                    if (EncodedVariableInterpreter::is_var_dict_id(var)) {
-                        segment_var_ids.emplace(EncodedVariableInterpreter::decode_var_dict_id(var));
-                    }
-                }
-            }
         }
+        // Add variable IDs
+        segment_var_ids.insert(m_variable_ids->cbegin(), m_variable_ids->cend());
     }
 
     void File::set_segment_metadata (segment_id_t segment_id, uint64_t segment_timestamps_uncompressed_pos, uint64_t segment_logtypes_uncompressed_pos,

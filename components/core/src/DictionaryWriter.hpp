@@ -2,6 +2,7 @@
 #define DICTIONARYWRITER_HPP
 
 // C++ standard libraries
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -11,6 +12,7 @@
 
 // Project headers
 #include "Defs.h"
+#include "dictionary_utils.hpp"
 #include "FileWriter.hpp"
 #include "streaming_compression/zstd/Compressor.hpp"
 #include "TraceableException.hpp"
@@ -38,7 +40,7 @@ public:
     // Constructors
     DictionaryWriter () : m_is_open(false) {}
 
-    ~DictionaryWriter ();
+    ~DictionaryWriter () = default;
 
     // Methods
     /**
@@ -53,16 +55,17 @@ public:
     void close ();
 
     /**
-     * Gets the entry with the given ID
-     * @param id
-     * @return Pointer to the entry with the given ID
+     * Writes the dictionary's header and flushes unwritten content to disk
      */
-    const EntryType* get_entry (DictionaryIdType id) const;
+    void write_header_and_flush_to_disk ();
 
     /**
-     * Writes uncommitted dictionary entries to file
+     * Opens dictionary, loads entries, and then sets it up for writing
+     * @param dictionary_path
+     * @param segment_index_path
+     * @param max_id
      */
-    void write_uncommitted_entries_to_disk ();
+    void open_and_preload (const std::string& dictionary_path, const std::string& segment_index_path, variable_dictionary_id_t max_id);
 
     /**
      * Adds the given segment and IDs to the segment index
@@ -85,38 +88,25 @@ public:
 
 protected:
     // Types
-    typedef std::unordered_map<std::string, EntryType*> value_to_entry_t;
-    typedef std::unordered_map<DictionaryIdType, EntryType*> id_to_entry_t;
+    typedef std::unordered_map<std::string, DictionaryIdType> value_to_id_t;
 
     // Variables
     bool m_is_open;
 
     // Variables related to on-disk storage
-    std::vector<EntryType*> m_uncommitted_entries;
     FileWriter m_dictionary_file_writer;
     streaming_compression::zstd::Compressor m_dictionary_compressor;
     FileWriter m_segment_index_file_writer;
     streaming_compression::zstd::Compressor m_segment_index_compressor;
     size_t m_num_segments_in_index;
 
-    value_to_entry_t m_value_to_entry;
-    id_to_entry_t  m_id_to_entry;
+    value_to_id_t m_value_to_id;
     DictionaryIdType m_next_id;
     DictionaryIdType m_max_id;
 
     // Size (in-memory) of the data contained in the dictionary
     size_t m_data_size;
 };
-
-template <typename DictionaryIdType, typename EntryType>
-DictionaryWriter<DictionaryIdType, EntryType>::~DictionaryWriter () {
-    if (false == m_uncommitted_entries.empty()) {
-        SPDLOG_ERROR("DictionaryWriter contains uncommitted entries while being destroyed - possible data loss.");
-    }
-    for (const auto& value_entry_pair : m_value_to_entry) {
-        delete value_entry_pair.second;
-    }
-}
 
 template <typename DictionaryIdType, typename EntryType>
 void DictionaryWriter<DictionaryIdType, EntryType>::open (const std::string& dictionary_path, const std::string& segment_index_path, DictionaryIdType max_id) {
@@ -151,60 +141,89 @@ void DictionaryWriter<DictionaryIdType, EntryType>::close () {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
-    write_uncommitted_entries_to_disk();
+    write_header_and_flush_to_disk();
     m_segment_index_compressor.close();
     m_segment_index_file_writer.close();
     m_dictionary_compressor.close();
     m_dictionary_file_writer.close();
 
-    // Delete entries and clear maps
-    for (const auto& value_entry_pair : m_value_to_entry) {
-        delete value_entry_pair.second;
-    }
-    m_id_to_entry.clear();
-    m_value_to_entry.clear();
+    m_value_to_id.clear();
 
     m_is_open = false;
 }
 
 template <typename DictionaryIdType, typename EntryType>
-const EntryType* DictionaryWriter<DictionaryIdType, EntryType>::get_entry (DictionaryIdType id) const {
+void DictionaryWriter<DictionaryIdType, EntryType>::write_header_and_flush_to_disk () {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
-    }
-
-    if (m_id_to_entry.count(id) == 0) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
-    return m_id_to_entry.at(id);
-}
-
-template <typename DictionaryIdType, typename EntryType>
-void DictionaryWriter<DictionaryIdType, EntryType>::write_uncommitted_entries_to_disk () {
-    if (false == m_is_open) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
-    }
-
-    if (m_uncommitted_entries.empty()) {
-        // Nothing to do
-        return;
-    }
-
-    for (auto entry : m_uncommitted_entries) {
-        entry->write_to_file(m_dictionary_compressor);
     }
 
     // Update header
     auto dictionary_file_writer_pos = m_dictionary_file_writer.get_pos();
     m_dictionary_file_writer.seek_from_begin(0);
-    m_dictionary_file_writer.write_numeric_value<uint64_t>(m_id_to_entry.size());
+    m_dictionary_file_writer.write_numeric_value<uint64_t>(m_value_to_id.size());
     m_dictionary_file_writer.seek_from_begin(dictionary_file_writer_pos);
 
     m_segment_index_compressor.flush();
     m_segment_index_file_writer.flush();
     m_dictionary_compressor.flush();
     m_dictionary_file_writer.flush();
-    m_uncommitted_entries.clear();
+}
+
+template <typename DictionaryIdType, typename EntryType>
+void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload (const std::string& dictionary_path, const std::string& segment_index_path,
+                                                                      const variable_dictionary_id_t max_id)
+{
+    if (m_is_open) {
+        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+    }
+
+    m_max_id = max_id;
+
+    FileReader dictionary_file_reader;
+    streaming_compression::zstd::Decompressor dictionary_decompressor;
+    FileReader segment_index_file_reader;
+    streaming_compression::zstd::Decompressor segment_index_decompressor;
+    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024; // 64 KB
+    open_dictionary_for_reading(dictionary_path, segment_index_path, cDecompressorFileReadBufferCapacity, dictionary_file_reader, dictionary_decompressor,
+                                segment_index_file_reader, segment_index_decompressor);
+
+    auto num_dictionary_entries = read_dictionary_header(dictionary_file_reader);
+    if (num_dictionary_entries > m_max_id) {
+        SPDLOG_ERROR("DictionaryWriter ran out of IDs.");
+        throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);
+    }
+    // Loads entries from the given dictionary file
+    EntryType entry;
+    for (size_t i = 0; i < num_dictionary_entries; ++i) {
+        entry.clear();
+        entry.read_from_file(dictionary_decompressor);
+        const auto& str_value = entry.get_value();
+        if (m_value_to_id.count(str_value)) {
+            SPDLOG_ERROR("Entry's value already exists in dictionary");
+            throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
+        }
+
+        m_value_to_id[str_value] = entry.get_id();;
+        m_data_size += entry.get_data_size();
+    }
+
+    m_next_id = num_dictionary_entries;
+
+    segment_index_decompressor.close();
+    segment_index_file_reader.close();
+    dictionary_decompressor.close();
+    dictionary_file_reader.close();
+
+    m_dictionary_file_writer.open(dictionary_path, FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_SEEKABLE_WRITING);
+    // Open compressor
+    m_dictionary_compressor.open(m_dictionary_file_writer);
+
+    m_segment_index_file_writer.open(segment_index_path, FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_SEEKABLE_WRITING);
+    // Open compressor
+    m_segment_index_compressor.open(m_segment_index_file_writer);
+
+    m_is_open = true;
 }
 
 template <typename DictionaryIdType, typename EntryType>

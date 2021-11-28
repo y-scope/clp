@@ -75,9 +75,10 @@ public:
      * @param logtype_dict_entry
      * @param var_dict
      * @param encoded_vars
+     * @param var_ids
      */
     static void encode_and_add_to_dictionary (const std::string& message, LogTypeDictionaryEntry& logtype_dict_entry, VariableDictionaryWriter& var_dict,
-                                              std::vector<encoded_variable_t>& encoded_vars);
+                                              std::vector<encoded_variable_t>& encoded_vars, std::vector<variable_dictionary_id_t>& var_ids);
     /**
      * Decodes all variables and decompresses them into a message
      * @param logtype_dict_entry

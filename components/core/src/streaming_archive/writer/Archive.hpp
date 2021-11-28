@@ -243,8 +243,8 @@ namespace streaming_archive { namespace writer {
         int m_segments_dir_fd;
 
         LogTypeDictionaryWriter m_logtype_dict;
-        // Wrapper to hold logtype dictionary entry that's preallocated for performance
-        std::unique_ptr<LogTypeDictionaryEntry> m_logtype_dict_entry_wrapper;
+        // Holds preallocated logtype dictionary entry for performance
+        LogTypeDictionaryEntry m_logtype_dict_entry;
         VariableDictionaryWriter m_var_dict;
 
         boost::uuids::random_generator m_uuid_generator;

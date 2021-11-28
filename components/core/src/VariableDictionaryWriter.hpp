@@ -23,21 +23,12 @@ public:
         }
     };
 
-    // Methods
     /**
-     * Opens dictionary, loads entries, and then sets it up for writing
-     * @param dictionary_path
-     * @param segment_index_path
-     * @param max_id
-     */
-    void open_and_preload (const std::string& dictionary_path, const std::string& segment_index_path, variable_dictionary_id_t max_id);
-
-    /**
-     * Adds an entry to the dictionary if it doesn't exist, or increases its occurrence count if it does
+     * Adds the given variable to the dictionary if it doesn't exist.
      * @param value
-     * @param id
+     * @param id ID of the variable matching the given entry
      */
-    bool add_occurrence (const std::string& value, variable_dictionary_id_t& id);
+    bool add_entry (const std::string& value, variable_dictionary_id_t& id);
 };
 
 #endif // VARIABLEDICTIONARYWRITER_HPP

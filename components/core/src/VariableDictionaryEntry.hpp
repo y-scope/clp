@@ -44,6 +44,8 @@ public:
      */
     size_t get_data_size () const;
 
+    void clear () { m_value.clear(); }
+
     /**
      * Writes an entry to file
      * @param compressor

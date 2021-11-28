@@ -203,7 +203,8 @@ void EncodedVariableInterpreter::convert_encoded_double_to_string (encoded_varia
 }
 
 void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& message, LogTypeDictionaryEntry& logtype_dict_entry,
-                                                               VariableDictionaryWriter& var_dict, vector<encoded_variable_t>& encoded_vars)
+                                                               VariableDictionaryWriter& var_dict, vector<encoded_variable_t>& encoded_vars,
+                                                               vector<variable_dictionary_id_t>& var_ids)
 {
     // Extract all variables and add to dictionary while building logtype
     size_t tok_begin_pos = 0;
@@ -223,8 +224,9 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& mes
         } else {
             // Variable string looks like a dictionary variable, so encode it as so
             variable_dictionary_id_t id;
-            var_dict.add_occurrence(var_str, id);
+            var_dict.add_entry(var_str, id);
             encoded_var = encode_var_dict_id(id);
+            var_ids.push_back(id);
 
             logtype_dict_entry.add_non_double_var();
         }
