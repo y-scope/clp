@@ -6,42 +6,7 @@
 // Project headers
 #include "dictionary_utils.hpp"
 
-using std::string;
-
-void VariableDictionaryWriter::open_and_preload (const string& dictionary_path, const string& segment_index_path, variable_dictionary_id_t max_id) {
-    if (m_is_open) {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
-    }
-
-    m_max_id = max_id;
-
-    FileReader dictionary_file_reader;
-    streaming_compression::zstd::Decompressor dictionary_decompressor;
-    FileReader segment_index_file_reader;
-    streaming_compression::zstd::Decompressor segment_index_decompressor;
-    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024; // 64 KB
-    open_dictionary_for_reading(dictionary_path, segment_index_path, cDecompressorFileReadBufferCapacity, dictionary_file_reader, dictionary_decompressor,
-                                segment_index_file_reader, segment_index_decompressor);
-
-    preload_dictionary_value_to_map(dictionary_decompressor, dictionary_file_reader);
-
-    segment_index_decompressor.close();
-    segment_index_file_reader.close();
-    dictionary_decompressor.close();
-    dictionary_file_reader.close();
-
-    m_dictionary_file_writer.open(dictionary_path, FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_SEEKABLE_WRITING);
-    // Open compressor
-    m_dictionary_compressor.open(m_dictionary_file_writer);
-
-    m_segment_index_file_writer.open(segment_index_path, FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_SEEKABLE_WRITING);
-    // Open compressor
-    m_segment_index_compressor.open(m_segment_index_file_writer);
-
-    m_is_open = true;
-}
-
-bool VariableDictionaryWriter::add_occurrence (const string& value, variable_dictionary_id_t& id) {
+bool VariableDictionaryWriter::add_occurrence (const std::string& value, variable_dictionary_id_t& id) {
     bool new_entry = false;
 
     const auto ix = m_value_to_id.find(value);

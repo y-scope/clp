@@ -6,13 +6,14 @@
 using std::string;
 using std::to_string;
 using std::unordered_set;
+using std::vector;
 
 namespace streaming_archive { namespace writer {
     void File::open () {
         if (m_is_written_out) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
-        m_variable_ids = std::make_unique<std::unordered_set<variable_dictionary_id_t>>();
+        m_variable_ids = std::make_unique<unordered_set<variable_dictionary_id_t>>();
         m_is_open = true;
     }
 
@@ -45,15 +46,15 @@ namespace streaming_archive { namespace writer {
         m_variable_ids.reset(nullptr);
     }
 
-    void File::write_encoded_msg (epochtime_t timestamp, logtype_dictionary_id_t logtype_id, const std::vector<encoded_variable_t>& encoded_vars,
-                                  const std::vector<variable_dictionary_id_t>& added_var_ids, size_t num_uncompressed_bytes)
+    void File::write_encoded_msg (epochtime_t timestamp, logtype_dictionary_id_t logtype_id, const vector<encoded_variable_t>& encoded_vars,
+                                  const vector<variable_dictionary_id_t>& var_ids, size_t num_uncompressed_bytes)
     {
         m_timestamps.push_back(timestamp);
         m_logtypes.push_back(logtype_id);
         m_variables.push_back_all(encoded_vars);
 
         // Insert message's variable IDs into the file's variable ID set
-        m_variable_ids->insert(added_var_ids.cbegin(), added_var_ids.cend());
+        m_variable_ids->insert(var_ids.cbegin(), var_ids.cend());
 
         // Update metadata
         ++m_num_messages;

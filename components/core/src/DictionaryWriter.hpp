@@ -2,6 +2,7 @@
 #define DICTIONARYWRITER_HPP
 
 // C++ standard libraries
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -11,10 +12,10 @@
 
 // Project headers
 #include "Defs.h"
+#include "dictionary_utils.hpp"
 #include "FileWriter.hpp"
 #include "streaming_compression/zstd/Compressor.hpp"
 #include "TraceableException.hpp"
-#include "dictionary_utils.hpp"
 
 /**
  * Template class for performing operations on dictionaries and writing them to disk
@@ -59,13 +60,12 @@ public:
     void write_header_and_flush_to_disk ();
 
     /**
-     * Preload dictionary and populate the hash map with str values
-     * From the input dictionary
-     * @param dictionary_decompressor
-     * @param dictionary_file_reader
+     * Opens dictionary, loads entries, and then sets it up for writing
+     * @param dictionary_path
+     * @param segment_index_path
+     * @param max_id
      */
-    void preload_dictionary_value_to_map (streaming_compression::zstd::Decompressor& dictionary_decompressor,
-                                          FileReader& dictionary_file_reader);
+    void open_and_preload (const std::string& dictionary_path, const std::string& segment_index_path, const variable_dictionary_id_t max_id);
 
     /**
      * Adds the given segment and IDs to the segment index
@@ -171,29 +171,59 @@ void DictionaryWriter<DictionaryIdType, EntryType>::write_header_and_flush_to_di
 }
 
 template <typename DictionaryIdType, typename EntryType>
-void DictionaryWriter<DictionaryIdType, EntryType>::preload_dictionary_value_to_map (streaming_compression::zstd::Decompressor& dictionary_decompressor,
-                                                                                     FileReader& dictionary_file_reader) {
+void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload (const std::string& dictionary_path, const std::string& segment_index_path,
+                                                                      const variable_dictionary_id_t max_id)
+{
+    if (m_is_open) {
+        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+    }
+
+    m_max_id = max_id;
+
+    FileReader dictionary_file_reader;
+    streaming_compression::zstd::Decompressor dictionary_decompressor;
+    FileReader segment_index_file_reader;
+    streaming_compression::zstd::Decompressor segment_index_decompressor;
+    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024; // 64 KB
+    open_dictionary_for_reading(dictionary_path, segment_index_path, cDecompressorFileReadBufferCapacity, dictionary_file_reader, dictionary_decompressor,
+                                segment_index_file_reader, segment_index_decompressor);
 
     auto num_dictionary_entries = read_dictionary_header(dictionary_file_reader);
+    m_next_id = num_dictionary_entries;
+    if (m_next_id > m_max_id) {
+        SPDLOG_ERROR("DictionaryWriter ran out of IDs.");
+        throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);
+    }
+    // Loads entries from the given decompressor and file
     EntryType entry;
     for (size_t i = 0; i < num_dictionary_entries; ++i) {
         entry.read_from_file(dictionary_decompressor);
         const auto& str_value = entry.get_value();
-        if (m_value_to_id.find(str_value) != m_value_to_id.end()) {
-            SPDLOG_ERROR("entry value already exists");
+        if (m_value_to_id.count(str_value)) {
+            SPDLOG_ERROR("Entry's value already exists in dictionary");
             throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
         }
-        if (m_next_id > m_max_id) {
-            SPDLOG_ERROR("DictionaryWriter ran out of IDs.");
-            throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);
-        }
 
-        DictionaryIdType id = m_next_id;
-        m_next_id++;
+        auto id = entry.get_id();
         m_value_to_id[str_value] = id;
-
+        m_data_size += entry.get_data_size();
         entry.clear();
     }
+
+    segment_index_decompressor.close();
+    segment_index_file_reader.close();
+    dictionary_decompressor.close();
+    dictionary_file_reader.close();
+
+    m_dictionary_file_writer.open(dictionary_path, FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_SEEKABLE_WRITING);
+    // Open compressor
+    m_dictionary_compressor.open(m_dictionary_file_writer);
+
+    m_segment_index_file_writer.open(segment_index_path, FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_SEEKABLE_WRITING);
+    // Open compressor
+    m_segment_index_compressor.open(m_segment_index_file_writer);
+
+    m_is_open = true;
 }
 
 template <typename DictionaryIdType, typename EntryType>

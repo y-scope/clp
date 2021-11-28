@@ -29,14 +29,6 @@ public:
 
     // Methods
     /**
-     * Opens dictionary, loads entries, and then sets it up for writing
-     * @param dictionary_path
-     * @param segment_index_path
-     * @param max_id
-     */
-    void open_and_preload (const std::string& dictionary_path, const std::string& segment_index_path, logtype_dictionary_id_t max_id);
-
-    /**
      * Adds an entry to the dictionary if it doesn't exist, or increases its occurrence count if it does. If the entry does not exist, the entry pointer is
      * released from entry_wrapper and stored in the dictionary.
      * @param logtype_entry

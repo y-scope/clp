@@ -4,10 +4,6 @@ size_t VariableDictionaryEntry::get_data_size () const {
     return sizeof(m_id) + m_value.length() + m_ids_of_segments_containing_entry.size() * sizeof(segment_id_t);
 }
 
-void VariableDictionaryEntry::clear () {
-    m_value.clear();
-}
-
 void VariableDictionaryEntry::write_to_file (streaming_compression::zstd::Compressor& compressor) const {
     compressor.write_numeric_value(m_id);
     compressor.write_numeric_value<uint64_t>(m_value.length());

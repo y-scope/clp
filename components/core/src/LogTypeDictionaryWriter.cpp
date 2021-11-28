@@ -5,47 +5,14 @@
 
 using std::string;
 
-void LogTypeDictionaryWriter::open_and_preload (const std::string& dictionary_path, const std::string& segment_index_path, logtype_dictionary_id_t max_id) {
-    if (m_is_open) {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
-    }
-
-    m_max_id = max_id;
-
-    FileReader dictionary_file_reader;
-    streaming_compression::zstd::Decompressor dictionary_decompressor;
-    FileReader segment_index_file_reader;
-    streaming_compression::zstd::Decompressor segment_index_decompressor;
-    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024; // 64 KB
-    open_dictionary_for_reading(dictionary_path, segment_index_path, cDecompressorFileReadBufferCapacity, dictionary_file_reader, dictionary_decompressor,
-                                segment_index_file_reader, segment_index_decompressor);
-
-    preload_dictionary_value_to_map(dictionary_decompressor, dictionary_file_reader);
-
-    segment_index_decompressor.close();
-    segment_index_file_reader.close();
-    dictionary_decompressor.close();
-    dictionary_file_reader.close();
-
-    m_dictionary_file_writer.open(dictionary_path, FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_SEEKABLE_WRITING);
-    // Open compressor
-    m_dictionary_compressor.open(m_dictionary_file_writer);
-
-    m_segment_index_file_writer.open(segment_index_path, FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_SEEKABLE_WRITING);
-    // Open compressor
-    m_segment_index_compressor.open(m_segment_index_file_writer);
-
-    m_is_open = true;
-}
-
 bool LogTypeDictionaryWriter::add_occurrence (LogTypeDictionaryEntry& logtype_entry, logtype_dictionary_id_t& logtype_id) {
-    if (logtype_entry.get_value().empty()) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
 
     bool is_new_entry = false;
 
     const string& value = logtype_entry.get_value();
+    if (value.empty()) {
+        throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
+    }
     const auto ix = m_value_to_id.find(value);
     if (m_value_to_id.end() != ix) {
         // Entry exists so get its ID

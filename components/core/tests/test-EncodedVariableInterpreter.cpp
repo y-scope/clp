@@ -241,25 +241,25 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
 
         // Test encoding
         vector<encoded_variable_t> encoded_vars;
-        vector<variable_dictionary_id_t> added_var_ids;
+        vector<variable_dictionary_id_t> var_ids;
         vector<string> var_strs = {"4938", to_string(EncodedVariableInterpreter::get_var_dict_id_range_begin()),
                                    "-25.5196868642755", "-00.00", "bin/python2.7.3"};
         msg = "here is a string with a small int " + var_strs[0] + " and a very large int " + var_strs[1] + " and a double " + var_strs[2] +
               " and a weird double " + var_strs[3] + " and a str with numbers " + var_strs[4];
         LogTypeDictionaryEntry logtype_dict_entry;
-        EncodedVariableInterpreter::encode_and_add_to_dictionary(msg, logtype_dict_entry, var_dict_writer, encoded_vars, added_var_ids);
+        EncodedVariableInterpreter::encode_and_add_to_dictionary(msg, logtype_dict_entry, var_dict_writer, encoded_vars, var_ids);
         var_dict_writer.close();
 
-        // Test added_var_ids is correctly populated
+        // Test var_ids is correctly populated
         size_t encoded_var_id_ix = 0;
         for (const auto& var : encoded_vars) {
             if(EncodedVariableInterpreter::is_var_dict_id(var)){
-                REQUIRE(added_var_ids.size() > encoded_var_id_ix);
-                REQUIRE(EncodedVariableInterpreter::decode_var_dict_id(var) == added_var_ids[encoded_var_id_ix]);
+                REQUIRE(var_ids.size() > encoded_var_id_ix);
+                REQUIRE(EncodedVariableInterpreter::decode_var_dict_id(var) == var_ids[encoded_var_id_ix]);
                 encoded_var_id_ix++;
             }
         }
-        REQUIRE(added_var_ids.size() == encoded_var_id_ix);
+        REQUIRE(var_ids.size() == encoded_var_id_ix);
 
         // Open reader
         VariableDictionaryReader var_dict_reader;
