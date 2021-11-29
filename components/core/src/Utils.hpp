@@ -99,13 +99,11 @@ bool get_bounds_of_next_potential_var (const std::string& value, size_t& begin_p
  * Returns bounds of next variable in given string
  * A variable is a token (word between two delimiters) that contains numbers or is directly preceded by an equals sign
  * @param msg
- * @param token_end_pos End of the last token, changes to beginning of next variable
- *        (this is not necessarily the same as end_pos since the token may include punctuation after the variable)
  * @param begin_pos Begin position of last variable, changes to begin position of next variable
  * @param end_pos End position of last variable, changes to end position of next variable
  * @return true if a variable was found, false otherwise
  */
-bool get_bounds_of_next_var (const std::string& msg, size_t& token_end_pos, size_t& begin_pos, size_t& end_pos);
+bool get_bounds_of_next_var (const std::string& msg, size_t& begin_pos, size_t& end_pos);
 
 /**
  * Removes ".", "..", and consecutive "/" from a given path and returns the result
@@ -123,16 +121,6 @@ std::string get_unambiguous_path (const std::string& path);
  * @return The string with replacements
  */
 std::string replace_characters (const char* characters_to_escape, const char* replacement_characters, const std::string& value, bool escape);
-
-/**
- * Trims punctuation from variable denoted by given positions in string
- * @param str String containing variable
- * @param begin_pos Begin position of variable
- * @param end_pos End position of variable or string::npos if it is at str's end
- * @return true if any text remains after trimming, false otherwise
- * @note begin_pos and end_pos may be changed even if the method returns false
- */
-bool trim_punctuation_of_variable (const std::string& str, size_t& begin_pos, size_t& end_pos);
 
 /**
  * Perform wildcard match
