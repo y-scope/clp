@@ -106,12 +106,11 @@ public:
      * Parses next variable from a message, constructing the constant part of the message's logtype as well
      * @param msg
      * @param var_begin_pos Beginning position of last variable. Changes to beginning position of current variable.
-     * @param next_delim_pos Position of delimiter after token
-     * @param last_var_end_pos End position of last variable
+     * @param var_end_pos End position of last variable (exclusive). Changes to end position of current variable.
      * @param var
      * @return true if another variable was found, false otherwise
      */
-    bool parse_next_var (const std::string& msg, size_t& var_begin_pos, size_t& next_delim_pos, size_t& last_var_end_pos, std::string& var);
+    bool parse_next_var (const std::string& msg, size_t& var_begin_pos, size_t& var_end_pos, std::string& var);
 
     /**
      * Reserves space for a constant of the given length

@@ -207,14 +207,13 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& mes
                                                                vector<variable_dictionary_id_t>& var_ids)
 {
     // Extract all variables and add to dictionary while building logtype
-    size_t tok_begin_pos = 0;
-    size_t next_delim_pos = 0;
-    size_t last_var_end_pos = 0;
+    size_t var_begin_pos = 0;
+    size_t var_end_pos = 0;
     string var_str;
     logtype_dict_entry.clear();
     // To avoid reallocating the logtype as we append to it, reserve enough space to hold the entire message
     logtype_dict_entry.reserve_constant_length(message.length());
-    while (logtype_dict_entry.parse_next_var(message, tok_begin_pos, next_delim_pos, last_var_end_pos, var_str)) {
+    while (logtype_dict_entry.parse_next_var(message, var_begin_pos, var_end_pos, var_str)) {
         // Encode variable
         encoded_variable_t encoded_var;
         if (convert_string_to_representable_integer_var(var_str, encoded_var)) {

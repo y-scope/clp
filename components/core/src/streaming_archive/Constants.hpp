@@ -5,7 +5,7 @@
 #define STREAMING_ARCHIVE_CONSTANTS_HPP
 
 namespace streaming_archive {
-    constexpr archive_format_version_t cArchiveFormatVersion = cArchiveFormatDevelopmentVersionFlag | 3;
+    constexpr archive_format_version_t cArchiveFormatVersion = cArchiveFormatDevelopmentVersionFlag | 4;
     constexpr char cLogsDirname[] = "l";
     constexpr char cSegmentsDirname[] = "s";
     constexpr char cSegmentListFilename[] = "segment_list.txt";

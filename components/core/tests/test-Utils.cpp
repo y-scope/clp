@@ -144,92 +144,83 @@ TEST_CASE("get_unambiguous_path", "[get_unambiguous_path]") {
 
 TEST_CASE("get_bounds_of_next_var", "[get_bounds_of_next_var]") {
     string str;
-    size_t token_end_pos;
     size_t begin_pos;
     size_t end_pos;
-    bool is_var;
 
     // Corner cases
     // Empty string
     str = "";
-    token_end_pos = 0;
     begin_pos = 0;
     end_pos = 0;
-    REQUIRE(get_bounds_of_next_var(str, token_end_pos, begin_pos, end_pos) == false);
+    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos) == false);
 
-    // token_end_pos past the end of the string
+    // end_pos past the end of the string
     str = "abc";
-    token_end_pos = string::npos;
     begin_pos = 0;
-    end_pos = 0;
-    REQUIRE(get_bounds_of_next_var(str, token_end_pos, begin_pos, end_pos) == false);
+    end_pos = string::npos;
+    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos) == false);
 
     // Non-variables
     str = "/";
-    token_end_pos = 0;
     begin_pos = 0;
     end_pos = 0;
-    REQUIRE(get_bounds_of_next_var(str, token_end_pos, begin_pos, end_pos) == false);
+    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos) == false);
     REQUIRE(str.length() == begin_pos);
 
     str = "xyz";
-    token_end_pos = 0;
     begin_pos = 0;
     end_pos = 0;
-    REQUIRE(get_bounds_of_next_var(str, token_end_pos, begin_pos, end_pos) == false);
+    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos) == false);
     REQUIRE(str.length() == begin_pos);
 
     str = "=";
-    token_end_pos = 0;
     begin_pos = 0;
     end_pos = 0;
-    REQUIRE(get_bounds_of_next_var(str, token_end_pos, begin_pos, end_pos) == false);
+    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos) == false);
     REQUIRE(str.length() == begin_pos);
 
     // Variables
     str = "~=x!abc123;1.2%x:+394/-";
-    token_end_pos = 0;
     begin_pos = 0;
     end_pos = 0;
 
-    REQUIRE(get_bounds_of_next_var(str, token_end_pos, begin_pos, end_pos) == true);
+    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos) == true);
     REQUIRE("x" == str.substr(begin_pos, end_pos - begin_pos));
 
-    REQUIRE(get_bounds_of_next_var(str, token_end_pos, begin_pos, end_pos) == true);
+    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos) == true);
     REQUIRE("abc123" == str.substr(begin_pos, end_pos - begin_pos));
 
-    REQUIRE(get_bounds_of_next_var(str, token_end_pos, begin_pos, end_pos) == true);
+    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos) == true);
     REQUIRE("1.2" == str.substr(begin_pos, end_pos - begin_pos));
 
-    REQUIRE(get_bounds_of_next_var(str, token_end_pos, begin_pos, end_pos) == true);
-    REQUIRE("+394" == str.substr(begin_pos, end_pos - begin_pos));
+    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos) == true);
+    REQUIRE("+394/-" == str.substr(begin_pos, end_pos - begin_pos));
 
-    REQUIRE(get_bounds_of_next_var(str, token_end_pos, begin_pos, end_pos) == false);
+    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos) == false);
 
     str = " ad ff 95 24 0d ff ";
-    token_end_pos = 0;
     begin_pos = 0;
     end_pos = 0;
 
-    REQUIRE(get_bounds_of_next_var(str, token_end_pos, begin_pos, end_pos) == true);
+    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos) == true);
     REQUIRE("ad" == str.substr(begin_pos, end_pos - begin_pos));
 
-    REQUIRE(get_bounds_of_next_var(str, token_end_pos, begin_pos, end_pos) == true);
+    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos) == true);
     REQUIRE("ff" == str.substr(begin_pos, end_pos - begin_pos));
 
-    REQUIRE(get_bounds_of_next_var(str, token_end_pos, begin_pos, end_pos) == true);
+    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos) == true);
     REQUIRE("95" == str.substr(begin_pos, end_pos - begin_pos));
 
-    REQUIRE(get_bounds_of_next_var(str, token_end_pos, begin_pos, end_pos) == true);
+    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos) == true);
     REQUIRE("24" == str.substr(begin_pos, end_pos - begin_pos));
 
-    REQUIRE(get_bounds_of_next_var(str, token_end_pos, begin_pos, end_pos) == true);
+    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos) == true);
     REQUIRE("0d" == str.substr(begin_pos, end_pos - begin_pos));
 
-    REQUIRE(get_bounds_of_next_var(str, token_end_pos, begin_pos, end_pos) == true);
+    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos) == true);
     REQUIRE("ff" == str.substr(begin_pos, end_pos - begin_pos));
 
-    REQUIRE(get_bounds_of_next_var(str, token_end_pos, begin_pos, end_pos) == false);
+    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos) == false);
     REQUIRE(str.length() == begin_pos);
 }
 
@@ -258,7 +249,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
     REQUIRE(get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var) == false);
 
     // No wildcards
-    str = " MAC address 95: ad ff 95 24 0d ff ";
+    str = " MAC address 95: ad ff 95 24 0d ff =-abc- ";
     begin_pos = 0;
     end_pos = 0;
 
@@ -290,11 +281,15 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
     REQUIRE("ff" == str.substr(begin_pos, end_pos - begin_pos));
     REQUIRE(true == is_var);
 
+    REQUIRE(get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var) == true);
+    REQUIRE("-abc-" == str.substr(begin_pos, end_pos - begin_pos));
+    REQUIRE(true == is_var);
+
     REQUIRE(get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var) == false);
     REQUIRE(str.length() == begin_pos);
 
     // With wildcards
-    str = "~=\\*x\\?!abc*123;1.2%x:+394/-";
+    str = "~=\\*x\\?!abc*123;1.2%x:+394/-=-*abc-";
     begin_pos = 0;
     end_pos = 0;
 
@@ -307,77 +302,14 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
     REQUIRE(is_var == true);
 
     REQUIRE(get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var) == true);
-    REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "+394");
+    REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "+394/-");
     REQUIRE(is_var == true);
 
+    REQUIRE(get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var) == true);
+    REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "-*abc-");
+    REQUIRE(is_var == false);
+
     REQUIRE(get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var) == false);
-}
-
-TEST_CASE("trim_punctuation_of_variable methods", "[trim_punctuation_of_variable]") {
-    string str;
-    size_t begin_pos;
-    size_t end_pos;
-
-    // No punctuation cases
-    str = "test";
-    begin_pos = 0;
-    end_pos = string::npos;
-    REQUIRE(trim_punctuation_of_variable(str, begin_pos, end_pos));
-    REQUIRE(0 == begin_pos);
-    REQUIRE(string::npos == end_pos);
-
-    str = "test";
-    begin_pos = 0;
-    end_pos = str.length();
-    REQUIRE(trim_punctuation_of_variable(str, begin_pos, end_pos));
-    REQUIRE(0 == begin_pos);
-    REQUIRE(str.length() == end_pos);
-
-    str = "test";
-    begin_pos = 1;
-    end_pos = 2;
-    REQUIRE(trim_punctuation_of_variable(str, begin_pos, end_pos));
-    REQUIRE(1 == begin_pos);
-    REQUIRE(2 == end_pos);
-
-    // Empty token cases
-    str = "test";
-    begin_pos = 0;
-    end_pos = 0;
-    REQUIRE(!trim_punctuation_of_variable(str, begin_pos, end_pos));
-
-    str = "test";
-    begin_pos = 2;
-    end_pos = 2;
-    REQUIRE(!trim_punctuation_of_variable(str, begin_pos, end_pos));
-
-    str = "test";
-    begin_pos = str.length();
-    end_pos = str.length();
-    REQUIRE(!trim_punctuation_of_variable(str, begin_pos, end_pos));
-
-    str = "test";
-    begin_pos = string::npos;
-    end_pos = string::npos;
-    REQUIRE(!trim_punctuation_of_variable(str, begin_pos, end_pos));
-
-    // Normal cases
-    str = "%%;;:test$+---'";
-    begin_pos = 0;
-    end_pos = string::npos;
-    REQUIRE(trim_punctuation_of_variable(str, begin_pos, end_pos));
-    REQUIRE(5 == begin_pos);
-    REQUIRE(9 == end_pos);
-
-    str = ".";
-    begin_pos = 0;
-    end_pos = string::npos;
-    REQUIRE(!trim_punctuation_of_variable(str, begin_pos, end_pos));
-
-    str = "......:::::";
-    begin_pos = 0;
-    end_pos = string::npos;
-    REQUIRE(!trim_punctuation_of_variable(str, begin_pos, end_pos));
 }
 
 SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]") {
