@@ -1,0 +1,23 @@
+name: "Feature/Change Request"
+description: Request a feature or change
+labels: ["enhancement"]
+body:
+- type: markdown
+  attributes:
+    value: |
+      Use this form to request a feature/change in the software, or the project as a whole. 
+
+- type: textarea
+  attributes:
+    label: Request
+    description: "Describe your request and why it's important."
+  validations:
+    required: true
+
+- type: textarea
+  attributes:
+    label: Possible implementation
+    description: "Describe any implementations you have in mind."
+  validations:
+    required: true
+
