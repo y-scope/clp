@@ -1,0 +1,40 @@
+name: "Bug Report"
+description: Report software deficiencies
+labels: ["bug"]
+body:
+- type: markdown
+  attributes:
+    value: |
+      Use this form to report any functional or performance bugs you've found in the software.
+      
+      Be sure to check if your [issue](https://github.com/y-scope/clp/issues) has already been reported.
+
+- type: textarea
+  attributes:
+    label: Bug
+    description: "Describe what's wrong and if applicable, what you expected instead."
+  validations:
+    required: true
+
+- type: input
+  attributes:
+    label: CLP version
+    description: "The release version number or development commit hash that has the bug."
+    placeholder: "Version number or commit hash"
+  validations:
+    required: true
+
+- type: textarea
+  attributes:
+    label: Environment
+    description: "The environment in which you're running CLP."
+    placeholder: "OS version, docker version, etc."
+  validations:
+    required: true
+
+- type: textarea
+  attributes:
+    label: Reproduction steps
+    description: "List each step required to reproduce the bug."
+  validations:
+    required: true
