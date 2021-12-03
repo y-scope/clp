@@ -85,12 +85,11 @@ void LogTypeDictionaryEntry::add_double_var () {
     add_double_var(m_value);
 }
 
-bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begin_pos, size_t& next_delim_pos, size_t& last_var_end_pos, string& var) {
-    size_t var_end_pos = last_var_end_pos;
-    while (get_bounds_of_next_var(msg, next_delim_pos, var_begin_pos, var_end_pos)) {
+bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begin_pos, size_t& var_end_pos, string& var) {
+    auto last_var_end_pos = var_end_pos;
+    if (get_bounds_of_next_var(msg, var_begin_pos, var_end_pos)) {
         // Append to log type: from end of last variable to start of current variable
         add_constant(msg, last_var_end_pos, var_begin_pos - last_var_end_pos);
-        last_var_end_pos = var_end_pos;
 
         var.assign(msg, var_begin_pos, var_end_pos - var_begin_pos);
         return true;
