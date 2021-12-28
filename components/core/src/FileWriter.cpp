@@ -109,16 +109,20 @@ void FileWriter::open (const string& path, OpenMode open_mode) {
             m_file = fopen(path.c_str(), "ab");
             break;
         case OpenMode::CREATE_IF_NONEXISTENT_FOR_SEEKABLE_WRITING: {
-            // Create the file if it doesn't exist (the "r+" mode requires that it already exist)
-            auto retval = mknod(path.c_str(), S_IFREG | S_IRUSR | S_IWUSR, 0);
-            if (0 != retval) {
-                if (EEXIST != errno) {
+            struct stat stat_buf = {};
+            if (0 == stat(path.c_str(), &stat_buf)) {
+                // File exists, so open it for seekable writing
+                m_file = fopen(path.c_str(), "r+b");
+            } else {
+                if (ENOENT != errno) {
                     throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
                 }
+                // File doesn't exist, so create and open it for seekable writing
+                // NOTE: We can't use the "w+" mode if the file exists since that will truncate the file
+                m_file = fopen(path.c_str(), "w+b");
             }
 
-            m_file = fopen(path.c_str(), "r+b");
-            retval = fseek(m_file, 0, SEEK_END);
+            auto retval = fseek(m_file, 0, SEEK_END);
             if (0 != retval) {
                 throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
             }
