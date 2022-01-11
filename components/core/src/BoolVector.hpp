@@ -15,6 +15,7 @@
 // Project headers
 #include "Defs.h"
 #include "TraceableException.hpp"
+#include "streaming_compression/zstd/Compressor.hpp"
 
 // 2GB
 #define MAX_CAPACITY 2147483648
@@ -44,20 +45,15 @@ public:
     // number of IDs that occurred in the segment
     size_t num_ids() const { return m_num_element; }
 
-    // getter
-    const std::vector<bool>& get_data() const { return m_data; };
-
-    // the largest ID in the segment
-
-    size_t max_id() const { return m_largest_index; };
     void reset();
 
     // insert all ids from another bool vector
     void insert_id_from(const BoolVector<DictionaryIdType>& input);
 
     // insert all ids from an unordered_set
-    void insert_id_from(const std::unordered_set<DictionaryIdType>& input);
+    void insert_id_from_set(const std::unordered_set<DictionaryIdType>& input);
 
+    void write_to_compressor(streaming_compression::zstd::Compressor& segment_index_compressor) const;
 private:
     std::vector<bool> m_data;
     size_t m_num_element;
@@ -148,9 +144,19 @@ void BoolVector<DictionaryIdType>::insert_id_from(const BoolVector<DictionaryIdT
 }
 
 template <typename DictionaryIdType>
-void BoolVector<DictionaryIdType>::insert_id_from(const std::unordered_set<DictionaryIdType>& input){
+void BoolVector<DictionaryIdType>::insert_id_from_set(const std::unordered_set<DictionaryIdType>& input){
     for(const DictionaryIdType id : input) {
         insert_id(id);
+    }
+}
+
+template <typename DictionaryIdType>
+void BoolVector<DictionaryIdType>::write_to_compressor(streaming_compression::zstd::Compressor& segment_index_compressor) const {
+
+    for(size_t id = 0; id <= m_largest_index; id++) {
+        if(m_data[id]){
+            segment_index_compressor.write_numeric_value((DictionaryIdType)id);
+        }
     }
 }
 

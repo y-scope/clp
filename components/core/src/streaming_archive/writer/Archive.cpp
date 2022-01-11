@@ -338,13 +338,13 @@ namespace streaming_archive { namespace writer {
         m_mutable_files.erase(file);
 
         if (file->has_ts_pattern()) {
-            m_var_ids_in_segment_for_files_with_timestamps.insert_id_from(m_var_ids_without_timestamps_temp_holder);
-            m_logtype_ids_in_segment_for_files_with_timestamps.insert_id_from(m_log_ids_without_timestamps_temp_holder);
+            m_var_ids_in_segment_for_files_with_timestamps.insert_id_from_set(m_var_ids_without_timestamps_temp_holder);
+            m_logtype_ids_in_segment_for_files_with_timestamps.insert_id_from_set(m_log_ids_without_timestamps_temp_holder);
             append_file_to_segment(file, m_segment_for_files_with_timestamps, m_logtype_ids_in_segment_for_files_with_timestamps,
                                    m_var_ids_in_segment_for_files_with_timestamps, m_files_with_timestamps_in_segment);
         } else {
-            m_var_ids_in_segment_for_files_without_timestamps.insert_id_from(m_var_ids_without_timestamps_temp_holder);
-            m_logtype_ids_in_segment_for_files_without_timestamps.insert_id_from(m_log_ids_without_timestamps_temp_holder);
+            m_var_ids_in_segment_for_files_without_timestamps.insert_id_from_set(m_var_ids_without_timestamps_temp_holder);
+            m_logtype_ids_in_segment_for_files_without_timestamps.insert_id_from_set(m_log_ids_without_timestamps_temp_holder);
             append_file_to_segment(file, m_segment_for_files_without_timestamps, m_logtype_ids_in_segment_for_files_without_timestamps,
                                    m_var_ids_in_segment_for_files_without_timestamps, m_files_without_timestamps_in_segment);
         }

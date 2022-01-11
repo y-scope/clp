@@ -237,14 +237,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::index_segment (segment_id_t 
 
     // NOTE: The IDs in `ids` are not validated to exist in this dictionary since we perform validation when loading the dictionary.
     m_segment_index_compressor.write_numeric_value<uint64_t>(ids.num_ids());
-    auto ids_data = ids.get_data();
-
-    auto largest_id = ids.max_id();
-    for(size_t id = 0; id <= largest_id; id++) {
-        if(ids_data[id]){
-            m_segment_index_compressor.write_numeric_value((DictionaryIdType)id);
-        }
-    }
+    ids.write_to_compressor(m_segment_index_compressor);
 
     ++m_num_segments_in_index;
 
