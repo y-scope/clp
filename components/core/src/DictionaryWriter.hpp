@@ -73,7 +73,7 @@ public:
      * @param segment_id
      * @param ids
      */
-    void index_segment (segment_id_t segment_id, const BoolVector& ids);
+    void index_segment (segment_id_t segment_id, const BoolVector<DictionaryIdType>& ids);
 
     /**
      * Gets the size of the dictionary when it is stored on disk
@@ -228,7 +228,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload (const std:
 }
 
 template <typename DictionaryIdType, typename EntryType>
-void DictionaryWriter<DictionaryIdType, EntryType>::index_segment (segment_id_t segment_id, const BoolVector& ids) {
+void DictionaryWriter<DictionaryIdType, EntryType>::index_segment (segment_id_t segment_id, const BoolVector<DictionaryIdType>& ids) {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }

@@ -304,8 +304,8 @@ namespace streaming_archive { namespace writer {
         m_var_dict.write_header_and_flush_to_disk();
     }
 
-    void Archive::append_file_to_segment (File*& file, Segment& segment, BoolVector& logtype_ids_in_segment,
-                                          BoolVector& var_ids_in_segment, vector<File*>& files_in_segment)
+    void Archive::append_file_to_segment (File*& file, Segment& segment, BoolVector<logtype_dictionary_id_t>& logtype_ids_in_segment,
+                                          BoolVector<variable_dictionary_id_t>& var_ids_in_segment, vector<File*>& files_in_segment)
     {
         if (!segment.is_open()) {
             segment.open(m_segments_dir_path, m_next_segment_id++, m_compression_level);
@@ -338,28 +338,18 @@ namespace streaming_archive { namespace writer {
         m_mutable_files.erase(file);
 
         if (file->has_ts_pattern()) {
-            for(const auto& id : m_var_ids_without_timestamps_temp_holder) {
-                m_var_ids_in_segment_for_files_with_timestamps.insert_id(id);
-            }
-            for(const auto& id : m_log_ids_without_timestamps_temp_holder) {
-                m_logtype_ids_in_segment_for_files_with_timestamps.insert_id(id);
-            }
+            m_var_ids_in_segment_for_files_with_timestamps.insert_id_from(m_var_ids_without_timestamps_temp_holder);
+            m_logtype_ids_in_segment_for_files_with_timestamps.insert_id_from(m_log_ids_without_timestamps_temp_holder);
             append_file_to_segment(file, m_segment_for_files_with_timestamps, m_logtype_ids_in_segment_for_files_with_timestamps,
                                    m_var_ids_in_segment_for_files_with_timestamps, m_files_with_timestamps_in_segment);
         } else {
-            for(const auto& id : m_var_ids_without_timestamps_temp_holder) {
-                m_var_ids_in_segment_for_files_without_timestamps.insert_id(id);
-            }
-            for(const auto& id : m_log_ids_without_timestamps_temp_holder) {
-                m_logtype_ids_in_segment_for_files_without_timestamps.insert_id(id);
-            }
+            m_var_ids_in_segment_for_files_without_timestamps.insert_id_from(m_var_ids_without_timestamps_temp_holder);
+            m_logtype_ids_in_segment_for_files_without_timestamps.insert_id_from(m_log_ids_without_timestamps_temp_holder);
             append_file_to_segment(file, m_segment_for_files_without_timestamps, m_logtype_ids_in_segment_for_files_without_timestamps,
                                    m_var_ids_in_segment_for_files_without_timestamps, m_files_without_timestamps_in_segment);
         }
         m_var_ids_without_timestamps_temp_holder.clear();
-        //std::unordered_set<variable_dictionary_id_t>().swap(m_var_ids_without_timestamps_temp_holder);
         m_log_ids_without_timestamps_temp_holder.clear();
-        //std::unordered_set<variable_dictionary_id_t>().swap(m_log_ids_without_timestamps_temp_holder);
         // Make sure file pointer is nulled and cannot be accessed outside
         file = nullptr;
     }
@@ -380,8 +370,8 @@ namespace streaming_archive { namespace writer {
     }
 
     void Archive::close_segment_and_persist_file_metadata (Segment& segment, std::vector<File*>& files,
-                                                           BoolVector& segment_logtype_ids,
-                                                           BoolVector& segment_var_ids)
+                                                           BoolVector<logtype_dictionary_id_t>& segment_logtype_ids,
+                                                           BoolVector<variable_dictionary_id_t>& segment_var_ids)
     {
         auto segment_id = segment.get_id();
         m_logtype_dict.index_segment(segment_id, segment_logtype_ids);
