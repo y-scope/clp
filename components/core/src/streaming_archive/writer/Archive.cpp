@@ -304,8 +304,8 @@ namespace streaming_archive { namespace writer {
         m_var_dict.write_header_and_flush_to_disk();
     }
 
-    void Archive::append_file_to_segment (File*& file, Segment& segment, BoolVector<logtype_dictionary_id_t>& logtype_ids_in_segment,
-                                          BoolVector<variable_dictionary_id_t>& var_ids_in_segment, vector<File*>& files_in_segment)
+    void Archive::append_file_to_segment (File*& file, Segment& segment, IDOccurrenceArray<logtype_dictionary_id_t>& logtype_ids_in_segment,
+                                          IDOccurrenceArray<variable_dictionary_id_t>& var_ids_in_segment, vector<File*>& files_in_segment)
     {
         if (!segment.is_open()) {
             segment.open(m_segments_dir_path, m_next_segment_id++, m_compression_level);
@@ -370,8 +370,8 @@ namespace streaming_archive { namespace writer {
     }
 
     void Archive::close_segment_and_persist_file_metadata (Segment& segment, std::vector<File*>& files,
-                                                           BoolVector<logtype_dictionary_id_t>& segment_logtype_ids,
-                                                           BoolVector<variable_dictionary_id_t>& segment_var_ids)
+                                                           IDOccurrenceArray<logtype_dictionary_id_t>& segment_logtype_ids,
+                                                           IDOccurrenceArray<variable_dictionary_id_t>& segment_var_ids)
     {
         auto segment_id = segment.get_id();
         m_logtype_dict.index_segment(segment_id, segment_logtype_ids);

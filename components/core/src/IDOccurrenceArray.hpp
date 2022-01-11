@@ -2,8 +2,8 @@
 // Created by haiqixu on 1/6/2022.
 //
 
-#ifndef BOOLVECTOR_HPP
-#define BOOLVECTOR_HPP
+#ifndef IDOCCURRENCEARRAY_HPP
+#define IDOCCURRENCEARRAY_HPP
 
 // C++ standard libraries
 #include <vector>
@@ -14,15 +14,15 @@
 
 // Project headers
 #include "Defs.h"
-#include "TraceableException.hpp"
 #include "streaming_compression/zstd/Compressor.hpp"
+#include "TraceableException.hpp"
 
 // 2GB
 #define MAX_CAPACITY 2147483648
 #define DEFAULT_CAPACITY 1024
 
 template <typename DictionaryIdType>
-class BoolVector {
+class IDOccurrenceArray {
 public:
 
     class OperationFailed : public TraceableException {
@@ -32,12 +32,12 @@ public:
 
         // Methods
         const char* what () const noexcept override {
-            return "BoolVector operation failed";
+            return "IDOccurrenceArray operation failed";
         }
     };
 
-    BoolVector();
-    explicit BoolVector(size_t initial_capacity);
+    IDOccurrenceArray();
+    explicit IDOccurrenceArray(size_t initial_capacity);
 
     // insert ID as it occurs in the segment
     void insert_id(DictionaryIdType index);
@@ -47,8 +47,8 @@ public:
 
     void reset();
 
-    // insert all ids from another bool vector
-    void insert_id_from(const BoolVector<DictionaryIdType>& input);
+    // insert all ids from another id array
+    void insert_id_from_array(const IDOccurrenceArray<DictionaryIdType>& input);
 
     // insert all ids from an unordered_set
     void insert_id_from_set(const std::unordered_set<DictionaryIdType>& input);
@@ -67,23 +67,26 @@ private:
 };
 
 template <typename DictionaryIdType>
-BoolVector<DictionaryIdType>::BoolVector(){
+IDOccurrenceArray<DictionaryIdType>::IDOccurrenceArray(){
     m_initial_capacity = DEFAULT_CAPACITY;
-    m_data.resize(m_initial_capacity, false);
-    m_num_element = 0;
-    m_largest_index = 0;
+    reset();
 }
 
 template <typename DictionaryIdType>
-BoolVector<DictionaryIdType>::BoolVector(size_t initial_capacity){
+IDOccurrenceArray<DictionaryIdType>::IDOccurrenceArray(size_t initial_capacity){
     m_initial_capacity = initial_capacity;
+    reset();
+}
+
+template <typename DictionaryIdType>
+void IDOccurrenceArray<DictionaryIdType>::reset() {
     m_data.resize(m_initial_capacity, false);
     m_num_element = 0;
     m_largest_index = 0;
 }
 
 template <typename DictionaryIdType>
-void BoolVector<DictionaryIdType>::insert_id(DictionaryIdType index) {
+void IDOccurrenceArray<DictionaryIdType>::insert_id(DictionaryIdType index) {
 
     // if index is out of current bound, increase
     if(index >= m_data.size()) {
@@ -101,15 +104,7 @@ void BoolVector<DictionaryIdType>::insert_id(DictionaryIdType index) {
 }
 
 template <typename DictionaryIdType>
-void BoolVector<DictionaryIdType>::reset() {
-    m_data.clear();
-    m_data.resize(m_initial_capacity, false);
-    m_num_element = 0;
-    m_largest_index = 0;
-}
-
-template <typename DictionaryIdType>
-void BoolVector<DictionaryIdType>::increase_capacity(size_t index) {
+void IDOccurrenceArray<DictionaryIdType>::increase_capacity(size_t index) {
     if(index < m_data.size()) {
         SPDLOG_ERROR("Calling increase_capacity on IDs smaller than capacity.");
         throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
@@ -118,6 +113,7 @@ void BoolVector<DictionaryIdType>::increase_capacity(size_t index) {
     do{
         capacity = capacity * 2;
     } while (capacity <= index);
+
     if(capacity > MAX_CAPACITY){
         SPDLOG_ERROR("Size out of Bound.");
         throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);
@@ -126,13 +122,14 @@ void BoolVector<DictionaryIdType>::increase_capacity(size_t index) {
 }
 
 template <typename DictionaryIdType>
-void BoolVector<DictionaryIdType>::insert_id_from(const BoolVector<DictionaryIdType> &input) {
+void IDOccurrenceArray<DictionaryIdType>::insert_id_from_array(const IDOccurrenceArray<DictionaryIdType> &input) {
     auto input_data_array = input.m_data;
     size_t input_max_index = input.m_largest_index;
     if(input_max_index >= m_data.size()) {
         increase_capacity(input_max_index);
     }
     for(auto id = 0; id <= input_max_index; id++) {
+        // if an id is a new id in the input
         if(!m_data[id] && input_data_array[id]) {
             m_data[id] = true;
             m_num_element++;
@@ -144,14 +141,14 @@ void BoolVector<DictionaryIdType>::insert_id_from(const BoolVector<DictionaryIdT
 }
 
 template <typename DictionaryIdType>
-void BoolVector<DictionaryIdType>::insert_id_from_set(const std::unordered_set<DictionaryIdType>& input){
+void IDOccurrenceArray<DictionaryIdType>::insert_id_from_set(const std::unordered_set<DictionaryIdType>& input){
     for(const DictionaryIdType id : input) {
         insert_id(id);
     }
 }
 
 template <typename DictionaryIdType>
-void BoolVector<DictionaryIdType>::write_to_compressor(streaming_compression::zstd::Compressor& segment_index_compressor) const {
+void IDOccurrenceArray<DictionaryIdType>::write_to_compressor(streaming_compression::zstd::Compressor& segment_index_compressor) const {
 
     for(size_t id = 0; id <= m_largest_index; id++) {
         if(m_data[id]){
@@ -160,4 +157,4 @@ void BoolVector<DictionaryIdType>::write_to_compressor(streaming_compression::zs
     }
 }
 
-#endif //BOOLVECTOR_HPP
+#endif //IDOCCURRENCEARRAY_HPP
