@@ -165,13 +165,13 @@ namespace streaming_archive { namespace writer {
         m_var_dict.open(var_dict_path, var_dict_segment_index_path,
                         EncodedVariableInterpreter::get_var_dict_id_range_end() - EncodedVariableInterpreter::get_var_dict_id_range_begin());
 
-#if FLUSH_TO_DISK_ENABLED
-        // fsync archive directory now that everything in the archive directory has been created
-        if (fsync(archive_dir_fd) != 0) {
-            SPDLOG_ERROR("Failed to fsync {}, errno={}", archive_path_string.c_str(), errno);
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
-        }
-#endif
+        #if FLUSH_TO_DISK_ENABLED
+                // fsync archive directory now that everything in the archive directory has been created
+                if (fsync(archive_dir_fd) != 0) {
+                    SPDLOG_ERROR("Failed to fsync {}, errno={}", archive_path_string.c_str(), errno);
+                    throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+                }
+        #endif
         if (::close(archive_dir_fd) != 0) {
             // We've already fsynced, so this error shouldn't affect us. Therefore, just log it.
             SPDLOG_WARN("Error when closing file descriptor for {}, errno={}", archive_path_string.c_str(), errno);
@@ -291,13 +291,13 @@ namespace streaming_archive { namespace writer {
     }
 
     void Archive::write_dir_snapshot () {
-#if FLUSH_TO_DISK_ENABLED
-        // fsync logs directory to flush new files' directory entries
-        if (0 != fsync(m_logs_dir_fd)) {
-            SPDLOG_ERROR("Failed to fsync {}, errno={}", m_logs_dir_path.c_str(), errno);
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
-        }
-#endif
+        #if FLUSH_TO_DISK_ENABLED
+                // fsync logs directory to flush new files' directory entries
+                if (0 != fsync(m_logs_dir_fd)) {
+                    SPDLOG_ERROR("Failed to fsync {}, errno={}", m_logs_dir_path.c_str(), errno);
+                    throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+                }
+        #endif
 
         // Flush dictionaries
         m_logtype_dict.write_header_and_flush_to_disk();
@@ -381,13 +381,13 @@ namespace streaming_archive { namespace writer {
 
         segment.close();
 
-#if FLUSH_TO_DISK_ENABLED
-        // fsync segments directory to flush segment's directory entry
-        if (fsync(m_segments_dir_fd) != 0) {
-            SPDLOG_ERROR("Failed to fsync {}, errno={}", m_segments_dir_path.c_str(), errno);
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
-        }
-#endif
+        #if FLUSH_TO_DISK_ENABLED
+                // fsync segments directory to flush segment's directory entry
+                if (fsync(m_segments_dir_fd) != 0) {
+                    SPDLOG_ERROR("Failed to fsync {}, errno={}", m_segments_dir_path.c_str(), errno);
+                    throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+                }
+        #endif
 
         // Flush dictionaries
         m_logtype_dict.write_header_and_flush_to_disk();
