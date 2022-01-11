@@ -250,6 +250,8 @@ set(SOURCE_FILES_clp
         submodules/json/single_include/nlohmann/json.hpp
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
+        src/BoolVector.cpp
+        src/BoolVector.hpp
         )
 add_executable(clp ${SOURCE_FILES_clp})
 target_link_libraries(clp

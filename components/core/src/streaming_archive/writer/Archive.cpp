@@ -34,7 +34,7 @@ using std::vector;
 namespace streaming_archive { namespace writer {
     Archive::~Archive () {
         if (m_path.empty() == false || m_mutable_files.empty() == false || m_files_with_timestamps_in_segment.empty() == false ||
-                m_files_without_timestamps_in_segment.empty() == false)
+            m_files_without_timestamps_in_segment.empty() == false)
         {
             SPDLOG_ERROR("Archive not closed before being destroyed - data loss may occur");
             for (auto file : m_mutable_files) {
@@ -71,7 +71,6 @@ namespace streaming_archive { namespace writer {
         const auto& archive_path_string = archive_path.string();
         m_stable_uncompressed_size = 0;
         m_stable_size = 0;
-
         // Create internal directories if necessary
         retval = mkdir(archive_path_string.c_str(), 0750);
         if (0 != retval) {
@@ -166,13 +165,13 @@ namespace streaming_archive { namespace writer {
         m_var_dict.open(var_dict_path, var_dict_segment_index_path,
                         EncodedVariableInterpreter::get_var_dict_id_range_end() - EncodedVariableInterpreter::get_var_dict_id_range_begin());
 
-        #if FLUSH_TO_DISK_ENABLED
-            // fsync archive directory now that everything in the archive directory has been created
-            if (fsync(archive_dir_fd) != 0) {
-                SPDLOG_ERROR("Failed to fsync {}, errno={}", archive_path_string.c_str(), errno);
-                throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
-            }
-        #endif
+#if FLUSH_TO_DISK_ENABLED
+        // fsync archive directory now that everything in the archive directory has been created
+        if (fsync(archive_dir_fd) != 0) {
+            SPDLOG_ERROR("Failed to fsync {}, errno={}", archive_path_string.c_str(), errno);
+            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+        }
+#endif
         if (::close(archive_dir_fd) != 0) {
             // We've already fsynced, so this error shouldn't affect us. Therefore, just log it.
             SPDLOG_WARN("Error when closing file descriptor for {}, errno={}", archive_path_string.c_str(), errno);
@@ -192,14 +191,14 @@ namespace streaming_archive { namespace writer {
         if (m_segment_for_files_with_timestamps.is_open()) {
             close_segment_and_persist_file_metadata(m_segment_for_files_with_timestamps, m_files_with_timestamps_in_segment,
                                                     m_logtype_ids_in_segment_for_files_with_timestamps, m_var_ids_in_segment_for_files_with_timestamps);
-            m_logtype_ids_in_segment_for_files_with_timestamps.clear();
-            m_var_ids_in_segment_for_files_with_timestamps.clear();
+            m_logtype_ids_in_segment_for_files_with_timestamps.reset();
+            m_var_ids_in_segment_for_files_with_timestamps.reset();
         }
         if (m_segment_for_files_without_timestamps.is_open()) {
             close_segment_and_persist_file_metadata(m_segment_for_files_without_timestamps, m_files_without_timestamps_in_segment,
                                                     m_logtype_ids_in_segment_for_files_without_timestamps, m_var_ids_in_segment_for_files_without_timestamps);
-            m_logtype_ids_in_segment_for_files_without_timestamps.clear();
-            m_var_ids_in_segment_for_files_without_timestamps.clear();
+            m_logtype_ids_in_segment_for_files_without_timestamps.reset();
+            m_var_ids_in_segment_for_files_without_timestamps.reset();
         }
 
         // Persist all metadata including dictionaries
@@ -260,45 +259,66 @@ namespace streaming_archive { namespace writer {
         file.change_ts_pattern(pattern);
     }
 
+    void Archive::append_log_id_to_segment(const File& file, const logtype_dictionary_id_t log_id) {
+        if (file.has_ts_pattern()) {
+            m_logtype_ids_in_segment_for_files_with_timestamps.insert_id(log_id);
+        } else {
+            m_log_ids_without_timestamps_temp_holder.insert(log_id);
+        }
+    }
+
+    void Archive::append_var_ids_to_segment(const File& file, const std::vector<variable_dictionary_id_t>& var_ids) {
+        if (file.has_ts_pattern()) {
+            for(auto id : var_ids){
+                m_var_ids_in_segment_for_files_with_timestamps.insert_id(id);
+            }
+        } else {
+            for(auto id : var_ids){
+                m_var_ids_without_timestamps_temp_holder.insert(id);
+            }
+        }
+    }
+
     void Archive::write_msg (File& file, epochtime_t timestamp, const string& message, size_t num_uncompressed_bytes) {
         vector<encoded_variable_t> encoded_vars;
         vector<variable_dictionary_id_t> var_ids;
         EncodedVariableInterpreter::encode_and_add_to_dictionary(message, m_logtype_dict_entry, m_var_dict, encoded_vars, var_ids);
         logtype_dictionary_id_t logtype_id;
         m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
-
+        append_var_ids_to_segment(file,var_ids);
+        append_log_id_to_segment(file,logtype_id);
         file.write_encoded_msg(timestamp, logtype_id, encoded_vars, var_ids, num_uncompressed_bytes);
     }
 
     void Archive::write_dir_snapshot () {
-        #if FLUSH_TO_DISK_ENABLED
-            // fsync logs directory to flush new files' directory entries
-            if (0 != fsync(m_logs_dir_fd)) {
-                SPDLOG_ERROR("Failed to fsync {}, errno={}", m_logs_dir_path.c_str(), errno);
-                throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
-            }
-        #endif
+#if FLUSH_TO_DISK_ENABLED
+        // fsync logs directory to flush new files' directory entries
+        if (0 != fsync(m_logs_dir_fd)) {
+            SPDLOG_ERROR("Failed to fsync {}, errno={}", m_logs_dir_path.c_str(), errno);
+            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+        }
+#endif
 
         // Flush dictionaries
         m_logtype_dict.write_header_and_flush_to_disk();
         m_var_dict.write_header_and_flush_to_disk();
     }
 
-    void Archive::append_file_to_segment (File*& file, Segment& segment, unordered_set<logtype_dictionary_id_t>& logtype_ids_in_segment,
-                                          unordered_set<variable_dictionary_id_t>& var_ids_in_segment, vector<File*>& files_in_segment)
+    void Archive::append_file_to_segment (File*& file, Segment& segment, BoolVector& logtype_ids_in_segment,
+                                          BoolVector& var_ids_in_segment, vector<File*>& files_in_segment)
     {
         if (!segment.is_open()) {
             segment.open(m_segments_dir_path, m_next_segment_id++, m_compression_level);
         }
 
-        file->append_to_segment(m_logtype_dict, segment, logtype_ids_in_segment, var_ids_in_segment);
+        file->append_to_segment(m_logtype_dict, segment);
         files_in_segment.emplace_back(file);
 
         // Close current segment if its uncompressed size is greater than the target
         if (segment.get_uncompressed_size() >= m_target_segment_uncompressed_size) {
             close_segment_and_persist_file_metadata(segment, files_in_segment, logtype_ids_in_segment, var_ids_in_segment);
-            logtype_ids_in_segment.clear();
-            var_ids_in_segment.clear();
+            logtype_ids_in_segment.reset();
+            var_ids_in_segment.reset();
         }
     }
 
@@ -318,13 +338,28 @@ namespace streaming_archive { namespace writer {
         m_mutable_files.erase(file);
 
         if (file->has_ts_pattern()) {
+            for(const auto& id : m_var_ids_without_timestamps_temp_holder) {
+                m_var_ids_in_segment_for_files_with_timestamps.insert_id(id);
+            }
+            for(const auto& id : m_log_ids_without_timestamps_temp_holder) {
+                m_logtype_ids_in_segment_for_files_with_timestamps.insert_id(id);
+            }
             append_file_to_segment(file, m_segment_for_files_with_timestamps, m_logtype_ids_in_segment_for_files_with_timestamps,
                                    m_var_ids_in_segment_for_files_with_timestamps, m_files_with_timestamps_in_segment);
         } else {
+            for(const auto& id : m_var_ids_without_timestamps_temp_holder) {
+                m_var_ids_in_segment_for_files_without_timestamps.insert_id(id);
+            }
+            for(const auto& id : m_log_ids_without_timestamps_temp_holder) {
+                m_logtype_ids_in_segment_for_files_without_timestamps.insert_id(id);
+            }
             append_file_to_segment(file, m_segment_for_files_without_timestamps, m_logtype_ids_in_segment_for_files_without_timestamps,
                                    m_var_ids_in_segment_for_files_without_timestamps, m_files_without_timestamps_in_segment);
         }
-
+        m_var_ids_without_timestamps_temp_holder.clear();
+        //std::unordered_set<variable_dictionary_id_t>().swap(m_var_ids_without_timestamps_temp_holder);
+        m_log_ids_without_timestamps_temp_holder.clear();
+        //std::unordered_set<variable_dictionary_id_t>().swap(m_log_ids_without_timestamps_temp_holder);
         // Make sure file pointer is nulled and cannot be accessed outside
         file = nullptr;
     }
@@ -345,8 +380,8 @@ namespace streaming_archive { namespace writer {
     }
 
     void Archive::close_segment_and_persist_file_metadata (Segment& segment, std::vector<File*>& files,
-                                                           const unordered_set<logtype_dictionary_id_t>& segment_logtype_ids,
-                                                           const unordered_set<variable_dictionary_id_t>& segment_var_ids)
+                                                           BoolVector& segment_logtype_ids,
+                                                           BoolVector& segment_var_ids)
     {
         auto segment_id = segment.get_id();
         m_logtype_dict.index_segment(segment_id, segment_logtype_ids);
@@ -356,13 +391,13 @@ namespace streaming_archive { namespace writer {
 
         segment.close();
 
-        #if FLUSH_TO_DISK_ENABLED
-            // fsync segments directory to flush segment's directory entry
-            if (fsync(m_segments_dir_fd) != 0) {
-                SPDLOG_ERROR("Failed to fsync {}, errno={}", m_segments_dir_path.c_str(), errno);
-                throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
-            }
-        #endif
+#if FLUSH_TO_DISK_ENABLED
+        // fsync segments directory to flush segment's directory entry
+        if (fsync(m_segments_dir_fd) != 0) {
+            SPDLOG_ERROR("Failed to fsync {}, errno={}", m_segments_dir_path.c_str(), errno);
+            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+        }
+#endif
 
         // Flush dictionaries
         m_logtype_dict.write_header_and_flush_to_disk();

@@ -13,20 +13,14 @@ namespace streaming_archive { namespace writer {
         if (m_is_written_out) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
-        m_variable_ids = std::make_unique<unordered_set<variable_dictionary_id_t>>();
         m_is_open = true;
     }
 
-    void File::append_to_segment (const LogTypeDictionaryWriter& logtype_dict, Segment& segment, unordered_set<logtype_dictionary_id_t>& segment_logtype_ids,
-                                  unordered_set<variable_dictionary_id_t>& segment_var_ids)
+    void File::append_to_segment (const LogTypeDictionaryWriter& logtype_dict, Segment& segment)
     {
         if (m_is_open) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
-
-        // Add file's logtype and variable IDs to respective segment sets
-        auto logtype_ids = m_logtypes.data();
-        append_logtype_and_var_ids_to_segment_sets(logtype_ids, m_logtypes.size(), segment_logtype_ids, segment_var_ids);
 
         // Append files to segment
         uint64_t segment_timestamps_uncompressed_pos;
@@ -43,7 +37,6 @@ namespace streaming_archive { namespace writer {
         m_timestamps.clear();
         m_logtypes.clear();
         m_variables.clear();
-        m_variable_ids.reset(nullptr);
     }
 
     void File::write_encoded_msg (epochtime_t timestamp, logtype_dictionary_id_t logtype_id, const vector<encoded_variable_t>& encoded_vars,
@@ -52,9 +45,6 @@ namespace streaming_archive { namespace writer {
         m_timestamps.push_back(timestamp);
         m_logtypes.push_back(logtype_id);
         m_variables.push_back_all(encoded_vars);
-
-        // Insert message's variable IDs into the file's variable ID set
-        m_variable_ids->insert(var_ids.cbegin(), var_ids.cend());
 
         // Update metadata
         ++m_num_messages;
@@ -113,19 +103,6 @@ namespace streaming_archive { namespace writer {
         }
 
         return encoded_timestamp_patterns;
-    }
-
-    void File::append_logtype_and_var_ids_to_segment_sets (const logtype_dictionary_id_t* logtype_ids, size_t num_logtypes,
-                                                           unordered_set<logtype_dictionary_id_t>& segment_logtype_ids,
-                                                           unordered_set<variable_dictionary_id_t>& segment_var_ids)
-    {
-        // Add logtype IDs
-        for (size_t i = 0; i < num_logtypes; ++i) {
-            auto logtype_id = logtype_ids[i];
-            segment_logtype_ids.emplace(logtype_id);
-        }
-        // Add variable IDs
-        segment_var_ids.insert(m_variable_ids->cbegin(), m_variable_ids->cend());
     }
 
     void File::set_segment_metadata (segment_id_t segment_id, uint64_t segment_timestamps_uncompressed_pos, uint64_t segment_logtypes_uncompressed_pos,

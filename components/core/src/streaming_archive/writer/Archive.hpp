@@ -18,6 +18,7 @@
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
 #include "../MetadataDB.hpp"
+#include "../../BoolVector.hpp"
 
 namespace streaming_archive { namespace writer {
     class Archive {
@@ -128,6 +129,9 @@ namespace streaming_archive { namespace writer {
          */
         void write_dir_snapshot ();
 
+        void append_var_ids_to_segment(const File& file, const std::vector<variable_dictionary_id_t>& var_ids);
+        void append_log_id_to_segment(const File& file, const logtype_dictionary_id_t log_id);
+
         /**
          * Mark files ready for segment and it will be added to the segment at a convenient time.
          * @param file
@@ -189,8 +193,8 @@ namespace streaming_archive { namespace writer {
          * @param var_ids_in_segment
          * @param files_in_segment
          */
-        void append_file_to_segment (File*& file, Segment& segment, std::unordered_set<logtype_dictionary_id_t>& logtype_ids_in_segment,
-                std::unordered_set<variable_dictionary_id_t>& var_ids_in_segment, std::vector<File*>& files_in_segment);
+        void append_file_to_segment (File*& file, Segment& segment, BoolVector& logtype_ids_in_segment,
+                                     BoolVector& var_ids_in_segment, std::vector<File*>& files_in_segment);
         /**
          * Writes the given files' metadata to the database using bulk writes
          * @param files
@@ -208,8 +212,8 @@ namespace streaming_archive { namespace writer {
          * @throw Same as streaming_archive::writer::Archive::persist_file_metadata
          */
         void close_segment_and_persist_file_metadata (Segment& segment, std::vector<File*>& files,
-                                                      const std::unordered_set<logtype_dictionary_id_t>& segment_logtype_ids,
-                                                      const std::unordered_set<variable_dictionary_id_t>& segment_var_ids);
+                                                      BoolVector& segment_logtype_ids,
+                                                      BoolVector& segment_var_ids);
 
         /**
          * Gets the size of uncompressed data that has been compressed into the archive and will not be changed
@@ -261,11 +265,13 @@ namespace streaming_archive { namespace writer {
 
         size_t m_target_segment_uncompressed_size;
         Segment m_segment_for_files_with_timestamps;
-        std::unordered_set<logtype_dictionary_id_t> m_logtype_ids_in_segment_for_files_with_timestamps;
-        std::unordered_set<variable_dictionary_id_t> m_var_ids_in_segment_for_files_with_timestamps;
+        BoolVector m_logtype_ids_in_segment_for_files_with_timestamps;
+        BoolVector m_var_ids_in_segment_for_files_with_timestamps;
+        std::unordered_set<variable_dictionary_id_t> m_var_ids_without_timestamps_temp_holder;
+        std::unordered_set<logtype_dictionary_id_t> m_log_ids_without_timestamps_temp_holder;
         Segment m_segment_for_files_without_timestamps;
-        std::unordered_set<logtype_dictionary_id_t> m_logtype_ids_in_segment_for_files_without_timestamps;
-        std::unordered_set<variable_dictionary_id_t> m_var_ids_in_segment_for_files_without_timestamps;
+        BoolVector m_logtype_ids_in_segment_for_files_without_timestamps;
+        BoolVector m_var_ids_in_segment_for_files_without_timestamps;
 
         size_t m_stable_uncompressed_size;
         size_t m_stable_size;
