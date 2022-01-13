@@ -1,6 +1,6 @@
 // C++ standard libraries
 #include <string>
-
+#include <queue>
 // Boost libraries
 #include <boost/filesystem.hpp>
 
@@ -41,7 +41,7 @@ int main (int argc, const char* argv[]) {
     }
 
     FileWriter file_writer;
-
+    FileWriter index_writer;
     // Open log-type dictionary
     auto logtype_dict_path = boost::filesystem::path(command_line_args.get_archive_path()) / streaming_archive::cLogTypeDictFilename;
     auto logtype_segment_index_path = boost::filesystem::path(command_line_args.get_archive_path()) / streaming_archive::cLogTypeSegmentIndexFilename;
@@ -51,8 +51,11 @@ int main (int argc, const char* argv[]) {
 
     // Write readable dictionary
     auto readable_logtype_dict_path = boost::filesystem::path(command_line_args.get_output_dir()) / streaming_archive::cLogTypeDictFilename;
+    auto readable_logtype_dict_index_path = boost::filesystem::path(command_line_args.get_output_dir()) / streaming_archive::cLogTypeSegmentIndexFilename;
     readable_logtype_dict_path += ".hr";
+    readable_logtype_dict_index_path += ".hr";
     file_writer.open(readable_logtype_dict_path.string(), FileWriter::OpenMode::CREATE_FOR_WRITING);
+    index_writer.open(readable_logtype_dict_index_path.string(), FileWriter::OpenMode::CREATE_FOR_WRITING);
     string human_readable_value;
     for (const auto& entry : logtype_dict.get_entries()) {
         const auto& value = entry.get_value();
@@ -81,9 +84,21 @@ int main (int argc, const char* argv[]) {
 
         file_writer.write_string(replace_characters("\n", "n", human_readable_value, true));
         file_writer.write_char('\n');
+
+        auto ids_set = entry.get_ids_of_segments_containing_entry();
+        std::priority_queue<uint64_t> id_queue;
+        for(auto id : ids_set){
+            id_queue.push(reinterpret_cast<uint64_t>(id));
+        }
+        while(!id_queue.empty()) {
+            std::string sorted_id_str = std::to_string(id_queue.top());
+            index_writer.write_string(sorted_id_str + " ");
+            id_queue.pop();
+        }
+        index_writer.write_char('\n');
     }
     file_writer.close();
-
+    index_writer.close();
     logtype_dict.close();
 
     // Open variables dictionary
@@ -95,14 +110,29 @@ int main (int argc, const char* argv[]) {
 
     // Write readable dictionary
     auto readable_var_dict_path = boost::filesystem::path(command_line_args.get_output_dir()) / streaming_archive::cVarDictFilename;
+    auto readable_var_dict_index_path = boost::filesystem::path(command_line_args.get_output_dir()) / streaming_archive::cVarSegmentIndexFilename;
     readable_var_dict_path += ".hr";
+    readable_var_dict_index_path += ".hr";
     file_writer.open(readable_var_dict_path.string(), FileWriter::OpenMode::CREATE_FOR_WRITING);
+    index_writer.open(readable_var_dict_index_path.string(), FileWriter::OpenMode::CREATE_FOR_WRITING);
     for (const auto& entry : var_dict.get_entries()) {
         file_writer.write_string(entry.get_value());
         file_writer.write_char('\n');
+
+        auto ids_set = entry.get_ids_of_segments_containing_entry();
+        std::priority_queue<uint64_t> id_queue;
+        for(auto id : ids_set){
+            id_queue.push(reinterpret_cast<uint64_t>(id));
+        }
+        while(!id_queue.empty()) {
+            std::string sorted_id_str = std::to_string(id_queue.top());
+            index_writer.write_string(sorted_id_str + " ");
+            id_queue.pop();
+        }
+        index_writer.write_char('\n');
     }
     file_writer.close();
-
+    index_writer.close();
     var_dict.close();
 
     return 0;

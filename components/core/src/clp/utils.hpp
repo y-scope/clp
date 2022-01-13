@@ -68,7 +68,7 @@ namespace clp {
      * @param split_ix
      * @return A pointer to the file
      */
-    streaming_archive::writer::File* create_and_open_file (streaming_archive::writer::Archive& archive, const std::string& path_for_compression,
+    void create_and_open_file (streaming_archive::writer::Archive& archive, const std::string& path_for_compression,
                                                            group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix);
 
     /**
@@ -76,7 +76,7 @@ namespace clp {
      * @param archive
      * @param file
      */
-    void close_file_and_mark_ready_for_segment (streaming_archive::writer::Archive& archive, streaming_archive::writer::File*& file);
+    void close_file_and_mark_ready_for_segment (streaming_archive::writer::Archive& archive);
 
     /**
      * Closes the current archive and starts a new one
@@ -94,7 +94,7 @@ namespace clp {
      * @param file
      */
     void split_file (const std::string& path_for_compression, group_id_t group_id, const TimestampPattern* last_timestamp_pattern,
-                     streaming_archive::writer::Archive& archive_writer, streaming_archive::writer::File*& file);
+                     streaming_archive::writer::Archive& archive_writer);
 
     /**
      * Closes both the current encoded file and archive, then starts a new archive and encoded file
@@ -106,8 +106,7 @@ namespace clp {
      * @param file
      */
     void split_file_and_archive (streaming_archive::writer::Archive::UserConfig& archive_user_config, const std::string& path_for_compression,
-                                 group_id_t group_id, const TimestampPattern* last_timestamp_pattern, streaming_archive::writer::Archive& archive_writer,
-                                 streaming_archive::writer::File*& file);
+                                 group_id_t group_id, const TimestampPattern* last_timestamp_pattern, streaming_archive::writer::Archive& archive_writer);
 }
 
 #endif // CLP_UTILS_HPP

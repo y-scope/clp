@@ -154,6 +154,8 @@ namespace streaming_archive { namespace writer {
         m_global_metadata_db->add_archive(m_id_as_string, m_stable_uncompressed_size, m_stable_size, m_creator_id_as_string, m_creation_num);
         m_global_metadata_db->close();
 
+        m_internal_file_object = nullptr;
+
         // Open log-type dictionary
         string logtype_dict_path = archive_path_string + '/' + cLogTypeDictFilename;
         string logtype_dict_segment_index_path = archive_path_string + '/' + cLogTypeSegmentIndexFilename;
@@ -208,6 +210,11 @@ namespace streaming_archive { namespace writer {
         m_logtype_dict_entry.clear();
         m_var_dict.close();
 
+        if(m_internal_file_object != nullptr) {
+            SPDLOG_WARN("????????");
+            exit(1);
+        }
+
         if (::close(m_segments_dir_fd) != 0) {
             // We've already fsynced, so this error shouldn't affect us. Therefore, just log it.
             SPDLOG_WARN("Error when closing segments directory file descriptor, errno={}", errno);
@@ -236,39 +243,42 @@ namespace streaming_archive { namespace writer {
         m_path.clear();
     }
 
-    File* Archive::create_file (const string& path, const group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix) {
+    void Archive::create_file (const string& path, const group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix) {
         auto file = new File(m_uuid_generator(), orig_file_id, path, group_id, split_ix);
         m_mutable_files.insert(file);
-
-        return file;
+        if(m_internal_file_object != nullptr) {
+            SPDLOG_WARN("BUBU");
+            exit(1);
+        }
+        m_internal_file_object = file;
     }
 
-    void Archive::open_file (File& file) {
-        file.open();
+    void Archive::open_file () {
+        m_internal_file_object->open();
     }
 
-    void Archive::close_file (File& file) {
-        file.close();
+    void Archive::close_file () {
+        m_internal_file_object->close();
     }
 
-    bool Archive::is_file_open (File& file) {
-        return file.is_open();
+    bool Archive::is_file_open () {
+        return m_internal_file_object->is_open();
     }
 
-    void Archive::change_ts_pattern (File& file, const TimestampPattern* pattern) {
-        file.change_ts_pattern(pattern);
+    void Archive::change_ts_pattern (const TimestampPattern* pattern) {
+        m_internal_file_object->change_ts_pattern(pattern);
     }
 
-    void Archive::append_log_id_to_segment(const File& file, const logtype_dictionary_id_t log_id) {
-        if (file.has_ts_pattern()) {
+    void Archive::append_log_id_to_segment(const logtype_dictionary_id_t log_id) {
+        if (m_internal_file_object->has_ts_pattern()) {
             m_logtype_ids_in_segment_for_files_with_timestamps.insert_id(log_id);
         } else {
             m_log_ids_without_timestamps_temp_holder.insert(log_id);
         }
     }
 
-    void Archive::append_var_ids_to_segment(const File& file, const std::vector<variable_dictionary_id_t>& var_ids) {
-        if (file.has_ts_pattern()) {
+    void Archive::append_var_ids_to_segment(const std::vector<variable_dictionary_id_t>& var_ids) {
+        if (m_internal_file_object->has_ts_pattern()) {
             for(auto id : var_ids){
                 m_var_ids_in_segment_for_files_with_timestamps.insert_id(id);
             }
@@ -279,15 +289,15 @@ namespace streaming_archive { namespace writer {
         }
     }
 
-    void Archive::write_msg (File& file, epochtime_t timestamp, const string& message, size_t num_uncompressed_bytes) {
+    void Archive::write_msg (epochtime_t timestamp, const string& message, size_t num_uncompressed_bytes) {
         vector<encoded_variable_t> encoded_vars;
         vector<variable_dictionary_id_t> var_ids;
         EncodedVariableInterpreter::encode_and_add_to_dictionary(message, m_logtype_dict_entry, m_var_dict, encoded_vars, var_ids);
         logtype_dictionary_id_t logtype_id;
         m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
-        append_var_ids_to_segment(file,var_ids);
-        append_log_id_to_segment(file,logtype_id);
-        file.write_encoded_msg(timestamp, logtype_id, encoded_vars, var_ids, num_uncompressed_bytes);
+        append_var_ids_to_segment(var_ids);
+        append_log_id_to_segment(logtype_id);
+        m_internal_file_object->write_encoded_msg(timestamp, logtype_id, encoded_vars, var_ids, num_uncompressed_bytes);
     }
 
     void Archive::write_dir_snapshot () {
@@ -304,15 +314,15 @@ namespace streaming_archive { namespace writer {
         m_var_dict.write_header_and_flush_to_disk();
     }
 
-    void Archive::append_file_to_segment (File*& file, Segment& segment, IDOccurrenceArray<logtype_dictionary_id_t>& logtype_ids_in_segment,
+    void Archive::append_file_to_segment (Segment& segment, IDOccurrenceArray<logtype_dictionary_id_t>& logtype_ids_in_segment,
                                           IDOccurrenceArray<variable_dictionary_id_t>& var_ids_in_segment, vector<File*>& files_in_segment)
     {
         if (!segment.is_open()) {
             segment.open(m_segments_dir_path, m_next_segment_id++, m_compression_level);
         }
 
-        file->append_to_segment(m_logtype_dict, segment);
-        files_in_segment.emplace_back(file);
+        m_internal_file_object->append_to_segment(m_logtype_dict, segment);
+        files_in_segment.emplace_back(m_internal_file_object);
 
         // Close current segment if its uncompressed size is greater than the target
         if (segment.get_uncompressed_size() >= m_target_segment_uncompressed_size) {
@@ -327,31 +337,31 @@ namespace streaming_archive { namespace writer {
      * 1) Given file has a timestamp, so append to segment only if enough files are buffered
      * 2) Given file lacks a timestamp, append to segment immediately
      */
-    void Archive::mark_file_ready_for_segment (File*& file) {
+    void Archive::mark_file_ready_for_segment () {
         // Check if file actually exists in our tracked file container
-        if (m_mutable_files.count(file) == 0) {
+        if (m_mutable_files.count(m_internal_file_object) == 0) {
             SPDLOG_CRITICAL("Unable to mark a file ready for segment for file that is not tracked by the current archive");
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
 
         // Remove file pointer visibility from outside of the archive
-        m_mutable_files.erase(file);
+        m_mutable_files.erase(m_internal_file_object);
 
-        if (file->has_ts_pattern()) {
+        if (m_internal_file_object->has_ts_pattern()) {
             m_var_ids_in_segment_for_files_with_timestamps.insert_id_from_set(m_var_ids_without_timestamps_temp_holder);
             m_logtype_ids_in_segment_for_files_with_timestamps.insert_id_from_set(m_log_ids_without_timestamps_temp_holder);
-            append_file_to_segment(file, m_segment_for_files_with_timestamps, m_logtype_ids_in_segment_for_files_with_timestamps,
+            append_file_to_segment(m_segment_for_files_with_timestamps, m_logtype_ids_in_segment_for_files_with_timestamps,
                                    m_var_ids_in_segment_for_files_with_timestamps, m_files_with_timestamps_in_segment);
         } else {
             m_var_ids_in_segment_for_files_without_timestamps.insert_id_from_set(m_var_ids_without_timestamps_temp_holder);
             m_logtype_ids_in_segment_for_files_without_timestamps.insert_id_from_set(m_log_ids_without_timestamps_temp_holder);
-            append_file_to_segment(file, m_segment_for_files_without_timestamps, m_logtype_ids_in_segment_for_files_without_timestamps,
+            append_file_to_segment(m_segment_for_files_without_timestamps, m_logtype_ids_in_segment_for_files_without_timestamps,
                                    m_var_ids_in_segment_for_files_without_timestamps, m_files_without_timestamps_in_segment);
         }
         m_var_ids_without_timestamps_temp_holder.clear();
         m_log_ids_without_timestamps_temp_holder.clear();
         // Make sure file pointer is nulled and cannot be accessed outside
-        file = nullptr;
+        m_internal_file_object = nullptr;
     }
 
     void Archive::persist_file_metadata (const vector<File*>& files) {

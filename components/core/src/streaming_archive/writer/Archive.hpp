@@ -89,28 +89,28 @@ namespace streaming_archive { namespace writer {
          * @param split_ix
          * @return Pointer to the new file
          */
-        File* create_file (const std::string& path, group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix);
+        void create_file (const std::string& path, group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix);
 
         /**
          * Wrapper for streaming_archive::writer::File::open
          * @param file File to open
          * @throw Same as streaming_archive::writer::File::open
          */
-        void open_file (File& file);
+        void open_file ();
         /**
          * Wrapper for streaming_archive::writer::File::close
          * @param file File to close
          * @throw Same as streaming_archive::writer::File::close
          */
-        void close_file (File& file);
-        bool is_file_open (File& file);
+        void close_file ();
+        bool is_file_open ();
 
         /**
          * Wrapper for streaming_archive::writer::File::change_ts_pattern
          * @param file File to change timestamp pattern for
          * @param pattern
          */
-        void change_ts_pattern (File& file, const TimestampPattern* pattern);
+        void change_ts_pattern (const TimestampPattern* pattern);
         /**
          * Encodes and writes a message to the given file
          * @param file
@@ -119,7 +119,7 @@ namespace streaming_archive { namespace writer {
          * @param num_uncompressed_bytes
          * @throw FileWriter::OperationFailed if any write fails
          */
-        void write_msg (File& file, epochtime_t timestamp, const std::string& message, size_t num_uncompressed_bytes);
+        void write_msg (epochtime_t timestamp, const std::string& message, size_t num_uncompressed_bytes);
 
         /**
          * Writes snapshot of archive to disk including metadata of all files and new dictionary entries
@@ -129,8 +129,13 @@ namespace streaming_archive { namespace writer {
          */
         void write_dir_snapshot ();
 
-        void append_var_ids_to_segment(const File& file, const std::vector<variable_dictionary_id_t>& var_ids);
-        void append_log_id_to_segment(const File& file, const logtype_dictionary_id_t log_id);
+        void append_var_ids_to_segment(const std::vector<variable_dictionary_id_t>& var_ids);
+        void append_log_id_to_segment(logtype_dictionary_id_t log_id);
+
+        size_t get_encoded_file_size_in_bytes () const { return m_internal_file_object->get_encoded_size_in_bytes(); };
+        const boost::uuids::uuid& get_orig_file_id () const { return m_internal_file_object->get_orig_file_id(); };
+        size_t get_split_ix () const { return m_internal_file_object->get_split_ix(); };
+        void set_is_split (bool is_split) { m_internal_file_object->set_is_split(is_split); };
 
         /**
          * Mark files ready for segment and it will be added to the segment at a convenient time.
@@ -138,7 +143,7 @@ namespace streaming_archive { namespace writer {
          * @throw streaming_archive::writer::Archive::OperationFailed if failed the file is not tracked by the current archive
          * @throw Same as streaming_archive::writer::Archive::persist_file_metadata
          */
-        void mark_file_ready_for_segment (File*& file);
+        void mark_file_ready_for_segment ();
 
         /**
          * Adds empty directories to the archive
@@ -193,7 +198,7 @@ namespace streaming_archive { namespace writer {
          * @param var_ids_in_segment
          * @param files_in_segment
          */
-        void append_file_to_segment (File*& file, Segment& segment, IDOccurrenceArray<logtype_dictionary_id_t>& logtype_ids_in_segment,
+        void append_file_to_segment (Segment& segment, IDOccurrenceArray<logtype_dictionary_id_t>& logtype_ids_in_segment,
                                      IDOccurrenceArray<variable_dictionary_id_t>& var_ids_in_segment, std::vector<File*>& files_in_segment);
         /**
          * Writes the given files' metadata to the database using bulk writes
@@ -245,6 +250,8 @@ namespace streaming_archive { namespace writer {
         int m_logs_dir_fd;
         std::string m_segments_dir_path;
         int m_segments_dir_fd;
+
+        File* m_internal_file_object;
 
         LogTypeDictionaryWriter m_logtype_dict;
         // Holds preallocated logtype dictionary entry for performance
