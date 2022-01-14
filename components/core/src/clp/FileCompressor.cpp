@@ -117,7 +117,7 @@ namespace clp {
         m_parsed_message.clear();
 
         // Open compressed file
-        create_and_open_file(archive_writer, path_for_compression, group_id, m_uuid_generator(), 0);
+        archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
 
         // Parse content from UTF-8 validation buffer
         size_t buf_pos = 0;

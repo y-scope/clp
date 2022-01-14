@@ -243,17 +243,13 @@ namespace streaming_archive { namespace writer {
         m_path.clear();
     }
 
-    void Archive::create_file (const string& path, const group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix) {
+    void Archive::create_and_open_file (const string& path, const group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix) {
         auto file = new File(m_uuid_generator(), orig_file_id, path, group_id, split_ix);
         m_mutable_files.insert(file);
         if(m_internal_file_object != nullptr) {
-            SPDLOG_WARN("BUBU");
-            exit(1);
+            throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
         }
         m_internal_file_object = file;
-    }
-
-    void Archive::open_file () {
         m_internal_file_object->open();
     }
 

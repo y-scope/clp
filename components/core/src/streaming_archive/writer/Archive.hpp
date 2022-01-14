@@ -89,14 +89,8 @@ namespace streaming_archive { namespace writer {
          * @param split_ix
          * @return Pointer to the new file
          */
-        void create_file (const std::string& path, group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix);
+        void create_and_open_file (const std::string& path, group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix);
 
-        /**
-         * Wrapper for streaming_archive::writer::File::open
-         * @param file File to open
-         * @throw Same as streaming_archive::writer::File::open
-         */
-        void open_file ();
         /**
          * Wrapper for streaming_archive::writer::File::close
          * @param file File to close
@@ -132,11 +126,6 @@ namespace streaming_archive { namespace writer {
         void append_var_ids_to_segment(const std::vector<variable_dictionary_id_t>& var_ids);
         void append_log_id_to_segment(logtype_dictionary_id_t log_id);
 
-        size_t get_encoded_file_size_in_bytes () const { return m_internal_file_object->get_encoded_size_in_bytes(); };
-        const boost::uuids::uuid& get_orig_file_id () const { return m_internal_file_object->get_orig_file_id(); };
-        size_t get_split_ix () const { return m_internal_file_object->get_split_ix(); };
-        void set_is_split (bool is_split) { m_internal_file_object->set_is_split(is_split); };
-
         /**
          * Mark files ready for segment and it will be added to the segment at a convenient time.
          * @param file
@@ -156,6 +145,14 @@ namespace streaming_archive { namespace writer {
         const std::string& get_id_as_string () const { return m_id_as_string; }
 
         size_t get_data_size_of_dictionaries () const { return m_logtype_dict.get_data_size() + m_var_dict.get_data_size(); }
+
+        /**
+         * Methods to get and set the status of file object
+         */
+        size_t get_encoded_file_size_in_bytes () const { return m_internal_file_object->get_encoded_size_in_bytes(); };
+        const boost::uuids::uuid& get_orig_file_id () const { return m_internal_file_object->get_orig_file_id(); };
+        size_t get_file_split_ix () const { return m_internal_file_object->get_split_ix(); };
+        void set_file_is_split (bool is_split) { m_internal_file_object->set_is_split(is_split); };
 
     private:
         // Types
@@ -251,6 +248,7 @@ namespace streaming_archive { namespace writer {
         std::string m_segments_dir_path;
         int m_segments_dir_fd;
 
+        // Holds the file being compressed
         File* m_internal_file_object;
 
         LogTypeDictionaryWriter m_logtype_dict;

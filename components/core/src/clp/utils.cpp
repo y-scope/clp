@@ -180,13 +180,6 @@ namespace clp {
         return all_paths_exist;
     }
 
-    void create_and_open_file (streaming_archive::writer::Archive& archive_writer, const string& path_for_compression,
-                                                           group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix)
-    {
-        archive_writer.create_file(path_for_compression, group_id, orig_file_id, split_ix);
-        archive_writer.open_file();
-    }
-
     void close_file_and_mark_ready_for_segment (streaming_archive::writer::Archive& archive_writer) {
         archive_writer.close_file();
         archive_writer.mark_file_ready_for_segment();
@@ -203,11 +196,11 @@ namespace clp {
                      streaming_archive::writer::Archive& archive_writer)
     {
         auto orig_file_id = archive_writer.get_orig_file_id();
-        auto split_ix = archive_writer.get_split_ix();
-        archive_writer.set_is_split(true);
+        auto split_ix = archive_writer.get_file_split_ix();
+        archive_writer.set_file_is_split(true);
         close_file_and_mark_ready_for_segment(archive_writer);
 
-        create_and_open_file(archive_writer, path_for_compression, group_id, orig_file_id, ++split_ix);
+        archive_writer.create_and_open_file(path_for_compression, group_id, orig_file_id, ++split_ix);
         // Initialize the file's timestamp pattern to the previous split's pattern
         archive_writer.change_ts_pattern(last_timestamp_pattern);
     }
@@ -216,13 +209,13 @@ namespace clp {
                                  const TimestampPattern* last_timestamp_pattern, streaming_archive::writer::Archive& archive_writer)
     {
         auto orig_file_id = archive_writer.get_orig_file_id();
-        auto split_ix = archive_writer.get_split_ix();
-        archive_writer.set_is_split(true);
+        auto split_ix = archive_writer.get_file_split_ix();
+        archive_writer.set_file_is_split(true);
         close_file_and_mark_ready_for_segment(archive_writer);
 
         split_archive(archive_user_config, archive_writer);
 
-        create_and_open_file(archive_writer, path_for_compression, group_id, orig_file_id, ++split_ix);
+        archive_writer.create_and_open_file(path_for_compression, group_id, orig_file_id, ++split_ix);
         // Initialize the file's timestamp pattern to the previous split's pattern
         archive_writer.change_ts_pattern(last_timestamp_pattern);
     }
