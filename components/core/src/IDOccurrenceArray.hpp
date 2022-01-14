@@ -80,6 +80,7 @@ IDOccurrenceArray<DictionaryIdType>::IDOccurrenceArray(size_t initial_capacity){
 
 template <typename DictionaryIdType>
 void IDOccurrenceArray<DictionaryIdType>::reset() {
+    m_data.clear();
     m_data.resize(m_initial_capacity, false);
     m_num_element = 0;
     m_largest_index = 0;
