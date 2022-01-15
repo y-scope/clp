@@ -154,7 +154,7 @@ namespace streaming_archive { namespace writer {
         m_global_metadata_db->add_archive(m_id_as_string, m_stable_uncompressed_size, m_stable_size, m_creator_id_as_string, m_creation_num);
         m_global_metadata_db->close();
 
-        m_internal_file_object = nullptr;
+        m_file = nullptr;
 
         // Open log-type dictionary
         string logtype_dict_path = archive_path_string + '/' + cLogTypeDictFilename;
@@ -210,9 +210,8 @@ namespace streaming_archive { namespace writer {
         m_logtype_dict_entry.clear();
         m_var_dict.close();
 
-        if(m_internal_file_object != nullptr) {
-            SPDLOG_WARN("????????");
-            exit(1);
+        if(m_file != nullptr) {
+            throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
         }
 
         if (::close(m_segments_dir_fd) != 0) {
@@ -246,27 +245,27 @@ namespace streaming_archive { namespace writer {
     void Archive::create_and_open_file (const string& path, const group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix) {
         auto file = new File(m_uuid_generator(), orig_file_id, path, group_id, split_ix);
         m_mutable_files.insert(file);
-        if(m_internal_file_object != nullptr) {
+        if(m_file != nullptr) {
             throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
         }
-        m_internal_file_object = file;
-        m_internal_file_object->open();
+        m_file = file;
+        m_file->open();
     }
 
     void Archive::close_file () {
-        m_internal_file_object->close();
+        m_file->close();
     }
 
     bool Archive::is_file_open () {
-        return m_internal_file_object->is_open();
+        return m_file->is_open();
     }
 
     void Archive::change_ts_pattern (const TimestampPattern* pattern) {
-        m_internal_file_object->change_ts_pattern(pattern);
+        m_file->change_ts_pattern(pattern);
     }
 
     void Archive::append_log_id_to_segment(const logtype_dictionary_id_t log_id) {
-        if (m_internal_file_object->has_ts_pattern()) {
+        if (m_file->has_ts_pattern()) {
             m_logtype_ids_in_segment_for_files_with_timestamps.insert_id(log_id);
         } else {
             m_log_ids_without_timestamps_temp_holder.insert(log_id);
@@ -274,7 +273,7 @@ namespace streaming_archive { namespace writer {
     }
 
     void Archive::append_var_ids_to_segment(const std::vector<variable_dictionary_id_t>& var_ids) {
-        if (m_internal_file_object->has_ts_pattern()) {
+        if (m_file->has_ts_pattern()) {
             for(auto id : var_ids){
                 m_var_ids_in_segment_for_files_with_timestamps.insert_id(id);
             }
@@ -293,7 +292,7 @@ namespace streaming_archive { namespace writer {
         m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
         append_var_ids_to_segment(var_ids);
         append_log_id_to_segment(logtype_id);
-        m_internal_file_object->write_encoded_msg(timestamp, logtype_id, encoded_vars, var_ids, num_uncompressed_bytes);
+        m_file->write_encoded_msg(timestamp, logtype_id, encoded_vars, var_ids, num_uncompressed_bytes);
     }
 
     void Archive::write_dir_snapshot () {
@@ -317,8 +316,8 @@ namespace streaming_archive { namespace writer {
             segment.open(m_segments_dir_path, m_next_segment_id++, m_compression_level);
         }
 
-        m_internal_file_object->append_to_segment(m_logtype_dict, segment);
-        files_in_segment.emplace_back(m_internal_file_object);
+        m_file->append_to_segment(m_logtype_dict, segment);
+        files_in_segment.emplace_back(m_file);
 
         // Close current segment if its uncompressed size is greater than the target
         if (segment.get_uncompressed_size() >= m_target_segment_uncompressed_size) {
@@ -335,15 +334,15 @@ namespace streaming_archive { namespace writer {
      */
     void Archive::mark_file_ready_for_segment () {
         // Check if file actually exists in our tracked file container
-        if (m_mutable_files.count(m_internal_file_object) == 0) {
+        if (m_mutable_files.count(m_file) == 0) {
             SPDLOG_CRITICAL("Unable to mark a file ready for segment for file that is not tracked by the current archive");
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
 
         // Remove file pointer visibility from outside of the archive
-        m_mutable_files.erase(m_internal_file_object);
+        m_mutable_files.erase(m_file);
 
-        if (m_internal_file_object->has_ts_pattern()) {
+        if (m_file->has_ts_pattern()) {
             m_var_ids_in_segment_for_files_with_timestamps.insert_id_from_set(m_var_ids_without_timestamps_temp_holder);
             m_logtype_ids_in_segment_for_files_with_timestamps.insert_id_from_set(m_log_ids_without_timestamps_temp_holder);
             append_file_to_segment(m_segment_for_files_with_timestamps, m_logtype_ids_in_segment_for_files_with_timestamps,
@@ -357,7 +356,7 @@ namespace streaming_archive { namespace writer {
         m_var_ids_without_timestamps_temp_holder.clear();
         m_log_ids_without_timestamps_temp_holder.clear();
         // Make sure file pointer is nulled and cannot be accessed outside
-        m_internal_file_object = nullptr;
+        m_file = nullptr;
     }
 
     void Archive::persist_file_metadata (const vector<File*>& files) {

@@ -17,7 +17,7 @@
 #include "streaming_compression/zstd/Compressor.hpp"
 #include "TraceableException.hpp"
 
-// 2GB
+// Constant
 #define MAX_CAPACITY 2147483648
 #define DEFAULT_CAPACITY 1024
 
@@ -36,34 +36,71 @@ public:
         }
     };
 
+    // Constructors
     IDOccurrenceArray();
     explicit IDOccurrenceArray(size_t initial_capacity);
 
-    // insert ID as it occurs in the segment
-    void insert_id(DictionaryIdType index);
+    // Destructors
+    ~IDOccurrenceArray() = default;
 
-    // number of IDs that occurred in the segment
-    size_t num_ids() const { return m_num_element; }
+    // Methods
+    /**
+     * insert the id into the data occurrence array
+     * @param id
+     */
+    void insert_id(DictionaryIdType id);
 
+    /**
+     * Get the number of different ids in the array
+     * @return number of ids in the array
+     */
+    size_t num_ids() const { return m_num_ids; }
+
+    /**
+     * Clear the id occurrence info and reset
+     * the array back to default initial capacity
+     */
     void reset();
 
-    // insert all ids from another id array
-    void insert_id_from_array(const IDOccurrenceArray<DictionaryIdType>& input);
+    /**
+     * Insert all IDs from another IDOccurrenceArray
+     * into the caller IDOccurrenceArray object
+     * @param ids_occurrence_array
+     */
+    void insert_id_from_array(const IDOccurrenceArray<DictionaryIdType>& ids_occurrence_array);
 
-    // insert all ids from an unordered_set
-    void insert_id_from_set(const std::unordered_set<DictionaryIdType>& input);
+    /**
+     * Insert all IDs from an unordered_set
+     * into the caller IDOccurrenceArray object
+     * @param ids_set
+     */
+    void insert_id_from_set(const std::unordered_set<DictionaryIdType>& ids_set);
 
+    /**
+     * write all IDs in the array into the segment index compressor
+     * @param segment_index_compressor
+     */
     void write_to_compressor(streaming_compression::zstd::Compressor& segment_index_compressor) const;
-private:
-    std::vector<bool> m_data;
-    size_t m_num_element;
-    size_t m_largest_index;
 
-    // not used yet, but we might want different array to have different default capacity.
+private:
+
+    std::vector<bool> m_data;
     size_t m_initial_capacity;
 
-    // keep increasing the capacity by factor of 2 until the input index is within the capacity range
-    void increase_capacity(size_t index);
+    // Tracks number of IDs that occurred in the array
+    size_t m_num_ids;
+
+    // Tracks the largest ID in the array
+    size_t m_largest_id;
+
+    /**
+     * increase the capacity of the bool array so that
+     * input id becomes an valid index of the array.
+     * Throws an error if the input id is already in the
+     * range of the array
+     * @param id
+     */
+    void increase_capacity(size_t id);
 };
 
 template <typename DictionaryIdType>
@@ -82,68 +119,71 @@ template <typename DictionaryIdType>
 void IDOccurrenceArray<DictionaryIdType>::reset() {
     m_data.clear();
     m_data.resize(m_initial_capacity, false);
-    m_num_element = 0;
-    m_largest_index = 0;
+    m_num_ids = 0;
+    m_largest_id = 0;
 }
 
 template <typename DictionaryIdType>
-void IDOccurrenceArray<DictionaryIdType>::insert_id(DictionaryIdType index) {
+void IDOccurrenceArray<DictionaryIdType>::insert_id(DictionaryIdType id) {
 
-    // if index is out of current bound, increase
-    if(index >= m_data.size()) {
-        increase_capacity(index);
+    if(id >= m_data.size()) {
+        increase_capacity(id);
     }
-    // if the data is not already inserted
-    if(!m_data[index]) {
-        m_num_element++;
-        m_data[index] = true;
-        // update max index if necessary
-        if(index > m_largest_index) {
-            m_largest_index = index;
+    // if the id is not already marked as "occurred"
+    if(!m_data[id]) {
+        m_data[id] = true;
+        m_num_ids++;
+        // update largest id if necessary
+        if(id > m_largest_id) {
+            m_largest_id = id;
         }
     }
 }
 
 template <typename DictionaryIdType>
-void IDOccurrenceArray<DictionaryIdType>::increase_capacity(size_t index) {
-    if(index < m_data.size()) {
+void IDOccurrenceArray<DictionaryIdType>::increase_capacity(size_t id) {
+    if(id < m_data.size()) {
         SPDLOG_ERROR("Calling increase_capacity on IDs smaller than capacity.");
         throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
     }
     size_t capacity = m_data.size();
     do{
         capacity = capacity * 2;
-    } while (capacity <= index);
+    } while (capacity <= id);
 
     if(capacity > MAX_CAPACITY){
-        SPDLOG_ERROR("Size out of Bound.");
-        throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);
+        SPDLOG_WARN("size of array {} is more than {} bytes.", capacity, MAX_CAPACITY);
     }
     m_data.resize(capacity, false);
 }
 
 template <typename DictionaryIdType>
-void IDOccurrenceArray<DictionaryIdType>::insert_id_from_array(const IDOccurrenceArray<DictionaryIdType> &input) {
-    auto input_data_array = input.m_data;
-    size_t input_max_index = input.m_largest_index;
-    if(input_max_index >= m_data.size()) {
-        increase_capacity(input_max_index);
+void IDOccurrenceArray<DictionaryIdType>::insert_id_from_array(const IDOccurrenceArray<DictionaryIdType> &ids_occurrence_array) {
+
+    auto input_data_array = ids_occurrence_array.m_data;
+    size_t input_max_id = ids_occurrence_array.m_largest_id;
+    // increase size of the boolean array if needed
+    if(input_max_id >= m_data.size()) {
+        increase_capacity(input_max_id);
     }
-    for(auto id = 0; id <= input_max_index; id++) {
-        // if an id is a new id in the input
+    for(auto id = 0; id <= input_max_id; id++) {
+        // if an ID
+        // 1. doesn't occur in the caller array
+        // 2. occurs in the input array
+        // Adds it to the caller's array
         if(!m_data[id] && input_data_array[id]) {
             m_data[id] = true;
-            m_num_element++;
+            m_num_ids++;
         }
     }
-    if(input_max_index > m_largest_index){
-        m_largest_index = input_max_index;
+    if(input_max_id > m_largest_id){
+        m_largest_id = input_max_id;
     }
 }
 
 template <typename DictionaryIdType>
-void IDOccurrenceArray<DictionaryIdType>::insert_id_from_set(const std::unordered_set<DictionaryIdType>& input){
-    for(const DictionaryIdType id : input) {
+void IDOccurrenceArray<DictionaryIdType>::insert_id_from_set(const std::unordered_set<DictionaryIdType>& ids_set){
+    for(const DictionaryIdType id : ids_set) {
         insert_id(id);
     }
 }
@@ -151,7 +191,7 @@ void IDOccurrenceArray<DictionaryIdType>::insert_id_from_set(const std::unordere
 template <typename DictionaryIdType>
 void IDOccurrenceArray<DictionaryIdType>::write_to_compressor(streaming_compression::zstd::Compressor& segment_index_compressor) const {
 
-    for(size_t id = 0; id <= m_largest_index; id++) {
+    for(size_t id = 0; id <= m_largest_id; id++) {
         if(m_data[id]){
             segment_index_compressor.write_numeric_value((DictionaryIdType)id);
         }

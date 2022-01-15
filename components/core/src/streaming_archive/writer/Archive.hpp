@@ -147,12 +147,12 @@ namespace streaming_archive { namespace writer {
         size_t get_data_size_of_dictionaries () const { return m_logtype_dict.get_data_size() + m_var_dict.get_data_size(); }
 
         /**
-         * Methods to get and set the status of file object
+         * Methods to get and set the status of file being compressed
          */
-        size_t get_encoded_file_size_in_bytes () const { return m_internal_file_object->get_encoded_size_in_bytes(); };
-        const boost::uuids::uuid& get_orig_file_id () const { return m_internal_file_object->get_orig_file_id(); };
-        size_t get_file_split_ix () const { return m_internal_file_object->get_split_ix(); };
-        void set_file_is_split (bool is_split) { m_internal_file_object->set_is_split(is_split); };
+        size_t get_encoded_file_size_in_bytes () const { return m_file->get_encoded_size_in_bytes(); };
+        const boost::uuids::uuid& get_orig_file_id () const { return m_file->get_orig_file_id(); };
+        size_t get_file_split_ix () const { return m_file->get_split_ix(); };
+        void set_file_is_split (bool is_split) { m_file->set_is_split(is_split); };
 
     private:
         // Types
@@ -249,7 +249,7 @@ namespace streaming_archive { namespace writer {
         int m_segments_dir_fd;
 
         // Holds the file being compressed
-        File* m_internal_file_object;
+        File* m_file;
 
         LogTypeDictionaryWriter m_logtype_dict;
         // Holds preallocated logtype dictionary entry for performance
