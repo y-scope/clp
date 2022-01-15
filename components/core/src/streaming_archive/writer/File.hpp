@@ -57,7 +57,11 @@ namespace streaming_archive { namespace writer {
                 m_segmentation_state(SegmentationState_NotInSegment),
                 m_is_metadata_clean(false),
                 m_is_written_out(false),
-                m_is_open(false)
+                m_is_open(false),
+                m_timestamps(nullptr),
+                m_logtypes(nullptr),
+                m_variables(nullptr)
+
         {}
 
         // Destructor
@@ -143,9 +147,9 @@ namespace streaming_archive { namespace writer {
          */
         const std::string& get_orig_path () const { return m_orig_log_path; }
         const boost::uuids::uuid& get_orig_file_id () const { return m_orig_file_id; }
-        const std::string& get_orig_file_id_as_string () const { return m_orig_file_id_as_string; }
+        const std::string get_orig_file_id_as_string () const { return boost::uuids::to_string(m_orig_file_id); }
         const boost::uuids::uuid& get_id () const { return m_id; }
-        const std::string& get_id_as_string () const { return m_id_as_string; }
+        const std::string get_id_as_string () const { return boost::uuids::to_string(m_id); }
         epochtime_t get_begin_ts () const { return m_begin_ts; }
         epochtime_t get_end_ts () const { return m_end_ts; }
         const std::vector<std::pair<int64_t, TimestampPattern>>& get_timestamp_patterns () const { return m_timestamp_patterns; }
@@ -209,9 +213,9 @@ namespace streaming_archive { namespace writer {
         size_t m_split_ix;
 
         // Data variables
-        PageAllocatedVector<epochtime_t> m_timestamps;
-        PageAllocatedVector<logtype_dictionary_id_t> m_logtypes;
-        PageAllocatedVector<encoded_variable_t> m_variables;
+        std::unique_ptr<PageAllocatedVector<epochtime_t>> m_timestamps;
+        std::unique_ptr<PageAllocatedVector<logtype_dictionary_id_t>> m_logtypes;
+        std::unique_ptr<PageAllocatedVector<encoded_variable_t>> m_variables;
 
         // State variables
         SegmentationState m_segmentation_state;
