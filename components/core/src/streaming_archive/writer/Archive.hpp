@@ -69,13 +69,14 @@ namespace streaming_archive { namespace writer {
          * @param user_config Settings configurable by the user
          * @throw FileWriter::OperationFailed if any dictionary writer could not be opened
          * @throw streaming_archive::writer::Archive::OperationFailed if archive already exists, if it could not be stat-ed, if the directory structure could
-                  not be created or problems with medatadata.
+                  not be created, if the file is not reset or problems with medatadata.
          */
         void open (const UserConfig& user_config);
         /**
          * Writes a final snapshot of the archive, closes all open files, and closes the dictionaries
          * @throw FileWriter::OperationFailed if any writer could not be closed
          * @throw streaming_archive::writer::Archive::OperationFailed if any empty directories could not be removed
+         * @throw streaming_archive::writer::Archive::OperationFailed if the file is not reset
          * @throw Same as streaming_archive::writer::SegmentManager::close
          * @throw Same as streaming_archive::writer::Archive::write_dir_snapshot
          */
@@ -123,8 +124,17 @@ namespace streaming_archive { namespace writer {
          */
         void write_dir_snapshot ();
 
-        void append_var_ids_to_segment(const std::vector<variable_dictionary_id_t>& var_ids);
-        void append_log_id_to_segment(logtype_dictionary_id_t log_id);
+        /**
+         * Adds variable ids from the input vector into the current segment
+         * @param var_ids
+         */
+        void append_var_ids_to_segment (const std::vector <variable_dictionary_id_t>& var_ids);
+
+        /**
+         * Writes a single log id into the current segment
+         * @param log_id
+         */
+        void append_log_id_to_segment (logtype_dictionary_id_t log_id);
 
         /**
          * Mark files ready for segment and it will be added to the segment at a convenient time.
