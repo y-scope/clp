@@ -1,8 +1,10 @@
 // C++ standard libraries
 #include <set>
 #include <string>
+
 // Boost libraries
 #include <boost/filesystem.hpp>
+
 // spdlog
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
@@ -41,6 +43,7 @@ int main (int argc, const char* argv[]) {
 
     FileWriter file_writer;
     FileWriter index_writer;
+
     // Open log-type dictionary
     auto logtype_dict_path = boost::filesystem::path(command_line_args.get_archive_path()) / streaming_archive::cLogTypeDictFilename;
     auto logtype_segment_index_path = boost::filesystem::path(command_line_args.get_archive_path()) / streaming_archive::cLogTypeSegmentIndexFilename;
@@ -83,7 +86,6 @@ int main (int argc, const char* argv[]) {
 
         file_writer.write_string(replace_characters("\n", "n", human_readable_value, true));
         file_writer.write_char('\n');
-
         std::set<segment_id_t> segment_ids_set = entry.get_ids_of_segments_containing_entry();
         // the ids_set is std::set which iterates id in ascending order
         for (const auto segment_id : segment_ids_set) {
@@ -93,6 +95,7 @@ int main (int argc, const char* argv[]) {
     }
     file_writer.close();
     index_writer.close();
+
     logtype_dict.close();
 
     // Open variables dictionary
@@ -112,7 +115,6 @@ int main (int argc, const char* argv[]) {
     for (const auto& entry : var_dict.get_entries()) {
         file_writer.write_string(entry.get_value());
         file_writer.write_char('\n');
-
         std::set<segment_id_t> segment_ids_set = entry.get_ids_of_segments_containing_entry();
         // the ids_set is std::set which iterates id in ascending order
         for (const auto segment_id : segment_ids_set) {
@@ -122,6 +124,7 @@ int main (int argc, const char* argv[]) {
     }
     file_writer.close();
     index_writer.close();
+
     var_dict.close();
 
     return 0;
