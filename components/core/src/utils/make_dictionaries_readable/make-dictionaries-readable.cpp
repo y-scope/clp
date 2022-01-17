@@ -1,9 +1,8 @@
 // C++ standard libraries
+#include <set>
 #include <string>
-#include <queue>
 // Boost libraries
 #include <boost/filesystem.hpp>
-
 // spdlog
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
@@ -85,15 +84,10 @@ int main (int argc, const char* argv[]) {
         file_writer.write_string(replace_characters("\n", "n", human_readable_value, true));
         file_writer.write_char('\n');
 
-        auto ids_set = entry.get_ids_of_segments_containing_entry();
-        std::priority_queue<uint64_t> id_queue;
-        for(auto id : ids_set){
-            id_queue.push(reinterpret_cast<uint64_t>(id));
-        }
-        while(!id_queue.empty()) {
-            std::string sorted_id_str = std::to_string(id_queue.top());
-            index_writer.write_string(sorted_id_str + " ");
-            id_queue.pop();
+        std::set<segment_id_t> segment_ids_set = entry.get_ids_of_segments_containing_entry();
+        // the ids_set is std::set which iterates id in ascending order
+        for (const auto segment_id : segment_ids_set) {
+            index_writer.write_string(std::to_string(segment_id) + " ");
         }
         index_writer.write_char('\n');
     }
@@ -119,15 +113,10 @@ int main (int argc, const char* argv[]) {
         file_writer.write_string(entry.get_value());
         file_writer.write_char('\n');
 
-        auto ids_set = entry.get_ids_of_segments_containing_entry();
-        std::priority_queue<uint64_t> id_queue;
-        for(auto id : ids_set){
-            id_queue.push(reinterpret_cast<uint64_t>(id));
-        }
-        while(!id_queue.empty()) {
-            std::string sorted_id_str = std::to_string(id_queue.top());
-            index_writer.write_string(sorted_id_str + " ");
-            id_queue.pop();
+        std::set<segment_id_t> segment_ids_set = entry.get_ids_of_segments_containing_entry();
+        // the ids_set is std::set which iterates id in ascending order
+        for (const auto segment_id : segment_ids_set) {
+            index_writer.write_string(std::to_string(segment_id) + " ");
         }
         index_writer.write_char('\n');
     }
