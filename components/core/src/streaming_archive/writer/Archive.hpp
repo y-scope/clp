@@ -18,7 +18,7 @@
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
 #include "../MetadataDB.hpp"
-#include "../../IDOccurrenceArray.hpp"
+#include "../../ArrayBackedPosIntSet.hpp"
 
 namespace streaming_archive { namespace writer {
     class Archive {
@@ -94,21 +94,19 @@ namespace streaming_archive { namespace writer {
 
         /**
          * Wrapper for streaming_archive::writer::File::close
-         * @param file File to close
          * @throw Same as streaming_archive::writer::File::close
          */
         void close_file ();
+
         bool is_file_open ();
 
         /**
          * Wrapper for streaming_archive::writer::File::change_ts_pattern
-         * @param file File to change timestamp pattern for
          * @param pattern
          */
         void change_ts_pattern (const TimestampPattern* pattern);
         /**
-         * Encodes and writes a message to the given file
-         * @param file
+         * Encodes and writes a message to the current encoded file
          * @param timestamp
          * @param message
          * @param num_uncompressed_bytes
@@ -137,8 +135,7 @@ namespace streaming_archive { namespace writer {
         void append_log_id_to_segment (logtype_dictionary_id_t log_id);
 
         /**
-         * Mark files ready for segment and it will be added to the segment at a convenient time.
-         * @param file
+         * Mark the encoded file ready for segment and it will be added to the segment at a convenient time.
          * @throw streaming_archive::writer::Archive::OperationFailed if failed the file is not tracked by the current archive
          * @throw Same as streaming_archive::writer::Archive::persist_file_metadata
          */
@@ -198,15 +195,14 @@ namespace streaming_archive { namespace writer {
 
         // Methods
         /**
-         * Append the given file to the given segment
-         * @param file
+         * Append the current encoded file to the given segment
          * @param segment
          * @param logtype_ids_in_segment
          * @param var_ids_in_segment
          * @param files_in_segment
          */
-        void append_file_to_segment (Segment& segment, IDOccurrenceArray<logtype_dictionary_id_t>& logtype_ids_in_segment,
-                                     IDOccurrenceArray<variable_dictionary_id_t>& var_ids_in_segment, std::vector<File*>& files_in_segment);
+        void append_file_to_segment (Segment& segment, ArrayBackedPosIntSet<logtype_dictionary_id_t>& logtype_ids_in_segment,
+                                     ArrayBackedPosIntSet<variable_dictionary_id_t>& var_ids_in_segment, std::vector<File*>& files_in_segment);
         /**
          * Writes the given files' metadata to the database using bulk writes
          * @param files
@@ -224,8 +220,8 @@ namespace streaming_archive { namespace writer {
          * @throw Same as streaming_archive::writer::Archive::persist_file_metadata
          */
         void close_segment_and_persist_file_metadata (Segment& segment, std::vector<File*>& files,
-                                                      IDOccurrenceArray<logtype_dictionary_id_t>& segment_logtype_ids,
-                                                      IDOccurrenceArray<variable_dictionary_id_t>& segment_var_ids);
+                                                      ArrayBackedPosIntSet<logtype_dictionary_id_t>& segment_logtype_ids,
+                                                      ArrayBackedPosIntSet<variable_dictionary_id_t>& segment_var_ids);
 
         /**
          * Gets the size of uncompressed data that has been compressed into the archive and will not be changed
@@ -269,7 +265,6 @@ namespace streaming_archive { namespace writer {
         boost::uuids::random_generator m_uuid_generator;
 
         file_id_t m_next_file_id;
-        std::unordered_set<File*> m_mutable_files;
         // Since we batch metadata persistence operations, we need to keep track of files whose metadata should be persisted
         // Accordingly:
         // - m_files_with_timestamps_in_segment contains files that 1) have been moved to an open segment and 2) contain timestamps
@@ -280,13 +275,13 @@ namespace streaming_archive { namespace writer {
 
         size_t m_target_segment_uncompressed_size;
         Segment m_segment_for_files_with_timestamps;
-        IDOccurrenceArray<logtype_dictionary_id_t> m_logtype_ids_in_segment_for_files_with_timestamps;
-        IDOccurrenceArray<variable_dictionary_id_t> m_var_ids_in_segment_for_files_with_timestamps;
+        ArrayBackedPosIntSet<logtype_dictionary_id_t> m_logtype_ids_in_segment_for_files_with_timestamps;
+        ArrayBackedPosIntSet<variable_dictionary_id_t> m_var_ids_in_segment_for_files_with_timestamps;
         std::unordered_set<variable_dictionary_id_t> m_var_ids_without_timestamps_temp_holder;
         std::unordered_set<logtype_dictionary_id_t> m_log_ids_without_timestamps_temp_holder;
         Segment m_segment_for_files_without_timestamps;
-        IDOccurrenceArray<logtype_dictionary_id_t> m_logtype_ids_in_segment_for_files_without_timestamps;
-        IDOccurrenceArray<variable_dictionary_id_t> m_var_ids_in_segment_for_files_without_timestamps;
+        ArrayBackedPosIntSet<logtype_dictionary_id_t> m_logtype_ids_in_segment_for_files_without_timestamps;
+        ArrayBackedPosIntSet<variable_dictionary_id_t> m_var_ids_in_segment_for_files_without_timestamps;
 
         size_t m_stable_uncompressed_size;
         size_t m_stable_size;

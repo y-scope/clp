@@ -33,13 +33,11 @@ using std::vector;
 
 namespace streaming_archive { namespace writer {
     Archive::~Archive () {
-        if (m_path.empty() == false || m_mutable_files.empty() == false || m_files_with_timestamps_in_segment.empty() == false ||
+        if (m_path.empty() == false || m_file != nullptr || m_files_with_timestamps_in_segment.empty() == false ||
                 m_files_without_timestamps_in_segment.empty() == false)
         {
             SPDLOG_ERROR("Archive not closed before being destroyed - data loss may occur");
-            for (auto file : m_mutable_files) {
-                delete file;
-            }
+            delete m_file;
             for (auto file : m_files_with_timestamps_in_segment) {
                 delete file;
             }
@@ -183,10 +181,9 @@ namespace streaming_archive { namespace writer {
     }
 
     void Archive::close () {
-        // Any mutable files should have been closed and persisted before closing the archive.
-        if (!m_mutable_files.empty()) {
-            SPDLOG_CRITICAL("Failed to close archive because {} mutable files have not been released.", m_mutable_files.size());
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+        // the file should have been closed and persisted before closing the archive.
+        if (m_file != nullptr) {
+            throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
         }
 
         // Close segments if necessary
@@ -209,10 +206,6 @@ namespace streaming_archive { namespace writer {
         m_logtype_dict.close();
         m_logtype_dict_entry.clear();
         m_var_dict.close();
-
-        if(m_file != nullptr) {
-            throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
-        }
 
         if (::close(m_segments_dir_fd) != 0) {
             // We've already fsynced, so this error shouldn't affect us. Therefore, just log it.
@@ -243,11 +236,10 @@ namespace streaming_archive { namespace writer {
     }
 
     void Archive::create_and_open_file (const string& path, const group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix) {
-        auto file = new File(m_uuid_generator(), orig_file_id, path, group_id, split_ix);
-        m_mutable_files.insert(file);
-        if(m_file != nullptr) {
-            throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
+        if (m_file != nullptr) {
+            throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
         }
+        auto file = new File(m_uuid_generator(), orig_file_id, path, group_id, split_ix);
         m_file = file;
         m_file->open();
     }
@@ -309,8 +301,8 @@ namespace streaming_archive { namespace writer {
         m_var_dict.write_header_and_flush_to_disk();
     }
 
-    void Archive::append_file_to_segment (Segment& segment, IDOccurrenceArray<logtype_dictionary_id_t>& logtype_ids_in_segment,
-                                          IDOccurrenceArray<variable_dictionary_id_t>& var_ids_in_segment, vector<File*>& files_in_segment)
+    void Archive::append_file_to_segment (Segment& segment, ArrayBackedPosIntSet<logtype_dictionary_id_t>& logtype_ids_in_segment,
+                                          ArrayBackedPosIntSet<variable_dictionary_id_t>& var_ids_in_segment, vector<File*>& files_in_segment)
     {
         if (!segment.is_open()) {
             segment.open(m_segments_dir_path, m_next_segment_id++, m_compression_level);
@@ -333,14 +325,6 @@ namespace streaming_archive { namespace writer {
      * 2) Given file lacks a timestamp, append to segment immediately
      */
     void Archive::mark_file_ready_for_segment () {
-        // Check if file actually exists in our tracked file container
-        if (m_mutable_files.count(m_file) == 0) {
-            SPDLOG_CRITICAL("Unable to mark a file ready for segment for file that is not tracked by the current archive");
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
-        }
-
-        // Remove file pointer visibility from outside of the archive
-        m_mutable_files.erase(m_file);
 
         if (m_file->has_ts_pattern()) {
             m_var_ids_in_segment_for_files_with_timestamps.insert_id_from_set(m_var_ids_without_timestamps_temp_holder);
@@ -375,8 +359,8 @@ namespace streaming_archive { namespace writer {
     }
 
     void Archive::close_segment_and_persist_file_metadata (Segment& segment, std::vector<File*>& files,
-                                                           IDOccurrenceArray<logtype_dictionary_id_t>& segment_logtype_ids,
-                                                           IDOccurrenceArray<variable_dictionary_id_t>& segment_var_ids)
+                                                           ArrayBackedPosIntSet<logtype_dictionary_id_t>& segment_logtype_ids,
+                                                           ArrayBackedPosIntSet<variable_dictionary_id_t>& segment_var_ids)
     {
         auto segment_id = segment.get_id();
         m_logtype_dict.index_segment(segment_id, segment_logtype_ids);

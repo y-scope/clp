@@ -16,7 +16,7 @@
 #include "FileWriter.hpp"
 #include "streaming_compression/zstd/Compressor.hpp"
 #include "TraceableException.hpp"
-#include "IDOccurrenceArray.hpp"
+#include "ArrayBackedPosIntSet.hpp"
 
 /**
  * Template class for performing operations on dictionaries and writing them to disk
@@ -73,7 +73,7 @@ public:
      * @param segment_id
      * @param ids
      */
-    void index_segment (segment_id_t segment_id, const IDOccurrenceArray<DictionaryIdType>& ids);
+    void index_segment (segment_id_t segment_id, const ArrayBackedPosIntSet<DictionaryIdType>& ids);
 
     /**
      * Gets the size of the dictionary when it is stored on disk
@@ -228,7 +228,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload (const std:
 }
 
 template <typename DictionaryIdType, typename EntryType>
-void DictionaryWriter<DictionaryIdType, EntryType>::index_segment (segment_id_t segment_id, const IDOccurrenceArray<DictionaryIdType>& ids) {
+void DictionaryWriter<DictionaryIdType, EntryType>::index_segment (segment_id_t segment_id, const ArrayBackedPosIntSet<DictionaryIdType>& ids) {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }

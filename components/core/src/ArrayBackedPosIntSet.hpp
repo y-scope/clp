@@ -1,13 +1,10 @@
-//
-// Created by haiqixu on 1/6/2022.
-//
-
-#ifndef IDOCCURRENCEARRAY_HPP
-#define IDOCCURRENCEARRAY_HPP
+#ifndef ARRAYBACKEDPOSINTSET_HPP
+#define ARRAYBACKEDPOSINTSET_HPP
 
 // C++ standard libraries
-#include <vector>
 #include <unordered_set>
+#include <vector>
+
 
 // spdlog
 #include <spdlog/spdlog.h>
@@ -22,29 +19,25 @@
 #define DEFAULT_CAPACITY 1024
 
 template<typename DictionaryIdType>
-class IDOccurrenceArray {
+class ArrayBackedPosIntSet {
 public:
-
     class OperationFailed : public TraceableException {
     public:
         // Constructors
         OperationFailed (ErrorCode error_code, const char* const filename, int line_number) : TraceableException(error_code, filename, line_number) {}
-
         // Methods
         const char* what () const
-
         noexcept override{
-                return "IDOccurrenceArray operation failed";
+                return "ArrayBackedPosIntSet operation failed";
         }
     };
-
     // Constructors
-    IDOccurrenceArray ();
+    ArrayBackedPosIntSet ();
 
-    explicit IDOccurrenceArray (size_t initial_capacity);
+    explicit ArrayBackedPosIntSet (size_t initial_capacity);
 
     // Destructors
-    ~IDOccurrenceArray () = default;
+    ~ArrayBackedPosIntSet () = default;
 
     // Methods
     /**
@@ -66,15 +59,15 @@ public:
     void reset ();
 
     /**
-     * Inserts all IDs from another IDOccurrenceArray
-     * into the caller IDOccurrenceArray object
-     * @param ids_occurrence_array
+     * Inserts all IDs from the given ArrayBackedPosIntSet
+     * into the caller ArrayBackedPosIntSet object
+     * @param array_backed_int_set
      */
-    void insert_id_from_array (const IDOccurrenceArray<DictionaryIdType>& ids_occurrence_array);
+    void insert_id_from_array (const ArrayBackedPosIntSet<DictionaryIdType>& array_backed_int_set);
 
     /**
      * Inserts all IDs from an unordered_set
-     * into the caller IDOccurrenceArray object
+     * into the caller ArrayBackedPosIntSet object
      * @param ids_set
      */
     void insert_id_from_set (const std::unordered_set <DictionaryIdType>& ids_set);
@@ -106,19 +99,19 @@ private:
 };
 
 template<typename DictionaryIdType>
-IDOccurrenceArray<DictionaryIdType>::IDOccurrenceArray () {
+ArrayBackedPosIntSet<DictionaryIdType>::ArrayBackedPosIntSet () {
     m_initial_capacity = DEFAULT_CAPACITY;
     reset();
 }
 
 template<typename DictionaryIdType>
-IDOccurrenceArray<DictionaryIdType>::IDOccurrenceArray (size_t initial_capacity) {
+ArrayBackedPosIntSet<DictionaryIdType>::ArrayBackedPosIntSet (size_t initial_capacity) {
     m_initial_capacity = initial_capacity;
     reset();
 }
 
 template<typename DictionaryIdType>
-void IDOccurrenceArray<DictionaryIdType>::reset () {
+void ArrayBackedPosIntSet<DictionaryIdType>::reset () {
     m_data.clear();
     m_data.resize(m_initial_capacity, false);
     m_num_ids = 0;
@@ -126,7 +119,7 @@ void IDOccurrenceArray<DictionaryIdType>::reset () {
 }
 
 template<typename DictionaryIdType>
-void IDOccurrenceArray<DictionaryIdType>::insert_id (DictionaryIdType id) {
+void ArrayBackedPosIntSet<DictionaryIdType>::insert_id (DictionaryIdType id) {
 
     if (id >= m_data.size()) {
         increase_capacity(id);
@@ -143,7 +136,7 @@ void IDOccurrenceArray<DictionaryIdType>::insert_id (DictionaryIdType id) {
 }
 
 template<typename DictionaryIdType>
-void IDOccurrenceArray<DictionaryIdType>::increase_capacity (size_t id) {
+void ArrayBackedPosIntSet<DictionaryIdType>::increase_capacity (size_t id) {
     if (id < m_data.size()) {
         SPDLOG_ERROR("Calling increase_capacity on IDs smaller than capacity.");
         throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
@@ -160,10 +153,10 @@ void IDOccurrenceArray<DictionaryIdType>::increase_capacity (size_t id) {
 }
 
 template<typename DictionaryIdType>
-void IDOccurrenceArray<DictionaryIdType>::insert_id_from_array (const IDOccurrenceArray<DictionaryIdType>& ids_occurrence_array) {
+void ArrayBackedPosIntSet<DictionaryIdType>::insert_id_from_array (const ArrayBackedPosIntSet<DictionaryIdType>& array_backed_int_set) {
 
-    auto input_data_array = ids_occurrence_array.m_data;
-    size_t input_max_id = ids_occurrence_array.m_largest_id;
+    auto input_data_array = array_backed_int_set.m_data;
+    size_t input_max_id = array_backed_int_set.m_largest_id;
     // increase size of the boolean array if needed
     if (input_max_id >= m_data.size()) {
         increase_capacity(input_max_id);
@@ -184,14 +177,14 @@ void IDOccurrenceArray<DictionaryIdType>::insert_id_from_array (const IDOccurren
 }
 
 template<typename DictionaryIdType>
-void IDOccurrenceArray<DictionaryIdType>::insert_id_from_set (const std::unordered_set <DictionaryIdType>& ids_set) {
+void ArrayBackedPosIntSet<DictionaryIdType>::insert_id_from_set (const std::unordered_set <DictionaryIdType>& ids_set) {
     for (const DictionaryIdType id: ids_set) {
         insert_id(id);
     }
 }
 
 template<typename DictionaryIdType>
-void IDOccurrenceArray<DictionaryIdType>::write_to_compressor (streaming_compression::zstd::Compressor& segment_index_compressor) const {
+void ArrayBackedPosIntSet<DictionaryIdType>::write_to_compressor (streaming_compression::zstd::Compressor& segment_index_compressor) const {
 
     for (size_t id = 0; id <= m_largest_id; id++) {
         if (m_data[id]) {
@@ -200,4 +193,4 @@ void IDOccurrenceArray<DictionaryIdType>::write_to_compressor (streaming_compres
     }
 }
 
-#endif //IDOCCURRENCEARRAY_HPP
+#endif //ARRAYBACKEDPOSINTSET_HPP
