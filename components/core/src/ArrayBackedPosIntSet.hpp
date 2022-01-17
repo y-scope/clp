@@ -15,8 +15,8 @@
 #include "TraceableException.hpp"
 
 // Constant
-#define MAX_CAPACITY 2147483648
 #define DEFAULT_CAPACITY 1024
+#define MAX_CAPACITY 2147483648
 
 template<typename DictionaryIdType>
 class ArrayBackedPosIntSet {
@@ -27,7 +27,7 @@ public:
         OperationFailed (ErrorCode error_code, const char* const filename, int line_number) : TraceableException(error_code, filename, line_number) {}
         // Methods
         const char* what () const
-        noexcept override{
+        noexcept override {
                 return "ArrayBackedPosIntSet operation failed";
         }
     };

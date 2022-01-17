@@ -13,12 +13,12 @@
 #include <boost/uuid/uuid.hpp>
 
 // Project headers
+#include "../../ArrayBackedPosIntSet.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../GlobalMetadataDB.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
 #include "../MetadataDB.hpp"
-#include "../../ArrayBackedPosIntSet.hpp"
 
 namespace streaming_archive { namespace writer {
     class Archive {
@@ -83,7 +83,7 @@ namespace streaming_archive { namespace writer {
         void close ();
 
         /**
-         * Creates a file with the given path
+         * Creates and opens a file with the given path
          * @param path
          * @param group_id
          * @param orig_file_id
@@ -123,7 +123,7 @@ namespace streaming_archive { namespace writer {
         void write_dir_snapshot ();
 
         /**
-         * Adds variable ids from the input vector into the current segment
+         * Adds variable ids from the given vector into the current segment
          * @param var_ids
          */
         void append_var_ids_to_segment (const std::vector <variable_dictionary_id_t>& var_ids);
@@ -154,7 +154,7 @@ namespace streaming_archive { namespace writer {
         size_t get_data_size_of_dictionaries () const { return m_logtype_dict.get_data_size() + m_var_dict.get_data_size(); }
 
         /**
-         * Methods to get and set the status of file being compressed
+         * Methods to get and set the status of the current encoded file
          */
         size_t get_encoded_file_size_in_bytes () const { return m_file->get_encoded_size_in_bytes(); };
         const boost::uuids::uuid& get_orig_file_id () const { return m_file->get_orig_file_id(); };

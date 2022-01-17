@@ -11,12 +11,12 @@
 #include <spdlog/spdlog.h>
 
 // Project headers
+#include "ArrayBackedPosIntSet.hpp"
 #include "Defs.h"
 #include "dictionary_utils.hpp"
 #include "FileWriter.hpp"
 #include "streaming_compression/zstd/Compressor.hpp"
 #include "TraceableException.hpp"
-#include "ArrayBackedPosIntSet.hpp"
 
 /**
  * Template class for performing operations on dictionaries and writing them to disk
