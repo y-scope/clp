@@ -190,14 +190,14 @@ namespace streaming_archive { namespace writer {
         if (m_segment_for_files_with_timestamps.is_open()) {
             close_segment_and_persist_file_metadata(m_segment_for_files_with_timestamps, m_files_with_timestamps_in_segment,
                                                     m_logtype_ids_in_segment_for_files_with_timestamps, m_var_ids_in_segment_for_files_with_timestamps);
-            m_logtype_ids_in_segment_for_files_with_timestamps.reset();
-            m_var_ids_in_segment_for_files_with_timestamps.reset();
+            m_logtype_ids_in_segment_for_files_with_timestamps.clear();
+            m_var_ids_in_segment_for_files_with_timestamps.clear();
         }
         if (m_segment_for_files_without_timestamps.is_open()) {
             close_segment_and_persist_file_metadata(m_segment_for_files_without_timestamps, m_files_without_timestamps_in_segment,
                                                     m_logtype_ids_in_segment_for_files_without_timestamps, m_var_ids_in_segment_for_files_without_timestamps);
-            m_logtype_ids_in_segment_for_files_without_timestamps.reset();
-            m_var_ids_in_segment_for_files_without_timestamps.reset();
+            m_logtype_ids_in_segment_for_files_without_timestamps.clear();
+            m_var_ids_in_segment_for_files_without_timestamps.clear();
         }
 
         // Persist all metadata including dictionaries
@@ -258,7 +258,7 @@ namespace streaming_archive { namespace writer {
 
     void Archive::append_log_id_to_segment(const logtype_dictionary_id_t log_id) {
         if (m_file->has_ts_pattern()) {
-            m_logtype_ids_in_segment_for_files_with_timestamps.insert_id(log_id);
+            m_logtype_ids_in_segment_for_files_with_timestamps.insert(log_id);
         } else {
             m_log_ids_without_timestamps_temp_holder.insert(log_id);
         }
@@ -266,13 +266,9 @@ namespace streaming_archive { namespace writer {
 
     void Archive::append_var_ids_to_segment(const std::vector<variable_dictionary_id_t>& var_ids) {
         if (m_file->has_ts_pattern()) {
-            for(auto id : var_ids){
-                m_var_ids_in_segment_for_files_with_timestamps.insert_id(id);
-            }
+            m_var_ids_in_segment_for_files_with_timestamps.insert_all(var_ids);
         } else {
-            for(auto id : var_ids){
-                m_var_ids_without_timestamps_temp_holder.insert(id);
-            }
+            m_var_ids_without_timestamps_temp_holder.insert(var_ids.cbegin(), var_ids.cend());
         }
     }
 
@@ -314,8 +310,8 @@ namespace streaming_archive { namespace writer {
         // Close current segment if its uncompressed size is greater than the target
         if (segment.get_uncompressed_size() >= m_target_segment_uncompressed_size) {
             close_segment_and_persist_file_metadata(segment, files_in_segment, logtype_ids_in_segment, var_ids_in_segment);
-            logtype_ids_in_segment.reset();
-            var_ids_in_segment.reset();
+            logtype_ids_in_segment.clear();
+            var_ids_in_segment.clear();
         }
     }
 
@@ -327,13 +323,13 @@ namespace streaming_archive { namespace writer {
     void Archive::mark_file_ready_for_segment () {
 
         if (m_file->has_ts_pattern()) {
-            m_var_ids_in_segment_for_files_with_timestamps.insert_id_from_set(m_var_ids_without_timestamps_temp_holder);
-            m_logtype_ids_in_segment_for_files_with_timestamps.insert_id_from_set(m_log_ids_without_timestamps_temp_holder);
+            m_var_ids_in_segment_for_files_with_timestamps.insert_all(m_var_ids_without_timestamps_temp_holder);
+            m_logtype_ids_in_segment_for_files_with_timestamps.insert_all(m_log_ids_without_timestamps_temp_holder);
             append_file_to_segment(m_segment_for_files_with_timestamps, m_logtype_ids_in_segment_for_files_with_timestamps,
                                    m_var_ids_in_segment_for_files_with_timestamps, m_files_with_timestamps_in_segment);
         } else {
-            m_var_ids_in_segment_for_files_without_timestamps.insert_id_from_set(m_var_ids_without_timestamps_temp_holder);
-            m_logtype_ids_in_segment_for_files_without_timestamps.insert_id_from_set(m_log_ids_without_timestamps_temp_holder);
+            m_var_ids_in_segment_for_files_without_timestamps.insert_all(m_var_ids_without_timestamps_temp_holder);
+            m_logtype_ids_in_segment_for_files_without_timestamps.insert_all(m_log_ids_without_timestamps_temp_holder);
             append_file_to_segment(m_segment_for_files_without_timestamps, m_logtype_ids_in_segment_for_files_without_timestamps,
                                    m_var_ids_in_segment_for_files_without_timestamps, m_files_without_timestamps_in_segment);
         }

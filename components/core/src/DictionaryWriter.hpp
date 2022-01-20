@@ -236,7 +236,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::index_segment (segment_id_t 
     m_segment_index_compressor.write_numeric_value(segment_id);
 
     // NOTE: The IDs in `ids` are not validated to exist in this dictionary since we perform validation when loading the dictionary.
-    m_segment_index_compressor.write_numeric_value<uint64_t>(ids.num_ids());
+    m_segment_index_compressor.write_numeric_value<uint64_t>(ids.size());
     ids.write_to_compressor(m_segment_index_compressor);
 
     ++m_num_segments_in_index;
