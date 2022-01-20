@@ -180,9 +180,9 @@ namespace clp {
         return all_paths_exist;
     }
 
-    void close_file_and_mark_ready_for_segment (streaming_archive::writer::Archive& archive_writer) {
+    void close_file_and_append_to_segment (streaming_archive::writer::Archive& archive_writer) {
         archive_writer.get_file().close();
-        archive_writer.mark_file_ready_for_segment();
+        archive_writer.append_file_to_segment();
     }
 
     void split_archive (streaming_archive::writer::Archive::UserConfig& archive_user_config, streaming_archive::writer::Archive& archive_writer) {
@@ -198,7 +198,7 @@ namespace clp {
         auto orig_file_id = archive_writer.get_orig_file_id();
         auto split_ix = archive_writer.get_file_split_ix();
         archive_writer.set_file_is_split(true);
-        close_file_and_mark_ready_for_segment(archive_writer);
+        close_file_and_append_to_segment(archive_writer);
 
         archive_writer.create_and_open_file(path_for_compression, group_id, orig_file_id, ++split_ix);
         // Initialize the file's timestamp pattern to the previous split's pattern
@@ -211,7 +211,7 @@ namespace clp {
         auto orig_file_id = archive_writer.get_orig_file_id();
         auto split_ix = archive_writer.get_file_split_ix();
         archive_writer.set_file_is_split(true);
-        close_file_and_mark_ready_for_segment(archive_writer);
+        close_file_and_append_to_segment(archive_writer);
 
         split_archive(archive_user_config, archive_writer);
 

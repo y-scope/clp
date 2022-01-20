@@ -60,10 +60,10 @@ namespace clp {
     bool validate_paths_exist (const std::vector<std::string>& paths);
 
     /**
-     * Closes the encoded file in the given archive and marks it ready for a segment
+     * Closes the encoded file in the given archive and append it to the segment
      * @param archive
      */
-    void close_file_and_mark_ready_for_segment (streaming_archive::writer::Archive& archive);
+    void close_file_and_append_to_segment (streaming_archive::writer::Archive& archive);
 
     /**
      * Closes the current archive and starts a new one

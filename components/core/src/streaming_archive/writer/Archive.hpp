@@ -117,11 +117,11 @@ namespace streaming_archive { namespace writer {
         void write_dir_snapshot ();
 
         /**
-         * Mark the encoded file ready for segment and it will be added to the segment at a convenient time.
+         * Adds the encoded file to the segment.
          * @throw streaming_archive::writer::Archive::OperationFailed if failed the file is not tracked by the current archive
          * @throw Same as streaming_archive::writer::Archive::persist_file_metadata
          */
-        void mark_file_ready_for_segment ();
+        void append_file_to_segment ();
 
         /**
          * Adds empty directories to the archive
@@ -177,14 +177,14 @@ namespace streaming_archive { namespace writer {
 
         // Methods
         /**
-         * Appends the current encoded file to the given segment
+         * Appends the content of the current encoded file to the given segment
          * @param segment
          * @param logtype_ids_in_segment
          * @param var_ids_in_segment
          * @param files_in_segment
          */
-        void append_file_to_segment (Segment& segment, ArrayBackedPosIntSet<logtype_dictionary_id_t>& logtype_ids_in_segment,
-                                     ArrayBackedPosIntSet<variable_dictionary_id_t>& var_ids_in_segment, std::vector<File*>& files_in_segment);
+        void append_file_contents_to_segment (Segment& segment, ArrayBackedPosIntSet<logtype_dictionary_id_t>& logtype_ids_in_segment,
+                                              ArrayBackedPosIntSet<variable_dictionary_id_t>& var_ids_in_segment, std::vector<File*>& files_in_segment);
         /**
          * Writes the given files' metadata to the database using bulk writes
          * @param files

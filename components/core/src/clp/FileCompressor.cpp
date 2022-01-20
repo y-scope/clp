@@ -142,7 +142,7 @@ namespace clp {
             write_message_to_encoded_file(m_parsed_message, archive_writer);
         }
 
-        close_file_and_mark_ready_for_segment(archive_writer);
+        close_file_and_append_to_segment(archive_writer);
     }
 
     bool FileCompressor::try_compressing_as_archive (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
