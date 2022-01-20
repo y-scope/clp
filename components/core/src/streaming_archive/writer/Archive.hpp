@@ -92,13 +92,7 @@ namespace streaming_archive { namespace writer {
          */
         void create_and_open_file (const std::string& path, group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix);
 
-        /**
-         * Wrapper for streaming_archive::writer::File::close
-         * @throw Same as streaming_archive::writer::File::close
-         */
-        void close_file ();
-
-        bool is_file_open ();
+        File& get_file () const { return *m_file; }
 
         /**
          * Wrapper for streaming_archive::writer::File::change_ts_pattern
@@ -121,18 +115,6 @@ namespace streaming_archive { namespace writer {
          * @throw Same as streaming_archive::writer::Archive::persist_file_metadata
          */
         void write_dir_snapshot ();
-
-        /**
-         * Adds variable ids from the given vector into the current segment
-         * @param var_ids
-         */
-        void append_var_ids_to_segment (const std::vector <variable_dictionary_id_t>& var_ids);
-
-        /**
-         * Writes a single log id into the current segment
-         * @param log_id
-         */
-        void append_log_id_to_segment (logtype_dictionary_id_t log_id);
 
         /**
          * Mark the encoded file ready for segment and it will be added to the segment at a convenient time.
@@ -195,7 +177,7 @@ namespace streaming_archive { namespace writer {
 
         // Methods
         /**
-         * Append the current encoded file to the given segment
+         * Appends the current encoded file to the given segment
          * @param segment
          * @param logtype_ids_in_segment
          * @param var_ids_in_segment
@@ -277,8 +259,9 @@ namespace streaming_archive { namespace writer {
         Segment m_segment_for_files_with_timestamps;
         ArrayBackedPosIntSet<logtype_dictionary_id_t> m_logtype_ids_in_segment_for_files_with_timestamps;
         ArrayBackedPosIntSet<variable_dictionary_id_t> m_var_ids_in_segment_for_files_with_timestamps;
-        std::unordered_set<variable_dictionary_id_t> m_var_ids_without_timestamps_temp_holder;
-        std::unordered_set<logtype_dictionary_id_t> m_log_ids_without_timestamps_temp_holder;
+        // Logtype and variable IDs for a file that hasn't yet been assigned to the timestamp or timestamp-less segment
+        std::unordered_set<logtype_dictionary_id_t> m_log_ids_for_file_with_unassigned_segment;
+        std::unordered_set<variable_dictionary_id_t> m_var_ids_for_file_with_unassigned_segment;
         Segment m_segment_for_files_without_timestamps;
         ArrayBackedPosIntSet<logtype_dictionary_id_t> m_logtype_ids_in_segment_for_files_without_timestamps;
         ArrayBackedPosIntSet<variable_dictionary_id_t> m_var_ids_in_segment_for_files_without_timestamps;

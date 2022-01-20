@@ -73,8 +73,8 @@ public:
 private:
     // Methods
     /**
-     * increase the capacity of the bool array so that
-     * the given value becomes an valid index in the array.
+     * Increases the capacity of the bool array so that
+     * the given value becomes an valid index in the array
      * @param value
      */
     void increase_capacity (size_t value);
@@ -109,7 +109,7 @@ void ArrayBackedPosIntSet<PosIntType>::insert (PosIntType value) {
         increase_capacity(value);
     }
 
-    // if the value is not already in the set
+    // Adds the value if it is not already in the set
     if (false == m_data[value]) {
         m_data[value] = true;
         m_size++;
@@ -131,14 +131,14 @@ void ArrayBackedPosIntSet<PosIntType>::clear () {
 
 template<typename PosIntType>
 void ArrayBackedPosIntSet<PosIntType>::insert_all (const ArrayBackedPosIntSet<PosIntType>& input_set) {
-    auto input_set_data = input_set.m_data;
-    size_t input_set_largest_value = input_set.m_largest_value;
     // increase capacity if necessary
+    size_t input_set_largest_value = input_set.m_largest_value;
     if (input_set_largest_value >= m_data.size()) {
         increase_capacity(input_set_largest_value);
     }
 
     // Copy values from the input set
+    auto input_set_data = input_set.m_data;
     for (auto value = 0; value <= input_set_largest_value; ++value) {
         // Add a value only if
         // - doesn't exist in this set

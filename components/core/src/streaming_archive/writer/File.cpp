@@ -16,8 +16,7 @@ namespace streaming_archive { namespace writer {
         m_is_open = true;
     }
 
-    void File::append_to_segment (const LogTypeDictionaryWriter& logtype_dict, Segment& segment)
-    {
+    void File::append_to_segment (const LogTypeDictionaryWriter& logtype_dict, Segment& segment) {
         if (m_is_open) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }

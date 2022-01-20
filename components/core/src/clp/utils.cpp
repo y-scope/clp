@@ -181,7 +181,7 @@ namespace clp {
     }
 
     void close_file_and_mark_ready_for_segment (streaming_archive::writer::Archive& archive_writer) {
-        archive_writer.close_file();
+        archive_writer.get_file().close();
         archive_writer.mark_file_ready_for_segment();
     }
 
