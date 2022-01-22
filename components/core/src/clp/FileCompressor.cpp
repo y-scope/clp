@@ -124,7 +124,7 @@ namespace clp {
         while (m_message_parser.parse_next_message(false, m_utf8_validation_buf_length, m_utf8_validation_buf, buf_pos, m_parsed_message)) {
             if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
                 split_file_and_archive(archive_user_config, path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer);
-            } else if (archive_writer.get_encoded_file_size_in_bytes() >= target_encoded_file_size) {
+            } else if (archive_writer.get_file().get_encoded_size_in_bytes() >= target_encoded_file_size) {
                 split_file(path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer);
             }
 
@@ -135,7 +135,7 @@ namespace clp {
         while (m_message_parser.parse_next_message(true, reader, m_parsed_message)) {
             if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
                 split_file_and_archive(archive_user_config, path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer);
-            } else if (archive_writer.get_encoded_file_size_in_bytes() >= target_encoded_file_size) {
+            } else if (archive_writer.get_file().get_encoded_size_in_bytes() >= target_encoded_file_size) {
                 split_file(path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer);
             }
 

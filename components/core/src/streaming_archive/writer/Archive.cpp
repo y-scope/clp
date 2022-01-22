@@ -299,12 +299,7 @@ namespace streaming_archive { namespace writer {
             var_ids_in_segment.clear();
         }
     }
-
-    /**
-     * There are two data paths after the file is marked ready for a segment
-     * 1) Given file has a timestamp, so append to segment only if enough files are buffered
-     * 2) Given file lacks a timestamp, append to segment immediately
-     */
+    
     void Archive::append_file_to_segment () {
         if (m_file == nullptr) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);

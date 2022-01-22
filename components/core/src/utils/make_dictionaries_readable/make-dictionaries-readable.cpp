@@ -87,7 +87,7 @@ int main (int argc, const char* argv[]) {
         file_writer.write_string(replace_characters("\n", "n", human_readable_value, true));
         file_writer.write_char('\n');
 
-        std::set<segment_id_t> segment_ids = entry.get_ids_of_segments_containing_entry();
+        const std::set<segment_id_t>& segment_ids = entry.get_ids_of_segments_containing_entry();
         // Segment_Ids is a std::set, which iterates the IDs in ascending order
         for (auto segment_id : segment_ids) {
             index_writer.write_string(std::to_string(segment_id) + " ");
@@ -117,7 +117,7 @@ int main (int argc, const char* argv[]) {
         file_writer.write_string(entry.get_value());
         file_writer.write_char('\n');
 
-        std::set<segment_id_t> segment_ids_set = entry.get_ids_of_segments_containing_entry();
+        const std::set<segment_id_t>& segment_ids_set = entry.get_ids_of_segments_containing_entry();
         // Segment_Ids is a std::set, which iterates the IDs in ascending order
         for (auto segment_id : segment_ids_set) {
             index_writer.write_string(std::to_string(segment_id) + " ");

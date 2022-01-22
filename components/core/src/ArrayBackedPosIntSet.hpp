@@ -109,12 +109,12 @@ void ArrayBackedPosIntSet<PosIntType>::insert (PosIntType value) {
         increase_capacity(value);
     }
 
-    // Adds the value if it is not already in the set
+    // Add the value if it is not already in the set
     if (false == m_data[value]) {
         m_data[value] = true;
         m_size++;
 
-        // update the largest value if necessary
+        // Update the largest value if necessary
         if (value > m_largest_value) {
             m_largest_value = value;
         }
