@@ -182,7 +182,7 @@ namespace streaming_archive { namespace writer {
     }
 
     void Archive::close () {
-        // the file should have been closed and persisted before closing the archive.
+        // The file should have been closed and persisted before closing the archive.
         if (m_file != nullptr) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
