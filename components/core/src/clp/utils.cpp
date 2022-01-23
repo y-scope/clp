@@ -181,7 +181,7 @@ namespace clp {
     }
 
     void close_file_and_append_to_segment (streaming_archive::writer::Archive& archive_writer) {
-        archive_writer.get_file().close();
+        archive_writer.close_file();
         archive_writer.append_file_to_segment();
     }
 
@@ -196,7 +196,7 @@ namespace clp {
                      streaming_archive::writer::Archive& archive_writer)
     {
         const auto& encoded_file = archive_writer.get_file();
-        auto orig_file_id = encoded_file.get_orig_file_id();
+        const auto& orig_file_id = encoded_file.get_orig_file_id();
         auto split_ix = encoded_file.get_split_ix();
         archive_writer.set_file_is_split(true);
         close_file_and_append_to_segment(archive_writer);

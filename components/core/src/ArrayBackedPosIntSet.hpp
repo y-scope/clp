@@ -13,6 +13,10 @@
 #include "streaming_compression/zstd/Compressor.hpp"
 #include "TraceableException.hpp"
 
+/**
+ * Template class of set implemented with vector<bool> for continuously increasing numeric value
+ * @tparam PosIntType
+ */
 template<typename PosIntType>
 class ArrayBackedPosIntSet {
 public:
@@ -39,12 +43,12 @@ public:
      */
     size_t size () const { return m_size; }
 
-    void insert (PosIntType value);
-
     /**
      * Clears the set and restores its initial capacity
      */
     void clear ();
+
+    void insert (PosIntType value);
 
     /**
      * Inserts all values from the given set
@@ -74,7 +78,7 @@ private:
     // Methods
     /**
      * Increases the capacity of the bool array so that
-     * the given value becomes an valid index in the array
+     * the given value becomes a valid index in the array
      * @param value
      */
     void increase_capacity (size_t value);
@@ -104,6 +108,14 @@ ArrayBackedPosIntSet<PosIntType>::ArrayBackedPosIntSet (size_t initial_capacity)
 }
 
 template<typename PosIntType>
+void ArrayBackedPosIntSet<PosIntType>::clear () {
+    m_data.clear();
+    m_data.resize(m_initial_capacity, false);
+    m_size = 0;
+    m_largest_value = 0;
+}
+
+template<typename PosIntType>
 void ArrayBackedPosIntSet<PosIntType>::insert (PosIntType value) {
     if (value >= m_data.size()) {
         increase_capacity(value);
@@ -122,16 +134,8 @@ void ArrayBackedPosIntSet<PosIntType>::insert (PosIntType value) {
 }
 
 template<typename PosIntType>
-void ArrayBackedPosIntSet<PosIntType>::clear () {
-    m_data.clear();
-    m_data.resize(m_initial_capacity, false);
-    m_size = 0;
-    m_largest_value = 0;
-}
-
-template<typename PosIntType>
 void ArrayBackedPosIntSet<PosIntType>::insert_all (const ArrayBackedPosIntSet<PosIntType>& input_set) {
-    // increase capacity if necessary
+    // Increase capacity if necessary
     size_t input_set_largest_value = input_set.m_largest_value;
     if (input_set_largest_value >= m_data.size()) {
         increase_capacity(input_set_largest_value);
@@ -151,7 +155,7 @@ void ArrayBackedPosIntSet<PosIntType>::insert_all (const ArrayBackedPosIntSet<Po
 
     // Update the largest value if necessary
     if (input_set_largest_value > m_largest_value) {
-        m_size = input_set_largest_value;
+        m_largest_value = input_set_largest_value;
     }
 }
 

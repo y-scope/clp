@@ -92,7 +92,15 @@ namespace streaming_archive { namespace writer {
          */
         void create_and_open_file (const std::string& path, group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix);
 
-        File& get_file () const { return *m_file; }
+        void close_file ();
+
+        const File& get_file () const;
+
+        /**
+         * Sets the split status of the current encoded file
+         * @param is_split
+         */
+        void set_file_is_split (bool is_split);
 
         /**
          * Wrapper for streaming_archive::writer::File::change_ts_pattern
@@ -134,12 +142,6 @@ namespace streaming_archive { namespace writer {
         const std::string& get_id_as_string () const { return m_id_as_string; }
 
         size_t get_data_size_of_dictionaries () const { return m_logtype_dict.get_data_size() + m_var_dict.get_data_size(); }
-
-        /**
-         * Sets the split status of the current encoded file
-         * @param is_split
-         */
-        void set_file_is_split (bool is_split) { m_file->set_is_split(is_split); };
 
     private:
         // Types
@@ -258,7 +260,7 @@ namespace streaming_archive { namespace writer {
         ArrayBackedPosIntSet<logtype_dictionary_id_t> m_logtype_ids_in_segment_for_files_with_timestamps;
         ArrayBackedPosIntSet<variable_dictionary_id_t> m_var_ids_in_segment_for_files_with_timestamps;
         // Logtype and variable IDs for a file that hasn't yet been assigned to the timestamp or timestamp-less segment
-        std::unordered_set<logtype_dictionary_id_t> m_log_ids_for_file_with_unassigned_segment;
+        std::unordered_set<logtype_dictionary_id_t> m_logtype_ids_for_file_with_unassigned_segment;
         std::unordered_set<variable_dictionary_id_t> m_var_ids_for_file_with_unassigned_segment;
         Segment m_segment_for_files_without_timestamps;
         ArrayBackedPosIntSet<logtype_dictionary_id_t> m_logtype_ids_in_segment_for_files_without_timestamps;

@@ -244,6 +244,27 @@ namespace streaming_archive { namespace writer {
         m_file->open();
     }
 
+    void Archive::close_file () {
+        if (m_file == nullptr) {
+            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+        }
+        m_file->close();
+    }
+
+    const File& Archive::get_file () const {
+        if (m_file == nullptr) {
+            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+        }
+        return *m_file;
+    }
+
+    void Archive::set_file_is_split (bool is_split) {
+        if (m_file == nullptr) {
+            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+        }
+        m_file->set_is_split(is_split);
+    }
+
     void Archive::change_ts_pattern (const TimestampPattern* pattern) {
         m_file->change_ts_pattern(pattern);
     }
@@ -263,7 +284,7 @@ namespace streaming_archive { namespace writer {
             m_logtype_ids_in_segment_for_files_with_timestamps.insert(logtype_id);
             m_var_ids_in_segment_for_files_with_timestamps.insert_all(var_ids);
         } else {
-            m_log_ids_for_file_with_unassigned_segment.insert(logtype_id);
+            m_logtype_ids_for_file_with_unassigned_segment.insert(logtype_id);
             m_var_ids_for_file_with_unassigned_segment.insert(var_ids.cbegin(), var_ids.cend());
         }
     }
@@ -299,24 +320,24 @@ namespace streaming_archive { namespace writer {
             var_ids_in_segment.clear();
         }
     }
-    
+
     void Archive::append_file_to_segment () {
         if (m_file == nullptr) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
 
         if (m_file->has_ts_pattern()) {
-            m_logtype_ids_in_segment_for_files_with_timestamps.insert_all(m_log_ids_for_file_with_unassigned_segment);
+            m_logtype_ids_in_segment_for_files_with_timestamps.insert_all(m_logtype_ids_for_file_with_unassigned_segment);
             m_var_ids_in_segment_for_files_with_timestamps.insert_all(m_var_ids_for_file_with_unassigned_segment);
             append_file_contents_to_segment(m_segment_for_files_with_timestamps, m_logtype_ids_in_segment_for_files_with_timestamps,
                                             m_var_ids_in_segment_for_files_with_timestamps, m_files_with_timestamps_in_segment);
         } else {
-            m_logtype_ids_in_segment_for_files_without_timestamps.insert_all(m_log_ids_for_file_with_unassigned_segment);
+            m_logtype_ids_in_segment_for_files_without_timestamps.insert_all(m_logtype_ids_for_file_with_unassigned_segment);
             m_var_ids_in_segment_for_files_without_timestamps.insert_all(m_var_ids_for_file_with_unassigned_segment);
             append_file_contents_to_segment(m_segment_for_files_without_timestamps, m_logtype_ids_in_segment_for_files_without_timestamps,
                                             m_var_ids_in_segment_for_files_without_timestamps, m_files_without_timestamps_in_segment);
         }
-        m_log_ids_for_file_with_unassigned_segment.clear();
+        m_logtype_ids_for_file_with_unassigned_segment.clear();
         m_var_ids_for_file_with_unassigned_segment.clear();
         // Make sure file pointer is nulled and cannot be accessed outside
         m_file = nullptr;
