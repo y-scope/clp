@@ -266,6 +266,9 @@ namespace streaming_archive { namespace writer {
     }
 
     void Archive::change_ts_pattern (const TimestampPattern* pattern) {
+        if (m_file == nullptr) {
+            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+        }
         m_file->change_ts_pattern(pattern);
     }
 
