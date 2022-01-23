@@ -57,7 +57,7 @@ int main (int argc, const char* argv[]) {
     readable_logtype_dict_path += ".hr";
     readable_logtype_segment_index_path  += ".hr";
     file_writer.open(readable_logtype_dict_path.string(), FileWriter::OpenMode::CREATE_FOR_WRITING);
-    index_writer.open(readable_logtype_segment_index_path .string(), FileWriter::OpenMode::CREATE_FOR_WRITING);
+    index_writer.open(readable_logtype_segment_index_path.string(), FileWriter::OpenMode::CREATE_FOR_WRITING);
     string human_readable_value;
     for (const auto& entry : logtype_dict.get_entries()) {
         const auto& value = entry.get_value();
@@ -88,7 +88,7 @@ int main (int argc, const char* argv[]) {
         file_writer.write_char('\n');
 
         const std::set<segment_id_t>& segment_ids = entry.get_ids_of_segments_containing_entry();
-        // Segment_Ids is a std::set, which iterates the IDs in ascending order
+        // segment_Ids is a std::set, which iterates the IDs in ascending order
         for (auto segment_id : segment_ids) {
             index_writer.write_string(std::to_string(segment_id) + " ");
         }
@@ -117,9 +117,9 @@ int main (int argc, const char* argv[]) {
         file_writer.write_string(entry.get_value());
         file_writer.write_char('\n');
 
-        const std::set<segment_id_t>& segment_ids_set = entry.get_ids_of_segments_containing_entry();
-        // Segment_Ids is a std::set, which iterates the IDs in ascending order
-        for (auto segment_id : segment_ids_set) {
+        const std::set<segment_id_t>& segment_ids = entry.get_ids_of_segments_containing_entry();
+        // segment_Ids is a std::set, which iterates the IDs in ascending order
+        for (auto segment_id : segment_ids) {
             index_writer.write_string(std::to_string(segment_id) + " ");
         }
         index_writer.write_char('\n');

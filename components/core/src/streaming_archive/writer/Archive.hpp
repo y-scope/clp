@@ -125,7 +125,7 @@ namespace streaming_archive { namespace writer {
         void write_dir_snapshot ();
 
         /**
-         * Adds the encoded file to the segment.
+         * Adds the encoded file to the segment
          * @throw streaming_archive::writer::Archive::OperationFailed if failed the file is not tracked by the current archive
          * @throw Same as streaming_archive::writer::Archive::persist_file_metadata
          */
