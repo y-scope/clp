@@ -37,7 +37,7 @@ static void compute_and_add_empty_directories (const set<string>& directories, c
  * @param archive
  * @param file
  */
-static void write_message_to_encoded_file (const ParsedMessage& msg, streaming_archive::writer::Archive& archive, streaming_archive::writer::File* file);
+static void write_message_to_encoded_file (const ParsedMessage& msg, streaming_archive::writer::Archive& archive);
 
 static void compute_and_add_empty_directories (const set<string>& directories, const set<string>& parent_directories,
                                                const boost::filesystem::path& parent_path, streaming_archive::writer::Archive& archive)
@@ -69,12 +69,12 @@ static void compute_and_add_empty_directories (const set<string>& directories, c
     archive.add_empty_directories(empty_directories);
 }
 
-static void write_message_to_encoded_file (const ParsedMessage& msg, streaming_archive::writer::Archive& archive, streaming_archive::writer::File* file) {
+static void write_message_to_encoded_file (const ParsedMessage& msg, streaming_archive::writer::Archive& archive) {
     if (msg.has_ts_patt_changed()) {
-        archive.change_ts_pattern(*file, msg.get_ts_patt());
+        archive.change_ts_pattern(msg.get_ts_patt());
     }
 
-    archive.write_msg(*file, msg.get_ts(), msg.get_content(), msg.get_orig_num_bytes());
+    archive.write_msg(msg.get_ts(), msg.get_content(), msg.get_orig_num_bytes());
 }
 
 namespace clp {
@@ -117,32 +117,32 @@ namespace clp {
         m_parsed_message.clear();
 
         // Open compressed file
-        auto* file = create_and_open_file(archive_writer, path_for_compression, group_id, m_uuid_generator(), 0);
+        archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
 
         // Parse content from UTF-8 validation buffer
         size_t buf_pos = 0;
         while (m_message_parser.parse_next_message(false, m_utf8_validation_buf_length, m_utf8_validation_buf, buf_pos, m_parsed_message)) {
             if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
-                split_file_and_archive(archive_user_config, path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer, file);
-            } else if (file->get_encoded_size_in_bytes() >= target_encoded_file_size) {
-                split_file(path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer, file);
+                split_file_and_archive(archive_user_config, path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer);
+            } else if (archive_writer.get_file().get_encoded_size_in_bytes() >= target_encoded_file_size) {
+                split_file(path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer);
             }
 
-            write_message_to_encoded_file(m_parsed_message, archive_writer, file);
+            write_message_to_encoded_file(m_parsed_message, archive_writer);
         }
 
         // Parse remaining content from file
         while (m_message_parser.parse_next_message(true, reader, m_parsed_message)) {
             if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
-                split_file_and_archive(archive_user_config, path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer, file);
-            } else if (file->get_encoded_size_in_bytes() >= target_encoded_file_size) {
-                split_file(path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer, file);
+                split_file_and_archive(archive_user_config, path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer);
+            } else if (archive_writer.get_file().get_encoded_size_in_bytes() >= target_encoded_file_size) {
+                split_file(path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer);
             }
 
-            write_message_to_encoded_file(m_parsed_message, archive_writer, file);
+            write_message_to_encoded_file(m_parsed_message, archive_writer);
         }
 
-        close_file_and_mark_ready_for_segment(archive_writer, file);
+        close_file_and_append_to_segment(archive_writer);
     }
 
     bool FileCompressor::try_compressing_as_archive (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,

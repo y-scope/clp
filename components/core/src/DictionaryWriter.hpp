@@ -11,6 +11,7 @@
 #include <spdlog/spdlog.h>
 
 // Project headers
+#include "ArrayBackedPosIntSet.hpp"
 #include "Defs.h"
 #include "dictionary_utils.hpp"
 #include "FileWriter.hpp"
@@ -72,7 +73,7 @@ public:
      * @param segment_id
      * @param ids
      */
-    void index_segment (segment_id_t segment_id, const std::unordered_set<DictionaryIdType>& ids);
+    void index_segment (segment_id_t segment_id, const ArrayBackedPosIntSet<DictionaryIdType>& ids);
 
     /**
      * Gets the size of the dictionary when it is stored on disk
@@ -227,7 +228,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload (const std:
 }
 
 template <typename DictionaryIdType, typename EntryType>
-void DictionaryWriter<DictionaryIdType, EntryType>::index_segment (segment_id_t segment_id, const std::unordered_set<DictionaryIdType>& ids) {
+void DictionaryWriter<DictionaryIdType, EntryType>::index_segment (segment_id_t segment_id, const ArrayBackedPosIntSet<DictionaryIdType>& ids) {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
@@ -236,9 +237,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::index_segment (segment_id_t 
 
     // NOTE: The IDs in `ids` are not validated to exist in this dictionary since we perform validation when loading the dictionary.
     m_segment_index_compressor.write_numeric_value<uint64_t>(ids.size());
-    for (auto id : ids) {
-        m_segment_index_compressor.write_numeric_value(id);
-    }
+    ids.write_to_compressor(m_segment_index_compressor);
 
     ++m_num_segments_in_index;
 
