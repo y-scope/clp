@@ -13,6 +13,9 @@ namespace streaming_archive { namespace writer {
         if (m_is_written_out) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
+        m_timestamps = std::make_unique<PageAllocatedVector<epochtime_t>>();
+        m_logtypes = std::make_unique<PageAllocatedVector<logtype_dictionary_id_t>>();
+        m_variables = std::make_unique<PageAllocatedVector<encoded_variable_t>>();
         m_is_open = true;
     }
 
@@ -23,27 +26,27 @@ namespace streaming_archive { namespace writer {
 
         // Append files to segment
         uint64_t segment_timestamps_uncompressed_pos;
-        segment.append(reinterpret_cast<const char*>(m_timestamps.data()), m_timestamps.size_in_bytes(), segment_timestamps_uncompressed_pos);
+        segment.append(reinterpret_cast<const char*>(m_timestamps->data()), m_timestamps->size_in_bytes(), segment_timestamps_uncompressed_pos);
         uint64_t segment_logtypes_uncompressed_pos;
-        segment.append(reinterpret_cast<const char*>(m_logtypes.data()), m_logtypes.size_in_bytes(), segment_logtypes_uncompressed_pos);
+        segment.append(reinterpret_cast<const char*>(m_logtypes->data()), m_logtypes->size_in_bytes(), segment_logtypes_uncompressed_pos);
         uint64_t segment_variables_uncompressed_pos;
-        segment.append(reinterpret_cast<const char*>(m_variables.data()), m_variables.size_in_bytes(), segment_variables_uncompressed_pos);
+        segment.append(reinterpret_cast<const char*>(m_variables->data()), m_variables->size_in_bytes(), segment_variables_uncompressed_pos);
         set_segment_metadata(segment.get_id(), segment_timestamps_uncompressed_pos, segment_logtypes_uncompressed_pos, segment_variables_uncompressed_pos);
         m_segmentation_state = SegmentationState_MovingToSegment;
 
         // Mark file as written out and clear in-memory columns and clear the in-memory data (except metadata)
         m_is_written_out = true;
-        m_timestamps.clear();
-        m_logtypes.clear();
-        m_variables.clear();
+        m_timestamps.reset(nullptr);
+        m_logtypes.reset(nullptr);
+        m_variables.reset(nullptr);
     }
 
     void File::write_encoded_msg (epochtime_t timestamp, logtype_dictionary_id_t logtype_id, const vector<encoded_variable_t>& encoded_vars,
                                   const vector<variable_dictionary_id_t>& var_ids, size_t num_uncompressed_bytes)
     {
-        m_timestamps.push_back(timestamp);
-        m_logtypes.push_back(logtype_id);
-        m_variables.push_back_all(encoded_vars);
+        m_timestamps->push_back(timestamp);
+        m_logtypes->push_back(logtype_id);
+        m_variables->push_back_all(encoded_vars);
 
         // Update metadata
         ++m_num_messages;

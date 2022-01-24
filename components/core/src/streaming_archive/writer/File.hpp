@@ -38,9 +38,7 @@ namespace streaming_archive { namespace writer {
         // Constructors
         File (const boost::uuids::uuid& id, const boost::uuids::uuid& orig_file_id, const std::string& orig_log_path, group_id_t group_id, size_t split_ix) :
                 m_id(id),
-                m_id_as_string(boost::uuids::to_string(m_id)),
                 m_orig_file_id(orig_file_id),
-                m_orig_file_id_as_string(boost::uuids::to_string(m_orig_file_id)),
                 m_orig_log_path(orig_log_path),
                 m_begin_ts(cEpochTimeMax),
                 m_end_ts(cEpochTimeMin),
@@ -143,9 +141,9 @@ namespace streaming_archive { namespace writer {
          */
         const std::string& get_orig_path () const { return m_orig_log_path; }
         const boost::uuids::uuid& get_orig_file_id () const { return m_orig_file_id; }
-        const std::string& get_orig_file_id_as_string () const { return m_orig_file_id_as_string; }
+        std::string get_orig_file_id_as_string () const { return boost::uuids::to_string(m_orig_file_id); }
         const boost::uuids::uuid& get_id () const { return m_id; }
-        const std::string& get_id_as_string () const { return m_id_as_string; }
+        std::string get_id_as_string () const { return boost::uuids::to_string(m_id); }
         epochtime_t get_begin_ts () const { return m_begin_ts; }
         epochtime_t get_end_ts () const { return m_end_ts; }
         const std::vector<std::pair<int64_t, TimestampPattern>>& get_timestamp_patterns () const { return m_timestamp_patterns; }
@@ -183,9 +181,7 @@ namespace streaming_archive { namespace writer {
         // Variables
         // Metadata
         boost::uuids::uuid m_id;
-        std::string m_id_as_string;
         boost::uuids::uuid m_orig_file_id;
-        std::string m_orig_file_id_as_string;
 
         std::string m_orig_log_path;
 
@@ -209,9 +205,9 @@ namespace streaming_archive { namespace writer {
         size_t m_split_ix;
 
         // Data variables
-        PageAllocatedVector<epochtime_t> m_timestamps;
-        PageAllocatedVector<logtype_dictionary_id_t> m_logtypes;
-        PageAllocatedVector<encoded_variable_t> m_variables;
+        std::unique_ptr<PageAllocatedVector<epochtime_t>> m_timestamps;
+        std::unique_ptr<PageAllocatedVector<logtype_dictionary_id_t>> m_logtypes;
+        std::unique_ptr<PageAllocatedVector<encoded_variable_t>> m_variables;
 
         // State variables
         SegmentationState m_segmentation_state;

@@ -148,10 +148,10 @@ void GlobalMySQLMetadataDB::update_metadata_for_files (const std::string& archiv
     }
     auto& statement_bindings = m_upsert_file_statement->get_statement_bindings();
     for (auto file : files) {
-        const auto& id_as_string = file->get_id_as_string();
+        const auto id_as_string = file->get_id_as_string();
         statement_bindings.bind_varchar(enum_to_underlying_type(FilesTableFieldIndexes::Id), id_as_string.c_str(), id_as_string.length());
 
-        const auto& orig_file_id_as_string = file->get_orig_file_id_as_string();
+        const auto orig_file_id_as_string = file->get_orig_file_id_as_string();
         statement_bindings.bind_varchar(enum_to_underlying_type(FilesTableFieldIndexes::OrigFileId), orig_file_id_as_string.c_str(),
                                         orig_file_id_as_string.length());
 

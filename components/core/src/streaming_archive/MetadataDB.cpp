@@ -353,8 +353,10 @@ namespace streaming_archive {
     void MetadataDB::update_files (const vector<writer::File*>& files) {
         m_transaction_begin_statement->step();
         for (auto file : files) {
-            m_upsert_file_statement->bind_text(enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1, file->get_id_as_string(), false);
-            m_upsert_file_statement->bind_text(enum_to_underlying_type(FilesTableFieldIndexes::OrigFileId) + 1, file->get_orig_file_id_as_string(), false);
+            const auto id_as_string = file->get_id_as_string();
+            const auto orig_file_id_as_string = file->get_orig_file_id_as_string();
+            m_upsert_file_statement->bind_text(enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1, id_as_string, false);
+            m_upsert_file_statement->bind_text(enum_to_underlying_type(FilesTableFieldIndexes::OrigFileId) + 1, orig_file_id_as_string, false);
             m_upsert_file_statement->bind_text(enum_to_underlying_type(FilesTableFieldIndexes::Path) + 1, file->get_orig_path(), false);
             m_upsert_file_statement->bind_int64(enum_to_underlying_type(FilesTableFieldIndexes::BeginTimestamp) + 1, file->get_begin_ts());
             m_upsert_file_statement->bind_int64(enum_to_underlying_type(FilesTableFieldIndexes::EndTimestamp) + 1, file->get_end_ts());
