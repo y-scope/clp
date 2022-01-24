@@ -54,7 +54,6 @@ namespace streaming_archive { namespace writer {
                 m_segment_variables_pos(0),
                 m_is_split(split_ix > 0),
                 m_split_ix(split_ix),
-                m_variable_ids(nullptr),
                 m_segmentation_state(SegmentationState_NotInSegment),
                 m_is_metadata_clean(false),
                 m_is_written_out(false),
@@ -72,11 +71,8 @@ namespace streaming_archive { namespace writer {
          * Appends the file's columns to the given segment
          * @param logtype_dict
          * @param segment
-         * @param segment_logtype_ids
-         * @param segment_var_ids
          */
-        void append_to_segment (const LogTypeDictionaryWriter& logtype_dict, Segment& segment, std::unordered_set<logtype_dictionary_id_t>& segment_logtype_ids,
-                                std::unordered_set<variable_dictionary_id_t>& segment_var_ids);
+        void append_to_segment (const LogTypeDictionaryWriter& logtype_dict, Segment& segment);
         /**
          * Writes an encoded message to the respective columns and updates the metadata of the file
          * @param timestamp
@@ -175,17 +171,6 @@ namespace streaming_archive { namespace writer {
 
         // Methods
         /**
-         * Takes logtype and variable IDs from a file's logtype and variable columns and appends them to the given sets
-         * @param logtype_ids
-         * @param num_logtypes
-         * @param segment_logtype_ids
-         * @param segment_var_ids
-         */
-        void append_logtype_and_var_ids_to_segment_sets (const logtype_dictionary_id_t* logtype_ids, size_t num_logtypes,
-                                                         std::unordered_set<logtype_dictionary_id_t>& segment_logtype_ids,
-                                                         std::unordered_set<variable_dictionary_id_t>& segment_var_ids);
-
-        /**
          * Sets segment-related metadata to the given values
          * @param segment_id
          * @param segment_timestamps_uncompressed_pos
@@ -227,7 +212,6 @@ namespace streaming_archive { namespace writer {
         PageAllocatedVector<epochtime_t> m_timestamps;
         PageAllocatedVector<logtype_dictionary_id_t> m_logtypes;
         PageAllocatedVector<encoded_variable_t> m_variables;
-        std::unique_ptr<std::unordered_set<variable_dictionary_id_t>> m_variable_ids;
 
         // State variables
         SegmentationState m_segmentation_state;
