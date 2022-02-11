@@ -9,7 +9,7 @@ import sys
 # Setup logging
 # Create logger
 log = logging.getLogger('clp')
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 # Setup console logging
 logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s')
@@ -93,10 +93,9 @@ def main(argv):
     try:
         check_env(clp_cluster_name)
     except EnvironmentError as ex:
-        logging.error(ex)
+        log.error(ex)
         return -1
 
-    # TODO: check path and perform path conversion
     docker_exec_cmd = [
         'docker', 'exec',
         '--workdir', f'{CONTAINER_CLP_INSTALL_PREFIX}/clp',
@@ -105,11 +104,23 @@ def main(argv):
         'sbin/native/compress', '--config', f'{CONTAINER_CLP_INSTALL_PREFIX}/.{clp_package_config.cluster_name}.yaml'
     ]
     for path in parsed_args.paths:
+        path = str(pathlib.Path(path).resolve())
         docker_exec_cmd.append(path)
     if parsed_args.input_list is not None:
+        # Validate all paths in input list
+        all_paths_valid = True
+        with open(parsed_args.input_list, 'r') as f:
+            for line in f:
+                path = pathlib.Path(line.rstrip())
+                if not path.is_absolute():
+                    log.error(f'Invalid relative path in input list: {path}')
+                    all_paths_valid = False
+        if not all_paths_valid:
+            raise ValueError("--input-list must only contain absolute paths")
+
         docker_exec_cmd.append('--input-list')
         docker_exec_cmd.append(parsed_args.input_list)
-    logging.info(docker_exec_cmd)
+    log.debug(docker_exec_cmd)
     subprocess.run(docker_exec_cmd)
 
     return 0
