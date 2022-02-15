@@ -131,8 +131,12 @@ void TimestampPattern::init () {
     patterns.emplace_back(4, "%a %b %e %H:%M:%S %Y");
     // E.g. <<<2016-11-10 03:02:29:936
     patterns.emplace_back(0, "<<<%Y-%m-%d %H:%M:%S:%3");
+
+    // TODO These patterns are imprecise and will prevent searching by timestamp; but for now, it's no worse than not parsing a timestamp
     // E.g. Jan 21 11:56:42
     patterns.emplace_back(0, "%b %d %H:%M:%S");
+    // E.g. 01-21 11:56:42.392
+    patterns.emplace_back(0, "%m-%d %H:%M:%S.%3");
 
     // Initialize m_known_ts_patterns with vector's contents
     m_known_ts_patterns_len = patterns.size();
