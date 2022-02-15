@@ -288,4 +288,28 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     content.append(line, timestamp_end_pos, timestamp_end_pos - timestamp_begin_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
+
+    line = "Jan 21 11:56:42";
+    pattern = TimestampPattern::search_known_ts_patterns(line, timestamp, timestamp_begin_pos, timestamp_end_pos);
+    REQUIRE(nullptr != pattern);
+    REQUIRE(pattern->get_num_spaces_before_ts() == 0);
+    REQUIRE(pattern->get_format() == "%b %d %H:%M:%S");
+    REQUIRE(0 == timestamp_begin_pos);
+    REQUIRE(15 == timestamp_end_pos);
+    content.assign(line, 0, timestamp_begin_pos);
+    content.append(line, timestamp_end_pos, timestamp_end_pos - timestamp_begin_pos);
+    pattern->insert_formatted_timestamp(timestamp, content);
+    REQUIRE(line == content);
+
+    line = "01-21 11:56:42.392";
+    pattern = TimestampPattern::search_known_ts_patterns(line, timestamp, timestamp_begin_pos, timestamp_end_pos);
+    REQUIRE(nullptr != pattern);
+    REQUIRE(pattern->get_num_spaces_before_ts() == 0);
+    REQUIRE(pattern->get_format() == "%m-%d %H:%M:%S.%3");
+    REQUIRE(0 == timestamp_begin_pos);
+    REQUIRE(18 == timestamp_end_pos);
+    content.assign(line, 0, timestamp_begin_pos);
+    content.append(line, timestamp_end_pos, timestamp_end_pos - timestamp_begin_pos);
+    pattern->insert_formatted_timestamp(timestamp, content);
+    REQUIRE(line == content);
 }
