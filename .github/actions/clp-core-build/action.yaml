@@ -48,5 +48,5 @@ runs:
       uses: actions/upload-artifact@main
       with:
         name: clp_binaries_focal
-        path: $GITHUB_WORKSPACE/clp_binaries.tar
+        path: ${{github.workspace}}/clp_binaries.tar
         if-no-files-found: error
