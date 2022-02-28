@@ -18,6 +18,10 @@ on:
     types:
       - completed
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_BASE: ${{github.repository}}/clp-core-x86
+
 concurrency: build-${{github.ref}}
 
 jobs:
@@ -30,6 +34,36 @@ jobs:
 
       - name: Build CLP Core
         uses: ./.github/actions/clp-core-build
+      
+      - name: Bundle Built Binaries
+        run: tar -cf clp_binaries.tar ./build/clp ./build/clg ./build/clo ./build/make-dictionaries-readable
+
+      - name: Upload CLP Binary artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: clp_binaries
+          path: clp_binaries.tar.gz
+  
+  build-clp-core-image:
+    needs: build-focal
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download built CLP Binaries
+        uses: actions/download-artifact@v2
+        with:
+          name: clp_binaries
+      
+      - name: Extract Binaries Bundle
+        run: tar -xf clp_binaries.tar
+
+      - name: Build and Push Ubuntu Focal Docker Image
+        uses: ./.github/actions/clp-docker-build-push-action
+        with:
+          image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-focal
+          context: ./
+          file: components/core/tools/docker-images/clp-core-focal/Dockerfile
+
+      
 
   build-bionic:
     runs-on: ubuntu-latest
