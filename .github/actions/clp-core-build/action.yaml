@@ -34,7 +34,7 @@ runs:
     #   working-directory: ${{github.workspace}}/components/core
     #   shell: bash
 
-    - run: mkdir ${{github.workspace}}/build && touch ${{github.workspace}}/build/clp && ${{github.workspace}}/build/clg && ${{github.workspace}}/build/clo && ${{github.workspace}}/build/make-dictionaries-readable
+    - run: mkdir -p ${{github.workspace}}/build && touch ${{github.workspace}}/build/clp && ${{github.workspace}}/build/clg && ${{github.workspace}}/build/clo && ${{github.workspace}}/build/make-dictionaries-readable
       shell: bash
     
     - name: Bundle Built Binaries

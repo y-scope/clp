@@ -37,7 +37,7 @@ jobs:
         uses: ./.github/actions/clp-core-build
 
       - run: stat ${{steps.build.outputs.binaries}}
-      
+        
       - name: Upload CLP Binary artifact
         uses: actions/upload-artifact@v2
         with:
