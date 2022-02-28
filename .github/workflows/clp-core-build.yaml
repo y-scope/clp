@@ -51,15 +51,17 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: clp_binaries_focal
+          path: ${{github.workspace}}/binaries
       
       - name: Extract Binaries Bundle
         run: tar -xvf clp_binaries.tar
+        working-directory: ${{github.workspace}}/binaries
 
       - name: Build and Push Ubuntu Focal Docker Image
         uses: ./.github/actions/clp-docker-build-push-action
         with:
           image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-focal
-          context: ./
+          context: ${{github.workspace}}/binaries
           file: components/core/tools/docker-images/clp-core-focal/Dockerfile
 
       
