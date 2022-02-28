@@ -29,8 +29,3 @@ runs:
       working-directory: ${{github.workspace}}/components/core
       shell: bash
     
-    - run: ls
-      shell: bash
-
-    - run: ls ${{github.workspace}}/build
-      shell: bash
