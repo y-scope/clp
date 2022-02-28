@@ -27,7 +27,10 @@ concurrency: build-${{github.ref}}
 jobs:
   build-focal:
     runs-on: ubuntu-latest
-    container: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main
+    container: 
+      image: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main
+      volumes:
+        - ${{github.workspace}}/build:/output
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -35,6 +38,7 @@ jobs:
       - name: Build CLP Core
         id: build
         uses: ./.github/actions/clp-core-build
+        
   
   build-clp-core-image:
     needs: build-focal
