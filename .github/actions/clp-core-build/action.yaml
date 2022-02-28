@@ -7,6 +7,9 @@ inputs:
     required: false
     default: Release
   
+  output_path:
+    default: ${{github.worspace}}
+  
 outputs:
   binaries:
     description: "Binaries path"
@@ -16,10 +19,10 @@ runs:
   using: "composite"
   steps:
 
-    # - name: Download submodules
-    #   run: ./tools/scripts/deps-download/download-all.sh
-    #   working-directory: ${{github.workspace}}/components/core
-    #   shell: bash
+    - name: Download submodules
+      run: ./tools/scripts/deps-download/download-all.sh
+      working-directory: ${{github.workspace}}/components/core
+      shell: bash
 
     # - name: Configure CMake
     #   # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
@@ -34,10 +37,10 @@ runs:
     #   working-directory: ${{github.workspace}}/components/core
     #   shell: bash
 
-    - run: mkdir -p ${{github.workspace}}/build && touch ${{github.workspace}}/build/clp && ${{github.workspace}}/build/clg && ${{github.workspace}}/build/clo && ${{github.workspace}}/build/make-dictionaries-readable
+    - run: mkdir ${{github.workspace}}/build && touch ${{github.workspace}}/build/clp && touch ${{github.workspace}}/build/clg && touch ${{github.workspace}}/build/clo && touch ${{github.workspace}}/build/make-dictionaries-readable
       shell: bash
     
     - name: Bundle Built Binaries
-      run: tar -cf ${{github.workspace}}/build/clp_binaries.tar ${{github.workspace}}/build/clp ${{github.workspace}}/build/clg ${{github.workspace}}/build/clo ${{github.workspace}}/build/make-dictionaries-readable
+      run: tar -cf ${{inputs.output_path}}/clp_binaries.tar ${{github.workspace}}/build/clp ${{github.workspace}}/build/clg ${{github.workspace}}/build/clo ${{github.workspace}}/build/make-dictionaries-readable
       shell: bash
     
