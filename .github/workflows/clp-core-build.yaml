@@ -38,8 +38,6 @@ jobs:
         with:
           output_path: ${{github.workspace}}
 
-      - run: stat ${{steps.build.outputs.binaries}}
-
       - name: Upload CLP Binary artifact
         uses: actions/upload-artifact@v2
         with:
