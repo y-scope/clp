@@ -43,7 +43,7 @@ jobs:
       - name: Download built CLP Binaries
         uses: actions/download-artifact@v2
         with:
-          name: clp_binaries
+          name: clp_binaries_focal
       
       - name: Extract Binaries Bundle
         run: tar -xf clp_binaries.tar
