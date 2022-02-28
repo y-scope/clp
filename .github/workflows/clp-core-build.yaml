@@ -43,7 +43,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: clp_binaries
-          path: clp_binaries.tar.gz
+          path: ${{github.workspace}}/build/clp_binaries.tar.gz
   
   build-clp-core-image:
     needs: build-focal
