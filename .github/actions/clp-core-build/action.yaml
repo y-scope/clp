@@ -41,7 +41,8 @@ runs:
       shell: bash
     
     - name: Bundle Built Binaries
-      run: tar -cf $GITHUB_WORKSPACE/clp_binaries.tar $GITHUB_WORKSPACE/build/clp $GITHUB_WORKSPACE/build/clg $GITHUB_WORKSPACE/build/clo $GITHUB_WORKSPACE/build/make-dictionaries-readable
+      run: tar -cf $GITHUB_WORKSPACE/clp_binaries.tar ./clp ./clg ./clo ./make-dictionaries-readable
+      working-dir: $GITHUB_WORKSPACE/build
       shell: bash
   
     - name: Upload CLP Binary artifact
