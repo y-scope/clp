@@ -54,7 +54,7 @@ jobs:
           path: ${{github.workspace}}/binaries
       
       - name: Extract Binaries Bundle
-        run: tar -xvf clp_binaries.tar
+        run: tar -xvf ${{github.workspace}}/binaries/clp_binaries.tar
         working-directory: ${{github.workspace}}/binaries
 
       - name: Build and Push Ubuntu Focal Docker Image
