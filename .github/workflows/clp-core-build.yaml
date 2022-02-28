@@ -35,9 +35,13 @@ jobs:
       - name: Build CLP Core
         uses: ./.github/actions/clp-core-build
       
+      - run: ls
+      - run: ls ${{github.workspace}}/build
+      
       - name: Bundle Built Binaries
         run: tar -cf clp_binaries.tar ./clp ./clg ./clo ./make-dictionaries-readable
         working-directory: ${{github.workspace}}/build
+
 
       - name: Upload CLP Binary artifact
         uses: actions/upload-artifact@v2

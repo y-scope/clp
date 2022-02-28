@@ -28,3 +28,6 @@ runs:
       run: cmake --build ${{github.workspace}}/build --config ${{inputs.build_type}}
       working-directory: ${{github.workspace}}/components/core
       shell: bash
+    
+    - run: ls
+    - run: ls ${{github.workspace}}/build
