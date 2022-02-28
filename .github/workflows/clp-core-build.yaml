@@ -31,9 +31,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      
+      - run: pwd
+      - run: ls
 
       - name: Build CLP Core
         uses: ./.github/actions/clp-core-build
+
+      - run: pwd
+      - run: ls
       
       - name: Bundle Built Binaries
         run: tar -cf clp_binaries.tar ./build/clp ./build/clg ./build/clo ./build/make-dictionaries-readable
