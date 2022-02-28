@@ -36,11 +36,15 @@ jobs:
         uses: ./.github/actions/clp-core-build
       
       - run: ls
+        shell: bash
+
       - run: ls ${{github.workspace}}/build
+        shell: bash
       
       - name: Bundle Built Binaries
         run: tar -cf clp_binaries.tar ./clp ./clg ./clo ./make-dictionaries-readable
         working-directory: ${{github.workspace}}/build
+        shell: bash
 
 
       - name: Upload CLP Binary artifact

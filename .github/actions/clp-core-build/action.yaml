@@ -30,4 +30,7 @@ runs:
       shell: bash
     
     - run: ls
+      shell: bash
+
     - run: ls ${{github.workspace}}/build
+      shell: bash
