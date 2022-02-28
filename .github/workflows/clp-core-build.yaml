@@ -42,8 +42,7 @@ jobs:
         shell: bash
       
       - name: Bundle Built Binaries
-        run: tar -cf clp_binaries.tar ./clp ./clg ./clo ./make-dictionaries-readable
-        working-directory: ${{github.workspace}}/build
+        run: tar -cf clp_binaries.tar ${{github.workspace}}/build/clp ${{github.workspace}}/build/clg ${{github.workspace}}/build/clo ${{github.workspace}}/build/make-dictionaries-readable
         shell: bash
 
 
@@ -51,7 +50,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: clp_binaries
-          path: ${{github.workspace}}/build/clp_binaries.tar.gz
+          path: clp_binaries.tar.gz
   
   build-clp-core-image:
     needs: build-focal
