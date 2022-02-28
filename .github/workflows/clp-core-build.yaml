@@ -35,14 +35,6 @@ jobs:
       - name: Build CLP Core
         id: build
         uses: ./.github/actions/clp-core-build
-        with:
-          output_path: ${{github.workspace}}
-      - run: ls ${{github.workspace}}
-      - name: Upload CLP Binary artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: clp_binaries
-          path: ${{github.workspace}}/clp_binaries.tar
   
   build-clp-core-image:
     needs: build-focal
