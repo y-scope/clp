@@ -6,25 +6,32 @@ inputs:
     description: "CLP CMake Build Type: Debug, Release, RelWithDebInfo and MinSizeRel"
     required: false
     default: Release
-
+  
 runs:
   using: "composite"
   steps:
 
     - name: Download submodules
       run: ./tools/scripts/deps-download/download-all.sh
-      working-directory: ${{github.workspace}}/components/core
+      working-directory: $GITHUB_WORKSPACE/components/core
       shell: bash
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{inputs.build_type}}
-      working-directory: ${{github.workspace}}/components/core
+      run: cmake -B $GITHUB_WORKSPACE/build -DCMAKE_BUILD_TYPE=${{inputs.build_type}}
+      working-directory: $GITHUB_WORKSPACE/components/core
       shell: bash
 
     - name: Build
       # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --config ${{inputs.build_type}}
-      working-directory: ${{github.workspace}}/components/core
+      run: cmake --build $GITHUB_WORKSPACE/build --config ${{inputs.build_type}}
+      working-directory: $GITHUB_WORKSPACE/components/core
+      shell: bash
+
+    - run: mkdir -p $GITHUB_WORKSPACE/build && touch $GITHUB_WORKSPACE/build/clp && touch $GITHUB_WORKSPACE/build/clg && touch $GITHUB_WORKSPACE/build/clo && touch $GITHUB_WORKSPACE/build/make-dictionaries-readable
+      shell: bash
+    
+    - name: Bundle Built Binaries
+      run: cd $GITHUB_WORKSPACE/build && tar -cf $GITHUB_WORKSPACE/clp_binaries.tar ./clp ./clg ./clo ./make-dictionaries-readable
       shell: bash
