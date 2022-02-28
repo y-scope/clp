@@ -38,6 +38,13 @@ jobs:
       - name: Build CLP Core
         id: build
         uses: ./.github/actions/clp-core-build
+      
+      - name: Upload CLP Binary artifact
+        uses: actions/upload-artifact@main
+        with:
+            name: clp_binaries_focal
+            path: ${{github.workspace}}/clp_binaries.tar
+            if-no-files-found: error
 
   
   build-clp-core-image:
@@ -54,7 +61,7 @@ jobs:
           path: ${{github.workspace}}/binaries
       
       - name: Extract Binaries Bundle
-        run: pwd && tar -xvf ${{github.workspace}}/binaries/clp_binaries.tar -C ${{github.workspace}}/binaries && ls
+        run: tar -xvf clp_binaries.tar
         working-directory: ${{github.workspace}}/binaries
 
       - name: Build and Push Ubuntu Focal Docker Image

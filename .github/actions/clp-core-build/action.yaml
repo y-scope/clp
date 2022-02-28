@@ -43,10 +43,3 @@ runs:
     - name: Bundle Built Binaries
       run: cd $GITHUB_WORKSPACE/build && tar -cf $GITHUB_WORKSPACE/clp_binaries.tar ./clp ./clg ./clo ./make-dictionaries-readable
       shell: bash
-  
-    - name: Upload CLP Binary artifact
-      uses: actions/upload-artifact@main
-      with:
-        name: clp_binaries_focal
-        path: ${{github.workspace}}/clp_binaries.tar
-        if-no-files-found: error

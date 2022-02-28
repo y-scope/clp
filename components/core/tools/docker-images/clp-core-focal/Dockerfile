@@ -5,6 +5,6 @@ WORKDIR /clp
 ADD ./clp ./
 ADD ./clo ./
 ADD ./clg ./
-ADD ["./make-dictionaries-readable","./"]
+ADD ./make-dictionaries-readable ./
 
 CMD bash
