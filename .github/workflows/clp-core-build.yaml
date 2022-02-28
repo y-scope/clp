@@ -37,7 +37,7 @@ jobs:
         uses: ./.github/actions/clp-core-build
         with:
           output_path: ${{github.workspace}}
-
+      - run: ls ${{github.workspace}}
       - name: Upload CLP Binary artifact
         uses: actions/upload-artifact@v2
         with:
