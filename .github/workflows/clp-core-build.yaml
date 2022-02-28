@@ -33,17 +33,14 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build CLP Core
+        id: build
         uses: ./.github/actions/clp-core-build
-      
-      - name: Bundle Built Binaries
-        run: tar -cf ${{github.workspace}}/build/clp_binaries.tar ${{github.workspace}}/build/clp ${{github.workspace}}/build/clg ${{github.workspace}}/build/clo ${{github.workspace}}/build/make-dictionaries-readable
-        shell: bash
 
       - name: Upload CLP Binary artifact
         uses: actions/upload-artifact@v2
         with:
           name: clp_binaries
-          path: ${{github.workspace}}/build/clp_binaries.tar.gz
+          path: ${{steps.build.outputs.binaries}}
   
   build-clp-core-image:
     needs: build-focal

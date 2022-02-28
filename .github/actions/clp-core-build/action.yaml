@@ -6,6 +6,11 @@ inputs:
     description: "CLP CMake Build Type: Debug, Release, RelWithDebInfo and MinSizeRel"
     required: false
     default: Release
+  
+outputs:
+  binaries:
+    description: "Binaries path"
+    value: ${{github.workspace}}/build/clp_binaries.tar
 
 runs:
   using: "composite"
@@ -27,5 +32,9 @@ runs:
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config ${{inputs.build_type}}
       working-directory: ${{github.workspace}}/components/core
+      shell: bash
+    
+    - name: Bundle Built Binaries
+      run: tar -cf ${{github.workspace}}/build/clp_binaries.tar ${{github.workspace}}/build/clp ${{github.workspace}}/build/clg ${{github.workspace}}/build/clo ${{github.workspace}}/build/make-dictionaries-readable
       shell: bash
     
