@@ -43,9 +43,6 @@ runs:
     - name: Bundle Built Binaries
       run: tar -cf $GITHUB_WORKSPACE/clp_binaries.tar $GITHUB_WORKSPACE/build/clp $GITHUB_WORKSPACE/build/clg $GITHUB_WORKSPACE/build/clo $GITHUB_WORKSPACE/build/make-dictionaries-readable
       shell: bash
-
-    - run: echo $GITHUB_WORKSPACE
-      shell: bash
   
     - name: Upload CLP Binary artifact
       uses: actions/upload-artifact@main

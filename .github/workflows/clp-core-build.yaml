@@ -38,19 +38,22 @@ jobs:
       - name: Build CLP Core
         id: build
         uses: ./.github/actions/clp-core-build
-        
+
   
   build-clp-core-image:
     needs: build-focal
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
       - name: Download built CLP Binaries
         uses: actions/download-artifact@v2
         with:
           name: clp_binaries_focal
       
       - name: Extract Binaries Bundle
-        run: tar -xf clp_binaries.tar
+        run: tar -xvf clp_binaries.tar
 
       - name: Build and Push Ubuntu Focal Docker Image
         uses: ./.github/actions/clp-docker-build-push-action
