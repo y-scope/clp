@@ -15,7 +15,6 @@ runs:
     - name: Download submodules
       run: ./tools/scripts/deps-download/download-all.sh
       working-directory: ./components/core
-
       shell: bash
 
     - name: Configure CMake
