@@ -64,6 +64,13 @@ jobs:
         run: tar -xvf clp_binaries.tar
         working-directory: ${{github.workspace}}/binaries
 
+      - name: Log in to the Github Packages Container registry
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Build and Push Ubuntu Focal Docker Image
         uses: ./.github/actions/clp-docker-build-push-action
         with:
