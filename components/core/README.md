@@ -8,8 +8,9 @@ CLP's core is the low-level component that performs compression, decompression, 
 * [Requirements](#requirements)
 * [Building](#building)
   * [Source Dependencies](#source-dependencies)
-  * [Packages](#packages)
-  * [Libraries](#libraries)
+  * [Environment](#environment)
+    * [Native Environment](#native-environment)
+    * [Docker Environment](#docker-environment)
   * [Build](#build)
 * [Running](#running)
   * [`clp`](#clp)
@@ -42,7 +43,17 @@ This will download:
 * [SQLite3](https://www.sqlite.org/download.html) (v3.36.0)
 * [yaml-cpp](https://github.com/jbeder/yaml-cpp.git) (v0.7.0)
 
-### Packages
+### Environment
+
+A handful of packages and libraries are required to build CLP. There are two options to use them:
+
+* Install them on your machine and build CLP natively
+* Build CLP within a prebuilt docker container that contains the libraries;
+  However, this won't work if you need additional libraries that aren't already in the container.
+
+#### Native Environment
+
+*Packages*
 
 If you're using apt-get, you can use the following command to install all:
 ```shell
@@ -65,7 +76,7 @@ This will download:
 * wget
 * zlib1g-dev
 
-### Libraries
+*Libraries*
 
 The latest versions of some packages are not offered by apt repositories,
 so we've included some scripts to download, compile, and install them:
@@ -77,6 +88,26 @@ so we've included some scripts to download, compile, and install them:
 ./tools/scripts/lib_install/spdlog.sh 1.9.2
 ./tools/scripts/lib_install/zstandard.sh 1.4.9
 ```
+
+#### Docker Environment
+
+You can use these commands to start a container in which you can build and run CLP:
+
+```shell
+# Make sure to change /path/to/clp/components/core and /path/to/my/logs below
+docker run --rm -it \
+  --name 'clp-build-env' \
+  -u$(id -u):$(id -g) \
+  -v$(readlink -f /path/to/clp/components/core):/mnt/clp \
+  -v$(readlink -f /path/to/my/logs):/mnt/logs \
+  ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main \
+  /bin/bash
+
+cd /mnt/clp
+```
+
+Make sure to change `/path/to/clp/components/core` and `/path/to/my/logs` to
+the relevant paths on your machine.
 
 ### Build
 
