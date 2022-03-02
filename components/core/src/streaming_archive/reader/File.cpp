@@ -58,7 +58,7 @@ namespace streaming_archive { namespace reader {
             end_pos = encoded_timestamp_patterns.find_first_of(':', begin_pos);
             if (string::npos == end_pos) {
                 // Unexpected truncation
-                throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
+                throw OperationFailed(ErrorCode::Corrupt, __FILENAME__, __LINE__);
             }
             uint8_t num_spaces_before_ts = strtol(&encoded_timestamp_patterns[begin_pos], nullptr, 10);
             begin_pos = end_pos + 1;
@@ -66,7 +66,7 @@ namespace streaming_archive { namespace reader {
             end_pos = encoded_timestamp_patterns.find_first_of('\n', begin_pos);
             if (string::npos == end_pos) {
                 // Unexpected truncation
-                throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
+                throw OperationFailed(ErrorCode::Corrupt, __FILENAME__, __LINE__);
             }
             timestamp_format.assign(encoded_timestamp_patterns, begin_pos, end_pos - begin_pos);
             begin_pos = end_pos + 1;
@@ -113,7 +113,7 @@ namespace streaming_archive { namespace reader {
                 error_code = segment_manager.try_read(m_segment_id, m_segment_timestamps_decompressed_stream_pos,
                                                       reinterpret_cast<char*>(m_segment_timestamps.get()), num_bytes_to_read);
                 PROFILER_STOP_STOPWATCH(segment_read_stopwatch)
-                if (ErrorCode_Success != error_code) {
+                if (ErrorCode::Success != error_code) {
                     close_me();
                     return error_code;
                 }
@@ -124,7 +124,7 @@ namespace streaming_archive { namespace reader {
                 error_code = segment_manager.try_read(m_segment_id, m_segment_logtypes_decompressed_stream_pos,
                                                       reinterpret_cast<char*>(m_segment_logtypes.get()), num_bytes_to_read);
                 PROFILER_STOP_STOPWATCH(segment_read_stopwatch)
-                if (ErrorCode_Success != error_code) {
+                if (ErrorCode::Success != error_code) {
                     close_me();
                     return error_code;
                 }
@@ -144,7 +144,7 @@ namespace streaming_archive { namespace reader {
                 error_code = segment_manager.try_read(m_segment_id, m_segment_variables_decompressed_stream_pos,
                                                       reinterpret_cast<char*>(m_segment_variables.get()), num_bytes_to_read);
                 PROFILER_STOP_STOPWATCH(segment_read_stopwatch)
-                if (ErrorCode_Success != error_code) {
+                if (ErrorCode::Success != error_code) {
                     close_me();
                     return error_code;
                 }
@@ -162,7 +162,7 @@ namespace streaming_archive { namespace reader {
             column_path = file_path;
             column_path += cTimestampsFileExtension;
             error_code = memory_map_file(column_path, read_ahead, m_timestamps_fd, m_timestamps_file_size, ptr);
-            if (ErrorCode_Success != error_code) {
+            if (ErrorCode::Success != error_code) {
                 close_me();
                 return error_code;
             }
@@ -171,14 +171,14 @@ namespace streaming_archive { namespace reader {
             if (num_timestamps_read < m_num_messages) {
                 SPDLOG_ERROR("There are fewer timestamps on disk ({}) than the metadata ({}) indicates.", num_timestamps_read, m_num_messages);
                 close_me();
-                return ErrorCode_Truncated;
+                return ErrorCode::Truncated;
             }
 
             // Open logtype IDs file
             column_path = file_path;
             column_path += cLogTypeIdsFileExtension;
             error_code = memory_map_file(column_path, read_ahead, m_logtypes_fd, m_logtypes_file_size, ptr);
-            if (ErrorCode_Success != error_code) {
+            if (ErrorCode::Success != error_code) {
                 close_me();
                 return error_code;
             }
@@ -187,14 +187,14 @@ namespace streaming_archive { namespace reader {
             if (num_logtypes_read < m_num_messages) {
                 SPDLOG_ERROR("There are fewer logtypes on disk ({}) than the metadata ({}) indicates.", num_logtypes_read, m_num_messages);
                 close_me();
-                return ErrorCode_Truncated;
+                return ErrorCode::Truncated;
             }
 
             // Open variables file
             column_path = file_path;
             column_path += cVariablesFileExtension;
             error_code = memory_map_file(column_path, read_ahead, m_variables_fd, m_variables_file_size, ptr);
-            if (ErrorCode_Success != error_code) {
+            if (ErrorCode::Success != error_code) {
                 close_me();
                 return error_code;
             }
@@ -203,7 +203,7 @@ namespace streaming_archive { namespace reader {
             if (num_variables_read < m_num_variables) {
                 SPDLOG_ERROR("There are fewer variables on disk ({}) than the metadata ({}) indicates.", num_variables_read, m_num_variables);
                 close_me();
-                return ErrorCode_Truncated;
+                return ErrorCode::Truncated;
             }
         }
 
@@ -213,7 +213,7 @@ namespace streaming_archive { namespace reader {
         m_current_ts_pattern_ix = 0;
         m_current_ts_in_milli = m_begin_ts;
 
-        return ErrorCode_Success;
+        return ErrorCode::Success;
     }
 
     void File::close_me () {
@@ -233,7 +233,7 @@ namespace streaming_archive { namespace reader {
             // Unmap variables file
             if (0 != m_variables_file_size) {
                 error_code = memory_unmap_file(m_variables_fd, m_variables_file_size, m_variables);
-                if (ErrorCode_Success != error_code) {
+                if (ErrorCode::Success != error_code) {
                     SPDLOG_ERROR("streaming_archive::reader::File: Failed to unmap variables file, errno={}", errno);
                 }
                 m_variables_fd = -1;
@@ -244,7 +244,7 @@ namespace streaming_archive { namespace reader {
             // Unmap logtypes file
             if (0 != m_logtypes_file_size) {
                 error_code = memory_unmap_file(m_logtypes_fd, m_logtypes_file_size, m_logtypes);
-                if (ErrorCode_Success != error_code) {
+                if (ErrorCode::Success != error_code) {
                     SPDLOG_ERROR("streaming_archive::reader::File: Failed to unmap logtypes file, errno={}", errno);
                 }
                 m_logtypes_fd = -1;
@@ -255,7 +255,7 @@ namespace streaming_archive { namespace reader {
             // Unmap timestamps file
             if (0 != m_timestamps_file_size) {
                 error_code = memory_unmap_file(m_timestamps_fd, m_timestamps_file_size, m_timestamps);
-                if (ErrorCode_Success != error_code) {
+                if (ErrorCode::Success != error_code) {
                     SPDLOG_ERROR("streaming_archive::reader::File: Failed to unmap timestamps file, errno={}", errno);
                 }
                 m_timestamps_fd = -1;

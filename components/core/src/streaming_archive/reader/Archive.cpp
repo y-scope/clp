@@ -41,11 +41,11 @@ namespace streaming_archive { namespace reader {
         const char* path_c_str = path.c_str();
         if (0 != stat(path_c_str, &path_stat)) {
             SPDLOG_ERROR("Failed to stat {}, errno={}", path_c_str, errno);
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
         }
         if (!S_ISDIR(path_stat.st_mode)) {
             SPDLOG_ERROR("{} is not a directory", path_c_str);
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Unsupported, __FILENAME__, __LINE__);
         }
         m_path = path;
 
@@ -58,7 +58,7 @@ namespace streaming_archive { namespace reader {
             read_metadata_file(metadata_file_path, format_version, stable_uncompressed_size, stable_size);
         } catch (TraceableException& traceable_exception) {
             auto error_code = traceable_exception.get_error_code();
-            if (ErrorCode_errno == error_code) {
+            if (ErrorCode::Errno == error_code) {
                 SPDLOG_CRITICAL("streaming_archive::reader::Archive: Failed to read archive metadata file {} at {}:{} - errno={}", metadata_file_path.c_str(),
                                 traceable_exception.get_filename(), traceable_exception.get_line_number(), errno);
             } else {
@@ -71,7 +71,7 @@ namespace streaming_archive { namespace reader {
         // Check archive matches format version
         if (cArchiveFormatVersion != format_version) {
             SPDLOG_ERROR("streaming_archive::reader::Archive: Archive uses an unsupported format.");
-            throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::BadParam, __FILENAME__, __LINE__);
         }
 
         auto metadata_db_path = boost::filesystem::path(path) / cMetadataDBFileName;
@@ -205,7 +205,7 @@ namespace streaming_archive { namespace reader {
             ix.get_path(path);
             auto empty_directory_path = output_dir_path / path;
             auto error_code = create_directory_structure(empty_directory_path.string(), 0700);
-            if (ErrorCode_Success != error_code) {
+            if (ErrorCode::Success != error_code) {
                 SPDLOG_ERROR("Failed to create directory structure {}, errno={}", empty_directory_path.string().c_str(), errno);
                 throw OperationFailed(error_code, __FILENAME__, __LINE__);
             }

@@ -50,26 +50,26 @@ public:
     /**
      * Tries to get the current position of the write head in the file
      * @param pos Position of the write head in the file
-     * @return ErrorCode_NotInit if the file is not open
-     * @return ErrorCode_errno on error
-     * @return ErrorCode_Success on success
+     * @return ErrorCode::NotInit if the file is not open
+     * @return ErrorCode::Errno on error
+     * @return ErrorCode::Success on success
      */
     ErrorCode try_get_pos (size_t& pos) const override;
 
     /**
      * Tries to seek from the beginning of the file to the given position
      * @param pos
-     * @return ErrorCode_NotInit if the file is not open
-     * @return ErrorCode_errno on error
-     * @return ErrorCode_Success on success
+     * @return ErrorCode::NotInit if the file is not open
+     * @return ErrorCode::Errno on error
+     * @return ErrorCode::Success on success
      */
     ErrorCode try_seek_from_begin (size_t pos) override;
     /**
      * Tries to offset from the current position by the given amount
      * @param pos
-     * @return ErrorCode_NotInit if the file is not open
-     * @return ErrorCode_errno on error
-     * @return ErrorCode_Success on success
+     * @return ErrorCode::NotInit if the file is not open
+     * @return ErrorCode::Errno on error
+     * @return ErrorCode::Success on success
      */
     ErrorCode try_seek_from_current (off_t offset) override;
 

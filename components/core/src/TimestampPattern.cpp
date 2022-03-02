@@ -568,7 +568,7 @@ void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, 
     }
     if (num_spaces_found < m_num_spaces_before_ts) {
         SPDLOG_ERROR("{} has {} spaces, but pattern has {}", msg.c_str(), num_spaces_found, m_num_spaces_before_ts);
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
     }
 
     // Copy text before timestamp
@@ -699,7 +699,7 @@ void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, 
                     break;
 
                 default: {
-                    throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+                    throw OperationFailed(ErrorCode::Unsupported, __FILENAME__, __LINE__);
                 }
             }
             is_specifier = false;

@@ -23,18 +23,18 @@ FileWriter::~FileWriter () {
 }
 
 void FileWriter::write (const char* data, size_t data_length) {
-    ErrorCode error_code = ErrorCode_Success;
+    ErrorCode error_code = ErrorCode::Success;
     if (nullptr == m_file) {
-        error_code = ErrorCode_NotInit;
+        error_code = ErrorCode::NotInit;
     } else if (nullptr == data) {
-        error_code = ErrorCode_BadParam;
+        error_code = ErrorCode::BadParam;
     } else {
         size_t num_bytes_written = fwrite(data, sizeof(*data), data_length, m_file);
         if (num_bytes_written < data_length) {
-            error_code = ErrorCode_errno;
+            error_code = ErrorCode::Errno;
         }
     }
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 }
@@ -47,58 +47,58 @@ void FileWriter::flush () {
     // Flush userspace buffers to page cache
     if (0 != fflush(m_file)) {
         SPDLOG_ERROR("fflush failed, errno={}", errno);
-        throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
     }
 
     // Flush page cache pages to disk
     if (0 != fdatasync(m_fd)) {
         SPDLOG_ERROR("fdatasync failed, errno={}", errno);
-        throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
     }
 }
 
 ErrorCode FileWriter::try_get_pos (size_t& pos) const {
     if (nullptr == m_file) {
-        return ErrorCode_NotInit;
+        return ErrorCode::NotInit;
     }
 
     pos = ftello(m_file);
     if ((off_t)-1 == pos) {
-        return ErrorCode_errno;
+        return ErrorCode::Errno;
     }
 
-    return ErrorCode_Success;
+    return ErrorCode::Success;
 }
 
 ErrorCode FileWriter::try_seek_from_begin (size_t pos) {
     if (nullptr == m_file) {
-        return ErrorCode_NotInit;
+        return ErrorCode::NotInit;
     }
 
     int retval = fseeko(m_file, pos, SEEK_SET);
     if (0 != retval) {
-        return ErrorCode_errno;
+        return ErrorCode::Errno;
     }
 
-    return ErrorCode_Success;
+    return ErrorCode::Success;
 }
 
 ErrorCode FileWriter::try_seek_from_current (off_t offset) {
     if (nullptr == m_file) {
-        return ErrorCode_NotInit;
+        return ErrorCode::NotInit;
     }
 
     int retval = fseeko(m_file, offset, SEEK_CUR);
     if (0 != retval) {
-        return ErrorCode_errno;
+        return ErrorCode::Errno;
     }
 
-    return ErrorCode_Success;
+    return ErrorCode::Success;
 }
 
 void FileWriter::open (const string& path, OpenMode open_mode) {
     if (nullptr != m_file) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     switch (open_mode) {
@@ -115,7 +115,7 @@ void FileWriter::open (const string& path, OpenMode open_mode) {
                 m_file = fopen(path.c_str(), "r+b");
             } else {
                 if (ENOENT != errno) {
-                    throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+                    throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
                 }
                 // File doesn't exist, so create and open it for seekable writing
                 // NOTE: We can't use the "w+" mode if the file exists since that will truncate the file
@@ -124,26 +124,26 @@ void FileWriter::open (const string& path, OpenMode open_mode) {
 
             auto retval = fseek(m_file, 0, SEEK_END);
             if (0 != retval) {
-                throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+                throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
             }
             break;
         }
     }
     if (nullptr == m_file) {
-        throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
     }
 
     m_fd = fileno(m_file);
     if (-1 == m_fd) {
         fclose(m_file);
-        throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
     }
 }
 
 void FileWriter::close () {
     if (nullptr != m_file) {
         if (0 != fclose(m_file)) {
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
         }
         m_file = nullptr;
         m_fd = -1;

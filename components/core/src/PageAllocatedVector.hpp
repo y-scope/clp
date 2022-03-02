@@ -124,11 +124,11 @@ template <typename ValueType>
 PageAllocatedVector<ValueType>::PageAllocatedVector () : m_values(nullptr), m_capacity_in_bytes(0), m_capacity(0), m_size(0) {
     m_page_size = sysconf(_SC_PAGESIZE);
     if (-1 == m_page_size) {
-        throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
     }
 
     if (sizeof(ValueType) > m_page_size) {
-        throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Unsupported, __FILENAME__, __LINE__);
     }
 }
 
@@ -222,12 +222,12 @@ void PageAllocatedVector<ValueType>::increase_capacity (size_t required_capacity
         // NOTE: Regions with the MAP_SHARED flag cannot be remapped for some reason
         new_region = mmap(nullptr, new_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         if (MAP_FAILED == new_region) {
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
         }
     } else {
         new_region = mremap(m_values, m_capacity_in_bytes, new_size, MREMAP_MAYMOVE);
         if (MAP_FAILED == new_region) {
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
         }
     }
     m_values = (ValueType*)new_region;

@@ -258,7 +258,7 @@ namespace streaming_archive {
 
     void MetadataDB::open (const string& path) {
         if (m_is_open) {
-            throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::NotReady, __FILENAME__, __LINE__);
         }
 
         m_db.open(path);
@@ -345,7 +345,7 @@ namespace streaming_archive {
         m_insert_empty_directories_statement.reset(nullptr);
         if (false == m_db.close()) {
             SPDLOG_ERROR("streaming_archive::MetadataDB: Failed to close database - {}", m_db.get_error_message());
-            throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
         }
         m_is_open = false;
     }

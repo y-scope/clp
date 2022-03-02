@@ -17,7 +17,7 @@ bool VariableDictionaryWriter::add_entry (const std::string& value, variable_dic
 
         if (m_next_id > m_max_id) {
             SPDLOG_ERROR("VariableDictionaryWriter ran out of IDs.");
-            throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::OutOfBounds, __FILENAME__, __LINE__);
         }
 
         // Assign ID

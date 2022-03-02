@@ -107,7 +107,7 @@ static bool open_archive (const string& archive_path, Archive& archive_reader) {
         archive_reader.open(archive_path);
     } catch (TraceableException& e) {
         error_code = e.get_error_code();
-        if (ErrorCode_errno == error_code) {
+        if (ErrorCode::Errno == error_code) {
             SPDLOG_ERROR("Opening archive failed: {}:{} {}, errno={}", e.get_filename(), e.get_line_number(), e.what(), errno);
             return false;
         } else {
@@ -120,7 +120,7 @@ static bool open_archive (const string& archive_path, Archive& archive_reader) {
         archive_reader.refresh_dictionaries();
     } catch (TraceableException& e) {
         error_code = e.get_error_code();
-        if (ErrorCode_errno == error_code) {
+        if (ErrorCode::Errno == error_code) {
             SPDLOG_ERROR("Reading dictionaries failed: {}:{} {}, errno={}", e.get_filename(), e.get_line_number(), e.what(), errno);
             return false;
         } else {
@@ -186,7 +186,7 @@ static bool search (const vector<string>& search_strings, CommandLineArguments& 
         }
     } catch (TraceableException& e) {
         error_code = e.get_error_code();
-        if (ErrorCode_errno == error_code) {
+        if (ErrorCode::Errno == error_code) {
             SPDLOG_ERROR("Search failed: {}:{} {}, errno={}", e.get_filename(), e.get_line_number(), e.what(), errno);
             return false;
         } else {
@@ -200,14 +200,14 @@ static bool search (const vector<string>& search_strings, CommandLineArguments& 
 
 static bool open_compressed_file (MetadataDB::FileIterator& file_metadata_ix, Archive& archive, File& compressed_file) {
     ErrorCode error_code = archive.open_file(compressed_file, file_metadata_ix, false);
-    if (ErrorCode_Success == error_code) {
+    if (ErrorCode::Success == error_code) {
         return true;
     }
     string orig_path;
     file_metadata_ix.get_path(orig_path);
-    if (ErrorCode_FileNotFound == error_code) {
+    if (ErrorCode::FileNotFound == error_code) {
         SPDLOG_WARN("{} not found in archive", orig_path.c_str());
-    } else if (ErrorCode_errno == error_code) {
+    } else if (ErrorCode::Errno == error_code) {
         SPDLOG_ERROR("Failed to open {}, errno={}", orig_path.c_str(), errno);
     } else {
         SPDLOG_ERROR("Failed to open {}, error={}", orig_path.c_str(), error_code);

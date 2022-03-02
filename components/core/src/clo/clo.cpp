@@ -114,10 +114,10 @@ static bool search_files (Query& query, Archive& archive, MetadataDB::FileIterat
     // Run query on each file
     for (; file_metadata_ix.has_next(); file_metadata_ix.next()) {
         ErrorCode error_code = archive.open_file(compressed_file, file_metadata_ix, false);
-        if (ErrorCode_Success != error_code) {
+        if (ErrorCode::Success != error_code) {
             string orig_path;
             file_metadata_ix.get_path(orig_path);
-            if (ErrorCode_errno == error_code) {
+            if (ErrorCode::Errno == error_code) {
                 SPDLOG_ERROR("Failed to open {}, errno={}", orig_path.c_str(), errno);
             } else {
                 SPDLOG_ERROR("Failed to open {}, error={}", orig_path.c_str(), error_code);
@@ -223,7 +223,7 @@ int main (int argc, const char* argv[]) {
         }
     } catch (TraceableException& e) {
         auto error_code = e.get_error_code();
-        if (ErrorCode_errno == error_code) {
+        if (ErrorCode::Errno == error_code) {
             SPDLOG_ERROR("Search failed: {}:{} {}, errno={}", e.get_filename(), e.get_line_number(), e.what(), errno);
             return -1;
         } else {

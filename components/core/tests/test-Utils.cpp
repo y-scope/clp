@@ -82,15 +82,15 @@ TEST_CASE("create_directory_structure", "[create_directory_structure]") {
     string path;
 
     path = "a/b/c";
-    REQUIRE(ErrorCode_Success == create_directory_structure(path, 0700));
+    REQUIRE(ErrorCode::Success == create_directory_structure(path, 0700));
     REQUIRE(stat(path.c_str(), &s) == 0);
 
     path = "d/e/f/";
-    REQUIRE(ErrorCode_Success == create_directory_structure(path, 0700));
+    REQUIRE(ErrorCode::Success == create_directory_structure(path, 0700));
     REQUIRE(stat(path.c_str(), &s) == 0);
 
     path = "/tmp/5807";
-    REQUIRE(ErrorCode_Success == create_directory_structure(path, 0700));
+    REQUIRE(ErrorCode::Success == create_directory_structure(path, 0700));
     REQUIRE(stat(path.c_str(), &s) == 0);
 
     REQUIRE(0 == rmdir("a/b/c"));

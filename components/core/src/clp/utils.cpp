@@ -100,10 +100,10 @@ namespace clp {
 
     bool read_input_paths (const string& list_path, vector<string>& paths) {
         ErrorCode error_code = read_list_of_paths(list_path, paths);
-        if (ErrorCode_Success != error_code) {
-            if (ErrorCode_FileNotFound == error_code) {
+        if (ErrorCode::Success != error_code) {
+            if (ErrorCode::FileNotFound == error_code) {
                 SPDLOG_ERROR("'{}' does not exist.", list_path.c_str());
-            } else if (ErrorCode_errno == error_code) {
+            } else if (ErrorCode::Errno == error_code) {
                 SPDLOG_ERROR("Failed to read '{}', errno={}", list_path.c_str(), errno);
             } else {
                 SPDLOG_ERROR("Failed to read '{}', error_code={}", list_path.c_str(), error_code);

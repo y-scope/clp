@@ -86,7 +86,7 @@ int main (int argc, const char* argv[]) {
                                               command_line_args.get_target_encoded_file_size());
         } catch (TraceableException& e) {
             ErrorCode error_code = e.get_error_code();
-            if (ErrorCode_errno == error_code) {
+            if (ErrorCode::Errno == error_code) {
                 SPDLOG_ERROR("Compression failed: {}:{} {}, errno={}", e.get_filename(), e.get_line_number(), e.what(), errno);
                 compression_successful = false;
             } else {

@@ -82,11 +82,11 @@ namespace streaming_archive { namespace reader {
          * @param archive_logs_dir_path Path to directory where logs are stored on disk in this archive
          * @param segment_manager Segment manager for when file is stored in a segment
          * @return FileReader::try_open's error codes on failure to open metadata
-         * @return ErrorCode_Failure_Metadata_Corrupted on metadata loading error
-         * @return ErrorCode_errno on error
-         * @return ErrorCode_FileNotFound if a column's file was not found
-         * @return ErrorCode_Truncated if metadata did not contain all required data or if column in segment was truncated
-         * @return ErrorCode_Success on success
+         * @return ErrorCode::Failure_Metadata_Corrupted on metadata loading error
+         * @return ErrorCode::Errno on error
+         * @return ErrorCode::FileNotFound if a column's file was not found
+         * @return ErrorCode::Truncated if metadata did not contain all required data or if column in segment was truncated
+         * @return ErrorCode::Success on success
          * @throw FileReader::OperationFailed on any read failure
          * @throw Same as streaming_archive::reader::SegmentManager::read
          */

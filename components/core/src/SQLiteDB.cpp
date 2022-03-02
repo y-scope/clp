@@ -13,7 +13,7 @@ void SQLiteDB::open (const string& path) {
     if (SQLITE_OK != return_value) {
         SPDLOG_ERROR("Failed to open sqlite database {} - {}", path.c_str(), sqlite3_errmsg(m_db_handle));
         close();
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
     }
 }
 
@@ -29,7 +29,7 @@ bool SQLiteDB::close () {
 
 SQLitePreparedStatement SQLiteDB::prepare_statement (const char* statement, size_t statement_length) {
     if (nullptr == m_db_handle) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     return {statement, statement_length, m_db_handle};

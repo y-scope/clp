@@ -48,8 +48,8 @@ public:
      * @param buffer
      * @param file_reader
      * @param path_if_compressed_file Path to use if the data is a single compressed file
-     * @return ErrorCode_Success on success
-     * @return ErrorCode_Failure on failure
+     * @return ErrorCode::Success on success
+     * @return ErrorCode::Failure on failure
      */
     ErrorCode try_open (size_t buffer_length, const char* buffer, FileReader& file_reader, const std::string& path_if_compressed_file);
     /**
@@ -59,9 +59,9 @@ public:
 
     /**
      * Tries to read the next entry's header from the archive
-     * @return ErrorCode_EndOfFile on EOF
-     * @return ErrorCode_Failure on failure
-     * @return ErrorCode_Success on success
+     * @return ErrorCode::EndOfFile on EOF
+     * @return ErrorCode::Failure on failure
+     * @return ErrorCode::Success on success
      */
     ErrorCode try_read_next_header ();
 
@@ -134,9 +134,9 @@ private:
      * Reads a chunk of data from the underlying file
      * @param buffer
      * @param num_bytes_read
-     * @return ErrorCode_NotInit if not opened by libarchive
+     * @return ErrorCode::NotInit if not opened by libarchive
      * @return Same as FileReader::try_read
-     * @return ErrorCode_Success on success
+     * @return ErrorCode::Success on success
      */
     ErrorCode libarchive_read_callback (const void** buffer, size_t& num_bytes_read);
     /**
@@ -146,7 +146,7 @@ private:
      * @return Same as FileReader::try_get_pos
      * @return Same as FileReader::try_fstat
      * @return Same as FileReader::try_seek_from_begin
-     * @return ErrorCode_Success on success
+     * @return ErrorCode::Success on success
      */
     ErrorCode libarchive_skip_callback (off_t num_bytes_to_skip, size_t& num_bytes_skipped);
 

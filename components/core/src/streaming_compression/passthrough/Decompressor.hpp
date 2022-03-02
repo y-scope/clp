@@ -41,25 +41,25 @@ namespace streaming_compression { namespace passthrough {
          * @param buf
          * @param num_bytes_to_read The number of bytes to try and read
          * @param num_bytes_read The actual number of bytes read
-         * @return ErrorCode_NotInit if the decompressor is not open
-         * @return ErrorCode_BadParam if buf is invalid
-         * @return ErrorCode_EndOfFile on EOF
-         * @return ErrorCode_Success on success
+         * @return ErrorCode::NotInit if the decompressor is not open
+         * @return ErrorCode::BadParam if buf is invalid
+         * @return ErrorCode::EndOfFile on EOF
+         * @return ErrorCode::Success on success
          */
         ErrorCode try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) override;
         /**
          * Tries to seek from the beginning to the given position
          * @param pos
-         * @return ErrorCode_NotInit if the decompressor is not open
-         * @return ErrorCode_Truncated if the position is past the last byte in the file
-         * @return ErrorCode_Success on success
+         * @return ErrorCode::NotInit if the decompressor is not open
+         * @return ErrorCode::Truncated if the position is past the last byte in the file
+         * @return ErrorCode::Success on success
          */
         ErrorCode try_seek_from_begin (size_t pos) override;
         /**
          * Tries to get the current position of the read head
          * @param pos Position of the read head in the file
-         * @return ErrorCode_NotInit if the decompressor is not open
-         * @return ErrorCode_Success on success
+         * @return ErrorCode::NotInit if the decompressor is not open
+         * @return ErrorCode::Success on success
          */
         ErrorCode try_get_pos (size_t& pos) override;
 

@@ -14,17 +14,17 @@ ErrorCode VariableDictionaryEntry::try_read_from_file (streaming_compression::zs
     ErrorCode error_code;
 
     error_code = decompressor.try_read_numeric_value<variable_dictionary_id_t>(m_id);
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         return error_code;
     }
 
     uint64_t value_length;
     error_code = decompressor.try_read_numeric_value(value_length);
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         return error_code;
     }
     error_code = decompressor.try_read_string(value_length, m_value);
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         return error_code;
     }
 
@@ -33,7 +33,7 @@ ErrorCode VariableDictionaryEntry::try_read_from_file (streaming_compression::zs
 
 void VariableDictionaryEntry::read_from_file (streaming_compression::zstd::Decompressor& decompressor) {
     auto error_code = try_read_from_file(decompressor);
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 }

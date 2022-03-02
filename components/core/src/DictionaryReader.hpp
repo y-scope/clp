@@ -113,7 +113,7 @@ protected:
 template <typename DictionaryIdType, typename EntryType>
 void DictionaryReader<DictionaryIdType, EntryType>::open (const std::string& dictionary_path, const std::string& segment_index_path) {
     if (m_is_open) {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotReady, __FILENAME__, __LINE__);
     }
 
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024; // 64 KB
@@ -127,7 +127,7 @@ void DictionaryReader<DictionaryIdType, EntryType>::open (const std::string& dic
 template <typename DictionaryIdType, typename EntryType>
 void DictionaryReader<DictionaryIdType, EntryType>::close () {
     if (false == m_is_open) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     m_segment_index_decompressor.close();
@@ -144,7 +144,7 @@ void DictionaryReader<DictionaryIdType, EntryType>::close () {
 template <typename DictionaryIdType, typename EntryType>
 void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries () {
     if (false == m_is_open) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     // Read dictionary header
@@ -152,7 +152,7 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries () {
 
     // Validate dictionary header
     if (num_dictionary_entries < m_entries.size()) {
-        throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Corrupt, __FILENAME__, __LINE__);
     }
 
     // Read new dictionary entries
@@ -173,7 +173,7 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries () {
 
     // Validate segment index header
     if (num_segments < m_num_segments_read_from_index) {
-        throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Corrupt, __FILENAME__, __LINE__);
     }
 
     // Read new segments from index
@@ -188,10 +188,10 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries () {
 template <typename DictionaryIdType, typename EntryType>
 const EntryType& DictionaryReader<DictionaryIdType, EntryType>::get_entry (DictionaryIdType id) const {
     if (false == m_is_open) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
     if (id >= m_entries.size()) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::BadParam, __FILENAME__, __LINE__);
     }
 
     return m_entries[id];
@@ -200,7 +200,7 @@ const EntryType& DictionaryReader<DictionaryIdType, EntryType>::get_entry (Dicti
 template <typename DictionaryIdType, typename EntryType>
 const std::string& DictionaryReader<DictionaryIdType, EntryType>::get_value (DictionaryIdType id) const {
     if (id >= m_entries.size()) {
-        throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Corrupt, __FILENAME__, __LINE__);
     }
     return m_entries[id].get_value();
 }
@@ -247,7 +247,7 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_segment_ids () {
         DictionaryIdType id;
         m_segment_index_decompressor.read_numeric_value(id, false);
         if (id >= m_entries.size()) {
-            throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Corrupt, __FILENAME__, __LINE__);
         }
 
         m_entries[id].add_segment_containing_entry(segment_id);

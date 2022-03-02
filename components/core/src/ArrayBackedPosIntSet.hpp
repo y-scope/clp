@@ -186,7 +186,7 @@ template<typename PosIntType>
 void ArrayBackedPosIntSet<PosIntType>::increase_capacity (size_t value) {
     if (value < m_data.size()) {
         SPDLOG_ERROR("Calling increase_capacity on value smaller than capacity.");
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::BadParam, __FILENAME__, __LINE__);
     }
     auto capacity = m_data.size();
     do {

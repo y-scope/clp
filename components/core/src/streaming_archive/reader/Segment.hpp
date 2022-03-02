@@ -31,8 +31,8 @@ namespace streaming_archive { namespace reader {
          * Opens a segment with the given ID from the given directory
          * @param segment_dir_path
          * @param segment_id
-         * @return ErrorCode_Failure if unable to memory map the segment file
-         * @return ErrorCode_Success on success
+         * @return ErrorCode::Failure if unable to memory map the segment file
+         * @return ErrorCode::Success on success
          */
         ErrorCode try_open (const std::string& segment_dir_path, segment_id_t segment_id);
 
@@ -46,9 +46,9 @@ namespace streaming_archive { namespace reader {
          * @param decompressed_stream_pos Offset of the content in the segment
          * @param extraction_buf Buffer to store the content
          * @param extraction_len Length of the buffer
-         * @return ErrorCode_Truncated if decompressed_stream_pos is outside of the segment
-         * @return ErrorCode_Failure if decompression failed
-         * @return ErrorCode_Success on success
+         * @return ErrorCode::Truncated if decompressed_stream_pos is outside of the segment
+         * @return ErrorCode::Failure if decompression failed
+         * @return ErrorCode::Success on success
          */
         ErrorCode try_read (uint64_t decompressed_stream_pos, char* extraction_buf, uint64_t extraction_len);
 

@@ -29,9 +29,9 @@ public:
      * @param fd
      * @param buf
      * @param buf_len Length of the buffer
-     * @return ErrorCode_BadParam if file descriptor or buffer pointer are invalid
-     * @return ErrorCode_errno if write failed
-     * @return ErrorCode_Success otherwise
+     * @return ErrorCode::BadParam if file descriptor or buffer pointer are invalid
+     * @return ErrorCode::Errno if write failed
+     * @return ErrorCode::Success otherwise
      */
     static ErrorCode try_write (int fd, const unsigned char* buf, size_t buf_len);
 

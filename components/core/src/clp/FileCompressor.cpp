@@ -86,8 +86,8 @@ namespace clp {
 
         // Check that file is UTF-8 encoded
         auto error_code = m_file_reader.try_read(m_utf8_validation_buf, cUtf8ValidationBufCapacity, m_utf8_validation_buf_length);
-        if (ErrorCode_Success != error_code) {
-            if (ErrorCode_EndOfFile != error_code) {
+        if (ErrorCode::Success != error_code) {
+            if (ErrorCode::EndOfFile != error_code) {
                 SPDLOG_ERROR("Failed to read {}, errno={}", file_to_compress.get_path().c_str(), errno);
                 return false;
             }
@@ -162,7 +162,7 @@ namespace clp {
 
         // Check if it's an archive
         auto error_code = m_libarchive_reader.try_open(m_utf8_validation_buf_length, m_utf8_validation_buf, m_file_reader, filename_if_compressed);
-        if (ErrorCode_Success != error_code) {
+        if (ErrorCode::Success != error_code) {
             SPDLOG_ERROR("Cannot compress {} - not UTF-8 encoded.", file_to_compress.get_path().c_str());
             return false;
         }
@@ -173,8 +173,8 @@ namespace clp {
         set<string> parent_directories;
         while (true) {
             error_code = m_libarchive_reader.try_read_next_header();
-            if (ErrorCode_Success != error_code) {
-                if (ErrorCode_EndOfFile == error_code) {
+            if (ErrorCode::Success != error_code) {
+                if (ErrorCode::EndOfFile == error_code) {
                     break;
                 }
                 SPDLOG_ERROR("Failed to read entry in {}.", file_to_compress.get_path().c_str());
@@ -212,8 +212,8 @@ namespace clp {
 
             // Check that file is UTF-8 encoded
             error_code = m_libarchive_file_reader.try_read(m_utf8_validation_buf, cUtf8ValidationBufCapacity, m_utf8_validation_buf_length);
-            if (ErrorCode_Success != error_code) {
-                if (ErrorCode_EndOfFile != error_code) {
+            if (ErrorCode::Success != error_code) {
+                if (ErrorCode::EndOfFile != error_code) {
                     SPDLOG_ERROR("Failed to read {} from {}.", m_libarchive_reader.get_path(), file_to_compress.get_path().c_str());
                     m_libarchive_file_reader.close();
                     succeeded = false;

@@ -24,7 +24,7 @@ namespace streaming_archive { namespace reader {
         if (m_id_to_open_segment.count(segment_id) == 0) {
             // Insert and open segment
             ErrorCode error_code = m_id_to_open_segment[segment_id].try_open(m_segment_dir_path, segment_id);
-            if (ErrorCode_Success != error_code) {
+            if (ErrorCode::Success != error_code) {
                 m_id_to_open_segment.erase(segment_id);
                 return error_code;
             }

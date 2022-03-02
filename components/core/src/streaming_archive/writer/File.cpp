@@ -11,7 +11,7 @@ using std::vector;
 namespace streaming_archive { namespace writer {
     void File::open () {
         if (m_is_written_out) {
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Unsupported, __FILENAME__, __LINE__);
         }
         m_timestamps = std::make_unique<PageAllocatedVector<epochtime_t>>();
         m_logtypes = std::make_unique<PageAllocatedVector<logtype_dictionary_id_t>>();
@@ -21,7 +21,7 @@ namespace streaming_archive { namespace writer {
 
     void File::append_to_segment (const LogTypeDictionaryWriter& logtype_dict, Segment& segment) {
         if (m_is_open) {
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Unsupported, __FILENAME__, __LINE__);
         }
 
         // Append files to segment

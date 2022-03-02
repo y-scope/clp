@@ -33,7 +33,7 @@ namespace clp {
         // Create output directory in case it doesn't exist
         auto output_dir = boost::filesystem::path(command_line_args.get_output_dir());
         error_code = create_directory(output_dir.parent_path().string(), 0700, true);
-        if (ErrorCode_Success != error_code) {
+        if (ErrorCode::Success != error_code) {
             SPDLOG_ERROR("Failed to create {} - {}", output_dir.parent_path().c_str(), strerror(errno));
             return false;
         }
@@ -187,7 +187,7 @@ namespace clp {
             }
         } catch (TraceableException& e) {
             error_code = e.get_error_code();
-            if (ErrorCode_errno == error_code) {
+            if (ErrorCode::Errno == error_code) {
                 SPDLOG_ERROR("Decompression failed: {}:{} {}, errno={}", e.get_filename(), e.get_line_number(), e.what(), errno);
                 return false;
             } else {

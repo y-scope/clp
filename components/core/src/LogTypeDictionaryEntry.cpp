@@ -61,7 +61,7 @@ size_t LogTypeDictionaryEntry::get_var_length_in_logtype (size_t var_ix) const {
             return 2;
         case VarDelim::Length:
         default:
-            throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::BadParam, __FILENAME__, __LINE__);
     }
 }
 
@@ -124,25 +124,25 @@ ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::zst
     ErrorCode error_code;
 
     error_code = decompressor.try_read_numeric_value<logtype_dictionary_id_t>(m_id);
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         return error_code;
     }
 
     uint8_t verbosity;
     error_code = decompressor.try_read_numeric_value<uint8_t>(verbosity);
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         return error_code;
     }
     m_verbosity = (LogVerbosity)verbosity;
 
     uint64_t escaped_value_length;
     error_code = decompressor.try_read_numeric_value(escaped_value_length);
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         return error_code;
     }
     string escaped_value;
     error_code = decompressor.try_read_string(escaped_value_length, escaped_value);
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         return error_code;
     }
 
@@ -182,7 +182,7 @@ ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::zst
 
 void LogTypeDictionaryEntry::read_from_file (streaming_compression::zstd::Decompressor& decompressor) {
     auto error_code = try_read_from_file(decompressor);
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 }

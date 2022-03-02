@@ -8,7 +8,7 @@ using std::string;
 MySQLDB::Iterator::Iterator (MYSQL* m_db_handle) : m_row(nullptr), m_field_lengths(nullptr), m_num_fields(0) {
     m_query_result = mysql_use_result(m_db_handle);
     if (nullptr == m_query_result) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
     }
 
     fetch_next_row();
@@ -61,10 +61,10 @@ void MySQLDB::Iterator::get_next () {
 
 void MySQLDB::Iterator::get_field_as_string (size_t field_ix, string& field_value) {
     if (nullptr == m_row) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
     if (field_ix >= m_num_fields) {
-        throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::OutOfBounds, __FILENAME__, __LINE__);
     }
 
     field_value.assign(m_row[field_ix], m_field_lengths[field_ix]);
@@ -87,24 +87,24 @@ MySQLDB::~MySQLDB () {
 
 void MySQLDB::open (const string& host, int port, const string& username, const string& password, const string& database) {
     if (nullptr != m_db_handle) {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotReady, __FILENAME__, __LINE__);
     }
 
     m_db_handle = mysql_init(nullptr);
     if (nullptr == m_db_handle) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
     }
 
     auto db_handle = mysql_real_connect(m_db_handle, host.c_str(), username.c_str(), password.c_str(), database.c_str(), port, nullptr, CLIENT_COMPRESS);
     if (nullptr == db_handle) {
         SPDLOG_ERROR("MySQLDB: Failed to connect - {}.", mysql_error(m_db_handle));
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
     }
 }
 
 void MySQLDB::close () {
     if (nullptr == m_db_handle) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     mysql_close(m_db_handle);
@@ -113,7 +113,7 @@ void MySQLDB::close () {
 
 bool MySQLDB::execute_query (const string& sql_query) {
     if (nullptr == m_db_handle) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     if (0 != mysql_real_query(m_db_handle, sql_query.c_str(), sql_query.length())) {
@@ -126,7 +126,7 @@ bool MySQLDB::execute_query (const string& sql_query) {
 
 MySQLPreparedStatement MySQLDB::prepare_statement (const char* statement, size_t statement_length) {
     if (nullptr == m_db_handle) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     auto prepared_statement = MySQLPreparedStatement(m_db_handle);

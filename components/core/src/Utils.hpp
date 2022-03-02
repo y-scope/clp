@@ -45,9 +45,9 @@ bool convert_string_to_double (const std::string& raw, double& converted);
  * @param path
  * @param mode
  * @param exist_ok
- * @return ErrorCode_Success on success
- * @return ErrorCode_errno on error
- * @return ErrorCode_FileExists if exist_ok was false and the path already existed
+ * @return ErrorCode::Success on success
+ * @return ErrorCode::Errno on error
+ * @return ErrorCode::FileExists if exist_ok was false and the path already existed
  */
 ErrorCode create_directory (const std::string& path, __mode_t mode, bool exist_ok);
 
@@ -56,7 +56,7 @@ ErrorCode create_directory (const std::string& path, __mode_t mode, bool exist_o
  * NOTE: We assume the path "/" exists
  * @param path The path (must be non-empty)
  * @param mode Permission bits for structure
- * @return ErrorCode_Success on success, ErrorCode_errno otherwise
+ * @return ErrorCode::Success on success, ErrorCode::Errno otherwise
  */
 ErrorCode create_directory_structure (const std::string& path, __mode_t mode);
 
@@ -153,9 +153,9 @@ bool wildCardMatch (
  * @param fd Reference to file descriptor opened for file
  * @param file_size Reference to file size determined for file
  * @param ptr Reference to pointer to mapped region
- * @return ErrorCode_errno on error
- * @return ErrorCode_FileNotFound if file not found
- * @return ErrorCode_Success on success
+ * @return ErrorCode::Errno on error
+ * @return ErrorCode::FileNotFound if file not found
+ * @return ErrorCode::Success on success
  */
 ErrorCode memory_map_file (const std::string& path, bool read_ahead, int& fd, size_t& file_size, void*& ptr);
 
@@ -164,8 +164,8 @@ ErrorCode memory_map_file (const std::string& path, bool read_ahead, int& fd, si
  * @param fd File's file descriptor
  * @param file_size File's size
  * @param ptr Pointer to mapped region
- * @return ErrorCode_errno on error
- * @return ErrorCode_Success on success
+ * @return ErrorCode::Errno on error
+ * @return ErrorCode::Success on success
  */
 ErrorCode memory_unmap_file (int fd, size_t file_size, void* ptr);
 
@@ -173,7 +173,7 @@ ErrorCode memory_unmap_file (int fd, size_t file_size, void* ptr);
  * Read a list of paths from a file
  * @param list_path
  * @param paths
- * @return ErrorCode_Success on success
+ * @return ErrorCode::Success on success
  * @return Otherwise, same as FileReader::try_open and FileReader::try_read_to_delimiter
  */
 ErrorCode read_list_of_paths (const std::string& list_path, std::vector<std::string>& paths);

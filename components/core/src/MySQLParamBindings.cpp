@@ -23,7 +23,7 @@ void MySQLParamBindings::resize (size_t num_fields) {
 
 void MySQLParamBindings::bind_int64 (size_t field_index, int64_t& value) {
     if (field_index >= m_statement_bindings.size()) {
-        throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::OutOfBounds, __FILENAME__, __LINE__);
     }
 
     auto& binding = m_statement_bindings[field_index];
@@ -34,7 +34,7 @@ void MySQLParamBindings::bind_int64 (size_t field_index, int64_t& value) {
 
 void MySQLParamBindings::bind_uint64 (size_t field_index, uint64_t& value) {
     if (field_index >= m_statement_bindings.size()) {
-        throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::OutOfBounds, __FILENAME__, __LINE__);
     }
 
     auto& binding = m_statement_bindings[field_index];
@@ -46,7 +46,7 @@ void MySQLParamBindings::bind_uint64 (size_t field_index, uint64_t& value) {
 
 void MySQLParamBindings::bind_varchar (size_t field_index, const char* value, size_t value_length) {
     if (field_index >= m_statement_bindings.size()) {
-        throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::OutOfBounds, __FILENAME__, __LINE__);
     }
 
     auto& binding = m_statement_bindings[field_index];
