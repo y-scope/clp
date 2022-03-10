@@ -11,7 +11,6 @@ runs:
   using: "composite"
   steps:
 
-
     - name: Download submodules
       run: ./tools/scripts/deps-download/download-all.sh
       working-directory: ./components/core
@@ -31,5 +30,5 @@ runs:
       shell: bash
       
     - name: Bundle Built Binaries
-      run: cd $GITHUB_WORKSPACE/build && tar -cf $GITHUB_WORKSPACE/clp_binaries.tar ./clp ./clg ./clo ./make-dictionaries-readable
+      run: cd $GITHUB_WORKSPACE/build && tar -cf $GITHUB_WORKSPACE/clp-binaries-focal.tar ./clp ./clg ./clo ./make-dictionaries-readable
       shell: bash
