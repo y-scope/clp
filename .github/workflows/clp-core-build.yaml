@@ -42,10 +42,9 @@ jobs:
       - name: Upload CLP Binary artifact
         uses: actions/upload-artifact@main
         with:
-            name: clp_binaries_focal
-            path: ${{github.workspace}}/clp_binaries.tar
+            name: clp-binaries-focal
+            path: ${{github.workspace}}/clp-binaries-focal.tar
             if-no-files-found: error
-
   
   build-clp-core-image:
     needs: build-focal
@@ -57,21 +56,26 @@ jobs:
       - name: Download built CLP Binaries
         uses: actions/download-artifact@v2
         with:
-          name: clp_binaries_focal
+          name: clp-binaries-focal
           path: ${{github.workspace}}/binaries
       
       - name: Extract Binaries Bundle
-        run: tar -xvf clp_binaries.tar
+        run: tar -xvf clp-binaries-focal.tar
         working-directory: ${{github.workspace}}/binaries
 
+      - name: Log in to the Github Packages Container registry
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Build and Push Ubuntu Focal Docker Image
         uses: ./.github/actions/clp-docker-build-push-action
         with:
           image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-focal
           context: ${{github.workspace}}/binaries
           file: components/core/tools/docker-images/clp-core-focal/Dockerfile
-
-      
 
   build-bionic:
     runs-on: ubuntu-latest
