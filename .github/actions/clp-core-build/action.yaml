@@ -30,5 +30,7 @@ runs:
       shell: bash
       
     - name: Bundle Built Binaries
-      run: cd $GITHUB_WORKSPACE/build; tar -cf $GITHUB_WORKSPACE/clp-binaries-focal.tar ./clp ./clg ./clo ./make-dictionaries-readable
+      run: |
+        cd $GITHUB_WORKSPACE/build 
+        tar -cf $GITHUB_WORKSPACE/clp-binaries-focal.tar ./clp ./clg ./clo ./make-dictionaries-readable
       shell: bash
