@@ -1,0 +1,10 @@
+[mysqld]
+# https://dev.mysql.com/doc/refman/8.0/en/log-destinations.html
+# Enable the general log
+general_log=1
+# Set the destination file
+general_log_file=/var/log/mysql/mysql.log
+
+# https://dev.mysql.com/doc/refman/8.0/en/error-log-destination-configuration.html
+# Send error logs to file
+log_error=/var/log/mysql/mysql-error.log

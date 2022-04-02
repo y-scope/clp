@@ -43,26 +43,34 @@ Therefore:
 ### Requirements
 
 * The single-node deployment requirements
-* For the scheduler node, port 3306 and 5672 must be available and accessible from all compute nodes
 * A distributed file system mounted at the same path on all nodes
+* The same config file on all nodes
 
-### Starting the scheduler
+### Starting the control-node components
+
+NOTE: These must be started in the order below.
 
 ```bash
-sbin/start-clp --start-scheduler-only --publish-ports \
-  --uncompressed-logs-dir <location of your uncompressed logs on dfs>
+sbin/start-clp db
+sbin/start-clp queue
+sbin/start-clp scheduler
 ```
 
-### Starting the worker(s)
+### Starting the worker-node components
 
 ```bash
-sbin/start-clp --start-worker-only --publish-ports \
-  --uncompressed-logs-dir <location of your uncompressed logs on dfs>
+sbin/start-clp worker
 ```
 
 ### Stopping components
 
-Every component can be stopped by:
+To stop an individual component on a node, you can use:
+
+```bash
+./sbin/stop-clp <component name>
+```
+
+To stop all components on a node, you can use:
 ```bash
 ./sbin/stop-clp
 ```

@@ -1,8 +1,7 @@
-import typing
-
-from pydantic import BaseModel, validator
-
 from clp_py_utils.pretty_size import pretty_size
+import pathlib
+from pydantic import BaseModel, validator
+import typing
 
 
 class Database(BaseModel):
@@ -38,21 +37,6 @@ class Database(BaseModel):
             connection_params['ssl_cert'] = self.ssl_cert
         return connection_params
 
-    def get_mariadb_connection_params(self):
-        # Currently, mysql's connector parameter is the same as mysql
-        connection_params = {
-            'host': self.host,
-            'port': self.port,
-            'user': self.username,
-            'password': self.password,
-            'database': self.name,
-            'compress': self.compress,
-            'autocommit': self.auto_commit
-        }
-        if self.ssl_cert:
-            connection_params['ssl_cert'] = self.ssl_cert
-        return connection_params
-
     def get_clp_connection_params_and_type(self):
         connection_params_and_type = {
             'type': 'mysql',  # hard code this as mysql as CLP only support "mysql" for global database
@@ -71,20 +55,21 @@ class Database(BaseModel):
 
 
 class Scheduler(BaseModel):
-    host: str
     jobs_poll_delay: int
 
 
 class SchedulerQueue(BaseModel):
-    host: str
-    port: int
-    username: str
-    password: str
+    host: typing.Optional[str]
+    port: typing.Optional[int]
+    username: typing.Optional[str]
+    password: typing.Optional[str]
+
+    # TODO validate port
 
 
 class ArchiveOutput(BaseModel):
     type: str  # Support only 'fs' type for now
-    directory: str
+    directory: pathlib.Path
     target_archive_size: int
     target_dictionaries_size: int
     target_encoded_file_size: int
@@ -122,63 +107,63 @@ class ArchiveOutput(BaseModel):
 
 
 class CLPConfig(BaseModel):
-    input_logs_dfs_path: str
+    input_logs_dfs_path: pathlib.Path
     database: Database
     scheduler: Scheduler
     scheduler_queue: SchedulerQueue
     archive_output: ArchiveOutput
-    data_directory: str
-    logs_directory: str
+    data_directory: pathlib.Path
+    logs_directory: pathlib.Path
 
     def generate_config_file_content_with_comments(self):
-        file_content = [
-            f'# A path containing any logs you which to compress. Must be reachable by all workers.',
-            f'# - This path will be exposed inside the docker container.',
-            f'# - This path should not be any path that exists in the container image (an Ubuntu image) (e.g., /var/log).',
-            f'# - Limitations: Docker follow symlink outside context, therefore, we recommend avoiding symbolic links',
-            f'input_logs_dfs_path: {self.input_logs_dfs_path}',
-            f'',
-            f'database:',
-            f'  type: {self.database.type}',
-            f'  host: {self.database.host}',
-            f'  port: {self.database.port}',
-            f'  username: {self.database.username}',
-            f'  password: {self.database.password}',
-            f'  name: {self.database.name}',
-            f'',
-            f'scheduler:',
-            f'  host: {self.scheduler.host}',
-            f'  jobs_poll_delay: {self.scheduler.jobs_poll_delay}   # Seconds',
-            f'',
-            f'scheduler_queue:',
-            f'  host: {self.scheduler_queue.host}',
-            f'  port: {self.scheduler_queue.port}',
-            f'  username: {self.scheduler_queue.username}',
-            f'  password: {self.scheduler_queue.password}',
-            f'',
-            f'# Where archives should be output to',
-            f'# Note: Only one output type may be specified',
-            f'archive_output:',
-            f'  type: {self.archive_output.type}',
-            f'  directory: "{self.archive_output.directory}"',
-            f'',
-            f'  # How much data CLP should try to compress into each archive',
-            f'  target_archive_size: {self.archive_output.target_archive_size}   # {pretty_size(self.archive_output.target_archive_size)}',
-            f'',
-            f'  # How large the dictionaries should be allowed to get before the archive is closed and a new one is created',
-            f'  target_dictionaries_size: {self.archive_output.target_dictionaries_size}   # {pretty_size(self.archive_output.target_dictionaries_size)}',
-            f'',
-            f'  # How large each encoded file should be before being split into a new encoded file',
-            f'  target_encoded_file_size: {self.archive_output.target_encoded_file_size}   # {pretty_size(self.archive_output.target_encoded_file_size)}',
-            f'',
-            f'  # How much data CLP should try to fit into each segment within an archive',
-            f'  target_segment_size: {self.archive_output.target_segment_size}   # {pretty_size(self.archive_output.target_segment_size)}',
-            f'',
-            f'# Location where other data is stored',
-            f'data_directory: "{self.data_directory}"',
-            f'',
-            f'# Location where logs are stored',
-            f'logs_directory: "{self.logs_directory}"',
-            f'',
-        ]
-        return '\n'.join(file_content)
+        file_content = f"""
+# A path containing any logs you which to compress. Must be reachable by all workers.
+# - This path will be exposed inside the docker container.
+# - This path should not be any path that exists in the container image (an Ubuntu image) (e.g., /var/log).
+# A path containing any logs you which to compress. Must be reachable by all workers.
+# - This path will be exposed inside the docker container.
+# - This path should not be any path that exists in the container image (an Ubuntu image) (e.g., /var/log).
+# - Limitations: Docker follow symlink outside context, therefore, we recommend avoiding symbolic links
+input_logs_dfs_path: {self.input_logs_dfs_path}
+
+database:
+  type: {self.database.type}
+  host: {self.database.host}
+  port: {self.database.port}
+  username: {self.database.username}
+  password: {self.database.password}
+  name: {self.database.name}
+
+scheduler:
+  jobs_poll_delay: {self.scheduler.jobs_poll_delay}   # Seconds
+
+scheduler_queue:
+  host: {self.scheduler_queue.host}
+  port: {self.scheduler_queue.port}
+  username: {self.scheduler_queue.username}
+  password: {self.scheduler_queue.password}
+
+# Where archives should be output to
+archive_output:
+  type: {self.archive_output.type}
+  directory: "{self.archive_output.directory}"
+
+  # How much data CLP should try to compress into each archive
+  target_archive_size: {self.archive_output.target_archive_size}   # {pretty_size(self.archive_output.target_archive_size)}
+
+  # How large the dictionaries should be allowed to get before the archive is closed and a new one is created
+  target_dictionaries_size: {self.archive_output.target_dictionaries_size}   # {pretty_size(self.archive_output.target_dictionaries_size)}
+
+  # How large each encoded file should be before being split into a new encoded file
+  target_encoded_file_size: {self.archive_output.target_encoded_file_size}   # {pretty_size(self.archive_output.target_encoded_file_size)}
+
+  # How much data CLP should try to fit into each segment within an archive
+  target_segment_size: {self.archive_output.target_segment_size}   # {pretty_size(self.archive_output.target_segment_size)}
+
+# Location where other data is stored
+data_directory: "{self.data_directory}"
+
+# Location where logs are stored
+logs_directory: "{self.logs_directory}"
+"""
+        return file_content

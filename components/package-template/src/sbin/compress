@@ -8,6 +8,8 @@ import sys
 
 # Setup logging
 # Create logger
+import uuid
+
 log = logging.getLogger('clp')
 log.setLevel(logging.INFO)
 # Setup console logging
@@ -51,62 +53,63 @@ if clp_home is None:
     sys.exit(-1)
 load_bundled_python_lib_path(clp_home)
 
-from clp.package_utils import check_env, CONTAINER_CLP_INSTALL_PREFIX
-from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.clp_package_config import CLPPackageConfig
-from pydantic import ValidationError
+from clp.package_utils import \
+    CONTAINER_CLP_INSTALL_PREFIX, \
+    generate_container_config, \
+    validate_or_generate_config_file
 
 
 def main(argv):
-    args_parser = argparse.ArgumentParser(description='Startup script for CLP')
-    args_parser.add_argument('--config', '-c', type=str, help='CLP package configuration file.')
+    default_config_file_path = clp_home / 'etc' / 'clp-config.yaml'
+
+    args_parser = argparse.ArgumentParser(description='Compresses files/directories')
+    args_parser.add_argument('--config', '-c', default=str(default_config_file_path),
+                             help='CLP package configuration file.')
     args_parser.add_argument('paths', metavar='PATH', nargs='*', help='Paths to compress.')
     args_parser.add_argument('-f', '--input-list', dest='input_list', help='A file listing all paths to compress.')
+
     parsed_args = args_parser.parse_args(argv[1:])
 
-    # Infer config file path
-    try:
-        if not parsed_args.config:
-            # Did not provide a config file
-            default_clp_package_config_file = clp_home / 'etc' / 'clp-config.yaml'
-            if not default_clp_package_config_file.exists():
-                raise FileNotFoundError
-            log.info(f'Using default config file at {default_clp_package_config_file.relative_to(pathlib.Path.cwd())}')
-            package_config_file_path = default_clp_package_config_file
-        else:
-            # Provided a config file
-            package_config_file_path = pathlib.Path(parsed_args.config).resolve(strict=True)
-    except FileNotFoundError:
-        log.error('Did not provide a clp package config file or the specified config file does not exist.')
-        return
-
-    try:
-        clp_package_config = CLPPackageConfig.parse_obj(read_yaml_config_file(package_config_file_path))
-    except ValidationError as err:
-        log.error(err)
-        return
-    except Exception as ex:
-        # read_yaml_config_file already logs the parsing error inside
-        return
-
-    clp_cluster_name = clp_package_config.cluster_name
-    try:
-        check_env(clp_cluster_name)
-    except EnvironmentError as ex:
-        log.error(ex)
+    # Validate config file
+    config_file_path = pathlib.Path(parsed_args.config)
+    clp_config = validate_or_generate_config_file(config_file_path, default_config_file_path)
+    if clp_config is None:
         return -1
 
-    docker_exec_cmd = [
-        'docker', 'exec',
-        '--workdir', f'{CONTAINER_CLP_INSTALL_PREFIX}/clp',
+    container_name = f'clp-compressor-{str(uuid.uuid4())[-4:]}'
+
+    container_clp_config, mounts = generate_container_config(clp_config, clp_home)
+    container_config_filename = f'.{container_name}-config.yaml'
+    container_config_file_path = clp_home / 'etc' / container_config_filename
+    with open(container_config_file_path, 'w') as f:
+        f.write(container_clp_config.generate_config_file_content_with_comments())
+
+    docker_clp_home = pathlib.Path(CONTAINER_CLP_INSTALL_PREFIX) / 'clp'
+    container_start_cmd = [
+        'docker', 'run',
+        '-i',
+        '--rm',
+        '--network', 'host',
+        '-w', str(docker_clp_home),
         '-u', f'{os.getuid()}:{os.getgid()}',
-        clp_package_config.cluster_name,
-        'sbin/native/compress', '--config', f'{CONTAINER_CLP_INSTALL_PREFIX}/.{clp_package_config.cluster_name}.yaml'
+        '--name', container_name,
     ]
+    for mount in mounts:
+        container_start_cmd.append('--mount')
+        container_start_cmd.append(str(mount))
+    container_start_cmd.append('ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-focal:main')
+    compress_cmd = [
+        str(docker_clp_home / 'sbin' / 'native' / 'compress'),
+        '--config', str(docker_clp_home / 'etc' / container_config_filename)
+    ]
+    container_input_logs_path = pathlib.Path('/') / 'mnt' / 'logs'
     for path in parsed_args.paths:
-        path = str(pathlib.Path(path).resolve())
-        docker_exec_cmd.append(path)
+        # Resolve path and prefix it with container_input_logs_path
+        resolved_path = pathlib.Path(path).resolve()
+        path = str(container_input_logs_path / resolved_path.relative_to(resolved_path.anchor))
+        compress_cmd.append(path)
     if parsed_args.input_list is not None:
+        # TODO Paths need to be prefixed with /mnt/logs
         # Validate all paths in input list
         all_paths_valid = True
         with open(parsed_args.input_list, 'r') as f:
@@ -118,10 +121,12 @@ def main(argv):
         if not all_paths_valid:
             raise ValueError("--input-list must only contain absolute paths")
 
-        docker_exec_cmd.append('--input-list')
-        docker_exec_cmd.append(parsed_args.input_list)
-    log.debug(docker_exec_cmd)
-    subprocess.run(docker_exec_cmd)
+        compress_cmd.append('--input-list')
+        compress_cmd.append(parsed_args.input_list)
+    cmd = container_start_cmd + compress_cmd
+    subprocess.run(cmd, check=True)
+
+    container_config_file_path.unlink()
 
     return 0
 
