@@ -78,7 +78,7 @@ def wait_for_database_to_init(container_name, clp_config: CLPConfig, timeout: in
     mysqladmin_cmd = [
         'mysqladmin', 'ping',
         '--silent',
-        '-h', str(clp_config.database.host),
+        '--socket', str("/var/run/mysqld/mysqld.sock"),
         '-u', str(clp_config.database.username),
         f'--password={clp_config.database.password}'
     ]
@@ -417,10 +417,6 @@ def main(argv):
             if 0 == num_cpus:
                 num_cpus = multiprocessing.cpu_count()
 
-            # Add input logs directory mount since the worker will need to access it during
-            # compression
-            mounts.append(DockerMount(DockerMountType.BIND, input_logs_dfs_path,
-                                      container_clp_config.input_logs_dfs_path, True))
             start_worker(instance_id, docker_clp_home, mounts, container_clp_config, num_cpus)
     except:
         # Stop CLP
