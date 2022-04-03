@@ -424,7 +424,7 @@ def main(argv):
             start_worker(instance_id, docker_clp_home, mounts, container_clp_config, num_cpus)
     except:
         # Stop CLP
-        subprocess.run(['python3', str(clp_home / 'sbin' / 'stop.py')], check=True)
+        subprocess.run(['python3', str(clp_home / 'sbin' / 'stop-clp')], check=True)
 
         logger.exception('Failed to start CLP.')
         return -1
