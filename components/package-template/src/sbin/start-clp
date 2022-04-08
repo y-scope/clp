@@ -78,7 +78,7 @@ def wait_for_database_to_init(container_name, clp_config: CLPConfig, timeout: in
     mysqladmin_cmd = [
         'mysqladmin', 'ping',
         '--silent',
-        '--socket', str("/var/run/mysqld/mysqld.sock"),
+        '-h', '127.0.0.1',
         '-u', str(clp_config.database.username),
         f'--password={clp_config.database.password}'
     ]
