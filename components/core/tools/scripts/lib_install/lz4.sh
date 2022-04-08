@@ -3,72 +3,78 @@
 # Exit on any error
 set -e
 
-cUsage="Usage: ${BASH_SOURCE[0]} <version>"
+cUsage="Usage: ${BASH_SOURCE[0]} <version>[ <.deb output directory>]"
 if [ "$#" -lt 1 ] ; then
     echo $cUsage
     exit
 fi
 version=$1
 
-echo "Checking for elevated privileges..."
-if [ ${EUID:-$(id -u)} -ne 0 ] ; then
-  sudo echo "Script can elevate privileges."
-fi
-
-# Get number of cpu cores
-num_cpus=$(grep -c ^processor /proc/cpuinfo)
-
 package_name=liblz4
-
-# Create temp dir for installation
 temp_dir=/tmp/${package_name}-installation
-mkdir -p $temp_dir
+deb_output_dir=${temp_dir}
+if [[ "$#" -gt 1 ]] ; then
+  deb_output_dir="$(readlink -f "$2")"
+  if [ ! -d ${deb_output_dir} ] ; then
+    echo "${deb_output_dir} does not exist or is not a directory"
+    exit
+  fi
+fi
 
 # Check if already installed
 set +e
 dpkg -l ${package_name}
 installed=$?
 set -e
-
-# Install if necessary
-if [ $installed -ne 0 ] ; then
-  # Download and build
-  cd $temp_dir
-  extracted_dir=${temp_dir}/lz4-${version}
-  if [ ! -e ${extracted_dir} ] ; then
-    tar_filename=v${version}.tar.gz
-    if [ ! -e ${tar_filename} ] ; then
-      wget https://github.com/lz4/lz4/archive/${tar_filename}
-    fi
-
-    tar -xf ${tar_filename}
-  fi
-
-  cd ${extracted_dir}
-  make -j${num_cpus}
-
-  # Check if checkinstall is installed
-  set +e
-  command -v checkinstall
-  checkinstall_installed=$?
-  set -e
-
-  # Install
-  if [ $checkinstall_installed -ne 0 ] ; then
-    # checkinstall is not installed, so install without building a deb package
-    if [ ${EUID:-$(id -u)} -ne 0 ] ; then
-      sudo make install
-    else
-      make install
-    fi
-  else
-    if [ ${EUID:-$(id -u)} -ne 0 ] ; then
-      sudo checkinstall --pkgname "${package_name}" --pkgversion "${version}" --provides "${package_name}" --nodoc -y
-    else
-      checkinstall --pkgname "${package_name}" --pkgversion "${version}" --provides "${package_name}" --nodoc -y
-    fi
-  fi
+if [ $installed -eq 0 ] ; then
+  # Nothing to do
+  exit
 fi
+
+echo "Checking for elevated privileges..."
+privileged_command_prefix=""
+if [ ${EUID:-$(id -u)} -ne 0 ] ; then
+  sudo echo "Script can elevate privileges."
+  privileged_command_prefix="${privileged_command_prefix} sudo"
+fi
+
+# Install dependencies
+export DEBIAN_FRONTEND=noninteractive
+${privileged_command_prefix} apt-get update
+${privileged_command_prefix} apt-get install -y curl make gcc
+
+# Get number of cpu cores
+num_cpus=$(grep -c ^processor /proc/cpuinfo)
+
+# Download
+mkdir -p $temp_dir
+cd $temp_dir
+extracted_dir=${temp_dir}/lz4-${version}
+if [ ! -e ${extracted_dir} ] ; then
+  tar_filename=v${version}.tar.gz
+  if [ ! -e ${tar_filename} ] ; then
+    curl -fsSL https://github.com/lz4/lz4/archive/${tar_filename} -o ${tar_filename}
+  fi
+
+  tar -xf ${tar_filename}
+fi
+
+# Build
+cd ${extracted_dir}
+make -j${num_cpus}
+
+# Check if checkinstall is installed
+set +e
+command -v checkinstall
+checkinstall_installed=$?
+set -e
+
+# Install
+install_command_prefix="${privileged_command_prefix}"
+if [ $checkinstall_installed -eq 0 ] ; then
+  install_command_prefix="${install_command_prefix} checkinstall --pkgname '${package_name}' --pkgversion '${version}' --provides '${package_name}' --nodoc -y --pakdir \"${deb_output_dir}\""
+fi
+${install_command_prefix} make install
 
 # Clean up
 rm -rf $temp_dir
