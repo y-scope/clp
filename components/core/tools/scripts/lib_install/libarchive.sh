@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Dependencies:
+# - cmake
+# - curl
+# NOTE: Dependencies should be installed outside the script to allow the script to be largely distro-agnostic
+
 # Exit on any error
 set -e
 
@@ -37,11 +42,6 @@ if [ ${EUID:-$(id -u)} -ne 0 ] ; then
   sudo echo "Script can elevate privileges."
   privileged_command_prefix="${privileged_command_prefix} sudo"
 fi
-
-# Install dependencies
-export DEBIAN_FRONTEND=noninteractive
-${privileged_command_prefix} apt-get update
-${privileged_command_prefix} apt-get install -y cmake curl
 
 # Get number of cpu cores
 num_cpus=$(grep -c ^processor /proc/cpuinfo)

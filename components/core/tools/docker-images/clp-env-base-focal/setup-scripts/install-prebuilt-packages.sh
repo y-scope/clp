@@ -5,6 +5,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   ca-certificates \
   checkinstall \
   cmake \
+  curl \
   build-essential \
   git \
   libboost-filesystem-dev \
@@ -15,5 +16,4 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   python3 \
   python3-pip \
   rsync \
-  wget \
   zlib1g-dev
