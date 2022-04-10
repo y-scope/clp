@@ -11,7 +11,6 @@ yum install -y \
   python3 \
   python3-pip \
   rsync \
-  wget \
   zlib-static
 
 # Install packages from CentOS' software collections repository (centos-release-scl)

@@ -28,7 +28,7 @@ cd $temp_dir
 
 # Download source
 tar_filename=cmake-${version}.tar.gz
-wget https://github.com/Kitware/CMake/releases/download/v${version}/${tar_filename}
+curl -fsSL https://github.com/Kitware/CMake/releases/download/v${version}/${tar_filename} -o ${tar_filename}
 tar xzf ${tar_filename}
 cd cmake-${version}
 

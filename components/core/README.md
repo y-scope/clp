@@ -57,15 +57,16 @@ A handful of packages and libraries are required to build CLP. There are two opt
 
 If you're using apt-get, you can use the following command to install all:
 ```shell
-sudo apt-get install -y ca-certificates checkinstall cmake build-essential \
+sudo apt-get install -y ca-certificates checkinstall cmake curl build-essential \
 libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev \
-libssl-dev pkg-config rsync wget zlib1g-dev
+libssl-dev pkg-config rsync zlib1g-dev
 ```
 
 This will download:
 * ca-certificates
 * checkinstall
 * cmake
+* curl
 * build-essential
 * libboost-filesystem-dev
 * libboost-iostreams-dev
@@ -73,7 +74,6 @@ This will download:
 * libssl-dev
 * pkg-config
 * rsync
-* wget
 * zlib1g-dev
 
 *Libraries*
