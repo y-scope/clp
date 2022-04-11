@@ -7,6 +7,17 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
 endif()
 
+# Set general compressor
+set(GENERAL_COMPRESSOR "zstd" CACHE STRING "The general-purpose compressor used as the 2nd-stage compressor")
+set_property(CACHE GENERAL_COMPRESSOR PROPERTY STRINGS passthrough zstd)
+if ("${GENERAL_COMPRESSOR}" STREQUAL "passthrough")
+    add_definitions(-DUSE_PASSTHROUGH_COMPRESSION=1)
+    message(STATUS "Using passthrough compression")
+elseif ("${GENERAL_COMPRESSOR}" STREQUAL "zstd")
+    add_definitions(-DUSE_ZSTD_COMPRESSION=1)
+    message(STATUS "Using Zstandard compression")
+endif()
+
 # Add local CMake module directory to CMake's modules path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
@@ -22,9 +33,6 @@ add_definitions(-DPROF_ENABLED=0)
 
 # Flush to disk switch
 add_definitions(-DFLUSH_TO_DISK_ENABLED=1)
-
-# Passthrough compression switch
-add_definitions(-DUSE_PASSTHROUGH_COMPRESSION=0)
 
 # Make off_t 64-bit
 add_definitions(-D_FILE_OFFSET_BITS=64)

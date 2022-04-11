@@ -13,6 +13,7 @@
 #include "DictionaryEntry.hpp"
 #include "FileReader.hpp"
 #include "Profiler.hpp"
+#include "streaming_compression/passthrough/Decompressor.hpp"
 #include "streaming_compression/zstd/Decompressor.hpp"
 #include "Utils.hpp"
 
@@ -102,12 +103,16 @@ protected:
     // Variables
     bool m_is_open;
     FileReader m_dictionary_file_reader;
-    streaming_compression::zstd::Decompressor m_dictionary_decompressor;
     FileReader m_segment_index_file_reader;
+#if USE_PASSTHROUGH_COMPRESSION
+    streaming_compression::passthrough::Decompressor m_dictionary_decompressor;
+    streaming_compression::passthrough::Decompressor m_segment_index_decompressor;
+#elif USE_ZSTD_COMPRESSION
+    streaming_compression::zstd::Decompressor m_dictionary_decompressor;
     streaming_compression::zstd::Decompressor m_segment_index_decompressor;
+#endif
     size_t m_num_segments_read_from_index;
     std::vector<EntryType> m_entries;
-
 };
 
 template <typename DictionaryIdType, typename EntryType>

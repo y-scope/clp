@@ -50,19 +50,19 @@ public:
      * Writes an entry to file
      * @param compressor
      */
-    void write_to_file (streaming_compression::zstd::Compressor& compressor) const;
+    void write_to_file (streaming_compression::Compressor& compressor) const;
     /**
      * Tries to read an entry from the given decompressor
      * @param decompressor
-     * @return Same as streaming_compression::zstd::Decompressor::try_read_numeric_value
-     * @return Same as streaming_compression::zstd::Decompressor::try_read_string
+     * @return Same as streaming_compression::Decompressor::try_read_numeric_value
+     * @return Same as streaming_compression::Decompressor::try_read_string
      */
-    ErrorCode try_read_from_file (streaming_compression::zstd::Decompressor& decompressor);
+    ErrorCode try_read_from_file (streaming_compression::Decompressor& decompressor);
     /**
      * Reads an entry from the given decompressor
      * @param decompressor
      */
-    void read_from_file (streaming_compression::zstd::Decompressor& decompressor);
+    void read_from_file (streaming_compression::Decompressor& decompressor);
 };
 
 #endif // VARIABLEDICTIONARYENTRY_HPP

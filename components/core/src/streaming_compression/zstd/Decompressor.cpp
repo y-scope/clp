@@ -122,6 +122,36 @@ namespace streaming_compression { namespace zstd {
         return ErrorCode_Success;
     }
 
+    void Decompressor::open (const char* compressed_data_buf, size_t compressed_data_buf_size) {
+        if (InputType::NotInitialized != m_input_type) {
+            throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+        }
+        m_input_type = InputType::CompressedDataBuf;
+
+        // Configure input stream
+        m_compressed_stream_block = {compressed_data_buf, compressed_data_buf_size, 0};
+
+        reset_stream();
+    }
+
+    void Decompressor::open (FileReader& file_reader, size_t file_read_buffer_capacity) {
+        if (InputType::NotInitialized != m_input_type) {
+            throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+        }
+        m_input_type = InputType::File;
+
+        m_file_reader = &file_reader;
+        m_file_reader_initial_pos = m_file_reader->get_pos();
+
+        m_file_read_buffer_capacity = file_read_buffer_capacity;
+        m_file_read_buffer = std::make_unique<char[]>(m_file_read_buffer_capacity);
+        m_file_read_buffer_length = 0;
+
+        m_compressed_stream_block = {m_file_read_buffer.get(), m_file_read_buffer_length, 0};
+
+        reset_stream();
+    }
+
     void Decompressor::close () {
         if (InputType::MemoryMappedCompressedFile == m_input_type) {
             if (m_memory_mapped_compressed_file.is_open()) {
@@ -135,18 +165,6 @@ namespace streaming_compression { namespace zstd {
             m_file_reader = nullptr;
         }
         m_input_type = InputType::NotInitialized;
-    }
-
-    void Decompressor::open (const char* compressed_data_buf, size_t compressed_data_buf_size) {
-        if (InputType::NotInitialized != m_input_type) {
-            throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
-        }
-        m_input_type = InputType::CompressedDataBuf;
-
-        // Configure input stream
-        m_compressed_stream_block = {compressed_data_buf, compressed_data_buf_size, 0};
-
-        reset_stream();
     }
 
     ErrorCode Decompressor::open (const std::string& compressed_file_path) {
@@ -181,24 +199,6 @@ namespace streaming_compression { namespace zstd {
         reset_stream();
 
         return ErrorCode_Success;
-    }
-
-    void Decompressor::open (FileReader& file_reader, size_t file_read_buffer_capacity) {
-        if (InputType::NotInitialized != m_input_type) {
-            throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
-        }
-        m_input_type = InputType::File;
-
-        m_file_reader = &file_reader;
-        m_file_reader_initial_pos = m_file_reader->get_pos();
-
-        m_file_read_buffer_capacity = file_read_buffer_capacity;
-        m_file_read_buffer = std::make_unique<char[]>(m_file_read_buffer_capacity);
-        m_file_read_buffer_length = 0;
-
-        m_compressed_stream_block = {m_file_read_buffer.get(), m_file_read_buffer_length, 0};
-
-        reset_stream();
     }
 
     ErrorCode Decompressor::get_decompressed_stream_region (size_t decompressed_stream_pos, char* extraction_buf, size_t extraction_len) {

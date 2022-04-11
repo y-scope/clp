@@ -108,7 +108,7 @@ void LogTypeDictionaryEntry::clear () {
     m_var_positions.clear();
 }
 
-void LogTypeDictionaryEntry::write_to_file (streaming_compression::zstd::Compressor& compressor) const {
+void LogTypeDictionaryEntry::write_to_file (streaming_compression::Compressor& compressor) const {
     compressor.write_numeric_value(m_id);
     compressor.write_numeric_value<uint8_t>(m_verbosity);
 
@@ -118,7 +118,7 @@ void LogTypeDictionaryEntry::write_to_file (streaming_compression::zstd::Compres
     compressor.write_string(escaped_value);
 }
 
-ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::zstd::Decompressor& decompressor) {
+ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::Decompressor& decompressor) {
     clear();
 
     ErrorCode error_code;
@@ -180,7 +180,7 @@ ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::zst
     return error_code;
 }
 
-void LogTypeDictionaryEntry::read_from_file (streaming_compression::zstd::Decompressor& decompressor) {
+void LogTypeDictionaryEntry::read_from_file (streaming_compression::Decompressor& decompressor) {
     auto error_code = try_read_from_file(decompressor);
     if (ErrorCode_Success != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);

@@ -75,6 +75,8 @@ namespace streaming_compression { namespace zstd {
         ErrorCode try_get_pos (size_t& pos) override;
 
         // Methods implementing the Decompressor interface
+        void open (const char* compressed_data_buf, size_t compressed_data_buf_size) override;
+        void open (FileReader& file_reader, size_t file_read_buffer_capacity) override;
         void close () override;
         /**
          * Decompresses and copies the range of uncompressed data described by decompressed_stream_pos and extraction_len into extraction_buf
@@ -88,13 +90,6 @@ namespace streaming_compression { namespace zstd {
 
         // Methods
         /***
-         * Initialize streaming decompressor to decompress from the specified compressed data buffer
-         * @param compressed_data_buf
-         * @param compressed_data_buf_size
-         */
-        void open (const char* compressed_data_buf, size_t compressed_data_buf_size);
-
-        /***
          * Initialize streaming decompressor to decompress from a compressed file specified by the given path
          * @param compressed_file_path
          * @param decompressed_stream_block_size
@@ -103,12 +98,6 @@ namespace streaming_compression { namespace zstd {
          */
         ErrorCode open (const std::string& compressed_file_path);
 
-        /**
-         * Initializes the decompressor to decompress from an open file
-         * @param file_reader
-         * @param file_read_buffer_capacity The maximum amount of data to read from a file at a time
-         */
-        void open (FileReader& file_reader, size_t file_read_buffer_capacity);
     private:
         // Enum class
         enum class InputType {

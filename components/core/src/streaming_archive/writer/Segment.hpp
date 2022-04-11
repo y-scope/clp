@@ -77,7 +77,7 @@ namespace streaming_archive { namespace writer {
         FileWriter m_file_writer;
 #if USE_PASSTHROUGH_COMPRESSION
         streaming_compression::passthrough::Compressor m_compressor;
-#else
+#elif USE_ZSTD_COMPRESSION
         streaming_compression::zstd::Compressor m_compressor;
 #endif
     };

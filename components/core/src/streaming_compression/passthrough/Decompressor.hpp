@@ -25,8 +25,8 @@ namespace streaming_compression { namespace passthrough {
         };
 
         // Constructors
-        Decompressor () : ::streaming_compression::Decompressor(CompressorType::Passthrough), m_compressed_data_buf(nullptr), m_compressed_data_buf_len(0),
-                m_decompressed_stream_pos(0) {}
+        Decompressor () : ::streaming_compression::Decompressor(CompressorType::Passthrough), m_input_type(InputType::NotInitialized),
+                m_compressed_data_buf(nullptr), m_compressed_data_buf_len(0), m_decompressed_stream_pos(0) {}
 
         // Destructor
         ~Decompressor () = default;
@@ -64,6 +64,8 @@ namespace streaming_compression { namespace passthrough {
         ErrorCode try_get_pos (size_t& pos) override;
 
         // Methods implementing the Decompressor interface
+        void open (const char* compressed_data_buf, size_t compressed_data_buf_size) override;
+        void open (FileReader& file_reader, size_t file_read_buffer_capacity) override;
         void close () override;
         /**
          * Decompresses and copies the range of uncompressed data described by decompressed_stream_pos and extraction_len into extraction_buf
@@ -75,16 +77,17 @@ namespace streaming_compression { namespace passthrough {
          */
         ErrorCode get_decompressed_stream_region (size_t decompressed_stream_pos, char* extraction_buf, size_t extraction_len) override;
 
-        // Methods
-        /**
-         * Initialize streaming decompressor to decompress from the specified compressed data buffer
-         * @param compressed_data_buf
-         * @param compressed_data_buf_size
-         */
-        void open (const char* compressed_data_buf, size_t compressed_data_buf_size);
     private:
+        enum class InputType {
+            NotInitialized,
+            CompressedDataBuf,
+            File
+        };
 
         // Variables
+        InputType m_input_type;
+
+        FileReader* m_file_reader;
         const char* m_compressed_data_buf;
         size_t m_compressed_data_buf_len;
 
