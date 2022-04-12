@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-20.04
     name: Build Image - Ubuntu Bionic
     steps:
-     - name: Checkout
+      - name: Checkout
         uses: actions/checkout@v2
       
       - name: Log in to the Github Packages Container registry
@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-20.04
     name: Build Image - Centos7.4
     steps:
-     - name: Checkout
+      - name: Checkout
         uses: actions/checkout@v2
       
       - name: Log in to the Github Packages Container registry
