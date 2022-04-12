@@ -29,6 +29,7 @@ jobs:
           image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-focal
           context: components/core/
           file: components/core/tools/docker-images/clp-env-base-focal/Dockerfile
+          token: ${{secrets.GITHUB_TOKEN}}
 
   build-ubuntu-bionic:
     runs-on: ubuntu-20.04
@@ -43,6 +44,7 @@ jobs:
           image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-bionic
           context: components/core/
           file: components/core/tools/docker-images/clp-env-base-bionic/Dockerfile
+          token: ${{secrets.GITHUB_TOKEN}}
 
   build-centos:
     runs-on: ubuntu-20.04
@@ -57,3 +59,4 @@ jobs:
           image_name: ${{env.IMAGE_NAME_BASE}}-centos7.4
           context: components/core/
           file: components/core/tools/docker-images/clp-env-base-centos7.4/Dockerfile
+          token: ${{secrets.GITHUB_TOKEN}}

@@ -69,6 +69,7 @@ jobs:
           image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-focal
           context: ${{github.workspace}}/binaries
           file: components/core/tools/docker-images/clp-core-focal/Dockerfile
+          token: ${{secrets.GITHUB_TOKEN}}
 
   build-bionic:
     runs-on: ubuntu-latest
