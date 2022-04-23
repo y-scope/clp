@@ -1,0 +1,15 @@
+[submodule "components/core/submodules/Catch2"]
+	path = components/core/submodules/Catch2
+	url = https://github.com/catchorg/Catch2.git
+[submodule "components/core/submodules/date"]
+	path = components/core/submodules/date
+	url = https://github.com/HowardHinnant/date.git
+[submodule "components/core/submodules/yaml-cpp"]
+	path = components/core/submodules/yaml-cpp
+	url = https://github.com/jbeder/yaml-cpp.git
+[submodule "components/core/submodules/json"]
+	path = components/core/submodules/json
+	url = https://github.com/nlohmann/json.git
+[submodule "components/core/submodules/sqlite3"]
+	path = components/core/submodules/sqlite3
+	url = https://github.com/azadkuh/sqlite-amalgamation.git

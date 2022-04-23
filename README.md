@@ -39,6 +39,31 @@ The packages held by this [repository](https://github.com/orgs/y-scope/packages?
 5. Docker Image `clp/clp-core-x86-ubuntu-focal`
     - A docker image containing CLP (clp, clg, clo, etc.) binaries built in an Ubuntu Focal x86 environment
 
+
+## Build core
+```
+# 1.pull docker image
+docker pull ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main
+
+# 2.run docker container
+docker run -it ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main bash
+
+# 3.clone clp repo
+git clone https://github.com/y-scope/clp
+
+# 4.init submodules
+cd clp
+git submodule update --init
+
+# 5.build
+cd components/core
+mkdir build
+cd build
+cmake ..
+make
+
+```
+
 ## Next Steps
 
 This is our open-source release which we will be constantly updating with bug fixes, features, etc.
