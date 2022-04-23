@@ -20,7 +20,7 @@ namespace streaming_compression { namespace zstd {
         m_decompression_stream = ZSTD_createDStream();
         if (nullptr == m_decompression_stream) {
             SPDLOG_ERROR("streaming_compression::zstd::Decompressor: ZSTD_createDStream() error");
-            throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
         }
 
         // Create block to hold unused decompressed data
@@ -34,10 +34,10 @@ namespace streaming_compression { namespace zstd {
 
     ErrorCode Decompressor::try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
         if (InputType::NotInitialized == m_input_type) {
-            return ErrorCode_NotInit;
+            return ErrorCode::NotInit;
         }
         if (nullptr == buf) {
-            return ErrorCode_BadParam;
+            return ErrorCode::BadParam;
         }
 
         num_bytes_read = 0;
@@ -49,20 +49,20 @@ namespace streaming_compression { namespace zstd {
                 if (InputType::File != m_input_type) {
                     num_bytes_read = decompressed_stream_block.pos;
                     if (0 == decompressed_stream_block.pos) {
-                        return ErrorCode_EndOfFile;
+                        return ErrorCode::EndOfFile;
                     } else {
-                        return ErrorCode_Success;
+                        return ErrorCode::Success;
                     }
                 } else {
                     auto error_code = m_file_reader->try_read(reinterpret_cast<char*>(m_file_read_buffer.get()), m_file_read_buffer_capacity,
                                                               m_file_read_buffer_length);
-                    if (ErrorCode_Success != error_code) {
-                        if (ErrorCode_EndOfFile == error_code) {
+                    if (ErrorCode::Success != error_code) {
+                        if (ErrorCode::EndOfFile == error_code) {
                             num_bytes_read = decompressed_stream_block.pos;
                             if (0 == decompressed_stream_block.pos) {
-                                return ErrorCode_EndOfFile;
+                                return ErrorCode::EndOfFile;
                             } else {
-                                return ErrorCode_Success;
+                                return ErrorCode::Success;
                             }
                         } else {
                             return error_code;
@@ -78,7 +78,7 @@ namespace streaming_compression { namespace zstd {
             size_t error = ZSTD_decompressStream(m_decompression_stream, &decompressed_stream_block, &m_compressed_stream_block);
             if (ZSTD_isError(error)) {
                 SPDLOG_ERROR("streaming_compression::zstd::Decompressor: ZSTD_decompressStream() error: {}", ZSTD_getErrorName(error));
-                return ErrorCode_Failure;
+                return ErrorCode::Failure;
             }
         }
 
@@ -86,12 +86,12 @@ namespace streaming_compression { namespace zstd {
         m_decompressed_stream_pos += decompressed_stream_block.pos;
 
         num_bytes_read = decompressed_stream_block.pos;
-        return ErrorCode_Success;
+        return ErrorCode::Success;
     }
 
     ErrorCode Decompressor::try_seek_from_begin (size_t pos) {
         if (InputType::NotInitialized == m_input_type) {
-            throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
         }
 
         // Check if we've already decompressed passed the desired position
@@ -105,21 +105,21 @@ namespace streaming_compression { namespace zstd {
         while (m_decompressed_stream_pos < pos) {
             size_t num_bytes_to_decompress = std::min(m_unused_decompressed_stream_block_size, pos - m_decompressed_stream_pos);
             error = try_read_exact_length(m_unused_decompressed_stream_block_buffer.get(), num_bytes_to_decompress);
-            if (ErrorCode_Success != error) {
+            if (ErrorCode::Success != error) {
                 return error;
             }
         }
 
-        return ErrorCode_Success;
+        return ErrorCode::Success;
     }
 
     ErrorCode Decompressor::try_get_pos (size_t& pos) {
         if (InputType::NotInitialized == m_input_type) {
-            return ErrorCode_NotInit;
+            return ErrorCode::NotInit;
         }
 
         pos = m_decompressed_stream_pos;
-        return ErrorCode_Success;
+        return ErrorCode::Success;
     }
 
     void Decompressor::close () {
@@ -139,7 +139,7 @@ namespace streaming_compression { namespace zstd {
 
     void Decompressor::open (const char* compressed_data_buf, size_t compressed_data_buf_size) {
         if (InputType::NotInitialized != m_input_type) {
-            throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::NotReady, __FILENAME__, __LINE__);
         }
         m_input_type = InputType::CompressedDataBuf;
 
@@ -151,7 +151,7 @@ namespace streaming_compression { namespace zstd {
 
     ErrorCode Decompressor::open (const std::string& compressed_file_path) {
         if (InputType::NotInitialized != m_input_type) {
-            throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::NotReady, __FILENAME__, __LINE__);
         }
         m_input_type = InputType::MemoryMappedCompressedFile;
 
@@ -161,7 +161,7 @@ namespace streaming_compression { namespace zstd {
         if (boost_error_code) {
             SPDLOG_ERROR("streaming_compression::zstd::Decompressor: Unable to obtain file size for '{}' - {}.", compressed_file_path.c_str(),
                          boost_error_code.message().c_str());
-            return ErrorCode_Failure;
+            return ErrorCode::Failure;
         }
 
         boost::iostreams::mapped_file_params memory_map_params;
@@ -172,7 +172,7 @@ namespace streaming_compression { namespace zstd {
         m_memory_mapped_compressed_file.open(memory_map_params);
         if (!m_memory_mapped_compressed_file.is_open()) {
             SPDLOG_ERROR("streaming_compression::zstd::Decompressor: Unable to memory map the compressed file with path: {}", compressed_file_path.c_str());
-            return ErrorCode_Failure;
+            return ErrorCode::Failure;
         }
 
         // Configure input stream
@@ -180,12 +180,12 @@ namespace streaming_compression { namespace zstd {
 
         reset_stream();
 
-        return ErrorCode_Success;
+        return ErrorCode::Success;
     }
 
     void Decompressor::open (FileReader& file_reader, size_t file_read_buffer_capacity) {
         if (InputType::NotInitialized != m_input_type) {
-            throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::NotReady, __FILENAME__, __LINE__);
         }
         m_input_type = InputType::File;
 
@@ -203,7 +203,7 @@ namespace streaming_compression { namespace zstd {
 
     ErrorCode Decompressor::get_decompressed_stream_region (size_t decompressed_stream_pos, char* extraction_buf, size_t extraction_len) {
         auto error_code = try_seek_from_begin(decompressed_stream_pos);
-        if (ErrorCode_Success != error_code) {
+        if (ErrorCode::Success != error_code) {
             return error_code;
         }
 

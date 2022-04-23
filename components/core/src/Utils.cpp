@@ -169,13 +169,13 @@ ErrorCode create_directory (const string& path, __mode_t mode, bool exist_ok) {
     int retval = mkdir(path.c_str(), mode);
     if (0 != retval ) {
         if (EEXIST != errno) {
-            return ErrorCode_errno;
+            return ErrorCode::Errno;
         } else if (false == exist_ok) {
-            return ErrorCode_FileExists;
+            return ErrorCode::FileExists;
         }
     }
 
-    return ErrorCode_Success;
+    return ErrorCode::Success;
 }
 
 ErrorCode create_directory_structure (const string& path, __mode_t mode) {
@@ -185,10 +185,10 @@ ErrorCode create_directory_structure (const string& path, __mode_t mode) {
     struct stat s = {};
     if (0 == stat(path.c_str(), &s)) {
         // Deepest directory exists, so can return here
-        return ErrorCode_Success;
+        return ErrorCode::Success;
     } else if (ENOENT != errno) {
         // Unexpected error
-        return ErrorCode_errno;
+        return ErrorCode::Errno;
     }
 
     // Find deepest directory which exists, starting from the (2nd) deepest directory
@@ -202,7 +202,7 @@ ErrorCode create_directory_structure (const string& path, __mode_t mode) {
                 break;
             } else if (ENOENT != errno) {
                 // Unexpected error
-                return ErrorCode_errno;
+                return ErrorCode::Errno;
             }
         }
 
@@ -220,12 +220,12 @@ ErrorCode create_directory_structure (const string& path, __mode_t mode) {
         dir_path.assign(path, 0, path_end_pos);
         // Technically the directory shouldn't exist at this point in the code, but it may have been created concurrently.
         auto error_code = create_directory(dir_path, mode, true);
-        if (ErrorCode_Success != error_code) {
+        if (ErrorCode::Success != error_code) {
             return error_code;
         }
     }
 
-    return ErrorCode_Success;
+    return ErrorCode::Success;
 }
 
 size_t find_first_of (const string& haystack, const char* needles, size_t search_start_pos, size_t& needle_ix) {
@@ -747,24 +747,24 @@ ErrorCode memory_map_file (const string& path, bool read_ahead, int& fd, size_t&
     fd = open(path.c_str(), O_RDONLY);
     if (fd < 0) {
         SPDLOG_ERROR("Failed to open {}, errno={}", path.c_str(), errno);
-        return ErrorCode_errno;
+        return ErrorCode::Errno;
     }
 
     // Check file exists and get size
     struct stat s = {};
     if (0 != fstat(fd, &s)) {
         if (ENOENT == errno) {
-            return ErrorCode_FileNotFound;
+            return ErrorCode::FileNotFound;
         }
         SPDLOG_ERROR("Failed to stat {}, errno={}", path.c_str(), errno);
-        return ErrorCode_errno;
+        return ErrorCode::Errno;
     }
     file_size = s.st_size;
 
     if (0 == file_size) {
         if (0 != close(fd)) {
             SPDLOG_ERROR("Failed to close empty file - {}, errno={}", path.c_str(), errno);
-            return ErrorCode_errno;
+            return ErrorCode::Errno;
         }
     } else {
         int flags = MAP_SHARED;
@@ -776,27 +776,27 @@ ErrorCode memory_map_file (const string& path, bool read_ahead, int& fd, size_t&
         void* mapped_region = mmap(nullptr, file_size, PROT_READ, flags, fd, 0);
         if (MAP_FAILED == mapped_region) {
             SPDLOG_ERROR("Failed to mmap {}, errno={}", path.c_str(), errno);
-            return ErrorCode_errno;
+            return ErrorCode::Errno;
         }
         ptr = mapped_region;
     }
 
-    return ErrorCode_Success;
+    return ErrorCode::Success;
 }
 
 ErrorCode memory_unmap_file (int fd, size_t file_size, void* ptr) {
     if (0 != file_size) {
         if (0 != munmap(ptr, file_size)) {
             SPDLOG_ERROR("Failed to unmap file, errno={}", errno);
-            return ErrorCode_errno;
+            return ErrorCode::Errno;
         }
         if (0 != close(fd)) {
             SPDLOG_ERROR("Failed to close file, errno={}", errno);
-            return ErrorCode_errno;
+            return ErrorCode::Errno;
         }
     }
 
-    return ErrorCode_Success;
+    return ErrorCode::Success;
 }
 
 
@@ -804,7 +804,7 @@ ErrorCode memory_unmap_file (int fd, size_t file_size, void* ptr) {
 ErrorCode read_list_of_paths (const string& list_path, vector<string>& paths) {
     FileReader file_reader;
     ErrorCode error_code = file_reader.try_open(list_path);
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         return error_code;
     }
 
@@ -812,7 +812,7 @@ ErrorCode read_list_of_paths (const string& list_path, vector<string>& paths) {
     string line;
     while (true) {
         error_code = file_reader.try_read_to_delimiter('\n', false, false, line);
-        if (ErrorCode_Success != error_code) {
+        if (ErrorCode::Success != error_code) {
             break;
         }
         // Only add non-empty paths
@@ -821,11 +821,11 @@ ErrorCode read_list_of_paths (const string& list_path, vector<string>& paths) {
         }
     }
     // Check for any unexpected errors
-    if (ErrorCode_EndOfFile != error_code) {
+    if (ErrorCode::EndOfFile != error_code) {
         return error_code;
     }
 
     file_reader.close();
 
-    return ErrorCode_Success;
+    return ErrorCode::Success;
 }

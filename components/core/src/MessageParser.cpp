@@ -46,8 +46,8 @@ bool MessageParser::parse_next_message (bool drain_source, ReaderInterface& read
     while (true) {
         // Read message
         auto error_code = reader.try_read_to_delimiter(cLineDelimiter, true, true, m_line);
-        if (ErrorCode_Success != error_code) {
-            if (ErrorCode_EndOfFile != error_code) {
+        if (ErrorCode::Success != error_code) {
+            if (ErrorCode::EndOfFile != error_code) {
                 throw OperationFailed(error_code, __FILENAME__, __LINE__);
             }
 

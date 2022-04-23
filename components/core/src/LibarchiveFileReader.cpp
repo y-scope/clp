@@ -8,30 +8,30 @@
 
 ErrorCode LibarchiveFileReader::try_get_pos (size_t& pos) {
     if (nullptr == m_archive) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
     pos = m_pos_in_file;
-    return ErrorCode_Success;
+    return ErrorCode::Success;
 }
 
 ErrorCode LibarchiveFileReader::try_seek_from_begin (size_t pos) {
     if (nullptr == m_archive) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
-    throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+    throw OperationFailed(ErrorCode::Unsupported, __FILENAME__, __LINE__);
 }
 
 ErrorCode LibarchiveFileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
     if (nullptr == m_archive) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
     if (nullptr == m_archive_entry) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     if (m_reached_eof) {
-        return ErrorCode_EndOfFile;
+        return ErrorCode::EndOfFile;
     }
 
     num_bytes_read = 0;
@@ -39,9 +39,9 @@ ErrorCode LibarchiveFileReader::try_read (char* buf, size_t num_bytes_to_read, s
         // Read a data block if necessary
         if (nullptr == m_data_block) {
             auto error_code = read_next_data_block();
-            if (ErrorCode_Success != error_code) {
-                if (ErrorCode_EndOfFile == error_code && num_bytes_read > 0) {
-                    return ErrorCode_Success;
+            if (ErrorCode::Success != error_code) {
+                if (ErrorCode::EndOfFile == error_code && num_bytes_read > 0) {
+                    return ErrorCode::Success;
                 }
                 return error_code;
             }
@@ -55,7 +55,7 @@ ErrorCode LibarchiveFileReader::try_read (char* buf, size_t num_bytes_to_read, s
             m_pos_in_file += num_zeros_to_append;
 
             if (num_bytes_read == num_bytes_to_read) {
-                return ErrorCode_Success;
+                return ErrorCode::Success;
             }
         }
 
@@ -76,7 +76,7 @@ ErrorCode LibarchiveFileReader::try_read (char* buf, size_t num_bytes_to_read, s
             }
 
             if (num_bytes_read == num_bytes_to_read) {
-                return ErrorCode_Success;
+                return ErrorCode::Success;
             }
         }
     }
@@ -84,14 +84,14 @@ ErrorCode LibarchiveFileReader::try_read (char* buf, size_t num_bytes_to_read, s
 
 ErrorCode LibarchiveFileReader::try_read_to_delimiter (char delim, bool keep_delimiter, bool append, std::string& str) {
     if (nullptr == m_archive) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
     if (nullptr == m_archive_entry) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     if (m_reached_eof) {
-        return ErrorCode_EndOfFile;
+        return ErrorCode::EndOfFile;
     }
 
     if (false == append) {
@@ -104,10 +104,10 @@ ErrorCode LibarchiveFileReader::try_read_to_delimiter (char delim, bool keep_del
         // Read a data block if necessary
         if (nullptr == m_data_block) {
             auto error_code = read_next_data_block();
-            if (ErrorCode_Success != error_code) {
-                if (ErrorCode_EndOfFile == error_code && str.length() > original_str_length) {
+            if (ErrorCode::Success != error_code) {
+                if (ErrorCode::EndOfFile == error_code && str.length() > original_str_length) {
                     // NOTE: At this point, we haven't found delim, so return directly without breaking to add delim
-                    return ErrorCode_Success;
+                    return ErrorCode::Success;
                 }
                 return error_code;
             }
@@ -164,18 +164,18 @@ ErrorCode LibarchiveFileReader::try_read_to_delimiter (char delim, bool keep_del
     if (keep_delimiter) {
         str += delim;
     }
-    return ErrorCode_Success;
+    return ErrorCode::Success;
 }
 
 void LibarchiveFileReader::open (struct archive* archive, struct archive_entry* archive_entry) {
     if (nullptr == archive) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::BadParam, __FILENAME__, __LINE__);
     }
     if (nullptr == archive_entry) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::BadParam, __FILENAME__, __LINE__);
     }
     if (nullptr != m_archive) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     m_archive = archive;
@@ -184,7 +184,7 @@ void LibarchiveFileReader::open (struct archive* archive, struct archive_entry* 
 
 void LibarchiveFileReader::close () {
     if (nullptr == m_archive) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     m_archive = nullptr;
@@ -202,14 +202,14 @@ ErrorCode LibarchiveFileReader::read_next_data_block () {
         if (ARCHIVE_EOF == return_value) {
             m_reached_eof = true;
             m_data_block = nullptr;
-            return ErrorCode_EndOfFile;
+            return ErrorCode::EndOfFile;
         } else {
             SPDLOG_DEBUG("Failed to read data block from libarchive - {}", archive_error_string(m_archive));
-            return ErrorCode_Failure;
+            return ErrorCode::Failure;
         }
     }
 
     m_pos_in_data_block = 0;
 
-    return ErrorCode_Success;
+    return ErrorCode::Success;
 }

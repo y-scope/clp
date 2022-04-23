@@ -31,7 +31,7 @@ TEST_CASE("Test writing and reading a segment", "[Segment]") {
     // Create directory for segments
     string segments_dir_path = "unit-test-segment/";
     error_code = create_directory_structure(segments_dir_path, 0700);
-    REQUIRE(ErrorCode_Success == error_code);
+    REQUIRE(ErrorCode::Success == error_code);
 
     // Test segment writing
     writer::Segment writer_segment;
@@ -48,11 +48,11 @@ TEST_CASE("Test writing and reading a segment", "[Segment]") {
     reader::Segment reader_segment;
 
     error_code = reader_segment.try_open(segments_dir_path, segment_id);
-    REQUIRE(ErrorCode_Success == error_code);
+    REQUIRE(ErrorCode::Success == error_code);
 
     // Read out
     error_code = reader_segment.try_read(0, decompressed_data, uncompressed_data_size);
-    REQUIRE(ErrorCode_Success == error_code);
+    REQUIRE(ErrorCode::Success == error_code);
     REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size) == 0);
 
     reader_segment.close();

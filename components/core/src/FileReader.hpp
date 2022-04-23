@@ -32,17 +32,17 @@ public:
     /**
      * Tries to get the current position of the read head in the file
      * @param pos Position of the read head in the file
-     * @return ErrorCode_NotInit if the file is not open
-     * @return ErrorCode_errno on error
-     * @return ErrorCode_Success on success
+     * @return ErrorCode::NotInit if the file is not open
+     * @return ErrorCode::Errno on error
+     * @return ErrorCode::Success on success
      */
     ErrorCode try_get_pos (size_t& pos) override;
     /**
      * Tries to seek from the beginning of the file to the given position
      * @param pos
-     * @return ErrorCode_NotInit if the file is not open
-     * @return ErrorCode_errno on error
-     * @return ErrorCode_Success on success
+     * @return ErrorCode::NotInit if the file is not open
+     * @return ErrorCode::Errno on error
+     * @return ErrorCode::Success on success
      */
     ErrorCode try_seek_from_begin (size_t pos) override;
 
@@ -51,11 +51,11 @@ public:
      * @param buf
      * @param num_bytes_to_read The number of bytes to try and read
      * @param num_bytes_read The actual number of bytes read
-     * @return ErrorCode_NotInit if the file is not open
-     * @return ErrorCode_BadParam if buf is invalid
-     * @return ErrorCode_errno on error
-     * @return ErrorCode_EndOfFile on EOF
-     * @return ErrorCode_Success on success
+     * @return ErrorCode::NotInit if the file is not open
+     * @return ErrorCode::BadParam if buf is invalid
+     * @return ErrorCode::Errno on error
+     * @return ErrorCode::EndOfFile on EOF
+     * @return ErrorCode::Success on success
      */
     ErrorCode try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) override;
 
@@ -65,9 +65,9 @@ public:
      * @param keep_delimiter Whether to include the delimiter in the output string or not
      * @param append Whether to append to the given string or replace its contents
      * @param str The string read
-     * @return ErrorCode_Success on success
-     * @return ErrorCode_EndOfFile on EOF
-     * @return ErrorCode_errno otherwise
+     * @return ErrorCode::Success on success
+     * @return ErrorCode::EndOfFile on EOF
+     * @return ErrorCode::Errno otherwise
      */
     ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter, bool append, std::string& str) override;
 
@@ -77,9 +77,9 @@ public:
     /**
      * Tries to open a file
      * @param path
-     * @return ErrorCode_Success on success
-     * @return ErrorCode_FileNotFound if the file was not found
-     * @return ErrorCode_errno otherwise
+     * @return ErrorCode::Success on success
+     * @return ErrorCode::FileNotFound if the file was not found
+     * @return ErrorCode::Errno otherwise
      */
     ErrorCode try_open (const std::string& path);
     /**
@@ -96,8 +96,8 @@ public:
     /**
      * Tries to stat the current file
      * @param stat_buffer
-     * @return ErrorCode_errno on error
-     * @return ErrorCode_Success on success
+     * @return ErrorCode::Errno on error
+     * @return ErrorCode::Success on success
      */
     ErrorCode try_fstat (struct stat& stat_buffer);
 

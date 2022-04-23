@@ -112,7 +112,7 @@ protected:
 template <typename DictionaryIdType, typename EntryType>
 void DictionaryWriter<DictionaryIdType, EntryType>::open (const std::string& dictionary_path, const std::string& segment_index_path, DictionaryIdType max_id) {
     if (m_is_open) {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotReady, __FILENAME__, __LINE__);
     }
 
     m_dictionary_file_writer.open(dictionary_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
@@ -139,7 +139,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open (const std::string& dic
 template <typename DictionaryIdType, typename EntryType>
 void DictionaryWriter<DictionaryIdType, EntryType>::close () {
     if (false == m_is_open) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     write_header_and_flush_to_disk();
@@ -156,7 +156,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::close () {
 template <typename DictionaryIdType, typename EntryType>
 void DictionaryWriter<DictionaryIdType, EntryType>::write_header_and_flush_to_disk () {
     if (false == m_is_open) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     // Update header
@@ -176,7 +176,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload (const std:
                                                                       const variable_dictionary_id_t max_id)
 {
     if (m_is_open) {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotReady, __FILENAME__, __LINE__);
     }
 
     m_max_id = max_id;
@@ -192,7 +192,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload (const std:
     auto num_dictionary_entries = read_dictionary_header(dictionary_file_reader);
     if (num_dictionary_entries > m_max_id) {
         SPDLOG_ERROR("DictionaryWriter ran out of IDs.");
-        throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::OutOfBounds, __FILENAME__, __LINE__);
     }
     // Loads entries from the given dictionary file
     EntryType entry;
@@ -202,7 +202,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload (const std:
         const auto& str_value = entry.get_value();
         if (m_value_to_id.count(str_value)) {
             SPDLOG_ERROR("Entry's value already exists in dictionary");
-            throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Corrupt, __FILENAME__, __LINE__);
         }
 
         m_value_to_id[str_value] = entry.get_id();;
@@ -230,7 +230,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload (const std:
 template <typename DictionaryIdType, typename EntryType>
 void DictionaryWriter<DictionaryIdType, EntryType>::index_segment (segment_id_t segment_id, const ArrayBackedPosIntSet<DictionaryIdType>& ids) {
     if (false == m_is_open) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     m_segment_index_compressor.write_numeric_value(segment_id);

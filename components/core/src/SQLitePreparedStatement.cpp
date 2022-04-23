@@ -12,7 +12,7 @@ SQLitePreparedStatement::SQLitePreparedStatement (const char* statement, size_t 
     auto return_value = sqlite3_prepare_v2(db_handle, statement, statement_length, &m_statement_handle, nullptr);
     if (SQLITE_OK != return_value) {
         SPDLOG_ERROR("SQLitePreparedStatement: Failed to prepare statement '{:.{}}' - {}", statement, statement_length, sqlite3_errmsg(db_handle));
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
     }
     m_db_handle = db_handle;
     m_row_ready = false;
@@ -54,14 +54,14 @@ void SQLitePreparedStatement::bind_int (int parameter_index, int value) {
     auto return_value = sqlite3_bind_int(m_statement_handle, parameter_index, value);
     if (SQLITE_OK != return_value) {
         SPDLOG_ERROR("SQLitePreparedStatement: Failed to bind int to statement - {}", sqlite3_errmsg(m_db_handle));
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
     }
 }
 
 void SQLitePreparedStatement::bind_int (const string& parameter_name, int value) {
     int parameter_index = sqlite3_bind_parameter_index(m_statement_handle, parameter_name.c_str());
     if (0 == parameter_index) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::BadParam, __FILENAME__, __LINE__);
     }
 
     bind_int(parameter_index, value);
@@ -71,14 +71,14 @@ void SQLitePreparedStatement::bind_int64 (int parameter_index, int64_t value) {
     auto return_value = sqlite3_bind_int64(m_statement_handle, parameter_index, value);
     if (SQLITE_OK != return_value) {
         SPDLOG_ERROR("SQLitePreparedStatement: Failed to bind int64 to statement - {}", sqlite3_errmsg(m_db_handle));
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
     }
 }
 
 void SQLitePreparedStatement::bind_int64 (const string& parameter_name, int64_t value) {
     int parameter_index = sqlite3_bind_parameter_index(m_statement_handle, parameter_name.c_str());
     if (0 == parameter_index) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::BadParam, __FILENAME__, __LINE__);
     }
 
     bind_int64(parameter_index, value);
@@ -89,14 +89,14 @@ void SQLitePreparedStatement::bind_text (int parameter_index, const std::string&
                                           copy_parameter ? SQLITE_TRANSIENT : SQLITE_STATIC);
     if (SQLITE_OK != return_value) {
         SPDLOG_ERROR("SQLitePreparedStatement: Failed to bind text to statement - {}", sqlite3_errmsg(m_db_handle));
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
     }
 }
 
 void SQLitePreparedStatement::bind_text (const string& parameter_name, const string& value, bool copy_parameter) {
     int parameter_index = sqlite3_bind_parameter_index(m_statement_handle, parameter_name.c_str());
     if (0 == parameter_index) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::BadParam, __FILENAME__, __LINE__);
     }
 
     bind_text(parameter_index, value, copy_parameter);
@@ -113,19 +113,19 @@ bool SQLitePreparedStatement::step () {
     m_row_ready = (SQLITE_ROW == return_value);
     switch (return_value) {
         case SQLITE_BUSY:
-            throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::NotReady, __FILENAME__, __LINE__);
         case SQLITE_DONE:
             return false;
         case SQLITE_ROW:
             return true;
         default:
-            throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
     }
 }
 
 int SQLitePreparedStatement::column_int (int parameter_index) const {
     if (false == m_row_ready) {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotReady, __FILENAME__, __LINE__);
     }
 
     return sqlite3_column_int(m_statement_handle, parameter_index);
@@ -133,11 +133,11 @@ int SQLitePreparedStatement::column_int (int parameter_index) const {
 
 int SQLitePreparedStatement::column_int (const string& parameter_name) const {
     if (false == m_row_ready) {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotReady, __FILENAME__, __LINE__);
     }
     int parameter_index = sqlite3_bind_parameter_index(m_statement_handle, parameter_name.c_str());
     if (0 == parameter_index) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::BadParam, __FILENAME__, __LINE__);
     }
 
     return column_int(parameter_index);
@@ -145,7 +145,7 @@ int SQLitePreparedStatement::column_int (const string& parameter_name) const {
 
 int64_t SQLitePreparedStatement::column_int64 (int parameter_index) const {
     if (false == m_row_ready) {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotReady, __FILENAME__, __LINE__);
     }
 
     return sqlite3_column_int64(m_statement_handle, parameter_index);
@@ -153,11 +153,11 @@ int64_t SQLitePreparedStatement::column_int64 (int parameter_index) const {
 
 int64_t SQLitePreparedStatement::column_int64 (const string& parameter_name) const {
     if (false == m_row_ready) {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotReady, __FILENAME__, __LINE__);
     }
     int parameter_index = sqlite3_bind_parameter_index(m_statement_handle, parameter_name.c_str());
     if (0 == parameter_index) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::BadParam, __FILENAME__, __LINE__);
     }
 
     return column_int64(parameter_index);
@@ -165,7 +165,7 @@ int64_t SQLitePreparedStatement::column_int64 (const string& parameter_name) con
 
 void SQLitePreparedStatement::column_string (int parameter_index, std::string& value) const {
     if (false == m_row_ready) {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotReady, __FILENAME__, __LINE__);
     }
 
     value.assign(reinterpret_cast<const char*>(sqlite3_column_text(m_statement_handle, parameter_index)),
@@ -174,11 +174,11 @@ void SQLitePreparedStatement::column_string (int parameter_index, std::string& v
 
 void SQLitePreparedStatement::column_string (const std::string& parameter_name, std::string& value) const {
     if (false == m_row_ready) {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotReady, __FILENAME__, __LINE__);
     }
     int parameter_index = sqlite3_bind_parameter_index(m_statement_handle, parameter_name.c_str());
     if (0 == parameter_index) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::BadParam, __FILENAME__, __LINE__);
     }
 
     column_string(parameter_index, value);

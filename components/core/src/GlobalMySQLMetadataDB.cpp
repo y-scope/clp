@@ -44,7 +44,7 @@ void GlobalMySQLMetadataDB::ArchiveIterator::get_id (string& id) const {
 
 void GlobalMySQLMetadataDB::open () {
     if (m_is_open) {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotReady, __FILENAME__, __LINE__);
     }
 
     m_db.open(m_host, m_port, m_username, m_password, m_database_name);
@@ -109,7 +109,7 @@ void GlobalMySQLMetadataDB::close () {
 
 void GlobalMySQLMetadataDB::add_archive (const string& id, size_t uncompressed_size, size_t size, const string& creator_id, size_t creation_num) {
     if (false == m_is_open) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     auto& statement_bindings = m_insert_archive_statement->get_statement_bindings();
@@ -119,13 +119,13 @@ void GlobalMySQLMetadataDB::add_archive (const string& id, size_t uncompressed_s
     statement_bindings.bind_varchar(enum_to_underlying_type(ArchivesTableFieldIndexes::CreatorId), creator_id.c_str(), creator_id.length());
     statement_bindings.bind_uint64(enum_to_underlying_type(ArchivesTableFieldIndexes::CreationIx), creation_num);
     if (false == m_insert_archive_statement->execute()) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
     }
 }
 
 void GlobalMySQLMetadataDB::update_archive_size (const std::string& archive_id, size_t uncompressed_size, size_t size) {
     if (false == m_is_open) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     auto& statement_bindings = m_update_archive_size_statement->get_statement_bindings();
@@ -133,18 +133,18 @@ void GlobalMySQLMetadataDB::update_archive_size (const std::string& archive_id, 
     statement_bindings.bind_uint64(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Size), size);
     statement_bindings.bind_varchar(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Length), archive_id.c_str(), archive_id.length());
     if (false == m_update_archive_size_statement->execute()) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
     }
 }
 
 void GlobalMySQLMetadataDB::update_metadata_for_files (const std::string& archive_id, const std::vector<streaming_archive::writer::File*>& files) {
     if (false == m_is_open) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     // TODO Split into multiple transactions if necessary
     if (false == m_db.execute_query("BEGIN")) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
     }
     auto& statement_bindings = m_upsert_file_statement->get_statement_bindings();
     for (auto file : files) {
@@ -184,11 +184,11 @@ void GlobalMySQLMetadataDB::update_metadata_for_files (const std::string& archiv
         statement_bindings.bind_varchar(enum_to_underlying_type(FilesTableFieldIndexes::ArchiveId) + offset, archive_id.c_str(), archive_id.length());
 
         if (false == m_upsert_file_statement->execute()) {
-            throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
         }
     }
     if (false == m_db.execute_query("COMMIT")) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
     }
 }
 
@@ -199,7 +199,7 @@ GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator (
     SPDLOG_DEBUG("{}", statement_string);
 
     if (false == m_db.execute_query(statement_string)) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
     }
 
     return new ArchiveIterator(m_db.get_iterator());
@@ -217,7 +217,7 @@ GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator_f
     SPDLOG_DEBUG("{}", statement_string);
 
     if (false == m_db.execute_query(statement_string)) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
     }
 
     return new ArchiveIterator(m_db.get_iterator());

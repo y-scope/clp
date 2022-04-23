@@ -8,18 +8,18 @@
 
 ErrorCode Writer::try_write (int fd, const unsigned char* buf, size_t buf_len) {
     if (fd < 0 || nullptr == buf) {
-        return ErrorCode_BadParam;
+        return ErrorCode::BadParam;
     }
 
     while (buf_len > 0) {
         ssize_t num_bytes_sent = ::write(fd, buf, buf_len);
         if (-1 == num_bytes_sent) {
-            return ErrorCode_errno;
+            return ErrorCode::Errno;
         }
         buf_len -= num_bytes_sent;
     }
 
-    return ErrorCode_Success;
+    return ErrorCode::Success;
 }
 
 ErrorCode Writer::try_write_packet (int fd, PacketEncoder& packet_encoder) {
@@ -28,7 +28,7 @@ ErrorCode Writer::try_write_packet (int fd, PacketEncoder& packet_encoder) {
 
 void Writer::write_packet(int fd, PacketEncoder &packet_encoder) {
     ErrorCode error_code = try_write_packet(fd, packet_encoder);
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 }

@@ -6,7 +6,7 @@
 namespace streaming_compression { namespace passthrough {
     void Compressor::write (const char* data, const size_t data_length) {
         if (nullptr == m_compressed_stream_file_writer) {
-            throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
         }
 
         if (0 == data_length) {
@@ -14,7 +14,7 @@ namespace streaming_compression { namespace passthrough {
             return;
         }
         if (nullptr == data) {
-            throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::BadParam, __FILENAME__, __LINE__);
         }
 
         m_compressed_stream_file_writer->write(data, data_length);
@@ -22,7 +22,7 @@ namespace streaming_compression { namespace passthrough {
 
     void Compressor::flush () {
         if (nullptr == m_compressed_stream_file_writer) {
-            throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
         }
 
         m_compressed_stream_file_writer->flush();
@@ -30,7 +30,7 @@ namespace streaming_compression { namespace passthrough {
 
     ErrorCode Compressor::try_get_pos (size_t& pos) const {
         if (nullptr == m_compressed_stream_file_writer) {
-            return ErrorCode_NotInit;
+            return ErrorCode::NotInit;
         }
 
         return m_compressed_stream_file_writer->try_get_pos(pos);

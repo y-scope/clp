@@ -60,7 +60,7 @@ namespace clp {
 
         // Create output directory in case it doesn't exist
         auto error_code = create_directory(output_dir.parent_path().string(), 0700, true);
-        if (ErrorCode_Success != error_code) {
+        if (ErrorCode::Success != error_code) {
             SPDLOG_ERROR("Failed to create {} - {}", output_dir.parent_path().c_str(), strerror(errno));
             return false;
         }
@@ -156,10 +156,10 @@ namespace clp {
     {
         FileReader grouped_file_path_reader;
         ErrorCode error_code = grouped_file_path_reader.try_open(list_path);
-        if (ErrorCode_Success != error_code) {
-            if (ErrorCode_FileNotFound == error_code) {
+        if (ErrorCode::Success != error_code) {
+            if (ErrorCode::FileNotFound == error_code) {
                 SPDLOG_ERROR("'{}' does not exist.", list_path.c_str());
-            } else if (ErrorCode_errno == error_code) {
+            } else if (ErrorCode::Errno == error_code) {
                 SPDLOG_ERROR("Failed to read '{}', errno={}", list_path.c_str(), errno);
             } else {
                 SPDLOG_ERROR("Failed to read '{}', error_code={}", list_path.c_str(), error_code);
@@ -170,10 +170,10 @@ namespace clp {
         FileReader grouped_file_id_reader;
         string grouped_file_ids_path = list_path.substr(0, list_path.length() - 4) + ".gid";
         error_code = grouped_file_id_reader.try_open(grouped_file_ids_path);
-        if (ErrorCode_Success != error_code) {
-            if (ErrorCode_FileNotFound == error_code) {
+        if (ErrorCode::Success != error_code) {
+            if (ErrorCode::FileNotFound == error_code) {
                 SPDLOG_ERROR("'{}' does not exist.", grouped_file_ids_path.c_str());
-            } else if (ErrorCode_errno == error_code) {
+            } else if (ErrorCode::Errno == error_code) {
                 SPDLOG_ERROR("Failed to read '{}', errno={}", grouped_file_ids_path.c_str(), errno);
             } else {
                 SPDLOG_ERROR("Failed to read '{}', error_code={}", grouped_file_ids_path.c_str(), error_code);
@@ -189,7 +189,7 @@ namespace clp {
         while (true) {
             // Read path
             error_code = grouped_file_path_reader.try_read_to_delimiter('\n', false, false, path);
-            if (ErrorCode_Success != error_code) {
+            if (ErrorCode::Success != error_code) {
                 break;
             }
             // Validate path is not empty
@@ -201,8 +201,8 @@ namespace clp {
 
             // Read group ID
             error_code = grouped_file_id_reader.try_read_numeric_value(group_id);
-            if (ErrorCode_Success != error_code) {
-                if (ErrorCode_EndOfFile == error_code) {
+            if (ErrorCode::Success != error_code) {
+                if (ErrorCode::EndOfFile == error_code) {
                     SPDLOG_ERROR("There are more grouped file paths than IDs.");
                     return false;
                 }
@@ -234,8 +234,8 @@ namespace clp {
             grouped_files.emplace_back(path, path_without_prefix, group_id);
         }
         // Check for any unexpected errors
-        if (ErrorCode_EndOfFile != error_code) {
-            if (ErrorCode_errno == error_code) {
+        if (ErrorCode::EndOfFile != error_code) {
+            if (ErrorCode::Errno == error_code) {
                 SPDLOG_ERROR("Failed to read grouped file paths or IDs, errno={}", errno);
             } else {
                 SPDLOG_ERROR("Failed to read grouped file paths or IDs, error_code={}", error_code);

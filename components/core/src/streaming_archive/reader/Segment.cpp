@@ -35,7 +35,7 @@ namespace streaming_archive { namespace reader {
         if (segment_path == m_segment_path) {
             // Do nothing if segment file path is the same because it is already memory mapped
             // If we want to re-open the same file, we need to close it first
-            return ErrorCode_Success;
+            return ErrorCode::Success;
         }
 
         // Get the size of the compressed segment file
@@ -44,7 +44,7 @@ namespace streaming_archive { namespace reader {
         if (boost_error_code) {
             SPDLOG_ERROR("streaming_archive::reader::Segment: Unable to obtain file size for segment: {}", segment_path.c_str());
             SPDLOG_ERROR("streaming_archive::reader::Segment: {}", boost_error_code.message().c_str());
-            return ErrorCode_Failure;
+            return ErrorCode::Failure;
         }
 
         // Sanity check: previously used memory mapped file should be closed before opening a new one
@@ -61,13 +61,13 @@ namespace streaming_archive { namespace reader {
         m_memory_mapped_segment_file.open(memory_map_params);
         if (!m_memory_mapped_segment_file.is_open()) {
             SPDLOG_ERROR("streaming_archive::reader:Segment: Unable to memory map the compressed segment with path: {}", segment_path.c_str());
-            return ErrorCode_Failure;
+            return ErrorCode::Failure;
         }
 
         m_decompressor.open(m_memory_mapped_segment_file.data(), segment_file_size);
 
         m_segment_path = segment_path;
-        return ErrorCode_Success;
+        return ErrorCode::Success;
     }
 
     void Segment::close () {
@@ -82,7 +82,7 @@ namespace streaming_archive { namespace reader {
         // We always assume the passed in buffer is already pre-allocated, but we check anyways as a precaution
         if (nullptr == extraction_buf) {
             SPDLOG_ERROR("streaming_archive::reader::Segment: Extraction buffer not allocated during decompression");
-            return ErrorCode_BadParam;
+            return ErrorCode::BadParam;
         }
         return m_decompressor.get_decompressed_stream_region(decompressed_stream_pos, extraction_buf, extraction_len);
     }

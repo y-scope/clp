@@ -1,6 +1,33 @@
 #ifndef ERRORCODE_HPP
 #define ERRORCODE_HPP
 
+// C libraries
+#include <stdint.h>
+
+enum class ErrorCode : uint8_t {
+    Success = 0,
+    BadParam,
+    BadParam_DB_URI,
+    Corrupt,
+    Errno,
+    EndOfFile,
+    FileExists,
+    FileNotFound,
+    NoMem,
+    NotInit,
+    NotReady,
+    OutOfBounds,
+    TooLong,
+    Truncated,
+    Unsupported,
+    NoAccess,
+    Failure,
+    Failure_Metadata_Corrupted,
+    MetadataCorrupted,
+    Failure_DB_Bulk_Write,
+};
+
+/*
 typedef enum {
     ErrorCode_Success = 0,
     ErrorCode_BadParam,
@@ -23,5 +50,6 @@ typedef enum {
     ErrorCode_MetadataCorrupted,
     ErrorCode_Failure_DB_Bulk_Write
 } ErrorCode;
+*/
 
 #endif

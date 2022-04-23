@@ -64,7 +64,7 @@ namespace streaming_archive { namespace writer {
         bool path_exists = boost::filesystem::exists(archive_path, boost_error_code);
         if (path_exists) {
             SPDLOG_ERROR("Archive path already exists: {}", archive_path.c_str());
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Unsupported, __FILENAME__, __LINE__);
         }
         const auto& archive_path_string = archive_path.string();
         m_stable_uncompressed_size = 0;
@@ -74,14 +74,14 @@ namespace streaming_archive { namespace writer {
         retval = mkdir(archive_path_string.c_str(), 0750);
         if (0 != retval) {
             SPDLOG_ERROR("Failed to create {}, errno={}", archive_path_string.c_str(), errno);
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
         }
 
         // Get archive directory's file descriptor
         int archive_dir_fd = ::open(archive_path_string.c_str(), O_RDONLY);
         if (-1 == archive_dir_fd) {
             SPDLOG_ERROR("Failed to get file descriptor for {}, errno={}", archive_path_string.c_str(), errno);
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
         }
 
         // Create logs directory
@@ -92,14 +92,14 @@ namespace streaming_archive { namespace writer {
         retval = mkdir(m_logs_dir_path.c_str(), 0750);
         if (0 != retval) {
             SPDLOG_ERROR("Failed to create {}, errno={}", m_logs_dir_path.c_str(), errno);
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
         }
 
         // Get logs directory's file descriptor
         m_logs_dir_fd = ::open(m_logs_dir_path.c_str(), O_RDONLY);
         if (-1 == m_logs_dir_fd) {
             SPDLOG_ERROR("Failed to open file descriptor for {}, errno={}", m_logs_dir_path.c_str(), errno);
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
         }
 
         // Create segments directory
@@ -110,14 +110,14 @@ namespace streaming_archive { namespace writer {
         retval = mkdir(m_segments_dir_path.c_str(), 0750);
         if (0 != retval) {
             SPDLOG_ERROR("Failed to create {}, errno={}", m_segments_dir_path.c_str(), errno);
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
         }
 
         // Get segments directory's file descriptor
         m_segments_dir_fd = ::open(m_segments_dir_path.c_str(), O_RDONLY);
         if (-1 == m_segments_dir_fd) {
             SPDLOG_ERROR("Failed to open file descriptor for {}, errno={}", m_segments_dir_path.c_str(), errno);
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
         }
 
         // Create metadata database
@@ -170,7 +170,7 @@ namespace streaming_archive { namespace writer {
             // fsync archive directory now that everything in the archive directory has been created
             if (fsync(archive_dir_fd) != 0) {
                 SPDLOG_ERROR("Failed to fsync {}, errno={}", archive_path_string.c_str(), errno);
-                throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+                throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
             }
         #endif
         if (::close(archive_dir_fd) != 0) {
@@ -184,7 +184,7 @@ namespace streaming_archive { namespace writer {
     void Archive::close () {
         // The file should have been closed and persisted before closing the archive.
         if (m_file != nullptr) {
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Unsupported, __FILENAME__, __LINE__);
         }
 
         // Close segments if necessary
@@ -238,7 +238,7 @@ namespace streaming_archive { namespace writer {
 
     void Archive::create_and_open_file (const string& path, const group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix) {
         if (m_file != nullptr) {
-            throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::NotReady, __FILENAME__, __LINE__);
         }
         m_file = new File(m_uuid_generator(), orig_file_id, path, group_id, split_ix);
         m_file->open();
@@ -246,28 +246,28 @@ namespace streaming_archive { namespace writer {
 
     void Archive::close_file () {
         if (m_file == nullptr) {
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Unsupported, __FILENAME__, __LINE__);
         }
         m_file->close();
     }
 
     const File& Archive::get_file () const {
         if (m_file == nullptr) {
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Unsupported, __FILENAME__, __LINE__);
         }
         return *m_file;
     }
 
     void Archive::set_file_is_split (bool is_split) {
         if (m_file == nullptr) {
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Unsupported, __FILENAME__, __LINE__);
         }
         m_file->set_is_split(is_split);
     }
 
     void Archive::change_ts_pattern (const TimestampPattern* pattern) {
         if (m_file == nullptr) {
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Unsupported, __FILENAME__, __LINE__);
         }
         m_file->change_ts_pattern(pattern);
     }
@@ -297,7 +297,7 @@ namespace streaming_archive { namespace writer {
             // fsync logs directory to flush new files' directory entries
             if (0 != fsync(m_logs_dir_fd)) {
                 SPDLOG_ERROR("Failed to fsync {}, errno={}", m_logs_dir_path.c_str(), errno);
-                throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+                throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
             }
         #endif
 
@@ -326,7 +326,7 @@ namespace streaming_archive { namespace writer {
 
     void Archive::append_file_to_segment () {
         if (m_file == nullptr) {
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::Unsupported, __FILENAME__, __LINE__);
         }
 
         if (m_file->has_ts_pattern()) {
@@ -377,7 +377,7 @@ namespace streaming_archive { namespace writer {
             // fsync segments directory to flush segment's directory entry
             if (fsync(m_segments_dir_fd) != 0) {
                 SPDLOG_ERROR("Failed to fsync {}, errno={}", m_segments_dir_path.c_str(), errno);
-                throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+                throw OperationFailed(ErrorCode::Errno, __FILENAME__, __LINE__);
             }
         #endif
 

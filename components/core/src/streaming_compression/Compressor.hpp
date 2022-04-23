@@ -39,15 +39,15 @@ namespace streaming_compression {
         /**
          * Unsupported operation
          * @param pos
-         * @return ErrorCode_Unsupported
+         * @return ErrorCode::Unsupported
          */
-        ErrorCode try_seek_from_begin (size_t pos) override { return ErrorCode_Unsupported; };
+        ErrorCode try_seek_from_begin (size_t pos) override { return ErrorCode::Unsupported; };
         /**
          * Unsupported operation
          * @param pos
-         * @return ErrorCode_Unsupported
+         * @return ErrorCode::Unsupported
          */
-        ErrorCode try_seek_from_current (off_t offset) override { return ErrorCode_Unsupported; };
+        ErrorCode try_seek_from_current (off_t offset) override { return ErrorCode::Unsupported; };
 
         // Methods
         /**

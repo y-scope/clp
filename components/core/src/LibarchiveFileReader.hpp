@@ -36,7 +36,7 @@ public:
     /**
      * Tries to get the current position of the read head in the file
      * @param pos Position of the read head in the file
-     * @return ErrorCode_Success
+     * @return ErrorCode::Success
      */
     ErrorCode try_get_pos (size_t &pos) override;
     /**
@@ -50,9 +50,9 @@ public:
      * @param buf
      * @param num_bytes_to_read The number of bytes to try and read
      * @param num_bytes_read The actual number of bytes read
-     * @return ErrorCode_EndOfFile on EOF
-     * @return ErrorCode_Failure on failure
-     * @return ErrorCode_Success on success
+     * @return ErrorCode::EndOfFile on EOF
+     * @return ErrorCode::Failure on failure
+     * @return ErrorCode::Success on success
      */
     ErrorCode try_read (char *buf, size_t num_bytes_to_read, size_t &num_bytes_read) override;
 
@@ -63,9 +63,9 @@ public:
      * @param keep_delimiter Whether to include the delimiter in the output string or not
      * @param append Whether to append to the given string or replace its contents
      * @param str The string read
-     * @return ErrorCode_EndOfFile on EOF
-     * @return ErrorCode_Failure on failure
-     * @return ErrorCode_Success on success
+     * @return ErrorCode::EndOfFile on EOF
+     * @return ErrorCode::Failure on failure
+     * @return ErrorCode::Success on success
      */
     ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter, bool append, std::string& str) override;
 
@@ -85,9 +85,9 @@ private:
     // Methods
     /**
      * Reads next data block from the archive
-     * @return ErrorCode_EndOfFile on EOF
-     * @return ErrorCode_Failure on failure
-     * @return ErrorCode_Success on success
+     * @return ErrorCode::EndOfFile on EOF
+     * @return ErrorCode::Failure on failure
+     * @return ErrorCode::Success on success
      */
     ErrorCode read_next_data_block ();
 

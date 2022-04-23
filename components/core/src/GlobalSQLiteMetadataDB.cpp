@@ -136,7 +136,7 @@ void GlobalSQLiteMetadataDB::ArchiveIterator::get_id (string& id) const {
 
 void GlobalSQLiteMetadataDB::open () {
     if (m_is_open) {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotReady, __FILENAME__, __LINE__);
     }
 
     m_db.open(m_path);
@@ -231,14 +231,14 @@ void GlobalSQLiteMetadataDB::close () {
     m_upsert_files_transaction_begin_statement.reset(nullptr);
     m_upsert_files_transaction_end_statement.reset(nullptr);
     if (false == m_db.close()) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::Failure, __FILENAME__, __LINE__);
     }
     m_is_open = false;
 }
 
 void GlobalSQLiteMetadataDB::add_archive (const string& id, size_t uncompressed_size, size_t size, const string& creator_id, size_t creation_num) {
     if (false == m_is_open) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     m_insert_archive_statement->bind_text(enum_to_underlying_type(ArchivesTableFieldIndexes::Id) + 1, id, false);
@@ -252,7 +252,7 @@ void GlobalSQLiteMetadataDB::add_archive (const string& id, size_t uncompressed_
 
 void GlobalSQLiteMetadataDB::update_archive_size (const string& archive_id, size_t uncompressed_size, size_t size) {
     if (false == m_is_open) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     m_update_archive_size_statement->bind_int64(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::UncompressedSize) + 1, (int64_t)uncompressed_size);
@@ -264,7 +264,7 @@ void GlobalSQLiteMetadataDB::update_archive_size (const string& archive_id, size
 
 void GlobalSQLiteMetadataDB::update_metadata_for_files (const string& archive_id, const vector<streaming_archive::writer::File*>& files) {
     if (false == m_is_open) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
     }
 
     m_upsert_files_transaction_begin_statement->step();

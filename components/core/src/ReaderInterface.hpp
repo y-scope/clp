@@ -36,7 +36,7 @@ public:
      * @param keep_delimiter Whether to include the delimiter in the output string or not
      * @param append Whether to append to the given string or replace its contents
      * @param str The string read
-     * @return ErrorCode_Success on success
+     * @return ErrorCode::Success on success
      * @return Same as ReaderInterface::try_read otherwise
      */
     virtual ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter, bool append, std::string& str);
@@ -67,7 +67,7 @@ public:
      * @param buf
      * @param num_bytes Number of bytes to read
      * @return Same as the underlying medium's try_read method
-     * @return ErrorCode_Truncated if 0 < # bytes read < num_bytes
+     * @return ErrorCode::Truncated if 0 < # bytes read < num_bytes
      */
     ErrorCode try_read_exact_length (char* buf, size_t num_bytes);
     /**
@@ -130,19 +130,19 @@ public:
 template <typename ValueType>
 ErrorCode ReaderInterface::try_read_numeric_value (ValueType& value) {
     ErrorCode error_code = try_read_exact_length(reinterpret_cast<char*>(&value), sizeof(value));
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         return error_code;
     }
-    return ErrorCode_Success;
+    return ErrorCode::Success;
 }
 
 template <typename ValueType>
 bool ReaderInterface::read_numeric_value (ValueType& value, bool eof_possible) {
     ErrorCode error_code = try_read_numeric_value(value);
-    if (ErrorCode_EndOfFile == error_code && eof_possible) {
+    if (ErrorCode::EndOfFile == error_code && eof_possible) {
         return false;
     }
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
     return true;

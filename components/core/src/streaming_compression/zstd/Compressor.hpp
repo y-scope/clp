@@ -55,8 +55,8 @@ namespace streaming_compression { namespace zstd {
         /**
          * Tries to get the current position of the write head
          * @param pos Position of the write head
-         * @return ErrorCode_NotInit if the compressor is not open
-         * @return ErrorCode_Success on success
+         * @return ErrorCode::NotInit if the compressor is not open
+         * @return ErrorCode::Success on success
          */
         ErrorCode try_get_pos (size_t& pos) const override;
 

@@ -29,7 +29,7 @@ namespace streaming_archive { namespace writer {
 
     void Segment::open (const string& segments_dir_path, segment_id_t id, int compression_level) {
         if (!m_segment_path.empty()) {
-            throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode::NotInit, __FILENAME__, __LINE__);
         }
 
         m_id = id;

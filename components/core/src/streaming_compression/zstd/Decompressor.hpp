@@ -51,26 +51,26 @@ namespace streaming_compression { namespace zstd {
          * @param num_bytes_to_read The number of bytes to try and read
          * @param num_bytes_read The actual number of bytes read
          * @return Same as FileReader::try_read if the decompressor is attached to a file
-         * @return ErrorCode_NotInit if the decompressor is not open
-         * @return ErrorCode_BadParam if buf is invalid
-         * @return ErrorCode_EndOfFile on EOF
-         * @return ErrorCode_Failure on decompression failure
-         * @return ErrorCode_Success on success
+         * @return ErrorCode::NotInit if the decompressor is not open
+         * @return ErrorCode::BadParam if buf is invalid
+         * @return ErrorCode::EndOfFile on EOF
+         * @return ErrorCode::Failure on decompression failure
+         * @return ErrorCode::Success on success
          */
         ErrorCode try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) override;
         /**
          * Tries to seek from the beginning to the given position
          * @param pos
-         * @return ErrorCode_NotInit if the decompressor is not open
+         * @return ErrorCode::NotInit if the decompressor is not open
          * @return Same as ReaderInterface::try_read_exact_length
-         * @return ErrorCode_Success on success
+         * @return ErrorCode::Success on success
          */
         ErrorCode try_seek_from_begin (size_t pos) override;
         /**
          * Tries to get the current position of the read head
          * @param pos Position of the read head in the file
-         * @return ErrorCode_NotInit if the decompressor is not open
-         * @return ErrorCode_Success on success
+         * @return ErrorCode::NotInit if the decompressor is not open
+         * @return ErrorCode::Success on success
          */
         ErrorCode try_get_pos (size_t& pos) override;
 
@@ -98,8 +98,8 @@ namespace streaming_compression { namespace zstd {
          * Initialize streaming decompressor to decompress from a compressed file specified by the given path
          * @param compressed_file_path
          * @param decompressed_stream_block_size
-         * @return ErrorCode_Failure if the provided path cannot be memory mapped
-         * @return ErrorCode_Success on success
+         * @return ErrorCode::Failure if the provided path cannot be memory mapped
+         * @return ErrorCode::Success on success
          */
         ErrorCode open (const std::string& compressed_file_path);
 

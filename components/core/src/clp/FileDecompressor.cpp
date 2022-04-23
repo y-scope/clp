@@ -15,8 +15,8 @@ namespace clp {
     {
         // Open compressed file
         auto error_code = archive_reader.open_file(m_encoded_file, file_metadata_ix, true);
-        if (ErrorCode_Success != error_code) {
-            if (ErrorCode_errno == error_code) {
+        if (ErrorCode::Success != error_code) {
+            if (ErrorCode::Errno == error_code) {
                 SPDLOG_ERROR("Failed to open encoded file, errno={}", errno);
             } else {
                 SPDLOG_ERROR("Failed to open encoded file, error_code={}", error_code);
@@ -44,7 +44,7 @@ namespace clp {
 
         // Generate output directory
         error_code = create_directory_structure(final_output_path.parent_path().string(), 0700);
-        if (ErrorCode_Success != error_code) {
+        if (ErrorCode::Success != error_code) {
             SPDLOG_ERROR("Failed to create directory structure {}, errno={}", final_output_path.parent_path().c_str(), errno);
             return false;
         }

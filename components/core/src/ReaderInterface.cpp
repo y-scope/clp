@@ -14,9 +14,9 @@ ErrorCode ReaderInterface::try_read_to_delimiter (char delim, bool keep_delimite
     size_t num_bytes_read;
     while (true) {
         auto error_code = try_read(&c, 1, num_bytes_read);
-        if (ErrorCode_Success != error_code) {
-            if (ErrorCode_EndOfFile == error_code && str.length() > original_str_length) {
-                return ErrorCode_Success;
+        if (ErrorCode::Success != error_code) {
+            if (ErrorCode::EndOfFile == error_code && str.length() > original_str_length) {
+                return ErrorCode::Success;
             }
             return error_code;
         }
@@ -33,15 +33,15 @@ ErrorCode ReaderInterface::try_read_to_delimiter (char delim, bool keep_delimite
         str += delim;
     }
 
-    return ErrorCode_Success;
+    return ErrorCode::Success;
 }
 
 bool ReaderInterface::read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
     ErrorCode error_code = try_read(buf, num_bytes_to_read, num_bytes_read);
-    if (ErrorCode_EndOfFile == error_code) {
+    if (ErrorCode::EndOfFile == error_code) {
         return false;
     }
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
     return true;
@@ -49,10 +49,10 @@ bool ReaderInterface::read (char* buf, size_t num_bytes_to_read, size_t& num_byt
 
 bool ReaderInterface::read_to_delimiter (char delim, bool keep_delimiter, bool append, string& str) {
     ErrorCode error_code = try_read_to_delimiter(delim, keep_delimiter, append, str);
-    if (ErrorCode_EndOfFile == error_code) {
+    if (ErrorCode::EndOfFile == error_code) {
         return false;
     }
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 
@@ -62,22 +62,22 @@ bool ReaderInterface::read_to_delimiter (char delim, bool keep_delimiter, bool a
 ErrorCode ReaderInterface::try_read_exact_length (char* buf, size_t num_bytes) {
     size_t num_bytes_read;
     auto error_code = try_read(buf, num_bytes, num_bytes_read);
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         return error_code;
     }
     if (num_bytes_read < num_bytes) {
-        return ErrorCode_Truncated;
+        return ErrorCode::Truncated;
     }
 
-    return ErrorCode_Success;
+    return ErrorCode::Success;
 }
 
 bool ReaderInterface::read_exact_length (char* buf, size_t num_bytes, bool eof_possible) {
     ErrorCode error_code = try_read_exact_length(buf, num_bytes);
-    if (eof_possible && ErrorCode_EndOfFile == error_code) {
+    if (eof_possible && ErrorCode::EndOfFile == error_code) {
         return false;
     }
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
     return true;
@@ -92,10 +92,10 @@ ErrorCode ReaderInterface::try_read_string (const size_t str_length, string& str
 
 bool ReaderInterface::read_string (const size_t str_length, string& str, bool eof_possible) {
     ErrorCode error_code = try_read_string(str_length, str);
-    if (eof_possible && ErrorCode_EndOfFile == error_code) {
+    if (eof_possible && ErrorCode::EndOfFile == error_code) {
         return false;
     }
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
     return true;
@@ -103,7 +103,7 @@ bool ReaderInterface::read_string (const size_t str_length, string& str, bool eo
 
 void ReaderInterface::seek_from_begin (size_t pos) {
     ErrorCode error_code = try_seek_from_begin(pos);
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 }
@@ -111,7 +111,7 @@ void ReaderInterface::seek_from_begin (size_t pos) {
 size_t ReaderInterface::get_pos () {
     size_t pos;
     ErrorCode error_code = try_get_pos(pos);
-    if (ErrorCode_Success != error_code) {
+    if (ErrorCode::Success != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 

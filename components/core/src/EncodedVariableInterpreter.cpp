@@ -284,7 +284,7 @@ bool EncodedVariableInterpreter::encode_and_search_dictionary (const string& var
 {
     size_t length = var_str.length();
     if (0 == length) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode::BadParam, __FILENAME__, __LINE__);
     }
 
     encoded_variable_t encoded_var;

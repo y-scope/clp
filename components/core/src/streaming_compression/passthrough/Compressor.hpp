@@ -45,7 +45,7 @@ namespace streaming_compression { namespace passthrough {
         /**
          * Tries to get the current position of the write head
          * @param pos Position of the write head
-         * @return ErrorCode_NotInit if the compressor is not open
+         * @return ErrorCode::NotInit if the compressor is not open
          * @return Same as FileWriter::try_get_pos
          */
         ErrorCode try_get_pos (size_t& pos) const override;
