@@ -62,13 +62,6 @@ jobs:
       - name: Extract Binaries Bundle
         run: tar -xvf clp-binaries-focal.tar
         working-directory: ${{github.workspace}}/binaries
-
-      - name: Log in to the Github Packages Container registry
-        uses: docker/login-action@v1
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Build and Push Ubuntu Focal Docker Image
         uses: ./.github/actions/clp-docker-build-push-action
@@ -76,6 +69,7 @@ jobs:
           image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-focal
           context: ${{github.workspace}}/binaries
           file: components/core/tools/docker-images/clp-core-focal/Dockerfile
+          token: ${{secrets.GITHUB_TOKEN}}
 
   build-bionic:
     runs-on: ubuntu-latest

@@ -21,15 +21,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Log in to the Github Packages Container registry
-        uses: docker/login-action@v1
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build and push Docker image
         uses: ./.github/actions/clp-docker-build-push-action
         with:
           image_name: ${{env.IMAGE_NAME}}
           file: ./tools/docker-images/clp-execution-base-focal/Dockerfile
+          token: ${{secrets.GITHUB_TOKEN}}
