@@ -16,6 +16,8 @@ if ("${GENERAL_COMPRESSOR}" STREQUAL "passthrough")
 elseif ("${GENERAL_COMPRESSOR}" STREQUAL "zstd")
     add_definitions(-DUSE_ZSTD_COMPRESSION=1)
     message(STATUS "Using Zstandard compression")
+else()
+    message(SEND_ERROR "GENERAL_COMPRESSOR=${GENERAL_COMPRESSOR} is unimplemented.")
 endif()
 
 # Add local CMake module directory to CMake's modules path
