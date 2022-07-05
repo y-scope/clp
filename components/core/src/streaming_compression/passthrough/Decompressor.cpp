@@ -12,18 +12,24 @@ namespace streaming_compression { namespace passthrough {
             throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
         }
 
-        if (InputType::CompressedDataBuf == m_input_type) {
-            if (m_compressed_data_buf_len == m_decompressed_stream_pos) {
-                return ErrorCode_EndOfFile;
-            }
+        switch (m_input_type) {
+            case InputType::CompressedDataBuf:
+                if (m_compressed_data_buf_len == m_decompressed_stream_pos) {
+                    return ErrorCode_EndOfFile;
+                }
 
-            num_bytes_read = std::min(num_bytes_to_read, m_compressed_data_buf_len - m_decompressed_stream_pos);
-            memcpy(buf, &m_compressed_data_buf[m_decompressed_stream_pos], num_bytes_read);
-        } else if (InputType::File == m_input_type) {
-            auto error_code = m_file_reader->try_read(buf, num_bytes_to_read, num_bytes_read);
-            if (ErrorCode_Success != error_code) {
-                return error_code;
+                num_bytes_read = std::min(num_bytes_to_read, m_compressed_data_buf_len - m_decompressed_stream_pos);
+                memcpy(buf, &m_compressed_data_buf[m_decompressed_stream_pos], num_bytes_read);
+                break;
+            case InputType::File: {
+                auto error_code = m_file_reader->try_read(buf, num_bytes_to_read, num_bytes_read);
+                if (ErrorCode_Success != error_code) {
+                    return error_code;
+                }
+                break;
             }
+            default:
+                throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
         m_decompressed_stream_pos += num_bytes_read;
 
@@ -35,15 +41,21 @@ namespace streaming_compression { namespace passthrough {
             throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
         }
 
-        if (InputType::CompressedDataBuf == m_input_type) {
-            if (pos > m_compressed_data_buf_len) {
-                return ErrorCode_Truncated;
+        switch (m_input_type) {
+            case InputType::CompressedDataBuf:
+                if (pos > m_compressed_data_buf_len) {
+                    return ErrorCode_Truncated;
+                }
+                break;
+            case InputType::File: {
+                auto error_code = m_file_reader->try_seek_from_begin(pos);
+                if (ErrorCode_Success != error_code) {
+                    return error_code;
+                }
+                break;
             }
-        } else if (InputType::File == m_input_type) {
-            auto error_code = m_file_reader->try_seek_from_begin(pos);
-            if (ErrorCode_Success != error_code) {
-                return error_code;
-            }
+            default:
+                throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
         m_decompressed_stream_pos = pos;
 
@@ -82,11 +94,19 @@ namespace streaming_compression { namespace passthrough {
     }
 
     void Decompressor::close () {
-        if (InputType::CompressedDataBuf == m_input_type) {
-            m_compressed_data_buf = nullptr;
-            m_compressed_data_buf_len = 0;
-        } else if (InputType::File == m_input_type) {
-            m_file_reader = nullptr;
+        switch (m_input_type) {
+            case InputType::CompressedDataBuf:
+                m_compressed_data_buf = nullptr;
+                m_compressed_data_buf_len = 0;
+                break;
+            case InputType::File:
+                m_file_reader = nullptr;
+                break;
+            case InputType::NotInitialized:
+                // Do nothing
+                break;
+            default:
+                throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
         m_input_type = InputType::NotInitialized;
     }
