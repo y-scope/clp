@@ -106,6 +106,8 @@ protected:
 #elif USE_ZSTD_COMPRESSION
     streaming_compression::zstd::Compressor m_dictionary_compressor;
     streaming_compression::zstd::Compressor m_segment_index_compressor;
+#else
+    static_assert(false, "Unsupported compression mode.");
 #endif
     size_t m_num_segments_in_index;
 
@@ -197,6 +199,8 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload (const std:
 #elif USE_ZSTD_COMPRESSION
     streaming_compression::zstd::Decompressor dictionary_decompressor;
     streaming_compression::zstd::Decompressor segment_index_decompressor;
+#else
+    static_assert(false, "Unsupported compression mode.");
 #endif
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024; // 64 KB
     open_dictionary_for_reading(dictionary_path, segment_index_path, cDecompressorFileReadBufferCapacity, dictionary_file_reader, dictionary_decompressor,

@@ -43,6 +43,8 @@ namespace streaming_archive { namespace writer {
         m_compressor.open(m_file_writer);
 #elif USE_ZSTD_COMPRESSION
         m_compressor.open(m_file_writer, compression_level);
+#else
+        static_assert(false, "Unsupported compression mode.");
 #endif
     }
 

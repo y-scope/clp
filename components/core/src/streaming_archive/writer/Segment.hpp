@@ -79,6 +79,8 @@ namespace streaming_archive { namespace writer {
         streaming_compression::passthrough::Compressor m_compressor;
 #elif USE_ZSTD_COMPRESSION
         streaming_compression::zstd::Compressor m_compressor;
+#else
+        static_assert(false, "Unsupported compression mode.");
 #endif
     };
 } }

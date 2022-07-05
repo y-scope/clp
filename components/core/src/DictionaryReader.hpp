@@ -110,6 +110,8 @@ protected:
 #elif USE_ZSTD_COMPRESSION
     streaming_compression::zstd::Decompressor m_dictionary_decompressor;
     streaming_compression::zstd::Decompressor m_segment_index_decompressor;
+#else
+    static_assert(false, "Unsupported compression mode.");
 #endif
     size_t m_num_segments_read_from_index;
     std::vector<EntryType> m_entries;
