@@ -38,10 +38,10 @@ namespace streaming_compression {
         // Methods
         /**
          * Initialize streaming decompressor to decompress from the specified compressed data buffer
-         * @param compressed_data_buf
-         * @param compressed_data_buf_size
+         * @param compressed_data_buffer
+         * @param compressed_data_buffer_size
          */
-        virtual void open (const char* compressed_data_buf, size_t compressed_data_buf_size) = 0;
+        virtual void open (const char* compressed_data_buffer, size_t compressed_data_buffer_size) = 0;
         /**
          * Initializes the decompressor to decompress from an open file
          * @param file_reader

@@ -128,7 +128,6 @@ namespace streaming_compression { namespace zstd {
         }
         m_input_type = InputType::CompressedDataBuf;
 
-        // Configure input stream
         m_compressed_stream_block = {compressed_data_buf, compressed_data_buf_size, 0};
 
         reset_stream();
