@@ -1,8 +1,8 @@
 #include "dictionary_utils.hpp"
 
 void open_dictionary_for_reading (const std::string& dictionary_path, const std::string& segment_index_path, size_t decompressor_file_read_buffer_capacity,
-                                  FileReader& dictionary_file_reader, streaming_compression::zstd::Decompressor& dictionary_decompressor,
-                                  FileReader& segment_index_file_reader, streaming_compression::zstd::Decompressor& segment_index_decompressor)
+                                  FileReader& dictionary_file_reader, streaming_compression::Decompressor& dictionary_decompressor,
+                                  FileReader& segment_index_file_reader, streaming_compression::Decompressor& segment_index_decompressor)
 {
     dictionary_file_reader.open(dictionary_path);
     // Skip header

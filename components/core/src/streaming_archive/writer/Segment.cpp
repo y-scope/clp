@@ -41,9 +41,10 @@ namespace streaming_archive { namespace writer {
         m_file_writer.open(m_segment_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
 #if USE_PASSTHROUGH_COMPRESSION
         m_compressor.open(m_file_writer);
-#else
-        // Configure a zstd streaming compressor
+#elif USE_ZSTD_COMPRESSION
         m_compressor.open(m_file_writer, compression_level);
+#else
+        static_assert(false, "Unsupported compression mode.");
 #endif
     }
 

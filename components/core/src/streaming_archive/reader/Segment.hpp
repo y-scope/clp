@@ -58,10 +58,11 @@ namespace streaming_archive { namespace reader {
 
 #if USE_PASSTHROUGH_COMPRESSION
         streaming_compression::passthrough::Decompressor m_decompressor;
-#else
+#elif USE_ZSTD_COMPRESSION
         streaming_compression::zstd::Decompressor m_decompressor;
+#else
+        static_assert(false, "Unsupported compression mode.");
 #endif
-
     };
 } }
 
