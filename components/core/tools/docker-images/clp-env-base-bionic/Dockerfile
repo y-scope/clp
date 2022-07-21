@@ -10,3 +10,7 @@ ADD ./tools/scripts/lib_install ./tools/scripts/lib_install
 
 RUN ./tools/docker-images/clp-env-base-bionic/setup-scripts/install-prebuilt-packages.sh
 RUN ./tools/docker-images/clp-env-base-bionic/setup-scripts/install-packages-from-source.sh
+
+# Reset the working directory so that it's accessible by any user who runs the
+# container
+WORKDIR /
