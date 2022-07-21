@@ -4,7 +4,7 @@ on:
   push:
     branches: ['main']
     paths:
-      - './tools/docker-images/clp-execution-base-focal/**'
+      - 'tools/docker-images/clp-execution-base-focal/**'
       - 'components/core/tools/scripts/lib_install/**'
       - '.github/workflows/clp-execution-image-build.yaml'
   workflow_dispatch:
