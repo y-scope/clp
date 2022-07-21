@@ -3,4 +3,4 @@
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 component_root=${script_dir}/../../../
 
-docker build -t clp-env-base:centos7.4 ${component_root} --file ${script_dir}/Dockerfile
+docker build -t clp-core-dependencies-x86-centos7.4:dev ${component_root} --file ${script_dir}/Dockerfile

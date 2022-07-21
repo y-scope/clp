@@ -24,3 +24,7 @@ RUN cp ./tools/docker-images/clp-env-base-centos7.4/setup-scripts/git /usr/bin/g
 
 # Load .bashrc for non-interactive bash shells
 ENV BASH_ENV=/etc/bashrc
+
+# Reset the working directory so that it's accessible by any user who runs the
+# container
+WORKDIR /
