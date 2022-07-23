@@ -22,7 +22,7 @@ while IFS= read -r -d '' req ; do
   fi
 
   PIP_CACHE_DIR=${CACHE_DIR} pip3 install \
-    -c constraints.txt
+    -c constraints.txt \
     --target "${WORKING_DIR}/${ARTIFACT_NAME}/lib/python3/site-packages" \
     "$req" &
 
