@@ -1,0 +1,2 @@
+# Constrain typing-extensions to 4.1.1 to support Ubuntu 18.04
+typing-extensions==4.1.1

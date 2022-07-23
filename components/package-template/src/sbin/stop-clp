@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-
 import argparse
-import json
 import logging
 import os
 import pathlib
@@ -10,113 +8,150 @@ import sys
 
 # Setup logging
 # Create logger
-log = logging.getLogger('clp')
-log.setLevel(logging.INFO)
+logger = logging.getLogger('clp')
+logger.setLevel(logging.INFO)
 # Setup console logging
 logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s')
 logging_console_handler.setFormatter(logging_formatter)
-log.addHandler(logging_console_handler)
+logger.addHandler(logging_console_handler)
 
 
 def get_clp_home():
-    clp_home = None
+    # Determine CLP_HOME from an environment variable or this script's path
+    _clp_home = None
     if 'CLP_HOME' in os.environ:
-        clp_home = pathlib.Path(os.environ['CLP_HOME'])
+        _clp_home = pathlib.Path(os.environ['CLP_HOME'])
     else:
         for path in pathlib.Path(__file__).resolve().parents:
             if 'sbin' == path.name:
-                clp_home = path.parent
+                _clp_home = path.parent
                 break
 
-    if clp_home is None:
-        log.error('CLP_HOME is not set and could not be determined automatically.')
+    if _clp_home is None:
+        logger.error("CLP_HOME is not set and could not be determined automatically.")
         return None
-    elif not clp_home.exists():
-        log.error('CLP_HOME does not exist.')
+    elif not _clp_home.exists():
+        logger.error("CLP_HOME set to nonexistent path.")
         return None
 
-    return clp_home.resolve()
+    return _clp_home.resolve()
 
 
-def load_bundled_python_lib_path(clp_home):
-    python_site_packages_path = clp_home / 'lib' / 'python3' / 'site-packages'
+def load_bundled_python_lib_path(_clp_home):
+    python_site_packages_path = _clp_home / 'lib' / 'python3' / 'site-packages'
     if not python_site_packages_path.is_dir():
-        log.error('Failed to load python3 packages bundled with CLP.')
-        return -1
+        logger.error("Failed to load python3 packages bundled with CLP.")
+        return False
+
     # Add packages to the front of the path
     sys.path.insert(0, str(python_site_packages_path))
 
+    return True
+
 
 clp_home = get_clp_home()
-if clp_home is None:
+if clp_home is None or not load_bundled_python_lib_path(clp_home):
     sys.exit(-1)
-load_bundled_python_lib_path(clp_home)
 
-from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.clp_package_config import CLPPackageConfig
-from pydantic import ValidationError
+from clp.package_utils import \
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
+    DB_COMPONENT_NAME, \
+    QUEUE_COMPONENT_NAME, \
+    SCHEDULER_COMPONENT_NAME, \
+    WORKER_COMPONENT_NAME, \
+    container_exists, \
+    validate_and_load_config_file, \
+    validate_and_load_db_credentials_file, \
+    validate_and_load_queue_credentials_file
 
 
-def inspect_docker_network_bridge(clp_cluster_name: str):
-    cmd = ['docker', 'network', 'inspect', clp_cluster_name]
-    log.info('Inspecting docker network bridge')
-    log.debug(' '.join(cmd))
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if 0 != proc.returncode:
-        log.error(f'Cluster "{clp_cluster_name}" has not been provisioned.')
-        raise EnvironmentError
+def stop_container(container_name: str):
+    if not container_exists(container_name):
+        return
 
-    bridge_bridge_specification = json.loads(proc.stdout.decode('utf-8'))[0]
-
-    return bridge_bridge_specification
+    logger.info(f"Stopping {container_name}...")
+    cmd = ['docker', 'stop', container_name]
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+    logger.info(f"Stopped {container_name}.")
 
 
 def main(argv):
-    args_parser = argparse.ArgumentParser(description='Startup script for CLP')
-    args_parser.add_argument('--config', '-c', type=str, help='CLP package configuration file.')
+    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+
+    args_parser = argparse.ArgumentParser(description="Stops CLP")
+    args_parser.add_argument('--config', '-c', default=str(default_config_file_path),
+                             help="CLP package configuration file.")
+
+    component_args_parser = args_parser.add_subparsers(dest='component_name')
+    component_args_parser.add_parser(DB_COMPONENT_NAME)
+    component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
+    component_args_parser.add_parser(SCHEDULER_COMPONENT_NAME)
+    component_args_parser.add_parser(WORKER_COMPONENT_NAME)
+
     parsed_args = args_parser.parse_args(argv[1:])
 
-    # Infer config file path
-    try:
-        if not parsed_args.config:
-            # Did not provide a config file
-            default_clp_package_config_file = clp_home / 'etc' / 'clp-config.yaml'
-            if not default_clp_package_config_file.exists():
-                raise FileNotFoundError
-            log.info(f'Using default config file at {default_clp_package_config_file.relative_to(pathlib.Path.cwd())}')
-            package_config_file_path = default_clp_package_config_file
-        else:
-            # Provided a config file
-            package_config_file_path = pathlib.Path(parsed_args.config).resolve(strict=True)
-    except FileNotFoundError:
-        log.error('Did not provide a clp package config file or the specified config file does not exist.')
-        return
-
-    try:
-        clp_package_config = CLPPackageConfig.parse_obj(read_yaml_config_file(package_config_file_path))
-    except ValidationError as err:
-        log.error(err)
-        return
-    except Exception as ex:
-        # read_yaml_config_file already logs the parsing error inside
-        return
-
-    clp_cluster_name = clp_package_config.cluster_name
-    try:
-        bridge_bridge_specification = inspect_docker_network_bridge(clp_cluster_name)
-        for container_id in bridge_bridge_specification['Containers']:
-            # Stop and remove container
-            log.debug(f'Removing container {container_id}')
-            subprocess.run(['docker', 'stop', container_id], stdout=subprocess.DEVNULL)
-            subprocess.run(['docker', 'rm', container_id], stdout=subprocess.DEVNULL)
-        log.debug(f'Removing docker network bridge {clp_cluster_name}')
-        subprocess.run(['docker', 'network', 'rm', clp_cluster_name], stdout=subprocess.DEVNULL)
-    except EnvironmentError:
-        log.error(f'Failed to decommission "{clp_cluster_name}"')
+    if parsed_args.component_name:
+        component_name = parsed_args.component_name
     else:
-        log.info(f'Successfully decommissioned "{clp_cluster_name}"')
+        component_name = ""
+
+    # Validate and load config file
+    try:
+        config_file_path = pathlib.Path(parsed_args.config)
+        clp_config = validate_and_load_config_file(config_file_path, default_config_file_path, clp_home)
+
+        # Validate and load necessary credentials
+        if component_name in ['', DB_COMPONENT_NAME]:
+            validate_and_load_db_credentials_file(clp_config, clp_home, False)
+        if component_name in ['', QUEUE_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME, WORKER_COMPONENT_NAME]:
+            validate_and_load_queue_credentials_file(clp_config, clp_home, False)
+    except:
+        logger.exception("Failed to load config.")
+        return -1
+
+    try:
+        # Read instance ID from file
+        logs_dir = clp_config.logs_directory
+        instance_id_file_path = logs_dir / 'instance-id'
+        if not (logs_dir.exists() and logs_dir.is_dir() and instance_id_file_path.exists()):
+            # No instance ID file, so nothing to do
+            return 0
+        with open(instance_id_file_path, 'r') as f:
+            instance_id = f.readline()
+
+        if '' == component_name or WORKER_COMPONENT_NAME == component_name:
+            stop_container(f'clp-{WORKER_COMPONENT_NAME}-{instance_id}')
+        if '' == component_name or SCHEDULER_COMPONENT_NAME == component_name:
+            container_name = f'clp-{SCHEDULER_COMPONENT_NAME}-{instance_id}'
+            stop_container(container_name)
+
+            container_config_file_path = logs_dir / f'{container_name}.yml'
+            if container_config_file_path.exists():
+                container_config_file_path.unlink()
+        if '' == component_name or QUEUE_COMPONENT_NAME == component_name:
+            container_name = f'clp-{QUEUE_COMPONENT_NAME}-{instance_id}'
+            stop_container(container_name)
+
+            queue_config_file_path = logs_dir / f'{container_name}.conf'
+            if queue_config_file_path.exists():
+                queue_config_file_path.unlink()
+        if '' == component_name or DB_COMPONENT_NAME == component_name:
+            stop_container(f'clp-db-{instance_id}')
+
+        if '' == component_name:
+            # NOTE: We can only remove the instance ID file if all containers have been stopped.
+            # Currently, we only remove the instance file when all containers are stopped at once.
+            # If a single container is stopped, it's expensive to check if the others are running,
+            # so instead we don't remove the instance file. In the worst case, a user will have to
+            # remove it manually.
+            instance_id_file_path.unlink()
+    except:
+        logger.exception("Failed to stop CLP.")
+        return -1
+
+    return 0
 
 
 if '__main__' == __name__:
-    main(sys.argv)
+    sys.exit(main(sys.argv))

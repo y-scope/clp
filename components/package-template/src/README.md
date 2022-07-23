@@ -3,9 +3,44 @@
 Compressed Log Processor (CLP) is a tool that compresses text logs and allows users to search the compressed data 
 without decompression. CLP's compression ratio is significantly higher than gzip.
 
-## Getting started
+## Usage
 
-CLP can be run in Docker containers, in one of two modes:
+### Starting CLP
+
+```shell
+sbin/start-clp
+```
+
+### Compressing logs
+
+```shell
+sbin/compress <uncompressed log files/directories>
+```
+
+For more options, run the script with the `--help` option.
+
+### Decompressing logs
+
+```shell
+sbin/decompress -d <output directory> 
+```
+For more options, run the script with the `--help` option.
+
+### Searching logs
+
+```bash
+sbin/search <your * wildcard * query>
+```
+
+CLP supports two wildcard characters:
+* `*` which matches 0 or more characters
+* `?` which matches any single character
+
+For more options, run the script with the `--help` option.
+
+## Deployment options
+
+CLP can be run in Docker containers, in one of two deployments:
 * On a single-node (typically for development and testing)
 * Across multiple nodes
 
@@ -14,95 +49,87 @@ CLP can be run in Docker containers, in one of two modes:
 ### Requirements
 
 * [Docker](https://docs.docker.com/engine/install/)
-  * `docker` should be in the user's path, and
-  * [runnable without superuser privileges](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user)
+  * `docker` should be in the user's path
+  * `docker` should be [runnable without superuser privileges](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user)
     (without sudo)
-* Plenty of disk space
 * Python3
   * For systems with a version < 3.7, run `pip3 install -r requirements-pre-3.7.txt`
 
-### Starting CLP
+### Configuration
 
-```bash
-./sbin/start-clp --uncompressed-logs-dir <directory containing your uncompressed logs>
-```
-
-Note that running CLP in containers means that the `uncompressed-logs-dir` must be mounted inside the container.
-Therefore:
-* The `uncompressed-logs-dir` must not include symbolic links to items **outside** of the directory 
-* Changing `uncompressed-logs-dir` requires restarting CLP.
-
-### Stopping CLP
-
-```bash
-./sbin/stop-clp
-```
+* If necessary,  you can uncomment and modify any configurations in 
+  `etc/clp-config.yml`
+  * You can use a configuration file at a different location, but you will need 
+    to pass the location to any CLP command you run 
+    (`sbin/<command> --config <file path>`).
+* Note: In most cases, changing any configurations will require restarting CLP.
 
 ## Multi-node deployment
+
+A multi-node deployment comprises a control node and one or more worker nodes.
+Any node can be a control node.
 
 ### Requirements
 
 * The single-node deployment requirements
-* For the scheduler node, port 3306 and 5672 must be available and accessible from all compute nodes
-* A distributed file system mounted at the same path on all nodes
+* A distributed filesystem mounted at the same path on all nodes
+* Your uncompressed logs should be on the distributed filesystem
 
-### Starting the scheduler
+### Setup
+
+The easiest way to set up a multi-node deployment is as follows:
+
+* Copy the package to a location on your distributed filesystem
+* Modify `etc/clp-config.yml`:
+  * Uncomment the file if it is commented.
+  * Set `input_logs_directory` to the location of your logs on the distributed 
+    filesystem.
+  * Set the `host` in the `database` section to the hostname/IP of your control 
+    node.
+  * Set the `host` in the `queue` section to the hostname/IP of your control 
+    node.
+* You can now skip to the next sections to see how to start/stop the components.
+
+If you don't want to store data within the package, you can change the 
+configuration file as follows:
+
+* Set `directory` in the `archive_output` section to a location on the 
+  distributed filesystem (outside the package).
+* Set `data_directory` and `logs_directory` to locations on the distributed 
+  filesystem (outside the package).
+
+### Starting the control components
+
+On the control node, run the following commands (these must be started in the 
+order below):
 
 ```bash
-sbin/start-clp --start-scheduler-only --publish-ports \
-  --uncompressed-logs-dir <location of your uncompressed logs on dfs>
+sbin/start-clp db
+sbin/start-clp queue
+sbin/start-clp scheduler
 ```
 
-### Starting the worker(s)
+### Starting the worker-node components
+
+On every node you want to run workers, run this command:
 
 ```bash
-sbin/start-clp --start-worker-only --publish-ports \
-  --uncompressed-logs-dir <location of your uncompressed logs on dfs>
+sbin/start-clp worker
 ```
 
 ### Stopping components
 
-Every component can be stopped by:
-```bash
-./sbin/stop-clp
-```
-
-## Usage
-
-Once CLP is started, you can use it as follows.
-
-### Compressing logs
+To stop an individual component on a node, you can use:
 
 ```bash
-./sbin/compress <uncompressed log files/directories>
+sbin/stop-clp <component name>
 ```
 
-Note:
-* The uncompressed logs must be within `uncompressed-logs-dir`
-* CLP is designed to compress text logs
+To stop all components on a node, you can use:
 
-For more options, run the script with the `--help` option.
-
-### Decompressing logs
-
-To decompress all compressed logs:
 ```bash
-./sbin/decompress -d <output directory> 
+sbin/stop-clp
 ```
-For more options, run the script with the `--help` option.
-
-### Searching logs
-
-To search all logs for a given wildcard query:
-```bash
-./sbin/search <your wildcard query>
-```
-
-CLP supports two wildcard characters:
-* `*` which matches 0 or more characters
-* `?` which matches any single character
-
-For more options, run the script with the `--help` option.
 
 ## Troubleshooting
 
