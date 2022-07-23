@@ -241,7 +241,7 @@ def handle_job(scheduling_db, scheduling_db_cursor, clp_io_config: ClpIoConfig, 
 
         # Create job-specific logger
         job_str = f'job-{scheduling_job_id}'
-        # FIXME: This will write to the current working directory which may be permissioned
+        # FIXME: This will write to the current working directory which may require elevated privileges
         job_logger = logging.getLogger(job_str)
         job_logger.setLevel(logging.INFO)
         combined_log_file_path = f'{logs_dir_abs}/{job_str}.log'

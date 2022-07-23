@@ -7,7 +7,6 @@ import pathlib
 import subprocess
 import sys
 
-import celery.utils.nodenames
 import yaml
 from celery.utils.log import get_task_logger
 
