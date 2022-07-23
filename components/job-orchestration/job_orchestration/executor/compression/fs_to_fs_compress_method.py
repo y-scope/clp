@@ -14,14 +14,16 @@ from celery.utils.log import get_task_logger
 from clp_py_utils.clp_io_config import ClpIoConfig, PathsToCompress
 
 
-def compress(clp_config: ClpIoConfig, clp_home_str: str, data_dir_str: str, logs_dir_str: str,
-             job_id_str: str, task_id_str: str, paths_to_compress: PathsToCompress, database_connection_params):
+def compress(clp_config: ClpIoConfig, clp_home_str: str, data_dir_str: str, archive_output_dir_str: str,
+             logs_dir_str: str, job_id_str: str, task_id_str: str, paths_to_compress: PathsToCompress,
+             database_connection_params):
     """
     Compresses files from an FS into archives on an FS
 
     :param clp_config: ClpIoConfig
     :param clp_home_str:
     :param data_dir_str:
+    :param archive_output_dir_str:
     :param logs_dir_str:
     :param job_id_str:
     :param task_id_str:
@@ -59,10 +61,10 @@ def compress(clp_config: ClpIoConfig, clp_home_str: str, data_dir_str: str, logs
     db_config_file.close()
 
     # Start assembling compression command
-    archives_dir = data_dir / 'archives'
+    archive_output_dir = pathlib.Path(archive_output_dir_str).resolve()
     compression_cmd = [
         str(clp_home / 'bin' / 'clp'),
-        'c', str(archives_dir),
+        'c', str(archive_output_dir),
         '--print-archive-stats-progress',
         '--target-dictionaries-size',
         str(clp_config.output.target_dictionaries_size),

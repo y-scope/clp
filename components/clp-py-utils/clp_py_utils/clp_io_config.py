@@ -11,13 +11,11 @@ class PathsToCompress(BaseModel):
 
 
 class InputConfig(BaseModel):
-    type: str
     list_path: str
     path_prefix_to_remove: str = None
 
 
 class OutputConfig(BaseModel):
-    type: str
     target_archive_size: int
     target_dictionaries_size: int
     target_segment_size: int

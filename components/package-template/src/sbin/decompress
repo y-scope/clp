@@ -3,197 +3,160 @@ import argparse
 import logging
 import os
 import pathlib
-import shutil
 import subprocess
 import sys
 import uuid
 
 # Setup logging
 # Create logger
-log = logging.getLogger('clp')
-log.setLevel(logging.DEBUG)
+logger = logging.getLogger('clp')
+logger.setLevel(logging.DEBUG)
 # Setup console logging
 logging_console_handler = logging.StreamHandler()
-logging_formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s')
+logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
-log.addHandler(logging_console_handler)
+logger.addHandler(logging_console_handler)
 
 
 def get_clp_home():
-    clp_home = None
+    # Determine CLP_HOME from an environment variable or this script's path
+    _clp_home = None
     if 'CLP_HOME' in os.environ:
-        clp_home = pathlib.Path(os.environ['CLP_HOME'])
+        _clp_home = pathlib.Path(os.environ['CLP_HOME'])
     else:
         for path in pathlib.Path(__file__).resolve().parents:
             if 'sbin' == path.name:
-                clp_home = path.parent
+                _clp_home = path.parent
                 break
 
-    if clp_home is None:
-        log.error('CLP_HOME is not set and could not be determined automatically.')
+    if _clp_home is None:
+        logger.error("CLP_HOME is not set and could not be determined automatically.")
         return None
-    elif not clp_home.exists():
-        log.error('CLP_HOME does not exist.')
+    elif not _clp_home.exists():
+        logger.error("CLP_HOME set to nonexistent path.")
         return None
 
-    return clp_home.resolve()
+    return _clp_home.resolve()
 
 
-def load_bundled_python_lib_path(clp_home):
-    python_site_packages_path = clp_home / 'lib' / 'python3' / 'site-packages'
+def load_bundled_python_lib_path(_clp_home):
+    python_site_packages_path = _clp_home / 'lib' / 'python3' / 'site-packages'
     if not python_site_packages_path.is_dir():
-        log.error('Failed to load python3 packages bundled with CLP.')
-        return -1
+        logger.error("Failed to load python3 packages bundled with CLP.")
+        return False
+
     # Add packages to the front of the path
     sys.path.insert(0, str(python_site_packages_path))
 
+    return True
+
 
 clp_home = get_clp_home()
-if clp_home is None:
+if clp_home is None or not load_bundled_python_lib_path(clp_home):
     sys.exit(-1)
-load_bundled_python_lib_path(clp_home)
 
-from clp.package_utils import check_env, CONTAINER_CLP_INSTALL_PREFIX
-from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.clp_package_config import CLPPackageConfig
-from clp_py_utils.clp_config import CLPConfig
-from pydantic import ValidationError
+import yaml
+from clp.package_utils import \
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
+    CONTAINER_CLP_HOME, \
+    DockerMount, \
+    DockerMountType, \
+    generate_container_config, \
+    validate_and_load_config_file, \
+    validate_and_load_db_credentials_file, \
+    validate_path_could_be_dir
 
 
 def main(argv):
-    args_parser = argparse.ArgumentParser(description='Script to decompress logs')
-    args_parser.add_argument('--config', '-c', type=str, help='CLP package configuration file.')
-    args_parser.add_argument('paths', metavar='PATH', nargs='*', help='Paths to decompress.')
-    args_parser.add_argument('-f', '--files-from', help='A file listing all files to decompress.')
-    args_parser.add_argument('-d', '--extraction-dir', metavar='DIR', default='.', help='Decompress files into DIR')
+    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+
+    args_parser = argparse.ArgumentParser(description="Decompresses logs")
+    args_parser.add_argument('--config', '-c', type=str, default=str(default_config_file_path),
+                             help="CLP package configuration file.")
+    args_parser.add_argument('paths', metavar='PATH', nargs='*', help="Files to decompress.")
+    args_parser.add_argument('-f', '--files-from', help="A file listing all files to decompress.")
+    args_parser.add_argument('-d', '--extraction-dir', metavar='DIR', default='.', help="Decompress files into DIR")
     parsed_args = args_parser.parse_args(argv[1:])
 
-    # Infer config file path
+    # Validate and load config file
     try:
-        if not parsed_args.config:
-            # Did not provide a config file
-            default_clp_package_config_file = clp_home / 'etc' / 'clp-config.yaml'
-            if not default_clp_package_config_file.exists():
-                raise FileNotFoundError
-            log.info(f'Using default config file at {default_clp_package_config_file.relative_to(pathlib.Path.cwd())}')
-            package_config_file_path = default_clp_package_config_file
-        else:
-            # Provided a config file
-            package_config_file_path = pathlib.Path(parsed_args.config).resolve(strict=True)
-    except FileNotFoundError:
-        log.error('Did not provide a clp package config file or the specified config file does not exist.')
-        return
+        config_file_path = pathlib.Path(parsed_args.config)
+        clp_config = validate_and_load_config_file(config_file_path, default_config_file_path, clp_home)
+        clp_config.validate_logs_dir()
 
-    try:
-        clp_package_config = CLPPackageConfig.parse_obj(read_yaml_config_file(package_config_file_path))
-    except ValidationError as err:
-        log.error(err)
-        return
-    except Exception as ex:
-        # read_yaml_config_file already logs the parsing error inside
-        return
-
-    # Validate paths were specified using only one method
-    if len(parsed_args.paths) > 0 and parsed_args.files_from is not None:
-        args_parser.error(
-            "Paths cannot be specified both on the command line and through a file.")
+        validate_and_load_db_credentials_file(clp_config, clp_home, False)
+    except:
+        logger.exception("Failed to load config.")
         return -1
 
-    files_to_decompress_path = None
+    paths_to_decompress_file_path = None
     if parsed_args.files_from:
-        files_to_decompress_path = pathlib.Path(parsed_args.files_from).resolve(strict=True)
+        paths_to_decompress_file_path = pathlib.Path(parsed_args.files_from)
 
     # Validate extraction directory
     extraction_dir = pathlib.Path(parsed_args.extraction_dir).resolve()
-    if extraction_dir.exists() and not extraction_dir.is_dir():
-        log.error(f'extraction-dir ({extraction_dir}) is not a valid directory.')
+    try:
+        validate_path_could_be_dir(extraction_dir)
+    except ValueError as ex:
+        logger.error(f"extraction-dir is invalid: {ex}")
         return -1
     extraction_dir.mkdir(exist_ok=True)
 
-    clp_cluster_name = clp_package_config.cluster_name
-    try:
-        check_env(clp_cluster_name)
-    except EnvironmentError as ex:
-        log.error(ex)
-        return -1
+    container_name = f'clp-decompressor-{str(uuid.uuid4())[-4:]}'
 
-    # Parse and validate config file
-    container_clp_config_file_name = f'.{clp_package_config.cluster_name}.yaml'
-    host_config_file_path = clp_home / container_clp_config_file_name
-    container_config_file_path = f'{CONTAINER_CLP_INSTALL_PREFIX}/{container_clp_config_file_name}'
+    container_clp_config, mounts = generate_container_config(clp_config, clp_home)
+    container_config_filename = f'.{container_name}-config.yml'
+    container_config_file_path_on_host = clp_config.logs_directory / container_config_filename
+    with open(container_config_file_path_on_host, 'w') as f:
+        yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
 
-    try:
-        clp_config = CLPConfig.parse_obj(read_yaml_config_file(host_config_file_path))
-    except ValidationError as err:
-        log.error(err)
-        return -1
-    except Exception as ex:
-        log.error(ex)
-        return -1
-
-    docker_clp_home = pathlib.Path(CONTAINER_CLP_INSTALL_PREFIX) / 'clp'
-    docker_extraction_dir = pathlib.Path('/') / 'mnt' / '_extraction_dir_'
-
-    host_data_directory = clp_home / pathlib.Path(clp_config.data_directory).relative_to(docker_clp_home)
-    host_log_directory = clp_home / pathlib.Path(clp_config.logs_directory).relative_to(docker_clp_home)
-    host_archive_out_directory = \
-        clp_home / pathlib.Path(clp_config.archive_output.directory).relative_to(docker_clp_home)
-
-    # Start execution environment
-    clp_execution_env_container = 'whywhywhywhywhywhy/clp-execution-env:x86-ubuntu-focal-20210919'
-    container_name = f'{clp_cluster_name}-decompressor-{uuid.uuid4()}'[:62]   # max docker hostname = 63 chars
-    clp_execution_env_startup_cmd = [
-        'docker', 'run', '-di',
+    container_start_cmd = [
+        'docker', 'run',
+        '-i',
         '--rm',
-        '--network', clp_cluster_name,
-        '--hostname', container_name,
+        '--network', 'host',
+        '-w', str(CONTAINER_CLP_HOME),
+        '-u', f'{os.getuid()}:{os.getgid()}',
         '--name', container_name,
-        '-v', f'{clp_home}:{docker_clp_home}',
-        '-v', f'{extraction_dir}:{docker_extraction_dir}',
-        '-u', f'{os.getuid()}:{os.getgid()}'
+        '--mount', str(mounts.clp_home),
     ]
-    if not clp_config.data_directory.startswith(f'{CONTAINER_CLP_INSTALL_PREFIX}/clp'):
-        clp_execution_env_startup_cmd.append('-v')
-        clp_execution_env_startup_cmd.append(f'{host_data_directory}:{clp_config.data_directory}')
-    if not clp_config.logs_directory.startswith(f'{CONTAINER_CLP_INSTALL_PREFIX}/clp'):
-        clp_execution_env_startup_cmd.append('-v')
-        clp_execution_env_startup_cmd.append(f'{host_log_directory}:{clp_config.logs_directory}')
-    if not clp_config.archive_output.directory.startswith(f'{CONTAINER_CLP_INSTALL_PREFIX}/clp'):
-        clp_execution_env_startup_cmd.append('-v')
-        clp_execution_env_startup_cmd.append(
-            f'{host_archive_out_directory}:{clp_config.archive_output.directory}')
-    clp_execution_env_startup_cmd.append(clp_execution_env_container)
-    subprocess.run(clp_execution_env_startup_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-    try:
-        # Copy config file into container
-        copy_cmd = ['docker', 'cp', host_config_file_path, f'{container_name}:{container_config_file_path}']
-        subprocess.run(copy_cmd)
 
-        docker_exec_cmd = [
-            'docker', 'exec',
-            '--workdir', str(docker_clp_home),
-            container_name,
-            'sbin/native/decompress', '--config', container_config_file_path,
-            '-d', str(docker_extraction_dir)
-        ]
-        for path in parsed_args.paths:
-            docker_exec_cmd.append(path)
-        temporary_files_to_decompress_path = None
-        if files_to_decompress_path:
-            # Copy list to logs directory
-            temp_list_name = f'{uuid.uuid4()}-decompress-paths.txt'
-            temporary_files_to_decompress_path = host_log_directory / temp_list_name
-            shutil.copyfile(files_to_decompress_path, temporary_files_to_decompress_path)
+    # Set up mounts
+    container_extraction_dir = pathlib.Path('/') / 'mnt' / 'extraction-dir'
+    necessary_mounts = [
+        mounts.data_dir,
+        mounts.logs_dir,
+        mounts.archives_output_dir,
+        DockerMount(DockerMountType.BIND, extraction_dir, container_extraction_dir),
+    ]
+    container_paths_to_decompress_file_path = None
+    if paths_to_decompress_file_path:
+        container_paths_to_decompress_file_path = pathlib.Path('/') / 'mnt' / 'paths-to-decompress.txt'
+        necessary_mounts.append(
+            DockerMount(DockerMountType.BIND, paths_to_decompress_file_path, container_paths_to_decompress_file_path))
+    for mount in necessary_mounts:
+        if mount:
+            container_start_cmd.append('--mount')
+            container_start_cmd.append(str(mount))
 
-            docker_exec_cmd.append('--files-from')
-            docker_exec_cmd.append(pathlib.Path(clp_config.logs_directory) / temp_list_name)
-        logging.info(docker_exec_cmd)
-        subprocess.run(docker_exec_cmd)
-        if files_to_decompress_path:
-            temporary_files_to_decompress_path.unlink()
-    finally:
-        docker_stop_cmd = ['docker', 'stop', container_name]
-        subprocess.run(docker_stop_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    container_start_cmd.append(clp_config.execution_container)
+
+    decompress_cmd = [
+        str(CONTAINER_CLP_HOME / 'sbin' / 'native' / 'decompress'),
+        '--config', str(container_clp_config.logs_directory / container_config_filename),
+        '-d', str(container_extraction_dir)
+    ]
+    for path in parsed_args.paths:
+        decompress_cmd.append(path)
+    if container_paths_to_decompress_file_path:
+        decompress_cmd.append('--input-list')
+        decompress_cmd.append(container_paths_to_decompress_file_path)
+
+    cmd = container_start_cmd + decompress_cmd
+    subprocess.run(cmd, check=True)
+
+    # Remove generated files
+    container_config_file_path_on_host.unlink()
 
     return 0
 

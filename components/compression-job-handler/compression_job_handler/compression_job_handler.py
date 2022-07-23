@@ -8,7 +8,6 @@ import typing
 from contextlib import closing
 
 import msgpack
-import mysql.connector
 import zstandard
 import zstandard as zstd
 from pydantic import ValidationError
@@ -232,80 +231,79 @@ def handle_job(scheduling_db, scheduling_db_cursor, clp_io_config: ClpIoConfig, 
 
     try:
         job_completed_with_errors = False
-        if 'fs' == clp_io_config.input.type:
-            # Create new job in the sql database
-            scheduling_db_cursor.execute(
-                'INSERT INTO compression_jobs (clp_config) VALUES (%s);',
-                (zstd_cctx.compress(msgpack.packb(clp_io_config.dict(exclude_none=True, exclude_unset=True))),)
-            )
-            scheduling_db.commit()
-            scheduling_job_id = scheduling_db_cursor.lastrowid
+        # Create new job in the sql database
+        scheduling_db_cursor.execute(
+            'INSERT INTO compression_jobs (clp_config) VALUES (%s);',
+            (zstd_cctx.compress(msgpack.packb(clp_io_config.dict(exclude_none=True, exclude_unset=True))),)
+        )
+        scheduling_db.commit()
+        scheduling_job_id = scheduling_db_cursor.lastrowid
 
-            # Create job-specific logger
-            job_str = f'job-{scheduling_job_id}'
-            # FIXME: This will write to the current working directory which may be permissioned
-            job_logger = logging.getLogger(job_str)
-            job_logger.setLevel(logging.INFO)
-            combined_log_file_path = f'{logs_dir_abs}/{job_str}.log'
-            job_logger_file_handler = logging.FileHandler(combined_log_file_path)
-            job_logger_file_handler.setFormatter(logging_formatter)
-            job_logger.addHandler(logging_console_handler)
-            job_logger.addHandler(job_logger_file_handler)
+        # Create job-specific logger
+        job_str = f'job-{scheduling_job_id}'
+        # FIXME: This will write to the current working directory which may be permissioned
+        job_logger = logging.getLogger(job_str)
+        job_logger.setLevel(logging.INFO)
+        combined_log_file_path = f'{logs_dir_abs}/{job_str}.log'
+        job_logger_file_handler = logging.FileHandler(combined_log_file_path)
+        job_logger_file_handler.setFormatter(logging_formatter)
+        job_logger.addHandler(logging_console_handler)
+        job_logger.addHandler(job_logger_file_handler)
 
-            job_logger.debug(f'Starting job {scheduling_job_id}')
+        job_logger.debug(f'Starting job {scheduling_job_id}')
 
-            paths_to_compress_buffer = PathsToCompressBuffer(
-                scheduler_db_cursor=scheduling_db_cursor,
-                maintain_file_ordering=False,
-                empty_directories_allowed=True,
-                target_archive_size=clp_io_config.output.target_archive_size,
-                file_size_to_trigger_compression=clp_io_config.output.target_archive_size * 2,
-                scheduling_job_id=scheduling_job_id,
-                zstd_cctx=zstd_cctx
-            )
+        paths_to_compress_buffer = PathsToCompressBuffer(
+            scheduler_db_cursor=scheduling_db_cursor,
+            maintain_file_ordering=False,
+            empty_directories_allowed=True,
+            target_archive_size=clp_io_config.output.target_archive_size,
+            file_size_to_trigger_compression=clp_io_config.output.target_archive_size * 2,
+            scheduling_job_id=scheduling_job_id,
+            zstd_cctx=zstd_cctx
+        )
 
-            # Compress all files at once to try and satisfy the target number of archives
-            job_logger.info("Iterating and partitioning files into tasks.")
-            # TODO: Handle file not found
-            with open(pathlib.Path(clp_io_config.input.list_path).resolve(), 'r') as f:
-                for path_idx, path in enumerate(f, start=1):
-                    stripped_path = path.strip()
-                    if '' == stripped_path:
-                        # Skip empty paths
-                        continue
-                    path = pathlib.Path(stripped_path)
+        # Compress all files at once to try and satisfy the target number of archives
+        job_logger.info("Iterating and partitioning files into tasks.")
+        # TODO: Handle file not found
+        with open(pathlib.Path(clp_io_config.input.list_path).resolve(), 'r') as f:
+            for path_idx, path in enumerate(f, start=1):
+                stripped_path = path.strip()
+                if '' == stripped_path:
+                    # Skip empty paths
+                    continue
+                path = pathlib.Path(stripped_path)
 
-                    try:
-                        file, empty_directory = validate_path_and_get_info(fs_logs_required_parent_dir, path)
-                    except ValueError as ex:
-                        job_logger.error(str(ex))
-                        job_completed_with_errors = True
-                        continue
+                try:
+                    file, empty_directory = validate_path_and_get_info(fs_logs_required_parent_dir, path)
+                except ValueError as ex:
+                    job_logger.error(str(ex))
+                    job_completed_with_errors = True
+                    continue
 
-                    if file:
-                        paths_to_compress_buffer.add_file(file)
-                    elif empty_directory:
-                        paths_to_compress_buffer.add_empty_directory(empty_directory)
+                if file:
+                    paths_to_compress_buffer.add_file(file)
+                elif empty_directory:
+                    paths_to_compress_buffer.add_empty_directory(empty_directory)
 
-                    if path.is_dir():
-                        for internal_path in path.rglob('*'):
-                            try:
-                                file, empty_directory = validate_path_and_get_info(
-                                    fs_logs_required_parent_dir, internal_path)
-                            except ValueError as ex:
-                                job_logger.error(str(ex))
-                                job_completed_with_errors = True
-                                continue
+                if path.is_dir():
+                    for internal_path in path.rglob('*'):
+                        try:
+                            file, empty_directory = validate_path_and_get_info(
+                                fs_logs_required_parent_dir, internal_path)
+                        except ValueError as ex:
+                            job_logger.error(str(ex))
+                            job_completed_with_errors = True
+                            continue
 
-                            if file:
-                                paths_to_compress_buffer.add_file(file)
-                            elif empty_directory:
-                                paths_to_compress_buffer.add_empty_directory(empty_directory)
+                        if file:
+                            paths_to_compress_buffer.add_file(file)
+                        elif empty_directory:
+                            paths_to_compress_buffer.add_empty_directory(empty_directory)
 
-                    if path_idx % 10000 == 0:
-                        scheduling_db.commit()
+                if path_idx % 10000 == 0:
+                    scheduling_db.commit()
 
-            paths_to_compress_buffer.flush()
+        paths_to_compress_buffer.flush()
 
         # Ensure all of the scheduled task and the total number of tasks
         # in the job row has been updated and committed
@@ -341,14 +339,14 @@ def handle_job(scheduling_db, scheduling_db_cursor, clp_io_config: ClpIoConfig, 
 
             # Using fetchall() here t
             results = scheduling_db_cursor.fetchall()
+            # TODO Why is this necessary in the newest MariaDB/MySQL?
+            scheduling_db.commit()
             if len(results) > 1:
                 logging.error("Duplicated job_id")
                 logging.error(str(results))
             if len(results) == 0:
                 time.sleep(1)
                 continue
-            if isinstance(scheduling_db, mysql.connector.MySQLConnection):
-                scheduling_db.commit()  # clear the query cache
 
             job_row = results[0]
             job_status = job_row['job_status']
@@ -385,9 +383,7 @@ def handle_job(scheduling_db, scheduling_db_cursor, clp_io_config: ClpIoConfig, 
                 job_logger.info(f'handler for job_status "{job_status}" is not implemented')
                 raise NotImplementedError
 
-            scheduling_db.commit()  # clear the query cache
             time.sleep(1)
-
     except Exception as ex:
         if job_logger:
             job_logger.exception(f'Exception while processing {job_str}.')
@@ -417,7 +413,7 @@ def handle_jobs(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, logs_dir_a
     zstd_cctx = zstd.ZstdCompressor(level=3)
 
     # Connect to SQL Database
-    with closing(sql_adapter.create_connection()) as scheduling_db, \
+    with closing(sql_adapter.create_connection(True)) as scheduling_db, \
             closing(scheduling_db.cursor(dictionary=True)) as scheduling_db_cursor:
         # Execute new compression job
         handle_job(scheduling_db=scheduling_db, scheduling_db_cursor=scheduling_db_cursor, clp_io_config=clp_io_config,
@@ -450,7 +446,7 @@ def main(argv):
         sql_adapter = SQL_Adapter(clp_config.database)
 
         clp_io_config = ClpIoConfig(
-            input=InputConfig(type='fs', list_path=str(pathlib.Path(parsed_args.log_list_path).resolve())),
+            input=InputConfig(list_path=str(pathlib.Path(parsed_args.log_list_path).resolve())),
             output=OutputConfig.parse_obj(clp_config.archive_output)
         )
 

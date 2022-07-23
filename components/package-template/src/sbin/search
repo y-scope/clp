@@ -5,109 +5,128 @@ import os
 import pathlib
 import subprocess
 import sys
+import uuid
 
 # Setup logging
 # Create logger
-log = logging.getLogger('clp')
-log.setLevel(logging.DEBUG)
+logger = logging.getLogger(__file__)
+logger.setLevel(logging.DEBUG)
 # Setup console logging
 logging_console_handler = logging.StreamHandler()
-logging_formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s')
+logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
-log.addHandler(logging_console_handler)
+logger.addHandler(logging_console_handler)
 
 
 def get_clp_home():
-    clp_home = None
+    # Determine CLP_HOME from an environment variable or this script's path
+    _clp_home = None
     if 'CLP_HOME' in os.environ:
-        clp_home = pathlib.Path(os.environ['CLP_HOME'])
+        _clp_home = pathlib.Path(os.environ['CLP_HOME'])
     else:
         for path in pathlib.Path(__file__).resolve().parents:
             if 'sbin' == path.name:
-                clp_home = path.parent
+                _clp_home = path.parent
                 break
 
-    if clp_home is None:
-        log.error('CLP_HOME is not set and could not be determined automatically.')
+    if _clp_home is None:
+        logger.error("CLP_HOME is not set and could not be determined automatically.")
         return None
-    elif not clp_home.exists():
-        log.error('CLP_HOME does not exist.')
+    elif not _clp_home.exists():
+        logger.error("CLP_HOME set to nonexistent path.")
         return None
 
-    return clp_home.resolve()
+    return _clp_home.resolve()
 
 
-def load_bundled_python_lib_path(clp_home):
-    python_site_packages_path = clp_home / 'lib' / 'python3' / 'site-packages'
+def load_bundled_python_lib_path(_clp_home):
+    python_site_packages_path = _clp_home / 'lib' / 'python3' / 'site-packages'
     if not python_site_packages_path.is_dir():
-        log.error('Failed to load python3 packages bundled with CLP.')
-        return -1
+        logger.error("Failed to load python3 packages bundled with CLP.")
+        return False
+
     # Add packages to the front of the path
     sys.path.insert(0, str(python_site_packages_path))
 
+    return True
+
 
 clp_home = get_clp_home()
-if clp_home is None:
+if clp_home is None or not load_bundled_python_lib_path(clp_home):
     sys.exit(-1)
-load_bundled_python_lib_path(clp_home)
 
-from clp.package_utils import check_env, CONTAINER_CLP_INSTALL_PREFIX
-from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.clp_package_config import CLPPackageConfig
-from pydantic import ValidationError
+import yaml
+from clp.package_utils import \
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
+    CONTAINER_CLP_HOME, \
+    generate_container_config, \
+    validate_and_load_config_file, \
+    validate_and_load_db_credentials_file
 
 
 def main(argv):
-    args_parser = argparse.ArgumentParser(description='Searches the compressed logs.')
-    args_parser.add_argument('--config', '-c', type=str, help='CLP package configuration file.')
+    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+
+    args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")
+    args_parser.add_argument('--config', '-c', default=str(default_config_file_path),
+                             help="CLP package configuration file.")
     args_parser.add_argument('wildcard_query', help="Wildcard query.")
     args_parser.add_argument('--file-path', help="File to search.")
     parsed_args = args_parser.parse_args(argv[1:])
 
-    # Infer config file path
+    # Validate and load config file
     try:
-        if not parsed_args.config:
-            # Did not provide a config file
-            default_clp_package_config_file = clp_home / 'etc' / 'clp-config.yaml'
-            if not default_clp_package_config_file.exists():
-                raise FileNotFoundError
-            log.debug(f'Using default config file at {default_clp_package_config_file.relative_to(pathlib.Path.cwd())}')
-            package_config_file_path = default_clp_package_config_file
-        else:
-            # Provided a config file
-            package_config_file_path = pathlib.Path(parsed_args.config).resolve(strict=True)
-    except FileNotFoundError:
-        log.error('Did not provide a clp package config file or the specified config file does not exist.')
-        return
+        config_file_path = pathlib.Path(parsed_args.config)
+        clp_config = validate_and_load_config_file(config_file_path, default_config_file_path, clp_home)
+        clp_config.validate_logs_dir()
 
-    try:
-        clp_package_config = CLPPackageConfig.parse_obj(read_yaml_config_file(package_config_file_path))
-    except ValidationError as err:
-        log.error(err)
-        return
-    except Exception as ex:
-        # read_yaml_config_file already logs the parsing error inside
-        return
-
-    clp_cluster_name = clp_package_config.cluster_name
-    try:
-        check_env(clp_cluster_name)
-    except EnvironmentError as ex:
-        logging.error(ex)
+        # Validate and load necessary credentials
+        validate_and_load_db_credentials_file(clp_config, clp_home, True)
+    except:
+        logger.exception("Failed to load config.")
         return -1
 
-    docker_exec_cmd = [
-        'docker', 'exec',
-        '--workdir', f'{CONTAINER_CLP_INSTALL_PREFIX}/clp',
+    container_name = f'clp-search-{str(uuid.uuid4())[-4:]}'
+
+    container_clp_config, mounts = generate_container_config(clp_config, clp_home)
+    container_config_filename = f'.{container_name}-config.yml'
+    container_config_file_path_on_host = clp_config.logs_directory / container_config_filename
+    with open(container_config_file_path_on_host, 'w') as f:
+        yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
+
+    container_start_cmd = [
+        'docker', 'run',
+        '-i',
+        '--rm',
+        '--network', 'host',
+        '-w', str(CONTAINER_CLP_HOME),
         '-u', f'{os.getuid()}:{os.getgid()}',
-        clp_cluster_name,
-        'sbin/native/search', '--config', f'{CONTAINER_CLP_INSTALL_PREFIX}/.{clp_cluster_name}.yaml',
-        parsed_args.wildcard_query
+        '--name', container_name,
+        '--mount', str(mounts.clp_home),
+    ]
+    necessary_mounts = [
+        mounts.logs_dir,
+        mounts.archives_output_dir,
+    ]
+    for mount in necessary_mounts:
+        if mount:
+            container_start_cmd.append('--mount')
+            container_start_cmd.append(str(mount))
+    container_start_cmd.append(clp_config.execution_container)
+
+    search_cmd = [
+        str(CONTAINER_CLP_HOME / 'sbin' / 'native' / 'search'),
+        '--config', str(container_clp_config.logs_directory / container_config_filename),
+        parsed_args.wildcard_query,
     ]
     if parsed_args.file_path:
-        docker_exec_cmd.append('--file-path')
-        docker_exec_cmd.append(parsed_args.file_path)
-    subprocess.run(docker_exec_cmd)
+        search_cmd.append('--file-path')
+        search_cmd.append(parsed_args.file_path)
+    cmd = container_start_cmd + search_cmd
+    subprocess.run(cmd, check=True)
+
+    # Remove generated files
+    container_config_file_path_on_host.unlink()
 
     return 0
 
