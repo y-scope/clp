@@ -1,13 +1,15 @@
 import os
 
+from job_orchestration.scheduler.scheduler_data import QueueName
+
 # Worker settings
 # Force workers to consume only one task at a time
 worker_prefetch_multiplier = 1
-imports = ['job_orchestration.executor.compression.task']
+imports = ['job_orchestration.executor.compression_task']
 
 # Queue settings
 task_queue_max_priority = 3
-task_routes = {'job_orchestration.executor.compression.task.compress': 'compression'}
+task_routes = {'job_orchestration.executor.compression_task.compress': QueueName.COMPRESSION}
 task_create_missing_queues = True
 
 # Results backend settings

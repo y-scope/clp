@@ -1,57 +1,46 @@
-"""
-This module is specifically to hold the remote method, easing the process of
-figuring out what imports it requires.
-"""
 import json
+import os
 import pathlib
 import subprocess
-import sys
 
 import yaml
 from celery.utils.log import get_task_logger
 
-from clp_py_utils.clp_io_config import ClpIoConfig, PathsToCompress
+from job_orchestration.executor.celery import app
+from job_orchestration.executor.utils import append_message_to_task_results_queue
+from job_orchestration.job_config import ClpIoConfig, PathsToCompress
+from job_orchestration.scheduler.scheduler_data import \
+    TaskStatus, \
+    TaskUpdate, \
+    TaskCompletionUpdate, \
+    TaskFailureUpdate
+
+# Setup logging
+logger = get_task_logger(__name__)
 
 
-def compress(clp_config: ClpIoConfig, clp_home_str: str, data_dir_str: str, archive_output_dir_str: str,
-             logs_dir_str: str, job_id_str: str, task_id_str: str, paths_to_compress: PathsToCompress,
-             database_connection_params):
+def run_clp(clp_config: ClpIoConfig, clp_home: pathlib.Path, data_dir: pathlib.Path, archive_output_dir: pathlib.Path,
+            logs_dir: pathlib.Path, job_id: int, task_id: int, paths_to_compress: PathsToCompress,
+            database_connection_params):
     """
     Compresses files from an FS into archives on an FS
 
     :param clp_config: ClpIoConfig
-    :param clp_home_str:
-    :param data_dir_str:
-    :param archive_output_dir_str:
-    :param logs_dir_str:
-    :param job_id_str:
-    :param task_id_str:
+    :param clp_home:
+    :param data_dir:
+    :param archive_output_dir:
+    :param logs_dir:
+    :param job_id:
+    :param task_id:
     :param paths_to_compress: PathToCompress
     :param database_connection_params:
     :return: tuple -- (whether compression was successful, output messages)
     """
-    # Setup logging
-    logger = get_task_logger(__name__)
+    instance_id_str = f'job-{job_id}-task-{task_id}'
 
-    instance_id_str = f'job-{job_id_str}-task-{task_id_str}'
-
-    clp_home = pathlib.Path(clp_home_str)
-
-    # Add clp package to sys.path
-    python_site_packages_path = clp_home / 'lib' / 'python3' / 'site-packages'
-    if not python_site_packages_path.is_dir():
-        logger.error('Failed to load python3 packages bundled with CLP.')
-        return False, 0
-    # Add packages to the front of the path
-    sys.path.insert(0, str(python_site_packages_path))
-
-    # Expand parameters
     path_prefix_to_remove = clp_config.input.path_prefix_to_remove
 
     file_paths = paths_to_compress.file_paths
-
-    data_dir = pathlib.Path(data_dir_str).resolve()
-    logs_dir = pathlib.Path(logs_dir_str).resolve()
 
     # Generate database config file for clp
     db_config_file_path = data_dir / f'{instance_id_str}-db-config.yml'
@@ -60,7 +49,6 @@ def compress(clp_config: ClpIoConfig, clp_home_str: str, data_dir_str: str, arch
     db_config_file.close()
 
     # Start assembling compression command
-    archive_output_dir = pathlib.Path(archive_output_dir_str).resolve()
     compression_cmd = [
         str(clp_home / 'bin' / 'clp'),
         'c', str(archive_output_dir),
@@ -98,8 +86,7 @@ def compress(clp_config: ClpIoConfig, clp_home_str: str, data_dir_str: str, arch
     # Start compression
     logger.debug('Compressing...')
     compression_successful = False
-    proc = subprocess.Popen(compression_cmd, close_fds=True, stdout=subprocess.PIPE,
-                            stderr=stderr_log_file)
+    proc = subprocess.Popen(compression_cmd, stdout=subprocess.PIPE, stderr=stderr_log_file)
 
     # Compute the total amount of data compressed
     last_archive_stats = None
@@ -144,3 +131,50 @@ def compress(clp_config: ClpIoConfig, clp_home_str: str, data_dir_str: str, arch
         }
     else:
         return compression_successful, {'error_message': f'See logs {stderr_log_path}'}
+
+
+@app.task()
+def compress(job_id: int, task_id: int, clp_io_config_json: str, paths_to_compress_json: str,
+             database_connection_params):
+    clp_home_str = os.getenv('CLP_HOME')
+    data_dir_str = os.getenv('CLP_DATA_DIR')
+    archive_output_dir_str = os.getenv('CLP_ARCHIVE_OUTPUT_DIR')
+    logs_dir_str = os.getenv('CLP_LOGS_DIR')
+    celery_broker_url = os.getenv('BROKER_URL')
+
+    logger.debug(f'CLP_HOME: {clp_home_str}')
+    logger.info(f"Compressing (job_id={job_id} task_id={task_id})")
+
+    clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
+    paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
+
+    task_update = TaskUpdate(
+        job_id=job_id,
+        task_id=task_id,
+        status=TaskStatus.IN_PROGRESS
+    )
+    append_message_to_task_results_queue(celery_broker_url, True, task_update.dict())
+    logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")
+
+    compression_successful, worker_output = run_clp(clp_io_config, pathlib.Path(clp_home_str),
+                                                    pathlib.Path(data_dir_str), pathlib.Path(archive_output_dir_str),
+                                                    pathlib.Path(logs_dir_str), job_id, task_id, paths_to_compress,
+                                                    database_connection_params)
+
+    if compression_successful:
+        task_update = TaskCompletionUpdate(
+            job_id=job_id,
+            task_id=task_id,
+            status=TaskStatus.SUCCEEDED,
+            total_uncompressed_size=worker_output['total_uncompressed_size'],
+            total_compressed_size=worker_output['total_compressed_size']
+        )
+    else:
+        task_update = TaskFailureUpdate(
+            job_id=job_id,
+            task_id=task_id,
+            status=TaskStatus.FAILED,
+            error_message=worker_output['error_message']
+        )
+    append_message_to_task_results_queue(celery_broker_url, False, task_update.dict())
+    logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
