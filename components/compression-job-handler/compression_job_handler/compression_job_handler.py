@@ -13,12 +13,13 @@ import zstandard as zstd
 from pydantic import ValidationError
 
 from clp_py_utils.clp_config import CLPConfig
-from clp_py_utils.clp_io_config import PathsToCompress, InputConfig, OutputConfig, ClpIoConfig
 from clp_py_utils.compression import FileMetadata, FilesPartition, \
     group_files_by_similar_filenames, validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.sql_adapter import SQL_Adapter
+from job_orchestration.job_config import PathsToCompress, InputConfig, OutputConfig, ClpIoConfig
+from job_orchestration.scheduler.scheduler_data import JobStatus
 from .utils.common import JobCompletionStatus
 
 # Setup logging
@@ -307,11 +308,11 @@ def handle_job(scheduling_db, scheduling_db_cursor, clp_io_config: ClpIoConfig, 
 
         # Ensure all of the scheduled task and the total number of tasks
         # in the job row has been updated and committed
-        scheduling_db_cursor.execute(
-            f'UPDATE compression_jobs '
-            f'SET num_tasks={paths_to_compress_buffer.num_tasks}, job_status="SCHEDULED" '
-            f'WHERE job_id={scheduling_job_id};'
-        )
+        scheduling_db_cursor.execute(f"""
+            UPDATE compression_jobs 
+            SET num_tasks={paths_to_compress_buffer.num_tasks}, status='{JobStatus.SCHEDULED}' 
+            WHERE id={scheduling_job_id}
+        """)
         scheduling_db.commit()
 
         # TODO: what happens when commit fails, log error and crash ASAP
@@ -319,19 +320,15 @@ def handle_job(scheduling_db, scheduling_db_cursor, clp_io_config: ClpIoConfig, 
         # Wait for jobs to finish
         job_logger.info(f'Waiting for {paths_to_compress_buffer.num_tasks} task(s) to finish.')
 
-        # Simply poll the job_status in the job scheduling table
+        # Simply poll the status in the job scheduling table
         if no_progress_reporting:
-            polling_query = \
-                f'SELECT job_status, job_status_msg FROM compression_jobs ' \
-                f'WHERE job_id={scheduling_job_id};'
+            polling_query = f"SELECT status, status_msg FROM compression_jobs WHERE id={scheduling_job_id}"
         else:
-            polling_query = \
-                f'SELECT job_status, job_status_msg, job_uncompressed_size, job_compressed_size ' \
-                f'FROM compression_jobs WHERE job_id={scheduling_job_id};'
+            polling_query = f"SELECT status, status_msg, uncompressed_size, compressed_size " \
+                            f"FROM compression_jobs WHERE id={scheduling_job_id}"
 
-        completion_query = \
-            f'SELECT job_duration, job_uncompressed_size, job_compressed_size ' \
-            f'FROM compression_jobs WHERE job_id={scheduling_job_id};'
+        completion_query = f"SELECT duration, uncompressed_size, compressed_size " \
+                           f"FROM compression_jobs WHERE id={scheduling_job_id}"
 
         job_last_uncompressed_size = 0
         while True:
@@ -349,11 +346,11 @@ def handle_job(scheduling_db, scheduling_db_cursor, clp_io_config: ClpIoConfig, 
                 continue
 
             job_row = results[0]
-            job_status = job_row['job_status']
+            job_status = job_row['status']
 
             if not no_progress_reporting:
-                job_uncompressed_size = job_row['job_uncompressed_size']
-                job_compressed_size = job_row['job_compressed_size']
+                job_uncompressed_size = job_row['uncompressed_size']
+                job_compressed_size = job_row['compressed_size']
                 if job_uncompressed_size > 0:
                     compression_ratio = float(job_uncompressed_size) / job_compressed_size
                     if job_last_uncompressed_size < job_uncompressed_size:
@@ -362,22 +359,22 @@ def handle_job(scheduling_db, scheduling_db_cursor, clp_io_config: ClpIoConfig, 
                             f'{pretty_size(job_compressed_size)} ({compression_ratio:.2f})')
                         job_last_uncompressed_size = job_uncompressed_size
 
-            if job_status == 'SCHEDULED':
+            if JobStatus.SCHEDULED == job_status:
                 pass  # Simply wait another iteration
-            elif job_status == 'COMPLETED':
+            elif JobStatus.COMPLETED == job_status:
                 # All tasks in the job is done
+                speed = 0
                 if not no_progress_reporting:
                     scheduling_db_cursor.execute(completion_query)
                     job_row = scheduling_db_cursor.fetchone()
-                    if job_row['job_duration']:
-                        speed = job_row['job_uncompressed_size'] / job_row['job_duration']
-                    job_logger.info(
-                        f'Compression finished. Runtime: {str(job_row["job_duration"])}s. '
-                        f'Speed: {pretty_size(speed)}/s.')
+                    if job_row['duration'] and job_row['duration'] > 0:
+                        speed = job_row['uncompressed_size'] / job_row['duration']
+                    job_logger.info(f"Compression finished. Runtime: {str(job_row['duration'])}s. "
+                                    f"Speed: {pretty_size(speed)}/s.")
                 break  # Done
-            elif job_status == 'FAILED':
+            elif JobStatus.FAILED == job_status:
                 # One or more tasks in the job has failed
-                job_logger.error(f'Compression failed. See log file in {job_row["job_status_msg"]}')
+                job_logger.error(f"Compression failed. See log file in {job_row['status_msg']}")
                 break  # Done
             else:
                 job_logger.info(f'handler for job_status "{job_status}" is not implemented')

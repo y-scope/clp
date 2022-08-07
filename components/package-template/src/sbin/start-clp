@@ -79,6 +79,7 @@ from clp.package_utils import \
     validate_queue_config, \
     validate_worker_config
 from clp_py_utils.clp_config import CLPConfig
+from job_orchestration.scheduler.scheduler_data import QueueName
 
 
 def append_docker_port_settings_for_host_ips(hostname: str, host_port: int, container_port: int, cmd: [str]):
@@ -375,7 +376,7 @@ def start_worker(instance_id: str, clp_config: CLPConfig, container_clp_config: 
         'worker',
         '--concurrency', str(num_cpus),
         '--loglevel', 'WARNING',
-        '-Q', 'compression',
+        '-Q', f'{QueueName.COMPRESSION}',
     ]
     cmd = container_start_cmd + worker_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)

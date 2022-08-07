@@ -9,6 +9,18 @@ from celery.result import AsyncResult
 from pydantic import BaseModel, validator
 
 
+class QueueName:
+    COMPRESSION = "compression"
+
+
+class TaskStatus:
+    SUBMITTED = 'SUBMITTED'
+    SCHEDULED = 'SCHEDULED'
+    IN_PROGRESS = 'IN_PROGRESS'
+    SUCCEEDED = 'SUCCEEDED'
+    FAILED = 'FAILED'
+
+
 class TaskUpdate(BaseModel):
     job_id: int
     task_id: int
@@ -16,7 +28,7 @@ class TaskUpdate(BaseModel):
 
     @validator('status')
     def valid_status(cls, field):
-        supported_status = ['COMPRESSING', 'COMPLETED', 'FAILED']
+        supported_status = [TaskStatus.IN_PROGRESS, TaskStatus.SUCCEEDED, TaskStatus.FAILED]
         if field not in supported_status:
             raise ValueError(f'must be one of the following {"|".join(supported_status)}')
         return field
@@ -32,11 +44,11 @@ class TaskFailureUpdate(TaskUpdate):
 
 
 class Task(BaseModel):
-    task_id: int
-    task_status: str
+    id: int
+    status: str
     priority: int = 1
     clp_paths_to_compress: bytes
-    task_start_time: datetime.datetime = None
+    start_time: datetime.datetime = None
     instance: AsyncResult = None
 
     class Config:
@@ -48,10 +60,17 @@ class Task(BaseModel):
         return json.dumps(msgpack.unpackb(dctx.decompress(self.clp_paths_to_compress)))
 
 
+class JobStatus:
+    SCHEDULING = 'SCHEDULING'
+    SCHEDULED = 'SCHEDULED'
+    COMPLETED = 'COMPLETED'
+    FAILED = 'FAILED'
+
+
 class Job(BaseModel):
-    job_id: int
-    job_status: str
-    job_start_time: datetime.datetime
+    id: int
+    status: str
+    start_time: datetime.datetime
     clp_config: bytes
     num_tasks: typing.Optional[int]
     num_tasks_completed: int

@@ -7,7 +7,7 @@ from .core import get_config_value, make_config_path_absolute, read_yaml_config_
 
 # Constants
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path('etc') / 'credentials.yml'
-
+CLP_METADATA_TABLE_PREFIX = 'clp_'
 
 class Database(BaseModel):
     type: str = 'mariadb'
@@ -80,7 +80,7 @@ class Database(BaseModel):
             'username': self.username,
             'password': self.password,
             'name': self.name,
-            'table_prefix': 'clp_',
+            'table_prefix': CLP_METADATA_TABLE_PREFIX,
             'compress': self.compress,
             'autocommit': self.auto_commit
         }
