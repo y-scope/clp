@@ -11,9 +11,10 @@ from job_orchestration.executor.utils import append_message_to_task_results_queu
 from job_orchestration.job_config import ClpIoConfig, PathsToCompress
 from job_orchestration.scheduler.scheduler_data import \
     TaskStatus, \
+    TaskUpdateType, \
     TaskUpdate, \
-    TaskCompletionUpdate, \
-    TaskFailureUpdate
+    TaskFailureUpdate, \
+    CompressionTaskSuccessUpdate
 
 # Setup logging
 logger = get_task_logger(__name__)
@@ -149,6 +150,7 @@ def compress(job_id: int, task_id: int, clp_io_config_json: str, paths_to_compre
     paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
 
     task_update = TaskUpdate(
+        type=TaskUpdateType.COMPRESSION,
         job_id=job_id,
         task_id=task_id,
         status=TaskStatus.IN_PROGRESS
@@ -162,7 +164,8 @@ def compress(job_id: int, task_id: int, clp_io_config_json: str, paths_to_compre
                                                     database_connection_params)
 
     if compression_successful:
-        task_update = TaskCompletionUpdate(
+        task_update = CompressionTaskSuccessUpdate(
+            type=TaskUpdateType.COMPRESSION,
             job_id=job_id,
             task_id=task_id,
             status=TaskStatus.SUCCEEDED,
@@ -171,6 +174,7 @@ def compress(job_id: int, task_id: int, clp_io_config_json: str, paths_to_compre
         )
     else:
         task_update = TaskFailureUpdate(
+            type=TaskUpdateType.COMPRESSION,
             job_id=job_id,
             task_id=task_id,
             status=TaskStatus.FAILED,

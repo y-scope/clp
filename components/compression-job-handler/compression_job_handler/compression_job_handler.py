@@ -361,7 +361,7 @@ def handle_job(scheduling_db, scheduling_db_cursor, clp_io_config: ClpIoConfig, 
 
             if JobStatus.SCHEDULED == job_status:
                 pass  # Simply wait another iteration
-            elif JobStatus.COMPLETED == job_status:
+            elif JobStatus.SUCCEEDED == job_status:
                 # All tasks in the job is done
                 speed = 0
                 if not no_progress_reporting:

@@ -68,11 +68,15 @@ namespace clo {
         // Define hidden positional options (not shown in Boost's program options help message)
         po::options_description hidden_positional_options;
         hidden_positional_options.add_options()
+                ("search-controller-host", po::value<string>(&m_search_controller_host))
+                ("search-controller-port", po::value<string>(&m_search_controller_port))
                 ("archive-path", po::value<string>(&m_archive_path))
                 ("wildcard-string", po::value<string>(&m_search_string))
                 ("file-path", po::value<string>(&m_file_path))
                 ;
         po::positional_options_description positional_options_description;
+        positional_options_description.add("search-controller-host", 1);
+        positional_options_description.add("search-controller-port", 1);
         positional_options_description.add("archive-path", 1);
         positional_options_description.add("wildcard-string", 1);
         positional_options_description.add("file-path", 1);
@@ -117,8 +121,9 @@ namespace clo {
                 cerr << endl;
 
                 cerr << "Examples:" << endl;
-                cerr << R"(  # Search ARCHIVE_PATH for " ERROR ")" << endl;
-                cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")" << endl;
+                cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to the controller at localhost:5555)"
+                     << endl;
+                cerr << "  " << get_program_name() << R"( localhost 5555 ARCHIVE_PATH " ERROR ")" << endl;
                 cerr << endl;
 
                 cerr << "Options can be specified on the command line or through a configuration file." << endl;
@@ -130,6 +135,16 @@ namespace clo {
             if (parsed_command_line_options.count("version")) {
                 cerr << cVersion << endl;
                 return ParsingResult::InfoCommand;
+            }
+
+            // Validate search controller host was specified
+            if (m_search_controller_host.empty()) {
+                throw invalid_argument("SEARCH_CONTROLLER_HOST not specified or empty.");
+            }
+
+            // Validate search controller port was specified
+            if (m_search_controller_port.empty()) {
+                throw invalid_argument("SEARCH_CONTROLLER_PORT not specified or empty.");
             }
 
             // Validate archive path was specified
@@ -190,6 +205,7 @@ namespace clo {
     }
 
     void CommandLineArguments::print_basic_usage () const {
-        cerr << "Usage: " << get_program_name() << R"( [OPTIONS] ARCHIVE_PATH "WILDCARD STRING" [FILE])" << endl;
+        cerr << "Usage: " << get_program_name() << " [OPTIONS] SEARCH_CONTROLLER_HOST SEARCH_CONTROLLER_PORT "
+             << R"(ARCHIVE_PATH "WILDCARD STRING" [FILE])" << endl;
     }
 }
