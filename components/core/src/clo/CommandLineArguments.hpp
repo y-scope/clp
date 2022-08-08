@@ -22,6 +22,8 @@ namespace clo {
         // Methods
         ParsingResult parse_arguments (int argc, const char* argv[]) override;
 
+        const std::string& get_search_controller_host () const { return m_search_controller_host; }
+        const std::string& get_search_controller_port () const { return m_search_controller_port; }
         const std::string& get_archive_path () const { return m_archive_path; }
         bool ignore_case () const { return m_ignore_case; }
         const std::string& get_search_string () const { return m_search_string; }
@@ -34,6 +36,8 @@ namespace clo {
         void print_basic_usage () const override;
 
         // Variables
+        std::string m_search_controller_host;
+        std::string m_search_controller_port;
         std::string m_archive_path;
         bool m_ignore_case;
         std::string m_search_string;

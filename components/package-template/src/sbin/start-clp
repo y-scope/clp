@@ -376,7 +376,7 @@ def start_worker(instance_id: str, clp_config: CLPConfig, container_clp_config: 
         'worker',
         '--concurrency', str(num_cpus),
         '--loglevel', 'WARNING',
-        '-Q', f'{QueueName.COMPRESSION}',
+        '-Q', f"{QueueName.COMPRESSION},{QueueName.SEARCH}",
     ]
     cmd = container_start_cmd + worker_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)

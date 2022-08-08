@@ -111,6 +111,14 @@ else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for MariaDBClient")
 endif()
 
+# Find and setup msgpack
+find_package(msgpack 4.1.1 REQUIRED)
+if(msgpack_FOUND)
+    message(STATUS "Found msgpack ${msgpack_VERSION}")
+else()
+    message(FATAL_ERROR "Could not find msgpack")
+endif()
+
 # Add yaml-cpp
 add_subdirectory(submodules/yaml-cpp EXCLUDE_FROM_ALL)
 
@@ -489,14 +497,20 @@ set(SOURCE_FILES_clo
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
-        )
+        src/networking/socket_utils.cpp
+        src/networking/socket_utils.hpp
+        src/networking/SocketOperationFailed.cpp
+        src/networking/SocketOperationFailed.hpp
+        src/PThread.cpp src/PThread.hpp src/clo/ControllerMonitoringThread.cpp src/clo/ControllerMonitoringThread.hpp)
 add_executable(clo ${SOURCE_FILES_clo})
 target_link_libraries(clo
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
+        msgpackc-cxx
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
+        Threads::Threads
         ZStd::ZStd
         )
 target_compile_features(clo

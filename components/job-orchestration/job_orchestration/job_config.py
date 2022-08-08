@@ -25,3 +25,10 @@ class OutputConfig(BaseModel):
 class ClpIoConfig(BaseModel):
     input: InputConfig
     output: OutputConfig
+
+
+class SearchConfig(BaseModel):
+    search_controller_host: str
+    search_controller_port: int
+    wildcard_query: str
+    path_filter: str = None
