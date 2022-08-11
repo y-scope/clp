@@ -128,12 +128,18 @@ namespace streaming_archive {
         // Add clauses
         bool clause_exists = false;
         if (cEpochTimeMin != ts_begin) {
-            fmt::format_to(statement_buffer_ix, " WHERE {} >= ?{}", streaming_archive::cMetadataDB::File::BeginTimestamp,
+            // If the end-timestamp of the file is less than the given begin-
+            // timestamp, messages within the file are guaranteed to be outside
+            // the timestamp range. So this filters for the opposite.
+            fmt::format_to(statement_buffer_ix, " WHERE {} >= ?{}", streaming_archive::cMetadataDB::File::EndTimestamp,
                            enum_to_underlying_type(FilesTableFieldIndexes::BeginTimestamp) + 1);
             clause_exists = true;
         }
         if (cEpochTimeMax != ts_end) {
-            fmt::format_to(statement_buffer_ix, " {} {} <= ?{}", clause_exists ? "AND" : "WHERE", streaming_archive::cMetadataDB::File::EndTimestamp,
+            // If the begin-timestamp of the file is greater than the given end-
+            // timestamp, messages within the file are guaranteed to be outside
+            // the timestamp range. So this filters for the opposite.
+            fmt::format_to(statement_buffer_ix, " {} {} <= ?{}", clause_exists ? "AND" : "WHERE", streaming_archive::cMetadataDB::File::BeginTimestamp,
                            enum_to_underlying_type(FilesTableFieldIndexes::EndTimestamp) + 1);
             clause_exists = true;
         }
