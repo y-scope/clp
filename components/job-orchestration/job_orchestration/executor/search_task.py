@@ -44,7 +44,7 @@ def run_clo(job_id: int, task_id: int, clp_home: pathlib.Path, archive_output_di
         cmd.append(path_filter)
 
     # Open stderr log file
-    stderr_filename = f'job-{job_id}-task-{task_id}-stderr.log'
+    stderr_filename = f'search-job-{job_id}-task-{task_id}-stderr.log'
     stderr_log_path = logs_dir / stderr_filename
     stderr_log_file = open(stderr_log_path, 'w')
 
