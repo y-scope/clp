@@ -1,14 +1,16 @@
 #include "Archive.hpp"
+#include "../../clp/utils.hpp"
 
 // C libraries
 #include <sys/stat.h>
 
 // C++ libraries
 #include <iostream>
+#include <fstream>
+#include <filesystem>
 
 // Boost libraries
 #include <boost/asio.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -47,7 +49,7 @@ namespace streaming_archive { namespace writer {
         }
     }
 
-    void Archive::open (const UserConfig& user_config) {
+    std::string Archive::open (const UserConfig& user_config) {
         int retval;
 
         m_id = user_config.id;
@@ -57,11 +59,11 @@ namespace streaming_archive { namespace writer {
         m_creation_num = user_config.creation_num;
         m_print_archive_stats_progress = user_config.print_archive_stats_progress;
 
-        boost::system::error_code boost_error_code;
+        std::error_code std_error_code;
 
         // Ensure path doesn't already exist
-        auto archive_path = boost::filesystem::path(user_config.output_dir) / m_id_as_string;
-        bool path_exists = boost::filesystem::exists(archive_path, boost_error_code);
+        std::filesystem::path archive_path = std::filesystem::path(user_config.output_dir) / m_id_as_string;
+        bool path_exists = std::filesystem::exists(archive_path, std_error_code);
         if (path_exists) {
             SPDLOG_ERROR("Archive path already exists: {}", archive_path.c_str());
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
@@ -130,18 +132,36 @@ namespace streaming_archive { namespace writer {
         m_next_segment_id = 0;
         m_compression_level = user_config.compression_level;
 
+        // Copy schema file into archive
+        if(!m_schema_file_path.empty()) {
+            const std::filesystem::path archive_schema_filesystem_path = archive_path / cSchemaFileName;
+            try {
+                const std::filesystem::path m_schema_filesystem_path = m_schema_file_path;
+                std::filesystem::copy(m_schema_filesystem_path, archive_schema_filesystem_path);
+                m_stable_size += m_schema_file_size;
+            } catch (FileWriter::OperationFailed& e) {
+                SPDLOG_CRITICAL("Failed to copy schema file to archive: {}", archive_schema_filesystem_path.c_str());
+                throw;
+            }
+        }
+        
         // Save metadata to disk
         auto metadata_file_path = archive_path / cMetadataFileName;
         try {
+            size_t schema_original_file_path_size = m_schema_original_file_path.size();
             m_metadata_file_writer.open(metadata_file_path.string(), FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_SEEKABLE_WRITING);
             // Update size before we write the metadata file so we can store the size in the metadata file
-            m_stable_size += sizeof(cArchiveFormatVersion) + sizeof(m_stable_uncompressed_size) + sizeof(m_stable_size);
+            m_stable_size += sizeof(cArchiveFormatVersion) + sizeof(m_stable_uncompressed_size) + sizeof(m_stable_size) + sizeof(m_schema_checksum);
+            m_stable_size += sizeof(schema_original_file_path_size) + m_schema_original_file_path.size()*sizeof(char) + sizeof(m_schema_last_edited);
 
             m_metadata_file_writer.write_numeric_value(cArchiveFormatVersion);
+            m_metadata_file_writer.write_numeric_value(m_schema_checksum);
+            m_metadata_file_writer.write_numeric_value(schema_original_file_path_size);
+            m_metadata_file_writer.write_string(m_schema_original_file_path);
+            m_metadata_file_writer.write_numeric_value(m_schema_last_edited);
             m_metadata_file_writer.write_numeric_value(m_stable_uncompressed_size);
             m_metadata_file_writer.write_numeric_value(m_stable_size);
             m_metadata_file_writer.flush();
-
         } catch (FileWriter::OperationFailed& e) {
             SPDLOG_CRITICAL("Failed to write archive file metadata collection in file: {}", metadata_file_path.c_str());
             throw;
@@ -179,6 +199,7 @@ namespace streaming_archive { namespace writer {
         }
 
         m_path = archive_path_string;
+        return archive_path.string();
     }
 
     void Archive::close () {
@@ -291,7 +312,115 @@ namespace streaming_archive { namespace writer {
             m_var_ids_for_file_with_unassigned_segment.insert(var_ids.cbegin(), var_ids.cend());
         }
     }
+    
+    void Archive::write_msg_using_schema (TaggedToken*& uncompressed_msg, uint32_t uncompressed_msg_pos,
+                                          bool has_delimiter) {
+        epochtime_t timestamp = 0;
+        TimestampPattern* timestamp_pattern = nullptr;
+        if (uncompressed_msg[0].is_timestamp) {
+            size_t start;
+            size_t end;
+            timestamp_pattern = (TimestampPattern*) TimestampPattern::search_known_ts_patterns(
+                    uncompressed_msg[0].token.get_string(), timestamp, start, end);
+            if (old_ts_pattern != *timestamp_pattern) {
+                change_ts_pattern(timestamp_pattern);
+                old_ts_pattern = *timestamp_pattern;
+            } 
+            assert(nullptr != timestamp_pattern);               
+        }
+        if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts) {
+            clp::split_file_and_archive(m_archive_user_config, m_path_for_compression, m_group_id, timestamp_pattern, *this);
+        } else if (m_file->get_encoded_size_in_bytes() >= m_target_encoded_file_size) {
+            clp::split_file(m_path_for_compression, m_group_id, timestamp_pattern, *this);
+        }
 
+        m_encoded_vars.clear();
+        m_var_ids.clear();
+        m_logtype_dict_entry.clear();
+        
+        size_t num_uncompressed_bytes = 0;
+        uint32_t start_pos = uncompressed_msg[0].token.start_pos;
+        if (timestamp_pattern == nullptr) {
+            start_pos = uncompressed_msg[1].token.start_pos;
+        }
+        uint32_t end_pos = uncompressed_msg[uncompressed_msg_pos - 1].token.end_pos;
+        if (start_pos <= end_pos) {
+            num_uncompressed_bytes = end_pos - start_pos;
+        } else {
+            num_uncompressed_bytes = *uncompressed_msg[0].token.buffer_size_ptr - start_pos + end_pos;
+        }
+        for (uint32_t i = 1; i < uncompressed_msg_pos; i++) {
+            TaggedToken& taggedToken = uncompressed_msg[i];
+            if (has_delimiter && taggedToken.type != TaggedToken::TYPE::STATIC) {
+                m_logtype_dict_entry.add_constant(taggedToken.token.get_delimiter(), 0, 1);
+                if (taggedToken.token.start_pos == *taggedToken.token.buffer_size_ptr - 1) {
+                    taggedToken.token.start_pos = 0;
+                } else {
+                    taggedToken.token.start_pos++;
+                }
+            }
+            switch(taggedToken.type) {
+                case TaggedToken::TYPE::STATIC: {
+                    m_logtype_dict_entry.add_constant(taggedToken.token.get_string(), 0, taggedToken.token.get_length());
+                    break;
+                }
+                case TaggedToken::TYPE::INTEGER: {
+                    encoded_variable_t encoded_var;
+                    if (!EncodedVariableInterpreter::convert_string_to_representable_integer_var(taggedToken.token.get_string(), encoded_var)) {
+                        variable_dictionary_id_t id;
+                        m_var_dict.add_entry(taggedToken.token.get_string(), id);
+                        encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);                        
+                    }
+                    m_logtype_dict_entry.add_non_double_var();
+                    m_encoded_vars.push_back(encoded_var);
+                    break;
+                }
+                case TaggedToken::TYPE::DOUBLE: {
+                    encoded_variable_t encoded_var;
+                    if (!EncodedVariableInterpreter::convert_string_to_representable_double_var(taggedToken.token.get_string(), encoded_var)) {
+                        variable_dictionary_id_t id;
+                        m_var_dict.add_entry(taggedToken.token.get_string(), id);
+                        encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
+                        m_logtype_dict_entry.add_non_double_var();
+                    } else {
+                        m_logtype_dict_entry.add_double_var();
+                    }
+                    m_encoded_vars.push_back(encoded_var);
+                    break;
+                }
+                case TaggedToken::TYPE::STRING: {
+                    // Variable string looks like a dictionary variable, so encode it as so
+                    encoded_variable_t encoded_var;
+                    variable_dictionary_id_t id;
+                    m_var_dict.add_entry(taggedToken.token.get_string(), id);
+                    encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
+                    m_var_ids.push_back(id);
+                    
+                    m_logtype_dict_entry.add_non_double_var();
+                    m_encoded_vars.push_back(encoded_var);
+                    break;
+                }
+                default: {
+                    assert(false);
+                }
+            }
+        }
+        if(!m_logtype_dict_entry.get_value().empty()) {
+            logtype_dictionary_id_t logtype_id;
+            m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
+            m_file->write_encoded_msg(timestamp, logtype_id, m_encoded_vars, m_var_ids, num_uncompressed_bytes);
+
+            // Update segment indices
+            if (m_file->has_ts_pattern()) {
+                m_logtype_ids_in_segment_for_files_with_timestamps.insert(logtype_id);
+                m_var_ids_in_segment_for_files_with_timestamps.insert_all(m_var_ids);
+            } else {
+                m_logtype_ids_for_file_with_unassigned_segment.insert(logtype_id);
+                m_var_ids_for_file_with_unassigned_segment.insert(m_var_ids.cbegin(), m_var_ids.cend());
+            }
+        }
+    }
+    
     void Archive::write_dir_snapshot () {
         #if FLUSH_TO_DISK_ENABLED
             // fsync logs directory to flush new files' directory entries

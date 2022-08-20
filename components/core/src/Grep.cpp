@@ -7,6 +7,8 @@
 #include "EncodedVariableInterpreter.hpp"
 #include "Profiler.hpp"
 #include "Utils.hpp"
+#include "frontend/QueryParser.hpp"
+#include "StringReader.hpp"
 
 using std::string;
 using std::vector;
@@ -109,6 +111,7 @@ QueryToken::QueryToken (const string& query_string, const size_t begin_pos, cons
                 m_type = Type::Ambiguous;
                 m_possible_types.push_back(Type::Logtype);
                 m_possible_types.push_back(Type::DictOrIntVar);
+                m_possible_types.push_back(Type::DoubleVar);
             }
         } else {
             string value_without_wildcards = m_value;
@@ -367,7 +370,7 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
 }
 
 bool Grep::process_raw_query (const Archive& archive, const string& search_string, epochtime_t search_begin_ts, epochtime_t search_end_ts, bool ignore_case,
-        Query& query)
+        Query& query, Lexer& forward_lexer, Lexer& reverse_lexer, bool use_heuristic)
 {
     // Set properties which require no processing
     query.set_search_begin_timestamp(search_begin_ts);
@@ -379,6 +382,7 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     query.set_search_string(processed_search_string);
 
     // Replace non-greedy wildcards with greedy wildcards since we currently have no support for searching compressed files with non-greedy wildcards
+    // SPDLOG_WARN("CLG currently does not support '?', replacing with '*'");
     std::replace(processed_search_string.begin(), processed_search_string.end(), '?', '*');
     // Clean-up in case any instances of "?*" or "*?" were changed into "**"
     processed_search_string = clean_up_wildcard_search_string(processed_search_string);
@@ -388,11 +392,18 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     size_t begin_pos = 0;
     size_t end_pos = 0;
     bool is_var;
-    while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos, is_var)) {
-        query_tokens.emplace_back(processed_search_string, begin_pos, end_pos, is_var);
+    if(use_heuristic) {
+        while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos, is_var)) {
+            query_tokens.emplace_back(processed_search_string, begin_pos, end_pos, is_var);
+        }
+    } else {
+        while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos, is_var, forward_lexer, reverse_lexer)) {
+            query_tokens.emplace_back(processed_search_string, begin_pos, end_pos, is_var);
+        }
     }
-
+    
     // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in the middle since we fall-back to decompression + wildcard matching for those.
+    // a*a
     vector<QueryToken*> ambiguous_tokens;
     for (auto& query_token : query_tokens) {
         if (!query_token.has_greedy_wildcard_in_middle() && query_token.is_ambiguous_token()) {
@@ -441,6 +452,264 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     }
 
     return query.contains_sub_queries();
+}
+
+bool Grep::process_raw_query (const Archive& archive, const string& search_string, epochtime_t search_begin_ts, epochtime_t search_end_ts, bool ignore_case,
+        Query& query, const std::unique_ptr<QueryParser>& parser)
+{
+    // Set properties which require no processing
+    query.set_search_begin_timestamp(search_begin_ts);
+    query.set_search_end_timestamp(search_end_ts);
+    query.set_ignore_case(ignore_case);
+
+
+
+
+    /* query.set_search_string(processed_search_string); */
+
+
+    return query.contains_sub_queries();
+}
+
+bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, size_t& end_pos, bool& is_var) {
+    const auto value_length = value.length();
+    if (end_pos >= value_length) {
+        return false;
+    }
+
+    is_var = false;
+    bool contains_wildcard = false;
+    while (false == is_var && false == contains_wildcard && begin_pos < value_length) {
+        // Start search at end of last token
+        begin_pos = end_pos;
+
+        // Find next wildcard or non-delimiter
+        bool is_escaped = false;
+        for (; begin_pos < value_length; ++begin_pos) {
+            char c = value[begin_pos];
+
+            if (is_escaped) {
+                is_escaped = false;
+
+                if (false == is_delim(c)) {
+                    // Found escaped non-delimiter, so reverse the index to retain the escape character
+                    --begin_pos;
+                    break;
+                }
+            } else if ('\\' == c) {
+                // Escape character
+                is_escaped = true;
+            } else {
+                if (is_wildcard(c)) {
+                    contains_wildcard = true;
+                    break;
+                }
+                if (false == is_delim(c)) {
+                    break;
+                }
+            }
+        }
+
+        bool contains_decimal_digit = false;
+        bool contains_alphabet = false;
+
+        // Find next delimiter
+        is_escaped = false;
+        end_pos = begin_pos;
+        for (; end_pos < value_length; ++end_pos) {
+            char c = value[end_pos];
+
+            if (is_escaped) {
+                is_escaped = false;
+
+                if (is_delim(c)) {
+                    // Found escaped delimiter, so reverse the index to retain the escape character
+                    --end_pos;
+                    break;
+                }
+            } else if ('\\' == c) {
+                // Escape character
+                is_escaped = true;
+            } else {
+                if (is_wildcard(c)) {
+                    contains_wildcard = true;
+                } else if (is_delim(c)) {
+                    // Found delimiter that's not also a wildcard
+                    break;
+                }
+            }
+
+            if (is_decimal_digit(c)) {
+                contains_decimal_digit = true;
+            } else if (is_alphabet(c)) {
+                contains_alphabet = true;
+            }
+        }
+
+        // Treat token as a definite variable if:
+        // - it contains a decimal digit, or
+        // - it could be a multi-digit hex value, or
+        // - it's directly preceded by an equals sign and contains an alphabet without a wildcard between the equals sign and the first alphabet of the token
+        if (contains_decimal_digit || could_be_multi_digit_hex_value(value, begin_pos, end_pos)) {
+            is_var = true;
+        } else if (begin_pos > 0 && '=' == value[begin_pos - 1] && contains_alphabet) {
+            // Find first alphabet or wildcard in token
+            is_escaped = false;
+            bool found_wildcard_before_alphabet = false;
+            for (auto i = begin_pos; i < end_pos; ++i) {
+                auto c = value[i];
+
+                if (is_escaped) {
+                    is_escaped = false;
+
+                    if (is_alphabet(c)) {
+                        break;
+                    }
+                } else if ('\\' == c) {
+                    // Escape character
+                    is_escaped = true;
+                } else if (is_wildcard(c)) {
+                    found_wildcard_before_alphabet = true;
+                    break;
+                }
+            }
+
+            if (false == found_wildcard_before_alphabet) {
+                is_var = true;
+            }
+        }
+    }
+
+    return (value_length != begin_pos);
+}
+
+bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, size_t& end_pos, bool& is_var, Lexer& forward_lexer, Lexer& reverse_lexer) {
+    const size_t value_length = value.length();
+    if (end_pos >= value_length) {
+        return false;
+    }
+
+    is_var = false;
+    bool contains_wildcard = false;
+    while (false == is_var && false == contains_wildcard && begin_pos < value_length) {
+        // Start search at end of last token
+        begin_pos = end_pos;
+
+        // Find variable begin or wildcard
+        bool is_escaped = false;
+        for (; begin_pos < value_length; ++begin_pos) {
+            char c = value[begin_pos];
+
+            if (is_escaped) {
+                if (forward_lexer.is_first_char[c]) {
+                    // Found variable begin
+                    break;
+                }
+
+                is_escaped = false;
+            } else if ('\\' == c) {
+                // Escape character
+                is_escaped = true;
+            } else {
+                if (is_wildcard(c)) {
+                    contains_wildcard = true;
+                    break;
+                }
+                if (forward_lexer.is_first_char[c]) {
+                    break;
+                }
+            }
+        }
+
+        bool contains_decimal_digit = false;
+
+        // Find next delimiter
+        is_escaped = false;
+        end_pos = begin_pos;
+        size_t last_wildcard_or_variable_end_pos = end_pos;
+        for (; end_pos < value_length; ++end_pos) {
+            char c = value[end_pos];
+
+            if (is_escaped) {
+                if (forward_lexer.is_delimiter[c]) {
+                    // Found delimiter
+                    break;
+                }
+                if (reverse_lexer.is_first_char[c]) {
+                    last_wildcard_or_variable_end_pos = end_pos;
+                }
+
+                is_escaped = false;
+            } else if ('\\' == c) {
+                // Escape character
+                is_escaped = true;
+            } else {
+                if (is_wildcard(c)) {
+                    contains_wildcard = true;
+                    last_wildcard_or_variable_end_pos = end_pos;
+                } else if (reverse_lexer.is_first_char[c]) {
+                    last_wildcard_or_variable_end_pos = end_pos;
+                } else if (forward_lexer.is_delimiter[c]) {
+                    // Found delimiter that's not also a wildcard
+                    break;
+                }
+            }
+
+            if ('0' <= c && c <= '9') {
+                contains_decimal_digit = true;
+            }
+        }
+
+        // Trim end if necessary
+        if (last_wildcard_or_variable_end_pos + 1 < end_pos) {
+            end_pos = last_wildcard_or_variable_end_pos + 1;
+        }
+
+        if (end_pos > begin_pos) {
+            bool has_prefix_wildcard = ('*' == value[begin_pos]) || ('?' == value[begin_pos]);
+            bool has_suffix_wildcard = ('*' == value[end_pos - 1]) || ('?' == value[begin_pos]);;
+            bool has_wildcard_in_middle = false;
+            for (size_t i = begin_pos + 1; i < end_pos - 1; ++i) {
+                if (('*' == value[i] || '?' == value[i]) && value[i-1] != '\\') {
+                    has_wildcard_in_middle = true;
+                    break;
+                }
+            }
+            if (has_wildcard_in_middle || (has_prefix_wildcard && has_suffix_wildcard)) {
+                // DO NOTHING
+            } else if (has_suffix_wildcard) { //asdsas*
+                StringReader stringReader;
+                stringReader.open(value.substr(begin_pos, end_pos - begin_pos - 1));
+                forward_lexer.reset(&stringReader);
+                Token token = forward_lexer.scan_with_wildcard(value[end_pos - 1]);
+                if (token.type_ids->at(0) != Lexer::TOKEN_UNCAUGHT_STRING_ID &&
+                    token.type_ids->at(0) != Lexer::TOKEN_END_ID) {
+                    is_var = true;
+                }
+            } else if (has_prefix_wildcard) { // *asdas
+                std::string value_reverse = value.substr(begin_pos + 1, end_pos - begin_pos - 1);
+                std::reverse(value_reverse.begin(), value_reverse.end());
+                StringReader stringReader;
+                stringReader.open(value_reverse);
+                reverse_lexer.reset(&stringReader);
+                Token token = reverse_lexer.scan_with_wildcard(value[begin_pos]);
+                if (token.type_ids->at(0) != Lexer::TOKEN_UNCAUGHT_STRING_ID &&
+                    token.type_ids->at(0) != Lexer::TOKEN_END_ID) {
+                    is_var = true;
+                }
+            } else { // no wildcards
+                StringReader stringReader;
+                stringReader.open(value.substr(begin_pos, end_pos - begin_pos));
+                forward_lexer.reset(&stringReader);
+                Token token = forward_lexer.scan();
+                if (token.type_ids->at(0) != Lexer::TOKEN_UNCAUGHT_STRING_ID &&
+                    token.type_ids->at(0) != Lexer::TOKEN_END_ID) {
+                    is_var = true;
+                }
+            }
+        }
+    }
+    return (value_length != begin_pos);
 }
 
 void Grep::calculate_sub_queries_relevant_to_file (const File& compressed_file, vector<Query>& queries) {

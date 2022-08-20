@@ -3,6 +3,7 @@
 
 // C++ libraries
 #include <vector>
+#include <cstddef>
 
 // Project headers
 #include "../../Defs.h"

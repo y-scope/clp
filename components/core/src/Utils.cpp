@@ -19,6 +19,7 @@
 
 // Project headers
 #include "Profiler.hpp"
+#include "StringReader.hpp"
 
 using std::list;
 using std::string;
@@ -26,63 +27,7 @@ using std::vector;
 
 static const char* const cWildcards = "?*";
 
-/**
- * Checks if the given character is an alphabet
- * @param c
- * @return true if c is an alphabet, false otherwise
- */
-static inline bool is_alphabet (char c) {
-    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
-}
-
-/**
- * Checks if character is a decimal (base-10) digit
- * @param c
- * @return true if c is a decimal digit, false otherwise
- */
-static inline bool is_decimal_digit (char c) {
-    return '0' <= c && c <= '9';
-}
-
-/**
- * Checks if character is a delimiter
- * We treat everything except the following quoted characters as a delimiter: "+-./0-9A-Z\a-z"
- * NOTE: For performance, we rely on the ASCII ordering of characters to compare ranges of characters at a time instead of comparing individual characters
- * @param c
- * @return true if c is a delimiter, false otherwise
- */
-static inline bool is_delim (char c) {
-    return !('+' == c || ('-' <= c && c <= '9') || ('A' <= c && c <= 'Z') || '\\' == c || '_' == c || ('a' <= c && c <= 'z'));
-}
-
-/**
- * Checks if the given segment of the stringcould be a multi-digit hex value
- * @param str
- * @param begin_pos
- * @param end_pos
- * @return true if yes, false otherwise
- */
-static inline bool could_be_multi_digit_hex_value (const string& str, size_t begin_pos, size_t end_pos) {
-    if (end_pos - begin_pos < 2) {
-        return false;
-    }
-
-    for (size_t i = begin_pos; i < end_pos; ++i) {
-        auto c = str[i];
-        if (!( ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F') || ('0' <= c && c <= '9') )) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-/**
- * Checks if character is a wildcard
- * @param c
- * @return true if c is a wildcard, false otherwise
- */
-static bool is_wildcard (char c) {
+bool is_wildcard (char c) {
     for (size_t i = 0; i < strlen(cWildcards); ++i) {
         if (cWildcards[i] == c) {
             return true;
@@ -242,6 +187,7 @@ size_t find_first_of (const string& haystack, const char* needles, size_t search
     return string::npos;
 }
 
+/*
 bool get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, size_t& end_pos, bool& is_var) {
     const auto value_length = value.length();
     if (end_pos >= value_length) {
@@ -353,6 +299,7 @@ bool get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, s
 
     return (value_length != begin_pos);
 }
+*/
 
 bool get_bounds_of_next_var (const string& msg, size_t& begin_pos, size_t& end_pos) {
     const auto msg_length = msg.length();

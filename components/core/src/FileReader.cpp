@@ -1,5 +1,8 @@
 #include "FileReader.hpp"
 
+// Boost libraries
+#include <boost/crc.hpp>
+
 // C standard libraries
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -8,6 +11,7 @@
 // C++ libraries
 #include <cassert>
 #include <cerrno>
+#include <boost/filesystem.hpp>
 
 using std::string;
 
@@ -75,6 +79,7 @@ ErrorCode FileReader::try_open (const string& path) {
         }
         return ErrorCode_errno;
     }
+    this->path = path;
 
     return ErrorCode_Success;
 }
@@ -82,7 +87,11 @@ ErrorCode FileReader::try_open (const string& path) {
 void FileReader::open (const string& path) {
     ErrorCode error_code = try_open(path);
     if (ErrorCode_Success != error_code) {
-        throw OperationFailed(error_code, __FILENAME__, __LINE__);
+        if (ErrorCode_FileNotFound == error_code) {
+            throw "File not found: " + boost::filesystem::weakly_canonical(path).string() + "\n"; 
+        } else {
+            throw OperationFailed(error_code, __FILENAME__, __LINE__);            
+        }
     }
 }
 
@@ -117,6 +126,7 @@ ErrorCode FileReader::try_read_to_delimiter (char delim, bool keep_delimiter, bo
     return ErrorCode_Success;
 }
 
+
 ErrorCode FileReader::try_fstat (struct stat& stat_buffer) {
     if (nullptr == m_file) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
@@ -127,4 +137,20 @@ ErrorCode FileReader::try_fstat (struct stat& stat_buffer) {
         return ErrorCode_errno;
     }
     return ErrorCode_Success;
+}
+
+uint16_t FileReader::compute_checksum (uint16_t& file_size) {
+    
+    boost::crc_32_type result;
+    size_t buf_size = 100000;
+    char buf[buf_size];
+    size_t bytes_read;
+    try_read(buf, buf_size, bytes_read);
+    while(bytes_read > 0) {
+        file_size += bytes_read;
+        result.process_bytes(buf, bytes_read);
+        try_read(buf, buf_size, bytes_read);
+    }
+    close();
+    return result.checksum();
 }

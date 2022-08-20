@@ -45,6 +45,7 @@ namespace clp {
         }
         config_file_path += cDefaultConfigFilename;
         string global_metadata_db_config_file_path;
+        //m_schema_file_path = "./schema.txt";
         options_general.add_options()
                 ("help,h", "Print help")
                 ("version,V", "Print version")
@@ -53,6 +54,7 @@ namespace clp {
                 ("db-config-file",
                         po::value<string>(&global_metadata_db_config_file_path)->value_name("FILE")->default_value(global_metadata_db_config_file_path),
                         "Global metadata DB YAML config")
+                ("schema-path", po::value<string>(&m_schema_file_path)->value_name("FILE")->default_value(m_schema_file_path), "Specify path to user defined schema file, otherwise heuristics are used to determine dictionary variables for compression. See README-Schema.md for documentation.")
                 ;
 
         // Define functional options
@@ -288,6 +290,15 @@ namespace clp {
                     }
                     if (false == boost::filesystem::is_directory(m_path_prefix_to_remove)) {
                         throw invalid_argument("Specified prefix to remove is not a directory.");
+                    }
+                }
+
+                if (false == m_schema_file_path.empty()) {
+                    if (false == boost::filesystem::exists(m_schema_file_path)) {
+                        throw invalid_argument("Specified schema file does not exist.");
+                    }
+                    if (false == boost::filesystem::is_regular_file(m_schema_file_path)) {
+                        throw invalid_argument("Specified schema file is not regular file.");
                     }
                 }
             }

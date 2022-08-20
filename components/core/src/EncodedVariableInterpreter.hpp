@@ -113,9 +113,9 @@ public:
     static bool wildcard_search_dictionary_and_get_encoded_matches (const std::string& var_wildcard_str, const VariableDictionaryReader& var_dict,
                                                                     bool ignore_case, SubQuery& sub_query);
 
-private:
     // Methods
     static encoded_variable_t encode_var_dict_id (variable_dictionary_id_t id);
+private:
 
     // Variables
     // The beginning of the range used for encoding variable dictionary IDs

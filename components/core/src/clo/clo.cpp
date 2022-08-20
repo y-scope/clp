@@ -3,6 +3,7 @@
 
 // C++ libraries
 #include <iostream>
+#include <memory>
 
 // Boost libraries
 #include <boost/filesystem.hpp>
@@ -16,6 +17,7 @@
 
 // Project headers
 #include "../Defs.h"
+#include "../frontend/utils.hpp"
 #include "../Grep.hpp"
 #include "../Profiler.hpp"
 #include "../networking/socket_utils.hpp"
@@ -25,11 +27,13 @@
 #include "ControllerMonitoringThread.hpp"
 
 using clo::CommandLineArguments;
+using frontend::load_lexer_from_file;
 using std::cout;
 using std::cerr;
 using std::endl;
 using std::string;
 using std::to_string;
+using std::unique_ptr;
 using std::vector;
 using streaming_archive::MetadataDB;
 using streaming_archive::reader::Archive;
@@ -202,6 +206,21 @@ static bool search_archive (const CommandLineArguments& command_line_args, const
         return false;
     }
 
+    // Load lexers from schema file if it exists
+    auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
+    unique_ptr<Lexer> forward_lexer, reverse_lexer;
+    bool use_heuristic = true;
+    if (boost::filesystem::exists(schema_file_path)) {
+        use_heuristic = false;
+        // Create forward lexer
+        forward_lexer.reset(new Lexer());
+        load_lexer_from_file(schema_file_path.string(), false, *forward_lexer);
+
+        // Create reverse lexer
+        reverse_lexer.reset(new Lexer());
+        load_lexer_from_file(schema_file_path.string(), true, *reverse_lexer);
+    }
+
     Archive archive_reader;
     archive_reader.open(archive_path.string());
     archive_reader.refresh_dictionaries();
@@ -211,7 +230,8 @@ static bool search_archive (const CommandLineArguments& command_line_args, const
 
     Query query;
     if (false == Grep::process_raw_query(archive_reader, command_line_args.get_search_string(), search_begin_ts,
-                                         search_end_ts, command_line_args.ignore_case(), query))
+                                         search_end_ts, command_line_args.ignore_case(), query, *forward_lexer,
+                                         *reverse_lexer, use_heuristic))
     {
         return true;
     }

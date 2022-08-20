@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <filesystem>
 
 // Boost libraries
 #include <boost/uuid/random_generator.hpp>
@@ -18,11 +19,15 @@
 #include "../../GlobalMetadataDB.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
+#include "../../frontend/LogParser.hpp"
 #include "../MetadataDB.hpp"
+#include "../../Stopwatch.hpp"
 
-namespace streaming_archive { namespace writer {
+namespace streaming_archive { namespace writer { 
     class Archive {
     public:
+        static Stopwatch get_pattern_watch;
+        static Stopwatch write_watch;
         // Types
         /**
          * Structure used to pass settings when opening a new archive
@@ -57,8 +62,22 @@ namespace streaming_archive { namespace writer {
             }
         };
 
+        TimestampPattern old_ts_pattern;
+
+        size_t m_target_data_size_of_dicts;
+        UserConfig m_archive_user_config;
+        std::string m_path_for_compression;
+        group_id_t m_group_id;
+        size_t m_target_encoded_file_size;
+        std::string m_schema_file_path;
+        size_t m_schema_checksum;
+        size_t m_schema_file_size;
+        std::string m_schema_original_file_path;
+        std::filesystem::file_time_type m_schema_last_edited;
+
         // Constructors
-        Archive () : m_logs_dir_fd(-1), m_segments_dir_fd(-1), m_compression_level(0), m_global_metadata_db(nullptr) {}
+        Archive () : m_logs_dir_fd(-1), m_segments_dir_fd(-1), m_compression_level(0), m_global_metadata_db(nullptr), old_ts_pattern(), m_schema_file_path(),
+                     m_schema_file_size(0), m_schema_checksum(0) {}
 
         // Destructor
         ~Archive ();
@@ -71,7 +90,7 @@ namespace streaming_archive { namespace writer {
          * @throw streaming_archive::writer::Archive::OperationFailed if archive already exists, if it could not be stat-ed, if the directory structure could
                   not be created, if the file is not reset or problems with medatadata.
          */
-        void open (const UserConfig& user_config);
+        std::string  open (const UserConfig& user_config);
         /**
          * Writes a final snapshot of the archive, closes all open files, and closes the dictionaries
          * @throw FileWriter::OperationFailed if any writer could not be closed
@@ -79,6 +98,7 @@ namespace streaming_archive { namespace writer {
          * @throw streaming_archive::writer::Archive::OperationFailed if the file is not reset
          * @throw Same as streaming_archive::writer::SegmentManager::close
          * @throw Same as streaming_archive::writer::Archive::write_dir_snapshot
+         * @return Path of the new archive
          */
         void close ();
 
@@ -115,6 +135,15 @@ namespace streaming_archive { namespace writer {
          * @throw FileWriter::OperationFailed if any write fails
          */
         void write_msg (epochtime_t timestamp, const std::string& message, size_t num_uncompressed_bytes);
+        /**
+         * Encodes and writes a message to the given file using schema file
+         * @param file
+         * @param uncompressed_msg
+         * @param uncompressed_msg_pos
+         * @param has_delimiter
+         * @throw FileWriter::OperationFailed if any write fails
+         */
+        void write_msg_using_schema (TaggedToken*& uncompressed_msg, uint32_t uncompressed_msg_pos, bool has_delimiter);
 
         /**
          * Writes snapshot of archive to disk including metadata of all files and new dictionary entries
@@ -242,6 +271,8 @@ namespace streaming_archive { namespace writer {
         LogTypeDictionaryWriter m_logtype_dict;
         // Holds preallocated logtype dictionary entry for performance
         LogTypeDictionaryEntry m_logtype_dict_entry;
+        std::vector<encoded_variable_t> m_encoded_vars;
+        std::vector<variable_dictionary_id_t> m_var_ids;
         VariableDictionaryWriter m_var_dict;
 
         boost::uuids::random_generator m_uuid_generator;

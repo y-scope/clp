@@ -9,6 +9,7 @@
 #include "Query.hpp"
 #include "streaming_archive/reader/Archive.hpp"
 #include "streaming_archive/reader/File.hpp"
+#include "frontend/QueryParser.hpp"
 
 class Grep {
 public:
@@ -35,8 +36,34 @@ public:
      * @return true if query may match messages, false otherwise
      */
     static bool process_raw_query (const streaming_archive::reader::Archive& archive, const std::string& search_string,
-                                   epochtime_t search_begin_ts, epochtime_t search_end_ts, bool ignore_case, Query& query);
+                                   epochtime_t search_begin_ts, epochtime_t search_end_ts, bool ignore_case, Query& query, 
+                                   Lexer& forward_lexer, Lexer& reverse_lexer, bool use_heuristic);
+    static bool process_raw_query (const streaming_archive::reader::Archive& archive, const std::string& search_string,
+                                   epochtime_t search_begin_ts, epochtime_t search_end_ts, bool ignore_case, Query& query, const std::unique_ptr<QueryParser>& parser);
 
+    /**
+     * Returns bounds of next potential variable (either a definite variable or a token with wildcards)
+     * @param value String containing token
+     * @param begin_pos Begin position of last token, changes to begin position of next token
+     * @param end_pos End position of last token, changes to end position of next token
+     * @param is_var Whether the token is definitely a variable
+     * @return true if another potential variable was found, false otherwise
+     */
+    static bool get_bounds_of_next_potential_var (const std::string& value, size_t& begin_pos, size_t& end_pos, bool& is_var);
+
+    /**
+     * Returns bounds of next potential variable (either a definite variable or a token with wildcards)
+     * @param value String containing token
+     * @param begin_pos Begin position of last token, changes to begin position of next token
+     * @param end_pos End position of last token, changes to end position of next token
+     * @param is_var Whether the token is definitely a variable
+     * @param forward_lexer DFA for determining if input is in the schema
+     * @param reverse_lexer DFA for determining if reverse of input is in the schema
+     * @return true if another potential variable was found, false otherwise
+     */
+    static bool get_bounds_of_next_potential_var (const std::string& value, size_t& begin_pos, size_t& end_pos, bool& is_var,
+                                           Lexer& forward_lexer, Lexer& reverse_lexer);
+    
     /**
      * Marks which sub-queries in each query are relevant to the given file
      * @param compressed_file

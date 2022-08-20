@@ -3,9 +3,7 @@
 
 // C++ libraries
 #include <iostream>
-
-// Boost libraries
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 // spdlog
 #include <spdlog/sinks/stdout_sinks.h>
@@ -13,15 +11,15 @@
 
 // Project headers
 #include "../Defs.h"
+#include "../frontend/utils.hpp"
 #include "../Grep.hpp"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
-#include "../Profiler.hpp"
 #include "../streaming_archive/Constants.hpp"
-#include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 
 using clg::CommandLineArguments;
+using frontend::load_lexer_from_file;
 using std::cout;
 using std::cerr;
 using std::endl;
@@ -47,7 +45,7 @@ static bool open_archive (const string& archive_path, Archive& archive_reader);
  * @param archive
  * @return true on success, false otherwise
  */
-static bool search (const vector<string>& search_strings, CommandLineArguments& command_line_args, Archive& archive);
+static bool search (const vector<string>& search_strings, CommandLineArguments& command_line_args, Archive& archive, bool use_heuristic);
 /**
  * Opens a compressed file or logs any errors if it couldn't be opened
  * @param file_metadata_ix
@@ -132,7 +130,8 @@ static bool open_archive (const string& archive_path, Archive& archive_reader) {
     return true;
 }
 
-static bool search (const vector<string>& search_strings, CommandLineArguments& command_line_args, Archive& archive) {
+static bool search (const vector<string>& search_strings, CommandLineArguments& command_line_args, Archive& archive,
+                    Lexer& forward_lexer, Lexer& reverse_lexer, bool use_heuristic) {
     ErrorCode error_code;
     auto search_begin_ts = command_line_args.get_search_begin_ts();
     auto search_end_ts = command_line_args.get_search_end_ts();
@@ -144,7 +143,9 @@ static bool search (const vector<string>& search_strings, CommandLineArguments& 
         bool is_superseding_query = false;
         for (const auto& search_string : search_strings) {
             Query query;
-            if (Grep::process_raw_query(archive, search_string, search_begin_ts, search_end_ts, command_line_args.ignore_case(), query)) {
+            if (Grep::process_raw_query(archive, search_string, search_begin_ts, search_end_ts, command_line_args.ignore_case(), query, forward_lexer, 
+                                        reverse_lexer, use_heuristic)) {
+            //if (Grep::process_raw_query(archive, search_string, search_begin_ts, search_end_ts, command_line_args.ignore_case(), query, parser)) {
                 no_queries_match = false;
 
                 if (query.contains_sub_queries() == false) {
@@ -354,7 +355,7 @@ int main (int argc, const char* argv[]) {
 
     // Validate archives directory
     struct stat archives_dir_stat = {};
-    auto archives_dir = boost::filesystem::path(command_line_args.get_archives_dir());
+    auto archives_dir = std::filesystem::path(command_line_args.get_archives_dir());
     if (0 != stat(archives_dir.c_str(), &archives_dir_stat)) {
         SPDLOG_ERROR("'{}' does not exist or cannot be accessed - {}.", archives_dir.c_str(), strerror(errno));
         return -1;
@@ -366,7 +367,7 @@ int main (int argc, const char* argv[]) {
     const auto& global_metadata_db_config = command_line_args.get_metadata_db_config();
     std::unique_ptr<GlobalMetadataDB> global_metadata_db;
     switch (global_metadata_db_config.get_metadata_db_type()) {
-        case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
+        case GlobalMetadataDBConfig::MetadataDBType::SQLite: { 
             auto global_metadata_db_path = archives_dir / streaming_archive::cMetadataDBFileName;
             global_metadata_db = std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
             break;
@@ -382,6 +383,13 @@ int main (int argc, const char* argv[]) {
     }
     global_metadata_db->open();
 
+    std::map<std::pair<std::string, std::filesystem::file_time_type>, Lexer> forward_lexer_map;
+    std::map<std::pair<std::string, std::filesystem::file_time_type>, Lexer> reverse_lexer_map;
+    Lexer* forward_lexer_ptr;
+    Lexer* reverse_lexer_ptr;
+
+    // std::unique_ptr<QueryParser> parser = std::make_unique<QueryParser>(QueryParser(std::move(schema_ast)));
+    
     string archive_id;
     Archive archive_reader;
     for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(get_archive_iterator(*global_metadata_db, command_line_args.get_file_path()));
@@ -390,16 +398,45 @@ int main (int argc, const char* argv[]) {
         archive_ix->get_id(archive_id);
         auto archive_path = archives_dir / archive_id;
 
-        if (false == boost::filesystem::exists(archive_path)) {
+        if (false == std::filesystem::exists(archive_path)) {
             SPDLOG_WARN("Archive {} does not exist in '{}'.", archive_id, command_line_args.get_archives_dir());
             continue;
         }
 
-        // Perform search
+        // Open archive
         if (!open_archive(archive_path.string(), archive_reader)) {
             return -1;
         }
-        if (!search(search_strings, command_line_args, archive_reader)) {
+        
+        // Generate lexer if schema file exists exists
+        auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
+        bool use_heuristic = true;
+        if (std::filesystem::exists(schema_file_path)) {
+            use_heuristic = false;
+            std::pair<string, std::filesystem::file_time_type> lexer_key(archive_reader.get_schema_original_file_path(),
+                                                                         archive_reader.get_schema_last_edited());
+            auto forward_lexer_map_it = forward_lexer_map.find(lexer_key);
+            auto reverse_lexer_map_it = reverse_lexer_map.find(lexer_key);
+            // if there is a chance there might be a difference make a new lexer as it's pretty fast to create
+            if (forward_lexer_map_it == forward_lexer_map.end()) {
+                // Create forward lexer
+                auto insert_result = forward_lexer_map.emplace(lexer_key, Lexer());
+                forward_lexer_ptr = &insert_result.first->second;
+                load_lexer_from_file(schema_file_path, false, *forward_lexer_ptr);
+
+                // Create reverse lexer
+                insert_result = reverse_lexer_map.emplace(lexer_key, Lexer());
+                reverse_lexer_ptr = &insert_result.first->second;
+                load_lexer_from_file(schema_file_path, true, *reverse_lexer_ptr);
+            } else {
+                // load the lexers if they already exist
+                forward_lexer_ptr = &forward_lexer_map_it->second;
+                reverse_lexer_ptr = &reverse_lexer_map_it->second;
+            }
+        }
+
+        // Perform search
+        if (!search(search_strings, command_line_args, archive_reader, *forward_lexer_ptr, *reverse_lexer_ptr, use_heuristic)) {
             return -1;
         }
         archive_reader.close();
