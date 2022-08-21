@@ -289,12 +289,11 @@ int main (int argc, const char* argv[]) {
         auto error_code = e.get_error_code();
         if (ErrorCode_errno == error_code) {
             SPDLOG_ERROR("Search failed: {}:{} {}, errno={}", e.get_filename(), e.get_line_number(), e.what(), errno);
-            return_value = -1;
         } else {
             SPDLOG_ERROR("Search failed: {}:{} {}, error_code={}", e.get_filename(), e.get_line_number(), e.what(),
                          error_code);
-            return_value = -1;
         }
+        return_value = -1;
     }
 
     // Unblock the controller monitoring thread if it's blocked
@@ -305,10 +304,18 @@ int main (int argc, const char* argv[]) {
         } // else connection already disconnected, so nothing to do
     }
 
-    void* thread_return_value;
-    auto error_code = controller_monitoring_thread.try_join(thread_return_value);
-    if (ErrorCode_Success != error_code) {
-        SPDLOG_ERROR("Failed to join with controller monitoring thread: errno={}", errno);
+    try {
+        controller_monitoring_thread.join();
+    } catch (TraceableException& e) {
+        auto error_code = e.get_error_code();
+        if (ErrorCode_errno == error_code) {
+            SPDLOG_ERROR("Failed to join with controller monitoring thread: {}:{} {}, errno={}",
+                         e.get_filename(), e.get_line_number(), e.what(), errno);
+        } else {
+            SPDLOG_ERROR("Failed to join with controller monitoring thread: {}:{} {}, "
+                         "error_code={}", e.get_filename(), e.get_line_number(), e.what(),
+                         error_code);
+        }
         return_value = -1;
     }
 
