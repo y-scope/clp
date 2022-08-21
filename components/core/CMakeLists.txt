@@ -411,6 +411,8 @@ set(SOURCE_FILES_clo
         src/clo/clo.cpp
         src/clo/CommandLineArguments.cpp
         src/clo/CommandLineArguments.hpp
+        src/clo/ControllerMonitoringThread.cpp
+        src/clo/ControllerMonitoringThread.hpp
         src/database_utils.cpp
         src/database_utils.hpp
         src/Defs.h
@@ -433,6 +435,10 @@ set(SOURCE_FILES_clo
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
         src/LogTypeDictionaryReader.hpp
+        src/networking/socket_utils.cpp
+        src/networking/socket_utils.hpp
+        src/networking/SocketOperationFailed.cpp
+        src/networking/SocketOperationFailed.hpp
         src/PageAllocatedVector.cpp
         src/PageAllocatedVector.hpp
         src/ParsedMessage.cpp
@@ -478,6 +484,8 @@ set(SOURCE_FILES_clo
         src/streaming_compression/zstd/Constants.hpp
         src/streaming_compression/zstd/Decompressor.cpp
         src/streaming_compression/zstd/Decompressor.hpp
+        src/Thread.cpp
+        src/Thread.hpp
         src/TimestampPattern.cpp
         src/TimestampPattern.hpp
         src/TraceableException.cpp
@@ -497,11 +505,7 @@ set(SOURCE_FILES_clo
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
-        src/networking/socket_utils.cpp
-        src/networking/socket_utils.hpp
-        src/networking/SocketOperationFailed.cpp
-        src/networking/SocketOperationFailed.hpp
-        src/PThread.cpp src/PThread.hpp src/clo/ControllerMonitoringThread.cpp src/clo/ControllerMonitoringThread.hpp)
+        )
 add_executable(clo ${SOURCE_FILES_clo})
 target_link_libraries(clo
         PRIVATE
@@ -510,7 +514,6 @@ target_link_libraries(clo
         msgpackc-cxx
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
-        Threads::Threads
         ZStd::ZStd
         )
 target_compile_features(clo
