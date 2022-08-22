@@ -37,7 +37,7 @@ def run_clp(clp_config: ClpIoConfig, clp_home: pathlib.Path, data_dir: pathlib.P
     :param database_connection_params:
     :return: tuple -- (whether compression was successful, output messages)
     """
-    instance_id_str = f'job-{job_id}-task-{task_id}'
+    instance_id_str = f'compression-job-{job_id}-task-{task_id}'
 
     path_prefix_to_remove = clp_config.input.path_prefix_to_remove
 

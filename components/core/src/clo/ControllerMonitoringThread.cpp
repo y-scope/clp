@@ -9,7 +9,7 @@
 // Project headers
 #include "../networking/socket_utils.hpp"
 
-void* ControllerMonitoringThread::thread_method () {
+void ControllerMonitoringThread::thread_method () {
     // Wait for the controller socket to close
     constexpr size_t cBufLen = 4096;
     char buf[cBufLen];
@@ -42,6 +42,4 @@ void* ControllerMonitoringThread::thread_method () {
     }
 
     close(m_controller_socket_fd);
-
-    return nullptr;
 }

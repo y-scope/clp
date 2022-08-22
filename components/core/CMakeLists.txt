@@ -527,6 +527,8 @@ set(SOURCE_FILES_clo
         src/streaming_compression/zstd/Decompressor.hpp
         src/StringReader.cpp
         src/StringReader.hpp
+        src/Thread.cpp
+        src/Thread.hpp
         src/TimestampPattern.cpp
         src/TimestampPattern.hpp
         src/TraceableException.cpp
@@ -555,7 +557,6 @@ target_link_libraries(clo
         msgpackc-cxx
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
-        Threads::Threads
         ZStd::ZStd
         )
 target_compile_features(clo
