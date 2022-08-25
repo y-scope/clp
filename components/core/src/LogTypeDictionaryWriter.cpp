@@ -9,9 +9,6 @@ bool LogTypeDictionaryWriter::add_entry (LogTypeDictionaryEntry& logtype_entry, 
     bool is_new_entry = false;
 
     const string& value = logtype_entry.get_value();
-    if (value.empty()) {
-        throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
-    }
     const auto ix = m_value_to_id.find(value);
     if (m_value_to_id.end() != ix) {
         // Entry exists so get its ID
