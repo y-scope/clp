@@ -485,7 +485,6 @@ set(SOURCE_FILES_clo
         src/ParsedMessage.hpp
         src/Profiler.cpp
         src/Profiler.hpp
-        src/PThread.cpp src/PThread.hpp
         src/Query.cpp
         src/Query.hpp
         src/ReaderInterface.cpp
