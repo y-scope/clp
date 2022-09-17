@@ -11,7 +11,7 @@
 
 // Project headers
 #include "../Defs.h"
-#include "../frontend/utils.hpp"
+#include "../compressor_frontend/utils.hpp"
 #include "../Grep.hpp"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
@@ -19,7 +19,7 @@
 #include "CommandLineArguments.hpp"
 
 using clg::CommandLineArguments;
-using frontend::load_lexer_from_file;
+using compressor_frontend::load_lexer_from_file;
 using std::cout;
 using std::cerr;
 using std::endl;
@@ -131,7 +131,7 @@ static bool open_archive (const string& archive_path, Archive& archive_reader) {
 }
 
 static bool search (const vector<string>& search_strings, CommandLineArguments& command_line_args, Archive& archive,
-                    Lexer& forward_lexer, Lexer& reverse_lexer, bool use_heuristic) {
+                    compressor_frontend::Lexer& forward_lexer, compressor_frontend::Lexer& reverse_lexer, bool use_heuristic) {
     ErrorCode error_code;
     auto search_begin_ts = command_line_args.get_search_begin_ts();
     auto search_end_ts = command_line_args.get_search_end_ts();
@@ -383,10 +383,10 @@ int main (int argc, const char* argv[]) {
     }
     global_metadata_db->open();
 
-    std::map<std::pair<std::string, std::filesystem::file_time_type>, Lexer> forward_lexer_map;
-    std::map<std::pair<std::string, std::filesystem::file_time_type>, Lexer> reverse_lexer_map;
-    Lexer* forward_lexer_ptr;
-    Lexer* reverse_lexer_ptr;
+    std::map<std::pair<std::string, std::filesystem::file_time_type>, compressor_frontend::Lexer> forward_lexer_map;
+    std::map<std::pair<std::string, std::filesystem::file_time_type>, compressor_frontend::Lexer> reverse_lexer_map;
+    compressor_frontend::Lexer* forward_lexer_ptr;
+    compressor_frontend::Lexer* reverse_lexer_ptr;
 
     // std::unique_ptr<QueryParser> parser = std::make_unique<QueryParser>(QueryParser(std::move(schema_ast)));
     
@@ -408,7 +408,7 @@ int main (int argc, const char* argv[]) {
             return -1;
         }
         
-        // Generate lexer if schema file exists exists
+        // Generate lexer if schema file exists
         auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
         bool use_heuristic = true;
         if (std::filesystem::exists(schema_file_path)) {
@@ -420,12 +420,12 @@ int main (int argc, const char* argv[]) {
             // if there is a chance there might be a difference make a new lexer as it's pretty fast to create
             if (forward_lexer_map_it == forward_lexer_map.end()) {
                 // Create forward lexer
-                auto insert_result = forward_lexer_map.emplace(lexer_key, Lexer());
+                auto insert_result = forward_lexer_map.emplace(lexer_key, compressor_frontend::Lexer());
                 forward_lexer_ptr = &insert_result.first->second;
                 load_lexer_from_file(schema_file_path, false, *forward_lexer_ptr);
 
                 // Create reverse lexer
-                insert_result = reverse_lexer_map.emplace(lexer_key, Lexer());
+                insert_result = reverse_lexer_map.emplace(lexer_key, compressor_frontend::Lexer());
                 reverse_lexer_ptr = &insert_result.first->second;
                 load_lexer_from_file(schema_file_path, true, *reverse_lexer_ptr);
             } else {

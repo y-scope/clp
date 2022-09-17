@@ -178,16 +178,19 @@ set(SOURCE_FILES_clp
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
-        src/frontend/FiniteAutomata.cpp
-        src/frontend/FiniteAutomata.hpp
-        src/frontend/LALR1Parser.cpp
-        src/frontend/LALR1Parser.hpp
-        src/frontend/Lexer.cpp
-        src/frontend/Lexer.hpp
-        src/frontend/LogParser.cpp
-        src/frontend/LogParser.hpp
-        src/frontend/SchemaParser.cpp
-        src/frontend/SchemaParser.hpp
+        src/compressor_frontend/Constants.hpp
+        src/compressor_frontend/FiniteAutomata.cpp
+        src/compressor_frontend/FiniteAutomata.hpp
+        src/compressor_frontend/LALR1Parser.cpp
+        src/compressor_frontend/LALR1Parser.hpp
+        src/compressor_frontend/Lexer.cpp
+        src/compressor_frontend/Lexer.hpp
+        src/compressor_frontend/LogParser.cpp
+        src/compressor_frontend/LogParser.hpp
+        src/compressor_frontend/SchemaParser.cpp
+        src/compressor_frontend/SchemaParser.hpp
+        src/compressor_frontend/Token.cpp
+        src/compressor_frontend/Token.hpp
         src/GlobalMetadataDB.cpp
         src/GlobalMetadataDB.hpp
         src/GlobalMetadataDBConfig.cpp
@@ -322,18 +325,21 @@ set(SOURCE_FILES_clg
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
-        src/frontend/FiniteAutomata.cpp
-        src/frontend/FiniteAutomata.hpp
-        src/frontend/LALR1Parser.cpp
-        src/frontend/LALR1Parser.hpp
-        src/frontend/Lexer.cpp
-        src/frontend/Lexer.hpp
-        src/frontend/QueryParser.cpp
-        src/frontend/QueryParser.hpp
-        src/frontend/SchemaParser.cpp
-        src/frontend/SchemaParser.hpp
-        src/frontend/utils.cpp
-        src/frontend/utils.hpp
+        src/compressor_frontend/Constants.hpp
+        src/compressor_frontend/FiniteAutomata.cpp
+        src/compressor_frontend/FiniteAutomata.hpp
+        src/compressor_frontend/LALR1Parser.cpp
+        src/compressor_frontend/LALR1Parser.hpp
+        src/compressor_frontend/Lexer.cpp
+        src/compressor_frontend/Lexer.hpp
+        src/compressor_frontend/QueryParser.cpp
+        src/compressor_frontend/QueryParser.hpp
+        src/compressor_frontend/SchemaParser.cpp
+        src/compressor_frontend/SchemaParser.hpp
+        src/compressor_frontend/Token.cpp
+        src/compressor_frontend/Token.hpp
+        src/compressor_frontend/utils.cpp
+        src/compressor_frontend/utils.hpp
         src/GlobalMetadataDB.cpp
         src/GlobalMetadataDB.hpp
         src/GlobalMetadataDBConfig.cpp
@@ -459,16 +465,19 @@ set(SOURCE_FILES_clo
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
-        src/frontend/FiniteAutomata.cpp
-        src/frontend/FiniteAutomata.hpp
-        src/frontend/LALR1Parser.cpp
-        src/frontend/LALR1Parser.hpp
-        src/frontend/Lexer.cpp
-        src/frontend/Lexer.hpp
-        src/frontend/SchemaParser.cpp
-        src/frontend/SchemaParser.hpp
-        src/frontend/utils.cpp
-        src/frontend/utils.hpp
+        src/compressor_frontend/Constants.hpp
+        src/compressor_frontend/FiniteAutomata.cpp
+        src/compressor_frontend/FiniteAutomata.hpp
+        src/compressor_frontend/LALR1Parser.cpp
+        src/compressor_frontend/LALR1Parser.hpp
+        src/compressor_frontend/Lexer.cpp
+        src/compressor_frontend/Lexer.hpp
+        src/compressor_frontend/SchemaParser.cpp
+        src/compressor_frontend/SchemaParser.hpp
+        src/compressor_frontend/Token.cpp
+        src/compressor_frontend/Token.hpp
+        src/compressor_frontend/utils.cpp
+        src/compressor_frontend/utils.hpp
         src/Grep.cpp
         src/Grep.hpp
         src/LogTypeDictionaryEntry.cpp
@@ -599,16 +608,19 @@ set(SOURCE_FILES_unitTest
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
-        src/frontend/FiniteAutomata.cpp
-        src/frontend/FiniteAutomata.hpp
-        src/frontend/LALR1Parser.cpp
-        src/frontend/LALR1Parser.hpp
-        src/frontend/Lexer.cpp
-        src/frontend/Lexer.hpp
-        src/frontend/LogParser.cpp
-        src/frontend/LogParser.hpp
-        src/frontend/SchemaParser.cpp
-        src/frontend/SchemaParser.hpp
+        src/compressor_frontend/Constants.hpp
+        src/compressor_frontend/FiniteAutomata.cpp
+        src/compressor_frontend/FiniteAutomata.hpp
+        src/compressor_frontend/LALR1Parser.cpp
+        src/compressor_frontend/LALR1Parser.hpp
+        src/compressor_frontend/Lexer.cpp
+        src/compressor_frontend/Lexer.hpp
+        src/compressor_frontend/LogParser.cpp
+        src/compressor_frontend/LogParser.hpp
+        src/compressor_frontend/SchemaParser.cpp
+        src/compressor_frontend/SchemaParser.hpp
+        src/compressor_frontend/Token.cpp
+        src/compressor_frontend/Token.hpp
         src/GlobalMetadataDB.cpp
         src/GlobalMetadataDB.hpp
         src/GlobalMetadataDBConfig.cpp

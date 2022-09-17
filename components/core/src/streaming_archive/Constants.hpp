@@ -31,7 +31,7 @@ namespace streaming_archive {
             constexpr char Size[] = "size";
             constexpr char CreatorId[] = "creator_id";
             constexpr char CreationIx[] = "creation_ix";
-            constexpr char SchemaChecksum[] = "schema_checksum";
+            constexpr char SchemaChecksum[] = "m_schema_checksum";
         }
         namespace File {
             constexpr char Id[] = "id";

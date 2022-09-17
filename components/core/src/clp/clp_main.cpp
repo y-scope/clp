@@ -1,17 +1,16 @@
+#include "clp_main.hpp"
+
 // C++ libraries
 #include <unordered_set>
-
-// Boost libraries
-#include <boost/filesystem.hpp>
 
 // spdlog
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 
 // Project headers
-#include "clp_main.hpp"
 #include "../Profiler.hpp"
 #include "../Utils.hpp"
+#include "../compressor_frontend/LogParser.hpp"
 #include "CommandLineArguments.hpp"
 #include "compression.hpp"
 #include "decompression.hpp"
@@ -57,41 +56,13 @@ int clp_main (int argc, const char* argv[], std::string* archive_path) {
     }
 
     if (CommandLineArguments::Command::Compress == command_line_args.get_command()) {
-        std::unique_ptr<LogParser> log_parser;
-        if(!command_line_args.get_use_heuristic()) {
-            {
-                std::string const &schema_file_path = command_line_args.get_schema_file_path();
-                if (true == schema_file_path.empty()) { // currently, impossible (as get_use_heuristic==false iff true == schema_file_path.empty())
-                    // (1) have a default schema path and require that to be valid
-                    // (2) hardcode a schema to use if no schema file is provided
-                    // 1 probably makes more sense as a default log schema is unlikely to be useful anyway
-                    SPDLOG_ERROR("No schema file provided. TODO: decide on default behaviour...");
-                    return false;
-                }
-
-                FileReader schema_reader;
-                ErrorCode error_code = schema_reader.try_open(schema_file_path);
-                if (ErrorCode_Success != error_code) {
-                    if (ErrorCode_FileNotFound == error_code) {
-                        SPDLOG_ERROR("'{}' does not exist.", schema_file_path.c_str());
-                    } else if (ErrorCode_errno == error_code) {
-                        SPDLOG_ERROR("Failed to read '{}', errno={}", schema_file_path.c_str(), errno);
-                    } else {
-                        SPDLOG_ERROR("Failed to read '{}', error_code={}", schema_file_path.c_str(), error_code);
-                    }
-                    return false;
-                }
-                log_parser = std::make_unique<LogParser>(LogParser());
-                log_parser->schema_checksum = schema_reader.compute_checksum(log_parser->schema_file_size);
-                schema_reader.try_open(schema_file_path);
-                SchemaParser sp;
-                std::unique_ptr<ParserASTSchemaFile> schema_ast = sp.generate_schema_ast(&schema_reader);
-                schema_ast->file_path = boost::filesystem::canonical(schema_reader.get_path()).string();
-                log_parser->init(std::move(schema_ast));
-                schema_reader.close();
-            }
+        /// TODO: make this not a unique_ptr and test performance difference
+        std::unique_ptr<compressor_frontend::LogParser> log_parser;
+        if (!command_line_args.get_use_heuristic()) {
+            const std::string& schema_file_path = command_line_args.get_schema_file_path();
+            log_parser = std::make_unique<compressor_frontend::LogParser>(schema_file_path);
         }
-        
+
         boost::filesystem::path path_prefix_to_remove(command_line_args.get_path_prefix_to_remove());
 
         // Validate input paths exist
@@ -102,7 +73,7 @@ int clp_main (int argc, const char* argv[], std::string* archive_path) {
         // Get paths of all files we need to compress
         vector<clp::FileToCompress> files_to_compress;
         vector<string> empty_directory_paths;
-        for (const auto& input_path : input_paths) {
+        for (const auto& input_path: input_paths) {
             if (false == find_all_files_and_empty_directories(path_prefix_to_remove, input_path, files_to_compress, empty_directory_paths)) {
                 return -1;
             }
@@ -114,11 +85,11 @@ int clp_main (int argc, const char* argv[], std::string* archive_path) {
             SPDLOG_ERROR("No files/directories to compress.");
             return -1;
         }
-        
+
         bool compression_successful;
         try {
             compression_successful = compress(command_line_args, files_to_compress, empty_directory_paths, grouped_files_to_compress,
-                                              command_line_args.get_target_encoded_file_size(), archive_path, std::move(log_parser), 
+                                              command_line_args.get_target_encoded_file_size(), archive_path, std::move(log_parser),
                                               command_line_args.get_use_heuristic());
         } catch (TraceableException& e) {
             ErrorCode error_code = e.get_error_code();

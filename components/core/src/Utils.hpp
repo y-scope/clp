@@ -9,11 +9,11 @@
 #include <vector>
 
 // Project headers
+#include "compressor_frontend/Lexer.hpp"
 #include "Defs.h"
 #include "ErrorCode.hpp"
 #include "FileReader.hpp"
 #include "ParsedMessage.hpp"
-#include "frontend/Lexer.hpp"
 
 /**
  * Checks if the given character is an alphabet

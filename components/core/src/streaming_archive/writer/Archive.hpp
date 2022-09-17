@@ -19,7 +19,7 @@
 #include "../../GlobalMetadataDB.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
-#include "../../frontend/LogParser.hpp"
+#include "../../compressor_frontend/LogParser.hpp"
 #include "../MetadataDB.hpp"
 #include "../../Stopwatch.hpp"
 
@@ -141,9 +141,10 @@ namespace streaming_archive { namespace writer {
          * @param uncompressed_msg
          * @param uncompressed_msg_pos
          * @param has_delimiter
+         * @param has_timestamp
          * @throw FileWriter::OperationFailed if any write fails
          */
-        void write_msg_using_schema (TaggedToken*& uncompressed_msg, uint32_t uncompressed_msg_pos, bool has_delimiter);
+        void write_msg_using_schema (compressor_frontend::Token*& uncompressed_msg, uint32_t uncompressed_msg_pos, bool has_delimiter, bool has_timestamp);
 
         /**
          * Writes snapshot of archive to disk including metadata of all files and new dictionary entries

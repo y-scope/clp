@@ -17,7 +17,7 @@
 
 // Project headers
 #include "../Defs.h"
-#include "../frontend/utils.hpp"
+#include "../compressor_frontend/utils.hpp"
 #include "../Grep.hpp"
 #include "../Profiler.hpp"
 #include "../networking/socket_utils.hpp"
@@ -27,7 +27,7 @@
 #include "ControllerMonitoringThread.hpp"
 
 using clo::CommandLineArguments;
-using frontend::load_lexer_from_file;
+using compressor_frontend::load_lexer_from_file;
 using std::cout;
 using std::cerr;
 using std::endl;
@@ -208,16 +208,16 @@ static bool search_archive (const CommandLineArguments& command_line_args, const
 
     // Load lexers from schema file if it exists
     auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
-    unique_ptr<Lexer> forward_lexer, reverse_lexer;
+    unique_ptr<compressor_frontend::Lexer> forward_lexer, reverse_lexer;
     bool use_heuristic = true;
     if (boost::filesystem::exists(schema_file_path)) {
         use_heuristic = false;
         // Create forward lexer
-        forward_lexer.reset(new Lexer());
+        forward_lexer.reset(new compressor_frontend::Lexer());
         load_lexer_from_file(schema_file_path.string(), false, *forward_lexer);
 
         // Create reverse lexer
-        reverse_lexer.reset(new Lexer());
+        reverse_lexer.reset(new compressor_frontend::Lexer());
         load_lexer_from_file(schema_file_path.string(), true, *reverse_lexer);
     }
 

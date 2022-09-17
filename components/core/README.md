@@ -140,7 +140,7 @@ To compress some logs without a schema file:
 * `/home/my/logs` is any log file or directory containing log files
 * This will use heuristics to determine the dictionary variables for compression corresponding to the example schema file in README-Schema.md.
 
-To compress with a user defined schema:
+To compress with a user-defined schema:
 ```shell
 ./clp c archives-dir /home/my/logs --schema-path path-to-schema-file 
 ```

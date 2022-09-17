@@ -45,7 +45,6 @@ namespace clp {
         }
         config_file_path += cDefaultConfigFilename;
         string global_metadata_db_config_file_path;
-        //m_schema_file_path = "./schema.txt";
         options_general.add_options()
                 ("help,h", "Print help")
                 ("version,V", "Print version")
@@ -54,7 +53,6 @@ namespace clp {
                 ("db-config-file",
                         po::value<string>(&global_metadata_db_config_file_path)->value_name("FILE")->default_value(global_metadata_db_config_file_path),
                         "Global metadata DB YAML config")
-                ("schema-path", po::value<string>(&m_schema_file_path)->value_name("FILE")->default_value(m_schema_file_path), "Specify path to user defined schema file, otherwise heuristics are used to determine dictionary variables for compression. See README-Schema.md for documentation.")
                 ;
 
         // Define functional options
@@ -236,6 +234,8 @@ namespace clp {
                         ("print-archive-stats-progress", po::bool_switch(&m_print_archive_stats_progress), "Print statistics (ndjson) about each archive as "
                                                                                                            "it's compressed")
                         ("progress", po::bool_switch(&m_show_progress), "Show progress during compression")
+                        ("schema-path", po::value<string>(&m_schema_file_path)->value_name("FILE")->default_value(m_schema_file_path),
+                         "Path to a schema file. If not specified, heuristics are used to determine dictionary variables. See README-Schema.md for details.")
                         ;
 
                 po::options_description all_compression_options;
@@ -298,7 +298,7 @@ namespace clp {
                         throw invalid_argument("Specified schema file does not exist.");
                     }
                     if (false == boost::filesystem::is_regular_file(m_schema_file_path)) {
-                        throw invalid_argument("Specified schema file is not regular file.");
+                        throw invalid_argument("Specified schema file '" +  m_schema_file_path + "' is not a regular file.");
                     }
                 }
             }
