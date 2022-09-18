@@ -44,7 +44,7 @@ namespace clp {
     private:
         // Methods
         /**
-         * Parses and encodes content from the given reader into the given archive_writer_ptr
+         * Parses and encodes content from the given reader into the given archive_writer
          * @param target_data_size_of_dicts
          * @param archive_user_config
          * @param target_encoded_file_size
@@ -62,7 +62,7 @@ namespace clp {
                                               streaming_archive::writer::Archive& archive_writer, ReaderInterface& reader);
 
         /**
-         * Tries to compress the given file as if it were a generic archive_writer_ptr
+         * Tries to compress the given file as if it were a generic archive_writer
          * @param target_data_size_of_dicts
          * @param archive_user_config
          * @param target_encoded_file_size

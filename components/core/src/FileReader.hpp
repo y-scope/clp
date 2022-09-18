@@ -102,6 +102,7 @@ public:
     ErrorCode try_fstat (struct stat& stat_buffer);
     std::string get_path() { return path; }
     uint16_t compute_checksum(uint16_t& file_size);
+
 private:
     FILE* m_file;
     size_t m_getdelim_buf_len;

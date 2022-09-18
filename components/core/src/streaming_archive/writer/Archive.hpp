@@ -86,6 +86,7 @@ namespace streaming_archive { namespace writer {
         /**
          * Creates the directory structure for the archive and opens writers for the dictionaries
          * @param user_config Settings configurable by the user
+         * @return Path of the new archive
          * @throw FileWriter::OperationFailed if any dictionary writer could not be opened
          * @throw streaming_archive::writer::Archive::OperationFailed if archive already exists, if it could not be stat-ed, if the directory structure could
                   not be created, if the file is not reset or problems with medatadata.
@@ -98,7 +99,6 @@ namespace streaming_archive { namespace writer {
          * @throw streaming_archive::writer::Archive::OperationFailed if the file is not reset
          * @throw Same as streaming_archive::writer::SegmentManager::close
          * @throw Same as streaming_archive::writer::Archive::write_dir_snapshot
-         * @return Path of the new archive
          */
         void close ();
 

@@ -367,7 +367,7 @@ int main (int argc, const char* argv[]) {
     const auto& global_metadata_db_config = command_line_args.get_metadata_db_config();
     std::unique_ptr<GlobalMetadataDB> global_metadata_db;
     switch (global_metadata_db_config.get_metadata_db_type()) {
-        case GlobalMetadataDBConfig::MetadataDBType::SQLite: { 
+        case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
             auto global_metadata_db_path = archives_dir / streaming_archive::cMetadataDBFileName;
             global_metadata_db = std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
             break;

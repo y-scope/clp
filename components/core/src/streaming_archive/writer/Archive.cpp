@@ -37,13 +37,14 @@ using std::vector;
 namespace streaming_archive::writer {
     Archive::~Archive () {
         if (m_path.empty() == false || m_file != nullptr || m_files_with_timestamps_in_segment.empty() == false ||
-            m_files_without_timestamps_in_segment.empty() == false) {
+                m_files_without_timestamps_in_segment.empty() == false)
+        {
             SPDLOG_ERROR("Archive not closed before being destroyed - data loss may occur");
             delete m_file;
-            for (auto file: m_files_with_timestamps_in_segment) {
+            for (auto file : m_files_with_timestamps_in_segment) {
                 delete file;
             }
-            for (auto file: m_files_without_timestamps_in_segment) {
+            for (auto file : m_files_without_timestamps_in_segment) {
                 delete file;
             }
         }
@@ -186,13 +187,13 @@ namespace streaming_archive::writer {
         m_var_dict.open(var_dict_path, var_dict_segment_index_path,
                         EncodedVariableInterpreter::get_var_dict_id_range_end() - EncodedVariableInterpreter::get_var_dict_id_range_begin());
 
-#if FLUSH_TO_DISK_ENABLED
-        // fsync archive directory now that everything in the archive directory has been created
-        if (fsync(archive_dir_fd) != 0) {
-            SPDLOG_ERROR("Failed to fsync {}, errno={}", archive_path_string.c_str(), errno);
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
-        }
-#endif
+        #if FLUSH_TO_DISK_ENABLED
+            // fsync archive directory now that everything in the archive directory has been created
+            if (fsync(archive_dir_fd) != 0) {
+                SPDLOG_ERROR("Failed to fsync {}, errno={}", archive_path_string.c_str(), errno);
+                throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+            }
+        #endif
         if (::close(archive_dir_fd) != 0) {
             // We've already fsynced, so this error shouldn't affect us. Therefore, just log it.
             SPDLOG_WARN("Error when closing file descriptor for {}, errno={}", archive_path_string.c_str(), errno);
@@ -217,8 +218,7 @@ namespace streaming_archive::writer {
         }
         if (m_segment_for_files_without_timestamps.is_open()) {
             close_segment_and_persist_file_metadata(m_segment_for_files_without_timestamps, m_files_without_timestamps_in_segment,
-                                                    m_logtype_ids_in_segment_for_files_without_timestamps,
-                                                    m_var_ids_in_segment_for_files_without_timestamps);
+                                                    m_logtype_ids_in_segment_for_files_without_timestamps, m_var_ids_in_segment_for_files_without_timestamps);
             m_logtype_ids_in_segment_for_files_without_timestamps.clear();
             m_var_ids_in_segment_for_files_without_timestamps.clear();
         }
@@ -424,13 +424,13 @@ namespace streaming_archive::writer {
     }
 
     void Archive::write_dir_snapshot () {
-#if FLUSH_TO_DISK_ENABLED
-        // fsync logs directory to flush new files' directory entries
-        if (0 != fsync(m_logs_dir_fd)) {
-            SPDLOG_ERROR("Failed to fsync {}, errno={}", m_logs_dir_path.c_str(), errno);
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
-        }
-#endif
+        #if FLUSH_TO_DISK_ENABLED
+            // fsync logs directory to flush new files' directory entries
+            if (0 != fsync(m_logs_dir_fd)) {
+                SPDLOG_ERROR("Failed to fsync {}, errno={}", m_logs_dir_path.c_str(), errno);
+                throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+            }
+        #endif
 
         // Flush dictionaries
         m_logtype_dict.write_header_and_flush_to_disk();
@@ -438,7 +438,8 @@ namespace streaming_archive::writer {
     }
 
     void Archive::append_file_contents_to_segment (Segment& segment, ArrayBackedPosIntSet<logtype_dictionary_id_t>& logtype_ids_in_segment,
-                                                   ArrayBackedPosIntSet<variable_dictionary_id_t>& var_ids_in_segment, vector<File*>& files_in_segment) {
+                                                   ArrayBackedPosIntSet<variable_dictionary_id_t>& var_ids_in_segment, vector<File*>& files_in_segment)
+    {
         if (!segment.is_open()) {
             segment.open(m_segments_dir_path, m_next_segment_id++, m_compression_level);
         }
@@ -486,14 +487,15 @@ namespace streaming_archive::writer {
         m_global_metadata_db->update_metadata_for_files(m_id_as_string, files);
 
         // Mark files' metadata as clean
-        for (auto file: files) {
+        for (auto file : files) {
             file->mark_metadata_as_clean();
         }
     }
 
     void Archive::close_segment_and_persist_file_metadata (Segment& segment, std::vector<File*>& files,
                                                            ArrayBackedPosIntSet<logtype_dictionary_id_t>& segment_logtype_ids,
-                                                           ArrayBackedPosIntSet<variable_dictionary_id_t>& segment_var_ids) {
+                                                           ArrayBackedPosIntSet<variable_dictionary_id_t>& segment_var_ids)
+    {
         auto segment_id = segment.get_id();
         m_logtype_dict.index_segment(segment_id, segment_logtype_ids);
         m_var_dict.index_segment(segment_id, segment_var_ids);
@@ -502,19 +504,19 @@ namespace streaming_archive::writer {
 
         segment.close();
 
-#if FLUSH_TO_DISK_ENABLED
-        // fsync segments directory to flush segment's directory entry
-        if (fsync(m_segments_dir_fd) != 0) {
-            SPDLOG_ERROR("Failed to fsync {}, errno={}", m_segments_dir_path.c_str(), errno);
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
-        }
-#endif
+        #if FLUSH_TO_DISK_ENABLED
+            // fsync segments directory to flush segment's directory entry
+            if (fsync(m_segments_dir_fd) != 0) {
+                SPDLOG_ERROR("Failed to fsync {}, errno={}", m_segments_dir_path.c_str(), errno);
+                throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+            }
+        #endif
 
         // Flush dictionaries
         m_logtype_dict.write_header_and_flush_to_disk();
         m_var_dict.write_header_and_flush_to_disk();
 
-        for (auto file: files) {
+        for (auto file : files) {
             file->mark_as_in_committed_segment();
         }
 
@@ -523,7 +525,7 @@ namespace streaming_archive::writer {
         update_metadata();
         m_global_metadata_db->close();
 
-        for (auto file: files) {
+        for (auto file : files) {
             m_stable_uncompressed_size += file->get_num_uncompressed_bytes();
             delete file;
         }
@@ -542,10 +544,10 @@ namespace streaming_archive::writer {
         size_t uncompressed_size = m_stable_uncompressed_size;
 
         // Add size of files in an unclosed segment
-        for (auto file: m_files_with_timestamps_in_segment) {
+        for (auto file : m_files_with_timestamps_in_segment) {
             uncompressed_size += file->get_num_uncompressed_bytes();
         }
-        for (auto file: m_files_without_timestamps_in_segment) {
+        for (auto file : m_files_without_timestamps_in_segment) {
             uncompressed_size += file->get_num_uncompressed_bytes();
         }
 
@@ -567,7 +569,7 @@ namespace streaming_archive::writer {
         auto stable_uncompressed_size = get_stable_uncompressed_size();
         auto stable_size = get_stable_size();
 
-        m_metadata_file_writer.seek_from_current(-((int64_t) (sizeof(m_stable_uncompressed_size) + sizeof(m_stable_size))));
+        m_metadata_file_writer.seek_from_current(-((int64_t)(sizeof(m_stable_uncompressed_size) + sizeof(m_stable_size))));
         m_metadata_file_writer.write_numeric_value(stable_uncompressed_size);
         m_metadata_file_writer.write_numeric_value(stable_size);
 

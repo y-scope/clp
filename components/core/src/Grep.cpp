@@ -32,27 +32,17 @@ public:
 
     // Methods
     bool cannot_convert_to_non_dict_var () const;
-
     bool contains_wildcards () const;
-
     bool has_greedy_wildcard_in_middle () const;
-
     bool has_prefix_greedy_wildcard () const;
-
     bool has_suffix_greedy_wildcard () const;
-
     bool is_ambiguous_token () const;
-
     bool is_double_var () const;
-
     bool is_var () const;
-
     bool is_wildcard () const;
 
     size_t get_begin_pos () const;
-
     size_t get_end_pos () const;
-
     const string& get_value () const;
 
     bool change_to_next_possible_type ();
@@ -136,7 +126,8 @@ QueryToken::QueryToken (const string& query_string, const size_t begin_pos, cons
             encoded_variable_t encoded_var;
             bool converts_to_non_dict_var = false;
             if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(value_without_wildcards, encoded_var) ||
-                EncodedVariableInterpreter::convert_string_to_representable_double_var(value_without_wildcards, encoded_var)) {
+                EncodedVariableInterpreter::convert_string_to_representable_double_var(value_without_wildcards, encoded_var))
+            {
                 converts_to_non_dict_var = true;
             }
 
@@ -235,7 +226,6 @@ bool QueryToken::change_to_next_possible_type () {
  * @return true if this token might match a message, false otherwise
  */
 static bool process_var_token (const QueryToken& query_token, const Archive& archive, bool ignore_case, SubQuery& sub_query, string& logtype);
-
 /**
  * Finds a message matching the given query
  * @param query
@@ -246,7 +236,6 @@ static bool process_var_token (const QueryToken& query_token, const Archive& arc
  * @return true on success, false otherwise
  */
 static bool find_matching_message (const Query& query, Archive& archive, const SubQuery*& matching_sub_query, File& compressed_file, Message& compressed_msg);
-
 /**
  * Generates logtypes and variables for subquery
  * @param archive
@@ -268,7 +257,8 @@ static bool process_var_token (const QueryToken& query_token, const Archive& arc
     // Create QueryVar corresponding to token
     if (!query_token.contains_wildcards()) {
         if (EncodedVariableInterpreter::encode_and_search_dictionary(query_token.get_value(), archive.get_var_dictionary(), ignore_case, logtype,
-                                                                     sub_query) == false) {
+                                                                     sub_query) == false)
+        {
             // Variable doesn't exist in dictionary
             return false;
         }
@@ -285,7 +275,8 @@ static bool process_var_token (const QueryToken& query_token, const Archive& arc
             if (query_token.cannot_convert_to_non_dict_var()) {
                 // Must be a dictionary variable, so search variable dictionary
                 if (!EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matches(query_token.get_value(), archive.get_var_dictionary(),
-                                                                                                    ignore_case, sub_query)) {
+                                                                                                    ignore_case, sub_query))
+                {
                     // Variable doesn't exist in dictionary
                     return false;
                 }
@@ -323,10 +314,11 @@ static bool find_matching_message (const Query& query, Archive& archive, const S
 }
 
 SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archive& archive, string& processed_search_string, vector<QueryToken>& query_tokens,
-                                                                    bool ignore_case, SubQuery& sub_query) {
+                                                                    bool ignore_case, SubQuery& sub_query)
+{
     size_t last_token_end_pos = 0;
     string logtype;
-    for (const auto& query_token: query_tokens) {
+    for (const auto& query_token : query_tokens) {
         // Append from end of last token to beginning of this token, to logtype
         logtype.append(processed_search_string, last_token_end_pos, query_token.get_begin_pos() - last_token_end_pos);
         last_token_end_pos = query_token.get_end_pos();
@@ -379,7 +371,8 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
 }
 
 bool Grep::process_raw_query (const Archive& archive, const string& search_string, epochtime_t search_begin_ts, epochtime_t search_end_ts, bool ignore_case,
-                              Query& query, compressor_frontend::Lexer& forward_lexer, compressor_frontend::Lexer& reverse_lexer, bool use_heuristic) {
+                              Query& query, compressor_frontend::Lexer& forward_lexer, compressor_frontend::Lexer& reverse_lexer, bool use_heuristic)
+{
     // Set properties which require no processing
     query.set_search_begin_timestamp(search_begin_ts);
     query.set_search_end_timestamp(search_end_ts);
@@ -411,9 +404,8 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     }
 
     // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in the middle since we fall-back to decompression + wildcard matching for those.
-    // a*a
     vector<QueryToken*> ambiguous_tokens;
-    for (auto& query_token: query_tokens) {
+    for (auto& query_token : query_tokens) {
         if (!query_token.has_greedy_wildcard_in_middle() && query_token.is_ambiguous_token()) {
             ambiguous_tokens.push_back(&query_token);
         }
@@ -451,7 +443,7 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
 
         // Update combination of ambiguous tokens
         type_of_one_token_changed = false;
-        for (auto* ambiguous_token: ambiguous_tokens) {
+        for (auto* ambiguous_token : ambiguous_tokens) {
             if (ambiguous_token->change_to_next_possible_type()) {
                 type_of_one_token_changed = true;
                 break;
@@ -723,11 +715,11 @@ Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, 
 
 void Grep::calculate_sub_queries_relevant_to_file (const File& compressed_file, vector<Query>& queries) {
     if (compressed_file.is_in_segment()) {
-        for (auto& query: queries) {
+        for (auto& query : queries) {
             query.make_sub_queries_relevant_to_segment(compressed_file.get_segment_id());
         }
     } else {
-        for (auto& query: queries) {
+        for (auto& query : queries) {
             query.make_all_sub_queries_relevant();
         }
     }
@@ -757,7 +749,8 @@ size_t Grep::search_and_output (const Query& query, size_t limit, Archive& archi
         // - Sub-query requires wildcard match, or
         // - no subqueries exist and the search string is not a match-all
         if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required()) ||
-            (query.contains_sub_queries() == false && query.search_string_matches_all() == false)) {
+            (query.contains_sub_queries() == false && query.search_string_matches_all() == false))
+        {
             bool matched = wildCardMatch(decompressed_msg, query.get_search_string(), query.get_ignore_case() == false);
             if (!matched) {
                 continue;
@@ -797,7 +790,8 @@ bool Grep::search_and_decompress (const Query& query, Archive& archive, File& co
         // - Sub-query requires wildcard match, or
         // - no subqueries exist and the search string is not a match-all
         if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required()) ||
-            (query.contains_sub_queries() == false && query.search_string_matches_all() == false)) {
+            (query.contains_sub_queries() == false && query.search_string_matches_all() == false))
+        {
             matched = wildCardMatch(decompressed_msg, query.get_search_string(), query.get_ignore_case() == false);
         } else {
             matched = true;
@@ -825,7 +819,8 @@ size_t Grep::search (const Query& query, size_t limit, Archive& archive, File& c
         // - Sub-query requires wildcard match, or
         // - no subqueries exist and the search string is not a match-all
         if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required()) ||
-            (query.contains_sub_queries() == false && query.search_string_matches_all() == false)) {
+            (query.contains_sub_queries() == false && query.search_string_matches_all() == false))
+        {
             // Decompress match
             bool decompress_successful = archive.decompress_message(compressed_file, compressed_msg, decompressed_msg);
             if (!decompress_successful) {

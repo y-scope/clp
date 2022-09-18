@@ -19,7 +19,8 @@ using std::vector;
 
 namespace clp {
     bool find_all_files_and_empty_directories (boost::filesystem::path& path_prefix_to_remove, const string& path, vector<FileToCompress>& file_paths,
-                                               vector<string>& empty_directory_paths) {
+                                               vector<string>& empty_directory_paths)
+    {
         string path_without_prefix;
         if (false == remove_prefix_and_clean_up_path(path_prefix_to_remove, path, path_without_prefix)) {
             SPDLOG_ERROR("'{}' does not contain prefix '{}'.", path.c_str(), path_prefix_to_remove.c_str());
@@ -169,7 +170,7 @@ namespace clp {
     bool validate_paths_exist (const vector<string>& paths) {
         // Ensure all paths in the list exist
         bool all_paths_exist = true;
-        for (const auto& path: paths) {
+        for (const auto& path : paths) {
             if (boost::filesystem::exists(path) == false) {
                 SPDLOG_ERROR("'{}' does not exist.", path.c_str());
                 all_paths_exist = false;
@@ -192,7 +193,8 @@ namespace clp {
     }
 
     void split_file (const string& path_for_compression, group_id_t group_id, const TimestampPattern* last_timestamp_pattern,
-                     streaming_archive::writer::Archive& archive_writer) {
+                     streaming_archive::writer::Archive& archive_writer)
+    {
         const auto& encoded_file = archive_writer.get_file();
         auto orig_file_id = encoded_file.get_orig_file_id();
         auto split_ix = encoded_file.get_split_ix();
@@ -205,7 +207,8 @@ namespace clp {
     }
 
     void split_file_and_archive (streaming_archive::writer::Archive::UserConfig& archive_user_config, const string& path_for_compression, group_id_t group_id,
-                                 const TimestampPattern* last_timestamp_pattern, streaming_archive::writer::Archive& archive_writer) {
+                                 const TimestampPattern* last_timestamp_pattern, streaming_archive::writer::Archive& archive_writer)
+    {
         const auto& encoded_file = archive_writer.get_file();
         auto orig_file_id = encoded_file.get_orig_file_id();
         auto split_ix = encoded_file.get_split_ix();

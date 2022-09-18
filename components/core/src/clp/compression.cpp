@@ -37,7 +37,6 @@ namespace clp {
      * @return true if lhs' group ID is less than rhs' group ID, false otherwise
      */
     static bool file_group_id_comparator (const FileToCompress& lhs, const FileToCompress& rhs);
-
     /**
      * Comparator to sort files based on their last write time
      * @param lhs

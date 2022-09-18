@@ -126,7 +126,6 @@ ErrorCode FileReader::try_read_to_delimiter (char delim, bool keep_delimiter, bo
     return ErrorCode_Success;
 }
 
-
 ErrorCode FileReader::try_fstat (struct stat& stat_buffer) {
     if (nullptr == m_file) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);

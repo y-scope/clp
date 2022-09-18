@@ -367,9 +367,9 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
     REQUIRE(is_var == true);
 
     REQUIRE(get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var, forward_lexer, reverse_lexer) == false);
-        REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "-*abc-");
+    REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "-*abc-");
     REQUIRE(is_var == false);
-    
+
     REQUIRE(get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var, forward_lexer, reverse_lexer) == false);
 }
 

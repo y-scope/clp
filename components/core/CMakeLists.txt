@@ -742,7 +742,6 @@ target_link_libraries(unitTest
         yaml-cpp::yaml-cpp
         ZStd::ZStd
         )
-
 target_compile_features(unitTest
         PRIVATE cxx_std_17
         )
