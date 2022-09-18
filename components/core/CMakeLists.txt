@@ -590,6 +590,19 @@ set(SOURCE_FILES_unitTest
         src/clp/StructuredFileToCompress.hpp
         src/clp/utils.cpp
         src/clp/utils.hpp
+        src/compressor_frontend/Constants.hpp
+        src/compressor_frontend/FiniteAutomata.cpp
+        src/compressor_frontend/FiniteAutomata.hpp
+        src/compressor_frontend/LALR1Parser.cpp
+        src/compressor_frontend/LALR1Parser.hpp
+        src/compressor_frontend/Lexer.cpp
+        src/compressor_frontend/Lexer.hpp
+        src/compressor_frontend/LogParser.cpp
+        src/compressor_frontend/LogParser.hpp
+        src/compressor_frontend/SchemaParser.cpp
+        src/compressor_frontend/SchemaParser.hpp
+        src/compressor_frontend/Token.cpp
+        src/compressor_frontend/Token.hpp
         src/database_utils.cpp
         src/database_utils.hpp
         src/Defs.h
@@ -608,19 +621,6 @@ set(SOURCE_FILES_unitTest
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
-        src/compressor_frontend/Constants.hpp
-        src/compressor_frontend/FiniteAutomata.cpp
-        src/compressor_frontend/FiniteAutomata.hpp
-        src/compressor_frontend/LALR1Parser.cpp
-        src/compressor_frontend/LALR1Parser.hpp
-        src/compressor_frontend/Lexer.cpp
-        src/compressor_frontend/Lexer.hpp
-        src/compressor_frontend/LogParser.cpp
-        src/compressor_frontend/LogParser.hpp
-        src/compressor_frontend/SchemaParser.cpp
-        src/compressor_frontend/SchemaParser.hpp
-        src/compressor_frontend/Token.cpp
-        src/compressor_frontend/Token.hpp
         src/GlobalMetadataDB.cpp
         src/GlobalMetadataDB.hpp
         src/GlobalMetadataDBConfig.cpp
@@ -629,6 +629,8 @@ set(SOURCE_FILES_unitTest
         src/GlobalMySQLMetadataDB.hpp
         src/GlobalSQLiteMetadataDB.cpp
         src/GlobalSQLiteMetadataDB.hpp
+        src/Grep.cpp
+        src/Grep.hpp
         src/LibarchiveFileReader.cpp
         src/LibarchiveFileReader.hpp
         src/LibarchiveReader.cpp

@@ -15,8 +15,8 @@
 #include "../submodules/Catch2/single_include/catch2/catch.hpp"
 
 // Project headers
-#include "../src/frontend/LogParser.hpp"
-#include "../src/frontend/SchemaParser.hpp"
+#include "../src/compressor_frontend/LogParser.hpp"
+#include "../src/compressor_frontend/SchemaParser.hpp"
 #include "../src/FileReader.hpp"
 #include "../src/streaming_archive/writer/Archive.hpp"
 #include "../src/GlobalMetadataDBConfig.hpp"
@@ -28,20 +28,29 @@
 #include "../src/Stopwatch.hpp"
 #include "../src/clp/clp_main.hpp"
 
-std::unique_ptr<ParserASTSchemaFile> generate_schema_ast(std::string schema_file) {
+using compressor_frontend::DelimiterStringAST;
+using compressor_frontend::LALR1Parser;
+using compressor_frontend::Lexer;
+using compressor_frontend::LogParser;
+using compressor_frontend::ParserAST;
+using compressor_frontend::SchemaFileAST;
+using compressor_frontend::SchemaParser;
+using compressor_frontend::SchemaVarAST;
+using compressor_frontend::Token;
+
+std::unique_ptr<SchemaFileAST> generate_schema_ast(std::string schema_file) {
     SchemaParser schema_parser;
     FileReader schema_file_reader;
     schema_file_reader.open(schema_file);
     REQUIRE(schema_file_reader.is_open());
-    std::unique_ptr<ParserASTSchemaFile> schema_ast = schema_parser.generate_schema_ast(&schema_file_reader);
+    std::unique_ptr<SchemaFileAST> schema_ast = schema_parser.generate_schema_ast(schema_file_reader);
     REQUIRE(schema_ast.get() != nullptr);
     return schema_ast;
 }
 
 std::unique_ptr<LogParser> generate_log_parser(std::string schema_file) {
-    std::unique_ptr<ParserASTSchemaFile> schema_ast = generate_schema_ast(schema_file);
-    std::unique_ptr<LogParser> log_parser = std::make_unique<LogParser>(LogParser());
-    log_parser->init(std::move(schema_ast));
+    std::unique_ptr<SchemaFileAST> schema_ast = generate_schema_ast(schema_file);
+    std::unique_ptr<LogParser> log_parser = std::make_unique<LogParser>(schema_file);
     REQUIRE(log_parser.get() != nullptr);
     return log_parser;
 }
@@ -50,7 +59,7 @@ void parse(std::string log_file, std::string schema_file) {
     std::unique_ptr<LogParser> log_parser = generate_log_parser(schema_file);
     FileReader log_file_reader;
     log_file_reader.open(log_file);
-    log_parser->parse(&log_file_reader);
+    log_parser->parse(log_file_reader);
 }
 
 std::string compress(std::string output_dir, std::string file_to_compress, std::string schema_file, bool old = false) {
@@ -150,7 +159,6 @@ TEST_CASE("Test compression", "[Compression][Benchmark]") {
     std::cout << "Compressed to: " << archive_path << std::endl;
     compression_watch.stop();
     compression_watch.print();
-    std::cout << "memory usage: " << LALR1Parser::MAX_MEMORY_USAGE << std::endl;
 }
 
 TEST_CASE("Test compression old", "[Compression][Benchmark]") {
@@ -165,7 +173,6 @@ TEST_CASE("Test compression old", "[Compression][Benchmark]") {
     std::cout << "Compressed to: " << archive_path << std::endl;
     compression_watch.stop();
     compression_watch.print();
-    std::cout << "memory usage: " << LALR1Parser::MAX_MEMORY_USAGE << std::endl;
 }
 
 
@@ -204,7 +211,6 @@ TEST_CASE("Test compression real", "[Compression][Benchmark]") {
     std::cout << "Compressed to: " << archive_path << std::endl;
     compression_watch.stop();
     compression_watch.print();
-    std::cout << "memory usage: " << LALR1Parser::MAX_MEMORY_USAGE << std::endl;
 }
 
 TEST_CASE("Test compression real old", "[Compression][Benchmark]") {
@@ -218,7 +224,6 @@ TEST_CASE("Test compression real old", "[Compression][Benchmark]") {
     std::cout << "Compressed to: " << archive_path << std::endl;
     compression_watch.stop();
     compression_watch.print();
-    std::cout << "memory usage: " << LALR1Parser::MAX_MEMORY_USAGE << std::endl;
 }
  
 TEST_CASE("Test compression directory", "[Compression][Benchmark]") {
@@ -232,7 +237,6 @@ TEST_CASE("Test compression directory", "[Compression][Benchmark]") {
     std::cout << "Compressed to: " << archive_path << std::endl;
     compression_watch.stop();
     compression_watch.print();
-    std::cout << "memory usage: " << LALR1Parser::MAX_MEMORY_USAGE << std::endl;
 }
 
 TEST_CASE("Test compression no timestamp", "[Compression][Benchmark]") {
@@ -253,7 +257,6 @@ TEST_CASE("Test compression no timestamp", "[Compression][Benchmark]") {
     std::cout << "Compressed to: " << archive_path << std::endl;
     compression_watch.stop();
     compression_watch.print();
-    std::cout << "memory usage: " << LALR1Parser::MAX_MEMORY_USAGE << std::endl;
 }
 
 TEST_CASE("Test compression hadoop", "[Compression][Benchmark]") {
@@ -267,7 +270,6 @@ TEST_CASE("Test compression hadoop", "[Compression][Benchmark]") {
     std::cout << "Compressed to: " << archive_path << std::endl;
     compression_watch.stop();
     compression_watch.print();
-    std::cout << "memory usage: " << LALR1Parser::MAX_MEMORY_USAGE << std::endl;
 }
 
 TEST_CASE("Test decompression hadoop", "[Compression][Benchmark]") {
@@ -280,18 +282,18 @@ TEST_CASE("Test reverse lexer", "[Search]") {
     FileReader schema_reader;
     ErrorCode error_code = schema_reader.try_open("../tests/test_schema_files/search_schema.txt");
     SchemaParser sp;
-    std::unique_ptr<ParserASTSchemaFile> schema_ast = sp.generate_schema_ast(&schema_reader);
+    std::unique_ptr<SchemaFileAST> schema_ast = sp.generate_schema_ast(schema_reader);
     Lexer reverse_lexer;
-    reverse_lexer.symbol_id[Lexer::TOKEN_END] = reverse_lexer.symbol_id.size();
-    reverse_lexer.symbol_id[Lexer::TOKEN_UNCAUGHT_STRING] = reverse_lexer.symbol_id.size();
-    reverse_lexer.id_symbol[Lexer::TOKEN_END_ID] = Lexer::TOKEN_END;
-    reverse_lexer.id_symbol[Lexer::TOKEN_UNCAUGHT_STRING_ID] = Lexer::TOKEN_UNCAUGHT_STRING;
-    DelimiterStringAST* delimiters_ptr = dynamic_cast<DelimiterStringAST*>(schema_ast->delimiters.get());
+    reverse_lexer.symbol_id[compressor_frontend::cTokenEnd] = reverse_lexer.symbol_id.size();
+    reverse_lexer.symbol_id[compressor_frontend::cTokenUncaughtString] = reverse_lexer.symbol_id.size();
+    reverse_lexer.id_symbol[(int)compressor_frontend::SymbolID::TokenEndID] = compressor_frontend::cTokenEnd;
+    reverse_lexer.id_symbol[(int)compressor_frontend::SymbolID::TokenUncaughtStringID] = compressor_frontend::cTokenUncaughtString;
+    auto delimiters_ptr = dynamic_cast<DelimiterStringAST*>(schema_ast->delimiters.get());
     if(delimiters_ptr != nullptr) {
         reverse_lexer.add_delimiters(delimiters_ptr->delimiters);
     }
     for (std::unique_ptr<ParserAST> const& parser_ast : schema_ast->schema_vars) {
-        ParserASTSchemaVar* rule = static_cast<ParserASTSchemaVar*>(parser_ast.get());
+        auto rule = dynamic_cast<SchemaVarAST*>(parser_ast.get());
         if( reverse_lexer.symbol_id.find(rule->name) ==  reverse_lexer.symbol_id.end()) {
             reverse_lexer.symbol_id[rule->name] = reverse_lexer.symbol_id.size();
             reverse_lexer.id_symbol[reverse_lexer.symbol_id[rule->name]] = rule->name;
@@ -304,9 +306,9 @@ TEST_CASE("Test reverse lexer", "[Search]") {
     // use it
     FileReader reader;
     reader.open("../tests/test_search_queries/easy.txt");
-    reverse_lexer.reset(&reader);
+    reverse_lexer.reset(reader);
     Token token = reverse_lexer.scan();
-    while (token.type_ids->at(0) != Lexer::TOKEN_END_ID) {
+    while (token.type_ids->at(0) != (int)compressor_frontend::SymbolID::TokenEndID) {
         std::cout << "token:" << token.get_string() << std::endl;
         std::cout << "token.type_ids->back():" << reverse_lexer.id_symbol[token.type_ids->back()] << std::endl;
         token = reverse_lexer.scan();
