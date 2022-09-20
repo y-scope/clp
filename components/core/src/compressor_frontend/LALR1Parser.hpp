@@ -53,7 +53,6 @@ namespace compressor_frontend {
             return static_cast<ParserValue<T>*>(this)->value;
         }
     };
-
     
     template<typename T>
     class ParserValue : public ParserAST {
@@ -64,6 +63,7 @@ namespace compressor_frontend {
     };
     
     typedef std::variant<Token, NonTerminal> MatchedSymbol;
+    
     template<class... Ts>
     struct overloaded : Ts ... {
         using Ts::operator()...;
@@ -72,84 +72,84 @@ namespace compressor_frontend {
 
     class NonTerminal {
     public:
-        static MatchedSymbol all_children[];
-        static uint32_t next_children_start;
-        Production* production;
-        std::unique_ptr<ParserAST> value;
 
-        uint32_t children_start;
-
-        NonTerminal () : production(nullptr), children_start(0), value(nullptr) {}
+        NonTerminal () : m_production(nullptr), m_children_start(0), m_value(nullptr) {}
 
         explicit NonTerminal (Production*);
 
         [[nodiscard]] Token* token_cast (int i) const {
-            return &std::get<Token>(NonTerminal::all_children[children_start + i]);
+            return &std::get<Token>(NonTerminal::m_all_children[m_children_start + i]);
         }
 
         [[nodiscard]] NonTerminal* nonterminal_cast (int i) const {
-            return &std::get<NonTerminal>(NonTerminal::all_children[children_start + i]);
+            return &std::get<NonTerminal>(NonTerminal::m_all_children[m_children_start + i]);
         }
 
         std::unique_ptr<ParserAST>& getParserAST () {
-            return value;
+            return m_value;
         }
+
+        static MatchedSymbol m_all_children[];
+        static uint32_t m_next_children_start;
+        Production* m_production;
+        std::unique_ptr<ParserAST> m_value;
+        uint32_t m_children_start;
     };
 
     struct Production {
     public:
-        uint32_t index;
-        uint32_t head;
-        std::vector<uint32_t> body;
-        SemanticRule semantic_rule;
+        uint32_t m_index;
+        uint32_t m_head;
+        std::vector<uint32_t> m_body;
+        SemanticRule m_semantic_rule;
 
         [[nodiscard]] bool is_epsilon () const {
-            return this->body.empty();
+            return this->m_body.empty();
         }
     };
 
     struct Item {
     public:
-        Production* production;
-        uint32_t dot;
-        // for LR0 items, `lookahead` is unused
-        uint32_t lookahead;
-
         Item () = default;
 
-        Item (Production* p, uint32_t d, uint32_t t) : production(p), dot(d), lookahead(t) {
+        Item (Production* p, uint32_t d, uint32_t t) : m_production(p), m_dot(d), m_lookahead(t) {
         }
 
         [[nodiscard]] bool has_dot_at_end () const {
-            return this->dot == this->production->body.size();
+            return this->m_dot == this->m_production->m_body.size();
         }
 
         [[nodiscard]] uint32_t next_symbol () const {
-            return this->production->body.at(this->dot);
+            return this->m_production->m_body.at(this->m_dot);
         }
 
         friend bool operator< (const Item& lhs, const Item& rhs) {
-            return std::tie(lhs.production->index, lhs.dot, lhs.lookahead) <
-                   std::tie(rhs.production->index, rhs.dot, rhs.lookahead);
+            return std::tie(lhs.m_production->m_index, lhs.m_dot, lhs.m_lookahead) <
+                   std::tie(rhs.m_production->m_index, rhs.m_dot, rhs.m_lookahead);
         }
+
+        Production* m_production;
+        uint32_t m_dot;
+        // for LR0 items, `m_lookahead` is unused
+        uint32_t m_lookahead;
     };
 
     struct ItemSet {
     public:
-        uint32_t index = -1;
-        std::set<Item> kernel;
-        std::set<Item> closure;
-        std::unordered_map<uint32_t, ItemSet*> next;
-        std::unordered_map<uint32_t, std::vector<Production*>> reductions;
-        std::vector<Action> actions;
-
         friend bool operator< (const ItemSet& lhs, const ItemSet& rhs) {
-            return lhs.kernel < rhs.kernel;
+            return lhs.m_kernel < rhs.m_kernel;
         }
 
         bool empty () const {
-            return kernel.empty();
+            return m_kernel.empty();
         }
+        
+        uint32_t m_index = -1;
+        std::set<Item> m_kernel;
+        std::set<Item> m_closure;
+        std::unordered_map<uint32_t, ItemSet*> m_next;
+        std::unordered_map<uint32_t, std::vector<Production*>> m_reductions;
+        std::vector<Action> m_actions;
     };
 
     /// TODO: make LALR1Parser an abstract class?
@@ -161,7 +161,7 @@ namespace compressor_frontend {
 
         void add_token (const std::string& name, char rule_char);
 
-        void add_token_group (const std::string& name, std::unique_ptr<RegexASTGroup> rule_group);
+        void add_token_group (const std::string& name, std::unique_ptr<finite_automata::RegexASTGroup> rule_group);
 
         void add_token_chain (const std::string& name, const std::string& chain);
 
@@ -172,11 +172,11 @@ namespace compressor_frontend {
         NonTerminal parse (ReaderInterface& reader);
         
         void set_archive_writer_ptr (streaming_archive::writer::Archive* value) {
-            archive_writer_ptr = value;
+            m_archive_writer_ptr = value;
         }
         
         [[nodiscard]] streaming_archive::writer::Archive* get_archive_writer_ptr () const {
-            return archive_writer_ptr;
+            return m_archive_writer_ptr;
         }
         
     protected:
@@ -185,7 +185,7 @@ namespace compressor_frontend {
         std::string report_error (ReaderInterface& reader);
 
         Lexer m_lexer;
-        streaming_archive::writer::Archive* archive_writer_ptr;
+        streaming_archive::writer::Archive* m_archive_writer_ptr;
         std::stack<MatchedSymbol> m_parse_stack_matches;
         std::stack<ItemSet*> m_parse_stack_states;
         ItemSet* root_itemset_ptr;
@@ -193,7 +193,7 @@ namespace compressor_frontend {
         std::vector<std::unique_ptr<Production>> m_productions;
         std::unordered_map<std::string, std::map<std::vector<std::string>, Production*>> m_productions_map;
         std::unordered_map<uint32_t, std::vector<Production*>> m_nonterminals;
-        uint32_t root_production_id;
+        uint32_t m_root_production_id;
 
     private:
         std::set<uint32_t> m_terminals;
@@ -203,7 +203,7 @@ namespace compressor_frontend {
         std::unordered_map<uint32_t, std::set<uint32_t>> m_firsts;
         std::unordered_map<Production*, std::set<uint32_t>> m_spontaneous_map;
         std::map<Item, std::set<Item>> m_propagate_map;
-        std::unordered_map<uint32_t, std::map<uint32_t, uint32_t>> go_to_table;
+        std::unordered_map<uint32_t, std::map<uint32_t, uint32_t>> m_go_to_table;
 
         void generate_lr0_kernels ();
 

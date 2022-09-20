@@ -10,12 +10,18 @@
 // Project headers
 #include "../FileReader.hpp"
 #include "Constants.hpp"
-#include "FiniteAutomata.hpp"
+#include "finite_automata/RegexAST.hpp"
 #include "LALR1Parser.hpp"
 #include "Lexer.hpp"
 
+using compressor_frontend::finite_automata::RegexAST;
+using compressor_frontend::finite_automata::RegexASTCat;
+using compressor_frontend::finite_automata::RegexASTGroup;
+using compressor_frontend::finite_automata::RegexASTInteger;
+using compressor_frontend::finite_automata::RegexASTLiteral;
+using compressor_frontend::finite_automata::RegexASTMultiplication;
+using compressor_frontend::finite_automata::RegexASTOr;
 using std::make_unique;
-using std::move;
 using std::string;
 using std::unique_ptr;
 
@@ -29,7 +35,7 @@ namespace compressor_frontend {
     unique_ptr<SchemaFileAST> SchemaParser::generate_schema_ast (ReaderInterface& reader) {
         NonTerminal nonterminal = parse(reader);
         std::unique_ptr<SchemaFileAST> schema_file_ast(dynamic_cast<SchemaFileAST*>(nonterminal.getParserAST().release()));
-        return move(schema_file_ast);
+        return std::move(schema_file_ast);
     }
 
     unique_ptr<SchemaFileAST> SchemaParser::try_schema_file (const string& schema_file_path) {
@@ -65,14 +71,14 @@ namespace compressor_frontend {
         auto* r1_ptr = dynamic_cast<IdentifierAST*>(r1.get());
         string r2 = m->token_cast(1)->get_string();
         r1_ptr->add_character(r2[0]);
-        return move(r1);
+        return std::move(r1);
     }
 
     static unique_ptr<SchemaVarAST> schema_var_rule (NonTerminal* m) {
         auto* r2 = dynamic_cast<IdentifierAST*>(m->nonterminal_cast(1)->getParserAST().get());
         Token* colon_token = m->token_cast(2);
         auto& r4 = m->nonterminal_cast(3)->getParserAST()->get<unique_ptr<RegexAST>>();
-        return make_unique<SchemaVarAST>(r2->name, move(r4), colon_token->line);
+        return make_unique<SchemaVarAST>(r2->m_name, std::move(r4), colon_token->m_line);
     }
 
     static unique_ptr<SchemaFileAST> new_schema_file_rule (NonTerminal* m) {
@@ -82,72 +88,68 @@ namespace compressor_frontend {
     static unique_ptr<SchemaFileAST> new_schema_file_rule_with_var (NonTerminal* m) {
         unique_ptr<ParserAST>& r1 = m->nonterminal_cast(0)->getParserAST();
         unique_ptr<SchemaFileAST> schema_file_ast = make_unique<SchemaFileAST>();
-        schema_file_ast->add_schema_var(move(r1));
-        return move(schema_file_ast);
+        schema_file_ast->add_schema_var(std::move(r1));
+        return std::move(schema_file_ast);
     }
 
 
     static unique_ptr<SchemaFileAST> new_schema_file_rule_with_delimiters (NonTerminal* m) {
         unique_ptr<ParserAST>& r1 = m->nonterminal_cast(2)->getParserAST();
         unique_ptr<SchemaFileAST> schema_file_ast = make_unique<SchemaFileAST>();
-        schema_file_ast->add_delimiters(move(r1));
-        return move(schema_file_ast);
+        schema_file_ast->add_delimiters(std::move(r1));
+        return std::move(schema_file_ast);
     }
 
     static unique_ptr<SchemaFileAST> existing_schema_file_rule_with_delimiter (NonTerminal* m) {
         unique_ptr<ParserAST>& r1 = m->nonterminal_cast(0)->getParserAST();
         std::unique_ptr<SchemaFileAST> schema_file_ast(dynamic_cast<SchemaFileAST*>(r1.release()));
         unique_ptr<ParserAST>& r5 = m->nonterminal_cast(4)->getParserAST();
-        schema_file_ast->add_delimiters(move(r5));
-        return move(schema_file_ast);
+        schema_file_ast->add_delimiters(std::move(r5));
+        return std::move(schema_file_ast);
     }
 
     unique_ptr<SchemaFileAST> SchemaParser::existing_schema_file_rule (NonTerminal* m) {
         unique_ptr<ParserAST>& r1 = m->nonterminal_cast(0)->getParserAST();
         std::unique_ptr<SchemaFileAST> schema_file_ast(dynamic_cast<SchemaFileAST*>(r1.release()));
         unique_ptr<ParserAST>& r2 = m->nonterminal_cast(2)->getParserAST();
-        schema_file_ast->add_schema_var(move(r2));
+        schema_file_ast->add_schema_var(std::move(r2));
         m_lexer.soft_reset();
-        return move(schema_file_ast);
+        return std::move(schema_file_ast);
     }
-
-    //static unique_ptr<ParserAST> identity_rule(NonTerminal* m) {
-    //    return move(m->nonterminal_cast(0)->getParserAST());
-    //}
 
     static unique_ptr<SchemaFileAST> identity_rule_ParserASTSchemaFile (NonTerminal* m) {
         unique_ptr<ParserAST>& r1 = m->nonterminal_cast(0)->getParserAST();
         std::unique_ptr<SchemaFileAST> schema_file_ast(dynamic_cast<SchemaFileAST*>(r1.release()));
-        return move(schema_file_ast);
+        return std::move(schema_file_ast);
     }
     
     typedef ParserValue<unique_ptr<RegexAST>> ParserValueRegex;
 
     static unique_ptr<ParserAST> regex_identity_rule (NonTerminal* m) {
         return unique_ptr<ParserAST>(
-                new ParserValueRegex(move(m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>())));
+                new ParserValueRegex(std::move(m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>())));
     }
 
     static unique_ptr<ParserAST> regex_cat_rule (NonTerminal* m) {
         auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>();
         auto& r2 = m->nonterminal_cast(1)->getParserAST()->get<unique_ptr<RegexAST>>();
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTCat(move(r1), move(r2)))));
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTCat(std::move(r1), std::move(r2)))));
     }
 
     static unique_ptr<ParserAST> regex_or_rule (NonTerminal* m) {
         auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>();
         auto& r2 = m->nonterminal_cast(2)->getParserAST()->get<unique_ptr<RegexAST>>();
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTOr(move(r1), move(r2)))));
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTOr(std::move(r1), std::move(r2)))));
     }
 
     static unique_ptr<ParserAST> regex_match_zero_or_more_rule (NonTerminal* m) {
         auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>();
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTMultiplication(move(r1), 0, 0))));
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTMultiplication(std::move(r1), 0, 0))));
     }
 
     static unique_ptr<ParserAST> regex_match_one_or_more_rule (NonTerminal* m) {
         auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>();
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTMultiplication(move(r1), 1, 0))));
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTMultiplication(std::move(r1), 1, 0))));
     }
 
     static unique_ptr<ParserAST> regex_match_exactly_rule (NonTerminal* m) {
@@ -159,7 +161,7 @@ namespace compressor_frontend {
             reps += r3_ptr->get_digit(i) * (uint32_t) pow(10, r3_size - i - 1);
         }
         auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>();
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTMultiplication(move(r1), reps, reps))));
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTMultiplication(std::move(r1), reps, reps))));
     }
 
     static unique_ptr<ParserAST> regex_match_range_rule (NonTerminal* m) {
@@ -178,7 +180,7 @@ namespace compressor_frontend {
             max += r5_ptr->get_digit(i) * (uint32_t) pow(10, r5_size - i - 1);
         }
         auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>();
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTMultiplication(move(r1), min, max))));
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTMultiplication(std::move(r1), min, max))));
     }
 
     static unique_ptr<ParserAST> regex_add_literal_existing_group_rule (NonTerminal* m) {
@@ -223,7 +225,7 @@ namespace compressor_frontend {
 
     static unique_ptr<ParserAST> regex_middle_identity_rule (NonTerminal* m) {
         return unique_ptr<ParserAST>(
-                new ParserValueRegex(move(m->nonterminal_cast(1)->getParserAST()->get<unique_ptr<RegexAST>>())));
+                new ParserValueRegex(std::move(m->nonterminal_cast(1)->getParserAST()->get<unique_ptr<RegexAST>>())));
     }
 
     static unique_ptr<ParserAST> regex_literal_rule (NonTerminal* m) {
@@ -259,7 +261,7 @@ namespace compressor_frontend {
     static unique_ptr<ParserAST> regex_wildcard_rule (NonTerminal* m) {
         unique_ptr<RegexASTGroup> regex_wildcard = make_unique<RegexASTGroup>(0, cUnicodeMax);
         regex_wildcard->set_is_wildcard_true();
-        return unique_ptr<ParserAST>(new ParserValueRegex(move(regex_wildcard)));
+        return unique_ptr<ParserAST>(new ParserValueRegex(std::move(regex_wildcard)));
     }
 
     static unique_ptr<ParserAST> regex_vertical_tab_rule (NonTerminal* m) {
@@ -284,7 +286,7 @@ namespace compressor_frontend {
 
     static unique_ptr<ParserAST> regex_white_space_rule (NonTerminal* m) {
         unique_ptr<RegexASTGroup> regex_ast_group = make_unique<RegexASTGroup>(RegexASTGroup({' ', '\t', '\r', '\n', '\v', '\f'}));
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(move(regex_ast_group))));
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(std::move(regex_ast_group))));
     }
 
     static unique_ptr<ParserAST> existing_delimiter_string_rule (NonTerminal* m) {
@@ -293,7 +295,7 @@ namespace compressor_frontend {
         auto* r1_ptr = dynamic_cast<DelimiterStringAST*>(r1.get());
         uint32_t character = dynamic_cast<RegexASTLiteral*>(r2.get())->get_character();
         r1_ptr->add_delimiter(character);
-        return move(r1);
+        return std::move(r1);
     }
 
     static unique_ptr<ParserAST> new_delimiter_string_rule (NonTerminal* m) {
@@ -353,11 +355,11 @@ namespace compressor_frontend {
         add_token("f", 'f');
         add_token("v", 'v');
         add_token_chain("Delimiters", "delimiters");
-        // default constructs to a negate group
+        // default constructs to a m_negate group
         unique_ptr<RegexASTGroup> comment_characters = make_unique<RegexASTGroup>();
         comment_characters->add_literal('\r');
         comment_characters->add_literal('\n');
-        add_token_group("CommentCharacters", move(comment_characters));
+        add_token_group("CommentCharacters", std::move(comment_characters));
     }
 
     void SchemaParser::add_productions () {

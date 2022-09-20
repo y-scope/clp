@@ -3,6 +3,8 @@
 // Project headers
 #include "Constants.hpp"
 
+using compressor_frontend::finite_automata::RegexASTGroup;
+
 namespace compressor_frontend {
 
     QueryParser::QueryParser (std::unique_ptr<SchemaFileAST> schema_ast) {

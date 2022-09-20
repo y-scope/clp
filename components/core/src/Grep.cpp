@@ -602,7 +602,7 @@ Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, 
             char c = value[begin_pos];
 
             if (is_escaped) {
-                if (forward_lexer.check_is_first_char(c)) {
+                if (forward_lexer.is_first_char(c)) {
                     // Found variable begin
                     break;
                 }
@@ -616,7 +616,7 @@ Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, 
                     contains_wildcard = true;
                     break;
                 }
-                if (forward_lexer.check_is_first_char(c)) {
+                if (forward_lexer.is_first_char(c)) {
                     break;
                 }
             }
@@ -632,11 +632,11 @@ Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, 
             char c = value[end_pos];
 
             if (is_escaped) {
-                if (forward_lexer.check_is_delimiter(c)) {
+                if (forward_lexer.is_delimiter(c)) {
                     // Found delimiter
                     break;
                 }
-                if (reverse_lexer.check_is_first_char(c)) {
+                if (reverse_lexer.is_first_char(c)) {
                     last_wildcard_or_variable_end_pos = end_pos;
                 }
 
@@ -648,9 +648,9 @@ Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, 
                 if (is_wildcard(c)) {
                     contains_wildcard = true;
                     last_wildcard_or_variable_end_pos = end_pos;
-                } else if (reverse_lexer.check_is_first_char(c)) {
+                } else if (reverse_lexer.is_first_char(c)) {
                     last_wildcard_or_variable_end_pos = end_pos;
-                } else if (forward_lexer.check_is_delimiter(c)) {
+                } else if (forward_lexer.is_delimiter(c)) {
                     // Found delimiter that's not also a wildcard
                     break;
                 }
@@ -683,8 +683,8 @@ Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, 
                 stringReader.open(value.substr(begin_pos, end_pos - begin_pos - 1));
                 forward_lexer.reset(stringReader);
                 compressor_frontend::Token token = forward_lexer.scan_with_wildcard(value[end_pos - 1]);
-                if (token.type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenUncaughtStringID &&
-                    token.type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenEndID) {
+                if (token.m_type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenUncaughtStringID &&
+                    token.m_type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenEndID) {
                     is_var = true;
                 }
             } else if (has_prefix_wildcard) { // *asdas
@@ -694,8 +694,8 @@ Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, 
                 stringReader.open(value_reverse);
                 reverse_lexer.reset(stringReader);
                 compressor_frontend::Token token = reverse_lexer.scan_with_wildcard(value[begin_pos]);
-                if (token.type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenUncaughtStringID &&
-                    token.type_ids->at(0) != (int)compressor_frontend::SymbolID::TokenEndID) {
+                if (token.m_type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenUncaughtStringID &&
+                    token.m_type_ids->at(0) != (int)compressor_frontend::SymbolID::TokenEndID) {
                     is_var = true;
                 }
             } else { // no wildcards
@@ -703,8 +703,8 @@ Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, 
                 stringReader.open(value.substr(begin_pos, end_pos - begin_pos));
                 forward_lexer.reset(stringReader);
                 compressor_frontend::Token token = forward_lexer.scan();
-                if (token.type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenUncaughtStringID &&
-                    token.type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenEndID) {
+                if (token.m_type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenUncaughtStringID &&
+                    token.m_type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenEndID) {
                     is_var = true;
                 }
             }

@@ -24,23 +24,23 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
         ErrorCode error_code = schema_reader.try_open("../tests/test_schema_files/search_schema.txt");
         SchemaParser sp;
         std::unique_ptr<SchemaFileAST> schema_ast = sp.generate_schema_ast(schema_reader);
-        auto delimiters_ptr = dynamic_cast<DelimiterStringAST*>(schema_ast->delimiters.get());
+        auto delimiters_ptr = dynamic_cast<DelimiterStringAST*>(schema_ast->m_delimiters.get());
         // Create forward lexer
-        forward_lexer.symbol_id[compressor_frontend::cTokenEnd] = forward_lexer.symbol_id.size();
-        forward_lexer.symbol_id[compressor_frontend::cTokenUncaughtString] = forward_lexer.symbol_id.size();
-        forward_lexer.id_symbol[(int)compressor_frontend::SymbolID::TokenEndID] = compressor_frontend::cTokenEnd;
-        forward_lexer.id_symbol[(int)compressor_frontend::SymbolID::TokenUncaughtStringID] = compressor_frontend::cTokenUncaughtString;
+        forward_lexer.m_symbol_id[compressor_frontend::cTokenEnd] = forward_lexer.m_symbol_id.size();
+        forward_lexer.m_symbol_id[compressor_frontend::cTokenUncaughtString] = forward_lexer.m_symbol_id.size();
+        forward_lexer.m_id_symbol[(int)compressor_frontend::SymbolID::TokenEndID] = compressor_frontend::cTokenEnd;
+        forward_lexer.m_id_symbol[(int)compressor_frontend::SymbolID::TokenUncaughtStringID] = compressor_frontend::cTokenUncaughtString;
         if (delimiters_ptr != nullptr) {
-            forward_lexer.add_delimiters(delimiters_ptr->delimiters);
+            forward_lexer.add_delimiters(delimiters_ptr->m_delimiters);
         }
-        for (std::unique_ptr<ParserAST> const &parser_ast: schema_ast->schema_vars) {
+        for (std::unique_ptr<ParserAST> const &parser_ast: schema_ast->m_schema_vars) {
             auto rule = dynamic_cast<SchemaVarAST*>(parser_ast.get());
-            if (forward_lexer.symbol_id.find(rule->name) == forward_lexer.symbol_id.end()) {
-                forward_lexer.symbol_id[rule->name] = forward_lexer.symbol_id.size();
-                forward_lexer.id_symbol[forward_lexer.symbol_id[rule->name]] = rule->name;
+            if (forward_lexer.m_symbol_id.find(rule->m_name) == forward_lexer.m_symbol_id.end()) {
+                forward_lexer.m_symbol_id[rule->m_name] = forward_lexer.m_symbol_id.size();
+                forward_lexer.m_id_symbol[forward_lexer.m_symbol_id[rule->m_name]] = rule->m_name;
 
             }
-            forward_lexer.add_rule(forward_lexer.symbol_id[rule->name], std::move(rule->regex_ptr));
+            forward_lexer.add_rule(forward_lexer.m_symbol_id[rule->m_name], std::move(rule->m_regex_ptr));
         }
         forward_lexer.generate();
         schema_reader.close();
@@ -52,21 +52,21 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
         ErrorCode error_code = schema_reader.try_open("../tests/test_schema_files/search_schema.txt");
         SchemaParser sp;
         std::unique_ptr<SchemaFileAST> schema_ast = sp.generate_schema_ast(schema_reader);
-        auto delimiters_ptr = dynamic_cast<DelimiterStringAST*>(schema_ast->delimiters.get());
-        reverse_lexer.symbol_id[compressor_frontend::cTokenEnd] = reverse_lexer.symbol_id.size();
-        reverse_lexer.symbol_id[compressor_frontend::cTokenUncaughtString] = reverse_lexer.symbol_id.size();
-        reverse_lexer.id_symbol[(int)compressor_frontend::SymbolID::TokenEndID] = compressor_frontend::cTokenEnd;
-        reverse_lexer.id_symbol[(int)compressor_frontend::SymbolID::TokenUncaughtStringID] = compressor_frontend::cTokenUncaughtString;
+        auto delimiters_ptr = dynamic_cast<DelimiterStringAST*>(schema_ast->m_delimiters.get());
+        reverse_lexer.m_symbol_id[compressor_frontend::cTokenEnd] = reverse_lexer.m_symbol_id.size();
+        reverse_lexer.m_symbol_id[compressor_frontend::cTokenUncaughtString] = reverse_lexer.m_symbol_id.size();
+        reverse_lexer.m_id_symbol[(int)compressor_frontend::SymbolID::TokenEndID] = compressor_frontend::cTokenEnd;
+        reverse_lexer.m_id_symbol[(int)compressor_frontend::SymbolID::TokenUncaughtStringID] = compressor_frontend::cTokenUncaughtString;
         if (delimiters_ptr != nullptr) {
-            reverse_lexer.add_delimiters(delimiters_ptr->delimiters);
+            reverse_lexer.add_delimiters(delimiters_ptr->m_delimiters);
         }
-        for (std::unique_ptr<ParserAST> const &parser_ast: schema_ast->schema_vars) {
+        for (std::unique_ptr<ParserAST> const &parser_ast: schema_ast->m_schema_vars) {
             auto rule = dynamic_cast<SchemaVarAST*>(parser_ast.get());
-            if (reverse_lexer.symbol_id.find(rule->name) == reverse_lexer.symbol_id.end()) {
-                reverse_lexer.symbol_id[rule->name] = reverse_lexer.symbol_id.size();
-                reverse_lexer.id_symbol[reverse_lexer.symbol_id[rule->name]] = rule->name;
+            if (reverse_lexer.m_symbol_id.find(rule->m_name) == reverse_lexer.m_symbol_id.end()) {
+                reverse_lexer.m_symbol_id[rule->m_name] = reverse_lexer.m_symbol_id.size();
+                reverse_lexer.m_id_symbol[reverse_lexer.m_symbol_id[rule->m_name]] = rule->m_name;
             }
-            reverse_lexer.add_rule(reverse_lexer.symbol_id[rule->name], std::move(rule->regex_ptr));
+            reverse_lexer.add_rule(reverse_lexer.m_symbol_id[rule->m_name], std::move(rule->m_regex_ptr));
         }
         reverse_lexer.generate_reverse();
         schema_reader.close();
@@ -77,7 +77,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
     size_t end_pos;
     bool is_var;
 
-    // end_pos past the end of the string
+    // m_end_pos past the end of the string
     str = "";
     begin_pos = string::npos;
     end_pos = string::npos;

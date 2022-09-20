@@ -15,52 +15,52 @@ namespace compressor_frontend {
         SchemaFileAST () = default;
 
         void add_delimiters (std::unique_ptr<ParserAST> delimiters_in) {
-            this->delimiters = std::move(delimiters_in);
+            this->m_delimiters = std::move(delimiters_in);
         }
 
         void add_schema_var (std::unique_ptr<ParserAST> schema_var) {
-            schema_vars.push_back(std::move(schema_var));
+            m_schema_vars.push_back(std::move(schema_var));
         }
 
-        std::vector<std::unique_ptr<ParserAST>> schema_vars;
-        std::unique_ptr<ParserAST> delimiters;
-        std::string file_path;
+        std::vector<std::unique_ptr<ParserAST>> m_schema_vars;
+        std::unique_ptr<ParserAST> m_delimiters;
+        std::string m_file_path;
     };
     
     class IdentifierAST : public ParserAST {
     public:
-        std::string name;
-
         explicit IdentifierAST (char character) {
-            name.push_back(character);
+            m_name.push_back(character);
         }
 
         void add_character (char character) {
-            name.push_back(character);
+            m_name.push_back(character);
         }
+        
+        std::string m_name;
     };
     
     class SchemaVarAST : public ParserAST {
     public:
-        SchemaVarAST (std::string name, std::unique_ptr<RegexAST> regex_ptr, uint32_t line_num) : name(std::move(name)), regex_ptr(std::move(regex_ptr))
-                                                                                                  , line_num(line_num) {}
+        SchemaVarAST (std::string name, std::unique_ptr<RegexAST> regex_ptr, uint32_t line_num) : m_name(std::move(name)), m_regex_ptr(std::move(regex_ptr))
+                                                                                                  , m_line_num(line_num) {}
 
-        uint32_t line_num;
-        std::string name;
-        std::unique_ptr<RegexAST> regex_ptr;
+        uint32_t m_line_num;
+        std::string m_name;
+        std::unique_ptr<RegexAST> m_regex_ptr;
     };
 
     class DelimiterStringAST : public ParserAST {
     public:
         explicit DelimiterStringAST (uint32_t delimiter) {
-            delimiters.push_back(delimiter);
+            m_delimiters.push_back(delimiter);
         }
 
         void add_delimiter (uint32_t delimiter) {
-            delimiters.push_back(delimiter);
+            m_delimiters.push_back(delimiter);
         }
 
-        std::vector<uint32_t> delimiters;
+        std::vector<uint32_t> m_delimiters;
     };
 
     class SchemaParser : public LALR1Parser {

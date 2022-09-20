@@ -341,26 +341,26 @@ namespace streaming_archive::writer {
 
         size_t num_uncompressed_bytes = 0;
         // Timestamp is included in the uncompressed message size
-        uint32_t start_pos = uncompressed_msg[0].start_pos;
+        uint32_t start_pos = uncompressed_msg[0].m_start_pos;
         if (timestamp_pattern == nullptr) {
-            start_pos = uncompressed_msg[1].start_pos;
+            start_pos = uncompressed_msg[1].m_start_pos;
         }
-        uint32_t end_pos = uncompressed_msg[uncompressed_msg_pos - 1].end_pos;
+        uint32_t end_pos = uncompressed_msg[uncompressed_msg_pos - 1].m_end_pos;
         if (start_pos <= end_pos) {
             num_uncompressed_bytes = end_pos - start_pos;
         } else {
-            num_uncompressed_bytes = *uncompressed_msg[0].buffer_size_ptr - start_pos + end_pos;
+            num_uncompressed_bytes = *uncompressed_msg[0].m_buffer_size_ptr - start_pos + end_pos;
         }
         for (uint32_t i = 1; i < uncompressed_msg_pos; i++) {
             compressor_frontend::Token& token = uncompressed_msg[i];
-            int token_type = token.type_ids->at(0);
+            int token_type = token.m_type_ids->at(0);
             if (has_delimiter && token_type != (int) compressor_frontend::SymbolID::TokenUncaughtStringID &&
                 token_type != (int) compressor_frontend::SymbolID::TokenNewlineId) {
                 m_logtype_dict_entry.add_constant(token.get_delimiter(), 0, 1);
-                if (token.start_pos == *token.buffer_size_ptr - 1) {
-                    token.start_pos = 0;
+                if (token.m_start_pos == *token.m_buffer_size_ptr - 1) {
+                    token.m_start_pos = 0;
                 } else {
-                    token.start_pos++;
+                    token.m_start_pos++;
                 }
             }
             switch (token_type) {

@@ -17,15 +17,15 @@ namespace compressor_frontend {
     /// TODO: try not inheriting from LALR1Parser (and compare c-array vs. vectors (its underlying array) for buffers afterwards)
     class LogParser : public LALR1Parser {
     public:
-        Token* m_timestamp_token_ptr;
-        uint16_t m_schema_checksum;
-        uint16_t m_schema_file_size;
-
         LogParser (const std::string& schema_file_path);
 
         void parse (ReaderInterface& reader);
 
         void increment_uncompressed_msg_pos (ReaderInterface& reader);
+
+        Token* m_timestamp_token_ptr;
+        uint16_t m_schema_checksum;
+        uint16_t m_schema_file_size;
 
     private:
         Token get_next_symbol ();
@@ -36,8 +36,8 @@ namespace compressor_frontend {
 
         Token* m_active_uncompressed_msg;
         uint32_t m_uncompressed_msg_size;
-        Token static_uncompressed_msg[cStaticByteBuffSize];
-        uint32_t uncompressed_msg_pos = 0;
+        Token m_static_uncompressed_msg[cStaticByteBuffSize];
+        uint32_t m_uncompressed_msg_pos = 0;
 
     };
 }

@@ -8,17 +8,10 @@
 namespace compressor_frontend {
     class Token {
     public:
-        uint32_t start_pos;
-        uint32_t end_pos;
-        char** buffer_ptr;
-        const uint32_t* buffer_size_ptr;
-        uint32_t line;
-        const std::vector<int>* type_ids;
-
-        Token () : buffer_ptr(nullptr), buffer_size_ptr(nullptr), type_ids(nullptr), start_pos(0), end_pos(0), line(0) {}
+        Token () : m_buffer_ptr(nullptr), m_buffer_size_ptr(nullptr), m_type_ids(nullptr), m_start_pos(0), m_end_pos(0), m_line(0) {}
 
         Token (uint32_t start_pos, uint32_t end_pos, char** buffer_ptr, const uint32_t* buffer_size_ptr, uint32_t line, const std::vector<int>* type_ids) :
-                start_pos(start_pos), end_pos(end_pos), buffer_ptr(buffer_ptr), buffer_size_ptr(buffer_size_ptr), line(line), type_ids(type_ids) {}
+                m_start_pos(start_pos), m_end_pos(end_pos), m_buffer_ptr(buffer_ptr), m_buffer_size_ptr(buffer_size_ptr), m_line(line), m_type_ids(type_ids) {}
 
         [[nodiscard]] std::string get_string () const;
 
@@ -29,6 +22,13 @@ namespace compressor_frontend {
         [[nodiscard]] uint32_t get_length () const;
 
         void set_string (int start_offset, int end_offset);
+
+        uint32_t m_start_pos;
+        uint32_t m_end_pos;
+        char** m_buffer_ptr;
+        const uint32_t* m_buffer_size_ptr;
+        uint32_t m_line;
+        const std::vector<int>* m_type_ids;
     };
 }
 
