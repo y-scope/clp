@@ -38,8 +38,8 @@ namespace compressor_frontend::finite_automata {
 
     }
 
-    void RegexASTLiteral::add_state (RegexNFA* nfa, RegexNFA::State* end_state) {
-        nfa->add_root_interval(RegexNFA::Tree::Interval(this->m_character, this->m_character), end_state);
+    void RegexASTLiteral::add (RegexNFA* nfa, RegexNFA::State* end_state) {
+        nfa->add_root_interval(RegexNFA::Tree::Interval(m_character, m_character), end_state);
     }
 
     RegexASTInteger::RegexASTInteger (uint32_t digit) {
@@ -53,7 +53,7 @@ namespace compressor_frontend::finite_automata {
         m_digits.push_back(digit);
     }
 
-    void RegexASTInteger::add_state (RegexNFA* nfa, RegexNFA::State* end_state) {
+    void RegexASTInteger::add (RegexNFA* nfa, RegexNFA::State* end_state) {
         assert(false); // this shouldn't ever be called
     }
 
@@ -62,21 +62,21 @@ namespace compressor_frontend::finite_automata {
 
     }
 
-    void RegexASTOr::add_state (RegexNFA* nfa, RegexNFA::State* end_state) {
-        m_left->add_state(nfa, end_state);
-        m_right->add_state(nfa, end_state);
+    void RegexASTOr::add (RegexNFA* nfa, RegexNFA::State* end_state) {
+        m_left->add(nfa, end_state);
+        m_right->add(nfa, end_state);
     }
 
     RegexASTCat::RegexASTCat (unique_ptr<RegexAST> left, unique_ptr<RegexAST> right) : m_left(std::move(left)), m_right(std::move(right)) {
 
     }
 
-    void RegexASTCat::add_state (RegexNFA* nfa, RegexNFA::State* end_state) {
+    void RegexASTCat::add (RegexNFA* nfa, RegexNFA::State* end_state) {
         RegexNFA::State* saved_root = nfa->m_root;
         RegexNFA::State* intermediate_state = nfa->new_state();
-        m_left->add_state(nfa, intermediate_state);
+        m_left->add(nfa, intermediate_state);
         nfa->m_root = intermediate_state;
-        m_right->add_state(nfa, end_state);
+        m_right->add(nfa, end_state);
         nfa->m_root = saved_root;
     }
 
@@ -85,34 +85,34 @@ namespace compressor_frontend::finite_automata {
 
     }
 
-    void RegexASTMultiplication::add_state (RegexNFA* nfa, RegexNFA::State* end_state) {
+    void RegexASTMultiplication::add (RegexNFA* nfa, RegexNFA::State* end_state) {
         RegexNFA::State* saved_root = nfa->m_root;
         if (this->m_min == 0) {
             nfa->m_root->add_epsilon_transition(end_state);
         } else {
             for (int i = 1; i < this->m_min; i++) {
                 RegexNFA::State* intermediate_state = nfa->new_state();
-                m_operand->add_state(nfa, intermediate_state);
+                m_operand->add(nfa, intermediate_state);
                 nfa->m_root = intermediate_state;
             }
-            m_operand->add_state(nfa, end_state);
+            m_operand->add(nfa, end_state);
         }
         if (this->is_infinite()) {
             nfa->m_root = end_state;
-            m_operand->add_state(nfa, end_state);
+            m_operand->add(nfa, end_state);
         } else if (this->m_max > this->m_min) {
             if (this->m_min != 0) {
                 RegexNFA::State* intermediate_state = nfa->new_state();
-                m_operand->add_state(nfa, intermediate_state);
+                m_operand->add(nfa, intermediate_state);
                 nfa->m_root = intermediate_state;
             }
             for (uint32_t i = this->m_min + 1; i < this->m_max; i++) {
-                m_operand->add_state(nfa, end_state);
+                m_operand->add(nfa, end_state);
                 RegexNFA::State* intermediate_state = nfa->new_state();
-                m_operand->add_state(nfa, intermediate_state);
+                m_operand->add(nfa, intermediate_state);
                 nfa->m_root = intermediate_state;
             }
-            m_operand->add_state(nfa, end_state);
+            m_operand->add(nfa, end_state);
         }
         nfa->m_root = saved_root;
     }
@@ -230,7 +230,7 @@ namespace compressor_frontend::finite_automata {
         return complemented;
     }
 
-    void RegexASTGroup::add_state (RegexNFA* nfa, RegexNFA::State* end_state) {
+    void RegexASTGroup::add (RegexNFA* nfa, RegexNFA::State* end_state) {
         std::sort(this->m_ranges.begin(), this->m_ranges.end());
         vector<Range> merged = RegexASTGroup::merge(this->m_ranges);
         if (this->m_negate) {

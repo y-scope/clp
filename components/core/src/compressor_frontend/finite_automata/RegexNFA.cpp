@@ -30,11 +30,11 @@ namespace compressor_frontend::finite_automata {
         return state;
     }
 
-    void RegexNFA::State::add_interval (Tree::Interval interval, State* state) {
+    void RegexNFA::State::add_interval (Tree::Interval interval, State* dest_state) {
         if (interval.first < cSizeOfByte) {
             uint32_t bound = min(interval.second, cSizeOfByte - 1);
             for (uint32_t i = interval.first; i <= bound; i++) {
-                m_bytes_transitions[i].push_back(state);
+                m_bytes_transitions[i].push_back(dest_state);
             }
             interval.first = bound + 1;
         }
@@ -48,12 +48,12 @@ namespace compressor_frontend::finite_automata {
             uint32_t overlap_high = min(data.m_interval.second, interval.second);
 
             StateVec tree_states = data.m_value;
-            tree_states.push_back(state);
+            tree_states.push_back(dest_state);
             m_tree_transitions.insert(Tree::Interval(overlap_low, overlap_high), tree_states);
             if (data.m_interval.first < interval.first) {
                 m_tree_transitions.insert(Tree::Interval(data.m_interval.first, interval.first - 1), data.m_value);
             } else if (data.m_interval.first > interval.first) {
-                m_tree_transitions.insert(Tree::Interval(interval.first, data.m_interval.first - 1), {state});
+                m_tree_transitions.insert(Tree::Interval(interval.first, data.m_interval.first - 1), {dest_state});
             }
             if (data.m_interval.second > interval.second) {
                 m_tree_transitions.insert(Tree::Interval(interval.second + 1, data.m_interval.second), data.m_value);
@@ -61,7 +61,7 @@ namespace compressor_frontend::finite_automata {
             interval.first = data.m_interval.second + 1;
         }
         if (interval.first != 0 && interval.first <= interval.second) {
-            m_tree_transitions.insert(interval, {state});
+            m_tree_transitions.insert(interval, {dest_state});
         }
     }
     

@@ -21,31 +21,54 @@ namespace compressor_frontend::finite_automata {
         class State;
 
         typedef UnicodeIntervalTree<State*> Tree;
-        
-        struct State {
+
+        class State {
         public:
-            State* next (uint32_t c);
-
-            void add_tag (const int& value) {
-                m_tags.push_back(value);
+            /**
+             * Returns the next state the DFA transitions to on input character (byte or utf8)
+             * @param character
+             * @return State*
+             */
+            State* next (uint32_t character);
+            
+            /**
+             * Adds to m_tags an id indicating a regex rule name that is matched in this state
+             * @param rule_name
+             */
+            void add_tag (const int& rule_name_id) {
+                m_tags.push_back(rule_name_id);
             }
-
+            
+            /**
+             * Returns ids indicating the names of regex rules matched in this state
+             * @return const std::vector<int>&
+             */
             [[nodiscard]] const std::vector<int>& get_tags () const {
                 return m_tags;
             }
-
-            [[nodiscard]] State** get_bytes_transition () {
-                return m_bytes_transition;
-            };
             
-            void add_byte_transition (const uint8_t& byte, State*& byte_transition) {
-                m_bytes_transition[byte] = byte_transition;
+            /**
+             * Specify which state is transitioned to on an input byte  
+             * @param byte
+             * @param dest_state
+             */            
+            void add_byte_transition (const uint8_t& byte, State*& dest_state) {
+                m_bytes_transition[byte] = dest_state;
             }
-
+            
+            /**
+             * Specify which state is transitioned to on an input utf8
+             * @param key
+             * @param dest_state
+             */
             void add_tree_transition (const std::pair<uint32_t, uint32_t> key, State*& dest_state) {
                 m_tree_transitions.insert(key, dest_state);
             }
-
+            
+            /**
+             * Returns if state is accepting (matches at least one regex rule)  
+             * @return bool
+             */
             bool is_accepting () {
                 return !m_tags.empty();
             }
@@ -55,10 +78,21 @@ namespace compressor_frontend::finite_automata {
             State* m_bytes_transition[cSizeOfByte];
             Tree m_tree_transitions;
         };
-        
-        State* root () { return m_states.at(0).get(); }
 
+        /**
+         * Creates a new DFA state based on a set of NFA states and adds it to m_states
+         * @param set
+         * @return State*
+         */  
         State* new_state (const RegexNFA::StateSet* set);
+
+        /**
+         * Returns root of DFA  
+         * @return State*
+         */
+        State* get_root () { 
+            return m_states.at(0).get(); 
+        }
         
     private:
         std::vector<std::unique_ptr<State>> m_states;

@@ -108,6 +108,7 @@ namespace compressor_frontend {
         bool m_last_read_first_half_of_buf;
         size_t m_bytes_read;
         uint32_t m_line;
+        /// TODO: make this not a unique_ptr and test performance difference
         std::unique_ptr<RegexDFA> m_dfa;
         ReaderInterface* m_reader;
         bool m_has_delimiters;

@@ -80,7 +80,7 @@ namespace compressor_frontend {
         m_match_pos = m_byte_buf_pos;
         m_match_line = m_line;
         m_type_ids = nullptr;
-        RegexDFA::State* state = m_dfa->root();
+        RegexDFA::State* state = m_dfa->get_root();
         while (true) {
             if (m_byte_buf_pos == m_fail_pos) {
                 string warn = "Long line detected";
@@ -148,7 +148,7 @@ namespace compressor_frontend {
             if (next_char == '\n') {
                 m_line++;
                 if (m_has_delimiters && !m_match) {
-                    next = m_dfa->root()->next(next_char);
+                    next = m_dfa->get_root()->next(next_char);
                     m_match = true;
                     m_type_ids = &(next->get_tags());
                     m_start_pos = prev_byte_buf_pos;
@@ -183,7 +183,7 @@ namespace compressor_frontend {
                     }
                     m_byte_buf_pos = prev_byte_buf_pos;
                     m_start_pos = prev_byte_buf_pos;
-                    state = m_dfa->root();
+                    state = m_dfa->get_root();
                     continue;
                 }
             }
@@ -202,7 +202,7 @@ namespace compressor_frontend {
         m_match_pos = m_byte_buf_pos;
         m_match_line = m_line;
         m_type_ids = nullptr;
-        RegexDFA::State* state = m_dfa->root();
+        RegexDFA::State* state = m_dfa->get_root();
         while (true) {
             if (m_byte_buf_pos == m_fail_pos) {
                 string warn = "Long line detected";
@@ -270,7 +270,7 @@ namespace compressor_frontend {
             if (next_char == '\n') {
                 m_line++;
                 if (m_has_delimiters && !m_match) {
-                    next = m_dfa->root()->next(next_char);
+                    next = m_dfa->get_root()->next(next_char);
                     m_match = true;
                     m_type_ids = &(next->get_tags());
                     m_start_pos = prev_byte_buf_pos;
@@ -291,14 +291,12 @@ namespace compressor_frontend {
                 if (m_match) {
                     // BFS (keep track of m_type_ids)
                     if (wildcard == '?') {
-                        /// TODO: fix this part
-                        /*
-                        for (auto next_state: state->get_bytes_transition()) {
+                        for (uint32_t byte = 0; byte < cSizeOfByte; byte++) {
+                            RegexDFA::State* next_state = state->next(byte);
                             if (next_state->is_accepting() == false) {
                                 return Token{m_last_match_pos, m_byte_buf_pos, m_byte_buf_ptr, m_byte_buf_size_ptr, m_last_match_line, &cTokenUncaughtStringTypes};
                             }
                         }
-                         */
                     } else if (wildcard == '*') {
                         std::stack<RegexDFA::State*> unvisited_states;
                         std::set<RegexDFA::State*> visited_states;
@@ -400,7 +398,7 @@ namespace compressor_frontend {
         }
         m_dfa = nfa.to_dfa();
 
-        RegexDFA::State* state = m_dfa->root();
+        RegexDFA::State* state = m_dfa->get_root();
         for (uint32_t i = 0; i < cSizeOfByte; i++) {
             if (state->next(i) != nullptr) {
                 m_is_first_char[i] = true;
@@ -418,7 +416,7 @@ namespace compressor_frontend {
         nfa.reverse();
         m_dfa = nfa.to_dfa();
 
-        RegexDFA::State* state = m_dfa->root();
+        RegexDFA::State* state = m_dfa->get_root();
         for (uint32_t i = 0; i < cSizeOfByte; i++) {
             if (state->next(i) != nullptr) {
                 m_is_first_char[i] = true;
@@ -432,6 +430,6 @@ namespace compressor_frontend {
         RegexNFA::State* s = nfa->new_state();
         s->set_accepting(true);
         s->set_tag(m_name);
-        m_regex->add_state(nfa, s);
+        m_regex->add(nfa, s);
     }
 }
