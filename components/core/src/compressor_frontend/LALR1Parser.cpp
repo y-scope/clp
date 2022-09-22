@@ -36,7 +36,7 @@ namespace compressor_frontend {
 
     uint32_t NonTerminal::m_next_children_start = 0;
 
-    NonTerminal::NonTerminal (Production* p) : m_production(p), m_value(nullptr) {
+    NonTerminal::NonTerminal (Production* p) : m_production(p), m_ast(nullptr) {
         m_children_start = NonTerminal::m_next_children_start;
         NonTerminal::m_next_children_start += p->m_body.size();
     }
@@ -656,18 +656,16 @@ namespace compressor_frontend {
                     for (size_t i = 0; i < n; i++) {
                         m_parse_stack_states.pop();
                         NonTerminal::m_all_children[matched_nonterminal.m_children_start + n - i - 1] = std::move(m_parse_stack_matches.top());
-                        m_parse_stack_matches.pop();// matched_nonterminal.children->at(n - i - 1) = std::move(m);
+                        m_parse_stack_matches.pop();
                     }
                     if (reduce->m_semantic_rule != nullptr) {
                         m_lexer.set_reduce_pos(m_next_token->m_start_pos - 1);
-                        matched_nonterminal.m_value = reduce->m_semantic_rule(&matched_nonterminal);
+                        matched_nonterminal.m_ast = reduce->m_semantic_rule(&matched_nonterminal);
                     }
-                    {
-                        ItemSet* curr = m_parse_stack_states.top();
-                        Action const& it = curr->m_actions[matched_nonterminal.m_production->m_head];
-                        m_parse_stack_states.push(std::get<ItemSet*>(it));
-                        m_parse_stack_matches.push(std::move(matched_nonterminal));
-                    }
+                    ItemSet* curr = m_parse_stack_states.top();
+                    Action const& it = curr->m_actions[matched_nonterminal.m_production->m_head];
+                    m_parse_stack_states.push(std::get<ItemSet*>(it));
+                    m_parse_stack_matches.push(std::move(matched_nonterminal));
                     ret = true;
                     return;
                 }

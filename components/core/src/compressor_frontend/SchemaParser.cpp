@@ -27,7 +27,7 @@ using std::unique_ptr;
 
 namespace compressor_frontend {
     SchemaParser::SchemaParser () {
-        add_tokens();
+        add_lexical_rules();
         add_productions();
         generate();
     }
@@ -304,7 +304,7 @@ namespace compressor_frontend {
         return make_unique<DelimiterStringAST>(character);
     }
 
-    void SchemaParser::add_tokens () {
+    void SchemaParser::add_lexical_rules () {
         add_token("Tab", '\t'); //9
         add_token("NewLine", '\n'); //10
         add_token("VerticalTab", '\v'); //11

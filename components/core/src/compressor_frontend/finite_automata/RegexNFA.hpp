@@ -169,9 +169,9 @@ namespace compressor_frontend::finite_automata {
         State* m_root;
 
     private:
-        
+
         /**
-         * Add to epsilon_closure all the states reachable from the specified state by an epsilon transition 
+         * Add to epsilon_closure all the states reachable from the specified state by an epsilon transition
          * @param epsilon_closure
          * @param state
          */

@@ -17,63 +17,130 @@
 #include "finite_automata/RegexAST.hpp"
 #include "Token.hpp"
 
+using compressor_frontend::finite_automata::RegexAST;
+using compressor_frontend::finite_automata::RegexNFA;
+using compressor_frontend::finite_automata::RegexDFA;
+
 namespace compressor_frontend {
-    using finite_automata::RegexAST;
-    using finite_automata::RegexNFA;
-    using finite_automata::RegexDFA;
-    
     class Lexer {
     public:
         // std::vector<int> can be declared as constexpr in c++20
         inline static const std::vector<int> cTokenEndTypes = {(int) SymbolID::TokenEndID};
         inline static const std::vector<int> cTokenUncaughtStringTypes = {(int) SymbolID::TokenUncaughtStringID};
 
+        /**
+         * A lexical rule has a name and regex pattern
+         */
         struct Rule {
+            // Constructor
             Rule (int n, std::unique_ptr<RegexAST> r) : m_name(n), m_regex(std::move(r)) {}
 
-            void add_accepting_state (RegexNFA* nfa) const;
+            /**
+             * Adds AST representing the lexical rule to the NFA
+             * @param nfa
+             */
+            void add_ast (RegexNFA* nfa) const;
 
             int m_name;
             std::unique_ptr<RegexAST> m_regex;
         };
 
-        Lexer () : m_byte_buf_pos(0), m_bytes_read(0), m_line(0), m_fail_pos(0), m_reduce_pos(0), m_match(false), m_match_pos(0), m_start_pos(0), m_match_line(0)
-                   , m_last_match_pos(0), m_last_match_line(0), m_type_ids(), m_is_delimiter(), m_is_first_char(), m_static_byte_buf(), m_finished_reading_file(false)
-                   , m_at_end_of_file(false), m_last_read_first_half_of_buf(false), m_reader(nullptr), m_has_delimiters(false), m_active_byte_buf(nullptr),
-                m_byte_buf_ptr(nullptr), m_byte_buf_size_ptr(nullptr), m_static_byte_buf_ptr(nullptr) {
+        // Constructor
+        Lexer () : m_byte_buf_pos(0), m_bytes_read(0), m_line(0), m_fail_pos(0), m_reduce_pos(0), m_match(false), m_match_pos(0), m_start_pos(0),
+                   m_match_line(0), m_last_match_pos(0), m_last_match_line(0), m_type_ids(), m_is_delimiter(), m_is_first_char(), m_static_byte_buf(),
+                   m_finished_reading_file(false), m_at_end_of_file(false), m_last_read_first_half_of_buf(false), m_reader(nullptr), m_has_delimiters(false),
+                   m_active_byte_buf(nullptr), m_byte_buf_ptr(nullptr), m_byte_buf_size_ptr(nullptr), m_static_byte_buf_ptr(nullptr) {
             for (bool& i: m_is_first_char) {
                 i = false;
             }
         }
-        
+
+        /**
+         * Add a delimiters line from the schema to the lexer
+         * @param delimiters
+         */
         void add_delimiters (const std::vector<uint32_t>& delimiters);
 
-        void add_rule (const uint32_t& id, std::unique_ptr<finite_automata::RegexAST> regex);
+        /**
+         * Add lexical rule to the lexer's list of rules
+         * @param id
+         * @param regex
+         */
+        void add_rule (const uint32_t& id, std::unique_ptr<RegexAST> regex);
 
+        /**
+         * Return regex patter for a rule name
+         * @param name
+         * @return RegexAST*
+         */
         RegexAST* get_rule (const uint32_t& name);
 
+        /**
+         * Generate DFA for lexer
+         */
         void generate ();
 
+        /**
+         * Generate DFA for a reverse lexer matching the reverse of the words in the original language
+         */
         void generate_reverse ();
 
+        /**
+         * Reset the lexer to start a new lexing (reset buffers, reset vars tracking positions)
+         * @param reader
+         */
         void reset (ReaderInterface& reader);
 
+        /**
+         * After lexing half of the buffer, reads into that half of the buffer and changes variables accordingly
+         */
         void soft_reset ();
 
+        /**
+         * Gets next token from the input string
+         * If next token is an uncaught string, the next variable token is already prepped to be returned on the next call
+         * @return Token
+         */
         Token scan ();
 
+        /**
+         * scan(), but with wild wildcards in the input string (for search)
+         * @param wildcard
+         * @return Token
+         */
         Token scan_with_wildcard (char wildcard);
 
+        /**
+         * Sets the position of where the last reduce was performed,
+         * Used to know during lexing if half of the buffer has been lexed and needs to be read into
+         * @param value
+         */
         void set_reduce_pos (uint32_t value) {
             m_reduce_pos = value;
         }
-        
+
+        /**
+         * Returns if lexer has delimiters set
+         * @return const bool&
+         */
         [[nodiscard]] const bool& get_has_delimiters() const {
             return m_has_delimiters;
         }
+
+        /**
+         * Checks if an input byte is a delimiter
+         * @param byte
+         * @return const bool&
+         */
         [[nodiscard]] const bool& is_delimiter (uint8_t byte) const {
             return m_is_delimiter[byte];
         }
+
+        /**
+         * Checks if an input byte is the first character of a variable in the schema
+         * @param byte
+         * @return const bool&
+         */
         [[nodiscard]] const bool& is_first_char (uint8_t byte) const {
             return m_is_first_char[byte];
         }
@@ -82,6 +149,10 @@ namespace compressor_frontend {
         std::map<uint32_t, std::string> m_id_symbol;
         
     private:
+        /**
+         * Get next character from the input buffer
+         * @return unsigned char
+         */
         unsigned char get_next_character ();
         
         uint32_t m_fail_pos;

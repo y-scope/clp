@@ -26,7 +26,6 @@ using std::vector;
 
 namespace compressor_frontend {
     LogParser::LogParser (const string& schema_file_path) {
-        m_timestamp_token_ptr = nullptr;
         m_schema_checksum = 0;
         m_schema_file_size = 0;
         m_active_uncompressed_msg = nullptr;

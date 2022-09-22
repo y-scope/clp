@@ -341,9 +341,6 @@ namespace compressor_frontend {
         m_match = false;
         m_byte_buf_pos = 0;
         m_line = 0;
-        //if (m_bytes_read != 0) {
-        //    delete m_active_byte_buf;
-        //}
         m_bytes_read = 0;
         m_last_read_first_half_of_buf = true;
         if (m_active_byte_buf != nullptr && m_active_byte_buf != m_static_byte_buf) {
@@ -394,7 +391,7 @@ namespace compressor_frontend {
     void Lexer::generate () {
         RegexNFA nfa;
         for (const Rule& r: m_rules) {
-            r.add_accepting_state(&nfa);
+            r.add_ast(&nfa);
         }
         m_dfa = nfa.to_dfa();
 
@@ -411,7 +408,7 @@ namespace compressor_frontend {
     void Lexer::generate_reverse () {
         RegexNFA nfa;
         for (const Rule& r: m_rules) {
-            r.add_accepting_state(&nfa);
+            r.add_ast(&nfa);
         }
         nfa.reverse();
         m_dfa = nfa.to_dfa();
@@ -426,7 +423,7 @@ namespace compressor_frontend {
         }
     }
 
-    void Lexer::Rule::add_accepting_state (RegexNFA* nfa) const {
+    void Lexer::Rule::add_ast (RegexNFA* nfa) const {
         RegexNFA::State* s = nfa->new_state();
         s->set_accepting(true);
         s->set_tag(m_name);

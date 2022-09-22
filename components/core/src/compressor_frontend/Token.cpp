@@ -28,9 +28,4 @@ namespace compressor_frontend {
             return *m_buffer_size_ptr - m_start_pos + m_end_pos;
         }
     }
-
-    void Token::set_string (int start_offset, int end_offset) {
-        m_start_pos += start_offset;
-        m_end_pos -= end_offset;
-    }
 }

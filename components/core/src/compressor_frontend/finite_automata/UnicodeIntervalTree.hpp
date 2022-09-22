@@ -171,7 +171,7 @@ namespace compressor_frontend::finite_automata {
             }
             
             /**
-             * return m_value
+             * return m_ast
              * @retrun T
              */
             T get_value () {
