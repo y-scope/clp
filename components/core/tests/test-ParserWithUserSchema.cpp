@@ -15,18 +15,18 @@
 #include "../submodules/Catch2/single_include/catch2/catch.hpp"
 
 // Project headers
+#include "../src/clp/FileCompressor.hpp"
+#include "../src/clp/run.hpp"
+#include "../src/clp/utils.hpp"
 #include "../src/compressor_frontend/LogParser.hpp"
 #include "../src/compressor_frontend/SchemaParser.hpp"
-#include "../src/FileReader.hpp"
-#include "../src/streaming_archive/writer/Archive.hpp"
-#include "../src/GlobalMetadataDBConfig.hpp"
-#include "../src/GlobalSQLiteMetadataDB.hpp"
-#include "../src/GlobalMySQLMetadataDB.hpp"
-#include "../src/clp/utils.hpp"
-#include "../src/clp/FileCompressor.hpp"
 #include "../src/ErrorCode.hpp"
+#include "../src/FileReader.hpp"
+#include "../src/GlobalMetadataDBConfig.hpp"
+#include "../src/GlobalMySQLMetadataDB.hpp"
+#include "../src/GlobalSQLiteMetadataDB.hpp"
 #include "../src/Stopwatch.hpp"
-#include "../src/clp/clp_main.hpp"
+#include "../src/streaming_archive/writer/Archive.hpp"
 
 using compressor_frontend::DelimiterStringAST;
 using compressor_frontend::LALR1Parser;
@@ -74,7 +74,7 @@ std::string compress(std::string output_dir, std::string file_to_compress, std::
         argv.push_back((char*)arg.data());
     argv.push_back(nullptr);
     std::string archive_path;
-    clp_main(argv.size() - 1, (const char**) argv.data(), &archive_path);
+    clp::run(argv.size() - 1, (const char**) argv.data(), &archive_path);
     return archive_path;
 }
 
@@ -85,7 +85,7 @@ std::string decompress(std::string archive_dir, std::string output_dir) {
         argv.push_back((char*)arg.data());
     argv.push_back(nullptr);
     std::string archive_path;
-    clp_main(argv.size() - 1, (const char**) argv.data(), &archive_path);
+    clp::run(argv.size() - 1, (const char**) argv.data(), &archive_path);
     return archive_path;
 }
 
