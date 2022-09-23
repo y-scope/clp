@@ -44,5 +44,5 @@ target_link_libraries(make-dictionaries-readable
         ZStd::ZStd
         )
 target_compile_features(make-dictionaries-readable
-        PRIVATE cxx_std_14
+        PRIVATE cxx_std_17
         )

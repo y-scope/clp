@@ -284,7 +284,7 @@ target_link_libraries(clp
         ZStd::ZStd
         )
 target_compile_features(clp
-        PRIVATE cxx_std_14
+        PRIVATE cxx_std_17
         )
 
 set(SOURCE_FILES_clg
@@ -404,7 +404,7 @@ target_link_libraries(clg
         ZStd::ZStd
         )
 target_compile_features(clg
-        PRIVATE cxx_std_14
+        PRIVATE cxx_std_17
         )
 
 set(SOURCE_FILES_clo
@@ -517,7 +517,7 @@ target_link_libraries(clo
         ZStd::ZStd
         )
 target_compile_features(clo
-        PRIVATE cxx_std_14
+        PRIVATE cxx_std_17
         )
 
 set(SOURCE_FILES_unitTest
@@ -628,7 +628,7 @@ target_link_libraries(unitTest
         ZStd::ZStd
         )
 target_compile_features(unitTest
-        PRIVATE cxx_std_14
+        PRIVATE cxx_std_17
         )
 
 include(cmake/utils.cmake)

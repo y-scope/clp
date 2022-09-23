@@ -17,9 +17,6 @@
 // spdlog
 #include <spdlog/spdlog.h>
 
-// Project headers
-#include "Profiler.hpp"
-
 using std::list;
 using std::string;
 using std::vector;

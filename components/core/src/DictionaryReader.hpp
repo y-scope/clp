@@ -12,7 +12,6 @@
 #include "dictionary_utils.hpp"
 #include "DictionaryEntry.hpp"
 #include "FileReader.hpp"
-#include "Profiler.hpp"
 #include "streaming_compression/passthrough/Decompressor.hpp"
 #include "streaming_compression/zstd/Decompressor.hpp"
 #include "Utils.hpp"
@@ -174,7 +173,6 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries () {
         }
     }
 
-    PROFILER_FRAGMENTED_MEASUREMENT_START(SegmentIndexRead)
     // Read segment index header
     auto num_segments = read_segment_index_header(m_segment_index_file_reader);
 
@@ -189,7 +187,6 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries () {
             read_segment_ids();
         }
     }
-    PROFILER_FRAGMENTED_MEASUREMENT_STOP(SegmentIndexRead)
 }
 
 template <typename DictionaryIdType, typename EntryType>

@@ -32,7 +32,7 @@ int main (int argc, const char* argv[]) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
-    PROFILER_INITIALIZE()
+    Profiler::init();
     TimestampPattern::init();
 
     clp::CommandLineArguments command_line_args("clp");
@@ -48,6 +48,8 @@ int main (int argc, const char* argv[]) {
     }
 
     vector<string> input_paths = command_line_args.get_input_paths();
+
+    Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::Compression>();
 
     // Read input paths from file if necessary
     if (false == command_line_args.get_path_list_path().empty()) {
@@ -106,6 +108,9 @@ int main (int argc, const char* argv[]) {
             return -1;
         }
     }
+
+    Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::Compression>();
+    LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::Compression)
 
     return 0;
 }
