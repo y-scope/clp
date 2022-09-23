@@ -21,13 +21,10 @@
 #include "../../VariableDictionaryWriter.hpp"
 #include "../../compressor_frontend/LogParser.hpp"
 #include "../MetadataDB.hpp"
-#include "../../Stopwatch.hpp"
 
 namespace streaming_archive { namespace writer { 
     class Archive {
     public:
-        static Stopwatch get_pattern_watch;
-        static Stopwatch write_watch;
         // Types
         /**
          * Structure used to pass settings when opening a new archive

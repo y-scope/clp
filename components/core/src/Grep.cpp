@@ -7,7 +7,6 @@
 #include "compressor_frontend/Constants.hpp"
 #include "compressor_frontend/QueryParser.hpp"
 #include "EncodedVariableInterpreter.hpp"
-#include "Profiler.hpp"
 #include "StringReader.hpp"
 #include "Utils.hpp"
 
@@ -583,7 +582,7 @@ bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_
 }
 
 bool
-Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, size_t& end_pos, bool& is_var, compressor_frontend::Lexer& forward_lexer, 
+Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, size_t& end_pos, bool& is_var, compressor_frontend::Lexer& forward_lexer,
                                         compressor_frontend::Lexer& reverse_lexer) {
     const size_t value_length = value.length();
     if (end_pos >= value_length) {
@@ -772,9 +771,7 @@ bool Grep::search_and_decompress (const Query& query, Archive& archive, File& co
     while (false == matched) {
         // Find matching message
         const SubQuery* matching_sub_query = nullptr;
-        PROFILER_FRAGMENTED_MEASUREMENT_START(MessageSearch)
         bool message_found = find_matching_message(query, archive, matching_sub_query, compressed_file, compressed_msg);
-        PROFILER_FRAGMENTED_MEASUREMENT_STOP(MessageSearch)
         if (false == message_found) {
             return false;
         }

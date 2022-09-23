@@ -18,7 +18,6 @@
 #include <spdlog/spdlog.h>
 
 // Project headers
-#include "Profiler.hpp"
 #include "StringReader.hpp"
 
 using std::list;

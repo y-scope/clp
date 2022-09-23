@@ -145,7 +145,7 @@ TEST_CASE("Test parsing", "[LALR1Parser][LogParser]") {
 }
 
 TEST_CASE("Test compression", "[Compression][Benchmark]") {
-    Stopwatch compression_watch("compression_watch");
+    Stopwatch compression_watch;
     std::string compress_dir_path = "../tests/test_archives/openstack_logs_new/";
     std::string input_path = "../tests/test_log_files/openstack_logs/test";
     
@@ -154,11 +154,11 @@ TEST_CASE("Test compression", "[Compression][Benchmark]") {
     compression_watch.start();
     compress(compress_dir_path, input_path, schema_file);
     compression_watch.stop();
-    compression_watch.print();
+    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
 }
 
 TEST_CASE("Test compression old", "[Compression][Benchmark]") {
-    Stopwatch compression_watch("compression_watch");
+    Stopwatch compression_watch;
     std::string compress_dir_path = "../tests/test_archives/openstack_logs_old/";
     std::string input_path = "../tests/test_log_files/openstack_logs/test";
 
@@ -167,7 +167,7 @@ TEST_CASE("Test compression old", "[Compression][Benchmark]") {
     compression_watch.start();
     compress(compress_dir_path, input_path, schema_file, true);
     compression_watch.stop();
-    compression_watch.print();
+    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
 }
 
 
@@ -188,26 +188,23 @@ TEST_CASE("Test decompression", "[Compression][Benchmark]") {
 }
 
 TEST_CASE("Test compression real", "[Compression][Benchmark]") {
-    Stopwatch compression_watch("compression_watch");
-
-
+    Stopwatch compression_watch;
 
     std::string input_path = "../tests/test_log_files/openstack_logs/n-cpu.log.2016-05-08-072252";
     //std::string input_path = "../../../logs";
     //std::string input_path = "../../../logs/yarn--resourcemanager-8d30a2c150ca.log.2018-07-13ir"; //breaks at line 55 if its timestamp format isn't in the schema 
-    
-    
+
     std::string compress_dir_path = "../tests/test_archives/openstack_logs_new/";
     std::string schema_file = "../tests/test_schema_files/real_schema.txt";
     std::string decompress_dir_path = "../tests/decompressed/";
     compression_watch.start();
     compress(compress_dir_path, input_path, schema_file);
     compression_watch.stop();
-    compression_watch.print();
+    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
 }
 
 TEST_CASE("Test compression real old", "[Compression][Benchmark]") {
-    Stopwatch compression_watch("compression_watch");
+    Stopwatch compression_watch;
     std::string compress_dir_path = "../tests/test_archives/openstack_logs_old/";
     std::string input_path = "../tests/test_log_files/openstack_logs/n-cpu.log.2016-05-08-072252";
     std::string schema_file = "../tests/test_schema_files/real_schema.txt";
@@ -215,11 +212,11 @@ TEST_CASE("Test compression real old", "[Compression][Benchmark]") {
     compression_watch.start();
     compress(compress_dir_path, input_path, schema_file, true);
     compression_watch.stop();
-    compression_watch.print();
+    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
 }
  
 TEST_CASE("Test compression directory", "[Compression][Benchmark]") {
-    Stopwatch compression_watch("compression_watch");
+    Stopwatch compression_watch;
     std::string compress_dir_path = "../tests/test_archives/openstack_logs_new/";
     std::string input_path = "../tests/test_log_files/openstack_logs";
     std::string schema_file = "../tests/test_schema_files/real_schema.txt";
@@ -227,18 +224,15 @@ TEST_CASE("Test compression directory", "[Compression][Benchmark]") {
     compression_watch.start();
     compress(compress_dir_path, input_path, schema_file);
     compression_watch.stop();
-    compression_watch.print();
+    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
 }
 
 TEST_CASE("Test compression no timestamp", "[Compression][Benchmark]") {
-    Stopwatch compression_watch("compression_watch");
-
-
+    Stopwatch compression_watch;
 
     std::string input_path = "../tests/test_log_files/openstack_logs/test_no_timestamp";
     //std::string input_path = "../../../logs";
     //std::string input_path = "../../../logs/yarn--resourcemanager-8d30a2c150ca.log.2018-07-13ir"; //breaks at line 55 if its timestamp format isn't in the schema 
-
 
     std::string compress_dir_path = "../tests/test_archives/openstack_logs_new/";
     std::string schema_file = "../tests/test_schema_files/real_schema.txt";
@@ -246,11 +240,11 @@ TEST_CASE("Test compression no timestamp", "[Compression][Benchmark]") {
     compression_watch.start();
     compress(compress_dir_path, input_path, schema_file);
     compression_watch.stop();
-    compression_watch.print();
+    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
 }
 
 TEST_CASE("Test compression hadoop", "[Compression][Benchmark]") {
-    Stopwatch compression_watch("compression_watch");
+    Stopwatch compression_watch;
     std::string compress_dir_path = "../../../archive/";
     std::string input_path = "../../../logs";
     std::string schema_file = "../tests/test_schema_files/real_schema.txt";
@@ -258,7 +252,7 @@ TEST_CASE("Test compression hadoop", "[Compression][Benchmark]") {
     compression_watch.start();
     compress(compress_dir_path, input_path, schema_file);
     compression_watch.stop();
-    compression_watch.print();
+    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
 }
 
 TEST_CASE("Test decompression hadoop", "[Compression][Benchmark]") {

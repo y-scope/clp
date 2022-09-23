@@ -12,6 +12,7 @@
 #include <archive_entry.h>
 
 // Project headers
+#include "../Profiler.hpp"
 #include "utils.hpp"
 
 using std::cout;
@@ -82,9 +83,10 @@ namespace clp {
                                         size_t target_encoded_file_size, const FileToCompress& file_to_compress,
                                         streaming_archive::writer::Archive& archive_writer, bool use_heuristic) {
         std::string file_name = std::filesystem::canonical(file_to_compress.get_path()).string();
-        SPDLOG_INFO("Start parsing " + file_name);
-        Stopwatch parse_watch("parse_watch");
-        parse_watch.start();
+
+        PROFILER_SPDLOG_INFO("Start parsing {}", file_name)
+        Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
+
         m_file_reader.open(file_to_compress.get_path());
 
         // Check that file is UTF-8 encoded
@@ -114,10 +116,12 @@ namespace clp {
                 succeeded = false;
             }
         }
-        parse_watch.stop();
-        parse_watch.print();
-        SPDLOG_INFO("Done parsing " + file_name);
+
         m_file_reader.close();
+
+        Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
+        LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::ParseLogFile)
+        PROFILER_SPDLOG_INFO("Done parsing {}", file_name)
 
         return succeeded;
     }

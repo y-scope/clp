@@ -16,8 +16,6 @@
 
 // Project headers
 #include "../../EncodedVariableInterpreter.hpp"
-#include "../../Profiler.hpp"
-#include "../../Stopwatch.hpp"
 #include "../../Utils.hpp"
 #include "../Constants.hpp"
 
@@ -131,12 +129,8 @@ namespace streaming_archive { namespace reader {
     }
 
     void Archive::refresh_dictionaries () {
-        PROFILER_FRAGMENTED_MEASUREMENT_START(LogtypeDictRead)
         m_logtype_dictionary.read_new_entries();
-        PROFILER_FRAGMENTED_MEASUREMENT_STOP(LogtypeDictRead)
-        PROFILER_FRAGMENTED_MEASUREMENT_START(VarDictRead)
         m_var_dictionary.read_new_entries();
-        PROFILER_FRAGMENTED_MEASUREMENT_STOP(VarDictRead)
     }
 
     ErrorCode Archive::open_file (File& file, MetadataDB::FileIterator& file_metadata_ix, bool read_ahead) {
