@@ -22,7 +22,7 @@ using std::unordered_set;
 using std::vector;
 
 namespace clp {
-    int run (int argc, const char* argv[], std::string* archive_path) {
+    int run (int argc, const char* argv[]) {
         // Program-wide initialization
         try {
             auto stderr_logger = spdlog::stderr_logger_st("stderr");
@@ -90,7 +90,7 @@ namespace clp {
             bool compression_successful;
             try {
                 compression_successful = compress(command_line_args, files_to_compress, empty_directory_paths, grouped_files_to_compress,
-                                                  command_line_args.get_target_encoded_file_size(), archive_path, std::move(log_parser),
+                                                  command_line_args.get_target_encoded_file_size(), std::move(log_parser),
                                                   command_line_args.get_use_heuristic());
             } catch (TraceableException& e) {
                 ErrorCode error_code = e.get_error_code();

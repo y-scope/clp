@@ -54,7 +54,7 @@ namespace clp {
     }
 
     bool compress (CommandLineArguments& command_line_args, vector<FileToCompress>& files_to_compress, const vector<string>& empty_directory_paths,
-                   vector<FileToCompress>& grouped_files_to_compress, size_t target_encoded_file_size, std::string* archive_path,
+                   vector<FileToCompress>& grouped_files_to_compress, size_t target_encoded_file_size,
                    std::unique_ptr<compressor_frontend::LogParser> log_parser, bool use_heuristic) {
         auto output_dir = boost::filesystem::path(command_line_args.get_output_dir());
 
@@ -108,7 +108,7 @@ namespace clp {
             archive_writer.m_schema_last_edited = std::filesystem::last_write_time(command_line_args.get_schema_file_path());
         }
         // Open archive
-        *archive_path = archive_writer.open(archive_user_config);
+        archive_writer.open(archive_user_config);
 
         archive_writer.add_empty_directories(empty_directory_paths);
 

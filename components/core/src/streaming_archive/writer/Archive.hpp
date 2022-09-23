@@ -86,12 +86,11 @@ namespace streaming_archive { namespace writer {
         /**
          * Creates the directory structure for the archive and opens writers for the dictionaries
          * @param user_config Settings configurable by the user
-         * @return Path of the new archive
          * @throw FileWriter::OperationFailed if any dictionary writer could not be opened
          * @throw streaming_archive::writer::Archive::OperationFailed if archive already exists, if it could not be stat-ed, if the directory structure could
                   not be created, if the file is not reset or problems with medatadata.
          */
-        std::string  open (const UserConfig& user_config);
+        void open (const UserConfig& user_config);
         /**
          * Writes a final snapshot of the archive, closes all open files, and closes the dictionaries
          * @throw FileWriter::OperationFailed if any writer could not be closed
