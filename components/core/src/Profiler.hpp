@@ -10,6 +10,7 @@
 
 /**
  * Class to time code.
+ *
  * There are two types of measurements:
  * - Continuous measurements where a user needs to time a single, continuous
  *   operation.
@@ -24,6 +25,9 @@
  * allow enabling/disabling specific measurements such that a disabled
  * measurement will not affect the performance of the program (except for
  * extra heap storage).
+ *
+ * To log a measurement, use LOG_CONTINUOUS_MEASUREMENT or
+ * LOG_FRAGMENTED_MEASUREMENT, passing in the relevant measurement index enum.
  *
  * Two implementation details allow this class to avoid inducing overhead
  * when profiling is disabled:
