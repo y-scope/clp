@@ -2,141 +2,163 @@
 #define PROFILER_HPP
 
 // C++ libraries
-#include <atomic>
-#include <memory>
 #include <vector>
 
 // Project headers
 #include "Stopwatch.hpp"
+#include "Utils.hpp"
 
 /**
- * Class to perform global profiling of any program in the package.
+ * Class to time code.
+ *
  * There are two types of measurements:
- * - Fragmented measurements where a user needs to time a multiple, separated instances of an operation.
- * - Continuous measurements where a user needs to time a single, continuous operation.
+ * - Continuous measurements where a user needs to time a single, continuous
+ *   operation.
+ * - Fragmented measurements where a user needs to time multiple,
+ *   separated instances of an operation. For example if we want to get the
+ *   total run time taken for inserting entries into a dictionary, we could
+ *   wrap the insertion with a fragmented measurement.
  *
- * To add an operation, add it to the relevant enum and add a flag indicating whether it's enabled to the relevant flags enum.
+ * To add a measurement, add it to the ContinuousMeasurementIndex or
+ * FragmentedMeasurementIndex enums and add a corresponding enable flag to
+ * cContinuousMeasurementEnabled or cFragmentedMeasurementEnabled. The flags
+ * allow enabling/disabling specific measurements such that a disabled
+ * measurement will not affect the performance of the program (except for
+ * extra heap storage).
  *
- * Measurements that are disabled will not affect the performance of the program (except for extra heap storage) so long as the user uses the profiling
- * preprocessor macros below.
+ * To log a measurement, use LOG_CONTINUOUS_MEASUREMENT or
+ * LOG_FRAGMENTED_MEASUREMENT, passing in the relevant measurement index enum.
+ *
+ * Two implementation details allow this class to avoid inducing overhead
+ * when profiling is disabled:
+ * - All methods bodies are defined in the header, guarded by
+ *   `if constexpr (PROF_ENABLED)`. When profiling is disabled, the compiler
+ *   will detect the empty body and won't add any code to the binary; if
+ *   the methods were instead defined in the .cpp file, the compiler would
+ *   still generate an empty method.
+ * - The methods use the measurement enum as a template parameter to
+ *   indicate which measurement the method call is for. So at compile-time,
+ *   for each measurement, the compiler can use the enable flag to determine
+ *   whether to generate code to do the measurement or whether to do
+ *   nothing.
  */
 class Profiler {
 public:
     // Types
-    enum class FragmentedMeasurementIndex : size_t {
-        SegmentRead = 0,
-        LogtypeDictRead,
-        VarDictRead,
-        MessageSearch,
-        SegmentIndexRead,
-        ColumnsAlloc,
-        Length
-    };
-    enum class FragmentedMeasurementEnabled : bool {
-        SegmentRead = true,
-        LogtypeDictRead = true,
-        VarDictRead = true,
-        MessageSearch = true,
-        SegmentIndexRead = true,
-        ColumnsAlloc = true,
-    };
     enum class ContinuousMeasurementIndex : size_t {
-        PipelineRequest = 0,
+        Compression = 0,
+        Search,
         Length
     };
-    enum class ContinuousMeasurementEnabled : bool {
-        PipelineRequest = true,
+    enum class FragmentedMeasurementIndex : size_t {
+        Length
     };
+
+    // Constants
+    // NOTE: We use lambdas so that we can programmatically initialize the constexpr array
+    static constexpr auto cContinuousMeasurementEnabled = []() {
+        std::array<bool, enum_to_underlying_type (ContinuousMeasurementIndex::Length)> enabled{};
+        enabled[enum_to_underlying_type (ContinuousMeasurementIndex::Compression)] = true;
+        enabled[enum_to_underlying_type (ContinuousMeasurementIndex::Search)] = true;
+        return enabled;
+    }();
+    static constexpr auto cFragmentedMeasurementEnabled = []() {
+        std::array<bool, enum_to_underlying_type(FragmentedMeasurementIndex::Length)> enabled{};
+        return enabled;
+    }();
 
     // Methods
     /**
      * Static initializer for class. This must be called before using the class.
      */
-    static void init ();
-
-    static void start_continuous_measurement (ContinuousMeasurementIndex index) {
-        (*m_continuous_measurement_durations_ns)[(size_t)index] = 0;
-        start_measurement(m_continuous_measurement_begin_timestamps_ns, (size_t)index);
+    static void init () {
+        if constexpr (PROF_ENABLED) {
+            m_continuous_measurements = new std::vector<Stopwatch>(
+                    enum_to_underlying_type(ContinuousMeasurementIndex::Length));
+            m_fragmented_measurements = new std::vector<Stopwatch>(
+                    enum_to_underlying_type(FragmentedMeasurementIndex::Length));
+        }
     }
 
-    static void stop_continuous_measurement (ContinuousMeasurementIndex index) {
-        stop_measurement(m_continuous_measurement_begin_timestamps_ns, m_continuous_measurement_durations_ns, (size_t)index);
+    template<ContinuousMeasurementIndex index>
+    static void start_continuous_measurement () {
+        if constexpr (PROF_ENABLED && cContinuousMeasurementEnabled[enum_to_underlying_type(index)])
+        {
+            auto& stopwatch = (*m_continuous_measurements)[enum_to_underlying_type(index)];
+            stopwatch.reset();
+            stopwatch.start();
+        }
     }
 
-    static uint64_t get_continuous_measurement_begin_ns (ContinuousMeasurementIndex index) {
-        return (*m_continuous_measurement_begin_timestamps_ns)[(size_t)index].load();
+    template<ContinuousMeasurementIndex index>
+    static void stop_continuous_measurement () {
+        if constexpr (PROF_ENABLED && cContinuousMeasurementEnabled[enum_to_underlying_type(index)])
+        {
+            (*m_continuous_measurements)[enum_to_underlying_type(index)].stop();
+        }
     }
 
-    static uint64_t get_continuous_measurement_duration_ns (ContinuousMeasurementIndex index) {
-        return (*m_continuous_measurement_durations_ns)[(size_t)index].load();
+    template<ContinuousMeasurementIndex index>
+    static double get_continuous_measurement_in_seconds () {
+        if constexpr (PROF_ENABLED) {
+            return (*m_continuous_measurements)[enum_to_underlying_type(
+                    index)].get_time_taken_in_seconds();
+        } else {
+            return 0;
+        }
     }
 
-    static void start_fragmented_measurement (FragmentedMeasurementIndex index) {
-        start_measurement(m_fragmented_measurement_begin_timestamps_ns, (size_t)index);
+    template<FragmentedMeasurementIndex index>
+    static void start_fragmented_measurement () {
+        if constexpr (PROF_ENABLED && cFragmentedMeasurementEnabled[enum_to_underlying_type(index)])
+        {
+            (*m_fragmented_measurements)[enum_to_underlying_type(index)].start();
+        }
     }
 
-    static void stop_fragmented_measurement (FragmentedMeasurementIndex index) {
-        stop_measurement(m_fragmented_measurement_begin_timestamps_ns, m_fragmented_measurement_durations_ns, (size_t)index);
+    template<FragmentedMeasurementIndex index>
+    static void stop_fragmented_measurement () {
+        if constexpr (PROF_ENABLED && cFragmentedMeasurementEnabled[enum_to_underlying_type(index)])
+        {
+            (*m_fragmented_measurements)[enum_to_underlying_type(index)].stop();
+        }
     }
 
-    static void reset_fragmented_measurement (FragmentedMeasurementIndex index) {
-        (*m_fragmented_measurement_durations_ns)[(size_t)index] = 0;
+    template<FragmentedMeasurementIndex index>
+    static void reset_fragmented_measurement () {
+        if constexpr (PROF_ENABLED && cFragmentedMeasurementEnabled[enum_to_underlying_type(index)])
+        {
+            (*m_fragmented_measurements)[enum_to_underlying_type(index)].reset();
+        }
     }
 
-    static void increment_fragmented_measurement (FragmentedMeasurementIndex index, uint64_t duration_ns) {
-        (*m_fragmented_measurement_durations_ns)[(size_t)index] += duration_ns;
-    }
-
-    static uint64_t get_fragmented_measurement (FragmentedMeasurementIndex index) {
-        return (*m_fragmented_measurement_durations_ns)[(size_t)index].load();
+    template<FragmentedMeasurementIndex index>
+    static double get_fragmented_measurement_in_seconds () {
+        if constexpr (PROF_ENABLED) {
+            return (*m_fragmented_measurements)[enum_to_underlying_type(index)]
+                    .get_time_taken_in_seconds();
+        } else {
+            return 0;
+        }
     }
 
 private:
-    // Methods
-    static void start_measurement (std::unique_ptr<std::vector<std::atomic_uint64_t>>& begin_timestamps_in_nanoseconds, size_t index);
-    static void stop_measurement (std::unique_ptr<std::vector<std::atomic_uint64_t>>& begin_timestamps_in_nanoseconds,
-                                  std::unique_ptr<std::vector<std::atomic_uint64_t>>& durations_in_nanoseconds, size_t index);
-
-    // Variables
-    static std::unique_ptr<std::vector<std::atomic_uint64_t>> m_fragmented_measurement_begin_timestamps_ns;
-    static std::unique_ptr<std::vector<std::atomic_uint64_t>> m_fragmented_measurement_durations_ns;
-    static std::unique_ptr<std::vector<std::atomic_uint64_t>> m_continuous_measurement_begin_timestamps_ns;
-    static std::unique_ptr<std::vector<std::atomic_uint64_t>> m_continuous_measurement_durations_ns;
+    static std::vector<Stopwatch>* m_fragmented_measurements;
+    static std::vector<Stopwatch>* m_continuous_measurements;
 };
 
-// Profiling macros
-#define PROFILER_INITIALIZE() if (PROF_ENABLED) { \
-    Profiler::init(); \
-}
-
-#define PROFILER_FRAGMENTED_MEASUREMENT_START(NAME) \
-    if (PROF_ENABLED && (bool)Profiler::FragmentedMeasurementEnabled::NAME) { \
-        Profiler::start_fragmented_measurement(Profiler::FragmentedMeasurementIndex::NAME); \
+// Macros to log the measurements
+// NOTE: We use macros so that we can add the measurement index to the log (not
+// easy to do with templates).
+#define LOG_CONTINUOUS_MEASUREMENT(x) \
+    if (PROF_ENABLED && Profiler::cContinuousMeasurementEnabled[enum_to_underlying_type(x)]) { \
+        SPDLOG_INFO("{} took {} s", #x, \
+                    Profiler::get_continuous_measurement_in_seconds<x>()); \
     }
-#define PROFILER_FRAGMENTED_MEASUREMENT_STOP(NAME) \
-    if (PROF_ENABLED && (bool)Profiler::FragmentedMeasurementEnabled::NAME) { \
-        Profiler::stop_fragmented_measurement(Profiler::FragmentedMeasurementIndex::NAME); \
-    }
-#define PROFILER_FRAGMENTED_MEASUREMENT_RESET(NAME) \
-    if (PROF_ENABLED && (bool)Profiler::FragmentedMeasurementEnabled::NAME) { \
-        Profiler::reset_fragmented_measurement(Profiler::FragmentedMeasurementIndex::NAME); \
-    }
-#define PROFILER_FRAGMENTED_MEASUREMENT_INCREMENT(NAME, DURATION_NS) \
-    if (PROF_ENABLED && (bool)Profiler::FragmentedMeasurementEnabled::NAME) { \
-        Profiler::increment_fragmented_measurement(Profiler::FragmentedMeasurementIndex::NAME, DURATION_NS); \
+#define LOG_FRAGMENTED_MEASUREMENT(x) \
+    if (PROF_ENABLED && Profiler::cFragmentedMeasurementEnabled[enum_to_underlying_type(x)]) { \
+        SPDLOG_INFO("{} took {} s", #x, \
+                    Profiler::get_fragmented_measurement_in_seconds<x>()); \
     }
 
-#define PROFILER_CONTINUOUS_MEASUREMENT_START(NAME) \
-    if (PROF_ENABLED && (bool)Profiler::ContinuousMeasurementEnabled::NAME) { \
-        Profiler::start_continuous_measurement(Profiler::ContinuousMeasurementIndex::NAME); \
-    }
-#define PROFILER_CONTINUOUS_MEASUREMENT_STOP(NAME) \
-    if (PROF_ENABLED && (bool)Profiler::ContinuousMeasurementEnabled::NAME) { \
-        Profiler::stop_continuous_measurement(Profiler::ContinuousMeasurementIndex::NAME); \
-    }
-
-#define PROFILER_START_STOPWATCH(NAME) \
-    if (PROF_ENABLED) NAME.start();
-#define PROFILER_STOP_STOPWATCH(NAME) \
-    if (PROF_ENABLED) NAME.stop();
 #endif // PROFILER_HPP

@@ -321,7 +321,7 @@ int main (int argc, const char* argv[]) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
-    PROFILER_INITIALIZE()
+    Profiler::init();
     TimestampPattern::init();
 
     CommandLineArguments command_line_args("clg");
@@ -335,6 +335,8 @@ int main (int argc, const char* argv[]) {
             // Continue processing
             break;
     }
+
+    Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::Search>();
 
     // Create vector of search strings
     vector<string> search_strings;
@@ -406,6 +408,9 @@ int main (int argc, const char* argv[]) {
     }
 
     global_metadata_db->close();
+
+    Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::Search>();
+    LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::Search)
 
     return 0;
 }

@@ -5,7 +5,6 @@
 
 // Project headers
 #include "EncodedVariableInterpreter.hpp"
-#include "Profiler.hpp"
 #include "Utils.hpp"
 
 using std::string;
@@ -502,9 +501,7 @@ bool Grep::search_and_decompress (const Query& query, Archive& archive, File& co
     while (false == matched) {
         // Find matching message
         const SubQuery* matching_sub_query = nullptr;
-        PROFILER_FRAGMENTED_MEASUREMENT_START(MessageSearch)
         bool message_found = find_matching_message(query, archive, matching_sub_query, compressed_file, compressed_msg);
-        PROFILER_FRAGMENTED_MEASUREMENT_STOP(MessageSearch)
         if (false == message_found) {
             return false;
         }

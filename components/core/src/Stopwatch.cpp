@@ -5,18 +5,18 @@ Stopwatch::Stopwatch () {
 }
 
 void Stopwatch::start () {
-    m_begin = std::chrono::high_resolution_clock::now();
+    m_begin = std::chrono::steady_clock::now();
 }
 
 void Stopwatch::stop () {
-    m_end = std::chrono::high_resolution_clock::now();
+    auto end = std::chrono::steady_clock::now();
 
-    std::chrono::duration<uint64_t, std::nano> time_taken = m_end - m_begin;
+    auto time_taken = end - m_begin;
     m_time_taken += time_taken;
 }
 
 void Stopwatch::reset () {
-    m_time_taken = std::chrono::high_resolution_clock::duration::zero();
+    m_time_taken = std::chrono::steady_clock::duration::zero();
 }
 
 double Stopwatch::get_time_taken_in_seconds () {

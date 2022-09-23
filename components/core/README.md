@@ -23,7 +23,7 @@ CLP's core is the low-level component that performs compression, decompression, 
 
 * We have built and tested CLP on **Ubuntu 18.04 (bionic)** and **Ubuntu 20.04 (focal)**.
   * If you have trouble building for another OS, file an issue and we may be able to help.
-* A compiler that supports c++14
+* A compiler that supports C++17 (e.g., gcc-8)
 
 ## Building
 

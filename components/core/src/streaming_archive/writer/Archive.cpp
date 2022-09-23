@@ -21,7 +21,6 @@
 
 // Project headers
 #include "../../EncodedVariableInterpreter.hpp"
-#include "../../Profiler.hpp"
 #include "../../Utils.hpp"
 #include "../Constants.hpp"
 

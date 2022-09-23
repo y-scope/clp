@@ -13,7 +13,6 @@
 
 // Project headers
 #include "../../EncodedVariableInterpreter.hpp"
-#include "../../Profiler.hpp"
 #include "../../Stopwatch.hpp"
 #include "../../Utils.hpp"
 #include "../Constants.hpp"
@@ -95,24 +94,17 @@ namespace streaming_archive { namespace reader {
 
         if (m_is_in_segment) {
             uint64_t num_bytes_to_read;
-            Stopwatch segment_read_stopwatch;
-            Stopwatch columns_alloc_stopwatch;
-
             if (m_num_messages > 0) {
                 if (m_num_messages > m_num_segment_msgs) {
                     // Buffers too small, so increase size to required amount
-                    PROFILER_START_STOPWATCH(columns_alloc_stopwatch)
                     m_segment_timestamps = make_unique<epochtime_t[]>(m_num_messages);
                     m_segment_logtypes = make_unique<logtype_dictionary_id_t[]>(m_num_messages);
-                    PROFILER_STOP_STOPWATCH(columns_alloc_stopwatch)
                     m_num_segment_msgs = m_num_messages;
                 }
 
                 num_bytes_to_read = m_num_messages*sizeof(epochtime_t);
-                PROFILER_START_STOPWATCH(segment_read_stopwatch)
                 error_code = segment_manager.try_read(m_segment_id, m_segment_timestamps_decompressed_stream_pos,
                                                       reinterpret_cast<char*>(m_segment_timestamps.get()), num_bytes_to_read);
-                PROFILER_STOP_STOPWATCH(segment_read_stopwatch)
                 if (ErrorCode_Success != error_code) {
                     close_me();
                     return error_code;
@@ -120,10 +112,8 @@ namespace streaming_archive { namespace reader {
                 m_timestamps = m_segment_timestamps.get();
 
                 num_bytes_to_read = m_num_messages*sizeof(logtype_dictionary_id_t);
-                PROFILER_START_STOPWATCH(segment_read_stopwatch)
                 error_code = segment_manager.try_read(m_segment_id, m_segment_logtypes_decompressed_stream_pos,
                                                       reinterpret_cast<char*>(m_segment_logtypes.get()), num_bytes_to_read);
-                PROFILER_STOP_STOPWATCH(segment_read_stopwatch)
                 if (ErrorCode_Success != error_code) {
                     close_me();
                     return error_code;
@@ -134,25 +124,18 @@ namespace streaming_archive { namespace reader {
             if (m_num_variables > 0) {
                 if (m_num_variables > m_num_segment_vars) {
                     // Buffer too small, so increase size to required amount
-                    PROFILER_START_STOPWATCH(columns_alloc_stopwatch)
                     m_segment_variables = make_unique<encoded_variable_t[]>(m_num_variables);
-                    PROFILER_STOP_STOPWATCH(columns_alloc_stopwatch)
                     m_num_segment_vars = m_num_variables;
                 }
                 num_bytes_to_read = m_num_variables*sizeof(encoded_variable_t);
-                PROFILER_START_STOPWATCH(segment_read_stopwatch)
                 error_code = segment_manager.try_read(m_segment_id, m_segment_variables_decompressed_stream_pos,
                                                       reinterpret_cast<char*>(m_segment_variables.get()), num_bytes_to_read);
-                PROFILER_STOP_STOPWATCH(segment_read_stopwatch)
                 if (ErrorCode_Success != error_code) {
                     close_me();
                     return error_code;
                 }
                 m_variables = m_segment_variables.get();
             }
-
-            PROFILER_FRAGMENTED_MEASUREMENT_INCREMENT(SegmentRead, segment_read_stopwatch.get_time_taken_in_nanoseconds())
-            PROFILER_FRAGMENTED_MEASUREMENT_INCREMENT(ColumnsAlloc, columns_alloc_stopwatch.get_time_taken_in_nanoseconds())
         } else {
             void* ptr;
             string file_path = archive_logs_dir_path + m_id_as_string;
