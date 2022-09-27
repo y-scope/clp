@@ -19,7 +19,7 @@
 #include "../../GlobalMetadataDB.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
-#include "../../compressor_frontend/LogParser.hpp"
+#include "../../compressor_frontend/Token.hpp"
 #include "../MetadataDB.hpp"
 #include "../../Stopwatch.hpp"
 

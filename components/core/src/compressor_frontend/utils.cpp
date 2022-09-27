@@ -12,7 +12,7 @@
 using std::unique_ptr;
 
 namespace compressor_frontend {
-    void load_lexer_from_file (const std::string& schema_file_path, bool reverse, Lexer& lexer) {
+    void load_lexer_from_file (const std::string& schema_file_path, bool reverse, Lexer<RegexNFAByteState, RegexDFAByteState>& lexer) {
         FileReader schema_reader;
         schema_reader.try_open(schema_file_path);
 

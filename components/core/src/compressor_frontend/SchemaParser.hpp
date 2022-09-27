@@ -7,9 +7,15 @@
 
 // Project headers
 #include "../ReaderInterface.hpp"
+#include "finite_automata/RegexDFAByte.hpp"
+#include "finite_automata/RegexNFAByte.hpp"
 #include "LALR1Parser.hpp"
 
 namespace compressor_frontend {
+
+    using finite_automata::RegexDFAByteState;
+    using finite_automata::RegexNFAByteState;
+
     // ASTs used in SchemaParser AST
     class SchemaFileAST : public ParserAST {
     public:
@@ -59,12 +65,13 @@ namespace compressor_frontend {
     class SchemaVarAST : public ParserAST {
     public:
         //Constructor
-        SchemaVarAST (std::string name, std::unique_ptr<RegexAST> regex_ptr, uint32_t line_num) : m_name(std::move(name)), m_regex_ptr(std::move(regex_ptr)),
-                                                                                                  m_line_num(line_num) {}
+        SchemaVarAST (std::string name, std::unique_ptr<RegexAST<RegexNFAByteState>> regex_ptr, uint32_t line_num) : m_name(std::move(name)),
+                                                                                                                     m_regex_ptr(std::move(regex_ptr)),
+                                                                                                                     m_line_num(line_num) {}
 
         uint32_t m_line_num;
         std::string m_name;
-        std::unique_ptr<RegexAST> m_regex_ptr;
+        std::unique_ptr<RegexAST<RegexNFAByteState>> m_regex_ptr;
     };
 
     class DelimiterStringAST : public ParserAST {
@@ -87,7 +94,7 @@ namespace compressor_frontend {
 
     // Schema Parser itself
 
-    class SchemaParser : public LALR1Parser {
+    class SchemaParser : public LALR1Parser<RegexNFAByteState, RegexDFAByteState> {
     public:
         // Constructor
         SchemaParser ();

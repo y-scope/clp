@@ -77,7 +77,7 @@ namespace compressor_frontend {
     static unique_ptr<SchemaVarAST> schema_var_rule (NonTerminal* m) {
         auto* r2 = dynamic_cast<IdentifierAST*>(m->nonterminal_cast(1)->getParserAST().get());
         Token* colon_token = m->token_cast(2);
-        auto& r4 = m->nonterminal_cast(3)->getParserAST()->get<unique_ptr<RegexAST>>();
+        auto& r4 = m->nonterminal_cast(3)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
         return make_unique<SchemaVarAST>(r2->m_name, std::move(r4), colon_token->m_line);
     }
 
@@ -113,7 +113,7 @@ namespace compressor_frontend {
         std::unique_ptr<SchemaFileAST> schema_file_ast(dynamic_cast<SchemaFileAST*>(r1.release()));
         unique_ptr<ParserAST>& r2 = m->nonterminal_cast(2)->getParserAST();
         schema_file_ast->add_schema_var(std::move(r2));
-        m_lexer.soft_reset();
+        m_lexer.soft_reset(NonTerminal::m_next_children_start);
         return std::move(schema_file_ast);
     }
 
@@ -123,184 +123,187 @@ namespace compressor_frontend {
         return std::move(schema_file_ast);
     }
     
-    typedef ParserValue<unique_ptr<RegexAST>> ParserValueRegex;
+    typedef ParserValue<unique_ptr<RegexAST<RegexNFAByteState>>> ParserValueRegex;
 
     static unique_ptr<ParserAST> regex_identity_rule (NonTerminal* m) {
         return unique_ptr<ParserAST>(
-                new ParserValueRegex(std::move(m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>())));
+                new ParserValueRegex(std::move(m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>())));
     }
 
     static unique_ptr<ParserAST> regex_cat_rule (NonTerminal* m) {
-        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>();
-        auto& r2 = m->nonterminal_cast(1)->getParserAST()->get<unique_ptr<RegexAST>>();
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTCat(std::move(r1), std::move(r2)))));
+        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        auto& r2 = m->nonterminal_cast(1)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(new RegexASTCat(std::move(r1), std::move(r2)))));
     }
 
     static unique_ptr<ParserAST> regex_or_rule (NonTerminal* m) {
-        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>();
-        auto& r2 = m->nonterminal_cast(2)->getParserAST()->get<unique_ptr<RegexAST>>();
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTOr(std::move(r1), std::move(r2)))));
+        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        auto& r2 = m->nonterminal_cast(2)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(new RegexASTOr(std::move(r1), std::move(r2)))));
     }
 
     static unique_ptr<ParserAST> regex_match_zero_or_more_rule (NonTerminal* m) {
-        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>();
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTMultiplication(std::move(r1), 0, 0))));
+        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(new RegexASTMultiplication(std::move(r1), 0, 0))));
     }
 
     static unique_ptr<ParserAST> regex_match_one_or_more_rule (NonTerminal* m) {
-        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>();
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTMultiplication(std::move(r1), 1, 0))));
+        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(new RegexASTMultiplication(std::move(r1), 1, 0))));
     }
 
     static unique_ptr<ParserAST> regex_match_exactly_rule (NonTerminal* m) {
-        auto& r3 = m->nonterminal_cast(2)->getParserAST()->get<unique_ptr<RegexAST>>();
-        auto* r3_ptr = dynamic_cast<RegexASTInteger*>(r3.get());
+        auto& r3 = m->nonterminal_cast(2)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        auto* r3_ptr = dynamic_cast<RegexASTInteger<RegexNFAByteState>*>(r3.get());
         uint32_t reps = 0;
         uint32_t r3_size = r3_ptr->get_digits().size();
         for (uint32_t i = 0; i < r3_size; i++) {
             reps += r3_ptr->get_digit(i) * (uint32_t) pow(10, r3_size - i - 1);
         }
-        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>();
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTMultiplication(std::move(r1), reps, reps))));
+        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(new RegexASTMultiplication(std::move(r1), reps, reps))));
     }
 
     static unique_ptr<ParserAST> regex_match_range_rule (NonTerminal* m) {
-        auto& r3 = m->nonterminal_cast(2)->getParserAST()->get<unique_ptr<RegexAST>>();
-        auto* r3_ptr = dynamic_cast<RegexASTInteger*>(r3.get());
+        auto& r3 = m->nonterminal_cast(2)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        auto* r3_ptr = dynamic_cast<RegexASTInteger<RegexNFAByteState>*>(r3.get());
         uint32_t min = 0;
         uint32_t r3_size = r3_ptr->get_digits().size();
         for (uint32_t i = 0; i < r3_size; i++) {
             min += r3_ptr->get_digit(i) * (uint32_t) pow(10, r3_size - i - 1);
         }
-        auto& r5 = m->nonterminal_cast(4)->getParserAST()->get<unique_ptr<RegexAST>>();
-        auto* r5_ptr = dynamic_cast<RegexASTInteger*>(r5.get());
+        auto& r5 = m->nonterminal_cast(4)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        auto* r5_ptr = dynamic_cast<RegexASTInteger<RegexNFAByteState>*>(r5.get());
         uint32_t max = 0;
         uint32_t r5_size = r5_ptr->get_digits().size();
         for (uint32_t i = 0; i < r5_size; i++) {
             max += r5_ptr->get_digit(i) * (uint32_t) pow(10, r5_size - i - 1);
         }
-        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>();
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTMultiplication(std::move(r1), min, max))));
+        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(new RegexASTMultiplication(std::move(r1), min, max))));
     }
 
     static unique_ptr<ParserAST> regex_add_literal_existing_group_rule (NonTerminal* m) {
-        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>();
-        auto& r2 = m->nonterminal_cast(1)->getParserAST()->get<unique_ptr<RegexAST>>();
-        auto* r1_ptr = dynamic_cast<RegexASTGroup*>(r1.get());
-        auto* r2_ptr = dynamic_cast<RegexASTLiteral*>(r2.get());
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTGroup(r1_ptr, r2_ptr))));
+        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        auto& r2 = m->nonterminal_cast(1)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        auto* r1_ptr = dynamic_cast<RegexASTGroup<RegexNFAByteState>*>(r1.get());
+        auto* r2_ptr = dynamic_cast<RegexASTLiteral<RegexNFAByteState>*>(r2.get());
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(new RegexASTGroup(r1_ptr, r2_ptr))));
     }
 
     static unique_ptr<ParserAST> regex_add_range_existing_group_rule (NonTerminal* m) {
-        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>();
-        auto& r2 = m->nonterminal_cast(1)->getParserAST()->get<unique_ptr<RegexAST>>();
-        auto* r1_ptr = dynamic_cast<RegexASTGroup*>(r1.get());
-        auto* r2_ptr = dynamic_cast<RegexASTGroup*>(r2.get());
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTGroup(r1_ptr, r2_ptr))));
+        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        auto& r2 = m->nonterminal_cast(1)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        auto* r1_ptr = dynamic_cast<RegexASTGroup<RegexNFAByteState>*>(r1.get());
+        auto* r2_ptr = dynamic_cast<RegexASTGroup<RegexNFAByteState>*>(r2.get());
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(new RegexASTGroup(r1_ptr, r2_ptr))));
     }
 
     static unique_ptr<ParserAST> regex_add_literal_new_group_rule (NonTerminal* m) {
-        auto& r2 = m->nonterminal_cast(1)->getParserAST()->get<unique_ptr<RegexAST>>();
-        auto* r2_ptr = dynamic_cast<RegexASTLiteral*>(r2.get());
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTGroup(r2_ptr))));
+        auto& r2 = m->nonterminal_cast(1)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        auto* r2_ptr = dynamic_cast<RegexASTLiteral<RegexNFAByteState>*>(r2.get());
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(new RegexASTGroup(r2_ptr))));
     }
 
     static unique_ptr<ParserAST> regex_add_range_new_group_rule (NonTerminal* m) {
-        auto& r2 = m->nonterminal_cast(1)->getParserAST()->get<unique_ptr<RegexAST>>();
-        auto* r2_ptr = dynamic_cast<RegexASTGroup*>(r2.get());
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTGroup(r2_ptr))));
+        auto& r2 = m->nonterminal_cast(1)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        auto* r2_ptr = dynamic_cast<RegexASTGroup<RegexNFAByteState>*>(r2.get());
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(new RegexASTGroup(r2_ptr))));
     }
 
     static unique_ptr<ParserAST> regex_complement_incomplete_group_rule (NonTerminal* m) {
-        return unique_ptr<ParserAST>(new ParserValueRegex(make_unique<RegexASTGroup>()));
+        return unique_ptr<ParserAST>(new ParserValueRegex(make_unique<RegexASTGroup<RegexNFAByteState>>()));
     }
 
     static unique_ptr<ParserAST> regex_range_rule (NonTerminal* m) {
-        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>();
-        auto& r2 = m->nonterminal_cast(2)->getParserAST()->get<unique_ptr<RegexAST>>();
-        auto* r1_ptr = dynamic_cast<RegexASTLiteral*>(r1.get());
-        auto* r2_ptr = dynamic_cast<RegexASTLiteral*>(r2.get());
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTGroup(r1_ptr, r2_ptr))));
+        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        auto& r2 = m->nonterminal_cast(2)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        auto* r1_ptr = dynamic_cast<RegexASTLiteral<RegexNFAByteState>*>(r1.get());
+        auto* r2_ptr = dynamic_cast<RegexASTLiteral<RegexNFAByteState>*>(r2.get());
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(new RegexASTGroup(r1_ptr, r2_ptr))));
     }
 
     static unique_ptr<ParserAST> regex_middle_identity_rule (NonTerminal* m) {
         return unique_ptr<ParserAST>(
-                new ParserValueRegex(std::move(m->nonterminal_cast(1)->getParserAST()->get<unique_ptr<RegexAST>>())));
+                new ParserValueRegex(std::move(m->nonterminal_cast(1)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>())));
     }
 
     static unique_ptr<ParserAST> regex_literal_rule (NonTerminal* m) {
         Token* token = m->token_cast(0);
         assert(token->get_string().size() == 1);
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTLiteral(token->get_string()[0]))));
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(
+                new RegexASTLiteral<RegexNFAByteState>(token->get_string()[0]))));
     }
 
     static unique_ptr<ParserAST> regex_cancel_literal_rule (NonTerminal* m) {
         Token* token = m->token_cast(1);
         assert(token->get_string().size() == 1);
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTLiteral(token->get_string()[0]))));
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(
+                new RegexASTLiteral<RegexNFAByteState>(token->get_string()[0]))));
     }
 
     static unique_ptr<ParserAST> regex_existing_integer_rule (NonTerminal* m) {
-        auto& r2 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>();
-        auto* r2_ptr = dynamic_cast<RegexASTInteger*>(r2.get());
+        auto& r2 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        auto* r2_ptr = dynamic_cast<RegexASTInteger<RegexNFAByteState>*>(r2.get());
         Token* token = m->token_cast(1);
         assert(token->get_string().size() == 1);
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTInteger(r2_ptr, token->get_string()[0]))));
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(new RegexASTInteger(r2_ptr, token->get_string()[0]))));
     }
 
     static unique_ptr<ParserAST> regex_new_integer_rule (NonTerminal* m) {
         Token* token = m->token_cast(0);
         assert(token->get_string().size() == 1);
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTInteger(token->get_string()[0]))));
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(
+                new RegexASTInteger<RegexNFAByteState>(token->get_string()[0]))));
     }
 
     static unique_ptr<ParserAST> regex_digit_rule (NonTerminal* m) {
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTGroup('0', '9'))));
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(new RegexASTGroup<RegexNFAByteState>('0', '9'))));
     }
 
     static unique_ptr<ParserAST> regex_wildcard_rule (NonTerminal* m) {
-        unique_ptr<RegexASTGroup> regex_wildcard = make_unique<RegexASTGroup>(0, cUnicodeMax);
+        unique_ptr<RegexASTGroup<RegexNFAByteState>> regex_wildcard = make_unique<RegexASTGroup<RegexNFAByteState>>(0, cUnicodeMax);
         regex_wildcard->set_is_wildcard_true();
         return unique_ptr<ParserAST>(new ParserValueRegex(std::move(regex_wildcard)));
     }
 
     static unique_ptr<ParserAST> regex_vertical_tab_rule (NonTerminal* m) {
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTLiteral('\v'))));
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(new RegexASTLiteral<RegexNFAByteState>('\v'))));
     }
 
     static unique_ptr<ParserAST> regex_form_feed_rule (NonTerminal* m) {
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTLiteral('\f'))));
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(new RegexASTLiteral<RegexNFAByteState>('\f'))));
     }
 
     static unique_ptr<ParserAST> regex_tab_rule (NonTerminal* m) {
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTLiteral('\t'))));
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(new RegexASTLiteral<RegexNFAByteState>('\t'))));
     }
 
     static unique_ptr<ParserAST> regex_char_return_rule (NonTerminal* m) {
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTLiteral('\r'))));
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(new RegexASTLiteral<RegexNFAByteState>('\r'))));
     }
 
     static unique_ptr<ParserAST> regex_newline_rule (NonTerminal* m) {
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(new RegexASTLiteral('\n'))));
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(new RegexASTLiteral<RegexNFAByteState>('\n'))));
     }
 
     static unique_ptr<ParserAST> regex_white_space_rule (NonTerminal* m) {
-        unique_ptr<RegexASTGroup> regex_ast_group = make_unique<RegexASTGroup>(RegexASTGroup({' ', '\t', '\r', '\n', '\v', '\f'}));
-        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST>(std::move(regex_ast_group))));
+        unique_ptr<RegexASTGroup<RegexNFAByteState>> regex_ast_group = make_unique<RegexASTGroup<RegexNFAByteState>>(RegexASTGroup<RegexNFAByteState>({' ', '\t', '\r', '\n', '\v', '\f'}));
+        return unique_ptr<ParserAST>(new ParserValueRegex(unique_ptr<RegexAST<RegexNFAByteState>>(std::move(regex_ast_group))));
     }
 
     static unique_ptr<ParserAST> existing_delimiter_string_rule (NonTerminal* m) {
         unique_ptr<ParserAST>& r1 = m->nonterminal_cast(0)->getParserAST();
-        auto& r2 = m->nonterminal_cast(1)->getParserAST()->get<unique_ptr<RegexAST>>();
+        auto& r2 = m->nonterminal_cast(1)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
         auto* r1_ptr = dynamic_cast<DelimiterStringAST*>(r1.get());
-        uint32_t character = dynamic_cast<RegexASTLiteral*>(r2.get())->get_character();
+        uint32_t character = dynamic_cast<RegexASTLiteral<RegexNFAByteState>*>(r2.get())->get_character();
         r1_ptr->add_delimiter(character);
         return std::move(r1);
     }
 
     static unique_ptr<ParserAST> new_delimiter_string_rule (NonTerminal* m) {
-        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST>>();
-        uint32_t character = dynamic_cast<RegexASTLiteral*>(r1.get())->get_character();
+        auto& r1 = m->nonterminal_cast(0)->getParserAST()->get<unique_ptr<RegexAST<RegexNFAByteState>>>();
+        uint32_t character = dynamic_cast<RegexASTLiteral<RegexNFAByteState>*>(r1.get())->get_character();
         return make_unique<DelimiterStringAST>(character);
     }
 
@@ -326,7 +329,7 @@ namespace compressor_frontend {
         add_token("Dash", '-');
         add_token("Dot", '.');
         add_token("ForwardSlash", '/');
-        add_token_group("Numeric", make_unique<RegexASTGroup>('0', '9'));
+        add_token_group("Numeric", make_unique<RegexASTGroup<RegexNFAByteState>>('0', '9'));
         add_token("Colon", ':');
         add_token("SemiColon", ';');
         add_token("LAngle", '<');
@@ -334,9 +337,9 @@ namespace compressor_frontend {
         add_token("RAngle", '>');
         add_token("QuestionMark", '?');
         add_token("At", '@');
-        add_token_group("AlphaNumeric", make_unique<RegexASTGroup>('a', 'z'));
-        add_token_group("AlphaNumeric", make_unique<RegexASTGroup>('A', 'Z'));
-        add_token_group("AlphaNumeric", make_unique<RegexASTGroup>('0', '9'));
+        add_token_group("AlphaNumeric", make_unique<RegexASTGroup<RegexNFAByteState>>('a', 'z'));
+        add_token_group("AlphaNumeric", make_unique<RegexASTGroup<RegexNFAByteState>>('A', 'Z'));
+        add_token_group("AlphaNumeric", make_unique<RegexASTGroup<RegexNFAByteState>>('0', '9'));
         add_token("Lbracket", '[');
         add_token("Backslash", '\\');
         add_token("Rbracket", ']');
@@ -356,7 +359,7 @@ namespace compressor_frontend {
         add_token("v", 'v');
         add_token_chain("Delimiters", "delimiters");
         // default constructs to a m_negate group
-        unique_ptr<RegexASTGroup> comment_characters = make_unique<RegexASTGroup>();
+        unique_ptr<RegexASTGroup<RegexNFAByteState>> comment_characters = make_unique<RegexASTGroup<RegexNFAByteState>>();
         comment_characters->add_literal('\r');
         comment_characters->add_literal('\n');
         add_token_group("CommentCharacters", std::move(comment_characters));

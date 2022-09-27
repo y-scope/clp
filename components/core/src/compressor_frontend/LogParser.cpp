@@ -64,11 +64,11 @@ namespace compressor_frontend {
             rule->m_regex_ptr->remove_delimiters_from_wildcard(delimiters);
 
             if (rule->m_name == "timestamp") {
-                unique_ptr<RegexAST> first_timestamp_regex_ast(rule->m_regex_ptr->clone());
+                unique_ptr<RegexAST<RegexNFAByteState>> first_timestamp_regex_ast(rule->m_regex_ptr->clone());
                 add_rule("firstTimestamp", std::move(first_timestamp_regex_ast));
-                unique_ptr<RegexAST> newline_timestamp_regex_ast(rule->m_regex_ptr->clone());
-                unique_ptr<RegexASTLiteral> r2 = make_unique<RegexASTLiteral>('\n');
-                add_rule("newLineTimestamp", make_unique<RegexASTCat>(std::move(r2), std::move(newline_timestamp_regex_ast)));
+                unique_ptr<RegexAST<RegexNFAByteState>> newline_timestamp_regex_ast(rule->m_regex_ptr->clone());
+                unique_ptr<RegexASTLiteral<RegexNFAByteState>> r2 = make_unique<RegexASTLiteral<RegexNFAByteState>>('\n');
+                add_rule("newLineTimestamp", make_unique<RegexASTCat<RegexNFAByteState>>(std::move(r2), std::move(newline_timestamp_regex_ast)));
                 // prevent timestamps from going into the dictionary
                 continue;
             }
@@ -114,8 +114,9 @@ namespace compressor_frontend {
                 }
                 throw runtime_error("Variable contains delimiter");
             }
-            unique_ptr<RegexASTGroup> delimiter_group = make_unique<RegexASTGroup>(RegexASTGroup(delimiters));
-            rule->m_regex_ptr = make_unique<RegexASTCat>(std::move(delimiter_group), std::move(rule->m_regex_ptr));
+            unique_ptr<RegexASTGroup<RegexNFAByteState>> delimiter_group =
+                    make_unique<RegexASTGroup<RegexNFAByteState>>(RegexASTGroup<RegexNFAByteState>(delimiters));
+            rule->m_regex_ptr = make_unique<RegexASTCat<RegexNFAByteState>>(std::move(delimiter_group), std::move(rule->m_regex_ptr));
             add_rule(rule->m_name, std::move(rule->m_regex_ptr));
         }
     }
@@ -186,7 +187,7 @@ namespace compressor_frontend {
                 m_archive_writer_ptr->write_msg_using_schema(m_active_uncompressed_msg, m_uncompressed_msg_pos,
                                                              m_lexer.get_has_delimiters(), has_timestamp);
                 m_uncompressed_msg_pos = 0;
-                m_lexer.soft_reset();
+                m_lexer.soft_reset(NonTerminal::m_next_children_start);
             }
             if (found_start_of_next_message) {
                 increment_uncompressed_msg_pos(reader);
@@ -198,7 +199,7 @@ namespace compressor_frontend {
                 }
                 m_active_uncompressed_msg[m_uncompressed_msg_pos - 1].m_end_pos =
                         m_active_uncompressed_msg[m_uncompressed_msg_pos - 1].m_start_pos + 1;
-                m_active_uncompressed_msg[m_uncompressed_msg_pos - 1].m_type_ids = &Lexer::cTokenUncaughtStringTypes;
+                m_active_uncompressed_msg[m_uncompressed_msg_pos - 1].m_type_ids = &Lexer<RegexNFAByteState, RegexDFAByteState>::cTokenUncaughtStringTypes;
                 m_lexer.set_reduce_pos(m_active_uncompressed_msg[m_uncompressed_msg_pos].m_start_pos - 1);
                 m_archive_writer_ptr->write_msg_using_schema(m_active_uncompressed_msg, m_uncompressed_msg_pos,
                                                              m_lexer.get_has_delimiters(), has_timestamp);
@@ -214,7 +215,7 @@ namespace compressor_frontend {
                     m_active_uncompressed_msg[1] = m_active_uncompressed_msg[m_uncompressed_msg_pos];
                     m_uncompressed_msg_pos = 1;
                 }
-                m_lexer.soft_reset();
+                m_lexer.soft_reset(NonTerminal::m_next_children_start);
             }
             increment_uncompressed_msg_pos(reader);
         }

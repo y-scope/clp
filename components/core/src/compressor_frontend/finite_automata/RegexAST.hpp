@@ -1,5 +1,5 @@
-#ifndef COMPRESSOR_FRONTEND_FINITEAUTOMATA_REGEXAST_HPP
-#define COMPRESSOR_FRONTEND_FINITEAUTOMATA_REGEXAST_HPP
+#ifndef COMPRESSOR_FRONTEND_FINITE_AUTOMATA_REGEX_AST_HPP
+#define COMPRESSOR_FRONTEND_FINITE_AUTOMATA_REGEX_AST_HPP
 
 // C++ standard libraries
 #include <algorithm>
@@ -11,11 +11,12 @@
 
 // Project headers
 #include "../Constants.hpp"
-#include "RegexDFA.hpp"
 #include "RegexNFA.hpp"
 #include "UnicodeIntervalTree.hpp"
 
 namespace compressor_frontend::finite_automata {
+
+    template <typename NFAStateType>
     class RegexAST {
     public:
         // Destructor
@@ -44,11 +45,12 @@ namespace compressor_frontend::finite_automata {
          * @param nfa
          * @param end_state
          */
-        virtual void add (RegexNFA* nfa, RegexNFA::State* end_state) = 0;
+        virtual void add (RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) = 0;
     };
 
     // Leaf node
-    class RegexASTLiteral : public RegexAST {
+    template <typename NFAStateType>
+    class RegexASTLiteral : public RegexAST<NFAStateType> {
     public:
         // Constructor
         explicit RegexASTLiteral (uint32_t character);
@@ -82,7 +84,7 @@ namespace compressor_frontend::finite_automata {
          * @param nfa
          * @param end_state
          */
-        void add (RegexNFA* nfa, RegexNFA::State* end_state) override;
+        void add (RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) override;
 
         /**
          * Gets the character (literal) associated with a RegexASTLiteral leaf node
@@ -98,7 +100,8 @@ namespace compressor_frontend::finite_automata {
     };
 
     // Leaf node
-    class RegexASTInteger : public RegexAST {
+    template <typename NFAStateType>
+    class RegexASTInteger : public RegexAST<NFAStateType> {
     public:
         // Constructor
         explicit RegexASTInteger (uint32_t digit);
@@ -137,7 +140,7 @@ namespace compressor_frontend::finite_automata {
          * @param nfa
          * @param end_state
          */
-        void add (RegexNFA* nfa, RegexNFA::State* end_state) override;
+        void add (RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) override;
 
         /**
          * Returns the digits associated with the RegexASTInteger leaf node
@@ -160,7 +163,8 @@ namespace compressor_frontend::finite_automata {
     };
 
     // Lead node
-    class RegexASTGroup : public RegexAST {
+    template <typename NFAStateType>
+    class RegexASTGroup : public RegexAST<NFAStateType> {
     public:
 
         typedef std::pair<uint32_t, uint32_t> Range;
@@ -169,19 +173,19 @@ namespace compressor_frontend::finite_automata {
         RegexASTGroup ();
 
         // constructor
-        RegexASTGroup (RegexASTGroup* left, RegexASTLiteral* right);
+        RegexASTGroup (RegexASTGroup* left, RegexASTLiteral<NFAStateType>* right);
 
         // constructor
         RegexASTGroup (RegexASTGroup* left, RegexASTGroup* right);
 
         // constructor
-        explicit RegexASTGroup (RegexASTLiteral* right);
+        explicit RegexASTGroup (RegexASTLiteral<NFAStateType>* right);
 
         // constructor
         explicit RegexASTGroup (RegexASTGroup* right);
 
         // constructor
-        RegexASTGroup (RegexASTLiteral* left, RegexASTLiteral* right);
+        RegexASTGroup (RegexASTLiteral<NFAStateType>* left, RegexASTLiteral<NFAStateType>* right);
 
         // constructor
         RegexASTGroup (uint32_t min, uint32_t max);
@@ -257,7 +261,7 @@ namespace compressor_frontend::finite_automata {
          * @param nfa
          * @param end_state
          */
-        void add (RegexNFA* nfa, RegexNFA::State* end_state) override;
+        void add (RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) override;
 
         /**
          * Adds range between min and max (inclusive) to m_ranges
@@ -302,15 +306,17 @@ namespace compressor_frontend::finite_automata {
     };
     
     // Intermediate node
-    class RegexASTOr : public RegexAST {
+
+    template <typename NFAStateType>
+    class RegexASTOr : public RegexAST<NFAStateType> {
     public:
         // Constructor
-        RegexASTOr (std::unique_ptr<RegexAST>, std::unique_ptr<RegexAST>);
+        RegexASTOr (std::unique_ptr<RegexAST<NFAStateType>>, std::unique_ptr<RegexAST<NFAStateType>>);
 
         // Constructor
         RegexASTOr (const RegexASTOr& rhs) {
-            m_left = std::unique_ptr<RegexAST>(rhs.m_left->clone());
-            m_right = std::unique_ptr<RegexAST>(rhs.m_right->clone());
+            m_left = std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_left->clone());
+            m_right = std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_right->clone());
         }
         
         /**
@@ -344,23 +350,24 @@ namespace compressor_frontend::finite_automata {
          * @param nfa
          * @param end_state
          */
-        void add (RegexNFA* nfa, RegexNFA::State* end_state) override;
+        void add (RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) override;
 
     private:
-        std::unique_ptr<RegexAST> m_left;
-        std::unique_ptr<RegexAST> m_right;
+        std::unique_ptr<RegexAST<NFAStateType>> m_left;
+        std::unique_ptr<RegexAST<NFAStateType>> m_right;
     };
 
     // Intermediate node
-    class RegexASTCat : public RegexAST {
+    template <typename NFAStateType>
+    class RegexASTCat : public RegexAST<NFAStateType> {
     public:
         // Constructor
-        RegexASTCat (std::unique_ptr<RegexAST>, std::unique_ptr<RegexAST>);
+        RegexASTCat (std::unique_ptr<RegexAST<NFAStateType>>, std::unique_ptr<RegexAST<NFAStateType>>);
 
         // Constructor
         RegexASTCat (const RegexASTCat& rhs) {
-            m_left = std::unique_ptr<RegexAST>(rhs.m_left->clone());
-            m_right = std::unique_ptr<RegexAST>(rhs.m_right->clone());
+            m_left = std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_left->clone());
+            m_right = std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_right->clone());
         }
         
         /**
@@ -394,22 +401,23 @@ namespace compressor_frontend::finite_automata {
          * @param nfa
          * @param end_state
          */
-        void add (RegexNFA* nfa, RegexNFA::State* end_state) override;
+        void add (RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) override;
 
     private:
-        std::unique_ptr<RegexAST> m_left;
-        std::unique_ptr<RegexAST> m_right;
+        std::unique_ptr<RegexAST<NFAStateType>> m_left;
+        std::unique_ptr<RegexAST<NFAStateType>> m_right;
     };
 
     // Intermediate node
-    class RegexASTMultiplication : public RegexAST {
+    template <typename NFAStateType>
+    class RegexASTMultiplication : public RegexAST<NFAStateType> {
     public:
         // Constructor
-        RegexASTMultiplication (std::unique_ptr<RegexAST>, uint32_t, uint32_t);
+        RegexASTMultiplication (std::unique_ptr<RegexAST<NFAStateType>>, uint32_t, uint32_t);
         
         // Constructor
         RegexASTMultiplication (const RegexASTMultiplication& rhs) {
-            m_operand = std::unique_ptr<RegexAST>(rhs.m_operand->clone());
+            m_operand = std::unique_ptr<RegexAST<NFAStateType>>(rhs.m_operand->clone());
             m_min = rhs.m_min;
             m_max = rhs.m_max;
         }
@@ -443,7 +451,7 @@ namespace compressor_frontend::finite_automata {
          * @param nfa
          * @param end_state
          */
-        void add (RegexNFA* nfa, RegexNFA::State* end_state) override;
+        void add (RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) override;
 
         /**
          * Returns if the multiplication associated with the RegexASTMultiplication node is infinite ('*')
@@ -454,9 +462,12 @@ namespace compressor_frontend::finite_automata {
         }
 
     private:
-        std::unique_ptr<RegexAST> m_operand;
+        std::unique_ptr<RegexAST<NFAStateType>> m_operand;
         uint32_t m_min;
         uint32_t m_max;
     };
 }
-#endif // COMPRESSOR_FRONTEND_FINITEAUTOMATA_REGEXAST_HPP
+
+#include "RegexAST.tpp"
+
+#endif // COMPRESSOR_FRONTEND_FINITE_AUTOMATA_REGEX_AST_HPP

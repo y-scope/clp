@@ -10,12 +10,18 @@
 
 // Project headers
 #include "../Stopwatch.hpp"
+#include "finite_automata/RegexDFAByte.hpp"
+#include "finite_automata/RegexNFAByte.hpp"
 #include "LALR1Parser.hpp"
 #include "SchemaParser.hpp"
 
 namespace compressor_frontend {
+
+    using finite_automata::RegexDFAByteState;
+    using finite_automata::RegexNFAByteState;
+
     /// TODO: try not inheriting from LALR1Parser (and compare c-array vs. vectors (its underlying array) for buffers afterwards)
-    class LogParser : public LALR1Parser {
+    class LogParser : public LALR1Parser<RegexNFAByteState, RegexDFAByteState> {
     public:
         // Constructor
         LogParser (const std::string& schema_file_path);

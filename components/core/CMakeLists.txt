@@ -179,24 +179,36 @@ set(SOURCE_FILES_clp
         src/FileWriter.cpp
         src/FileWriter.hpp
         src/compressor_frontend/Constants.hpp
-        src/compressor_frontend/finite_automata/RegexAST.cpp
         src/compressor_frontend/finite_automata/RegexAST.hpp
+        src/compressor_frontend/finite_automata/RegexAST.tpp
         src/compressor_frontend/finite_automata/RegexDFA.cpp
         src/compressor_frontend/finite_automata/RegexDFA.hpp
-        src/compressor_frontend/finite_automata/RegexNFA.cpp
+        src/compressor_frontend/finite_automata/RegexDFA.tpp
+        src/compressor_frontend/finite_automata/RegexDFAByte.cpp
+        src/compressor_frontend/finite_automata/RegexDFAByte.hpp
+        src/compressor_frontend/finite_automata/RegexDFAUTF8.cpp
+        src/compressor_frontend/finite_automata/RegexDFAUTF8.hpp
         src/compressor_frontend/finite_automata/RegexNFA.hpp
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
+        src/compressor_frontend/finite_automata/RegexNFA.tpp
+        src/compressor_frontend/finite_automata/RegexNFAByte.cpp
+        src/compressor_frontend/finite_automata/RegexNFAByte.hpp
+        src/compressor_frontend/finite_automata/RegexNFAUTF8.cpp
+        src/compressor_frontend/finite_automata/RegexNFAUTF8.hpp
         src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
+        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
         src/compressor_frontend/LALR1Parser.cpp
         src/compressor_frontend/LALR1Parser.hpp
-        src/compressor_frontend/Lexer.cpp
+        src/compressor_frontend/LALR1Parser.tpp
         src/compressor_frontend/Lexer.hpp
+        src/compressor_frontend/Lexer.tpp
         src/compressor_frontend/LogParser.cpp
         src/compressor_frontend/LogParser.hpp
         src/compressor_frontend/SchemaParser.cpp
         src/compressor_frontend/SchemaParser.hpp
         src/compressor_frontend/Token.cpp
         src/compressor_frontend/Token.hpp
+        src/compressor_frontend/utils.cpp
+        src/compressor_frontend/utils.hpp
         src/GlobalMetadataDB.cpp
         src/GlobalMetadataDB.hpp
         src/GlobalMetadataDBConfig.cpp
@@ -332,20 +344,30 @@ set(SOURCE_FILES_clg
         src/FileWriter.cpp
         src/FileWriter.hpp
         src/compressor_frontend/Constants.hpp
-        src/compressor_frontend/finite_automata/RegexAST.cpp
         src/compressor_frontend/finite_automata/RegexAST.hpp
+        src/compressor_frontend/finite_automata/RegexAST.tpp
         src/compressor_frontend/finite_automata/RegexDFA.cpp
         src/compressor_frontend/finite_automata/RegexDFA.hpp
-        src/compressor_frontend/finite_automata/RegexNFA.cpp
+        src/compressor_frontend/finite_automata/RegexDFA.tpp
+        src/compressor_frontend/finite_automata/RegexDFAByte.cpp
+        src/compressor_frontend/finite_automata/RegexDFAByte.hpp
+        src/compressor_frontend/finite_automata/RegexDFAUTF8.cpp
+        src/compressor_frontend/finite_automata/RegexDFAUTF8.hpp
         src/compressor_frontend/finite_automata/RegexNFA.hpp
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
+        src/compressor_frontend/finite_automata/RegexNFA.tpp
+        src/compressor_frontend/finite_automata/RegexNFAByte.cpp
+        src/compressor_frontend/finite_automata/RegexNFAByte.hpp
+        src/compressor_frontend/finite_automata/RegexNFAUTF8.cpp
+        src/compressor_frontend/finite_automata/RegexNFAUTF8.hpp
         src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
+        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
         src/compressor_frontend/LALR1Parser.cpp
         src/compressor_frontend/LALR1Parser.hpp
-        src/compressor_frontend/Lexer.cpp
+        src/compressor_frontend/LALR1Parser.tpp
         src/compressor_frontend/Lexer.hpp
-        src/compressor_frontend/QueryParser.cpp
-        src/compressor_frontend/QueryParser.hpp
+        src/compressor_frontend/Lexer.tpp
+        src/compressor_frontend/LogParser.cpp
+        src/compressor_frontend/LogParser.hpp
         src/compressor_frontend/SchemaParser.cpp
         src/compressor_frontend/SchemaParser.hpp
         src/compressor_frontend/Token.cpp
@@ -478,18 +500,30 @@ set(SOURCE_FILES_clo
         src/FileWriter.cpp
         src/FileWriter.hpp
         src/compressor_frontend/Constants.hpp
-        src/compressor_frontend/finite_automata/RegexAST.cpp
         src/compressor_frontend/finite_automata/RegexAST.hpp
+        src/compressor_frontend/finite_automata/RegexAST.tpp
         src/compressor_frontend/finite_automata/RegexDFA.cpp
         src/compressor_frontend/finite_automata/RegexDFA.hpp
-        src/compressor_frontend/finite_automata/RegexNFA.cpp
+        src/compressor_frontend/finite_automata/RegexDFA.tpp
+        src/compressor_frontend/finite_automata/RegexDFAByte.cpp
+        src/compressor_frontend/finite_automata/RegexDFAByte.hpp
+        src/compressor_frontend/finite_automata/RegexDFAUTF8.cpp
+        src/compressor_frontend/finite_automata/RegexDFAUTF8.hpp
         src/compressor_frontend/finite_automata/RegexNFA.hpp
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
+        src/compressor_frontend/finite_automata/RegexNFA.tpp
+        src/compressor_frontend/finite_automata/RegexNFAByte.cpp
+        src/compressor_frontend/finite_automata/RegexNFAByte.hpp
+        src/compressor_frontend/finite_automata/RegexNFAUTF8.cpp
+        src/compressor_frontend/finite_automata/RegexNFAUTF8.hpp
         src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
+        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
         src/compressor_frontend/LALR1Parser.cpp
         src/compressor_frontend/LALR1Parser.hpp
-        src/compressor_frontend/Lexer.cpp
+        src/compressor_frontend/LALR1Parser.tpp
         src/compressor_frontend/Lexer.hpp
+        src/compressor_frontend/Lexer.tpp
+        src/compressor_frontend/LogParser.cpp
+        src/compressor_frontend/LogParser.hpp
         src/compressor_frontend/SchemaParser.cpp
         src/compressor_frontend/SchemaParser.hpp
         src/compressor_frontend/Token.cpp
@@ -609,24 +643,36 @@ set(SOURCE_FILES_unitTest
         src/clp/utils.cpp
         src/clp/utils.hpp
         src/compressor_frontend/Constants.hpp
-        src/compressor_frontend/finite_automata/RegexAST.cpp
         src/compressor_frontend/finite_automata/RegexAST.hpp
+        src/compressor_frontend/finite_automata/RegexAST.tpp
         src/compressor_frontend/finite_automata/RegexDFA.cpp
         src/compressor_frontend/finite_automata/RegexDFA.hpp
-        src/compressor_frontend/finite_automata/RegexNFA.cpp
+        src/compressor_frontend/finite_automata/RegexDFA.tpp
+        src/compressor_frontend/finite_automata/RegexDFAByte.cpp
+        src/compressor_frontend/finite_automata/RegexDFAByte.hpp
+        src/compressor_frontend/finite_automata/RegexDFAUTF8.cpp
+        src/compressor_frontend/finite_automata/RegexDFAUTF8.hpp
         src/compressor_frontend/finite_automata/RegexNFA.hpp
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
+        src/compressor_frontend/finite_automata/RegexNFA.tpp
+        src/compressor_frontend/finite_automata/RegexNFAByte.cpp
+        src/compressor_frontend/finite_automata/RegexNFAByte.hpp
+        src/compressor_frontend/finite_automata/RegexNFAUTF8.cpp
+        src/compressor_frontend/finite_automata/RegexNFAUTF8.hpp
         src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
+        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
         src/compressor_frontend/LALR1Parser.cpp
         src/compressor_frontend/LALR1Parser.hpp
-        src/compressor_frontend/Lexer.cpp
+        src/compressor_frontend/LALR1Parser.tpp
         src/compressor_frontend/Lexer.hpp
+        src/compressor_frontend/Lexer.tpp
         src/compressor_frontend/LogParser.cpp
         src/compressor_frontend/LogParser.hpp
         src/compressor_frontend/SchemaParser.cpp
         src/compressor_frontend/SchemaParser.hpp
         src/compressor_frontend/Token.cpp
         src/compressor_frontend/Token.hpp
+        src/compressor_frontend/utils.cpp
+        src/compressor_frontend/utils.hpp
         src/database_utils.cpp
         src/database_utils.hpp
         src/Defs.h

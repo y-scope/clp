@@ -1,5 +1,5 @@
-#ifndef COMPRESSOR_FRONTEND_LALR1Parser_HPP
-#define COMPRESSOR_FRONTEND_LALR1Parser_HPP
+#ifndef COMPRESSOR_FRONTEND_LALR1_PARSER_HPP
+#define COMPRESSOR_FRONTEND_LALR1_PARSER_HPP
 
 // C++ standard libraries
 #include <cstdint>
@@ -222,6 +222,7 @@ namespace compressor_frontend {
     };
 
     /// TODO: make LALR1Parser an abstract class?
+    template <typename NFAStateType, typename DFAStateType>
     class LALR1Parser {
     public:
         // Constructor
@@ -233,7 +234,7 @@ namespace compressor_frontend {
          * @param name
          * @param rule
          */
-        void add_rule (const std::string& name, std::unique_ptr<RegexAST> rule);
+        void add_rule (const std::string& name, std::unique_ptr<RegexAST<NFAStateType>> rule);
 
         /**
          * Constructs a RegexASTLiteral and call add_rule
@@ -247,7 +248,7 @@ namespace compressor_frontend {
          * @param name
          * @param rule_char
          */
-        void add_token_group (const std::string& name, std::unique_ptr<finite_automata::RegexASTGroup> rule_group);
+        void add_token_group (const std::string& name, std::unique_ptr<finite_automata::RegexASTGroup<NFAStateType>> rule_group);
 
         /**
          * Constructs a RegexASTCat and calls add_rule
@@ -307,7 +308,7 @@ namespace compressor_frontend {
          */
         std::string report_error (ReaderInterface& reader);
 
-        Lexer m_lexer;
+        Lexer<NFAStateType, DFAStateType> m_lexer;
         streaming_archive::writer::Archive* m_archive_writer_ptr;
         std::stack<MatchedSymbol> m_parse_stack_matches;
         std::stack<ItemSet*> m_parse_stack_states;
@@ -443,4 +444,6 @@ namespace compressor_frontend {
     };
 }
 
-#endif // COMPRESSOR_FRONTEND_LALR1Parser_HPP
+#include "LALR1Parser.tpp"
+
+#endif // COMPRESSOR_FRONTEND_LALR1_PARSER_HPP

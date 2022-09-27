@@ -15,8 +15,6 @@ namespace compressor_frontend::finite_automata {
     template<class T>
     class UnicodeIntervalTree {
     public:
-        typedef std::pair<uint32_t, uint32_t> Interval;
-
         /// TODO: probably use this Data type more often in this class???
         /**
          * Structure to represent utf8 data

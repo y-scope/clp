@@ -5,6 +5,8 @@
 
 namespace compressor_frontend {
 
+    typedef std::pair<uint32_t, uint32_t> Interval;
+
     constexpr uint32_t cUnicodeMax = 0x10FFFF;
     constexpr uint32_t cSizeOfByte = 256;
     constexpr uint32_t cSizeOfAllChildren = 10000;

@@ -15,6 +15,8 @@
 #include "../Stopwatch.hpp"
 #include "Constants.hpp"
 #include "finite_automata/RegexAST.hpp"
+#include "finite_automata/RegexDFA.hpp"
+#include "finite_automata/RegexNFA.hpp"
 #include "Token.hpp"
 
 using compressor_frontend::finite_automata::RegexAST;
@@ -22,6 +24,7 @@ using compressor_frontend::finite_automata::RegexNFA;
 using compressor_frontend::finite_automata::RegexDFA;
 
 namespace compressor_frontend {
+    template <typename NFAStateType, typename DFAStateType>
     class Lexer {
     public:
         // std::vector<int> can be declared as constexpr in c++20
@@ -33,16 +36,16 @@ namespace compressor_frontend {
          */
         struct Rule {
             // Constructor
-            Rule (int n, std::unique_ptr<RegexAST> r) : m_name(n), m_regex(std::move(r)) {}
+            Rule (int n, std::unique_ptr<RegexAST<NFAStateType>> r) : m_name(n), m_regex(std::move(r)) {}
 
             /**
              * Adds AST representing the lexical rule to the NFA
              * @param nfa
              */
-            void add_ast (RegexNFA* nfa) const;
+            void add_ast (RegexNFA<NFAStateType>* nfa) const;
 
             int m_name;
-            std::unique_ptr<RegexAST> m_regex;
+            std::unique_ptr<RegexAST<NFAStateType>> m_regex;
         };
 
         // Constructor
@@ -66,14 +69,14 @@ namespace compressor_frontend {
          * @param id
          * @param regex
          */
-        void add_rule (const uint32_t& id, std::unique_ptr<RegexAST> regex);
+        void add_rule (const uint32_t& id, std::unique_ptr<RegexAST<NFAStateType>> regex);
 
         /**
          * Return regex patter for a rule name
          * @param name
          * @return RegexAST*
          */
-        RegexAST* get_rule (const uint32_t& name);
+        RegexAST<NFAStateType>* get_rule (const uint32_t& name);
 
         /**
          * Generate DFA for lexer
@@ -93,8 +96,9 @@ namespace compressor_frontend {
 
         /**
          * After lexing half of the buffer, reads into that half of the buffer and changes variables accordingly
+         * @param next_children_start
          */
-        void soft_reset ();
+        void soft_reset (uint32_t& next_children_start);
 
         /**
          * Gets next token from the input string
@@ -154,6 +158,13 @@ namespace compressor_frontend {
          * @return unsigned char
          */
         unsigned char get_next_character ();
+
+        /**
+        * Generate a DFA from the NFA
+        * @param RegexNFA<NFAStateType> nfa
+        * @return std::unique_ptr<RegexDFA<DFAStateType>>
+        */
+        unique_ptr<RegexDFA<DFAStateType>> nfa_to_dfa (RegexNFA<NFAStateType>& nfa);
         
         uint32_t m_fail_pos;
         uint32_t m_reduce_pos;
@@ -179,11 +190,12 @@ namespace compressor_frontend {
         bool m_last_read_first_half_of_buf;
         size_t m_bytes_read;
         uint32_t m_line;
-        /// TODO: make this not a unique_ptr and test performance difference
-        std::unique_ptr<RegexDFA> m_dfa;
         ReaderInterface* m_reader;
         bool m_has_delimiters;
+        unique_ptr<RegexDFA<DFAStateType>> m_dfa;
     };
 }
+
+#include "Lexer.tpp"
 
 #endif // COMPRESSOR_FRONTEND_LEXER_HPP
