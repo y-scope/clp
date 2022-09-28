@@ -16,7 +16,11 @@
 #include "Constants.hpp"
 #include "finite_automata/RegexAST.hpp"
 #include "finite_automata/RegexDFA.hpp"
+#include "finite_automata/RegexDFAByteState.hpp"
+#include "finite_automata/RegexDFAUTF8State.hpp"
 #include "finite_automata/RegexNFA.hpp"
+#include "finite_automata/RegexNFAByteState.hpp"
+#include "finite_automata/RegexNFAUTF8State.hpp"
 #include "Token.hpp"
 
 using compressor_frontend::finite_automata::RegexAST;
@@ -160,6 +164,12 @@ namespace compressor_frontend {
         unsigned char get_next_character ();
 
         /**
+         * Return epsilon_closure over m_epsilon_transitions
+         * @return
+         */
+        std::set<NFAStateType*> epsilon_closure (NFAStateType* state_ptr);
+
+        /**
         * Generate a DFA from the NFA
         * @param RegexNFA<NFAStateType> nfa
         * @return std::unique_ptr<RegexDFA<DFAStateType>>
@@ -193,6 +203,11 @@ namespace compressor_frontend {
         ReaderInterface* m_reader;
         bool m_has_delimiters;
         unique_ptr<RegexDFA<DFAStateType>> m_dfa;
+    };
+
+    namespace lexers {
+        typedef Lexer<finite_automata::RegexNFAByteState, finite_automata::RegexDFAByteState> ByteLexer;
+        typedef Lexer<finite_automata::RegexNFAUTF8State, finite_automata::RegexDFAUTF8State> UTF8Lexer;
     };
 }
 

@@ -1,4 +1,4 @@
-#include "RegexDFAByte.hpp"
+#include "RegexDFAByteState.hpp"
 
 namespace compressor_frontend::finite_automata {
 
@@ -6,7 +6,7 @@ namespace compressor_frontend::finite_automata {
         m_bytes_transition[byte] = dest_state;
     }
 
-    RegexDFAState* RegexDFAByteState::next (uint32_t character) {
+    RegexDFAByteState* RegexDFAByteState::next (uint32_t character) {
         return m_bytes_transition[character];
     }
 

@@ -532,7 +532,7 @@ namespace compressor_frontend {
             case '\f':
                 return "\\f";
             default:
-                return {1, c};
+                return {c};
         }
     }
 
@@ -555,7 +555,7 @@ namespace compressor_frontend {
         error_indicator += "^\n";
         if (token.m_type_ids->at(0) == (int) SymbolID::TokenEndID && consumed_input.empty()) {
             error_type = "empty file";
-            error_indicator = "\n^\n";
+            error_indicator = "^\n";
         } else {
             error_type = "expected ";
             for (uint32_t i = 0; i < m_parse_stack_states.top()->m_actions.size(); i++) {

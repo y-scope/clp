@@ -10,7 +10,7 @@
 #include "../src/Grep.hpp"
 
 using compressor_frontend::DelimiterStringAST;
-using compressor_frontend::Lexer;
+using compressor_frontend::lexers::ByteLexer;
 using compressor_frontend::ParserAST;
 using compressor_frontend::SchemaFileAST;
 using compressor_frontend::SchemaParser;
@@ -18,7 +18,7 @@ using compressor_frontend::SchemaVarAST;
 using std::string;
 
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {
-    Lexer forward_lexer;
+    ByteLexer forward_lexer;
     {
         FileReader schema_reader;
         ErrorCode error_code = schema_reader.try_open("../tests/test_schema_files/search_schema.txt");
@@ -46,7 +46,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
         schema_reader.close();
     }
     // Create reverse lexer
-    Lexer reverse_lexer;
+    ByteLexer reverse_lexer;
     {
         FileReader schema_reader;
         ErrorCode error_code = schema_reader.try_open("../tests/test_schema_files/search_schema.txt");

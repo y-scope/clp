@@ -3,8 +3,8 @@
 
 // Project headers
 #include "Lexer.hpp"
-#include "finite_automata/RegexNFAByte.hpp"
-#include "finite_automata/RegexDFAByte.hpp"
+#include "finite_automata/RegexNFAByteState.hpp"
+#include "finite_automata/RegexDFAByteState.hpp"
 
 namespace compressor_frontend {
 

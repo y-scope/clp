@@ -1,10 +1,10 @@
-#include "RegexNFAUTF8.hpp"
+#include "RegexNFAUTF8State.hpp"
 
 // Project headers
 #include "../Constants.hpp"
 
 namespace compressor_frontend::finite_automata {
-    void RegexNFAUTF8State::add_interval (Interval interval, RegexNFAState* dest_state) {
+    void RegexNFAUTF8State::add_interval (Interval interval, RegexNFAUTF8State* dest_state) {
         RegexNFAByteState::add_interval(interval, dest_state);
         if (interval.second < cSizeOfByte) {
             return;
@@ -14,7 +14,7 @@ namespace compressor_frontend::finite_automata {
             uint32_t overlap_low = max(data.m_interval.first, interval.first);
             uint32_t overlap_high = min(data.m_interval.second, interval.second);
 
-            StateVec tree_states = data.m_value;
+            std::vector<RegexNFAUTF8State*> tree_states = data.m_value;
             tree_states.push_back(dest_state);
             m_tree_transitions.insert(Interval(overlap_low, overlap_high), tree_states);
             if (data.m_interval.first < interval.first) {

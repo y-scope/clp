@@ -16,28 +16,6 @@
 namespace compressor_frontend::finite_automata {
     class RegexNFAState {
     public:
-        typedef std::vector<RegexNFAState*> StateVec;
-
-        /**
-         * Return epsilon_closure over m_epsilon_transitions
-         * @return
-         */
-        std::set<RegexNFAState*> epsilon_closure () {
-            std::set<RegexNFAState*> closure_set;
-            std::stack<RegexNFAState*> stack;
-            stack.push(this);
-            while (!stack.empty()) {
-                RegexNFAState* t = stack.top();
-                stack.pop();
-                if (closure_set.insert(t).second) {
-                    for (RegexNFAState* const u: t->get_epsilon_transitions()) {
-                        stack.push(u);
-                    }
-                }
-            }
-            return closure_set;
-        }
-
         void set_accepting (bool accepting) {
             m_accepting = accepting;
         }
@@ -62,16 +40,14 @@ namespace compressor_frontend::finite_automata {
             m_epsilon_transitions.clear();
         }
 
-        [[nodiscard]] const StateVec& get_epsilon_transitions () const {
+        [[nodiscard]] const std::vector<RegexNFAState*>& get_epsilon_transitions () const {
             return m_epsilon_transitions;
         }
-
-        virtual const StateVec& get_byte_transitions (uint8_t byte) const = 0;
 
     private:
         bool m_accepting;
         int m_tag;
-        StateVec m_epsilon_transitions;
+        std::vector<RegexNFAState*> m_epsilon_transitions;
     };
 
     template <typename NFAStateType>

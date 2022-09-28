@@ -57,6 +57,7 @@ namespace compressor_frontend {
         schema_reader.close();
 
         // TODO: do the checksum stuff here (and it should not be a filereader function)
+        schema_ast->m_file_path = std::filesystem::canonical(schema_reader.get_path()).string();
 
         return schema_ast;
     }
@@ -366,7 +367,7 @@ namespace compressor_frontend {
     }
 
     void SchemaParser::add_productions () {
-        add_production("SchemaFile", {}, new_schema_file_rule);
+        // add_production("SchemaFile", {}, new_schema_file_rule);
         add_production("SchemaFile", {"Comment"}, new_schema_file_rule);
         add_production("SchemaFile", {"SchemaVar"}, new_schema_file_rule_with_var);
         add_production("SchemaFile", {"Delimiters", "Colon", "DelimiterString"}, new_schema_file_rule_with_delimiters);

@@ -1,4 +1,4 @@
-#include "RegexDFAUTF8.hpp"
+#include "RegexDFAUTF8State.hpp"
 
 // C++ standard libraries
 #include <cassert>
@@ -9,9 +9,9 @@ using std::vector;
 
 namespace compressor_frontend::finite_automata {
 
-    RegexDFAState* RegexDFAUTF8State::next (uint32_t character) {
+    RegexDFAUTF8State* RegexDFAUTF8State::next (uint32_t character) {
         if (character < cSizeOfByte) {
-            return RegexDFAByteState::next(character);
+            return m_bytes_transition[character];
         }
         unique_ptr<vector<Tree::Data>> result = m_tree_transitions.find(Interval(character, character));
         assert(result->size() <= 1);

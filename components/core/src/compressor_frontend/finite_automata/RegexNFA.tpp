@@ -32,25 +32,24 @@ namespace compressor_frontend::finite_automata {
                 state_ptr->set_accepting(false);
             }
         }
-        // move edges
-        map<pair<RegexNFAState*, RegexNFAState*>, vector<uint8_t>> byte_edges;
-        map<pair<RegexNFAState*, RegexNFAState*>, bool> epsilon_edges;
+        // move edges from NFA to maps
+        map<pair<NFAStateType*, NFAStateType*>, vector<uint8_t>> byte_edges;
+        map<pair<NFAStateType*, NFAStateType*>, bool> epsilon_edges;
         for (unique_ptr<NFAStateType>& src_state_ptr: m_states) {
-            // TODO: add this for the utf8 case
-            // src_state_ptr->reset_tree_transitions();
+            // TODO: handle utf8 case
             for (uint32_t byte = 0; byte < cSizeOfByte; byte++) {
-                for (RegexNFAState* dest_state_ptr: src_state_ptr->get_byte_transitions(byte)) {
-                    byte_edges[pair<RegexNFAState*, RegexNFAState*>(src_state_ptr.get(), dest_state_ptr)].push_back(byte);
+                for (NFAStateType* dest_state_ptr: src_state_ptr->get_byte_transitions(byte)) {
+                    byte_edges[pair<NFAStateType*, NFAStateType*>(src_state_ptr.get(), dest_state_ptr)].push_back(byte);
                 }
                 src_state_ptr->clear_byte_transitions(byte);
             }
-            for (RegexNFAState* dest_state_ptr: src_state_ptr->get_epsilon_transitions()) {
-                epsilon_edges[pair<RegexNFAState*, RegexNFAState*>(src_state_ptr.get(), dest_state_ptr)] = true;
+            for (NFAStateType* dest_state_ptr: src_state_ptr->get_epsilon_transitions()) {
+                epsilon_edges[pair<NFAStateType*, NFAStateType*>(src_state_ptr.get(), dest_state_ptr)] = true;
             }
             src_state_ptr->clear_epsilon_transitions();
         }
 
-        // reverse edges
+        // insert edges from maps back into NFA, but in the reverse direction
         for (unique_ptr<NFAStateType>& src_state_ptr: m_states) {
             for (unique_ptr<NFAStateType>& dest_state_ptr: m_states) {
                 pair<NFAStateType*, NFAStateType*> key(src_state_ptr.get(), dest_state_ptr.get());
@@ -68,25 +67,25 @@ namespace compressor_frontend::finite_automata {
         }
 
         // propagate tag from old accepting m_states
-        for (RegexNFAState* old_accepting_state: new_end->get_epsilon_transitions()) {
+        for (NFAStateType* old_accepting_state: new_end->get_epsilon_transitions()) {
             int tag = old_accepting_state->get_tag();
-            stack<RegexNFAState*> unvisited_states;
-            std::set<RegexNFAState*> visited_states;
+            stack<NFAStateType*> unvisited_states;
+            std::set<NFAStateType*> visited_states;
             unvisited_states.push(old_accepting_state);
             while (!unvisited_states.empty()) {
-                RegexNFAState* current_state = unvisited_states.top();
+                NFAStateType* current_state = unvisited_states.top();
                 current_state->set_tag(tag);
                 unvisited_states.pop();
                 visited_states.insert(current_state);
                 for(uint32_t byte  = 0; byte < cSizeOfByte; byte++) {
-                    std::vector<RegexNFAState*> byte_transitions = current_state->get_byte_transitions(byte);
-                    for (RegexNFAState* next_state: byte_transitions) {
+                    std::vector<NFAStateType*> byte_transitions = current_state->get_byte_transitions(byte);
+                    for (NFAStateType* next_state: byte_transitions) {
                         if (visited_states.find(next_state) == visited_states.end()) {
                             unvisited_states.push(next_state);
                         }
                     }
                 }
-                for (RegexNFAState* next_state: current_state->get_epsilon_transitions()) {
+                for (NFAStateType* next_state: current_state->get_epsilon_transitions()) {
                     if (visited_states.find(next_state) == visited_states.end()) {
                         unvisited_states.push(next_state);
                     }
@@ -98,9 +97,9 @@ namespace compressor_frontend::finite_automata {
             NFAStateType* src_state = src_state_unique_ptr.get();
             int tag = src_state->get_tag();
             for(uint32_t byte  = 0; byte < cSizeOfByte; byte++) {
-                std::vector<RegexNFAState*> byte_transitions = src_state->get_byte_transitions(byte);
+                std::vector<NFAStateType*> byte_transitions = src_state->get_byte_transitions(byte);
                 for (int32_t j = byte_transitions.size() - 1; j >= 0; j--) {
-                    RegexNFAState*& dest_state = byte_transitions[j];
+                    NFAStateType*& dest_state = byte_transitions[j];
                     if (dest_state == m_root) {
                         dest_state = new_state();
                         assert(dest_state != nullptr);
@@ -109,7 +108,7 @@ namespace compressor_frontend::finite_automata {
                     }
                 }
             }
-            for (RegexNFAState* dest_state: src_state->get_epsilon_transitions()) {
+            for (NFAStateType* dest_state: src_state->get_epsilon_transitions()) {
                 if (dest_state == m_root) {
                     dest_state = new_state();
                     dest_state->set_tag(src_state->get_tag());
@@ -136,7 +135,7 @@ namespace compressor_frontend::finite_automata {
 
     template <typename NFAStateType>
     NFAStateType* RegexNFA<NFAStateType>::new_state () {
-        unique_ptr<NFAStateType> ptr(new NFAStateType());
+        unique_ptr<NFAStateType> ptr = std::make_unique<NFAStateType>();
         NFAStateType* state = ptr.get();
         m_states.push_back(std::move(ptr));
         return state;

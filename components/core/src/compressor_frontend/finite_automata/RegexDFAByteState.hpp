@@ -1,5 +1,5 @@
-#ifndef COMPRESSOR_FRONTEND_FINITE_AUTOMATA_REGEX_DFA_BYTE_HPP
-#define COMPRESSOR_FRONTEND_FINITE_AUTOMATA_REGEX_DFA_BYTE_HPP
+#ifndef COMPRESSOR_FRONTEND_FINITE_AUTOMATA_REGEX_DFA_BYTE_STATE_HPP
+#define COMPRESSOR_FRONTEND_FINITE_AUTOMATA_REGEX_DFA_BYTE_STATE_HPP
 
 #include "RegexDFA.hpp"
 
@@ -18,15 +18,12 @@ namespace compressor_frontend::finite_automata {
          * @param character
          * @return State*
          */
-        RegexDFAState* next (uint32_t character) override;
+        RegexDFAByteState* next (uint32_t character);
 
     private:
 
-        RegexDFAState* m_bytes_transition[cSizeOfByte];
+        RegexDFAByteState* m_bytes_transition[cSizeOfByte];
     };
-
-    class RegexDFAByte : public RegexDFA<RegexDFAByteState> {};
-
 }
 
-#endif // COMPRESSOR_FRONTEND_FINITE_AUTOMATA_REGEX_DFA_BYTE_HPP
+#endif // COMPRESSOR_FRONTEND_FINITE_AUTOMATA_REGEX_DFA_BYTE_STATE_HPP

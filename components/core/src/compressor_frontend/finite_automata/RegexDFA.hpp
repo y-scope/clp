@@ -17,16 +17,6 @@ namespace compressor_frontend::finite_automata {
     class RegexDFAState {
     public:
 
-        // Destructor
-        virtual ~RegexDFAState() = 0;
-
-        /**
-         * Returns the next state the DFA transitions to on input character (byte or utf8)
-         * @param character
-         * @return State*
-         */
-        virtual RegexDFAState* next (uint32_t character) = 0;
-
         void add_tag (const int& rule_name_id) {
             m_tags.push_back(rule_name_id);
         }
@@ -53,7 +43,7 @@ namespace compressor_frontend::finite_automata {
          * @return DFAStateType*
          */
         template <typename NFAStateType>
-        DFAStateType* new_state (const std::set<NFAStateType>* set);
+        DFAStateType* new_state (const std::set<NFAStateType*>& set);
 
         DFAStateType* get_root () {
             return m_states.at(0).get();

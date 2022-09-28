@@ -10,8 +10,8 @@
 
 // Project headers
 #include "../Stopwatch.hpp"
-#include "finite_automata/RegexDFAByte.hpp"
-#include "finite_automata/RegexNFAByte.hpp"
+#include "finite_automata/RegexDFAByteState.hpp"
+#include "finite_automata/RegexNFAByteState.hpp"
 #include "LALR1Parser.hpp"
 #include "SchemaParser.hpp"
 

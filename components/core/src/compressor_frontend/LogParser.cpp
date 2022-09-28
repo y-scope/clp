@@ -39,7 +39,6 @@ namespace compressor_frontend {
         FileReader schema_reader;
         schema_reader.try_open(schema_file_path);
         m_schema_checksum = schema_reader.compute_checksum(m_schema_file_size);
-        schema_ast->m_file_path = std::filesystem::canonical(schema_reader.get_path()).string();
     }
 
     void LogParser::add_delimiters (const unique_ptr<ParserAST>& delimiters) {
@@ -52,8 +51,7 @@ namespace compressor_frontend {
     void LogParser::add_rules (const unique_ptr<SchemaFileAST>& schema_ast) {
         // Currently, required to have delimiters (if schema_ast->delimiters != nullptr it is already enforced that at least 1 delimiter is specified)
         if (schema_ast->m_delimiters == nullptr) {
-            SPDLOG_ERROR("When using --schema-path, \"delimiters:\" line must be used.");
-            throw runtime_error("delimiters: line missing");
+            throw runtime_error("When using --schema-path, \"delimiters:\" line must be used.");
         }
         vector<uint32_t>& delimiters = dynamic_cast<DelimiterStringAST*>(schema_ast->m_delimiters.get())->m_delimiters;
         add_token("newLine", '\n');
@@ -89,8 +87,8 @@ namespace compressor_frontend {
                 FileReader schema_reader;
                 ErrorCode error_code = schema_reader.try_open(schema_ast->m_file_path);
                 if (ErrorCode_Success != error_code) {
-                    SPDLOG_ERROR(schema_ast->m_file_path + ":" + to_string(rule->m_line_num + 1) + ": error: '" + rule->m_name
-                                 + "' has regex pattern which contains delimiter '" + char(delimiter_name) + "'.");
+                    throw std::runtime_error(schema_ast->m_file_path + ":" + to_string(rule->m_line_num + 1) + ": error: '" + rule->m_name
+                                             + "' has regex pattern which contains delimiter '" + char(delimiter_name) + "'.\n");
                 } else {
                     // more detailed debugging based on looking at the file
                     string line;
@@ -98,21 +96,20 @@ namespace compressor_frontend {
                         schema_reader.read_to_delimiter('\n', false, false, line);
                     }
                     int colon_pos = 0;
-                    for (int i = 0; i < line.size(); i++) {
+                    for (char i : line) {
                         colon_pos++;
-                        if (line[i] == ':') {
+                        if (i == ':') {
                             break;
                         }
                     }
-                    string indent(32, ' ');
+                    string indent(10, ' ');
                     string spaces(colon_pos, ' ');
                     string arrows(line.size() - colon_pos, '^');
 
-                    SPDLOG_ERROR(schema_ast->m_file_path + ":" + to_string(rule->m_line_num + 1) + ": error: '" + rule->m_name
-                                 + "' has regex pattern which contains delimiter '" + char(delimiter_name) + "'.\n"
-                                 + indent + line + "\n" + indent + spaces + arrows);
+                    throw std::runtime_error(schema_ast->m_file_path + ":" + to_string(rule->m_line_num + 1) + ": error: '" + rule->m_name
+                                             + "' has regex pattern which contains delimiter '" + char(delimiter_name) + "'.\n"
+                                             + indent + line + "\n" + indent + spaces + arrows + "\n");
                 }
-                throw runtime_error("Variable contains delimiter");
             }
             unique_ptr<RegexASTGroup<RegexNFAByteState>> delimiter_group =
                     make_unique<RegexASTGroup<RegexNFAByteState>>(RegexASTGroup<RegexNFAByteState>(delimiters));

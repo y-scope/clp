@@ -25,9 +25,6 @@ using std::to_string;
  * 4 byte: 0x10000 - 0x1FFFFF : 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
  */
 namespace compressor_frontend {
-    using finite_automata::RegexDFAState;
-    using finite_automata::RegexNFAState;
-
     template <typename NFAStateType, typename DFAStateType>
     uint32_t Lexer<NFAStateType, DFAStateType>::m_current_buff_size;
 
@@ -89,7 +86,7 @@ namespace compressor_frontend {
         m_match_pos = m_byte_buf_pos;
         m_match_line = m_line;
         m_type_ids = nullptr;
-        RegexDFAState* state = m_dfa->get_root();
+        DFAStateType* state = m_dfa->get_root();
         while (true) {
             if (m_byte_buf_pos == m_fail_pos) {
                 string warn = "Long line detected";
@@ -153,7 +150,7 @@ namespace compressor_frontend {
                 m_match_pos = prev_byte_buf_pos;
                 m_match_line = m_line;
             }
-            RegexDFAState* next = state->next(next_char);
+            DFAStateType* next = state->next(next_char);
             if (next_char == '\n') {
                 m_line++;
                 if (m_has_delimiters && !m_match) {
@@ -200,6 +197,7 @@ namespace compressor_frontend {
         }
     }
 
+    /// TODO: this is duplicating almost all the code of scan()
     template <typename NFAStateType, typename DFAStateType>
     Token Lexer<NFAStateType, DFAStateType>::scan_with_wildcard (char wildcard) {
         if (m_match) {
@@ -426,7 +424,9 @@ namespace compressor_frontend {
         for (const Rule& r: m_rules) {
             r.add_ast(&nfa);
         }
+        
         nfa.reverse();
+
         m_dfa = nfa_to_dfa(nfa);
 
         DFAStateType* state = m_dfa->get_root();
@@ -448,9 +448,26 @@ namespace compressor_frontend {
     }
 
     template <typename NFAStateType, typename DFAStateType>
+    std::set<NFAStateType*> Lexer<NFAStateType, DFAStateType>::epsilon_closure (NFAStateType* state_ptr) {
+        std::set<NFAStateType*> closure_set;
+        std::stack<NFAStateType*> stack;
+        stack.push(state_ptr);
+        while (!stack.empty()) {
+            NFAStateType* t = stack.top();
+            stack.pop();
+            if (closure_set.insert(t).second) {
+                for (NFAStateType* const u: t->get_epsilon_transitions()) {
+                    stack.push(u);
+                }
+            }
+        }
+        return closure_set;
+    }
+
+    template <typename NFAStateType, typename DFAStateType>
     unique_ptr<RegexDFA<DFAStateType>> Lexer<NFAStateType, DFAStateType>::nfa_to_dfa (RegexNFA<NFAStateType>& nfa) {
 
-        typedef std::set<RegexNFAState*> StateSet;
+        typedef std::set<NFAStateType*> StateSet;
         unique_ptr<RegexDFA<DFAStateType>> dfa(new RegexDFA<DFAStateType>);
 
         map<StateSet, DFAStateType*> dfa_states;
@@ -458,13 +475,13 @@ namespace compressor_frontend {
 
         auto create_dfa_state =
                 [&dfa, &dfa_states, &unmarked_sets] (const StateSet& set) -> DFAStateType* {
-                    DFAStateType* state = dfa->new_state(&set);
+                    DFAStateType* state = dfa->new_state(set);
                     dfa_states[set] = state;
                     unmarked_sets.push(set);
                     return state;
                 };
 
-        StateSet start_set = nfa.m_root->epsilon_closure();
+        StateSet start_set = epsilon_closure(nfa.m_root);
         create_dfa_state(start_set);
 
         while (!unmarked_sets.empty()) {
@@ -475,18 +492,18 @@ namespace compressor_frontend {
             map<uint32_t, StateSet> ascii_transitions_map;
             // map<Interval, StateSet> transitions_map;
 
-            for (RegexNFAState* s0: set) {
+            for (NFAStateType* s0: set) {
                 for (uint32_t i = 0; i < cSizeOfByte; i++) {
-                    for (RegexNFAState* const s1: s0->get_byte_transitions(i)) {
-                        StateSet closure = s1->epsilon_closure();
+                    for (NFAStateType* const s1: s0->get_byte_transitions(i)) {
+                        StateSet closure = epsilon_closure(s1);
                         ascii_transitions_map[i].insert(closure.begin(), closure.end());
                     }
                 }
 
                 // TODO: add this for the utf8 case
                 //for (const typename NFAStateType::Tree::Data& data: s0->get_tree_transitions().all()) {
-                //    for (RegexNFAState* const s1: data.m_value) {
-                //    StateSet closure = s1->epsilon_closure();
+                //    for (NFAStateType* const s1: data.m_value) {
+                //    StateSet closure = epsilon_closure(s1);
                 //        transitions_map[data.m_interval].insert(closure.begin(), closure.end());
                 //    }
                 //}
