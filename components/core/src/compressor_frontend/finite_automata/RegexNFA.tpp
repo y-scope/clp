@@ -22,6 +22,43 @@ using std::unique_ptr;
 using std::vector;
 
 namespace compressor_frontend::finite_automata {
+    template <RegexNFAStateType stateType>
+    void RegexNFAState<stateType>::add_interval (Interval interval, RegexNFAState<stateType>* dest_state) {
+        if (interval.first < cSizeOfByte) {
+            uint32_t bound = min(interval.second, cSizeOfByte - 1);
+            for (uint32_t i = interval.first; i <= bound; i++) {
+                add_byte_transition(i, dest_state);
+            }
+            interval.first = bound + 1;
+        }
+        if constexpr (RegexNFAStateType::UTF8 == stateType) {
+            if (interval.second < cSizeOfByte) {
+                return;
+            }
+            unique_ptr<vector<typename Tree::Data>> overlaps = m_tree_transitions.pop(interval);
+            for (const typename Tree::Data& data: *overlaps) {
+                uint32_t overlap_low = max(data.m_interval.first, interval.first);
+                uint32_t overlap_high = min(data.m_interval.second, interval.second);
+
+                std::vector<RegexNFAUTF8State*> tree_states = data.m_value;
+                tree_states.push_back(dest_state);
+                m_tree_transitions.insert(Interval(overlap_low, overlap_high), tree_states);
+                if (data.m_interval.first < interval.first) {
+                    m_tree_transitions.insert(Interval(data.m_interval.first, interval.first - 1), data.m_value);
+                } else if (data.m_interval.first > interval.first) {
+                    m_tree_transitions.insert(Interval(interval.first, data.m_interval.first - 1), {dest_state});
+                }
+                if (data.m_interval.second > interval.second) {
+                    m_tree_transitions.insert(Interval(interval.second + 1, data.m_interval.second), data.m_value);
+                }
+                interval.first = data.m_interval.second + 1;
+            }
+            if (interval.first != 0 && interval.first <= interval.second) {
+                m_tree_transitions.insert(interval, {dest_state});
+            }
+        }
+    }
+
     template <typename NFAStateType>
     void RegexNFA<NFAStateType>::reverse () {
         // add new end with all accepting pointing to it
@@ -36,7 +73,7 @@ namespace compressor_frontend::finite_automata {
         map<pair<NFAStateType*, NFAStateType*>, vector<uint8_t>> byte_edges;
         map<pair<NFAStateType*, NFAStateType*>, bool> epsilon_edges;
         for (unique_ptr<NFAStateType>& src_state_ptr: m_states) {
-            // TODO: handle utf8 case
+            // TODO: handle utf8 case with if constexpr (RegexNFAUTF8State == NFAStateType) ~ don't really need this though
             for (uint32_t byte = 0; byte < cSizeOfByte; byte++) {
                 for (NFAStateType* dest_state_ptr: src_state_ptr->get_byte_transitions(byte)) {
                     byte_edges[pair<NFAStateType*, NFAStateType*>(src_state_ptr.get(), dest_state_ptr)].push_back(byte);
@@ -107,14 +144,20 @@ namespace compressor_frontend::finite_automata {
                         dest_state->set_accepting(true);
                     }
                 }
+                src_state->clear_byte_transitions(byte);
+                src_state->set_byte_transitions(byte, byte_transitions);
             }
-            for (NFAStateType* dest_state: src_state->get_epsilon_transitions()) {
+            std::vector<NFAStateType*> epsilon_transitions = src_state->get_epsilon_transitions();
+            for (int32_t j = epsilon_transitions .size() - 1; j >= 0; j--) {
+                NFAStateType*& dest_state = epsilon_transitions[j];
                 if (dest_state == m_root) {
                     dest_state = new_state();
                     dest_state->set_tag(src_state->get_tag());
                     dest_state->set_accepting(true);
                 }
             }
+            src_state->clear_epsilon_transitions();
+            src_state->set_epsilon_transitions(epsilon_transitions);
         }
 
         for (uint32_t i = 0; i < m_states.size(); i++) {

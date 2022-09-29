@@ -16,11 +16,7 @@
 #include "Constants.hpp"
 #include "finite_automata/RegexAST.hpp"
 #include "finite_automata/RegexDFA.hpp"
-#include "finite_automata/RegexDFAByteState.hpp"
-#include "finite_automata/RegexDFAUTF8State.hpp"
 #include "finite_automata/RegexNFA.hpp"
-#include "finite_automata/RegexNFAByteState.hpp"
-#include "finite_automata/RegexNFAUTF8State.hpp"
 #include "Token.hpp"
 
 using compressor_frontend::finite_automata::RegexAST;
@@ -206,8 +202,8 @@ namespace compressor_frontend {
     };
 
     namespace lexers {
-        typedef Lexer<finite_automata::RegexNFAByteState, finite_automata::RegexDFAByteState> ByteLexer;
-        typedef Lexer<finite_automata::RegexNFAUTF8State, finite_automata::RegexDFAUTF8State> UTF8Lexer;
+        using ByteLexer = Lexer<finite_automata::RegexNFAByteState, finite_automata::RegexDFAByteState>;
+        using UTF8Lexer = Lexer<finite_automata::RegexNFAUTF8State, finite_automata::RegexDFAUTF8State>;
     };
 }
 

@@ -4,6 +4,6 @@
 // C++ libraries
 #include <string>
 
-int clp_main (int argc, const char* argv[], std::string* archive_path);
+int clp_main (uint32_t argc, const char* argv[], std::string* archive_path);
 
 #endif // CLP_MAIN_HPP

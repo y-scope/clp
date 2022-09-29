@@ -7,8 +7,6 @@
 
 // Project headers
 #include "../ReaderInterface.hpp"
-#include "finite_automata/RegexDFAByteState.hpp"
-#include "finite_automata/RegexNFAByteState.hpp"
 #include "LALR1Parser.hpp"
 
 namespace compressor_frontend {

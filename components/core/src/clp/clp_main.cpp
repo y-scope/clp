@@ -21,7 +21,7 @@ using std::string;
 using std::unordered_set;
 using std::vector;
 
-int clp_main (int argc, const char* argv[], std::string* archive_path) {
+int clp_main (uint32_t argc, const char* argv[], std::string* archive_path) {
     // Program-wide initialization
     try {
         auto stderr_logger = spdlog::stderr_logger_st("stderr");
@@ -35,7 +35,7 @@ int clp_main (int argc, const char* argv[], std::string* archive_path) {
     TimestampPattern::init();
 
     clp::CommandLineArguments command_line_args("clp");
-    auto parsing_result = command_line_args.parse_arguments(argc, argv);
+    auto parsing_result = command_line_args.parse_arguments((int) argc, argv);
     switch (parsing_result) {
         case CommandLineArgumentsBase::ParsingResult::Failure:
             return -1;

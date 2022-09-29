@@ -5,7 +5,6 @@
 
 // Project headers
 #include "../FileReader.hpp"
-#include "finite_automata/RegexNFAByteState.hpp"
 #include "Constants.hpp"
 #include "LALR1Parser.hpp"
 #include "SchemaParser.hpp"

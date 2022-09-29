@@ -9,8 +9,6 @@
 #include "Query.hpp"
 #include "streaming_archive/reader/Archive.hpp"
 #include "streaming_archive/reader/File.hpp"
-#include "compressor_frontend/finite_automata/RegexDFAByteState.hpp"
-#include "compressor_frontend/finite_automata/RegexNFAByteState.hpp"
 #include "compressor_frontend/Lexer.hpp"
 #include "compressor_frontend/QueryParser.hpp"
 
