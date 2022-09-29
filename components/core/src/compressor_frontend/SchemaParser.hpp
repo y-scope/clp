@@ -96,7 +96,7 @@ namespace compressor_frontend {
         std::unique_ptr<SchemaFileAST> generate_schema_ast (ReaderInterface& reader);
 
         /**
-         * Wrapper around generate_schema_ast() including error checking on opening the input schema file and computing schema checksum
+         * Wrapper around generate_schema_ast()
          * @param schema_file_path
          * @return std::unique_ptr<SchemaFileAST>
          */

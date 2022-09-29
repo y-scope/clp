@@ -90,7 +90,6 @@ namespace streaming_archive {
             size_t get_segment_timestamps_pos () const;
             size_t get_segment_logtypes_pos () const;
             size_t get_segment_variables_pos () const;
-            size_t get_schema_checksum () const;
         };
 
         class EmptyDirectoryIterator : public Iterator {

@@ -93,7 +93,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
     end_pos = 0;
 
     REQUIRE(Grep::get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var, forward_lexer, reverse_lexer) == true);
-    REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "\\*x\\?");
+    REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "\\*x");
     REQUIRE(is_var == false);
     //REQUIRE(is_var == true);
 

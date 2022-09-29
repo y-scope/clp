@@ -51,14 +51,10 @@ namespace compressor_frontend {
             }
             return nullptr;
         }
-
         SchemaParser sp;
         unique_ptr<SchemaFileAST> schema_ast = sp.generate_schema_ast(schema_reader);
         schema_reader.close();
-
-        /// TODO: do the checksum stuff here (and it should not be a filereader function)
         schema_ast->m_file_path = std::filesystem::canonical(schema_reader.get_path()).string();
-
         return schema_ast;
     }
 

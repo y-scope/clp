@@ -133,13 +133,13 @@ namespace streaming_archive::writer {
         m_next_segment_id = 0;
         m_compression_level = user_config.compression_level;
 
+        /// TODO: add schema file size to m_stable_size???
         // Copy schema file into archive
         if (!m_schema_file_path.empty()) {
             const std::filesystem::path archive_schema_filesystem_path = archive_path / cSchemaFileName;
             try {
-                const std::filesystem::path m_schema_filesystem_path = m_schema_file_path;
-                std::filesystem::copy(m_schema_filesystem_path, archive_schema_filesystem_path);
-                m_stable_size += m_schema_file_size;
+                const std::filesystem::path schema_filesystem_path = m_schema_file_path;
+                std::filesystem::copy(schema_filesystem_path, archive_schema_filesystem_path);
             } catch (FileWriter::OperationFailed& e) {
                 SPDLOG_CRITICAL("Failed to copy schema file to archive: {}", archive_schema_filesystem_path.c_str());
                 throw;
@@ -149,17 +149,11 @@ namespace streaming_archive::writer {
         // Save metadata to disk
         auto metadata_file_path = archive_path / cMetadataFileName;
         try {
-            size_t schema_original_file_path_size = m_schema_original_file_path.size();
             m_metadata_file_writer.open(metadata_file_path.string(), FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_SEEKABLE_WRITING);
             // Update size before we write the metadata file so we can store the size in the metadata file
-            m_stable_size += sizeof(cArchiveFormatVersion) + sizeof(m_stable_uncompressed_size) + sizeof(m_stable_size) + sizeof(m_schema_checksum);
-            m_stable_size += sizeof(schema_original_file_path_size) + m_schema_original_file_path.size() * sizeof(char) + sizeof(m_schema_last_edited);
+            m_stable_size += sizeof(cArchiveFormatVersion) + sizeof(m_stable_uncompressed_size) + sizeof(m_stable_size);
 
             m_metadata_file_writer.write_numeric_value(cArchiveFormatVersion);
-            m_metadata_file_writer.write_numeric_value(m_schema_checksum);
-            m_metadata_file_writer.write_numeric_value(schema_original_file_path_size);
-            m_metadata_file_writer.write_string(m_schema_original_file_path);
-            m_metadata_file_writer.write_numeric_value(m_schema_last_edited);
             m_metadata_file_writer.write_numeric_value(m_stable_uncompressed_size);
             m_metadata_file_writer.write_numeric_value(m_stable_size);
             m_metadata_file_writer.flush();

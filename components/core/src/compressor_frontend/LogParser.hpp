@@ -37,9 +37,6 @@ namespace compressor_frontend {
          */
         void increment_uncompressed_msg_pos (ReaderInterface& reader);
 
-        uint16_t m_schema_checksum;
-        uint16_t m_schema_file_size;
-
     private:
         /**
          * Request the next symbol from the lexer

@@ -26,16 +26,10 @@ using std::unordered_set;
 using std::vector;
 
 namespace streaming_archive { namespace reader {
-    void Archive::read_metadata_file(const string& path, archive_format_version_t& format_version, size_t& stable_uncompressed_size, size_t& stable_size,
-                                     size_t& schema_checksum, std::string& schema_original_file_path, std::filesystem::file_time_type& schema_last_edited) {
+    void Archive::read_metadata_file (const string& path, archive_format_version_t& format_version, size_t& stable_uncompressed_size, size_t& stable_size) {
         FileReader file_reader;
         file_reader.open(path);
         file_reader.read_numeric_value(format_version, false);
-        file_reader.read_numeric_value(schema_checksum, false);
-        size_t schema_original_file_path_size;
-        file_reader.read_numeric_value(schema_original_file_path_size, false);
-        file_reader.read_string(schema_original_file_path_size, schema_original_file_path, false);
-        file_reader.read_numeric_value(schema_last_edited, false);
         file_reader.read_numeric_value(stable_uncompressed_size, false);
         file_reader.read_numeric_value(stable_size, false);
         file_reader.close();
@@ -61,8 +55,7 @@ namespace streaming_archive { namespace reader {
         size_t stable_uncompressed_size;
         size_t stable_size;
         try {
-            read_metadata_file(metadata_file_path, format_version, stable_uncompressed_size, stable_size, m_schema_checksum,
-                               m_schema_original_file_path, m_schema_last_edited);
+            read_metadata_file(metadata_file_path, format_version, stable_uncompressed_size, stable_size);
         } catch (TraceableException& traceable_exception) {
             auto error_code = traceable_exception.get_error_code();
             if (ErrorCode_errno == error_code) {

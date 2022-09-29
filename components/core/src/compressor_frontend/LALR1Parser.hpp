@@ -260,6 +260,7 @@ namespace compressor_frontend {
          */
         void generate ();
 
+        /// TODO: add throws to function headers
         /**
          * Parse an input (e.g. file)
          * @param reader

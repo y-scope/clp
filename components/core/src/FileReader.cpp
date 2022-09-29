@@ -137,19 +137,3 @@ ErrorCode FileReader::try_fstat (struct stat& stat_buffer) {
     }
     return ErrorCode_Success;
 }
-
-uint16_t FileReader::compute_checksum (uint16_t& file_size) {
-    
-    boost::crc_32_type result;
-    size_t buf_size = 100000;
-    char buf[buf_size];
-    size_t bytes_read;
-    try_read(buf, buf_size, bytes_read);
-    while(bytes_read > 0) {
-        file_size += bytes_read;
-        result.process_bytes(buf, bytes_read);
-        try_read(buf, buf_size, bytes_read);
-    }
-    close();
-    return result.checksum();
-}

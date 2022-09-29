@@ -70,14 +70,9 @@ namespace streaming_archive { namespace writer {
         group_id_t m_group_id;
         size_t m_target_encoded_file_size;
         std::string m_schema_file_path;
-        size_t m_schema_checksum;
-        size_t m_schema_file_size;
-        std::string m_schema_original_file_path;
-        std::filesystem::file_time_type m_schema_last_edited;
 
         // Constructors
-        Archive () : m_logs_dir_fd(-1), m_segments_dir_fd(-1), m_compression_level(0), m_global_metadata_db(nullptr), old_ts_pattern(), m_schema_file_path(),
-                     m_schema_file_size(0), m_schema_checksum(0) {}
+        Archive () : m_logs_dir_fd(-1), m_segments_dir_fd(-1), m_compression_level(0), m_global_metadata_db(nullptr), old_ts_pattern(), m_schema_file_path() {}
 
         // Destructor
         ~Archive ();

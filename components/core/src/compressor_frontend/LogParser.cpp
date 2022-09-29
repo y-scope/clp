@@ -26,19 +26,13 @@ using std::vector;
 
 namespace compressor_frontend {
     LogParser::LogParser (const string& schema_file_path) {
-        m_schema_checksum = 0;
-        m_schema_file_size = 0;
         m_active_uncompressed_msg = nullptr;
         m_uncompressed_msg_size = 0;
 
         std::unique_ptr<compressor_frontend::SchemaFileAST> schema_ast = compressor_frontend::SchemaParser::try_schema_file(schema_file_path);
         add_delimiters(schema_ast->m_delimiters);
         add_rules(schema_ast);
-        m_lexer.generate();            
-        /// TODO compute checksum can be done inside of generating the schema, and can be part of the lexer (not part of file m_reader), 
-        FileReader schema_reader;
-        schema_reader.try_open(schema_file_path);
-        m_schema_checksum = schema_reader.compute_checksum(m_schema_file_size);
+        m_lexer.generate();
     }
 
     void LogParser::add_delimiters (const unique_ptr<ParserAST>& delimiters) {
