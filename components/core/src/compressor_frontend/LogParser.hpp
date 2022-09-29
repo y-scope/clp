@@ -25,7 +25,7 @@ namespace compressor_frontend {
         LogParser (const std::string& schema_file_path);
 
         /**
-         * TODO: this description will need to change after adding it directly into the dictionary writer
+         * /// TODO: this description will need to change after adding it directly into the dictionary writer
          * Custom parsing for the log that builds up an uncompressed message and then compresses it all at once
          * @param reader
          */

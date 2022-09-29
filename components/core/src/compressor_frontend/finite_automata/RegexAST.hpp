@@ -86,10 +86,6 @@ namespace compressor_frontend::finite_automata {
          */
         void add (RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) override;
 
-        /**
-         * Gets the character (literal) associated with a RegexASTLiteral leaf node
-         * @return uint32_t
-         */
         [[nodiscard]] const uint32_t& get_character () const {
             return m_character;
         }
@@ -142,18 +138,10 @@ namespace compressor_frontend::finite_automata {
          */
         void add (RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) override;
 
-        /**
-         * Returns the digits associated with the RegexASTInteger leaf node
-         * @return const std::vector<uint32_t>&
-         */
         [[nodiscard]] const std::vector<uint32_t>& get_digits () const {
             return m_digits;
         }
-        /**
-         * 
-         * Returns the ith digit associated with the RegexASTInteger leaf node
-         * @return const uint32_t&
-         */
+
         [[nodiscard]] const uint32_t& get_digit (uint32_t i) const {
             return m_digits[i];
         }
@@ -262,23 +250,15 @@ namespace compressor_frontend::finite_automata {
          * @param end_state
          */
         void add (RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) override;
+        
+        void add_range (uint32_t min, uint32_t max) {
+            m_ranges.emplace_back(min, max);
+        }
 
-        /**
-         * Adds range between min and max (inclusive) to m_ranges
-         * @param min
-         * @param max
-         */
-        void add_range (uint32_t min, uint32_t max);
-        
-        /**
-         * Adds a single literal to m_ranges
-         * @param literal
-         */
-        void add_literal (uint32_t literal);
-        
-        /**
-         * Sets m_is_wildcard to true (indicating RegexASTGroup contains '.')
-         */
+        void add_literal (uint32_t literal) {
+            m_ranges.emplace_back(literal, literal);
+        }
+
         void set_is_wildcard_true () {
             m_is_wildcard = true;
         }
@@ -453,10 +433,6 @@ namespace compressor_frontend::finite_automata {
          */
         void add (RegexNFA<NFAStateType>* nfa, NFAStateType* end_state) override;
 
-        /**
-         * Returns if the multiplication associated with the RegexASTMultiplication node is infinite ('*')
-         * @return bool
-         */
         [[nodiscard]] bool is_infinite () const {
             return this->m_max == 0;
         }

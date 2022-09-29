@@ -123,28 +123,15 @@ namespace compressor_frontend {
             m_reduce_pos = value;
         }
 
-        /**
-         * Returns if lexer has delimiters set
-         * @return const bool&
-         */
         [[nodiscard]] const bool& get_has_delimiters() const {
             return m_has_delimiters;
         }
 
-        /**
-         * Checks if an input byte is a delimiter
-         * @param byte
-         * @return const bool&
-         */
         [[nodiscard]] const bool& is_delimiter (uint8_t byte) const {
             return m_is_delimiter[byte];
         }
 
-        /**
-         * Checks if an input byte is the first character of a variable in the schema
-         * @param byte
-         * @return const bool&
-         */
+        // First character of any variable in the schema
         [[nodiscard]] const bool& is_first_char (uint8_t byte) const {
             return m_is_first_char[byte];
         }

@@ -56,7 +56,7 @@ namespace compressor_frontend {
         unique_ptr<SchemaFileAST> schema_ast = sp.generate_schema_ast(schema_reader);
         schema_reader.close();
 
-        // TODO: do the checksum stuff here (and it should not be a filereader function)
+        /// TODO: do the checksum stuff here (and it should not be a filereader function)
         schema_ast->m_file_path = std::filesystem::canonical(schema_reader.get_path()).string();
 
         return schema_ast;
@@ -97,7 +97,7 @@ namespace compressor_frontend {
     static unique_ptr<SchemaFileAST> new_schema_file_rule_with_delimiters (NonTerminal* m) {
         unique_ptr<ParserAST>& r1 = m->nonterminal_cast(2)->getParserAST();
         unique_ptr<SchemaFileAST> schema_file_ast = make_unique<SchemaFileAST>();
-        schema_file_ast->add_delimiters(std::move(r1));
+        schema_file_ast->set_delimiters(std::move(r1));
         return std::move(schema_file_ast);
     }
 
@@ -105,7 +105,7 @@ namespace compressor_frontend {
         unique_ptr<ParserAST>& r1 = m->nonterminal_cast(0)->getParserAST();
         std::unique_ptr<SchemaFileAST> schema_file_ast(dynamic_cast<SchemaFileAST*>(r1.release()));
         unique_ptr<ParserAST>& r5 = m->nonterminal_cast(4)->getParserAST();
-        schema_file_ast->add_delimiters(std::move(r5));
+        schema_file_ast->set_delimiters(std::move(r5));
         return std::move(schema_file_ast);
     }
 

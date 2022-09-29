@@ -102,7 +102,7 @@ namespace compressor_frontend {
                     if (m_fail_pos == 0) {
                         memcpy(m_active_byte_buf, m_static_byte_buf, sizeof(m_static_byte_buf));
                     } else {
-                        //TODO: make a test case for this scenario
+                        /// TODO: make a test case for this scenario
                         memcpy(m_active_byte_buf, m_static_byte_buf + sizeof(m_static_byte_buf) / 2, sizeof(m_static_byte_buf) / 2);
                         memcpy(m_active_byte_buf + sizeof(m_static_byte_buf) / 2, m_static_byte_buf, sizeof(m_static_byte_buf) / 2);
                         if (m_match_pos >= m_current_buff_size / 2) {
@@ -226,7 +226,7 @@ namespace compressor_frontend {
                     if (m_fail_pos == 0) {
                         memcpy(m_active_byte_buf, m_static_byte_buf, sizeof(m_static_byte_buf));
                     } else {
-                        // TODO: make a test case for this scenario
+                        /// TODO: make a test case for this scenario
                         memcpy(m_active_byte_buf, m_static_byte_buf + sizeof(m_static_byte_buf) / 2, sizeof(m_static_byte_buf) / 2);
                         memcpy(m_active_byte_buf + sizeof(m_static_byte_buf) / 2, m_static_byte_buf, sizeof(m_static_byte_buf) / 2);
                         if (m_match_pos >= m_current_buff_size / 2) {
@@ -500,7 +500,7 @@ namespace compressor_frontend {
                     }
                 }
 
-                // TODO: add this for the utf8 case
+                /// TODO: add this for the utf8 case
                 //for (const typename NFAStateType::Tree::Data& data: s0->get_tree_transitions().all()) {
                 //    for (NFAStateType* const s1: data.m_value) {
                 //    StateSet closure = epsilon_closure(s1);
@@ -527,7 +527,7 @@ namespace compressor_frontend {
                 dfa_state->add_byte_transition(kv.first, dest_state);
             }
 
-            // TODO: add this for the utf8 case
+            /// TODO: add this for the utf8 case
             //for (const typename map<Interval, typename NFAStateType::StateSet>::value_type& kv: transitions_map) {
             //    DFAStateType* dest_state = next_dfa_state(kv.second);
             //    dfa_state->add_tree_transition(kv.first, dest_state);

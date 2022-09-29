@@ -48,10 +48,6 @@ namespace compressor_frontend {
         // Constructor
         virtual ~ParserAST () = 0;
 
-        /**
-         * Convert ParserAST to one of its child classes
-         * @return T&
-         */
         template<typename T>
         T& get () {
             // TODO: why does this compile?
@@ -190,7 +186,6 @@ namespace compressor_frontend {
      * The m_kernel is sufficient for fully representing the state, but m_closure is useful for computations.
      * m_next indicates what state (ItemSet) to transition to based on the symbol received from the lexer
      * m_actions is the action to perform based on the symbol received from the lexer.
-     *
      */
     struct ItemSet {
     public:
@@ -204,12 +199,6 @@ namespace compressor_frontend {
             return lhs.m_kernel < rhs.m_kernel;
         }
 
-        /**
-         * Returns if ItemSet is empty
-         * @param lhs
-         * @param rhs
-         * @return bool
-         */
         bool empty () const {
             return m_kernel.empty();
         }
@@ -278,18 +267,10 @@ namespace compressor_frontend {
          */
         NonTerminal parse (ReaderInterface& reader);
 
-        /**
-         * Set the archive writer
-         * @param value
-         */
         void set_archive_writer_ptr (streaming_archive::writer::Archive* value) {
             m_archive_writer_ptr = value;
         }
 
-        /**
-         * Get the archive writer
-         * @return
-         */
         [[nodiscard]] streaming_archive::writer::Archive* get_archive_writer_ptr () const {
             return m_archive_writer_ptr;
         }
@@ -423,11 +404,6 @@ namespace compressor_frontend {
          */
         std::string get_input_until_next_newline (ReaderInterface& reader, Token* error_token);
 
-        /**
-         * Check if a symbol is a token (otherwise it is either not defined, or is a nonterminal)
-         * @param s
-         * @return bool
-         */
         bool symbol_is_token (uint32_t s) {
             return m_terminals.find(s) != m_terminals.end();
         }

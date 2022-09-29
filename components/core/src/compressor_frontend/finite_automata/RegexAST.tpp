@@ -209,16 +209,6 @@ namespace compressor_frontend::finite_automata {
         m_ranges.emplace_back(min, max);
     }
 
-    template <typename NFAStateType>
-    void RegexASTGroup<NFAStateType>::add_range (uint32_t min, uint32_t max) {
-        m_ranges.emplace_back(min, max);
-    }
-
-    template <typename NFAStateType>
-    void RegexASTGroup<NFAStateType>::add_literal (uint32_t literal) {
-        m_ranges.emplace_back(literal, literal);
-    }
-
     // ranges must be sorted
     template <typename NFAStateType>
     vector<typename RegexASTGroup<NFAStateType>::Range> RegexASTGroup<NFAStateType>::merge (const vector<Range>& ranges) {

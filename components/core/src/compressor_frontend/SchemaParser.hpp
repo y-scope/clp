@@ -20,19 +20,11 @@ namespace compressor_frontend {
         // Constructor
         SchemaFileAST () = default;
 
-        /**
-         * Sets the list of delimiters when a delimiters line is found in the schema
-         * Will overwrite any existing delimiters
-         * @param delimiters_in
-         */
-        void add_delimiters (std::unique_ptr<ParserAST> delimiters_in) {
+        /// TODO: shouldn't this add delimiters instead of setting it?
+        void set_delimiters (std::unique_ptr<ParserAST> delimiters_in) {
             m_delimiters = std::move(delimiters_in);
         }
 
-        /**
-         * Add a schema variable to the list of schema vars when a variable line is found in the schema
-         * @param schema_var
-         */
         void add_schema_var (std::unique_ptr<ParserAST> schema_var) {
             m_schema_vars.push_back(std::move(schema_var));
         }
@@ -49,10 +41,6 @@ namespace compressor_frontend {
             m_name.push_back(character);
         }
 
-        /**
-         * Add a character to the name of a variable in the schema
-         * @param character
-         */
         void add_character (char character) {
             m_name.push_back(character);
         }
@@ -79,10 +67,6 @@ namespace compressor_frontend {
             m_delimiters.push_back(delimiter);
         }
 
-        /**
-         * Add a delimiter to the string of delimiters specified on a delimiters line of the schema
-         * @param delimiter
-         */
         void add_delimiter (uint32_t delimiter) {
             m_delimiters.push_back(delimiter);
         }

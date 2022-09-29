@@ -124,11 +124,6 @@ namespace compressor_frontend::finite_automata {
          */
         void reverse ();
 
-        /**
-         For m_root, add dest_state to m_bytes_transitions if all values in interval are a byte, otherwise add dest_state to m_tree_transitions
-         * @param interval
-         * @param dest_state
-         */
         void add_root_interval (Interval interval, NFAStateType* dest_state) {
             m_root->add_interval(interval, dest_state);
         }

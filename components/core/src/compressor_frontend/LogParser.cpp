@@ -201,7 +201,7 @@ namespace compressor_frontend {
                 m_archive_writer_ptr->write_msg_using_schema(m_active_uncompressed_msg, m_uncompressed_msg_pos,
                                                              m_lexer.get_has_delimiters(), has_timestamp);
                 // switch to timestamped messages if a timestamp is ever found at the start of line (potentially dangerous as it never switches back)
-                // TODO: potentially switch back if a new line is reached and the message is too long (100x static message size) 
+                /// TODO: potentially switch back if a new line is reached and the message is too long (100x static message size)
                 if (token_type == (int) SymbolID::TokenNewlineTimestampId) {
                     has_timestamp = true;
                 }
