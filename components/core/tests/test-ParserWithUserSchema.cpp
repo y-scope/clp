@@ -9,10 +9,10 @@
 #include "../submodules/Catch2/single_include/catch2/catch.hpp"
 
 // Project headers
+#include "../src/clp/run.hpp"
 #include "../src/compressor_frontend/utils.hpp"
 #include "../src/compressor_frontend/LogParser.hpp"
 #include "../src/GlobalMySQLMetadataDB.hpp"
-#include "../src/clp/clp_main.hpp"
 
 using compressor_frontend::DelimiterStringAST;
 using compressor_frontend::LALR1Parser;
@@ -48,7 +48,7 @@ void parse(const std::string& log_file, const std::string& schema_file) {
     log_parser->parse(log_file_reader);
 }
 
-std::string compress(const std::string& output_dir, const std::string& file_to_compress, std::string schema_file, bool old = false) {
+void compress(const std::string& output_dir, const std::string& file_to_compress, std::string schema_file, bool old = false) {
     std::vector<std::string> arguments;
     if(old) {
         arguments = {"main.cpp", "c", output_dir, file_to_compress};        
@@ -59,20 +59,17 @@ std::string compress(const std::string& output_dir, const std::string& file_to_c
     for (const auto& arg : arguments)
         argv.push_back((char*)arg.data());
     argv.push_back(nullptr);
-    std::string archive_path;
-    clp_main(argv.size() - 1, (const char**) argv.data(), &archive_path);
-    return archive_path;
+    clp::run(argv.size() - 1, (const char**) argv.data());
 }
 
-std::string decompress(std::string archive_dir, std::string output_dir) {
+void decompress(std::string archive_dir, std::string output_dir) {
     std::vector<std::string> arguments = {"main.cpp", "x", std::move(archive_dir), std::move(output_dir)};
     std::vector<char*> argv;
     for (const auto& arg : arguments)
         argv.push_back((char*)arg.data());
     argv.push_back(nullptr);
     std::string archive_path;
-    clp_main(argv.size() - 1, (const char**) argv.data(), &archive_path);
-    return archive_path;
+    clp::run(argv.size() - 1, (const char**) argv.data());
 }
 
 TEST_CASE("Test error for missing schema file", "[LALR1Parser][SchemaParser]") {
@@ -142,27 +139,25 @@ TEST_CASE("Test parsing", "[LALR1Parser][LogParser]") {
 /// TODO: add the test logs to the git repo
 /// TODO: add the directory structure to support compress_dir_path
 TEST_CASE("Test compression", "[Compression][Benchmark]") {
-    Stopwatch compression_watch("compression_watch");
+    Stopwatch compression_watch;
     std::string compress_dir_path = "../tests/test_archives/openstack_logs_new/";
     std::string input_path = "../tests/test_log_files/openstack_logs/test";
     std::string schema_file = "../tests/test_schema_files/real_schema.txt";
     compression_watch.start();
-    std::string archive_path = compress(compress_dir_path, input_path, schema_file);
-    SPDLOG_INFO("Compressed to: " + archive_path + "\n");
+    compress(compress_dir_path, input_path, schema_file);
     compression_watch.stop();
-    compression_watch.print();
+    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
 }
 
 TEST_CASE("Test compression old", "[Compression][Benchmark]") {
-    Stopwatch compression_watch("compression_watch");
+    Stopwatch compression_watch;
     std::string compress_dir_path = "../tests/test_archives/openstack_logs_old/";
     std::string input_path = "../tests/test_log_files/openstack_logs/test";
     std::string schema_file = "../tests/test_schema_files/real_schema.txt";
     compression_watch.start();
-    std::string archive_path = compress(compress_dir_path, input_path, schema_file, true);
-    SPDLOG_INFO("Compressed to: " + archive_path + "\n");
+    compress(compress_dir_path, input_path, schema_file, true);
     compression_watch.stop();
-    compression_watch.print();
+    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
 }
 
 
@@ -170,8 +165,7 @@ TEST_CASE("Test compression without timestamps", "[Compression][Benchmark]") {
     std::string compress_dir_path = "../tests/test_archives/openstack_logs_new/";
     std::string input_path = "../tests/test_log_files/openstack_logs/test_no_timestamps";
     std::string schema_file = "../tests/test_schema_files/real_schema.txt";
-    std::string archive_path = compress(compress_dir_path, input_path, schema_file);
-    SPDLOG_INFO("Compressed to: " + archive_path + "\n");
+    compress(compress_dir_path, input_path, schema_file);
 }
 
 TEST_CASE("Test decompression", "[Compression][Benchmark]") {
@@ -181,64 +175,59 @@ TEST_CASE("Test decompression", "[Compression][Benchmark]") {
 }
 
 TEST_CASE("Test compression real", "[Compression][Benchmark]") {
-    Stopwatch compression_watch("compression_watch");
+    Stopwatch compression_watch;
     std::string input_path = "../tests/test_log_files/openstack_logs/n-cpu.log.2016-05-08-072252";
     std::string compress_dir_path = "../tests/test_archives/openstack_logs_new/";
     std::string schema_file = "../tests/test_schema_files/real_schema.txt";
     compression_watch.start();
-    std::string archive_path = compress(compress_dir_path, input_path, schema_file);
-    SPDLOG_INFO("Compressed to: " + archive_path + "\n");
+    compress(compress_dir_path, input_path, schema_file);
     compression_watch.stop();
-    compression_watch.print();
+    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
 }
 
 TEST_CASE("Test compression real old", "[Compression][Benchmark]") {
-    Stopwatch compression_watch("compression_watch");
+    Stopwatch compression_watch;
     std::string compress_dir_path = "../tests/test_archives/openstack_logs_old/";
     std::string input_path = "../tests/test_log_files/openstack_logs/n-cpu.log.2016-05-08-072252";
     std::string schema_file = "../tests/test_schema_files/real_schema.txt";
     compression_watch.start();
-    std::string archive_path = compress(compress_dir_path, input_path, schema_file, true);
-    SPDLOG_INFO("Compressed to: " + archive_path + "\n");
+    compress(compress_dir_path, input_path, schema_file, true);
     compression_watch.stop();
-    compression_watch.print();
+    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
 }
  
 TEST_CASE("Test compression directory", "[Compression][Benchmark]") {
-    Stopwatch compression_watch("compression_watch");
+    Stopwatch compression_watch;
     std::string compress_dir_path = "../tests/test_archives/openstack_logs_new/";
     std::string input_path = "../tests/test_log_files/openstack_logs";
     std::string schema_file = "../tests/test_schema_files/real_schema.txt";
     compression_watch.start();
-    std::string archive_path = compress(compress_dir_path, input_path, schema_file);
-    SPDLOG_INFO("Compressed to: " + archive_path + "\n");
+    compress(compress_dir_path, input_path, schema_file);
     compression_watch.stop();
-    compression_watch.print();
+    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
 }
 
 TEST_CASE("Test compression no timestamp", "[Compression][Benchmark]") {
-    Stopwatch compression_watch("compression_watch");
+    Stopwatch compression_watch;
     std::string input_path = "../tests/test_log_files/openstack_logs/test_no_timestamp";
     //std::string input_path = "../../../logs/yarn--resourcemanager-8d30a2c150ca.log.2018-07-13ir"; //breaks at line 55 if its timestamp format isn't in schema
     std::string compress_dir_path = "../tests/test_archives/openstack_logs_new/";
     std::string schema_file = "../tests/test_schema_files/real_schema.txt";
     compression_watch.start();
-    std::string archive_path = compress(compress_dir_path, input_path, schema_file);
-    SPDLOG_INFO("Compressed to: " + archive_path + "\n");
+    compress(compress_dir_path, input_path, schema_file);
     compression_watch.stop();
-    compression_watch.print();
+    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
 }
 
 TEST_CASE("Test compression hadoop", "[Compression][Benchmark]") {
-    Stopwatch compression_watch("compression_watch");
+    Stopwatch compression_watch;
     std::string compress_dir_path = "../../../archive/";
     std::string input_path = "../../../logs";
     std::string schema_file = "../tests/test_schema_files/real_schema.txt";
     compression_watch.start();
-    std::string archive_path = compress(compress_dir_path, input_path, schema_file);
-    SPDLOG_INFO("Compressed to: " + archive_path + "\n");
+    compress(compress_dir_path, input_path, schema_file);
     compression_watch.stop();
-    compression_watch.print();
+    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
 }
 
 TEST_CASE("Test decompression hadoop", "[Compression][Benchmark]") {

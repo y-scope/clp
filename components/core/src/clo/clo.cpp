@@ -272,7 +272,7 @@ int main (int argc, const char* argv[]) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
-    PROFILER_INITIALIZE()
+    Profiler::init();
     TimestampPattern::init();
 
     CommandLineArguments command_line_args("clo");

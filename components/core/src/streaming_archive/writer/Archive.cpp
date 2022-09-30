@@ -23,7 +23,6 @@
 
 // Project headers
 #include "../../EncodedVariableInterpreter.hpp"
-#include "../../Profiler.hpp"
 #include "../../Utils.hpp"
 #include "../Constants.hpp"
 #include "../../compressor_frontend/LogParser.hpp"
@@ -50,7 +49,7 @@ namespace streaming_archive::writer {
         }
     }
 
-    std::string Archive::open (const UserConfig& user_config) {
+    void Archive::open (const UserConfig& user_config) {
         int retval;
 
         m_id = user_config.id;
@@ -194,7 +193,6 @@ namespace streaming_archive::writer {
         }
 
         m_path = archive_path_string;
-        return archive_path.string();
     }
 
     void Archive::close () {

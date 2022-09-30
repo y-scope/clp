@@ -142,8 +142,6 @@ set(SOURCE_FILES_clp
         src/ArrayBackedPosIntSet.cpp
         src/ArrayBackedPosIntSet.hpp
         src/clp/clp.cpp
-        src/clp/clp_main.cpp
-        src/clp/clp_main.hpp
         src/clp/CommandLineArguments.cpp
         src/clp/CommandLineArguments.hpp
         src/clp/compression.cpp
@@ -156,6 +154,8 @@ set(SOURCE_FILES_clp
         src/clp/FileDecompressor.hpp
         src/clp/FileToCompress.cpp
         src/clp/FileToCompress.hpp
+        src/clp/run.cpp
+        src/clp/run.hpp
         src/clp/StructuredFileToCompress.cpp
         src/clp/StructuredFileToCompress.hpp
         src/clp/utils.cpp
@@ -593,8 +593,6 @@ target_compile_features(clo
         )
 
 set(SOURCE_FILES_unitTest
-        src/clp/clp_main.cpp
-        src/clp/clp_main.hpp
         src/clp/CommandLineArguments.cpp
         src/clp/CommandLineArguments.hpp
         src/clp/compression.cpp
@@ -607,6 +605,8 @@ set(SOURCE_FILES_unitTest
         src/clp/FileDecompressor.hpp
         src/clp/FileToCompress.cpp
         src/clp/FileToCompress.hpp
+        src/clp/run.cpp
+        src/clp/run.hpp
         src/clp/StructuredFileToCompress.cpp
         src/clp/StructuredFileToCompress.hpp
         src/clp/utils.cpp
