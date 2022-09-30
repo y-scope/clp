@@ -7,10 +7,11 @@
 // Project headers
 #include "../src/compressor_frontend/Lexer.hpp"
 #include "../src/compressor_frontend/SchemaParser.hpp"
+#include "../src/compressor_frontend/utils.hpp"
 #include "../src/Grep.hpp"
 
 using compressor_frontend::DelimiterStringAST;
-using compressor_frontend::Lexer;
+using compressor_frontend::lexers::ByteLexer;
 using compressor_frontend::ParserAST;
 using compressor_frontend::SchemaFileAST;
 using compressor_frontend::SchemaParser;
@@ -18,59 +19,10 @@ using compressor_frontend::SchemaVarAST;
 using std::string;
 
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {
-    Lexer forward_lexer;
-    {
-        FileReader schema_reader;
-        ErrorCode error_code = schema_reader.try_open("../tests/test_schema_files/search_schema.txt");
-        SchemaParser sp;
-        std::unique_ptr<SchemaFileAST> schema_ast = sp.generate_schema_ast(schema_reader);
-        auto delimiters_ptr = dynamic_cast<DelimiterStringAST*>(schema_ast->m_delimiters.get());
-        // Create forward lexer
-        forward_lexer.m_symbol_id[compressor_frontend::cTokenEnd] = forward_lexer.m_symbol_id.size();
-        forward_lexer.m_symbol_id[compressor_frontend::cTokenUncaughtString] = forward_lexer.m_symbol_id.size();
-        forward_lexer.m_id_symbol[(int)compressor_frontend::SymbolID::TokenEndID] = compressor_frontend::cTokenEnd;
-        forward_lexer.m_id_symbol[(int)compressor_frontend::SymbolID::TokenUncaughtStringID] = compressor_frontend::cTokenUncaughtString;
-        if (delimiters_ptr != nullptr) {
-            forward_lexer.add_delimiters(delimiters_ptr->m_delimiters);
-        }
-        for (std::unique_ptr<ParserAST> const &parser_ast: schema_ast->m_schema_vars) {
-            auto rule = dynamic_cast<SchemaVarAST*>(parser_ast.get());
-            if (forward_lexer.m_symbol_id.find(rule->m_name) == forward_lexer.m_symbol_id.end()) {
-                forward_lexer.m_symbol_id[rule->m_name] = forward_lexer.m_symbol_id.size();
-                forward_lexer.m_id_symbol[forward_lexer.m_symbol_id[rule->m_name]] = rule->m_name;
-
-            }
-            forward_lexer.add_rule(forward_lexer.m_symbol_id[rule->m_name], std::move(rule->m_regex_ptr));
-        }
-        forward_lexer.generate();
-        schema_reader.close();
-    }
-    // Create reverse lexer
-    Lexer reverse_lexer;
-    {
-        FileReader schema_reader;
-        ErrorCode error_code = schema_reader.try_open("../tests/test_schema_files/search_schema.txt");
-        SchemaParser sp;
-        std::unique_ptr<SchemaFileAST> schema_ast = sp.generate_schema_ast(schema_reader);
-        auto delimiters_ptr = dynamic_cast<DelimiterStringAST*>(schema_ast->m_delimiters.get());
-        reverse_lexer.m_symbol_id[compressor_frontend::cTokenEnd] = reverse_lexer.m_symbol_id.size();
-        reverse_lexer.m_symbol_id[compressor_frontend::cTokenUncaughtString] = reverse_lexer.m_symbol_id.size();
-        reverse_lexer.m_id_symbol[(int)compressor_frontend::SymbolID::TokenEndID] = compressor_frontend::cTokenEnd;
-        reverse_lexer.m_id_symbol[(int)compressor_frontend::SymbolID::TokenUncaughtStringID] = compressor_frontend::cTokenUncaughtString;
-        if (delimiters_ptr != nullptr) {
-            reverse_lexer.add_delimiters(delimiters_ptr->m_delimiters);
-        }
-        for (std::unique_ptr<ParserAST> const &parser_ast: schema_ast->m_schema_vars) {
-            auto rule = dynamic_cast<SchemaVarAST*>(parser_ast.get());
-            if (reverse_lexer.m_symbol_id.find(rule->m_name) == reverse_lexer.m_symbol_id.end()) {
-                reverse_lexer.m_symbol_id[rule->m_name] = reverse_lexer.m_symbol_id.size();
-                reverse_lexer.m_id_symbol[reverse_lexer.m_symbol_id[rule->m_name]] = rule->m_name;
-            }
-            reverse_lexer.add_rule(reverse_lexer.m_symbol_id[rule->m_name], std::move(rule->m_regex_ptr));
-        }
-        reverse_lexer.generate_reverse();
-        schema_reader.close();
-    }
+    ByteLexer forward_lexer;
+    compressor_frontend::load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, forward_lexer);
+    ByteLexer reverse_lexer;
+    compressor_frontend::load_lexer_from_file("../tests/test_schema_files/search_schema.txt", true, reverse_lexer);
 
     string str;
     size_t begin_pos;
@@ -136,13 +88,14 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
     REQUIRE(str.length() == begin_pos);
 
     // With wildcards
-    str = "~=\\*x\\?!abc*123;1.2%x:+394/-=-*abc-";
+    str = "~=1\\*x\\?!abc*123;1.2%x:+394/-=-*abc-";
     begin_pos = 0;
     end_pos = 0;
 
     REQUIRE(Grep::get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var, forward_lexer, reverse_lexer) == true);
-    REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "=\\*x");
+    REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "1\\*x");
     REQUIRE(is_var == true);
+    //REQUIRE(is_var == true);
 
     REQUIRE(Grep::get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var, forward_lexer, reverse_lexer) == true);
     REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "abc*123");
@@ -157,7 +110,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
     REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "+394/-");
     REQUIRE(is_var == true);
 
-    REQUIRE(Grep::get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var, forward_lexer, reverse_lexer) == false);
+    REQUIRE(Grep::get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var, forward_lexer, reverse_lexer) == true);
     REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "-*abc-");
     REQUIRE(is_var == false);
 

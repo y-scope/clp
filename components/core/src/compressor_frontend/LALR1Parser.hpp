@@ -1,5 +1,5 @@
-#ifndef COMPRESSOR_FRONTEND_LALR1Parser_HPP
-#define COMPRESSOR_FRONTEND_LALR1Parser_HPP
+#ifndef COMPRESSOR_FRONTEND_LALR1_PARSER_HPP
+#define COMPRESSOR_FRONTEND_LALR1_PARSER_HPP
 
 // C++ standard libraries
 #include <cstdint>
@@ -48,10 +48,6 @@ namespace compressor_frontend {
         // Constructor
         virtual ~ParserAST () = 0;
 
-        /**
-         * Convert ParserAST to one of its child classes
-         * @return T&
-         */
         template<typename T>
         T& get () {
             // TODO: why does this compile?
@@ -190,7 +186,6 @@ namespace compressor_frontend {
      * The m_kernel is sufficient for fully representing the state, but m_closure is useful for computations.
      * m_next indicates what state (ItemSet) to transition to based on the symbol received from the lexer
      * m_actions is the action to perform based on the symbol received from the lexer.
-     *
      */
     struct ItemSet {
     public:
@@ -204,12 +199,6 @@ namespace compressor_frontend {
             return lhs.m_kernel < rhs.m_kernel;
         }
 
-        /**
-         * Returns if ItemSet is empty
-         * @param lhs
-         * @param rhs
-         * @return bool
-         */
         bool empty () const {
             return m_kernel.empty();
         }
@@ -222,6 +211,7 @@ namespace compressor_frontend {
     };
 
     /// TODO: make LALR1Parser an abstract class?
+    template <typename NFAStateType, typename DFAStateType>
     class LALR1Parser {
     public:
         // Constructor
@@ -233,7 +223,7 @@ namespace compressor_frontend {
          * @param name
          * @param rule
          */
-        void add_rule (const std::string& name, std::unique_ptr<RegexAST> rule);
+        void add_rule (const std::string& name, std::unique_ptr<RegexAST<NFAStateType>> rule);
 
         /**
          * Constructs a RegexASTLiteral and call add_rule
@@ -247,7 +237,7 @@ namespace compressor_frontend {
          * @param name
          * @param rule_char
          */
-        void add_token_group (const std::string& name, std::unique_ptr<finite_automata::RegexASTGroup> rule_group);
+        void add_token_group (const std::string& name, std::unique_ptr<finite_automata::RegexASTGroup<NFAStateType>> rule_group);
 
         /**
          * Constructs a RegexASTCat and calls add_rule
@@ -270,6 +260,7 @@ namespace compressor_frontend {
          */
         void generate ();
 
+        /// TODO: add throws to function headers
         /**
          * Parse an input (e.g. file)
          * @param reader
@@ -277,18 +268,10 @@ namespace compressor_frontend {
          */
         NonTerminal parse (ReaderInterface& reader);
 
-        /**
-         * Set the archive writer
-         * @param value
-         */
         void set_archive_writer_ptr (streaming_archive::writer::Archive* value) {
             m_archive_writer_ptr = value;
         }
 
-        /**
-         * Get the archive writer
-         * @return
-         */
         [[nodiscard]] streaming_archive::writer::Archive* get_archive_writer_ptr () const {
             return m_archive_writer_ptr;
         }
@@ -307,7 +290,7 @@ namespace compressor_frontend {
          */
         std::string report_error (ReaderInterface& reader);
 
-        Lexer m_lexer;
+        Lexer<NFAStateType, DFAStateType> m_lexer;
         streaming_archive::writer::Archive* m_archive_writer_ptr;
         std::stack<MatchedSymbol> m_parse_stack_matches;
         std::stack<ItemSet*> m_parse_stack_states;
@@ -422,11 +405,6 @@ namespace compressor_frontend {
          */
         std::string get_input_until_next_newline (ReaderInterface& reader, Token* error_token);
 
-        /**
-         * Check if a symbol is a token (otherwise it is either not defined, or is a nonterminal)
-         * @param s
-         * @return bool
-         */
         bool symbol_is_token (uint32_t s) {
             return m_terminals.find(s) != m_terminals.end();
         }
@@ -443,4 +421,6 @@ namespace compressor_frontend {
     };
 }
 
-#endif // COMPRESSOR_FRONTEND_LALR1Parser_HPP
+#include "LALR1Parser.tpp"
+
+#endif // COMPRESSOR_FRONTEND_LALR1_PARSER_HPP

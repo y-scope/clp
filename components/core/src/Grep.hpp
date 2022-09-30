@@ -9,9 +9,11 @@
 #include "Query.hpp"
 #include "streaming_archive/reader/Archive.hpp"
 #include "streaming_archive/reader/File.hpp"
+#include "compressor_frontend/Lexer.hpp"
 #include "compressor_frontend/QueryParser.hpp"
 
 class Grep {
+
 public:
     // Types
     /**
@@ -35,12 +37,12 @@ public:
      * @param query
      * @return true if query may match messages, false otherwise
      */
-    static bool process_raw_query (const streaming_archive::reader::Archive& archive, const std::string& search_string,
-                                   epochtime_t search_begin_ts, epochtime_t search_end_ts, bool ignore_case, Query& query,
-                                   compressor_frontend::Lexer& forward_lexer, compressor_frontend::Lexer& reverse_lexer, bool use_heuristic);
-    static bool process_raw_query (const streaming_archive::reader::Archive& archive, const std::string& search_string,
-                                   epochtime_t search_begin_ts, epochtime_t search_end_ts, bool ignore_case, Query& query, 
-                                   const std::unique_ptr<compressor_frontend::QueryParser>& parser);
+    static bool process_raw_query (const streaming_archive::reader::Archive& archive, const std::string& search_string, epochtime_t search_begin_ts,
+                                   epochtime_t search_end_ts, bool ignore_case, Query& query, compressor_frontend::lexers::ByteLexer& forward_lexer,
+                                   compressor_frontend::lexers::ByteLexer& reverse_lexer, bool use_heuristic);
+    //static bool process_raw_query (const streaming_archive::reader::Archive& archive, const std::string& search_string,
+    //                               epochtime_t search_begin_ts, epochtime_t search_end_ts, bool ignore_case, Query& query,
+    //                               const std::unique_ptr<compressor_frontend::QueryParser>& parser);
 
     /**
      * Returns bounds of next potential variable (either a definite variable or a token with wildcards)
@@ -63,7 +65,7 @@ public:
      * @return true if another potential variable was found, false otherwise
      */
     static bool get_bounds_of_next_potential_var (const std::string& value, size_t& begin_pos, size_t& end_pos, bool& is_var,
-                                                  compressor_frontend::Lexer& forward_lexer, compressor_frontend::Lexer& reverse_lexer);
+                                                  compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer);
     
     /**
      * Marks which sub-queries in each query are relevant to the given file

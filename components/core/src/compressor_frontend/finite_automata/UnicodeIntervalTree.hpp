@@ -15,8 +15,6 @@ namespace compressor_frontend::finite_automata {
     template<class T>
     class UnicodeIntervalTree {
     public:
-        typedef std::pair<uint32_t, uint32_t> Interval;
-
         /// TODO: probably use this Data type more often in this class???
         /**
          * Structure to represent utf8 data
@@ -56,9 +54,6 @@ namespace compressor_frontend::finite_automata {
          */
         std::unique_ptr<std::vector<Data>> pop (Interval interval);
 
-        /**
-         * Reset the tree to be empty
-         */
         void reset () {
             m_root.reset();
         }
@@ -161,19 +156,11 @@ namespace compressor_frontend::finite_automata {
              * @param i
              */
             bool overlaps (Interval i);
-            
-            /**
-             * return m_interval
-             * @retrun Interval
-             */
+
             Interval get_interval () {
                 return m_interval;
             }
-            
-            /**
-             * return m_ast
-             * @retrun T
-             */
+
             T get_value () {
                 return m_value;
             }

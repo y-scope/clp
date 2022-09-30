@@ -14,14 +14,18 @@
 #include "SchemaParser.hpp"
 
 namespace compressor_frontend {
+
+    using finite_automata::RegexDFAByteState;
+    using finite_automata::RegexNFAByteState;
+
     /// TODO: try not inheriting from LALR1Parser (and compare c-array vs. vectors (its underlying array) for buffers afterwards)
-    class LogParser : public LALR1Parser {
+    class LogParser : public LALR1Parser<RegexNFAByteState, RegexDFAByteState> {
     public:
         // Constructor
         LogParser (const std::string& schema_file_path);
 
         /**
-         * TODO: this description will need to change after adding it directly into the dictionary writer
+         * /// TODO: this description will need to change after adding it directly into the dictionary writer
          * Custom parsing for the log that builds up an uncompressed message and then compresses it all at once
          * @param reader
          */
@@ -32,9 +36,6 @@ namespace compressor_frontend {
          * @param reader
          */
         void increment_uncompressed_msg_pos (ReaderInterface& reader);
-
-        uint16_t m_schema_checksum;
-        uint16_t m_schema_file_size;
 
     private:
         /**

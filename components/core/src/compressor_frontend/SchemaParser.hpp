@@ -10,25 +10,21 @@
 #include "LALR1Parser.hpp"
 
 namespace compressor_frontend {
+
+    using finite_automata::RegexDFAByteState;
+    using finite_automata::RegexNFAByteState;
+
     // ASTs used in SchemaParser AST
     class SchemaFileAST : public ParserAST {
     public:
         // Constructor
         SchemaFileAST () = default;
 
-        /**
-         * Sets the list of delimiters when a delimiters line is found in the schema
-         * Will overwrite any existing delimiters
-         * @param delimiters_in
-         */
-        void add_delimiters (std::unique_ptr<ParserAST> delimiters_in) {
+        /// TODO: shouldn't this add delimiters instead of setting it?
+        void set_delimiters (std::unique_ptr<ParserAST> delimiters_in) {
             m_delimiters = std::move(delimiters_in);
         }
 
-        /**
-         * Add a schema variable to the list of schema vars when a variable line is found in the schema
-         * @param schema_var
-         */
         void add_schema_var (std::unique_ptr<ParserAST> schema_var) {
             m_schema_vars.push_back(std::move(schema_var));
         }
@@ -45,10 +41,6 @@ namespace compressor_frontend {
             m_name.push_back(character);
         }
 
-        /**
-         * Add a character to the name of a variable in the schema
-         * @param character
-         */
         void add_character (char character) {
             m_name.push_back(character);
         }
@@ -59,12 +51,13 @@ namespace compressor_frontend {
     class SchemaVarAST : public ParserAST {
     public:
         //Constructor
-        SchemaVarAST (std::string name, std::unique_ptr<RegexAST> regex_ptr, uint32_t line_num) : m_name(std::move(name)), m_regex_ptr(std::move(regex_ptr)),
-                                                                                                  m_line_num(line_num) {}
+        SchemaVarAST (std::string name, std::unique_ptr<RegexAST<RegexNFAByteState>> regex_ptr, uint32_t line_num) : m_name(std::move(name)),
+                                                                                                                     m_regex_ptr(std::move(regex_ptr)),
+                                                                                                                     m_line_num(line_num) {}
 
         uint32_t m_line_num;
         std::string m_name;
-        std::unique_ptr<RegexAST> m_regex_ptr;
+        std::unique_ptr<RegexAST<RegexNFAByteState>> m_regex_ptr;
     };
 
     class DelimiterStringAST : public ParserAST {
@@ -74,10 +67,6 @@ namespace compressor_frontend {
             m_delimiters.push_back(delimiter);
         }
 
-        /**
-         * Add a delimiter to the string of delimiters specified on a delimiters line of the schema
-         * @param delimiter
-         */
         void add_delimiter (uint32_t delimiter) {
             m_delimiters.push_back(delimiter);
         }
@@ -87,7 +76,7 @@ namespace compressor_frontend {
 
     // Schema Parser itself
 
-    class SchemaParser : public LALR1Parser {
+    class SchemaParser : public LALR1Parser<RegexNFAByteState, RegexDFAByteState> {
     public:
         // Constructor
         SchemaParser ();
@@ -107,7 +96,7 @@ namespace compressor_frontend {
         std::unique_ptr<SchemaFileAST> generate_schema_ast (ReaderInterface& reader);
 
         /**
-         * Wrapper around generate_schema_ast() including error checking on opening the input schema file and computing schema checksum
+         * Wrapper around generate_schema_ast()
          * @param schema_file_path
          * @return std::unique_ptr<SchemaFileAST>
          */

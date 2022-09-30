@@ -99,13 +99,8 @@ namespace clp {
         // Open Archive
         streaming_archive::writer::Archive archive_writer;
         // Set schema file if specified by user
-        /// TODO: only use checksum for files
         if (false == command_line_args.get_use_heuristic()) {
             archive_writer.m_schema_file_path = command_line_args.get_schema_file_path();
-            archive_writer.m_schema_file_size = log_parser->m_schema_file_size;
-            archive_writer.m_schema_checksum = log_parser->m_schema_checksum;
-            archive_writer.m_schema_original_file_path = command_line_args.get_schema_file_path();
-            archive_writer.m_schema_last_edited = std::filesystem::last_write_time(command_line_args.get_schema_file_path());
         }
         // Open archive
         archive_writer.open(archive_user_config);

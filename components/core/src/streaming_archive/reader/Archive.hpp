@@ -41,8 +41,7 @@ namespace streaming_archive { namespace reader {
          * @param id
          */
         static void read_metadata_file (const std::string& path, archive_format_version_t& format_version, size_t& stable_uncompressed_size,
-                                        size_t& stable_size, size_t& schema_checksum, std::string& schema_original_file_path, 
-                                        std::filesystem::file_time_type& schema_last_edited);
+                                        size_t& stable_size);
 
         /**
          * Opens archive for reading
@@ -120,9 +119,6 @@ namespace streaming_archive { namespace reader {
         {
             return m_metadata_db.get_file_iterator(begin_ts, end_ts, file_path, true, segment_id);
         }
-        size_t get_schema_checksum() { return m_schema_checksum; }
-        std::string get_schema_original_file_path() { return m_schema_original_file_path; }
-        std::filesystem::file_time_type get_schema_last_edited() { return m_schema_last_edited; }
 
     private:
         // Variables
@@ -132,10 +128,7 @@ namespace streaming_archive { namespace reader {
         std::string m_segments_dir_path;
         LogTypeDictionaryReader m_logtype_dictionary;
         VariableDictionaryReader m_var_dictionary;
-        size_t m_schema_checksum;
-        std::string m_schema_original_file_path;
-        std::filesystem::file_time_type m_schema_last_edited;
-        
+
         SegmentManager m_segment_manager;
 
         MetadataDB m_metadata_db;

@@ -132,7 +132,7 @@ static bool open_archive (const string& archive_path, Archive& archive_reader) {
 }
 
 static bool search (const vector<string>& search_strings, CommandLineArguments& command_line_args, Archive& archive,
-                    compressor_frontend::Lexer& forward_lexer, compressor_frontend::Lexer& reverse_lexer, bool use_heuristic) {
+                    compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer, bool use_heuristic) {
     ErrorCode error_code;
     auto search_begin_ts = command_line_args.get_search_begin_ts();
     auto search_end_ts = command_line_args.get_search_end_ts();
@@ -386,10 +386,14 @@ int main (int argc, const char* argv[]) {
     }
     global_metadata_db->open();
 
-    std::map<std::pair<std::string, std::filesystem::file_time_type>, compressor_frontend::Lexer> forward_lexer_map;
-    std::map<std::pair<std::string, std::filesystem::file_time_type>, compressor_frontend::Lexer> reverse_lexer_map;
-    compressor_frontend::Lexer* forward_lexer_ptr;
-    compressor_frontend::Lexer* reverse_lexer_ptr;
+    /// TODO: if performance is too slow, can make this more efficient by only diffing files with the same checksum
+    const uint32_t max_map_schema_length = 100000;
+    std::map<std::string, compressor_frontend::lexers::ByteLexer> forward_lexer_map;
+    std::map<std::string, compressor_frontend::lexers::ByteLexer> reverse_lexer_map;
+    compressor_frontend::lexers::ByteLexer one_time_use_forward_lexer;
+    compressor_frontend::lexers::ByteLexer one_time_use_reverse_lexer;
+    compressor_frontend::lexers::ByteLexer* forward_lexer_ptr;
+    compressor_frontend::lexers::ByteLexer* reverse_lexer_ptr;
 
     // std::unique_ptr<QueryParser> parser = std::make_unique<QueryParser>(QueryParser(std::move(schema_ast)));
     
@@ -416,25 +420,40 @@ int main (int argc, const char* argv[]) {
         bool use_heuristic = true;
         if (std::filesystem::exists(schema_file_path)) {
             use_heuristic = false;
-            std::pair<string, std::filesystem::file_time_type> lexer_key(archive_reader.get_schema_original_file_path(),
-                                                                         archive_reader.get_schema_last_edited());
-            auto forward_lexer_map_it = forward_lexer_map.find(lexer_key);
-            auto reverse_lexer_map_it = reverse_lexer_map.find(lexer_key);
-            // if there is a chance there might be a difference make a new lexer as it's pretty fast to create
-            if (forward_lexer_map_it == forward_lexer_map.end()) {
+
+            char buf[max_map_schema_length];
+            FileReader file_reader;
+            file_reader.try_open(schema_file_path);
+
+            size_t num_bytes_read;
+            file_reader.read (buf, max_map_schema_length, num_bytes_read);
+            if(num_bytes_read < max_map_schema_length) {
+                auto forward_lexer_map_it = forward_lexer_map.find(buf);
+                auto reverse_lexer_map_it = reverse_lexer_map.find(buf);
+                // if there is a chance there might be a difference make a new lexer as it's pretty fast to create
+                if (forward_lexer_map_it == forward_lexer_map.end()) {
+                    // Create forward lexer
+                    auto insert_result = forward_lexer_map.emplace(buf, compressor_frontend::lexers::ByteLexer());
+                    forward_lexer_ptr = &insert_result.first->second;
+                    load_lexer_from_file(schema_file_path, false, *forward_lexer_ptr);
+
+                    // Create reverse lexer
+                    insert_result = reverse_lexer_map.emplace(buf, compressor_frontend::lexers::ByteLexer());
+                    reverse_lexer_ptr = &insert_result.first->second;
+                    load_lexer_from_file(schema_file_path, true, *reverse_lexer_ptr);
+                } else {
+                    // load the lexers if they already exist
+                    forward_lexer_ptr = &forward_lexer_map_it->second;
+                    reverse_lexer_ptr = &reverse_lexer_map_it->second;
+                }
+            } else {
                 // Create forward lexer
-                auto insert_result = forward_lexer_map.emplace(lexer_key, compressor_frontend::Lexer());
-                forward_lexer_ptr = &insert_result.first->second;
-                load_lexer_from_file(schema_file_path, false, *forward_lexer_ptr);
+                forward_lexer_ptr = &one_time_use_forward_lexer;
+                load_lexer_from_file(schema_file_path, false, one_time_use_forward_lexer);
 
                 // Create reverse lexer
-                insert_result = reverse_lexer_map.emplace(lexer_key, compressor_frontend::Lexer());
-                reverse_lexer_ptr = &insert_result.first->second;
-                load_lexer_from_file(schema_file_path, true, *reverse_lexer_ptr);
-            } else {
-                // load the lexers if they already exist
-                forward_lexer_ptr = &forward_lexer_map_it->second;
-                reverse_lexer_ptr = &reverse_lexer_map_it->second;
+                reverse_lexer_ptr = &one_time_use_reverse_lexer;
+                load_lexer_from_file(schema_file_path, false, one_time_use_reverse_lexer);
             }
         }
 

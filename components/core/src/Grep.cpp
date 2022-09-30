@@ -370,7 +370,8 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
 }
 
 bool Grep::process_raw_query (const Archive& archive, const string& search_string, epochtime_t search_begin_ts, epochtime_t search_end_ts, bool ignore_case,
-                              Query& query, compressor_frontend::Lexer& forward_lexer, compressor_frontend::Lexer& reverse_lexer, bool use_heuristic)
+                              Query& query, compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer,
+                              bool use_heuristic)
 {
     // Set properties which require no processing
     query.set_search_begin_timestamp(search_begin_ts);
@@ -453,21 +454,17 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     return query.contains_sub_queries();
 }
 
-bool Grep::process_raw_query (const Archive& archive, const string& search_string, epochtime_t search_begin_ts, epochtime_t search_end_ts, bool ignore_case,
-                              Query& query, const std::unique_ptr<compressor_frontend::QueryParser>& parser) {
-    // Set properties which require no processing
-    query.set_search_begin_timestamp(search_begin_ts);
-    query.set_search_end_timestamp(search_end_ts);
-    query.set_ignore_case(ignore_case);
-
-
-
-
-    /* query.set_search_string(processed_search_string); */
-
-
-    return query.contains_sub_queries();
-}
+//bool Grep::process_raw_query (const Archive& archive, const string& search_string, epochtime_t search_begin_ts, epochtime_t search_end_ts, bool ignore_case,
+//                              Query& query, const std::unique_ptr<compressor_frontend::QueryParser>& parser) {
+//    // Set properties which require no processing
+//    query.set_search_begin_timestamp(search_begin_ts);
+//    query.set_search_end_timestamp(search_end_ts);
+//    query.set_ignore_case(ignore_case);
+//
+//    /* query.set_search_string(processed_search_string); */
+//
+//    return query.contains_sub_queries();
+//}
 
 bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, size_t& end_pos, bool& is_var) {
     const auto value_length = value.length();
@@ -582,8 +579,8 @@ bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_
 }
 
 bool
-Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, size_t& end_pos, bool& is_var, compressor_frontend::Lexer& forward_lexer,
-                                        compressor_frontend::Lexer& reverse_lexer) {
+Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, size_t& end_pos, bool& is_var,
+                                        compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer) {
     const size_t value_length = value.length();
     if (end_pos >= value_length) {
         return false;
@@ -601,12 +598,13 @@ Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, 
             char c = value[begin_pos];
 
             if (is_escaped) {
-                if (forward_lexer.is_first_char(c)) {
-                    // Found variable begin
+                is_escaped = false;
+
+                if(false == forward_lexer.is_delimiter(c)) {
+                    // Found escaped non-delimiter, so reverse the index to retain the escape character
+                    --begin_pos;
                     break;
                 }
-
-                is_escaped = false;
             } else if ('\\' == c) {
                 // Escape character
                 is_escaped = true;
@@ -615,54 +613,37 @@ Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, 
                     contains_wildcard = true;
                     break;
                 }
-                if (forward_lexer.is_first_char(c)) {
+                if (false == forward_lexer.is_delimiter(c)) {
                     break;
                 }
             }
         }
 
-        bool contains_decimal_digit = false;
-
         // Find next delimiter
         is_escaped = false;
         end_pos = begin_pos;
-        size_t last_wildcard_or_variable_end_pos = end_pos;
         for (; end_pos < value_length; ++end_pos) {
             char c = value[end_pos];
 
             if (is_escaped) {
+                is_escaped = false;
+
                 if (forward_lexer.is_delimiter(c)) {
-                    // Found delimiter
+                    // Found escaped delimiter, so reverse the index to retain the escape character
+                    --end_pos;
                     break;
                 }
-                if (reverse_lexer.is_first_char(c)) {
-                    last_wildcard_or_variable_end_pos = end_pos;
-                }
-
-                is_escaped = false;
             } else if ('\\' == c) {
                 // Escape character
                 is_escaped = true;
             } else {
                 if (is_wildcard(c)) {
                     contains_wildcard = true;
-                    last_wildcard_or_variable_end_pos = end_pos;
-                } else if (reverse_lexer.is_first_char(c)) {
-                    last_wildcard_or_variable_end_pos = end_pos;
                 } else if (forward_lexer.is_delimiter(c)) {
                     // Found delimiter that's not also a wildcard
                     break;
                 }
             }
-
-            if ('0' <= c && c <= '9') {
-                contains_decimal_digit = true;
-            }
-        }
-
-        // Trim end if necessary
-        if (last_wildcard_or_variable_end_pos + 1 < end_pos) {
-            end_pos = last_wildcard_or_variable_end_pos + 1;
         }
 
         if (end_pos > begin_pos) {

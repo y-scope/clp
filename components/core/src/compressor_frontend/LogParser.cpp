@@ -26,20 +26,13 @@ using std::vector;
 
 namespace compressor_frontend {
     LogParser::LogParser (const string& schema_file_path) {
-        m_schema_checksum = 0;
-        m_schema_file_size = 0;
         m_active_uncompressed_msg = nullptr;
         m_uncompressed_msg_size = 0;
 
         std::unique_ptr<compressor_frontend::SchemaFileAST> schema_ast = compressor_frontend::SchemaParser::try_schema_file(schema_file_path);
         add_delimiters(schema_ast->m_delimiters);
         add_rules(schema_ast);
-        m_lexer.generate();            
-        /// TODO compute checksum can be done inside of generating the schema, and can be part of the lexer (not part of file m_reader), 
-        FileReader schema_reader;
-        schema_reader.try_open(schema_file_path);
-        m_schema_checksum = schema_reader.compute_checksum(m_schema_file_size);
-        schema_ast->m_file_path = std::filesystem::canonical(schema_reader.get_path()).string();
+        m_lexer.generate();
     }
 
     void LogParser::add_delimiters (const unique_ptr<ParserAST>& delimiters) {
@@ -52,8 +45,7 @@ namespace compressor_frontend {
     void LogParser::add_rules (const unique_ptr<SchemaFileAST>& schema_ast) {
         // Currently, required to have delimiters (if schema_ast->delimiters != nullptr it is already enforced that at least 1 delimiter is specified)
         if (schema_ast->m_delimiters == nullptr) {
-            SPDLOG_ERROR("When using --schema-path, \"delimiters:\" line must be used.");
-            throw runtime_error("delimiters: line missing");
+            throw runtime_error("When using --schema-path, \"delimiters:\" line must be used.");
         }
         vector<uint32_t>& delimiters = dynamic_cast<DelimiterStringAST*>(schema_ast->m_delimiters.get())->m_delimiters;
         add_token("newLine", '\n');
@@ -64,11 +56,11 @@ namespace compressor_frontend {
             rule->m_regex_ptr->remove_delimiters_from_wildcard(delimiters);
 
             if (rule->m_name == "timestamp") {
-                unique_ptr<RegexAST> first_timestamp_regex_ast(rule->m_regex_ptr->clone());
+                unique_ptr<RegexAST<RegexNFAByteState>> first_timestamp_regex_ast(rule->m_regex_ptr->clone());
                 add_rule("firstTimestamp", std::move(first_timestamp_regex_ast));
-                unique_ptr<RegexAST> newline_timestamp_regex_ast(rule->m_regex_ptr->clone());
-                unique_ptr<RegexASTLiteral> r2 = make_unique<RegexASTLiteral>('\n');
-                add_rule("newLineTimestamp", make_unique<RegexASTCat>(std::move(r2), std::move(newline_timestamp_regex_ast)));
+                unique_ptr<RegexAST<RegexNFAByteState>> newline_timestamp_regex_ast(rule->m_regex_ptr->clone());
+                unique_ptr<RegexASTLiteral<RegexNFAByteState>> r2 = make_unique<RegexASTLiteral<RegexNFAByteState>>('\n');
+                add_rule("newLineTimestamp", make_unique<RegexASTCat<RegexNFAByteState>>(std::move(r2), std::move(newline_timestamp_regex_ast)));
                 // prevent timestamps from going into the dictionary
                 continue;
             }
@@ -89,8 +81,8 @@ namespace compressor_frontend {
                 FileReader schema_reader;
                 ErrorCode error_code = schema_reader.try_open(schema_ast->m_file_path);
                 if (ErrorCode_Success != error_code) {
-                    SPDLOG_ERROR(schema_ast->m_file_path + ":" + to_string(rule->m_line_num + 1) + ": error: '" + rule->m_name
-                                 + "' has regex pattern which contains delimiter '" + char(delimiter_name) + "'.");
+                    throw std::runtime_error(schema_ast->m_file_path + ":" + to_string(rule->m_line_num + 1) + ": error: '" + rule->m_name
+                                             + "' has regex pattern which contains delimiter '" + char(delimiter_name) + "'.\n");
                 } else {
                     // more detailed debugging based on looking at the file
                     string line;
@@ -98,24 +90,24 @@ namespace compressor_frontend {
                         schema_reader.read_to_delimiter('\n', false, false, line);
                     }
                     int colon_pos = 0;
-                    for (int i = 0; i < line.size(); i++) {
+                    for (char i : line) {
                         colon_pos++;
-                        if (line[i] == ':') {
+                        if (i == ':') {
                             break;
                         }
                     }
-                    string indent(32, ' ');
+                    string indent(10, ' ');
                     string spaces(colon_pos, ' ');
                     string arrows(line.size() - colon_pos, '^');
 
-                    SPDLOG_ERROR(schema_ast->m_file_path + ":" + to_string(rule->m_line_num + 1) + ": error: '" + rule->m_name
-                                 + "' has regex pattern which contains delimiter '" + char(delimiter_name) + "'.\n"
-                                 + indent + line + "\n" + indent + spaces + arrows);
+                    throw std::runtime_error(schema_ast->m_file_path + ":" + to_string(rule->m_line_num + 1) + ": error: '" + rule->m_name
+                                             + "' has regex pattern which contains delimiter '" + char(delimiter_name) + "'.\n"
+                                             + indent + line + "\n" + indent + spaces + arrows + "\n");
                 }
-                throw runtime_error("Variable contains delimiter");
             }
-            unique_ptr<RegexASTGroup> delimiter_group = make_unique<RegexASTGroup>(RegexASTGroup(delimiters));
-            rule->m_regex_ptr = make_unique<RegexASTCat>(std::move(delimiter_group), std::move(rule->m_regex_ptr));
+            unique_ptr<RegexASTGroup<RegexNFAByteState>> delimiter_group =
+                    make_unique<RegexASTGroup<RegexNFAByteState>>(RegexASTGroup<RegexNFAByteState>(delimiters));
+            rule->m_regex_ptr = make_unique<RegexASTCat<RegexNFAByteState>>(std::move(delimiter_group), std::move(rule->m_regex_ptr));
             add_rule(rule->m_name, std::move(rule->m_regex_ptr));
         }
     }
@@ -186,7 +178,7 @@ namespace compressor_frontend {
                 m_archive_writer_ptr->write_msg_using_schema(m_active_uncompressed_msg, m_uncompressed_msg_pos,
                                                              m_lexer.get_has_delimiters(), has_timestamp);
                 m_uncompressed_msg_pos = 0;
-                m_lexer.soft_reset();
+                m_lexer.soft_reset(NonTerminal::m_next_children_start);
             }
             if (found_start_of_next_message) {
                 increment_uncompressed_msg_pos(reader);
@@ -198,12 +190,12 @@ namespace compressor_frontend {
                 }
                 m_active_uncompressed_msg[m_uncompressed_msg_pos - 1].m_end_pos =
                         m_active_uncompressed_msg[m_uncompressed_msg_pos - 1].m_start_pos + 1;
-                m_active_uncompressed_msg[m_uncompressed_msg_pos - 1].m_type_ids = &Lexer::cTokenUncaughtStringTypes;
+                m_active_uncompressed_msg[m_uncompressed_msg_pos - 1].m_type_ids = &Lexer<RegexNFAByteState, RegexDFAByteState>::cTokenUncaughtStringTypes;
                 m_lexer.set_reduce_pos(m_active_uncompressed_msg[m_uncompressed_msg_pos].m_start_pos - 1);
                 m_archive_writer_ptr->write_msg_using_schema(m_active_uncompressed_msg, m_uncompressed_msg_pos,
                                                              m_lexer.get_has_delimiters(), has_timestamp);
                 // switch to timestamped messages if a timestamp is ever found at the start of line (potentially dangerous as it never switches back)
-                // TODO: potentially switch back if a new line is reached and the message is too long (100x static message size) 
+                /// TODO: potentially switch back if a new line is reached and the message is too long (100x static message size)
                 if (token_type == (int) SymbolID::TokenNewlineTimestampId) {
                     has_timestamp = true;
                 }
@@ -214,7 +206,7 @@ namespace compressor_frontend {
                     m_active_uncompressed_msg[1] = m_active_uncompressed_msg[m_uncompressed_msg_pos];
                     m_uncompressed_msg_pos = 1;
                 }
-                m_lexer.soft_reset();
+                m_lexer.soft_reset(NonTerminal::m_next_children_start);
             }
             increment_uncompressed_msg_pos(reader);
         }
