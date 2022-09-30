@@ -88,13 +88,13 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
     REQUIRE(str.length() == begin_pos);
 
     // With wildcards
-    str = "~=\\*x\\?!abc*123;1.2%x:+394/-=-*abc-";
+    str = "~=1\\*x\\?!abc*123;1.2%x:+394/-=-*abc-";
     begin_pos = 0;
     end_pos = 0;
 
     REQUIRE(Grep::get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var, forward_lexer, reverse_lexer) == true);
-    REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "\\*x");
-    REQUIRE(is_var == false);
+    REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "1\\*x");
+    REQUIRE(is_var == true);
     //REQUIRE(is_var == true);
 
     REQUIRE(Grep::get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var, forward_lexer, reverse_lexer) == true);
