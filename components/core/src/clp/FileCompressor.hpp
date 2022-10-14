@@ -68,11 +68,12 @@ namespace clp {
          * @param target_encoded_file_size
          * @param file_to_compress
          * @param archive_writer
+         * @param use_heuristic
          * @return true if all files were compressed successfully, false otherwise
          */
         bool try_compressing_as_archive (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
                                          size_t target_encoded_file_size, const FileToCompress& file_to_compress,
-                                         streaming_archive::writer::Archive& archive_writer);
+                                         streaming_archive::writer::Archive& archive_writer, bool use_heuristic);
 
         // Variables
         boost::uuids::random_generator& m_uuid_generator;
