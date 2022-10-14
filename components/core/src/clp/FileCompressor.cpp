@@ -109,7 +109,6 @@ namespace clp {
                                  file_to_compress.get_group_id(), archive_writer, m_file_reader);
             }
         } else {
-            SPDLOG_INFO(file_to_compress.get_path() + " is not UTF8");
             if (false == try_compressing_as_archive(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, file_to_compress,
                                                     archive_writer, use_heuristic))
             {

@@ -1,7 +1,7 @@
 #include "FileReader.hpp"
 
 // Boost libraries
-#include <boost/crc.hpp>
+#include <boost/filesystem.hpp>
 
 // C standard libraries
 #include <sys/types.h>
@@ -11,7 +11,6 @@
 // C++ libraries
 #include <cassert>
 #include <cerrno>
-#include <boost/filesystem.hpp>
 
 using std::string;
 
@@ -79,7 +78,7 @@ ErrorCode FileReader::try_open (const string& path) {
         }
         return ErrorCode_errno;
     }
-    this->path = path;
+    m_path = path;
 
     return ErrorCode_Success;
 }
@@ -90,7 +89,7 @@ void FileReader::open (const string& path) {
         if (ErrorCode_FileNotFound == error_code) {
             throw "File not found: " + boost::filesystem::weakly_canonical(path).string() + "\n"; 
         } else {
-            throw OperationFailed(error_code, __FILENAME__, __LINE__);            
+            throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
     }
 }

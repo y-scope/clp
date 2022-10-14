@@ -160,24 +160,6 @@ set(SOURCE_FILES_clp
         src/clp/StructuredFileToCompress.hpp
         src/clp/utils.cpp
         src/clp/utils.hpp
-        src/database_utils.cpp
-        src/database_utils.hpp
-        src/Defs.h
-        src/dictionary_utils.cpp
-        src/dictionary_utils.hpp
-        src/DictionaryEntry.cpp
-        src/DictionaryEntry.hpp
-        src/DictionaryReader.cpp
-        src/DictionaryReader.hpp
-        src/DictionaryWriter.cpp
-        src/DictionaryWriter.hpp
-        src/EncodedVariableInterpreter.cpp
-        src/EncodedVariableInterpreter.hpp
-        src/ErrorCode.hpp
-        src/FileReader.cpp
-        src/FileReader.hpp
-        src/FileWriter.cpp
-        src/FileWriter.hpp
         src/compressor_frontend/Constants.hpp
         src/compressor_frontend/finite_automata/RegexAST.hpp
         src/compressor_frontend/finite_automata/RegexAST.tpp
@@ -200,6 +182,24 @@ set(SOURCE_FILES_clp
         src/compressor_frontend/Token.hpp
         src/compressor_frontend/utils.cpp
         src/compressor_frontend/utils.hpp
+        src/database_utils.cpp
+        src/database_utils.hpp
+        src/Defs.h
+        src/dictionary_utils.cpp
+        src/dictionary_utils.hpp
+        src/DictionaryEntry.cpp
+        src/DictionaryEntry.hpp
+        src/DictionaryReader.cpp
+        src/DictionaryReader.hpp
+        src/DictionaryWriter.cpp
+        src/DictionaryWriter.hpp
+        src/EncodedVariableInterpreter.cpp
+        src/EncodedVariableInterpreter.hpp
+        src/ErrorCode.hpp
+        src/FileReader.cpp
+        src/FileReader.hpp
+        src/FileWriter.cpp
+        src/FileWriter.hpp
         src/GlobalMetadataDB.cpp
         src/GlobalMetadataDB.hpp
         src/GlobalMetadataDBConfig.cpp
@@ -318,22 +318,6 @@ set(SOURCE_FILES_clg
         src/clg/clg.cpp
         src/clg/CommandLineArguments.cpp
         src/clg/CommandLineArguments.hpp
-        src/database_utils.cpp
-        src/database_utils.hpp
-        src/Defs.h
-        src/dictionary_utils.cpp
-        src/dictionary_utils.hpp
-        src/DictionaryEntry.cpp
-        src/DictionaryEntry.hpp
-        src/DictionaryReader.cpp
-        src/DictionaryReader.hpp
-        src/EncodedVariableInterpreter.cpp
-        src/EncodedVariableInterpreter.hpp
-        src/ErrorCode.hpp
-        src/FileReader.cpp
-        src/FileReader.hpp
-        src/FileWriter.cpp
-        src/FileWriter.hpp
         src/compressor_frontend/Constants.hpp
         src/compressor_frontend/finite_automata/RegexAST.hpp
         src/compressor_frontend/finite_automata/RegexAST.tpp
@@ -354,6 +338,22 @@ set(SOURCE_FILES_clg
         src/compressor_frontend/Token.hpp
         src/compressor_frontend/utils.cpp
         src/compressor_frontend/utils.hpp
+        src/database_utils.cpp
+        src/database_utils.hpp
+        src/Defs.h
+        src/dictionary_utils.cpp
+        src/dictionary_utils.hpp
+        src/DictionaryEntry.cpp
+        src/DictionaryEntry.hpp
+        src/DictionaryReader.cpp
+        src/DictionaryReader.hpp
+        src/EncodedVariableInterpreter.cpp
+        src/EncodedVariableInterpreter.hpp
+        src/ErrorCode.hpp
+        src/FileReader.cpp
+        src/FileReader.hpp
+        src/FileWriter.cpp
+        src/FileWriter.hpp
         src/GlobalMetadataDB.cpp
         src/GlobalMetadataDB.hpp
         src/GlobalMetadataDBConfig.cpp
@@ -463,22 +463,6 @@ set(SOURCE_FILES_clo
         src/clo/CommandLineArguments.hpp
         src/clo/ControllerMonitoringThread.cpp
         src/clo/ControllerMonitoringThread.hpp
-        src/database_utils.cpp
-        src/database_utils.hpp
-        src/Defs.h
-        src/dictionary_utils.cpp
-        src/dictionary_utils.hpp
-        src/DictionaryEntry.cpp
-        src/DictionaryEntry.hpp
-        src/DictionaryReader.cpp
-        src/DictionaryReader.hpp
-        src/EncodedVariableInterpreter.cpp
-        src/EncodedVariableInterpreter.hpp
-        src/ErrorCode.hpp
-        src/FileReader.cpp
-        src/FileReader.hpp
-        src/FileWriter.cpp
-        src/FileWriter.hpp
         src/compressor_frontend/Constants.hpp
         src/compressor_frontend/finite_automata/RegexAST.hpp
         src/compressor_frontend/finite_automata/RegexAST.tpp
@@ -499,6 +483,22 @@ set(SOURCE_FILES_clo
         src/compressor_frontend/Token.hpp
         src/compressor_frontend/utils.cpp
         src/compressor_frontend/utils.hpp
+        src/database_utils.cpp
+        src/database_utils.hpp
+        src/Defs.h
+        src/dictionary_utils.cpp
+        src/dictionary_utils.hpp
+        src/DictionaryEntry.cpp
+        src/DictionaryEntry.hpp
+        src/DictionaryReader.cpp
+        src/DictionaryReader.hpp
+        src/EncodedVariableInterpreter.cpp
+        src/EncodedVariableInterpreter.hpp
+        src/ErrorCode.hpp
+        src/FileReader.cpp
+        src/FileReader.hpp
+        src/FileWriter.cpp
+        src/FileWriter.hpp
         src/Grep.cpp
         src/Grep.hpp
         src/LogTypeDictionaryEntry.cpp
@@ -745,12 +745,12 @@ set(SOURCE_FILES_unitTest
         src/version.hpp
         src/WriterInterface.cpp
         src/WriterInterface.hpp
-        submodules/json/single_include/nlohmann/json.hpp
-        submodules/sqlite3/sqlite3ext.h
         submodules/Catch2/single_include/catch2/catch.hpp
         submodules/date/include/date/date.h
+        submodules/json/single_include/nlohmann/json.hpp
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
+        submodules/sqlite3/sqlite3ext.h
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-Grep.cpp
         tests/test-main.cpp
@@ -767,10 +767,10 @@ target_link_libraries(unitTest
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
-        spdlog::spdlog
-        ${sqlite_LIBRARY_DEPENDENCIES}
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
+        spdlog::spdlog
+        ${sqlite_LIBRARY_DEPENDENCIES}
         yaml-cpp::yaml-cpp
         ZStd::ZStd
         )

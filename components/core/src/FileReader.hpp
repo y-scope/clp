@@ -93,6 +93,8 @@ public:
      */
     void close ();
 
+    [[nodiscard]] const std::string& get_path () const { return m_path; }
+
     /**
      * Tries to stat the current file
      * @param stat_buffer
@@ -100,13 +102,12 @@ public:
      * @return ErrorCode_Success on success
      */
     ErrorCode try_fstat (struct stat& stat_buffer);
-    std::string get_path() { return path; }
 
 private:
     FILE* m_file;
     size_t m_getdelim_buf_len;
     char* m_getdelim_buf;
-    std::string path;
+    std::string m_path;
 };
 
 #endif // FILEREADER_HPP
