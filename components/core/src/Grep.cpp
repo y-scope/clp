@@ -382,7 +382,6 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     query.set_search_string(processed_search_string);
 
     // Replace non-greedy wildcards with greedy wildcards since we currently have no support for searching compressed files with non-greedy wildcards
-    // SPDLOG_WARN("CLG currently does not support '?', replacing with '*'");
     std::replace(processed_search_string.begin(), processed_search_string.end(), '?', '*');
     // Clean-up in case any instances of "?*" or "*?" were changed into "**"
     processed_search_string = clean_up_wildcard_search_string(processed_search_string);
