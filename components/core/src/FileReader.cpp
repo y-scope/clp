@@ -1,5 +1,8 @@
 #include "FileReader.hpp"
 
+// Boost libraries
+#include <boost/filesystem.hpp>
+
 // C standard libraries
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -75,6 +78,7 @@ ErrorCode FileReader::try_open (const string& path) {
         }
         return ErrorCode_errno;
     }
+    m_path = path;
 
     return ErrorCode_Success;
 }
@@ -82,7 +86,11 @@ ErrorCode FileReader::try_open (const string& path) {
 void FileReader::open (const string& path) {
     ErrorCode error_code = try_open(path);
     if (ErrorCode_Success != error_code) {
-        throw OperationFailed(error_code, __FILENAME__, __LINE__);
+        if (ErrorCode_FileNotFound == error_code) {
+            throw "File not found: " + boost::filesystem::weakly_canonical(path).string() + "\n"; 
+        } else {
+            throw OperationFailed(error_code, __FILENAME__, __LINE__);
+        }
     }
 }
 

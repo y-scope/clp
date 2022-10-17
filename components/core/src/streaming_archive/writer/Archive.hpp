@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <filesystem>
 
 // Boost libraries
 #include <boost/uuid/random_generator.hpp>
@@ -18,9 +19,10 @@
 #include "../../GlobalMetadataDB.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
+#include "../../compressor_frontend/Token.hpp"
 #include "../MetadataDB.hpp"
 
-namespace streaming_archive { namespace writer {
+namespace streaming_archive { namespace writer { 
     class Archive {
     public:
         // Types
@@ -57,8 +59,17 @@ namespace streaming_archive { namespace writer {
             }
         };
 
+        TimestampPattern old_ts_pattern;
+
+        size_t m_target_data_size_of_dicts;
+        UserConfig m_archive_user_config;
+        std::string m_path_for_compression;
+        group_id_t m_group_id;
+        size_t m_target_encoded_file_size;
+        std::string m_schema_file_path;
+
         // Constructors
-        Archive () : m_logs_dir_fd(-1), m_segments_dir_fd(-1), m_compression_level(0), m_global_metadata_db(nullptr) {}
+        Archive () : m_logs_dir_fd(-1), m_segments_dir_fd(-1), m_compression_level(0), m_global_metadata_db(nullptr), old_ts_pattern(), m_schema_file_path() {}
 
         // Destructor
         ~Archive ();
@@ -115,6 +126,16 @@ namespace streaming_archive { namespace writer {
          * @throw FileWriter::OperationFailed if any write fails
          */
         void write_msg (epochtime_t timestamp, const std::string& message, size_t num_uncompressed_bytes);
+        /**
+         * Encodes and writes a message to the given file using schema file
+         * @param file
+         * @param uncompressed_msg
+         * @param uncompressed_msg_pos
+         * @param has_delimiter
+         * @param has_timestamp
+         * @throw FileWriter::OperationFailed if any write fails
+         */
+        void write_msg_using_schema (compressor_frontend::Token*& uncompressed_msg, uint32_t uncompressed_msg_pos, bool has_delimiter, bool has_timestamp);
 
         /**
          * Writes snapshot of archive to disk including metadata of all files and new dictionary entries
@@ -242,6 +263,8 @@ namespace streaming_archive { namespace writer {
         LogTypeDictionaryWriter m_logtype_dict;
         // Holds preallocated logtype dictionary entry for performance
         LogTypeDictionaryEntry m_logtype_dict_entry;
+        std::vector<encoded_variable_t> m_encoded_vars;
+        std::vector<variable_dictionary_id_t> m_var_ids;
         VariableDictionaryWriter m_var_dict;
 
         boost::uuids::random_generator m_uuid_generator;

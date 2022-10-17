@@ -1,0 +1,11 @@
+123,21:21:21 21-21-4321
+4312
+12.12
+231ACDFE21
+21cba4321
+asd=
+asd123asd
+below is the case for forward lexer uniqueVariable
+1234-a12S34d5678-12-1212-12-12-123
+below is the case for reverse lexer uniqueVariable
+321-21-21-2121-21-8765d43S21a-4321

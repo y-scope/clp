@@ -9,10 +9,69 @@
 #include <vector>
 
 // Project headers
+#include "compressor_frontend/Lexer.hpp"
 #include "Defs.h"
 #include "ErrorCode.hpp"
 #include "FileReader.hpp"
 #include "ParsedMessage.hpp"
+
+/**
+ * Checks if the given character is an alphabet
+ * @param c
+ * @return true if c is an alphabet, false otherwise
+ */
+inline bool is_alphabet (char c) {
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
+}
+
+/**
+ * Checks if character is a decimal (base-10) digit
+ * @param c
+ * @return true if c is a decimal digit, false otherwise
+ */
+inline bool is_decimal_digit (char c)  {
+    return '0' <= c && c <= '9';
+}
+
+/**
+ * Checks if the given segment of the stringcould be a multi-digit hex value
+ * @param str
+ * @param begin_pos
+ * @param end_pos
+ * @return true if yes, false otherwise
+ */
+inline bool could_be_multi_digit_hex_value (const std::string& str, size_t begin_pos, size_t end_pos) {
+    if (end_pos - begin_pos < 2) {
+        return false;
+    }
+
+    for (size_t i = begin_pos; i < end_pos; ++i) {
+        auto c = str[i];
+        if (!( ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F') || ('0' <= c && c <= '9') )) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Checks if character is a delimiter
+ * We treat everything except the following quoted characters as a delimiter: "+-./0-9A-Z\a-z"
+ * NOTE: For performance, we rely on the ASCII ordering of characters to compare ranges of characters at a time instead of comparing individual characters
+ * @param c
+ * @return true if c is a delimiter, false otherwise
+ */
+inline bool is_delim (char c) {
+    return !('+' == c || ('-' <= c && c <= '9') || ('A' <= c && c <= 'Z') || '\\' == c || '_' == c || ('a' <= c && c <= 'z'));
+}
+
+/**
+ * Checks if character is a wildcard
+ * @param c
+ * @return true if c is a wildcard, false otherwise
+ */
+bool is_wildcard (char c);
 
 /**
  * Cleans wildcard search string
@@ -84,16 +143,6 @@ size_t find_first_of (const std::string& haystack, const char* needles, size_t s
  * @return Parent directory path
  */
 std::string get_parent_directory_path (const std::string& path);
-
-/**
- * Returns bounds of next potential variable (either a definite variable or a token with wildcards)
- * @param value String containing token
- * @param begin_pos Begin position of last token, changes to begin position of next token
- * @param end_pos End position of last token, changes to end position of next token
- * @param is_var Whether the token is definitely a variable
- * @return true if another potential variable was found, false otherwise
- */
-bool get_bounds_of_next_potential_var (const std::string& value, size_t& begin_pos, size_t& end_pos, bool& is_var);
 
 /**
  * Returns bounds of next variable in given string

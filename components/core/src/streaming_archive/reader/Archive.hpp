@@ -2,6 +2,7 @@
 #define STREAMING_ARCHIVE_READER_ARCHIVE_HPP
 
 // C++ libraries
+#include <filesystem>
 #include <iterator>
 #include <list>
 #include <memory>

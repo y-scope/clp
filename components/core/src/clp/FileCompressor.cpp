@@ -12,6 +12,7 @@
 #include <archive_entry.h>
 
 // Project headers
+#include "../Profiler.hpp"
 #include "utils.hpp"
 
 using std::cout;
@@ -80,8 +81,12 @@ static void write_message_to_encoded_file (const ParsedMessage& msg, streaming_a
 namespace clp {
     bool FileCompressor::compress_file (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
                                         size_t target_encoded_file_size, const FileToCompress& file_to_compress,
-                                        streaming_archive::writer::Archive& archive_writer)
-    {
+                                        streaming_archive::writer::Archive& archive_writer, bool use_heuristic) {
+        std::string file_name = std::filesystem::canonical(file_to_compress.get_path()).string();
+
+        PROFILER_SPDLOG_INFO("Start parsing {}", file_name)
+        Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
+
         m_file_reader.open(file_to_compress.get_path());
 
         // Check that file is UTF-8 encoded
@@ -92,14 +97,20 @@ namespace clp {
                 return false;
             }
         }
-
         bool succeeded = true;
         if (is_utf8_sequence(m_utf8_validation_buf_length, m_utf8_validation_buf)) {
-            parse_and_encode(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, file_to_compress.get_path_for_compression(),
-                             file_to_compress.get_group_id(), archive_writer, m_file_reader);
+            if (use_heuristic) {
+                parse_and_encode_with_heuristic(target_data_size_of_dicts, archive_user_config, target_encoded_file_size,
+                                                file_to_compress.get_path_for_compression(),
+                                                file_to_compress.get_group_id(), archive_writer, m_file_reader);
+            } else {
+                parse_and_encode(target_data_size_of_dicts, archive_user_config, target_encoded_file_size,
+                                 file_to_compress.get_path_for_compression(),
+                                 file_to_compress.get_group_id(), archive_writer, m_file_reader);
+            }
         } else {
             if (false == try_compressing_as_archive(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, file_to_compress,
-                                                    archive_writer))
+                                                    archive_writer, use_heuristic))
             {
                 succeeded = false;
             }
@@ -107,12 +118,53 @@ namespace clp {
 
         m_file_reader.close();
 
+        Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
+        LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::ParseLogFile)
+        PROFILER_SPDLOG_INFO("Done parsing {}", file_name)
+
         return succeeded;
     }
 
     void FileCompressor::parse_and_encode (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
                                            size_t target_encoded_file_size, const string& path_for_compression, group_id_t group_id,
                                            streaming_archive::writer::Archive& archive_writer, ReaderInterface& reader)
+    {
+        archive_writer.m_target_data_size_of_dicts = target_data_size_of_dicts;
+        archive_writer.m_archive_user_config = archive_user_config;
+        archive_writer.m_path_for_compression = path_for_compression;
+        archive_writer.m_group_id = group_id;
+        archive_writer.m_target_encoded_file_size = target_encoded_file_size;
+        // Open compressed file
+        archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
+        // TODO: decide what to actually do about this
+        // for now reset reader rather than try reading m_utf8_validation_buf as it would be
+        // very awkward to combine sources to/in the parser
+        reader.seek_from_begin(0);
+        m_log_parser->set_archive_writer_ptr(&archive_writer);
+        m_log_parser->get_archive_writer_ptr()->old_ts_pattern.clear();
+        try {
+            m_log_parser->parse(reader);
+        } catch (std::string const err) {
+            if (err.find("Lexer failed to find a match after checking entire buffer") != std::string::npos) {
+                close_file_and_append_to_segment(archive_writer);
+                SPDLOG_ERROR(err);
+            } else {
+                throw (err);
+            }
+        }
+        // TODO: separate variables from static text
+        //Stopwatch close_file_watch("close_file_watch");
+        //close_file_watch.start();
+        close_file_and_append_to_segment(archive_writer);
+        // archive_writer_config needs to persist between files
+        archive_user_config = archive_writer.m_archive_user_config;
+        //close_file_watch.stop();
+        //close_file_watch.print();
+    }
+
+    void FileCompressor::parse_and_encode_with_heuristic (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
+                                                          size_t target_encoded_file_size, const string& path_for_compression, group_id_t group_id,
+                                                          streaming_archive::writer::Archive& archive_writer, ReaderInterface& reader)
     {
         m_parsed_message.clear();
 
@@ -147,7 +199,7 @@ namespace clp {
 
     bool FileCompressor::try_compressing_as_archive (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
                                                      size_t target_encoded_file_size, const FileToCompress& file_to_compress,
-                                                     streaming_archive::writer::Archive& archive_writer)
+                                                     streaming_archive::writer::Archive& archive_writer, bool use_heuristic)
     {
         auto file_boost_path = boost::filesystem::path(file_to_compress.get_path_for_compression());
         auto parent_boost_path = file_boost_path.parent_path();
@@ -222,8 +274,14 @@ namespace clp {
             }
             if (is_utf8_sequence(m_utf8_validation_buf_length, m_utf8_validation_buf)) {
                 auto boost_path_for_compression = parent_boost_path / m_libarchive_reader.get_path();
-                parse_and_encode(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, boost_path_for_compression.string(),
-                                 file_to_compress.get_group_id(), archive_writer, m_libarchive_file_reader);
+                if (use_heuristic) {
+                    parse_and_encode_with_heuristic(target_data_size_of_dicts, archive_user_config, target_encoded_file_size,
+                                                    boost_path_for_compression.string(), file_to_compress.get_group_id(), archive_writer,
+                                                    m_libarchive_file_reader);
+                } else {
+                    parse_and_encode(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, boost_path_for_compression.string(),
+                                     file_to_compress.get_group_id(), archive_writer, m_libarchive_file_reader);
+                }
             } else {
                 SPDLOG_ERROR("Cannot compress {} - not UTF-8 encoded.", m_libarchive_reader.get_path());
                 succeeded = false;

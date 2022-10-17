@@ -154,10 +154,34 @@ set(SOURCE_FILES_clp
         src/clp/FileDecompressor.hpp
         src/clp/FileToCompress.cpp
         src/clp/FileToCompress.hpp
+        src/clp/run.cpp
+        src/clp/run.hpp
         src/clp/StructuredFileToCompress.cpp
         src/clp/StructuredFileToCompress.hpp
         src/clp/utils.cpp
         src/clp/utils.hpp
+        src/compressor_frontend/Constants.hpp
+        src/compressor_frontend/finite_automata/RegexAST.hpp
+        src/compressor_frontend/finite_automata/RegexAST.tpp
+        src/compressor_frontend/finite_automata/RegexDFA.hpp
+        src/compressor_frontend/finite_automata/RegexDFA.tpp
+        src/compressor_frontend/finite_automata/RegexNFA.hpp
+        src/compressor_frontend/finite_automata/RegexNFA.tpp
+        src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
+        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
+        src/compressor_frontend/LALR1Parser.cpp
+        src/compressor_frontend/LALR1Parser.hpp
+        src/compressor_frontend/LALR1Parser.tpp
+        src/compressor_frontend/Lexer.hpp
+        src/compressor_frontend/Lexer.tpp
+        src/compressor_frontend/LogParser.cpp
+        src/compressor_frontend/LogParser.hpp
+        src/compressor_frontend/SchemaParser.cpp
+        src/compressor_frontend/SchemaParser.hpp
+        src/compressor_frontend/Token.cpp
+        src/compressor_frontend/Token.hpp
+        src/compressor_frontend/utils.cpp
+        src/compressor_frontend/utils.hpp
         src/database_utils.cpp
         src/database_utils.hpp
         src/Defs.h
@@ -251,6 +275,8 @@ set(SOURCE_FILES_clp
         src/streaming_compression/zstd/Constants.hpp
         src/streaming_compression/zstd/Decompressor.cpp
         src/streaming_compression/zstd/Decompressor.hpp
+        src/StringReader.cpp
+        src/StringReader.hpp
         src/TimestampPattern.cpp
         src/TimestampPattern.hpp
         src/TraceableException.cpp
@@ -280,6 +306,7 @@ target_link_libraries(clp
         ${sqlite_LIBRARY_DEPENDENCIES}
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
+        stdc++fs
         yaml-cpp::yaml-cpp
         ZStd::ZStd
         )
@@ -291,6 +318,26 @@ set(SOURCE_FILES_clg
         src/clg/clg.cpp
         src/clg/CommandLineArguments.cpp
         src/clg/CommandLineArguments.hpp
+        src/compressor_frontend/Constants.hpp
+        src/compressor_frontend/finite_automata/RegexAST.hpp
+        src/compressor_frontend/finite_automata/RegexAST.tpp
+        src/compressor_frontend/finite_automata/RegexDFA.hpp
+        src/compressor_frontend/finite_automata/RegexDFA.tpp
+        src/compressor_frontend/finite_automata/RegexNFA.hpp
+        src/compressor_frontend/finite_automata/RegexNFA.tpp
+        src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
+        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
+        src/compressor_frontend/LALR1Parser.cpp
+        src/compressor_frontend/LALR1Parser.hpp
+        src/compressor_frontend/LALR1Parser.tpp
+        src/compressor_frontend/Lexer.hpp
+        src/compressor_frontend/Lexer.tpp
+        src/compressor_frontend/SchemaParser.cpp
+        src/compressor_frontend/SchemaParser.hpp
+        src/compressor_frontend/Token.cpp
+        src/compressor_frontend/Token.hpp
+        src/compressor_frontend/utils.cpp
+        src/compressor_frontend/utils.hpp
         src/database_utils.cpp
         src/database_utils.hpp
         src/Defs.h
@@ -372,6 +419,8 @@ set(SOURCE_FILES_clg
         src/streaming_compression/zstd/Constants.hpp
         src/streaming_compression/zstd/Decompressor.cpp
         src/streaming_compression/zstd/Decompressor.hpp
+        src/StringReader.cpp
+        src/StringReader.hpp
         src/TimestampPattern.cpp
         src/TimestampPattern.hpp
         src/TraceableException.cpp
@@ -400,6 +449,7 @@ target_link_libraries(clg
         MariaDBClient::MariaDBClient
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
+        stdc++fs
         yaml-cpp::yaml-cpp
         ZStd::ZStd
         )
@@ -413,6 +463,26 @@ set(SOURCE_FILES_clo
         src/clo/CommandLineArguments.hpp
         src/clo/ControllerMonitoringThread.cpp
         src/clo/ControllerMonitoringThread.hpp
+        src/compressor_frontend/Constants.hpp
+        src/compressor_frontend/finite_automata/RegexAST.hpp
+        src/compressor_frontend/finite_automata/RegexAST.tpp
+        src/compressor_frontend/finite_automata/RegexDFA.hpp
+        src/compressor_frontend/finite_automata/RegexDFA.tpp
+        src/compressor_frontend/finite_automata/RegexNFA.hpp
+        src/compressor_frontend/finite_automata/RegexNFA.tpp
+        src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
+        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
+        src/compressor_frontend/LALR1Parser.cpp
+        src/compressor_frontend/LALR1Parser.hpp
+        src/compressor_frontend/LALR1Parser.tpp
+        src/compressor_frontend/Lexer.hpp
+        src/compressor_frontend/Lexer.tpp
+        src/compressor_frontend/SchemaParser.cpp
+        src/compressor_frontend/SchemaParser.hpp
+        src/compressor_frontend/Token.cpp
+        src/compressor_frontend/Token.hpp
+        src/compressor_frontend/utils.cpp
+        src/compressor_frontend/utils.hpp
         src/database_utils.cpp
         src/database_utils.hpp
         src/Defs.h
@@ -484,6 +554,8 @@ set(SOURCE_FILES_clo
         src/streaming_compression/zstd/Constants.hpp
         src/streaming_compression/zstd/Decompressor.cpp
         src/streaming_compression/zstd/Decompressor.hpp
+        src/StringReader.cpp
+        src/StringReader.hpp
         src/Thread.cpp
         src/Thread.hpp
         src/TimestampPattern.cpp
@@ -514,6 +586,7 @@ target_link_libraries(clo
         msgpackc-cxx
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
+        stdc++fs
         ZStd::ZStd
         )
 target_compile_features(clo
@@ -521,6 +594,46 @@ target_compile_features(clo
         )
 
 set(SOURCE_FILES_unitTest
+        src/clp/CommandLineArguments.cpp
+        src/clp/CommandLineArguments.hpp
+        src/clp/compression.cpp
+        src/clp/compression.hpp
+        src/clp/decompression.cpp
+        src/clp/decompression.hpp
+        src/clp/FileCompressor.cpp
+        src/clp/FileCompressor.hpp
+        src/clp/FileDecompressor.cpp
+        src/clp/FileDecompressor.hpp
+        src/clp/FileToCompress.cpp
+        src/clp/FileToCompress.hpp
+        src/clp/run.cpp
+        src/clp/run.hpp
+        src/clp/StructuredFileToCompress.cpp
+        src/clp/StructuredFileToCompress.hpp
+        src/clp/utils.cpp
+        src/clp/utils.hpp
+        src/compressor_frontend/Constants.hpp
+        src/compressor_frontend/finite_automata/RegexAST.hpp
+        src/compressor_frontend/finite_automata/RegexAST.tpp
+        src/compressor_frontend/finite_automata/RegexDFA.hpp
+        src/compressor_frontend/finite_automata/RegexDFA.tpp
+        src/compressor_frontend/finite_automata/RegexNFA.hpp
+        src/compressor_frontend/finite_automata/RegexNFA.tpp
+        src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
+        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
+        src/compressor_frontend/LALR1Parser.cpp
+        src/compressor_frontend/LALR1Parser.hpp
+        src/compressor_frontend/LALR1Parser.tpp
+        src/compressor_frontend/Lexer.hpp
+        src/compressor_frontend/Lexer.tpp
+        src/compressor_frontend/LogParser.cpp
+        src/compressor_frontend/LogParser.hpp
+        src/compressor_frontend/SchemaParser.cpp
+        src/compressor_frontend/SchemaParser.hpp
+        src/compressor_frontend/Token.cpp
+        src/compressor_frontend/Token.hpp
+        src/compressor_frontend/utils.cpp
+        src/compressor_frontend/utils.hpp
         src/database_utils.cpp
         src/database_utils.hpp
         src/Defs.h
@@ -530,6 +643,8 @@ set(SOURCE_FILES_unitTest
         src/DictionaryEntry.hpp
         src/DictionaryReader.cpp
         src/DictionaryReader.hpp
+        src/DictionaryWriter.cpp
+        src/DictionaryWriter.hpp
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
         src/ErrorCode.hpp
@@ -539,14 +654,34 @@ set(SOURCE_FILES_unitTest
         src/FileWriter.hpp
         src/GlobalMetadataDB.cpp
         src/GlobalMetadataDB.hpp
+        src/GlobalMetadataDBConfig.cpp
+        src/GlobalMetadataDBConfig.hpp
+        src/GlobalMySQLMetadataDB.cpp
+        src/GlobalMySQLMetadataDB.hpp
+        src/GlobalSQLiteMetadataDB.cpp
+        src/GlobalSQLiteMetadataDB.hpp
         src/Grep.cpp
         src/Grep.hpp
+        src/LibarchiveFileReader.cpp
+        src/LibarchiveFileReader.hpp
+        src/LibarchiveReader.cpp
+        src/LibarchiveReader.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
         src/LogTypeDictionaryReader.hpp
         src/LogTypeDictionaryWriter.cpp
         src/LogTypeDictionaryWriter.hpp
+        src/MessageParser.cpp
+        src/MessageParser.hpp
+        src/MySQLDB.cpp
+        src/MySQLDB.hpp
+        src/MySQLParamBindings.cpp
+        src/MySQLParamBindings.hpp
+        src/MySQLPreparedStatement.cpp
+        src/MySQLPreparedStatement.hpp
+        src/PageAllocatedVector.cpp
+        src/PageAllocatedVector.hpp
         src/ParsedMessage.cpp
         src/ParsedMessage.hpp
         src/Profiler.cpp
@@ -561,6 +696,7 @@ set(SOURCE_FILES_unitTest
         src/SQLitePreparedStatement.hpp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
+        src/streaming_archive/Constants.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
         src/streaming_archive/reader/Archive.cpp
@@ -573,6 +709,8 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/reader/Segment.hpp
         src/streaming_archive/reader/SegmentManager.cpp
         src/streaming_archive/reader/SegmentManager.hpp
+        src/streaming_archive/writer/Archive.cpp
+        src/streaming_archive/writer/Archive.hpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
         src/streaming_archive/writer/Segment.cpp
@@ -591,6 +729,8 @@ set(SOURCE_FILES_unitTest
         src/streaming_compression/zstd/Constants.hpp
         src/streaming_compression/zstd/Decompressor.cpp
         src/streaming_compression/zstd/Decompressor.hpp
+        src/StringReader.cpp
+        src/StringReader.hpp
         src/TimestampPattern.cpp
         src/TimestampPattern.hpp
         src/TraceableException.cpp
@@ -603,15 +743,19 @@ set(SOURCE_FILES_unitTest
         src/VariableDictionaryReader.hpp
         src/VariableDictionaryWriter.cpp
         src/VariableDictionaryWriter.hpp
+        src/version.hpp
         src/WriterInterface.cpp
         src/WriterInterface.hpp
         submodules/Catch2/single_include/catch2/catch.hpp
         submodules/date/include/date/date.h
+        submodules/json/single_include/nlohmann/json.hpp
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
+        submodules/sqlite3/sqlite3ext.h
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-Grep.cpp
         tests/test-main.cpp
+        tests/test-ParserWithUserSchema.cpp
         tests/test-Segment.cpp
         tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
@@ -622,9 +766,14 @@ set(SOURCE_FILES_unitTest
 add_executable(unitTest ${SOURCE_FILES_unitTest})
 target_link_libraries(unitTest
         PRIVATE
-        Boost::filesystem Boost::iostreams
+        Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
+        LibArchive::LibArchive
+        MariaDBClient::MariaDBClient
+        spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
+        stdc++fs
+        yaml-cpp::yaml-cpp
         ZStd::ZStd
         )
 target_compile_features(unitTest

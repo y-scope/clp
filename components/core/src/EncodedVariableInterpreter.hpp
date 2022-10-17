@@ -43,6 +43,7 @@ public:
     static encoded_variable_t get_var_dict_id_range_begin ();
     static encoded_variable_t get_var_dict_id_range_end ();
     static bool is_var_dict_id (encoded_variable_t encoded_var);
+    static encoded_variable_t encode_var_dict_id (variable_dictionary_id_t id);
     static variable_dictionary_id_t decode_var_dict_id (encoded_variable_t encoded_var);
     /**
      * Converts the given string into a representable integer variable if possible
@@ -114,9 +115,6 @@ public:
                                                                     bool ignore_case, SubQuery& sub_query);
 
 private:
-    // Methods
-    static encoded_variable_t encode_var_dict_id (variable_dictionary_id_t id);
-
     // Variables
     // The beginning of the range used for encoding variable dictionary IDs
     static constexpr encoded_variable_t m_var_dict_id_range_begin = 1LL << 62;

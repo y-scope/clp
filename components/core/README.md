@@ -1,10 +1,9 @@
 # CLP Core
 
-CLP's core is the low-level component that performs compression, decompression, and search.
+CLP core is the low-level component that performs compression, decompression, and search.
 
 ## Contents
 
-* [Getting Started](#getting-started)
 * [Requirements](#requirements)
 * [Building](#building)
   * [Source Dependencies](#source-dependencies)
@@ -17,12 +16,11 @@ CLP's core is the low-level component that performs compression, decompression, 
   * [`clg`](#clg)
   * [`make-dictionaries-readable`](#make-dictionaries-readable)
 * [Parallel Compression](#parallel-compression)
-* [Next Steps](#next-steps)
 
 ## Requirements
 
 * We have built and tested CLP on **Ubuntu 18.04 (bionic)** and **Ubuntu 20.04 (focal)**.
-  * If you have trouble building for another OS, file an issue and we may be able to help.
+  * If you have trouble building for another OS, file an issue, and we may be able to help.
 * A compiler that supports C++17 (e.g., gcc-8)
 
 ## Building
@@ -132,7 +130,7 @@ the relevant paths on your machine.
 
 ### `clp`
 
-To compress some logs:
+To compress some logs without a schema file:
 ```shell
 ./clp c archives-dir /home/my/logs
 ```
@@ -140,6 +138,17 @@ To compress some logs:
   * `clp` will create a number of files and directories within, so it's best if this directory is empty
   * You can use the same directory repeatedly and `clp` will add to the compressed logs within.
 * `/home/my/logs` is any log file or directory containing log files
+* In this mode, `clp` will use heuristics to determine what are the variables in
+  each uncompressed message.
+  * The heuristics roughly correspond to the example schema file in
+    `config/schemas.txt`.
+
+To compress with a user-defined schema file:
+```shell
+./clp c --schema-path path-to-schema-file archives-dir /home/my/logs 
+```
+* `path-to-schema-file` is the location of a schema file. For more details on 
+  schema files, see README-Schema.md.
 
 To decompress those logs:
 ```shell
@@ -166,7 +175,11 @@ To search the compressed logs:
 ./clg archives-dir " a *wildcard* search phrase "
 ```
 * `archives-dir` is where the compressed logs were previously stored
-* The search phrase can contain the `*` wildcard which matches 0 or more characters, or the `?` wildcard which matches any single character.
+* For archives compressed without a schema file:
+  * The search phrase can contain the `*` wildcard which matches 0 or more
+    characters, or the `?` wildcard which matches any single character.
+* For archives compressed using a schema file:
+  * `*` may only represent non-delimiter characters.
 
 Similar to `clp`, `clg` can search a single file:
 ```shell
@@ -215,4 +228,4 @@ use a MySQL-type database (MariaDB) as follows:
 * To compress in parallel, simply run another instance of `clp` concurrently.
 
 Note that currently, decompression (`clp x`) and search (`clg`) can only be run with a single 
-instance. We are in the process of open-sourcing parallelizable versions of these as well.
+instance. We are in the process of open-sourcing parallelized versions of these as well.

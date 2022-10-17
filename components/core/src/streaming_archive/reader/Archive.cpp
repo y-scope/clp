@@ -16,7 +16,6 @@
 
 // Project headers
 #include "../../EncodedVariableInterpreter.hpp"
-#include "../../Stopwatch.hpp"
 #include "../../Utils.hpp"
 #include "../Constants.hpp"
 
@@ -25,7 +24,7 @@ using std::unordered_set;
 using std::vector;
 
 namespace streaming_archive { namespace reader {
-    void Archive::read_metadata_file(const string& path, archive_format_version_t& format_version, size_t& stable_uncompressed_size, size_t& stable_size) {
+    void Archive::read_metadata_file (const string& path, archive_format_version_t& format_version, size_t& stable_uncompressed_size, size_t& stable_size) {
         FileReader file_reader;
         file_reader.open(path);
         file_reader.read_numeric_value(format_version, false);

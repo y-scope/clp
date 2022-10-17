@@ -13,7 +13,6 @@
 
 // Project headers
 #include "../../EncodedVariableInterpreter.hpp"
-#include "../../Stopwatch.hpp"
 #include "../../Utils.hpp"
 #include "../Constants.hpp"
 #include "SegmentManager.hpp"

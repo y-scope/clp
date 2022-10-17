@@ -12,6 +12,7 @@
 #include "../ParsedMessage.hpp"
 #include "../streaming_archive/writer/Archive.hpp"
 #include "FileToCompress.hpp"
+#include "../compressor_frontend/LogParser.hpp"
 
 namespace clp {
     constexpr size_t cUtf8ValidationBufCapacity = 4096;
@@ -22,7 +23,8 @@ namespace clp {
     class FileCompressor {
     public:
         // Constructors
-        FileCompressor (boost::uuids::random_generator& uuid_generator) : m_uuid_generator(uuid_generator) {}
+        FileCompressor (boost::uuids::random_generator& uuid_generator, std::unique_ptr<compressor_frontend::LogParser> log_parser) : m_uuid_generator(
+                uuid_generator), m_log_parser(std::move(log_parser)) {}
 
         // Methods
         /**
@@ -34,8 +36,10 @@ namespace clp {
          * @param archive_writer
          * @return true if the file was compressed successfully, false otherwise
          */
-        bool compress_file (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
-                            size_t target_encoded_file_size, const FileToCompress& file_to_compress, streaming_archive::writer::Archive& archive_writer);
+        bool compress_file (size_t target_data_size_of_dicts,
+                            streaming_archive::writer::Archive::UserConfig& archive_user_config,
+                            size_t target_encoded_file_size, const FileToCompress& file_to_compress,
+                            streaming_archive::writer::Archive& archive_writer, bool use_heuristic);
 
     private:
         // Methods
@@ -53,6 +57,10 @@ namespace clp {
                                size_t target_encoded_file_size, const std::string& path_for_compression, group_id_t group_id,
                                streaming_archive::writer::Archive& archive_writer, ReaderInterface& reader);
 
+        void parse_and_encode_with_heuristic (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
+                                              size_t target_encoded_file_size, const std::string& path_for_compression, group_id_t group_id,
+                                              streaming_archive::writer::Archive& archive_writer, ReaderInterface& reader);
+
         /**
          * Tries to compress the given file as if it were a generic archive_writer
          * @param target_data_size_of_dicts
@@ -60,11 +68,12 @@ namespace clp {
          * @param target_encoded_file_size
          * @param file_to_compress
          * @param archive_writer
+         * @param use_heuristic
          * @return true if all files were compressed successfully, false otherwise
          */
         bool try_compressing_as_archive (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
                                          size_t target_encoded_file_size, const FileToCompress& file_to_compress,
-                                         streaming_archive::writer::Archive& archive_writer);
+                                         streaming_archive::writer::Archive& archive_writer, bool use_heuristic);
 
         // Variables
         boost::uuids::random_generator& m_uuid_generator;
@@ -75,6 +84,7 @@ namespace clp {
         size_t m_utf8_validation_buf_length;
         MessageParser m_message_parser;
         ParsedMessage m_parsed_message;
+        std::unique_ptr<compressor_frontend::LogParser> m_log_parser;
     };
 }
 

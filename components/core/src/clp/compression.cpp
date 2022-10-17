@@ -54,8 +54,8 @@ namespace clp {
     }
 
     bool compress (CommandLineArguments& command_line_args, vector<FileToCompress>& files_to_compress, const vector<string>& empty_directory_paths,
-                   vector<FileToCompress>& grouped_files_to_compress, size_t target_encoded_file_size)
-    {
+                   vector<FileToCompress>& grouped_files_to_compress, size_t target_encoded_file_size,
+                   std::unique_ptr<compressor_frontend::LogParser> log_parser, bool use_heuristic) {
         auto output_dir = boost::filesystem::path(command_line_args.get_output_dir());
 
         // Create output directory in case it doesn't exist
@@ -96,14 +96,19 @@ namespace clp {
         archive_user_config.global_metadata_db = global_metadata_db.get();
         archive_user_config.print_archive_stats_progress = command_line_args.print_archive_stats_progress();
 
-        // Open archive
+        // Open Archive
         streaming_archive::writer::Archive archive_writer;
+        // Set schema file if specified by user
+        if (false == command_line_args.get_use_heuristic()) {
+            archive_writer.m_schema_file_path = command_line_args.get_schema_file_path();
+        }
+        // Open archive
         archive_writer.open(archive_user_config);
 
         archive_writer.add_empty_directories(empty_directory_paths);
 
         bool all_files_compressed_successfully = true;
-        FileCompressor file_compressor(uuid_generator);
+        FileCompressor file_compressor(uuid_generator, std::move(log_parser));
         auto target_data_size_of_dictionaries = command_line_args.get_target_data_size_of_dictionaries();
 
         // Compress all files
@@ -117,8 +122,8 @@ namespace clp {
             if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dictionaries) {
                 split_archive(archive_user_config, archive_writer);
             }
-
-            if (false == file_compressor.compress_file(target_data_size_of_dictionaries, archive_user_config, target_encoded_file_size, *rit, archive_writer)) {
+            if (false == file_compressor.compress_file(target_data_size_of_dictionaries, archive_user_config,
+                                                       target_encoded_file_size, *rit, archive_writer, use_heuristic)) {
                 all_files_compressed_successfully = false;
             }
             if (command_line_args.show_progress()) {
@@ -130,14 +135,13 @@ namespace clp {
         // Sort files by group ID to avoid spreading groups over multiple segments
         sort(grouped_files_to_compress.begin(), grouped_files_to_compress.end(), file_group_id_comparator);
         // Compress grouped files
-        for (const auto& file_to_compress : grouped_files_to_compress) {
+        for (const auto& file_to_compress: grouped_files_to_compress) {
             if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dictionaries) {
                 split_archive(archive_user_config, archive_writer);
             }
-
-            if (false == file_compressor.compress_file(target_data_size_of_dictionaries, archive_user_config, target_encoded_file_size, file_to_compress,
-                                                       archive_writer))
-            {
+            if (false == file_compressor.compress_file(target_data_size_of_dictionaries, archive_user_config,
+                                                       target_encoded_file_size, file_to_compress,
+                                                       archive_writer, use_heuristic)) {
                 all_files_compressed_successfully = false;
             }
             if (command_line_args.show_progress()) {
@@ -152,8 +156,7 @@ namespace clp {
     }
 
     bool read_and_validate_grouped_file_list (const boost::filesystem::path& path_prefix_to_remove, const string& list_path,
-                                              vector<FileToCompress>& grouped_files)
-    {
+                                              vector<FileToCompress>& grouped_files) {
         FileReader grouped_file_path_reader;
         ErrorCode error_code = grouped_file_path_reader.try_open(list_path);
         if (ErrorCode_Success != error_code) {

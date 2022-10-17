@@ -2,6 +2,7 @@
 #define STREAMING_ARCHIVE_READER_MESSAGE_HPP
 
 // C++ libraries
+#include <cstddef>
 #include <vector>
 
 // Project headers

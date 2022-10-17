@@ -32,6 +32,8 @@ namespace clp {
         const std::string& get_path_list_path () const { return m_path_list_path; }
         const std::string& get_path_prefix_to_remove () const { return m_path_prefix_to_remove; }
         const std::string& get_output_dir () const { return m_output_dir; }
+        const std::string& get_schema_file_path () const { return m_schema_file_path; }
+        bool get_use_heuristic () const { return (m_schema_file_path.empty()); }
         bool show_progress () const { return m_show_progress; }
         bool print_archive_stats_progress () const { return m_print_archive_stats_progress; }
         size_t get_target_encoded_file_size () const { return m_target_encoded_file_size; }
@@ -53,6 +55,7 @@ namespace clp {
         std::string m_path_list_path;
         std::string m_path_prefix_to_remove;
         std::string m_output_dir;
+        std::string m_schema_file_path;
         bool m_show_progress;
         bool m_print_archive_stats_progress;
         size_t m_target_encoded_file_size;

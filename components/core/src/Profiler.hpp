@@ -47,6 +47,7 @@ public:
     // Types
     enum class ContinuousMeasurementIndex : size_t {
         Compression = 0,
+        ParseLogFile,
         Search,
         Length
     };
@@ -59,6 +60,7 @@ public:
     static constexpr auto cContinuousMeasurementEnabled = []() {
         std::array<bool, enum_to_underlying_type (ContinuousMeasurementIndex::Length)> enabled{};
         enabled[enum_to_underlying_type (ContinuousMeasurementIndex::Compression)] = true;
+        enabled[enum_to_underlying_type (ContinuousMeasurementIndex::ParseLogFile)] = true;
         enabled[enum_to_underlying_type (ContinuousMeasurementIndex::Search)] = true;
         return enabled;
     }();
@@ -159,6 +161,10 @@ private:
     if (PROF_ENABLED && Profiler::cFragmentedMeasurementEnabled[enum_to_underlying_type(x)]) { \
         SPDLOG_INFO("{} took {} s", #x, \
                     Profiler::get_fragmented_measurement_in_seconds<x>()); \
+    }
+#define PROFILER_SPDLOG_INFO(...) \
+    if (PROF_ENABLED) { \
+        SPDLOG_INFO(__VA_ARGS__); \
     }
 
 #endif // PROFILER_HPP

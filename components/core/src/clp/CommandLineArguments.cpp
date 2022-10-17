@@ -234,6 +234,8 @@ namespace clp {
                         ("print-archive-stats-progress", po::bool_switch(&m_print_archive_stats_progress), "Print statistics (ndjson) about each archive as "
                                                                                                            "it's compressed")
                         ("progress", po::bool_switch(&m_show_progress), "Show progress during compression")
+                        ("schema-path", po::value<string>(&m_schema_file_path)->value_name("FILE")->default_value(m_schema_file_path),
+                         "Path to a schema file. If not specified, heuristics are used to determine dictionary variables. See README-Schema.md for details.")
                         ;
 
                 po::options_description all_compression_options;
@@ -288,6 +290,15 @@ namespace clp {
                     }
                     if (false == boost::filesystem::is_directory(m_path_prefix_to_remove)) {
                         throw invalid_argument("Specified prefix to remove is not a directory.");
+                    }
+                }
+
+                if (false == m_schema_file_path.empty()) {
+                    if (false == boost::filesystem::exists(m_schema_file_path)) {
+                        throw invalid_argument("Specified schema file does not exist.");
+                    }
+                    if (false == boost::filesystem::is_regular_file(m_schema_file_path)) {
+                        throw invalid_argument("Specified schema file '" +  m_schema_file_path + "' is not a regular file.");
                     }
                 }
             }
