@@ -41,13 +41,6 @@ std::unique_ptr<LogParser> generate_log_parser(const std::string& schema_file) {
     return log_parser;
 }
 
-void parse(const std::string& log_file, const std::string& schema_file) {
-    std::unique_ptr<LogParser> log_parser = generate_log_parser(schema_file);
-    FileReader log_file_reader;
-    log_file_reader.open(log_file);
-    log_parser->parse(log_file_reader);
-}
-
 void compress(const std::string& output_dir, const std::string& file_to_compress, std::string schema_file, bool old = false) {
     std::vector<std::string> arguments;
     if(old) {
@@ -131,110 +124,6 @@ TEST_CASE("Test error for creating log file with delimiter in regex pattern", "[
 //    REQUIRE_THROWS(compress("../tests/test_archives", file_name, "../tests/test_schema_files/schema_that_does_not_exist.txt"),
 //                   "Specified schema file does not exist.");
 //}
-
-TEST_CASE("Test parsing", "[LALR1Parser][LogParser]") {
-    compress("../tests/test_archives", "../tests/test_log_files/log.txt", "../tests/test_schema_files/schema_without_delimiters.txt");
-}
-
-/// TODO: add the test logs to the git repo
-/// TODO: add the directory structure to support compress_dir_path
-TEST_CASE("Test compression", "[Compression][Benchmark]") {
-    Stopwatch compression_watch;
-    std::string compress_dir_path = "../tests/test_archives/openstack_logs_new/";
-    std::string input_path = "../tests/test_log_files/openstack_logs/test";
-    std::string schema_file = "../tests/test_schema_files/real_schema.txt";
-    compression_watch.start();
-    compress(compress_dir_path, input_path, schema_file);
-    compression_watch.stop();
-    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
-}
-
-TEST_CASE("Test compression old", "[Compression][Benchmark]") {
-    Stopwatch compression_watch;
-    std::string compress_dir_path = "../tests/test_archives/openstack_logs_old/";
-    std::string input_path = "../tests/test_log_files/openstack_logs/test";
-    std::string schema_file = "../tests/test_schema_files/real_schema.txt";
-    compression_watch.start();
-    compress(compress_dir_path, input_path, schema_file, true);
-    compression_watch.stop();
-    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
-}
-
-
-TEST_CASE("Test compression without timestamps", "[Compression][Benchmark]") {
-    std::string compress_dir_path = "../tests/test_archives/openstack_logs_new/";
-    std::string input_path = "../tests/test_log_files/openstack_logs/test_no_timestamps";
-    std::string schema_file = "../tests/test_schema_files/real_schema.txt";
-    compress(compress_dir_path, input_path, schema_file);
-}
-
-TEST_CASE("Test decompression", "[Compression][Benchmark]") {
-    std::string compress_dir_path = "../tests/test_archives/openstack_logs_new/";
-    std::string decompress_dir_path = "../tests/decompressed/";
-    decompress(compress_dir_path, decompress_dir_path);
-}
-
-TEST_CASE("Test compression real", "[Compression][Benchmark]") {
-    Stopwatch compression_watch;
-    std::string input_path = "../tests/test_log_files/openstack_logs/n-cpu.log.2016-05-08-072252";
-    std::string compress_dir_path = "../tests/test_archives/openstack_logs_new/";
-    std::string schema_file = "../tests/test_schema_files/real_schema.txt";
-    compression_watch.start();
-    compress(compress_dir_path, input_path, schema_file);
-    compression_watch.stop();
-    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
-}
-
-TEST_CASE("Test compression real old", "[Compression][Benchmark]") {
-    Stopwatch compression_watch;
-    std::string compress_dir_path = "../tests/test_archives/openstack_logs_old/";
-    std::string input_path = "../tests/test_log_files/openstack_logs/n-cpu.log.2016-05-08-072252";
-    std::string schema_file = "../tests/test_schema_files/real_schema.txt";
-    compression_watch.start();
-    compress(compress_dir_path, input_path, schema_file, true);
-    compression_watch.stop();
-    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
-}
- 
-TEST_CASE("Test compression directory", "[Compression][Benchmark]") {
-    Stopwatch compression_watch;
-    std::string compress_dir_path = "../tests/test_archives/openstack_logs_new/";
-    std::string input_path = "../tests/test_log_files/openstack_logs";
-    std::string schema_file = "../tests/test_schema_files/real_schema.txt";
-    compression_watch.start();
-    compress(compress_dir_path, input_path, schema_file);
-    compression_watch.stop();
-    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
-}
-
-TEST_CASE("Test compression no timestamp", "[Compression][Benchmark]") {
-    Stopwatch compression_watch;
-    std::string input_path = "../tests/test_log_files/openstack_logs/test_no_timestamp";
-    //std::string input_path = "../../../logs/yarn--resourcemanager-8d30a2c150ca.log.2018-07-13ir"; //breaks at line 55 if its timestamp format isn't in schema
-    std::string compress_dir_path = "../tests/test_archives/openstack_logs_new/";
-    std::string schema_file = "../tests/test_schema_files/real_schema.txt";
-    compression_watch.start();
-    compress(compress_dir_path, input_path, schema_file);
-    compression_watch.stop();
-    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
-}
-
-TEST_CASE("Test compression hadoop", "[Compression][Benchmark]") {
-    Stopwatch compression_watch;
-    std::string compress_dir_path = "../../../archive/";
-    std::string input_path = "../../../logs";
-    std::string schema_file = "../tests/test_schema_files/real_schema.txt";
-    compression_watch.start();
-    compress(compress_dir_path, input_path, schema_file);
-    compression_watch.stop();
-    SPDLOG_INFO("Compression took {}", compression_watch.get_time_taken_in_seconds());
-}
-
-TEST_CASE("Test decompression hadoop", "[Compression][Benchmark]") {
-    std::string compress_dir_path = "../../../archive/";
-    std::string decompress_dir_path = "../../../decompressed/";
-    decompress(compress_dir_path, decompress_dir_path);
-}
 
 TEST_CASE("Test forward lexer", "[Search]") {
     ByteLexer forward_lexer;

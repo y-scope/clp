@@ -5,7 +5,6 @@
 
 // Project headers
 #include "compressor_frontend/Constants.hpp"
-#include "compressor_frontend/QueryParser.hpp"
 #include "EncodedVariableInterpreter.hpp"
 #include "StringReader.hpp"
 #include "Utils.hpp"
@@ -383,7 +382,6 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     query.set_search_string(processed_search_string);
 
     // Replace non-greedy wildcards with greedy wildcards since we currently have no support for searching compressed files with non-greedy wildcards
-    // SPDLOG_WARN("CLG currently does not support '?', replacing with '*'");
     std::replace(processed_search_string.begin(), processed_search_string.end(), '?', '*');
     // Clean-up in case any instances of "?*" or "*?" were changed into "**"
     processed_search_string = clean_up_wildcard_search_string(processed_search_string);
@@ -453,18 +451,6 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
 
     return query.contains_sub_queries();
 }
-
-//bool Grep::process_raw_query (const Archive& archive, const string& search_string, epochtime_t search_begin_ts, epochtime_t search_end_ts, bool ignore_case,
-//                              Query& query, const std::unique_ptr<compressor_frontend::QueryParser>& parser) {
-//    // Set properties which require no processing
-//    query.set_search_begin_timestamp(search_begin_ts);
-//    query.set_search_end_timestamp(search_end_ts);
-//    query.set_ignore_case(ignore_case);
-//
-//    /* query.set_search_string(processed_search_string); */
-//
-//    return query.contains_sub_queries();
-//}
 
 bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, size_t& end_pos, bool& is_var) {
     const auto value_length = value.length();

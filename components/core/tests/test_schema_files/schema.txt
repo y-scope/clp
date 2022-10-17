@@ -1,7 +1,0 @@
-delimiters: 
-
-identifier:(My.og)\d{3}\sAPet[0-9]*\\test\.txt
-timestamp:[0-9]*:[0-9]*\s[A/P]M\s[0-9]*/[0-9]*/[0-9]*
-serverName:(S|s)erver[0-9]*
-int:[0-9]+
-double:[0-9]+\.[0-9]+

@@ -395,8 +395,6 @@ int main (int argc, const char* argv[]) {
     compressor_frontend::lexers::ByteLexer* forward_lexer_ptr;
     compressor_frontend::lexers::ByteLexer* reverse_lexer_ptr;
 
-    // std::unique_ptr<QueryParser> parser = std::make_unique<QueryParser>(QueryParser(std::move(schema_ast)));
-    
     string archive_id;
     Archive archive_reader;
     for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(get_archive_iterator(*global_metadata_db, command_line_args.get_file_path()));

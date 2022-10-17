@@ -109,9 +109,8 @@ namespace clp {
                                  file_to_compress.get_group_id(), archive_writer, m_file_reader);
             }
         } else {
-            SPDLOG_INFO(file_to_compress.get_path() + " is not UTF8");
             if (false == try_compressing_as_archive(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, file_to_compress,
-                                                    archive_writer))
+                                                    archive_writer, use_heuristic))
             {
                 succeeded = false;
             }
@@ -200,7 +199,7 @@ namespace clp {
 
     bool FileCompressor::try_compressing_as_archive (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
                                                      size_t target_encoded_file_size, const FileToCompress& file_to_compress,
-                                                     streaming_archive::writer::Archive& archive_writer)
+                                                     streaming_archive::writer::Archive& archive_writer, bool use_heuristic)
     {
         auto file_boost_path = boost::filesystem::path(file_to_compress.get_path_for_compression());
         auto parent_boost_path = file_boost_path.parent_path();
@@ -275,8 +274,14 @@ namespace clp {
             }
             if (is_utf8_sequence(m_utf8_validation_buf_length, m_utf8_validation_buf)) {
                 auto boost_path_for_compression = parent_boost_path / m_libarchive_reader.get_path();
-                parse_and_encode(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, boost_path_for_compression.string(),
-                                 file_to_compress.get_group_id(), archive_writer, m_libarchive_file_reader);
+                if (use_heuristic) {
+                    parse_and_encode_with_heuristic(target_data_size_of_dicts, archive_user_config, target_encoded_file_size,
+                                                    boost_path_for_compression.string(), file_to_compress.get_group_id(), archive_writer,
+                                                    m_libarchive_file_reader);
+                } else {
+                    parse_and_encode(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, boost_path_for_compression.string(),
+                                     file_to_compress.get_group_id(), archive_writer, m_libarchive_file_reader);
+                }
             } else {
                 SPDLOG_ERROR("Cannot compress {} - not UTF-8 encoded.", m_libarchive_reader.get_path());
                 succeeded = false;

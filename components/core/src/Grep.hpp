@@ -10,7 +10,6 @@
 #include "streaming_archive/reader/Archive.hpp"
 #include "streaming_archive/reader/File.hpp"
 #include "compressor_frontend/Lexer.hpp"
-#include "compressor_frontend/QueryParser.hpp"
 
 class Grep {
 
@@ -40,9 +39,6 @@ public:
     static bool process_raw_query (const streaming_archive::reader::Archive& archive, const std::string& search_string, epochtime_t search_begin_ts,
                                    epochtime_t search_end_ts, bool ignore_case, Query& query, compressor_frontend::lexers::ByteLexer& forward_lexer,
                                    compressor_frontend::lexers::ByteLexer& reverse_lexer, bool use_heuristic);
-    //static bool process_raw_query (const streaming_archive::reader::Archive& archive, const std::string& search_string,
-    //                               epochtime_t search_begin_ts, epochtime_t search_end_ts, bool ignore_case, Query& query,
-    //                               const std::unique_ptr<compressor_frontend::QueryParser>& parser);
 
     /**
      * Returns bounds of next potential variable (either a definite variable or a token with wildcards)
