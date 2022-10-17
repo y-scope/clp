@@ -586,6 +586,7 @@ target_link_libraries(clo
         msgpackc-cxx
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
+        stdc++fs
         ZStd::ZStd
         )
 target_compile_features(clo
@@ -771,6 +772,7 @@ target_link_libraries(unitTest
         MariaDBClient::MariaDBClient
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
+        stdc++fs
         yaml-cpp::yaml-cpp
         ZStd::ZStd
         )
