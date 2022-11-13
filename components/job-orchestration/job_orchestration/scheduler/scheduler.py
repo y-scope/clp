@@ -17,19 +17,20 @@ from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compression_task import compress
 from job_orchestration.executor.search_task import search
+from job_orchestration.scheduler.constants import \
+    QueueName, \
+    JobStatus, \
+    TaskUpdateType, \
+    TaskStatus
 from job_orchestration.scheduler.results_consumer import ReconnectingResultsConsumer
 from job_orchestration.scheduler.scheduler_data import \
     CompressionJob, \
     SearchJob, \
-    JobStatus, \
     CompressionTask, \
     SearchTask, \
-    TaskStatus, \
-    TaskUpdateType, \
     TaskUpdate, \
     TaskFailureUpdate, \
-    CompressionTaskSuccessUpdate, \
-    QueueName
+    CompressionTaskSuccessUpdate
 
 # Setup logging
 # Create logger

@@ -67,7 +67,7 @@ from clp.package_utils import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, validate_an
 from clp_py_utils.clp_config import CLP_METADATA_TABLE_PREFIX, Database
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.job_config import SearchConfig
-from job_orchestration.scheduler.scheduler_data import JobStatus
+from job_orchestration.scheduler.constants import JobStatus
 
 
 async def run_function_in_process(function, *args, initializer=None, init_args=None):

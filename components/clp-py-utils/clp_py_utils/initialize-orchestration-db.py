@@ -6,7 +6,7 @@ from contextlib import closing
 
 from clp_py_utils.clp_config import Database
 from clp_py_utils.core import read_yaml_config_file
-from job_orchestration.scheduler.scheduler_data import JobStatus, TaskStatus
+from job_orchestration.scheduler.constants import JobStatus, TaskStatus
 from sql_adapter import SQL_Adapter
 
 # Setup logging
