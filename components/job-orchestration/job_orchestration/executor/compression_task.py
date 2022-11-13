@@ -9,9 +9,8 @@ from celery.utils.log import get_task_logger
 from job_orchestration.executor.celery import app
 from job_orchestration.executor.utils import append_message_to_task_results_queue
 from job_orchestration.job_config import ClpIoConfig, PathsToCompress
+from job_orchestration.scheduler.constants import TaskStatus, TaskUpdateType
 from job_orchestration.scheduler.scheduler_data import \
-    TaskStatus, \
-    TaskUpdateType, \
     TaskUpdate, \
     TaskFailureUpdate, \
     CompressionTaskSuccessUpdate

@@ -7,8 +7,8 @@ from celery.utils.log import get_task_logger
 from job_orchestration.job_config import SearchConfig
 from job_orchestration.executor.celery import app
 from job_orchestration.executor.utils import append_message_to_task_results_queue
-from job_orchestration.scheduler.scheduler_data import TaskUpdate, TaskUpdateType, TaskStatus, \
-    TaskFailureUpdate
+from job_orchestration.scheduler.constants import TaskUpdateType, TaskStatus
+from job_orchestration.scheduler.scheduler_data import TaskUpdate, TaskFailureUpdate
 
 # Setup logging
 logger = get_task_logger(__name__)

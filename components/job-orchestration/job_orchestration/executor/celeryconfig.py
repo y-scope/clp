@@ -1,6 +1,6 @@
 import os
 
-from job_orchestration.scheduler.scheduler_data import QueueName, TASK_QUEUE_HIGHEST_PRIORITY
+from job_orchestration.scheduler.constants import QueueName, TASK_QUEUE_HIGHEST_PRIORITY
 
 # Worker settings
 # Force workers to consume only one task at a time

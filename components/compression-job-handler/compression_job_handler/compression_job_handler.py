@@ -19,7 +19,7 @@ from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.job_config import PathsToCompress, InputConfig, OutputConfig, ClpIoConfig
-from job_orchestration.scheduler.scheduler_data import JobStatus
+from job_orchestration.scheduler.constants import JobStatus
 from .utils.common import JobCompletionStatus
 
 # Setup logging

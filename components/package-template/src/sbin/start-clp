@@ -79,7 +79,7 @@ from clp.package_utils import \
     validate_queue_config, \
     validate_worker_config
 from clp_py_utils.clp_config import CLPConfig
-from job_orchestration.scheduler.scheduler_data import QueueName
+from job_orchestration.scheduler.constants import QueueName
 
 
 def append_docker_port_settings_for_host_ips(hostname: str, host_port: int, container_port: int, cmd: [str]):
