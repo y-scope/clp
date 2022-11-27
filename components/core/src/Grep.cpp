@@ -377,8 +377,13 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     query.set_search_end_timestamp(search_end_ts);
     query.set_ignore_case(ignore_case);
 
+    // Add prefix and suffix '*' to make the search a sub-string match
+    string processed_search_string = "*";
+    processed_search_string += search_string;
+    processed_search_string += '*';
+
     // Clean-up search string
-    string processed_search_string = clean_up_wildcard_search_string(search_string);
+    processed_search_string = clean_up_wildcard_search_string(processed_search_string);
     query.set_search_string(processed_search_string);
 
     // Replace non-greedy wildcards with greedy wildcards since we currently have no support for searching compressed files with non-greedy wildcards
@@ -717,7 +722,8 @@ size_t Grep::search_and_output (const Query& query, size_t limit, Archive& archi
         if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required()) ||
             (query.contains_sub_queries() == false && query.search_string_matches_all() == false))
         {
-            bool matched = wildCardMatch(decompressed_msg, query.get_search_string(), query.get_ignore_case() == false);
+            bool matched = wildcard_match_unsafe(decompressed_msg, query.get_search_string(),
+                                                 query.get_ignore_case() == false);
             if (!matched) {
                 continue;
             }
@@ -756,7 +762,8 @@ bool Grep::search_and_decompress (const Query& query, Archive& archive, File& co
         if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required()) ||
             (query.contains_sub_queries() == false && query.search_string_matches_all() == false))
         {
-            matched = wildCardMatch(decompressed_msg, query.get_search_string(), query.get_ignore_case() == false);
+            matched = wildcard_match_unsafe(decompressed_msg, query.get_search_string(),
+                                            query.get_ignore_case() == false);
         } else {
             matched = true;
         }
@@ -791,7 +798,8 @@ size_t Grep::search (const Query& query, size_t limit, Archive& archive, File& c
                 break;
             }
 
-            bool matched = wildCardMatch(decompressed_msg, query.get_search_string(), query.get_ignore_case() == false);
+            bool matched = wildcard_match_unsafe(decompressed_msg, query.get_search_string(),
+                                                 query.get_ignore_case() == false);
             if (!matched) {
                 continue;
             }

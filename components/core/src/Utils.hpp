@@ -75,13 +75,15 @@ bool is_wildcard (char c);
 
 /**
  * Cleans wildcard search string
- * - Removes consecutive '*'
- * - Removes escaping from non-wildcard characters
- * - Adds wildcard to beginning and end of string
+ * <ul>
+ *   <li>Removes consecutive '*'</li>
+ *   <li>Removes escaping from non-wildcard characters</li>
+ *   <li>Removes dangling escape character from the end of the string</li>
+ * </ul>
  * @param str Wildcard search string to clean
  * @return Cleaned wildcard search string
  */
-std::string clean_up_wildcard_search_string (const std::string& str);
+std::string clean_up_wildcard_search_string (std::string_view str);
 
 /**
  * Converts the given string to a 64-bit integer if possible
@@ -172,28 +174,36 @@ std::string get_unambiguous_path (const std::string& path);
 std::string replace_characters (const char* characters_to_escape, const char* replacement_characters, const std::string& value, bool escape);
 
 /**
- * Perform wildcard match
- * @param string_tame A cpp string without wildcards
- * @param string_wild A (potentially) corresponding cpp string with wildcards
- * @return
+ * Same as ``wildcard_match_unsafe_case_sensitive`` except this method allows
+ * the caller to specify whether the match should be case sensitive.
+ *
+ * @param tame The literal string
+ * @param wild The wildcard string
+ * @param case_sensitive_match Whether to consider case when matching
+ * @return Whether the two strings match
  */
-bool wildCardMatch_caseSensitive (
-        const std::string& string_tame,
-        const std::string& string_wild
-);
-
+bool wildcard_match_unsafe (std::string_view tame, std::string_view wild,
+                            bool case_sensitive_match = true);
 /**
- * Perform wildcard match with case sentivity flag
- * @param string_tame A string without wildcards
- * @param string_wild A (potentially) corresponding string with wildcards
- * @param isCaseSensitive
- * @return
+ * Checks if a string matches a wildcard string. Two wildcards are currently
+ * supported: '*' to match 0 or more characters, and '?' to match any single
+ * character. Each can be escaped using a preceding '\'. Other characters which
+ * are escaped are treated as normal characters.
+ * <br/>
+ * This method is optimized for performance by omitting some checks on the
+ * wildcard string that are unnecessary if the caller cleans up the wildcard
+ * string as follows:
+ * <ul>
+ *   <li>The wildcard string should not contain consecutive '*'.</li>
+ *   <li>The wildcard string should not contain an escape character without a
+ *   character following it.</li>
+ * </ul>
+ *
+ * @param tame The literal string
+ * @param wild The wildcard string
+ * @return Whether the two strings match
  */
-bool wildCardMatch (
-        const std::string& string_tame,
-        const std::string& string_wild,
-        const bool isCaseSensitive
-);
+bool wildcard_match_unsafe_case_sensitive (std::string_view tame, std::string_view wild);
 
 /**
  * Maps a given file into memory
