@@ -22,9 +22,30 @@
 
 using std::list;
 using std::string;
+using std::string_view;
 using std::vector;
 
 static const char* const cWildcards = "?*";
+
+// Local function prototypes
+/**
+ * Helper for ``do_wildcard_match_unsafe`` to advance the pointer in tame to
+ * the next character which matches wild. This method should be inlined for
+ * performance.
+ * @param tame_current
+ * @param tame_bookmark
+ * @param tame_end
+ * @param wild_current
+ * @param wild_bookmark
+ * @return true on success, false if wild cannot match tame
+ */
+static inline bool advance_tame_to_next_match (
+        const char*& tame_current,
+        const char*& tame_bookmark,
+        const char* tame_end,
+        const char*& wild_current,
+        const char*& wild_bookmark
+);
 
 bool is_wildcard (char c) {
     for (size_t i = 0; i < strlen(cWildcards); ++i) {
@@ -35,39 +56,38 @@ bool is_wildcard (char c) {
     return false;
 }
 
-string clean_up_wildcard_search_string (const string& str) {
+string clean_up_wildcard_search_string (string_view str) {
     string cleaned_str;
 
-    for (size_t begin_pos = 0; begin_pos < str.length(); ) {
-        begin_pos = str.find_first_not_of('*', begin_pos);
-        if (string::npos == begin_pos) {
-            break;
-        }
-        cleaned_str += '*';
+    bool is_escaped = false;
+    auto str_end = str.cend();
+    for (auto current = str.cbegin(); current != str_end;) {
+        auto c = *current;
+        if (is_escaped) {
+            is_escaped = false;
 
-        // Add everything up to next unescaped '*'
-        bool is_escaped = false;
-        for (; begin_pos < str.length(); ++begin_pos) {
-            char c = str[begin_pos];
+            if (is_wildcard(c) || '\\' == c) {
+                // Keep escaping if c is a wildcard character or an escape character
+                cleaned_str += '\\';
+            }
+            cleaned_str += c;
+            ++current;
+        } else if ('*' == c) {
+            cleaned_str += c;
 
-            if (is_escaped) {
-                if (is_wildcard(c) || '\\' == c) {
-                    // Keep escaping if c is a wildcard character or an escape character
-                    cleaned_str += '\\';
-                }
-                cleaned_str += c;
-
-                is_escaped = false;
-            } else if ('\\' == c) {
+            // Skip over all '*' to find the next non-'*'
+            do {
+                ++current;
+            } while (current != str_end && '*' == *current);
+        } else {
+            if ('\\' == c) {
                 is_escaped = true;
-            } else if ('*' == c) {
-                break;
             } else {
                 cleaned_str += c;
             }
+            ++current;
         }
     }
-    cleaned_str += '*';
 
     return cleaned_str;
 }
@@ -307,271 +327,163 @@ string replace_characters (const char* characters_to_replace, const char* replac
     return new_value;
 }
 
-/**
- * Highly Efficient Wild Card Match - The Most Fundamental and Performance Critical Component of Search
- * @param cStringPtr_tame - c style string pointer pointing to string without wild characters
- * @param cStringPtr_wild - c style string pointer pointing to string with or without wild characters
- * @return - returns true if wild card matched, else returns false
- *
- * Basic wild card definition
- * 1) "*" refers to 0 or more ascii characters
- * 2) "?" refers to exactly 1 ascii character
- * 3) "\" refers to escape char, any char after this is treated as literal character rather than special function
- *      - only '\', '*', '?' can be escaped for now, others are simply ignored
- *          - the use of other unsupported escape characters causes wild card match to ignore the escape character
- *
- * Special properties of wild card match to take advantage of:
- * 1) When we encountered a mismatched character, we only need to rewind the wildcard string back to the previous "*"
- *    to continue searching. We can use position pointers to keep track of the nearest location we can rollback.
- *
- * Pros:
- * 1) No recursion, no need to worry about preventing stack overflow at expense of performance, easy to debug
- * 2) In place checking - no need to allocate string buffers, only char type buffers and pointers are used
- *
- * Future Work:
- * 1) Consider integrating token with space as delimiter in addition to "*" or "?"
- *      - maybe also differentiate variable or static token
- *
- * Notes:
- * 1) This is the highest performance version which only capable of performing case insensitive wild card match.
- *    It has all other functionality stripped away to achieve maximum performance.
- * 2) Performance is tuned to find matches extremely fast, however it is much slower to find mismatches becuase we want
- *    to gurantee 100% confidence that we correctly identified a mismatch.
- *    This is an important property which we need in CLG. It would be good to have algorithm tuned to find non-matches,
- *    but currently, there's no good algorithm available. The only optimization left is possibly distance based where
- *    it checks if the leftover tame string has enough characters match if "*" wa assumed to be 0 characters.
- *    Overall, this algorithm is possibly thousands of times if not more faster compared to a standard solution.
- */
+static inline bool advance_tame_to_next_match (
+        const char*& tame_current,
+        const char*& tame_bookmark,
+        const char* tame_end,
+        const char*& wild_current,
+        const char*& wild_bookmark
+) {
+    auto w = *wild_current;
+    if ('?' != w) {
+        // No need to check for '*' since the caller ensures wild doesn't
+        // contain consecutive '*'
 
+        // Handle escaped characters
+        if ('\\' == w) {
+            ++wild_current;
+            // This is safe without a bounds check since this the caller
+            // ensures there are no dangling escape characters
+            w = *wild_current;
+        }
 
-bool wildCardMatch_caseSensitive(const string& string_tame, const string& cppString_wild){
-    const char *cStringPtr_tame = string_tame.c_str();
-    const char *cStringPtr_wild = cppString_wild.c_str();
-
-    if (cppString_wild.empty()) {
-        // Optimization: empty wild card search string
-        //  - sometimes, clg users may search for an empty wild card search string
-        //  - the default behavior should be to match everything
-        return true;
+        // Advance tame_current until it matches wild_current
+        while (true) {
+            if (tame_end == tame_current) {
+                // Wild group is longer than last group in tame, so
+                // can't match
+                // e.g. "*abc" doesn't match "zab"
+                return false;
+            }
+            auto t = *tame_current;
+            if (t == w) {
+                break;
+            }
+            ++tame_current;
+        }
     }
 
-    bool wildCharNotEscaped;
-    const char* bookmark_tame = nullptr;
-    const char* bookmark_wild = nullptr;
+    tame_bookmark = tame_current;
 
-    while (true) {
-        wildCharNotEscaped = true;
-        if (*cStringPtr_wild == '\\') {
-            // encountered an escape character, set wildCharEscaped to true
-            // Then directly advance to next character instead of taking another loop iteration
-            wildCharNotEscaped = false;
-            cStringPtr_wild++;
-            if (!(*cStringPtr_wild == '*' or *cStringPtr_wild == '?' or *cStringPtr_wild == '\\')){
-                // Silently ignore unsupported escape sequences for now by resetting the wildCharNotEscaped flag
-                // Emit warning message if necessary in the future
-                wildCharNotEscaped = true;
-            }
-        }
+    return true;
+}
 
-        if (wildCharNotEscaped && *cStringPtr_wild == '*'){
-            // '*' character receives special treatment
-            // Skip as much consecutive '*' as possible until we reach a non '*' character
-            while (*(++cStringPtr_wild) == '*') { }
-
-            // If we are at end of the c style wild string, we found a match
-            if (*cStringPtr_wild == '\0') {
-                return true;
-            }
-
-            // Save the bookmark_wild at the character after the last observed '*'
-            // If the 1st new wild char is escape character, advance cStringPtr_wild to the next char to be used later
-            bookmark_wild = cStringPtr_wild;
-            if (*(cStringPtr_wild) == '\\'){
-                cStringPtr_wild++;
-                // Silently ignore unsupported escape sequences for now
-                // Emit warning message if necessary in the future
-            }
-
-            // Efficiently fast-forward tame string pointer to the next possible match before saving the bookmark_tame
-            if (*cStringPtr_wild != '?') {
-                while (*cStringPtr_tame != *cStringPtr_wild) {
-                    if (*(++cStringPtr_tame) == '\0') {
-                        // If we reached the end of tame string at this point, return no match found
-                        return false;
-                    }
-                }
-            }
-            bookmark_tame = cStringPtr_tame;
-        } else if (*cStringPtr_tame != *cStringPtr_wild && wildCharNotEscaped && *cStringPtr_wild != '?') {
-            // found a mismatch, rewind one or both bookmarks
-            if (bookmark_wild) {
-                if (cStringPtr_wild != bookmark_wild) {
-                    cStringPtr_wild = bookmark_wild;
-                    if (*cStringPtr_wild == '\\'){
-                        // Handle case when bookmark starts with an escape character
-                        cStringPtr_wild++;
-                        // Silently ignore unsupported escape sequences for now
-                        // Emit warning message if necessary in the future
-                    }
-                    if (*cStringPtr_tame != *cStringPtr_wild) {
-                        // Don't go this far back again
-                        cStringPtr_tame = ++bookmark_tame;
-                        continue;   // "xy" matches "*y"
-                    } else {
-                        cStringPtr_wild++;
-                    }
-                }
-                if (*cStringPtr_tame) {
-                    cStringPtr_tame++;
-                    continue;       // "mississippi" matches "*sip*"
-                }
-            }
-            return false;           // "xy" doesn't match "x"
-        }
-
-        cStringPtr_tame++;
-        cStringPtr_wild++;
-
-        if (*cStringPtr_tame == '\0') {
-            while (*cStringPtr_wild == '*') {
-                cStringPtr_wild++;  // "x" matches "x*"
-            }
-            if (*cStringPtr_wild == '\0') {
-                return true;        // "x" matches "x"
-            } else if (*cStringPtr_wild == '\\') {
-                // Silently ignore invalid escape sequences for now
-                // Emit warning message if necessary in the future
-                return true;
-            } else {
-                return false;       // "x" doesn't matches "xy"
-            }
-        }
+bool wildcard_match_unsafe (string_view tame, string_view wild, bool case_sensitive_match) {
+    if (case_sensitive_match) {
+        return wildcard_match_unsafe_case_sensitive(tame, wild);
+    } else {
+        // We convert to lowercase (rather than uppercase) anticipating that
+        // callers use lowercase more frequently, so little will need to change.
+        string lowercase_tame(tame);
+        boost::to_lower(lowercase_tame);
+        string lowercase_wild(wild);
+        boost::to_lower(lowercase_wild);
+        return wildcard_match_unsafe_case_sensitive(lowercase_tame, lowercase_wild);
     }
 }
 
 /**
- * Checks if a given string, tame, matches a string containing wildcards, wild.
- * Two wildcards are currently supported: '*' to match 0 or more characters, and '?' to match any single character.
- * Each can be escaped using a preceeding '\'. Other characters which are escaped are treated as normal characters.
- *
  * The algorithm basically works as follows:
- * Given a wild string "*abc*def*ghi*", it can be broken into groups of characters delimited by one or more '*'
- * characters. Essentially, the goal of the algorithm is then to determine whether the tame string contains each of
+ * Given a wild string "*abc*def*ghi*", it can be broken into groups of
+ * characters delimited by one or more '*' characters. The goal of the
+ * algorithm is then to determine whether the tame string contains each of
  * those groups in the same order.
- *
- * There are three additional points to handle:
- * 1. '?' must match any character,
- * 2. if there is no leading '*', then tame must start with the same group as wild, and
- * 3. if there is no trailing '*', then tame must end with the same group as wild.
  *
  * Thus, the algorithm:
  * 1. searches for the start of one of these groups in wild,
  * 2. searches for a group in tame starting with the same character, and then
- * 3. checks if the two match. If not, the search repeats with the next group in tame.
- *
- * @param tame The original string
- * @param wild The string containing wildcards
- * @return true if the two strings match (accounting for wildcards), false otherwise
+ * 3. checks if the two match. If not, the search repeats with the next group in
+ *    tame.
  */
-bool wildcard_match_simple (const string& tame, const string& wild) {
-    const size_t cTameLen = tame.length();
-    const size_t cWildLen = wild.length();
-    int tame_ix = 0;
-    int wild_ix = 0;
-    int tame_bookmark_ix = -1;
-    int wild_bookmark_ix = -1;
-    bool escaped = false;
-    while (true) {
-        if ('\\' == wild[wild_ix]) {
-            // Found escape character, so skip to next character
-            escaped = true;
-            ++wild_ix;
+bool wildcard_match_unsafe_case_sensitive (string_view tame, string_view wild) {
+    const auto tame_length = tame.length();
+    const auto wild_length = wild.length();
+    const char* tame_current = tame.data();
+    const char* wild_current = wild.data();
+    const char* tame_bookmark = nullptr;
+    const char* wild_bookmark = nullptr;
+    const char* tame_end = tame_current + tame_length;
+    const char* wild_end = wild_current + wild_length;
 
-            // Should be impossible to have an escape character without something after it
-            assert(cWildLen != wild_ix);
+    // Handle wild or tame being empty
+    if (0 == wild_length) {
+        return 0 == tame_length;
+    } else {
+        if (0 == tame_length) {
+            return "*" == wild;
         }
+    }
 
-        if (!escaped && '*' == wild[wild_ix]) {
-            // Fast-forward wild_bookmark_ix to non-wildcard character
-            while ('*' == wild[wild_ix]) {
-                ++wild_ix;
-            }
-            if (cWildLen == wild_ix) {
-                // Trailing '*' implies we don't care about anything after this point, so exit now
+    char w;
+    char t;
+    bool is_escaped = false;
+    while (true) {
+        w = *wild_current;
+        if ('*' == w) {
+            ++wild_current;
+            if (wild_end == wild_current) {
+                // Trailing '*' means everything remaining in tame will match
                 return true;
             }
 
-            // Bookmark wild and tame
-            wild_bookmark_ix = wild_ix;
-            tame_bookmark_ix = tame_ix;
+            // Set wild and tame bookmarks
+            wild_bookmark = wild_current;
+            if (false == advance_tame_to_next_match(tame_current, tame_bookmark, tame_end,
+                                                    wild_current, wild_bookmark))
+            {
+                return false;
+            }
         } else {
-            if ( (!escaped && '?' == wild[wild_ix]) || tame[tame_ix] == wild[wild_ix]) {
-                // Current characters in wild and tame match
-                if (cWildLen == wild_ix && cTameLen == tame_ix) {
-                    // Reached the end of both, so exit
-                    return true;
-                }
+            // Handle escaped characters
+            if ('\\' == w) {
+                is_escaped = true;
+                ++wild_current;
+                // This is safe without a bounds check since this the caller
+                // ensures there are no dangling escape characters
+                w = *wild_current;
+            }
 
-                ++wild_ix;
-                ++tame_ix;
-            } else {
-                // Current characters in wild and tame don't match
-                if (-1 == wild_bookmark_ix) {
-                    // No bookmark indicates no '*', so no option to retry match
-                    // Exit
+            // Handle a mismatch
+            t = *tame_current;
+            if (!((false == is_escaped && '?' == w) || t == w)) {
+                if (nullptr == wild_bookmark) {
+                    // No bookmark to return to
                     return false;
                 }
 
-                // Reset to bookmark
-                wild_ix = wild_bookmark_ix;
-                char wild_char = wild[wild_ix];
-                if ('\\' == wild_char) {
-                    // Found escape chaacter, so skip to next character
-                    wild_char = wild[wild_ix + 1];
-                    escaped = true;
+                wild_current = wild_bookmark;
+                tame_current = tame_bookmark + 1;
+                if (false == advance_tame_to_next_match(tame_current, tame_bookmark, tame_end,
+                                                        wild_current, wild_bookmark))
+                {
+                    return false;
                 }
-                tame_ix = tame_bookmark_ix;
-
-                if (!escaped && '?' == wild_char) {
-                    if (cTameLen == tame_ix) {
-                        // Reached end of tame before end of wild
-                        return false;
-                    }
-                    ++tame_ix;
-                } else {
-                    // Fast-forward tame_bookmark_ix to next matching character
-                    do {
-                        if (cTameLen == tame_ix) {
-                            // Reached end of tame before end of wild
-                            return false;
-                        }
-                        ++tame_ix;
-                    } while (tame[tame_ix] != wild_char);
-                }
-                tame_bookmark_ix = tame_ix;
             }
         }
 
-        escaped = false;
-    }
-}
+        ++tame_current;
+        ++wild_current;
 
-/***
- *
- * @param string_tame
- * @param string_wild
- * @param isCaseSensitive - defaults to case sensitive wild card search
- * @return
- */
-bool wildCardMatch (
-        const string& string_tame,        // A string without wildcards
-        const string& string_wild,        // A (potentially) corresponding string with wildcards
-        const bool isCaseSensitive = true   // Defaults to case sensitive wild card match (faster performance)
-){
-    if (isCaseSensitive) {
-        return wildcard_match_simple(string_tame, string_wild);
-    } else {
-        return wildcard_match_simple(boost::to_upper_copy(string_tame), boost::to_upper_copy(string_wild));
+        // Handle reaching the end of tame or wild
+        if (tame_end == tame_current) {
+            return (wild_end == wild_current ||
+                    ('*' == *wild_current && (wild_current + 1) == wild_end));
+        } else {
+            if (wild_end == wild_current) {
+                if (nullptr == wild_bookmark) {
+                    // No bookmark to return to
+                    return false;
+                } else {
+                    wild_current = wild_bookmark;
+                    tame_current = tame_bookmark + 1;
+                    if (false == advance_tame_to_next_match(tame_current, tame_bookmark, tame_end,
+                                                            wild_current, wild_bookmark))
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
     }
 }
 
