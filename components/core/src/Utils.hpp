@@ -91,7 +91,7 @@ std::string clean_up_wildcard_search_string (std::string_view str);
  * @param converted
  * @return true if the conversion was successful, false otherwise
  */
-bool convert_string_to_int64 (const std::string& raw, int64_t& converted);
+bool convert_string_to_int64 (std::string_view raw, int64_t& converted);
 
 /**
  * Converts the given string to a double if possible
