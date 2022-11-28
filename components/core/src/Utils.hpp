@@ -9,29 +9,10 @@
 #include <vector>
 
 // Project headers
-#include "compressor_frontend/Lexer.hpp"
 #include "Defs.h"
 #include "ErrorCode.hpp"
 #include "FileReader.hpp"
 #include "ParsedMessage.hpp"
-
-/**
- * Checks if the given character is an alphabet
- * @param c
- * @return true if c is an alphabet, false otherwise
- */
-inline bool is_alphabet (char c) {
-    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
-}
-
-/**
- * Checks if character is a decimal (base-10) digit
- * @param c
- * @return true if c is a decimal digit, false otherwise
- */
-inline bool is_decimal_digit (char c)  {
-    return '0' <= c && c <= '9';
-}
 
 /**
  * Checks if the given segment of the stringcould be a multi-digit hex value
@@ -67,41 +48,6 @@ inline bool is_delim (char c) {
 }
 
 /**
- * Checks if character is a wildcard
- * @param c
- * @return true if c is a wildcard, false otherwise
- */
-bool is_wildcard (char c);
-
-/**
- * Cleans wildcard search string
- * <ul>
- *   <li>Removes consecutive '*'</li>
- *   <li>Removes escaping from non-wildcard characters</li>
- *   <li>Removes dangling escape character from the end of the string</li>
- * </ul>
- * @param str Wildcard search string to clean
- * @return Cleaned wildcard search string
- */
-std::string clean_up_wildcard_search_string (std::string_view str);
-
-/**
- * Converts the given string to a 64-bit integer if possible
- * @param raw
- * @param converted
- * @return true if the conversion was successful, false otherwise
- */
-bool convert_string_to_int64 (const std::string& raw, int64_t& converted);
-
-/**
- * Converts the given string to a double if possible
- * @param raw
- * @param converted
- * @return true if the conversion was successful, false otherwise
- */
-bool convert_string_to_double (const std::string& raw, double& converted);
-
-/**
  * Creates a directory with the given path
  * @param path
  * @param mode
@@ -120,16 +66,6 @@ ErrorCode create_directory (const std::string& path, __mode_t mode, bool exist_o
  * @return ErrorCode_Success on success, ErrorCode_errno otherwise
  */
 ErrorCode create_directory_structure (const std::string& path, __mode_t mode);
-
-/**
- * Searches haystack starting at the given position for one of the given needles
- * @param haystack
- * @param needles
- * @param search_start_pos
- * @param needle_ix The index of the needle found
- * @return The position of the match or string::npos if none
- */
-size_t find_first_of (const std::string& haystack, const char* needles, size_t search_start_pos, size_t& needle_ix);
 
 /**
  * Gets the parent directory path for a given path
@@ -164,48 +100,6 @@ bool get_bounds_of_next_var (const std::string& msg, size_t& begin_pos, size_t& 
 std::string get_unambiguous_path (const std::string& path);
 
 /**
- * Replaces the given characters in the given value with the given replacements
- * @param characters_to_escape
- * @param replacement_characters
- * @param value
- * @param escape Whether to precede the replacement with a '\' (e.g., so that a line-feed character is output as "\n")
- * @return The string with replacements
- */
-std::string replace_characters (const char* characters_to_escape, const char* replacement_characters, const std::string& value, bool escape);
-
-/**
- * Same as ``wildcard_match_unsafe_case_sensitive`` except this method allows
- * the caller to specify whether the match should be case sensitive.
- *
- * @param tame The literal string
- * @param wild The wildcard string
- * @param case_sensitive_match Whether to consider case when matching
- * @return Whether the two strings match
- */
-bool wildcard_match_unsafe (std::string_view tame, std::string_view wild,
-                            bool case_sensitive_match = true);
-/**
- * Checks if a string matches a wildcard string. Two wildcards are currently
- * supported: '*' to match 0 or more characters, and '?' to match any single
- * character. Each can be escaped using a preceding '\'. Other characters which
- * are escaped are treated as normal characters.
- * <br/>
- * This method is optimized for performance by omitting some checks on the
- * wildcard string that are unnecessary if the caller cleans up the wildcard
- * string as follows:
- * <ul>
- *   <li>The wildcard string should not contain consecutive '*'.</li>
- *   <li>The wildcard string should not contain an escape character without a
- *   character following it.</li>
- * </ul>
- *
- * @param tame The literal string
- * @param wild The wildcard string
- * @return Whether the two strings match
- */
-bool wildcard_match_unsafe_case_sensitive (std::string_view tame, std::string_view wild);
-
-/**
  * Maps a given file into memory
  * @param path
  * @param read_ahead Whether to read-ahead in the file
@@ -236,16 +130,5 @@ ErrorCode memory_unmap_file (int fd, size_t file_size, void* ptr);
  * @return Otherwise, same as FileReader::try_open and FileReader::try_read_to_delimiter
  */
 ErrorCode read_list_of_paths (const std::string& list_path, std::vector<std::string>& paths);
-
-/**
- * Gets the underlying type of the given enum
- * @tparam T
- * @param enum_member
- * @return The underlying type of the given enum
- */
-template <typename T>
-constexpr typename std::underlying_type<T>::type enum_to_underlying_type(T enum_member) {
-    return static_cast<typename std::underlying_type<T>::type>(enum_member);
-}
 
 #endif // UTILS_HPP

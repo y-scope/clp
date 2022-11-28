@@ -275,6 +275,8 @@ set(SOURCE_FILES_clp
         src/streaming_compression/zstd/Constants.hpp
         src/streaming_compression/zstd/Decompressor.cpp
         src/streaming_compression/zstd/Decompressor.hpp
+        src/string_utils.cpp
+        src/string_utils.hpp
         src/StringReader.cpp
         src/StringReader.hpp
         src/TimestampPattern.cpp
@@ -419,6 +421,8 @@ set(SOURCE_FILES_clg
         src/streaming_compression/zstd/Constants.hpp
         src/streaming_compression/zstd/Decompressor.cpp
         src/streaming_compression/zstd/Decompressor.hpp
+        src/string_utils.cpp
+        src/string_utils.hpp
         src/StringReader.cpp
         src/StringReader.hpp
         src/TimestampPattern.cpp
@@ -554,6 +558,8 @@ set(SOURCE_FILES_clo
         src/streaming_compression/zstd/Constants.hpp
         src/streaming_compression/zstd/Decompressor.cpp
         src/streaming_compression/zstd/Decompressor.hpp
+        src/string_utils.cpp
+        src/string_utils.hpp
         src/StringReader.cpp
         src/StringReader.hpp
         src/Thread.cpp
@@ -729,6 +735,8 @@ set(SOURCE_FILES_unitTest
         src/streaming_compression/zstd/Constants.hpp
         src/streaming_compression/zstd/Decompressor.cpp
         src/streaming_compression/zstd/Decompressor.hpp
+        src/string_utils.cpp
+        src/string_utils.hpp
         src/StringReader.cpp
         src/StringReader.hpp
         src/TimestampPattern.cpp
@@ -759,10 +767,10 @@ set(SOURCE_FILES_unitTest
         tests/test-Segment.cpp
         tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
+        tests/test-string_utils.cpp
         tests/test-TimestampPattern.cpp
         tests/test-Utils.cpp
         )
-
 add_executable(unitTest ${SOURCE_FILES_unitTest})
 target_link_libraries(unitTest
         PRIVATE
