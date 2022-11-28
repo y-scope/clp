@@ -9,6 +9,9 @@
 #include "../Defs.h"
 #include "../TraceableException.hpp"
 
+// TODO Some of the methods in this file are mostly duplicated from code that
+//  exists elsewhere in the repo. They should be consolidated in a future
+//  commit.
 namespace ffi {
     // Types
     enum class VariablePlaceholder : char {
