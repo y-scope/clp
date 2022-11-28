@@ -9,6 +9,7 @@
 
 // Project headers
 #include "Defs.h"
+#include "string_utils.hpp"
 #include "Utils.hpp"
 
 using std::string;
