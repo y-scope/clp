@@ -51,6 +51,7 @@ TEST_CASE("clean_up_wildcard_search_string", "[clean_up_wildcard_search_string]"
 }
 
 TEST_CASE("convert_string_to_int64", "[convert_string_to_int64]") {
+    int64_t raw_as_int;
     string raw;
     int64_t converted;
 
@@ -59,8 +60,21 @@ TEST_CASE("convert_string_to_int64", "[convert_string_to_int64]") {
     raw = "";
     REQUIRE(false == convert_string_to_int64(raw, converted));
 
-    // Integer that's more than 64-bits
-    raw = "9999999999999999999";
+    // Edges of representable range
+    raw_as_int = INT64_MAX;
+    raw = std::to_string(raw_as_int);
+    REQUIRE(convert_string_to_int64(raw, converted));
+    REQUIRE(raw_as_int == converted);
+
+    raw_as_int = INT64_MIN;
+    raw = std::to_string(raw_as_int);
+    REQUIRE(convert_string_to_int64(raw, converted));
+    REQUIRE(raw_as_int == converted);
+
+    raw = "9223372036854775808";  // INT64_MAX + 1 == 2^63
+    REQUIRE(false == convert_string_to_int64(raw, converted));
+
+    raw = "-9223372036854775809";  // INT64_MIN - 1 == -2^63 - 1
     REQUIRE(false == convert_string_to_int64(raw, converted));
 
     // Non-integers
