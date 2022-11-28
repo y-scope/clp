@@ -654,6 +654,9 @@ set(SOURCE_FILES_unitTest
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
         src/ErrorCode.hpp
+        src/ffi/encoding_methods.cpp
+        src/ffi/encoding_methods.hpp
+        src/ffi/encoding_methods.tpp
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
@@ -761,6 +764,7 @@ set(SOURCE_FILES_unitTest
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
         tests/test-EncodedVariableInterpreter.cpp
+        tests/test-encoding_methods.cpp
         tests/test-Grep.cpp
         tests/test-main.cpp
         tests/test-ParserWithUserSchema.cpp
