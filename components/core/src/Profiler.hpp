@@ -2,11 +2,12 @@
 #define PROFILER_HPP
 
 // C++ libraries
+#include <array>
 #include <vector>
 
 // Project headers
 #include "Stopwatch.hpp"
-#include "Utils.hpp"
+#include "type_utils.hpp"
 
 /**
  * Class to time code.

@@ -8,6 +8,7 @@
 
 // Project headers
 #include "../string_utils.hpp"
+#include "../type_utils.hpp"
 
 using std::string;
 using std::string_view;
@@ -194,12 +195,7 @@ namespace ffi {
         encoded_float |= (decimal_point_pos - 1) & 0x0F;
         encoded_float <<= 55;
         encoded_float |= digits & 0x003FFFFFFFFFFFFF;
-        static_assert(sizeof(encoded_var) == sizeof(encoded_float),
-                      "sizeof(encoded_var) != sizeof(encoded_float)");
-        // NOTE: We use memcpy rather than reinterpret_cast to avoid violating
-        // strict aliasing; a smart compiler should optimize it to a register
-        // move
-        std::memcpy(&encoded_var, &encoded_float, sizeof(encoded_float));
+        encoded_var = bit_cast<encoded_variable_t>(encoded_float);
 
         return true;
     }
@@ -207,13 +203,7 @@ namespace ffi {
     string decode_float_var (encoded_variable_t encoded_var) {
         string value;
 
-        uint64_t encoded_float;
-        static_assert(sizeof(encoded_float) == sizeof(encoded_var),
-                      "sizeof(encoded_float) != sizeof(encoded_var)");
-        // NOTE: We use memcpy rather than reinterpret_cast to avoid violating
-        // strict aliasing; a smart compiler should optimize it to a register
-        // move
-        std::memcpy(&encoded_float, &encoded_var, sizeof(encoded_var));
+        auto encoded_float = bit_cast<uint64_t>(encoded_var);
 
         // Decode according to the format described in encode_float_string
         uint64_t digits = encoded_float & 0x003FFFFFFFFFFFFF;

@@ -12,9 +12,8 @@
 
 // Project headers
 #include "database_utils.hpp"
-#include "Defs.h"
 #include "streaming_archive/Constants.hpp"
-#include "Utils.hpp"
+#include "type_utils.hpp"
 
 // Types
 enum class ArchivesTableFieldIndexes : uint16_t {

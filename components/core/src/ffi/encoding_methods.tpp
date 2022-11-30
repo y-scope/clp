@@ -3,6 +3,7 @@
 
 // Project headers
 #include "../string_utils.hpp"
+#include "../type_utils.hpp"
 
 namespace ffi {
     template <VariablePlaceholder var_placeholder>
