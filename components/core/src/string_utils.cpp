@@ -1,11 +1,9 @@
 #include "string_utils.hpp"
 
 // C++ standard libraries
+#include <algorithm>
 #include <charconv>
 #include <cstring>
-
-// Boost libraries
-#include <boost/algorithm/string.hpp>
 
 using std::string;
 using std::string_view;
@@ -68,6 +66,12 @@ string replace_characters (const char* characters_to_replace, const char* replac
         }
     }
     return new_value;
+}
+
+void to_lower (string& str) {
+    std::transform(str.cbegin(), str.cend(), str.begin(), [](unsigned char c) {
+        return std::tolower(c);
+    });
 }
 
 bool is_wildcard (char c) {
@@ -164,9 +168,9 @@ bool wildcard_match_unsafe (string_view tame, string_view wild, bool case_sensit
         // We convert to lowercase (rather than uppercase) anticipating that
         // callers use lowercase more frequently, so little will need to change.
         string lowercase_tame(tame);
-        boost::to_lower(lowercase_tame);
+        to_lower(lowercase_tame);
         string lowercase_wild(wild);
-        boost::to_lower(lowercase_wild);
+        to_lower(lowercase_wild);
         return wildcard_match_unsafe_case_sensitive(lowercase_tame, lowercase_wild);
     }
 }

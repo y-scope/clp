@@ -16,6 +16,12 @@ using std::endl;
 using std::string;
 using std::vector;
 
+TEST_CASE("to_lower", "[to_lower]") {
+    string str = "test123TEST";
+    to_lower(str);
+    REQUIRE(str == "test123test");
+}
+
 TEST_CASE("clean_up_wildcard_search_string", "[clean_up_wildcard_search_string]") {
     string str;
 
