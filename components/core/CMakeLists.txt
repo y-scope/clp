@@ -283,6 +283,7 @@ set(SOURCE_FILES_clp
         src/TimestampPattern.hpp
         src/TraceableException.cpp
         src/TraceableException.hpp
+        src/type_utils.hpp
         src/Utils.cpp
         src/Utils.hpp
         src/VariableDictionaryEntry.cpp
@@ -429,6 +430,7 @@ set(SOURCE_FILES_clg
         src/TimestampPattern.hpp
         src/TraceableException.cpp
         src/TraceableException.hpp
+        src/type_utils.hpp
         src/Utils.cpp
         src/Utils.hpp
         src/VariableDictionaryEntry.cpp
@@ -568,6 +570,7 @@ set(SOURCE_FILES_clo
         src/TimestampPattern.hpp
         src/TraceableException.cpp
         src/TraceableException.hpp
+        src/type_utils.hpp
         src/Utils.cpp
         src/Utils.hpp
         src/VariableDictionaryEntry.cpp
@@ -746,6 +749,7 @@ set(SOURCE_FILES_unitTest
         src/TimestampPattern.hpp
         src/TraceableException.cpp
         src/TraceableException.hpp
+        src/type_utils.hpp
         src/Utils.cpp
         src/Utils.hpp
         src/VariableDictionaryEntry.cpp

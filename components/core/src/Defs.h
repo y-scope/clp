@@ -56,15 +56,4 @@ enum LogVerbosity : uint8_t {
 constexpr char cDefaultConfigFilename[] = ".clp.rc";
 constexpr int cMongoDbDuplicateKeyErrorCode = 11000;
 
-/**
- * Gets the underlying type of the given enum
- * @tparam T
- * @param enum_member
- * @return The underlying type of the given enum
- */
-template <typename T>
-constexpr typename std::underlying_type<T>::type enum_to_underlying_type(T enum_member) {
-    return static_cast<typename std::underlying_type<T>::type>(enum_member);
-}
-
 #endif // DEFS_H

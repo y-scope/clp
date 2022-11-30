@@ -1,5 +1,8 @@
 #include "Profiler.hpp"
 
+// C++ standard libraries
+#include <memory>
+
 using std::unique_ptr;
 using std::vector;
 

@@ -10,7 +10,7 @@
 // Project headers
 #include "Defs.h"
 #include "string_utils.hpp"
-#include "Utils.hpp"
+#include "type_utils.hpp"
 
 using std::string;
 using std::unordered_set;
@@ -142,18 +142,13 @@ bool EncodedVariableInterpreter::convert_string_to_representable_double_var (con
     encoded_double |= (decimal_point_pos - 1) & 0x0F;
     encoded_double <<= 55;
     encoded_double |= digits & 0x003FFFFFFFFFFFFF;
-    static_assert(sizeof(encoded_var) == sizeof(encoded_double), "sizeof(encoded_var) != sizeof(encoded_double)");
-    // NOTE: We use memcpy rather than reinterpret_cast to avoid violating strict aliasing; a smart compiler should optimize it to a register move
-    std::memcpy(&encoded_var, &encoded_double, sizeof(encoded_double));
+    encoded_var = bit_cast<encoded_variable_t>(encoded_double);
 
     return true;
 }
 
 void EncodedVariableInterpreter::convert_encoded_double_to_string (encoded_variable_t encoded_var, string& value) {
-    uint64_t encoded_double;
-    static_assert(sizeof(encoded_double) == sizeof(encoded_var), "sizeof(encoded_double) != sizeof(encoded_var)");
-    // NOTE: We use memcpy rather than reinterpret_cast to avoid violating strict aliasing; a smart compiler should optimize it to a register move
-    std::memcpy(&encoded_double, &encoded_var, sizeof(encoded_var));
+    auto encoded_double = bit_cast<uint64_t>(encoded_var);
 
     // Decode according to the format described in EncodedVariableInterpreter::convert_string_to_representable_double_var
     uint64_t digits = encoded_double & 0x003FFFFFFFFFFFFF;

@@ -6,7 +6,7 @@
 // Project headers
 #include "database_utils.hpp"
 #include "streaming_archive/Constants.hpp"
-#include "Utils.hpp"
+#include "type_utils.hpp"
 
 using std::pair;
 using std::string;

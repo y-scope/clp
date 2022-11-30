@@ -9,7 +9,7 @@
 // Project headers
 #include "../Defs.h"
 #include "../database_utils.hpp"
-#include "../Utils.hpp"
+#include "../type_utils.hpp"
 #include "Constants.hpp"
 
 // Types
