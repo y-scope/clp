@@ -6,7 +6,7 @@ This Python module submits compression jobs to the CLP compression scheduler.
 
 ```bash
 pip3 install -r requirements.txt --target <clp-package>/lib/python3/site-packages
-cp -R clp_py_utils <clp-package>/lib/python3/site-packages
+cp -R compression_job_handler <clp-package>/lib/python3/site-packages
 ```
 
 ## Usage

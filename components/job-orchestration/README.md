@@ -7,7 +7,7 @@ CLP's Compression Job Handler can be used to interface and submit compression jo
 
 ```bash
 pip3 install -r requirements.txt --target <clp-package>/lib/python3/site-packages
-cp -R clp_py_utils <clp-package>/lib/python3/site-packages
+cp -R job_orchestration <clp-package>/lib/python3/site-packages
 ```
 
 ## Usage
