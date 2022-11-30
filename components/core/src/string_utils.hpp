@@ -46,6 +46,12 @@ std::string replace_characters (const char* characters_to_escape,
                                 bool escape);
 
 /**
+ * Converts a string to lowercase
+ * @param str
+ */
+void to_lower (std::string& str);
+
+/**
  * Cleans wildcard search string
  * <ul>
  *   <li>Removes consecutive '*'</li>
