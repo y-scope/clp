@@ -9,6 +9,9 @@ the compressed logs without decompression. To learn more about it, you can read 
 You can download a release from the [releases](https://github.com/y-scope/clp/releases) page or you can build the latest by using the
 [packager](tools/packager/README.md).
 
+For some logs you can use to test CLP, check out our open-source 
+[datasets](docs/Datasets.md).
+
 ## Project Structure
 
 CLP is currently split across a few different components in the [components](components) 
