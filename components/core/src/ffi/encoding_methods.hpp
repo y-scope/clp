@@ -38,6 +38,20 @@ namespace ffi {
     };
 
     // Constants
+    /*
+     * These constants can be used by callers to store the version of the
+     * schemas and encoding methods they're using. At some point, we may update
+     * and/or add built-in schemas/encoding methods. So callers must store the
+     * versions they used for encoding to ensure that they can choose the same
+     * versions for decoding.
+     *
+     * We use versions which look like package names in anticipation of users
+     * writing their own custom schemas and encoding methods.
+     */
+    static constexpr char cVariableEncodingMethodsVersion[] =
+            "com.yscope.clp.VariableEncodingMethodsV1";
+    static constexpr char cVariablesSchemaVersion[] = "com.yscope.clp.VariablesSchemaV1";
+
     static constexpr char cTooFewDictionaryVarsErrorMessage[] =
             "There are fewer dictionary variables than dictionary variable delimiters in the "
             "logtype.";

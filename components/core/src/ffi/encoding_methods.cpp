@@ -13,6 +13,9 @@
 using std::string;
 using std::string_view;
 
+// Constants
+constexpr unsigned long long cDigitsInRepresentableFloatBitMask = (1ULL << 54) - 1;
+
 namespace ffi {
     /**
      * @param str
@@ -45,8 +48,8 @@ namespace ffi {
      * characters
      */
     static bool is_delim (signed char c) {
-        return !('+' == c || ('-' <= c && c <= '.') || ('0' <= c && c <= '9') ||
-                 ('A' <= c && c <= 'Z') || '\\' == c || '_' == c || ('a' <= c && c <= 'z'));
+        return !('+' == c || ('-' <= c && c <= '9') || ('A' <= c && c <= 'Z') || '\\' == c ||
+                 '_' == c || ('a' <= c && c <= 'z'));
     }
 
     bool is_variable_placeholder (char c) {
@@ -164,6 +167,9 @@ namespace ffi {
 
         // Encode into 64 bits with the following format (from MSB to LSB):
         // -  1 bit : is negative
+        // -  1 bit : unused
+        // - 54 bits: The digits of the float without the decimal, as an
+        //            integer
         // -  4 bits: # of decimal digits minus 1
         //     - This format can represent floats with between 1 and 16 decimal
         //       digits, so we use 4 bits and map the range [1, 16] to
@@ -182,19 +188,16 @@ namespace ffi {
         //           range from 0 to 16 because of the negative sign. Whereas
         //           from the right, the negative sign is inconsequential.
         //     - Thus, we use 4 bits and map the range [1, 16] to [0x0, 0xF].
-        // -  1 bit : unused
-        // - 54 bits: The digits of the float without the decimal, as an
-        //            integer
         uint64_t encoded_float = 0;
         if (is_negative) {
             encoded_float = 1;
         }
+        encoded_float <<= 55;  // 1 unused + 54 for digits of the float
+        encoded_float |= digits & cDigitsInRepresentableFloatBitMask;
         encoded_float <<= 4;
         encoded_float |= (num_digits - 1) & 0x0F;
         encoded_float <<= 4;
         encoded_float |= (decimal_point_pos - 1) & 0x0F;
-        encoded_float <<= 55;
-        encoded_float |= digits & 0x003FFFFFFFFFFFFF;
         encoded_var = bit_cast<encoded_variable_t>(encoded_float);
 
         return true;
@@ -206,12 +209,12 @@ namespace ffi {
         auto encoded_float = bit_cast<uint64_t>(encoded_var);
 
         // Decode according to the format described in encode_float_string
-        uint64_t digits = encoded_float & 0x003FFFFFFFFFFFFF;
-        encoded_float >>= 55;
         uint8_t decimal_pos = (encoded_float & 0x0F) + 1;
         encoded_float >>= 4;
         uint8_t num_digits = (encoded_float & 0x0F) + 1;
         encoded_float >>= 4;
+        uint64_t digits = encoded_float & cDigitsInRepresentableFloatBitMask;
+        encoded_float >>= 55;
         bool is_negative = encoded_float > 0;
 
         size_t value_length = num_digits + 1 + is_negative;
