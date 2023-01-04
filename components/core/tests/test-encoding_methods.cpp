@@ -26,7 +26,7 @@ TEST_CASE("ffi::get_bounds_of_next_var", "[ffi::get_bounds_of_next_var]") {
     // methods, we validate the versions
     REQUIRE(strcmp("com.yscope.clp.VariableEncodingMethodsV1",
                    ffi::cVariableEncodingMethodsVersion) == 0);
-    REQUIRE(strcmp("com.yscope.clp.VariablesSchemaV1", ffi::cVariablesSchemaVersion) == 0);
+    REQUIRE(strcmp("com.yscope.clp.VariablesSchemaV2", ffi::cVariablesSchemaVersion) == 0);
 
     // Corner cases
     // Empty string
@@ -83,7 +83,7 @@ TEST_CASE("ffi::get_bounds_of_next_var", "[ffi::get_bounds_of_next_var]") {
     REQUIRE(false == contains_var_placeholder);
 
     REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == true);
-    REQUIRE("+394/-" == str.substr(begin_pos, end_pos - begin_pos));
+    REQUIRE("+394" == str.substr(begin_pos, end_pos - begin_pos));
     REQUIRE(false == contains_var_placeholder);
 
     REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == false);

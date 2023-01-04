@@ -48,8 +48,8 @@ namespace ffi {
      * characters
      */
     static bool is_delim (signed char c) {
-        return !('+' == c || ('-' <= c && c <= '9') || ('A' <= c && c <= 'Z') || '\\' == c ||
-                 '_' == c || ('a' <= c && c <= 'z'));
+        return !('+' == c || ('-' <= c && c <= '.') || ('0' <= c && c <= '9') ||
+                 ('A' <= c && c <= 'Z') || '\\' == c || '_' == c || ('a' <= c && c <= 'z'));
     }
 
     bool is_variable_placeholder (char c) {
