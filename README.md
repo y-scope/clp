@@ -1,10 +1,14 @@
 <img alt="CLP" src="https://yscope.com/img/clp-logo.png" width="300"/>
 
+[![Open bug reports](https://img.shields.io/github/issues/y-scope/clp/bug?label=bugs)](https://github.com/y-scope/clp/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
+[![Open feature requests](https://img.shields.io/github/issues/y-scope/clp/enhancement?label=feature-requests)](https://github.com/y-scope/clp/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement)
+[![CLP on Zulip](https://img.shields.io/badge/zulip-yscope--clp%20chat-1888FA?logo=zulip)](https://yscope-clp.zulipchat.com/) 
+
 Compressed Log Processor (CLP) is a tool capable of losslessly compressing text logs and searching 
 the compressed logs without decompression. To learn more about it, you can read our 
 [paper](https://www.usenix.org/system/files/osdi21-rodrigues.pdf).
 
-## Getting Started
+# Getting Started
 
 You can download a release from the [releases](https://github.com/y-scope/clp/releases) page or you can build the latest by using the
 [packager](tools/packager/README.md).
@@ -12,13 +16,15 @@ You can download a release from the [releases](https://github.com/y-scope/clp/re
 For some logs you can use to test CLP, check out our open-source 
 [datasets](docs/Datasets.md).
 
-To report a bug or request a feature, you can create a 
-[GitHub issue](https://github.com/y-scope/clp/issues/new/choose).
+# Providing Feedback
 
-If you want to get in touch with the developers and other community members, check out our 
-[![CLP on Zulip](https://img.shields.io/badge/zulip-yscope--clp%20chat-1888FA?logo=zulip)](https://yscope-clp.zulipchat.com/).
+You can use GitHub issues to [report a bug](https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&template=bug-report.yml) 
+or [request a feature](https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml).
 
-## Project Structure
+Join us on [Zulip](https://yscope-clp.zulipchat.com/) to chat with developers 
+and other community members.
+
+# Project Structure
 
 CLP is currently split across a few different components in the [components](components) 
 directory:
@@ -34,7 +40,7 @@ directory:
 * [package-template](components/package-template) contains the base directory structure and files of the 
   CLP package.
 
-## Packages
+# Packages
 The packages held by this [repository](https://github.com/orgs/y-scope/packages?repo_name=clp) are: 
 
 1. Docker Image `clp/clp-core-dependencies-x86-ubuntu-focal`
@@ -48,7 +54,7 @@ The packages held by this [repository](https://github.com/orgs/y-scope/packages?
 5. Docker Image `clp/clp-core-x86-ubuntu-focal`
     - A docker image containing CLP (clp, clg, clo, etc.) binaries built in an Ubuntu Focal x86 environment
 
-## Next Steps
+# Next Steps
 
 This is our open-source release which we will be constantly updating with bug fixes, features, etc.
 If you would like a feature or want to report a bug, please file an issue and we'll be happy to engage.
