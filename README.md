@@ -1,4 +1,4 @@
-# CLP
+<img alt="CLP" src="https://yscope.com/img/clp-logo.png" width="300"/>
 
 Compressed Log Processor (CLP) is a tool capable of losslessly compressing text logs and searching 
 the compressed logs without decompression. To learn more about it, you can read our 
@@ -11,6 +11,12 @@ You can download a release from the [releases](https://github.com/y-scope/clp/re
 
 For some logs you can use to test CLP, check out our open-source 
 [datasets](docs/Datasets.md).
+
+To report a bug or request a feature, you can create a 
+[GitHub issue](https://github.com/y-scope/clp/issues/new/choose).
+
+If you want to get in touch with the developers and other community members, check out our 
+[![CLP on Zulip](https://img.shields.io/badge/zulip-yscope--clp%20chat-1888FA?logo=zulip)](https://yscope-clp.zulipchat.com/).
 
 ## Project Structure
 
