@@ -70,13 +70,19 @@ namespace ffi {
             begin_pos = end_pos;
 
             // Find next non-delimiter
+            bool char_before_var_was_equals_sign = false;
+            char previous_char = 0;
             for (; begin_pos < msg_length; ++begin_pos) {
                 auto c = str[begin_pos];
                 if (false == is_delim(c)) {
+                    char_before_var_was_equals_sign = ('=' == previous_char);
                     break;
-                } else if (enum_to_underlying_type(VariablePlaceholder::Integer) == c ||
-                           enum_to_underlying_type(VariablePlaceholder::Dictionary) == c ||
-                           enum_to_underlying_type(VariablePlaceholder::Float) == c)
+                }
+                previous_char = c;
+
+                if (enum_to_underlying_type(VariablePlaceholder::Integer) == c ||
+                    enum_to_underlying_type(VariablePlaceholder::Dictionary) == c ||
+                    enum_to_underlying_type(VariablePlaceholder::Float) == c)
                 {
                     contains_var_placeholder = true;
                 }
@@ -108,8 +114,9 @@ namespace ffi {
             // - it's directly preceded by an equals sign and contains an alphabet, or
             // - it could be a multi-digit hex value
             if (contains_decimal_digit ||
-                (begin_pos > 0 && '=' == str[begin_pos - 1] && contains_alphabet) ||
-                could_be_multi_digit_hex_value(variable)) {
+                (char_before_var_was_equals_sign && contains_alphabet) ||
+                could_be_multi_digit_hex_value(variable))
+            {
                 break;
             }
         }
