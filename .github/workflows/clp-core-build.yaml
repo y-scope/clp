@@ -33,7 +33,9 @@ jobs:
         - ${{github.workspace}}/build:/output
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+        with:
+            submodules: recursive
 
       - name: Build CLP Core
         id: build
@@ -51,7 +53,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+        with:
+            submodules: recursive
 
       - name: Download built CLP Binaries
         uses: actions/download-artifact@v2
@@ -76,7 +80,9 @@ jobs:
     container: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-bionic:main
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+        with:
+            submodules: recursive
 
       - name: Build CLP Core
         uses: ./.github/actions/clp-core-build
@@ -86,7 +92,9 @@ jobs:
     container: ghcr.io/y-scope/clp/clp-core-dependencies-x86-centos7.4:main
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+        with:
+            submodules: recursive
 
       - name: Build CLP Core
         uses: ./.github/actions/clp-core-build
