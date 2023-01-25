@@ -13,7 +13,10 @@
 //  commit.
 namespace ffi {
     // Types
+    using epoch_time_ms_t = int64_t;
+
     using eight_byte_encoded_variable_t = int64_t;
+    using four_byte_encoded_variable_t = int32_t;
 
     enum class VariablePlaceholder : char {
         Integer = 0x11,
@@ -122,6 +125,35 @@ namespace ffi {
      */
     template <typename encoded_variable_t>
     std::string decode_integer_var (encoded_variable_t encoded_var);
+
+    /**
+     * Encodes the given message and calls the given methods to handle specific
+     * components of the message.
+     * @tparam encoded_variable_t Type of the encoded variable
+     * @tparam ConstantHandler Method to handle constants. Signature:
+     * (std::string_view constant, bool constant_contains_variable_placeholder,
+     * std::string& logtype) -> bool
+     * @tparam FinalConstantHandler Method to handle the constant after the last
+     * variable. Signature: (std::string_view constant, std::string& logtype) -> bool
+     * @tparam EncodedVariableHandler Method to handle encoded variables.
+     * Signature: (encoded_variable_t) -> void
+     * @tparam DictionaryVariableHandler Method to handle dictionary variables.
+     * Signature: (std::string_view message, size_t begin_pos, size_t end_pos) -> bool
+     * @param message
+     * @param logtype
+     * @param constant_handler
+     * @param final_constant_handler
+     * @param encoded_variable_handler
+     * @param dictionary_variable_handler
+     * @return true on success, false otherwise
+     */
+    template <typename encoded_variable_t, typename ConstantHandler, typename FinalConstantHandler,
+            typename EncodedVariableHandler, typename DictionaryVariableHandler>
+    bool encode_message_generically (std::string_view message, std::string& logtype,
+                                     ConstantHandler constant_handler,
+                                     FinalConstantHandler final_constant_handler,
+                                     EncodedVariableHandler encoded_variable_handler,
+                                     DictionaryVariableHandler dictionary_variable_handler);
 
     /**
      * Encodes the given message. The simplistic interface is to make it

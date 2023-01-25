@@ -10,7 +10,8 @@
 
 namespace ffi {
     // Constants
-    constexpr unsigned long long cDigitsInRepresentableFloatBitMask = (1ULL << 54) - 1;
+    constexpr uint64_t cEightByteEncodedFloatDigitsBitMask = (1ULL << 54) - 1;
+    constexpr uint32_t cFourByteEncodedFloatDigitsBitMask = (1UL << 25) - 1;
 
     template<typename encoded_variable_t>
     bool encode_float_string (std::string_view str, encoded_variable_t& encoded_var) {
@@ -21,9 +22,9 @@ namespace ffi {
         }
 
         size_t pos = 0;
-        constexpr size_t cMaxDigitsInRepresentableFloatVar = 16;
-        // +1 for decimal point
-        size_t max_length = cMaxDigitsInRepresentableFloatVar + 1;
+        constexpr size_t cMaxDigitsInRepresentableFloatVar =
+                std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t> ? 8 : 16;
+        size_t max_length = cMaxDigitsInRepresentableFloatVar + 1;  // +1 for decimal point
 
         // Check for a negative sign
         bool is_negative = false;
@@ -41,7 +42,8 @@ namespace ffi {
 
         size_t num_digits = 0;
         size_t decimal_point_pos = std::string::npos;
-        uint64_t digits = 0;
+        std::conditional_t<std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
+                uint32_t, uint64_t> digits = 0;
         for (; pos < value_length; ++pos) {
             auto c = str[pos];
             if ('0' <= c && c <= '9') {
@@ -61,40 +63,82 @@ namespace ffi {
             return false;
         }
 
-        // Encode into 64 bits with the following format (from MSB to LSB):
-        // -  1 bit : is negative
-        // -  1 bit : unused
-        // - 54 bits: The digits of the float without the decimal, as an
-        //            integer
-        // -  4 bits: # of decimal digits minus 1
-        //     - This format can represent floats with between 1 and 16 decimal
-        //       digits, so we use 4 bits and map the range [1, 16] to
-        //       [0x0, 0xF]
-        // -  4 bits: position of the decimal from the right minus 1
-        //     - To see why the position is taken from the right, consider
-        //       (1) "-123456789012345.6", (2) "-.1234567890123456", and
-        //       (3) ".1234567890123456"
-        //         - For (1), the decimal point is at index 16 from the left and
-        //           index 1 from the right.
-        //         - For (2), the decimal point is at index 1 from the left and
-        //           index 16 from the right.
-        //         - For (3), the decimal point is at index 0 from the left and
-        //           index 16 from the right.
-        //         - So if we take the decimal position from the left, it can
-        //           range from 0 to 16 because of the negative sign. Whereas
-        //           from the right, the negative sign is inconsequential.
-        //     - Thus, we use 4 bits and map the range [1, 16] to [0x0, 0xF].
-        uint64_t encoded_float = 0;
-        if (is_negative) {
-            encoded_float = 1;
+        static_assert(std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> ||
+                      std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+        if constexpr (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
+            // Encode into 64 bits with the following format (from MSB to LSB):
+            // -  1 bit : is negative
+            // -  1 bit : unused
+            // - 54 bits: The digits of the float without the decimal, as an
+            //            integer
+            // -  4 bits: # of decimal digits minus 1
+            //     - This format can represent floats with between 1 and 16 decimal
+            //       digits, so we use 4 bits and map the range [1, 16] to
+            //       [0x0, 0xF]
+            // -  4 bits: position of the decimal from the right minus 1
+            //     - To see why the position is taken from the right, consider
+            //       (1) "-123456789012345.6", (2) "-.1234567890123456", and
+            //       (3) ".1234567890123456"
+            //         - For (1), the decimal point is at index 16 from the left and
+            //           index 1 from the right.
+            //         - For (2), the decimal point is at index 1 from the left and
+            //           index 16 from the right.
+            //         - For (3), the decimal point is at index 0 from the left and
+            //           index 16 from the right.
+            //         - So if we take the decimal position from the left, it can
+            //           range from 0 to 16 because of the negative sign. Whereas
+            //           from the right, the negative sign is inconsequential.
+            //     - Thus, we use 4 bits and map the range [1, 16] to [0x0, 0xF].
+            uint64_t encoded_float = 0;
+            if (is_negative) {
+                encoded_float = 1;
+            }
+            encoded_float <<= 55;  // 1 unused + 54 for digits of the float
+            encoded_float |= digits & cEightByteEncodedFloatDigitsBitMask;
+            encoded_float <<= 4;
+            encoded_float |= (num_digits - 1) & 0x0F;
+            encoded_float <<= 4;
+            encoded_float |= (decimal_point_pos - 1) & 0x0F;
+            encoded_var = bit_cast<encoded_variable_t>(encoded_float);
+        } else {  // std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
+            if (digits > cFourByteEncodedFloatDigitsBitMask) {
+                // digits is larger than maximum representable
+                return false;
+            }
+
+            // Encode into 32 bits with the following format (from MSB to LSB):
+            // -  1 bit : is negative
+            // - 25 bits: The digits of the float without the decimal, as an
+            //            integer
+            // -  3 bits: # of decimal digits minus 1
+            //     - This format can represent floats with between 1 and 8 decimal
+            //       digits, so we use 3 bits and map the range [1, 8] to
+            //       [0x0, 0x7]
+            // -  3 bits: position of the decimal from the right minus 1
+            //     - To see why the position is taken from the right, consider
+            //       (1) "-1234567.8", (2) "-.12345678", and (3) ".12345678"
+            //         - For (1), the decimal point is at index 8 from the left and
+            //           index 1 from the right.
+            //         - For (2), the decimal point is at index 1 from the left and
+            //           index 8 from the right.
+            //         - For (3), the decimal point is at index 0 from the left and
+            //           index 8 from the right.
+            //         - So if we take the decimal position from the left, it can
+            //           range from 0 to 8 because of the negative sign. Whereas
+            //           from the right, the negative sign is inconsequential.
+            //     - Thus, we use 3 bits and map the range [1, 8] to [0x0, 0x7].
+            uint32_t encoded_float = 0;
+            if (is_negative) {
+                encoded_float = 1;
+            }
+            encoded_float <<= 25;  // 25 for digits of the float
+            encoded_float |= digits & cFourByteEncodedFloatDigitsBitMask;
+            encoded_float <<= 3;
+            encoded_float |= (num_digits - 1) & 0x07;
+            encoded_float <<= 3;
+            encoded_float |= (decimal_point_pos - 1) & 0x07;
+            encoded_var = bit_cast<encoded_variable_t>(encoded_float);
         }
-        encoded_float <<= 55;  // 1 unused + 54 for digits of the float
-        encoded_float |= digits & cDigitsInRepresentableFloatBitMask;
-        encoded_float <<= 4;
-        encoded_float |= (num_digits - 1) & 0x0F;
-        encoded_float <<= 4;
-        encoded_float |= (decimal_point_pos - 1) & 0x0F;
-        encoded_var = bit_cast<encoded_variable_t>(encoded_float);
 
         return true;
     }
@@ -103,16 +147,36 @@ namespace ffi {
     std::string decode_float_var (encoded_variable_t encoded_var) {
         std::string value;
 
-        auto encoded_float = bit_cast<uint64_t>(encoded_var);
+        uint8_t decimal_pos;
+        uint8_t num_digits;
+        std::conditional_t<std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
+                uint32_t, uint64_t> digits;
+        bool is_negative;
+        static_assert(std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> ||
+                      std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+        if constexpr (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
+            auto encoded_float = bit_cast<uint64_t>(encoded_var);
 
-        // Decode according to the format described in encode_float_string
-        uint8_t decimal_pos = (encoded_float & 0x0F) + 1;
-        encoded_float >>= 4;
-        uint8_t num_digits = (encoded_float & 0x0F) + 1;
-        encoded_float >>= 4;
-        uint64_t digits = encoded_float & cDigitsInRepresentableFloatBitMask;
-        encoded_float >>= 55;
-        bool is_negative = encoded_float > 0;
+            // Decode according to the format described in encode_float_string
+            decimal_pos = (encoded_float & 0x0F) + 1;
+            encoded_float >>= 4;
+            num_digits = (encoded_float & 0x0F) + 1;
+            encoded_float >>= 4;
+            digits = encoded_float & cEightByteEncodedFloatDigitsBitMask;
+            encoded_float >>= 55;
+            is_negative = encoded_float > 0;
+        } else {  // std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
+            auto encoded_float = bit_cast<uint32_t>(encoded_var);
+
+            // Decode according to the format described in encode_string_as_float_compact_var
+            decimal_pos = (encoded_float & 0x07) + 1;
+            encoded_float >>= 3;
+            num_digits = (encoded_float & 0x07) + 1;
+            encoded_float >>= 3;
+            digits = encoded_float & cFourByteEncodedFloatDigitsBitMask;
+            encoded_float >>= 25;
+            is_negative = encoded_float > 0;
+        }
 
         size_t value_length = num_digits + 1 + is_negative;
         value.resize(value_length);
@@ -182,7 +246,7 @@ namespace ffi {
             }
         }
 
-        int64_t result;
+        encoded_variable_t result;
         if (false == convert_string_to_int(str, result)) {
             // Conversion failed
             return false;
@@ -198,60 +262,109 @@ namespace ffi {
         return std::to_string(encoded_var);
     }
 
-    template<typename encoded_variable_t>
-    bool encode_message (std::string_view message, std::string& logtype,
-                         std::vector<encoded_variable_t>& encoded_vars,
-                         std::vector<int32_t>& dictionary_var_bounds)
+    template <typename encoded_variable_t, typename ConstantHandler, typename FinalConstantHandler,
+            typename EncodedVariableHandler, typename DictionaryVariableHandler>
+    bool encode_message_generically (std::string_view message, std::string& logtype,
+                                     ConstantHandler constant_handler,
+                                     FinalConstantHandler final_constant_handler,
+                                     EncodedVariableHandler encoded_variable_handler,
+                                     DictionaryVariableHandler dictionary_variable_handler)
     {
-        size_t begin_pos = 0;
-        size_t end_pos = 0;
-        bool message_contains_variable_placeholder = false;
-        size_t last_var_end_pos = 0;
+        size_t var_begin_pos = 0;
+        size_t var_end_pos = 0;
+        bool constant_contains_variable_placeholder = false;
+        size_t constant_begin_pos = 0;
         logtype.clear();
         logtype.reserve(message.length());
-        while (get_bounds_of_next_var(message, begin_pos, end_pos,
-                                      message_contains_variable_placeholder))
+        while (get_bounds_of_next_var(message, var_begin_pos, var_end_pos,
+                                      constant_contains_variable_placeholder))
         {
-            if (message_contains_variable_placeholder) {
+            std::string_view constant{&message[constant_begin_pos],
+                                      var_begin_pos - constant_begin_pos};
+            if (false == constant_handler(constant, constant_contains_variable_placeholder,
+                                          logtype))
+            {
                 return false;
             }
-
-            // Append the content between the last variable and this one
-            logtype.append(message, last_var_end_pos, begin_pos - last_var_end_pos);
-            last_var_end_pos = end_pos;
+            constant_begin_pos = var_end_pos;
 
             // Encode the variable
-            std::string_view var_string(&message[begin_pos], end_pos - begin_pos);
+            std::string_view var_string{&message[var_begin_pos], var_end_pos - var_begin_pos};
             encoded_variable_t encoded_variable;
             if (encode_float_string(var_string, encoded_variable)) {
                 logtype += enum_to_underlying_type(VariablePlaceholder::Float);
-                encoded_vars.push_back(encoded_variable);
+                encoded_variable_handler(encoded_variable);
             } else if (encode_integer_string(var_string, encoded_variable)) {
                 logtype += enum_to_underlying_type(VariablePlaceholder::Integer);
-                encoded_vars.push_back(encoded_variable);
+                encoded_variable_handler(encoded_variable);
             } else {
                 logtype += enum_to_underlying_type(VariablePlaceholder::Dictionary);
-                dictionary_var_bounds.push_back(begin_pos);
-                dictionary_var_bounds.push_back(end_pos);
+                if (false == dictionary_variable_handler(message, var_begin_pos, var_end_pos)) {
+                    return false;
+                }
             }
         }
         // Append any remaining message content to the logtype
-        if (last_var_end_pos < message.length()) {
-            // Ensure the remaining content doesn't contain a variable
-            // placeholder
-            message_contains_variable_placeholder = std::any_of(
-                    message.cbegin() + last_var_end_pos, message.cend(),
-                    is_variable_placeholder);
-            if (message_contains_variable_placeholder) {
+        if (constant_begin_pos < message.length()) {
+            std::string_view constant{&message[constant_begin_pos],
+                                      message.length() - constant_begin_pos};
+            if (false == final_constant_handler(constant, logtype)) {
                 return false;
             }
-            logtype.append(message, last_var_end_pos);
         }
 
         return true;
     }
 
     template<typename encoded_variable_t>
+    bool encode_message (std::string_view message, std::string& logtype,
+                         std::vector<encoded_variable_t>& encoded_vars,
+                         std::vector<int32_t>& dictionary_var_bounds)
+    {
+        auto constant_handler = [] (std::string_view constant, bool contains_variable_placeholder,
+                                    std::string& logtype)
+        {
+            if (contains_variable_placeholder) {
+                return false;
+            }
+
+            logtype.append(constant);
+            return true;
+        };
+        auto final_constant_handler = [&constant_handler] (std::string_view constant,
+                                                           std::string& logtype)
+        {
+            // Ensure the final constant doesn't contain a variable placeholder
+            bool contains_variable_placeholder = std::any_of(constant.cbegin(), constant.cend(),
+                                                             is_variable_placeholder);
+            return constant_handler(constant, contains_variable_placeholder, logtype);
+        };
+        auto encoded_variable_handler = [&encoded_vars] (encoded_variable_t encoded_variable) {
+            encoded_vars.push_back(encoded_variable);
+        };
+        auto dictionary_variable_handler = [&dictionary_var_bounds] (std::string_view,
+                size_t begin_pos, size_t end_pos)
+        {
+            if (begin_pos > INT32_MAX || end_pos > INT32_MAX) {
+                return false;
+            }
+
+            dictionary_var_bounds.push_back(static_cast<int32_t>(begin_pos));
+            dictionary_var_bounds.push_back(static_cast<int32_t>(end_pos));
+            return true;
+        };
+
+        if (false == encode_message_generically<encoded_variable_t>(
+                message, logtype, constant_handler, final_constant_handler,
+                encoded_variable_handler, dictionary_variable_handler
+        )) {
+            return false;
+        }
+
+        return true;
+    }
+
+    template <typename encoded_variable_t>
     std::string decode_message (
             std::string_view logtype,
             encoded_variable_t* encoded_vars,
@@ -307,11 +420,11 @@ namespace ffi {
         return message;
     }
 
-    template <VariablePlaceholder var_placeholder>
+    template <VariablePlaceholder var_placeholder, typename encoded_variable_t>
     bool wildcard_query_matches_any_encoded_var (
             std::string_view wildcard_query,
             std::string_view logtype,
-            eight_byte_encoded_variable_t* encoded_vars,
+            encoded_variable_t* encoded_vars,
             int encoded_vars_length
     ) {
         size_t encoded_vars_ix = 0;
