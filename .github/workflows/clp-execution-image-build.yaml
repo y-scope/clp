@@ -23,6 +23,9 @@ jobs:
         with:
             submodules: recursive
 
+      - name: Workaround actions/runner-images/issues/6775
+        run: chown $(id -u):$(id -g) -R .
+
       - name: Build and push Docker image
         uses: ./.github/actions/clp-docker-build-push-action
         with:
