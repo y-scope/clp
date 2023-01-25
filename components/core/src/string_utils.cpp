@@ -280,16 +280,6 @@ bool wildcard_match_unsafe_case_sensitive (string_view tame, string_view wild) {
     }
 }
 
-bool convert_string_to_int64 (std::string_view raw, int64_t& converted) {
-    auto raw_end = raw.cend();
-    auto result = std::from_chars(raw.cbegin(), raw_end, converted);
-    if (raw_end != result.ptr) {
-        return false;
-    } else {
-        return result.ec == std::errc();
-    }
-}
-
 bool convert_string_to_double (const std::string& raw, double& converted) {
     if (raw.empty()) {
         // Can't convert an empty string

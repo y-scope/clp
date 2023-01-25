@@ -6,7 +6,6 @@
 #include <vector>
 
 // Project headers
-#include "../Defs.h"
 #include "../TraceableException.hpp"
 
 // TODO Some of the methods in this file are mostly duplicated from code that
@@ -14,6 +13,11 @@
 //  commit.
 namespace ffi {
     // Types
+    using epoch_time_ms_t = int64_t;
+
+    using eight_byte_encoded_variable_t = int64_t;
+    using four_byte_encoded_variable_t = int32_t;
+
     enum class VariablePlaceholder : char {
         Integer = 0x11,
         Dictionary = 0x12,
@@ -87,37 +91,75 @@ namespace ffi {
     /**
      * Encodes the given string into a representable float variable if
      * possible
+     * @tparam encoded_variable_t Type of the encoded variable
      * @param str
-     * @param encoded_var Encoded variable
-     * @return true if successfully converted, false otherwise
+     * @param encoded_var
+     * @return true on success, false otherwise
      */
+    template <typename encoded_variable_t>
     bool encode_float_string (std::string_view str, encoded_variable_t& encoded_var);
     /**
      * Decodes the given encoded float variable into a string
+     * @tparam encoded_variable_t Type of the encoded variable
      * @param encoded_var
-     * @return The decoded value
+     * @return The decoded value as a string
      */
+    template <typename encoded_variable_t>
     std::string decode_float_var (encoded_variable_t encoded_var);
 
     /**
      * Encodes the given string into a representable integer variable if
      * possible
+     * @tparam encoded_variable_t Type of the encoded variable
      * @param str
      * @param encoded_var
      * @return true if successfully converted, false otherwise
      */
+    template <typename encoded_variable_t>
     bool encode_integer_string (std::string_view str, encoded_variable_t& encoded_var);
     /**
      * Decodes the given encoded integer variable into a string
+     * @tparam encoded_variable_t Type of the encoded variable
      * @param encoded_var
-     * @return The decoded value
+     * @return The decoded value as a string
      */
+    template <typename encoded_variable_t>
     std::string decode_integer_var (encoded_variable_t encoded_var);
+
+    /**
+     * Encodes the given message and calls the given methods to handle specific
+     * components of the message.
+     * @tparam encoded_variable_t Type of the encoded variable
+     * @tparam ConstantHandler Method to handle constants. Signature:
+     * (std::string_view constant, bool constant_contains_variable_placeholder,
+     * std::string& logtype) -> bool
+     * @tparam FinalConstantHandler Method to handle the constant after the last
+     * variable. Signature: (std::string_view constant, std::string& logtype) -> bool
+     * @tparam EncodedVariableHandler Method to handle encoded variables.
+     * Signature: (encoded_variable_t) -> void
+     * @tparam DictionaryVariableHandler Method to handle dictionary variables.
+     * Signature: (std::string_view message, size_t begin_pos, size_t end_pos) -> bool
+     * @param message
+     * @param logtype
+     * @param constant_handler
+     * @param final_constant_handler
+     * @param encoded_variable_handler
+     * @param dictionary_variable_handler
+     * @return true on success, false otherwise
+     */
+    template <typename encoded_variable_t, typename ConstantHandler, typename FinalConstantHandler,
+            typename EncodedVariableHandler, typename DictionaryVariableHandler>
+    bool encode_message_generically (std::string_view message, std::string& logtype,
+                                     ConstantHandler constant_handler,
+                                     FinalConstantHandler final_constant_handler,
+                                     EncodedVariableHandler encoded_variable_handler,
+                                     DictionaryVariableHandler dictionary_variable_handler);
 
     /**
      * Encodes the given message. The simplistic interface is to make it
      * efficient to transfer data between the caller language and this native
      * code.
+     * @tparam encoded_variable_t Type of the encoded variable
      * @param message
      * @param logtype
      * @param encoded_vars
@@ -127,6 +169,7 @@ namespace ffi {
      * @return false if the message contains variable placeholders, true
      * otherwise
      */
+    template <typename encoded_variable_t>
     bool encode_message (std::string_view message, std::string& logtype,
                          std::vector<encoded_variable_t>& encoded_vars,
                          std::vector<int32_t>& dictionary_var_bounds);
@@ -135,6 +178,7 @@ namespace ffi {
      * Decodes the message from the given logtype, encoded variables, and
      * dictionary variables. The simplistic interface is to make it efficient
      * to transfer data between the caller language and this native code.
+     * @tparam encoded_variable_t Type of the encoded variable
      * @param logtype
      * @param encoded_vars
      * @param encoded_vars_length
@@ -145,25 +189,31 @@ namespace ffi {
      * @param dictionary_var_end_offsets_length
      * @return The decoded message
      */
-    std::string decode_message (std::string_view logtype, encoded_variable_t* encoded_vars,
-                                size_t encoded_vars_length, std::string_view all_dictionary_vars,
-                                const int32_t* dictionary_var_end_offsets,
-                                size_t dictionary_var_end_offsets_length);
+    template <typename encoded_variable_t>
+    std::string decode_message (
+            std::string_view logtype,
+            encoded_variable_t* encoded_vars,
+            size_t encoded_vars_length,
+            std::string_view all_dictionary_vars,
+            const int32_t* dictionary_var_end_offsets,
+            size_t dictionary_var_end_offsets_length
+    );
 
     /**
      * Checks if any encoded variable matches the given wildcard query
      * NOTE: This method checks for *either* matching integer encoded variables
      * or matching float encoded variables, based on the variable placeholder
      * template parameter.
-     * @tparam var_placeholder The placeholder for the type of encoded variables
+     * @tparam var_placeholder Placeholder for the type of encoded variables
      * that should be checked for matches
+     * @tparam encoded_variable_t Type of the encoded variable
      * @param wildcard_query
      * @param logtype
      * @param encoded_vars
      * @param encoded_vars_length
      * @return true if a match was found, false otherwise
      */
-    template <VariablePlaceholder var_placeholder>
+    template <VariablePlaceholder var_placeholder, typename encoded_variable_t>
     bool wildcard_query_matches_any_encoded_var (
             std::string_view wildcard_query,
             std::string_view logtype,

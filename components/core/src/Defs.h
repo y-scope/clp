@@ -47,8 +47,6 @@ enum LogVerbosity : uint8_t {
 };
 
 // Macros
-// Relative version of __FILE__
-#define __FILENAME__ ((__FILE__) + SOURCE_PATH_SIZE)
 // Rounds up VALUE to be a multiple of MULTIPLE
 #define ROUND_UP_TO_MULTIPLE(VALUE, MULTIPLE) ((VALUE + MULTIPLE - 1) / MULTIPLE) * MULTIPLE
 

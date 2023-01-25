@@ -7,6 +7,7 @@
 using ffi::decode_float_var;
 using ffi::decode_integer_var;
 using ffi::decode_message;
+using ffi::eight_byte_encoded_variable_t;
 using ffi::encode_float_string;
 using ffi::encode_integer_string;
 using ffi::encode_message;
@@ -136,7 +137,7 @@ TEST_CASE("ffi::get_bounds_of_next_var", "[ffi::get_bounds_of_next_var]") {
 TEST_CASE("Encoding integers", "[encode-integer]") {
     string value;
     string decoded_value;
-    encoded_variable_t encoded_var;
+    eight_byte_encoded_variable_t encoded_var;
 
     // Test basic conversions
     value = "0";
@@ -240,7 +241,7 @@ TEST_CASE("Encoding integers", "[encode-integer]") {
 TEST_CASE("Encoding floats", "[encode-float]") {
     string value;
     string decoded_value;
-    encoded_variable_t encoded_var;
+    eight_byte_encoded_variable_t encoded_var;
 
     // Test basic conversions
     value = "0.0";
@@ -346,7 +347,7 @@ TEST_CASE("Encoding messages", "[encode-message]") {
 
     // Test encoding
     string logtype;
-    vector<encoded_variable_t> encoded_vars;
+    vector<eight_byte_encoded_variable_t> encoded_vars;
     vector<int32_t> dictionary_var_bounds;
     vector<string> var_strs = {"4938", std::to_string(INT64_MAX), "-25.5196868642755", "-00.00",
                                "bin/python2.7.3"};
@@ -403,7 +404,7 @@ TEST_CASE("ffi::wildcard_query_matches_any_encoded_var",
 
     // Encode
     string logtype;
-    vector<encoded_variable_t> encoded_vars;
+    vector<eight_byte_encoded_variable_t> encoded_vars;
     vector<int32_t> dictionary_var_bounds;
     REQUIRE(encode_message(message, logtype, encoded_vars, dictionary_var_bounds));
 

@@ -660,6 +660,9 @@ set(SOURCE_FILES_unitTest
         src/ffi/encoding_methods.cpp
         src/ffi/encoding_methods.hpp
         src/ffi/encoding_methods.tpp
+        src/ffi/ir_stream/encoding_methods.cpp
+        src/ffi/ir_stream/encoding_methods.hpp
+        src/ffi/ir_stream/protocol_constants.hpp
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
@@ -743,6 +746,7 @@ set(SOURCE_FILES_unitTest
         src/streaming_compression/zstd/Decompressor.hpp
         src/string_utils.cpp
         src/string_utils.hpp
+        src/string_utils.tpp
         src/StringReader.cpp
         src/StringReader.hpp
         src/TimestampPattern.cpp

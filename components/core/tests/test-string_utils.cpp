@@ -495,7 +495,7 @@ SCENARIO("Test wild card performance", "[wildcard performance]") {
     }
 }
 
-TEST_CASE("convert_string_to_int64", "[convert_string_to_int64]") {
+TEST_CASE("convert_string_to_int", "[convert_string_to_int]") {
     int64_t raw_as_int;
     string raw;
     int64_t converted;
@@ -503,41 +503,41 @@ TEST_CASE("convert_string_to_int64", "[convert_string_to_int64]") {
     // Corner cases
     // Empty string
     raw = "";
-    REQUIRE(false == convert_string_to_int64(raw, converted));
+    REQUIRE(false == convert_string_to_int(raw, converted));
 
     // Edges of representable range
     raw_as_int = INT64_MAX;
     raw = std::to_string(raw_as_int);
-    REQUIRE(convert_string_to_int64(raw, converted));
+    REQUIRE(convert_string_to_int(raw, converted));
     REQUIRE(raw_as_int == converted);
 
     raw_as_int = INT64_MIN;
     raw = std::to_string(raw_as_int);
-    REQUIRE(convert_string_to_int64(raw, converted));
+    REQUIRE(convert_string_to_int(raw, converted));
     REQUIRE(raw_as_int == converted);
 
     raw = "9223372036854775808";  // INT64_MAX + 1 == 2^63
-    REQUIRE(false == convert_string_to_int64(raw, converted));
+    REQUIRE(false == convert_string_to_int(raw, converted));
 
     raw = "-9223372036854775809";  // INT64_MIN - 1 == -2^63 - 1
-    REQUIRE(false == convert_string_to_int64(raw, converted));
+    REQUIRE(false == convert_string_to_int(raw, converted));
 
     // Non-integers
     raw = "abc";
-    REQUIRE(false == convert_string_to_int64(raw, converted));
+    REQUIRE(false == convert_string_to_int(raw, converted));
 
     raw = "90a";
-    REQUIRE(false == convert_string_to_int64(raw, converted));
+    REQUIRE(false == convert_string_to_int(raw, converted));
 
     raw = "0.5";
-    REQUIRE(false == convert_string_to_int64(raw, converted));
+    REQUIRE(false == convert_string_to_int(raw, converted));
 
     // Non-decimal integers
     raw = "0x5A";
-    REQUIRE(false == convert_string_to_int64(raw, converted));
+    REQUIRE(false == convert_string_to_int(raw, converted));
 
     // Integers
     raw = "98340";
-    REQUIRE(convert_string_to_int64(raw, converted));
+    REQUIRE(convert_string_to_int(raw, converted));
     REQUIRE(98340 == converted);
 }

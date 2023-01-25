@@ -32,4 +32,8 @@ private:
     int m_line_number;
 };
 
+// Macros
+// Relative version of __FILE__
+#define __FILENAME__ ((__FILE__) + SOURCE_PATH_SIZE)
+
 #endif // TRACEABLEEXCEPTION

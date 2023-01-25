@@ -104,11 +104,13 @@ bool wildcard_match_unsafe_case_sensitive (std::string_view tame, std::string_vi
 
 /**
  * Converts the given string to a 64-bit integer if possible
+ * @tparam integer_t
  * @param raw
  * @param converted
  * @return true if the conversion was successful, false otherwise
  */
-bool convert_string_to_int64 (std::string_view raw, int64_t& converted);
+template<typename integer_t>
+bool convert_string_to_int (std::string_view raw, integer_t& converted);
 
 /**
  * Converts the given string to a double if possible
@@ -117,5 +119,7 @@ bool convert_string_to_int64 (std::string_view raw, int64_t& converted);
  * @return true if the conversion was successful, false otherwise
  */
 bool convert_string_to_double (const std::string& raw, double& converted);
+
+#include "string_utils.tpp"
 
 #endif // STRING_UTILS_HPP
