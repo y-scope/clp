@@ -13,7 +13,7 @@ namespace ffi {
     constexpr uint64_t cEightByteEncodedFloatDigitsBitMask = (1ULL << 54) - 1;
     constexpr uint32_t cFourByteEncodedFloatDigitsBitMask = (1UL << 25) - 1;
 
-    template<typename encoded_variable_t>
+    template <typename encoded_variable_t>
     bool encode_float_string (std::string_view str, encoded_variable_t& encoded_var) {
         const auto value_length = str.length();
         if (0 == value_length) {
@@ -143,7 +143,7 @@ namespace ffi {
         return true;
     }
 
-    template<typename encoded_variable_t>
+    template <typename encoded_variable_t>
     std::string decode_float_var (encoded_variable_t encoded_var) {
         std::string value;
 
@@ -219,7 +219,7 @@ namespace ffi {
         return value;
     }
 
-    template<typename encoded_variable_t>
+    template <typename encoded_variable_t>
     bool encode_integer_string (std::string_view str, encoded_variable_t& encoded_var) {
         size_t length = str.length();
         if (0 == length) {
@@ -257,7 +257,7 @@ namespace ffi {
         return true;
     }
 
-    template<typename encoded_variable_t>
+    template <typename encoded_variable_t>
     std::string decode_integer_var (encoded_variable_t encoded_var) {
         return std::to_string(encoded_var);
     }
@@ -316,7 +316,7 @@ namespace ffi {
         return true;
     }
 
-    template<typename encoded_variable_t>
+    template <typename encoded_variable_t>
     bool encode_message (std::string_view message, std::string& logtype,
                          std::vector<encoded_variable_t>& encoded_vars,
                          std::vector<int32_t>& dictionary_var_bounds)
