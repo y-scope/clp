@@ -743,6 +743,7 @@ set(SOURCE_FILES_unitTest
         src/streaming_compression/zstd/Decompressor.hpp
         src/string_utils.cpp
         src/string_utils.hpp
+        src/string_utils.tpp
         src/StringReader.cpp
         src/StringReader.hpp
         src/TimestampPattern.cpp

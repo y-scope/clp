@@ -59,7 +59,7 @@ bool EncodedVariableInterpreter::convert_string_to_representable_integer_var (co
     }
 
     int64_t result;
-    if (false == convert_string_to_int64(value, result)) {
+    if (false == convert_string_to_int(value, result)) {
         // Conversion failed
         return false;
     } else if (result >= m_var_dict_id_range_begin) {

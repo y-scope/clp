@@ -183,7 +183,7 @@ namespace ffi {
         }
 
         int64_t result;
-        if (false == convert_string_to_int64(str, result)) {
+        if (false == convert_string_to_int(str, result)) {
             // Conversion failed
             return false;
         } else {
