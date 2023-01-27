@@ -1,12 +1,10 @@
 #include "encoding_methods.hpp"
 
-// C standard libraries
-#include <byteswap.h>
-
 // json
 #include "../../../submodules/json/single_include/nlohmann/json.hpp"
 
 // Project headers
+#include "byteswap.hpp"
 #include "protocol_constants.hpp"
 
 using std::string_view;
