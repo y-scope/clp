@@ -660,6 +660,7 @@ set(SOURCE_FILES_unitTest
         src/ffi/encoding_methods.cpp
         src/ffi/encoding_methods.hpp
         src/ffi/encoding_methods.tpp
+        src/ffi/ir_stream/byteswap.hpp
         src/ffi/ir_stream/encoding_methods.cpp
         src/ffi/ir_stream/encoding_methods.hpp
         src/ffi/ir_stream/protocol_constants.hpp
