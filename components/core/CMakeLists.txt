@@ -112,11 +112,11 @@ else()
 endif()
 
 # Find and setup msgpack
-find_package(msgpack 4.1.1 REQUIRED)
-if(msgpack_FOUND)
-    message(STATUS "Found msgpack ${msgpack_VERSION}")
+find_package(msgpackc-cxx 5.0.0 REQUIRED)
+if(msgpackc-cxx_FOUND)
+    message(STATUS "Found msgpackc-cxx ${msgpackc-cxx_VERSION}")
 else()
-    message(FATAL_ERROR "Could not find msgpack")
+    message(FATAL_ERROR "Could not find msgpackc-cxx")
 endif()
 
 # Add yaml-cpp
