@@ -2,24 +2,19 @@
 
 // C libraries
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
-
-// C++ libraries
-#include <cassert>
 
 // spdlog
 #include <spdlog/spdlog.h>
 
 // Project headers
 #include "../../EncodedVariableInterpreter.hpp"
-#include "../../Utils.hpp"
 #include "../Constants.hpp"
 #include "SegmentManager.hpp"
 
 using namespace std;
 
-namespace streaming_archive { namespace reader {
+namespace streaming_archive::reader {
     epochtime_t File::get_begin_ts () const {
         return m_begin_ts;
     }
@@ -27,8 +22,9 @@ namespace streaming_archive { namespace reader {
         return m_end_ts;
     }
 
-    ErrorCode File::open_me (const LogTypeDictionaryReader& archive_logtype_dict, MetadataDB::FileIterator& file_metadata_ix, bool read_ahead,
-            const string& archive_logs_dir_path, SegmentManager& segment_manager)
+    ErrorCode File::open_me (const LogTypeDictionaryReader& archive_logtype_dict,
+                             MetadataDB::FileIterator& file_metadata_ix,
+                             SegmentManager& segment_manager)
     {
         m_archive_logtype_dict = &archive_logtype_dict;
 
@@ -58,7 +54,8 @@ namespace streaming_archive { namespace reader {
                 // Unexpected truncation
                 throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
             }
-            uint8_t num_spaces_before_ts = strtol(&encoded_timestamp_patterns[begin_pos], nullptr, 10);
+            uint8_t num_spaces_before_ts = strtol(&encoded_timestamp_patterns[begin_pos], nullptr,
+                                                  10);
             begin_pos = end_pos + 1;
 
             end_pos = encoded_timestamp_patterns.find_first_of('\n', begin_pos);
@@ -79,114 +76,70 @@ namespace streaming_archive { namespace reader {
         m_num_variables = file_metadata_ix.get_num_variables();
 
         m_segment_id = file_metadata_ix.get_segment_id();
-        m_is_in_segment = (cInvalidSegmentId != m_segment_id);
-        if (m_is_in_segment) {
-            m_segment_timestamps_decompressed_stream_pos = file_metadata_ix.get_segment_timestamps_pos();
-            m_segment_logtypes_decompressed_stream_pos = file_metadata_ix.get_segment_logtypes_pos();
-            m_segment_variables_decompressed_stream_pos = file_metadata_ix.get_segment_variables_pos();
-        }
+        m_segment_timestamps_decompressed_stream_pos =
+                file_metadata_ix.get_segment_timestamps_pos();
+        m_segment_logtypes_decompressed_stream_pos = file_metadata_ix.get_segment_logtypes_pos();
+        m_segment_variables_decompressed_stream_pos = file_metadata_ix.get_segment_variables_pos();
 
         m_is_split = file_metadata_ix.is_split();
         m_split_ix = file_metadata_ix.get_split_ix();
 
         ErrorCode error_code;
 
-        if (m_is_in_segment) {
-            uint64_t num_bytes_to_read;
-            if (m_num_messages > 0) {
-                if (m_num_messages > m_num_segment_msgs) {
-                    // Buffers too small, so increase size to required amount
-                    m_segment_timestamps = make_unique<epochtime_t[]>(m_num_messages);
-                    m_segment_logtypes = make_unique<logtype_dictionary_id_t[]>(m_num_messages);
-                    m_num_segment_msgs = m_num_messages;
-                }
-
-                num_bytes_to_read = m_num_messages*sizeof(epochtime_t);
-                error_code = segment_manager.try_read(m_segment_id, m_segment_timestamps_decompressed_stream_pos,
-                                                      reinterpret_cast<char*>(m_segment_timestamps.get()), num_bytes_to_read);
-                if (ErrorCode_Success != error_code) {
-                    close_me();
-                    return error_code;
-                }
-                m_timestamps = m_segment_timestamps.get();
-
-                num_bytes_to_read = m_num_messages*sizeof(logtype_dictionary_id_t);
-                error_code = segment_manager.try_read(m_segment_id, m_segment_logtypes_decompressed_stream_pos,
-                                                      reinterpret_cast<char*>(m_segment_logtypes.get()), num_bytes_to_read);
-                if (ErrorCode_Success != error_code) {
-                    close_me();
-                    return error_code;
-                }
-                m_logtypes = m_segment_logtypes.get();
+        uint64_t num_bytes_to_read;
+        if (m_num_messages > 0) {
+            if (m_num_messages > m_num_segment_msgs) {
+                // Buffers too small, so increase size to required amount
+                m_segment_timestamps = make_unique<epochtime_t[]>(m_num_messages);
+                m_segment_logtypes = make_unique<logtype_dictionary_id_t[]>(m_num_messages);
+                m_num_segment_msgs = m_num_messages;
             }
 
-            if (m_num_variables > 0) {
-                if (m_num_variables > m_num_segment_vars) {
-                    // Buffer too small, so increase size to required amount
-                    m_segment_variables = make_unique<encoded_variable_t[]>(m_num_variables);
-                    m_num_segment_vars = m_num_variables;
-                }
-                num_bytes_to_read = m_num_variables*sizeof(encoded_variable_t);
-                error_code = segment_manager.try_read(m_segment_id, m_segment_variables_decompressed_stream_pos,
-                                                      reinterpret_cast<char*>(m_segment_variables.get()), num_bytes_to_read);
-                if (ErrorCode_Success != error_code) {
-                    close_me();
-                    return error_code;
-                }
-                m_variables = m_segment_variables.get();
-            }
-        } else {
-            void* ptr;
-            string file_path = archive_logs_dir_path + m_id_as_string;
-            string column_path;
-
-            // Open timestamps file
-            column_path = file_path;
-            column_path += cTimestampsFileExtension;
-            error_code = memory_map_file(column_path, read_ahead, m_timestamps_fd, m_timestamps_file_size, ptr);
+            num_bytes_to_read = m_num_messages*sizeof(epochtime_t);
+            error_code = segment_manager.try_read(
+                    m_segment_id,
+                    m_segment_timestamps_decompressed_stream_pos,
+                    reinterpret_cast<char*>(m_segment_timestamps.get()),
+                    num_bytes_to_read
+            );
             if (ErrorCode_Success != error_code) {
                 close_me();
                 return error_code;
             }
-            m_timestamps = reinterpret_cast<epochtime_t*>(ptr);
-            size_t num_timestamps_read = m_timestamps_file_size / sizeof(epochtime_t);
-            if (num_timestamps_read < m_num_messages) {
-                SPDLOG_ERROR("There are fewer timestamps on disk ({}) than the metadata ({}) indicates.", num_timestamps_read, m_num_messages);
-                close_me();
-                return ErrorCode_Truncated;
-            }
+            m_timestamps = m_segment_timestamps.get();
 
-            // Open logtype IDs file
-            column_path = file_path;
-            column_path += cLogTypeIdsFileExtension;
-            error_code = memory_map_file(column_path, read_ahead, m_logtypes_fd, m_logtypes_file_size, ptr);
+            num_bytes_to_read = m_num_messages*sizeof(logtype_dictionary_id_t);
+            error_code = segment_manager.try_read(
+                    m_segment_id,
+                    m_segment_logtypes_decompressed_stream_pos,
+                    reinterpret_cast<char*>(m_segment_logtypes.get()),
+                    num_bytes_to_read
+            );
             if (ErrorCode_Success != error_code) {
                 close_me();
                 return error_code;
             }
-            m_logtypes = reinterpret_cast<logtype_dictionary_id_t*>(ptr);
-            size_t num_logtypes_read = m_logtypes_file_size / sizeof(logtype_dictionary_id_t);
-            if (num_logtypes_read < m_num_messages) {
-                SPDLOG_ERROR("There are fewer logtypes on disk ({}) than the metadata ({}) indicates.", num_logtypes_read, m_num_messages);
-                close_me();
-                return ErrorCode_Truncated;
-            }
+            m_logtypes = m_segment_logtypes.get();
+        }
 
-            // Open variables file
-            column_path = file_path;
-            column_path += cVariablesFileExtension;
-            error_code = memory_map_file(column_path, read_ahead, m_variables_fd, m_variables_file_size, ptr);
+        if (m_num_variables > 0) {
+            if (m_num_variables > m_num_segment_vars) {
+                // Buffer too small, so increase size to required amount
+                m_segment_variables = make_unique<encoded_variable_t[]>(m_num_variables);
+                m_num_segment_vars = m_num_variables;
+            }
+            num_bytes_to_read = m_num_variables*sizeof(encoded_variable_t);
+            error_code = segment_manager.try_read(
+                    m_segment_id,
+                    m_segment_variables_decompressed_stream_pos,
+                    reinterpret_cast<char*>(m_segment_variables.get()),
+                    num_bytes_to_read
+            );
             if (ErrorCode_Success != error_code) {
                 close_me();
                 return error_code;
             }
-            m_variables = reinterpret_cast<encoded_variable_t*>(ptr);
-            size_t num_variables_read = m_variables_file_size / sizeof(encoded_variable_t);
-            if (num_variables_read < m_num_variables) {
-                SPDLOG_ERROR("There are fewer variables on disk ({}) than the metadata ({}) indicates.", num_variables_read, m_num_variables);
-                close_me();
-                return ErrorCode_Truncated;
-            }
+            m_variables = m_segment_variables.get();
         }
 
         m_msgs_ix = 0;
@@ -199,52 +152,13 @@ namespace streaming_archive { namespace reader {
     }
 
     void File::close_me () {
-        ErrorCode error_code;
+        m_timestamps = nullptr;
+        m_logtypes = nullptr;
+        m_variables = nullptr;
 
-        if (m_is_in_segment) {
-            m_timestamps = nullptr;
-            m_logtypes = nullptr;
-            m_variables = nullptr;
-
-            m_segment_timestamps_decompressed_stream_pos = 0;
-            m_segment_logtypes_decompressed_stream_pos = 0;
-            m_segment_variables_decompressed_stream_pos = 0;
-
-            m_is_in_segment = false;
-        } else {
-            // Unmap variables file
-            if (0 != m_variables_file_size) {
-                error_code = memory_unmap_file(m_variables_fd, m_variables_file_size, m_variables);
-                if (ErrorCode_Success != error_code) {
-                    SPDLOG_ERROR("streaming_archive::reader::File: Failed to unmap variables file, errno={}", errno);
-                }
-                m_variables_fd = -1;
-                m_variables_file_size = 0;
-                m_variables = nullptr;
-            }
-
-            // Unmap logtypes file
-            if (0 != m_logtypes_file_size) {
-                error_code = memory_unmap_file(m_logtypes_fd, m_logtypes_file_size, m_logtypes);
-                if (ErrorCode_Success != error_code) {
-                    SPDLOG_ERROR("streaming_archive::reader::File: Failed to unmap logtypes file, errno={}", errno);
-                }
-                m_logtypes_fd = -1;
-                m_logtypes_file_size = 0;
-                m_logtypes = nullptr;
-            }
-
-            // Unmap timestamps file
-            if (0 != m_timestamps_file_size) {
-                error_code = memory_unmap_file(m_timestamps_fd, m_timestamps_file_size, m_timestamps);
-                if (ErrorCode_Success != error_code) {
-                    SPDLOG_ERROR("streaming_archive::reader::File: Failed to unmap timestamps file, errno={}", errno);
-                }
-                m_timestamps_fd = -1;
-                m_timestamps_file_size = 0;
-                m_timestamps = nullptr;
-            }
-        }
+        m_segment_timestamps_decompressed_stream_pos = 0;
+        m_segment_logtypes_decompressed_stream_pos = 0;
+        m_segment_variables_decompressed_stream_pos = 0;
 
         m_msgs_ix = 0;
         m_num_messages = 0;
@@ -286,12 +200,16 @@ namespace streaming_archive { namespace reader {
         ++m_current_ts_pattern_ix;
     }
 
-    bool File::find_message_in_time_range (epochtime_t search_begin_timestamp, epochtime_t search_end_timestamp, Message& msg) {
+    bool File::find_message_in_time_range (epochtime_t search_begin_timestamp,
+                                           epochtime_t search_end_timestamp, Message& msg)
+    {
         bool found_msg = false;
         while (m_msgs_ix < m_num_messages && !found_msg) {
             // Get logtype
-            // NOTE: We get the logtype before the timestamp since we need to use it to get the number of variables, and then advance the variable index,
-            // regardless of whether the timestamp falls in the time range or not
+            // NOTE: We get the logtype before the timestamp since we need to
+            // use it to get the number of variables, and then advance the
+            // variable index, regardless of whether the timestamp falls in the
+            // time range or not
             auto logtype_id = m_logtypes[m_msgs_ix];
 
             // Get number of variables in logtype
@@ -413,4 +331,4 @@ namespace streaming_archive { namespace reader {
 
         return true;
     }
-} }
+}

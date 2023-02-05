@@ -6,7 +6,6 @@
 
 namespace streaming_archive {
     constexpr archive_format_version_t cArchiveFormatVersion = cArchiveFormatDevelopmentVersionFlag | 5;
-    constexpr char cLogsDirname[] = "l";
     constexpr char cSegmentsDirname[] = "s";
     constexpr char cSegmentListFilename[] = "segment_list.txt";
     constexpr char cLogTypeDictFilename[] = "logtype.dict";
@@ -15,9 +14,6 @@ namespace streaming_archive {
     constexpr char cVarSegmentIndexFilename[] = "var.segindex";
     constexpr char cMetadataFileName[] = "metadata";
     constexpr char cMetadataDBFileName[] = "metadata.db";
-    constexpr char cTimestampsFileExtension[] = ".tme";
-    constexpr char cLogTypeIdsFileExtension[] = ".lid";
-    constexpr char cVariablesFileExtension[] = ".var";
     constexpr char cSchemaFileName[] = "schema.txt";
 
     namespace cMetadataDB {

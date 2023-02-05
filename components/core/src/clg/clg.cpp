@@ -201,7 +201,7 @@ static bool search (const vector<string>& search_strings, CommandLineArguments& 
 }
 
 static bool open_compressed_file (MetadataDB::FileIterator& file_metadata_ix, Archive& archive, File& compressed_file) {
-    ErrorCode error_code = archive.open_file(compressed_file, file_metadata_ix, false);
+    ErrorCode error_code = archive.open_file(compressed_file, file_metadata_ix);
     if (ErrorCode_Success == error_code) {
         return true;
     }
