@@ -132,7 +132,8 @@ class Query {
 public:
     // Constructors
     Query () : m_search_begin_timestamp(cEpochTimeMin), m_search_end_timestamp(cEpochTimeMax),
-            m_ignore_case(false), m_search_string_matches_all(true) {}
+            m_ignore_case(false), m_search_string_matches_all(true),
+            m_prev_segment_id(cInvalidSegmentId) {}
 
     // Methods
     void set_search_begin_timestamp (epochtime_t timestamp) { m_search_begin_timestamp = timestamp; }
