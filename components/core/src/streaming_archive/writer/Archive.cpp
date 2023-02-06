@@ -86,24 +86,6 @@ namespace streaming_archive::writer {
             throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
         }
 
-        // Create logs directory
-        m_logs_dir_path = archive_path_string;
-        m_logs_dir_path += '/';
-        m_logs_dir_path += cLogsDirname;
-        m_logs_dir_path += '/';
-        retval = mkdir(m_logs_dir_path.c_str(), 0750);
-        if (0 != retval) {
-            SPDLOG_ERROR("Failed to create {}, errno={}", m_logs_dir_path.c_str(), errno);
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
-        }
-
-        // Get logs directory's file descriptor
-        m_logs_dir_fd = ::open(m_logs_dir_path.c_str(), O_RDONLY);
-        if (-1 == m_logs_dir_fd) {
-            SPDLOG_ERROR("Failed to open file descriptor for {}, errno={}", m_logs_dir_path.c_str(), errno);
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
-        }
-
         // Create segments directory
         m_segments_dir_path = archive_path_string;
         m_segments_dir_path += '/';
@@ -228,13 +210,6 @@ namespace streaming_archive::writer {
         }
         m_segments_dir_fd = -1;
         m_segments_dir_path.clear();
-
-        if (::close(m_logs_dir_fd) != 0) {
-            // We've already fsynced, so this error shouldn't affect us. Therefore, just log it.
-            SPDLOG_WARN("Error when closing logs directory file descriptor, errno={}", errno);
-        }
-        m_logs_dir_fd = -1;
-        m_logs_dir_path.clear();
 
         m_metadata_file_writer.close();
 
@@ -416,14 +391,6 @@ namespace streaming_archive::writer {
     }
 
     void Archive::write_dir_snapshot () {
-        #if FLUSH_TO_DISK_ENABLED
-            // fsync logs directory to flush new files' directory entries
-            if (0 != fsync(m_logs_dir_fd)) {
-                SPDLOG_ERROR("Failed to fsync {}, errno={}", m_logs_dir_path.c_str(), errno);
-                throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
-            }
-        #endif
-
         // Flush dictionaries
         m_logtype_dict.write_header_and_flush_to_disk();
         m_var_dict.write_header_and_flush_to_disk();

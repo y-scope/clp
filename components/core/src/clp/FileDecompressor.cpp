@@ -14,7 +14,7 @@ namespace clp {
                                             streaming_archive::reader::Archive& archive_reader, std::unordered_map<string, string>& temp_path_to_final_path)
     {
         // Open compressed file
-        auto error_code = archive_reader.open_file(m_encoded_file, file_metadata_ix, true);
+        auto error_code = archive_reader.open_file(m_encoded_file, file_metadata_ix);
         if (ErrorCode_Success != error_code) {
             if (ErrorCode_errno == error_code) {
                 SPDLOG_ERROR("Failed to open encoded file, errno={}", errno);

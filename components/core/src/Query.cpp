@@ -161,7 +161,7 @@ void Query::add_sub_query (const SubQuery& sub_query) {
     m_sub_queries.push_back(sub_query);
 
     // Add to relevant sub-queries if necessary
-    if (m_all_subqueries_relevant || sub_query.get_ids_of_matching_segments().count(m_prev_segment_id)) {
+    if (sub_query.get_ids_of_matching_segments().count(m_prev_segment_id)) {
         m_relevant_sub_queries.push_back(&m_sub_queries.back());
     }
 }
@@ -169,24 +169,10 @@ void Query::add_sub_query (const SubQuery& sub_query) {
 void Query::clear_sub_queries() {
     m_sub_queries.clear();
     m_relevant_sub_queries.clear();
-    m_all_subqueries_relevant = true;
-}
-
-void Query::make_all_sub_queries_relevant () {
-    if (m_all_subqueries_relevant) {
-        // All sub-queries already relevant
-        return;
-    }
-
-    m_relevant_sub_queries.clear();
-    for (auto& sub_query : m_sub_queries) {
-        m_relevant_sub_queries.push_back(&sub_query);
-    }
-    m_all_subqueries_relevant = true;
 }
 
 void Query::make_sub_queries_relevant_to_segment (segment_id_t segment_id) {
-    if (false == m_all_subqueries_relevant && segment_id == m_prev_segment_id) {
+    if (segment_id == m_prev_segment_id) {
         // Sub-queries already relevant to segment
         return;
     }
@@ -199,5 +185,4 @@ void Query::make_sub_queries_relevant_to_segment (segment_id_t segment_id) {
         }
     }
     m_prev_segment_id = segment_id;
-    m_all_subqueries_relevant = false;
 }

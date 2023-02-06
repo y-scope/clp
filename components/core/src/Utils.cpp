@@ -187,62 +187,6 @@ string get_unambiguous_path (const string& path) {
     return unambiguous_path;
 }
 
-ErrorCode memory_map_file (const string& path, bool read_ahead, int& fd, size_t& file_size, void*& ptr) {
-    fd = open(path.c_str(), O_RDONLY);
-    if (fd < 0) {
-        SPDLOG_ERROR("Failed to open {}, errno={}", path.c_str(), errno);
-        return ErrorCode_errno;
-    }
-
-    // Check file exists and get size
-    struct stat s = {};
-    if (0 != fstat(fd, &s)) {
-        if (ENOENT == errno) {
-            return ErrorCode_FileNotFound;
-        }
-        SPDLOG_ERROR("Failed to stat {}, errno={}", path.c_str(), errno);
-        return ErrorCode_errno;
-    }
-    file_size = s.st_size;
-
-    if (0 == file_size) {
-        if (0 != close(fd)) {
-            SPDLOG_ERROR("Failed to close empty file - {}, errno={}", path.c_str(), errno);
-            return ErrorCode_errno;
-        }
-    } else {
-        int flags = MAP_SHARED;
-        if (read_ahead) {
-            flags |= MAP_POPULATE;
-        } else {
-            flags |= MAP_NONBLOCK;
-        }
-        void* mapped_region = mmap(nullptr, file_size, PROT_READ, flags, fd, 0);
-        if (MAP_FAILED == mapped_region) {
-            SPDLOG_ERROR("Failed to mmap {}, errno={}", path.c_str(), errno);
-            return ErrorCode_errno;
-        }
-        ptr = mapped_region;
-    }
-
-    return ErrorCode_Success;
-}
-
-ErrorCode memory_unmap_file (int fd, size_t file_size, void* ptr) {
-    if (0 != file_size) {
-        if (0 != munmap(ptr, file_size)) {
-            SPDLOG_ERROR("Failed to unmap file, errno={}", errno);
-            return ErrorCode_errno;
-        }
-        if (0 != close(fd)) {
-            SPDLOG_ERROR("Failed to close file, errno={}", errno);
-            return ErrorCode_errno;
-        }
-    }
-
-    return ErrorCode_Success;
-}
-
 ErrorCode read_list_of_paths (const string& list_path, vector<string>& paths) {
     FileReader file_reader;
     ErrorCode error_code = file_reader.try_open(list_path);

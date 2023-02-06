@@ -69,7 +69,8 @@ namespace streaming_archive { namespace writer {
         std::string m_schema_file_path;
 
         // Constructors
-        Archive () : m_logs_dir_fd(-1), m_segments_dir_fd(-1), m_compression_level(0), m_global_metadata_db(nullptr), old_ts_pattern(), m_schema_file_path() {}
+        Archive () : m_segments_dir_fd(-1), m_compression_level(0), m_global_metadata_db(nullptr),
+                old_ts_pattern(), m_schema_file_path() {}
 
         // Destructor
         ~Archive ();
@@ -252,8 +253,6 @@ namespace streaming_archive { namespace writer {
         size_t m_creation_num;
 
         std::string m_path;
-        std::string m_logs_dir_path;
-        int m_logs_dir_fd;
         std::string m_segments_dir_path;
         int m_segments_dir_fd;
 

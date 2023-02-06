@@ -75,12 +75,6 @@ namespace streaming_archive { namespace reader {
         auto metadata_db_path = boost::filesystem::path(path) / cMetadataDBFileName;
         m_metadata_db.open(metadata_db_path.string());
 
-        // Assemble logs directory path
-        m_logs_dir_path = m_path;
-        m_logs_dir_path += '/';
-        m_logs_dir_path += cLogsDirname;
-        m_logs_dir_path += '/';
-
         // Open log-type dictionary
         string logtype_dict_path = m_path;
         logtype_dict_path += '/';
@@ -116,7 +110,6 @@ namespace streaming_archive { namespace reader {
         m_var_dictionary.close();
         m_segment_manager.close();
         m_segments_dir_path.clear();
-        m_logs_dir_path.clear();
         m_metadata_db.close();
         m_path.clear();
     }
@@ -126,8 +119,8 @@ namespace streaming_archive { namespace reader {
         m_var_dictionary.read_new_entries();
     }
 
-    ErrorCode Archive::open_file (File& file, MetadataDB::FileIterator& file_metadata_ix, bool read_ahead) {
-        return file.open_me(m_logtype_dictionary, file_metadata_ix, read_ahead, m_logs_dir_path, m_segment_manager);
+    ErrorCode Archive::open_file (File& file, MetadataDB::FileIterator& file_metadata_ix) {
+        return file.open_me(m_logtype_dictionary, file_metadata_ix, m_segment_manager);
     }
 
     void Archive::close_file (File& file) {

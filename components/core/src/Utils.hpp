@@ -100,29 +100,6 @@ bool get_bounds_of_next_var (const std::string& msg, size_t& begin_pos, size_t& 
 std::string get_unambiguous_path (const std::string& path);
 
 /**
- * Maps a given file into memory
- * @param path
- * @param read_ahead Whether to read-ahead in the file
- * @param fd Reference to file descriptor opened for file
- * @param file_size Reference to file size determined for file
- * @param ptr Reference to pointer to mapped region
- * @return ErrorCode_errno on error
- * @return ErrorCode_FileNotFound if file not found
- * @return ErrorCode_Success on success
- */
-ErrorCode memory_map_file (const std::string& path, bool read_ahead, int& fd, size_t& file_size, void*& ptr);
-
-/**
- * Unmaps a memory-mapped file
- * @param fd File's file descriptor
- * @param file_size File's size
- * @param ptr Pointer to mapped region
- * @return ErrorCode_errno on error
- * @return ErrorCode_Success on success
- */
-ErrorCode memory_unmap_file (int fd, size_t file_size, void* ptr);
-
-/**
  * Read a list of paths from a file
  * @param list_path
  * @param paths

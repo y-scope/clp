@@ -131,8 +131,9 @@ private:
 class Query {
 public:
     // Constructors
-    Query () : m_search_begin_timestamp(cEpochTimeMin), m_search_end_timestamp(cEpochTimeMax), m_ignore_case(false), m_search_string_matches_all(true),
-            m_all_subqueries_relevant(true) {}
+    Query () : m_search_begin_timestamp(cEpochTimeMin), m_search_end_timestamp(cEpochTimeMax),
+            m_ignore_case(false), m_search_string_matches_all(true),
+            m_prev_segment_id(cInvalidSegmentId) {}
 
     // Methods
     void set_search_begin_timestamp (epochtime_t timestamp) { m_search_begin_timestamp = timestamp; }
@@ -141,10 +142,6 @@ public:
     void set_search_string (const std::string& search_string);
     void add_sub_query (const SubQuery& sub_query);
     void clear_sub_queries ();
-    /**
-     * Populates the set of relevant sub-queries with all possible sub-queries from the query
-     */
-    void make_all_sub_queries_relevant ();
     /**
      * Populates the set of relevant sub-queries with only those that match the given segment
      * @param segment_id
@@ -186,7 +183,6 @@ private:
     std::vector<SubQuery> m_sub_queries;
     std::vector<const SubQuery*> m_relevant_sub_queries;
     segment_id_t m_prev_segment_id;
-    bool m_all_subqueries_relevant;
 };
 
 

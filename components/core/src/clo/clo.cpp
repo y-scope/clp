@@ -153,7 +153,7 @@ static SearchFilesResult search_files (Query& query, Archive& archive, MetadataD
 
     // Run query on each file
     for (; file_metadata_ix.has_next(); file_metadata_ix.next()) {
-        ErrorCode error_code = archive.open_file(compressed_file, file_metadata_ix, false);
+        ErrorCode error_code = archive.open_file(compressed_file, file_metadata_ix);
         if (ErrorCode_Success != error_code) {
             string orig_path;
             file_metadata_ix.get_path(orig_path);
@@ -166,11 +166,7 @@ static SearchFilesResult search_files (Query& query, Archive& archive, MetadataD
             continue;
         }
 
-        if (compressed_file.is_in_segment()) {
-            query.make_sub_queries_relevant_to_segment(compressed_file.get_segment_id());
-        } else {
-            query.make_all_sub_queries_relevant();
-        }
+        query.make_sub_queries_relevant_to_segment(compressed_file.get_segment_id());
         while (false == query_cancelled &&
                Grep::search_and_decompress(query, archive, compressed_file, compressed_message, decompressed_message))
         {

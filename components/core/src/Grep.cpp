@@ -685,14 +685,8 @@ Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, 
 }
 
 void Grep::calculate_sub_queries_relevant_to_file (const File& compressed_file, vector<Query>& queries) {
-    if (compressed_file.is_in_segment()) {
-        for (auto& query : queries) {
-            query.make_sub_queries_relevant_to_segment(compressed_file.get_segment_id());
-        }
-    } else {
-        for (auto& query : queries) {
-            query.make_all_sub_queries_relevant();
-        }
+    for (auto& query : queries) {
+        query.make_sub_queries_relevant_to_segment(compressed_file.get_segment_id());
     }
 }
 

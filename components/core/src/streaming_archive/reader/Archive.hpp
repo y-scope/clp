@@ -64,11 +64,9 @@ namespace streaming_archive { namespace reader {
          * Opens file with given path
          * @param file
          * @param file_metadata_ix
-         * @param read_ahead Whether to read-ahead in the file (if possible)
          * @return Same as streaming_archive::reader::File::open_me
-         * @throw Same as streaming_archive::reader::File::open_me
          */
-        ErrorCode open_file (File& file, MetadataDB::FileIterator& file_metadata_ix, bool read_ahead);
+        ErrorCode open_file (File& file, MetadataDB::FileIterator& file_metadata_ix);
         /**
          * Wrapper for streaming_archive::reader::File::close_me
          * @param file
@@ -124,7 +122,6 @@ namespace streaming_archive { namespace reader {
         // Variables
         std::string m_id;
         std::string m_path;
-        std::string m_logs_dir_path;
         std::string m_segments_dir_path;
         LogTypeDictionaryReader m_logtype_dictionary;
         VariableDictionaryReader m_var_dictionary;

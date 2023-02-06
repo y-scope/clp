@@ -16,14 +16,15 @@
 #include "Message.hpp"
 #include "SegmentManager.hpp"
 
-namespace streaming_archive { namespace reader {
+namespace streaming_archive::reader {
     class File {
     public:
         // Types
         class OperationFailed : public TraceableException {
         public:
             // Constructors
-            OperationFailed (ErrorCode error_code, const char* const filename, int line_number) : TraceableException (error_code, filename, line_number) {}
+            OperationFailed (ErrorCode error_code, const char* const filename, int line_number) :
+                    TraceableException(error_code, filename, line_number) {}
 
             // Methods
             const char* what () const noexcept override {
@@ -36,7 +37,6 @@ namespace streaming_archive { namespace reader {
             m_archive_logtype_dict(nullptr),
             m_begin_ts(cEpochTimeMax),
             m_end_ts(cEpochTimeMin),
-            m_is_in_segment(false),
             m_segment_timestamps_decompressed_stream_pos(0),
             m_segment_logtypes_decompressed_stream_pos(0),
             m_segment_variables_decompressed_stream_pos(0),
@@ -46,14 +46,8 @@ namespace streaming_archive { namespace reader {
             m_num_messages(0),
             m_variables_ix(0),
             m_num_variables(0),
-            m_logtypes_fd(-1),
-            m_logtypes_file_size(0),
             m_logtypes(nullptr),
-            m_timestamps_fd(-1),
-            m_timestamps_file_size(0),
             m_timestamps(nullptr),
-            m_variables_fd(-1),
-            m_variables_file_size(0),
             m_variables(nullptr),
             m_current_ts_pattern_ix(0),
             m_current_ts_in_milli(0)
@@ -65,7 +59,6 @@ namespace streaming_archive { namespace reader {
         epochtime_t get_begin_ts () const;
         epochtime_t get_end_ts () const;
         const std::string& get_orig_path () const;
-        bool is_in_segment () const { return m_is_in_segment; }
         segment_id_t get_segment_id () const { return m_segment_id; }
         uint64_t get_num_messages () const { return m_num_messages; }
         bool is_split () const { return m_is_split; }
@@ -78,20 +71,13 @@ namespace streaming_archive { namespace reader {
          * Opens file
          * @param archive_logtype_dict
          * @param file_metadata_ix
-         * @param read_ahead Whether to read-ahead in the file (if possible)
-         * @param archive_logs_dir_path Path to directory where logs are stored on disk in this archive
-         * @param segment_manager Segment manager for when file is stored in a segment
-         * @return FileReader::try_open's error codes on failure to open metadata
-         * @return ErrorCode_Failure_Metadata_Corrupted on metadata loading error
-         * @return ErrorCode_errno on error
-         * @return ErrorCode_FileNotFound if a column's file was not found
-         * @return ErrorCode_Truncated if metadata did not contain all required data or if column in segment was truncated
+         * @param segment_manager
+         * @return Same as SegmentManager::try_read
          * @return ErrorCode_Success on success
-         * @throw FileReader::OperationFailed on any read failure
-         * @throw Same as streaming_archive::reader::SegmentManager::read
          */
-        ErrorCode open_me (const LogTypeDictionaryReader& archive_logtype_dict, MetadataDB::FileIterator& file_metadata_ix, bool read_ahead,
-                const std::string& archive_logs_dir_path, SegmentManager& segment_manager);
+        ErrorCode open_me (const LogTypeDictionaryReader& archive_logtype_dict,
+                           MetadataDB::FileIterator& file_metadata_ix,
+                           SegmentManager& segment_manager);
         /**
          * Closes the file
          */
@@ -114,7 +100,8 @@ namespace streaming_archive { namespace reader {
          * @param msg
          * @return true if a message was found, false otherwise
          */
-        bool find_message_in_time_range (epochtime_t search_begin_timestamp, epochtime_t search_end_timestamp, Message& msg);
+        bool find_message_in_time_range (epochtime_t search_begin_timestamp,
+                                         epochtime_t search_end_timestamp, Message& msg);
         /**
          * Finds message matching the given query
          * @param query
@@ -140,7 +127,6 @@ namespace streaming_archive { namespace reader {
         std::string m_orig_file_id_as_string;
         std::string m_orig_path;
 
-        bool m_is_in_segment;
         segment_id_t m_segment_id;
         uint64_t m_segment_timestamps_decompressed_stream_pos;
         uint64_t m_segment_logtypes_decompressed_stream_pos;
@@ -156,16 +142,8 @@ namespace streaming_archive { namespace reader {
         size_t m_variables_ix;
         uint64_t m_num_variables;
 
-        int m_logtypes_fd;
-        size_t m_logtypes_file_size;
         logtype_dictionary_id_t* m_logtypes;
-
-        int m_timestamps_fd;
-        size_t m_timestamps_file_size;
         epochtime_t* m_timestamps;
-
-        int m_variables_fd;
-        size_t m_variables_file_size;
         encoded_variable_t* m_variables;
 
         size_t m_current_ts_pattern_ix;
@@ -174,6 +152,6 @@ namespace streaming_archive { namespace reader {
         size_t m_split_ix;
         bool m_is_split;
     };
-} }
+}
 
 #endif // STREAMING_ARCHIVE_READER_FILE_HPP
