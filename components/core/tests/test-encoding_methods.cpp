@@ -8,6 +8,7 @@ using ffi::decode_float_var;
 using ffi::decode_integer_var;
 using ffi::decode_message;
 using ffi::eight_byte_encoded_variable_t;
+using ffi::four_byte_encoded_variable_t;
 using ffi::encode_float_string;
 using ffi::encode_integer_string;
 using ffi::encode_message;
@@ -17,7 +18,7 @@ using ffi::wildcard_query_matches_any_encoded_var;
 using std::string;
 using std::vector;
 
-TEST_CASE("ffi::get_bounds_of_next_var", "[ffi::get_bounds_of_next_var]") {
+TEST_CASE("ffi::get_bounds_of_next_var", "[ffi][get_bounds_of_next_var]") {
     string str;
     size_t begin_pos;
     size_t end_pos;
@@ -134,10 +135,16 @@ TEST_CASE("ffi::get_bounds_of_next_var", "[ffi::get_bounds_of_next_var]") {
     REQUIRE("var123" == str.substr(begin_pos, end_pos - begin_pos));
 }
 
-TEST_CASE("Encoding integers", "[encode-integer]") {
+TEMPLATE_TEST_CASE("Encoding integers", "[ffi][encode-integer]", eight_byte_encoded_variable_t,
+                   four_byte_encoded_variable_t)
+{
+    // Code below only supports these two types right now
+    static_assert(std::is_same_v<TestType, eight_byte_encoded_variable_t> ||
+                  std::is_same_v<TestType, four_byte_encoded_variable_t>);
+
     string value;
     string decoded_value;
-    eight_byte_encoded_variable_t encoded_var;
+    TestType encoded_var;
 
     // Test basic conversions
     value = "0";
@@ -156,20 +163,37 @@ TEST_CASE("Encoding integers", "[encode-integer]") {
     REQUIRE(decoded_value == value);
 
     // Test edges of representable range
-    value = std::to_string(INT64_MAX);
+    int64_t min_value;
+    int64_t max_value;
+    if constexpr (std::is_same_v<TestType, eight_byte_encoded_variable_t>) {
+        min_value = INT64_MIN;
+        max_value = INT64_MAX;
+    } else {  // std::is_same_v<TestType, four_byte_encoded_variable_t>
+        min_value = INT32_MIN;
+        max_value = INT32_MAX;
+    }
+    value = std::to_string(min_value);
     REQUIRE(encode_integer_string(value, encoded_var));
     decoded_value = decode_integer_var(encoded_var);
     REQUIRE(decoded_value == value);
 
-    value = std::to_string(INT64_MIN);
+    value = std::to_string(max_value);
     REQUIRE(encode_integer_string(value, encoded_var));
     decoded_value = decode_integer_var(encoded_var);
     REQUIRE(decoded_value == value);
 
-    value = "9223372036854775808";  // INT64_MAX + 1 == 2^63
+    if constexpr (std::is_same_v<TestType, eight_byte_encoded_variable_t>) {
+        value = "9223372036854775808";  // INT64_MAX + 1 == 2^63
+    } else {  // std::is_same_v<TestType, four_byte_encoded_variable_t>
+        value = "2147483648";  // INT32_MAX + 1 == 2^31
+    }
     REQUIRE(false == encode_integer_string(value, encoded_var));
 
-    value = "-9223372036854775809";  // INT64_MIN - 1 == -2^63 - 1
+    if constexpr (std::is_same_v<TestType, eight_byte_encoded_variable_t>) {
+        value = "-9223372036854775809";  // INT64_MIN - 1 == -2^63 - 1
+    } else {  // std::is_same_v<TestType, four_byte_encoded_variable_t>
+        value = "-2147483649";  // INT32_MIN - 1 == -2^31 - 1
+    }
     REQUIRE(false == encode_integer_string(value, encoded_var));
 
     // Test non-integers
@@ -238,10 +262,12 @@ TEST_CASE("Encoding integers", "[encode-integer]") {
     REQUIRE(!encode_integer_string(value, encoded_var));
 }
 
-TEST_CASE("Encoding floats", "[encode-float]") {
+TEMPLATE_TEST_CASE("Encoding floats", "[ffi][encode-float]", eight_byte_encoded_variable_t,
+                   four_byte_encoded_variable_t)
+{
     string value;
     string decoded_value;
-    eight_byte_encoded_variable_t encoded_var;
+    TestType encoded_var;
 
     // Test basic conversions
     value = "0.0";
@@ -270,17 +296,38 @@ TEST_CASE("Encoding floats", "[encode-float]") {
     REQUIRE(decoded_value == value);
 
     // Test edges of representable range
-    value = "-999999999999999.9";
+    if constexpr (std::is_same_v<TestType, eight_byte_encoded_variable_t>) {
+        value = "-999999999999999.9";
+    } else {  // std::is_same_v<TestType, four_byte_encoded_variable_t>
+        value = "-3355443.1";
+    }
     REQUIRE(encode_float_string(value, encoded_var));
     decoded_value = decode_float_var(encoded_var);
     REQUIRE(decoded_value == value);
 
-    value = "-.9999999999999999";
+    if constexpr (std::is_same_v<TestType, eight_byte_encoded_variable_t>) {
+        value = "999999999999999.9";
+    } else {  // std::is_same_v<TestType, four_byte_encoded_variable_t>
+        value = "3355443.1";
+    }
     REQUIRE(encode_float_string(value, encoded_var));
     decoded_value = decode_float_var(encoded_var);
     REQUIRE(decoded_value == value);
 
-    value = ".9999999999999999";
+    if constexpr (std::is_same_v<TestType, eight_byte_encoded_variable_t>) {
+        value = "-.9999999999999999";
+    } else {  // std::is_same_v<TestType, four_byte_encoded_variable_t>
+        value = "-.33554431";
+    }
+    REQUIRE(encode_float_string(value, encoded_var));
+    decoded_value = decode_float_var(encoded_var);
+    REQUIRE(decoded_value == value);
+
+    if constexpr (std::is_same_v<TestType, eight_byte_encoded_variable_t>) {
+        value = ".9999999999999999";
+    } else {  // std::is_same_v<TestType, four_byte_encoded_variable_t>
+        value = ".33554431";
+    }
     REQUIRE(encode_float_string(value, encoded_var));
     decoded_value = decode_float_var(encoded_var);
     REQUIRE(decoded_value == value);
@@ -342,18 +389,27 @@ TEST_CASE("Encoding floats", "[encode-float]") {
     REQUIRE(!encode_float_string(value, encoded_var));
 }
 
-TEST_CASE("Encoding messages", "[encode-message]") {
+TEMPLATE_TEST_CASE("Encoding messages", "[ffi][encode-message]", eight_byte_encoded_variable_t,
+                   four_byte_encoded_variable_t)
+{
     string message;
 
     // Test encoding
     string logtype;
-    vector<eight_byte_encoded_variable_t> encoded_vars;
+    vector<TestType> encoded_vars;
     vector<int32_t> dictionary_var_bounds;
-    vector<string> var_strs = {"4938", std::to_string(INT64_MAX), "-25.5196868642755", "-00.00",
-                               "bin/python2.7.3"};
-    message = "here is a string with a small int " + var_strs[0] + " and a very large int " +
-              var_strs[1] + " and a double " + var_strs[2] + " and a weird double " + var_strs[3] +
-              " and a str with numbers " + var_strs[4];
+    vector<string> var_strs = {"4938", std::to_string(INT32_MAX), std::to_string(INT64_MAX),
+                               "0.1", "-25.519686", "-25.5196868642755", "-00.00",
+                               "bin/python2.7.3", "abc123"};
+    size_t var_ix = 0;
+    message = "here is a string with a small int " + var_strs[var_ix++];
+    message += " and a medium int " + var_strs[var_ix++];
+    message += " and a very large int " + var_strs[var_ix++];
+    message += " and a small double " + var_strs[var_ix++];
+    message += " and a medium double " + var_strs[var_ix++];
+    message += " and a weird double " + var_strs[var_ix++];
+    message += " and a string with numbers " + var_strs[var_ix++];
+    message += " and another string with numbers " + var_strs[var_ix++];
     REQUIRE(encode_message(message, logtype, encoded_vars, dictionary_var_bounds));
 
     // Concatenate all dictionary variables
@@ -377,7 +433,7 @@ TEST_CASE("Encoding messages", "[encode-message]") {
         auto end_pos = *current;
         ++current;
         all_dictionary_vars.append(message.data() + begin_pos, message.data() + end_pos);
-        dictionary_var_end_offsets.push_back(end_pos);
+        dictionary_var_end_offsets.push_back(all_dictionary_vars.length());
     }
 
     // Test decoding
@@ -397,8 +453,9 @@ TEST_CASE("Encoding messages", "[encode-message]") {
     REQUIRE(false == encode_message(message, logtype, encoded_vars, dictionary_var_bounds));
 }
 
-TEST_CASE("ffi::wildcard_query_matches_any_encoded_var",
-          "[ffi::wildcard_query_matches_any_encoded_var]")
+TEMPLATE_TEST_CASE("wildcard_query_matches_any_encoded_var",
+          "[ffi][wildcard_query_matches_any_encoded_var]", eight_byte_encoded_variable_t,
+          four_byte_encoded_variable_t)
 {
     string message = "Static text, dictVar1, 123, 456.7, dictVar2, 987, 654.3";
 
