@@ -8,8 +8,7 @@ ADD ./tools/docker-images/clp-env-base-centos7.4/setup-scripts ./tools/docker-im
 RUN mkdir -p ./tools/scripts/lib_install
 ADD ./tools/scripts/lib_install ./tools/scripts/lib_install
 
-RUN ./tools/docker-images/clp-env-base-centos7.4/setup-scripts/install-prebuilt-packages.sh
-RUN ./tools/docker-images/clp-env-base-centos7.4/setup-scripts/install-packages-from-source.sh
+RUN ./tools/scripts/lib_install/centos7.4/install-all.sh
 
 # Set PKG_CONFIG_PATH since CentOS doesn't look in /usr/local by default
 ENV PKG_CONFIG_PATH /usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig

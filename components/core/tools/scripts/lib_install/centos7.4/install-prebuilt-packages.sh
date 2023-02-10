@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 yum install -y \
   bzip2 \
