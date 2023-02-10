@@ -16,6 +16,10 @@ inputs:
     description: "Dockerfile path"
     required: false
     default: ./Dockerfile
+  push_image:
+    description: "Whether to publish the Docker image"
+    required: true
+    default: "false"
 
   token:
     description: "Registry token"
@@ -37,25 +41,12 @@ runs:
       uses: docker/metadata-action@v2
       with:
         images: ${{ env.REGISTRY }}/${{ inputs.image_name }}
-    
-    # Build docker image without pushing on PR
-    - name: Build Docker image
-      uses: docker/build-push-action@v2
-      if: github.event_name == 'pull_request'
-      with:
-        context: ${{inputs.context}}
-        file: ${{inputs.file}}
-        push: false
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v2
-      if: github.event_name != 'pull_request'
       with:
         context: ${{inputs.context}}
         file: ${{inputs.file}}
-        push: true
+        push: ${{inputs.push_image}}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
-

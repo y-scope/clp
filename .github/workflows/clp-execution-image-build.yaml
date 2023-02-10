@@ -2,7 +2,6 @@ name: generate-execution-dependency-image
 
 on:
   push:
-    branches: ['main']
     paths:
       - 'tools/docker-images/clp-execution-base-focal/**'
       - 'components/core/tools/scripts/lib_install/**'
@@ -32,3 +31,4 @@ jobs:
           image_name: ${{env.IMAGE_NAME}}
           file: ./tools/docker-images/clp-execution-base-focal/Dockerfile
           token: ${{secrets.GITHUB_TOKEN}}
+          push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}

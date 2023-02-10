@@ -2,7 +2,6 @@ name: generate-build-dependency-image
 
 on:
   push:
-    branches: ['main']
     paths:
       - 'components/core/tools/docker-images/**'
       - 'components/core/tools/scripts/lib_install/**'
@@ -35,6 +34,7 @@ jobs:
           context: components/core/
           file: components/core/tools/docker-images/clp-env-base-focal/Dockerfile
           token: ${{secrets.GITHUB_TOKEN}}
+          push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
 
   build-ubuntu-bionic:
     runs-on: ubuntu-20.04
@@ -55,6 +55,7 @@ jobs:
           context: components/core/
           file: components/core/tools/docker-images/clp-env-base-bionic/Dockerfile
           token: ${{secrets.GITHUB_TOKEN}}
+          push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
 
   build-centos:
     runs-on: ubuntu-20.04
@@ -75,3 +76,4 @@ jobs:
           context: components/core/
           file: components/core/tools/docker-images/clp-env-base-centos7.4/Dockerfile
           token: ${{secrets.GITHUB_TOKEN}}
+          push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
