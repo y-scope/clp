@@ -2,12 +2,10 @@ name: build-clp-core
 
 on:
   push:
-    branches: [ main ]
     paths:
       - 'components/core/**'
       - '.github/workflows/clp-core-build.yaml'
   pull_request:
-    branches: [ main ]
     paths:
       - 'components/core/**'
       - '.github/workflows/clp-core-build.yaml'
@@ -80,6 +78,7 @@ jobs:
           context: ${{github.workspace}}/binaries
           file: components/core/tools/docker-images/clp-core-focal/Dockerfile
           token: ${{secrets.GITHUB_TOKEN}}
+          push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
 
   build-bionic:
     runs-on: ubuntu-latest
