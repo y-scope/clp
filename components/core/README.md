@@ -57,8 +57,7 @@ See the relevant README for your OS:
 * [Ubuntu 18.04](./tools/scripts/lib_install/ubuntu-bionic/README.md)
 * [Ubuntu 20.04](./tools/scripts/lib_install/ubuntu-focal/README.md)
 
-Want to build natively on an OS not listed here? You can file a [feature request](https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml)
-for us to look into.
+Want to build natively on an OS not listed here? You can file a [feature request](https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml).
 
 #### Docker Environment
 

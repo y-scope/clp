@@ -1,5 +1,5 @@
-These instructions are used to install the dependencies to build CLP. The same
-steps are used by our Docker containers.
+To install the dependencies required to build clp-core, follow the steps below.
+These same steps are used by our Docker containers.
 
 # Installing dependencies
 

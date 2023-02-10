@@ -1,5 +1,5 @@
-These instructions are used to install the dependencies to build CLP. The same 
-steps are used by our Docker containers.
+To install the dependencies required to build clp-core, follow the steps below.
+These same steps are used by our Docker containers.
 
 # Installing dependencies
 
@@ -7,9 +7,9 @@ Before you run any commands below, you should review the scripts to ensure they
 will not install any dependencies you don't expect.
 
 * Install all dependencies:
-  * ⚠ NOTE: The packages built from source are installed (`make install`) 
-    without using a packager, so they need to be manually uninstalled if 
-    necessary.
+  * ⚠ NOTE: The packages built from source (`install-packages-from-source.sh`) 
+    are installed without using a packager. So if you ever need to uninstall 
+    them, you will need to do so manually.
 
   ```bash
   ./install-all.sh
