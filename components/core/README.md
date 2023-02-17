@@ -51,42 +51,13 @@ A handful of packages and libraries are required to build CLP. There are two opt
 
 #### Native Environment
 
-*Packages*
+See the relevant README for your OS:
 
-If you're using apt-get, you can use the following command to install all:
-```shell
-sudo apt-get install -y ca-certificates checkinstall cmake curl build-essential \
-libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev \
-libssl-dev pkg-config rsync zlib1g-dev
-```
+* [CentOS 7.4](./tools/scripts/lib_install/centos7.4/README.md)
+* [Ubuntu 18.04](./tools/scripts/lib_install/ubuntu-bionic/README.md)
+* [Ubuntu 20.04](./tools/scripts/lib_install/ubuntu-focal/README.md)
 
-This will download:
-* ca-certificates
-* checkinstall
-* cmake
-* curl
-* build-essential
-* libboost-filesystem-dev
-* libboost-iostreams-dev
-* libboost-program-options-dev
-* libssl-dev
-* pkg-config
-* rsync
-* zlib1g-dev
-
-*Libraries*
-
-The latest versions of some packages are not offered by apt repositories,
-so we've included some scripts to download, compile, and install them:
-```shell
-./tools/scripts/lib_install/fmtlib.sh 8.0.1
-./tools/scripts/lib_install/libarchive.sh 3.5.1
-./tools/scripts/lib_install/lz4.sh 1.8.2
-./tools/scripts/lib_install/mariadb-connector-c.sh 3.2.3
-./tools/scripts/lib_install/msgpack.sh 5.0.0
-./tools/scripts/lib_install/spdlog.sh 1.9.2
-./tools/scripts/lib_install/zstandard.sh 1.4.9
-```
+Want to build natively on an OS not listed here? You can file a [feature request](https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml).
 
 #### Docker Environment
 

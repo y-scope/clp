@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ./tools/scripts/lib_install/fmtlib.sh 8.0.1
 ./tools/scripts/lib_install/libarchive.sh 3.5.1

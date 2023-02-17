@@ -1,11 +1,4 @@
-#!/bin/bash
-
-# Enable gcc 7
-source /opt/rh/devtoolset-7/enable
-
-# NOTE: cmake and boost must be installed first since the remaining packages depend on them
-./tools/docker-images/clp-env-base-centos7.4/setup-scripts/install-cmake.sh 3.21.2
-./tools/docker-images/clp-env-base-centos7.4/setup-scripts/install-boost.sh 1.76.0
+#!/usr/bin/env bash
 
 ./tools/scripts/lib_install/fmtlib.sh 8.0.1
 ./tools/scripts/lib_install/libarchive.sh 3.5.1
