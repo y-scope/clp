@@ -14,6 +14,8 @@
 
 set(libarchive_LIBNAME "archive")
 
+include(cmake/Modules/FindLibraryDependencies.cmake)
+
 # Run pkg-config
 find_package(PkgConfig)
 pkg_check_modules(libarchive_PKGCONF QUIET "lib${libarchive_LIBNAME}")
@@ -44,10 +46,10 @@ if (LibArchive_LIBRARY)
     set(LibArchive_FOUND ON)
 endif()
 
-include(cmake/Modules/FindLibraryDependencies.cmake)
-FindStaticLibraryDependencies(${libarchive_LIBNAME} libarchive "${libarchive_PKGCONF_STATIC_LIBRARIES}")
-
 if(LibArchive_USE_STATIC_LIBS)
+    FindStaticLibraryDependencies(${libarchive_LIBNAME} libarchive
+                                  "${libarchive_PKGCONF_STATIC_LIBRARIES}")
+
     # Restore original value of CMAKE_FIND_LIBRARY_SUFFIXES
     set(CMAKE_FIND_LIBRARY_SUFFIXES ${libarchive_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
     unset(libarchive_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
@@ -70,7 +72,8 @@ if(NOT TARGET LibArchive::LibArchive)
         if (LibArchive_USE_STATIC_LIBS)
             add_library(LibArchive::LibArchive STATIC IMPORTED)
         else()
-            # NOTE: We use UNKNOWN so that if the user doesn't have the SHARED libraries installed, we can still use the STATIC libraries
+            # NOTE: We use UNKNOWN so that if the user doesn't have the SHARED
+            # libraries installed, we can still use the STATIC libraries
             add_library(LibArchive::LibArchive UNKNOWN IMPORTED)
         endif()
     endif()

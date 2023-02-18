@@ -14,6 +14,8 @@
 
 set(mariadbclient_LIBNAME "mariadb")
 
+include(cmake/Modules/FindLibraryDependencies.cmake)
+
 # Run pkg-config
 find_package(PkgConfig)
 pkg_check_modules(mariadbclient_PKGCONF QUIET "lib${mariadbclient_LIBNAME}")
@@ -44,10 +46,10 @@ if (MariaDBClient_LIBRARY)
     set(MariaDBClient_FOUND ON)
 endif()
 
-include(cmake/Modules/FindLibraryDependencies.cmake)
-FindStaticLibraryDependencies(${mariadbclient_LIBNAME} mariadbclient "${mariadbclient_PKGCONF_STATIC_LIBRARIES}")
-
 if(MariaDBClient_USE_STATIC_LIBS)
+    FindStaticLibraryDependencies(${mariadbclient_LIBNAME} mariadbclient
+                                  "${mariadbclient_PKGCONF_STATIC_LIBRARIES}")
+
     # Restore original value of CMAKE_FIND_LIBRARY_SUFFIXES
     set(CMAKE_FIND_LIBRARY_SUFFIXES ${mariadbclient_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
     unset(mariadbclient_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
@@ -70,7 +72,8 @@ if(NOT TARGET MariaDBClient::MariaDBClient)
         if (MariaDBClient_USE_STATIC_LIBS)
             add_library(MariaDBClient::MariaDBClient STATIC IMPORTED)
         else()
-            # NOTE: We use UNKNOWN so that if the user doesn't have the SHARED libraries installed, we can still use the STATIC libraries
+            # NOTE: We use UNKNOWN so that if the user doesn't have the SHARED
+            # libraries installed, we can still use the STATIC libraries
             add_library(MariaDBClient::MariaDBClient UNKNOWN IMPORTED)
         endif()
     endif()

@@ -13,6 +13,8 @@
 
 set(zstd_LIBNAME "zstd")
 
+include(cmake/Modules/FindLibraryDependencies.cmake)
+
 # Run pkg-config
 find_package(PkgConfig)
 pkg_check_modules(zstd_PKGCONF QUIET lib${zstd_LIBNAME})
@@ -43,10 +45,9 @@ if (ZStd_LIBRARY)
     set(ZStd_FOUND ON)
 endif()
 
-include(cmake/Modules/FindLibraryDependencies.cmake)
-FindStaticLibraryDependencies(${zstd_LIBNAME} zstd "${zstd_PKGCONF_STATIC_LIBRARIES}")
-
 if(ZStd_USE_STATIC_LIBS)
+    FindStaticLibraryDependencies(${zstd_LIBNAME} zstd "${zstd_PKGCONF_STATIC_LIBRARIES}")
+
     # Restore original value of CMAKE_FIND_LIBRARY_SUFFIXES
     set(CMAKE_FIND_LIBRARY_SUFFIXES ${zstd_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
     unset(zstd_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
@@ -72,7 +73,8 @@ if(NOT TARGET ZStd::ZStd)
         if (ZStd_USE_STATIC_LIBS)
             add_library(ZStd::ZStd STATIC IMPORTED)
         else()
-            # NOTE: We use UNKNOWN so that if the user doesn't have the SHARED libraries installed, we can still use the STATIC libraries
+            # NOTE: We use UNKNOWN so that if the user doesn't have the SHARED
+            # libraries installed, we can still use the STATIC libraries
             add_library(ZStd::ZStd UNKNOWN IMPORTED)
         endif()
     endif()
