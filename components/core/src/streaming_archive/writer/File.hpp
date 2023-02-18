@@ -49,7 +49,6 @@ namespace streaming_archive::writer {
                 m_segment_id(cInvalidSegmentId),
                 m_is_split(split_ix > 0),
                 m_split_ix(split_ix),
-                m_uncompressed_file_size(0),
                 m_is_metadata_clean(false),
                 m_is_written_out(false),
                 m_is_open(false)
@@ -103,11 +102,6 @@ namespace streaming_archive::writer {
          */
         group_id_t get_group_id () const { return m_group_id; };
 
-        // Haiqi TODO: this is only needed by GLT.
-        // May need to come up with a better way to deal with it.
-        size_t get_uncompressed_file_size () const {
-            return m_uncompressed_file_size;
-        }
         /**
          * Tests if file's current metadata is dirty
          * @return
@@ -161,7 +155,6 @@ namespace streaming_archive::writer {
 
         group_id_t m_group_id;
 
-        size_t m_uncompressed_file_size;
         uint64_t m_num_uncompressed_bytes;
 
         uint64_t m_num_messages;

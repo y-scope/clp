@@ -16,8 +16,7 @@ namespace streaming_archive::writer {
         m_metadata_db = std::make_unique<GLTMetadataDB>();
     }
 
-    void GLTArchive::open (const UserConfig& user_config) {
-        Archive::open(user_config);
+    void GLTArchive::open_derived (const UserConfig& user_config) {
         m_table_threshold = user_config.table_threshold;
         // Save file_id to file name mapping to disk
         std::string file_id_file_path = m_path + '/' + cFileNameDictFilename;
@@ -197,6 +196,9 @@ namespace streaming_archive::writer {
         if (m_file == nullptr) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
+        // Haiqi TODO: this open logic is counter intuitive for glt_segment
+        // because the open happens after file content gets appended
+        // to m_glt_segment.
         if (!m_message_order_table.is_open()) {
             m_glt_segment.open(m_segments_dir_path, m_next_segment_id,
                                m_compression_level, m_table_threshold);
@@ -219,9 +221,8 @@ namespace streaming_archive::writer {
                                                       ArrayBackedPosIntSet<logtype_dictionary_id_t>& logtype_ids_in_segment,
                                                       ArrayBackedPosIntSet<variable_dictionary_id_t>& var_ids_in_segment,
                                                       std::vector<File*>& files_in_segment) {
-        size_t file_uncompressed_size = m_file->get_uncompressed_file_size();
+
         m_file->append_to_segment(m_logtype_dict, segment);
-        glt_segment.increment_uncompressed_size(file_uncompressed_size);
         files_in_segment.emplace_back(m_file);
 
         // Close current segment if its uncompressed size is greater than the target

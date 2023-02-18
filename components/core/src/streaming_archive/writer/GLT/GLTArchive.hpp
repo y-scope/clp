@@ -10,10 +10,12 @@
 namespace streaming_archive::writer {
     class GLTArchive : public Archive {
     public:
+
+        // Constructors
         GLTArchive ();
 
-        void open (const UserConfig& user_config) override;
-
+        // Methods
+        void open_derived(const UserConfig& user_config) override;
         void close_derived () override;
 
         void create_and_open_file (const std::string& path, group_id_t group_id,
@@ -32,7 +34,7 @@ namespace streaming_archive::writer {
         size_t get_stable_size () const override;
 
         /**
-         * Closes a given segment, persists the metadata of the files in the segment, and cleans up any data remaining outside the segment
+         * Closes a given segment, persists the metadata of the files in the segment
          * @param segment
          * @param files
          * @param segment_logtype_ids
@@ -50,7 +52,7 @@ namespace streaming_archive::writer {
 
         // Methods
         /**
-         * Appends the content of the current encoded file to the given segment
+         * Appends the message order table of the current encoded file to the given segment
          * @param segment
          * @param logtype_ids_in_segment
          * @param var_ids_in_segment

@@ -27,11 +27,10 @@ namespace streaming_archive::writer {
         m_segment_path += std::to_string(m_id);
         m_table_threshold = threshold;
         m_compression_level = compression_level;
-        m_compressed_size = 0;
-        m_uncompressed_size = 0;
     }
 
     void GLTSegment::close () {
+        m_uncompressed_size = 0;
         compress_logtype_tables_to_disk();
         m_segment_path.clear();
     }
@@ -299,10 +298,6 @@ namespace streaming_archive::writer {
 #endif
     }
 
-    void GLTSegment::increment_uncompressed_size (size_t file_size) {
-        m_uncompressed_size += file_size;
-    }
-
     // return the offset of the row
     size_t GLTSegment::append_var_to_segment (logtype_dictionary_id_t logtype_id,
                                               epochtime_t timestamp,
@@ -312,9 +307,12 @@ namespace streaming_archive::writer {
             m_logtype_variables.emplace(logtype_id, encoded_vars.size());
         }
         auto iter = m_logtype_variables.find(logtype_id);
-        // Here, say if there are already 3 rows, then the next offset start at index 3
+        // Offset start from 0. so current_offsert = num_rows - 1
+        // and the offset after insertion is num_rows
         size_t offset = iter->second.get_num_rows();
-        iter->second.append_to_variable_segment(timestamp, file_id, encoded_vars);
+        iter->second.append_to_table(timestamp, file_id, encoded_vars);
+
+        m_uncompressed_size += sizeof(epochtime_t) + sizeof(file_id_t) + sizeof(encoded_variable_t) * encoded_vars.size();
         return offset;
     }
 

@@ -1,6 +1,7 @@
 #include "GLTFile.hpp"
 
 namespace streaming_archive::writer {
+
     void GLTFile::open_derived () {
         m_logtypes = std::make_unique<PageAllocatedVector<logtype_dictionary_id_t>>();
         m_offset = std::make_unique<PageAllocatedVector<size_t>>();
@@ -27,7 +28,6 @@ namespace streaming_archive::writer {
         m_logtypes.reset(nullptr);
         m_offset.reset(nullptr);
         m_logtype_id_occurance.clear();
-        m_uncompressed_file_size = 0;
     }
 
     void GLTFile::write_encoded_msg (epochtime_t timestamp, logtype_dictionary_id_t logtype_id,
@@ -41,9 +41,6 @@ namespace streaming_archive::writer {
         } else {
             m_offset->push_back(0);
         }
-        // increase the size by logtype table's data size.
-        m_uncompressed_file_size +=
-                sizeof(epochtime_t) + sizeof(file_id_t) + sizeof(encoded_variable_t) * num_vars ;
 
         // Update metadata
         ++m_num_messages;

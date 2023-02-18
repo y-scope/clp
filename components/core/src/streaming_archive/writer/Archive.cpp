@@ -170,10 +170,15 @@ namespace streaming_archive::writer {
         }
 
         m_path = archive_path_string;
+
+        // call open method on derived class
+        open_derived(user_config);
+
     }
 
     void Archive::close () {
 
+        // call close method on derived class
         close_derived();
         // The file should have been closed and persisted before closing the archive.
         if (m_file != nullptr) {

@@ -27,8 +27,8 @@ namespace streaming_archive::writer {
          * @param file_id
          * @param encoded_vars
          */
-        void append_to_variable_segment (epochtime_t timestamp, file_id_t file_id,
-                                         const std::vector<encoded_variable_t>& encoded_vars);
+        void append_to_table (epochtime_t timestamp, file_id_t file_id,
+                              const std::vector<encoded_variable_t>& encoded_vars);
 
         size_t get_num_rows () const { return m_num_rows; }
 

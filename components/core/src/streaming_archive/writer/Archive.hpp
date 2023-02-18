@@ -84,7 +84,13 @@ namespace streaming_archive::writer {
          * @throw streaming_archive::writer::Archive::OperationFailed if archive already exists, if it could not be stat-ed,
          * if the directory structure could not be created, if the file is not reset or problems with metadata.
          */
-        virtual void open (const UserConfig& user_config);
+        void open (const UserConfig& user_config);
+        /**
+         * Call open from derived class to create its own directory structure and initialize its own class variables
+         * @param user_config Settings configurable by the user
+         * @throw Same as defined in derived class
+         */
+        virtual void open_derived(const UserConfig& user_config) = 0;
         /**
          * Writes a final snapshot of the archive, closes all open files, and closes the dictionaries
          * @throw FileWriter::OperationFailed if any writer could not be closed
@@ -94,7 +100,10 @@ namespace streaming_archive::writer {
          * @throw Same as streaming_archive::writer::Archive::write_dir_snapshot
          */
         void close ();
-
+        /**
+         * Closes the data structure in the derived class and writes its snapshot
+         * @throw Same as defined in derived class
+         */
         virtual void close_derived() = 0;
 
         /**

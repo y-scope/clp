@@ -9,8 +9,12 @@
 namespace streaming_archive::writer {
     class CLPArchive : public Archive {
     public:
+
+        // Constructors
         CLPArchive ();
 
+        // Methods
+        void open_derived(const UserConfig& user_config) override {}
         void close_derived () override;
 
         void create_and_open_file (const std::string& path, group_id_t group_id,
@@ -25,7 +29,6 @@ namespace streaming_archive::writer {
                                      bool has_timestamp) override;
 
         void append_file_to_segment () override;
-        // Methods
         /**
          * Appends the content of the current encoded file to the given segment
          * @param segment
