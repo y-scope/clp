@@ -42,7 +42,7 @@ namespace streaming_archive::writer {
         std::unique_ptr<PageAllocatedVector<logtype_dictionary_id_t>> m_logtypes;
         std::unique_ptr<PageAllocatedVector<size_t>> m_offset;
 
-        // for keeping the logtype ids that has appeared
+        // for keeping the logtype ids that has appeared once in the file
         std::set<logtype_dictionary_id_t> m_logtype_id_occurance;
 
         // metadata

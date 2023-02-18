@@ -49,8 +49,6 @@ namespace streaming_archive::writer {
                 m_segment_id(cInvalidSegmentId),
                 m_is_split(split_ix > 0),
                 m_split_ix(split_ix),
-                m_is_metadata_clean(false),
-                m_is_written_out(false),
                 m_is_open(false)
         {}
 
@@ -101,16 +99,6 @@ namespace streaming_archive::writer {
          * @return The compression group ID
          */
         group_id_t get_group_id () const { return m_group_id; };
-
-        /**
-         * Tests if file's current metadata is dirty
-         * @return
-         */
-        bool is_metadata_dirty () const;
-        /**
-         * Marks the file's metadata as clean
-         */
-        void mark_metadata_as_clean ();
 
         void set_is_split (bool is_split) { m_is_split = is_split; }
 
@@ -165,8 +153,6 @@ namespace streaming_archive::writer {
         size_t m_split_ix;
 
         // State variables
-        bool m_is_metadata_clean;
-        bool m_is_written_out;
         bool m_is_open;
     };
 }

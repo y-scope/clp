@@ -21,8 +21,8 @@ namespace streaming_archive::writer {
         if (m_file != nullptr) {
             throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
         }
-        m_clp_file_ptr = new CLPFile(m_uuid_generator(), orig_file_id, path, group_id, split_ix);
-        m_file = m_clp_file_ptr;
+        m_clp_file = new CLPFile(m_uuid_generator(), orig_file_id, path, group_id, split_ix);
+        m_file = m_clp_file;
         m_file->open();
         std::string file_name_to_write = path + '\n';
     }
@@ -47,7 +47,7 @@ namespace streaming_archive::writer {
         logtype_dictionary_id_t logtype_id;
         m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
 
-        m_clp_file_ptr->write_encoded_msg(timestamp, logtype_id, encoded_vars, var_ids, num_uncompressed_bytes);
+        m_clp_file->write_encoded_msg(timestamp, logtype_id, encoded_vars, var_ids, num_uncompressed_bytes);
 
         // Update segment indices
         m_logtype_ids_in_segment.insert(logtype_id);
@@ -151,7 +151,7 @@ namespace streaming_archive::writer {
         if (!m_logtype_dict_entry.get_value().empty()) {
             logtype_dictionary_id_t logtype_id;
             m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
-            m_clp_file_ptr->write_encoded_msg(timestamp, logtype_id, m_encoded_vars, m_var_ids, num_uncompressed_bytes);
+            m_clp_file->write_encoded_msg(timestamp, logtype_id, m_encoded_vars, m_var_ids, num_uncompressed_bytes);
 
             // Update segment indices
             m_logtype_ids_in_segment.insert(logtype_id);

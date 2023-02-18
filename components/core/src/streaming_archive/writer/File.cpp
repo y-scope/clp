@@ -10,7 +10,7 @@ using std::vector;
 
 namespace streaming_archive::writer {
     void File::open () {
-        if (m_is_written_out) {
+        if (m_is_open) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
         m_is_open = true;
@@ -23,15 +23,6 @@ namespace streaming_archive::writer {
         } else {
             m_timestamp_patterns.emplace_back(m_num_messages, *pattern);
         }
-        m_is_metadata_clean = false;
-    }
-
-    bool File::is_metadata_dirty () const {
-        return !m_is_metadata_clean;
-    }
-
-    void File::mark_metadata_as_clean () {
-        m_is_metadata_clean = true;
     }
 
     string File::get_encoded_timestamp_patterns () const {

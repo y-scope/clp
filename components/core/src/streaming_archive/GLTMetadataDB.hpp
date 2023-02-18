@@ -30,6 +30,7 @@ namespace streaming_archive {
             size_t get_segment_offset_pos () const;
         };
 
+        // Methods
         virtual std::unique_ptr<FileIterator> get_file_iterator (epochtime_t begin_ts, epochtime_t end_ts, const std::string& file_path, bool in_specific_segment,
                                                                  segment_id_t segment_id)
         {
@@ -44,7 +45,7 @@ namespace streaming_archive {
             Length,
         };
 
-
+        // Methods
         size_t get_field_size() override { return enum_to_underlying_type(GLTFilesTableFieldIndexes::Length); }
         void add_storage_specific_field_names_and_types(std::vector<std::pair<std::string, std::string>>& file_field_names_and_types) override;
         void add_storage_specific_fields(std::vector<std::string>& field_names) override;

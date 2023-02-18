@@ -256,11 +256,6 @@ namespace streaming_archive::writer {
         m_metadata_db->update_files(files);
 
         m_global_metadata_db->update_metadata_for_files(m_id_as_string, files);
-
-        // Mark files' metadata as clean
-        for (auto file : files) {
-            file->mark_metadata_as_clean();
-        }
     }
 
     void Archive::add_empty_directories (const vector<string>& empty_directory_paths) {

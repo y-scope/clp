@@ -16,7 +16,6 @@ namespace streaming_archive::writer {
         m_segment_timestamps_pos = segment_timestamps_uncompressed_pos;
         m_segment_logtypes_pos = segment_logtypes_uncompressed_pos;
         m_segment_variables_pos = segment_variables_uncompressed_pos;
-        m_is_metadata_clean = false;
     }
 
     void CLPFile::append_to_segment (const LogTypeDictionaryWriter& logtype_dict,
@@ -39,8 +38,7 @@ namespace streaming_archive::writer {
                              segment_logtypes_uncompressed_pos,
                              segment_variables_uncompressed_pos);
 
-        // Mark file as written out and clear in-memory columns and clear the in-memory data (except metadata)
-        m_is_written_out = true;
+        // clear in-memory columns
         m_timestamps.reset(nullptr);
         m_logtypes.reset(nullptr);
         m_variables.reset(nullptr);
@@ -67,6 +65,5 @@ namespace streaming_archive::writer {
         }
 
         m_num_uncompressed_bytes += num_uncompressed_bytes;
-        m_is_metadata_clean = false;
     }
 }

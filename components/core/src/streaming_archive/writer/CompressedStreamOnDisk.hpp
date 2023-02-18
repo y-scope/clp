@@ -15,7 +15,8 @@
 
 namespace streaming_archive { namespace writer {
     /**
-     * Class for writing segments. A segment is a container for multiple compressed buffers that itself may be further compressed and then stored on disk.
+     * Class for writing compressed stream. A compressed stream is a container for multiple compressed buffers
+     * that itself may be further compressed and then stored on disk.
      */
     class CompressedStreamOnDisk {
     public:
@@ -27,7 +28,7 @@ namespace streaming_archive { namespace writer {
 
             // Methods
             const char* what () const noexcept override {
-                return "streaming_archive::writer::Segment operation failed";
+                return "streaming_archive::writer::CompressedStreamOnDisk operation failed";
             }
         };
 

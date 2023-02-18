@@ -23,8 +23,7 @@ namespace streaming_archive::writer {
         set_segment_metadata(segment.get_id(), segment_logtypes_uncompressed_pos,
                              segment_offset_uncompressed_pos);
 
-        // Mark file as written out and clear in-memory columns and clear the in-memory data (except metadata)
-        m_is_written_out = true;
+        // clear in-memory columns
         m_logtypes.reset(nullptr);
         m_offset.reset(nullptr);
         m_logtype_id_occurance.clear();
@@ -35,6 +34,10 @@ namespace streaming_archive::writer {
                                      const std::vector<variable_dictionary_id_t>& var_ids,
                                      size_t num_uncompressed_bytes, size_t num_vars) {
         m_logtypes->push_back(logtype_id);
+        // For each file, the offset is only needed for a
+        // logtype's first occurrence. else set to 0
+        // Haiqi TODO: create a separate id->first_offset map
+        // per file to avoid storing duplicated 0
         if (m_logtype_id_occurance.count(logtype_id) == 0) {
             m_logtype_id_occurance.insert(logtype_id);
             m_offset->push_back(vars_offset);
@@ -54,7 +57,6 @@ namespace streaming_archive::writer {
         }
 
         m_num_uncompressed_bytes += num_uncompressed_bytes;
-        m_is_metadata_clean = false;
     }
 
     void GLTFile::set_segment_metadata (segment_id_t segment_id,
@@ -63,6 +65,5 @@ namespace streaming_archive::writer {
         m_segment_id = segment_id;
         m_segment_logtypes_pos = segment_logtypes_uncompressed_pos;
         m_segment_offset_pos = segment_offset_uncompressed_pos;
-        m_is_metadata_clean = false;
     }
 }

@@ -346,6 +346,11 @@ namespace streaming_archive {
      *  Haiqi TODO: temporary placeholders for functions. After the change
      *  is complete, those functions should be pure virtual
      */
+
+    size_t MetadataDB::get_field_size () {
+        return enum_to_underlying_type(FilesTableFieldIndexes::Length);
+    }
+
     void MetadataDB::add_storage_specific_field_names_and_types(std::vector<std::pair<std::string, std::string>>& file_field_names_and_types) {
         return;
     }

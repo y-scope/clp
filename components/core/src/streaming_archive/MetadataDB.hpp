@@ -138,8 +138,8 @@ namespace streaming_archive {
         SQLitePreparedStatement get_files_select_statement (SQLiteDB& db, epochtime_t ts_begin, epochtime_t ts_end, const std::string& file_path, bool in_specific_segment, segment_id_t segment_id);
 
     protected:
-
-        virtual size_t get_field_size() { return enum_to_underlying_type(FilesTableFieldIndexes::Length); }
+        // Methods
+        virtual size_t get_field_size();
         virtual void add_storage_specific_fields(std::vector<std::string>& field_names);
         virtual void bind_storage_specific_fields(writer::File*);
         virtual void add_storage_specific_field_names_and_types(std::vector<std::pair<std::string, std::string>>& file_field_names_and_types);

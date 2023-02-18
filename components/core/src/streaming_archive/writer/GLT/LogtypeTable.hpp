@@ -9,16 +9,35 @@
 #include "../../../ErrorCode.hpp"
 #include "../../../PageAllocatedVector.hpp"
 
-// This class caches all variable rows of a specific logtype in the memory for later writing.
-// During compression, both File and CompressedStreamOnDisk own a LogtypeTable for each logtype.
-// The variable row is first stored into the File's VariableSegmentWriter. Upon file closure, the
-// Variable row will then be copied from File to CompressedStreamOnDisk. The design is because while processing a file,
-// we don't know if the file has timestamps hence we don't know which segment to insert variable rows into.
-// Idea: maybe I want to create two classes. the wrap around the LogtypeTable class, for File adn segment Class
 namespace streaming_archive::writer {
+    /**
+     * Class for writing a Logtype Table. A LogtypeTable is a container for all messages belonging to a single
+     * logtype. The table is arranged in a column-orientated manner where each column represents a variable
+     * column from all messages of the logtype, plus timestamp and file_id column
+     */
     class LogtypeTable {
     public:
+        // Types
+        class OperationFailed : public TraceableException {
+        public:
+            // Constructors
+            OperationFailed (ErrorCode error_code, const char* const filename, int line_number)
+                    : TraceableException(error_code, filename, line_number) {}
 
+            // Methods
+            const char* what () const noexcept override {
+                return "streaming_archive::writer::LogtypeTable operation failed";
+            }
+        };
+
+        // Constructor
+        /**
+         * Initialize the logtype table for a logtype
+         * with num_columns variables
+         * @param timestamp
+         * @param file_id
+         * @param encoded_vars
+         */
         LogtypeTable (size_t num_columns);
 
         /**
@@ -41,7 +60,7 @@ namespace streaming_archive::writer {
         const std::vector<file_id_t>& get_file_ids () const { return m_file_ids; }
 
     private:
-        // Number of columns for the given logtype
+        // Variables
         size_t m_num_columns;
         size_t m_num_rows;
         std::vector<std::vector<encoded_variable_t>> m_variables;

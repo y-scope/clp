@@ -50,8 +50,8 @@ namespace streaming_archive::writer {
         if (m_file != nullptr) {
             throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
         }
-        m_glt_file_ptr = new GLTFile(m_uuid_generator(), orig_file_id, path, group_id, split_ix);
-        m_file = m_glt_file_ptr;
+        m_glt_file = new GLTFile(m_uuid_generator(), orig_file_id, path, group_id, split_ix);
+        m_file = m_glt_file;
         m_file->open();
         std::string file_name_to_write = path + '\n';
         m_filename_dict_writer.write(file_name_to_write.c_str(), file_name_to_write.size());
@@ -67,13 +67,12 @@ namespace streaming_archive::writer {
                                                                  var_ids);
         logtype_dictionary_id_t logtype_id;
         m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
-        size_t vars_offset = m_glt_segment.append_var_to_segment(
-                logtype_id, timestamp, m_file_id, encoded_vars);
+        size_t offset = m_glt_segment.append_to_segment(logtype_id, timestamp, m_file_id, encoded_vars);
         // Issue: the offset of var_segments is per file based. However, we still need to add the offset of segments.
         // the offset of segment is not known because we don't know if the segment should be timestamped...
         // Here for simplicity, we add the segment offset back when we close the file
-        m_glt_file_ptr->write_encoded_msg(timestamp, logtype_id, vars_offset, var_ids,
-                                          num_uncompressed_bytes, encoded_vars.size());
+        m_glt_file->write_encoded_msg(timestamp, logtype_id, offset, var_ids,
+                                      num_uncompressed_bytes, encoded_vars.size());
         // Update segment indices
         m_logtype_ids_in_segment.insert(logtype_id);
         m_var_ids_in_segment.insert_all(var_ids);
@@ -181,10 +180,10 @@ namespace streaming_archive::writer {
         if (!m_logtype_dict_entry.get_value().empty()) {
             logtype_dictionary_id_t logtype_id;
             m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
-            size_t vars_offset = m_glt_segment.append_var_to_segment(
+            size_t offset = m_glt_segment.append_to_segment(
                     logtype_id, timestamp, m_file_id, m_encoded_vars);
-            m_glt_file_ptr->write_encoded_msg(timestamp, logtype_id, vars_offset, m_var_ids,
-                                              num_uncompressed_bytes, m_encoded_vars.size());
+            m_glt_file->write_encoded_msg(timestamp, logtype_id, offset, m_var_ids,
+                                          num_uncompressed_bytes, m_encoded_vars.size());
 
             // Update segment indices
             m_logtype_ids_in_segment.insert(logtype_id);

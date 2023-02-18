@@ -133,7 +133,7 @@ namespace streaming_archive::writer {
          */
         void change_ts_pattern (const TimestampPattern* pattern);
         /**
-         * Encodes and writes a message to the current encoded file
+         * Encodes and writes a message to the current encoded file or segment
          * @param timestamp
          * @param message
          * @param num_uncompressed_bytes
@@ -142,7 +142,7 @@ namespace streaming_archive::writer {
         virtual void write_msg (epochtime_t timestamp, const std::string& message, size_t num_uncompressed_bytes) = 0;
 
         /**
-         * Encodes and writes a message to the given file using schema file
+         * Encodes and writes a message to the given file or segment using schema file
          * @param file
          * @param uncompressed_msg
          * @param uncompressed_msg_pos

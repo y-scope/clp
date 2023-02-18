@@ -57,7 +57,7 @@ namespace streaming_archive::writer {
 
     private:
         CompressedStreamOnDisk m_clp_segment;
-        CLPFile* m_clp_file_ptr;
+        CLPFile* m_clp_file;
     };
 };
 #endif //STREAMING_ARCHIVE_CLP_ARCHIVE_HPP

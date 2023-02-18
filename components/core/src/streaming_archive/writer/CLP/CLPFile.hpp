@@ -7,6 +7,7 @@
 namespace streaming_archive::writer {
     class CLPFile : public File {
     public:
+        // Constructor
         CLPFile (const boost::uuids::uuid& id, const boost::uuids::uuid& orig_file_id,
                  const std::string& orig_log_path, group_id_t group_id, size_t split_ix) :
                     File(id, orig_file_id, orig_log_path, group_id, split_ix),
@@ -15,6 +16,7 @@ namespace streaming_archive::writer {
                     m_segment_variables_pos(0)
         {}
 
+        // Method
         void open_derived () override;
 
         void append_to_segment (const LogTypeDictionaryWriter& logtype_dict,

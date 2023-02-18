@@ -65,12 +65,12 @@ namespace streaming_archive::writer {
                                          std::vector<File*>& files_in_segment);
 
         double m_table_threshold;
-        // temporarily hack for testing. need to be removed after file id is integrated
+        // TODO: remove this after file id is integrated
         // into the database schema
         FileWriter m_filename_dict_writer;
 
         GLTSegment m_glt_segment;
-        GLTFile* m_glt_file_ptr;
+        GLTFile* m_glt_file;
         CompressedStreamOnDisk m_message_order_table;
 
     };

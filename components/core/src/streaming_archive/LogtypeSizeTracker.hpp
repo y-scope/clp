@@ -15,7 +15,7 @@ namespace streaming_archive::glt {
      * When two table has the same size, they are ordered base on logtype ID
      */
     public:
-
+        // Methods
         size_t get_size() const {
             return m_size;
         }
@@ -59,6 +59,7 @@ namespace streaming_archive::glt {
             this->m_logtype_id = logtype_id;
         }
     private:
+        // Variables
         size_t m_size;
         logtype_dictionary_id_t m_logtype_id;
     };

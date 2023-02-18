@@ -12,6 +12,9 @@
 
 namespace streaming_archive::writer {
     class GLTSegment {
+        /**
+         * Class representing a GLT segment. The segment maintains a collection in-memory logtype tables
+         */
     public:
         // Types
         class OperationFailed : public TraceableException {
@@ -42,37 +45,64 @@ namespace streaming_archive::writer {
         // Destructor
         ~GLTSegment ();
 
-        void open (const std::string& segments_dir_path, segment_id_t id, int compression_level,
-                   double threshold);
+        /**
+         * Open and create the GLT segment on disk specified by segments_dir_path and id.
+         * Also sets the size threshold of combining small logtype tables
+         * @param segments_dir_path
+         * @param id
+         * @param compression_level
+         * @param threshold
+         */
+        void open (const std::string& segments_dir_path, segment_id_t id, int compression_level, double threshold);
 
-        bool is_open () const;
-
+        /**
+         * Close the segment and flush all logtype tables onto the disk
+         */
         void close ();
 
-        size_t append_var_to_segment (logtype_dictionary_id_t logtype_id, epochtime_t timestamp,
-                                      file_id_t file_id,
-                                      const std::vector<encoded_variable_t>& encoded_vars);
-
+        bool is_open () const;
         uint64_t get_uncompressed_size ();
-
         size_t get_compressed_size ();
 
-        void increment_uncompressed_size (size_t file_size);
+        size_t append_to_segment (logtype_dictionary_id_t logtype_id, epochtime_t timestamp,
+                                  file_id_t file_id, const std::vector<encoded_variable_t>& encoded_vars);
 
     private:
 
+        // Method
         void open_single_table_compressor ();
         void open_combined_table_compressor ();
         void open_metadata_compressor ();
 
-        void write_single_logtype (logtype_dictionary_id_t logtype_id,
-                                   const LogtypeTable& m_logtype_variables);
-
-        void write_accumulated_logtype (const std::vector<logtype_dictionary_id_t>& accumulated_logtype,
-                                        combined_table_id_t& combined_table_id,
-                                        std::map<size_t, CombinedTableInfo>& combined_tables_info);
-
+        /**
+         * Compresses and stores all in-memory logtype tables onto the disk
+         * The function calculates the total size of all logtype tables, and use the
+         * threshold to decide which logtype tables should be combined into a conbined-table.
+         * All logtype tables will be stored in the order of Descending size. They
+         * are compressed separately but stored in a single on-disk file to minimize
+         * disk-io overhead.
+         */
         void compress_logtype_tables_to_disk ();
+
+        /**
+         * Compresses and stores a logtype tagle with given ID as a single logtype table.
+         * i.e. each variable column is compressed individually
+         * @param logtype_id
+         */
+        void write_single_logtype (logtype_dictionary_id_t logtype_id);
+
+        /**
+         * Compresses and stores a set of small logtype table as a single combined table
+         * i.e. All tables are combined and compressed together as a single compression stream.
+         * Return the combined table id and size by reference.
+         * @param accumulated_logtype
+         * @param combined_table_id
+         * @param combined_tables_info
+         */
+        void write_combined_logtype (const std::vector<logtype_dictionary_id_t>& accumulated_logtype,
+                                     combined_table_id_t combined_table_id,
+                                     std::map<combined_table_id_t, CombinedTableInfo>& combined_tables_info);
+
 
         uint64_t m_uncompressed_size;
         uint64_t m_compressed_size;
