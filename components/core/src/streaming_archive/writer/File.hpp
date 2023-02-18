@@ -103,7 +103,7 @@ namespace streaming_archive::writer {
          */
         group_id_t get_group_id () const { return m_group_id; };
 
-        // Haiqi: TODO this is only needed by GLT.
+        // Haiqi TODO: this is only needed by GLT.
         // May need to come up with a better way to deal with it.
         size_t get_uncompressed_file_size () const {
             return m_uncompressed_file_size;

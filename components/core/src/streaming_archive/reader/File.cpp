@@ -77,8 +77,7 @@ namespace streaming_archive::reader {
         m_num_variables = file_metadata_ix.get_num_variables();
 
         m_segment_id = file_metadata_ix.get_segment_id();
-        // Haiqi: TODO: this change is temporary just to make clp build but doesn't
-        // let clp decompressed properly
+        // Haiqi: TODO: this change is temporary
         CLPMetadataDB::CLPFileIterator* clp_file_metadata_ix = dynamic_cast<CLPMetadataDB::CLPFileIterator*> (&file_metadata_ix);
         m_segment_timestamps_decompressed_stream_pos = clp_file_metadata_ix->get_segment_timestamps_pos();
         m_segment_logtypes_decompressed_stream_pos = clp_file_metadata_ix->get_segment_logtypes_pos();

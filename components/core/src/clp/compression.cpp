@@ -17,6 +17,7 @@
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
 #include "../streaming_archive/writer/CLP/CLPArchive.hpp"
+#include "../streaming_archive/writer/GLT/GLTArchive.hpp"
 #include "../Utils.hpp"
 #include "FileCompressor.hpp"
 #include "utils.hpp"
@@ -100,7 +101,7 @@ namespace clp {
         // Open Archive
         unique_ptr<streaming_archive::writer::Archive> archive_writer;
         if (command_line_args.use_glt()) {
-            //archive_writer_ptr = std::make_unique<streaming_archive::writer::GLTArchive>();
+            archive_writer = std::make_unique<streaming_archive::writer::GLTArchive>();
         } else {
             archive_writer = std::make_unique<streaming_archive::writer::CLPArchive>();
         }

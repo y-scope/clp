@@ -1,0 +1,20 @@
+#include "LogtypeTable.hpp"
+
+namespace streaming_archive::writer {
+    LogtypeTable::LogtypeTable (size_t num_columns) {
+        m_num_columns = num_columns;
+        m_variables.resize(num_columns);
+        m_num_rows = 0;
+    }
+
+    void LogtypeTable::append_to_variable_segment (epochtime_t timestamp, file_id_t file_id,
+                                                   const std::vector<encoded_variable_t>& encoded_vars) {
+        assert(encoded_vars.size() == m_num_columns);
+        m_num_rows++;
+        for (size_t index = 0; index < m_num_columns; index++) {
+            m_variables[index].push_back(encoded_vars[index]);
+        }
+        m_timestamp.push_back(timestamp);
+        m_file_ids.push_back(file_id);
+    }
+}
