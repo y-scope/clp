@@ -10,10 +10,14 @@ namespace streaming_archive {
     constexpr char cSegmentListFilename[] = "segment_list.txt";
     constexpr char cLogTypeDictFilename[] = "logtype.dict";
     constexpr char cVarDictFilename[] = "var.dict";
+    constexpr char cFileNameDictFilename[] = "filename.dict";
     constexpr char cLogTypeSegmentIndexFilename[] = "logtype.segindex";
     constexpr char cVarSegmentIndexFilename[] = "var.segindex";
     constexpr char cMetadataFileName[] = "metadata";
     constexpr char cMetadataDBFileName[] = "metadata.db";
+    constexpr char cVarSegmentFileName[] = "variable_segments";
+    constexpr char cVarMetadataFileName[] = "metadata";
+    constexpr char cVariablesFileExtension[] = ".var";
     constexpr char cSchemaFileName[] = "schema.txt";
 
     namespace cMetadataDB {
@@ -41,13 +45,26 @@ namespace streaming_archive {
             constexpr char IsSplit[] = "is_split";
             constexpr char SplitIx[] = "split_ix";
             constexpr char SegmentId[] = "segment_id";
+            constexpr char ArchiveId[] = "archive_id";
+        }
+        namespace GLTFile {
+            constexpr char SegmentLogtypesPosition[] = "segment_logtypes_position";
+            constexpr char SegmentOffsetPosition[] = "segment_offset_position";
+        }
+        namespace CLPFile {
             constexpr char SegmentTimestampsPosition[] = "segment_timestamps_position";
             constexpr char SegmentLogtypesPosition[] = "segment_logtypes_position";
             constexpr char SegmentVariablesPosition[] = "segment_variables_position";
-            constexpr char ArchiveId[] = "archive_id";
         }
         namespace EmptyDirectory {
             constexpr char Path[] = "path";
+        }
+    }
+
+    namespace GLT {
+        namespace LogtypeTableType {
+            constexpr uint64_t NonCombined = 0;
+            constexpr uint64_t Combined = 1;
         }
     }
 }

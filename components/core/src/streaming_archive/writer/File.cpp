@@ -8,59 +8,13 @@ using std::to_string;
 using std::unordered_set;
 using std::vector;
 
-namespace streaming_archive { namespace writer {
+namespace streaming_archive::writer {
     void File::open () {
         if (m_is_written_out) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
-        m_timestamps = std::make_unique<PageAllocatedVector<epochtime_t>>();
-        m_logtypes = std::make_unique<PageAllocatedVector<logtype_dictionary_id_t>>();
-        m_variables = std::make_unique<PageAllocatedVector<encoded_variable_t>>();
         m_is_open = true;
-    }
-
-    void File::append_to_segment (const LogTypeDictionaryWriter& logtype_dict, Segment& segment) {
-        if (m_is_open) {
-            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
-        }
-
-        // Append files to segment
-        uint64_t segment_timestamps_uncompressed_pos;
-        segment.append(reinterpret_cast<const char*>(m_timestamps->data()), m_timestamps->size_in_bytes(), segment_timestamps_uncompressed_pos);
-        uint64_t segment_logtypes_uncompressed_pos;
-        segment.append(reinterpret_cast<const char*>(m_logtypes->data()), m_logtypes->size_in_bytes(), segment_logtypes_uncompressed_pos);
-        uint64_t segment_variables_uncompressed_pos;
-        segment.append(reinterpret_cast<const char*>(m_variables->data()), m_variables->size_in_bytes(), segment_variables_uncompressed_pos);
-        set_segment_metadata(segment.get_id(), segment_timestamps_uncompressed_pos, segment_logtypes_uncompressed_pos, segment_variables_uncompressed_pos);
-        m_segmentation_state = SegmentationState_MovingToSegment;
-
-        // Mark file as written out and clear in-memory columns and clear the in-memory data (except metadata)
-        m_is_written_out = true;
-        m_timestamps.reset(nullptr);
-        m_logtypes.reset(nullptr);
-        m_variables.reset(nullptr);
-    }
-
-    void File::write_encoded_msg (epochtime_t timestamp, logtype_dictionary_id_t logtype_id, const vector<encoded_variable_t>& encoded_vars,
-                                  const vector<variable_dictionary_id_t>& var_ids, size_t num_uncompressed_bytes)
-    {
-        m_timestamps->push_back(timestamp);
-        m_logtypes->push_back(logtype_id);
-        m_variables->push_back_all(encoded_vars);
-
-        // Update metadata
-        ++m_num_messages;
-        m_num_variables += encoded_vars.size();
-
-        if (timestamp < m_begin_ts) {
-            m_begin_ts = timestamp;
-        }
-        if (timestamp > m_end_ts) {
-            m_end_ts = timestamp;
-        }
-
-        m_num_uncompressed_bytes += num_uncompressed_bytes;
-        m_is_metadata_clean = false;
+        open_derived();
     }
 
     void File::change_ts_pattern (const TimestampPattern* pattern) {
@@ -70,14 +24,6 @@ namespace streaming_archive { namespace writer {
             m_timestamp_patterns.emplace_back(m_num_messages, *pattern);
         }
         m_is_metadata_clean = false;
-    }
-
-    bool File::is_in_uncommitted_segment () const {
-        return (SegmentationState_MovingToSegment == m_segmentation_state);
-    }
-
-    void File::mark_as_in_committed_segment () {
-        m_segmentation_state = SegmentationState_InSegment;
     }
 
     bool File::is_metadata_dirty () const {
@@ -106,14 +52,4 @@ namespace streaming_archive { namespace writer {
 
         return encoded_timestamp_patterns;
     }
-
-    void File::set_segment_metadata (segment_id_t segment_id, uint64_t segment_timestamps_uncompressed_pos, uint64_t segment_logtypes_uncompressed_pos,
-                                     uint64_t segment_variables_uncompressed_pos)
-    {
-        m_segment_id = segment_id;
-        m_segment_timestamps_pos = segment_timestamps_uncompressed_pos;
-        m_segment_logtypes_pos = segment_logtypes_uncompressed_pos;
-        m_segment_variables_pos = segment_variables_uncompressed_pos;
-        m_is_metadata_clean = false;
-    }
-} }
+}

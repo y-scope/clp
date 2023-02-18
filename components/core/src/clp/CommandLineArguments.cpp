@@ -231,9 +231,12 @@ namespace clp {
                                 "Target size (B) for the dictionaries before a new archive is created")
                         ("compression-level", po::value<int>(&m_compression_level)->value_name("LEVEL")->default_value(m_compression_level),
                                 "1 (fast/low compression) to 9 (slow/high compression)")
+                        ("table-threshold", po::value<double>(&m_table_threshold)->value_name("VALUE")->default_value(m_table_threshold),
+                                "Threshold used to determine if a logtype should be combined in GLT")
                         ("print-archive-stats-progress", po::bool_switch(&m_print_archive_stats_progress), "Print statistics (ndjson) about each archive as "
                                                                                                            "it's compressed")
                         ("progress", po::bool_switch(&m_show_progress), "Show progress during compression")
+                        ("glt", po::bool_switch(&m_use_glt), "Use GLT for compression")
                         ("schema-path", po::value<string>(&m_schema_file_path)->value_name("FILE")->default_value(m_schema_file_path),
                          "Path to a schema file. If not specified, heuristics are used to determine dictionary variables. See README-Schema.md for details.")
                         ;

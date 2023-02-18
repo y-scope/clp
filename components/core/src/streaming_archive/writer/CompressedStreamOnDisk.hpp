@@ -17,7 +17,7 @@ namespace streaming_archive { namespace writer {
     /**
      * Class for writing segments. A segment is a container for multiple compressed buffers that itself may be further compressed and then stored on disk.
      */
-    class Segment {
+    class CompressedStreamOnDisk {
     public:
         // Types
         class OperationFailed : public TraceableException {
@@ -32,10 +32,10 @@ namespace streaming_archive { namespace writer {
         };
 
         // Constructors
-        Segment () : m_id(cInvalidSegmentId), m_offset(0) {}
+        CompressedStreamOnDisk () : m_id(cInvalidSegmentId), m_offset(0) {}
 
         // Destructor
-        ~Segment ();
+        ~CompressedStreamOnDisk ();
 
         // Methods
         /**

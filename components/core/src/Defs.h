@@ -23,12 +23,12 @@ typedef uint16_t archive_format_version_t;
 // - Production versions (which should be changed with care and as infrequently as possible) which should not have the flag
 constexpr archive_format_version_t cArchiveFormatDevelopmentVersionFlag = 0x8000;
 
-typedef uint64_t file_id_t;
+typedef uint32_t file_id_t;
 typedef uint64_t segment_id_t;
 constexpr segment_id_t cInvalidSegmentId = UINT64_MAX;
 
 typedef int64_t encoded_variable_t;
-
+typedef uint64_t combined_table_id_t;
 typedef uint64_t group_id_t;
 
 typedef uint64_t pipeline_id_t;

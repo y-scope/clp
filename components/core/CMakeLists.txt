@@ -278,8 +278,8 @@ set(SOURCE_FILES_clp
         src/streaming_archive/writer/Archive.hpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
-        src/streaming_archive/writer/Segment.cpp
-        src/streaming_archive/writer/Segment.hpp
+        src/streaming_archive/writer/CompressedStreamOnDisk.cpp
+        src/streaming_archive/writer/CompressedStreamOnDisk.hpp
         src/streaming_compression/Compressor.cpp
         src/streaming_compression/Compressor.hpp
         src/streaming_compression/Constants.hpp
@@ -318,6 +318,12 @@ set(SOURCE_FILES_clp
         submodules/json/single_include/nlohmann/json.hpp
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
+        src/streaming_archive/CLPMetadataDB.cpp
+        src/streaming_archive/CLPMetadataDB.hpp
+        src/streaming_archive/writer/CLP/CLPFile.cpp
+        src/streaming_archive/writer/CLP/CLPFile.hpp
+        src/streaming_archive/writer/CLP/CLPArchive.cpp
+        src/streaming_archive/writer/CLP/CLPArchive.hpp
         )
 add_executable(clp ${SOURCE_FILES_clp})
 target_link_libraries(clp
@@ -416,6 +422,10 @@ set(SOURCE_FILES_clg
         src/streaming_archive/Constants.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
+        src/streaming_archive/CLPMetadataDB.cpp
+        src/streaming_archive/CLPMetadataDB.hpp
+        src/streaming_archive/writer/CLP/CLPFile.cpp
+        src/streaming_archive/writer/CLP/CLPFile.hpp
         src/streaming_archive/reader/Archive.cpp
         src/streaming_archive/reader/Archive.hpp
         src/streaming_archive/reader/File.cpp
@@ -428,8 +438,8 @@ set(SOURCE_FILES_clg
         src/streaming_archive/reader/SegmentManager.hpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
-        src/streaming_archive/writer/Segment.cpp
-        src/streaming_archive/writer/Segment.hpp
+        src/streaming_archive/writer/CompressedStreamOnDisk.cpp
+        src/streaming_archive/writer/CompressedStreamOnDisk.hpp
         src/streaming_compression/Constants.hpp
         src/streaming_compression/Decompressor.cpp
         src/streaming_compression/Decompressor.hpp
@@ -555,6 +565,10 @@ set(SOURCE_FILES_clo
         src/streaming_archive/Constants.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
+        src/streaming_archive/CLPMetadataDB.cpp
+        src/streaming_archive/CLPMetadataDB.hpp
+        src/streaming_archive/writer/CLP/CLPFile.cpp
+        src/streaming_archive/writer/CLP/CLPFile.hpp
         src/streaming_archive/reader/Archive.cpp
         src/streaming_archive/reader/Archive.hpp
         src/streaming_archive/reader/File.cpp
@@ -567,8 +581,8 @@ set(SOURCE_FILES_clo
         src/streaming_archive/reader/SegmentManager.hpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
-        src/streaming_archive/writer/Segment.cpp
-        src/streaming_archive/writer/Segment.hpp
+        src/streaming_archive/writer/CompressedStreamOnDisk.cpp
+        src/streaming_archive/writer/CompressedStreamOnDisk.hpp
         src/streaming_compression/Constants.hpp
         src/streaming_compression/Decompressor.cpp
         src/streaming_compression/Decompressor.hpp
@@ -751,6 +765,10 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/Constants.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
+        src/streaming_archive/CLPMetadataDB.cpp
+        src/streaming_archive/CLPMetadataDB.hpp
+        src/streaming_archive/writer/CLP/CLPFile.cpp
+        src/streaming_archive/writer/CLP/CLPFile.hpp
         src/streaming_archive/reader/Archive.cpp
         src/streaming_archive/reader/Archive.hpp
         src/streaming_archive/reader/File.cpp
@@ -765,8 +783,8 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/writer/Archive.hpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
-        src/streaming_archive/writer/Segment.cpp
-        src/streaming_archive/writer/Segment.hpp
+        src/streaming_archive/writer/CompressedStreamOnDisk.cpp
+        src/streaming_archive/writer/CompressedStreamOnDisk.hpp
         src/streaming_compression/Compressor.cpp
         src/streaming_compression/Compressor.hpp
         src/streaming_compression/Constants.hpp

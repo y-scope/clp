@@ -10,10 +10,11 @@
 // Project headers
 #include "../../EncodedVariableInterpreter.hpp"
 #include "../Constants.hpp"
+#include "../CLPMetadataDB.hpp"
 #include "SegmentManager.hpp"
 
 using namespace std;
-
+using streaming_archive::clp::CLPMetadataDB;
 namespace streaming_archive::reader {
     epochtime_t File::get_begin_ts () const {
         return m_begin_ts;
@@ -76,10 +77,12 @@ namespace streaming_archive::reader {
         m_num_variables = file_metadata_ix.get_num_variables();
 
         m_segment_id = file_metadata_ix.get_segment_id();
-        m_segment_timestamps_decompressed_stream_pos =
-                file_metadata_ix.get_segment_timestamps_pos();
-        m_segment_logtypes_decompressed_stream_pos = file_metadata_ix.get_segment_logtypes_pos();
-        m_segment_variables_decompressed_stream_pos = file_metadata_ix.get_segment_variables_pos();
+        // Haiqi: TODO: this change is temporary just to make clp build but doesn't
+        // let clp decompressed properly
+        CLPMetadataDB::CLPFileIterator* clp_file_metadata_ix = dynamic_cast<CLPMetadataDB::CLPFileIterator*> (&file_metadata_ix);
+        m_segment_timestamps_decompressed_stream_pos = clp_file_metadata_ix->get_segment_timestamps_pos();
+        m_segment_logtypes_decompressed_stream_pos = clp_file_metadata_ix->get_segment_logtypes_pos();
+        m_segment_variables_decompressed_stream_pos = clp_file_metadata_ix->get_segment_variables_pos();
 
         m_is_split = file_metadata_ix.is_split();
         m_split_ix = file_metadata_ix.get_split_ix();
