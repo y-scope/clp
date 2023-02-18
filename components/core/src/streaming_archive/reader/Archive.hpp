@@ -16,6 +16,7 @@
 #include "../../SQLiteDB.hpp"
 #include "../../VariableDictionaryReader.hpp"
 #include "../MetadataDB.hpp"
+#include "../CLPMetadataDB.hpp"
 #include "File.hpp"
 #include "Message.hpp"
 
@@ -33,6 +34,8 @@ namespace streaming_archive { namespace reader {
                 return "streaming_archive::reader::Archive operation failed";
             }
         };
+        // Constructor
+        Archive();
 
         // Methods
         /**
@@ -104,18 +107,18 @@ namespace streaming_archive { namespace reader {
         void decompress_empty_directories (const std::string& output_dir);
 
         std::unique_ptr<MetadataDB::FileIterator> get_file_iterator () {
-            return m_metadata_db.get_file_iterator(cEpochTimeMin, cEpochTimeMax, "", false, cInvalidSegmentId);
+            return m_metadata_db->get_file_iterator(cEpochTimeMin, cEpochTimeMax, "", false, cInvalidSegmentId);
         }
         std::unique_ptr<MetadataDB::FileIterator> get_file_iterator (const std::string& file_path) {
-            return m_metadata_db.get_file_iterator(cEpochTimeMin, cEpochTimeMax, file_path, false, cInvalidSegmentId);
+            return m_metadata_db->get_file_iterator(cEpochTimeMin, cEpochTimeMax, file_path, false, cInvalidSegmentId);
         }
         std::unique_ptr<MetadataDB::FileIterator> get_file_iterator (epochtime_t begin_ts, epochtime_t end_ts, const std::string& file_path) {
-            return m_metadata_db.get_file_iterator(begin_ts, end_ts, file_path, false, cInvalidSegmentId);
+            return m_metadata_db->get_file_iterator(begin_ts, end_ts, file_path, false, cInvalidSegmentId);
         }
         std::unique_ptr<MetadataDB::FileIterator> get_file_iterator (epochtime_t begin_ts, epochtime_t end_ts, const std::string& file_path,
                                                                      segment_id_t segment_id)
         {
-            return m_metadata_db.get_file_iterator(begin_ts, end_ts, file_path, true, segment_id);
+            return m_metadata_db->get_file_iterator(begin_ts, end_ts, file_path, true, segment_id);
         }
 
     private:
@@ -128,7 +131,7 @@ namespace streaming_archive { namespace reader {
 
         SegmentManager m_segment_manager;
 
-        MetadataDB m_metadata_db;
+        std::unique_ptr<MetadataDB> m_metadata_db;
     };
 } }
 

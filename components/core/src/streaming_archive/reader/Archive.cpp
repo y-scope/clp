@@ -24,6 +24,12 @@ using std::unordered_set;
 using std::vector;
 
 namespace streaming_archive { namespace reader {
+
+    // Haiqi TODO: remove this once supporting GLT decompression and search
+    Archive::Archive() {
+        m_metadata_db = std::make_unique<streaming_archive::clp::CLPMetadataDB>();
+    }
+
     void Archive::read_metadata_file (const string& path, archive_format_version_t& format_version, size_t& stable_uncompressed_size, size_t& stable_size) {
         FileReader file_reader;
         file_reader.open(path);
@@ -73,7 +79,7 @@ namespace streaming_archive { namespace reader {
         }
 
         auto metadata_db_path = boost::filesystem::path(path) / cMetadataDBFileName;
-        m_metadata_db.open(metadata_db_path.string());
+        m_metadata_db->open(metadata_db_path.string());
 
         // Open log-type dictionary
         string logtype_dict_path = m_path;
@@ -110,7 +116,7 @@ namespace streaming_archive { namespace reader {
         m_var_dictionary.close();
         m_segment_manager.close();
         m_segments_dir_path.clear();
-        m_metadata_db.close();
+        m_metadata_db->close();
         m_path.clear();
     }
 
@@ -187,7 +193,7 @@ namespace streaming_archive { namespace reader {
         boost::filesystem::path output_dir_path = boost::filesystem::path(output_dir);
 
         string path;
-        auto ix_ptr = m_metadata_db.get_empty_directory_iterator();
+        auto ix_ptr = m_metadata_db->get_empty_directory_iterator();
         for (auto& ix = *ix_ptr; ix.has_next(); ix.next()) {
             ix.get_path(path);
             auto empty_directory_path = output_dir_path / path;
