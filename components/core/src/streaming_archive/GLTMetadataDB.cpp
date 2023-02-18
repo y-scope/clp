@@ -1,10 +1,6 @@
 #include "GLTMetadataDB.hpp"
-// C++ standard libraries
-#include <vector>
 
 // Project headers
-#include "../database_utils.hpp"
-#include "Constants.hpp"
 #include "writer/GLT/GLTFile.hpp"
 
 namespace streaming_archive {

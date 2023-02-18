@@ -2,6 +2,7 @@
 #define COMPRESSOR_FRONTEND_CONSTANTS_HPP
 
 #include <cstdint>
+#include <utility>
 
 namespace compressor_frontend {
 

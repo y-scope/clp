@@ -1,10 +1,13 @@
-#ifndef CLPMETADATADB_HPP
-#define CLPMETADATADB_HPP
+#ifndef STREAMING_ARCHIVE_CLP_METADATADB_HPP
+#define STREAMING_ARCHIVE_CLP_METADATADB_HPP
 
+// Project headers
 #include "MetadataDB.hpp"
+
 namespace streaming_archive::clp {
     class CLPMetadataDB : public MetadataDB {
     public:
+
         class CLPFileIterator : public FileIterator {
         public:
             // Types
@@ -54,4 +57,4 @@ namespace streaming_archive::clp {
     };
 }
 
-#endif //CLPMETADATADB_HPP
+#endif //STREAMING_ARCHIVE_CLP_METADATADB_HPP

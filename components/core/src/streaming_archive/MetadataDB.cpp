@@ -4,7 +4,6 @@
 #include <vector>
 
 // Project headers
-#include "../Defs.h"
 #include "../database_utils.hpp"
 #include "Constants.hpp"
 

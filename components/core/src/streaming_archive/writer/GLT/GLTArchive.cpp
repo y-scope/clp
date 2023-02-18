@@ -1,10 +1,15 @@
 #include "GLTArchive.hpp"
-#include "../../../EncodedVariableInterpreter.hpp"
-#include "../../../clp/utils.hpp"
-#include "../../GLTMetadataDB.hpp"
+
+// C++ libraries
 #include <iostream>
 #include <string>
 #include <vector>
+
+// Project headers
+#include "../../../compressor_frontend/Constants.hpp"
+#include "../../../EncodedVariableInterpreter.hpp"
+#include "../../../clp/utils.hpp"
+#include "../../GLTMetadataDB.hpp"
 
 namespace streaming_archive::writer {
     GLTArchive::GLTArchive () {

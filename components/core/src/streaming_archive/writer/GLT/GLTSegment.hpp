@@ -1,11 +1,14 @@
 #ifndef STREAMING_ARCHIVE_WRITER_GLTSEGMENT_HPP
 #define STREAMING_ARCHIVE_WRITER_GLTSEGMENT_HPP
 
+// C++ libraries
 #include <map>
-#include "../../../Utils.hpp"
-#include "LogtypeTable.hpp"
+
+// Project headers
 #include "../../../streaming_compression/passthrough/Compressor.hpp"
 #include "../../../streaming_compression/zstd/Compressor.hpp"
+#include "../../../Utils.hpp"
+#include "LogtypeTable.hpp"
 
 namespace streaming_archive::writer {
     class GLTSegment {

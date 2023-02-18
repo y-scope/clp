@@ -1,4 +1,6 @@
 #include "CLPMetadataDB.hpp"
+
+// Project headers
 #include "writer/CLP/CLPFile.hpp"
 
 namespace streaming_archive::clp {

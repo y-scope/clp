@@ -1,8 +1,11 @@
 #ifndef STREAMING_ARCHIVE_LOGTYPESIZETRACKER_HPP
 #define STREAMING_ARCHIVE_LOGTYPESIZETRACKER_HPP
 
+// C++ standard libraries
+#include <cstring>
+
+// Project headers
 #include "../Defs.h"
-#include <cstdio>
 #include "Constants.hpp"
 
 namespace streaming_archive::glt {

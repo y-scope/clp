@@ -1,7 +1,9 @@
 #ifndef STREAMING_ARCHIVE_GLT_METADATADB_HPP
 #define STREAMING_ARCHIVE_GLT_METADATADB_HPP
 
+// Project headers
 #include "MetadataDB.hpp"
+
 namespace streaming_archive {
     class GLTMetadataDB : public MetadataDB {
     public:

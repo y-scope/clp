@@ -1,6 +1,7 @@
 #ifndef STREAMING_ARCHIVE_WRITER_GLT_FILE_HPP
 #define STREAMING_ARCHIVE_WRITER_GLT_FILE_HPP
 
+// C++ libraries
 #include "../File.hpp"
 
 namespace streaming_archive::writer {

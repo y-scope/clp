@@ -1,11 +1,11 @@
 #ifndef STREAMING_ARCHIVE_GLT_ARCHIVE_HPP
 #define STREAMING_ARCHIVE_GLT_ARCHIVE_HPP
 
+// Project headers
 #include "../Archive.hpp"
-#include "../../../compressor_frontend/Constants.hpp"
 #include "../CompressedStreamOnDisk.hpp"
-#include "GLTSegment.hpp"
 #include "GLTFile.hpp"
+#include "GLTSegment.hpp"
 
 namespace streaming_archive::writer {
     class GLTArchive : public Archive {

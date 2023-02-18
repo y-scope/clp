@@ -24,8 +24,8 @@
 // Project headers
 #include "../../EncodedVariableInterpreter.hpp"
 #include "../../Utils.hpp"
-#include "../Constants.hpp"
 #include "../../compressor_frontend/LogParser.hpp"
+#include "../Constants.hpp"
 
 using std::list;
 using std::make_unique;

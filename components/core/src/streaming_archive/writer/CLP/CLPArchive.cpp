@@ -1,10 +1,14 @@
 #include "CLPArchive.hpp"
-#include "../../../EncodedVariableInterpreter.hpp"
-#include "../../../clp/utils.hpp"
-#include "../../CLPMetadataDB.hpp"
+
+// C++ standard libraries
 #include <iostream>
 #include <string>
 #include <vector>
+
+// Project headers
+#include "../../../EncodedVariableInterpreter.hpp"
+#include "../../../clp/utils.hpp"
+#include "../../CLPMetadataDB.hpp"
 
 namespace streaming_archive::writer {
     CLPArchive::CLPArchive () {

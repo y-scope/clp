@@ -1,9 +1,10 @@
 #ifndef STREAMING_ARCHIVE_CLP_ARCHIVE_HPP
 #define STREAMING_ARCHIVE_CLP_ARCHIVE_HPP
 
+// Project headers
+#include "../../../compressor_frontend/Constants.hpp"
 #include "../Archive.hpp"
 #include "CLPFile.hpp"
-#include "../../../compressor_frontend/Constants.hpp"
 
 namespace streaming_archive::writer {
     class CLPArchive : public Archive {

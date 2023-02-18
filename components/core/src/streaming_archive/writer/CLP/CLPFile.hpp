@@ -1,6 +1,7 @@
 #ifndef STREAMING_ARCHIVE_WRITER_CLP_FILE_HPP
 #define STREAMING_ARCHIVE_WRITER_CLP_FILE_HPP
 
+// Project headers
 #include "../File.hpp"
 
 namespace streaming_archive::writer {
