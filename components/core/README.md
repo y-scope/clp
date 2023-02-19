@@ -19,7 +19,8 @@ CLP core is the low-level component that performs compression, decompression, an
 
 ## Requirements
 
-* We have built and tested CLP on **Ubuntu 18.04 (bionic)** and **Ubuntu 20.04 (focal)**.
+* We have built and tested CLP on the OSes listed 
+  [below](https://github.com/y-scope/clp/tree/main/components/core#native-environment).
   * If you have trouble building for another OS, file an issue, and we may be able to help.
 * A compiler that supports C++17 (e.g., gcc-8)
 
@@ -54,6 +55,7 @@ A handful of packages and libraries are required to build CLP. There are two opt
 See the relevant README for your OS:
 
 * [CentOS 7.4](./tools/scripts/lib_install/centos7.4/README.md)
+* [macOS 12](./tools/scripts/lib_install/macos-12/README.md)
 * [Ubuntu 18.04](./tools/scripts/lib_install/ubuntu-bionic/README.md)
 * [Ubuntu 20.04](./tools/scripts/lib_install/ubuntu-focal/README.md)
 
@@ -90,12 +92,12 @@ the relevant paths on your machine.
 
 * Build:
   ```shell
-  make
+  make -j
   ```
 
 ## Running
 
-* CLP contains two executables: `clp` and `clg`
+* CLP contains two core executables: `clp` and `clg`
     * `clp` is used for compressing and extracting logs
     * `clg` is used for performing wildcard searches on the compressed logs
 
