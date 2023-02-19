@@ -24,7 +24,7 @@ using std::list;
 using std::string;
 using std::vector;
 
-ErrorCode create_directory (const string& path, __mode_t mode, bool exist_ok) {
+ErrorCode create_directory (const string& path, mode_t mode, bool exist_ok) {
     int retval = mkdir(path.c_str(), mode);
     if (0 != retval ) {
         if (EEXIST != errno) {
@@ -37,7 +37,7 @@ ErrorCode create_directory (const string& path, __mode_t mode, bool exist_ok) {
     return ErrorCode_Success;
 }
 
-ErrorCode create_directory_structure (const string& path, __mode_t mode) {
+ErrorCode create_directory_structure (const string& path, mode_t mode) {
     assert(!path.empty());
 
     // Check if entire path already exists

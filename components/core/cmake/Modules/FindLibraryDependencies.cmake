@@ -29,7 +29,8 @@ macro(FindStaticLibraryDependencies fld_LIBNAME fld_PREFIX fld_STATIC_LIBS)
                 PATH_SUFFIXES lib
                 )
         if(${fld_PREFIX}_${fld_DEP_LIB}_LIBRARY)
-            list(APPEND ${fld_PREFIX}_LIBRARY_DEPENDENCIES "${${fld_PREFIX}_${fld_DEP_LIB}_LIBRARY}")
+            list(APPEND ${fld_PREFIX}_LIBRARY_DEPENDENCIES
+                 "${${fld_PREFIX}_${fld_DEP_LIB}_LIBRARY}")
         else()
             message(SEND_ERROR "Static ${fld_DEP_LIB} library not found")
         endif()
@@ -39,7 +40,7 @@ endmacro()
 # Find the given libraries
 # Params:
 #   fld_PREFIX - Prefix for created variables
-#   fld_STATIC_LIBS - List of libraries to find
+#   fld_DYNAMIC_LIBS - List of libraries to find
 # Returns:
 #   ${fld_PREFIX}_LIBRARY_DEPENDENCIES - Found libraries
 macro(FindDynamicLibraryDependencies fld_PREFIX fld_DYNAMIC_LIBS)

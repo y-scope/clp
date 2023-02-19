@@ -107,7 +107,10 @@ void GlobalMySQLMetadataDB::close () {
     m_is_open = false;
 }
 
-void GlobalMySQLMetadataDB::add_archive (const string& id, size_t uncompressed_size, size_t size, const string& creator_id, size_t creation_num) {
+void GlobalMySQLMetadataDB::add_archive (const string& id, uint64_t uncompressed_size,
+                                         uint64_t size, const string& creator_id,
+                                         uint64_t creation_num)
+{
     if (false == m_is_open) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
@@ -123,7 +126,9 @@ void GlobalMySQLMetadataDB::add_archive (const string& id, size_t uncompressed_s
     }
 }
 
-void GlobalMySQLMetadataDB::update_archive_size (const std::string& archive_id, size_t uncompressed_size, size_t size) {
+void GlobalMySQLMetadataDB::update_archive_size (const std::string& archive_id,
+                                                 uint64_t uncompressed_size, uint64_t size)
+{
     if (false == m_is_open) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }

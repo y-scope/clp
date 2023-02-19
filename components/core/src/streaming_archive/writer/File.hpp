@@ -98,7 +98,7 @@ namespace streaming_archive { namespace writer {
          * Gets the file's uncompressed size
          * @return File's uncompressed size in bytes
          */
-        size_t get_num_uncompressed_bytes () const { return m_num_uncompressed_bytes; }
+        uint64_t get_num_uncompressed_bytes () const { return m_num_uncompressed_bytes; }
 
         /**
          * Gets the file's encoded size in bytes
@@ -148,8 +148,8 @@ namespace streaming_archive { namespace writer {
         epochtime_t get_end_ts () const { return m_end_ts; }
         const std::vector<std::pair<int64_t, TimestampPattern>>& get_timestamp_patterns () const { return m_timestamp_patterns; }
         std::string get_encoded_timestamp_patterns () const;
-        size_t get_num_messages () const { return m_num_messages; }
-        size_t get_num_variables () const { return m_num_variables; }
+        uint64_t get_num_messages () const { return m_num_messages; }
+        uint64_t get_num_variables () const { return m_num_variables; }
 
         bool is_in_segment () const { return SegmentationState_InSegment == m_segmentation_state; }
         segment_id_t get_segment_id () const { return m_segment_id; }

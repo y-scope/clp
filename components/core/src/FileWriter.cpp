@@ -13,6 +13,12 @@
 
 // Project headers
 #include "Defs.h"
+#include "Platform.hpp"
+
+// Define a fdatasync shim for compilation (just compilation) on macOS
+#if defined(__APPLE__) || defined(__MACH__)
+int fdatasync (int fd);
+#endif
 
 using std::string;
 
@@ -51,9 +57,17 @@ void FileWriter::flush () {
     }
 
     // Flush page cache pages to disk
-    if (0 != fdatasync(m_fd)) {
-        SPDLOG_ERROR("fdatasync failed, errno={}", errno);
-        throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+    if constexpr (Platform::MacOs == cCurrentPlatform) {
+        // macOS doesn't have fdatasync, so just use the more expensive fsync
+        if (0 != fsync(m_fd)) {
+            SPDLOG_ERROR("fsync failed, errno={}", errno);
+            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+        }
+    } else {
+        if (0 != fdatasync(m_fd)) {
+            SPDLOG_ERROR("fdatasync failed, errno={}", errno);
+            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+        }
     }
 }
 

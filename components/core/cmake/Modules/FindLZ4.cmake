@@ -13,6 +13,8 @@
 
 set(lz4_LIBNAME "lz4")
 
+include(cmake/Modules/FindLibraryDependencies.cmake)
+
 # Run pkg-config
 find_package(PkgConfig)
 pkg_check_modules(lz4_PKGCONF QUIET "lib${lz4_LIBNAME}")
@@ -43,10 +45,9 @@ if (LZ4_LIBRARY)
     set(LZ4_FOUND ON)
 endif()
 
-include(cmake/Modules/FindLibraryDependencies.cmake)
-FindStaticLibraryDependencies(${lz4_LIBNAME} lz4 "${lz4_PKGCONF_STATIC_LIBRARIES}")
-
 if(LZ4_USE_STATIC_LIBS)
+    FindStaticLibraryDependencies(${lz4_LIBNAME} lz4 "${lz4_PKGCONF_STATIC_LIBRARIES}")
+
     # Restore original value of CMAKE_FIND_LIBRARY_SUFFIXES
     set(CMAKE_FIND_LIBRARY_SUFFIXES ${lz4_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
     unset(lz4_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
@@ -69,7 +70,8 @@ if(NOT TARGET LZ4::LZ4)
         if (LZ4_USE_STATIC_LIBS)
             add_library(LZ4::LZ4 STATIC IMPORTED)
         else()
-            # NOTE: We use UNKNOWN so that if the user doesn't have the SHARED libraries installed, we can still use the STATIC libraries
+            # NOTE: We use UNKNOWN so that if the user doesn't have the SHARED
+            # libraries installed, we can still use the STATIC libraries
             add_library(LZ4::LZ4 UNKNOWN IMPORTED)
         endif()
     endif()

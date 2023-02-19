@@ -56,7 +56,7 @@ inline bool is_delim (char c) {
  * @return ErrorCode_errno on error
  * @return ErrorCode_FileExists if exist_ok was false and the path already existed
  */
-ErrorCode create_directory (const std::string& path, __mode_t mode, bool exist_ok);
+ErrorCode create_directory (const std::string& path, mode_t mode, bool exist_ok);
 
 /**
  * Creates every directory in the given path (if they don't exist)
@@ -65,7 +65,7 @@ ErrorCode create_directory (const std::string& path, __mode_t mode, bool exist_o
  * @param mode Permission bits for structure
  * @return ErrorCode_Success on success, ErrorCode_errno otherwise
  */
-ErrorCode create_directory_structure (const std::string& path, __mode_t mode);
+ErrorCode create_directory_structure (const std::string& path, mode_t mode);
 
 /**
  * Gets the parent directory path for a given path

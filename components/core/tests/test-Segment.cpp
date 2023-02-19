@@ -40,7 +40,7 @@ TEST_CASE("Test writing and reading a segment", "[Segment]") {
     auto segment_id = writer_segment.get_id();
 
     // Fill segment
-    size_t offset = 0;
+    uint64_t offset = 0;
     writer_segment.append(uncompressed_data, uncompressed_data_size, offset);
     writer_segment.close();
 
