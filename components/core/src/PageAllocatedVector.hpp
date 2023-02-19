@@ -16,7 +16,13 @@
 // Project headers
 #include "Defs.h"
 #include "ErrorCode.hpp"
+#include "Platform.hpp"
 #include "TraceableException.hpp"
+
+// Define a MREMAP_MAYMOVE shim for compilation (just compilation) on macOS
+#if defined(__APPLE__) || defined(__MACH__)
+#define MREMAP_MAYMOVE 0
+#endif
 
 /**
  * A minimal vector that is allocated in increments of pages rather than individual elements
@@ -101,6 +107,17 @@ public:
 private:
     // Methods
     /**
+     * Memory maps a new readable/writeable anonymous region with the given size
+     * @param new_size
+     * @return A pointer to the new region
+     */
+    static void* map_new_region (size_t new_size);
+    /**
+     * Unmaps the existing region
+     */
+    static void unmap_region (void* region, size_t region_size);
+
+    /**
      * Increases the vector's capacity to the given value
      * @param required_capacity
      * @throw PageAllocatedVector::OperationFailed if memory allocation fails
@@ -145,7 +162,7 @@ void PageAllocatedVector<ValueType>::push_back_all (const std::vector<ValueType>
         increase_capacity(new_size);
     }
 
-    memcpy(&m_values[m_size], values.data(), num_new_values*sizeof(ValueType));
+    std::copy(values.data(), values.data() + num_new_values, &m_values[m_size]);
     m_size += num_new_values;
 }
 
@@ -168,18 +185,10 @@ void PageAllocatedVector<ValueType>::push_back (ValueType& value) {
 
 template <typename ValueType>
 void PageAllocatedVector<ValueType>::clear () noexcept {
-    if (nullptr != m_values) {
-        int retval = munmap(m_values, m_capacity_in_bytes);
-        if (0 != retval) {
-            SPDLOG_ERROR("PageAllocatedVector::clear munmap failed with errno={}", errno);
-            return;
-        }
-
-        m_values = nullptr;
-        m_capacity_in_bytes = 0;
-        m_capacity = 0;
-        m_size = 0;
-    }
+    unmap_region(m_values, m_capacity_in_bytes);
+    m_capacity_in_bytes = 0;
+    m_capacity = 0;
+    m_size = 0;
 }
 
 template <typename ValueType>
@@ -207,6 +216,29 @@ size_t PageAllocatedVector<ValueType>::size_in_bytes () const noexcept {
     return m_size*sizeof(ValueType);
 }
 
+template <typename ValueType>
+void* PageAllocatedVector<ValueType>::map_new_region (size_t new_size) {
+    // NOTE: Regions with the MAP_SHARED flag cannot be remapped for some reason
+    void* new_region = mmap(nullptr, new_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS,
+                            -1, 0);
+    if (MAP_FAILED == new_region) {
+        throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+    }
+    return new_region;
+}
+
+template <typename ValueType>
+void PageAllocatedVector<ValueType>::unmap_region (void* region, size_t region_size) {
+    if (nullptr == region) {
+        return;
+    }
+
+    int retval = munmap(region, region_size);
+    if (0 != retval) {
+        throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+    }
+}
+
 /*
  * To lower the number of calls necessary to increase the vector's capacity, we use a heuristic to grow to max(2*m_capacity, required_capacity)
  */
@@ -219,20 +251,31 @@ void PageAllocatedVector<ValueType>::increase_capacity (size_t required_capacity
 
     void* new_region;
     if (nullptr == m_values) {
-        // NOTE: Regions with the MAP_SHARED flag cannot be remapped for some reason
-        new_region = mmap(nullptr, new_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        if (MAP_FAILED == new_region) {
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
-        }
+        new_region = static_cast<ValueType*>(map_new_region(new_size));
     } else {
-        new_region = mremap(m_values, m_capacity_in_bytes, new_size, MREMAP_MAYMOVE);
-        if (MAP_FAILED == new_region) {
-            throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+        if constexpr (Platform::MacOs == cCurrentPlatform) {
+            // macOS doesn't support mremap, so we need to map a new region, copy
+            // the contents of the old region, and then unmap the old region.
+            new_region = map_new_region(new_size);
+            std::copy(m_values, m_values + m_capacity, static_cast<ValueType*>(new_region));
+
+            try {
+                unmap_region(m_values, m_capacity_in_bytes);
+            } catch (const OperationFailed& e) {
+                // Unmap the new region so we don't leak it
+                unmap_region(new_region, new_size);
+                throw e;
+            }
+        } else {
+            new_region = mremap(m_values, m_capacity_in_bytes, new_size, MREMAP_MAYMOVE);
+            if (MAP_FAILED == new_region) {
+                throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
+            }
         }
     }
-    m_values = (ValueType*)new_region;
+    m_values = static_cast<ValueType*>(new_region);
     m_capacity_in_bytes = new_size;
-    m_capacity = m_capacity_in_bytes/sizeof(ValueType);
+    m_capacity = m_capacity_in_bytes / sizeof(ValueType);
 }
 
 #endif // PAGEALLOCATEDVECTOR_HPP
