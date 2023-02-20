@@ -3,7 +3,7 @@
 
 // Project headers
 #include "../Archive.hpp"
-#include "../CompressedStreamOnDisk.hpp"
+#include "../Segment.hpp"
 #include "GLTFile.hpp"
 #include "GLTSegment.hpp"
 
@@ -42,7 +42,7 @@ namespace streaming_archive::writer {
          * @throw Same as streaming_archive::writer::CompressedStreamOnDisk::close
          * @throw Same as streaming_archive::writer::Archive::persist_file_metadata
          */
-        void close_segment_and_persist_file_metadata (CompressedStreamOnDisk& message_order_table,
+        void close_segment_and_persist_file_metadata (Segment& message_order_table,
                                                       GLTSegment& glt_segment,
                                                       std::vector<File*>& files,
                                                       ArrayBackedPosIntSet<logtype_dictionary_id_t>& segment_logtype_ids,
@@ -59,7 +59,7 @@ namespace streaming_archive::writer {
          * @param files_in_segment
          */
         void
-        append_file_contents_to_segment (CompressedStreamOnDisk& message_order_table, GLTSegment& glt_segment,
+        append_file_contents_to_segment (Segment& message_order_table, GLTSegment& glt_segment,
                                          ArrayBackedPosIntSet<logtype_dictionary_id_t>& logtype_ids_in_segment,
                                          ArrayBackedPosIntSet<variable_dictionary_id_t>& var_ids_in_segment,
                                          std::vector<File*>& files_in_segment);
@@ -71,7 +71,7 @@ namespace streaming_archive::writer {
 
         GLTSegment m_glt_segment;
         GLTFile* m_glt_file;
-        CompressedStreamOnDisk m_message_order_table;
+        Segment m_message_order_table;
 
     };
 }

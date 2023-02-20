@@ -215,7 +215,7 @@ namespace streaming_archive::writer {
         m_file = nullptr;
     }
 
-    void GLTArchive::append_file_contents_to_segment (CompressedStreamOnDisk& segment,
+    void GLTArchive::append_file_contents_to_segment (Segment& segment,
                                                       GLTSegment& glt_segment,
                                                       ArrayBackedPosIntSet<logtype_dictionary_id_t>& logtype_ids_in_segment,
                                                       ArrayBackedPosIntSet<variable_dictionary_id_t>& var_ids_in_segment,
@@ -234,7 +234,7 @@ namespace streaming_archive::writer {
         }
     }
 
-    void GLTArchive::close_segment_and_persist_file_metadata (CompressedStreamOnDisk& on_disk_stream,
+    void GLTArchive::close_segment_and_persist_file_metadata (Segment& on_disk_stream,
                                                               GLTSegment& glt_segment,
                                                               std::vector<File*>& files,
                                                               ArrayBackedPosIntSet<logtype_dictionary_id_t>& segment_logtype_ids,

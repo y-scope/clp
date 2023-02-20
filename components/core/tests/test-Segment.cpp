@@ -9,7 +9,7 @@
 
 // Project headers
 #include "../src/streaming_archive/reader/Segment.hpp"
-#include "../src/streaming_archive/writer/CompressedStreamOnDisk.hpp"
+#include "../src/streaming_archive/writer/Segment.hpp"
 #include "../src/Utils.hpp"
 
 using namespace std;
@@ -34,7 +34,7 @@ TEST_CASE("Test writing and reading a segment", "[Segment]") {
     REQUIRE(ErrorCode_Success == error_code);
 
     // Test segment writing
-    writer::CompressedStreamOnDisk writer_segment;
+    writer::Segment writer_segment;
 
     writer_segment.open(segments_dir_path, 0, 0);
     auto segment_id = writer_segment.get_id();

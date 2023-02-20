@@ -292,8 +292,8 @@ set(SOURCE_FILES_clp
         src/streaming_archive/writer/CLP/CLPFile.hpp
         src/streaming_archive/writer/GLT/GLTFile.cpp
         src/streaming_archive/writer/GLT/GLTFile.hpp
-        src/streaming_archive/writer/CompressedStreamOnDisk.cpp
-        src/streaming_archive/writer/CompressedStreamOnDisk.hpp
+        src/streaming_archive/writer/Segment.cpp
+        src/streaming_archive/writer/Segment.hpp
         src/streaming_archive/writer/GLT/GLTSegment.cpp
         src/streaming_archive/writer/GLT/GLTSegment.hpp
         src/streaming_archive/writer/GLT/LogtypeTable.cpp
@@ -454,8 +454,8 @@ set(SOURCE_FILES_clg
         src/streaming_archive/writer/CLP/CLPFile.hpp
         src/streaming_archive/writer/GLT/GLTFile.cpp
         src/streaming_archive/writer/GLT/GLTFile.hpp
-        src/streaming_archive/writer/CompressedStreamOnDisk.cpp
-        src/streaming_archive/writer/CompressedStreamOnDisk.hpp
+        src/streaming_archive/writer/Segment.cpp
+        src/streaming_archive/writer/Segment.hpp
         src/streaming_compression/Constants.hpp
         src/streaming_compression/Decompressor.cpp
         src/streaming_compression/Decompressor.hpp
@@ -601,8 +601,8 @@ set(SOURCE_FILES_clo
         src/streaming_archive/writer/CLP/CLPFile.hpp
         src/streaming_archive/writer/GLT/GLTFile.cpp
         src/streaming_archive/writer/GLT/GLTFile.hpp
-        src/streaming_archive/writer/CompressedStreamOnDisk.cpp
-        src/streaming_archive/writer/CompressedStreamOnDisk.hpp
+        src/streaming_archive/writer/Segment.cpp
+        src/streaming_archive/writer/Segment.hpp
         src/streaming_compression/Constants.hpp
         src/streaming_compression/Decompressor.cpp
         src/streaming_compression/Decompressor.hpp
@@ -811,8 +811,8 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/writer/CLP/CLPFile.hpp
         src/streaming_archive/writer/GLT/GLTFile.cpp
         src/streaming_archive/writer/GLT/GLTFile.hpp
-        src/streaming_archive/writer/CompressedStreamOnDisk.cpp
-        src/streaming_archive/writer/CompressedStreamOnDisk.hpp
+        src/streaming_archive/writer/Segment.cpp
+        src/streaming_archive/writer/Segment.hpp
         src/streaming_archive/writer/GLT/GLTSegment.cpp
         src/streaming_archive/writer/GLT/GLTSegment.hpp
         src/streaming_archive/writer/GLT/LogtypeTable.cpp

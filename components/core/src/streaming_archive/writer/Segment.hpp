@@ -18,7 +18,7 @@ namespace streaming_archive { namespace writer {
      * Class for writing compressed stream. A compressed stream is a container for multiple compressed buffers
      * that itself may be further compressed and then stored on disk.
      */
-    class CompressedStreamOnDisk {
+    class Segment {
     public:
         // Types
         class OperationFailed : public TraceableException {
@@ -33,10 +33,10 @@ namespace streaming_archive { namespace writer {
         };
 
         // Constructors
-        CompressedStreamOnDisk () : m_id(cInvalidSegmentId), m_offset(0) {}
+        Segment () : m_id(cInvalidSegmentId), m_offset(0) {}
 
         // Destructor
-        ~CompressedStreamOnDisk ();
+        ~Segment ();
 
         // Methods
         /**

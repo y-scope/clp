@@ -8,7 +8,7 @@ namespace streaming_archive::writer {
     }
 
     void GLTFile::append_to_segment (const LogTypeDictionaryWriter& logtype_dict,
-                                     CompressedStreamOnDisk& segment) {
+                                     Segment& segment) {
         if (m_is_open) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }

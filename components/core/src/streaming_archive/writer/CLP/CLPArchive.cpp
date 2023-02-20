@@ -159,7 +159,7 @@ namespace streaming_archive::writer {
         }
     }
 
-    void CLPArchive::close_segment_and_persist_file_metadata (CompressedStreamOnDisk& clp_segment, std::vector<File*>& files,
+    void CLPArchive::close_segment_and_persist_file_metadata (Segment& clp_segment, std::vector<File*>& files,
                                                               ArrayBackedPosIntSet<logtype_dictionary_id_t>& segment_logtype_ids,
                                                               ArrayBackedPosIntSet<variable_dictionary_id_t>& segment_var_ids)
     {
@@ -195,7 +195,7 @@ namespace streaming_archive::writer {
         files.clear();
     }
 
-    void CLPArchive::append_file_contents_to_segment (CompressedStreamOnDisk& clp_segment, ArrayBackedPosIntSet<logtype_dictionary_id_t>& logtype_ids_in_segment,
+    void CLPArchive::append_file_contents_to_segment (Segment& clp_segment, ArrayBackedPosIntSet<logtype_dictionary_id_t>& logtype_ids_in_segment,
                                                       ArrayBackedPosIntSet<variable_dictionary_id_t>& var_ids_in_segment, std::vector<File*>& files_in_segment)
     {
         if (!clp_segment.is_open()) {

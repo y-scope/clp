@@ -15,7 +15,7 @@
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../PageAllocatedVector.hpp"
 #include "../../TimestampPattern.hpp"
-#include "CompressedStreamOnDisk.hpp"
+#include "Segment.hpp"
 
 namespace streaming_archive::writer {
     /**
@@ -66,7 +66,7 @@ namespace streaming_archive::writer {
          * @param segment
          */
         virtual void append_to_segment (const LogTypeDictionaryWriter& logtype_dict,
-                                        CompressedStreamOnDisk& segment) = 0;
+                                        Segment& segment) = 0;
 
         /**
          * Changes timestamp pattern in use at current message in file

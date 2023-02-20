@@ -20,7 +20,7 @@ namespace streaming_archive::writer {
         void open_derived () override;
 
         void append_to_segment (const LogTypeDictionaryWriter& logtype_dict,
-                                CompressedStreamOnDisk& segment) override;
+                                Segment& segment) override;
 
         /**
          * Writes an encoded message to the respective columns and updates the metadata of the file

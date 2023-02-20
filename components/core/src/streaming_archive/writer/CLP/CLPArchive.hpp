@@ -36,7 +36,7 @@ namespace streaming_archive::writer {
          * @param var_ids_in_segment
          * @param files_in_segment
          */
-        void append_file_contents_to_segment (CompressedStreamOnDisk& clp_segment,
+        void append_file_contents_to_segment (Segment& clp_segment,
                                               ArrayBackedPosIntSet<logtype_dictionary_id_t>& logtype_ids_in_segment,
                                               ArrayBackedPosIntSet<variable_dictionary_id_t>& var_ids_in_segment,
                                               std::vector<File*>& files_in_segment);
@@ -50,13 +50,13 @@ namespace streaming_archive::writer {
          * @throw Same as streaming_archive::writer::CompressedStreamOnDisk::close
          * @throw Same as streaming_archive::writer::Archive::persist_file_metadata
          */
-        void close_segment_and_persist_file_metadata (CompressedStreamOnDisk& clp_segment,
+        void close_segment_and_persist_file_metadata (Segment& clp_segment,
                                                       std::vector<File*>& files,
                                                       ArrayBackedPosIntSet<logtype_dictionary_id_t>& segment_logtype_ids,
                                                       ArrayBackedPosIntSet<variable_dictionary_id_t>& segment_var_ids);
 
     private:
-        CompressedStreamOnDisk m_clp_segment;
+        Segment m_clp_segment;
         CLPFile* m_clp_file;
     };
 };

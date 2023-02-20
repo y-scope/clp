@@ -14,7 +14,7 @@ namespace streaming_archive::writer {
         void open_derived () override;
 
         void append_to_segment (const LogTypeDictionaryWriter& logtype_dict,
-                                CompressedStreamOnDisk& segment) override;
+                                Segment& segment) override;
 
         void write_encoded_msg (epochtime_t timestamp, logtype_dictionary_id_t logtype_id,
                                 size_t offset,
