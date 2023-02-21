@@ -341,32 +341,4 @@ namespace streaming_archive {
             m_insert_empty_directories_statement->reset();
         }
     }
-
-    /*
-     *  Haiqi TODO: temporary placeholders for functions. After the change
-     *  is complete, those functions should be pure virtual
-     */
-
-    size_t MetadataDB::get_field_size () {
-        return enum_to_underlying_type(FilesTableFieldIndexes::Length);
-    }
-
-    void MetadataDB::add_storage_specific_field_names_and_types(std::vector<std::pair<std::string, std::string>>& file_field_names_and_types) {
-        return;
-    }
-    void MetadataDB::create_storage_specific_index (
-            std::back_insert_iterator<fmt::memory_buffer> statement_buffer_ix) {
-        return;
-    }
-    void MetadataDB::add_storage_specific_fields (std::vector<std::string>& field_names) {
-        return;
-    }
-
-    void MetadataDB::add_storage_specific_ordering(std::back_insert_iterator<fmt::memory_buffer> statement_buffer_ix) {
-        return;
-    }
-
-    void MetadataDB::bind_storage_specific_fields (writer::File*) {
-        return;
-    }
 }

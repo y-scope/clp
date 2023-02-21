@@ -268,7 +268,6 @@ set(SOURCE_FILES_clp
         src/streaming_archive/CLPMetadataDB.hpp
         src/streaming_archive/GLTMetadataDB.cpp
         src/streaming_archive/GLTMetadataDB.hpp
-        src/streaming_archive/LogtypeSizeTracker.cpp
         src/streaming_archive/LogtypeSizeTracker.hpp
         src/streaming_archive/reader/Archive.cpp
         src/streaming_archive/reader/Archive.hpp

@@ -43,7 +43,7 @@ namespace streaming_archive::writer {
             size_t creation_num;
             size_t target_segment_uncompressed_size;
             int compression_level;
-            double table_threshold;
+            double glt_combined_threshold;
             std::string output_dir;
             GlobalMetadataDB* global_metadata_db;
             bool print_archive_stats_progress;

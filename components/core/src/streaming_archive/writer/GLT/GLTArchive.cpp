@@ -17,7 +17,7 @@ namespace streaming_archive::writer {
     }
 
     void GLTArchive::open_derived (const UserConfig& user_config) {
-        m_table_threshold = user_config.table_threshold;
+        m_combined_threshold = user_config.glt_combined_threshold;
         // Save file_id to file name mapping to disk
         std::string file_id_file_path = m_path + '/' + cFileNameDictFilename;
         try {
@@ -200,7 +200,7 @@ namespace streaming_archive::writer {
         // to m_glt_segment.
         if (!m_message_order_table.is_open()) {
             m_glt_segment.open(m_segments_dir_path, m_next_segment_id,
-                               m_compression_level, m_table_threshold);
+                               m_compression_level, m_combined_threshold);
             m_message_order_table.open(m_segments_dir_path, m_next_segment_id,
                                        m_compression_level);
             m_next_segment_id++;

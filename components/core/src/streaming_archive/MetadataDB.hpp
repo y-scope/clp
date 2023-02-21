@@ -13,9 +13,6 @@
 #include "../type_utils.hpp"
 #include "writer/File.hpp"
 
-// fmt
-#include <fmt/core.h>
-
 namespace streaming_archive {
     class MetadataDB {
     public:
@@ -76,7 +73,7 @@ namespace streaming_archive {
             explicit FileIterator (MetadataDB* m_db_ptr, SQLiteDB& db, epochtime_t begin_timestamp, epochtime_t end_timestamp, const std::string& file_path, bool in_specific_segment,
                                    segment_id_t segment_id);
             // Destructor
-            // Need at least one virtual function to make the class to be virtual
+            // Need at least one virtual function to enable dynamic casting
             virtual ~FileIterator() {}
             // Methods
             void set_segment_id (segment_id_t segment_id);
@@ -139,12 +136,12 @@ namespace streaming_archive {
 
     protected:
         // Methods
-        virtual size_t get_field_size();
-        virtual void add_storage_specific_fields(std::vector<std::string>& field_names);
-        virtual void bind_storage_specific_fields(writer::File*);
-        virtual void add_storage_specific_field_names_and_types(std::vector<std::pair<std::string, std::string>>& file_field_names_and_types);
-        virtual void add_storage_specific_ordering(std::back_insert_iterator<fmt::memory_buffer> statement_buffer_ix);
-        virtual void create_storage_specific_index(std::back_insert_iterator<fmt::memory_buffer> statement_buffer_ix);
+        virtual size_t get_field_size() = 0;
+        virtual void add_storage_specific_fields(std::vector<std::string>& field_names) = 0;
+        virtual void bind_storage_specific_fields(writer::File*) = 0;
+        virtual void add_storage_specific_field_names_and_types(std::vector<std::pair<std::string, std::string>>& file_field_names_and_types) = 0;
+        virtual void add_storage_specific_ordering(std::back_insert_iterator<fmt::memory_buffer> statement_buffer_ix) = 0;
+        virtual void create_storage_specific_index(std::back_insert_iterator<fmt::memory_buffer> statement_buffer_ix) = 0;
 
         void create_tables (const std::vector<std::pair<std::string, std::string>>& file_field_names_and_types, SQLiteDB& db);
 

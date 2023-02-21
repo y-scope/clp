@@ -93,26 +93,28 @@ namespace clp {
         archive_user_config.creation_num = 0;
         archive_user_config.target_segment_uncompressed_size = command_line_args.get_target_segment_uncompressed_size();
         archive_user_config.compression_level = command_line_args.get_compression_level();
-        archive_user_config.table_threshold = command_line_args.get_table_threshold();
+        archive_user_config.glt_combined_threshold = command_line_args.get_glt_combined_threshold();
         archive_user_config.output_dir = command_line_args.get_output_dir();
         archive_user_config.global_metadata_db = global_metadata_db.get();
         archive_user_config.print_archive_stats_progress = command_line_args.print_archive_stats_progress();
 
         // Open Archive
-        unique_ptr<streaming_archive::writer::Archive> archive_writer;
+        unique_ptr<streaming_archive::writer::Archive> archive_writer_ptr;
         if (command_line_args.use_glt()) {
-            archive_writer = std::make_unique<streaming_archive::writer::GLTArchive>();
+            archive_writer_ptr = std::make_unique<streaming_archive::writer::GLTArchive>();
         } else {
-            archive_writer = std::make_unique<streaming_archive::writer::CLPArchive>();
+            archive_writer_ptr = std::make_unique<streaming_archive::writer::CLPArchive>();
         }
+        auto& archive_writer = *archive_writer_ptr;
+
         // Set schema file if specified by user
         if (false == command_line_args.get_use_heuristic()) {
-            archive_writer->m_schema_file_path = command_line_args.get_schema_file_path();
+            archive_writer.m_schema_file_path = command_line_args.get_schema_file_path();
         }
         // Open archive
-        archive_writer->open(archive_user_config);
+        archive_writer.open(archive_user_config);
 
-        archive_writer->add_empty_directories(empty_directory_paths);
+        archive_writer.add_empty_directories(empty_directory_paths);
 
         bool all_files_compressed_successfully = true;
         FileCompressor file_compressor(uuid_generator, std::move(log_parser));
@@ -126,11 +128,11 @@ namespace clp {
         }
         sort(files_to_compress.begin(), files_to_compress.end(), file_lt_last_write_time_comparator);
         for (auto rit = files_to_compress.crbegin(); rit != files_to_compress.crend(); ++rit) {
-            if (archive_writer->get_data_size_of_dictionaries() >= target_data_size_of_dictionaries) {
-                split_archive(archive_user_config, *archive_writer);
+            if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dictionaries) {
+                split_archive(archive_user_config, archive_writer);
             }
             if (false == file_compressor.compress_file(target_data_size_of_dictionaries, archive_user_config,
-                                                       target_encoded_file_size, *rit, *archive_writer, use_heuristic)) {
+                                                       target_encoded_file_size, *rit, archive_writer, use_heuristic)) {
                 all_files_compressed_successfully = false;
             }
             if (command_line_args.show_progress()) {
@@ -143,12 +145,12 @@ namespace clp {
         sort(grouped_files_to_compress.begin(), grouped_files_to_compress.end(), file_group_id_comparator);
         // Compress grouped files
         for (const auto& file_to_compress: grouped_files_to_compress) {
-            if (archive_writer->get_data_size_of_dictionaries() >= target_data_size_of_dictionaries) {
-                split_archive(archive_user_config, *archive_writer);
+            if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dictionaries) {
+                split_archive(archive_user_config, archive_writer);
             }
             if (false == file_compressor.compress_file(target_data_size_of_dictionaries, archive_user_config,
                                                        target_encoded_file_size, file_to_compress,
-                                                       *archive_writer, use_heuristic)) {
+                                                       archive_writer, use_heuristic)) {
                 all_files_compressed_successfully = false;
             }
             if (command_line_args.show_progress()) {
@@ -157,7 +159,7 @@ namespace clp {
             }
         }
 
-        archive_writer->close();
+        archive_writer.close();
         return all_files_compressed_successfully;
     }
 

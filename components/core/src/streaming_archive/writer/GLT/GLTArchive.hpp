@@ -64,7 +64,7 @@ namespace streaming_archive::writer {
                                          ArrayBackedPosIntSet<variable_dictionary_id_t>& var_ids_in_segment,
                                          std::vector<File*>& files_in_segment);
 
-        double m_table_threshold;
+        double m_combined_threshold;
         // TODO: remove this after file id is integrated
         // into the database schema
         FileWriter m_filename_dict_writer;
