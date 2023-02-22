@@ -215,7 +215,6 @@ namespace clp {
                 compression_positional_options_description.add("output-dir", 1);
                 compression_positional_options_description.add("input-paths", -1);
 
-                // storage engine
                 string storage_engine = "clp";
 
                 // Define compression-specific options
@@ -234,9 +233,8 @@ namespace clp {
                                 "Target size (B) for the dictionaries before a new archive is created")
                         ("compression-level", po::value<int>(&m_compression_level)->value_name("LEVEL")->default_value(m_compression_level),
                                 "1 (fast/low compression) to 9 (slow/high compression)")
-                        ("combined-threshold", po::value<double>(&m_glt_combine_threshold)->value_name("VALUE")->default_value(m_glt_combine_threshold),
-                                "Percentage threshold used to determine if a logtype should be stored in a combined table. "
-                                "Default = 0.1%")
+                        ("combine-threshold", po::value<double>(&m_glt_combine_threshold)->value_name("VALUE")->default_value(m_glt_combine_threshold),
+                                "Percentage threshold used to determine if a logtype should be stored in a combined table.")
                         ("print-archive-stats-progress", po::bool_switch(&m_print_archive_stats_progress),
                                 "Print statistics (ndjson) about each archive as it's compressed")
                         ("storage-engine", po::value<string>(&storage_engine)->value_name("engine")->default_value(storage_engine),
@@ -313,24 +311,16 @@ namespace clp {
 
                 if (storage_engine == "clp") {
                     m_use_glt = false;
-                } else if (storage_engine == "glt") {
-                    m_use_glt = true;
-                } else {
-                    throw invalid_argument("Unknown --storage-engine specified.");
-                }
-
-                if (!m_use_glt) {
-                    if (m_glt_combine_threshold != std::numeric_limits<double>::max()) {
+                    if (m_glt_combine_threshold != 0.1) {
                         throw invalid_argument("--combined-threshold specified when storage engine is not GLT");
                     }
-                } else {
-                    if (m_glt_combine_threshold == std::numeric_limits<double>::max()) {
-                        // set default to 0.1
-                        m_glt_combine_threshold = 0.1;
-                    }
+                } else if (storage_engine == "glt") {
+                    m_use_glt = true;
                     if (m_glt_combine_threshold < 0 || m_glt_combine_threshold > 100) {
-                        throw invalid_argument(" specified combined-threshold is invalid");
+                        throw invalid_argument("specified combined-threshold is %d invalid");
                     }
+                } else {
+                    throw invalid_argument("Unknown --storage-engine specified.");
                 }
             }
 

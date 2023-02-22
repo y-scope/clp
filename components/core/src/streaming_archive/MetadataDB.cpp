@@ -5,6 +5,7 @@
 
 // Project headers
 #include "../database_utils.hpp"
+#include "../type_utils.hpp"
 #include "Constants.hpp"
 
 using std::make_unique;

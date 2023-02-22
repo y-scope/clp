@@ -93,7 +93,7 @@ namespace clp {
         archive_user_config.creation_num = 0;
         archive_user_config.target_segment_uncompressed_size = command_line_args.get_target_segment_uncompressed_size();
         archive_user_config.compression_level = command_line_args.get_compression_level();
-        archive_user_config.glt_combined_threshold = command_line_args.get_glt_combined_threshold();
+        archive_user_config.glt_combine_threshold = command_line_args.get_glt_combine_threshold();
         archive_user_config.output_dir = command_line_args.get_output_dir();
         archive_user_config.global_metadata_db = global_metadata_db.get();
         archive_user_config.print_archive_stats_progress = command_line_args.print_archive_stats_progress();

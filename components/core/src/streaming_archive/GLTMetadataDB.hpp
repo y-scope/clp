@@ -2,6 +2,7 @@
 #define STREAMING_ARCHIVE_GLT_METADATADB_HPP
 
 // Project headers
+#include "../type_utils.hpp"
 #include "MetadataDB.hpp"
 
 namespace streaming_archive {

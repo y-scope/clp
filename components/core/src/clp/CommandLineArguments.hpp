@@ -31,8 +31,7 @@ namespace clp {
                 m_target_encoded_file_size(512L * 1024 * 1024),
                 m_target_data_size_of_dictionaries(100L * 1024 * 1024),
                 m_compression_level(3),
-                m_glt_combine_threshold(std::numeric_limits<double>::max())
-        {}
+                m_glt_combine_threshold(0.1) {}
 
         // Methods
         ParsingResult parse_arguments (int argc, const char* argv[]) override;
@@ -49,7 +48,7 @@ namespace clp {
         size_t get_target_segment_uncompressed_size () const { return m_target_segment_uncompressed_size; }
         size_t get_target_data_size_of_dictionaries () const { return m_target_data_size_of_dictionaries; }
         int get_compression_level () const { return m_compression_level; }
-        double get_glt_combined_threshold () const { return m_glt_combine_threshold; }
+        double get_glt_combine_threshold () const { return m_glt_combine_threshold; }
         Command get_command () const { return m_command; }
         const std::string& get_archives_dir () const { return m_archives_dir; }
         const std::vector<std::string>& get_input_paths () const { return m_input_paths; }

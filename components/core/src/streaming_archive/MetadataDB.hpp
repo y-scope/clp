@@ -10,7 +10,6 @@
 
 // Project headers
 #include "../SQLiteDB.hpp"
-#include "../type_utils.hpp"
 #include "writer/File.hpp"
 
 namespace streaming_archive {
