@@ -25,7 +25,6 @@ namespace streaming_archive {
             std::back_insert_iterator<fmt::memory_buffer> statement_buffer_ix) {
         fmt::format_to(statement_buffer_ix, "CREATE INDEX IF NOT EXISTS files_segment_order ON {} ({},{})", streaming_archive::cMetadataDB::FilesTableName,
                        streaming_archive::cMetadataDB::File::SegmentId, streaming_archive::cMetadataDB::GLTFile::SegmentLogtypesPosition);
-        SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
     }
 
     void GLTMetadataDB::add_storage_specific_ordering (

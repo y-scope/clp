@@ -25,6 +25,7 @@ namespace streaming_archive {
         statement_buffer.clear();
 
         create_storage_specific_index(statement_buffer_ix);
+        SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
         auto create_index_statement = db.prepare_statement(statement_buffer.data(), statement_buffer.size());
         create_index_statement.step();
         statement_buffer.clear();
