@@ -130,7 +130,13 @@ else()
 endif()
 
 # Find and setup msgpack
-find_package(msgpackc-cxx 5.0.0 REQUIRED)
+if(APPLE)
+    execute_process(COMMAND brew --prefix msgpack-cxx OUTPUT_VARIABLE PREFIX_MSGPACK_CXX)
+    string(STRIP "${PREFIX_MSGPACK_CXX}" PREFIX_MSGPACK_CXX)
+endif()
+find_package(msgpackc-cxx 5.0.0 REQUIRED
+        HINTS ${PREFIX_MSGPACK_CXX}
+        )
 if(msgpackc-cxx_FOUND)
     message(STATUS "Found msgpackc-cxx ${msgpackc-cxx_VERSION}")
 else()

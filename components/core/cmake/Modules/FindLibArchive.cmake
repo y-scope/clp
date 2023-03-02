@@ -20,10 +20,19 @@ include(cmake/Modules/FindLibraryDependencies.cmake)
 find_package(PkgConfig)
 pkg_check_modules(libarchive_PKGCONF QUIET "lib${libarchive_LIBNAME}")
 
+# On macOS, libarchive installed through brew is not linked into prefix by default. 
+# So it cannot be found by pkg-config and we need to manually find it.
+# For more details, see https://github.com/Homebrew/homebrew-core/issues/117642
+if(APPLE)
+    execute_process(COMMAND brew --prefix libarchive OUTPUT_VARIABLE PREFIX_LIBARCHIVE)
+    string(STRIP "${PREFIX_LIBARCHIVE}" PREFIX_LIBARCHIVE)
+endif()
+
 # Set include directory
 find_path(LibArchive_INCLUDE_DIR archive.h
         HINTS ${libarchive_PKGCONF_INCLUDEDIR}
         PATH_SUFFIXES include
+        HINTS ${PREFIX_LIBARCHIVE}/include
         )
 
 # Handle static libraries
@@ -39,6 +48,7 @@ endif()
 find_library(LibArchive_LIBRARY
         NAMES ${libarchive_LIBNAME}
         HINTS ${libarchive_PKGCONF_LIBDIR}
+        HINTS ${PREFIX_LIBARCHIVE}/lib
         PATH_SUFFIXES lib
         )
 if (LibArchive_LIBRARY)
