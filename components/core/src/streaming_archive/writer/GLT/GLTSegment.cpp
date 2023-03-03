@@ -81,7 +81,6 @@ namespace streaming_archive::writer {
                                     sizeof(size_t));
 
         size_t accumulated_size = 0;
-        combined_table_id_t combined_table_id = 0;
         double threshold = m_table_threshold / 100;
 
         std::vector<logtype_dictionary_id_t> accumulated_logtype;
@@ -98,20 +97,19 @@ namespace streaming_archive::writer {
                 accumulated_size += table_size;
                 accumulated_logtype.push_back(logtype_id);
                 if ((double(accumulated_size) / total_size) > threshold) {
-                    write_combined_logtype(accumulated_logtype, combined_table_id,
-                                           combined_tables_info);
+                    write_combined_logtype(accumulated_logtype, combined_tables_info);
                     accumulated_size = 0;
                     accumulated_logtype.clear();
-                    combined_table_id += 1;
                 }
             }
         }
         // Don't forget to write remaining logtype tables
-        write_combined_logtype(accumulated_logtype, combined_table_id, combined_tables_info);
-        combined_table_id += 1;
+        if (accumulated_size > 0) {
+            write_combined_logtype(accumulated_logtype, combined_tables_info);
+        }
 
         // store info of combined_tables
-        size_t combined_table_id_count = combined_table_id;
+        size_t combined_table_id_count = combined_tables_info.size();
         m_metadata_compressor.write(reinterpret_cast<const char*>(&combined_table_id_count),
                                     sizeof(size_t));
 
@@ -137,12 +135,9 @@ namespace streaming_archive::writer {
     }
 
     void GLTSegment::write_combined_logtype (const std::vector<logtype_dictionary_id_t>& accumulated_logtype,
-                                             combined_table_id_t combined_table_id,
                                              std::map<combined_table_id_t, CombinedTableInfo>& combined_tables_info) {
-        if (accumulated_logtype.size() == 0) {
-            return;
-        }
         open_combined_table_compressor();
+        combined_table_id_t combined_table_id = combined_tables_info.size();
         size_t compression_type = streaming_archive::GLT::LogtypeTableType::Combined;
         size_t combined_table_beginning_offset = m_logtype_table_writer.get_pos();
         for (const auto& logtype_id : accumulated_logtype) {

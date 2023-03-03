@@ -100,7 +100,6 @@ namespace streaming_archive::writer {
          * @param combined_tables_info
          */
         void write_combined_logtype (const std::vector<logtype_dictionary_id_t>& accumulated_logtype,
-                                     combined_table_id_t combined_table_id,
                                      std::map<combined_table_id_t, CombinedTableInfo>& combined_tables_info);
 
 
