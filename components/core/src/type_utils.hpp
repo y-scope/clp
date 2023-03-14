@@ -36,4 +36,19 @@ std::enable_if_t<sizeof(Destination) == sizeof(Source) &&
     return dst;
 }
 
+/**
+ * Helper for defining std::variant overloads inline, using lambdas
+ * @tparam Ts The types of the variant that will be deduced using the deduction
+ * guide below
+ */
+template <class... Ts>
+struct overloaded : Ts ... {
+    using Ts::operator()...;
+};
+/**
+ * Explicit deduction guide for the types passed to the methods in the
+ * overloaded helper
+ */
+template <class... Ts> overloaded (Ts...) -> overloaded<Ts...>;
+
 #endif // TYPE_UTILS_HPP

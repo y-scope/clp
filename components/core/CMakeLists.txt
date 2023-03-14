@@ -685,6 +685,18 @@ set(SOURCE_FILES_unitTest
         src/ffi/ir_stream/encoding_methods.cpp
         src/ffi/ir_stream/encoding_methods.hpp
         src/ffi/ir_stream/protocol_constants.hpp
+        src/ffi/search/CompositeWildcardToken.cpp
+        src/ffi/search/CompositeWildcardToken.hpp
+        src/ffi/search/ExactVariableToken.cpp
+        src/ffi/search/ExactVariableToken.hpp
+        src/ffi/search/query_methods.cpp
+        src/ffi/search/query_methods.hpp
+        src/ffi/search/QueryMethodFailed.hpp
+        src/ffi/search/QueryToken.hpp
+        src/ffi/search/QueryWildcard.cpp
+        src/ffi/search/QueryWildcard.hpp
+        src/ffi/search/WildcardToken.cpp
+        src/ffi/search/WildcardToken.hpp
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
@@ -799,6 +811,7 @@ set(SOURCE_FILES_unitTest
         tests/test-Grep.cpp
         tests/test-main.cpp
         tests/test-ParserWithUserSchema.cpp
+        tests/test-query_methods.cpp
         tests/test-Segment.cpp
         tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp

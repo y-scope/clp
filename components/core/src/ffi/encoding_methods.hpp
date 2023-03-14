@@ -62,11 +62,36 @@ namespace ffi {
     static constexpr char cTooFewEncodedVarsErrorMessage[] =
             "There are fewer encoded variables than encoded variable delimiters in the logtype.";
 
+    constexpr size_t cMaxDigitsInRepresentableEightByteFloatVar = 16;
+    constexpr size_t cMaxDigitsInRepresentableFourByteFloatVar = 8;
+
+    /**
+     * Checks if the given character is a delimiter
+     * We treat everything *except* the following quoted characters as a
+     * delimiter: "+-.0-9A-Z\_a-z"
+     * @param c
+     * @return Whether c is a delimiter
+     */
+    bool is_delim (signed char c);
+
     /**
      * @param c
      * @return Whether the character is a variable placeholder
      */
     bool is_variable_placeholder (char c);
+
+    /**
+     * @param str
+     * @return Whether the given string could be a multi-digit hex value
+     */
+    bool could_be_multi_digit_hex_value (std::string_view str);
+
+    /**
+     * @param value
+     * @return Whether the given value is a variable according to the schemas
+     * specified in ffi::get_bounds_of_next_var
+     */
+    bool is_var (std::string_view value);
 
     /**
      * Gets the bounds of the next variable in the given string

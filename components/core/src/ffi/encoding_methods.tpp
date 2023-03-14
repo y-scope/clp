@@ -23,7 +23,9 @@ namespace ffi {
 
         size_t pos = 0;
         constexpr size_t cMaxDigitsInRepresentableFloatVar =
-                std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t> ? 8 : 16;
+                std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
+                        ? cMaxDigitsInRepresentableFourByteFloatVar
+                        : cMaxDigitsInRepresentableEightByteFloatVar;
         size_t max_length = cMaxDigitsInRepresentableFloatVar + 1;  // +1 for decimal point
 
         // Check for a negative sign
