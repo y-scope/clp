@@ -130,17 +130,11 @@ else()
 endif()
 
 # Find and setup msgpack
-if(APPLE)
-    execute_process(COMMAND brew --prefix msgpack-cxx OUTPUT_VARIABLE PREFIX_MSGPACK_CXX)
-    string(STRIP "${PREFIX_MSGPACK_CXX}" PREFIX_MSGPACK_CXX)
-endif()
-find_package(msgpackc-cxx 5.0.0 REQUIRED
-        HINTS ${PREFIX_MSGPACK_CXX}
-        )
-if(msgpackc-cxx_FOUND)
-    message(STATUS "Found msgpackc-cxx ${msgpackc-cxx_VERSION}")
+find_package(msgpack-cxx 6.0.0 REQUIRED)
+if(msgpack-cxx_FOUND)
+    message(STATUS "Found msgpack-cxx ${msgpack-cxx_VERSION}")
 else()
-    message(FATAL_ERROR "Could not find msgpackc-cxx")
+    message(FATAL_ERROR "Could not find msgpack-cxx")
 endif()
 
 # Add yaml-cpp
@@ -619,7 +613,7 @@ target_link_libraries(clo
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
-        msgpackc-cxx
+        msgpack-cxx
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
