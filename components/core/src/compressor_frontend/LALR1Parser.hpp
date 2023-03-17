@@ -19,6 +19,7 @@
 
 // Project headers
 #include "../ReaderInterface.hpp"
+#include "../type_utils.hpp"
 #include "Lexer.hpp"
 
 namespace streaming_archive::writer {
@@ -64,12 +65,6 @@ namespace compressor_frontend {
     };
     
     typedef std::variant<Token, NonTerminal> MatchedSymbol;
-    
-    template<class... Ts>
-    struct overloaded : Ts ... {
-        using Ts::operator()...;
-    }; // (1)
-    template<class... Ts> overloaded (Ts...) -> overloaded<Ts...>;  // (2)
 
     class NonTerminal {
     public:
