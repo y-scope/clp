@@ -23,7 +23,7 @@ include(cmake/Modules/FindLibraryDependencies.cmake)
 if(APPLE)
     execute_process(COMMAND brew --prefix libarchive OUTPUT_VARIABLE libarchive_MACOS_PREFIX)
     string(STRIP "${libarchive_MACOS_PREFIX}" libarchive_MACOS_PREFIX)
-    set(ENV{PREV_CMAKE_PREFIX_PATH} "$ENV{CMAKE_PREFIX_PATH}")  # save it so we can revert it later
+    set(ENV{libarchive_PREV_CMAKE_PATH} "$ENV{CMAKE_PREFIX_PATH}")  # save it so we can revert it later
     set(ENV{CMAKE_PREFIX_PATH} "${libarchive_MACOS_PREFIX};$ENV{CMAKE_PREFIX_PATH}")
 endif()
 
@@ -116,5 +116,6 @@ if(NOT TARGET LibArchive::LibArchive)
 endif()
 
 if(APPLE)
-    set(ENV{CMAKE_PREFIX_PATH} "$ENV{PREV_CMAKE_PREFIX_PATH}")  # remove LibArchive-specific path
+    # remove LibArchive-specific path
+    set(ENV{CMAKE_PREFIX_PATH} "$ENV{libarchive_PREV_CMAKE_PATH}")
 endif()
