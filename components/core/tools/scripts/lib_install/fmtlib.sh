@@ -29,7 +29,7 @@ fi
 
 # Check if already installed
 set +e
-dpkg -l ${package_name}
+dpkg -l ${package_name} | grep ${version}
 installed=$?
 set -e
 if [ $installed -eq 0 ] ; then
