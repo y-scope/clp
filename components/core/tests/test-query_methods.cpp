@@ -112,7 +112,13 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         string expected_logtype_query;
         vector<QueryVariableType> variable_types;
 
+        // In the comments below, we use:
+        // - \i to denote VariablePlaceholder::Integer,
+        // - \f to denote VariablePlaceholder::Float, and
+        // - \d to VariablePlaceholder::Dictionary
+
         // All wildcards treated as delimiters, "*abc*" as static text
+        // Expected logtype: "*abc*\i?\i?"
         expected_logtype_query = "*abc*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_logtype_query += '?';
@@ -123,6 +129,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(true, VariablePlaceholder::Integer);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*abc*\f?\i?"
         expected_logtype_query = "*abc*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         expected_logtype_query += '?';
@@ -133,6 +140,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(true, VariablePlaceholder::Integer);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*abc*\d?\i?"
         expected_logtype_query = "*abc*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '?';
@@ -144,6 +152,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
         // All wildcards treated as delimiters, "*abc*" as a dictionary variable
+        // Expected logtype: "*\d*\i?\i?"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '*';
@@ -157,6 +166,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(true, VariablePlaceholder::Integer);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*\d*\f?\i?"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '*';
@@ -170,6 +180,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(true, VariablePlaceholder::Integer);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*\d*\d?\i?"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '*';
@@ -184,6 +195,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
         // Second '*' treated as a non-delimiter
+        // Expected logtype: "*\d?\i?"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '?';
@@ -196,6 +208,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
 
         // Second '*' treated as delim, first '?' as non-delim, "*abc*" as
         // static text
+        // Expected logtype: "*abc*\i?"
         expected_logtype_query = "*abc*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_logtype_query += '?';
@@ -203,6 +216,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Integer);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*abc*\f?"
         expected_logtype_query = "*abc*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         expected_logtype_query += '?';
@@ -210,6 +224,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Float);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*abc*\d?"
         expected_logtype_query = "*abc*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '?';
@@ -219,6 +234,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
 
         // Second '*' treated as delim, first '?' as non-delim, "*abc*" as a
         // dictionary variable
+        // Expected logtype: "*\d*\i?"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '*';
@@ -229,6 +245,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Integer);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*\d*\f?"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '*';
@@ -239,6 +256,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Float);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*\d*\d?"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '*';
@@ -250,6 +268,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
         // Second '*' as non-delim, first '?' as non-delim
+        // Expected logtype: "*\d?"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '?';
@@ -259,6 +278,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
 
         // Second '*' as delim, first '?' as delim, second '?' as non-delim,
         // "*abc*" as static text
+        // Expected logtype: "*abc*\i?\i"
         expected_logtype_query = "*abc*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_logtype_query += '?';
@@ -268,6 +288,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Integer);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*abc*\f?\i"
         expected_logtype_query = "*abc*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         expected_logtype_query += '?';
@@ -277,6 +298,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Integer);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*abc*\d?\i"
         expected_logtype_query = "*abc*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '?';
@@ -286,6 +308,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Integer);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*abc*\i?\f"
         expected_logtype_query = "*abc*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_logtype_query += '?';
@@ -295,6 +318,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Float);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*abc*\f?\f"
         expected_logtype_query = "*abc*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         expected_logtype_query += '?';
@@ -304,6 +328,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Float);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*abc*\d?\f"
         expected_logtype_query = "*abc*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '?';
@@ -313,6 +338,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Float);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*abc*\i?\d"
         expected_logtype_query = "*abc*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_logtype_query += '?';
@@ -322,6 +348,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Dictionary);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*abc*\f?\d"
         expected_logtype_query = "*abc*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         expected_logtype_query += '?';
@@ -331,6 +358,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Dictionary);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*abc*\d?\d"
         expected_logtype_query = "*abc*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '?';
@@ -342,6 +370,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
 
         // Second '*' as delim, first '?' as delim, second '?' as non-delim,
         // "*abc*" as a dictionary variable
+        // Expected logtype: "*\d*\i?\i"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '*';
@@ -354,6 +383,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Integer);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*\d*\f?\i"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '*';
@@ -366,6 +396,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Integer);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*\d*\d?\i"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '*';
@@ -378,6 +409,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Integer);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*\d*\i?\f"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '*';
@@ -390,6 +422,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Float);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*\d*\f?\f"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '*';
@@ -402,6 +435,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Float);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*\d*\d?\f"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '*';
@@ -414,6 +448,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Float);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*\d*\i?\d"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '*';
@@ -426,6 +461,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Dictionary);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*\d*\f?\d"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '*';
@@ -438,6 +474,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Dictionary);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*\d*\d?\d"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '*';
@@ -451,6 +488,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
         // Second '*' as non-delim, first '?' as delim, second '?' as non-delim
+        // Expected logtype: "*\d?\i"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '?';
@@ -460,6 +498,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Integer);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*\d?\f"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '?';
@@ -469,6 +508,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Float);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*\d?\d"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '?';
@@ -480,18 +520,21 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
 
         // Second '*' as delim, first '?' as non-delim, second '?' as non-delim,
         // "*abc*" as static text
+        // Expected logtype: "*abc*\i"
         expected_logtype_query = "*abc*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         variable_types.clear();
         variable_types.emplace_back(false, VariablePlaceholder::Integer);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*abc*\f"
         expected_logtype_query = "*abc*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         variable_types.clear();
         variable_types.emplace_back(false, VariablePlaceholder::Float);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*abc*\d"
         expected_logtype_query = "*abc*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         variable_types.clear();
@@ -500,6 +543,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
 
         // Second '*' as delim, first '?' as non-delim, second '?' as non-delim,
         // "*abc*" as a dictionary variable
+        // Expected logtype: "*\d*\i"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '*';
@@ -509,6 +553,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Integer);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*\d*\f"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '*';
@@ -518,6 +563,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         variable_types.emplace_back(false, VariablePlaceholder::Float);
         logtype_query_to_variable_types.emplace(expected_logtype_query, variable_types);
 
+        // Expected logtype: "*\d*\d"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_logtype_query += '*';
@@ -529,6 +575,7 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
 
         // Second '*' as non-delim, first '?' as non-delim, second '?' as
         // non-delim"*abc*" as a dictionary variable
+        // Expected logtype: "*\d"
         expected_logtype_query = "*";
         expected_logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         variable_types.clear();
