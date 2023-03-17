@@ -1,5 +1,5 @@
-#ifndef FFI_SEARCH_WILDCARDCONTAININGTOKEN_HPP
-#define FFI_SEARCH_WILDCARDCONTAININGTOKEN_HPP
+#ifndef FFI_SEARCH_COMPOSITEWILDCARDTOKEN_HPP
+#define FFI_SEARCH_COMPOSITEWILDCARDTOKEN_HPP
 
 // C++ standard libraries
 #include <string_view>
@@ -20,7 +20,7 @@ namespace ffi::search {
      * <br>
      * For instance, in the query "var:*abc?def*", "*abc?def*" would be a
      * CompositeWildcardToken. This is different from a WildcardToken which can
-     * be delimited by wildcards. For instance, "*abc?" could be a
+     * be delimited by wildcards. For instance, "*abc" could be a
      * WildcardToken, where it's delimited by '?' (on the right).
      * <br>
      * By interpreting wildcards (as matching delimiters/non-delimiters) within
@@ -75,12 +75,21 @@ namespace ffi::search {
          * WildcardTokens based on the current interpretation of wildcards
          */
         void tokenize_into_wildcard_variable_tokens ();
+        /**
+         * Adds the token given by the string bounds to the vector of variables,
+         * iff the token contains a wildcard (and so could be a variable) or the
+         * token is indeed a variable.
+         * @param begin_pos
+         * @param end_pos
+         * @param wildcard_in_token
+         */
+        void try_add_wildcard_variable (size_t begin_pos, size_t end_pos, bool wildcard_in_token);
 
         // Variables
         std::vector<QueryWildcard> m_wildcards;
         std::vector<std::variant<ExactVariableToken<encoded_variable_t>,
-                WildcardToken<encoded_variable_t>>> m_wildcard_variables;
+                WildcardToken<encoded_variable_t>>> m_variables;
     };
 }
 
-#endif // FFI_SEARCH_WILDCARDCONTAININGTOKEN_HPP
+#endif // FFI_SEARCH_COMPOSITEWILDCARDTOKEN_HPP

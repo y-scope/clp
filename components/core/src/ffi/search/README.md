@@ -44,16 +44,16 @@ variables that match `0.3*`. But `0.3*` could also match a dictionary variable
 which requires a separate query. Overall, wildcards create ambiguity that
 requires us to consider different query interpretations.
 
-There are four query interpretations for the example:
+There are four query interpretations for the example (`*task* took 0.3*`):
 
 1. Interpretation 1:
    * Dictionary variable queries: `["*task*"]`
    * Encoded variable queries: `["0.3*"]`
-   * Logtype query: `*<dict-var> took <float>*`
+   * Logtype query: `*<dict-var>* took <float>*`
 2. Interpretation 2:
    * Dictionary variables queries: `["*task*", "0.3*"]`
    * Encoded variable queries: `[]`
-   * Logtype query: `*<dict-var> took <dict-var>*`
+   * Logtype query: `*<dict-var>* took <dict-var>*`
 3. Interpretation 3:
    * Dictionary variable queries: `[]`
    * Encoded variable queries: `["0.3*"]`
@@ -146,12 +146,13 @@ the sequence: one as a suffix of `to`, a lone `*`, and one as a prefix of
 
 Comparing the first and third interpretation in Table 1, we can see that the
 third is a more general version of the first. As a result, we don't need to
-consider the first interpretation. We can generalize this as follows: *If a `*`
-is interpreted to have a different type than either of the characters
-surrounding it, the tokenization should split the string at the `*` while
-leaving a `*` attached to the surrounding characters.*
+consider the first interpretation. We can generalize this as follows:
 
-So the wildcard-containing token, `*container*to`, can be tokenized either as:
+> If a `*` is interpreted to have a different type than either of the
+> characters surrounding it, the tokenization should split the string at the
+> `*` while leaving a `*` attached to the surrounding characters.
+
+So the wildcard-containing token, `*container*to*`, can be tokenized either as:
 
 1. `*container*` and `*to*`, or
 2. `*container*to*`

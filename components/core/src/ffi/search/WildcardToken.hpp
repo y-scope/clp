@@ -52,7 +52,10 @@ namespace ffi::search {
         }
 
         /**
-         * Adds this token to the given logtype query
+         * Adds this token to the given logtype query. NOTE: We don't add this
+         * token's suffix '*' (if any) to the logtype query since we expect it
+         * will be added as the next token's prefix '*' (or if this is the last
+         * token, we expect the caller will add the suffix '*').
          * @param logtype_query
          * @return true if the token is interpreted as a variable
          * @return false if the token is interpreted as static text

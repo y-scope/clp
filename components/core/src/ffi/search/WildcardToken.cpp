@@ -85,9 +85,14 @@ namespace ffi::search {
                 }
             } else if ('0' <= c && c <= '9') {
                 ++num_digits;
+                // ceil(log10(INT32_MAX))
+                constexpr size_t cMaxDigitsInRepresentableFourByteIntVar = 10;
+                // ceil(log10(INT64_MAX))
+                constexpr size_t cMaxDigitsInRepresentableEightByteIntVar = 19;
                 constexpr size_t cMaxDigitsInRepresentableIntVar =
                         std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
-                        ? 10 : 19;
+                        ? cMaxDigitsInRepresentableFourByteIntVar
+                        : cMaxDigitsInRepresentableEightByteIntVar;
                 if (num_digits > cMaxDigitsInRepresentableIntVar) {
                     // More digits than is representable
                     return false;
@@ -162,9 +167,16 @@ namespace ffi::search {
 
     template <typename encoded_variable_t>
     bool WildcardToken<encoded_variable_t>::add_to_logtype_query (string& logtype_query) const {
+        // Recall from CompositeWildcardToken::add_to_query: We need to handle
+        // '*' carefully when adding to the logtype query since we may have a
+        // token like "a1*b2" with interpretation ["a1*", "*b2"], i.e., the
+        // first token's suffix '*' is the second token's prefix '*'. So we only
+        // add the current token's prefix '*' below and ignore any suffix '*'
+        // since they will be captured by the next token.
         auto current_interpretation = m_possible_variable_types[m_current_interpretation_idx];
         if (TokenType::StaticText == current_interpretation) {
             if (m_has_suffix_star_wildcard) {
+                // Ignore the suffix '*'
                 logtype_query.append(m_query, m_begin_pos, (m_end_pos - 1) - m_begin_pos);
             } else {
                 logtype_query.append(m_query, m_begin_pos, m_end_pos - m_begin_pos);

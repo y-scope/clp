@@ -11,10 +11,34 @@ using std::string_view;
 using std::variant;
 using std::vector;
 
-auto TokenGetBeginPos = [] (const auto& token) { return token.get_begin_pos(); };
-auto TokenGetEndPos = [] (const auto& token) { return token.get_end_pos(); };
-
 namespace ffi::search {
+    auto TokenGetBeginPos = [] (const auto& token) { return token.get_begin_pos(); };
+    auto TokenGetEndPos = [] (const auto& token) { return token.get_end_pos(); };
+
+    /**
+     * Finds the next delimiter that's not also a wildcard
+     * @param value
+     * @param pos Position to the start the search from, returns the position of
+     * the delimiter (if found)
+     * @param contains_alphabet Returns whether the string contains an alphabet
+     * @param contains_decimal_digit Returns whether the string contains a
+     * decimal digit
+     * @param contains_wildcard Returns whether the string contains a wildcard
+     */
+    static void find_delimiter (string_view value, size_t& pos, bool& contains_alphabet,
+                                bool& contains_decimal_digit, bool& contains_wildcard);
+    /**
+     * Finds the next wildcard or non-delimiter in the given string, starting
+     * from the given position
+     * @param value
+     * @param pos Position to the start the search from, returns the position of
+     * the wildcard or non-delimiter (if found)
+     * @param contains_wildcard Returns whether the string contains a wildcard
+     * @return Whether a wildcard/non-delimiter was found
+     */
+    static bool find_wildcard_or_non_delimiter (string_view value, size_t& pos,
+                                                bool& contains_wildcard);
+
     /**
      * Tokenizes the given wildcard query into exact variables (as would be
      * found by ffi::get_bounds_of_next_var) and potential variables, i.e., any
@@ -35,7 +59,7 @@ namespace ffi::search {
 
     template<typename encoded_variable_t>
     void generate_subqueries (
-            const string& wildcard_query,
+            string_view wildcard_query,
             vector<
                     pair<
                             string,
@@ -58,17 +82,18 @@ namespace ffi::search {
         vector<CompositeWildcardToken<encoded_variable_t>*> composite_wildcard_tokens;
         tokenize_query(wildcard_query, tokens, composite_wildcard_tokens);
 
+        bool all_interpretations_complete = false;
         string logtype_query;
         vector<variant<ExactVariableToken<encoded_variable_t>,
                 WildcardToken<encoded_variable_t>>> query_vars;
-        while (true) {
+        while (false == all_interpretations_complete) {
             logtype_query.clear();
             query_vars.clear();
-            size_t last_variable_end_pos = 0;
+            size_t constant_begin_pos = 0;
             for (const auto& token : tokens) {
                 auto begin_pos = std::visit(TokenGetBeginPos, token);
-                logtype_query.append(wildcard_query, last_variable_end_pos,
-                                     begin_pos - last_variable_end_pos);
+                logtype_query.append(wildcard_query, constant_begin_pos,
+                                     begin_pos - constant_begin_pos);
 
                 std::visit(overloaded{
                         [&logtype_query, &query_vars] (
@@ -84,18 +109,14 @@ namespace ffi::search {
                         }
                 }, token);
 
-                last_variable_end_pos = std::visit(TokenGetEndPos, token);
+                constant_begin_pos = std::visit(TokenGetEndPos, token);
             }
-            logtype_query.append(wildcard_query, last_variable_end_pos);
+            logtype_query.append(wildcard_query, constant_begin_pos);
 
             // Save sub-query if it's unique
             bool sub_query_exists = false;
             for (const auto& sub_query : sub_queries) {
-                const auto& sub_query_logtype_query = sub_query.first;
-                const auto& sub_query_query_vars = sub_query.second;
-                if (sub_query_logtype_query == logtype_query
-                    && sub_query_query_vars == query_vars)
-                {
+                if (sub_query.first == logtype_query && sub_query.second == query_vars) {
                     sub_query_exists = true;
                     break;
                 }
@@ -105,15 +126,12 @@ namespace ffi::search {
             }
 
             // Generate next interpretation if any
-            bool all_interpretations_complete = true;
+            all_interpretations_complete = true;
             for (auto w : composite_wildcard_tokens) {
                 if (w->generate_next_interpretation()) {
                     all_interpretations_complete = false;
                     break;
                 }
-            }
-            if (all_interpretations_complete) {
-                break;
             }
         }
     }
@@ -128,78 +146,21 @@ namespace ffi::search {
         // Tokenize query using delimiters to get definite variables and tokens
         // containing wildcards (potential variables)
         size_t end_pos = 0;
-        auto wildcard_query_length = wildcard_query.length();
         while (true) {
             auto begin_pos = end_pos;
 
-            // Find next wildcard or delimiter
-            bool is_escaped = false;
-            bool contains_wildcard = false;
-            for (; begin_pos < wildcard_query_length; ++begin_pos) {
-                auto c = wildcard_query[begin_pos];
-
-                if (is_escaped) {
-                    is_escaped = false;
-
-                    if (false == is_delim(c)) {
-                        // Found escaped non-delimiter, so reverse the index to
-                        // retain the escape character
-                        --begin_pos;
-                        break;
-                    }
-                } else if ('\\' == c) {
-                    is_escaped = true;
-                } else {
-                    if (is_wildcard(c)) {
-                        contains_wildcard = true;
-                        break;
-                    } else if (false == is_delim(c)) {
-                        break;
-                    }
-                }
-            }
-            if (wildcard_query_length == begin_pos) {
-                // Early exit for performance
+            bool contains_wildcard;
+            if (false == find_wildcard_or_non_delimiter(wildcard_query, begin_pos,
+                                                        contains_wildcard))
+            {
                 break;
             }
 
             bool contains_decimal_digit = false;
             bool contains_alphabet = false;
-
-            // Find next delimiter
-            is_escaped = false;
             end_pos = begin_pos;
-            while (end_pos < wildcard_query_length) {
-                auto c = wildcard_query[end_pos];
-
-                if (is_escaped) {
-                    is_escaped = false;
-
-                    if (is_delim(c)) {
-                        // Found escaped delimiter, so reverse the index to
-                        // exclude the escape character
-                        --end_pos;
-                        break;
-                    }
-                } else if ('\\' == c) {
-                    is_escaped = true;
-                } else {
-                    if (is_wildcard(c)) {
-                        contains_wildcard = true;
-                    } else if (is_delim(c)) {
-                        // Found delimiter that's not also a wildcard
-                        break;
-                    }
-                }
-
-                if (is_decimal_digit(c)) {
-                    contains_decimal_digit = true;
-                } else if (is_alphabet(c)) {
-                    contains_alphabet = true;
-                }
-
-                ++end_pos;
-            }
+            find_delimiter(wildcard_query, end_pos, contains_alphabet, contains_decimal_digit,
+                           contains_wildcard);
 
             if (contains_wildcard) {
                 // Only consider tokens which contain more than just a wildcard
@@ -229,10 +190,77 @@ namespace ffi::search {
         }
     }
 
+    static void find_delimiter (string_view value, size_t& pos, bool& contains_alphabet,
+                                bool& contains_decimal_digit, bool& contains_wildcard)
+    {
+        bool is_escaped = false;
+        for (; pos < value.length(); ++pos) {
+            auto c = value[pos];
+
+            if (is_escaped) {
+                is_escaped = false;
+
+                if (is_delim(c)) {
+                    // Found escaped delimiter, so reverse the index to
+                    // exclude the escape character
+                    --pos;
+                    return;
+                }
+            } else if ('\\' == c) {
+                is_escaped = true;
+            } else {
+                if (is_wildcard(c)) {
+                    contains_wildcard = true;
+                } else if (is_delim(c)) {
+                    // Found delimiter that's not also a wildcard
+                    return;
+                }
+            }
+
+            if (is_decimal_digit(c)) {
+                contains_decimal_digit = true;
+            } else if (is_alphabet(c)) {
+                contains_alphabet = true;
+            }
+        }
+    }
+
+    static bool find_wildcard_or_non_delimiter (string_view value, size_t& pos,
+                                                bool& contains_wildcard)
+    {
+        bool is_escaped = false;
+        contains_wildcard = false;
+        for (; pos < value.length(); ++pos) {
+            auto c = value[pos];
+
+            if (is_escaped) {
+                is_escaped = false;
+
+                if (false == is_delim(c)) {
+                    // Found escaped non-delimiter, so reverse the index to
+                    // retain the escape character
+                    --pos;
+                    return true;
+                }
+            } else if ('\\' == c) {
+                is_escaped = true;
+            } else {
+                if (is_wildcard(c)) {
+                    contains_wildcard = true;
+                    return true;
+                } else if (false == is_delim(c)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     // Explicitly declare specializations to avoid having to validate that the
     // template parameters are supported
     template void generate_subqueries (
-            const string& wildcard_query,
+            string_view wildcard_query,
             vector<
                     pair<
                             string,
@@ -246,7 +274,7 @@ namespace ffi::search {
             >& sub_queries
     );
     template void generate_subqueries (
-            const string& wildcard_query,
+            string_view wildcard_query,
             vector<
                     pair<
                             string,

@@ -3,6 +3,7 @@
 
 // C++ standard libraries
 #include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -14,7 +15,7 @@
 namespace ffi::search {
     template <typename encoded_variable_t>
     void generate_subqueries (
-            const std::string& wildcard_query,
+            std::string_view wildcard_query,
             std::vector<
                     std::pair<
                             std::string,
