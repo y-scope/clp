@@ -176,16 +176,15 @@ namespace ffi::ir_stream {
     {
         size_t begin_pos = 0;
         auto constant_len = constant.length();
-        if (contains_variable_placeholder) {
-            for (size_t i = 0; i < constant_len; ++i) {
-                if (is_variable_placeholder(constant[i])) {
-                    logtype.append(constant, begin_pos, i - begin_pos);
-                    logtype += '\\';
-                    // NOTE: We don't need to append the variable placeholder
-                    // immediately since the next constant copy operation will
-                    // get it
-                    begin_pos = i;
-                }
+        for (size_t i = 0; i < constant_len; ++i) {
+            auto c = constant[i];
+            if (cVariablePlaceholderEscapeCharacter == c || is_variable_placeholder(c)) {
+                logtype.append(constant, begin_pos, i - begin_pos);
+                logtype += cVariablePlaceholderEscapeCharacter;
+                // NOTE: We don't need to append the character of interest
+                // immediately since the next constant copy operation will
+                // get it
+                begin_pos = i;
             }
         }
         logtype.append(constant, begin_pos, constant_len - begin_pos);

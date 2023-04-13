@@ -56,6 +56,8 @@ namespace ffi {
             "com.yscope.clp.VariableEncodingMethodsV1";
     static constexpr char cVariablesSchemaVersion[] = "com.yscope.clp.VariablesSchemaV2";
 
+    constexpr char cVariablePlaceholderEscapeCharacter = '\\';
+
     static constexpr char cTooFewDictionaryVarsErrorMessage[] =
             "There are fewer dictionary variables than dictionary variable delimiters in the "
             "logtype.";
