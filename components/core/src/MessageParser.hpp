@@ -3,6 +3,8 @@
 
 // C++ standard libraries
 #include <string>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 // Project headers
 #include "ErrorCode.hpp"
