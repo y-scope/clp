@@ -90,6 +90,17 @@ bool MessageParser::parse_line (ParsedMessage& message) {
     epochtime_t timestamp = 0;
     size_t timestamp_begin_pos;
     size_t timestamp_end_pos;
+
+    try {
+        boost::property_tree::ptree pt;
+        std::stringstream ss(m_line);
+        boost::property_tree::read_json(ss, pt);
+        m_line = pt.get<std::string>("log_time") + " " + m_line;
+    } catch (const std::exception &e) {
+        SPDLOG_ERROR(e.what());
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+    
     if (nullptr == timestamp_pattern || false == timestamp_pattern->parse_timestamp(m_line, timestamp, timestamp_begin_pos, timestamp_end_pos)) {
         timestamp_pattern = TimestampPattern::search_known_ts_patterns(m_line, timestamp, timestamp_begin_pos, timestamp_end_pos);
     }
