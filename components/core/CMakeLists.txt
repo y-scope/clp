@@ -682,6 +682,8 @@ set(SOURCE_FILES_unitTest
         src/ffi/encoding_methods.hpp
         src/ffi/encoding_methods.tpp
         src/ffi/ir_stream/byteswap.hpp
+        src/ffi/ir_stream/decoding_methods.cpp
+        src/ffi/ir_stream/decoding_methods.hpp
         src/ffi/ir_stream/encoding_methods.cpp
         src/ffi/ir_stream/encoding_methods.hpp
         src/ffi/ir_stream/protocol_constants.hpp
@@ -809,6 +811,7 @@ set(SOURCE_FILES_unitTest
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
         tests/test-Grep.cpp
+        tests/test-ir-encoding_methods.cpp
         tests/test-main.cpp
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
