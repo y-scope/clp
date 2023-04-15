@@ -98,7 +98,6 @@ TEST_CASE("decode_next_message", "[ffi][decode_next_message]") {
 
     std::vector<int8_t> ir_buf;
     std::string logtype;
-    ffi::ir_stream::TimestampInfo ts_info;
     ffi::epoch_time_ms_t reference_timestamp = 1234567;
     REQUIRE(true == ffi::ir_stream::eight_byte_encoding::encode_message(reference_timestamp, message, logtype, ir_buf));
     const size_t encoded_message_end_pos = ir_buf.size();
@@ -107,17 +106,17 @@ TEST_CASE("decode_next_message", "[ffi][decode_next_message]") {
     size_t cursor_pos = encoded_message_start_pos;
     string decoded_message;
     ffi::epoch_time_ms_t timestamp;
-    REQUIRE(ffi::ir_stream::ErrorCode_Success == ffi::ir_stream::eight_byte_encoding::decode_next_message(ts_info, ir_buf, decoded_message, timestamp, cursor_pos));
+    REQUIRE(ffi::ir_stream::ErrorCode_Success == ffi::ir_stream::eight_byte_encoding::decode_next_message(ir_buf, decoded_message, timestamp, cursor_pos));
     REQUIRE(message == decoded_message);
     REQUIRE(timestamp == reference_timestamp);
     REQUIRE(cursor_pos == encoded_message_end_pos);
 
     cursor_pos = encoded_message_start_pos + 1;
-    REQUIRE(ffi::ir_stream::ErrorCode_Corrupted_IR == ffi::ir_stream::eight_byte_encoding::decode_next_message(ts_info, ir_buf, message, timestamp, cursor_pos));
+    REQUIRE(ffi::ir_stream::ErrorCode_Corrupted_IR == ffi::ir_stream::eight_byte_encoding::decode_next_message(ir_buf, message, timestamp, cursor_pos));
 
     cursor_pos = encoded_message_start_pos;
     ir_buf.resize(encoded_message_end_pos - 4);
-    REQUIRE(ffi::ir_stream::ErrorCode_InComplete_IR == ffi::ir_stream::eight_byte_encoding::decode_next_message(ts_info, ir_buf, message, timestamp, cursor_pos));
+    REQUIRE(ffi::ir_stream::ErrorCode_InComplete_IR == ffi::ir_stream::eight_byte_encoding::decode_next_message(ir_buf, message, timestamp, cursor_pos));
 }
 
 TEST_CASE("decode_next_message-4bytes", "[ffi][decode_next_message]") {
@@ -126,7 +125,6 @@ TEST_CASE("decode_next_message-4bytes", "[ffi][decode_next_message]") {
 
     std::vector<int8_t> ir_buf;
     std::string logtype;
-    ffi::ir_stream::TimestampInfo ts_info;
     ffi::epoch_time_ms_t reference_timestamp = -5;
     REQUIRE(true == ffi::ir_stream::four_byte_encoding::encode_message(reference_timestamp, message, logtype, ir_buf));
     const size_t encoded_message_end_pos = ir_buf.size();
@@ -135,17 +133,17 @@ TEST_CASE("decode_next_message-4bytes", "[ffi][decode_next_message]") {
     size_t cursor_pos = encoded_message_start_pos;
     string decoded_message;
     ffi::epoch_time_ms_t timestamp;
-    REQUIRE(ffi::ir_stream::ErrorCode_Success == ffi::ir_stream::four_byte_encoding::decode_next_message(ts_info, ir_buf, decoded_message, timestamp, cursor_pos));
+    REQUIRE(ffi::ir_stream::ErrorCode_Success == ffi::ir_stream::four_byte_encoding::decode_next_message(ir_buf, decoded_message, timestamp, cursor_pos));
     REQUIRE(message == decoded_message);
     REQUIRE(timestamp == reference_timestamp);
     REQUIRE(cursor_pos == encoded_message_end_pos);
 
     cursor_pos = encoded_message_start_pos + 1;
-    REQUIRE(ffi::ir_stream::ErrorCode_Corrupted_IR == ffi::ir_stream::four_byte_encoding::decode_next_message(ts_info, ir_buf, message, timestamp, cursor_pos));
+    REQUIRE(ffi::ir_stream::ErrorCode_Corrupted_IR == ffi::ir_stream::four_byte_encoding::decode_next_message(ir_buf, message, timestamp, cursor_pos));
 
     cursor_pos = encoded_message_start_pos;
     ir_buf.resize(encoded_message_end_pos - 4);
-    REQUIRE(ffi::ir_stream::ErrorCode_InComplete_IR == ffi::ir_stream::four_byte_encoding::decode_next_message(ts_info, ir_buf, message, timestamp, cursor_pos));
+    REQUIRE(ffi::ir_stream::ErrorCode_InComplete_IR == ffi::ir_stream::four_byte_encoding::decode_next_message(ir_buf, message, timestamp, cursor_pos));
 }
 
 
@@ -195,7 +193,7 @@ TEST_CASE("complete_test", "[ffi][decode_next_message]") {
     string decoded_message;
     ffi::epoch_time_ms_t timestamp;
     for (size_t ix = 0; ix < reference_messages.size(); ix++) {
-        REQUIRE(ffi::ir_stream::ErrorCode_Success == ffi::ir_stream::eight_byte_encoding::decode_next_message(ts_info, ir_buf, decoded_message, timestamp, cursor_pos));
+        REQUIRE(ffi::ir_stream::ErrorCode_Success == ffi::ir_stream::eight_byte_encoding::decode_next_message(ir_buf, decoded_message, timestamp, cursor_pos));
         REQUIRE(decoded_message == reference_messages[ix]);
         REQUIRE(timestamp == reference_timestamps[ix]);
     }

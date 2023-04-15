@@ -232,8 +232,7 @@ namespace ffi::ir_stream {
      * @return true on success, false otherwise
      */
     template <typename encoded_variable_t>
-    static IR_ErrorCode decode_next_message_general (const TimestampInfo& ts_info,
-                                                     const std::vector<int8_t>& ir_buf,
+    static IR_ErrorCode decode_next_message_general (const std::vector<int8_t>& ir_buf,
                                                      std::string& message,
                                                      epoch_time_ms_t& timestamp,
                                                      size_t& ending_pos) {
@@ -304,13 +303,11 @@ namespace ffi::ir_stream {
     }
 
     namespace four_byte_encoding {
-        IR_ErrorCode decode_next_message (const TimestampInfo& ts_info,
-                                          const std::vector<int8_t>& ir_buf,
+        IR_ErrorCode decode_next_message (const std::vector<int8_t>& ir_buf,
                                           std::string& message,
                                           epoch_time_ms_t& ts_delta,
                                           size_t& ending_pos) {
-            return decode_next_message_general<four_byte_encoded_variable_t>(ts_info,
-                                                                             ir_buf,
+            return decode_next_message_general<four_byte_encoded_variable_t>(ir_buf,
                                                                              message,
                                                                              ts_delta,
                                                                              ending_pos);
@@ -380,14 +377,12 @@ namespace ffi::ir_stream {
             return ErrorCode_Success;
         }
 
-        IR_ErrorCode decode_next_message (const TimestampInfo& ts_info,
-                                          const std::vector<int8_t>& ir_buf,
+        IR_ErrorCode decode_next_message (const std::vector<int8_t>& ir_buf,
                                           std::string& message,
                                           epoch_time_ms_t& timestamp,
                                           size_t& ending_pos) {
 
-            return decode_next_message_general<eight_byte_encoded_variable_t>(ts_info,
-                                                                              ir_buf,
+            return decode_next_message_general<eight_byte_encoded_variable_t>(ir_buf,
                                                                               message,
                                                                               timestamp,
                                                                               ending_pos);
