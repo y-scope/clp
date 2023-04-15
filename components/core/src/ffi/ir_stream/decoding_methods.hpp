@@ -20,9 +20,9 @@ namespace ffi::ir_stream {
         ErrorCode_End_of_IR
     } IR_ErrorCode;
 
-    IR_ErrorCode get_encoding_type(const std::vector<int8_t>& ir_buf, bool& is_compact);
-    namespace eight_byte_encoding {
+    IR_ErrorCode get_encoding_type(const std::vector<int8_t>& ir_buf, size_t& cursor_pos, bool& is_compact);
 
+    namespace eight_byte_encoding {
         typedef struct {
             std::string timestamp_pattern;
             std::string timestamp_pattern_syntax;

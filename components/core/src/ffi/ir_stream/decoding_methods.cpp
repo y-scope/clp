@@ -178,18 +178,23 @@ namespace ffi::ir_stream {
         return ErrorCode_Success;
     }
 
-    IR_ErrorCode get_encoding_type(const std::vector<int8_t>& ir_buf, bool& is_4bytes_encoding) {
+    IR_ErrorCode get_encoding_type(const std::vector<int8_t>& ir_buf, size_t& cursor_pos, bool& is_4bytes_encoding) {
+        bool header_match = false;
         if (ir_buf.size() < cProtocol::MagicNumberLength) {
             return ErrorCode_InComplete_IR;
         }
         if (0 == memcmp(ir_buf.data(), cProtocol::FourByteEncodingMagicNumber, cProtocol::MagicNumberLength)) {
             is_4bytes_encoding = true;
-            return ErrorCode_Success;
+            header_match = true;
         } else if (0 == memcmp(ir_buf.data(), cProtocol::EightByteEncodingMagicNumber, cProtocol::MagicNumberLength)) {
             is_4bytes_encoding = false;
-            return ErrorCode_Success;
+            header_match = true;
         }
-        return ErrorCode_Corrupted_IR;
+        if (false == header_match) {
+            return ErrorCode_Corrupted_IR;
+        }
+        cursor_pos += cProtocol::MagicNumberLength;
+        return ErrorCode_Success;
     }
 
     namespace eight_byte_encoding {
