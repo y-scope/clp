@@ -12,6 +12,12 @@
 namespace ffi::ir_stream {
     using encoded_tag_t = uint8_t;
 
+    typedef struct {
+        std::string timestamp_pattern;
+        std::string timestamp_pattern_syntax;
+        std::string time_zone_id;
+    } TimestampInfo;
+
     typedef enum {
         ErrorCode_Success,
         ErrorCode_Corrupted_IR,
@@ -20,14 +26,9 @@ namespace ffi::ir_stream {
         ErrorCode_End_of_IR
     } IR_ErrorCode;
 
-    IR_ErrorCode get_encoding_type(const std::vector<int8_t>& ir_buf, size_t& cursor_pos, bool& is_compact);
+    IR_ErrorCode get_encoding_type(const std::vector<int8_t>& ir_buf, size_t& cursor_pos, bool& is_four_bytes_encoding);
 
     namespace eight_byte_encoding {
-        typedef struct {
-            std::string timestamp_pattern;
-            std::string timestamp_pattern_syntax;
-            std::string time_zone_id;
-        } TimestampInfo;
 
         /**
          * decodes the preamble for the eight-byte encoding IR stream
@@ -63,12 +64,6 @@ namespace ffi::ir_stream {
 
     namespace four_byte_encoding {
 
-        typedef struct {
-            std::string timestamp_pattern;
-            std::string timestamp_pattern_syntax;
-            std::string time_zone_id;
-        } TimestampInfo;
-
         /**
          * decodes the preamble for the eight-byte encoding IR stream
          * @param timestamp_pattern
@@ -93,13 +88,12 @@ namespace ffi::ir_stream {
          * @param ir_buf
          * @return true on success, false otherwise
          */
-        bool decode_message (const TimestampInfo& ts_info,
-                             const std::vector<int8_t>& ir_buf,
-                             epoch_time_ms_t& reference_ts,
-                             std::string& message,
-                             epoch_time_ms_t& timestamp,
-                             size_t& ending_pos);
+        IR_ErrorCode decode_next_message (const TimestampInfo& ts_info,
+                                          const std::vector<int8_t>& ir_buf,
+                                          std::string& message,
+                                          epoch_time_ms_t& ts_delta,
+                                          size_t& ending_pos);
     }
 }
 
-#endif //DECODING_METHODS_HPP
+#endif //FFI_IR_STREAM_DECODING_METHODS_HPP

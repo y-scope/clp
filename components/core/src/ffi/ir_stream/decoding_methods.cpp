@@ -18,22 +18,25 @@ using std::vector;
 namespace ffi::ir_stream {
 
     template <typename encoded_variable_t>
-    static bool is_encoding_variable_tag(encoded_tag_t tag) {
+    static bool is_variable_tag(encoded_tag_t tag, bool& is_encoded_var) {
         static_assert(std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> ||
                       std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
 
+        if (tag == cProtocol::Payload::VarStrLenUByte ||
+            tag == cProtocol::Payload::VarStrLenUShort ||
+            tag == cProtocol::Payload::VarStrLenInt) {
+            is_encoded_var = false;
+            return true;
+        }
+
         if constexpr (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
-            if (tag == cProtocol::Payload::VarEightByteEncoding ||
-                tag == cProtocol::Payload::VarStrLenUByte ||
-                tag == cProtocol::Payload::VarStrLenUShort ||
-                tag == cProtocol::Payload::VarStrLenInt) {
+            if (tag == cProtocol::Payload::VarEightByteEncoding) {
+                is_encoded_var = true;
                 return true;
             }
         } else {
-            if (tag == cProtocol::Payload::VarFourByteEncoding ||
-                tag == cProtocol::Payload::VarStrLenUByte ||
-                tag == cProtocol::Payload::VarStrLenUShort ||
-                tag == cProtocol::Payload::VarStrLenInt) {
+            if (tag == cProtocol::Payload::VarFourByteEncoding) {
+                is_encoded_var = true;
                 return true;
             }
         }
@@ -172,22 +175,42 @@ namespace ffi::ir_stream {
                 return ErrorCode_InComplete_IR;
             }
         } else {
-            SPDLOG_ERROR("Too lazy to support 4 bytes IR atm");
-            throw;
+            if(cProtocol::Payload::TimestampDeltaByte == encoded_tag) {
+                int8_t ts_delta;
+                if (!read_data_big_endian(ir_buf, ts_delta, cursor_pos)) {
+                    return ErrorCode_InComplete_IR;
+                }
+                ts = ts_delta;
+            } else if (cProtocol::Payload::TimestampDeltaShort == encoded_tag) {
+                int16_t ts_delta;
+                if (!read_data_big_endian(ir_buf, ts_delta, cursor_pos)) {
+                    return ErrorCode_InComplete_IR;
+                }
+                ts = ts_delta;
+            } else if (cProtocol::Payload::TimestampDeltaInt == encoded_tag) {
+                int32_t ts_delta;
+                if (!read_data_big_endian(ir_buf, ts_delta, cursor_pos)) {
+                    return ErrorCode_InComplete_IR;
+                }
+                ts = ts_delta;
+            } else {
+                SPDLOG_ERROR("Unexpected timestamp tag {}", encoded_tag);
+                return ErrorCode_Corrupted_IR;
+            }
         }
         return ErrorCode_Success;
     }
 
-    IR_ErrorCode get_encoding_type(const std::vector<int8_t>& ir_buf, size_t& cursor_pos, bool& is_4bytes_encoding) {
+    IR_ErrorCode get_encoding_type(const std::vector<int8_t>& ir_buf, size_t& cursor_pos, bool& is_four_bytes_encoding) {
         bool header_match = false;
         if (ir_buf.size() < cProtocol::MagicNumberLength) {
             return ErrorCode_InComplete_IR;
         }
         if (0 == memcmp(ir_buf.data(), cProtocol::FourByteEncodingMagicNumber, cProtocol::MagicNumberLength)) {
-            is_4bytes_encoding = true;
+            is_four_bytes_encoding = true;
             header_match = true;
         } else if (0 == memcmp(ir_buf.data(), cProtocol::EightByteEncodingMagicNumber, cProtocol::MagicNumberLength)) {
-            is_4bytes_encoding = false;
+            is_four_bytes_encoding = false;
             header_match = true;
         }
         if (false == header_match) {
@@ -195,6 +218,103 @@ namespace ffi::ir_stream {
         }
         cursor_pos += cProtocol::MagicNumberLength;
         return ErrorCode_Success;
+    }
+
+    /**
+     * decodes the first message in the given eight-byte encoding IR stream.
+     * if the IR stream is incomplete, return false.
+     * else, return the ending position of the IR stream.
+     * @param ts_info
+     * @param ir_buf
+     * @param message
+     * @param timestamp
+     * @param ending_pos
+     * @return true on success, false otherwise
+     */
+    template <typename encoded_variable_t>
+    static IR_ErrorCode decode_next_message_general (const TimestampInfo& ts_info,
+                                                     const std::vector<int8_t>& ir_buf,
+                                                     std::string& message,
+                                                     epoch_time_ms_t& timestamp,
+                                                     size_t& ending_pos) {
+        size_t cursor_pos = ending_pos;
+        encoded_tag_t encoded_tag;
+
+        if (false == try_read_tag(ir_buf, cursor_pos, encoded_tag)) {
+            return ErrorCode_InComplete_IR;
+        }
+
+        if (cProtocol::Eof == encoded_tag) {
+            // TODO: do we want to sanity check if the current tag is the last byte of ir_buf
+            return ErrorCode_End_of_IR;
+        }
+
+        std::vector<encoded_variable_t> encoded_vars;
+        std::string all_dict_var_strings;
+        vector<int32_t> dictionary_var_end_offsets;
+        IR_ErrorCode error_code;
+        bool is_encoded_var;
+        // handle variables
+        while (is_variable_tag<encoded_variable_t>(encoded_tag, is_encoded_var)) {
+            if (is_encoded_var) {
+                encoded_variable_t encoded_variable;
+                if (false == read_data_big_endian(ir_buf, encoded_variable, cursor_pos)) {
+                    return ErrorCode_InComplete_IR;
+                }
+                encoded_vars.push_back(encoded_variable);
+            } else {
+                std::string var_str;
+                error_code = parse_dictionary_var(ir_buf, encoded_tag, var_str, cursor_pos);
+                if (ErrorCode_Success != error_code) {
+                    return error_code;
+                }
+                all_dict_var_strings.append(var_str);
+                dictionary_var_end_offsets.push_back(all_dict_var_strings.length());
+            }
+            if (false == try_read_tag(ir_buf, cursor_pos, encoded_tag)) {
+                return ErrorCode_InComplete_IR;
+            }
+        }
+
+        // now handle logtype
+        std::string logtype;
+        error_code = parse_log_type(ir_buf, encoded_tag, logtype, cursor_pos);
+        if (ErrorCode_Success != error_code) {
+            return error_code;
+        }
+
+        // now handle timestamp
+        // this is different between 8 bytes and 4 bytes
+        if (false == try_read_tag(ir_buf, cursor_pos, encoded_tag)) {
+            return ErrorCode_InComplete_IR;
+        }
+        error_code = parse_timestamp<encoded_variable_t>(ir_buf, encoded_tag, timestamp, cursor_pos);
+        if (ErrorCode_Success != error_code) {
+            return error_code;
+        }
+        // now decode message
+        message = decode_message(logtype, encoded_vars.data(),
+                                 encoded_vars.size(), all_dict_var_strings,
+                                 dictionary_var_end_offsets.data(),
+                                 dictionary_var_end_offsets.size());
+
+        ending_pos = cursor_pos;
+
+        return ErrorCode_Success;
+    }
+
+    namespace four_byte_encoding {
+        IR_ErrorCode decode_next_message (const TimestampInfo& ts_info,
+                                          const std::vector<int8_t>& ir_buf,
+                                          std::string& message,
+                                          epoch_time_ms_t& ts_delta,
+                                          size_t& ending_pos) {
+            return decode_next_message_general<four_byte_encoded_variable_t>(ts_info,
+                                                                             ir_buf,
+                                                                             message,
+                                                                             ts_delta,
+                                                                             ending_pos);
+        }
     }
 
     namespace eight_byte_encoding {
@@ -260,86 +380,17 @@ namespace ffi::ir_stream {
             return ErrorCode_Success;
         }
 
-        /**
-         * decodes the first message in the given eight-byte encoding IR stream.
-         * if the IR stream is incomplete, return false.
-         * else, return the ending position of the IR stream.
-         * @param ts_info
-         * @param ir_buf
-         * @param message
-         * @param timestamp
-         * @param ending_pos
-         * @return true on success, false otherwise
-         */
         IR_ErrorCode decode_next_message (const TimestampInfo& ts_info,
                                           const std::vector<int8_t>& ir_buf,
                                           std::string& message,
                                           epoch_time_ms_t& timestamp,
                                           size_t& ending_pos) {
-            size_t cursor_pos = ending_pos;
-            encoded_tag_t encoded_tag;
 
-            if (false == try_read_tag(ir_buf, cursor_pos, encoded_tag)) {
-                return ErrorCode_InComplete_IR;
-            }
-
-            if (cProtocol::Eof == encoded_tag) {
-                // TODO: do we want to sanity check if the current tag is the last byte of ir_buf
-                return ErrorCode_End_of_IR;
-            }
-
-            std::vector<eight_byte_encoded_variable_t> encoded_vars;
-            std::string all_dict_var_strings;
-            vector<int32_t> dictionary_var_end_offsets;
-            IR_ErrorCode error_code;
-            // handle variables
-            while (is_encoding_variable_tag<eight_byte_encoded_variable_t>(encoded_tag)) {
-                // Variable handle will be slightly different between 4 bytes and 8 bytes
-                if (cProtocol::Payload::VarEightByteEncoding == encoded_tag) {
-                    eight_byte_encoded_variable_t encoded_variable;
-                    if (false == read_data_big_endian(ir_buf, encoded_variable, cursor_pos)) {
-                        return ErrorCode_InComplete_IR;
-                    }
-                    encoded_vars.push_back(encoded_variable);
-                } else {
-                    std::string var_str;
-                    error_code = parse_dictionary_var(ir_buf, encoded_tag, var_str, cursor_pos);
-                    if (ErrorCode_Success != error_code) {
-                        return error_code;
-                    }
-                    all_dict_var_strings.append(var_str);
-                    dictionary_var_end_offsets.push_back(all_dict_var_strings.length());
-                }
-                if (false == try_read_tag(ir_buf, cursor_pos, encoded_tag)) {
-                    return ErrorCode_InComplete_IR;
-                }
-            }
-
-            // now handle logtype
-            std::string logtype;
-            error_code = parse_log_type(ir_buf, encoded_tag, logtype, cursor_pos);
-            if (ErrorCode_Success != error_code) {
-                return error_code;
-            }
-
-            // now handle timestamp
-            // this is different between 8 bytes and 4 bytes
-            if (false == try_read_tag(ir_buf, cursor_pos, encoded_tag)) {
-                return ErrorCode_InComplete_IR;
-            }
-            error_code = parse_timestamp<eight_byte_encoded_variable_t>(ir_buf, encoded_tag, timestamp, cursor_pos);
-            if (ErrorCode_Success != error_code) {
-                return error_code;
-            }
-            // now decode message
-            message = decode_message(logtype, encoded_vars.data(),
-                                     encoded_vars.size(), all_dict_var_strings,
-                                     dictionary_var_end_offsets.data(),
-                                     dictionary_var_end_offsets.size());
-
-            ending_pos = cursor_pos;
-
-            return ErrorCode_Success;
+            return decode_next_message_general<eight_byte_encoded_variable_t>(ts_info,
+                                                                              ir_buf,
+                                                                              message,
+                                                                              timestamp,
+                                                                              ending_pos);
         }
     }
 }

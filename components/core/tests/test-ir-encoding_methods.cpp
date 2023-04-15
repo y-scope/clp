@@ -66,7 +66,7 @@ TEST_CASE("decode_preamble", "[ffi][check_encoding_type]") {
     const size_t encoded_preamble_end_pos = ir_buf.size();
     ir_buf.push_back(0x34);
 
-    ffi::ir_stream::eight_byte_encoding::TimestampInfo ts_info;
+    ffi::ir_stream::TimestampInfo ts_info;
     size_t cursor_pos = 0;
     bool is_four_bytes_encoding;
     REQUIRE(ffi::ir_stream::get_encoding_type(ir_buf, cursor_pos, is_four_bytes_encoding) == IR_ErrorCode::ErrorCode_Success);
@@ -98,7 +98,7 @@ TEST_CASE("decode_next_message", "[ffi][decode_next_message]") {
 
     std::vector<int8_t> ir_buf;
     std::string logtype;
-    ffi::ir_stream::eight_byte_encoding::TimestampInfo ts_info;
+    ffi::ir_stream::TimestampInfo ts_info;
     ffi::epoch_time_ms_t reference_timestamp = 1234567;
     REQUIRE(true == ffi::ir_stream::eight_byte_encoding::encode_message(reference_timestamp, message, logtype, ir_buf));
     const size_t encoded_message_end_pos = ir_buf.size();
@@ -119,6 +119,35 @@ TEST_CASE("decode_next_message", "[ffi][decode_next_message]") {
     ir_buf.resize(encoded_message_end_pos - 4);
     REQUIRE(ffi::ir_stream::ErrorCode_InComplete_IR == ffi::ir_stream::eight_byte_encoding::decode_next_message(ts_info, ir_buf, message, timestamp, cursor_pos));
 }
+
+TEST_CASE("decode_next_message-4bytes", "[ffi][decode_next_message]") {
+
+    string message = "Static <\text>, dictVar1, 123, 456345232.7234223, dictVar2, 987, 654.3, end of static text";
+
+    std::vector<int8_t> ir_buf;
+    std::string logtype;
+    ffi::ir_stream::TimestampInfo ts_info;
+    ffi::epoch_time_ms_t reference_timestamp = -5;
+    REQUIRE(true == ffi::ir_stream::four_byte_encoding::encode_message(reference_timestamp, message, logtype, ir_buf));
+    const size_t encoded_message_end_pos = ir_buf.size();
+    const size_t encoded_message_start_pos = 0;
+
+    size_t cursor_pos = encoded_message_start_pos;
+    string decoded_message;
+    ffi::epoch_time_ms_t timestamp;
+    REQUIRE(ffi::ir_stream::ErrorCode_Success == ffi::ir_stream::four_byte_encoding::decode_next_message(ts_info, ir_buf, decoded_message, timestamp, cursor_pos));
+    REQUIRE(message == decoded_message);
+    REQUIRE(timestamp == reference_timestamp);
+    REQUIRE(cursor_pos == encoded_message_end_pos);
+
+    cursor_pos = encoded_message_start_pos + 1;
+    REQUIRE(ffi::ir_stream::ErrorCode_Corrupted_IR == ffi::ir_stream::four_byte_encoding::decode_next_message(ts_info, ir_buf, message, timestamp, cursor_pos));
+
+    cursor_pos = encoded_message_start_pos;
+    ir_buf.resize(encoded_message_end_pos - 4);
+    REQUIRE(ffi::ir_stream::ErrorCode_InComplete_IR == ffi::ir_stream::four_byte_encoding::decode_next_message(ts_info, ir_buf, message, timestamp, cursor_pos));
+}
+
 
 TEST_CASE("complete_test", "[ffi][decode_next_message]") {
     string message;
@@ -153,7 +182,7 @@ TEST_CASE("complete_test", "[ffi][decode_next_message]") {
 
 
     bool is_four_bytes_encoding;
-    ffi::ir_stream::eight_byte_encoding::TimestampInfo ts_info;
+    ffi::ir_stream::TimestampInfo ts_info;
     REQUIRE(ffi::ir_stream::get_encoding_type(ir_buf, cursor_pos, is_four_bytes_encoding) == IR_ErrorCode::ErrorCode_Success);
     REQUIRE(false == is_four_bytes_encoding);
 
