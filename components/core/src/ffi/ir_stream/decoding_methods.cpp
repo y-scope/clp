@@ -109,7 +109,7 @@ namespace ffi::ir_stream {
             }
             logtype_length = length;
         } else {
-            SPDLOG_ERROR("Unexpected tag byte {}\n", encoded_tag);
+            SPDLOG_ERROR("Unexpected tag byte {}", encoded_tag);
             return ErrorCode_Corrupted_IR;
         }
         return ErrorCode_Success;
@@ -214,6 +214,7 @@ namespace ffi::ir_stream {
             header_match = true;
         }
         if (false == header_match) {
+            SPDLOG_ERROR("Unrecognized encoding");
             return ErrorCode_Corrupted_IR;
         }
         cursor_pos += cProtocol::MagicNumberLength;
@@ -302,15 +303,93 @@ namespace ffi::ir_stream {
         return ErrorCode_Success;
     }
 
+    IR_ErrorCode extract_json_metadata(const std::vector<int8_t>& ir_buf,
+                                       size_t& cursor_pos,
+                                       std::string& json_metadata) {
+
+        encoded_tag_t encoded_tag;
+        if (false == try_read_tag(ir_buf, cursor_pos, encoded_tag)) {
+            return ErrorCode_InComplete_IR;
+        }
+        if (encoded_tag != cProtocol::Metadata::EncodingJson) {
+            SPDLOG_ERROR("Unexpected encoding tag {}", encoded_tag);
+            return ErrorCode_Corrupted_IR;
+        }
+
+        // read length
+        if(false == try_read_tag(ir_buf, cursor_pos, encoded_tag)) {
+            return ErrorCode_InComplete_IR;
+        }
+        unsigned int metadata_length;
+        switch(encoded_tag) {
+            case cProtocol::Metadata::LengthUByte:
+                uint8_t ubyte_res;
+                if (false == read_data_big_endian(ir_buf, ubyte_res, cursor_pos)) {
+                    return ErrorCode_InComplete_IR;
+                }
+                metadata_length = ubyte_res;
+                break;
+            case cProtocol::Metadata::LengthUShort:
+                uint16_t ushort_res;
+                if (false == read_data_big_endian(ir_buf, ushort_res, cursor_pos)) {
+                    return ErrorCode_InComplete_IR;
+                }
+                metadata_length = ushort_res;
+                break;
+            default:
+                SPDLOG_ERROR("Invalid Length Tag {}", encoded_tag);
+                return ErrorCode_Corrupted_IR;
+        }
+
+        // read the json contents
+        if (false == try_read_string(ir_buf, cursor_pos, json_metadata, metadata_length)) {
+            return ErrorCode_InComplete_IR;
+        }
+        return ErrorCode_Success;
+    }
+
     namespace four_byte_encoding {
+
+        IR_ErrorCode decode_preamble (std::vector<int8_t>& ir_buf,
+                                      TimestampInfo& ts_info,
+                                      size_t& ending_pos,
+                                      epoch_time_ms_t& reference_ts) {
+
+            // Only update the ending_pos if the message is successfully
+            // decoded. (maybe this is not necessary). so create a local cursor_pos
+            size_t cursor_pos = ending_pos;
+
+            std::string json_metadata;
+            if (IR_ErrorCode error_code = extract_json_metadata(ir_buf, cursor_pos, json_metadata);
+                error_code != ErrorCode_Success) {
+                return error_code;
+            }
+
+            // TODO: we should try & catch to handle a corrupted json?
+            nlohmann::basic_json metadata_json = nlohmann::json::parse(json_metadata);
+            std::string version = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey);
+            if (version != ffi::ir_stream::cProtocol::Metadata::VersionValue) {
+                SPDLOG_ERROR("Deprecated version: {}", version);
+                return ErrorCode_Unsupported_Version;
+            }
+
+            ts_info.time_zone_id = metadata_json.at(cProtocol::Metadata::TimeZoneIdKey);
+            ts_info.timestamp_pattern = metadata_json.at(cProtocol::Metadata::TimestampPatternKey);
+            ts_info.timestamp_pattern_syntax = metadata_json.at(cProtocol::Metadata::TimestampPatternSyntaxKey);
+            reference_ts = std::stoll(metadata_json.at(cProtocol::Metadata::ReferenceTimestampKey).get<std::string>());
+
+            ending_pos = cursor_pos;
+            return ErrorCode_Success;
+        }
+
         IR_ErrorCode decode_next_message (const std::vector<int8_t>& ir_buf,
                                           std::string& message,
                                           epoch_time_ms_t& ts_delta,
-                                          size_t& ending_pos) {
+                                          size_t& cursor_pos) {
             return decode_next_message_general<four_byte_encoded_variable_t>(ir_buf,
                                                                              message,
                                                                              ts_delta,
-                                                                             ending_pos);
+                                                                             cursor_pos);
         }
     }
 
@@ -319,61 +398,28 @@ namespace ffi::ir_stream {
                                       TimestampInfo& ts_info,
                                       size_t& ending_pos) {
 
+            // Only update the ending_pos if the message is successfully
+            // decoded. (maybe this is not necessary). so create a local cursor_pos
             size_t cursor_pos = ending_pos;
-            encoded_tag_t encoded_tag;
-            if (false == try_read_tag(ir_buf, cursor_pos, encoded_tag)) {
-                return ErrorCode_InComplete_IR;
-            }
-            if (encoded_tag != cProtocol::Metadata::EncodingJson) {
-                SPDLOG_ERROR("Unexpected encoding tag {}", encoded_tag);
-                return ErrorCode_Corrupted_IR;
+
+            std::string json_metadata;
+            if (IR_ErrorCode error_code = extract_json_metadata(ir_buf, cursor_pos, json_metadata); error_code != ErrorCode_Success) {
+                return error_code;
             }
 
-            // read length
-            if(false == try_read_tag(ir_buf, cursor_pos, encoded_tag)) {
-                return ErrorCode_InComplete_IR;
-            }
-            unsigned int metadata_length;
-            switch(encoded_tag) {
-                case cProtocol::Metadata::LengthUByte:
-                    uint8_t ubyte_res;
-                    if (false == read_data_big_endian(ir_buf, ubyte_res, cursor_pos)) {
-                        return ErrorCode_InComplete_IR;
-                    }
-                    metadata_length = ubyte_res;
-                    break;
-                case cProtocol::Metadata::LengthUShort:
-                    uint16_t ushort_res;
-                    if (false == read_data_big_endian(ir_buf, ushort_res, cursor_pos)) {
-                        return ErrorCode_InComplete_IR;
-                    }
-                    metadata_length = ushort_res;
-                    break;
-                default:
-                    SPDLOG_ERROR("Invalid Length Tag {}", encoded_tag);
-                    return ErrorCode_Corrupted_IR;
-            }
-
-            // read the json contents
-            std::string json_string;
-            if (false == try_read_string(ir_buf, cursor_pos, json_string, metadata_length)) {
-                return ErrorCode_InComplete_IR;
-            }
-
-            // TODO: should we do a try & catch to handle a corrupted json?
-            auto metadata_json = nlohmann::json::parse(json_string);
-
-            // Only here is the non-generic part
-            ts_info.time_zone_id = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::TimeZoneIdKey);
-            ts_info.timestamp_pattern = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::TimestampPatternKey);
-            ts_info.timestamp_pattern_syntax = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::TimestampPatternSyntaxKey);
+            // TODO: we should try & catch to handle a corrupted json?
+            auto metadata_json = nlohmann::json::parse(json_metadata);
             std::string version = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey);
             if (version != ffi::ir_stream::cProtocol::Metadata::VersionValue) {
                 SPDLOG_ERROR("Deprecated version: {}", version);
                 return ErrorCode_Unsupported_Version;
             }
-            ending_pos = cursor_pos;
 
+            ts_info.time_zone_id = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::TimeZoneIdKey);
+            ts_info.timestamp_pattern = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::TimestampPatternKey);
+            ts_info.timestamp_pattern_syntax = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::TimestampPatternSyntaxKey);
+
+            ending_pos = cursor_pos;
             return ErrorCode_Success;
         }
 

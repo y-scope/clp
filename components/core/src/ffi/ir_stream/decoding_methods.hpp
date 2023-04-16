@@ -72,10 +72,10 @@ namespace ffi::ir_stream {
          * @return true on success, false otherwise
          * Also return the ending position of preamble
          */
-        bool decode_preamble (std::vector<int8_t>& ir_buf,
-                              TimestampInfo& ts_info,
-                              epoch_time_ms_t& reference_ts,
-                              size_t& ending_pos);
+        IR_ErrorCode decode_preamble (std::vector<int8_t>& ir_buf,
+                                      TimestampInfo& ts_info,
+                                      size_t& ending_pos,
+                                      epoch_time_ms_t& reference_ts);
 
         /**
          * decodes the first message in the given eight-byte encoding IR stream.
