@@ -12,6 +12,16 @@
 namespace ffi::ir_stream {
     using encoded_tag_t = uint8_t;
 
+    struct IRBuffer {
+        const int8_t* const data;
+        const size_t length;
+        size_t cursor_pos;
+        IRBuffer(const int8_t* _data, size_t _length) : data(_data),
+                                                        length(_length),
+                                                        cursor_pos(0)
+                                                        {}
+    };
+
     typedef struct {
         std::string timestamp_pattern;
         std::string timestamp_pattern_syntax;
@@ -26,7 +36,7 @@ namespace ffi::ir_stream {
         ErrorCode_End_of_IR
     } IR_ErrorCode;
 
-    IR_ErrorCode get_encoding_type(const std::vector<int8_t>& ir_buf, size_t& cursor_pos, bool& is_four_bytes_encoding);
+    IR_ErrorCode get_encoding_type(IRBuffer& ir_buf, bool& is_four_bytes_encoding);
 
     namespace eight_byte_encoding {
 
@@ -39,9 +49,8 @@ namespace ffi::ir_stream {
          * @return true on success, false otherwise
          * Also return the ending position of preamble
          */
-        IR_ErrorCode decode_preamble (std::vector<int8_t>& ir_buf,
-                                      TimestampInfo& ts_info,
-                                      size_t& ending_pos);
+        IR_ErrorCode decode_preamble (IRBuffer& ir_buf,
+                                      TimestampInfo& ts_info);
 
         /**
          * decodes the first message in the given eight-byte encoding IR stream.
@@ -54,10 +63,9 @@ namespace ffi::ir_stream {
          * @param ending_pos
          * @return true on success, false otherwise
          */
-        IR_ErrorCode decode_next_message (const std::vector<int8_t>& ir_buf,
+        IR_ErrorCode decode_next_message (IRBuffer& ir_buf,
                                           std::string& message,
-                                          epoch_time_ms_t& timestamp,
-                                          size_t& ending_pos);
+                                          epoch_time_ms_t& timestamp);
 
     }
 
@@ -72,9 +80,8 @@ namespace ffi::ir_stream {
          * @return true on success, false otherwise
          * Also return the ending position of preamble
          */
-        IR_ErrorCode decode_preamble (std::vector<int8_t>& ir_buf,
+        IR_ErrorCode decode_preamble (IRBuffer& ir_buf,
                                       TimestampInfo& ts_info,
-                                      size_t& ending_pos,
                                       epoch_time_ms_t& reference_ts);
 
         /**
@@ -87,10 +94,9 @@ namespace ffi::ir_stream {
          * @param ir_buf
          * @return true on success, false otherwise
          */
-        IR_ErrorCode decode_next_message (const std::vector<int8_t>& ir_buf,
+        IR_ErrorCode decode_next_message (IRBuffer& ir_buf,
                                           std::string& message,
-                                          epoch_time_ms_t& ts_delta,
-                                          size_t& ending_pos);
+                                          epoch_time_ms_t& ts_delta);
     }
 }
 
