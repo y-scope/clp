@@ -12,14 +12,34 @@
 namespace ffi::ir_stream {
     using encoded_tag_t = uint8_t;
 
-    struct IRBuffer {
-        const int8_t* const data;
-        const size_t length;
-        size_t cursor_pos;
-        IRBuffer(const int8_t* _data, size_t _length) : data(_data),
-                                                        length(_length),
-                                                        cursor_pos(0)
-                                                        {}
+    class IRBuffer {
+    public:
+        IRBuffer (const int8_t* data, size_t size) : m_data(data),
+                  m_size(size),
+                  m_cursor_pos(0),
+                  m_internal_cursor_pos(0)
+        {}
+
+        size_t cursor_pos () const { return m_cursor_pos; }
+        void set_cursor_pos (size_t cursor_pos) { m_cursor_pos = cursor_pos; }
+
+        // the following functions are only supposed to be used by the decoder
+        void commit_internal_pos () { m_cursor_pos = m_internal_cursor_pos; }
+        void increment_internal_pos (size_t val) { m_internal_cursor_pos += val; }
+        void init_internal_pos () { m_internal_cursor_pos = m_cursor_pos; }
+
+        bool size_overflow (size_t read_size) {
+            return (m_internal_cursor_pos + read_size) > m_size;
+        }
+
+        const int8_t* internal_head() { return m_data + m_internal_cursor_pos; }
+
+
+    private:
+        const int8_t* const m_data;
+        const size_t m_size;
+        size_t m_cursor_pos;
+        size_t m_internal_cursor_pos;
     };
 
     typedef struct {

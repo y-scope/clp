@@ -173,14 +173,14 @@ TEMPLATE_TEST_CASE("decode_preamble_general", "[ffi][decode_preamble]", four_byt
     bool is_four_bytes_encoding;
     REQUIRE(ffi::ir_stream::get_encoding_type(preamble_buffer, is_four_bytes_encoding) == IR_ErrorCode::ErrorCode_Success);
     REQUIRE(match_encoding_type<TestType>(is_four_bytes_encoding));
-    REQUIRE(ffi::ir_stream::cProtocol::MagicNumberLength == preamble_buffer.cursor_pos);
+    REQUIRE(ffi::ir_stream::cProtocol::MagicNumberLength == preamble_buffer.cursor_pos());
 
     // Test if preamble can be decoded correctly
     REQUIRE(decode_preamble<TestType>(preamble_buffer, ts_info, decoded_ts) == IR_ErrorCode::ErrorCode_Success);
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);
     REQUIRE(time_zone_id == ts_info.time_zone_id);
     REQUIRE(timestamp_pattern == ts_info.timestamp_pattern);
-    REQUIRE(encoded_preamble_end_pos == preamble_buffer.cursor_pos);
+    REQUIRE(encoded_preamble_end_pos == preamble_buffer.cursor_pos());
     if constexpr (std::is_same_v<TestType, four_byte_encoded_variable_t>) {
         REQUIRE(reference_ts == decoded_ts);
     }
@@ -188,13 +188,13 @@ TEMPLATE_TEST_CASE("decode_preamble_general", "[ffi][decode_preamble]", four_byt
     // Test if incomplete IR can be detected.
     ir_buf.resize(encoded_preamble_end_pos - 1);
     ffi::ir_stream::IRBuffer incomplete_preamble_buffer (ir_buf.data(), ir_buf.size());
-    incomplete_preamble_buffer.cursor_pos = ffi::ir_stream::cProtocol::MagicNumberLength;
+    incomplete_preamble_buffer.set_cursor_pos(ffi::ir_stream::cProtocol::MagicNumberLength);
     REQUIRE(decode_preamble<TestType>(incomplete_preamble_buffer, ts_info, decoded_ts) == IR_ErrorCode::ErrorCode_InComplete_IR);
 
     // Test if corrupted IR can be detected.
     ir_buf.at(ffi::ir_stream::cProtocol::MagicNumberLength) = 0x23;
     ffi::ir_stream::IRBuffer corrupted_preamble_buffer (ir_buf.data(), ir_buf.size());
-    incomplete_preamble_buffer.cursor_pos = ffi::ir_stream::cProtocol::MagicNumberLength;
+    incomplete_preamble_buffer.set_cursor_pos(ffi::ir_stream::cProtocol::MagicNumberLength);
     REQUIRE(decode_preamble<TestType>(corrupted_preamble_buffer, ts_info, decoded_ts) == IR_ErrorCode::ErrorCode_Corrupted_IR);
 }
 
@@ -217,9 +217,9 @@ TEMPLATE_TEST_CASE("decode_next_message_general", "[ffi][decode_next_message]", 
     REQUIRE(ffi::ir_stream::ErrorCode_Success == decode_next_message<TestType>(encoded_message_buffer, decoded_message, timestamp));
     REQUIRE(message == decoded_message);
     REQUIRE(timestamp == reference_timestamp);
-    REQUIRE(encoded_message_buffer.cursor_pos == encoded_message_end_pos);
+    REQUIRE(encoded_message_buffer.cursor_pos() == encoded_message_end_pos);
 
-    encoded_message_buffer.cursor_pos = encoded_message_start_pos + 1;
+    encoded_message_buffer.set_cursor_pos(encoded_message_start_pos + 1);
     REQUIRE(ffi::ir_stream::ErrorCode_Corrupted_IR == decode_next_message<TestType>(encoded_message_buffer, message, timestamp));
 
     ir_buf.resize(encoded_message_end_pos - 4);
@@ -296,5 +296,5 @@ TEMPLATE_TEST_CASE("decode_ir_complete", "[ffi][decode_next_message]", four_byte
         REQUIRE(decoded_message == reference_messages[ix]);
         REQUIRE(timestamp == reference_timestamps[ix]);
     }
-    REQUIRE(complete_encoding_buffer.cursor_pos == encoded_message_end_pos);
+    REQUIRE(complete_encoding_buffer.cursor_pos() == encoded_message_end_pos);
 }

@@ -46,21 +46,21 @@ namespace ffi::ir_stream {
     // read next tag byte and increment read_pos by size of tag
     static bool try_read_tag (IRBuffer& ir_buf, encoded_tag_t& tag_byte) {
         // In case we have different tag size in the future
-        constexpr size_t read_pos_incr = sizeof(encoded_tag_t) / sizeof(int8_t);
-        if (ir_buf.cursor_pos >= ir_buf.length) {
+        constexpr size_t read_size = sizeof(encoded_tag_t) / sizeof(int8_t);
+        if (ir_buf.size_overflow(read_size)) {
             return false;
         }
-        tag_byte = ir_buf.data[ir_buf.cursor_pos];
-        ir_buf.cursor_pos += read_pos_incr;
+        tag_byte = ir_buf.internal_head()[0];
+        ir_buf.increment_internal_pos(read_size);
         return true;
     }
 
     static bool try_read_string (IRBuffer& ir_buf, std::string& str_data, size_t read_size) {
-        if (ir_buf.length < ir_buf.cursor_pos + read_size) {
+        if (ir_buf.size_overflow(read_size)) {
             return false;
         }
-        str_data = std::string((char*)(ir_buf.data + ir_buf.cursor_pos), read_size);
-        ir_buf.cursor_pos += read_size;
+        str_data = std::string((char*)ir_buf.internal_head(), read_size);
+        ir_buf.increment_internal_pos(read_size);
         return true;
     }
 
@@ -70,11 +70,11 @@ namespace ffi::ir_stream {
         static_assert(read_size == 1 || read_size == 2 || read_size == 4 || read_size == 8);
 
         integer_t value_small_endian;
-        if(ir_buf.length < ir_buf.cursor_pos + read_size) {
+        if(ir_buf.size_overflow(read_size)) {
             return false;
         }
 
-        memcpy(&value_small_endian, ir_buf.data + ir_buf.cursor_pos, read_size);
+        memcpy(&value_small_endian, ir_buf.internal_head(), read_size);
 
         if constexpr (read_size == 1) {
             data = value_small_endian;
@@ -85,7 +85,7 @@ namespace ffi::ir_stream {
         } else if constexpr (read_size == 8) {
             data = bswap_64(value_small_endian);
         }
-        ir_buf.cursor_pos += read_size;
+        ir_buf.increment_internal_pos(read_size);
         return true;
     }
 
@@ -202,14 +202,16 @@ namespace ffi::ir_stream {
     }
 
     IR_ErrorCode get_encoding_type(IRBuffer& ir_buf, bool& is_four_bytes_encoding) {
+
+        ir_buf.init_internal_pos();
         bool header_match = false;
-        if (ir_buf.length < cProtocol::MagicNumberLength) {
+        if (ir_buf.size_overflow(cProtocol::MagicNumberLength)) {
             return ErrorCode_InComplete_IR;
         }
-        if (0 == memcmp(ir_buf.data, cProtocol::FourByteEncodingMagicNumber, cProtocol::MagicNumberLength)) {
+        if (0 == memcmp(ir_buf.internal_head(), cProtocol::FourByteEncodingMagicNumber, cProtocol::MagicNumberLength)) {
             is_four_bytes_encoding = true;
             header_match = true;
-        } else if (0 == memcmp(ir_buf.data, cProtocol::EightByteEncodingMagicNumber, cProtocol::MagicNumberLength)) {
+        } else if (0 == memcmp(ir_buf.internal_head(), cProtocol::EightByteEncodingMagicNumber, cProtocol::MagicNumberLength)) {
             is_four_bytes_encoding = false;
             header_match = true;
         }
@@ -217,7 +219,8 @@ namespace ffi::ir_stream {
             SPDLOG_ERROR("Unrecognized encoding");
             return ErrorCode_Corrupted_IR;
         }
-        ir_buf.cursor_pos += cProtocol::MagicNumberLength;
+        ir_buf.increment_internal_pos(cProtocol::MagicNumberLength);
+        ir_buf.commit_internal_pos();
         return ErrorCode_Success;
     }
 
@@ -236,6 +239,7 @@ namespace ffi::ir_stream {
     static IR_ErrorCode decode_next_message_general (IRBuffer& ir_buf,
                                                      std::string& message,
                                                      epoch_time_ms_t& timestamp) {
+        ir_buf.init_internal_pos();
         encoded_tag_t encoded_tag;
 
         if (false == try_read_tag(ir_buf, encoded_tag)) {
@@ -296,6 +300,7 @@ namespace ffi::ir_stream {
                                  dictionary_var_end_offsets.data(),
                                  dictionary_var_end_offsets.size());
 
+        ir_buf.commit_internal_pos();
         return ErrorCode_Success;
     }
 
@@ -349,6 +354,7 @@ namespace ffi::ir_stream {
                                       TimestampInfo& ts_info,
                                       epoch_time_ms_t& reference_ts) {
 
+            ir_buf.init_internal_pos();
             std::string json_metadata;
             if (IR_ErrorCode error_code = extract_json_metadata(ir_buf, json_metadata); error_code != ErrorCode_Success) {
                 return error_code;
@@ -367,6 +373,7 @@ namespace ffi::ir_stream {
             ts_info.timestamp_pattern_syntax = metadata_json.at(cProtocol::Metadata::TimestampPatternSyntaxKey);
             reference_ts = std::stoll(metadata_json.at(cProtocol::Metadata::ReferenceTimestampKey).get<std::string>());
 
+            ir_buf.commit_internal_pos();
             return ErrorCode_Success;
         }
 
@@ -383,6 +390,7 @@ namespace ffi::ir_stream {
         IR_ErrorCode decode_preamble (IRBuffer& ir_buf,
                                       TimestampInfo& ts_info) {
 
+            ir_buf.init_internal_pos();
             std::string json_metadata;
             if (IR_ErrorCode error_code = extract_json_metadata(ir_buf, json_metadata); error_code != ErrorCode_Success) {
                 return error_code;
@@ -400,6 +408,7 @@ namespace ffi::ir_stream {
             ts_info.timestamp_pattern = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::TimestampPatternKey);
             ts_info.timestamp_pattern_syntax = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::TimestampPatternSyntaxKey);
 
+            ir_buf.commit_internal_pos();
             return ErrorCode_Success;
         }
 
