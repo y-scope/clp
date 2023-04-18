@@ -55,11 +55,11 @@ namespace ffi::ir_stream {
         return true;
     }
 
-    static bool try_read_string (IRBuffer& ir_buf, std::string& str_data, size_t read_size) {
+    static bool try_read_string (IRBuffer& ir_buf, std::string_view& str_data, size_t read_size) {
         if (ir_buf.size_overflow(read_size)) {
             return false;
         }
-        str_data = std::string((char*)ir_buf.internal_head(), read_size);
+        str_data = std::string_view((char*)ir_buf.internal_head(), read_size);
         ir_buf.increment_internal_pos(read_size);
         return true;
     }
@@ -115,7 +115,7 @@ namespace ffi::ir_stream {
         return ErrorCode_Success;
     }
 
-    static IR_ErrorCode parse_log_type(IRBuffer& ir_buf, encoded_tag_t encoded_tag, std::string& logtype) {
+    static IR_ErrorCode parse_log_type(IRBuffer& ir_buf, encoded_tag_t encoded_tag, std::string_view& logtype) {
 
         size_t log_length;
         IR_ErrorCode error_code = get_logtype_length(ir_buf, encoded_tag, log_length);
@@ -128,7 +128,7 @@ namespace ffi::ir_stream {
         return ErrorCode_Success;
     }
 
-    IR_ErrorCode parse_dictionary_var(IRBuffer& ir_buf, encoded_tag_t encoded_tag, std::string& dict_var) {
+    IR_ErrorCode parse_dictionary_var(IRBuffer& ir_buf, encoded_tag_t encoded_tag, std::string_view& dict_var) {
         size_t var_length;
         if (cProtocol::Payload::VarStrLenUByte == encoded_tag) {
             uint8_t length;
@@ -265,7 +265,7 @@ namespace ffi::ir_stream {
                 }
                 encoded_vars.push_back(encoded_variable);
             } else {
-                std::string var_str;
+                std::string_view var_str;
                 error_code = parse_dictionary_var(ir_buf, encoded_tag, var_str);
                 if (ErrorCode_Success != error_code) {
                     return error_code;
@@ -279,7 +279,7 @@ namespace ffi::ir_stream {
         }
 
         // now handle logtype
-        std::string logtype;
+        std::string_view logtype;
         error_code = parse_log_type(ir_buf, encoded_tag, logtype);
         if (ErrorCode_Success != error_code) {
             return error_code;
@@ -305,7 +305,7 @@ namespace ffi::ir_stream {
     }
 
     IR_ErrorCode extract_json_metadata(IRBuffer& ir_buf,
-                                       std::string& json_metadata) {
+                                       std::string_view& json_metadata) {
 
         encoded_tag_t encoded_tag;
         if (false == try_read_tag(ir_buf, encoded_tag)) {
@@ -355,7 +355,7 @@ namespace ffi::ir_stream {
                                       epoch_time_ms_t& reference_ts) {
 
             ir_buf.init_internal_pos();
-            std::string json_metadata;
+            std::string_view json_metadata;
             if (IR_ErrorCode error_code = extract_json_metadata(ir_buf, json_metadata); error_code != ErrorCode_Success) {
                 return error_code;
             }
@@ -391,7 +391,7 @@ namespace ffi::ir_stream {
                                       TimestampInfo& ts_info) {
 
             ir_buf.init_internal_pos();
-            std::string json_metadata;
+            std::string_view json_metadata;
             if (IR_ErrorCode error_code = extract_json_metadata(ir_buf, json_metadata); error_code != ErrorCode_Success) {
                 return error_code;
             }
