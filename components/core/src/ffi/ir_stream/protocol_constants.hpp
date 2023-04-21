@@ -5,14 +5,16 @@
 #include <cstdint>
 
 namespace ffi::ir_stream::cProtocol {
-    constexpr size_t MagicNumberLength = 4;
     constexpr int8_t FourByteEncodingMagicNumber[] = {
             static_cast<int8_t>(0xFD), 0x2F, static_cast<int8_t>(0xB5), 0x29
     };
     constexpr int8_t EightByteEncodingMagicNumber[] = {
             static_cast<int8_t>(0xFD), 0x2F, static_cast<int8_t>(0xB5), 0x30
     };
-
+    constexpr std::enable_if<
+            sizeof(EightByteEncodingMagicNumber) == sizeof(FourByteEncodingMagicNumber),
+            size_t
+    >::type MagicNumberLength = sizeof(EightByteEncodingMagicNumber);
     namespace Metadata {
         constexpr int8_t EncodingJson = 0x1;
         constexpr int8_t LengthUByte = 0x11;

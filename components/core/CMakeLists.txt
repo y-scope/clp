@@ -811,7 +811,7 @@ set(SOURCE_FILES_unitTest
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
         tests/test-Grep.cpp
-        tests/test-ir-encoding_methods.cpp
+        tests/test-ir_encoding_methods.cpp
         tests/test-main.cpp
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
