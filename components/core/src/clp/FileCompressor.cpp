@@ -215,7 +215,7 @@ namespace clp {
         // Check if it's an archive
         auto error_code = m_libarchive_reader.try_open(m_utf8_validation_buf_length, m_utf8_validation_buf, m_file_reader, filename_if_compressed);
         if (ErrorCode_Success != error_code) {
-            SPDLOG_ERROR("Cannot compress {} - not UTF-8 encoded.", file_to_compress.get_path().c_str());
+            SPDLOG_ERROR("Cannot compress {} - failed to open with libarchive.", file_to_compress.get_path().c_str());
             return false;
         }
 
