@@ -59,10 +59,10 @@ ffi::epoch_time_ms_t get_next_timestamp_for_test () {
 // A helper function to generalize the testing caller interface.
 // The reference_timestamp is only used by four bytes encoding
 template <typename encoded_variable_t>
-bool
-encode_preamble (std::string_view timestamp_pattern, std::string_view timestamp_pattern_syntax,
-                 std::string_view time_zone_id, ffi::epoch_time_ms_t reference_timestamp,
-                 std::vector<int8_t>& ir_buf) {
+bool encode_preamble (std::string_view timestamp_pattern,
+                      std::string_view timestamp_pattern_syntax, std::string_view time_zone_id,
+                      ffi::epoch_time_ms_t reference_timestamp, std::vector<int8_t>& ir_buf)
+{
     static_assert(std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> ||
                   std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
 
@@ -124,10 +124,9 @@ IRErrorCode decode_next_message (ffi::ir_stream::IRBuffer& ir_buf,
 }
 
 TEST_CASE("check_encoding_type", "[ffi][check_encoding_type]") {
-
     bool is_four_bytes_encoding;
 
-    // Test eight bytes encoding
+    // Test eight-byte encoding
     std::vector<int8_t> eight_byte_encoding_vec;
     eight_byte_encoding_vec.resize(ffi::ir_stream::cProtocol::MagicNumberLength);
     memcpy(eight_byte_encoding_vec.data(), ffi::ir_stream::cProtocol::EightByteEncodingMagicNumber,
@@ -137,10 +136,9 @@ TEST_CASE("check_encoding_type", "[ffi][check_encoding_type]") {
                                                   eight_byte_encoding_vec.size());
     REQUIRE(ffi::ir_stream::get_encoding_type(eight_byte_ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
-    REQUIRE(match_encoding_type<eight_byte_encoded_variable_t>);
+    REQUIRE(match_encoding_type<eight_byte_encoded_variable_t>(is_four_bytes_encoding));
 
-
-    // Test four bytes encoding
+    // Test four-byte encoding
     std::vector<int8_t> four_byte_encoding_vec;
     four_byte_encoding_vec.resize(ffi::ir_stream::cProtocol::MagicNumberLength);
     memcpy(four_byte_encoding_vec.data(), ffi::ir_stream::cProtocol::FourByteEncodingMagicNumber,
@@ -150,18 +148,18 @@ TEST_CASE("check_encoding_type", "[ffi][check_encoding_type]") {
                                                  four_byte_encoding_vec.size());
     REQUIRE(ffi::ir_stream::get_encoding_type(four_byte_ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
-    REQUIRE(match_encoding_type<four_byte_encoded_variable_t>);
+    REQUIRE(match_encoding_type<four_byte_encoded_variable_t>(is_four_bytes_encoding));
 
     // Test error on empty and incomplete ir_buffer
     const std::vector<int8_t> empty_ir_vec;
     ffi::ir_stream::IRBuffer empty_ir_buffer(empty_ir_vec.data(), empty_ir_vec.size());
     REQUIRE(ffi::ir_stream::get_encoding_type(empty_ir_buffer, is_four_bytes_encoding) ==
-            IRErrorCode::IRErrorCode_InComplete_IR);
+            IRErrorCode::IRErrorCode_Incomplete_IR);
 
     ffi::ir_stream::IRBuffer incomplete_ir_buffer(four_byte_encoding_vec.data(),
                                                   four_byte_encoding_vec.size() - 1);
     REQUIRE(ffi::ir_stream::get_encoding_type(incomplete_ir_buffer, is_four_bytes_encoding) ==
-            IRErrorCode::IRErrorCode_InComplete_IR);
+            IRErrorCode::IRErrorCode_Incomplete_IR);
 
     // Test error on invalid encoding.
     const std::vector<int8_t> invalid_ir_vec{0x02, 0x43, 0x24, 0x34};
@@ -172,8 +170,8 @@ TEST_CASE("check_encoding_type", "[ffi][check_encoding_type]") {
 }
 
 TEMPLATE_TEST_CASE("decode_preamble_general", "[ffi][decode_preamble]",
-                   four_byte_encoded_variable_t, eight_byte_encoded_variable_t) {
-
+                   four_byte_encoded_variable_t, eight_byte_encoded_variable_t)
+{
     string message = "Static text, dictVar1, 123, 456.7, dictVar2, 987, 654.3";
 
     std::vector<int8_t> ir_buf;
@@ -185,7 +183,7 @@ TEMPLATE_TEST_CASE("decode_preamble_general", "[ffi][decode_preamble]",
                                       reference_ts, ir_buf));
     const size_t encoded_preamble_end_pos = ir_buf.size();
 
-    // Check if encoding type is propely readed.
+    // Check if encoding type is properly read
     ffi::ir_stream::TimestampInfo ts_info;
     ffi::ir_stream::IRBuffer preamble_buffer(ir_buf.data(), ir_buf.size());
     ffi::epoch_time_ms_t decoded_ts;
@@ -211,7 +209,7 @@ TEMPLATE_TEST_CASE("decode_preamble_general", "[ffi][decode_preamble]",
     ffi::ir_stream::IRBuffer incomplete_preamble_buffer(ir_buf.data(), ir_buf.size());
     incomplete_preamble_buffer.set_cursor_pos(ffi::ir_stream::cProtocol::MagicNumberLength);
     REQUIRE(decode_preamble<TestType>(incomplete_preamble_buffer, ts_info, decoded_ts) ==
-            IRErrorCode::IRErrorCode_InComplete_IR);
+            IRErrorCode::IRErrorCode_Incomplete_IR);
 
     // Test if corrupted IR can be detected.
     ir_buf.at(ffi::ir_stream::cProtocol::MagicNumberLength) = 0x23;
@@ -220,7 +218,6 @@ TEMPLATE_TEST_CASE("decode_preamble_general", "[ffi][decode_preamble]",
     REQUIRE(decode_preamble<TestType>(corrupted_preamble_buffer, ts_info, decoded_ts) ==
             IRErrorCode::IRErrorCode_Corrupted_IR);
 }
-
 
 TEMPLATE_TEST_CASE("decode_next_message_general", "[ffi][decode_next_message]",
                    four_byte_encoded_variable_t, eight_byte_encoded_variable_t) {
@@ -251,7 +248,7 @@ TEMPLATE_TEST_CASE("decode_next_message_general", "[ffi][decode_next_message]",
 
     ir_buf.resize(encoded_message_end_pos - 4);
     ffi::ir_stream::IRBuffer incomplete_message_buffer(ir_buf.data(), ir_buf.size());
-    REQUIRE(ffi::ir_stream::IRErrorCode_InComplete_IR ==
+    REQUIRE(ffi::ir_stream::IRErrorCode_Incomplete_IR ==
             decode_next_message<TestType>(incomplete_message_buffer, message, timestamp));
 }
 
@@ -312,7 +309,6 @@ TEMPLATE_TEST_CASE("decode_ir_complete", "[ffi][decode_next_message]",
     const size_t encoded_message_start_pos = 0;
 
     ffi::ir_stream::IRBuffer complete_encoding_buffer(ir_buf.data(), ir_buf.size());
-
 
     bool is_four_bytes_encoding;
     ffi::ir_stream::TimestampInfo ts_info;
