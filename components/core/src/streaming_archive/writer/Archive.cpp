@@ -342,8 +342,10 @@ namespace streaming_archive::writer {
                         variable_dictionary_id_t id;
                         m_var_dict.add_entry(token.get_string(), id);
                         encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
+                        m_logtype_dict_entry.add_dictionary_var();
+                    } else {
+                        m_logtype_dict_entry.add_int_var();
                     }
-                    m_logtype_dict_entry.add_non_double_var();
                     m_encoded_vars.push_back(encoded_var);
                     break;
                 }
@@ -353,9 +355,9 @@ namespace streaming_archive::writer {
                         variable_dictionary_id_t id;
                         m_var_dict.add_entry(token.get_string(), id);
                         encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
-                        m_logtype_dict_entry.add_non_double_var();
+                        m_logtype_dict_entry.add_dictionary_var();
                     } else {
-                        m_logtype_dict_entry.add_double_var();
+                        m_logtype_dict_entry.add_float_var();
                     }
                     m_encoded_vars.push_back(encoded_var);
                     break;
@@ -368,7 +370,7 @@ namespace streaming_archive::writer {
                     encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
                     m_var_ids.push_back(id);
 
-                    m_logtype_dict_entry.add_non_double_var();
+                    m_logtype_dict_entry.add_dictionary_var();
                     m_encoded_vars.push_back(encoded_var);
                     break;
                 }
