@@ -79,7 +79,8 @@ private:
     size_t m_current_possible_type_ix;
 };
 
-QueryToken::QueryToken (const string& query_string, const size_t begin_pos, const size_t end_pos, const bool is_var) : m_current_possible_type_ix(0) {
+QueryToken::QueryToken (const string& query_string, const size_t begin_pos, const size_t end_pos,
+                        const bool is_var) : m_current_possible_type_ix(0) {
     m_begin_pos = begin_pos;
     m_end_pos = end_pos;
     m_value.assign(query_string, m_begin_pos, m_end_pos - m_begin_pos);
@@ -103,7 +104,8 @@ QueryToken::QueryToken (const string& query_string, const size_t begin_pos, cons
             }
         }
 
-        m_contains_wildcards = (m_has_prefix_greedy_wildcard || m_has_suffix_greedy_wildcard || m_has_greedy_wildcard_in_middle);
+        m_contains_wildcards = (m_has_prefix_greedy_wildcard || m_has_suffix_greedy_wildcard ||
+                                m_has_greedy_wildcard_in_middle);
 
         if (!is_var) {
             if (!m_contains_wildcards) {
@@ -126,9 +128,10 @@ QueryToken::QueryToken (const string& query_string, const size_t begin_pos, cons
 
             encoded_variable_t encoded_var;
             bool converts_to_non_dict_var = false;
-            if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(value_without_wildcards, encoded_var) ||
-                EncodedVariableInterpreter::convert_string_to_representable_double_var(value_without_wildcards, encoded_var))
-            {
+            if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(
+                    value_without_wildcards, encoded_var) ||
+                EncodedVariableInterpreter::convert_string_to_representable_double_var(
+                        value_without_wildcards, encoded_var)) {
                 converts_to_non_dict_var = true;
             }
 

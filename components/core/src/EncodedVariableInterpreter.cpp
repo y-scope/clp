@@ -259,7 +259,8 @@ bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDic
         size_t var_position = logtype_dict_entry.get_var_info(i, var_delim);
 
         // Add the constant that's between the last variable and this one
-        decompressed_msg.append(logtype_value, constant_begin_pos, var_position - constant_begin_pos);
+        decompressed_msg.append(logtype_value, constant_begin_pos,
+                                var_position - constant_begin_pos);
 
         if (LogTypeDictionaryEntry::VarDelim::Integer == var_delim) {
             decompressed_msg += std::to_string(encoded_vars[i]);
