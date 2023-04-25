@@ -120,28 +120,37 @@ bool EncodedVariableInterpreter::convert_string_to_representable_double_var (con
 
     // Encode into 64 bits with the following format (from MSB to LSB):
     // -  1 bit : is negative
-    // -  4 bits: # of decimal digits minus 1
-    //     - This format can represent doubles with between 1 and 16 decimal digits, so we use 4 bits and map the range [1, 16] to [0x0, 0xF]
-    // -  4 bits: position of the decimal from the right minus 1
-    //     - To see why the position is taken from the right, consider (1) "-123456789012345.6", (2) "-.1234567890123456", and (3) ".1234567890123456"
-    //         - For (1), the decimal point is at index 16 from the left and index 1 from the right.
-    //         - For (2), the decimal point is at index 1 from the left and index 16 from the right.
-    //         - For (3), the decimal point is at index 0 from the left and index 16 from the right.
-    //         - So if we take the decimal position from the left, it can range from 0 to 16 because of the negative sign. Whereas from the right, the
-    //           negative sign is inconsequential.
-    //     - Thus, we use 4 bits and map the range [1, 16] to [0x0, 0xF].
     // -  1 bit : unused
-    // - 54 bits: The digits of the double without the decimal, as an integer
+    // - 54 bits: The digits of the float without the decimal, as an
+    //            integer
+    // -  4 bits: # of decimal digits minus 1
+    //     - This format can represent floats with between 1 and 16 decimal
+    //       digits, so we use 4 bits and map the range [1, 16] to
+    //       [0x0, 0xF]
+    // -  4 bits: position of the decimal from the right minus 1
+    //     - To see why the position is taken from the right, consider
+    //       (1) "-123456789012345.6", (2) "-.1234567890123456", and
+    //       (3) ".1234567890123456"
+    //         - For (1), the decimal point is at index 16 from the left and
+    //           index 1 from the right.
+    //         - For (2), the decimal point is at index 1 from the left and
+    //           index 16 from the right.
+    //         - For (3), the decimal point is at index 0 from the left and
+    //           index 16 from the right.
+    //         - So if we take the decimal position from the left, it can
+    //           range from 0 to 16 because of the negative sign. Whereas
+    //           from the right, the negative sign is inconsequential.
+    //     - Thus, we use 4 bits and map the range [1, 16] to [0x0, 0xF].
     uint64_t encoded_double = 0;
     if (is_negative) {
         encoded_double = 1;
     }
+    encoded_double <<= 55;  // 1 unused + 54 for digits of the float
+    encoded_double |= digits & 0x003FFFFFFFFFFFFF;
     encoded_double <<= 4;
     encoded_double |= (num_digits - 1) & 0x0F;
     encoded_double <<= 4;
     encoded_double |= (decimal_point_pos - 1) & 0x0F;
-    encoded_double <<= 55;
-    encoded_double |= digits & 0x003FFFFFFFFFFFFF;
     encoded_var = bit_cast<encoded_variable_t>(encoded_double);
 
     return true;
@@ -151,12 +160,12 @@ void EncodedVariableInterpreter::convert_encoded_double_to_string (encoded_varia
     auto encoded_double = bit_cast<uint64_t>(encoded_var);
 
     // Decode according to the format described in EncodedVariableInterpreter::convert_string_to_representable_double_var
-    uint64_t digits = encoded_double & 0x003FFFFFFFFFFFFF;
-    encoded_double >>= 55;
     uint8_t decimal_pos = (encoded_double & 0x0F) + 1;
     encoded_double >>= 4;
     uint8_t num_digits = (encoded_double & 0x0F) + 1;
     encoded_double >>= 4;
+    uint64_t digits = encoded_double & 0x003FFFFFFFFFFFFF;
+    encoded_double >>= 55;
     bool is_negative = encoded_double > 0;
 
     size_t value_length = num_digits + 1 + is_negative;
