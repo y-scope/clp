@@ -14,6 +14,16 @@ using std::vector;
 
 namespace ffi::ir_stream {
     /**
+     * Checks if the encoded tag is a variable tag
+     * @tparam encoded_variable_t
+     * @param tag
+     * @param is_encoded_var
+     * @return true if the tag is a variable tag, false otherwise
+     */
+    template <typename encoded_variable_t>
+    static bool is_variable_tag (encoded_tag_t tag, bool& is_encoded_var);
+
+    /**
      * Decodes an integer from ir_buf and returns it by reference
      * @tparam integer_t
      * @param ir_buf
@@ -23,20 +33,6 @@ namespace ffi::ir_stream {
      */
     template <typename integer_t>
     static bool decode_int (IRBuffer& ir_buf, integer_t& data);
-
-    /**
-     * Decodes the length of the next logtype from ir_buf and returns it by
-     * reference
-     * @param ir_buf
-     * @param encoded_tag
-     * @param logtype_length
-     * @return IRErrorCode_Success on success
-     * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
-     * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough
-     * data to decode
-     */
-    static IRErrorCode get_logtype_length (IRBuffer& ir_buf, encoded_tag_t encoded_tag,
-                                           size_t& logtype_length);
 
     /**
      * Decodes the next logtype string from ir_buf and returns as a string view
@@ -53,8 +49,8 @@ namespace ffi::ir_stream {
                                       string_view& logtype);
 
     /**
-     * Decodes the next dictionary type variable string from ir_buf and returns as a string view
-     * by reference
+     * Decodes the next dictionary type variable string from ir_buf
+     * and returns as a string view by reference
      * @param ir_buf
      * @param encoded_tag
      * @param dict_var
@@ -189,8 +185,10 @@ namespace ffi::ir_stream {
         return true;
     }
 
-    static IRErrorCode
-    get_logtype_length (IRBuffer& ir_buf, encoded_tag_t encoded_tag, size_t& logtype_length) {
+    static IRErrorCode parse_logtype (IRBuffer& ir_buf, encoded_tag_t encoded_tag,
+                                      string_view& logtype)
+    {
+        size_t logtype_length;
         if (encoded_tag == cProtocol::Payload::LogtypeStrLenUByte) {
             uint8_t length;
             if (false == decode_int(ir_buf, length)) {
@@ -212,19 +210,8 @@ namespace ffi::ir_stream {
         } else {
             return IRErrorCode_Corrupted_IR;
         }
-        return IRErrorCode_Success;
-    }
 
-    static IRErrorCode parse_logtype (IRBuffer& ir_buf, encoded_tag_t encoded_tag,
-                                      string_view& logtype)
-    {
-        size_t log_length;
-        if (auto error_code = get_logtype_length(ir_buf, encoded_tag, log_length);
-                IRErrorCode_Success != error_code)
-        {
-            return error_code;
-        }
-        if (ir_buf.try_read(logtype, log_length) == false) {
+        if (ir_buf.try_read(logtype, logtype_length) == false) {
             return IRErrorCode_Incomplete_IR;
         }
         return IRErrorCode_Success;
@@ -370,10 +357,14 @@ namespace ffi::ir_stream {
             return error_code;
         }
 
-        message = decode_message(logtype, encoded_vars.data(),
-                                 encoded_vars.size(), all_dict_var_strings,
-                                 dictionary_var_end_offsets.data(),
-                                 dictionary_var_end_offsets.size());
+        try {
+            message = decode_message(logtype, encoded_vars.data(),
+                                     encoded_vars.size(), all_dict_var_strings,
+                                     dictionary_var_end_offsets.data(),
+                                     dictionary_var_end_offsets.size());
+        } catch (const EncodingException& e) {
+            return IRErrorCode_Decode_Error;
+        }
 
         ir_buf.commit_internal_pos();
         return IRErrorCode_Success;

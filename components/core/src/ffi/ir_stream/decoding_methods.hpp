@@ -87,6 +87,7 @@ namespace ffi::ir_stream {
 
     typedef enum {
         IRErrorCode_Success,
+        IRErrorCode_Decode_Error,
         IRErrorCode_Eof,
         IRErrorCode_Corrupted_IR,
         IRErrorCode_Corrupted_Metadata,
@@ -131,6 +132,8 @@ namespace ffi::ir_stream {
          * @param timestamp
          * @return ErrorCode_Success on success
          * @return ErrorCode_Corrupted_IR if ir_buf contains invalid IR
+         * @return ErrorCode_Decode_Error if the encoded message can not be
+         * properly decoded
          * @return ErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
          * to decode
          * @return ErrorCode_End_of_IR if the IR ends
@@ -168,6 +171,8 @@ namespace ffi::ir_stream {
          * @param timestamp_delta
          * @return ErrorCode_Success on success
          * @return ErrorCode_Corrupted_IR if ir_buf contains invalid IR
+         * @return ErrorCode_Decode_Error if the encoded message can not be
+         * properly decoded
          * @return ErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
          * to decode
          * @return ErrorCode_End_of_IR if the IR ends
