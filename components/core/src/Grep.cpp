@@ -111,12 +111,9 @@ QueryToken::QueryToken (const string& query_string, const size_t begin_pos, cons
             } else {
                 m_type = Type::Ambiguous;
                 m_possible_types.push_back(Type::Logtype);
-                m_possible_types.push_back(Type::DictionaryVar);
-                // For myself's reasoning and for code review
-                // If a token is not var, it must not have any number in it.
-                // the only case it be can be a double is if the non-wilcard is "-" or "."
-                m_possible_types.push_back(Type::FloatVar);
                 m_possible_types.push_back(Type::IntVar);
+                m_possible_types.push_back(Type::FloatVar);
+                m_possible_types.push_back(Type::DictionaryVar);
             }
         } else {
             string value_without_wildcards = m_value;
@@ -137,18 +134,12 @@ QueryToken::QueryToken (const string& query_string, const size_t begin_pos, cons
 
             if (!converts_to_non_dict_var) {
                 // Dictionary variable
-                // This seems to be incorrect? what if a wildcard is at the middle?
-                // in that case it can still be a int or a float
                 m_type = Type::DictionaryVar;
                 m_cannot_convert_to_non_dict_var = true;
             } else {
                 m_type = Type::Ambiguous;
                 m_possible_types.push_back(Type::IntVar);
                 m_possible_types.push_back(Type::FloatVar);
-                // For myself's reasoning and for code review
-                // Ideally, here still needs to consider Dict var
-                // It's possible that the non-wildcard matches a dictionary value
-                 m_possible_types.push_back(Type::DictionaryVar);
                 m_cannot_convert_to_non_dict_var = false;
             }
         }

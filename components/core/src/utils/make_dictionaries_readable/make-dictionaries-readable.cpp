@@ -71,10 +71,12 @@ int main (int argc, const char* argv[]) {
             // Add the constant that's between the last variable and this one, with newlines escaped
             human_readable_value.append(value, constant_begin_pos, var_pos - constant_begin_pos);
 
-            if (LogTypeDictionaryEntry::VarDelim::NonDouble == var_delim) {
-                human_readable_value += "\\v";
-            } else { // LogTypeDictionaryEntry::VarDelim::Double == var_delim
+            if (LogTypeDictionaryEntry::VarDelim::Integer == var_delim) {
+                human_readable_value += "\\i";
+            } else if (LogTypeDictionaryEntry::VarDelim::Float == var_delim) {
                 human_readable_value += "\\f";
+            } else { // LogTypeDictionaryEntry::VarDelim::Dictionary == var_delim
+                human_readable_value += "\\d";
             }
             // Move past the variable delimiter
             constant_begin_pos = var_pos + 1;
