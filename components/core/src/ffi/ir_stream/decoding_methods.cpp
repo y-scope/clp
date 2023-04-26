@@ -14,11 +14,10 @@ using std::vector;
 
 namespace ffi::ir_stream {
     /**
-     * Checks if the encoded tag is a variable tag
      * @tparam encoded_variable_t
      * @param tag
-     * @param is_encoded_var
-     * @return true if the tag is a variable tag, false otherwise
+     * @param is_encoded_var Returns whether the tag is for an encoded variable
+     * @return Whether the tag is a variable tag
      */
     template <typename encoded_variable_t>
     static bool is_variable_tag (encoded_tag_t tag, bool& is_encoded_var);
@@ -27,12 +26,12 @@ namespace ffi::ir_stream {
      * Decodes an integer from ir_buf and returns it by reference
      * @tparam integer_t
      * @param ir_buf
-     * @param data
+     * @param value
      * @return true on success, false if the ir_buf doesn't contain enough data
      * to decode
      */
     template <typename integer_t>
-    static bool decode_int (IRBuffer& ir_buf, integer_t& data);
+    static bool decode_int (IRBuffer& ir_buf, integer_t& value);
 
     /**
      * Decodes the next logtype string from ir_buf and returns as a string view
@@ -49,21 +48,21 @@ namespace ffi::ir_stream {
                                       string_view& logtype);
 
     /**
-     * Decodes the next dictionary type variable string from ir_buf
+     * Decodes the next dictionary-type variable string from ir_buf
      * and returns as a string view by reference
      * @param ir_buf
      * @param encoded_tag
      * @param dict_var
      * @return IRErrorCode_Success on success
      * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
-     * @return IRErrorCode_Incomplete_IR if input buffer doesn't contain
-     * enough data to decode
+     * @return IRErrorCode_Incomplete_IR if input buffer doesn't contain enough
+     * data to decode
      */
     static IRErrorCode parse_dictionary_var (IRBuffer& ir_buf, encoded_tag_t encoded_tag,
                                              string_view& dict_var);
 
     /**
-     * Parses the next timestamp from the IR. Returns, by reference, the
+     * Parses the next timestamp from ir_buf. Returns, by reference, the
      * timestamp delta if encoded_variable_t == four_byte_encoded_variable_t or
      * the actual timestamp if encoded_variable_t ==
      * eight_byte_encoded_variable_t.
@@ -87,30 +86,29 @@ namespace ffi::ir_stream {
     static void set_timestamp_info (const nlohmann::json& metadata_json, TimestampInfo& ts_info);
 
     /**
-     * Templated function for decoding IR message
+     * Decodes a message from ir_buf
      * @tparam encoded_variable_t
      * @param ir_buf
      * @param message
      * @param timestamp
      * @return IRErrorCode_Success on success
      * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
-     * @return IRErrorCode_Incomplete_IR if input buffer doesn't contain
-     * enough data for decoding
+     * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
+     * to decode
      */
     template <typename encoded_variable_t>
-    static IRErrorCode decode_next_message_general (IRBuffer& ir_buf,
-                                                    string& message,
+    static IRErrorCode generic_decode_next_message (IRBuffer& ir_buf, string& message,
                                                     epoch_time_ms_t& timestamp);
 
     /**
-     * Decodes the json metadata from the ir_buf and return the metadata as
+     * Decodes the JSON metadata from the ir_buf and return the metadata as
      * as string_view by reference
      * @param ir_buf
      * @param json_metadata
      * @return IRErrorCode_Success on success
      * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
-     * @return IRErrorCode_Incomplete_IR if input buffer doesn't contain
-     * enough data for decoding
+     * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
+     * to decode
      */
     static IRErrorCode read_json_metadata (IRBuffer& ir_buf, string_view& json_metadata);
 
@@ -165,7 +163,7 @@ namespace ffi::ir_stream {
     }
 
     template <typename integer_t>
-    static bool decode_int (IRBuffer& ir_buf, integer_t& data) {
+    static bool decode_int (IRBuffer& ir_buf, integer_t& value) {
         integer_t value_small_endian;
         if (ir_buf.try_read(value_small_endian) == false) {
             return false;
@@ -174,13 +172,13 @@ namespace ffi::ir_stream {
         constexpr auto read_size = sizeof(integer_t);
         static_assert(read_size == 1 || read_size == 2 || read_size == 4 || read_size == 8);
         if constexpr (read_size == 1) {
-            data = value_small_endian;
+            value = value_small_endian;
         } else if constexpr (read_size == 2) {
-            data = bswap_16(value_small_endian);
+            value = bswap_16(value_small_endian);
         } else if constexpr (read_size == 4) {
-            data = bswap_32(value_small_endian);
+            value = bswap_32(value_small_endian);
         } else if constexpr (read_size == 8) {
-            data = bswap_64(value_small_endian);
+            value = bswap_64(value_small_endian);
         }
         return true;
     }
@@ -298,7 +296,7 @@ namespace ffi::ir_stream {
     }
 
     template <typename encoded_variable_t>
-    static IRErrorCode decode_next_message_general (IRBuffer& ir_buf, string& message,
+    static IRErrorCode generic_decode_next_message (IRBuffer& ir_buf, string& message,
                                                     epoch_time_ms_t& timestamp)
     {
         ir_buf.init_internal_pos();
@@ -347,8 +345,8 @@ namespace ffi::ir_stream {
         }
 
         // NOTE: for the eight-byte encoding, the timestamp is the actual
-        // timestamp; for the four-byte encoding, the timestamp is a
-        // timestamp delta
+        // timestamp; for the four-byte encoding, the timestamp is a timestamp
+        // delta
         if (false == ir_buf.try_read(encoded_tag)) {
             return IRErrorCode_Incomplete_IR;
         }
@@ -461,12 +459,12 @@ namespace ffi::ir_stream {
             return IRErrorCode_Success;
         }
 
-        IRErrorCode decode_next_message (IRBuffer& ir_buf,
-                                         string& message,
-                                         epoch_time_ms_t& timestamp_delta) {
-            return decode_next_message_general<four_byte_encoded_variable_t>(ir_buf,
-                                                                             message,
-                                                                             timestamp_delta);
+        IRErrorCode decode_next_message (IRBuffer& ir_buf, string& message,
+                                         epoch_time_ms_t& timestamp_delta)
+        {
+            return generic_decode_next_message<four_byte_encoded_variable_t>(
+                    ir_buf, message, timestamp_delta
+            );
         }
     }
 
@@ -496,12 +494,12 @@ namespace ffi::ir_stream {
             return IRErrorCode_Success;
         }
 
-        IRErrorCode decode_next_message (IRBuffer& ir_buf,
-                                         string& message,
-                                         epoch_time_ms_t& timestamp) {
-            return decode_next_message_general<eight_byte_encoded_variable_t>(ir_buf,
-                                                                              message,
-                                                                              timestamp);
+        IRErrorCode decode_next_message (IRBuffer& ir_buf, string& message,
+                                         epoch_time_ms_t& timestamp)
+        {
+            return generic_decode_next_message<eight_byte_encoded_variable_t>(
+                    ir_buf, message, timestamp
+            );
         }
     }
 }

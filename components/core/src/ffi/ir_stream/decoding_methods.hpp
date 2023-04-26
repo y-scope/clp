@@ -12,7 +12,9 @@ namespace ffi::ir_stream {
     using encoded_tag_t = uint8_t;
 
     /**
-     * Class representing an IR buffer that decoder sequentially reads from
+     * Class representing an IR buffer that the decoder sequentially reads from.
+     * The class maintains an internal cursor such that every successful read
+     * increments the cursor.
      */
     class IRBuffer {
     public:
@@ -25,45 +27,47 @@ namespace ffi::ir_stream {
         [[nodiscard]] size_t get_cursor_pos () const { return m_cursor_pos; }
         void set_cursor_pos (size_t cursor_pos) { m_cursor_pos = cursor_pos; }
 
-        // the following functions are only supposed to be used by the decoder
+        // The following methods should only be used by the decoder
         void init_internal_pos () { m_internal_cursor_pos = m_cursor_pos; }
         void commit_internal_pos () { m_cursor_pos = m_internal_cursor_pos; }
 
         /**
-         * Tries reading a string view of size = read_size from the ir_buf
-         * On success, returns the string as string_view by reference
-         * and increments the internal cursor of if_buf
+         * Tries reading a string view of size = read_size from the ir_buf.
+         * On success, returns the string as string_view by reference.
          * @param str_view
          * @param read_size
-         * @return true on success, false if the ir_buf doesn't
-         * contain enough data
+         * @return true on success, false if the ir_buf doesn't contain enough
+         * data to decode
          **/
         [[nodiscard]] bool try_read (std::string_view& str_view, size_t read_size);
 
         /**
-         * Tries reading data of size = sizeof(integer_t) from
-         * the ir_buf. On success, returns the value by reference
-         * and increments the internal cursor of if_buf
+         * Tries reading an integer of size = sizeof(integer_t) from the ir_buf.
+         * On success, returns the value by reference.
          * @tparam integer_t
          * @param data
-         * @return true on success, false if the ir_buf doesn't
-         * contain enough data
+         * @return true on success, false if the ir_buf doesn't contain enough
+         * data to decode
          */
         template <typename integer_t>
         [[nodiscard]] bool try_read (integer_t& data);
 
         /**
-         * Tries reading data of size = read_size from the ir_buf.
-         * On success, stores the data into dest and increments the internal
-         * cursor of if_buf
+         * Tries reading data of size = read_size from the ir_buf. On success,
+         * stores the data into dest.
          * @param dest
          * @param read_size
-         * @return true on success, false if the ir_buf doesn't
-         * contain enough data
+         * @return true on success, false if the ir_buf doesn't contain enough
+         * data to decode
          */
         [[nodiscard]] bool try_read (void* dest, size_t read_size);
 
     private:
+        /**
+         * @param read_size
+         * @return Whether a read of the given size will exceed the size of the
+         * buffer
+         */
         [[nodiscard]] bool read_will_overflow (size_t read_size) const {
             return (m_internal_cursor_pos + read_size) > m_size;
         }
@@ -71,8 +75,8 @@ namespace ffi::ir_stream {
         const int8_t* const m_data;
         const size_t m_size;
         size_t m_cursor_pos;
-        // Internal cursor position to help keeping
-        // cursor pos on a decoding failure.
+        // Internal cursor position to help restore cursor pos if/when decoding
+        // fails
         size_t m_internal_cursor_pos;
     };
 
@@ -116,7 +120,7 @@ namespace ffi::ir_stream {
          * @return IRErrorCode_Success on success
          * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
          * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough
-         * data for decoding
+         * data to decode
          * @return IRErrorCode_Unsupported_Version if the IR uses an unsupported
          * version
          * @return IRErrorCode_Corrupted_Metadata if the metadata cannot be
@@ -132,7 +136,7 @@ namespace ffi::ir_stream {
          * @param timestamp
          * @return ErrorCode_Success on success
          * @return ErrorCode_Corrupted_IR if ir_buf contains invalid IR
-         * @return ErrorCode_Decode_Error if the encoded message can not be
+         * @return ErrorCode_Decode_Error if the encoded message cannot be
          * properly decoded
          * @return ErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
          * to decode
@@ -171,7 +175,7 @@ namespace ffi::ir_stream {
          * @param timestamp_delta
          * @return ErrorCode_Success on success
          * @return ErrorCode_Corrupted_IR if ir_buf contains invalid IR
-         * @return ErrorCode_Decode_Error if the encoded message can not be
+         * @return ErrorCode_Decode_Error if the encoded message cannot be
          * properly decoded
          * @return ErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
          * to decode
