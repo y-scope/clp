@@ -33,8 +33,7 @@ namespace ffi::ir_stream {
 
         /**
          * Tries reading a string view of size = read_size from the ir_buf.
-         * On success, returns the string as string_view by reference.
-         * @param str_view
+         * @param str_view Returns the string view
          * @param read_size
          * @return true on success, false if the ir_buf doesn't contain enough
          * data to decode
@@ -107,7 +106,7 @@ namespace ffi::ir_stream {
      * @return ErrorCode_Incomplete_IR if ir_buf doesn't contain enough data to
      * decode
      */
-    IRErrorCode get_encoding_type (IrBuffer & ir_buf, bool & is_four_bytes_encoding);
+    IRErrorCode get_encoding_type (IrBuffer& ir_buf, bool& is_four_bytes_encoding);
 
     namespace eight_byte_encoding {
         /**
@@ -123,14 +122,13 @@ namespace ffi::ir_stream {
          * @return IRErrorCode_Corrupted_Metadata if the metadata cannot be
          * decoded
          */
-        IRErrorCode decode_preamble (IrBuffer & ir_buf, TimestampInfo & ts_info);
+        IRErrorCode decode_preamble (IrBuffer& ir_buf, TimestampInfo& ts_info);
 
         /**
          * Decodes the next message for the eight-byte encoding IR stream.
-         * On success, returns message and timestamp by reference
          * @param ir_buf
-         * @param message
-         * @param timestamp
+         * @param message Returns the decoded message
+         * @param timestamp Returns the decoded timestamp
          * @return ErrorCode_Success on success
          * @return ErrorCode_Corrupted_IR if ir_buf contains invalid IR
          * @return ErrorCode_Decode_Error if the encoded message cannot be
@@ -139,17 +137,16 @@ namespace ffi::ir_stream {
          * to decode
          * @return ErrorCode_End_of_IR if the IR ends
          */
-        IRErrorCode decode_next_message (IrBuffer & ir_buf, std::string & message,
+        IRErrorCode decode_next_message (IrBuffer& ir_buf, std::string& message,
                                          epoch_time_ms_t& timestamp);
     }
 
     namespace four_byte_encoding {
         /**
          * Decodes the preamble for the four-byte encoding IR stream.
-         * On success, returns ts_info and reference_ts by reference
          * @param ir_buf
-         * @param ts_info
-         * @param reference_ts
+         * @param ts_info Returns the decoded timestamp info
+         * @param reference_ts Returns the decoded reference timestamp
          * @return IRErrorCode_Success on success
          * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
          * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough
@@ -159,17 +156,14 @@ namespace ffi::ir_stream {
          * @return IRErrorCode_Corrupted_Metadata if the metadata cannot be
          * decoded
          */
-        IRErrorCode decode_preamble (IrBuffer & ir_buf,
-                                     TimestampInfo& ts_info,
+        IRErrorCode decode_preamble (IrBuffer& ir_buf, TimestampInfo& ts_info,
                                      epoch_time_ms_t& reference_ts);
 
         /**
          * Decodes the next message for the four-byte encoding IR stream.
-         * On success, returns message and ts_delta by reference and sets
-         * get_cursor_pos in ir_buf to be the end of decoded message
          * @param ir_buf
-         * @param message
-         * @param timestamp_delta
+         * @param message Returns the decoded message
+         * @param timestamp_delta Returns the decoded timestamp delta
          * @return ErrorCode_Success on success
          * @return ErrorCode_Corrupted_IR if ir_buf contains invalid IR
          * @return ErrorCode_Decode_Error if the encoded message cannot be
@@ -178,7 +172,7 @@ namespace ffi::ir_stream {
          * to decode
          * @return ErrorCode_End_of_IR if the IR ends
          */
-        IRErrorCode decode_next_message (IrBuffer & ir_buf, std::string & message,
+        IRErrorCode decode_next_message (IrBuffer& ir_buf, std::string& message,
                                          epoch_time_ms_t& timestamp_delta);
     }
 }

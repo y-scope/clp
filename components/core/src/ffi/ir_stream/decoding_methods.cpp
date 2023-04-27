@@ -14,10 +14,10 @@ using std::vector;
 
 namespace ffi::ir_stream {
     /**
-     * Checks if the tag is a variable encoding tag
      * @tparam encoded_variable_t Type of the encoded variable
      * @param tag
-     * @param is_encoded_var Returns whether the tag is for an encoded variable
+     * @param is_encoded_var Returns true if tag is for an encoded variable (as
+     * opposed to a dictionary variable)
      * @return Whether the tag is a variable tag
      */
     template <typename encoded_variable_t>
@@ -38,7 +38,7 @@ namespace ffi::ir_stream {
      * Decodes the next logtype string from ir_buf
      * @param ir_buf
      * @param encoded_tag
-     * @param logtype Returns logtype string
+     * @param logtype Returns the logtype string
      * @return IRErrorCode_Success on success
      * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
      * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
@@ -51,7 +51,7 @@ namespace ffi::ir_stream {
      * Decodes the next dictionary-type variable string from ir_buf
      * @param ir_buf
      * @param encoded_tag
-     * @param dict_var Returns dictionary variable
+     * @param dict_var Returns the dictionary variable
      * @return IRErrorCode_Success on success
      * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
      * @return IRErrorCode_Incomplete_IR if input buffer doesn't contain enough
@@ -61,14 +61,13 @@ namespace ffi::ir_stream {
                                              string_view& dict_var);
 
     /**
-     * Parses the next timestamp from ir_buf. Returns the
-     * timestamp delta if encoded_variable_t == four_byte_encoded_variable_t or
-     * the actual timestamp if encoded_variable_t ==
-     * eight_byte_encoded_variable_t.
+     * Parses the next timestamp from ir_buf
      * @tparam encoded_variable_t Type of the encoded variable
      * @param ir_buf
      * @param encoded_tag
-     * @param ts Returns the next timestamp
+     * @param ts Returns the timestamp delta if
+     * encoded_variable_t == four_byte_encoded_variable_t or the actual
+     * timestamp if encoded_variable_t == eight_byte_encoded_variable_t
      * @return IRErrorCode_Success on success
      * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
      * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
@@ -78,20 +77,24 @@ namespace ffi::ir_stream {
     IRErrorCode parse_timestamp (IrBuffer& ir_buf, encoded_tag_t encoded_tag, epoch_time_ms_t& ts);
 
     /**
-     * Extracts timestamp info from json metadata and stores into ts_info
-     * @param metadata_json Returns the json metadata
-     * @param ts_info Returns timestamp info
+     * Extracts timestamp info from the JSON metadata and stores it into ts_info
+     * @param metadata_json The JSON metadata
+     * @param ts_info Returns the timestamp info
      */
     static void set_timestamp_info (const nlohmann::json& metadata_json, TimestampInfo& ts_info);
 
     /**
-     * Decodes a message from ir_buf
+     * Decodes the next encoded message from ir_buf
      * @tparam encoded_variable_t Type of the encoded variable
      * @param ir_buf
      * @param message Returns the decoded message
-     * @param timestamp
+     * @param timestamp Returns the timestamp delta if
+     * encoded_variable_t == four_byte_encoded_variable_t or the actual
+     * timestamp if encoded_variable_t == eight_byte_encoded_variable_t
      * @return IRErrorCode_Success on success
      * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
+     * @return IRErrorCode_Decode_Error if the encoded message cannot be
+     * properly decoded
      * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
      * to decode
      */
@@ -102,7 +105,7 @@ namespace ffi::ir_stream {
     /**
      * Decodes the JSON metadata from the ir_buf
      * @param ir_buf
-     * @param json_metadata Returns JSON metadata
+     * @param json_metadata Returns the JSON metadata
      * @return IRErrorCode_Success on success
      * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
      * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
