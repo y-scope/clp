@@ -16,9 +16,9 @@ namespace ffi::ir_stream {
      * The class maintains an internal cursor such that every successful read
      * increments the cursor.
      */
-    class IRBuffer {
+    class IrBuffer {
     public:
-        IRBuffer (const int8_t* data, size_t size) :
+        IrBuffer (const int8_t* data, size_t size) :
                 m_data(data),
                 m_size(size),
                 m_cursor_pos(0),
@@ -42,10 +42,9 @@ namespace ffi::ir_stream {
         [[nodiscard]] bool try_read (std::string_view& str_view, size_t read_size);
 
         /**
-         * Tries reading an integer of size = sizeof(integer_t) from the ir_buf.
-         * On success, returns the value by reference.
+         * Tries reading an integer of size = sizeof(integer_t) from the ir_buf
          * @tparam integer_t
-         * @param data
+         * @param data Returns the integer
          * @return true on success, false if the ir_buf doesn't contain enough
          * data to decode
          */
@@ -100,23 +99,21 @@ namespace ffi::ir_stream {
     } IRErrorCode;
 
     /**
-     * Decodes the encoding type for the encoded IR stream.
-     * On success, return the encoding type by reference
+     * Decodes the encoding type for the encoded IR stream
      * @param ir_buf
-     * @param is_four_bytes_encoding
+     * @param is_four_bytes_encoding Returns the encoding type
      * @return ErrorCode_Success on success
      * @return ErrorCode_Corrupted_IR if ir_buf contains invalid IR
      * @return ErrorCode_Incomplete_IR if ir_buf doesn't contain enough data to
      * decode
      */
-    IRErrorCode get_encoding_type (IRBuffer& ir_buf, bool& is_four_bytes_encoding);
+    IRErrorCode get_encoding_type (IrBuffer & ir_buf, bool & is_four_bytes_encoding);
 
     namespace eight_byte_encoding {
         /**
          * Decodes the preamble for the eight-byte encoding IR stream.
-         * On success, returns ts_info by reference
          * @param ir_buf
-         * @param ts_info
+         * @param ts_info Returns the timestamp info on success
          * @return IRErrorCode_Success on success
          * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
          * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough
@@ -126,7 +123,7 @@ namespace ffi::ir_stream {
          * @return IRErrorCode_Corrupted_Metadata if the metadata cannot be
          * decoded
          */
-        IRErrorCode decode_preamble (IRBuffer& ir_buf, TimestampInfo& ts_info);
+        IRErrorCode decode_preamble (IrBuffer & ir_buf, TimestampInfo & ts_info);
 
         /**
          * Decodes the next message for the eight-byte encoding IR stream.
@@ -142,7 +139,7 @@ namespace ffi::ir_stream {
          * to decode
          * @return ErrorCode_End_of_IR if the IR ends
          */
-        IRErrorCode decode_next_message (IRBuffer& ir_buf, std::string& message,
+        IRErrorCode decode_next_message (IrBuffer & ir_buf, std::string & message,
                                          epoch_time_ms_t& timestamp);
     }
 
@@ -162,7 +159,7 @@ namespace ffi::ir_stream {
          * @return IRErrorCode_Corrupted_Metadata if the metadata cannot be
          * decoded
          */
-        IRErrorCode decode_preamble (IRBuffer& ir_buf,
+        IRErrorCode decode_preamble (IrBuffer & ir_buf,
                                      TimestampInfo& ts_info,
                                      epoch_time_ms_t& reference_ts);
 
@@ -181,7 +178,7 @@ namespace ffi::ir_stream {
          * to decode
          * @return ErrorCode_End_of_IR if the IR ends
          */
-        IRErrorCode decode_next_message (IRBuffer& ir_buf, std::string& message,
+        IRErrorCode decode_next_message (IrBuffer & ir_buf, std::string & message,
                                          epoch_time_ms_t& timestamp_delta);
     }
 }
