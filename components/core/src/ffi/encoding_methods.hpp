@@ -64,7 +64,7 @@ namespace ffi {
     static constexpr char cTooFewEncodedVarsErrorMessage[] =
             "There are fewer encoded variables than encoded variable delimiters in the logtype.";
     static constexpr char cUnexpectedEscapeCharacterMessage[] =
-            "Unexpected escape character without escaped value at the end of logtype.";
+            "Unexpected escape character without escaped value at the end of the logtype.";
 
     constexpr size_t cMaxDigitsInRepresentableEightByteFloatVar = 16;
     constexpr size_t cMaxDigitsInRepresentableFourByteFloatVar = 8;
