@@ -352,7 +352,7 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]")
     // Timestamp is encoded as tagbyte + eight_byte_encoded_variable_t
     size_t timestamp_encoding_size = sizeof(ffi::ir_stream::cProtocol::Payload::TimestampVal) +
                                      sizeof(eight_byte_encoded_variable_t);
-    const size_t logtype_end_index = (ir_buf.size() - 1) - encoded_timestamp_size;
+    const size_t logtype_end_index = (ir_buf.size() - 1) - timestamp_encoding_size;
 
     string decoded_message;
     epoch_time_ms_t timestamp;
