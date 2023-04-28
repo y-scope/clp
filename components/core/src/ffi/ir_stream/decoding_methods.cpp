@@ -113,6 +113,25 @@ namespace ffi::ir_stream {
      */
     static IRErrorCode read_json_metadata (IrBuffer& ir_buf, string_view& json_metadata);
 
+    /**
+     * Decodes the message from the given logtype, encoded variables, and
+     * dictionary variables. This function properly handles the escaped
+     * placeholder in the logtype, as opposed to the decode_message defined in
+     * encoding_methods that doesn't handle escaped placeholder for simplicity.
+     * @tparam encoded_variable_t Type of the encoded variable
+     * @param logtype
+     * @param encoded_vars
+     * @param dictionary_vars
+     * @return The decoded message
+     * @throw ErrorCode_Corrupt if the message can't be decoded
+     */
+    template <typename encoded_variable_t>
+    static std::string decode_message (
+        string_view logtype,
+        vector<encoded_variable_t> encoded_vars,
+        vector<string_view> dictionary_vars
+    );
+
     bool IrBuffer::try_read (string_view& str_view, size_t read_size) {
         if (read_will_overflow(read_size)) {
             return false;
@@ -312,8 +331,7 @@ namespace ffi::ir_stream {
 
         // Handle variables
         vector<encoded_variable_t> encoded_vars;
-        string all_dict_var_strings;
-        vector<int32_t> dictionary_var_end_offsets;
+        vector<string_view> dict_vars;
         bool is_encoded_var;
         while (is_variable_tag<encoded_variable_t>(encoded_tag, is_encoded_var)) {
             if (is_encoded_var) {
@@ -329,8 +347,7 @@ namespace ffi::ir_stream {
                 {
                     return error_code;
                 }
-                all_dict_var_strings.append(var_str);
-                dictionary_var_end_offsets.push_back(all_dict_var_strings.length());
+                dict_vars.push_back(var_str);
             }
             if (false == ir_buf.try_read(encoded_tag)) {
                 return IRErrorCode_Incomplete_IR;
@@ -357,10 +374,7 @@ namespace ffi::ir_stream {
         }
 
         try {
-            message = decode_message(logtype, encoded_vars.data(),
-                                     encoded_vars.size(), all_dict_var_strings,
-                                     dictionary_var_end_offsets.data(),
-                                     dictionary_var_end_offsets.size());
+            message = decode_message(logtype, encoded_vars, dict_vars);
         } catch (const EncodingException& e) {
             return IRErrorCode_Decode_Error;
         }
@@ -407,6 +421,71 @@ namespace ffi::ir_stream {
             return IRErrorCode_Incomplete_IR;
         }
         return IRErrorCode_Success;
+    }
+
+    template <typename encoded_variable_t>
+    static std::string decode_message (
+            string_view logtype,
+            vector <encoded_variable_t> encoded_vars,
+            vector <string_view> dictionary_vars
+    ) {
+        std::string message;
+        size_t encoded_vars_length = encoded_vars.size();
+        size_t dict_vars_length = dictionary_vars.size();
+        size_t next_static_text_begin_pos = 0;
+
+        size_t dictionary_vars_ix = 0;
+        size_t encoded_vars_ix = 0;
+        for (size_t cur_pos = 0; cur_pos < logtype.length(); ++cur_pos) {
+            auto c = logtype[cur_pos];
+            if (enum_to_underlying_type(VariablePlaceholder::Float) == c) {
+                message.append(logtype, next_static_text_begin_pos, cur_pos - next_static_text_begin_pos);
+                next_static_text_begin_pos = cur_pos + 1;
+                if (encoded_vars_ix >= encoded_vars_length) {
+                    throw EncodingException(ErrorCode_Corrupt, __FILENAME__, __LINE__,
+                                            cTooFewEncodedVarsErrorMessage);
+                }
+                message.append(decode_float_var(encoded_vars[encoded_vars_ix]));
+                ++encoded_vars_ix;
+            } else if (enum_to_underlying_type(VariablePlaceholder::Integer) == c) {
+                message.append(logtype, next_static_text_begin_pos, cur_pos - next_static_text_begin_pos);
+                next_static_text_begin_pos = cur_pos + 1;
+                if (encoded_vars_ix >= encoded_vars_length) {
+                    throw EncodingException(ErrorCode_Corrupt, __FILENAME__, __LINE__,
+                                            cTooFewEncodedVarsErrorMessage);
+                }
+                message.append(decode_integer_var(encoded_vars[encoded_vars_ix]));
+                ++encoded_vars_ix;
+            } else if (enum_to_underlying_type(VariablePlaceholder::Dictionary) == c) {
+                message.append(logtype, next_static_text_begin_pos, cur_pos - next_static_text_begin_pos);
+                next_static_text_begin_pos = cur_pos + 1;
+                if (dictionary_vars_ix >= dict_vars_length) {
+                    throw EncodingException(ErrorCode_Corrupt, __FILENAME__, __LINE__,
+                                            cTooFewDictionaryVarsErrorMessage);
+                }
+                message.append(dictionary_vars[dictionary_vars_ix]);
+                ++dictionary_vars_ix;
+            } else if (cVariablePlaceholderEscapeCharacter == c) {
+                if (cur_pos == logtype.length() - 1) {
+                    throw EncodingException(ErrorCode_Corrupt, __FILENAME__, __LINE__,
+                                            cUnexpectedEscapeCharacterMessage);
+                }
+                message.append(logtype, next_static_text_begin_pos, cur_pos - next_static_text_begin_pos);
+
+                // Skips the escape character
+                next_static_text_begin_pos = cur_pos + 1;
+                // The next character after the escape character is static text.
+                // Increments the cur_pos by 1 to unconditionally append the
+                // next character to the message as static text
+                ++cur_pos;
+            }
+        }
+        // Add remainder
+        if (next_static_text_begin_pos < logtype.length()) {
+            message.append(logtype, next_static_text_begin_pos);
+        }
+
+        return message;
     }
 
     IRErrorCode get_encoding_type (IrBuffer& ir_buf, bool& is_four_bytes_encoding) {

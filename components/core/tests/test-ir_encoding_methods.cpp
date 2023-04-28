@@ -304,8 +304,9 @@ TEMPLATE_TEST_CASE("decode_next_message_general", "[ffi][decode_next_message]",
     vector<int8_t> ir_buf;
     string logtype;
 
-    string message = "Static <\text>, dictVar1, 123, 456.7, "
-                     "dictVar2, 987, 654.3, end of static text";
+    string placeholder_as_string {enum_to_underlying_type(ffi::VariablePlaceholder::Dictionary)};
+    string message = "Static <\text>, dictVar1, 123, 456.7 dictVar2, 987, 654.3," +
+                     placeholder_as_string + " end of static text";
     epoch_time_ms_t reference_timestamp = get_next_timestamp_for_test<TestType>();
     REQUIRE(true == encode_message<TestType>(reference_timestamp, message, logtype, ir_buf));
     const size_t encoded_message_end_pos = ir_buf.size();
