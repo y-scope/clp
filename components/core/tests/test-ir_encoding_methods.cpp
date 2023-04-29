@@ -332,10 +332,9 @@ TEMPLATE_TEST_CASE("decode_next_message_general", "[ffi][decode_next_message]",
             decode_next_message<TestType>(incomplete_message_buffer, message, timestamp));
 }
 
-// The test case only tests eight_byte_encoded_variable_t. Because the timestamp
-// size is fixed, it is easier to reverse engineer the last index of logtype in
-// the ir_buffer. The test makes modification to the logtype in the ir_buf
-// to trigger a mocked IRErrorCode_Decode_Error.
+// NOTE: This test only tests eight_byte_encoded_variable_t because we trigger
+// IRErrorCode_Decode_Error by manually modifying the logtype within the IR, and
+// this is easier for the eight_byte_encoded_variable_t case.
 TEST_CASE("message_decode_error", "[ffi][decode_next_message]")
 {
     vector<int8_t> ir_buf;
@@ -345,36 +344,35 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]")
     string message = "Static <\text>, dictVar1, 123, 456.7 dictVar2, 987, 654.3," +
                      placeholder_as_string + " end of static text";
     epoch_time_ms_t reference_ts = get_next_timestamp_for_test<eight_byte_encoded_variable_t>();
-    REQUIRE(true ==
-            encode_message<eight_byte_encoded_variable_t>(reference_ts, message, logtype,
-                                                          ir_buf));
+    REQUIRE(true == encode_message<eight_byte_encoded_variable_t>(reference_ts, message,
+                                                                  logtype, ir_buf));
 
-    // Timestamp is encoded as tagbyte + eight_byte_encoded_variable_t
+    // Find the end of the encoded logtype which is before the encoded timestamp
+    // The timestamp is encoded as tagbyte + eight_byte_encoded_variable_t
     size_t timestamp_encoding_size = sizeof(ffi::ir_stream::cProtocol::Payload::TimestampVal) +
                                      sizeof(eight_byte_encoded_variable_t);
-    const size_t logtype_end_index = (ir_buf.size() - 1) - timestamp_encoding_size;
+    const size_t logtype_end_pos = ir_buf.size() - timestamp_encoding_size;
 
     string decoded_message;
     epoch_time_ms_t timestamp;
 
     // Test if a trailing escape triggers a decoder error
     auto ir_with_extra_escape{ir_buf};
-    ir_with_extra_escape.at(logtype_end_index) = ffi::cVariablePlaceholderEscapeCharacter;
+    ir_with_extra_escape.at(logtype_end_pos - 1) = ffi::cVariablePlaceholderEscapeCharacter;
     IrBuffer ir_buffer_with_extra_escape(ir_with_extra_escape.data(), ir_with_extra_escape.size());
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error ==
             decode_next_message<eight_byte_encoded_variable_t>(ir_buffer_with_extra_escape,
-                                                               message, timestamp));
-
+                                                               decoded_message, timestamp));
 
     // Test if an extra placeholder triggers a decoder error
     auto ir_with_extra_placeholder{ir_buf};
-    ir_with_extra_placeholder.at(logtype_end_index) = enum_to_underlying_type(
-            VariablePlaceholder::Dictionary);
+    ir_with_extra_placeholder.at(logtype_end_pos - 1) =
+            enum_to_underlying_type(VariablePlaceholder::Dictionary);
     IrBuffer ir_buffer_with_extra_placeholder(ir_with_extra_escape.data(),
                                               ir_with_extra_escape.size());
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error ==
             decode_next_message<eight_byte_encoded_variable_t>(ir_buffer_with_extra_placeholder,
-                                                               message, timestamp));
+                                                               decoded_message, timestamp));
 }
 
 TEST_CASE("decode_next_message_four_byte_negative_delta", "[ffi][decode_next_message]") {
