@@ -144,6 +144,7 @@ QueryToken::QueryToken (const string& query_string, const size_t begin_pos, cons
                 m_type = Type::Ambiguous;
                 m_possible_types.push_back(Type::IntVar);
                 m_possible_types.push_back(Type::FloatVar);
+                m_possible_types.push_back(Type::DictionaryVar);
                 m_cannot_convert_to_non_dict_var = false;
             }
         }
