@@ -279,7 +279,7 @@ bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDic
                     "EncodedVariableInterpreter: Logtype '{}' contains "
                     "unexpected variable placeholder {}",
                     logtype_value.c_str(),
-                    var_delim);
+                    enum_to_underlying_type(var_delim));
                 return false;
         }
         // Move past the variable delimiter
