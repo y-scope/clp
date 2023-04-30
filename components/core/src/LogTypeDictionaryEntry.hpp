@@ -35,7 +35,8 @@ public:
         // NOTE: These values are used within logtypes to denote variables, so care must be taken when changing them
         Integer = 0x11,
         Dictionary = 0x12,
-        Float = 0x13
+        Float = 0x13,
+        Length = 3
     };
 
     // Constructors
