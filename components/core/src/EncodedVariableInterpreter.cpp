@@ -255,22 +255,32 @@ bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDic
     LogTypeDictionaryEntry::VarDelim var_delim;
     size_t constant_begin_pos = 0;
     string double_str;
+    encoded_variable_t var_dict_id;
     for (size_t i = 0; i < num_vars_in_logtype; ++i) {
         size_t var_position = logtype_dict_entry.get_var_info(i, var_delim);
 
         // Add the constant that's between the last variable and this one
         decompressed_msg.append(logtype_value, constant_begin_pos,
                                 var_position - constant_begin_pos);
-
-        if (LogTypeDictionaryEntry::VarDelim::Integer == var_delim) {
-            decompressed_msg += std::to_string(encoded_vars[i]);
-        } else if (LogTypeDictionaryEntry::VarDelim::Float == var_delim) {
-            convert_encoded_double_to_string(encoded_vars[i], double_str);
-            decompressed_msg += double_str;
-        } else {
-            // LogTypeDictionaryEntry::VarDelim::Dictionary == var_delim
-            auto var_dict_id = decode_var_dict_id(encoded_vars[i]);
-            decompressed_msg += var_dict.get_value(var_dict_id);
+        switch (var_delim) {
+            case LogTypeDictionaryEntry::VarDelim::Integer:
+                decompressed_msg += std::to_string(encoded_vars[i]);
+                break;
+            case LogTypeDictionaryEntry::VarDelim::Float:
+                convert_encoded_double_to_string(encoded_vars[i], double_str);
+                decompressed_msg += double_str;
+                break;
+            case LogTypeDictionaryEntry::VarDelim::Dictionary:
+                var_dict_id = decode_var_dict_id(encoded_vars[i]);
+                decompressed_msg += var_dict.get_value(var_dict_id);
+                break;
+            default:
+                SPDLOG_ERROR(
+                    "EncodedVariableInterpreter: Logtype '{}' contains "
+                    "unexpected variable placeholder {}",
+                    logtype_value.c_str(),
+                    var_delim);
+                return false;
         }
         // Move past the variable delimiter
         constant_begin_pos = var_position + 1;

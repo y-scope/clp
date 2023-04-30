@@ -18,10 +18,13 @@ typedef int64_t logtype_dictionary_id_t;
 static const logtype_dictionary_id_t cLogtypeDictionaryIdMax = INT64_MAX;
 
 typedef uint16_t archive_format_version_t;
-// This flag is used to maintain two separate streams of archive format versions:
-// - Development versions (which can change frequently as necessary) which should have the flag
-// - Production versions (which should be changed with care and as infrequently as possible) which should not have the flag
-constexpr archive_format_version_t cArchiveFormatDevelopmentVersionFlag = 0x8000;
+// This flag is used to maintain two separate streams of archive format
+// versions:
+// - Development versions (which can change frequently as necessary) which
+//   should have the flag
+// - Production versions (which should be changed with care and as infrequently
+//   as possible) which should not have the flag
+constexpr archive_format_version_t cArchiveFormatDevVersionFlag = 0x8000;
 
 typedef uint64_t file_id_t;
 typedef uint64_t segment_id_t;

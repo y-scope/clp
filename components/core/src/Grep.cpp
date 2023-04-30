@@ -80,7 +80,8 @@ private:
 };
 
 QueryToken::QueryToken (const string& query_string, const size_t begin_pos, const size_t end_pos,
-                        const bool is_var) : m_current_possible_type_ix(0) {
+                        const bool is_var) : m_current_possible_type_ix(0)
+{
     m_begin_pos = begin_pos;
     m_end_pos = end_pos;
     m_value.assign(query_string, m_begin_pos, m_end_pos - m_begin_pos);
