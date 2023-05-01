@@ -16,10 +16,10 @@ namespace streaming_archive::glt {
      */
     public:
         // Methods
-        size_t get_size() const {
+        [[nodiscard]] size_t get_size() const {
             return m_size;
         }
-        logtype_dictionary_id_t get_id() const {
+        [[nodiscard]] logtype_dictionary_id_t get_id() const {
             return m_logtype_id;
         }
 

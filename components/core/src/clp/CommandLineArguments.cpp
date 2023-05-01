@@ -220,36 +220,50 @@ namespace clp {
                 // Define compression-specific options
                 po::options_description options_compression("Compression Options");
                 options_compression.add_options()
-                        ("remove-path-prefix", po::value<string>(&m_path_prefix_to_remove)->value_name("DIR")->default_value(m_path_prefix_to_remove),
-                                "Remove the given path prefix from each compressed file/dir.")
-                        ("target-encoded-file-size",
-                         po::value<size_t>(&m_target_encoded_file_size)->value_name("SIZE")->default_value(m_target_encoded_file_size),
-                                "Target size (B) for an encoded file before a new one is created")
-                        ("target-segment-size",
-                         po::value<size_t>(&m_target_segment_uncompressed_size)->value_name("SIZE")->default_value(m_target_segment_uncompressed_size),
-                                "Target uncompressed size (B) of a segment before a new one is created")
-                        ("target-dictionaries-size",
-                         po::value<size_t>(&m_target_data_size_of_dictionaries)->value_name("SIZE")->default_value(m_target_data_size_of_dictionaries),
-                                "Target size (B) for the dictionaries before a new archive is created")
-                        ("compression-level", po::value<int>(&m_compression_level)->value_name("LEVEL")->default_value(m_compression_level),
-                                "1 (fast/low compression) to 9 (slow/high compression)")
-                        ("combine-threshold", po::value<double>(&m_glt_combine_threshold)->value_name("VALUE")->default_value(m_glt_combine_threshold),
-                                "Percentage threshold used to determine if a logtype should be stored in a combined table.")
-                        ("print-archive-stats-progress", po::bool_switch(&m_print_archive_stats_progress),
-                                "Print statistics (ndjson) about each archive as it's compressed")
-                        ("storage-engine", po::value<string>(&storage_engine)->value_name("engine")->default_value(storage_engine),
-                                "Use storage engine specified by ENGINE (clp - CLP, glt - GLT)")
-                        ("progress", po::bool_switch(&m_show_progress), "Show progress during compression")
-                        ("schema-path", po::value<string>(&m_schema_file_path)->value_name("FILE")->default_value(m_schema_file_path),
-                                "Path to a schema file. If not specified, heuristics are used to determine dictionary variables. "
-                                "See README-Schema.md for details.")
-                        ;
+                    ("remove-path-prefix",
+                     po::value<string>(&m_path_prefix_to_remove)->value_name("DIR")->
+                            default_value(m_path_prefix_to_remove),
+                     "Remove the given path prefix from each compressed file/dir.")
+                    ("target-encoded-file-size",
+                     po::value<size_t>(&m_target_encoded_file_size)->value_name("SIZE")->
+                            default_value(m_target_encoded_file_size),
+                     "Target size (B) for an encoded file before a new one is created")
+                    ("target-segment-size",
+                     po::value<size_t>(&m_target_segment_uncompressed_size)->value_name("SIZE")->
+                            default_value(m_target_segment_uncompressed_size),
+                     "Target uncompressed size (B) of a segment before a new one is created")
+                    ("target-dictionaries-size",
+                     po::value<size_t>(&m_target_data_size_of_dictionaries)->value_name("SIZE")->
+                            default_value(m_target_data_size_of_dictionaries),
+                     "Target size (B) for the dictionaries before a new archive is created")
+                    ("compression-level",
+                     po::value<int>(&m_compression_level)->value_name("LEVEL")->
+                            default_value(m_compression_level),
+                     "1 (fast/low compression) to 9 (slow/high compression)")
+                    ("combine-threshold", po::value<double>(&m_glt_combine_threshold)->
+                            value_name("VALUE")->default_value(m_glt_combine_threshold),
+                    "Percentage threshold used to determine if a logtype should be stored in "
+                    "a combined table.")
+                    ("print-archive-stats-progress",
+                     po::bool_switch(&m_print_archive_stats_progress),
+                            "Print statistics (ndjson) about each archive as it's compressed")
+                    ("storage-engine", po::value<string>(&storage_engine)->value_name("engine")->
+                            default_value(storage_engine),
+                     "Use storage engine specified by ENGINE (clp - CLP, glt - GLT)")
+                    ("progress", po::bool_switch(&m_show_progress),
+                     "Show progress during compression")
+                    ("schema-path", po::value<string>(&m_schema_file_path)->value_name("FILE")->
+                            default_value(m_schema_file_path),
+                    "Path to a schema file. If not specified, heuristics are used to determine "
+                    "dictionary variables. See README-Schema.md for details.")
+                    ;
 
                 po::options_description all_compression_options;
                 all_compression_options.add(options_compression);
                 all_compression_options.add(compression_positional_options);
 
-                vector<string> unrecognized_options = po::collect_unrecognized(parsed.options, po::include_positional);
+                vector<string> unrecognized_options = po::collect_unrecognized(
+                        parsed.options, po::include_positional);
                 unrecognized_options.erase(unrecognized_options.begin());
                 po::store(po::command_line_parser(unrecognized_options)
                         .options(all_compression_options)
@@ -274,7 +288,8 @@ namespace clp {
                     return ParsingResult::InfoCommand;
                 }
 
-                // Validate at least one input path should exist (we validate that the file isn't empty later)
+                // Validate at least one input path should exist
+                // (we validate that the file isn't empty later)
                 if (m_input_paths.empty() && m_path_list_path.empty()) {
                     throw invalid_argument("No input paths specified.");
                 }
@@ -305,14 +320,16 @@ namespace clp {
                         throw invalid_argument("Specified schema file does not exist.");
                     }
                     if (false == boost::filesystem::is_regular_file(m_schema_file_path)) {
-                        throw invalid_argument("Specified schema file '" +  m_schema_file_path + "' is not a regular file.");
+                        throw invalid_argument("Specified schema file '" +  m_schema_file_path +
+                                               "' is not a regular file.");
                     }
                 }
 
                 if (storage_engine == "clp") {
                     m_use_glt = false;
                     if (m_glt_combine_threshold != 0.1) {
-                        throw invalid_argument("--combined-threshold specified when storage engine is not GLT");
+                        throw invalid_argument("--combined-threshold specified when "
+                                               "storage engine is not GLT");
                     }
                 } else if (storage_engine == "glt") {
                     m_use_glt = true;

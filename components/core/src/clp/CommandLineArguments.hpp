@@ -42,13 +42,13 @@ namespace clp {
         const std::string& get_schema_file_path () const { return m_schema_file_path; }
         bool get_use_heuristic () const { return (m_schema_file_path.empty()); }
         bool show_progress () const { return m_show_progress; }
-        bool use_glt() const { return m_use_glt; }
+        [[nodiscard]] bool use_glt() const { return m_use_glt; }
         bool print_archive_stats_progress () const { return m_print_archive_stats_progress; }
         size_t get_target_encoded_file_size () const { return m_target_encoded_file_size; }
         size_t get_target_segment_uncompressed_size () const { return m_target_segment_uncompressed_size; }
         size_t get_target_data_size_of_dictionaries () const { return m_target_data_size_of_dictionaries; }
         int get_compression_level () const { return m_compression_level; }
-        double get_glt_combine_threshold () const { return m_glt_combine_threshold; }
+        [[nodiscard]] double get_glt_combine_threshold () const { return m_glt_combine_threshold; }
         Command get_command () const { return m_command; }
         const std::string& get_archives_dir () const { return m_archives_dir; }
         const std::vector<std::string>& get_input_paths () const { return m_input_paths; }

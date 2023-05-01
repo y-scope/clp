@@ -59,6 +59,9 @@ namespace streaming_archive {
         namespace EmptyDirectory {
             constexpr char Path[] = "path";
         }
+        namespace DataType {
+            constexpr char Integer[] = "Integer";
+        }
     }
 
     namespace GLT {
