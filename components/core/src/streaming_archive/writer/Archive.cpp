@@ -160,7 +160,7 @@ namespace streaming_archive::writer {
         string var_dict_path = archive_path_string + '/' + cVarDictFilename;
         string var_dict_segment_index_path = archive_path_string + '/' + cVarSegmentIndexFilename;
         m_var_dict.open(var_dict_path, var_dict_segment_index_path,
-                        EncodedVariableInterpreter::get_var_dict_id_range_end() - EncodedVariableInterpreter::get_var_dict_id_range_begin());
+                        EncodedVariableInterpreter::get_var_dict_id_max());
 
         #if FLUSH_TO_DISK_ENABLED
             // fsync archive directory now that everything in the archive directory has been created
@@ -349,9 +349,10 @@ namespace streaming_archive::writer {
                     m_encoded_vars.push_back(encoded_var);
                     break;
                 }
-                case (int) compressor_frontend::SymbolID::TokenDoubleId: {
+                case (int) compressor_frontend::SymbolID::TokenFloatId: {
                     encoded_variable_t encoded_var;
-                    if (!EncodedVariableInterpreter::convert_string_to_representable_double_var(token.get_string(), encoded_var)) {
+                    if (!EncodedVariableInterpreter::convert_string_to_representable_float_var(
+                            token.get_string(), encoded_var)) {
                         variable_dictionary_id_t id;
                         m_var_dict.add_entry(token.get_string(), id);
                         encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);

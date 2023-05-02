@@ -71,12 +71,20 @@ int main (int argc, const char* argv[]) {
             // Add the constant that's between the last variable and this one, with newlines escaped
             human_readable_value.append(value, constant_begin_pos, var_pos - constant_begin_pos);
 
-            if (LogTypeDictionaryEntry::VarDelim::Integer == var_delim) {
-                human_readable_value += "\\i";
-            } else if (LogTypeDictionaryEntry::VarDelim::Float == var_delim) {
-                human_readable_value += "\\f";
-            } else { // LogTypeDictionaryEntry::VarDelim::Dictionary == var_delim
-                human_readable_value += "\\d";
+            switch (var_delim) {
+                case LogTypeDictionaryEntry::VarDelim::Integer:
+                    human_readable_value += "\\i";
+                    break;
+                case LogTypeDictionaryEntry::VarDelim::Float:
+                    human_readable_value += "\\f";
+                    break;
+                case LogTypeDictionaryEntry::VarDelim::Dictionary:
+                    human_readable_value += "\\d";
+                    break;
+                default:
+                    SPDLOG_ERROR("Logtype '{}' contains ""unexpected variable placeholder {}",
+                                 value, var_delim);
+                    return -1;
             }
             // Move past the variable delimiter
             constant_begin_pos = var_pos + 1;

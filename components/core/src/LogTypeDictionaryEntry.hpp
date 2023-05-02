@@ -55,7 +55,7 @@ public:
      */
     static void add_dict_var (std::string& logtype) { logtype += (char)VarDelim::Dictionary; }
     /**
-     * Adds a integer variable delimiter to the given logtype
+     * Adds an integer variable delimiter to the given logtype
      * @param logtype
      */
     static void add_int_var (std::string& logtype) { logtype += (char)VarDelim::Integer; }

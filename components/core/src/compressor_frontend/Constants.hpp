@@ -16,7 +16,7 @@ namespace compressor_frontend {
         TokenEndID,
         TokenUncaughtStringID,
         TokenIntId,
-        TokenDoubleId,
+        TokenFloatId,
         TokenFirstTimestampId,
         TokenNewlineTimestampId,
         TokenNewlineId
@@ -25,7 +25,7 @@ namespace compressor_frontend {
     constexpr char cTokenEnd[] = "$end";
     constexpr char cTokenUncaughtString[] = "$UncaughtString";
     constexpr char cTokenInt[] = "int";
-    constexpr char cTokenDouble[] = "double";
+    constexpr char cTokenFloat[] = "float";
     constexpr char cTokenFirstTimestamp[] = "firstTimestamp";
     constexpr char cTokenNewlineTimestamp[] = "newLineTimestamp";
     constexpr char cTokenNewline[] = "newLine";

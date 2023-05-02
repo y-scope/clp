@@ -131,7 +131,7 @@ QueryToken::QueryToken (const string& query_string, const size_t begin_pos, cons
             bool converts_to_non_dict_var = false;
             if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(
                     value_without_wildcards, encoded_var) ||
-                EncodedVariableInterpreter::convert_string_to_representable_double_var(
+                EncodedVariableInterpreter::convert_string_to_representable_float_var(
                         value_without_wildcards, encoded_var)) {
                 converts_to_non_dict_var = true;
             }

@@ -1,8 +1,8 @@
 #include "LogTypeDictionaryEntry.hpp"
 
 // Project headers
+#include "type_utils.hpp"
 #include "Utils.hpp"
-
 using std::string;
 
 // Constants
@@ -23,9 +23,9 @@ static void escape_variable_delimiters (const string& value, size_t begin_ix, si
         auto c = value[i];
 
         // Add escape character if necessary
-        if ((char)LogTypeDictionaryEntry::VarDelim::Integer == c ||
-            (char)LogTypeDictionaryEntry::VarDelim::Float == c ||
-            (char)LogTypeDictionaryEntry::VarDelim::Dictionary == c ||
+        if (enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Integer) == c ||
+            enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Float) == c ||
+            enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Dictionary) == c ||
             cEscapeChar == c) {
             escaped_value += cEscapeChar;
         }
@@ -144,19 +144,22 @@ ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::Dec
         } else if (cEscapeChar == c) {
             is_escaped = true;
         } else {
-            if ((char)LogTypeDictionaryEntry::VarDelim::Integer == c) {
+            if (enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Integer) == c) {
                 add_constant(constant, 0, constant.length());
                 constant.clear();
                 add_int_var();
-            } else if ((char)LogTypeDictionaryEntry::VarDelim::Float == c) {
+            }
+            else if (enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Float) == c) {
                 add_constant(constant, 0, constant.length());
                 constant.clear();
                 add_float_var();
-            } else if ((char)LogTypeDictionaryEntry::VarDelim::Dictionary == c) {
+            }
+            else if (enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Dictionary) == c) {
                 add_constant(constant, 0, constant.length());
                 constant.clear();
                 add_dictionary_var();
-            } else {
+            }
+            else {
                 constant += c;
             }
         }
