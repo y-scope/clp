@@ -271,7 +271,7 @@ bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDic
             default:
                 SPDLOG_ERROR(
                     "EncodedVariableInterpreter: Logtype '{}' contains "
-                    "unexpected variable placeholder {}",
+                    "unexpected variable placeholder 0x{:x}",
                     logtype_value,
                     enum_to_underlying_type(var_delim));
                 return false;

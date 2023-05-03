@@ -14,6 +14,7 @@
 #include "../../LogTypeDictionaryReader.hpp"
 #include "../../VariableDictionaryReader.hpp"
 #include "../../streaming_archive/Constants.hpp"
+#include "../../type_utils.hpp"
 #include "CommandLineArguments.hpp"
 
 using std::string;
@@ -82,8 +83,8 @@ int main (int argc, const char* argv[]) {
                     human_readable_value += "\\d";
                     break;
                 default:
-                    SPDLOG_ERROR("Logtype '{}' contains ""unexpected variable placeholder {}",
-                                 value, var_delim);
+                    SPDLOG_ERROR("Logtype '{}' contains unexpected variable placeholder 0x{:x}",
+                                 value, enum_to_underlying_type(var_delim));
                     return -1;
             }
             // Move past the variable delimiter
