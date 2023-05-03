@@ -12,6 +12,7 @@
 #include "streaming_compression/zstd/Compressor.hpp"
 #include "streaming_compression/zstd/Decompressor.hpp"
 #include "TraceableException.hpp"
+#include "type_utils.hpp"
 
 /**
  * Class representing a logtype dictionary entry
@@ -31,7 +32,7 @@ public:
     };
 
     // Constants
-    enum class VarDelim {
+    enum class VarDelim : char {
         // NOTE: These values are used within logtypes to denote variables, so care must be taken when changing them
         Integer = 0x11,
         Dictionary = 0x12,
@@ -53,17 +54,23 @@ public:
      * Adds a dictionary variable delimiter to the given logtype
      * @param logtype
      */
-    static void add_dict_var (std::string& logtype) { logtype += (char)VarDelim::Dictionary; }
+    static void add_dict_var (std::string& logtype) {
+        logtype += enum_to_underlying_type(VarDelim::Dictionary);
+    }
     /**
      * Adds an integer variable delimiter to the given logtype
      * @param logtype
      */
-    static void add_int_var (std::string& logtype) { logtype += (char)VarDelim::Integer; }
+    static void add_int_var (std::string& logtype) {
+        logtype += enum_to_underlying_type(VarDelim::Integer);
+    }
     /**
-     * Adds a double variable delimiter to the given logtype
+     * Adds a float variable delimiter to the given logtype
      * @param logtype
      */
-    static void add_float_var (std::string& logtype) { logtype += (char)VarDelim::Float; }
+    static void add_float_var (std::string& logtype) {
+        logtype += enum_to_underlying_type(VarDelim::Float);
+    }
 
     size_t get_num_vars () const { return m_var_positions.size(); }
     /**

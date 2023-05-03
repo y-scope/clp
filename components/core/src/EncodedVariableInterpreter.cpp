@@ -18,10 +18,6 @@ using std::string;
 using std::unordered_set;
 using std::vector;
 
-encoded_variable_t EncodedVariableInterpreter::get_var_dict_id_max () {
-    return m_var_dict_id_max;
-}
-
 variable_dictionary_id_t EncodedVariableInterpreter::decode_var_dict_id (encoded_variable_t encoded_var) {
     return bit_cast<variable_dictionary_id_t>(encoded_var);
 }

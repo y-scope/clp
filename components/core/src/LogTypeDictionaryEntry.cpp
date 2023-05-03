@@ -3,6 +3,7 @@
 // Project headers
 #include "type_utils.hpp"
 #include "Utils.hpp"
+
 using std::string;
 
 // Constants
@@ -148,13 +149,12 @@ ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::Dec
                 add_constant(constant, 0, constant.length());
                 constant.clear();
                 add_int_var();
-            }
-            else if (enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Float) == c) {
+            } else if (enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Float) == c) {
                 add_constant(constant, 0, constant.length());
                 constant.clear();
                 add_float_var();
-            }
-            else if (enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Dictionary) == c) {
+            } else if (enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Dictionary) == c)
+            {
                 add_constant(constant, 0, constant.length());
                 constant.clear();
                 add_dictionary_var();

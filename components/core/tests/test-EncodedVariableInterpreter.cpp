@@ -13,7 +13,6 @@ using std::to_string;
 using std::vector;
 
 TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
-
     SECTION("Test convert_string_to_representable_integer_var") {
         string value;
         encoded_variable_t encoded_var;
@@ -223,14 +222,13 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
 
         // Open writer
         VariableDictionaryWriter var_dict_writer;
-        var_dict_writer.open(cVarDictPath, cVarSegmentIndexPath,
-                             EncodedVariableInterpreter::get_var_dict_id_max());
+        var_dict_writer.open(cVarDictPath, cVarSegmentIndexPath, cVariableDictionaryIdMax);
 
         // Test encoding
         vector<encoded_variable_t> encoded_vars;
         vector<variable_dictionary_id_t> var_ids;
 
-        string large_val_str = to_string(EncodedVariableInterpreter::get_var_dict_id_max()) + "0";
+        string large_val_str = to_string(cVariableDictionaryIdMax) + "0";
         vector<string> var_strs = {"4938", large_val_str, "-25.5196868642755",
                                    "-00.00", "bin/python2.7.3"};
         msg = "here is a string with a small int " + var_strs[0] +
@@ -249,9 +247,9 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
         size_t encoded_var_id_ix = 0;
         LogTypeDictionaryEntry::VarDelim var_placeholder;
         for (auto var_ix = 0; var_ix < logtype_dict_entry.get_num_vars(); var_ix++) {
-            static_cast<void>(logtype_dict_entry.get_var_info(var_ix, var_placeholder));
-            if(LogTypeDictionaryEntry::VarDelim::Dictionary == var_placeholder){
-                encoded_variable_t var = encoded_vars[var_ix];
+            std::ignore = logtype_dict_entry.get_var_info(var_ix, var_placeholder);
+            if (LogTypeDictionaryEntry::VarDelim::Dictionary == var_placeholder) {
+                auto var = encoded_vars[var_ix];
                 REQUIRE(var_ids.size() > encoded_var_id_ix);
                 REQUIRE(EncodedVariableInterpreter::decode_var_dict_id(var) ==
                         var_ids[encoded_var_id_ix]);

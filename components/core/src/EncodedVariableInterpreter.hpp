@@ -40,7 +40,6 @@ public:
     };
 
     // Methods
-    static encoded_variable_t get_var_dict_id_max ();
     static encoded_variable_t encode_var_dict_id (variable_dictionary_id_t id);
     static variable_dictionary_id_t decode_var_dict_id (encoded_variable_t encoded_var);
     /**
@@ -51,18 +50,14 @@ public:
      */
     static bool convert_string_to_representable_integer_var (const std::string& value, encoded_variable_t& encoded_var);
     /**
-     * Converts the given string into a representable double variable if possible
-     * A representable double:
-     * - is base-10
-     * - has 16-digits with a decimal point, where at least one digit is after the decimal point
-     * - has an optional negative sign
+     * Converts the given string into a representable float variable if possible
      * @param value
      * @param encoded_var
      * @return true if was successfully converted, false otherwise
      */
     static bool convert_string_to_representable_float_var (const std::string& value, encoded_variable_t& encoded_var);
     /**
-     * Converts the given encoded double into a string
+     * Converts the given encoded float into a string
      * @param encoded_var
      * @param value
      */
@@ -111,12 +106,6 @@ public:
      */
     static bool wildcard_search_dictionary_and_get_encoded_matches (const std::string& var_wildcard_str, const VariableDictionaryReader& var_dict,
                                                                     bool ignore_case, SubQuery& sub_query);
-
-private:
-    // Variables
-    // The maximum value for encoding variable dictionary IDs
-    static constexpr encoded_variable_t m_var_dict_id_max =
-            std::numeric_limits<variable_dictionary_id_t>::max();
 };
 
 #endif // ENCODEDVARIABLEINTERPRETER_HPP

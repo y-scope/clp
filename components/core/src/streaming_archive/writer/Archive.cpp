@@ -159,8 +159,7 @@ namespace streaming_archive::writer {
         // Open variable dictionary
         string var_dict_path = archive_path_string + '/' + cVarDictFilename;
         string var_dict_segment_index_path = archive_path_string + '/' + cVarSegmentIndexFilename;
-        m_var_dict.open(var_dict_path, var_dict_segment_index_path,
-                        EncodedVariableInterpreter::get_var_dict_id_max());
+        m_var_dict.open(var_dict_path, var_dict_segment_index_path, cVariableDictionaryIdMax);
 
         #if FLUSH_TO_DISK_ENABLED
             // fsync archive directory now that everything in the archive directory has been created
