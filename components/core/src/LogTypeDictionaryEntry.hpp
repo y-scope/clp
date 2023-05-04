@@ -12,6 +12,7 @@
 #include "streaming_compression/zstd/Compressor.hpp"
 #include "streaming_compression/zstd/Decompressor.hpp"
 #include "TraceableException.hpp"
+#include "type_utils.hpp"
 
 /**
  * Class representing a logtype dictionary entry
@@ -31,11 +32,12 @@ public:
     };
 
     // Constants
-    enum class VarDelim {
+    enum class VarDelim : char {
         // NOTE: These values are used within logtypes to denote variables, so care must be taken when changing them
-        NonDouble = 17,
-        Double = 18,
-        Length = 2,
+        Integer = 0x11,
+        Dictionary = 0x12,
+        Float = 0x13,
+        Length = 3
     };
 
     // Constructors
@@ -49,15 +51,26 @@ public:
 
     // Methods
     /**
-     * Adds a non-double variable delimiter to the given logtype
+     * Adds a dictionary variable delimiter to the given logtype
      * @param logtype
      */
-    static void add_non_double_var (std::string& logtype) { logtype += (char)VarDelim::NonDouble; }
+    static void add_dict_var (std::string& logtype) {
+        logtype += enum_to_underlying_type(VarDelim::Dictionary);
+    }
     /**
-     * Adds a double variable delimiter to the given logtype
+     * Adds an integer variable delimiter to the given logtype
      * @param logtype
      */
-    static void add_double_var (std::string& logtype) { logtype += (char)VarDelim::Double; }
+    static void add_int_var (std::string& logtype) {
+        logtype += enum_to_underlying_type(VarDelim::Integer);
+    }
+    /**
+     * Adds a float variable delimiter to the given logtype
+     * @param logtype
+     */
+    static void add_float_var (std::string& logtype) {
+        logtype += enum_to_underlying_type(VarDelim::Float);
+    }
 
     size_t get_num_vars () const { return m_var_positions.size(); }
     /**
@@ -67,18 +80,6 @@ public:
      * @return The variable's position in the logtype, or SIZE_MAX if var_ix is out of bounds
      */
     size_t get_var_info (size_t var_ix, VarDelim& var_delim) const;
-    /**
-     * Gets the variable delimiter at the given index
-     * @param var_ix The index of the variable delimiter to get
-     * @return The variable delimiter, or LogTypeDictionaryEntry::VarDelim::Length if var_ix is out of bounds
-     */
-    VarDelim get_var_delim (size_t var_ix) const;
-    /**
-     * Gets the length of the specified variable's representation in the logtype
-     * @param var_ix The index of the variable
-     * @return The length
-     */
-    size_t get_var_length_in_logtype (size_t var_ix) const;
 
     /**
      * Gets the size (in-memory) of the data contained in this entry
@@ -94,13 +95,17 @@ public:
      */
     void add_constant (const std::string& value_containing_constant, size_t begin_pos, size_t length);
     /**
-     * Adds a non-double variable delimiter
+     * Adds an int variable delimiter
      */
-    void add_non_double_var ();
+    void add_int_var ();
     /**
-     * Adds a double variable delimiter
+     * Adds a float variable delimiter
      */
-    void add_double_var ();
+    void add_float_var ();
+    /**
+     * Adds a dictionary variable delimiter
+     */
+    void add_dictionary_var ();
 
     /**
      * Parses next variable from a message, constructing the constant part of the message's logtype as well

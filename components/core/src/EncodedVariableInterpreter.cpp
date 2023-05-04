@@ -9,28 +9,17 @@
 
 // Project headers
 #include "Defs.h"
+#include "ffi/encoding_methods.hpp"
 #include "string_utils.hpp"
 #include "type_utils.hpp"
 
+using ffi::cEightByteEncodedFloatDigitsBitMask;
 using std::string;
 using std::unordered_set;
 using std::vector;
 
-encoded_variable_t EncodedVariableInterpreter::get_var_dict_id_range_begin () {
-    return m_var_dict_id_range_begin;
-}
-
-encoded_variable_t EncodedVariableInterpreter::get_var_dict_id_range_end () {
-    return m_var_dict_id_range_end;
-}
-
-bool EncodedVariableInterpreter::is_var_dict_id (encoded_variable_t encoded_var) {
-    return (m_var_dict_id_range_begin <= encoded_var && encoded_var < m_var_dict_id_range_end);
-}
-
 variable_dictionary_id_t EncodedVariableInterpreter::decode_var_dict_id (encoded_variable_t encoded_var) {
-    variable_dictionary_id_t id = encoded_var - m_var_dict_id_range_begin;
-    return id;
+    return bit_cast<variable_dictionary_id_t>(encoded_var);
 }
 
 bool EncodedVariableInterpreter::convert_string_to_representable_integer_var (const string& value, encoded_variable_t& encoded_var) {
@@ -62,9 +51,6 @@ bool EncodedVariableInterpreter::convert_string_to_representable_integer_var (co
     if (false == convert_string_to_int(value, result)) {
         // Conversion failed
         return false;
-    } else if (result >= m_var_dict_id_range_begin) {
-        // Value is in dictionary variable range, so cannot be converted
-        return false;
     } else {
         encoded_var = result;
     }
@@ -72,16 +58,18 @@ bool EncodedVariableInterpreter::convert_string_to_representable_integer_var (co
     return true;
 }
 
-bool EncodedVariableInterpreter::convert_string_to_representable_double_var (const string& value, encoded_variable_t& encoded_var) {
+bool EncodedVariableInterpreter::convert_string_to_representable_float_var (
+        const string& value, encoded_variable_t& encoded_var)
+{
     if (value.empty()) {
         // Can't convert an empty string
         return false;
     }
 
     size_t pos = 0;
-    constexpr size_t cMaxDigitsInRepresentableDoubleVar = 16;
+    constexpr size_t cMaxDigitsInRepresentableFloatVar = 16;
     // +1 for decimal point
-    size_t max_length = cMaxDigitsInRepresentableDoubleVar + 1;
+    size_t max_length = cMaxDigitsInRepresentableFloatVar + 1;
 
     // Check for a negative sign
     bool is_negative = false;
@@ -120,44 +108,55 @@ bool EncodedVariableInterpreter::convert_string_to_representable_double_var (con
 
     // Encode into 64 bits with the following format (from MSB to LSB):
     // -  1 bit : is negative
-    // -  4 bits: # of decimal digits minus 1
-    //     - This format can represent doubles with between 1 and 16 decimal digits, so we use 4 bits and map the range [1, 16] to [0x0, 0xF]
-    // -  4 bits: position of the decimal from the right minus 1
-    //     - To see why the position is taken from the right, consider (1) "-123456789012345.6", (2) "-.1234567890123456", and (3) ".1234567890123456"
-    //         - For (1), the decimal point is at index 16 from the left and index 1 from the right.
-    //         - For (2), the decimal point is at index 1 from the left and index 16 from the right.
-    //         - For (3), the decimal point is at index 0 from the left and index 16 from the right.
-    //         - So if we take the decimal position from the left, it can range from 0 to 16 because of the negative sign. Whereas from the right, the
-    //           negative sign is inconsequential.
-    //     - Thus, we use 4 bits and map the range [1, 16] to [0x0, 0xF].
     // -  1 bit : unused
-    // - 54 bits: The digits of the double without the decimal, as an integer
-    uint64_t encoded_double = 0;
+    // - 54 bits: The digits of the float without the decimal, as an
+    //            integer
+    // -  4 bits: # of decimal digits minus 1
+    //     - This format can represent floats with between 1 and 16 decimal
+    //       digits, so we use 4 bits and map the range [1, 16] to
+    //       [0x0, 0xF]
+    // -  4 bits: position of the decimal from the right minus 1
+    //     - To see why the position is taken from the right, consider
+    //       (1) "-123456789012345.6", (2) "-.1234567890123456", and
+    //       (3) ".1234567890123456"
+    //         - For (1), the decimal point is at index 16 from the left and
+    //           index 1 from the right.
+    //         - For (2), the decimal point is at index 1 from the left and
+    //           index 16 from the right.
+    //         - For (3), the decimal point is at index 0 from the left and
+    //           index 16 from the right.
+    //         - So if we take the decimal position from the left, it can
+    //           range from 0 to 16 because of the negative sign. Whereas
+    //           from the right, the negative sign is inconsequential.
+    //     - Thus, we use 4 bits and map the range [1, 16] to [0x0, 0xF].
+    uint64_t encoded_float = 0;
     if (is_negative) {
-        encoded_double = 1;
+        encoded_float = 1;
     }
-    encoded_double <<= 4;
-    encoded_double |= (num_digits - 1) & 0x0F;
-    encoded_double <<= 4;
-    encoded_double |= (decimal_point_pos - 1) & 0x0F;
-    encoded_double <<= 55;
-    encoded_double |= digits & 0x003FFFFFFFFFFFFF;
-    encoded_var = bit_cast<encoded_variable_t>(encoded_double);
+    encoded_float <<= 55;  // 1 unused + 54 for digits of the float
+    encoded_float |= digits & cEightByteEncodedFloatDigitsBitMask;
+    encoded_float <<= 4;
+    encoded_float |= (num_digits - 1) & 0x0F;
+    encoded_float <<= 4;
+    encoded_float |= (decimal_point_pos - 1) & 0x0F;
+    encoded_var = bit_cast<encoded_variable_t>(encoded_float);
 
     return true;
 }
 
-void EncodedVariableInterpreter::convert_encoded_double_to_string (encoded_variable_t encoded_var, string& value) {
-    auto encoded_double = bit_cast<uint64_t>(encoded_var);
+void EncodedVariableInterpreter::convert_encoded_float_to_string (encoded_variable_t encoded_var,
+                                                                  string& value) {
+    auto encoded_float = bit_cast<uint64_t>(encoded_var);
 
-    // Decode according to the format described in EncodedVariableInterpreter::convert_string_to_representable_double_var
-    uint64_t digits = encoded_double & 0x003FFFFFFFFFFFFF;
-    encoded_double >>= 55;
-    uint8_t decimal_pos = (encoded_double & 0x0F) + 1;
-    encoded_double >>= 4;
-    uint8_t num_digits = (encoded_double & 0x0F) + 1;
-    encoded_double >>= 4;
-    bool is_negative = encoded_double > 0;
+    // Decode according to the format described in
+    // EncodedVariableInterpreter::convert_string_to_representable_float_var
+    uint8_t decimal_pos = (encoded_float & 0x0F) + 1;
+    encoded_float >>= 4;
+    uint8_t num_digits = (encoded_float & 0x0F) + 1;
+    encoded_float >>= 4;
+    uint64_t digits = encoded_float & cEightByteEncodedFloatDigitsBitMask;
+    encoded_float >>= 55;
+    bool is_negative = encoded_float > 0;
 
     size_t value_length = num_digits + 1 + is_negative;
     value.resize(value_length);
@@ -213,9 +212,9 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& mes
         // Encode variable
         encoded_variable_t encoded_var;
         if (convert_string_to_representable_integer_var(var_str, encoded_var)) {
-            logtype_dict_entry.add_non_double_var();
-        } else if (convert_string_to_representable_double_var(var_str, encoded_var)) {
-            logtype_dict_entry.add_double_var();
+            logtype_dict_entry.add_int_var();
+        } else if (convert_string_to_representable_float_var(var_str, encoded_var)) {
+            logtype_dict_entry.add_float_var();
         } else {
             // Variable string looks like a dictionary variable, so encode it as so
             variable_dictionary_id_t id;
@@ -223,7 +222,7 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& mes
             encoded_var = encode_var_dict_id(id);
             var_ids.push_back(id);
 
-            logtype_dict_entry.add_non_double_var();
+            logtype_dict_entry.add_dictionary_var();
         }
 
         encoded_vars.push_back(encoded_var);
@@ -245,24 +244,33 @@ bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDic
 
     LogTypeDictionaryEntry::VarDelim var_delim;
     size_t constant_begin_pos = 0;
-    string double_str;
+    string float_str;
+    variable_dictionary_id_t var_dict_id;
     for (size_t i = 0; i < num_vars_in_logtype; ++i) {
         size_t var_position = logtype_dict_entry.get_var_info(i, var_delim);
 
         // Add the constant that's between the last variable and this one
-        decompressed_msg.append(logtype_value, constant_begin_pos, var_position - constant_begin_pos);
-
-        if (LogTypeDictionaryEntry::VarDelim::NonDouble == var_delim) {
-            if (!is_var_dict_id(encoded_vars[i])) {
+        decompressed_msg.append(logtype_value, constant_begin_pos,
+                                var_position - constant_begin_pos);
+        switch (var_delim) {
+            case LogTypeDictionaryEntry::VarDelim::Integer:
                 decompressed_msg += std::to_string(encoded_vars[i]);
-            } else {
-                auto var_dict_id = decode_var_dict_id(encoded_vars[i]);
+                break;
+            case LogTypeDictionaryEntry::VarDelim::Float:
+                convert_encoded_float_to_string(encoded_vars[i], float_str);
+                decompressed_msg += float_str;
+                break;
+            case LogTypeDictionaryEntry::VarDelim::Dictionary:
+                var_dict_id = decode_var_dict_id(encoded_vars[i]);
                 decompressed_msg += var_dict.get_value(var_dict_id);
-            }
-        } else { // LogTypeDictionaryEntry::VarDelim::Double == var_delim
-            convert_encoded_double_to_string(encoded_vars[i], double_str);
-
-            decompressed_msg += double_str;
+                break;
+            default:
+                SPDLOG_ERROR(
+                    "EncodedVariableInterpreter: Logtype '{}' contains "
+                    "unexpected variable placeholder 0x{:x}",
+                    logtype_value,
+                    enum_to_underlying_type(var_delim));
+                return false;
         }
         // Move past the variable delimiter
         constant_begin_pos = var_position + 1;
@@ -285,10 +293,10 @@ bool EncodedVariableInterpreter::encode_and_search_dictionary (const string& var
 
     encoded_variable_t encoded_var;
     if (convert_string_to_representable_integer_var(var_str, encoded_var)) {
-        LogTypeDictionaryEntry::add_non_double_var(logtype);
+        LogTypeDictionaryEntry::add_int_var(logtype);
         sub_query.add_non_dict_var(encoded_var);
-    } else if (convert_string_to_representable_double_var(var_str, encoded_var)) {
-        LogTypeDictionaryEntry::add_double_var(logtype);
+    } else if (convert_string_to_representable_float_var(var_str, encoded_var)) {
+        LogTypeDictionaryEntry::add_float_var(logtype);
         sub_query.add_non_dict_var(encoded_var);
     } else {
         auto entry = var_dict.get_entry_matching_value(var_str, ignore_case);
@@ -298,7 +306,7 @@ bool EncodedVariableInterpreter::encode_and_search_dictionary (const string& var
         }
         encoded_var = encode_var_dict_id(entry->get_id());
 
-        LogTypeDictionaryEntry::add_non_double_var(logtype);
+        LogTypeDictionaryEntry::add_dict_var(logtype);
         sub_query.add_dict_var(encoded_var, entry);
     }
 
@@ -329,5 +337,5 @@ bool EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matc
 }
 
 encoded_variable_t EncodedVariableInterpreter::encode_var_dict_id (variable_dictionary_id_t id) {
-    return (encoded_variable_t)id + m_var_dict_id_range_begin;
+    return bit_cast<encoded_variable_t>(id);
 }

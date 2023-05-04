@@ -14,6 +14,7 @@
 #include "../../LogTypeDictionaryReader.hpp"
 #include "../../VariableDictionaryReader.hpp"
 #include "../../streaming_archive/Constants.hpp"
+#include "../../type_utils.hpp"
 #include "CommandLineArguments.hpp"
 
 using std::string;
@@ -71,10 +72,20 @@ int main (int argc, const char* argv[]) {
             // Add the constant that's between the last variable and this one, with newlines escaped
             human_readable_value.append(value, constant_begin_pos, var_pos - constant_begin_pos);
 
-            if (LogTypeDictionaryEntry::VarDelim::NonDouble == var_delim) {
-                human_readable_value += "\\v";
-            } else { // LogTypeDictionaryEntry::VarDelim::Double == var_delim
-                human_readable_value += "\\f";
+            switch (var_delim) {
+                case LogTypeDictionaryEntry::VarDelim::Integer:
+                    human_readable_value += "\\i";
+                    break;
+                case LogTypeDictionaryEntry::VarDelim::Float:
+                    human_readable_value += "\\f";
+                    break;
+                case LogTypeDictionaryEntry::VarDelim::Dictionary:
+                    human_readable_value += "\\d";
+                    break;
+                default:
+                    SPDLOG_ERROR("Logtype '{}' contains unexpected variable placeholder 0x{:x}",
+                                 value, enum_to_underlying_type(var_delim));
+                    return -1;
             }
             // Move past the variable delimiter
             constant_begin_pos = var_pos + 1;

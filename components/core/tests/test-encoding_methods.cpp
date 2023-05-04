@@ -332,7 +332,7 @@ TEMPLATE_TEST_CASE("Encoding floats", "[ffi][encode-float]", eight_byte_encoded_
     decoded_value = decode_float_var(encoded_var);
     REQUIRE(decoded_value == value);
 
-    // Test non-doubles
+    // Test non-floats
     value = "";
     REQUIRE(!encode_float_string(value, encoded_var));
 
@@ -405,9 +405,9 @@ TEMPLATE_TEST_CASE("Encoding messages", "[ffi][encode-message]", eight_byte_enco
     message = "here is a string with a small int " + var_strs[var_ix++];
     message += " and a medium int " + var_strs[var_ix++];
     message += " and a very large int " + var_strs[var_ix++];
-    message += " and a small double " + var_strs[var_ix++];
-    message += " and a medium double " + var_strs[var_ix++];
-    message += " and a weird double " + var_strs[var_ix++];
+    message += " and a small float " + var_strs[var_ix++];
+    message += " and a medium float " + var_strs[var_ix++];
+    message += " and a weird float " + var_strs[var_ix++];
     message += " and a string with numbers " + var_strs[var_ix++];
     message += " and another string with numbers " + var_strs[var_ix++];
     REQUIRE(encode_message(message, logtype, encoded_vars, dictionary_var_bounds));

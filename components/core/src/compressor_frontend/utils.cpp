@@ -28,7 +28,7 @@ namespace compressor_frontend {
         lexer.m_symbol_id[cTokenEnd] = (int) SymbolID::TokenEndID;
         lexer.m_symbol_id[cTokenUncaughtString] = (int) SymbolID::TokenUncaughtStringID;
         lexer.m_symbol_id[cTokenInt] = (int) SymbolID::TokenIntId;
-        lexer.m_symbol_id[cTokenDouble] = (int) SymbolID::TokenDoubleId;
+        lexer.m_symbol_id[cTokenFloat] = (int) SymbolID::TokenFloatId;
         lexer.m_symbol_id[cTokenFirstTimestamp] = (int) SymbolID::TokenFirstTimestampId;
         lexer.m_symbol_id[cTokenNewlineTimestamp] = (int) SymbolID::TokenNewlineTimestampId;
         lexer.m_symbol_id[cTokenNewline] = (int) SymbolID::TokenNewlineId;
@@ -36,7 +36,7 @@ namespace compressor_frontend {
         lexer.m_id_symbol[(int) SymbolID::TokenEndID] = cTokenEnd;
         lexer.m_id_symbol[(int) SymbolID::TokenUncaughtStringID] = cTokenUncaughtString;
         lexer.m_id_symbol[(int) SymbolID::TokenIntId] = cTokenInt;
-        lexer.m_id_symbol[(int) SymbolID::TokenDoubleId] = cTokenDouble;
+        lexer.m_id_symbol[(int) SymbolID::TokenFloatId] = cTokenFloat;
         lexer.m_id_symbol[(int) SymbolID::TokenFirstTimestampId] = cTokenFirstTimestamp;
         lexer.m_id_symbol[(int) SymbolID::TokenNewlineTimestampId] = cTokenNewlineTimestamp;
         lexer.m_id_symbol[(int) SymbolID::TokenNewlineId] = cTokenNewline;

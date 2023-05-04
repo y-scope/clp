@@ -159,8 +159,7 @@ namespace streaming_archive::writer {
         // Open variable dictionary
         string var_dict_path = archive_path_string + '/' + cVarDictFilename;
         string var_dict_segment_index_path = archive_path_string + '/' + cVarSegmentIndexFilename;
-        m_var_dict.open(var_dict_path, var_dict_segment_index_path,
-                        EncodedVariableInterpreter::get_var_dict_id_range_end() - EncodedVariableInterpreter::get_var_dict_id_range_begin());
+        m_var_dict.open(var_dict_path, var_dict_segment_index_path, cVariableDictionaryIdMax);
 
         #if FLUSH_TO_DISK_ENABLED
             // fsync archive directory now that everything in the archive directory has been created
@@ -342,20 +341,23 @@ namespace streaming_archive::writer {
                         variable_dictionary_id_t id;
                         m_var_dict.add_entry(token.get_string(), id);
                         encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
+                        m_logtype_dict_entry.add_dictionary_var();
+                    } else {
+                        m_logtype_dict_entry.add_int_var();
                     }
-                    m_logtype_dict_entry.add_non_double_var();
                     m_encoded_vars.push_back(encoded_var);
                     break;
                 }
-                case (int) compressor_frontend::SymbolID::TokenDoubleId: {
+                case (int) compressor_frontend::SymbolID::TokenFloatId: {
                     encoded_variable_t encoded_var;
-                    if (!EncodedVariableInterpreter::convert_string_to_representable_double_var(token.get_string(), encoded_var)) {
+                    if (!EncodedVariableInterpreter::convert_string_to_representable_float_var(
+                            token.get_string(), encoded_var)) {
                         variable_dictionary_id_t id;
                         m_var_dict.add_entry(token.get_string(), id);
                         encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
-                        m_logtype_dict_entry.add_non_double_var();
+                        m_logtype_dict_entry.add_dictionary_var();
                     } else {
-                        m_logtype_dict_entry.add_double_var();
+                        m_logtype_dict_entry.add_float_var();
                     }
                     m_encoded_vars.push_back(encoded_var);
                     break;
@@ -368,7 +370,7 @@ namespace streaming_archive::writer {
                     encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
                     m_var_ids.push_back(id);
 
-                    m_logtype_dict_entry.add_non_double_var();
+                    m_logtype_dict_entry.add_dictionary_var();
                     m_encoded_vars.push_back(encoded_var);
                     break;
                 }
