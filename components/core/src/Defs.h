@@ -8,17 +8,17 @@
 
 // Types
 typedef int64_t epochtime_t;
-static const epochtime_t cEpochTimeMin = std::numeric_limits<epochtime_t>::min();
-static const epochtime_t cEpochTimeMax = std::numeric_limits<epochtime_t>::max();
+constexpr epochtime_t cEpochTimeMin = std::numeric_limits<epochtime_t>::min();
+constexpr epochtime_t cEpochTimeMax = std::numeric_limits<epochtime_t>::max();
 #define SECONDS_TO_EPOCHTIME(x) x*1000
 #define MICROSECONDS_TO_EPOCHTIME(x) 0
 
 typedef uint64_t variable_dictionary_id_t;
-static const variable_dictionary_id_t cVariableDictionaryIdMax =
+constexpr variable_dictionary_id_t cVariableDictionaryIdMax =
         std::numeric_limits<variable_dictionary_id_t>::max();
 
 typedef int64_t logtype_dictionary_id_t;
-static const logtype_dictionary_id_t cLogtypeDictionaryIdMax =
+constexpr logtype_dictionary_id_t cLogtypeDictionaryIdMax =
         std::numeric_limits<logtype_dictionary_id_t>::max();
 
 typedef uint16_t archive_format_version_t;
