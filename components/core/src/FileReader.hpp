@@ -1,8 +1,11 @@
-#ifndef FILEREADER_HPP
-#define FILEREADER_HPP
+#ifndef FileReaderSys_HPP
+#define FileReaderSys_HPP
+
+// C standard libraries
 
 // C++ libraries
 #include <cstdio>
+#include <memory>
 #include <string>
 
 // Project headers
@@ -10,6 +13,7 @@
 #include "ErrorCode.hpp"
 #include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
+
 
 class FileReader : public ReaderInterface {
 public:
@@ -25,9 +29,11 @@ public:
         }
     };
 
-    FileReader () : m_file(nullptr), m_getdelim_buf_len(0), m_getdelim_buf(nullptr) {}
-    ~FileReader ();
-
+    // Constructors
+    FileReader() : m_file_pos(0), m_buffer_pos(0), m_fd(-1) {
+        m_read_buffer = (char*)malloc(sizeof(char) * cReaderBufferSize);
+    }
+    ~FileReader();
     // Methods implementing the ReaderInterface
     /**
      * Tries to get the current position of the read head in the file
@@ -72,7 +78,7 @@ public:
     ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter, bool append, std::string& str) override;
 
     // Methods
-    bool is_open () const { return m_file != nullptr; }
+    bool is_open () const { return -1 != m_fd; }
 
     /**
      * Tries to open a file
@@ -103,11 +109,29 @@ public:
      */
     ErrorCode try_fstat (struct stat& stat_buffer);
 
+
 private:
-    FILE* m_file;
-    size_t m_getdelim_buf_len;
-    char* m_getdelim_buf;
+    // Types
+    size_t m_file_pos;
+    ssize_t m_buffer_length;
+    size_t m_buffer_pos;
+    char* m_read_buffer;
+    int m_fd;
     std::string m_path;
+    bool reached_eof;
+    bool started_reading;
+    static constexpr size_t cReaderBufferSize = 1024;
+    // Constants
+
+    // Factory functions
+
+    // Assignment operators
+
+    // Methods
+
+    // Variables
+
 };
 
-#endif // FILEREADER_HPP
+
+#endif // FileReaderSys_HPP
