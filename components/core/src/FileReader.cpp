@@ -53,11 +53,12 @@ ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num
         m_buffer_pos += num_bytes_to_read;
         m_file_pos += num_bytes_to_read;
         num_bytes_read = num_bytes_to_read;
-        return ErrorCode_Success;
     } else {
+        // else if data is not enough.
         // first, read everything from buffer
         size_t next_partial_read = num_bytes_to_read - remaining_data;
         memcpy(buf, m_read_buffer + m_buffer_pos, remaining_data);
+        num_bytes_read = remaining_data;
 
         if (reached_eof) {
             m_file_pos += remaining_data;
@@ -69,36 +70,49 @@ ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num
             return ErrorCode_Success;
         }
 
-        // refill the buffer
-        m_buffer_length = ::read(m_fd, m_read_buffer, cReaderBufferSize);
-        if (m_buffer_length == -1) {
-            return ErrorCode_errno;
-        }
-        if (m_buffer_length < cReaderBufferSize) {
-            reached_eof = true;
-        }
-        if (m_buffer_length < next_partial_read) {
-            memcpy(buf + remaining_data, m_read_buffer, m_buffer_length);
-            m_buffer_pos = m_buffer_length;
-            num_bytes_read = remaining_data + m_buffer_length;
-            m_file_pos += num_bytes_read;
-            return ErrorCode_Success;
-        } else {
-            memcpy(buf + remaining_data, m_read_buffer, next_partial_read);
-            m_buffer_pos = next_partial_read;
-            num_bytes_read = num_bytes_to_read;
-            m_file_pos += num_bytes_read;
-            return ErrorCode_Success;
+        bool finish_reading = false;
+        while (false == finish_reading) {
+            // refill the buffer
+            m_buffer_length = ::read(m_fd, m_read_buffer, cReaderBufferSize);
+            if (m_buffer_length == -1) {
+                return ErrorCode_errno;
+            }
+            if (m_buffer_length < cReaderBufferSize) {
+                reached_eof = true;
+            }
+            if (m_buffer_length >= next_partial_read) {
+                memcpy(buf + num_bytes_read, m_read_buffer, next_partial_read);
+                m_buffer_pos = next_partial_read;
+                num_bytes_read += next_partial_read;
+                m_file_pos += num_bytes_read;
+                finish_reading = true;
+            } else {
+                // m_buffer_length < next_partial_read
+                memcpy(buf + num_bytes_read, m_read_buffer, m_buffer_length);
+                num_bytes_read += m_buffer_length;
+                m_file_pos += num_bytes_read;
+                next_partial_read -= m_buffer_length;
+                if (reached_eof) {
+                    finish_reading = true;
+                }
+            }
         }
     }
+    return ErrorCode_Success;
 }
 
 // Maybe everytime, I should always read a page?
 ErrorCode FileReader::try_seek_from_begin (size_t pos) {
-    printf("try seek on fd %d\n", m_fd);
     if (m_fd == -1) {
         return ErrorCode_NotInit;
     }
+    struct stat st;
+    fstat(m_fd, &st);
+    off_t size = st.st_size;
+    if (pos >= size) {
+        return ErrorCode_EndOfFile;
+    }
+
     if (pos > m_file_pos) {
         auto front_seek_amount = pos - m_file_pos;
         if (front_seek_amount > m_buffer_length - m_buffer_pos) {
