@@ -56,6 +56,24 @@ ErrorCode BufferReader::try_read (char* buf, size_t num_bytes_to_read, size_t& n
     return error_code;
 }
 
+void BufferReader::mark_pos () {
+    checkpoint_enable = true;
+    m_checkpoint_pos = m_cursor_pos;
+}
+
+void BufferReader::revert_pos () {
+    if (false == checkpoint_enable) {
+        SPDLOG_ERROR("DictionaryWriter ran out of IDs.");
+        throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
+    }
+    m_cursor_pos = m_checkpoint_pos;
+}
+
+void BufferReader::reset_checkpoint () {
+    m_checkpoint_pos = 0;
+    checkpoint_enable = true;
+}
+
 bool BufferReader::try_read_string_view (string_view& str_view, size_t read_size) {
     if ((m_cursor_pos + read_size) > m_size) {
         return false;
