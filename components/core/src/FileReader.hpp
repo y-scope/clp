@@ -11,11 +11,11 @@
 // Project headers
 #include "Defs.h"
 #include "ErrorCode.hpp"
-#include "ReaderInterface.hpp"
+#include "BufferReader.hpp"
 #include "TraceableException.hpp"
 
 
-class FileReader : public ReaderInterface {
+class FileReader : public BufferReader {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -31,7 +31,7 @@ public:
 
     // Constructors
     FileReader() : m_file_pos(0), m_buffer_pos(0), m_fd(-1) {
-        m_read_buffer = (char*)malloc(sizeof(char) * cReaderBufferSize);
+        m_read_buffer = reinterpret_cast<int8_t*>(malloc(sizeof(int8_t) * cReaderBufferSize));
     }
     ~FileReader();
     // Methods implementing the ReaderInterface
@@ -111,26 +111,21 @@ public:
 
 
 private:
+
+    ErrorCode refill_reader_buffer(size_t num_bytes_to_read);
+
     // Types
     size_t m_file_pos;
-    ssize_t m_buffer_length;
-    size_t m_buffer_pos;
-    char* m_read_buffer;
     int m_fd;
     std::string m_path;
     bool reached_eof;
     bool started_reading;
+
+    // Buffer specific data
+    ssize_t m_buffer_length;
+    size_t m_buffer_pos;
+    int8_t* m_read_buffer;
     static constexpr size_t cReaderBufferSize = 1024;
-    // Constants
-
-    // Factory functions
-
-    // Assignment operators
-
-    // Methods
-
-    // Variables
-
 };
 
 

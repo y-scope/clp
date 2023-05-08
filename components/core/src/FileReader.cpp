@@ -30,6 +30,18 @@ ErrorCode FileReader::try_get_pos (size_t& pos) {
     return ErrorCode_Success;
 }
 
+ErrorCode FileReader::refill_reader_buffer (size_t num_bytes_to_read) {
+    // refill the local buffer
+    m_buffer_length = ::read(m_fd, m_read_buffer, cReaderBufferSize);
+    if (m_buffer_length < num_bytes_to_read) {
+        reached_eof = true;
+    }
+    if (m_buffer_length == -1) {
+        return ErrorCode_errno;
+    }
+    return ErrorCode_Success;
+}
+
 ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
     if (-1 == m_fd) {
         return ErrorCode_NotInit;
@@ -43,7 +55,6 @@ ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num
         if (offset != m_file_pos) {
             return ErrorCode_errno;
         }
-
     }
     size_t remaining_data = m_buffer_length - m_buffer_pos;
 
@@ -73,12 +84,9 @@ ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num
         bool finish_reading = false;
         while (false == finish_reading) {
             // refill the buffer
-            m_buffer_length = ::read(m_fd, m_read_buffer, cReaderBufferSize);
-            if (m_buffer_length == -1) {
-                return ErrorCode_errno;
-            }
-            if (m_buffer_length < cReaderBufferSize) {
-                reached_eof = true;
+            if (auto error_code = refill_reader_buffer(cReaderBufferSize);
+                ErrorCode_Success != error_code) {
+                return error_code;
             }
             if (m_buffer_length >= next_partial_read) {
                 memcpy(buf + num_bytes_read, m_read_buffer, next_partial_read);
@@ -161,14 +169,14 @@ ErrorCode FileReader::try_open (const string& path) {
         return ErrorCode_errno;
     }
     m_path = path;
-    m_buffer_pos = 0;
     m_file_pos = 0;
-    // If I open here, later I may get eof error, so I can not open here
-    // so early read might not be a good idea
-    m_buffer_length = 0;
     reached_eof = false;
     started_reading = false;
 
+    // Buffer specific things
+    m_buffer_pos = 0;
+    m_buffer_length = 0;
+    reset_buffer(m_read_buffer, m_buffer_length);
     return ErrorCode_Success;
 }
 
@@ -192,7 +200,8 @@ ErrorCode FileReader::try_read_to_delimiter (char delim, bool keep_delimiter, bo
         }
         if (found_delim) {
             // append to strings
-            std::string_view substr {m_read_buffer + m_buffer_pos, cursor + 1 - m_buffer_pos};
+            std::string_view substr(reinterpret_cast<char*>(m_read_buffer + m_buffer_pos),
+                                    cursor + 1 - m_buffer_pos);
             str.append(substr);
             // increase file pos
             m_file_pos += (cursor + 1) - m_buffer_pos;
@@ -200,25 +209,25 @@ ErrorCode FileReader::try_read_to_delimiter (char delim, bool keep_delimiter, bo
         } else {
             // if we didn't find a delimiter, we append the current buffer to the str and
             // read out a new buffer
-            std::string_view substr {m_read_buffer + m_buffer_pos, m_buffer_length - m_buffer_pos};
+            auto remaining_data_size = m_buffer_length - m_buffer_pos;
+            std::string_view substr(reinterpret_cast<char*>(m_read_buffer + m_buffer_pos),
+                                    remaining_data_size);
             str.append(substr);
-            m_file_pos += m_buffer_length - m_buffer_pos;
+            m_file_pos += remaining_data_size;
             // refill the buffer
             if (reached_eof) {
                 m_buffer_pos = m_buffer_length;
                 return ErrorCode_EndOfFile;
             }
-            m_buffer_length = ::read(m_fd, m_read_buffer, cReaderBufferSize);
+            // this place is little weird. need to think carefully.
+            // if the buffer_length = 0, then reach_eof = true, after that, we'll
+            // enter the next loop and then exit
+            // refill the buffer
+            if (auto error_code = refill_reader_buffer(cReaderBufferSize);
+                    ErrorCode_Success != error_code) {
+                return error_code;
+            }
             m_buffer_pos = 0;
-            if (m_buffer_length < cReaderBufferSize) {
-                reached_eof = true;
-            }
-            if (m_buffer_length == -1) {
-                return ErrorCode_errno;
-            }
-            if (m_buffer_length == 0) {
-                return ErrorCode_EndOfFile;
-            }
         }
     }
     return ErrorCode_Success;
@@ -239,10 +248,7 @@ void FileReader::close () {
     if (-1 != m_fd) {
         // NOTE: We don't check errors for fclose since it seems the only reason it could fail is if it was interrupted
         // by a signal
-        auto res = ::close(m_fd);
-        if (0 != res) {
-            throw "Not sure why close fail\n";
-        }
+        ::close(m_fd);
         m_fd = -1;
     }
 }

@@ -59,7 +59,7 @@ public:
      **/
     [[nodiscard]] bool try_read_string_view (std::string_view& str_view, size_t read_size);
 
-private:
+protected:
 
     const int8_t* m_buffer;
     bool checkpoint_enable;
