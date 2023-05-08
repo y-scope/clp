@@ -39,6 +39,8 @@ ErrorCode FileReader::refill_reader_buffer (size_t num_bytes_to_read) {
     if (m_buffer_length == -1) {
         return ErrorCode_errno;
     }
+    reset_buffer(m_read_buffer, m_buffer_length);
+
     return ErrorCode_Success;
 }
 
@@ -52,62 +54,66 @@ ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num
     if (started_reading == false) {
         started_reading = true;
         auto offset = lseek(m_fd, m_file_pos, SEEK_SET);
-        if (offset != m_file_pos) {
+        if (offset == -1) {
             return ErrorCode_errno;
         }
+        auto error_code = refill_reader_buffer(cReaderBufferSize);
+        if (ErrorCode_Success != error_code) {
+            return error_code;
+        }
     }
-    size_t remaining_data = m_buffer_length - m_buffer_pos;
 
-    if (num_bytes_to_read <= remaining_data) {
-        memcpy(buf, m_read_buffer + m_buffer_pos, num_bytes_to_read);
-        // increment cursors
-        m_buffer_pos += num_bytes_to_read;
-        m_file_pos += num_bytes_to_read;
-        num_bytes_read = num_bytes_to_read;
-    } else {
-        // else if data is not enough.
-        // first, read everything from buffer
-        size_t next_partial_read = num_bytes_to_read - remaining_data;
-        memcpy(buf, m_read_buffer + m_buffer_pos, remaining_data);
-        num_bytes_read = remaining_data;
-        m_file_pos += remaining_data;
-        m_buffer_pos = m_buffer_length;
+    num_bytes_read = 0;
+    size_t num_bytes_to_read_from_buffer {num_bytes_to_read};
+    size_t num_bytes_read_from_buffer;
 
+    auto error_code = BufferReader::try_read(buf + num_bytes_read, num_bytes_to_read_from_buffer,
+                                             num_bytes_read_from_buffer);
+    if (ErrorCode_Success == error_code) {
+        // if success, means the buffer still has enough data to read from
+        m_file_pos += num_bytes_read_from_buffer;
+        num_bytes_read = num_bytes_read_from_buffer;
+        return ErrorCode_Success;
+    } else if (ErrorCode_EndOfFile == error_code) {
+        // else, data is not enough. but anyway we have already readed some
+        m_file_pos += num_bytes_read_from_buffer;
+        num_bytes_read += num_bytes_read_from_buffer;
+        num_bytes_to_read_from_buffer -= num_bytes_read_from_buffer;
+        // if we know the file has been exhausted.
         if (reached_eof) {
-            num_bytes_read = remaining_data;
             if (num_bytes_read == 0) {
                 return ErrorCode_EndOfFile;
             }
             return ErrorCode_Success;
         }
-
+        // else, we should refill the buffer and keep reading
         bool finish_reading = false;
         while (false == finish_reading) {
             // refill the buffer
-            if (auto error_code = refill_reader_buffer(cReaderBufferSize);
-                ErrorCode_Success != error_code) {
+            error_code = refill_reader_buffer(cReaderBufferSize);
+            if (ErrorCode_Success != error_code) {
                 return error_code;
             }
-            if (m_buffer_length >= next_partial_read) {
-                memcpy(buf + num_bytes_read, m_read_buffer, next_partial_read);
-                m_buffer_pos = next_partial_read;
-                num_bytes_read += next_partial_read;
-                m_file_pos += next_partial_read;
+            // now try to read from the buffer
+            error_code = BufferReader::try_read(buf + num_bytes_read,
+                                                num_bytes_to_read_from_buffer,
+                                                num_bytes_read_from_buffer);
+            if (ErrorCode_Success == error_code) {
                 finish_reading = true;
             } else {
-                // m_buffer_length < next_partial_read
-                memcpy(buf + num_bytes_read, m_read_buffer, m_buffer_length);
-                num_bytes_read += m_buffer_length;
-                m_file_pos += m_buffer_length;
-                m_buffer_pos = m_buffer_length;
-                next_partial_read -= m_buffer_length;
                 if (reached_eof) {
                     finish_reading = true;
                 }
             }
+            num_bytes_to_read_from_buffer -= num_bytes_read_from_buffer;
+            m_file_pos += num_bytes_read_from_buffer;
+            num_bytes_read += num_bytes_read_from_buffer;
         }
+        return ErrorCode_Success;
+    } else {
+        // else some unexpected error code is encountered.
+        throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
-    return ErrorCode_Success;
 }
 
 // Maybe everytime, I should always read a page?
@@ -176,7 +182,6 @@ ErrorCode FileReader::try_open (const string& path) {
     // Buffer specific things
     m_buffer_pos = 0;
     m_buffer_length = 0;
-    reset_buffer(m_read_buffer, m_buffer_length);
     return ErrorCode_Success;
 }
 

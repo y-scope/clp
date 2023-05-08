@@ -43,6 +43,7 @@ public:
     void reset_buffer (const int8_t* data, size_t size) {
         m_buffer = data;
         m_size = size;
+        m_cursor_pos = 0;
     }
 
     // The following methods should only be used by the decoder
