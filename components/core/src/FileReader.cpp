@@ -59,10 +59,10 @@ ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num
         size_t next_partial_read = num_bytes_to_read - remaining_data;
         memcpy(buf, m_read_buffer + m_buffer_pos, remaining_data);
         num_bytes_read = remaining_data;
+        m_file_pos += remaining_data;
+        m_buffer_pos = m_buffer_length;
 
         if (reached_eof) {
-            m_file_pos += remaining_data;
-            m_buffer_pos += m_buffer_length;
             num_bytes_read = remaining_data;
             if (num_bytes_read == 0) {
                 return ErrorCode_EndOfFile;
@@ -84,13 +84,14 @@ ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num
                 memcpy(buf + num_bytes_read, m_read_buffer, next_partial_read);
                 m_buffer_pos = next_partial_read;
                 num_bytes_read += next_partial_read;
-                m_file_pos += num_bytes_read;
+                m_file_pos += next_partial_read;
                 finish_reading = true;
             } else {
                 // m_buffer_length < next_partial_read
                 memcpy(buf + num_bytes_read, m_read_buffer, m_buffer_length);
                 num_bytes_read += m_buffer_length;
-                m_file_pos += num_bytes_read;
+                m_file_pos += m_buffer_length;
+                m_buffer_pos = m_buffer_length;
                 next_partial_read -= m_buffer_length;
                 if (reached_eof) {
                     finish_reading = true;
@@ -201,13 +202,14 @@ ErrorCode FileReader::try_read_to_delimiter (char delim, bool keep_delimiter, bo
             // read out a new buffer
             std::string_view substr {m_read_buffer + m_buffer_pos, m_buffer_length - m_buffer_pos};
             str.append(substr);
+            m_file_pos += m_buffer_length - m_buffer_pos;
             // refill the buffer
             if (reached_eof) {
+                m_buffer_pos = m_buffer_length;
                 return ErrorCode_EndOfFile;
             }
-            m_file_pos += m_buffer_length - m_buffer_pos;
-            m_buffer_pos = 0;
             m_buffer_length = ::read(m_fd, m_read_buffer, cReaderBufferSize);
+            m_buffer_pos = 0;
             if (m_buffer_length < cReaderBufferSize) {
                 reached_eof = true;
             }
