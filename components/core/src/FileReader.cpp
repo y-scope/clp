@@ -195,33 +195,23 @@ ErrorCode FileReader::try_read_to_delimiter (char delim, bool keep_delimiter, bo
     bool found_delim {false};
 
     while (false == found_delim) {
-        auto cursor {m_buffer_pos};
-        while (cursor < m_buffer_length) {
-            if (delim == m_read_buffer[cursor]) {
+        auto cursor {m_cursor_pos};
+        while (cursor < m_size && false == found_delim) {
+            if (delim == m_buffer[cursor]) {
                 found_delim = true;
-                break;
             }
             cursor++;
         }
-        if (found_delim) {
-            // append to strings
-            std::string_view substr(reinterpret_cast<char*>(m_read_buffer + m_buffer_pos),
-                                    cursor + 1 - m_buffer_pos);
-            str.append(substr);
-            // increase file pos
-            m_file_pos += (cursor + 1) - m_buffer_pos;
-            m_buffer_pos = cursor + 1;
-        } else {
-            // if we didn't find a delimiter, we append the current buffer to the str and
-            // read out a new buffer
-            auto remaining_data_size = m_buffer_length - m_buffer_pos;
-            std::string_view substr(reinterpret_cast<char*>(m_read_buffer + m_buffer_pos),
-                                    remaining_data_size);
-            str.append(substr);
-            m_file_pos += remaining_data_size;
+        // append to strings
+        std::string_view substr(reinterpret_cast<const char*>(m_buffer + m_cursor_pos),
+                                cursor - m_cursor_pos);
+        str.append(substr);
+        // increase file pos
+        m_file_pos += cursor - m_cursor_pos;
+        m_cursor_pos = cursor;
+        if (false == found_delim) {
             // refill the buffer
             if (reached_eof) {
-                m_buffer_pos = m_buffer_length;
                 return ErrorCode_EndOfFile;
             }
             // this place is little weird. need to think carefully.
@@ -232,7 +222,7 @@ ErrorCode FileReader::try_read_to_delimiter (char delim, bool keep_delimiter, bo
                     ErrorCode_Success != error_code) {
                 return error_code;
             }
-            m_buffer_pos = 0;
+            m_cursor_pos = 0;
         }
     }
     return ErrorCode_Success;
