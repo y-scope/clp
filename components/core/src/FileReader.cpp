@@ -106,12 +106,13 @@ ErrorCode FileReader::try_seek_from_begin (size_t pos) {
     if (m_fd == -1) {
         return ErrorCode_NotInit;
     }
-    struct stat st;
-    fstat(m_fd, &st);
-    off_t size = st.st_size;
-    if (pos >= size) {
-        return ErrorCode_EndOfFile;
-    }
+    //TODO: do we need to detect out of range seek?
+//    struct stat st;
+//    fstat(m_fd, &st);
+//    off_t size = st.st_size;
+//    if (pos >= size) {
+//        return ErrorCode_EndOfFile;
+//    }
 
     if (pos > m_file_pos) {
         auto front_seek_amount = pos - m_file_pos;
