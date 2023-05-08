@@ -824,6 +824,8 @@ set(SOURCE_FILES_unitTest
         tests/test-string_utils.cpp
         tests/test-TimestampPattern.cpp
         tests/test-Utils.cpp
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         )
 add_executable(unitTest ${SOURCE_FILES_unitTest})
 target_link_libraries(unitTest
