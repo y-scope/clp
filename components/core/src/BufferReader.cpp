@@ -40,19 +40,10 @@ ErrorCode BufferReader::try_read (char* buf, size_t num_bytes_to_read, size_t& n
         return ErrorCode_EndOfFile;
     }
 
-    ErrorCode error_code;
-    auto data_available = m_size - m_cursor_pos;
-    if (data_available < num_bytes_to_read) {
-        memcpy(buf, m_buffer + m_cursor_pos, data_available);
-        num_bytes_read = data_available;
-        error_code = ErrorCode_EndOfFile;
-    } else {
-        memcpy(buf, m_buffer + m_cursor_pos, num_bytes_to_read);
-        num_bytes_read = num_bytes_to_read;
-        error_code = ErrorCode_Success;
-    }
+    num_bytes_read = std::min(m_size - m_cursor_pos, num_bytes_to_read);
+    memcpy(buf, m_buffer + m_cursor_pos, num_bytes_read);
     m_cursor_pos += num_bytes_read;
-    return error_code;
+    return ErrorCode_Success;
 }
 
 void BufferReader::mark_pos () {

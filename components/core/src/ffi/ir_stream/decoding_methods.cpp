@@ -467,8 +467,8 @@ namespace ffi::ir_stream {
 
         char buffer[cProtocol::MagicNumberLength];
         size_t num_bytes_read;
-        if (ErrorCode_Success != ir_buf.try_read(buffer, cProtocol::MagicNumberLength,
-                                                 num_bytes_read)) {
+        auto error_code = ir_buf.try_read(buffer, cProtocol::MagicNumberLength, num_bytes_read);
+        if (error_code != ErrorCode_Success || num_bytes_read != cProtocol::MagicNumberLength) {
             ir_buf.revert_pos();
             return IRErrorCode_Incomplete_IR;
         }

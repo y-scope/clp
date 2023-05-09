@@ -76,31 +76,38 @@ ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num
             if (ErrorCode_Success != error_code) {
                 return error_code;
             }
-        } else {
+        } else if (ErrorCode_Success == error_code) {
             m_file_pos += num_bytes_read_from_buffer;
             num_bytes_read += num_bytes_read_from_buffer;
             num_bytes_to_read_from_buffer -= num_bytes_read_from_buffer;
-            if (ErrorCode_Success == error_code) {
-                // if success, means the buffer still has enough data to read from
+            if (num_bytes_to_read_from_buffer == 0) {
                 finish_reading = true;
-            } else if (ErrorCode_EndOfFile == error_code) {
-                // if the buffer is not loaded or has been exhausted.
-                // simply return
-                if (reached_eof) {
-                    if (num_bytes_read == 0) {
-                        return ErrorCode_EndOfFile;
-                    }
-                    return ErrorCode_Success;
-                }
+            } else {
                 // else, we refill the buffer
                 error_code = refill_reader_buffer(cReaderBufferSize);
                 if (ErrorCode_Success != error_code) {
                     return error_code;
                 }
-            } else {
-                // else some unexpected error code is encountered.
-                throw OperationFailed(error_code, __FILENAME__, __LINE__);
             }
+        } else if (ErrorCode_EndOfFile == error_code) {
+            // if we encounter the end of file, means the buffer
+            // happens to be drained out and we didn't read any data from it
+            // in this case, exit if reached_eof, or simply refill the buffer.
+            if (reached_eof) {
+                if (num_bytes_read == 0) {
+                    return ErrorCode_EndOfFile;
+                } else {
+                    return ErrorCode_Success;
+                }
+            }
+            // else, we refill the buffer
+            error_code = refill_reader_buffer(cReaderBufferSize);
+            if (ErrorCode_Success != error_code) {
+                return error_code;
+            }
+        } else {
+            // else some unexpected error code is encountered.
+            throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
     }
     return ErrorCode_Success;
@@ -132,7 +139,7 @@ ErrorCode FileReader::try_seek_from_begin (size_t pos) {
         } else {
             // otherwise, we can simply
             printf("simple seek front on %d\n", m_fd);
-            m_buffer_pos += front_seek_amount;
+            m_cursor_pos += front_seek_amount;
             m_file_pos = pos;
         }
     } else {
@@ -142,11 +149,11 @@ ErrorCode FileReader::try_seek_from_begin (size_t pos) {
             m_file_pos = pos;
         } else {
             auto seek_back_amount = m_file_pos - pos;
-            if (seek_back_amount > m_buffer_pos) {
+            if (seek_back_amount > m_cursor_pos) {
                 SPDLOG_ERROR("Can't back trace anymore");
                 throw;
             } else {
-                m_buffer_pos = m_buffer_pos - seek_back_amount;
+                m_cursor_pos = m_cursor_pos - seek_back_amount;
                 m_file_pos = pos;
             }
         }

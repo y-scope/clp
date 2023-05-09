@@ -30,7 +30,7 @@ public:
     };
 
     // Constructors
-    FileReader() : m_file_pos(0), m_buffer_pos(0), m_fd(-1) {
+    FileReader() : m_file_pos(0), m_fd(-1) {
         m_read_buffer = reinterpret_cast<int8_t*>(malloc(sizeof(int8_t) * cReaderBufferSize));
     }
     ~FileReader();
@@ -107,8 +107,7 @@ public:
      * @return ErrorCode_errno on error
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_fstat (struct stat& stat_buffer);
-
+    [[nodiscard]] ErrorCode try_fstat (struct stat& stat_buffer);
 
 private:
 
@@ -122,10 +121,8 @@ private:
     bool started_reading;
 
     // Buffer specific data
-    ssize_t m_buffer_length;
-    size_t m_buffer_pos;
     int8_t* m_read_buffer;
-    static constexpr size_t cReaderBufferSize = 4096;
+    static constexpr size_t cReaderBufferSize = 65536;
 };
 
 
