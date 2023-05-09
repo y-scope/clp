@@ -125,7 +125,7 @@ private:
     ssize_t m_buffer_length;
     size_t m_buffer_pos;
     int8_t* m_read_buffer;
-    static constexpr size_t cReaderBufferSize = 1024;
+    static constexpr size_t cReaderBufferSize = 4096;
 };
 
 
