@@ -14,9 +14,20 @@ using ffi::encode_integer_string;
 using ffi::encode_message;
 using ffi::get_bounds_of_next_var;
 using ffi::VariablePlaceholder;
+using ffi::wildcard_match_encoded_vars;
 using ffi::wildcard_query_matches_any_encoded_var;
 using std::string;
+using std::string_view;
 using std::vector;
+
+// Local function prototypes
+/**
+ * Fills a vector of string views from the given vector of strings
+ * @param strings
+ * @param string_views
+ */
+static void string_views_from_strings (const vector<string>& strings,
+                                       vector<string_view>& string_views);
 
 TEST_CASE("ffi::get_bounds_of_next_var", "[ffi][get_bounds_of_next_var]") {
     string str;
@@ -474,4 +485,76 @@ TEMPLATE_TEST_CASE("wildcard_query_matches_any_encoded_var",
             "4*7", logtype, encoded_vars.data(), encoded_vars.size()));
     REQUIRE(false == wildcard_query_matches_any_encoded_var<VariablePlaceholder::Float>(
             "1*3", logtype, encoded_vars.data(), encoded_vars.size()));
+}
+
+TEMPLATE_TEST_CASE("wildcard_match_encoded_vars", "[ffi][wildcard_match_encoded_vars]",
+                   eight_byte_encoded_variable_t, four_byte_encoded_variable_t)
+{
+    string message = "Static text, dictVar1, 123, 456.7, dictVar2, 987, 654.3";
+
+    // Encode a message
+    string logtype;
+    vector<TestType> encoded_vars;
+    vector<int32_t> dictionary_var_bounds;
+    REQUIRE(encode_message(message, logtype, encoded_vars, dictionary_var_bounds));
+
+    string wildcard_var_types;
+    vector<string> wildcard_var_queries;
+    vector<string_view> wildcard_var_query_views;
+
+    SECTION("Fewer wildcard variables than encoded variables") {
+        wildcard_var_queries.emplace_back("*123*");
+        wildcard_var_types += enum_to_underlying_type(VariablePlaceholder::Integer);
+        wildcard_var_queries.emplace_back("9*7");
+        wildcard_var_types += enum_to_underlying_type(VariablePlaceholder::Integer);
+
+        string_views_from_strings(wildcard_var_queries, wildcard_var_query_views);
+
+        REQUIRE(wildcard_match_encoded_vars(logtype, encoded_vars.data(), encoded_vars.size(),
+                                            wildcard_var_types, wildcard_var_query_views));
+    }
+
+    SECTION("Same number of wildcard variables and encoded variables") {
+        wildcard_var_queries.emplace_back("*123*");
+        wildcard_var_types += enum_to_underlying_type(VariablePlaceholder::Integer);
+        wildcard_var_queries.emplace_back("4*7");
+        wildcard_var_types += enum_to_underlying_type(VariablePlaceholder::Float);
+        wildcard_var_queries.emplace_back("9*7");
+        wildcard_var_types += enum_to_underlying_type(VariablePlaceholder::Integer);
+        wildcard_var_queries.emplace_back("*654.3*");
+        wildcard_var_types += enum_to_underlying_type(VariablePlaceholder::Float);
+
+        string_views_from_strings(wildcard_var_queries, wildcard_var_query_views);
+
+        REQUIRE(wildcard_match_encoded_vars(logtype, encoded_vars.data(), encoded_vars.size(),
+                                            wildcard_var_types, wildcard_var_query_views));
+    }
+
+    SECTION("More wildcard variables than encoded variables") {
+        wildcard_var_queries.emplace_back("*123*");
+        wildcard_var_types += enum_to_underlying_type(VariablePlaceholder::Integer);
+        wildcard_var_queries.emplace_back("4*7");
+        wildcard_var_types += enum_to_underlying_type(VariablePlaceholder::Float);
+        wildcard_var_queries.emplace_back("9*7");
+        wildcard_var_types += enum_to_underlying_type(VariablePlaceholder::Integer);
+        wildcard_var_queries.emplace_back("*654.3*");
+        wildcard_var_types += enum_to_underlying_type(VariablePlaceholder::Float);
+        wildcard_var_queries.emplace_back("*123*");
+        wildcard_var_types += enum_to_underlying_type(VariablePlaceholder::Integer);
+
+        string_views_from_strings(wildcard_var_queries, wildcard_var_query_views);
+
+        REQUIRE(false == wildcard_match_encoded_vars(logtype, encoded_vars.data(),
+                                                     encoded_vars.size(), wildcard_var_types,
+                                                     wildcard_var_query_views));
+    }
+}
+
+static void string_views_from_strings (const vector<string>& strings,
+                                       vector<string_view>& string_views)
+{
+    string_views.reserve(strings.size());
+    for (const auto& s : strings) {
+        string_views.emplace_back(s);
+    }
 }

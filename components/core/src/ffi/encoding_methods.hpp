@@ -249,6 +249,35 @@ namespace ffi {
             encoded_variable_t* encoded_vars,
             int encoded_vars_length
     );
+
+    /**
+     * Checks whether the given wildcard strings match the given encoded
+     * variables (from a message). Specifically, let {w in W} be the set of
+     * wildcard strings and {e in E} be the set of encoded variables. This
+     * method will return true only if:
+     * (1) Each unique `w` matches a unique `e`.
+     * (2) When (1) is true, the order of elements in both W and E is unchanged.
+     * @tparam encoded_variable_t Type of the encoded variable
+     * @param logtype The message's logtype
+     * @param encoded_vars The message's encoded variables
+     * @param encoded_vars_length
+     * @param wildcard_var_placeholders String of variable placeholders, where
+     * each one indicates how the corresponding wildcard string should be
+     * interpreted.
+     * @param wildcard_var_queries The wildcard strings to compare with the
+     * encoded variables. Callers must ensure each wildcard string contains
+     * no redundant wildcards (e.g. "**") nor unnecessary escape characters
+     * (e.g. "\").
+     * @return Whether the wildcard strings match the encoded variables
+     */
+    template <typename encoded_variable_t>
+    bool wildcard_match_encoded_vars (
+            std::string_view logtype,
+            encoded_variable_t* encoded_vars,
+            int encoded_vars_length,
+            std::string_view wildcard_var_placeholders,
+            const std::vector<std::string_view>& wildcard_var_queries
+    );
 }
 
 #include "encoding_methods.tpp"
