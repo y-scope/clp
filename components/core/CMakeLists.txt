@@ -698,6 +698,8 @@ set(SOURCE_FILES_unitTest
         src/ffi/search/QueryToken.hpp
         src/ffi/search/QueryWildcard.cpp
         src/ffi/search/QueryWildcard.hpp
+        src/ffi/search/Subquery.cpp
+        src/ffi/search/Subquery.hpp
         src/ffi/search/WildcardToken.cpp
         src/ffi/search/WildcardToken.hpp
         src/FileReader.cpp

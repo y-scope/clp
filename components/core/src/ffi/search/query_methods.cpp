@@ -57,20 +57,9 @@ namespace ffi::search {
     );
 
     template<typename encoded_variable_t>
-    void generate_subqueries (
-            string_view wildcard_query,
-            vector<
-                    pair<
-                            string,
-                            vector<
-                                    variant<
-                                            ExactVariableToken<encoded_variable_t>,
-                                            WildcardToken<encoded_variable_t>
-                                    >
-                            >
-                    >
-            >& sub_queries
-    ) {
+    void generate_subqueries (string_view wildcard_query,
+                              vector<Subquery<encoded_variable_t>>& sub_queries)
+    {
         if (wildcard_query.empty()) {
             throw QueryMethodFailed(ErrorCode_BadParam, __FILENAME__, __LINE__,
                                     "wildcard_query cannot be empty");
@@ -115,7 +104,7 @@ namespace ffi::search {
             // Save sub-query if it's unique
             bool sub_query_exists = false;
             for (const auto& sub_query : sub_queries) {
-                if (sub_query.first == logtype_query && sub_query.second == query_vars) {
+                if (sub_query.equals(logtype_query, query_vars)) {
                     sub_query_exists = true;
                     break;
                 }
@@ -138,7 +127,7 @@ namespace ffi::search {
     template <typename encoded_variable_t>
     void tokenize_query (
             string_view wildcard_query,
-            vector <variant<ExactVariableToken<encoded_variable_t>,
+            vector<variant<ExactVariableToken<encoded_variable_t>,
                     CompositeWildcardToken<encoded_variable_t>>>& tokens,
             vector<CompositeWildcardToken<encoded_variable_t>*>& composite_wildcard_tokens
     ) {
@@ -258,34 +247,10 @@ namespace ffi::search {
 
     // Explicitly declare specializations to avoid having to validate that the
     // template parameters are supported
-    template void generate_subqueries (
-            string_view wildcard_query,
-            vector<
-                    pair<
-                            string,
-                            vector<
-                                    variant<
-                                            ExactVariableToken<eight_byte_encoded_variable_t>,
-                                            WildcardToken<eight_byte_encoded_variable_t>
-                                    >
-                            >
-                    >
-            >& sub_queries
-    );
-    template void generate_subqueries (
-            string_view wildcard_query,
-            vector<
-                    pair<
-                            string,
-                            vector<
-                                    variant<
-                                            ExactVariableToken<four_byte_encoded_variable_t>,
-                                            WildcardToken<four_byte_encoded_variable_t>
-                                    >
-                            >
-                    >
-            >& sub_queries
-    );
+    template void generate_subqueries<eight_byte_encoded_variable_t> (string_view wildcard_query,
+            vector<Subquery<eight_byte_encoded_variable_t>>& sub_queries);
+    template void generate_subqueries<four_byte_encoded_variable_t> (string_view wildcard_query,
+            vector<Subquery<four_byte_encoded_variable_t>>& sub_queries);
     template void tokenize_query<ffi::eight_byte_encoded_variable_t> (
             string_view wildcard_query,
             vector<variant<ExactVariableToken<eight_byte_encoded_variable_t>,
