@@ -5,12 +5,14 @@ void open_dictionary_for_reading (const std::string& dictionary_path, const std:
                                   FileReader& segment_index_file_reader, streaming_compression::Decompressor& segment_index_decompressor)
 {
     dictionary_file_reader.open(dictionary_path);
+    dictionary_file_reader.mark_pos();
     // Skip header
     dictionary_file_reader.seek_from_begin(sizeof(uint64_t));
     // Open decompressor
     dictionary_decompressor.open(dictionary_file_reader, decompressor_file_read_buffer_capacity);
 
     segment_index_file_reader.open(segment_index_path);
+    segment_index_file_reader.mark_pos();
     // Skip header
     segment_index_file_reader.seek_from_begin(sizeof(uint64_t));
     // Open decompressor
@@ -23,6 +25,7 @@ uint64_t read_dictionary_header (FileReader& file_reader) {
     uint64_t num_dictionary_entries;
     file_reader.read_numeric_value(num_dictionary_entries, false);
     file_reader.seek_from_begin(dictionary_file_reader_pos);
+    file_reader.reset_checkpoint();
     return num_dictionary_entries;
 }
 
@@ -33,5 +36,6 @@ uint64_t read_segment_index_header (FileReader& file_reader) {
     uint64_t num_segments;
     file_reader.read_numeric_value(num_segments, false);
     file_reader.seek_from_begin(segment_index_file_reader_pos);
+    file_reader.reset_checkpoint();
     return num_segments;
 }
