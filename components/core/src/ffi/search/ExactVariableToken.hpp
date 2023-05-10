@@ -6,10 +6,6 @@
 #include "../encoding_methods.hpp"
 #include "QueryToken.hpp"
 
-// fmtlib
-#include <fmt/core.h>
-#include <fmt/format.h>
-
 namespace ffi::search {
     /**
      * A token representing an exact variable (as opposed to a variable with
@@ -53,23 +49,5 @@ namespace ffi::search {
         VariablePlaceholder m_placeholder;
     };
 }
-
-// Template specialization for SPDLOG
-template<typename encoded_variable_t>
-struct fmt::formatter<ffi::search::ExactVariableToken<encoded_variable_t>> {
-    template <typename ParseContext>
-    constexpr auto parse (ParseContext& ctx) {
-        return ctx.begin();
-    }
-
-    template <typename FormatContext>
-    auto format (
-            const ffi::search::ExactVariableToken<encoded_variable_t>& v,
-            FormatContext& ctx
-    ) {
-        return fmt::format_to(ctx.out(), "ExactVariableToken(\"{}\") as {}", v.get_value(),
-                              v.get_encoded_value());
-    }
-};
 
 #endif // FFI_SEARCH_EXACTVARIABLETOKEN_HPP

@@ -1,7 +1,6 @@
 #include "query_methods.hpp"
 
 // Project headers
-#include "../../string_utils.hpp"
 #include "CompositeWildcardToken.hpp"
 #include "QueryMethodFailed.hpp"
 
@@ -12,8 +11,8 @@ using std::variant;
 using std::vector;
 
 namespace ffi::search {
-    auto TokenGetBeginPos = [] (const auto& token) { return token.get_begin_pos(); };
-    auto TokenGetEndPos = [] (const auto& token) { return token.get_end_pos(); };
+    static auto TokenGetBeginPos = [] (const auto& token) { return token.get_begin_pos(); };
+    static auto TokenGetEndPos = [] (const auto& token) { return token.get_end_pos(); };
 
     /**
      * Finds the next delimiter that's not also a wildcard
