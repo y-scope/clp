@@ -63,9 +63,11 @@ public:
 protected:
 
     const int8_t* m_buffer;
-    bool checkpoint_enable;
     size_t m_size;
     size_t m_cursor_pos;
+
+private:
+    bool checkpoint_enable;
     size_t m_checkpoint_pos;
 };
 

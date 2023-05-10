@@ -32,15 +32,28 @@ ErrorCode FileReader::try_get_pos (size_t& pos) {
 
 ErrorCode FileReader::refill_reader_buffer (size_t num_bytes_to_read) {
     size_t num_bytes_read;
-    num_bytes_read = ::read(m_fd, m_read_buffer, cReaderBufferSize);
-    if (num_bytes_read < num_bytes_to_read) {
-        reached_eof = true;
+    if (false == m_checkpoint_enabled) {
+        num_bytes_read = ::read(m_fd, m_read_buffer, cReaderBufferSize);
+        if (num_bytes_read < num_bytes_to_read) {
+            reached_eof = true;
+        }
+        if (num_bytes_read == -1) {
+            return ErrorCode_errno;
+        }
+        reset_buffer(m_read_buffer, num_bytes_read);
+    } else {
+        // increase buffer size
+        m_read_buffer = (int8_t*)realloc(m_read_buffer, m_size + cReaderBufferSize);
+        m_buffer = m_read_buffer;
+        num_bytes_read = ::read(m_fd, m_read_buffer + m_size, cReaderBufferSize);
+        m_size += cReaderBufferSize;
+        if (num_bytes_read < num_bytes_to_read) {
+            reached_eof = true;
+        }
+        if (num_bytes_read == -1) {
+            return ErrorCode_errno;
+        }
     }
-    if (num_bytes_read == -1) {
-        return ErrorCode_errno;
-    }
-    reset_buffer(m_read_buffer, num_bytes_read);
-
     return ErrorCode_Success;
 }
 
@@ -50,14 +63,6 @@ ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num
     }
     if (nullptr == buf) {
         return ErrorCode_BadParam;
-    }
-    // Question: should we delay the fseek?
-    if (started_reading == false) {
-        started_reading = true;
-        auto offset = lseek(m_fd, m_file_pos, SEEK_SET);
-        if (offset == -1) {
-            return ErrorCode_errno;
-        }
     }
 
     num_bytes_read = 0;
@@ -118,45 +123,66 @@ ErrorCode FileReader::try_seek_from_begin (size_t pos) {
     if (m_fd == -1) {
         return ErrorCode_NotInit;
     }
-    //TODO: do we need to detect out of range seek?
-//    struct stat st;
-//    fstat(m_fd, &st);
-//    off_t size = st.st_size;
-//    if (pos >= size) {
-//        return ErrorCode_EndOfFile;
-//    }
+    // early return path
+    if (pos == m_file_pos) {
+        return ErrorCode_Success;
+    }
 
     // if we are at A, readed something, seek to B which is on another buffer place.
     // and seek back to A, how will this be handled
     if (pos > m_file_pos) {
         auto front_seek_amount = pos - m_file_pos;
         if (front_seek_amount > m_size - m_cursor_pos) {
-            // if the seek-to pos is out of buffer
-            printf("Seek front on %d\n", m_fd);
-            m_size = 0;
-            m_cursor_pos = 0;
-            m_file_pos = pos;
+            if (m_checkpoint_enabled == false) {
+                // This should only be needed by GLT as CLP decompress the entire region
+                // into the passthrough buffer
+                SPDLOG_ERROR("haven't thought about this yet");
+                throw;
+                m_file_pos = pos;
+                // we will require to load buffer later
+                reset_buffer(nullptr, 0);
+            } else {
+                // Get the file size
+                struct stat fileInfo;
+                fstat(m_fd, &fileInfo);
+                off_t file_size = fileInfo.st_size;
+                if (pos > file_size) {
+                    SPDLOG_ERROR("not expecting to seek pass the Entire file");
+                    throw;
+                }
+
+                size_t data_read_remaining = front_seek_amount;
+                // we want to load all file contents between into the buffer
+                while (true) {
+                    // note, although we refill the buffer, we didn't adjust the
+                    // cur_pos;
+                    refill_reader_buffer(cReaderBufferSize);
+                    if (data_read_remaining < cReaderBufferSize) {
+                        m_file_pos = pos;
+                        m_cursor_pos += front_seek_amount;
+                        // then we are done.
+                        break;
+                    }
+                    data_read_remaining -= cReaderBufferSize;
+                }
+            }
         } else {
-            // otherwise, we can simply
-            printf("simple seek front on %d\n", m_fd);
+            // otherwise, we can simply seek in the same buffer;
             m_cursor_pos += front_seek_amount;
             m_file_pos = pos;
         }
     } else {
-        printf("Seek back on %d\n", m_fd);
-        // the maximum value we can seek back is m_buffer_pos;
-        if(started_reading == false) {
-            m_file_pos = pos;
-        } else {
-            auto seek_back_amount = m_file_pos - pos;
-            if (seek_back_amount > m_cursor_pos) {
-                SPDLOG_ERROR("Can't back trace anymore");
-                throw;
-            } else {
-                m_cursor_pos = m_cursor_pos - seek_back_amount;
-                m_file_pos = pos;
-            }
+        if (false == m_checkpoint_enabled) {
+            SPDLOG_ERROR("Seek back not allowed when checkpoint is not enabled");
+            return ErrorCode_Failure;
         }
+        if (pos < m_checkpointed_pos) {
+            SPDLOG_ERROR("Seek back before the checkpoint is not supported");
+            return ErrorCode_Failure;
+        }
+        m_file_pos = pos;
+        BufferReader::revert_pos();
+        m_cursor_pos += pos - m_checkpointed_pos;
     }
     return ErrorCode_Success;
 }
@@ -176,14 +202,14 @@ ErrorCode FileReader::try_open (const string& path) {
     m_path = path;
     m_file_pos = 0;
     reached_eof = false;
-    started_reading = false;
 
     // Buffer specific things
     reset_buffer(nullptr, 0);
     return ErrorCode_Success;
 }
 
-ErrorCode FileReader::try_read_to_delimiter (char delim, bool keep_delimiter, bool append, string& str) {
+ErrorCode FileReader::try_read_to_delimiter (char delim, bool keep_delimiter,
+                                             bool append, string& str) {
     assert(-1 != m_fd);
 
     if (false == append) {
@@ -231,16 +257,66 @@ void FileReader::open (const string& path) {
     }
 }
 
+void FileReader::revert_pos() {
+    if (false == m_checkpoint_enabled) {
+        SPDLOG_ERROR("Checkpoint is not enabled");
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+    m_file_pos = m_checkpointed_pos;
+    // this should have revert the pos to the original buffer pos
+    BufferReader::revert_pos();
+}
+
+void FileReader::mark_pos() {
+    if (true == m_checkpoint_enabled) {
+        SPDLOG_ERROR("I haven't carefully think about whether we should allow this or not");
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+    m_checkpointed_pos = m_file_pos;
+    m_checkpoint_enabled = true;
+    BufferReader::mark_pos();
+}
+
+// let's assume the checkpoint can only be reset if we are already reading
+// recent data
+void FileReader::reset_checkpoint () {
+
+    // this basically means we don't allow to reset yet
+    // because currently we are still reading from buffered data
+    if (m_size - m_cursor_pos > cReaderBufferSize) {
+        SPDLOG_ERROR("Not ready for reset checkpoint");
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+    if(m_size > cReaderBufferSize) {
+        int8_t* new_buffer = (int8_t*)malloc(sizeof(int8_t) * cReaderBufferSize);
+        // copy the last "page" of data over.
+        size_t copy_pos = m_size - cReaderBufferSize;
+        memcpy(new_buffer, m_buffer + copy_pos, cReaderBufferSize);
+        free(m_read_buffer);
+        m_read_buffer = new_buffer;
+
+        // here, we don't need to touch m_cursor_pos yet;
+        m_buffer = new_buffer;
+    }
+    m_checkpoint_enabled = false;
+    BufferReader::reset_checkpoint();
+}
+
 void FileReader::close () {
     if (-1 != m_fd) {
-        // NOTE: We don't check errors for fclose since it seems the only reason it could fail is if it was interrupted
-        // by a signal
+        // NOTE: We don't check errors for fclose since it seems
+        // the only reason it could fail is if it was interrupted by a signal
         ::close(m_fd);
         m_fd = -1;
+
+        if (m_checkpoint_enabled) {
+            m_read_buffer = (int8_t*)realloc(m_read_buffer, cReaderBufferSize);
+            m_checkpoint_enabled = false;
+        }
     }
 }
 
-ErrorCode FileReader::try_fstat (struct stat& stat_buffer) {
+ErrorCode FileReader::try_fstat (struct stat& stat_buffer) const {
     if (-1 == m_fd) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }

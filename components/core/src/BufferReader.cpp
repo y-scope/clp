@@ -61,7 +61,7 @@ void BufferReader::revert_pos () {
 
 void BufferReader::reset_checkpoint () {
     m_checkpoint_pos = 0;
-    checkpoint_enable = true;
+    checkpoint_enable = false;
 }
 
 bool BufferReader::try_read_string_view (string_view& str_view, size_t read_size) {

@@ -21,16 +21,18 @@ public:
     class OperationFailed : public TraceableException {
     public:
         // Constructors
-        OperationFailed (ErrorCode error_code, const char* const filename, int line_number) : TraceableException (error_code, filename, line_number) {}
+        OperationFailed (ErrorCode error_code, const char* const filename, int line_number) :
+            TraceableException (error_code, filename, line_number) {}
 
         // Methods
-        const char* what () const noexcept override {
+        [[nodiscard]] const char* what () const noexcept override {
             return "FileReader operation failed";
         }
     };
 
     // Constructors
-    FileReader() : m_file_pos(0), m_fd(-1) {
+    FileReader() : m_file_pos(0), m_fd(-1), reached_eof(false), m_checkpoint_enabled(false)
+    {
         m_read_buffer = reinterpret_cast<int8_t*>(malloc(sizeof(int8_t) * cReaderBufferSize));
     }
     ~FileReader();
@@ -75,10 +77,11 @@ public:
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_errno otherwise
      */
-    ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter, bool append, std::string& str) override;
+    ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter,
+                                     bool append, std::string& str) override;
 
     // Methods
-    bool is_open () const { return -1 != m_fd; }
+    [[nodiscard]] bool is_open () const { return -1 != m_fd; }
 
     /**
      * Tries to open a file
@@ -107,7 +110,11 @@ public:
      * @return ErrorCode_errno on error
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] ErrorCode try_fstat (struct stat& stat_buffer);
+    [[nodiscard]] ErrorCode try_fstat (struct stat& stat_buffer) const;
+
+    void mark_pos();
+    void revert_pos();
+    void reset_checkpoint ();
 
 private:
 
@@ -118,11 +125,14 @@ private:
     int m_fd;
     std::string m_path;
     bool reached_eof;
-    bool started_reading;
 
     // Buffer specific data
     int8_t* m_read_buffer;
     static constexpr size_t cReaderBufferSize = 65536;
+
+    // checkpoint specific data
+    bool m_checkpoint_enabled;
+    size_t m_checkpointed_pos;
 };
 
 

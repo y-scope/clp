@@ -339,6 +339,8 @@ target_compile_features(clp
         )
 
 set(SOURCE_FILES_clg
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clg/clg.cpp
         src/clg/CommandLineArguments.cpp
         src/clg/CommandLineArguments.hpp
@@ -486,6 +488,8 @@ target_compile_features(clg
         )
 
 set(SOURCE_FILES_clo
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clo/clo.cpp
         src/clo/CommandLineArguments.cpp
         src/clo/CommandLineArguments.hpp
