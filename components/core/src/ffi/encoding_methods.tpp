@@ -469,10 +469,20 @@ namespace ffi {
     bool wildcard_match_encoded_vars (
             std::string_view logtype,
             encoded_variable_t* encoded_vars,
-            int encoded_vars_length,
+            size_t encoded_vars_length,
             std::string_view wildcard_var_placeholders,
             const std::vector<std::string_view>& wildcard_var_queries
     ) {
+        // Validate arguments
+        if (nullptr == encoded_vars) {
+            throw EncodingException(ErrorCode_BadParam, __FILENAME__, __LINE__,
+                                    cTooFewEncodedVarsErrorMessage);
+        }
+        if (wildcard_var_queries.size() != wildcard_var_placeholders.length()) {
+            throw EncodingException(ErrorCode_BadParam, __FILENAME__, __LINE__,
+                                    cTooFewEncodedVarsErrorMessage);
+        }
+
         auto wildcard_var_queries_len = wildcard_var_queries.size();
         size_t var_ix = 0;
         size_t wildcard_var_ix = 0;

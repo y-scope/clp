@@ -257,10 +257,14 @@ namespace ffi {
      * method will return true only if:
      * (1) Each unique `w` matches a unique `e`.
      * (2) When (1) is true, the order of elements in both W and E is unchanged.
+     * NOTE: Instead of taking an array of objects, this method takes arrays of
+     * object-members (the result of serializing the objects) so that it can be
+     * called without unnecessarily reconstructing the objects.
      * @tparam encoded_variable_t Type of the encoded variable
      * @param logtype The message's logtype
      * @param encoded_vars The message's encoded variables
-     * @param encoded_vars_length
+     * @param encoded_vars_length The number of encoded variables in \p
+     * encoded_vars
      * @param wildcard_var_placeholders String of variable placeholders, where
      * each one indicates how the corresponding wildcard string should be
      * interpreted.
@@ -274,7 +278,7 @@ namespace ffi {
     bool wildcard_match_encoded_vars (
             std::string_view logtype,
             encoded_variable_t* encoded_vars,
-            int encoded_vars_length,
+            size_t encoded_vars_length,
             std::string_view wildcard_var_placeholders,
             const std::vector<std::string_view>& wildcard_var_queries
     );
