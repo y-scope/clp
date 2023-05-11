@@ -34,11 +34,10 @@ ErrorCode FileReader::try_get_pos (size_t& pos) {
 ErrorCode FileReader::refill_reader_buffer (size_t num_bytes_to_read) {
     size_t num_bytes_read;
     if (false == m_checkpoint_enabled) {
-        num_bytes_read = ::read(m_fd, m_read_buffer, cReaderBufferSize);
-
         // todo: keep reading until you see 0
-        if (num_bytes_read < num_bytes_to_read) {
-            reached_eof = true;
+        num_bytes_read = ::read(m_fd, m_read_buffer, num_bytes_to_read);
+        if (num_bytes_read == 0) {
+            return ErrorCode_EndOfFile;
         }
         if (num_bytes_read == -1) {
             return ErrorCode_errno;
@@ -46,16 +45,16 @@ ErrorCode FileReader::refill_reader_buffer (size_t num_bytes_to_read) {
         reset_buffer(m_read_buffer, num_bytes_read);
     } else {
         // increase buffer size
-        m_read_buffer = (int8_t*)realloc(m_read_buffer, m_size + cReaderBufferSize);
+        m_read_buffer = (int8_t*)realloc(m_read_buffer, m_size + num_bytes_to_read);
         m_buffer = m_read_buffer;
-        num_bytes_read = ::read(m_fd, m_read_buffer + m_size, cReaderBufferSize);
-        m_size += cReaderBufferSize;
-        if (num_bytes_read < num_bytes_to_read) {
-            reached_eof = true;
+        num_bytes_read = ::read(m_fd, m_read_buffer + m_size, num_bytes_to_read);
+        if (num_bytes_read == 0) {
+            return ErrorCode_EndOfFile;
         }
         if (num_bytes_read == -1) {
             return ErrorCode_errno;
         }
+        m_size += num_bytes_read;
     }
     return ErrorCode_Success;
 }
@@ -70,8 +69,7 @@ ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num
 
     num_bytes_read = 0;
     size_t num_bytes_to_read_from_buffer {num_bytes_to_read};
-    size_t num_bytes_read_from_buffer;
-
+    size_t num_bytes_read_from_buffer {0};
     // keep reading
     bool finish_reading = false;
     while (false == finish_reading) {
@@ -96,24 +94,30 @@ ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num
             } else {
                 // else, we refill the buffer
                 error_code = refill_reader_buffer(cReaderBufferSize);
-                if (ErrorCode_Success != error_code) {
+                // TODO: here is refill_reader_buffer returns eof, we can't simply
+                // return eof, because we might have already readed some data
+                if (ErrorCode_EndOfFile == error_code) {
+                    if (num_bytes_read == 0) {
+                        return ErrorCode_EndOfFile;
+                    } else {
+                        finish_reading = true;
+                    }
+                }
+                else if (ErrorCode_Success != error_code) {
                     return error_code;
                 }
             }
         } else if (ErrorCode_EndOfFile == error_code) {
-            // if we encounter the end of file, means the buffer
-            // happens to be drained out and we didn't read any data from it
-            // in this case, exit if reached_eof, or simply refill the buffer.
-            if (reached_eof) {
+            // else, we refill the buffer
+            error_code = refill_reader_buffer(cReaderBufferSize);
+            if (ErrorCode_EndOfFile == error_code) {
                 if (num_bytes_read == 0) {
                     return ErrorCode_EndOfFile;
                 } else {
-                    return ErrorCode_Success;
+                    finish_reading = true;
                 }
             }
-            // else, we refill the buffer
-            error_code = refill_reader_buffer(cReaderBufferSize);
-            if (ErrorCode_Success != error_code) {
+            else if (ErrorCode_Success != error_code) {
                 return error_code;
             }
         } else {
@@ -218,7 +222,6 @@ ErrorCode FileReader::try_open (const string& path) {
     }
     m_path = path;
     m_file_pos = 0;
-    reached_eof = false;
 
     // Buffer specific things
     reset_buffer(nullptr, 0);
@@ -251,9 +254,6 @@ ErrorCode FileReader::try_read_to_delimiter (char delim, bool keep_delimiter,
         m_file_pos += cursor - m_cursor_pos;
         m_cursor_pos = cursor;
         if (false == found_delim) {
-            if (reached_eof) {
-                return ErrorCode_EndOfFile;
-            }
             if (auto error_code = refill_reader_buffer(cReaderBufferSize);
                     ErrorCode_Success != error_code) {
                 return error_code;

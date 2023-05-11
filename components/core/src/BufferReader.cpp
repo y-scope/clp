@@ -29,6 +29,10 @@ using std::string_view;
 }
 
 ErrorCode BufferReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
+    // this is not defined by specifications,
+    // but we need this strong behavior for the upper class
+    num_bytes_read = 0;
+
     if (nullptr == m_buffer) {
         return ErrorCode_NotInit;
     }

@@ -31,7 +31,7 @@ public:
     };
 
     // Constructors
-    FileReader() : m_file_pos(0), m_fd(-1), reached_eof(false), m_checkpoint_enabled(false)
+    FileReader() : m_file_pos(0), m_fd(-1), m_checkpoint_enabled(false)
     {
         m_read_buffer = reinterpret_cast<int8_t*>(malloc(sizeof(int8_t) * cReaderBufferSize));
     }
@@ -124,7 +124,6 @@ private:
     size_t m_file_pos;
     int m_fd;
     std::string m_path;
-    bool reached_eof;
 
     // Buffer specific data
     int8_t* m_read_buffer;
