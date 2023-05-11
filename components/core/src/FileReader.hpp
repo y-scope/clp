@@ -128,8 +128,8 @@ private:
 
     // Buffer specific data
     int8_t* m_read_buffer;
-    static constexpr size_t cReaderBufferSize = 65536;
-
+    static constexpr size_t cReaderBufferSize = 1 << 16;
+    static constexpr size_t cBufferAlignedMask = ~((1 << 16) - 1);
     // checkpoint specific data
     bool m_checkpoint_enabled;
     size_t m_checkpointed_pos;

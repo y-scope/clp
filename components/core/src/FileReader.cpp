@@ -30,10 +30,13 @@ ErrorCode FileReader::try_get_pos (size_t& pos) {
     return ErrorCode_Success;
 }
 
+//TODO: return number of bytes I readed to avoid eof check
 ErrorCode FileReader::refill_reader_buffer (size_t num_bytes_to_read) {
     size_t num_bytes_read;
     if (false == m_checkpoint_enabled) {
         num_bytes_read = ::read(m_fd, m_read_buffer, cReaderBufferSize);
+
+        // todo: keep reading until you see 0
         if (num_bytes_read < num_bytes_to_read) {
             reached_eof = true;
         }
@@ -75,8 +78,11 @@ ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num
         auto error_code = BufferReader::try_read(buf + num_bytes_read,
                                                  num_bytes_to_read_from_buffer,
                                                  num_bytes_read_from_buffer);
+        // what if we make the error to be eof
         if (ErrorCode_NotInit == error_code) {
             // else, we refill the buffer
+            // TODO: we can do something special about the curpos
+            // if we know only two paths will lead to this place.
             error_code = refill_reader_buffer(cReaderBufferSize);
             if (ErrorCode_Success != error_code) {
                 return error_code;
@@ -128,19 +134,24 @@ ErrorCode FileReader::try_seek_from_begin (size_t pos) {
         return ErrorCode_Success;
     }
 
-    // if we are at A, readed something, seek to B which is on another buffer place.
-    // and seek back to A, how will this be handled
     if (pos > m_file_pos) {
         auto front_seek_amount = pos - m_file_pos;
         if (front_seek_amount > m_size - m_cursor_pos) {
             if (m_checkpoint_enabled == false) {
-                // This should only be needed by GLT as CLP decompress the entire region
-                // into the passthrough buffer
-                SPDLOG_ERROR("haven't thought about this yet");
-                throw;
+                // let's assume we want the read to be always page aligned
+                auto buffer_aligned_pos = pos & cBufferAlignedMask;
+                auto offset = lseek(m_fd, buffer_aligned_pos, SEEK_SET);
+                if (offset == -1) {
+                    return ErrorCode_errno;
+                }
+                // now the issue is that: if we want to delay buffer loading
+                // how can we propogate the right m_cursor_pos
+                if (auto error_code = refill_reader_buffer(cReaderBufferSize);
+                    ErrorCode_Success != error_code) {
+                    return error_code;
+                }
                 m_file_pos = pos;
-                // we will require to load buffer later
-                reset_buffer(nullptr, 0);
+                m_cursor_pos = pos - buffer_aligned_pos;
             } else {
                 // Get the file size
                 struct stat fileInfo;
@@ -153,10 +164,16 @@ ErrorCode FileReader::try_seek_from_begin (size_t pos) {
 
                 size_t data_read_remaining = front_seek_amount;
                 // we want to load all file contents between into the buffer
+                // TODO: what if without reading the files, user seek to a further place
+                // hence the buffer is nullptr pointing. and then user set the checkpoint,
+                // and then seek again? in this case, it should still work? because the refill
+                // buffer will handle it interanlly
                 while (true) {
-                    // note, although we refill the buffer, we didn't adjust the
-                    // cur_pos;
-                    refill_reader_buffer(cReaderBufferSize);
+                    // keep refilling the buffer
+                    if (auto error_code = refill_reader_buffer(cReaderBufferSize);
+                            ErrorCode_Success != error_code) {
+                        return error_code;
+                    }
                     if (data_read_remaining < cReaderBufferSize) {
                         m_file_pos = pos;
                         m_cursor_pos += front_seek_amount;
@@ -281,22 +298,26 @@ void FileReader::mark_pos() {
 // recent data
 void FileReader::reset_checkpoint () {
 
-    // this basically means we don't allow to reset yet
+    // we don't allow to reset yet
     // because currently we are still reading from buffered data
+    // and we are not at the last "page" of data
     if (m_size - m_cursor_pos > cReaderBufferSize) {
         SPDLOG_ERROR("Not ready for reset checkpoint");
+        // or we can only remove out of dated buffer, and reclain memory when
+        // we read the next page
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
     if(m_size > cReaderBufferSize) {
-        int8_t* new_buffer = (int8_t*)malloc(sizeof(int8_t) * cReaderBufferSize);
+        auto new_buffer = (int8_t*)malloc(sizeof(int8_t) * cReaderBufferSize);
         // copy the last "page" of data over.
         size_t copy_pos = m_size - cReaderBufferSize;
         memcpy(new_buffer, m_buffer + copy_pos, cReaderBufferSize);
         free(m_read_buffer);
         m_read_buffer = new_buffer;
 
-        // here, we don't need to touch m_cursor_pos yet;
+        m_size = cReaderBufferSize;
         m_buffer = new_buffer;
+        m_cursor_pos -= copy_pos;
     }
     m_checkpoint_enabled = false;
     BufferReader::reset_checkpoint();
@@ -310,6 +331,7 @@ void FileReader::close () {
         m_fd = -1;
 
         if (m_checkpoint_enabled) {
+            // ADD a debug log message
             m_read_buffer = (int8_t*)realloc(m_read_buffer, cReaderBufferSize);
             m_checkpoint_enabled = false;
         }
