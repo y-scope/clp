@@ -691,12 +691,15 @@ set(SOURCE_FILES_unitTest
         src/ffi/search/CompositeWildcardToken.hpp
         src/ffi/search/ExactVariableToken.cpp
         src/ffi/search/ExactVariableToken.hpp
+        src/ffi/search/fmtlib_specializations.hpp
         src/ffi/search/query_methods.cpp
         src/ffi/search/query_methods.hpp
         src/ffi/search/QueryMethodFailed.hpp
         src/ffi/search/QueryToken.hpp
         src/ffi/search/QueryWildcard.cpp
         src/ffi/search/QueryWildcard.hpp
+        src/ffi/search/Subquery.cpp
+        src/ffi/search/Subquery.hpp
         src/ffi/search/WildcardToken.cpp
         src/ffi/search/WildcardToken.hpp
         src/FileReader.cpp

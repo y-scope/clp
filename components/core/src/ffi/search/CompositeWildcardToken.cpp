@@ -6,8 +6,8 @@ using std::variant;
 using std::vector;
 
 namespace ffi::search {
-    auto TokenGetBeginPos = [] (const auto& token) { return token.get_begin_pos(); };
-    auto TokenGetEndPos = [] (const auto& token) { return token.get_end_pos(); };
+    static auto TokenGetBeginPos = [] (const auto& token) { return token.get_begin_pos(); };
+    static auto TokenGetEndPos = [] (const auto& token) { return token.get_end_pos(); };
 
     template <typename encoded_variable_t>
     CompositeWildcardToken<encoded_variable_t>::CompositeWildcardToken (

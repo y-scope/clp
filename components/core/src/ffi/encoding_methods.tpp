@@ -464,6 +464,70 @@ namespace ffi {
 
         return false;
     }
+
+    template <typename encoded_variable_t>
+    bool wildcard_match_encoded_vars (
+            std::string_view logtype,
+            encoded_variable_t* encoded_vars,
+            size_t encoded_vars_length,
+            std::string_view wildcard_var_placeholders,
+            const std::vector<std::string_view>& wildcard_var_queries
+    ) {
+        // Validate arguments
+        if (nullptr == encoded_vars) {
+            throw EncodingException(ErrorCode_BadParam, __FILENAME__, __LINE__,
+                                    cTooFewEncodedVarsErrorMessage);
+        }
+        if (wildcard_var_queries.size() != wildcard_var_placeholders.length()) {
+            throw EncodingException(ErrorCode_BadParam, __FILENAME__, __LINE__,
+                                    cTooFewEncodedVarsErrorMessage);
+        }
+
+        auto wildcard_var_queries_len = wildcard_var_queries.size();
+        size_t var_ix = 0;
+        size_t wildcard_var_ix = 0;
+        for (auto c : logtype) {
+            if (enum_to_underlying_type(VariablePlaceholder::Float) == c) {
+                if (var_ix >= encoded_vars_length) {
+                    throw EncodingException(ErrorCode_Corrupt, __FILENAME__, __LINE__,
+                                            cTooFewEncodedVarsErrorMessage);
+                }
+
+                if (wildcard_var_placeholders[wildcard_var_ix] == c) {
+                    auto decoded_var = decode_float_var(encoded_vars[var_ix]);
+                    if (wildcard_match_unsafe(decoded_var, wildcard_var_queries[wildcard_var_ix]))
+                    {
+                        ++wildcard_var_ix;
+                        if (wildcard_var_ix == wildcard_var_queries_len) {
+                            break;
+                        }
+                    }
+                }
+
+                ++var_ix;
+            } else if (enum_to_underlying_type(VariablePlaceholder::Integer) == c) {
+                if (var_ix >= encoded_vars_length) {
+                    throw EncodingException(ErrorCode_Corrupt, __FILENAME__, __LINE__,
+                                            cTooFewEncodedVarsErrorMessage);
+                }
+
+                if (wildcard_var_placeholders[wildcard_var_ix] == c) {
+                    auto decoded_var = decode_integer_var(encoded_vars[var_ix]);
+                    if (wildcard_match_unsafe(decoded_var, wildcard_var_queries[wildcard_var_ix]))
+                    {
+                        ++wildcard_var_ix;
+                        if (wildcard_var_ix == wildcard_var_queries_len) {
+                            break;
+                        }
+                    }
+                }
+
+                ++var_ix;
+            }
+        }
+
+        return (wildcard_var_queries_len == wildcard_var_ix);
+    }
 }
 
 #endif // FFI_ENCODING_METHODS_TPP

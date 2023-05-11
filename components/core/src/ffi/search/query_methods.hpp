@@ -10,24 +10,13 @@
 // Project headers
 #include "CompositeWildcardToken.hpp"
 #include "ExactVariableToken.hpp"
+#include "Subquery.hpp"
 #include "WildcardToken.hpp"
 
 namespace ffi::search {
     template <typename encoded_variable_t>
-    void generate_subqueries (
-            std::string_view wildcard_query,
-            std::vector<
-                    std::pair<
-                            std::string,
-                            std::vector<
-                                    std::variant<
-                                            ExactVariableToken<encoded_variable_t>,
-                                            WildcardToken<encoded_variable_t>
-                                    >
-                            >
-                    >
-            >& sub_queries
-    );
+    void generate_subqueries (std::string_view wildcard_query,
+                              std::vector<Subquery<encoded_variable_t>>& sub_queries);
 }
 
 #endif // FFI_SEARCH_QUERY_METHODS_HPP

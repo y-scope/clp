@@ -2,7 +2,9 @@
 #define FFI_IR_STREAM_PROTOCOL_CONSTANTS_HPP
 
 // C++ standard libraries
+#include <cstddef>
 #include <cstdint>
+#include <type_traits>
 
 namespace ffi::ir_stream::cProtocol {
     constexpr int8_t FourByteEncodingMagicNumber[] = {

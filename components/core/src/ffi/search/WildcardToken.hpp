@@ -4,10 +4,6 @@
 // C++ standard libraries
 #include <vector>
 
-// fmtlib
-#include <fmt/core.h>
-#include <fmt/format.h>
-
 // Project headers
 #include "../../TraceableException.hpp"
 #include "QueryToken.hpp"
@@ -88,26 +84,5 @@ namespace ffi::search {
         size_t m_current_interpretation_idx;
     };
 }
-
-// Template specialization for SPDLOG
-template<typename encoded_variable_t>
-struct fmt::formatter<ffi::search::WildcardToken<encoded_variable_t>> {
-    template <typename ParseContext>
-    constexpr auto parse (ParseContext& ctx) {
-        return ctx.begin();
-    }
-
-    template <typename FormatContext>
-    auto format (
-            const ffi::search::WildcardToken<encoded_variable_t>& v,
-            FormatContext& ctx
-    ) {
-        return fmt::format_to(ctx.out(), "WildcardToken(\"{}\") as {}TokenType({}){}",
-                              v.get_value(),
-                              v.has_prefix_star_wildcard() ? "*" : "",
-                              v.get_current_interpretation(),
-                              v.has_suffix_star_wildcard() ? "*" : "");
-    }
-};
 
 #endif // FFI_WILDCARDTOKEN_HPP
