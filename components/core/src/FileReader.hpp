@@ -132,6 +132,7 @@ private:
     // checkpoint specific data
     bool m_checkpoint_enabled;
     size_t m_checkpointed_pos;
+    size_t m_checkpointed_buffer_pos;
 };
 
 

@@ -25,31 +25,22 @@ public:
     };
     BufferReader () : m_buffer(nullptr),
                       m_size(0),
-                      m_cursor_pos(0),
-                      m_checkpoint_pos(0),
-                      checkpoint_enable(false) {}
+                      m_cursor_pos(0) {}
     BufferReader (const int8_t* data, size_t size) :
             m_buffer(data),
             m_size(size),
-            m_cursor_pos(0),
-            m_checkpoint_pos(0),
-            checkpoint_enable(false) {}
+            m_cursor_pos(0) {}
 
     [[nodiscard]] ErrorCode try_read (char* buf, size_t num_bytes_to_read,
                                       size_t& num_bytes_read) override;
     [[nodiscard]] ErrorCode try_get_pos (size_t& pos) override;
     [[nodiscard]] ErrorCode try_seek_from_begin (size_t pos) override;
-
+    [[nodiscard]] size_t get_buffer_length() { return m_size; }
     void reset_buffer (const int8_t* data, size_t size) {
         m_buffer = data;
         m_size = size;
         m_cursor_pos = 0;
     }
-
-    // The following methods should only be used by the decoder
-    virtual void mark_pos ();
-    virtual void revert_pos ();
-    virtual void reset_checkpoint ();
 
     /**
      * Tries reading a string view of size = read_size from the ir_buf.
@@ -65,10 +56,6 @@ protected:
     const int8_t* m_buffer;
     size_t m_size;
     size_t m_cursor_pos;
-
-private:
-    bool checkpoint_enable;
-    size_t m_checkpoint_pos;
 };
 
 

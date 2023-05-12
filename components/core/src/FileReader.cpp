@@ -202,8 +202,7 @@ ErrorCode FileReader::try_seek_from_begin (size_t pos) {
             return ErrorCode_Failure;
         }
         m_file_pos = pos;
-        BufferReader::revert_pos();
-        m_cursor_pos += pos - m_checkpointed_pos;
+        m_cursor_pos = m_checkpointed_buffer_pos + (pos - m_checkpointed_pos);
     }
     return ErrorCode_Success;
 }
@@ -281,7 +280,7 @@ void FileReader::revert_pos() {
     }
     m_file_pos = m_checkpointed_pos;
     // this should have revert the pos to the original buffer pos
-    BufferReader::revert_pos();
+    m_cursor_pos = m_checkpointed_buffer_pos;
 }
 
 void FileReader::mark_pos() {
@@ -291,7 +290,7 @@ void FileReader::mark_pos() {
     }
     m_checkpointed_pos = m_file_pos;
     m_checkpoint_enabled = true;
-    BufferReader::mark_pos();
+    m_checkpointed_buffer_pos = m_cursor_pos;
 }
 
 // let's assume the checkpoint can only be reset if we are already reading
@@ -320,7 +319,6 @@ void FileReader::reset_checkpoint () {
         m_cursor_pos -= copy_pos;
     }
     m_checkpoint_enabled = false;
-    BufferReader::reset_checkpoint();
 }
 
 void FileReader::close () {

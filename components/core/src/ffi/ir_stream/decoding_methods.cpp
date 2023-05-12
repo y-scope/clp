@@ -463,13 +463,16 @@ namespace ffi::ir_stream {
     }
 
     IRErrorCode get_encoding_type (BufferReader& ir_buf, bool& is_four_bytes_encoding) {
-        ir_buf.mark_pos();
+        if (ir_buf.get_buffer_length() == 0) {
+            return IRErrorCode_Incomplete_IR;
+        }
+        size_t seekback_pos = ir_buf.get_pos();
 
         char buffer[cProtocol::MagicNumberLength];
         size_t num_bytes_read;
         auto error_code = ir_buf.try_read(buffer, cProtocol::MagicNumberLength, num_bytes_read);
         if (error_code != ErrorCode_Success || num_bytes_read != cProtocol::MagicNumberLength) {
-            ir_buf.revert_pos();
+            ir_buf.seek_from_begin(seekback_pos);
             return IRErrorCode_Incomplete_IR;
         }
         if (0 == memcmp(buffer, cProtocol::FourByteEncodingMagicNumber,
@@ -479,26 +482,25 @@ namespace ffi::ir_stream {
                                cProtocol::MagicNumberLength)) {
             is_four_bytes_encoding = false;
         } else {
-            ir_buf.revert_pos();
+            ir_buf.seek_from_begin(seekback_pos);
             return IRErrorCode_Corrupted_IR;
         }
         return IRErrorCode_Success;
     }
-
+    
     IRErrorCode decode_preamble (BufferReader& ir_buf, encoded_tag_t& metadata_type,
                                  size_t& metadata_pos, uint16_t& metadata_size)
     {
-        ir_buf.mark_pos();
-
+        size_t marked_pos = ir_buf.get_pos();
         if (auto error_code = read_metadata_info(ir_buf, metadata_type, metadata_size);
                 error_code != IRErrorCode_Success) {
-            ir_buf.revert_pos();
+            ir_buf.seek_from_begin(marked_pos);
             return error_code;
         }
         metadata_pos = ir_buf.get_pos();
         //TODO: this might not be optimal
         if (ErrorCode_Success != ir_buf.try_seek_from_begin(metadata_pos + metadata_size)) {
-            ir_buf.revert_pos();
+            ir_buf.seek_from_begin(marked_pos);
             return IRErrorCode_Incomplete_IR;
         }
         return IRErrorCode_Success;
@@ -518,12 +520,15 @@ namespace ffi::ir_stream {
         IRErrorCode decode_next_message (BufferReader& ir_buf, string& message,
                                          epoch_time_ms_t& timestamp)
         {
-            ir_buf.mark_pos();
+            if (ir_buf.get_buffer_length() == 0) {
+                return IRErrorCode_Incomplete_IR;
+            }
+            size_t marked_pos = ir_buf.get_pos();
             auto error_code = generic_decode_next_message<eight_byte_encoded_variable_t>(
                     ir_buf, message, timestamp
             );
             if (IRErrorCode_Success != error_code) {
-                ir_buf.revert_pos();
+                ir_buf.seek_from_begin(marked_pos);
             }
             return error_code;
         }
