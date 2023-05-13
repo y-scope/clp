@@ -117,8 +117,8 @@ public:
     void reset_checkpoint ();
 
 private:
-
     ErrorCode refill_reader_buffer(size_t num_bytes_to_read);
+    ErrorCode refill_reader_buffer(size_t num_bytes_to_read, size_t& num_bytes_read);
 
     // Types
     size_t m_file_pos;
@@ -126,6 +126,7 @@ private:
     std::string m_path;
 
     // Buffer specific data
+    // TODO: either turn this into a unique ptr, or at least use new & delete
     int8_t* m_read_buffer;
     static constexpr size_t cReaderBufferSize = 1 << 16;
     static constexpr size_t cBufferAlignedMask = ~((1 << 16) - 1);
