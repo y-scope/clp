@@ -30,29 +30,47 @@ ErrorCode FileReader::try_get_pos (size_t& pos) {
     return ErrorCode_Success;
 }
 
-//TODO: return number of bytes I readed to avoid eof check
-ErrorCode FileReader::refill_reader_buffer (size_t num_bytes_to_read) {
-    size_t num_bytes_read;
-    if (false == m_checkpoint_enabled) {
-        // todo: keep reading until you see 0
-        num_bytes_read = ::read(m_fd, m_read_buffer, num_bytes_to_read);
-        if (num_bytes_read == 0) {
-            return ErrorCode_EndOfFile;
-        }
-        if (num_bytes_read == -1) {
+static ErrorCode try_read_into_buffer(int fd, int8_t* buffer, size_t num_bytes_to_read,
+                                      size_t& num_bytes_read) {
+    num_bytes_read = 0;
+    while (true) {
+        auto bytes_read = ::read(fd, buffer + num_bytes_read, num_bytes_to_read);
+        if (bytes_read == -1) {
             return ErrorCode_errno;
+        }
+        if (bytes_read == 0) {
+            break;
+        }
+        num_bytes_read += bytes_read;
+        num_bytes_to_read -= bytes_read;
+        if (num_bytes_to_read == 0) {
+            return ErrorCode_Success;
+        }
+    }
+    if (num_bytes_read == 0) {
+        return ErrorCode_EndOfFile;
+    }
+    return ErrorCode_Success;
+}
+
+
+ErrorCode FileReader::refill_reader_buffer (size_t num_bytes_to_read) {
+    size_t num_bytes_read {0};
+    if (false == m_checkpoint_enabled) {
+        auto error_code = try_read_into_buffer(m_fd, m_read_buffer,
+                                               num_bytes_to_read, num_bytes_read);
+        if (error_code != ErrorCode_Success) {
+            return error_code;
         }
         reset_buffer(m_read_buffer, num_bytes_read);
     } else {
         // increase buffer size
         m_read_buffer = (int8_t*)realloc(m_read_buffer, m_size + num_bytes_to_read);
         m_buffer = m_read_buffer;
-        num_bytes_read = ::read(m_fd, m_read_buffer + m_size, num_bytes_to_read);
-        if (num_bytes_read == 0) {
-            return ErrorCode_EndOfFile;
-        }
-        if (num_bytes_read == -1) {
-            return ErrorCode_errno;
+        auto error_code = try_read_into_buffer(m_fd, m_read_buffer + m_size, num_bytes_to_read,
+                                               num_bytes_read);
+        if (error_code != ErrorCode_Success) {
+            return error_code;
         }
         m_size += num_bytes_read;
     }
@@ -71,58 +89,37 @@ ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num
     size_t num_bytes_to_read_from_buffer {num_bytes_to_read};
     size_t num_bytes_read_from_buffer {0};
     // keep reading
-    bool finish_reading = false;
-    while (false == finish_reading) {
+    while (true) {
         auto error_code = BufferReader::try_read(buf + num_bytes_read,
                                                  num_bytes_to_read_from_buffer,
                                                  num_bytes_read_from_buffer);
-        // what if we make the error to be eof
-        if (ErrorCode_NotInit == error_code) {
-            // else, we refill the buffer
-            // TODO: we can do something special about the curpos
-            // if we know only two paths will lead to this place.
-            error_code = refill_reader_buffer(cReaderBufferSize);
-            if (ErrorCode_Success != error_code) {
-                return error_code;
-            }
-        } else if (ErrorCode_Success == error_code) {
+        if (ErrorCode_Success == error_code ||
+            ErrorCode_EndOfFile == error_code ||
+            ErrorCode_NotInit == error_code)
+        {
             m_file_pos += num_bytes_read_from_buffer;
             num_bytes_read += num_bytes_read_from_buffer;
             num_bytes_to_read_from_buffer -= num_bytes_read_from_buffer;
             if (num_bytes_to_read_from_buffer == 0) {
-                finish_reading = true;
+                break;
             } else {
                 // else, we refill the buffer
                 error_code = refill_reader_buffer(cReaderBufferSize);
-                // TODO: here is refill_reader_buffer returns eof, we can't simply
+                // TODO: here if refill_reader_buffer returns eof, we can't simply
                 // return eof, because we might have already readed some data
                 if (ErrorCode_EndOfFile == error_code) {
                     if (num_bytes_read == 0) {
                         return ErrorCode_EndOfFile;
                     } else {
-                        finish_reading = true;
+                        break;
                     }
                 }
                 else if (ErrorCode_Success != error_code) {
                     return error_code;
                 }
             }
-        } else if (ErrorCode_EndOfFile == error_code) {
-            // else, we refill the buffer
-            error_code = refill_reader_buffer(cReaderBufferSize);
-            if (ErrorCode_EndOfFile == error_code) {
-                if (num_bytes_read == 0) {
-                    return ErrorCode_EndOfFile;
-                } else {
-                    finish_reading = true;
-                }
-            }
-            else if (ErrorCode_Success != error_code) {
-                return error_code;
-            }
         } else {
-            // else some unexpected error code is encountered.
-            throw OperationFailed(error_code, __FILENAME__, __LINE__);
+            return error_code;
         }
     }
     return ErrorCode_Success;
@@ -329,7 +326,7 @@ void FileReader::close () {
         m_fd = -1;
 
         if (m_checkpoint_enabled) {
-            // ADD a debug log message
+            // TODO: add a debug log message
             m_read_buffer = (int8_t*)realloc(m_read_buffer, cReaderBufferSize);
             m_checkpoint_enabled = false;
         }
