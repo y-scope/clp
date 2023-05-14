@@ -54,25 +54,30 @@ static ErrorCode try_read_into_buffer(int fd, int8_t* buffer, size_t num_bytes_t
     return ErrorCode_Success;
 }
 
-ErrorCode FileReader::refill_reader_buffer (size_t num_bytes_to_read) {
+ErrorCode FileReader::refill_reader_buffer () {
     size_t num_bytes_read;
-    return refill_reader_buffer (num_bytes_to_read, num_bytes_read);
+    return refill_reader_buffer (num_bytes_read);
 }
 
-ErrorCode FileReader::refill_reader_buffer (size_t num_bytes_to_read, size_t& num_bytes_read) {
+ErrorCode FileReader::refill_reader_buffer (size_t& num_bytes_read) {
     num_bytes_read = 0;
     if (false == m_checkpoint_enabled) {
+        // recover from a previous reset
+        if (m_size > cReaderBufferSize) {
+            m_read_buffer = (int8_t*)realloc(m_read_buffer, cReaderBufferSize);
+        }
         auto error_code = try_read_into_buffer(m_fd, m_read_buffer,
-                                               num_bytes_to_read, num_bytes_read);
+                                               cReaderBufferSize, num_bytes_read);
         if (error_code != ErrorCode_Success) {
             return error_code;
         }
-        reset_buffer(m_read_buffer, num_bytes_read);
+        m_size = num_bytes_read;
+        m_cursor_pos = m_file_pos & cCursorMask;
     } else {
         // increase buffer size
-        m_read_buffer = (int8_t*)realloc(m_read_buffer, m_size + num_bytes_to_read);
+        m_read_buffer = (int8_t*)realloc(m_read_buffer, m_size + cReaderBufferSize);
         m_buffer = m_read_buffer;
-        auto error_code = try_read_into_buffer(m_fd, m_read_buffer + m_size, num_bytes_to_read,
+        auto error_code = try_read_into_buffer(m_fd, m_read_buffer + m_size, cReaderBufferSize,
                                                num_bytes_read);
         if (error_code != ErrorCode_Success) {
             return error_code;
@@ -108,7 +113,7 @@ ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num
                 break;
             }
             // refill the buffer if more bytes are to be read
-            error_code = refill_reader_buffer(cReaderBufferSize);
+            error_code = refill_reader_buffer();
             if (ErrorCode_EndOfFile == error_code) {
                 if (num_bytes_read == 0) {
                     return ErrorCode_EndOfFile;
@@ -161,20 +166,16 @@ ErrorCode FileReader::try_seek_from_begin (size_t pos) {
                 if (offset == -1) {
                     return ErrorCode_errno;
                 }
-                // now the issue is that: if we want to delay buffer loading
-                // how can we propogate the right m_cursor_pos
-                if (auto error_code = refill_reader_buffer(cReaderBufferSize);
-                    ErrorCode_Success != error_code) {
-                    return error_code;
-                }
+                m_size = 0;
                 m_file_pos = pos;
-                m_cursor_pos = pos - buffer_aligned_pos;
+                // TODO: This line is needed in case
+                m_cursor_pos = m_file_pos & cCursorMask;
             } else {
                 size_t data_read_remaining = seek_distance;
                 size_t num_bytes_refilled;
                 while (true) {
                     // keep refilling the buffer
-                    auto error_code = refill_reader_buffer(cReaderBufferSize, num_bytes_refilled);
+                    auto error_code = refill_reader_buffer(num_bytes_refilled);
                     if (ErrorCode_EndOfFile == error_code) {
                         SPDLOG_ERROR("not expecting to seek pass the Entire file");
                         throw;
@@ -209,7 +210,7 @@ ErrorCode FileReader::try_open (const string& path) {
     }
     m_path = path;
     m_file_pos = 0;
-    reset_buffer(nullptr, 0);
+    reset_buffer(m_read_buffer, 0);
     return ErrorCode_Success;
 }
 
@@ -240,7 +241,7 @@ ErrorCode FileReader::try_read_to_delimiter (char delim, bool keep_delimiter,
         m_file_pos += cursor - m_cursor_pos;
         m_cursor_pos = cursor;
         if (false == found_delim) {
-            if (auto error_code = refill_reader_buffer(cReaderBufferSize);
+            if (auto error_code = refill_reader_buffer();
                     ErrorCode_Success != error_code) {
                 return error_code;
             }
@@ -283,27 +284,23 @@ void FileReader::mark_pos() {
 // let's assume the checkpoint can only be reset if we are already reading
 // recent data
 void FileReader::reset_checkpoint () {
-
-    // we don't allow to reset yet
-    // because currently we are still reading from buffered data
-    // and we are not at the last "page" of data
-    if (m_size - m_cursor_pos > cReaderBufferSize) {
-        SPDLOG_ERROR("Not ready for reset checkpoint");
-        // or we can only remove out of dated buffer, and reclain memory when
-        // we read the next page
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    // alternatively, we can keep claiming back the memory
+    if (false == m_checkpoint_enabled) {
+        return;
     }
-    if(m_size > cReaderBufferSize) {
-        auto new_buffer = (int8_t*)malloc(sizeof(int8_t) * cReaderBufferSize);
-        // copy the last "page" of data over.
-        size_t copy_pos = m_size - cReaderBufferSize;
-        memcpy(new_buffer, m_buffer + copy_pos, cReaderBufferSize);
+    if (m_size != cReaderBufferSize) {
+        auto buffer_aligned_copy_pos = m_cursor_pos & cBufferAlignedMask;
+        auto remaining_data_size = m_size - buffer_aligned_copy_pos;
+        auto buffer_quantized_size = (1 + ((remaining_data_size - 1) >> cBufferExp)) << cBufferExp;
+        auto new_buffer = (int8_t*)malloc(sizeof(int8_t) * buffer_quantized_size);
+
+        memcpy(new_buffer, m_buffer + buffer_aligned_copy_pos, remaining_data_size);
         free(m_read_buffer);
         m_read_buffer = new_buffer;
 
-        m_size = cReaderBufferSize;
+        m_size = remaining_data_size;
         m_buffer = new_buffer;
-        m_cursor_pos -= copy_pos;
+        m_cursor_pos -= buffer_aligned_copy_pos;
     }
     m_checkpoint_enabled = false;
 }

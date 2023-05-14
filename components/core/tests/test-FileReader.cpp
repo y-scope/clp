@@ -184,25 +184,22 @@ TEST_CASE("Test reading data", "[FileReader]") {
 
         // now try to seek back to an unacceptable place
         REQUIRE(ErrorCode_Failure == file_reader.try_seek_from_begin(checkpoint_pos-1));
-        // try reset, which should fail now.
-        // REQUIRE(ErrorCode_Failure == file_reader.try_seek_from_begin(seek_pos));
-
-        // now go back to latest data
-        REQUIRE(ErrorCode_Success == file_reader.try_seek_from_begin(latest_file_pos));
-        // reset, and then seek back should fail
+        // try reset, which should success now.
         file_reader.reset_checkpoint();
         REQUIRE(ErrorCode_Failure == file_reader.try_seek_from_begin(seek_pos));
 
+        // now go back to latest data
+        REQUIRE(ErrorCode_Success == file_reader.try_seek_from_begin(latest_file_pos));
+
         // make sure data read after checkpoint-reset still matches
-        num_bytes_to_read = 4096;
+        num_bytes_to_read = 65536;
         REQUIRE(ErrorCode_Success == file_reader.try_read(read_buffer, num_bytes_to_read,
                                                           num_byte_read));
-
         REQUIRE(num_bytes_to_read == num_byte_read);
         REQUIRE(0 == memcmp(read_buffer, test_data + latest_file_pos, num_bytes_to_read));
 
         // Make sure now we can't reset back to checkpoint
-        REQUIRE(ErrorCode_Failure == file_reader.try_seek_from_begin(seek_pos));
+        REQUIRE(ErrorCode_Failure == file_reader.try_seek_from_begin(latest_file_pos));
     }
 
     SECTION("Reset seek with corner cases") {
