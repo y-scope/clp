@@ -14,18 +14,29 @@
 // Project headers
 #include <spdlog/spdlog.h>
 
+using std::make_unique;
+using std::move;
 using std::string;
+
+FileReader::FileReader () {
+    m_file_pos = 0;
+    m_fd = -1;
+    m_checkpoint_enabled = 0;
+    constexpr size_t DefaultBufferSize = 65536;
+    if (ErrorCode_Success != set_buffer_size(DefaultBufferSize)) {
+        throw "Failed to init reader buffer size\n";
+    }
+    m_read_buffer = make_unique<int8_t[]>(m_reader_buffer_size);
+}
 
 FileReader::~FileReader () {
     close();
-    free(m_read_buffer);
 }
 
 ErrorCode FileReader::try_get_pos (size_t& pos) {
     if (-1 == m_fd) {
         return ErrorCode_NotInit;
     }
-
     pos = m_file_pos;
     return ErrorCode_Success;
 }
@@ -33,7 +44,7 @@ ErrorCode FileReader::try_get_pos (size_t& pos) {
 static ErrorCode try_read_into_buffer(int fd, int8_t* buffer, size_t num_bytes_to_read,
                                       size_t& num_bytes_read) {
     num_bytes_read = 0;
-    // keep reading from the fd until seeing a 0
+    // keep reading from the fd until seeing a 0, which means eof
     while (true) {
         auto bytes_read = ::read(fd, buffer + num_bytes_read, num_bytes_to_read);
         if (bytes_read == -1) {
@@ -54,35 +65,45 @@ static ErrorCode try_read_into_buffer(int fd, int8_t* buffer, size_t num_bytes_t
     return ErrorCode_Success;
 }
 
-ErrorCode FileReader::refill_reader_buffer () {
-    size_t num_bytes_read;
-    return refill_reader_buffer (num_bytes_read);
+ErrorCode FileReader::refill_reader_buffer (size_t refill_size) {
+    size_t num_bytes_refilled;
+    return refill_reader_buffer (refill_size, num_bytes_refilled);
 }
 
-ErrorCode FileReader::refill_reader_buffer (size_t& num_bytes_read) {
-    num_bytes_read = 0;
+ErrorCode FileReader::refill_reader_buffer (size_t refill_size, size_t& num_bytes_refilled) {
+    num_bytes_refilled = 0;
     if (false == m_checkpoint_enabled) {
         // recover from a previous reset
-        if (m_size > cReaderBufferSize) {
-            m_read_buffer = (int8_t*)realloc(m_read_buffer, cReaderBufferSize);
+        if (m_size > refill_size) {
+            m_read_buffer = make_unique<int8_t[]>(refill_size);
+            m_buffer = m_read_buffer.get();
         }
-        auto error_code = try_read_into_buffer(m_fd, m_read_buffer,
-                                               cReaderBufferSize, num_bytes_read);
+        auto error_code = try_read_into_buffer(m_fd, m_read_buffer.get(),
+                                               refill_size, num_bytes_refilled);
         if (error_code != ErrorCode_Success) {
             return error_code;
         }
-        m_size = num_bytes_read;
-        m_cursor_pos = m_file_pos & cCursorMask;
+        m_size = num_bytes_refilled;
+        m_cursor_pos = m_file_pos & m_reader_buffer_cursor_mask;
     } else {
-        // increase buffer size
-        m_read_buffer = (int8_t*)realloc(m_read_buffer, m_size + cReaderBufferSize);
-        m_buffer = m_read_buffer;
-        auto error_code = try_read_into_buffer(m_fd, m_read_buffer + m_size, cReaderBufferSize,
-                                               num_bytes_read);
+        if (m_size == 0) {
+            // if buffer is uninitialized, reset the cursor_pos
+            // in case it's after a seek
+            m_cursor_pos = m_file_pos & m_reader_buffer_cursor_mask;
+        }
+
+        // Messy way of copying data from old buffer to new buffer
+        auto new_buffer = make_unique<int8_t[]>(m_size + refill_size);
+        memcpy(new_buffer.get(), m_read_buffer.get(), m_size);
+        m_read_buffer = std::move(new_buffer);
+        m_buffer = m_read_buffer.get();
+
+        auto error_code = try_read_into_buffer(m_fd, m_read_buffer.get() + m_size, refill_size,
+                                               num_bytes_refilled);
         if (error_code != ErrorCode_Success) {
             return error_code;
         }
-        m_size += num_bytes_read;
+        m_size += num_bytes_refilled;
     }
     return ErrorCode_Success;
 }
@@ -98,7 +119,7 @@ ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num
     num_bytes_read = 0;
     size_t num_bytes_to_read_from_buffer {num_bytes_to_read};
     size_t num_bytes_read_from_buffer {0};
-    // keep reading
+    // keep reading until enough data is read or an eof is seen
     while (true) {
         auto error_code = BufferReader::try_read(buf + num_bytes_read,
                                                  num_bytes_to_read_from_buffer,
@@ -113,7 +134,7 @@ ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num
                 break;
             }
             // refill the buffer if more bytes are to be read
-            error_code = refill_reader_buffer();
+            error_code = refill_reader_buffer(m_reader_buffer_size);
             if (ErrorCode_EndOfFile == error_code) {
                 if (num_bytes_read == 0) {
                     return ErrorCode_EndOfFile;
@@ -153,43 +174,38 @@ ErrorCode FileReader::try_seek_from_begin (size_t pos) {
         m_cursor_pos -= (m_file_pos - pos);
         m_file_pos = pos;
     } else {
+        auto buffer_available_data = m_size - m_cursor_pos;
         auto seek_distance = pos - m_file_pos;
-        if (seek_distance <= m_size - m_cursor_pos) {
-            // we can simply seek in the same buffer;
+        if (seek_distance <= buffer_available_data) {
             m_cursor_pos += seek_distance;
             m_file_pos = pos;
+        } else if (false == m_checkpoint_enabled) {
+            auto buffer_aligned_pos = pos & m_reader_buffer_aligned_mask;
+            auto offset = lseek(m_fd, buffer_aligned_pos, SEEK_SET);
+            if (offset == -1) {
+                return ErrorCode_errno;
+            }
+            // invalidate buffered_data by setting size to 0
+            m_size = 0;
+            m_file_pos = pos;
         } else {
-            if (false == m_checkpoint_enabled) {
-                // let's assume we want the read to be always page or buffer aligned
-                auto buffer_aligned_pos = pos & cBufferAlignedMask;
-                auto offset = lseek(m_fd, buffer_aligned_pos, SEEK_SET);
-                if (offset == -1) {
-                    return ErrorCode_errno;
+            size_t num_bytes_to_refill = seek_distance - buffer_available_data;
+            size_t num_bytes_refilled {0};
+            while (true) {
+                auto error_code = refill_reader_buffer(m_reader_buffer_size, num_bytes_refilled);
+                if (ErrorCode_EndOfFile == error_code) {
+                    SPDLOG_ERROR("not expecting to seek pass the Entire file");
+                    throw;
                 }
-                m_size = 0;
-                m_file_pos = pos;
-                // TODO: This line is needed in case
-                m_cursor_pos = m_file_pos & cCursorMask;
-            } else {
-                size_t data_read_remaining = seek_distance;
-                size_t num_bytes_refilled;
-                while (true) {
-                    // keep refilling the buffer
-                    auto error_code = refill_reader_buffer(num_bytes_refilled);
-                    if (ErrorCode_EndOfFile == error_code) {
-                        SPDLOG_ERROR("not expecting to seek pass the Entire file");
-                        throw;
-                    }
-                    else if (ErrorCode_Success != error_code) {
-                        return error_code;
-                    }
-                    if (data_read_remaining <= num_bytes_refilled) {
-                        m_file_pos = pos;
-                        m_cursor_pos += seek_distance;
-                        break;
-                    }
-                    data_read_remaining -= cReaderBufferSize;
+                else if (ErrorCode_Success != error_code) {
+                    return error_code;
                 }
+                if (num_bytes_to_refill <= m_reader_buffer_size) {
+                    m_file_pos = pos;
+                    m_cursor_pos += seek_distance;
+                    break;
+                }
+                num_bytes_to_refill -= num_bytes_refilled;
             }
         }
     }
@@ -210,38 +226,43 @@ ErrorCode FileReader::try_open (const string& path) {
     }
     m_path = path;
     m_file_pos = 0;
-    reset_buffer(m_read_buffer, 0);
+    reset_buffer(m_read_buffer.get(), 0);
     return ErrorCode_Success;
 }
 
-// TODO: optimize this a bit?
 ErrorCode FileReader::try_read_to_delimiter (char delim, bool keep_delimiter,
                                              bool append, string& str) {
-    assert(-1 != m_fd);
+    if (-1 == m_fd) {
+        return ErrorCode_NotInit;
+    }
 
     if (false == append) {
         str.clear();
     }
 
     bool found_delim {false};
-
+    size_t delim_pos;
     while (false == found_delim) {
-        auto cursor {m_cursor_pos};
-        while (cursor < m_size && false == found_delim) {
-            if (delim == m_buffer[cursor]) {
-                found_delim = true;
-            }
-            cursor++;
+        auto remaining_data_size = m_size - m_cursor_pos;
+        // find the pointer pointing to the delimiter
+        const auto* delim_ptr = reinterpret_cast<const int8_t*>(memchr(m_buffer + m_cursor_pos,
+                                                                delim, remaining_data_size));
+        if (delim_ptr != nullptr) {
+            delim_pos = (delim_ptr - m_buffer) + 1;
+            found_delim = true;
+        } else {
+            delim_pos = m_size;
         }
         // append to strings
+        size_t copy_length = delim_pos - m_cursor_pos;
         std::string_view substr(reinterpret_cast<const char*>(m_buffer + m_cursor_pos),
-                                cursor - m_cursor_pos);
+                                copy_length);
         str.append(substr);
-        // increase file pos
-        m_file_pos += cursor - m_cursor_pos;
-        m_cursor_pos = cursor;
+        // increment file pos to the delimiter or the end of file
+        m_file_pos += copy_length;
+        m_cursor_pos = delim_pos;
         if (false == found_delim) {
-            if (auto error_code = refill_reader_buffer();
+            if (auto error_code = refill_reader_buffer(m_reader_buffer_size);
                     ErrorCode_Success != error_code) {
                 return error_code;
             }
@@ -266,7 +287,6 @@ void FileReader::revert_pos() {
         SPDLOG_ERROR("Checkpoint is not enabled");
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
-    // this should have revert the pos to the original buffer pos
     m_file_pos = m_checkpointed_pos;
     m_cursor_pos = m_checkpointed_buffer_pos;
 }
@@ -281,28 +301,55 @@ void FileReader::mark_pos() {
     m_checkpoint_enabled = true;
 }
 
-// let's assume the checkpoint can only be reset if we are already reading
-// recent data
 void FileReader::reset_checkpoint () {
     // alternatively, we can keep claiming back the memory
     if (false == m_checkpoint_enabled) {
         return;
     }
-    if (m_size != cReaderBufferSize) {
-        auto buffer_aligned_copy_pos = m_cursor_pos & cBufferAlignedMask;
-        auto remaining_data_size = m_size - buffer_aligned_copy_pos;
-        auto buffer_quantized_size = (1 + ((remaining_data_size - 1) >> cBufferExp)) << cBufferExp;
-        auto new_buffer = (int8_t*)malloc(sizeof(int8_t) * buffer_quantized_size);
+    if (m_size != m_reader_buffer_size) {
+        // allocate new buffer for buffered data that hasn't been seek passed
+        auto copy_pos = m_cursor_pos & m_reader_buffer_aligned_mask;
+        auto copy_size = m_size - copy_pos;
+        // Use a quantized size for the new buffer size
+        auto new_buffer_size = (1 + ((copy_size - 1) >> m_reader_buffer_exp))
+                                        << m_reader_buffer_exp;
 
-        memcpy(new_buffer, m_buffer + buffer_aligned_copy_pos, remaining_data_size);
-        free(m_read_buffer);
-        m_read_buffer = new_buffer;
+        auto new_buffer = make_unique<int8_t[]>(new_buffer_size);
+        memcpy(new_buffer.get(), m_buffer + copy_pos, copy_size);
+        m_read_buffer = std::move(new_buffer);
+        m_buffer = m_read_buffer.get();
 
-        m_size = remaining_data_size;
-        m_buffer = new_buffer;
-        m_cursor_pos -= buffer_aligned_copy_pos;
+        m_size = copy_size;
+        m_cursor_pos -= copy_pos;
     }
     m_checkpoint_enabled = false;
+}
+
+ErrorCode FileReader::set_buffer_size (size_t buffer_size) {
+    if (m_fd != -1) {
+        SPDLOG_ERROR("Buffer size can not be changed when the file is open");
+        return ErrorCode_Failure;
+    }
+    if (buffer_size == 0) {
+        SPDLOG_ERROR("Buffer size can not be set to 0");
+        return ErrorCode_BadParam;
+    }
+    if (buffer_size % 4096 != 0) {
+        SPDLOG_ERROR("Buffer size {} is not a multiple of page size", buffer_size);
+        return ErrorCode_BadParam;
+    }
+    // Calculate the logarithm base 2 of the number
+    double exponent = log(buffer_size) / log(2);
+    if (ceil(exponent) != floor(exponent)) {
+        SPDLOG_ERROR("Buffer size {} is not a power of 2", buffer_size);
+        return ErrorCode_BadParam;
+    }
+
+    m_reader_buffer_exp = static_cast<size_t>(exponent);
+    m_reader_buffer_size = buffer_size;
+    m_reader_buffer_aligned_mask = ~(m_reader_buffer_size - 1);
+    m_reader_buffer_cursor_mask = m_reader_buffer_size - 1;
+    return ErrorCode_Success;
 }
 
 void FileReader::close () {
@@ -313,8 +360,8 @@ void FileReader::close () {
         m_fd = -1;
 
         if (m_checkpoint_enabled) {
-            // TODO: add a debug log message
-            m_read_buffer = (int8_t*)realloc(m_read_buffer, cReaderBufferSize);
+            SPDLOG_DEBUG("close file without resetting checkpoint");
+            m_read_buffer = make_unique<int8_t[]>(m_reader_buffer_size);
             m_checkpoint_enabled = false;
         }
     }

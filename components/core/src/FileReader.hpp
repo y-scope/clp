@@ -31,10 +31,7 @@ public:
     };
 
     // Constructors
-    FileReader() : m_file_pos(0), m_fd(-1), m_checkpoint_enabled(false)
-    {
-        m_read_buffer = reinterpret_cast<int8_t*>(malloc(sizeof(int8_t) * cReaderBufferSize));
-    }
+    FileReader();
     ~FileReader();
     // Methods implementing the ReaderInterface
     /**
@@ -44,7 +41,7 @@ public:
      * @return ErrorCode_errno on error
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_get_pos (size_t& pos) override;
+    [[nodiscard]] ErrorCode try_get_pos (size_t& pos) override;
     /**
      * Tries to seek from the beginning of the file to the given position
      * @param pos
@@ -52,7 +49,7 @@ public:
      * @return ErrorCode_errno on error
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_seek_from_begin (size_t pos) override;
+    [[nodiscard]] ErrorCode try_seek_from_begin (size_t pos) override;
 
     /**
      * Tries to read up to a given number of bytes from the file
@@ -65,7 +62,8 @@ public:
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) override;
+    [[nodiscard]] ErrorCode try_read (char* buf, size_t num_bytes_to_read,
+                                      size_t& num_bytes_read) override;
 
     /**
      * Tries to read a string from the file until it reaches the specified delimiter
@@ -77,8 +75,8 @@ public:
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_errno otherwise
      */
-    ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter,
-                                     bool append, std::string& str) override;
+    [[nodiscard]] ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter,
+                                                   bool append, std::string& str) override;
 
     // Methods
     [[nodiscard]] bool is_open () const { return -1 != m_fd; }
@@ -90,7 +88,7 @@ public:
      * @return ErrorCode_FileNotFound if the file was not found
      * @return ErrorCode_errno otherwise
      */
-    ErrorCode try_open (const std::string& path);
+    [[nodiscard]] ErrorCode try_open (const std::string& path);
     /**
      * Opens a file
      * @param path
@@ -115,10 +113,11 @@ public:
     void mark_pos();
     void revert_pos();
     void reset_checkpoint ();
+    [[nodiscard]] ErrorCode set_buffer_size(size_t buffer_size);
 
 private:
-    ErrorCode refill_reader_buffer();
-    ErrorCode refill_reader_buffer(size_t& num_bytes_read);
+    [[nodiscard]] ErrorCode refill_reader_buffer(size_t refill_size);
+    [[nodiscard]] ErrorCode refill_reader_buffer(size_t refill_size, size_t& num_bytes_refilled);
 
     // Types
     size_t m_file_pos;
@@ -126,13 +125,11 @@ private:
     std::string m_path;
 
     // Buffer specific data
-    // TODO: either turn this into a unique ptr, or at least use new & delete
-    int8_t* m_read_buffer;
-    int8_t* m_buffer_begin_pos;
-    static constexpr size_t cBufferExp = 16;
-    static constexpr size_t cReaderBufferSize = 1 << cBufferExp;
-    static constexpr size_t cBufferAlignedMask = ~(cReaderBufferSize - 1);
-    static constexpr size_t cCursorMask = cReaderBufferSize - 1;
+    std::unique_ptr<int8_t[]> m_read_buffer;
+    size_t m_reader_buffer_exp;
+    size_t m_reader_buffer_size;
+    size_t m_reader_buffer_aligned_mask;
+    size_t m_reader_buffer_cursor_mask;
     // checkpoint specific data
     bool m_checkpoint_enabled;
     size_t m_checkpointed_pos;
