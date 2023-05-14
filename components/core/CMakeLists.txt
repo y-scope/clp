@@ -630,6 +630,10 @@ target_compile_features(clo
         )
 
 set(SOURCE_FILES_unitTest
+        src/BufferReader.cpp
+        src/BufferReader.hpp
+        src/BufferedFileReader.cpp
+        src/BufferedFileReader.hpp
         src/clp/CommandLineArguments.cpp
         src/clp/CommandLineArguments.hpp
         src/clp/compression.cpp
@@ -817,6 +821,7 @@ set(SOURCE_FILES_unitTest
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
+        tests/test-BufferedFileReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
         tests/test-Grep.cpp
@@ -830,8 +835,6 @@ set(SOURCE_FILES_unitTest
         tests/test-string_utils.cpp
         tests/test-TimestampPattern.cpp
         tests/test-Utils.cpp
-        src/BufferReader.cpp
-        src/BufferReader.hpp
         )
 add_executable(unitTest ${SOURCE_FILES_unitTest})
 target_link_libraries(unitTest

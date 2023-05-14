@@ -9,10 +9,10 @@
 
 // Project headers
 #include "../src/FileWriter.hpp"
-#include "../src/FileReader.hpp"
+#include "../src/BufferedFileReader.hpp"
 #include "../src/Utils.hpp"
 
-TEST_CASE("Test reading data", "[FileReader]") {
+TEST_CASE("Test reading data", "[BufferedFileReader]") {
     ErrorCode error_code;
 
     // Initialize data for testing
@@ -23,7 +23,7 @@ TEST_CASE("Test reading data", "[FileReader]") {
         test_data[i] = (char)('a' + (i % 26));
     }
 
-    std::string test_file_path {"FileReader.test"};
+    std::string test_file_path {"BufferedFileReader.test"};
     // write to test file
     FileWriter file_writer;
     file_writer.open(test_file_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
@@ -31,7 +31,7 @@ TEST_CASE("Test reading data", "[FileReader]") {
     file_writer.close();
 
     SECTION("General read testing") {
-        FileReader file_reader;
+        BufferedFileReader file_reader;
         file_reader.open(test_file_path);
         size_t num_bytes_read {0};
         size_t buffer_offset {0};
@@ -44,7 +44,7 @@ TEST_CASE("Test reading data", "[FileReader]") {
         buffer_offset += num_bytes_read;
 
         // second, read a large chunk of data, so
-        // fileReader will refill the internal buffer
+        // BufferedFileReader will refill the internal buffer
         size_t read_size2 {65538};
         REQUIRE(ErrorCode_Success == file_reader.try_read(read_buffer + buffer_offset, read_size2,
                                                           num_bytes_read));
@@ -68,7 +68,7 @@ TEST_CASE("Test reading data", "[FileReader]") {
     }
 
     SECTION("Simple Seek without checkpoint") {
-        FileReader file_reader;
+        BufferedFileReader file_reader;
         file_reader.open(test_file_path);
 
         // seek to some random position and do a read
@@ -95,7 +95,7 @@ TEST_CASE("Test reading data", "[FileReader]") {
     }
 
     SECTION("Simple seek with checkpoint") {
-        FileReader file_reader;
+        BufferedFileReader file_reader;
         file_reader.open(test_file_path);
 
         // first, read some data to proceed the file_pos
@@ -151,7 +151,7 @@ TEST_CASE("Test reading data", "[FileReader]") {
     }
 
     SECTION("Simple seek with delayed read") {
-        FileReader file_reader;
+        BufferedFileReader file_reader;
         file_reader.open(test_file_path);
 
         // first, read seek to some random file_pos
