@@ -23,11 +23,11 @@ public:
             return "BufferReader operation failed";
         }
     };
-    BufferReader () : m_buffer(nullptr),
+    BufferReader () : m_data(nullptr),
                       m_size(0),
                       m_cursor_pos(0) {}
     BufferReader (const int8_t* data, size_t size) :
-            m_buffer(data),
+            m_data(data),
             m_size(size),
             m_cursor_pos(0) {}
 
@@ -37,7 +37,7 @@ public:
     [[nodiscard]] ErrorCode try_seek_from_begin (size_t pos) override;
     [[nodiscard]] size_t get_buffer_length() { return m_size; }
     void reset_buffer (const int8_t* data, size_t size) {
-        m_buffer = data;
+        m_data = data;
         m_size = size;
         m_cursor_pos = 0;
     }
@@ -52,8 +52,12 @@ public:
     [[nodiscard]] bool try_read_string_view (std::string_view& str_view, size_t read_size);
 
 protected:
-
-    const int8_t* m_buffer;
+    void reset_buffer (const int8_t* data, size_t size, size_t cursor_pos) {
+        m_data = data;
+        m_size = size;
+        m_cursor_pos = cursor_pos;
+    }
+    const int8_t* m_data;
     size_t m_size;
     size_t m_cursor_pos;
 };

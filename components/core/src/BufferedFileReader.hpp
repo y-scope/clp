@@ -17,6 +17,7 @@
 
 class BufferedFileReader : public BufferReader {
 public:
+    static constexpr size_t DefaultBufferSize = 65536;
     // Types
     class OperationFailed : public TraceableException {
     public:
@@ -110,7 +111,7 @@ public:
      */
     [[nodiscard]] ErrorCode try_fstat (struct stat& stat_buffer) const;
 
-    void mark_pos();
+    size_t mark_pos();
     void revert_pos();
     void reset_checkpoint ();
     [[nodiscard]] ErrorCode set_buffer_size(size_t buffer_size);
@@ -132,7 +133,7 @@ private:
     size_t m_reader_buffer_cursor_mask;
     // checkpoint specific data
     bool m_checkpoint_enabled;
-    size_t m_checkpointed_pos;
+    size_t m_checkpoint_pos;
     size_t m_checkpointed_buffer_pos;
 };
 

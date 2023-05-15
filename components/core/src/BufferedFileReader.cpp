@@ -21,8 +21,7 @@ using std::string;
 BufferedFileReader::BufferedFileReader () {
     m_file_pos = 0;
     m_fd = -1;
-    m_checkpoint_enabled = 0;
-    constexpr size_t DefaultBufferSize = 65536;
+    m_checkpoint_enabled = false;
     if (ErrorCode_Success != set_buffer_size(DefaultBufferSize)) {
         throw "Failed to init reader buffer size\n";
     }
@@ -70,45 +69,51 @@ ErrorCode BufferedFileReader::refill_reader_buffer (size_t refill_size) {
     return refill_reader_buffer (refill_size, num_bytes_refilled);
 }
 
-ErrorCode BufferedFileReader::refill_reader_buffer (size_t refill_size, size_t& num_bytes_refilled) {
+ErrorCode BufferedFileReader::refill_reader_buffer (size_t refill_size,
+                                                    size_t& num_bytes_refilled) {
     num_bytes_refilled = 0;
     if (false == m_checkpoint_enabled) {
         // recover from a previous reset
         if (m_size > refill_size) {
             m_read_buffer = make_unique<int8_t[]>(refill_size);
-            m_buffer = m_read_buffer.get();
         }
         auto error_code = try_read_into_buffer(m_fd, m_read_buffer.get(),
                                                refill_size, num_bytes_refilled);
         if (error_code != ErrorCode_Success) {
             return error_code;
         }
-        m_size = num_bytes_refilled;
-        m_cursor_pos = m_file_pos & m_reader_buffer_cursor_mask;
-    } else {
-        if (m_size == 0) {
-            // if buffer is uninitialized, reset the cursor_pos
-            // in case it's after a seek
+        m_cursor_pos = 0;
+        if (m_data == nullptr) {
             m_cursor_pos = m_file_pos & m_reader_buffer_cursor_mask;
+            m_data = m_read_buffer.get();
         }
+        m_size = num_bytes_refilled;
 
+    } else {
         // Messy way of copying data from old buffer to new buffer
         auto new_buffer = make_unique<int8_t[]>(m_size + refill_size);
         memcpy(new_buffer.get(), m_read_buffer.get(), m_size);
         m_read_buffer = std::move(new_buffer);
-        m_buffer = m_read_buffer.get();
-
         auto error_code = try_read_into_buffer(m_fd, m_read_buffer.get() + m_size, refill_size,
                                                num_bytes_refilled);
         if (error_code != ErrorCode_Success) {
             return error_code;
         }
+
+        if (nullptr == m_data) {
+            // if buffer is uninitialized, reset the cursor_pos
+            // in case it's after a seek
+            m_cursor_pos = m_file_pos & m_reader_buffer_cursor_mask;
+        }
+        m_data = m_read_buffer.get();
         m_size += num_bytes_refilled;
+
     }
     return ErrorCode_Success;
 }
 
-ErrorCode BufferedFileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
+ErrorCode BufferedFileReader::try_read (char* buf, size_t num_bytes_to_read,
+                                        size_t& num_bytes_read) {
     if (-1 == m_fd) {
         return ErrorCode_NotInit;
     }
@@ -152,7 +157,6 @@ ErrorCode BufferedFileReader::try_read (char* buf, size_t num_bytes_to_read, siz
     return ErrorCode_Success;
 }
 
-// Maybe everytime, I should always read a page?
 ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
     if (m_fd == -1) {
         return ErrorCode_NotInit;
@@ -167,7 +171,7 @@ ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
             SPDLOG_ERROR("Seek back not allowed when checkpoint is not enabled");
             return ErrorCode_Failure;
         }
-        if (pos < m_checkpointed_pos) {
+        if (pos < m_checkpoint_pos) {
             SPDLOG_ERROR("Seek back before the checkpoint is not supported");
             return ErrorCode_Failure;
         }
@@ -185,8 +189,8 @@ ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
             if (offset == -1) {
                 return ErrorCode_errno;
             }
-            // invalidate buffered_data by setting size to 0
-            m_size = 0;
+            // invalidate buffered_data
+            reset_buffer(nullptr, 0);
             m_file_pos = pos;
         } else {
             size_t num_bytes_to_refill = seek_distance - buffer_available_data;
@@ -245,17 +249,18 @@ ErrorCode BufferedFileReader::try_read_to_delimiter (char delim, bool keep_delim
     while (false == found_delim) {
         auto remaining_data_size = m_size - m_cursor_pos;
         // find the pointer pointing to the delimiter
-        const auto* delim_ptr = reinterpret_cast<const int8_t*>(memchr(m_buffer + m_cursor_pos,
-                                                                delim, remaining_data_size));
+        const auto* delim_ptr =
+                reinterpret_cast<const int8_t*>(memchr(m_data + m_cursor_pos,
+                                                       delim, remaining_data_size));
         if (delim_ptr != nullptr) {
-            delim_pos = (delim_ptr - m_buffer) + 1;
+            delim_pos = (delim_ptr - m_data) + 1;
             found_delim = true;
         } else {
             delim_pos = m_size;
         }
         // append to strings
         size_t copy_length = delim_pos - m_cursor_pos;
-        std::string_view substr(reinterpret_cast<const char*>(m_buffer + m_cursor_pos),
+        std::string_view substr(reinterpret_cast<const char*>(m_data + m_cursor_pos),
                                 copy_length);
         str.append(substr);
         // increment file pos to the delimiter or the end of file
@@ -287,18 +292,19 @@ void BufferedFileReader::revert_pos() {
         SPDLOG_ERROR("Checkpoint is not enabled");
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
-    m_file_pos = m_checkpointed_pos;
+    m_file_pos = m_checkpoint_pos;
     m_cursor_pos = m_checkpointed_buffer_pos;
 }
 
-void BufferedFileReader::mark_pos() {
+size_t BufferedFileReader::mark_pos() {
     if (true == m_checkpoint_enabled) {
         SPDLOG_ERROR("I haven't carefully think about whether we should allow this or not");
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
-    m_checkpointed_pos = m_file_pos;
+    m_checkpoint_pos = m_file_pos;
     m_checkpointed_buffer_pos = m_cursor_pos;
     m_checkpoint_enabled = true;
+    return m_file_pos;
 }
 
 void BufferedFileReader::reset_checkpoint () {
@@ -315,9 +321,9 @@ void BufferedFileReader::reset_checkpoint () {
                                         << m_reader_buffer_exp;
 
         auto new_buffer = make_unique<int8_t[]>(new_buffer_size);
-        memcpy(new_buffer.get(), m_buffer + copy_pos, copy_size);
+        memcpy(new_buffer.get(), m_data + copy_pos, copy_size);
         m_read_buffer = std::move(new_buffer);
-        m_buffer = m_read_buffer.get();
+        m_data = m_read_buffer.get();
 
         m_size = copy_size;
         m_cursor_pos -= copy_pos;
