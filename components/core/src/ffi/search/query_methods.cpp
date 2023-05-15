@@ -45,15 +45,15 @@ namespace ffi::search {
      * @tparam encoded_variable_t Type for encoded variable values
      * @param wildcard_query
      * @param tokens
-     * @param composite_wildcard_tokens Pointers to tokens in @p tokens which
-     * contain wildcards
+     * @param composite_wildcard_token_indexes Indexes of the tokens in \p
+     * tokens which contain wildcards
      */
     template <typename encoded_variable_t>
     static void tokenize_query (
             string_view wildcard_query,
             vector<variant<ExactVariableToken<encoded_variable_t>,
                     CompositeWildcardToken<encoded_variable_t>>>& tokens,
-            vector<CompositeWildcardToken<encoded_variable_t>*>& composite_wildcard_tokens
+            vector<size_t>& composite_wildcard_token_indexes
     );
 
     template<typename encoded_variable_t>
@@ -67,8 +67,8 @@ namespace ffi::search {
 
         vector<variant<ExactVariableToken<encoded_variable_t>,
                 CompositeWildcardToken<encoded_variable_t>>> tokens;
-        vector<CompositeWildcardToken<encoded_variable_t>*> composite_wildcard_tokens;
-        tokenize_query(wildcard_query, tokens, composite_wildcard_tokens);
+        vector<size_t> composite_wildcard_token_indexes;
+        tokenize_query(wildcard_query, tokens, composite_wildcard_token_indexes);
 
         bool all_interpretations_complete = false;
         string logtype_query;
@@ -115,8 +115,9 @@ namespace ffi::search {
 
             // Generate next interpretation if any
             all_interpretations_complete = true;
-            for (auto w : composite_wildcard_tokens) {
-                if (w->generate_next_interpretation()) {
+            for (auto i : composite_wildcard_token_indexes) {
+                auto& w = std::get<CompositeWildcardToken<encoded_variable_t>>(tokens[i]);
+                if (w.generate_next_interpretation()) {
                     all_interpretations_complete = false;
                     break;
                 }
@@ -129,7 +130,7 @@ namespace ffi::search {
             string_view wildcard_query,
             vector<variant<ExactVariableToken<encoded_variable_t>,
                     CompositeWildcardToken<encoded_variable_t>>>& tokens,
-            vector<CompositeWildcardToken<encoded_variable_t>*>& composite_wildcard_tokens
+            vector<size_t>& composite_wildcard_token_indexes
     ) {
         // Tokenize query using delimiters to get definite variables and tokens
         // containing wildcards (potential variables)
@@ -153,12 +154,11 @@ namespace ffi::search {
             if (contains_wildcard) {
                 // Only consider tokens which contain more than just a wildcard
                 if (end_pos - begin_pos > 1) {
-                    auto& token = tokens.emplace_back(
+                    tokens.emplace_back(
                             std::in_place_type<CompositeWildcardToken<encoded_variable_t>>,
                             wildcard_query,
                             begin_pos, end_pos);
-                    composite_wildcard_tokens.push_back(
-                            &std::get<CompositeWildcardToken<encoded_variable_t>>(token));
+                    composite_wildcard_token_indexes.push_back(tokens.size() - 1);
                 }
             } else {
                 string_view variable(wildcard_query.cbegin() + begin_pos, end_pos - begin_pos);
@@ -255,15 +255,13 @@ namespace ffi::search {
             string_view wildcard_query,
             vector<variant<ExactVariableToken<eight_byte_encoded_variable_t>,
                     CompositeWildcardToken<eight_byte_encoded_variable_t>>>& tokens,
-            vector<CompositeWildcardToken<
-                    eight_byte_encoded_variable_t>*>& composite_wildcard_tokens
+            vector<size_t>& composite_wildcard_token_indexes
     );
     template void tokenize_query<ffi::four_byte_encoded_variable_t>(
             string_view wildcard_query,
             vector<variant<ExactVariableToken<four_byte_encoded_variable_t>,
                     CompositeWildcardToken<four_byte_encoded_variable_t>>>& tokens,
-            vector<CompositeWildcardToken<
-                    four_byte_encoded_variable_t>*>& composite_wildcard_tokens
+            vector<size_t>& composite_wildcard_token_indexes
     );
 
 }
