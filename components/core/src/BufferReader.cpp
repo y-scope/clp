@@ -9,7 +9,7 @@
 using std::string_view;
 
 [[nodiscard]] ErrorCode BufferReader::try_get_pos (size_t& pos) {
-    if (nullptr == m_data || 0 == m_size) {
+    if (nullptr == m_data) {
         return ErrorCode_NotInit;
     }
     pos = m_cursor_pos;
@@ -17,7 +17,7 @@ using std::string_view;
 }
 
 [[nodiscard]] ErrorCode BufferReader::try_seek_from_begin (size_t pos) {
-    if (nullptr == m_data || 0 == m_size) {
+    if (nullptr == m_data) {
         return ErrorCode_NotInit;
     }
     if (pos > m_size) {
@@ -28,19 +28,11 @@ using std::string_view;
 }
 
 ErrorCode BufferReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
-    // this is not defined by specifications,
-    // but we need this strong behavior for the upper class
-    num_bytes_read = 0;
-
     if (nullptr == m_data) {
         return ErrorCode_NotInit;
     }
     if (nullptr == buf) {
         return ErrorCode_BadParam;
-    }
-
-    if (m_size == 0 && m_cursor_pos != 0) {
-        return ErrorCode_EndOfFile;
     }
 
     num_bytes_read = std::min(m_size - m_cursor_pos, num_bytes_to_read);
