@@ -11,11 +11,11 @@
 // Project headers
 #include "Defs.h"
 #include "ErrorCode.hpp"
-#include "BufferReader.hpp"
+#include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
 
 
-class BufferedFileReader : public BufferReader {
+class BufferedFileReader : public ReaderInterface {
 public:
     static constexpr size_t DefaultBufferSize = 65536;
     // Types
@@ -117,6 +117,13 @@ public:
     [[nodiscard]] ErrorCode set_buffer_size(size_t buffer_size);
 
 private:
+
+    [[nodiscard]] size_t buffer_remaining_data() {
+        return m_size - m_cursor;
+    }
+    [[nodiscard]] int8_t* buffer_head() {
+        return m_buffer.get() + m_cursor;
+    }
     [[nodiscard]] ErrorCode refill_reader_buffer(size_t refill_size);
     [[nodiscard]] ErrorCode refill_reader_buffer(size_t refill_size, size_t& num_bytes_refilled);
 
@@ -126,7 +133,11 @@ private:
     std::string m_path;
 
     // Buffer specific data
-    std::unique_ptr<int8_t[]> m_read_buffer;
+    std::unique_ptr<int8_t[]> m_buffer;
+    size_t m_size;
+    size_t m_cursor;
+
+    // constant flag
     size_t m_reader_buffer_exp;
     size_t m_reader_buffer_size;
     size_t m_reader_buffer_aligned_mask;

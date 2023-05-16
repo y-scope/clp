@@ -39,6 +39,7 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
         REQUIRE(ErrorCode_Success == file_reader.try_read(read_buffer + buffer_offset, read_size1,
                                                           num_bytes_read));
         REQUIRE(read_size1 == num_bytes_read);
+        REQUIRE(0 == memcmp(read_buffer, test_data, read_size1));
         buffer_offset += num_bytes_read;
 
         // second, read a large chunk of data, so
@@ -47,6 +48,7 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
         REQUIRE(ErrorCode_Success == file_reader.try_read(read_buffer + buffer_offset, read_size2,
                                                           num_bytes_read));
         REQUIRE(read_size2 == num_bytes_read);
+        REQUIRE(0 == memcmp(read_buffer, test_data, read_size1 + read_size2));
         buffer_offset += num_bytes_read;
 
         // third, read remaining data
