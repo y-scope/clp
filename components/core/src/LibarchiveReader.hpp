@@ -51,7 +51,7 @@ public:
      * @return ErrorCode_Success on success
      * @return ErrorCode_Failure on failure
      */
-    ErrorCode try_open (size_t buffer_length, const char* buffer, FileReader& file_reader, const std::string& path_if_compressed_file);
+    ErrorCode try_open (size_t buffer_length, const char* buffer, ReaderInterface& reader, const std::string& path_if_compressed_file);
     /**
      * Closes the reader
      */
@@ -160,7 +160,7 @@ private:
     struct archive_entry* m_archive_entry;
 
     std::vector<char> m_buffer;
-    FileReader* m_file_reader;
+    ReaderInterface* m_file_reader;
     bool m_initial_buffer_content_exhausted;
 
     std::string m_filename_if_compressed;

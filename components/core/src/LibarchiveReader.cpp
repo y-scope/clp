@@ -9,7 +9,7 @@
 // Project headers
 #include "Defs.h"
 
-ErrorCode LibarchiveReader::try_open (size_t buffer_length, const char* buffer, FileReader& file_reader, const std::string& path_if_compressed_file) {
+ErrorCode LibarchiveReader::try_open (size_t buffer_length, const char* buffer, ReaderInterface& reader, const std::string& path_if_compressed_file) {
     // Create and initialize internal libarchive
     m_archive = archive_read_new();
     if (nullptr == m_archive) {
@@ -39,7 +39,7 @@ ErrorCode LibarchiveReader::try_open (size_t buffer_length, const char* buffer, 
     memcpy(m_buffer.data(), buffer, buffer_length);
     m_initial_buffer_content_exhausted = m_buffer.empty();
 
-    m_file_reader = &file_reader;
+    m_file_reader = &reader;
 
     m_filename_if_compressed = path_if_compressed_file;
 
@@ -207,32 +207,14 @@ ErrorCode LibarchiveReader::libarchive_read_callback (const void** buffer, size_
 }
 
 ErrorCode LibarchiveReader::libarchive_skip_callback (off_t num_bytes_to_skip, size_t& num_bytes_skipped) {
-    // Get current position
-    size_t pos;
-    auto error_code = m_file_reader->try_get_pos(pos);
-    if (ErrorCode_Success != error_code) {
+    std::vector<char> temporary_read_buffer;
+    auto error_code = m_file_reader->try_read(temporary_read_buffer.data(), num_bytes_to_skip,
+                                              num_bytes_skipped);
+    if (ErrorCode_EndOfFile == error_code) {
+        num_bytes_skipped = 0;
+    } else if (ErrorCode_Success != error_code) {
         return error_code;
     }
-
-    // Calculate desired position, ensuring its within the file
-    size_t desired_pos = pos + num_bytes_to_skip;
-    struct stat stat_buffer = {};
-    error_code = m_file_reader->try_fstat(stat_buffer);
-    if (ErrorCode_Success != error_code) {
-        return error_code;
-    }
-    if (desired_pos > stat_buffer.st_size) {
-        desired_pos = stat_buffer.st_size;
-    }
-
-    // Seek to desired position
-    error_code = m_file_reader->try_seek_from_begin(desired_pos);
-    if (ErrorCode_Success != error_code) {
-        return error_code;
-    }
-
-    num_bytes_skipped = desired_pos - pos;
-
     return ErrorCode_Success;
 }
 
