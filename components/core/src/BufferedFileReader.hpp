@@ -117,12 +117,10 @@ public:
     [[nodiscard]] ErrorCode set_buffer_size(size_t buffer_size);
 
 private:
-
-    [[nodiscard]] size_t buffer_remaining_data() {
-        return m_size - m_cursor;
-    }
+    [[nodiscard]] size_t cursor_pos() { return m_file_pos - m_buffer_begin_pos; }
+    [[nodiscard]] size_t remaining_data_size();
     [[nodiscard]] int8_t* buffer_head() {
-        return m_buffer.get() + m_cursor;
+        return m_buffer.get() + cursor_pos();
     }
     [[nodiscard]] ErrorCode refill_reader_buffer(size_t refill_size);
     [[nodiscard]] ErrorCode refill_reader_buffer(size_t refill_size, size_t& num_bytes_refilled);
@@ -135,7 +133,7 @@ private:
     // Buffer specific data
     std::unique_ptr<int8_t[]> m_buffer;
     size_t m_size;
-    size_t m_cursor;
+    size_t m_buffer_begin_pos;
 
     // constant flag
     size_t m_reader_buffer_exp;
