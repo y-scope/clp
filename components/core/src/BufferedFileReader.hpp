@@ -17,7 +17,8 @@
 
 class BufferedFileReader : public ReaderInterface {
 public:
-    static constexpr size_t DefaultBufferSize = 65536;
+    static constexpr size_t cDefaultBufferSize = 65536;
+    static constexpr size_t cPageSize = 4096;
     // Types
     class OperationFailed : public TraceableException {
     public:
@@ -111,17 +112,18 @@ public:
      */
     [[nodiscard]] ErrorCode try_fstat (struct stat& stat_buffer) const;
 
+    [[nodiscard]] ErrorCode set_buffer_size(size_t buffer_size);
+
+    [[nodiscard]] ErrorCode is_utf8_encoded(bool& is_utf8);
+
     size_t mark_pos();
     void revert_pos();
     void reset_checkpoint ();
-    [[nodiscard]] ErrorCode set_buffer_size(size_t buffer_size);
 
 private:
-    [[nodiscard]] size_t cursor_pos() { return m_file_pos - m_buffer_begin_pos; }
-    [[nodiscard]] size_t remaining_data_size();
-    [[nodiscard]] int8_t* buffer_head() {
-        return m_buffer.get() + cursor_pos();
-    }
+    [[nodiscard]] size_t cursor_pos() const { return m_file_pos - m_buffer_begin_pos; }
+    [[nodiscard]] size_t remaining_data_size() const;
+    [[nodiscard]] int8_t* buffer_head() const { return m_buffer.get() + cursor_pos(); }
     [[nodiscard]] ErrorCode refill_reader_buffer(size_t refill_size);
     [[nodiscard]] ErrorCode refill_reader_buffer(size_t refill_size, size_t& num_bytes_refilled);
 
@@ -139,11 +141,9 @@ private:
     size_t m_reader_buffer_exp;
     size_t m_reader_buffer_size;
     size_t m_reader_buffer_aligned_mask;
-    size_t m_reader_buffer_cursor_mask;
     // checkpoint specific data
     bool m_checkpoint_enabled;
     size_t m_checkpoint_pos;
-    size_t m_checkpointed_buffer_pos;
 };
 
 

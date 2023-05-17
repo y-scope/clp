@@ -13,17 +13,23 @@
 
 // Project headers
 #include <spdlog/spdlog.h>
+#include "Utils.hpp"
 
 using std::make_unique;
 using std::move;
 using std::string;
 
+static ErrorCode try_read_into_buffer(int fd, int8_t* buffer, size_t num_bytes_to_read,
+                                      size_t& num_bytes_read);
+
 BufferedFileReader::BufferedFileReader () {
     m_file_pos = 0;
     m_fd = -1;
     m_checkpoint_enabled = false;
-    if (ErrorCode_Success != set_buffer_size(DefaultBufferSize)) {
-        throw "Failed to init reader buffer size\n";
+    if (auto error_code = set_buffer_size(cDefaultBufferSize);
+        ErrorCode_Success != error_code) {
+        SPDLOG_ERROR("Failed to init reader buffer size to be {}", cDefaultBufferSize);
+        throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
     m_buffer = make_unique<int8_t[]>(m_reader_buffer_size);
 }
@@ -32,8 +38,7 @@ BufferedFileReader::~BufferedFileReader () {
     close();
 }
 
-size_t BufferedFileReader::remaining_data_size ()
-{
+size_t BufferedFileReader::remaining_data_size () const {
     if (m_size == 0) {
         return 0;
     }
@@ -46,30 +51,6 @@ ErrorCode BufferedFileReader::try_get_pos (size_t& pos) {
         return ErrorCode_NotInit;
     }
     pos = m_file_pos;
-    return ErrorCode_Success;
-}
-
-static ErrorCode try_read_into_buffer(int fd, int8_t* buffer, size_t num_bytes_to_read,
-                                      size_t& num_bytes_read) {
-    num_bytes_read = 0;
-    // keep reading from the fd until seeing a 0, which means eof
-    while (true) {
-        auto bytes_read = ::read(fd, buffer + num_bytes_read, num_bytes_to_read);
-        if (bytes_read == -1) {
-            return ErrorCode_errno;
-        }
-        if (bytes_read == 0) {
-            break;
-        }
-        num_bytes_read += bytes_read;
-        num_bytes_to_read -= bytes_read;
-        if (num_bytes_to_read == 0) {
-            return ErrorCode_Success;
-        }
-    }
-    if (num_bytes_read == 0) {
-        return ErrorCode_EndOfFile;
-    }
     return ErrorCode_Success;
 }
 
@@ -193,6 +174,8 @@ ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
                 if (num_bytes_to_refill <= m_reader_buffer_size) {
                     break;
                 }
+                // do we need to distinguish num_bytes_refilled vs m_reader_buffer_size
+                // since we might anyway terminate the loop?
                 num_bytes_to_refill -= num_bytes_refilled;
             }
         }
@@ -203,6 +186,25 @@ ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
     return ErrorCode_Success;
 }
 
+ErrorCode BufferedFileReader::is_utf8_encoded (bool& is_utf8) {
+    if (-1 == m_fd) {
+        return ErrorCode_NotInit;
+    }
+    if (m_file_pos != 0) {
+        return ErrorCode_Unsupported;
+    }
+    // Refill the buffer if necessary
+    if (0 == m_size) {
+        if (auto error_code = refill_reader_buffer(m_reader_buffer_size);
+                ErrorCode_Success != error_code &&
+                ErrorCode_EndOfFile != error_code) {
+            return error_code;
+        }
+    }
+    auto bytes_to_verify = std::min(cPageSize, m_size);
+    is_utf8 = is_utf8_sequence(bytes_to_verify, reinterpret_cast<const char*>(m_buffer.get()));
+    return ErrorCode_Success;
+}
 
 ErrorCode BufferedFileReader::try_open (const string& path) {
     // Cleanup in case caller forgot to call close before calling this function
@@ -357,6 +359,30 @@ ErrorCode BufferedFileReader::try_fstat (struct stat& stat_buffer) const {
     auto return_value = fstat(m_fd, &stat_buffer);
     if (0 != return_value) {
         return ErrorCode_errno;
+    }
+    return ErrorCode_Success;
+}
+
+static ErrorCode try_read_into_buffer(int fd, int8_t* buffer, size_t num_bytes_to_read,
+                                      size_t& num_bytes_read) {
+    num_bytes_read = 0;
+    // keep reading from the fd until seeing a 0, which means eof
+    while (true) {
+        auto bytes_read = ::read(fd, buffer + num_bytes_read, num_bytes_to_read);
+        if (bytes_read == -1) {
+            return ErrorCode_errno;
+        }
+        if (bytes_read == 0) {
+            break;
+        }
+        num_bytes_read += bytes_read;
+        num_bytes_to_read -= bytes_read;
+        if (num_bytes_to_read == 0) {
+            return ErrorCode_Success;
+        }
+    }
+    if (num_bytes_read == 0) {
+        return ErrorCode_EndOfFile;
     }
     return ErrorCode_Success;
 }

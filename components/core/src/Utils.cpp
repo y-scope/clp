@@ -215,3 +215,37 @@ ErrorCode read_list_of_paths (const string& list_path, vector<string>& paths) {
 
     return ErrorCode_Success;
 }
+
+bool is_utf8_sequence (size_t sequence_length, const char* sequence) {
+    size_t num_utf8_bytes_to_read = 0;
+    for (size_t i = 0; i < sequence_length; ++i) {
+        auto byte = sequence[i];
+
+        if (num_utf8_bytes_to_read > 0) {
+            // Validate that byte matches 0b10xx_xxxx
+            if ((byte & 0xC0) != 0x80) {
+                return false;
+            }
+            --num_utf8_bytes_to_read;
+        } else {
+            if (byte & 0x80) {
+                // Check if byte is valid UTF-8 length-indicator
+                if ((byte & 0xF8) == 0xF0) {
+                    // Matches 0b1111_0xxx
+                    num_utf8_bytes_to_read = 3;
+                } else if ((byte & 0xF0) == 0xE0) {
+                    // Matches 0b1110_xxxx
+                    num_utf8_bytes_to_read = 2;
+                } else if ((byte & 0xE0) == 0xC0) {
+                    // Matches 0b110x_xxxx
+                    num_utf8_bytes_to_read = 1;
+                } else {
+                    // Invalid UTF-8 length-indicator
+                    return false;
+                }
+            } // else byte is ASCII
+        }
+    }
+
+    return true;
+}

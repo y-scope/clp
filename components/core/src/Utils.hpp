@@ -108,4 +108,12 @@ std::string get_unambiguous_path (const std::string& path);
  */
 ErrorCode read_list_of_paths (const std::string& list_path, std::vector<std::string>& paths);
 
+/**
+ * Checks if the given sequence is valid UTF-8
+ * @param sequence_length
+ * @param sequence
+ * @return true if valid, false otherwise
+ */
+bool is_utf8_sequence (size_t sequence_length, const char* sequence);
+
 #endif // UTILS_HPP

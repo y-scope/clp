@@ -13,6 +13,7 @@
 
 // Project headers
 #include "../Profiler.hpp"
+#include "../Utils.hpp"
 #include "utils.hpp"
 
 using std::cout;
