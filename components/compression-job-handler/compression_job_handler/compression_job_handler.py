@@ -448,9 +448,6 @@ def main(argv):
         finally:
             if lock.is_locked:
                 lock.release()
-            else:
-                logger.error("failed to acquire lock")
-                return
 
         
         # Configure file system directory locations   # TODO: refactor with better comment
