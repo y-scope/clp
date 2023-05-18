@@ -25,6 +25,14 @@ namespace clp {
                                                std::vector<std::string>& empty_directory_paths);
 
     /**
+     * Checks if the given sequence is valid UTF-8
+     * @param sequence_length
+     * @param sequence
+     * @return true if valid, false otherwise
+     */
+    bool is_utf8_sequence (size_t sequence_length, const char* sequence);
+
+    /**
      * Reads a list of input paths
      * @param list_path
      * @param paths

@@ -159,6 +159,8 @@ FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 set(SOURCE_FILES_clp
         src/ArrayBackedPosIntSet.cpp
         src/ArrayBackedPosIntSet.hpp
+        src/BufferedFileReader.cpp
+        src/BufferedFileReader.hpp
         src/BufferReader.cpp
         src/BufferReader.hpp
         src/clp/clp.cpp

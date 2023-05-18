@@ -13,7 +13,6 @@
 
 // Project headers
 #include "../Profiler.hpp"
-#include "../Utils.hpp"
 #include "utils.hpp"
 
 using std::cout;
@@ -91,12 +90,13 @@ namespace clp {
         m_file_reader.open(file_to_compress.get_path());
 
         // Check that file is UTF-8 encoded
-        auto error_code = m_file_reader.try_read(m_utf8_validation_buf, cUtf8ValidationBufCapacity, m_utf8_validation_buf_length);
-        if (ErrorCode_Success != error_code) {
-            if (ErrorCode_EndOfFile != error_code) {
-                SPDLOG_ERROR("Failed to read {}, errno={}", file_to_compress.get_path().c_str(), errno);
-                return false;
-            }
+        if (auto error_code = m_file_reader.peek_buffered_data(cUtf8ValidationBufCapacity,
+                                                               m_utf8_validation_buf,
+                                                               m_utf8_validation_buf_length);
+            ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code) {
+            SPDLOG_ERROR("Failed to peek data from {}, errno={}",
+                         file_to_compress.get_path().c_str(), errno);
+            return error_code;
         }
         bool succeeded = true;
         if (is_utf8_sequence(m_utf8_validation_buf_length, m_utf8_validation_buf)) {
@@ -140,7 +140,6 @@ namespace clp {
         // TODO: decide what to actually do about this
         // for now reset reader rather than try reading m_utf8_validation_buf as it would be
         // very awkward to combine sources to/in the parser
-        reader.seek_from_begin(0);
         m_log_parser->set_archive_writer_ptr(&archive_writer);
         m_log_parser->get_archive_writer_ptr()->old_ts_pattern.clear();
         try {
@@ -172,19 +171,7 @@ namespace clp {
         // Open compressed file
         archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
 
-        // Parse content from UTF-8 validation buffer
-        size_t buf_pos = 0;
-        while (m_message_parser.parse_next_message(false, m_utf8_validation_buf_length, m_utf8_validation_buf, buf_pos, m_parsed_message)) {
-            if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
-                split_file_and_archive(archive_user_config, path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer);
-            } else if (archive_writer.get_file().get_encoded_size_in_bytes() >= target_encoded_file_size) {
-                split_file(path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer);
-            }
-
-            write_message_to_encoded_file(m_parsed_message, archive_writer);
-        }
-
-        // Parse remaining content from file
+        // Parse content from file
         while (m_message_parser.parse_next_message(true, reader, m_parsed_message)) {
             if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
                 split_file_and_archive(archive_user_config, path_for_compression, group_id, m_parsed_message.get_ts_patt(), archive_writer);
@@ -214,7 +201,7 @@ namespace clp {
         }
 
         // Check if it's an archive
-        auto error_code = m_libarchive_reader.try_open(m_utf8_validation_buf_length, m_utf8_validation_buf, m_file_reader, filename_if_compressed);
+        auto error_code = m_libarchive_reader.try_open(m_file_reader, filename_if_compressed);
         if (ErrorCode_Success != error_code) {
             SPDLOG_ERROR("Cannot compress {} - failed to open with libarchive.", file_to_compress.get_path().c_str());
             return false;
@@ -262,12 +249,14 @@ namespace clp {
             }
 
             m_libarchive_reader.open_file_reader(m_libarchive_file_reader);
-
+            error_code = m_libarchive_file_reader.peek_data_block(cUtf8ValidationBufCapacity,
+                                                                  m_utf8_validation_buf,
+                                                                  m_utf8_validation_buf_length);
             // Check that file is UTF-8 encoded
-            error_code = m_libarchive_file_reader.try_read(m_utf8_validation_buf, cUtf8ValidationBufCapacity, m_utf8_validation_buf_length);
             if (ErrorCode_Success != error_code) {
                 if (ErrorCode_EndOfFile != error_code) {
-                    SPDLOG_ERROR("Failed to read {} from {}.", m_libarchive_reader.get_path(), file_to_compress.get_path().c_str());
+                    SPDLOG_ERROR("Failed to peek data from {}, errno={}",
+                                 file_to_compress.get_path().c_str(), errno);
                     m_libarchive_file_reader.close();
                     succeeded = false;
                     continue;

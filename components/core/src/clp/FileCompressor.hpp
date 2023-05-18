@@ -5,7 +5,7 @@
 #include <boost/uuid/random_generator.hpp>
 
 // Project headers
-#include "../FileReader.hpp"
+#include "../BufferedFileReader.hpp"
 #include "../LibarchiveFileReader.hpp"
 #include "../LibarchiveReader.hpp"
 #include "../MessageParser.hpp"
@@ -77,10 +77,10 @@ namespace clp {
 
         // Variables
         boost::uuids::random_generator& m_uuid_generator;
-        FileReader m_file_reader;
+        BufferedFileReader m_file_reader;
         LibarchiveReader m_libarchive_reader;
         LibarchiveFileReader m_libarchive_file_reader;
-        char m_utf8_validation_buf[cUtf8ValidationBufCapacity];
+        const char* m_utf8_validation_buf;
         size_t m_utf8_validation_buf_length;
         MessageParser m_message_parser;
         ParsedMessage m_parsed_message;

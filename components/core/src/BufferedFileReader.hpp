@@ -18,7 +18,6 @@
 class BufferedFileReader : public ReaderInterface {
 public:
     static constexpr size_t cDefaultBufferSize = 65536;
-    static constexpr size_t cPageSize = 4096;
     // Types
     class OperationFailed : public TraceableException {
     public:
@@ -113,9 +112,8 @@ public:
     [[nodiscard]] ErrorCode try_fstat (struct stat& stat_buffer) const;
 
     [[nodiscard]] ErrorCode set_buffer_size(size_t buffer_size);
-
-    [[nodiscard]] ErrorCode is_utf8_encoded(bool& is_utf8);
-
+    [[nodiscard]] ErrorCode peek_buffered_data(size_t size_to_peek, const char*& data_ptr,
+                                               size_t& peek_size);
     size_t mark_pos();
     void revert_pos();
     void reset_checkpoint ();

@@ -167,6 +167,62 @@ ErrorCode LibarchiveFileReader::try_read_to_delimiter (char delim, bool keep_del
     return ErrorCode_Success;
 }
 
+ErrorCode LibarchiveFileReader::peek_data_block (size_t size_to_peek, const char*& data_ptr,
+                                                 size_t& peek_size) {
+    if (nullptr == m_archive) {
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+    }
+    if (nullptr == m_archive_entry) {
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+    }
+
+    // Read a data block if necessary
+    if (nullptr == m_data_block) {
+        auto error_code = read_next_data_block();
+        if (ErrorCode_Success != error_code) {
+            data_ptr = nullptr;
+            peek_size = 0;
+            return error_code;
+        }
+    }
+
+    // If we don't need to simulate reading '\0' before the start of the data block
+    // simply return a const& to the current data block
+    if (m_data_block_pos_in_file <= m_pos_in_file) {
+        peek_size = std::min(size_to_peek, m_data_block_length - m_pos_in_data_block);
+        data_ptr = reinterpret_cast<const char*>(m_data_block);
+        return ErrorCode_Success;
+    }
+
+    // If there are sparse bytes before the data block, the pos in data block
+    // must be 0
+    assert(m_pos_in_data_block != 0);
+
+    auto num_sparse_bytes = m_data_block_pos_in_file - m_pos_in_file;
+    peek_size = std::min(num_sparse_bytes + m_data_block_length, size_to_peek);
+
+    // resize the local buffer is necessary
+    if (m_peek_data_size < peek_size) {
+        m_data_for_peek = std::make_unique<char[]>(peek_size);
+        m_peek_data_size = peek_size;
+    }
+    data_ptr = reinterpret_cast<const char*>(m_data_for_peek.get());
+
+    if (size_to_peek < num_sparse_bytes) {
+        memset(m_data_for_peek.get(), '\0', size_to_peek);
+        return ErrorCode_Success;
+    }
+
+    // if size to peek is greater than number of sparse bytes,
+    // copy over the data from data_block to the peek data buffer
+    memset(m_data_for_peek.get(), '\0', num_sparse_bytes);
+    size_t remaining_bytes_to_peek = peek_size - num_sparse_bytes;
+    const char* data = reinterpret_cast<const char*>(m_data_block);
+    memcpy(&m_data_for_peek[num_sparse_bytes], data, remaining_bytes_to_peek);
+
+    return ErrorCode_Success;
+}
+
 void LibarchiveFileReader::open (struct archive* archive, struct archive_entry* archive_entry) {
     if (nullptr == archive) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);

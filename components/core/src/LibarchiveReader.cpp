@@ -9,7 +9,7 @@
 // Project headers
 #include "Defs.h"
 
-ErrorCode LibarchiveReader::try_open (size_t buffer_length, const char* buffer, ReaderInterface& reader, const std::string& path_if_compressed_file) {
+ErrorCode LibarchiveReader::try_open (ReaderInterface& file_reader, const std::string& path_if_compressed_file) {
     // Create and initialize internal libarchive
     m_archive = archive_read_new();
     if (nullptr == m_archive) {
@@ -34,17 +34,11 @@ ErrorCode LibarchiveReader::try_open (size_t buffer_length, const char* buffer, 
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
 
-    // Copy initial buffer content
-    m_buffer.resize(buffer_length);
-    memcpy(m_buffer.data(), buffer, buffer_length);
-    m_initial_buffer_content_exhausted = m_buffer.empty();
-
-    m_file_reader = &reader;
-
+    m_file_reader = &file_reader;
     m_filename_if_compressed = path_if_compressed_file;
 
-
-    return_value = archive_read_open2(m_archive, this, libarchive_open_callback, libarchive_read_callback, libarchive_skip_callback,
+    return_value = archive_read_open2(m_archive, this, libarchive_open_callback,
+                                      libarchive_read_callback, libarchive_skip_callback,
                                       libarchive_close_callback);
     if (ARCHIVE_OK != return_value) {
         SPDLOG_DEBUG("Failed to open libarchive - {}", archive_error_string(m_archive));
@@ -186,27 +180,23 @@ ErrorCode LibarchiveReader::libarchive_read_callback (const void** buffer, size_
     if (false == m_is_opened_by_libarchive) {
         return ErrorCode_NotInit;
     }
-
-    if (false == m_initial_buffer_content_exhausted) {
-        *buffer = m_buffer.data();
-        num_bytes_read = m_buffer.size();
-        m_initial_buffer_content_exhausted = true;
-    } else {
-        constexpr size_t cTargetBufferLength = 4096;
-        m_buffer.resize(cTargetBufferLength);
-        auto error_code = m_file_reader->try_read(m_buffer.data(), cTargetBufferLength, num_bytes_read);
-        if (ErrorCode_Success != error_code) {
-            return error_code;
-        }
-        if (num_bytes_read < cTargetBufferLength) {
-            m_buffer.resize(num_bytes_read);
-        }
+    constexpr size_t cTargetBufferLength = 4096;
+    m_buffer.resize(cTargetBufferLength);
+    auto error_code = m_file_reader->try_read(m_buffer.data(), cTargetBufferLength, num_bytes_read);
+    if (ErrorCode_Success != error_code) {
+        return error_code;
     }
-
+    if (num_bytes_read < cTargetBufferLength) {
+        m_buffer.resize(num_bytes_read);
+    }
+    *buffer = m_buffer.data();
     return ErrorCode_Success;
 }
 
-ErrorCode LibarchiveReader::libarchive_skip_callback (off_t num_bytes_to_skip, size_t& num_bytes_skipped) {
+ErrorCode LibarchiveReader::libarchive_skip_callback (off_t num_bytes_to_skip,
+                                                      size_t& num_bytes_skipped) {
+
+    // skip bytes by simply reading data into a temporary buffer
     std::vector<char> temporary_read_buffer;
     auto error_code = m_file_reader->try_read(temporary_read_buffer.data(), num_bytes_to_skip,
                                               num_bytes_skipped);

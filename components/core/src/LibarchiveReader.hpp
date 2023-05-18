@@ -43,15 +43,13 @@ public:
 
     // Methods
     /**
-     * Tries to open the archive or compressed file contained across the given buffer and FileReader
-     * @param buffer_length
-     * @param buffer
+     * Tries to open the archive or compressed file contained in the FileReader
      * @param file_reader
      * @param path_if_compressed_file Path to use if the data is a single compressed file
      * @return ErrorCode_Success on success
      * @return ErrorCode_Failure on failure
      */
-    ErrorCode try_open (size_t buffer_length, const char* buffer, ReaderInterface& reader, const std::string& path_if_compressed_file);
+    ErrorCode try_open (ReaderInterface& file_reader, const std::string& path_if_compressed_file);
     /**
      * Closes the reader
      */

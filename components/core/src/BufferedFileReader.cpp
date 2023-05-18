@@ -186,23 +186,22 @@ ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
     return ErrorCode_Success;
 }
 
-ErrorCode BufferedFileReader::is_utf8_encoded (bool& is_utf8) {
+ErrorCode BufferedFileReader::peek_buffered_data (size_t size_to_peek, const char*& data_ptr,
+                                                  size_t& peek_size) {
     if (-1 == m_fd) {
         return ErrorCode_NotInit;
     }
-    if (m_file_pos != 0) {
-        return ErrorCode_Unsupported;
-    }
     // Refill the buffer if necessary
     if (0 == m_size) {
-        if (auto error_code = refill_reader_buffer(m_reader_buffer_size);
-                ErrorCode_Success != error_code &&
-                ErrorCode_EndOfFile != error_code) {
+        auto error_code = refill_reader_buffer(m_reader_buffer_size);
+        if (ErrorCode_Success != error_code) {
+            data_ptr = nullptr;
+            peek_size = 0;
             return error_code;
         }
     }
-    auto bytes_to_verify = std::min(cPageSize, m_size);
-    is_utf8 = is_utf8_sequence(bytes_to_verify, reinterpret_cast<const char*>(m_buffer.get()));
+    peek_size = std::min(size_to_peek, remaining_data_size());
+    data_ptr = reinterpret_cast<const char*>(buffer_head());
     return ErrorCode_Success;
 }
 

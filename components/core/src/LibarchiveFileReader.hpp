@@ -2,6 +2,7 @@
 #define LIBARCHIVEFILEREADER_HPP
 
 // C++ standard libraries
+#include <memory>
 #include <string>
 
 // libarchive
@@ -30,7 +31,8 @@ public:
     };
 
     // Constructors
-    LibarchiveFileReader () : m_archive(nullptr), m_archive_entry(nullptr), m_data_block(nullptr), m_reached_eof(false), m_pos_in_file(0) {}
+    LibarchiveFileReader () : m_archive(nullptr), m_archive_entry(nullptr), m_data_block(nullptr),
+                              m_reached_eof(false), m_pos_in_file(0), m_peek_data_size(0) {}
 
     // Methods implementing the ReaderInterface
     /**
@@ -69,6 +71,17 @@ public:
      */
     ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter, bool append, std::string& str) override;
 
+    /**
+     * Tries to peek up to a given number of bytes from the file.
+     * Note: This function only tries to peek within the next data block.
+     * @param size_to_peek
+     * @param data_ptr
+     * @param peek_size
+     * @return ErrorCode_EndOfFile on EOF
+     * @return ErrorCode_Failure on failure
+     * @return ErrorCode_Success on success
+     */
+    [[nodiscard]] ErrorCode peek_data_block(size_t size_to_peek, const char*& data_ptr, size_t& peek_size);
     // Methods
     /**
      * Opens the file reader
@@ -98,6 +111,8 @@ private:
     la_int64_t m_data_block_pos_in_file;
     const void* m_data_block;
     size_t m_data_block_length;
+    std::unique_ptr<char[]> m_data_for_peek;
+    size_t m_peek_data_size;
     la_int64_t m_pos_in_data_block;
     bool m_reached_eof;
 
