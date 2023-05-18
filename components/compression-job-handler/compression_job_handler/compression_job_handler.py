@@ -444,7 +444,7 @@ def main(argv):
             lock.acquire(timeout=10)
         except TimeoutError as e:
             logger.error("failed to acquire lock in 10s", e)
-            return
+            sys.exit(1)
         finally:
             if lock.is_locked:
                 lock.release()
