@@ -11,6 +11,7 @@ import msgpack
 import zstandard
 import zstandard as zstd
 from pydantic import ValidationError
+from filelock import FileLock
 
 from clp_py_utils.clp_config import CLPConfig
 from clp_py_utils.compression import FileMetadata, FilesPartition, \
@@ -425,6 +426,7 @@ def main(argv):
     args_parser.add_argument('--no-progress-reporting', action='store_true', help='Disables progress reporting.')
     args_parser.add_argument('--config', '-c', required=True, help='CLP configuration file.')
     args_parser.add_argument('--log-list-path', required=True, help='File containing list of input files to compress')
+    args_parser.add_argument('--lock-file-path', required=True, help='lock file path')
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Load configuration
@@ -437,6 +439,20 @@ def main(argv):
         # read_yaml_config_file already logs the parsing error inside
         pass
     else:
+        lock = FileLock(str(pathlib.Path(parsed_args.lock_file_path).resolve()))
+        try:
+            lock.acquire(timeout=10)
+        except TimeoutError as e:
+            logger.error("failed to acquire lock in 10s", e)
+            return
+        finally:
+            if lock.is_locked:
+                lock.release()
+            else:
+                logger.error("failed to acquire lock")
+                return
+
+        
         # Configure file system directory locations   # TODO: refactor with better comment
         fs_logs_required_parent_dir = pathlib.Path(parsed_args.fs_logs_required_parent_dir)
 
