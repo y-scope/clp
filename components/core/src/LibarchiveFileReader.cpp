@@ -202,20 +202,19 @@ ErrorCode LibarchiveFileReader::peek_data_block (size_t size_to_peek, const char
     peek_size = std::min(num_sparse_bytes + m_data_block_length, size_to_peek);
 
     // resize the local buffer is necessary
-    if (m_peek_data_size < peek_size) {
-        m_data_for_peek = std::make_unique<char[]>(peek_size);
-        m_peek_data_size = peek_size;
+    if (m_data_for_peek.size() < peek_size) {
+        m_data_for_peek.resize(peek_size);
     }
-    data_ptr = reinterpret_cast<const char*>(m_data_for_peek.get());
+    data_ptr = reinterpret_cast<const char*>(m_data_for_peek.data());
 
     if (size_to_peek < num_sparse_bytes) {
-        memset(m_data_for_peek.get(), '\0', size_to_peek);
+        memset(m_data_for_peek.data(), '\0', size_to_peek);
         return ErrorCode_Success;
     }
 
     // if size to peek is greater than number of sparse bytes,
     // copy over the data from data_block to the peek data buffer
-    memset(m_data_for_peek.get(), '\0', num_sparse_bytes);
+    memset(m_data_for_peek.data(), '\0', num_sparse_bytes);
     size_t remaining_bytes_to_peek = peek_size - num_sparse_bytes;
     const char* data = reinterpret_cast<const char*>(m_data_block);
     memcpy(&m_data_for_peek[num_sparse_bytes], data, remaining_bytes_to_peek);

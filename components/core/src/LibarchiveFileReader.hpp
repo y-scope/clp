@@ -4,6 +4,7 @@
 // C++ standard libraries
 #include <memory>
 #include <string>
+#include <vector>
 
 // libarchive
 #include <archive.h>
@@ -32,7 +33,7 @@ public:
 
     // Constructors
     LibarchiveFileReader () : m_archive(nullptr), m_archive_entry(nullptr), m_data_block(nullptr),
-                              m_reached_eof(false), m_pos_in_file(0), m_peek_data_size(0) {}
+                              m_reached_eof(false), m_pos_in_file(0) {}
 
     // Methods implementing the ReaderInterface
     /**
@@ -111,8 +112,7 @@ private:
     la_int64_t m_data_block_pos_in_file;
     const void* m_data_block;
     size_t m_data_block_length;
-    std::unique_ptr<char[]> m_data_for_peek;
-    size_t m_peek_data_size;
+    std::vector<char> m_data_for_peek;
     la_int64_t m_pos_in_data_block;
     bool m_reached_eof;
 
