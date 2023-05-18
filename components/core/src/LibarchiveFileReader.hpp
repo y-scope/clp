@@ -2,7 +2,6 @@
 #define LIBARCHIVEFILEREADER_HPP
 
 // C++ standard libraries
-#include <memory>
 #include <string>
 #include <vector>
 
