@@ -463,9 +463,6 @@ namespace ffi::ir_stream {
     }
 
     IRErrorCode get_encoding_type (BufferReader& ir_buf, bool& is_four_bytes_encoding) {
-        if (ir_buf.get_buffer_length() == 0) {
-            return IRErrorCode_Incomplete_IR;
-        }
         char buffer[cProtocol::MagicNumberLength];
         size_t num_bytes_read;
         auto error_code = ir_buf.try_read(buffer, cProtocol::MagicNumberLength, num_bytes_read);

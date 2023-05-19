@@ -37,7 +37,6 @@ public:
      * data to decode
      **/
     [[nodiscard]] bool try_read_string_view (std::string_view& str_view, size_t read_size);
-    [[nodiscard]] size_t get_buffer_length() { return m_size; }
     void reset_buffer (const char* data, size_t size) {
         m_data = data;
         m_size = size;
