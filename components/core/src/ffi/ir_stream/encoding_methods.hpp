@@ -59,6 +59,25 @@ namespace ffi::ir_stream {
          */
         bool encode_message (epoch_time_ms_t timestamp_delta, std::string_view message,
                              std::string& logtype, std::vector<int8_t>& ir_buf);
+
+        /**
+         * Encodes the given message into the four-byte encoding IR stream
+         * without encoding timestamp delta
+         * @param message
+         * @param logtype
+         * @param ir_buf
+         * @return true on success, false otherwise
+         */
+        bool encode_message (std::string_view message, std::string& logtype,
+                             std::vector<int8_t>& ir_buf);
+
+        /**
+         * Encodes the given timestamp delta into the four-byte encoding IR stream
+         * @param timestamp_delta
+         * @param ir_buf
+         * @return true on success, false otherwise
+         */
+        bool encode_timestamp (epoch_time_ms_t timestamp_delta, std::vector<int8_t>& ir_buf);
     }
 }
 
