@@ -268,20 +268,18 @@ namespace ffi::ir_stream {
         bool encode_message (epoch_time_ms_t timestamp_delta, string_view message, string& logtype,
                              vector<int8_t>& ir_buf)
         {
-            if (!encode_message(message, logtype, ir_buf)) {
+            if (false == encode_message(message, logtype, ir_buf)) {
                 return false;
             }
 
-            if (!encode_timestamp(timestamp_delta, ir_buf)) {
+            if (false == encode_timestamp(timestamp_delta, ir_buf)) {
                 return false;
             }
 
             return true;
         }
 
-        bool encode_message (std::string_view message, std::string& logtype,
-                             std::vector<int8_t>& ir_buf)
-        {
+        bool encode_message (string_view message, string& logtype, vector<int8_t>& ir_buf) {
             auto encoded_var_handler = [&ir_buf] (four_byte_encoded_variable_t encoded_var) {
                 ir_buf.push_back(cProtocol::Payload::VarFourByteEncoding);
                 encode_int(encoded_var, ir_buf);

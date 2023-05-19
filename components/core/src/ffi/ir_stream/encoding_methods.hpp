@@ -72,7 +72,8 @@ namespace ffi::ir_stream {
                              std::vector<int8_t>& ir_buf);
 
         /**
-         * Encodes the given timestamp delta into the four-byte encoding IR stream
+         * Encodes the given timestamp delta into the four-byte encoding IR
+         * stream
          * @param timestamp_delta
          * @param ir_buf
          * @return true on success, false otherwise
