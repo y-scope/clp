@@ -179,6 +179,15 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
                                                           num_byte_read));
         REQUIRE(num_bytes_to_read == num_byte_read);
         REQUIRE(0 == memcmp(read_buffer, test_data + seek_pos, num_bytes_to_read));
+
+        // test a seek that reaches the end of the file
+        num_bytes_to_read = 500;
+        seek_pos = test_data_size - num_bytes_to_read;
+        REQUIRE(ErrorCode_Success == file_reader.try_seek_from_begin(seek_pos));
+        REQUIRE(ErrorCode_Success == file_reader.try_read(read_buffer, num_bytes_to_read,
+                                                          num_byte_read));
+        REQUIRE(num_bytes_to_read == num_byte_read);
+        REQUIRE(0 == memcmp(read_buffer, test_data + seek_pos, num_bytes_to_read));
     }
 
     delete[] test_data;

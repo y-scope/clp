@@ -37,14 +37,6 @@ BufferedFileReader::~BufferedFileReader () {
     close();
 }
 
-size_t BufferedFileReader::remaining_data_size () const {
-    if (m_data_size == 0) {
-        return 0;
-    }
-    assert(m_data_size >= cursor_pos());
-    return m_data_size - cursor_pos();
-}
-
 ErrorCode BufferedFileReader::try_get_pos (size_t& pos) {
     if (-1 == m_fd) {
         return ErrorCode_NotInit;
@@ -53,39 +45,57 @@ ErrorCode BufferedFileReader::try_get_pos (size_t& pos) {
     return ErrorCode_Success;
 }
 
-ErrorCode BufferedFileReader::refill_reader_buffer (size_t refill_size) {
-    size_t num_bytes_refilled;
-    return refill_reader_buffer (refill_size, num_bytes_refilled);
-}
-
-ErrorCode BufferedFileReader::refill_reader_buffer (size_t refill_size,
-                                                    size_t& num_bytes_refilled) {
-    num_bytes_refilled = 0;
-    if (false == m_checkpoint_enabled) {
-        // recover from a previous reset
-        if (m_data_size > refill_size) {
-            m_buffer = make_unique<char[]>(refill_size);
-        }
-        auto error_code = try_read_into_buffer(m_fd, m_buffer.get(),
-                                               refill_size, num_bytes_refilled);
-        if (error_code != ErrorCode_Success) {
-            return error_code;
-        }
-        m_buffer_begin_pos = m_file_pos & m_buffer_aligned_mask;
-        m_data_size = num_bytes_refilled;
-    } else {
-        // Messy way of copying data from old buffer to new buffer
-        auto new_buffer = make_unique<char[]>(m_data_size + refill_size);
-        memcpy(new_buffer.get(), m_buffer.get(), m_data_size);
-        auto error_code = try_read_into_buffer(m_fd, &new_buffer[m_data_size], refill_size,
-                                               num_bytes_refilled);
-        m_buffer = std::move(new_buffer);
-        if (error_code != ErrorCode_Success) {
-            return error_code;
-        }
-        m_data_size += num_bytes_refilled;
-
+ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
+    if (m_fd == -1) {
+        return ErrorCode_NotInit;
     }
+    if (pos == m_file_pos) {
+        return ErrorCode_Success;
+    }
+
+    if (pos <= m_file_pos) {
+        if (false == m_checkpoint_enabled) {
+            SPDLOG_ERROR("Error: Seek back when checkpoint is not enabled");
+            return ErrorCode_Failure;
+        }
+        if (pos < m_checkpoint_pos) {
+            SPDLOG_ERROR("Error: trying to seek to {} which is ahead of checkpoint: {}",
+                         pos, m_checkpoint_pos);
+            return ErrorCode_Failure;
+        }
+    } else {
+        auto buffer_available_data = remaining_data_size();
+        auto seek_distance = pos - m_file_pos;
+        if (seek_distance <= buffer_available_data) {
+            m_file_pos = pos;
+            return ErrorCode_Success;
+        }
+        // Handle the case where buffer doesn't contain enough data for seek
+        if (false == m_checkpoint_enabled) {
+            m_buffer_begin_pos = pos & m_buffer_aligned_mask;
+            auto offset = lseek(m_fd, m_buffer_begin_pos, SEEK_SET);
+            if (offset == -1) {
+                return ErrorCode_errno;
+            }
+            // invalidate buffered_data
+            m_data_size = 0;
+        } else {
+            size_t num_bytes_to_refill = pos - (m_buffer_begin_pos + m_data_size);
+            size_t quantized_refill_size = quantize_to_buffer_size(num_bytes_to_refill);
+
+            size_t num_bytes_refilled {0};
+            auto error_code = refill_reader_buffer(quantized_refill_size, num_bytes_refilled);
+            if (ErrorCode_EndOfFile == error_code || num_bytes_refilled < num_bytes_to_refill) {
+                SPDLOG_ERROR("not expecting to seek pass the Entire file");
+                throw OperationFailed(ErrorCode_EndOfFile, __FILENAME__, __LINE__);
+            }
+            if (ErrorCode_Success != error_code) {
+                return error_code;
+            }
+        }
+    }
+
+    m_file_pos = pos;
     return ErrorCode_Success;
 }
 
@@ -128,103 +138,8 @@ ErrorCode BufferedFileReader::try_read (char* buf, size_t num_bytes_to_read,
     return ErrorCode_Success;
 }
 
-ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
-    if (m_fd == -1) {
-        return ErrorCode_NotInit;
-    }
-    if (pos == m_file_pos) {
-        return ErrorCode_Success;
-    }
-
-    if (pos <= m_file_pos) {
-        if (false == m_checkpoint_enabled) {
-            SPDLOG_ERROR("Error: Seek back when checkpoint is not enabled");
-            return ErrorCode_Failure;
-        }
-        if (pos < m_checkpoint_pos) {
-            SPDLOG_ERROR("Error: trying to seek to {} which is ahead of checkpoint: {}",
-                         pos, m_checkpoint_pos);
-            return ErrorCode_Failure;
-        }
-    } else {
-        auto buffer_available_data = remaining_data_size();
-        auto seek_distance = pos - m_file_pos;
-        if (seek_distance <= buffer_available_data) {
-            m_file_pos = pos;
-            return ErrorCode_Success;
-        }
-        // Handle the case where buffer doesn't contain enough data for seek
-        if (false == m_checkpoint_enabled) {
-            m_buffer_begin_pos = pos & m_buffer_aligned_mask;
-            auto offset = lseek(m_fd, m_buffer_begin_pos, SEEK_SET);
-            if (offset == -1) {
-                return ErrorCode_errno;
-            }
-            // invalidate buffered_data
-            m_data_size = 0;
-        } else {
-            // Note: we can safely assume that m_size will be a multiple of
-            // m_reader_buffer_size. if m_size is not a multiple of
-            // m_reader_buffer_size, if must mean the file has reached EoF
-            // and the code will throw an error anyway
-            size_t num_bytes_to_refill = pos - m_buffer_begin_pos + m_data_size;
-            size_t quantizied_refill_size =
-                    (1 + ((num_bytes_to_refill - 1) >> m_buffer_exp)) << m_buffer_exp;
-            size_t num_bytes_refilled {0};
-            auto error_code = refill_reader_buffer(quantizied_refill_size, num_bytes_refilled);
-            if (ErrorCode_EndOfFile == error_code || num_bytes_refilled < num_bytes_to_refill) {
-                SPDLOG_ERROR("not expecting to seek pass the Entire file");
-                throw OperationFailed(ErrorCode_EndOfFile, __FILENAME__, __LINE__);
-            }
-            if (ErrorCode_Success != error_code) {
-                return error_code;
-            }
-        }
-    }
-
-    m_file_pos = pos;
-    return ErrorCode_Success;
-}
-
-ErrorCode BufferedFileReader::peek_buffered_data (size_t size_to_peek, const char*& data_ptr,
-                                                  size_t& peek_size) {
-    if (-1 == m_fd) {
-        return ErrorCode_NotInit;
-    }
-    // Refill the buffer if necessary
-    if (0 == m_data_size) {
-        auto error_code = refill_reader_buffer(m_buffer_size);
-        if (ErrorCode_Success != error_code) {
-            data_ptr = nullptr;
-            peek_size = 0;
-            return error_code;
-        }
-    }
-    peek_size = std::min(size_to_peek, remaining_data_size());
-    data_ptr = reinterpret_cast<const char*>(buffer_head());
-    return ErrorCode_Success;
-}
-
-ErrorCode BufferedFileReader::try_open (const string& path) {
-    // Cleanup in case caller forgot to call close before calling this function
-    close();
-
-    m_fd = ::open(path.c_str(), O_RDONLY);
-    if (-1 == m_fd) {
-        if (ENOENT == errno) {
-            return ErrorCode_FileNotFound;
-        }
-        return ErrorCode_errno;
-    }
-    m_path = path;
-    m_file_pos = 0;
-    m_data_size = 0;
-    m_buffer_begin_pos = 0;
-    return ErrorCode_Success;
-}
-
 ErrorCode BufferedFileReader::try_read_to_delimiter (char delim, bool keep_delimiter,
-                                             bool append, string& str) {
+                                                     bool append, string& str) {
     if (-1 == m_fd) {
         return ErrorCode_NotInit;
     }
@@ -260,6 +175,24 @@ ErrorCode BufferedFileReader::try_read_to_delimiter (char delim, bool keep_delim
     return ErrorCode_Success;
 }
 
+ErrorCode BufferedFileReader::try_open (const string& path) {
+    // Cleanup in case caller forgot to call close before calling this function
+    close();
+
+    m_fd = ::open(path.c_str(), O_RDONLY);
+    if (-1 == m_fd) {
+        if (ENOENT == errno) {
+            return ErrorCode_FileNotFound;
+        }
+        return ErrorCode_errno;
+    }
+    m_path = path;
+    m_file_pos = 0;
+    m_data_size = 0;
+    m_buffer_begin_pos = 0;
+    return ErrorCode_Success;
+}
+
 void BufferedFileReader::open (const string& path) {
     ErrorCode error_code = try_open(path);
     if (ErrorCode_Success != error_code) {
@@ -269,6 +202,33 @@ void BufferedFileReader::open (const string& path) {
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
     }
+}
+
+void BufferedFileReader::close () {
+    if (-1 != m_fd) {
+        // NOTE: We don't check errors for fclose since it seems
+        // the only reason it could fail is if it was interrupted by a signal
+        ::close(m_fd);
+        m_fd = -1;
+
+        if (m_checkpoint_enabled) {
+            SPDLOG_DEBUG("close file without resetting checkpoint");
+            m_buffer = make_unique<char[]>(m_buffer_size);
+            m_checkpoint_enabled = false;
+        }
+    }
+}
+
+ErrorCode BufferedFileReader::try_fstat (struct stat& stat_buffer) const {
+    if (-1 == m_fd) {
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+    }
+
+    auto return_value = fstat(m_fd, &stat_buffer);
+    if (0 != return_value) {
+        return ErrorCode_errno;
+    }
+    return ErrorCode_Success;
 }
 
 void BufferedFileReader::revert_pos() {
@@ -299,7 +259,7 @@ void BufferedFileReader::reset_checkpoint () {
         auto copy_pos = cursor_pos() & m_buffer_aligned_mask;
         m_data_size -= copy_pos;
         // Use a quantized size for the new buffer size
-        auto new_buffer_size = (1 + ((m_data_size - 1) >> m_buffer_exp)) << m_buffer_exp;
+        auto new_buffer_size = quantize_to_buffer_size(m_data_size);
 
         auto new_buffer = make_unique<char[]>(new_buffer_size);
         memcpy(new_buffer.get(), &m_buffer[copy_pos], m_data_size);
@@ -335,32 +295,73 @@ ErrorCode BufferedFileReader::set_buffer_size (size_t buffer_size) {
     return ErrorCode_Success;
 }
 
-void BufferedFileReader::close () {
-    if (-1 != m_fd) {
-        // NOTE: We don't check errors for fclose since it seems
-        // the only reason it could fail is if it was interrupted by a signal
-        ::close(m_fd);
-        m_fd = -1;
-
-        if (m_checkpoint_enabled) {
-            SPDLOG_DEBUG("close file without resetting checkpoint");
-            m_buffer = make_unique<char[]>(m_buffer_size);
-            m_checkpoint_enabled = false;
+ErrorCode BufferedFileReader::peek_buffered_data (size_t size_to_peek, const char*& data_ptr,
+                                                  size_t& peek_size) {
+    if (-1 == m_fd) {
+        return ErrorCode_NotInit;
+    }
+    // Refill the buffer if necessary
+    if (0 == m_data_size) {
+        auto error_code = refill_reader_buffer(m_buffer_size);
+        if (ErrorCode_Success != error_code) {
+            data_ptr = nullptr;
+            peek_size = 0;
+            return error_code;
         }
     }
+    peek_size = std::min(size_to_peek, remaining_data_size());
+    data_ptr = reinterpret_cast<const char*>(buffer_head());
+    return ErrorCode_Success;
 }
 
-ErrorCode BufferedFileReader::try_fstat (struct stat& stat_buffer) const {
-    if (-1 == m_fd) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+size_t BufferedFileReader::remaining_data_size () const {
+    if (m_data_size == 0) {
+        return 0;
     }
+    assert(m_data_size >= cursor_pos());
+    return m_data_size - cursor_pos();
+}
 
-    auto return_value = fstat(m_fd, &stat_buffer);
-    if (0 != return_value) {
-        return ErrorCode_errno;
+size_t BufferedFileReader::quantize_to_buffer_size (size_t size) {
+    return (1 + ((size - 1) >> m_buffer_exp)) << m_buffer_exp;
+}
+
+ErrorCode BufferedFileReader::refill_reader_buffer (size_t refill_size) {
+    size_t num_bytes_refilled;
+    return refill_reader_buffer (refill_size, num_bytes_refilled);
+}
+
+ErrorCode BufferedFileReader::refill_reader_buffer (size_t refill_size,
+                                                    size_t& num_bytes_refilled) {
+    num_bytes_refilled = 0;
+    if (false == m_checkpoint_enabled) {
+        // recover from a previous reset if necessary
+        if (m_data_size > refill_size) {
+            m_buffer = make_unique<char[]>(refill_size);
+        }
+        auto error_code = try_read_into_buffer(m_fd, m_buffer.get(),
+                                               refill_size, num_bytes_refilled);
+        if (error_code != ErrorCode_Success) {
+            return error_code;
+        }
+        m_buffer_begin_pos = m_file_pos & m_buffer_aligned_mask;
+        m_data_size = num_bytes_refilled;
+    } else {
+        // Messy way of copying data from old buffer to new buffer
+        auto new_buffer = make_unique<char[]>(m_data_size + refill_size);
+        memcpy(new_buffer.get(), m_buffer.get(), m_data_size);
+        auto error_code = try_read_into_buffer(m_fd, &new_buffer[m_data_size], refill_size,
+                                               num_bytes_refilled);
+        if (error_code != ErrorCode_Success) {
+            return error_code;
+        }
+        m_buffer = std::move(new_buffer);
+        m_data_size += num_bytes_refilled;
+
     }
     return ErrorCode_Success;
 }
+
 
 static ErrorCode try_read_into_buffer(int fd, char* buffer, size_t num_bytes_to_read,
                                       size_t& num_bytes_read) {

@@ -120,11 +120,12 @@ public:
 
 private:
     [[nodiscard]] size_t cursor_pos() const { return m_file_pos - m_buffer_begin_pos; }
-    [[nodiscard]] size_t remaining_data_size() const;
     [[nodiscard]] char* buffer_head() const { return m_buffer.get() + cursor_pos(); }
+
+    [[nodiscard]] size_t remaining_data_size() const;
+    [[nodiscard]] size_t quantize_to_buffer_size(size_t size);
     [[nodiscard]] ErrorCode refill_reader_buffer(size_t refill_size);
     [[nodiscard]] ErrorCode refill_reader_buffer(size_t refill_size, size_t& num_bytes_refilled);
-
     // Types
     size_t m_file_pos;
     int m_fd;
