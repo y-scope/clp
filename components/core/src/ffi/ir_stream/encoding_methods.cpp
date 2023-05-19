@@ -268,6 +268,18 @@ namespace ffi::ir_stream {
         bool encode_message (epoch_time_ms_t timestamp_delta, string_view message, string& logtype,
                              vector<int8_t>& ir_buf)
         {
+            if (false == encode_message(message, logtype, ir_buf)) {
+                return false;
+            }
+
+            if (false == encode_timestamp(timestamp_delta, ir_buf)) {
+                return false;
+            }
+
+            return true;
+        }
+
+        bool encode_message (string_view message, string& logtype, vector<int8_t>& ir_buf) {
             auto encoded_var_handler = [&ir_buf] (four_byte_encoded_variable_t encoded_var) {
                 ir_buf.push_back(cProtocol::Payload::VarFourByteEncoding);
                 encode_int(encoded_var, ir_buf);
@@ -284,7 +296,10 @@ namespace ffi::ir_stream {
                 return false;
             }
 
-            // Encode timestamp delta
+            return true;
+        }
+
+        bool encode_timestamp (epoch_time_ms_t timestamp_delta, std::vector<int8_t>& ir_buf) {
             if (INT8_MIN <= timestamp_delta && timestamp_delta <= INT8_MAX) {
                 ir_buf.push_back(cProtocol::Payload::TimestampDeltaByte);
                 ir_buf.push_back(static_cast<int8_t>(timestamp_delta));
