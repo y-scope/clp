@@ -121,7 +121,7 @@ public:
 private:
     [[nodiscard]] size_t cursor_pos() const { return m_file_pos - m_buffer_begin_pos; }
     [[nodiscard]] size_t remaining_data_size() const;
-    [[nodiscard]] int8_t* buffer_head() const { return m_buffer.get() + cursor_pos(); }
+    [[nodiscard]] char* buffer_head() const { return m_buffer.get() + cursor_pos(); }
     [[nodiscard]] ErrorCode refill_reader_buffer(size_t refill_size);
     [[nodiscard]] ErrorCode refill_reader_buffer(size_t refill_size, size_t& num_bytes_refilled);
 
@@ -131,14 +131,14 @@ private:
     std::string m_path;
 
     // Buffer specific data
-    std::unique_ptr<int8_t[]> m_buffer;
-    size_t m_size;
+    std::unique_ptr<char[]> m_buffer;
+    size_t m_data_size;
     size_t m_buffer_begin_pos;
 
-    // constant flag
-    size_t m_reader_buffer_exp;
-    size_t m_reader_buffer_size;
-    size_t m_reader_buffer_aligned_mask;
+    // constant
+    size_t m_buffer_exp;
+    size_t m_buffer_size;
+    size_t m_buffer_aligned_mask;
     // checkpoint specific data
     bool m_checkpoint_enabled;
     size_t m_checkpoint_pos;
