@@ -374,9 +374,6 @@ namespace ffi::ir_stream {
         if (false == ir_buf.try_read(metadata_type)) {
             return IRErrorCode_Incomplete_IR;
         }
-        if (metadata_type != cProtocol::Metadata::EncodingJson) {
-            return IRErrorCode_Corrupted_IR;
-        }
 
         // Read metadata length
         encoded_tag_t encoded_tag;

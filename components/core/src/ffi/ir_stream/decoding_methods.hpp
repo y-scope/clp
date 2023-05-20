@@ -30,7 +30,7 @@ namespace ffi::ir_stream {
         // The following methods should only be used by the decoder
         void init_internal_pos () { m_internal_cursor_pos = m_cursor_pos; }
         void commit_internal_pos () { m_cursor_pos = m_internal_cursor_pos; }
-        size_t const size () const { return m_size; }
+        size_t size () const { return m_size; }
 
         /**
          * Tries reading a string view of size = read_size from the ir_buf.
@@ -79,15 +79,6 @@ namespace ffi::ir_stream {
         size_t m_internal_cursor_pos;
     };
 
-    /**
-     * Struct to hold the timestamp info from the IR stream's metadata
-     */
-    struct TimestampInfo {
-        std::string timestamp_pattern;
-        std::string timestamp_pattern_syntax;
-        std::string time_zone_id;
-    };
-
     typedef enum {
         IRErrorCode_Success,
         IRErrorCode_Decode_Error,
@@ -110,7 +101,7 @@ namespace ffi::ir_stream {
     IRErrorCode get_encoding_type (IrBuffer& ir_buf, bool& is_four_bytes_encoding);
 
     /**
-     * Decodes the preamble for the eight-byte encoding IR stream.
+     * Decodes the preamble for an IR stream.
      * @param ir_buf
      * @param metadata_type Returns the type of the metadata found in the IR
      * @param metadata_pos Returns the starting position of the metadata in ir_buf
@@ -119,8 +110,6 @@ namespace ffi::ir_stream {
      * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
      * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough
      * data to decode
-     * @return IRErrorCode_Unsupported_Version if the IR uses an unsupported
-     * version
      */
     IRErrorCode decode_preamble (IrBuffer& ir_buf, encoded_tag_t& metadata_type,
                                  size_t& metadata_pos, uint16_t& metadata_size);

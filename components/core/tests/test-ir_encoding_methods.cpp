@@ -2,7 +2,7 @@
 #include "../submodules/Catch2/single_include/catch2/catch.hpp"
 
 // json
-#include "../../../submodules/json/single_include/nlohmann/json.hpp"
+#include "../submodules/json/single_include/nlohmann/json.hpp"
 
 // Project headers
 #include "../src/ffi/encoding_methods.hpp"
@@ -26,7 +26,6 @@ using ffi::ir_stream::cProtocol::MagicNumberLength;
 using ffi::ir_stream::get_encoding_type;
 using ffi::ir_stream::IrBuffer;
 using ffi::ir_stream::IRErrorCode;
-using ffi::ir_stream::TimestampInfo;
 using ffi::VariablePlaceholder;
 using ffi::wildcard_query_matches_any_encoded_var;
 using std::chrono::duration_cast;
@@ -97,6 +96,15 @@ bool encode_message (epoch_time_ms_t timestamp, string_view message, string& log
  */
 template <typename encoded_variable_t>
 IRErrorCode decode_next_message (IrBuffer& ir_buf, string& message, epoch_time_ms_t& decoded_ts);
+
+/**
+ * Struct to hold the timestamp info from the IR stream's metadata
+ */
+struct TimestampInfo {
+    std::string timestamp_pattern;
+    std::string timestamp_pattern_syntax;
+    std::string time_zone_id;
+};
 
 /**
  * Extracts timestamp info from the JSON metadata and stores it into ts_info
@@ -266,8 +274,8 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(encoded_preamble_end_pos == preamble_buffer.get_cursor_pos());
 
-    string_view json_metadata;
-    REQUIRE(preamble_buffer.try_read(json_metadata, metadata_size));
+    char* metadata_ptr{reinterpret_cast<char *>(ir_buf.data()) + metadata_pos};
+    string_view json_metadata{metadata_ptr, metadata_size};
     auto metadata_json = nlohmann::json::parse(json_metadata);
     REQUIRE(ffi::ir_stream::cProtocol::Metadata::VersionValue ==
             metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey));
