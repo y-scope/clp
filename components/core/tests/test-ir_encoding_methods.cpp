@@ -6,6 +6,7 @@
 #include "../src/ffi/ir_stream/encoding_methods.hpp"
 #include "../src/ffi/ir_stream/decoding_methods.hpp"
 #include "../src/ffi/ir_stream/protocol_constants.hpp"
+#include "../src/BufferReader.hpp"
 
 using ffi::decode_float_var;
 using ffi::decode_integer_var;
@@ -21,7 +22,6 @@ using ffi::ir_stream::cProtocol::EightByteEncodingMagicNumber;
 using ffi::ir_stream::cProtocol::FourByteEncodingMagicNumber;
 using ffi::ir_stream::cProtocol::MagicNumberLength;
 using ffi::ir_stream::get_encoding_type;
-using ffi::ir_stream::IrBuffer;
 using ffi::ir_stream::IRErrorCode;
 using ffi::ir_stream::TimestampInfo;
 using ffi::VariablePlaceholder;
@@ -80,7 +80,7 @@ bool encode_preamble (string_view timestamp_pattern,
  * encoded_variable_t == four_byte_encoded_variable_t
  */
 template <typename encoded_variable_t>
-IRErrorCode decode_preamble (IrBuffer& ir_buf, TimestampInfo& ts_info,
+IRErrorCode decode_preamble (BufferReader& ir_buf, TimestampInfo& ts_info,
                              epoch_time_ms_t& reference_ts);
 
 /**
@@ -111,7 +111,7 @@ bool encode_message (epoch_time_ms_t timestamp, string_view message, string& log
  * encoded_variable_t == four_byte_encoded_variable_t
  */
 template <typename encoded_variable_t>
-IRErrorCode decode_next_message (IrBuffer& ir_buf, string& message, epoch_time_ms_t& decoded_ts);
+IRErrorCode decode_next_message (BufferReader& ir_buf, string& message, epoch_time_ms_t& decoded_ts);
 
 static epoch_time_ms_t get_current_ts () {
     return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
@@ -167,7 +167,7 @@ bool encode_preamble (string_view timestamp_pattern,
 }
 
 template <typename encoded_variable_t>
-IRErrorCode decode_preamble (IrBuffer& ir_buf, TimestampInfo& ts_info,
+IRErrorCode decode_preamble (BufferReader& ir_buf, TimestampInfo& ts_info,
                              epoch_time_ms_t& reference_ts)
 {
     static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> ||
@@ -196,7 +196,7 @@ bool encode_message (epoch_time_ms_t timestamp, string_view message, string& log
 }
 
 template <typename encoded_variable_t>
-IRErrorCode decode_next_message (IrBuffer& ir_buf, string& message, epoch_time_ms_t& decoded_ts) {
+IRErrorCode decode_next_message (BufferReader& ir_buf, string& message, epoch_time_ms_t& decoded_ts) {
     static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> ||
                   is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
 
@@ -211,14 +211,15 @@ IRErrorCode decode_next_message (IrBuffer& ir_buf, string& message, epoch_time_m
 
 TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
     bool is_four_bytes_encoding;
-
+    BufferReader ir_buffer;
     // Test eight-byte encoding
     vector<int8_t> eight_byte_encoding_vec{EightByteEncodingMagicNumber,
                                            EightByteEncodingMagicNumber + MagicNumberLength};
 
-    IrBuffer eight_byte_ir_buffer(eight_byte_encoding_vec.data(),
-                                  eight_byte_encoding_vec.size());
-    REQUIRE(get_encoding_type(eight_byte_ir_buffer, is_four_bytes_encoding) ==
+    // Test eight-byte encoding
+    ir_buffer.reset_buffer(reinterpret_cast<const char*>(eight_byte_encoding_vec.data()),
+                           eight_byte_encoding_vec.size());
+    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<eight_byte_encoded_variable_t>(is_four_bytes_encoding));
 
@@ -226,27 +227,29 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
     vector<int8_t> four_byte_encoding_vec{FourByteEncodingMagicNumber,
                                           FourByteEncodingMagicNumber + MagicNumberLength};
 
-    IrBuffer four_byte_ir_buffer(four_byte_encoding_vec.data(),
-                                 four_byte_encoding_vec.size());
-    REQUIRE(get_encoding_type(four_byte_ir_buffer, is_four_bytes_encoding) ==
+    ir_buffer.reset_buffer(reinterpret_cast<const char*>(four_byte_encoding_vec.data()),
+                           four_byte_encoding_vec.size());
+    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<four_byte_encoded_variable_t>(is_four_bytes_encoding));
 
     // Test error on empty and incomplete ir_buffer
     const vector<int8_t> empty_ir_vec;
-    IrBuffer empty_ir_buffer(empty_ir_vec.data(), empty_ir_vec.size());
-    REQUIRE(get_encoding_type(empty_ir_buffer, is_four_bytes_encoding) ==
+    ir_buffer.reset_buffer(reinterpret_cast<const char*>(empty_ir_vec.data()),
+                           empty_ir_vec.size());
+    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Incomplete_IR);
 
-    IrBuffer incomplete_ir_buffer(four_byte_encoding_vec.data(),
-                                  four_byte_encoding_vec.size() - 1);
-    REQUIRE(get_encoding_type(incomplete_ir_buffer, is_four_bytes_encoding) ==
+    ir_buffer.reset_buffer(reinterpret_cast<const char*>(four_byte_encoding_vec.data()),
+                           four_byte_encoding_vec.size() - 1);
+    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Incomplete_IR);
 
     // Test error on invalid encoding
     const vector<int8_t> invalid_ir_vec{0x02, 0x43, 0x24, 0x34};
-    IrBuffer invalid_ir_buffer(invalid_ir_vec.data(), invalid_ir_vec.size());
-    REQUIRE(get_encoding_type(invalid_ir_buffer, is_four_bytes_encoding) ==
+    ir_buffer.reset_buffer(reinterpret_cast<const char*>(invalid_ir_vec.data()),
+                           invalid_ir_vec.size());
+    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Corrupted_IR);
 
 }
@@ -255,6 +258,7 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
                    eight_byte_encoded_variable_t)
 {
     vector<int8_t> ir_buf;
+    BufferReader ir_buffer;
     constexpr char timestamp_pattern[] = "%Y-%m-%d %H:%M:%S,%3";
     constexpr char timestamp_pattern_syntax[] = "yyyy-MM-dd HH:mm:ss";
     constexpr char time_zone_id[] = "Asia/Tokyo";
@@ -264,37 +268,37 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
     const size_t encoded_preamble_end_pos = ir_buf.size();
 
     // Check if encoding type is properly read
-    IrBuffer preamble_buffer(ir_buf.data(), ir_buf.size());
+    ir_buffer.reset_buffer(reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size());
     bool is_four_bytes_encoding;
-    REQUIRE(get_encoding_type(preamble_buffer, is_four_bytes_encoding) ==
+    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<TestType>(is_four_bytes_encoding));
-    REQUIRE(MagicNumberLength == preamble_buffer.get_cursor_pos());
+    REQUIRE(MagicNumberLength == ir_buffer.get_pos());
 
     // Test if preamble can be decoded correctly
     TimestampInfo ts_info;
     epoch_time_ms_t decoded_ts;
-    REQUIRE(decode_preamble<TestType>(preamble_buffer, ts_info, decoded_ts) ==
+    REQUIRE(decode_preamble<TestType>(ir_buffer, ts_info, decoded_ts) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);
     REQUIRE(time_zone_id == ts_info.time_zone_id);
     REQUIRE(timestamp_pattern == ts_info.timestamp_pattern);
-    REQUIRE(encoded_preamble_end_pos == preamble_buffer.get_cursor_pos());
+    REQUIRE(encoded_preamble_end_pos == ir_buffer.get_pos());
     if constexpr (is_same_v<TestType, four_byte_encoded_variable_t>) {
         REQUIRE(reference_ts == decoded_ts);
     }
 
     // Test if incomplete IR can be detected
     ir_buf.resize(encoded_preamble_end_pos - 1);
-    IrBuffer incomplete_preamble_buffer(ir_buf.data(), ir_buf.size());
-    incomplete_preamble_buffer.set_cursor_pos(MagicNumberLength);
-    REQUIRE(decode_preamble<TestType>(incomplete_preamble_buffer, ts_info, decoded_ts) ==
+    ir_buffer.reset_buffer(reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size());
+    ir_buffer.seek_from_begin(MagicNumberLength);
+    REQUIRE(decode_preamble<TestType>(ir_buffer, ts_info, decoded_ts) ==
             IRErrorCode::IRErrorCode_Incomplete_IR);
 
     // Test if corrupted IR can be detected
     ir_buf[MagicNumberLength] = 0x23;
-    IrBuffer corrupted_preamble_buffer(ir_buf.data(), ir_buf.size());
-    REQUIRE(decode_preamble<TestType>(corrupted_preamble_buffer, ts_info, decoded_ts) ==
+    ir_buffer.seek_from_begin(MagicNumberLength);
+    REQUIRE(decode_preamble<TestType>(ir_buffer, ts_info, decoded_ts) ==
             IRErrorCode::IRErrorCode_Corrupted_IR);
 }
 
@@ -302,6 +306,7 @@ TEMPLATE_TEST_CASE("decode_next_message_general", "[ffi][decode_next_message]",
                    four_byte_encoded_variable_t, eight_byte_encoded_variable_t)
 {
     vector<int8_t> ir_buf;
+    BufferReader ir_buffer;
     string logtype;
 
     string placeholder_as_string{enum_to_underlying_type(VariablePlaceholder::Dictionary)};
@@ -312,24 +317,27 @@ TEMPLATE_TEST_CASE("decode_next_message_general", "[ffi][decode_next_message]",
     const size_t encoded_message_end_pos = ir_buf.size();
     const size_t encoded_message_start_pos = 0;
 
-    IrBuffer encoded_message_buffer(ir_buf.data(), ir_buf.size());
+    // Test if message can be decoded properly
+    ir_buffer.reset_buffer(reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size());
     string decoded_message;
     epoch_time_ms_t timestamp;
 
     REQUIRE(IRErrorCode::IRErrorCode_Success ==
-            decode_next_message<TestType>(encoded_message_buffer, decoded_message, timestamp));
+            decode_next_message<TestType>(ir_buffer, decoded_message, timestamp));
     REQUIRE(message == decoded_message);
     REQUIRE(timestamp == reference_timestamp);
-    REQUIRE(encoded_message_buffer.get_cursor_pos() == encoded_message_end_pos);
+    REQUIRE(ir_buffer.get_pos() == encoded_message_end_pos);
 
-    encoded_message_buffer.set_cursor_pos(encoded_message_start_pos + 1);
+    // Test corrupted IR
+    ir_buffer.seek_from_begin(encoded_message_start_pos + 1);
     REQUIRE(IRErrorCode::IRErrorCode_Corrupted_IR ==
-            decode_next_message<TestType>(encoded_message_buffer, message, timestamp));
+            decode_next_message<TestType>(ir_buffer, message, timestamp));
 
+    // Test incomplete IR
     ir_buf.resize(encoded_message_end_pos - 4);
-    IrBuffer incomplete_message_buffer(ir_buf.data(), ir_buf.size());
+    ir_buffer.reset_buffer(reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size());
     REQUIRE(IRErrorCode::IRErrorCode_Incomplete_IR ==
-            decode_next_message<TestType>(incomplete_message_buffer, message, timestamp));
+            decode_next_message<TestType>(ir_buffer, message, timestamp));
 }
 
 // NOTE: This test only tests eight_byte_encoded_variable_t because we trigger
@@ -338,6 +346,7 @@ TEMPLATE_TEST_CASE("decode_next_message_general", "[ffi][decode_next_message]",
 TEST_CASE("message_decode_error", "[ffi][decode_next_message]")
 {
     vector<int8_t> ir_buf;
+    BufferReader ir_buffer;
     string logtype;
 
     string placeholder_as_string{enum_to_underlying_type(VariablePlaceholder::Dictionary)};
@@ -357,22 +366,23 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]")
     epoch_time_ms_t timestamp;
 
     // Test if a trailing escape triggers a decoder error
-    auto ir_with_extra_escape{ir_buf};
+    auto ir_with_extra_escape {ir_buf};
     ir_with_extra_escape.at(logtype_end_pos - 1) = ffi::cVariablePlaceholderEscapeCharacter;
-    IrBuffer ir_buffer_with_extra_escape(ir_with_extra_escape.data(), ir_with_extra_escape.size());
+    ir_buffer.reset_buffer(reinterpret_cast<const char*>(ir_with_extra_escape.data()),
+                           ir_with_extra_escape.size());
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error ==
-            decode_next_message<eight_byte_encoded_variable_t>(ir_buffer_with_extra_escape,
-                                                               decoded_message, timestamp));
+            decode_next_message<eight_byte_encoded_variable_t>(ir_buffer, decoded_message,
+                                                               timestamp));
 
     // Test if an extra placeholder triggers a decoder error
     auto ir_with_extra_placeholder{ir_buf};
     ir_with_extra_placeholder.at(logtype_end_pos - 1) =
             enum_to_underlying_type(VariablePlaceholder::Dictionary);
-    IrBuffer ir_buffer_with_extra_placeholder(ir_with_extra_escape.data(),
-                                              ir_with_extra_escape.size());
+    ir_buffer.reset_buffer(reinterpret_cast<const char*>(ir_with_extra_placeholder.data()),
+                           ir_with_extra_placeholder.size());
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error ==
-            decode_next_message<eight_byte_encoded_variable_t>(ir_buffer_with_extra_placeholder,
-                                                               decoded_message, timestamp));
+            decode_next_message<eight_byte_encoded_variable_t>(ir_buffer, decoded_message,
+                                                               timestamp));
 }
 
 TEST_CASE("decode_next_message_four_byte_negative_delta", "[ffi][decode_next_message]") {
@@ -385,12 +395,12 @@ TEST_CASE("decode_next_message_four_byte_negative_delta", "[ffi][decode_next_mes
     REQUIRE(true == encode_message<four_byte_encoded_variable_t>(reference_delta_ts_negative,
                                                                  message, logtype, ir_buf));
 
-    IrBuffer encoded_message_buffer(ir_buf.data(), ir_buf.size());
+    BufferReader ir_buffer(reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size());
     string decoded_message;
     epoch_time_ms_t delta_ts;
     REQUIRE(IRErrorCode::IRErrorCode_Success ==
-            decode_next_message<four_byte_encoded_variable_t>(encoded_message_buffer,
-                                                              decoded_message, delta_ts));
+            decode_next_message<four_byte_encoded_variable_t>(ir_buffer, decoded_message,
+                                                              delta_ts));
     REQUIRE(message == decoded_message);
     REQUIRE(delta_ts == reference_delta_ts_negative);
 }
@@ -398,6 +408,7 @@ TEST_CASE("decode_next_message_four_byte_negative_delta", "[ffi][decode_next_mes
 TEMPLATE_TEST_CASE("decode_ir_complete", "[ffi][decode_next_message]",
                    four_byte_encoded_variable_t, eight_byte_encoded_variable_t) {
     vector<int8_t> ir_buf;
+    BufferReader ir_buffer;
     string logtype;
 
     epoch_time_ms_t preamble_ts = get_current_ts();
@@ -427,16 +438,16 @@ TEMPLATE_TEST_CASE("decode_ir_complete", "[ffi][decode_next_message]",
     reference_messages.push_back(message);
     reference_timestamps.push_back(ts);
 
-    IrBuffer complete_encoding_buffer(ir_buf.data(), ir_buf.size());
+    ir_buffer.reset_buffer(reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size());
 
     bool is_four_bytes_encoding;
-    REQUIRE(get_encoding_type(complete_encoding_buffer, is_four_bytes_encoding) ==
+    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<TestType>(is_four_bytes_encoding));
 
     // Test if preamble can be properly decoded
     TimestampInfo ts_info;
-    REQUIRE(decode_preamble<TestType>(complete_encoding_buffer, ts_info, preamble_ts) ==
+    REQUIRE(decode_preamble<TestType>(ir_buffer, ts_info, preamble_ts) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);
     REQUIRE(time_zone_id == ts_info.time_zone_id);
@@ -446,10 +457,10 @@ TEMPLATE_TEST_CASE("decode_ir_complete", "[ffi][decode_next_message]",
     epoch_time_ms_t timestamp;
     for (size_t ix = 0; ix < reference_messages.size(); ix++) {
         REQUIRE(IRErrorCode::IRErrorCode_Success ==
-                decode_next_message<TestType>(complete_encoding_buffer, decoded_message,
+                decode_next_message<TestType>(ir_buffer, decoded_message,
                                               timestamp));
         REQUIRE(decoded_message == reference_messages[ix]);
         REQUIRE(timestamp == reference_timestamps[ix]);
     }
-    REQUIRE(complete_encoding_buffer.get_cursor_pos() == ir_buf.size());
+    REQUIRE(ir_buffer.get_pos() == ir_buf.size());
 }
