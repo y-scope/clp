@@ -3,9 +3,6 @@
 // C++ standard libraries
 #include <cstring>
 
-// Project headers
-#include "spdlog/spdlog.h"
-
 using std::string_view;
 
 ErrorCode BufferReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
@@ -17,6 +14,9 @@ ErrorCode BufferReader::try_read (char* buf, size_t num_bytes_to_read, size_t& n
     }
 
     num_bytes_read = std::min(m_size - m_cursor_pos, num_bytes_to_read);
+    if (0 == num_bytes_read) {
+        return ErrorCode_EndOfFile;
+    }
     memcpy(buf, m_data + m_cursor_pos, num_bytes_read);
     m_cursor_pos += num_bytes_read;
     return ErrorCode_Success;
