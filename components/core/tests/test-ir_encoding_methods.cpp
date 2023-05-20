@@ -259,9 +259,9 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
 
     // Test if preamble can be decoded correctly
     TimestampInfo ts_info;
-    int8_t metadata_type;
-    size_t metadata_pos;
-    uint16_t metadata_size;
+    int8_t metadata_type{0};
+    size_t metadata_pos{0};
+    uint16_t metadata_size{0};
     REQUIRE(decode_preamble(preamble_buffer, metadata_type, metadata_pos, metadata_size) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(encoded_preamble_end_pos == preamble_buffer.get_cursor_pos());
