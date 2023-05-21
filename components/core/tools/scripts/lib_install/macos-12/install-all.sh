@@ -4,12 +4,12 @@ brew update
 brew install \
   boost \
   cmake \
-  fmt@8.0.1 \
+  fmt \
   gcc \
   libarchive \
   lz4 \
   mariadb-connector-c \
   msgpack-cxx \
-  spdlog@1.9.2 \
+  spdlog \
   pkg-config \
   zstd
