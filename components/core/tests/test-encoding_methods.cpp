@@ -306,6 +306,14 @@ TEMPLATE_TEST_CASE("Encoding floats", "[ffi][encode-float]", eight_byte_encoded_
     decoded_value = decode_float_var(encoded_var);
     REQUIRE(decoded_value == value);
 
+    value = "-.0";
+    REQUIRE(encode_float_string(value, encoded_var));
+    decoded_value = decode_float_var(encoded_var);
+    if constexpr (std::is_same_v<TestType, eight_byte_encoded_variable_t>) {
+        REQUIRE(INT64_MIN == encoded_var);
+    }
+    REQUIRE(decoded_value == value);
+
     // Test edges of representable range
     if constexpr (std::is_same_v<TestType, eight_byte_encoded_variable_t>) {
         value = "-999999999999999.9";
@@ -398,6 +406,13 @@ TEMPLATE_TEST_CASE("Encoding floats", "[ffi][encode-float]", eight_byte_encoded_
 
     value = "1.0L";
     REQUIRE(!encode_float_string(value, encoded_var));
+
+    if constexpr (std::is_same_v<TestType, eight_byte_encoded_variable_t>) {
+        REQUIRE_THROWS_AS(decode_float_var(INT64_MAX), ffi::EncodingException);
+        // NOTE: INT64_MIN is a valid encoded float
+    }
+    // NOTE: All possible values of four_byte_encoded_variable_t are valid
+    // encoded floats
 }
 
 TEMPLATE_TEST_CASE("Encoding messages", "[ffi][encode-message]", eight_byte_encoded_variable_t,
