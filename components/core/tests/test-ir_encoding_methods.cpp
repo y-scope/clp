@@ -272,7 +272,7 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(encoded_preamble_end_pos == preamble_buffer.get_cursor_pos());
 
-    char* metadata_ptr{reinterpret_cast<char*>(ir_buf.data()) + metadata_pos};
+    char* metadata_ptr{size_checked_pointer_cast<char>(ir_buf.data()) + metadata_pos};
     string_view json_metadata{metadata_ptr, metadata_size};
     auto metadata_json = nlohmann::json::parse(json_metadata);
     REQUIRE(ffi::ir_stream::cProtocol::Metadata::VersionValue ==
