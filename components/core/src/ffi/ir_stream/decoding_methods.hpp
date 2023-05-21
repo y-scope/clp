@@ -7,7 +7,7 @@
 
 // Project headers
 #include "../encoding_methods.hpp"
-#include "../../BufferReader.hpp"
+#include "../../BufferedReaderInterface.hpp"
 namespace ffi::ir_stream {
 
     using encoded_tag_t = uint8_t;
@@ -28,7 +28,7 @@ namespace ffi::ir_stream {
      * @return ErrorCode_Incomplete_IR if ir_buf doesn't contain enough data to
      * decode
      */
-    IRErrorCode get_encoding_type (BufferReader& ir_buf, bool& is_four_bytes_encoding);
+    IRErrorCode get_encoding_type (BufferedReaderInterface& ir_buf, bool& is_four_bytes_encoding);
 
     /**
      * Decodes the preamble for an IR stream.
@@ -41,7 +41,7 @@ namespace ffi::ir_stream {
      * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough
      * data to decode
      */
-    IRErrorCode decode_preamble (BufferReader& ir_buf, encoded_tag_t& metadata_type,
+    IRErrorCode decode_preamble (BufferedReaderInterface& ir_buf, encoded_tag_t& metadata_type,
                                  size_t& metadata_pos, uint16_t& metadata_size);
 
     namespace eight_byte_encoding {
@@ -58,7 +58,7 @@ namespace ffi::ir_stream {
          * to decode
          * @return ErrorCode_End_of_IR if the IR ends
          */
-        IRErrorCode decode_next_message (BufferReader& ir_buf, std::string& message,
+        IRErrorCode decode_next_message (BufferedReaderInterface& ir_buf, std::string& message,
                                          epoch_time_ms_t& timestamp);
     }
 
@@ -76,7 +76,7 @@ namespace ffi::ir_stream {
          * to decode
          * @return ErrorCode_End_of_IR if the IR ends
          */
-        IRErrorCode decode_next_message (BufferReader& ir_buf, std::string& message,
+        IRErrorCode decode_next_message (BufferedReaderInterface& ir_buf, std::string& message,
                                          epoch_time_ms_t& timestamp_delta);
     }
 }

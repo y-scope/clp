@@ -278,10 +278,9 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
     REQUIRE(decode_preamble(ir_buffer, metadata_type, metadata_pos, metadata_size) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(encoded_preamble_end_pos == ir_buffer.get_pos());
-
-    string_view json_metadata;
-    REQUIRE(ErrorCode_Success == ir_buffer.try_seek_from_begin(metadata_pos));
-    REQUIRE(ir_buffer.try_read_string_view(json_metadata, metadata_size));
+    
+    auto json_metadata_ptr = ir_buffer.get_buffer_ptr() + metadata_pos;
+    string_view json_metadata {json_metadata_ptr, metadata_size};
 
     auto metadata_json = nlohmann::json::parse(json_metadata);
     REQUIRE(ffi::ir_stream::cProtocol::Metadata::VersionValue ==
@@ -472,9 +471,8 @@ TEMPLATE_TEST_CASE("decode_ir_complete", "[ffi][decode_next_message]",
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(encoded_preamble_end_pos == complete_encoding_buffer.get_pos());
 
-    string_view json_metadata;
-    REQUIRE(ErrorCode_Success == complete_encoding_buffer.try_seek_from_begin(metadata_pos));
-    REQUIRE(complete_encoding_buffer.try_read_string_view(json_metadata, metadata_size));
+    auto json_metadata_ptr = complete_encoding_buffer.get_buffer_ptr() + metadata_pos;
+    string_view json_metadata {json_metadata_ptr, metadata_size};
     auto metadata_json = nlohmann::json::parse(json_metadata);
     REQUIRE(ffi::ir_stream::cProtocol::Metadata::VersionValue ==
             metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey));

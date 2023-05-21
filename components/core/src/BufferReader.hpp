@@ -2,9 +2,9 @@
 #define BufferReader_HPP
 
 // Project headers
-#include "ReaderInterface.hpp"
+#include "BufferedReaderInterface.hpp"
 
-class BufferReader : public ReaderInterface {
+class BufferReader : public BufferedReaderInterface {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -36,7 +36,11 @@ public:
      * @return true on success, false if the ir_buf doesn't contain enough
      * data to decode
      **/
-    [[nodiscard]] bool try_read_string_view (std::string_view& str_view, size_t read_size);
+    [[nodiscard]] virtual bool try_read_string_view (MyStringView& str_view,
+                                                     size_t read_size) override;
+
+    [[nodiscard]] virtual const char* get_buffer_ptr () override;
+
     void reset_buffer (const char* data, size_t size) {
         m_data = data;
         m_size = size;
