@@ -190,8 +190,7 @@ IRErrorCode decode_next_message (IrBuffer& ir_buf, string& message, epoch_time_m
         return ffi::ir_stream::eight_byte_encoding::decode_next_message(ir_buf, message,
                                                                         decoded_ts);
     } else {
-        return ffi::ir_stream::four_byte_encoding::decode_next_message(ir_buf, message,
-                                                                       decoded_ts);
+        return ffi::ir_stream::four_byte_encoding::decode_next_message(ir_buf, message, decoded_ts);
     }
 }
 
@@ -232,8 +231,7 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
     REQUIRE(get_encoding_type(empty_ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Incomplete_IR);
 
-    IrBuffer incomplete_ir_buffer(four_byte_encoding_vec.data(),
-                                  four_byte_encoding_vec.size() - 1);
+    IrBuffer incomplete_ir_buffer(four_byte_encoding_vec.data(), four_byte_encoding_vec.size() - 1);
     REQUIRE(get_encoding_type(incomplete_ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Incomplete_IR);
 
@@ -274,7 +272,7 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(encoded_preamble_end_pos == preamble_buffer.get_cursor_pos());
 
-    char* metadata_ptr{reinterpret_cast<char *>(ir_buf.data()) + metadata_pos};
+    char* metadata_ptr{reinterpret_cast<char*>(ir_buf.data()) + metadata_pos};
     string_view json_metadata{metadata_ptr, metadata_size};
     auto metadata_json = nlohmann::json::parse(json_metadata);
     REQUIRE(ffi::ir_stream::cProtocol::Metadata::VersionValue ==
@@ -285,20 +283,25 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
     REQUIRE(time_zone_id == ts_info.time_zone_id);
     REQUIRE(timestamp_pattern == ts_info.timestamp_pattern);
     if constexpr (is_same_v<TestType, four_byte_encoded_variable_t>) {
-        REQUIRE(reference_ts == std::stoll(metadata_json.at(ffi::ir_stream::cProtocol::Metadata::ReferenceTimestampKey).get<string>()));
+        REQUIRE(reference_ts ==
+                std::stoll(
+                        metadata_json.at(ffi::ir_stream::cProtocol::Metadata::ReferenceTimestampKey)
+                                .get<string>()));
     }
 
     // Test if incomplete IR can be detected
     ir_buf.resize(encoded_preamble_end_pos - 1);
     IrBuffer incomplete_preamble_buffer(ir_buf.data(), ir_buf.size());
     incomplete_preamble_buffer.set_cursor_pos(MagicNumberLength);
-    REQUIRE(decode_preamble(incomplete_preamble_buffer, metadata_type, metadata_pos, metadata_size) ==
+    REQUIRE(decode_preamble(
+                    incomplete_preamble_buffer, metadata_type, metadata_pos, metadata_size) ==
             IRErrorCode::IRErrorCode_Incomplete_IR);
 
     // Test if corrupted IR can be detected
     ir_buf[MagicNumberLength] = 0x23;
     IrBuffer corrupted_preamble_buffer(ir_buf.data(), ir_buf.size());
-    REQUIRE(decode_preamble(corrupted_preamble_buffer, metadata_type, metadata_pos, metadata_size) ==
+    REQUIRE(decode_preamble(
+                    corrupted_preamble_buffer, metadata_type, metadata_pos, metadata_size) ==
             IRErrorCode::IRErrorCode_Corrupted_IR);
 }
 
