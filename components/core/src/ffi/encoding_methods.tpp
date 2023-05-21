@@ -165,6 +165,14 @@ namespace ffi {
             num_digits = (encoded_float & 0x0F) + 1;
             encoded_float >>= 4;
             digits = encoded_float & cEightByteEncodedFloatDigitsBitMask;
+            // This is the maximum base-10 number with
+            // cMaxDigitsInRepresentableEightByteFloatVar
+            constexpr uint64_t cMaxRepresentableDigitsValue = 9999999999999999;
+            if (digits > cMaxRepresentableDigitsValue) {
+                throw EncodingException(ErrorCode_Corrupt, __FILENAME__, __LINE__,
+                                        "Digits in encoded float are larger than max representable "
+                                        "value.");
+            }
             encoded_float >>= 55;
             is_negative = encoded_float > 0;
         } else {  // std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>

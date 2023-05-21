@@ -398,6 +398,30 @@ TEMPLATE_TEST_CASE("Encoding floats", "[ffi][encode-float]", eight_byte_encoded_
 
     value = "1.0L";
     REQUIRE(!encode_float_string(value, encoded_var));
+
+    // Test boundary values of encode-variable storage types
+    if constexpr (std::is_same_v<TestType, eight_byte_encoded_variable_t>) {
+        value = "-.0";
+        REQUIRE(encode_float_string(value, encoded_var));
+        REQUIRE(INT64_MIN == encoded_var);
+        decoded_value = decode_float_var(encoded_var);
+        REQUIRE(decoded_value == value);
+
+        // INT64_MAX is not a valid encoded-float
+        REQUIRE_THROWS_AS(decode_float_var(INT64_MAX), ffi::EncodingException);
+    } else {  // std::is_same_v<TestType, four_byte_encoded_variable_t>
+        value = "-.0";
+        REQUIRE(encode_float_string(value, encoded_var));
+        REQUIRE(INT32_MIN == encoded_var);
+        decoded_value = decode_float_var(encoded_var);
+        REQUIRE(decoded_value == value);
+
+        value = ".33554431";
+        REQUIRE(encode_float_string(value, encoded_var));
+        REQUIRE(INT32_MAX == encoded_var);
+        decoded_value = decode_float_var(encoded_var);
+        REQUIRE(decoded_value == value);
+    }
 }
 
 TEMPLATE_TEST_CASE("Encoding messages", "[ffi][encode-message]", eight_byte_encoded_variable_t,
