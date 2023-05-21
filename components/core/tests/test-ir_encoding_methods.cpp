@@ -1,6 +1,9 @@
 // Catch2
 #include "../submodules/Catch2/single_include/catch2/catch.hpp"
 
+// json
+#include "../submodules/json/single_include/nlohmann/json.hpp"
+
 // Project headers
 #include "../src/ffi/encoding_methods.hpp"
 #include "../src/ffi/ir_stream/encoding_methods.hpp"
@@ -23,7 +26,6 @@ using ffi::ir_stream::cProtocol::MagicNumberLength;
 using ffi::ir_stream::get_encoding_type;
 using ffi::ir_stream::IrBuffer;
 using ffi::ir_stream::IRErrorCode;
-using ffi::ir_stream::TimestampInfo;
 using ffi::VariablePlaceholder;
 using ffi::wildcard_query_matches_any_encoded_var;
 using std::chrono::duration_cast;
@@ -66,24 +68,6 @@ bool encode_preamble (string_view timestamp_pattern,
                       epoch_time_ms_t reference_timestamp, vector<int8_t>& ir_buf);
 
 /**
- * Helper function that decodes a preamble of encoding type = encoded_variable_t
- * from the ir_buf
- * @tparam encoded_variable_t Type of the encoded variable
- * @param ir_buf
- * @param ts_info
- * @param reference_ts Returns the reference timestamp decoded from preamble
- * only when encoded_variable_t == four_byte_encoded_variable_t
- * @return IRErrorCode_Success on success, otherwise
- * Same as the ffi::ir_stream::eight_byte_encoding::decode_preamble when
- * encoded_variable_t == eight_byte_encoded_variable_t
- * Same as the ffi::ir_stream::four_byte_encoding::decode_preamble when
- * encoded_variable_t == four_byte_encoded_variable_t
- */
-template <typename encoded_variable_t>
-IRErrorCode decode_preamble (IrBuffer& ir_buf, TimestampInfo& ts_info,
-                             epoch_time_ms_t& reference_ts);
-
-/**
  * Helper function that encodes a message of encoding type = encoded_variable_t
  * and writes into ir_buf
  * @tparam encoded_variable_t Type of the encoded variable
@@ -112,6 +96,22 @@ bool encode_message (epoch_time_ms_t timestamp, string_view message, string& log
  */
 template <typename encoded_variable_t>
 IRErrorCode decode_next_message (IrBuffer& ir_buf, string& message, epoch_time_ms_t& decoded_ts);
+
+/**
+ * Struct to hold the timestamp info from the IR stream's metadata
+ */
+struct TimestampInfo {
+    std::string timestamp_pattern;
+    std::string timestamp_pattern_syntax;
+    std::string time_zone_id;
+};
+
+/**
+ * Extracts timestamp info from the JSON metadata and stores it into ts_info
+ * @param metadata_json The JSON metadata
+ * @param ts_info Returns the timestamp info
+ */
+static void set_timestamp_info (const nlohmann::json& metadata_json, TimestampInfo& ts_info);
 
 static epoch_time_ms_t get_current_ts () {
     return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
@@ -167,20 +167,6 @@ bool encode_preamble (string_view timestamp_pattern,
 }
 
 template <typename encoded_variable_t>
-IRErrorCode decode_preamble (IrBuffer& ir_buf, TimestampInfo& ts_info,
-                             epoch_time_ms_t& reference_ts)
-{
-    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> ||
-                  is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
-
-    if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
-        return ffi::ir_stream::eight_byte_encoding::decode_preamble(ir_buf, ts_info);
-    } else {
-        return ffi::ir_stream::four_byte_encoding::decode_preamble(ir_buf, ts_info, reference_ts);
-    }
-}
-
-template <typename encoded_variable_t>
 bool encode_message (epoch_time_ms_t timestamp, string_view message, string& logtype,
                      vector<int8_t>& ir_buf) {
     static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> ||
@@ -204,9 +190,16 @@ IRErrorCode decode_next_message (IrBuffer& ir_buf, string& message, epoch_time_m
         return ffi::ir_stream::eight_byte_encoding::decode_next_message(ir_buf, message,
                                                                         decoded_ts);
     } else {
-        return ffi::ir_stream::four_byte_encoding::decode_next_message(ir_buf, message,
-                                                                       decoded_ts);
+        return ffi::ir_stream::four_byte_encoding::decode_next_message(ir_buf, message, decoded_ts);
     }
+}
+
+static void set_timestamp_info (const nlohmann::json& metadata_json, TimestampInfo& ts_info) {
+    ts_info.time_zone_id = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::TimeZoneIdKey);
+    ts_info.timestamp_pattern =
+        metadata_json.at(ffi::ir_stream::cProtocol::Metadata::TimestampPatternKey);
+    ts_info.timestamp_pattern_syntax =
+        metadata_json.at(ffi::ir_stream::cProtocol::Metadata::TimestampPatternSyntaxKey);
 }
 
 TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
@@ -238,8 +231,7 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
     REQUIRE(get_encoding_type(empty_ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Incomplete_IR);
 
-    IrBuffer incomplete_ir_buffer(four_byte_encoding_vec.data(),
-                                  four_byte_encoding_vec.size() - 1);
+    IrBuffer incomplete_ir_buffer(four_byte_encoding_vec.data(), four_byte_encoding_vec.size() - 1);
     REQUIRE(get_encoding_type(incomplete_ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Incomplete_IR);
 
@@ -273,28 +265,43 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
 
     // Test if preamble can be decoded correctly
     TimestampInfo ts_info;
-    epoch_time_ms_t decoded_ts;
-    REQUIRE(decode_preamble<TestType>(preamble_buffer, ts_info, decoded_ts) ==
+    int8_t metadata_type{0};
+    size_t metadata_pos{0};
+    uint16_t metadata_size{0};
+    REQUIRE(decode_preamble(preamble_buffer, metadata_type, metadata_pos, metadata_size) ==
             IRErrorCode::IRErrorCode_Success);
+    REQUIRE(encoded_preamble_end_pos == preamble_buffer.get_cursor_pos());
+
+    char* metadata_ptr{size_checked_pointer_cast<char>(ir_buf.data()) + metadata_pos};
+    string_view json_metadata{metadata_ptr, metadata_size};
+    auto metadata_json = nlohmann::json::parse(json_metadata);
+    REQUIRE(ffi::ir_stream::cProtocol::Metadata::VersionValue ==
+            metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey));
+    REQUIRE(ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
+    set_timestamp_info(metadata_json, ts_info);
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);
     REQUIRE(time_zone_id == ts_info.time_zone_id);
     REQUIRE(timestamp_pattern == ts_info.timestamp_pattern);
-    REQUIRE(encoded_preamble_end_pos == preamble_buffer.get_cursor_pos());
     if constexpr (is_same_v<TestType, four_byte_encoded_variable_t>) {
-        REQUIRE(reference_ts == decoded_ts);
+        REQUIRE(reference_ts ==
+                std::stoll(
+                        metadata_json.at(ffi::ir_stream::cProtocol::Metadata::ReferenceTimestampKey)
+                                .get<string>()));
     }
 
     // Test if incomplete IR can be detected
     ir_buf.resize(encoded_preamble_end_pos - 1);
     IrBuffer incomplete_preamble_buffer(ir_buf.data(), ir_buf.size());
     incomplete_preamble_buffer.set_cursor_pos(MagicNumberLength);
-    REQUIRE(decode_preamble<TestType>(incomplete_preamble_buffer, ts_info, decoded_ts) ==
+    REQUIRE(decode_preamble(
+                    incomplete_preamble_buffer, metadata_type, metadata_pos, metadata_size) ==
             IRErrorCode::IRErrorCode_Incomplete_IR);
 
     // Test if corrupted IR can be detected
     ir_buf[MagicNumberLength] = 0x23;
     IrBuffer corrupted_preamble_buffer(ir_buf.data(), ir_buf.size());
-    REQUIRE(decode_preamble<TestType>(corrupted_preamble_buffer, ts_info, decoded_ts) ==
+    REQUIRE(decode_preamble(
+                    corrupted_preamble_buffer, metadata_type, metadata_pos, metadata_size) ==
             IRErrorCode::IRErrorCode_Corrupted_IR);
 }
 
@@ -406,6 +413,7 @@ TEMPLATE_TEST_CASE("decode_ir_complete", "[ffi][decode_next_message]",
     constexpr char time_zone_id[] = "Asia/Tokyo";
     REQUIRE(encode_preamble<TestType>(timestamp_pattern, timestamp_pattern_syntax, time_zone_id,
                                       preamble_ts, ir_buf));
+    const size_t encoded_preamble_end_pos = ir_buf.size();
 
     string message;
     epoch_time_ms_t ts;
@@ -436,8 +444,20 @@ TEMPLATE_TEST_CASE("decode_ir_complete", "[ffi][decode_next_message]",
 
     // Test if preamble can be properly decoded
     TimestampInfo ts_info;
-    REQUIRE(decode_preamble<TestType>(complete_encoding_buffer, ts_info, preamble_ts) ==
+    int8_t metadata_type;
+    size_t metadata_pos;
+    uint16_t metadata_size;
+    REQUIRE(decode_preamble(complete_encoding_buffer, metadata_type, metadata_pos, metadata_size) ==
             IRErrorCode::IRErrorCode_Success);
+    REQUIRE(encoded_preamble_end_pos == complete_encoding_buffer.get_cursor_pos());
+
+    string_view json_metadata;
+    REQUIRE(complete_encoding_buffer.try_read(json_metadata, metadata_size));
+    auto metadata_json = nlohmann::json::parse(json_metadata);
+    REQUIRE(ffi::ir_stream::cProtocol::Metadata::VersionValue ==
+            metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey));
+    REQUIRE(ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
+    set_timestamp_info(metadata_json, ts_info);
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);
     REQUIRE(time_zone_id == ts_info.time_zone_id);
     REQUIRE(timestamp_pattern == ts_info.timestamp_pattern);

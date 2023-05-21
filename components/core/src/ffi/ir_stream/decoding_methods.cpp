@@ -1,8 +1,5 @@
 #include "decoding_methods.hpp"
 
-// json
-#include "../../../submodules/json/single_include/nlohmann/json.hpp"
-
 // Project headers
 #include "byteswap.hpp"
 #include "protocol_constants.hpp"
@@ -77,13 +74,6 @@ namespace ffi::ir_stream {
     IRErrorCode parse_timestamp (IrBuffer& ir_buf, encoded_tag_t encoded_tag, epoch_time_ms_t& ts);
 
     /**
-     * Extracts timestamp info from the JSON metadata and stores it into ts_info
-     * @param metadata_json The JSON metadata
-     * @param ts_info Returns the timestamp info
-     */
-    static void set_timestamp_info (const nlohmann::json& metadata_json, TimestampInfo& ts_info);
-
-    /**
      * Decodes the next encoded message from ir_buf
      * @tparam encoded_variable_t Type of the encoded variable
      * @param ir_buf
@@ -103,15 +93,18 @@ namespace ffi::ir_stream {
                                                     epoch_time_ms_t& timestamp);
 
     /**
-     * Decodes the JSON metadata from the ir_buf
+     * Reads metadata information from the ir_buf
      * @param ir_buf
-     * @param json_metadata Returns the JSON metadata
+     * @param metadata_type Returns the type of the metadata found in the IR
+     * @param metadata_pos Returns the starting position of the metadata in ir_buf
+     * @param metadata_size Returns the size of the metadata written in the IR
      * @return IRErrorCode_Success on success
      * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
      * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
      * to decode
      */
-    static IRErrorCode read_json_metadata (IrBuffer& ir_buf, string_view& json_metadata);
+    static IRErrorCode read_metadata_info (IrBuffer& ir_buf, encoded_tag_t& metadata_type,
+                                           uint16_t& metadata_size);
 
     /**
      * Decodes the message from the given logtype, encoded variables, and
@@ -308,13 +301,6 @@ namespace ffi::ir_stream {
         return IRErrorCode_Success;
     }
 
-    static void set_timestamp_info (const nlohmann::json& metadata_json, TimestampInfo& ts_info) {
-        ts_info.time_zone_id = metadata_json.at(cProtocol::Metadata::TimeZoneIdKey);
-        ts_info.timestamp_pattern = metadata_json.at(cProtocol::Metadata::TimestampPatternKey);
-        ts_info.timestamp_pattern_syntax =
-                metadata_json.at(cProtocol::Metadata::TimestampPatternSyntaxKey);
-    }
-
     template <typename encoded_variable_t>
     static IRErrorCode generic_decode_next_message (IrBuffer& ir_buf, string& message,
                                                     epoch_time_ms_t& timestamp)
@@ -383,42 +369,34 @@ namespace ffi::ir_stream {
         return IRErrorCode_Success;
     }
 
-    static IRErrorCode read_json_metadata (IrBuffer& ir_buf, string_view& json_metadata) {
+    static IRErrorCode read_metadata_info (IrBuffer& ir_buf, encoded_tag_t& metadata_type,
+                                           uint16_t& metadata_size) {
+        if (false == ir_buf.try_read(metadata_type)) {
+            return IRErrorCode_Incomplete_IR;
+        }
+
+        // Read metadata length
         encoded_tag_t encoded_tag;
         if (false == ir_buf.try_read(encoded_tag)) {
             return IRErrorCode_Incomplete_IR;
         }
-        if (encoded_tag != cProtocol::Metadata::EncodingJson) {
-            return IRErrorCode_Corrupted_IR;
-        }
-
-        // Read metadata length
-        if (false == ir_buf.try_read(encoded_tag)) {
-            return IRErrorCode_Incomplete_IR;
-        }
-        unsigned int metadata_length;
         switch (encoded_tag) {
             case cProtocol::Metadata::LengthUByte:
                 uint8_t ubyte_res;
                 if (false == decode_int(ir_buf, ubyte_res)) {
                     return IRErrorCode_Incomplete_IR;
                 }
-                metadata_length = ubyte_res;
+                metadata_size = ubyte_res;
                 break;
             case cProtocol::Metadata::LengthUShort:
                 uint16_t ushort_res;
                 if (false == decode_int(ir_buf, ushort_res)) {
                     return IRErrorCode_Incomplete_IR;
                 }
-                metadata_length = ushort_res;
+                metadata_size = ushort_res;
                 break;
             default:
                 return IRErrorCode_Corrupted_IR;
-        }
-
-        // Read the serialized metadata
-        if (false == ir_buf.try_read(json_metadata, metadata_length)) {
-            return IRErrorCode_Incomplete_IR;
         }
         return IRErrorCode_Success;
     }
@@ -532,37 +510,28 @@ namespace ffi::ir_stream {
         return IRErrorCode_Success;
     }
 
-    namespace four_byte_encoding {
-        IRErrorCode decode_preamble (IrBuffer& ir_buf, TimestampInfo& ts_info,
-                                     epoch_time_ms_t& reference_ts)
-        {
-            ir_buf.init_internal_pos();
+    IRErrorCode decode_preamble (IrBuffer& ir_buf, encoded_tag_t& metadata_type,
+                                 size_t& metadata_pos, uint16_t& metadata_size)
+    {
+        ir_buf.init_internal_pos();
 
-            string_view json_metadata;
-            if (auto error_code = read_json_metadata(ir_buf, json_metadata);
-                    error_code != IRErrorCode_Success)
-            {
-                return error_code;
-            }
-
-            try {
-                auto metadata_json = nlohmann::json::parse(json_metadata);
-                const auto& version = metadata_json.at(cProtocol::Metadata::VersionKey);
-                if (version != cProtocol::Metadata::VersionValue) {
-                    return IRErrorCode_Unsupported_Version;
-                }
-
-                set_timestamp_info(metadata_json, ts_info);
-                reference_ts = std::stoll(metadata_json.at(
-                        cProtocol::Metadata::ReferenceTimestampKey).get<string>());
-            } catch (const nlohmann::json::parse_error& e) {
-                return IRErrorCode_Corrupted_Metadata;
-            }
-
-            ir_buf.commit_internal_pos();
-            return IRErrorCode_Success;
+        if (auto error_code = read_metadata_info(ir_buf, metadata_type, metadata_size);
+                error_code != IRErrorCode_Success) {
+            return error_code;
         }
 
+        size_t pos{ir_buf.get_cursor_pos()};
+        ir_buf.commit_internal_pos();
+        metadata_pos = ir_buf.get_cursor_pos();
+        if (ir_buf.size() < metadata_pos + metadata_size) {
+            ir_buf.set_cursor_pos(pos);
+            return IRErrorCode_Incomplete_IR;
+        }
+        ir_buf.set_cursor_pos(metadata_pos + metadata_size);
+        return IRErrorCode_Success;
+    }
+
+    namespace four_byte_encoding {
         IRErrorCode decode_next_message (IrBuffer& ir_buf, string& message,
                                          epoch_time_ms_t& timestamp_delta)
         {
@@ -573,31 +542,6 @@ namespace ffi::ir_stream {
     }
 
     namespace eight_byte_encoding {
-        IRErrorCode decode_preamble (IrBuffer& ir_buf, TimestampInfo& ts_info) {
-            ir_buf.init_internal_pos();
-
-            string_view json_metadata;
-            if (auto error_code = read_json_metadata(ir_buf, json_metadata);
-                    error_code != IRErrorCode_Success)
-            {
-                return error_code;
-            }
-            try {
-                auto metadata_json = nlohmann::json::parse(json_metadata);
-                const auto& version = metadata_json.at(cProtocol::Metadata::VersionKey);
-                if (version != cProtocol::Metadata::VersionValue) {
-                    return IRErrorCode_Unsupported_Version;
-                }
-
-                set_timestamp_info(metadata_json, ts_info);
-            } catch (const nlohmann::json::parse_error& e) {
-                return IRErrorCode_Corrupted_Metadata;
-            }
-
-            ir_buf.commit_internal_pos();
-            return IRErrorCode_Success;
-        }
-
         IRErrorCode decode_next_message (IrBuffer& ir_buf, string& message,
                                          epoch_time_ms_t& timestamp)
         {
