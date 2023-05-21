@@ -186,22 +186,21 @@ ErrorCode LibarchiveFileReader::peek_data_block (size_t size_to_peek, const char
         }
     }
 
-    // If we don't need to simulate reading '\0' before the start of the data block
-    // simply return a const& to the current data block
     if (m_data_block_pos_in_file <= m_pos_in_file) {
+        // No need to to simulate reading '\0' before the start of the data block
+        // simply return a const pointer to the current data block
         peek_size = std::min(size_to_peek, m_data_block_length - m_pos_in_data_block);
         data_ptr = reinterpret_cast<const char*>(m_data_block);
         return ErrorCode_Success;
     }
 
-    // If there are sparse bytes before the data block, the pos in data block
+    // There are sparse bytes before the data block, so the pos in data block
     // must be 0
     assert(m_pos_in_data_block != 0);
-
     auto num_sparse_bytes = m_data_block_pos_in_file - m_pos_in_file;
     peek_size = std::min(num_sparse_bytes + m_data_block_length, size_to_peek);
 
-    // resize the local buffer is necessary
+    // resize the local buffer if necessary
     if (m_data_for_peek.size() < peek_size) {
         m_data_for_peek.resize(peek_size);
     }
@@ -212,7 +211,7 @@ ErrorCode LibarchiveFileReader::peek_data_block (size_t size_to_peek, const char
         return ErrorCode_Success;
     }
 
-    // if size to peek is greater than number of sparse bytes,
+    // Size to peek is greater than number of sparse bytes,
     // copy over the data from data_block to the peek data buffer
     memset(m_data_for_peek.data(), '\0', num_sparse_bytes);
     size_t remaining_bytes_to_peek = peek_size - num_sparse_bytes;

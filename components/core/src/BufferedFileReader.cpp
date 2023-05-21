@@ -231,14 +231,6 @@ ErrorCode BufferedFileReader::try_fstat (struct stat& stat_buffer) const {
     return ErrorCode_Success;
 }
 
-void BufferedFileReader::revert_pos() {
-    if (false == m_checkpoint_enabled) {
-        SPDLOG_ERROR("Checkpoint is not enabled");
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
-    }
-    m_file_pos = m_checkpoint_pos;
-}
-
 size_t BufferedFileReader::mark_pos() {
     if (true == m_checkpoint_enabled) {
         SPDLOG_ERROR("I haven't carefully think about whether we should allow this or not");

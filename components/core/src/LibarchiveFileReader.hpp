@@ -72,11 +72,12 @@ public:
     ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter, bool append, std::string& str) override;
 
     /**
-     * Tries to peek up to a given number of bytes from the file.
-     * Note: This function only tries to peek within the next data block.
+     * Tries to peek up to a given number of bytes from the next data block
+     * if no enough data is available in the next data block, a smaller peek
+     * size will be returned
      * @param size_to_peek
      * @param data_ptr
-     * @param peek_size
+     * @param peek_size Return the number of bytes peeked by reference
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_Failure on failure
      * @return ErrorCode_Success on success
@@ -111,11 +112,13 @@ private:
     la_int64_t m_data_block_pos_in_file;
     const void* m_data_block;
     size_t m_data_block_length;
-    std::vector<char> m_data_for_peek;
     la_int64_t m_pos_in_data_block;
     bool m_reached_eof;
 
     size_t m_pos_in_file;
+
+    // vector to hold peeked data
+    std::vector<char> m_data_for_peek;
 };
 
 #endif // LIBARCHIVEFILEREADER_HPP

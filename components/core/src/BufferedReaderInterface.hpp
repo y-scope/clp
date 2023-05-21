@@ -1,10 +1,6 @@
 #ifndef newReaderInterface_HPP
 #define newReaderInterface_HPP
 
-// C standard libraries
-
-// C++ standard libraries
-
 // Project headers
 #include "ReaderInterface.hpp"
 

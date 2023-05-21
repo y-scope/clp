@@ -55,8 +55,8 @@ namespace ffi::ir_stream {
      * @return IRErrorCode_Incomplete_IR if input buffer doesn't contain enough
      * data to decode
      */
-    static IRErrorCode parse_dictionary_var (BufferedReaderInterface& ir_buf, encoded_tag_t encoded_tag,
-                                             MyStringView& dict_var);
+    static IRErrorCode parse_dictionary_var (BufferedReaderInterface& ir_buf,
+                                             encoded_tag_t encoded_tag, MyStringView& dict_var);
 
     /**
      * Parses the next timestamp from ir_buf
@@ -72,7 +72,8 @@ namespace ffi::ir_stream {
      * to decode
      */
     template <typename encoded_variable_t>
-    IRErrorCode parse_timestamp (BufferedReaderInterface& ir_buf, encoded_tag_t encoded_tag, epoch_time_ms_t& ts);
+    IRErrorCode parse_timestamp (BufferedReaderInterface& ir_buf, encoded_tag_t encoded_tag,
+                                 epoch_time_ms_t& ts);
 
     /**
      * Decodes the next encoded message from ir_buf
@@ -90,7 +91,8 @@ namespace ffi::ir_stream {
      * to decode
      */
     template <typename encoded_variable_t>
-    static IRErrorCode generic_decode_next_message (BufferedReaderInterface& ir_buf, string& message,
+    static IRErrorCode generic_decode_next_message (BufferedReaderInterface& ir_buf,
+                                                    string& message,
                                                     epoch_time_ms_t& timestamp);
 
     /**
@@ -104,8 +106,8 @@ namespace ffi::ir_stream {
      * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
      * to decode
      */
-    static IRErrorCode read_metadata_info (BufferedReaderInterface& ir_buf, encoded_tag_t& metadata_type,
-                                           uint16_t& metadata_size);
+    static IRErrorCode read_metadata_info (BufferedReaderInterface& ir_buf,
+                                           encoded_tag_t& metadata_type, uint16_t& metadata_size);
 
     /**
      * Decodes the message from the given logtype, encoded variables, and
@@ -206,8 +208,8 @@ namespace ffi::ir_stream {
         return IRErrorCode_Success;
     }
 
-    static IRErrorCode parse_dictionary_var (BufferedReaderInterface& ir_buf, encoded_tag_t encoded_tag,
-                                             MyStringView& dict_var) {
+    static IRErrorCode parse_dictionary_var (BufferedReaderInterface& ir_buf,
+                                             encoded_tag_t encoded_tag, MyStringView& dict_var) {
         // Decode variable's length
         size_t var_length;
         if (cProtocol::Payload::VarStrLenUByte == encoded_tag) {
