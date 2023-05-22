@@ -68,6 +68,8 @@ namespace ffi {
 
     constexpr size_t cMaxDigitsInRepresentableEightByteFloatVar = 16;
     constexpr size_t cMaxDigitsInRepresentableFourByteFloatVar = 8;
+    constexpr uint64_t cEightByteEncodedFloatDigitsBitMask = (1ULL << 54) - 1;
+    constexpr uint32_t cFourByteEncodedFloatDigitsBitMask = (1UL << 25) - 1;
 
     /**
      * Checks if the given character is a delimiter
@@ -127,6 +129,27 @@ namespace ffi {
      */
     template <typename encoded_variable_t>
     bool encode_float_string (std::string_view str, encoded_variable_t& encoded_var);
+
+    /**
+     * Encodes a float value with the given properties into an encoded variable
+     * @tparam encoded_variable_t Type of the encoded variable
+     * @param is_negative
+     * @param digits The digits of the float, ignoring the decimal, as an
+     * integer
+     * @param num_digits The number of digits in \p digits
+     * @param decimal_point_pos The position of the decimal point from the right
+     * of the value
+     * @return The encoded variable
+     */
+    template <typename encoded_variable_t>
+    encoded_variable_t encode_float_properties (
+            bool is_negative,
+            std::conditional_t<std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
+                    uint32_t, uint64_t> digits,
+            size_t num_digits,
+            size_t decimal_point_pos
+    );
+
     /**
      * Decodes the given encoded float variable into a string
      * @tparam encoded_variable_t Type of the encoded variable

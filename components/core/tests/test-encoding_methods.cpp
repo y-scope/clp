@@ -398,29 +398,83 @@ TEMPLATE_TEST_CASE("Encoding floats", "[ffi][encode-float]", eight_byte_encoded_
 
     value = "1.0L";
     REQUIRE(!encode_float_string(value, encoded_var));
+}
 
-    // Test boundary values of encode-variable storage types
-    if constexpr (std::is_same_v<TestType, eight_byte_encoded_variable_t>) {
-        value = "-.0";
-        REQUIRE(encode_float_string(value, encoded_var));
-        REQUIRE(INT64_MIN == encoded_var);
-        decoded_value = decode_float_var(encoded_var);
-        REQUIRE(decoded_value == value);
+TEMPLATE_TEST_CASE("encode_float_properties", "[ffi][encode-float]", eight_byte_encoded_variable_t,
+                   four_byte_encoded_variable_t)
+{
+    // Test all possible combinations of the properties of the encoded float,
+    // except for individual values of the 'digits' field, since that takes too
+    // long.
+    constexpr size_t cMaxDigitsInRepresentableFloatVar =
+            std::is_same_v<TestType, four_byte_encoded_variable_t>
+                    ? ffi::cMaxDigitsInRepresentableFourByteFloatVar
+                    : ffi::cMaxDigitsInRepresentableEightByteFloatVar;
+    for (size_t num_digits_in_digits_property = 0;
+         num_digits_in_digits_property <= cMaxDigitsInRepresentableFloatVar + 1;
+         ++num_digits_in_digits_property)
+    {
+        // Iterate over the possible values of the `num_digits` property
+        for (uint8_t num_digits = 1; num_digits <= cMaxDigitsInRepresentableFloatVar;
+             ++num_digits)
+        {
+            // Iterate over the possible values of the `decimal_point_pos`
+            // property
+            for (uint8_t decimal_point_pos = 1;
+                 decimal_point_pos <= cMaxDigitsInRepresentableFloatVar; ++decimal_point_pos)
+            {
+                // Create a value for the `digits` property that has a certain
+                // number of digits
+                std::conditional_t<std::is_same_v<TestType, four_byte_encoded_variable_t>,
+                        uint32_t, uint64_t> digits = 0;
+                for (size_t i = 0; i < num_digits_in_digits_property; ++i) {
+                    digits = digits * 10 + 9;
+                }
+                std::conditional_t<std::is_same_v<TestType, four_byte_encoded_variable_t>,
+                        uint32_t, uint64_t> cEncodedFloatDigitsBitMask =
+                                std::is_same_v<TestType, four_byte_encoded_variable_t>
+                                        ? ffi::cFourByteEncodedFloatDigitsBitMask
+                                        : ffi::cEightByteEncodedFloatDigitsBitMask;
+                // Due to the bitmask, the number of digits encoded may be
+                // less than num_digits_in_digits_property
+                digits = std::min(cEncodedFloatDigitsBitMask, digits);
+                auto num_digits_in_value = std::min(num_digits_in_digits_property,
+                                                    std::to_string(digits).length());
 
-        // INT64_MAX is not a valid encoded-float
-        REQUIRE_THROWS_AS(decode_float_var(INT64_MAX), ffi::EncodingException);
-    } else {  // std::is_same_v<TestType, four_byte_encoded_variable_t>
-        value = "-.0";
-        REQUIRE(encode_float_string(value, encoded_var));
-        REQUIRE(INT32_MIN == encoded_var);
-        decoded_value = decode_float_var(encoded_var);
-        REQUIRE(decoded_value == value);
+                // Iterate over the possible values for the encoded float's high
+                // bits
+                uint8_t num_high_bits =
+                        std::is_same_v<TestType, four_byte_encoded_variable_t> ? 1 : 2;
+                for (size_t high_bits = 0; high_bits < num_high_bits; ++high_bits) {
+                    TestType test_encoded_var;
+                    if (std::is_same_v<TestType, eight_byte_encoded_variable_t>) {
+                        test_encoded_var = ffi::encode_float_properties<TestType>(
+                                high_bits & 0x2, digits, num_digits, decimal_point_pos);
+                        // Since encode_float_properties erases the low bit of
+                        // high_bits, we need to add it again manually
+                        test_encoded_var =
+                                (high_bits << 62) | (((1ULL << 62) - 1) & test_encoded_var);
+                    } else {
+                        test_encoded_var = ffi::encode_float_properties<TestType>(
+                                high_bits, digits, num_digits, decimal_point_pos);
+                    }
 
-        value = ".33554431";
-        REQUIRE(encode_float_string(value, encoded_var));
-        REQUIRE(INT32_MAX == encoded_var);
-        decoded_value = decode_float_var(encoded_var);
-        REQUIRE(decoded_value == value);
+                    INFO("high_bits: " << high_bits);
+                    INFO("decimal_point_pos: " << decimal_point_pos);
+                    INFO("num_digits: " << num_digits);
+                    INFO("num_digits_in_value: " << num_digits_in_value);
+                    INFO("digits: " << digits);
+                    if (decimal_point_pos <= num_digits
+                        && num_digits >= num_digits_in_value
+                        && num_digits_in_value <= cMaxDigitsInRepresentableFloatVar) {
+                        REQUIRE_NOTHROW(decode_float_var(test_encoded_var));
+                    } else {
+                        REQUIRE_THROWS_AS(decode_float_var(test_encoded_var),
+                                          ffi::EncodingException);
+                    }
+                }
+            }
+        }
     }
 }
 

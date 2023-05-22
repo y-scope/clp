@@ -9,10 +9,6 @@
 #include "../type_utils.hpp"
 
 namespace ffi {
-    // Constants
-    constexpr uint64_t cEightByteEncodedFloatDigitsBitMask = (1ULL << 54) - 1;
-    constexpr uint32_t cFourByteEncodedFloatDigitsBitMask = (1UL << 25) - 1;
-
     template <typename encoded_variable_t>
     bool encode_float_string (std::string_view str, encoded_variable_t& encoded_var) {
         const auto value_length = str.length();
@@ -65,6 +61,20 @@ namespace ffi {
             return false;
         }
 
+        encoded_var = encode_float_properties<encoded_variable_t>(is_negative, digits, num_digits,
+                                                                  decimal_point_pos);
+
+        return true;
+    }
+
+    template <typename encoded_variable_t>
+    encoded_variable_t encode_float_properties (
+            bool is_negative,
+            std::conditional_t<std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
+                    uint32_t, uint64_t> digits,
+            size_t num_digits,
+            size_t decimal_point_pos
+    ) {
         static_assert(std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> ||
                       std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
         if constexpr (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
@@ -101,7 +111,7 @@ namespace ffi {
             encoded_float |= (num_digits - 1) & 0x0F;
             encoded_float <<= 4;
             encoded_float |= (decimal_point_pos - 1) & 0x0F;
-            encoded_var = bit_cast<encoded_variable_t>(encoded_float);
+            return bit_cast<encoded_variable_t>(encoded_float);
         } else {  // std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
             if (digits > cFourByteEncodedFloatDigitsBitMask) {
                 // digits is larger than maximum representable
@@ -139,17 +149,15 @@ namespace ffi {
             encoded_float |= (num_digits - 1) & 0x07;
             encoded_float <<= 3;
             encoded_float |= (decimal_point_pos - 1) & 0x07;
-            encoded_var = bit_cast<encoded_variable_t>(encoded_float);
+            return bit_cast<encoded_variable_t>(encoded_float);
         }
-
-        return true;
     }
 
     template <typename encoded_variable_t>
     std::string decode_float_var (encoded_variable_t encoded_var) {
         std::string value;
 
-        uint8_t decimal_pos;
+        uint8_t decimal_point_pos;
         uint8_t num_digits;
         std::conditional_t<std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
                 uint32_t, uint64_t> digits;
@@ -160,7 +168,7 @@ namespace ffi {
             auto encoded_float = bit_cast<uint64_t>(encoded_var);
 
             // Decode according to the format described in encode_float_string
-            decimal_pos = (encoded_float & 0x0F) + 1;
+            decimal_point_pos = (encoded_float & 0x0F) + 1;
             encoded_float >>= 4;
             num_digits = (encoded_float & 0x0F) + 1;
             encoded_float >>= 4;
@@ -179,13 +187,18 @@ namespace ffi {
             auto encoded_float = bit_cast<uint32_t>(encoded_var);
 
             // Decode according to the format described in encode_string_as_float_compact_var
-            decimal_pos = (encoded_float & 0x07) + 1;
+            decimal_point_pos = (encoded_float & 0x07) + 1;
             encoded_float >>= 3;
             num_digits = (encoded_float & 0x07) + 1;
             encoded_float >>= 3;
             digits = encoded_float & cFourByteEncodedFloatDigitsBitMask;
             encoded_float >>= 25;
             is_negative = encoded_float > 0;
+        }
+
+        if (num_digits < decimal_point_pos) {
+            throw EncodingException(ErrorCode_Corrupt, __FILENAME__, __LINE__,
+                                    "Invalid decimal-point position in encoded float.");
         }
 
         size_t value_length = num_digits + 1 + is_negative;
@@ -200,18 +213,30 @@ namespace ffi {
 
         // Decode until the decimal or the non-zero digits are exhausted
         size_t pos = value_length - 1;
-        for (; pos > (value_length - 1 - decimal_pos) && digits > 0; --pos) {
+        auto decimal_point_pos_from_left = value_length - 1 - decimal_point_pos;
+        for (; pos > decimal_point_pos_from_left && digits > 0; --pos) {
             value[pos] = (char)('0' + (digits % 10));
             digits /= 10;
             --num_chars_to_process;
         }
 
         if (digits > 0) {
+            constexpr char cTooManyDigitsErrorMsg[] = "Encoded number of digits doesn't match "
+                                                      "encoded digits in encoded float.";
+            if (0 == num_chars_to_process) {
+                throw EncodingException(ErrorCode_Corrupt, __FILENAME__, __LINE__,
+                                        cTooManyDigitsErrorMsg);
+            }
             // Skip decimal since it's added at the end
             --pos;
             --num_chars_to_process;
 
             while (digits > 0) {
+                if (0 == num_chars_to_process) {
+                    throw EncodingException(ErrorCode_Corrupt, __FILENAME__, __LINE__,
+                                            cTooManyDigitsErrorMsg);
+                }
+
                 value[pos--] = (char)('0' + (digits % 10));
                 digits /= 10;
                 --num_chars_to_process;
@@ -224,7 +249,7 @@ namespace ffi {
         }
 
         // Add decimal
-        value[value_length - 1 - decimal_pos] = '.';
+        value[decimal_point_pos_from_left] = '.';
 
         return value;
     }
