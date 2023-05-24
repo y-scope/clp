@@ -291,28 +291,26 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
         await server.wait_closed()
         await db_monitor_task
 
+async def createServer(host_ip):
+    try:
+        server = await asyncio.start_server(client_connected_cb=worker_connection_handler, host=host_ip, port=0,
+                                            family=socket.AF_INET)
+    except asyncio.CancelledError:
+        # Search cancelled
+        return
+
+    port = server.sockets[0].getsockname()[1]
+
+    server_task = asyncio.ensure_future(server.serve_forever())
+    pending = [server_task]
+    try:
+        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+    except asyncio.CancelledError:
+        server.close()
+        await server.wait_closed()
 
 
 def main(argv):
-    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
-
-    args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")
-    args_parser.add_argument('--config', '-c', required=True, help="CLP configuration file.")
-    args_parser.add_argument('wildcard_query', help="Wildcard query.")
-    args_parser.add_argument('--file-path', help="File to search.")
-    args_parser.add_argument('--context', help="Time context to search") #eg., last15m, last1h
-    parsed_args = args_parser.parse_args(argv[1:])
-
-    # Validate and load config file
-    try:
-        config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = validate_and_load_config_file(config_file_path, default_config_file_path, clp_home)
-        clp_config.validate_logs_dir()
-    except:
-        logger.exception("Failed to load config.")
-        return -1
-
-    # Get IP of local machine
     host_ip = None
     for ip in set(socket.gethostbyname_ex(socket.gethostname())[2]):
         host_ip = ip
@@ -320,17 +318,8 @@ def main(argv):
     if host_ip is None:
         logger.error("Could not determine IP of local machine.")
         return -1
-
-    if parsed_args.context is not None:
-        context = parsecontext(parsed_args.context)
-        if context == -1:
-            logger.error("Invalid context given")
-            return
-    else:
-        context = None
-
-    asyncio.run(do_search(clp_config.database, parsed_args.wildcard_query, parsed_args.file_path, host_ip, context))
-
+    asyncio.run(createServer(host_ip))
+    time.sleep(1000)
     return 0
 
 
@@ -341,7 +330,7 @@ def parsecontext(context):
         return -1
     if context[-1] == "h":
         unit = "HOUR"
-    elif context[-1] == "m":
+    elif context[-1] == "   m":
         unit = "MINUTE"
     else:
         return -1
