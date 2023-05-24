@@ -345,19 +345,8 @@ int main (int argc, const char* argv[]) {
 
     // Create vector of search strings
     vector<string> search_strings;
-    if (command_line_args.get_search_strings_file_path().empty()) {
-        search_strings.push_back(command_line_args.get_search_string());
-    } else {
-        FileReader file_reader;
-        file_reader.open(command_line_args.get_search_strings_file_path());
-        string line;
-        while (file_reader.read_to_delimiter('\n', false, false, line)) {
-            if (!line.empty()) {
-                search_strings.push_back(line);
-            }
-        }
-        file_reader.close();
-    }
+    search_strings.push_back(command_line_args.get_search_string());
+    
 
     // Validate archives directory
     struct stat archives_dir_stat = {};
