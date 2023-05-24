@@ -340,6 +340,8 @@ set(SOURCE_FILES_clg
         src/clg/clg.cpp
         src/clg/CommandLineArguments.cpp
         src/clg/CommandLineArguments.hpp
+        src/clg/ControllerMonitoringThread.cpp
+        src/clg/ControllerMonitoringThread.hpp
         src/compressor_frontend/Constants.hpp
         src/compressor_frontend/finite_automata/RegexAST.hpp
         src/compressor_frontend/finite_automata/RegexAST.tpp
