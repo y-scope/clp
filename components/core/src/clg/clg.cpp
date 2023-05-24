@@ -321,7 +321,7 @@ int main (int argc, const char* argv[]) {
         spdlog::set_pattern("%Y-%m-%d %H:%M:%S,%e [%l] %v");
     } catch (std::exception& e) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
-        std::cout(e.what());
+        std::cout(*e.what());
         return -1;
     }
     
@@ -448,7 +448,7 @@ int main (int argc, const char* argv[]) {
 
     return 0;
     }catch (std::exception& e) {
-        std::cout(e.what());
+        std::cout(*e.what());
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
