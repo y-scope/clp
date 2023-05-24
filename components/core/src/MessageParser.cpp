@@ -1,8 +1,11 @@
 #include "MessageParser.hpp"
-
+ 
 // Project headers
 #include "Defs.h"
 #include "TimestampPattern.hpp"
+
+#include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/spdlog.h>
 
 // Constants
 constexpr char cLineDelimiter = '\n';
