@@ -293,7 +293,7 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
 
 async def createServer(host_ip):
     try:
-        server = await asyncio.start_server(client_connected_cb=worker_connection_handler, host=host_ip, port=0,
+        server = await asyncio.start_server(client_connected_cb=worker_connection_handler, host=host_ip, port=9092,
                                             family=socket.AF_INET)
     except asyncio.CancelledError:
         # Search cancelled
@@ -319,7 +319,6 @@ def main(argv):
         logger.error("Could not determine IP of local machine.")
         return -1
     asyncio.run(createServer(host_ip))
-    time.sleep(1000)
     return 0
 
 
