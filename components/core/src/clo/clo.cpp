@@ -258,6 +258,49 @@ static bool search_archive (const CommandLineArguments& command_line_args, const
     return true;
 }
 
+static bool search_archive_new (const CommandLineArguments& command_line_args, const boost::filesystem::path& archive_path,
+                            const std::atomic_bool& query_cancelled, int controller_socket_fd)
+{
+    if (false == boost::filesystem::exists(archive_path)) {
+        SPDLOG_ERROR("Archive '{}' does not exist.", archive_path.c_str());
+        return false;
+    }
+    auto archive_metadata_file = archive_path / streaming_archive::cMetadataFileName;
+    if (false == boost::filesystem::exists(archive_metadata_file)) {
+        SPDLOG_ERROR("Archive metadata file '{}' does not exist. '{}' may not be an archive.",
+                     archive_metadata_file.c_str(), archive_path.c_str());
+        return false;
+    }
+
+    // Load lexers from schema file if it exists
+    auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
+    unique_ptr<compressor_frontend::lexers::ByteLexer> forward_lexer, reverse_lexer;
+    bool use_heuristic = true;
+    if (boost::filesystem::exists(schema_file_path)) {
+        use_heuristic = false;
+        // Create forward lexer
+        forward_lexer.reset(new compressor_frontend::lexers::ByteLexer());
+        load_lexer_from_file(schema_file_path.string(), false, *forward_lexer);
+
+        // Create reverse lexer
+        reverse_lexer.reset(new compressor_frontend::lexers::ByteLexer());
+        load_lexer_from_file(schema_file_path.string(), true, *reverse_lexer);
+    }
+
+    Archive archive_reader;
+    archive_reader.open(archive_path.string());
+    archive_reader.refresh_dictionaries();
+
+    auto search_begin_ts = command_line_args.get_search_begin_ts();
+    auto search_end_ts = command_line_args.get_search_end_ts();
+
+    if (!search(search_strings, command_line_args, archive_reader, *forward_lexer_ptr, *reverse_lexer_ptr, use_heuristic)) {
+            return -1;
+    }    
+
+    return true;
+}
+
 int main (int argc, const char* argv[]) {
     // Program-wide initialization
     try {
@@ -296,7 +339,7 @@ int main (int argc, const char* argv[]) {
 
     int return_value = 0;
     try {
-        if (false == search_archive(command_line_args, archive_path, controller_monitoring_thread.get_query_cancelled(),
+        if (false == search_archive_new(command_line_args, archive_path, controller_monitoring_thread.get_query_cancelled(),
                                     controller_socket_fd))
         {
             return_value = -1;
