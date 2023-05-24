@@ -15,6 +15,10 @@
 namespace clg {
     class CommandLineArguments : public CommandLineArgumentsBase {
     public:
+        enum class OutputMethod : char {
+            StdoutText = 's',
+            StdoutBinary = 'b',
+        };
         // Constructors
         explicit CommandLineArguments (const std::string& program_name) : CommandLineArgumentsBase(program_name), m_ignore_case(false),
                                                                           m_search_begin_ts(cEpochTimeMin), m_search_end_ts(cEpochTimeMax) {}
@@ -29,6 +33,7 @@ namespace clg {
         const std::string& get_search_string () const { return m_search_string; }
         const std::string& get_search_strings_file_path() const { return ""; }
         const std::string& get_file_path () const { return m_file_path; }
+        OutputMethod get_output_method () const { return 's'; }
         epochtime_t get_search_begin_ts () const { return m_search_begin_ts; }
         epochtime_t get_search_end_ts () const { return m_search_end_ts; }
 
