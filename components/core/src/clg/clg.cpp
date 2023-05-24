@@ -18,6 +18,8 @@
 #include "../Profiler.hpp"
 #include "../streaming_archive/Constants.hpp"
 #include "CommandLineArguments.hpp"
+#include "ControllerMonitoringThread.hpp"
+#include "../networking/socket_utils.hpp"
 
 using clg::CommandLineArguments;
 using compressor_frontend::load_lexer_from_file;
