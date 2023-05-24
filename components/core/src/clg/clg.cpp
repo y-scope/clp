@@ -358,7 +358,7 @@ int main (int argc, const char* argv[]) {
 
     // Validate archives directory
     struct stat archives_dir_stat = {};
-    auto archives_dir = std::filesystem::path(command_line_args.get_archives_dir());
+    auto archives_dir = std::filesystem::path(command_line_args.get_archive_path());
     if (0 != stat(archives_dir.c_str(), &archives_dir_stat)) {
         SPDLOG_ERROR("'{}' does not exist or cannot be accessed - {}.", archives_dir.c_str(), strerror(errno));
         return -1;
@@ -382,8 +382,8 @@ int main (int argc, const char* argv[]) {
     auto archive_path = command_line_args.get_archive_path();
 
     if (false == std::filesystem::exists(archive_path)) {
-        SPDLOG_WARN("Archive {} does not exist in '{}'.", archive_id, command_line_args.get_archives_dir());
-        continue;
+        SPDLOG_WARN("Archive {} does not exist in '{}'.", archive_path, command_line_args.get_archive_path());
+        return -1;
     }
 
     // Open archive
@@ -392,7 +392,7 @@ int main (int argc, const char* argv[]) {
     }
     
     // Generate lexer if schema file exists
-    auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
+    auto schema_file_path = archive_path + "/" + streaming_archive::cSchemaFileName;
     bool use_heuristic = true;
     if (std::filesystem::exists(schema_file_path)) {
         use_heuristic = false;
