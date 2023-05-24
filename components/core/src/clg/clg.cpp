@@ -382,6 +382,14 @@ int main (int argc, const char* argv[]) {
     if (!open_archive(archive_path, archive_reader)) {
         return -1;
     }
+
+    int controller_socket_fd = connect_to_search_controller(command_line_args.get_search_controller_host(),
+                                                            command_line_args.get_search_controller_port());
+    if (-1 == controller_socket_fd) {
+        return -1;
+    }
+    ControllerMonitoringThread controller_monitoring_thread(controller_socket_fd);
+    controller_monitoring_thread.start(); 
     
     // Generate lexer if schema file exists
     auto schema_file_path = archive_path + "/" + streaming_archive::cSchemaFileName;
@@ -425,9 +433,10 @@ int main (int argc, const char* argv[]) {
         }
     }
 
+    int return_value = 0;
     // Perform search
     if (!search(search_strings, command_line_args, archive_reader, *forward_lexer_ptr, *reverse_lexer_ptr, use_heuristic)) {
-        return -1;
+        return_value = -1;
     }
     archive_reader.close();
 
@@ -435,10 +444,34 @@ int main (int argc, const char* argv[]) {
     Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::Search>();
     LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::Search)
 
-    return 0;
+    auto shutdown_result = shutdown(controller_socket_fd, SHUT_RDWR);
+    if (0 != shutdown_result) {
+        if (ENOTCONN != shutdown_result) {
+            SPDLOG_ERROR("Failed to shutdown socket, error={}", shutdown_result);
+        } // else connection already disconnected, so nothing to do
+    }
+
+    try {
+        controller_monitoring_thread.join();
+    } catch (TraceableException& e) {
+        auto error_code = e.get_error_code();
+        if (ErrorCode_errno == error_code) {
+            SPDLOG_ERROR("Failed to join with controller monitoring thread: {}:{} {}, errno={}",
+                         e.get_filename(), e.get_line_number(), e.what(), errno);
+        } else {
+            SPDLOG_ERROR("Failed to join with controller monitoring thread: {}:{} {}, "
+                         "error_code={}", e.get_filename(), e.get_line_number(), e.what(),
+                         error_code);
+        }
+        return_value = -1;
+    }
+
+    return return_value;
+
     }catch (std::exception& e) {
         std::cout<<e.what();
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
+    
 }
