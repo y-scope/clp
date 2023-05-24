@@ -1,9 +1,11 @@
 // C libraries
 #include <sys/stat.h>
+#include <sys/socket.h>
 
 // C++ libraries
 #include <iostream>
 #include <filesystem>
+#include <memory>
 
 // spdlog
 #include <spdlog/sinks/stdout_sinks.h>
@@ -20,6 +22,7 @@
 #include "CommandLineArguments.hpp"
 #include "ControllerMonitoringThread.hpp"
 #include "../networking/socket_utils.hpp"
+#include "../Utils.hpp"
 
 using clg::CommandLineArguments;
 using compressor_frontend::load_lexer_from_file;
