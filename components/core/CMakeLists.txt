@@ -362,6 +362,12 @@ set(SOURCE_FILES_clg
         src/compressor_frontend/utils.hpp
         src/database_utils.cpp
         src/database_utils.hpp
+        src/networking/socket_utils.cpp
+        src/networking/socket_utils.hpp
+        src/networking/SocketOperationFailed.cpp
+        src/networking/SocketOperationFailed.hpp
+        src/Thread.cpp
+        src/Thread.hpp
         src/Defs.h
         src/dictionary_utils.cpp
         src/dictionary_utils.hpp
