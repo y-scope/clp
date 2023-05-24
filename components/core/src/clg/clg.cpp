@@ -379,7 +379,7 @@ int main (int argc, const char* argv[]) {
     Archive archive_reader;
     
         
-    auto archive_path = command_line_args.get_archive_path();
+    const std::string archive_path = command_line_args.get_archive_path();
 
     if (false == std::filesystem::exists(archive_path)) {
         SPDLOG_WARN("Archive {} does not exist in '{}'.", archive_path, command_line_args.get_archive_path());
@@ -387,7 +387,7 @@ int main (int argc, const char* argv[]) {
     }
 
     // Open archive
-    if (!open_archive(archive_path.string(), archive_reader)) {
+    if (!open_archive(archive_path, archive_reader)) {
         return -1;
     }
     
