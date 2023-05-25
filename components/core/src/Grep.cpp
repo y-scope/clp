@@ -89,6 +89,17 @@ private:
     size_t m_current_possible_type_ix;
 };
 
+/**
+ * Sends the search result to the search controller
+ * @param orig_file_path
+ * @param compressed_msg
+ * @param decompressed_msg
+ * @param controller_socket_fd
+ * @return Same as networking::try_send
+ */
+static ErrorCode send_result (const string& orig_file_path, const Message& compressed_msg,
+                              const string& decompressed_msg, int controller_socket_fd);
+
 QueryToken::QueryToken (const string& query_string, const size_t begin_pos, const size_t end_pos, const bool is_var) : m_current_possible_type_ix(0) {
     m_begin_pos = begin_pos;
     m_end_pos = end_pos;
@@ -738,8 +749,9 @@ size_t Grep::search_and_output (const Query& query, size_t limit, Archive& archi
 
         // Print match
         // output_func(orig_file_path, compressed_msg, decompressed_msg, output_func_arg);
+        ErrorCode error_code;
         if (false == query_cancelled){
-            error_code = send_result(orig_file_path, compressed_message, decompressed_message,
+            error_code = send_result(orig_file_path, compressed_msg, decompressed_msg,
                                      controller_socket_fd);
             if (ErrorCode_Success != error_code) {
                 result = SearchFilesResult::ResultSendFailure;
