@@ -8,8 +8,8 @@
 #include "EncodedVariableInterpreter.hpp"
 #include "StringReader.hpp"
 #include "Utils.hpp"
-#include "networking/socket_utils.hpp"
-#include "streaming_archive/Constants.hpp"
+#include "./networking/socket_utils.hpp"
+#include "./streaming_archive/Constants.hpp"
 
 
 // msgpack
