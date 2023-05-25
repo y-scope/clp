@@ -83,7 +83,8 @@ public:
      * @throw TimestampPattern::OperationFailed if failed to insert timestamp into message
      */
     static size_t search_and_output (const Query& query, size_t limit, streaming_archive::reader::Archive& archive,
-                                     streaming_archive::reader::File& compressed_file, OutputFunc output_func, void* output_func_arg);
+                                     streaming_archive::reader::File& compressed_file, OutputFunc output_func, void* output_func_arg,
+                                     const std::atomic_bool& query_cancelled, int controller_socket_fd);
     static bool search_and_decompress (const Query& query, streaming_archive::reader::Archive& archive, streaming_archive::reader::File& compressed_file,
             streaming_archive::reader::Message& compressed_msg, std::string& decompressed_msg);
     /**

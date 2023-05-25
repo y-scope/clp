@@ -189,7 +189,8 @@ static bool open_archive (const string& archive_path, Archive& archive_reader) {
 }
 
 static bool search (const vector<string>& search_strings, CommandLineArguments& command_line_args, Archive& archive,
-                    compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer, bool use_heuristic) {
+                    compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer, bool use_heuristic,
+                    const std::atomic_bool& query_cancelled, int controller_socket_fd) {
     ErrorCode error_code;
     auto search_begin_ts = command_line_args.get_search_begin_ts();
     auto search_end_ts = command_line_args.get_search_end_ts();
@@ -231,14 +232,14 @@ static bool search (const vector<string>& search_strings, CommandLineArguments& 
             size_t num_matches;
             if (is_superseding_query) {
                 auto file_metadata_ix = archive.get_file_iterator(search_begin_ts, search_end_ts, command_line_args.get_file_path());
-                num_matches = search_files(queries, command_line_args.get_output_method(), archive, *file_metadata_ix);
+                num_matches = search_files(queries, command_line_args.get_output_method(), archive, *file_metadata_ix, query_cancelled, controller_socket_fd);
             } else {
                 auto file_metadata_ix_ptr = archive.get_file_iterator(search_begin_ts, search_end_ts, command_line_args.get_file_path(), cInvalidSegmentId);
                 auto& file_metadata_ix = *file_metadata_ix_ptr;
-                num_matches = search_files(queries, command_line_args.get_output_method(), archive, file_metadata_ix);
+                num_matches = search_files(queries, command_line_args.get_output_method(), archive, file_metadata_ix, query_cancelled, controller_socket_fd);
                 for (auto segment_id : ids_of_segments_to_search) {
                     file_metadata_ix.set_segment_id(segment_id);
-                    num_matches += search_files(queries, command_line_args.get_output_method(), archive, file_metadata_ix);
+                    num_matches += search_files(queries, command_line_args.get_output_method(), archive, file_metadata_ix, query_cancelled, controller_socket_fd);
                 }
             }
             SPDLOG_DEBUG("# matches found: {}", num_matches);
@@ -275,7 +276,8 @@ static bool open_compressed_file (MetadataDB::FileIterator& file_metadata_ix, Ar
 }
 
 static size_t search_files (vector<Query>& queries, const CommandLineArguments::OutputMethod output_method, Archive& archive,
-                            MetadataDB::FileIterator& file_metadata_ix)
+                            MetadataDB::FileIterator& file_metadata_ix, 
+                            const std::atomic_bool& query_cancelled, int controller_socket_fd)
 {
     size_t num_matches = 0;
 
@@ -304,7 +306,7 @@ static size_t search_files (vector<Query>& queries, const CommandLineArguments::
 
             for (const auto& query : queries) {
                 archive.reset_file_indices(compressed_file);
-                num_matches += Grep::search_and_output(query, SIZE_MAX, archive, compressed_file, output_func, output_func_arg);
+                num_matches += Grep::search_and_output(query, SIZE_MAX, archive, compressed_file, output_func, output_func_arg, query_cancelled, controller_socket_fd);
             }
         }
         archive.close_file(compressed_file);
@@ -492,7 +494,8 @@ int main (int argc, const char* argv[]) {
 
     int return_value = 0;
     // Perform search
-    if (!search(search_strings, command_line_args, archive_reader, *forward_lexer_ptr, *reverse_lexer_ptr, use_heuristic)) {
+    if (!search(search_strings, command_line_args, archive_reader, *forward_lexer_ptr, *reverse_lexer_ptr, use_heuristic,  
+            controller_monitoring_thread.get_query_cancelled(), controller_socket_fd)) {
         return_value = -1;
     }
     archive_reader.close();
