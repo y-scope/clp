@@ -750,6 +750,7 @@ size_t Grep::search_and_output (const Query& query, size_t limit, Archive& archi
         // Print match
         // output_func(orig_file_path, compressed_msg, decompressed_msg, output_func_arg);
         ErrorCode error_code;
+        SearchFilesResult result = SearchFilesResult::Success;
         if (false == query_cancelled){
             error_code = send_result(orig_file_path, compressed_msg, decompressed_msg,
                                      controller_socket_fd);
