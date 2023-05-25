@@ -77,7 +77,7 @@ static bool open_compressed_file (MetadataDB::FileIterator& file_metadata_ix, Ar
  * @return The total number of matches found across all files
  */
 static size_t search_files (vector<Query>& queries, CommandLineArguments::OutputMethod output_method, Archive& archive,
-                            MetadataDB::FileIterator& file_metadata_ix);
+                            MetadataDB::FileIterator& file_metadata_ix, const std::atomic_bool& query_cancelled, int controller_socket_fd);
 /**
  * Prints search result to stdout in text format
  * @param orig_file_path
