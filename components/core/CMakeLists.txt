@@ -646,6 +646,10 @@ set(SOURCE_FILES_unitTest
         src/clp/FileToCompress.hpp
         src/clp/run.cpp
         src/clp/run.hpp
+        src/networking/socket_utils.cpp
+        src/networking/socket_utils.hpp
+        src/networking/SocketOperationFailed.cpp
+        src/networking/SocketOperationFailed.hpp
         src/clp/StructuredFileToCompress.cpp
         src/clp/StructuredFileToCompress.hpp
         src/clp/utils.cpp
