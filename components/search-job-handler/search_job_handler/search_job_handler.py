@@ -232,7 +232,7 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
                 time.sleep(1)
             
             if len(rows) < pagination_limit or search_logs_received > 500:
-                logger.info("no of logs received: ", search_logs_received)
+                logger.info("no of logs received: {f}".format(f=search_logs_received))
                 # Less than limit rows returned, so there are no more rows
                 break
             next_pagination_id += pagination_limit
