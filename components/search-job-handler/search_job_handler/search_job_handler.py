@@ -231,7 +231,7 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
 
                 time.sleep(1)
             
-            if len(rows) < pagination_limit or int(search_logs_received) > 500:
+            if len(rows) < pagination_limit or search_logs_received > 500:
                 logger.info("no of logs received: {f}".format(f=search_logs_received))
                 # Less than limit rows returned, so there are no more rows
                 break
@@ -240,7 +240,7 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
 
 async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
     try:
-        global search_logs_received
+        
         unpacker = msgpack.Unpacker()
         while True:
             # Read some data from the worker and feed it to msgpack
@@ -253,7 +253,8 @@ async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
             # Print out any messages we can decode
             for unpacked in unpacker:
                 print(f"{unpacked[0]}: {unpacked[2]}", end='')
-                search_logs_received = int(search_logs_received)+1
+                global search_logs_received
+                search_logs_received+=1
     except asyncio.CancelledError:
         return
     finally:
