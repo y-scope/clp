@@ -196,7 +196,7 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
             rows = db_cursor.fetchall()
             num_archives_searched += len(rows)
             # Insert tasks
-            if len(rows) == 0:
+            if len(rows) == 0 or search_logs_received > 500:
                 break
             
             stmt = f"""
@@ -231,7 +231,7 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
 
                 time.sleep(1)
             
-            if len(rows) < pagination_limit or search_logs_received > 500:
+            if len(rows) < pagination_limit:
                 logger.info("count of logs received: ", search_logs_received)
                 # Less than limit rows returned, so there are no more rows
                 break
