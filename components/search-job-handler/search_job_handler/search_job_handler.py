@@ -162,7 +162,7 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
 
         # Create a task for each archive, in batches
         next_pagination_id = 0
-        pagination_limit = 5
+        pagination_limit = 10
         num_tasks_added = 0
         num_archives_searched = 0
         if context is not None:
