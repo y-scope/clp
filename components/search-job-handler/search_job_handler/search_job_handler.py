@@ -37,7 +37,8 @@ logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
-search_logs_received = 0
+search_logs_received = dict()
+search_logs_received["counter"] = 0
 
 def get_clp_home():
     # Determine CLP_HOME from an environment variable or this script's path
@@ -143,7 +144,6 @@ async def run_function_in_process(function, *args, initializer=None, init_args=N
 
 def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_filter: str,
                                  search_controller_host: str, search_controller_port: int, context):
-    global search_logs_received
     search_config = SearchConfig(
         search_controller_host=search_controller_host,
         search_controller_port=search_controller_port,
@@ -231,7 +231,7 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
 
                 time.sleep(1)
             logger.info("no of logs received: {f}".format(f=search_logs_received))
-            if len(rows) < pagination_limit or search_logs_received > 500:
+            if len(rows) < pagination_limit or search_logs_received["counter"] > 500:
                 
                 # Less than limit rows returned, so there are no more rows
                 break
@@ -253,8 +253,7 @@ async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
             # Print out any messages we can decode
             for unpacked in unpacker:
                 print(f"{unpacked[0]}: {unpacked[2]}", end='')
-                global search_logs_received
-                search_logs_received+=1
+                search_logs_received["counter"] = search_logs_received["counter"] + 1
     except asyncio.CancelledError:
         return
     finally:
