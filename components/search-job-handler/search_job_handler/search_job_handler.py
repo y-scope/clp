@@ -181,9 +181,9 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
                     select archive_id, DENSE_RANK() OVER (ORDER BY archive_id) as no 
                     from clp_files 
                     where begin_timestamp between 
-                    {lowertlimit}
+                    {lowertlimit*1000}
                     and 
-                    {uppertlimit} 
+                    {uppertlimit*1000} 
                     group by archive_id limit {pagination_limit} offset {next_pagination_id};
                     """
             else:
