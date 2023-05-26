@@ -231,7 +231,7 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
 
                 time.sleep(1)
             
-
+            logger.info("count of logs received: ", search_logs_received)
             if len(rows) < pagination_limit or search_logs_received > 500:
                 # Less than limit rows returned, so there are no more rows
                 break
