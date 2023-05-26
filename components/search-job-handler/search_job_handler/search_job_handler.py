@@ -178,19 +178,13 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
             # Get next `limit` rows
             if context is not None:
                 job_stmt = f"""
-                    with temp as 
-                        (
-                            select DISTINCT archive_id, DENSE_RANK() OVER (ORDER BY archive_id) as no 
-                            from clp_files 
-                            where 
-                                begin_timestamp < {uppertlimit*1000}
-                                and 
-                                begin_timestamp > {lowertlimit*1000}  
-                            order by archive_id
-                        )
-                    select archive_id from temp
-                    WHERE `no` >= {next_pagination_id} 
-                    LIMIT {pagination_limit}
+                    select archive_id, DENSE_RANK() OVER (ORDER BY archive_id) as no 
+                    from clp_files 
+                    where begin_timestamp between 
+                    {lowertlimit}
+                    and 
+                    {uppertlimit} 
+                    group by archive_id limit {pagination_limit} offset {next_pagination_id};
                     """
             else:
                 job_stmt = f"""
