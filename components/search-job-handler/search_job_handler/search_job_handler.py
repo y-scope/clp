@@ -196,11 +196,16 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
             rows = db_cursor.fetchall()
             num_archives_searched += len(rows)
             # Insert tasks
+            logger.info(f"executed query: {job_stmt}")
+            logger.info(f"no of archive rows fetched: {len(rows)}")
+            if len(rows) == 0:
+                break
             
             stmt = f"""
             INSERT INTO `search_tasks` (`job_id`, `archive_id`, `scheduled_time`) 
             VALUES ({"), (".join(f"{job_id}, '{row['archive_id']}', '{datetime.datetime.utcnow()}'" for row in rows)})
             """
+
             db_cursor.execute(stmt)
             db_conn.commit()
             num_tasks_added += len(rows)
