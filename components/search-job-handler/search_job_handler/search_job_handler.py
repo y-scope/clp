@@ -254,6 +254,7 @@ async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
             for unpacked in unpacker:
                 print(f"{unpacked[0]}: {unpacked[2]}", end='')
                 search_logs_received["counter"] = search_logs_received["counter"] + 1
+                logger.info(f"counter updated {search_logs_received['counter']}")
     except asyncio.CancelledError:
         return
     finally:
