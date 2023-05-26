@@ -31,7 +31,7 @@ from clp_py_utils.core import \
 # Setup logging
 # Create logger
 logger = logging.getLogger(__file__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.ERROR)
 # Setup console logging
 logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
@@ -196,8 +196,6 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
             rows = db_cursor.fetchall()
             num_archives_searched += len(rows)
             # Insert tasks
-            logger.info(f"executed query: {job_stmt}")
-            logger.info(f"no of archive rows fetched: {len(rows)}")
             if len(rows) == 0:
                 break
             
@@ -210,7 +208,6 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
             db_conn.commit()
             num_tasks_added += len(rows)
 
-            print("number of archives searched: ", num_archives_searched)
             # Mark job as scheduled
             db_cursor.execute(f"""
             UPDATE `search_jobs`
@@ -351,7 +348,6 @@ def parsecontext(context):
     if not context[4:-1].isdigit():
         return -1
     ctx = {'unit': unit, 'interval': int(context[4:-1])}
-    print(ctx)
     return ctx
 
 
