@@ -154,12 +154,13 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_config: Database)
     global id_to_search_job
     global jobs_lock
 
-    logger.debug('Search and schedule new tasks')
+    # logger.debug('Search and schedule new tasks')
 
     dctx = zstandard.ZstdDecompressor()
 
     # Poll for new search tasks
     for task_row in fetch_new_search_task_metadata(db_cursor):
+
         search_task = SearchTask(
             id=task_row['task_id'],
             status=task_row['task_status'],
@@ -187,6 +188,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_config: Database)
                 id_to_search_job[search_job.id] = search_job
 
             celery_task = schedule_search_task(search_job, search_task, dctx)
+            logger.debug(f"scheduled new search job: job_id={task_row['job_id']}, task_id={task_row['task_id']}")
 
             update_search_task_metadata(db_cursor, search_task.id, dict(
                 status=TaskStatus.SCHEDULED,
@@ -197,6 +199,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_config: Database)
             search_task.instance = celery_task
             search_task.status = TaskStatus.SCHEDULED
             search_job.tasks[search_task.id] = search_task
+        
 
     # Poll for new compression tasks
     for task_row in fetch_new_compression_task_metadata(db_cursor):

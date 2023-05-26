@@ -37,7 +37,7 @@ logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
-
+search_logs_received = 0
 
 def get_clp_home():
     # Determine CLP_HOME from an environment variable or this script's path
@@ -143,6 +143,7 @@ async def run_function_in_process(function, *args, initializer=None, init_args=N
 
 def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_filter: str,
                                  search_controller_host: str, search_controller_port: int, context):
+    global search_logs_received
     search_config = SearchConfig(
         search_controller_host=search_controller_host,
         search_controller_port=search_controller_port,
@@ -161,7 +162,7 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
 
         # Create a task for each archive, in batches
         next_pagination_id = 0
-        pagination_limit = 64
+        pagination_limit = 5
         num_tasks_added = 0
         num_archives_searched = 0
         if context is not None:
@@ -210,38 +211,40 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
             db_conn.commit()
             num_tasks_added += len(rows)
 
-            if len(rows) < pagination_limit:
+            print("number of archives searched: ", num_archives_searched)
+            # Mark job as scheduled
+            db_cursor.execute(f"""
+            UPDATE `search_jobs`
+            SET num_tasks={num_tasks_added}, status = '{JobStatus.SCHEDULED}'
+            WHERE id = {job_id}
+            """)
+            db_conn.commit()
+
+        # Wait for the job to be marked complete
+            job_complete = False
+            while not job_complete:
+                db_cursor.execute(f"SELECT `status`, `status_msg` FROM `search_jobs` WHERE `id` = {job_id}")
+                # There will only ever be one row since it's impossible to have more than one job with the same ID
+                row = db_cursor.fetchall()[0]
+                if JobStatus.SUCCEEDED == row['status']:
+                    job_complete = True
+                elif JobStatus.FAILED == row['status']:
+                    logger.error(row['status_msg'])
+                    job_complete = True
+                db_conn.commit()
+
+                time.sleep(1)
+            
+
+            if len(rows) < pagination_limit or search_logs_received > 500:
                 # Less than limit rows returned, so there are no more rows
                 break
             next_pagination_id += pagination_limit
 
-        print("number of archives searched: ", num_archives_searched)
-        # Mark job as scheduled
-        db_cursor.execute(f"""
-        UPDATE `search_jobs`
-        SET num_tasks={num_tasks_added}, status = '{JobStatus.SCHEDULED}'
-        WHERE id = {job_id}
-        """)
-        db_conn.commit()
-
-        # Wait for the job to be marked complete
-        job_complete = False
-        while not job_complete:
-            db_cursor.execute(f"SELECT `status`, `status_msg` FROM `search_jobs` WHERE `id` = {job_id}")
-            # There will only ever be one row since it's impossible to have more than one job with the same ID
-            row = db_cursor.fetchall()[0]
-            if JobStatus.SUCCEEDED == row['status']:
-                job_complete = True
-            elif JobStatus.FAILED == row['status']:
-                logger.error(row['status_msg'])
-                job_complete = True
-            db_conn.commit()
-
-            time.sleep(1)
-
 
 async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
     try:
+        global search_logs_received
         unpacker = msgpack.Unpacker()
         while True:
             # Read some data from the worker and feed it to msgpack
@@ -254,6 +257,7 @@ async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
             # Print out any messages we can decode
             for unpacked in unpacker:
                 print(f"{unpacked[0]}: {unpacked[2]}", end='')
+                search_logs_received += 1
     except asyncio.CancelledError:
         return
     finally:
