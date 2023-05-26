@@ -31,7 +31,7 @@ from clp_py_utils.core import \
 # Setup logging
 # Create logger
 logger = logging.getLogger(__file__)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.INFO)
 # Setup console logging
 logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
@@ -196,7 +196,7 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
             rows = db_cursor.fetchall()
             num_archives_searched += len(rows)
             # Insert tasks
-            if len(rows) == 0 or search_logs_received > 500:
+            if len(rows) == 0:
                 break
             
             stmt = f"""
@@ -231,8 +231,8 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
 
                 time.sleep(1)
             
-            if len(rows) < pagination_limit:
-                logger.info("count of logs received: ", search_logs_received)
+            if len(rows) < pagination_limit or search_logs_received > 500:
+                logger.info("no of logs received: ", search_logs_received)
                 # Less than limit rows returned, so there are no more rows
                 break
             next_pagination_id += pagination_limit
