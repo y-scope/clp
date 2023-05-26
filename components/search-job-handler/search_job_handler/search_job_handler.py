@@ -216,7 +216,7 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
             """)
             db_conn.commit()
 
-        # Wait for the job to be marked complete
+            # Wait for the job to be marked complete
             job_complete = False
             while not job_complete:
                 db_cursor.execute(f"SELECT `status`, `status_msg` FROM `search_jobs` WHERE `id` = {job_id}")
@@ -231,8 +231,8 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
 
                 time.sleep(1)
             
-            logger.info("count of logs received: ", search_logs_received)
             if len(rows) < pagination_limit or search_logs_received > 500:
+                logger.info("count of logs received: ", search_logs_received)
                 # Less than limit rows returned, so there are no more rows
                 break
             next_pagination_id += pagination_limit
