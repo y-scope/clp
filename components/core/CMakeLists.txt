@@ -340,6 +340,8 @@ set(SOURCE_FILES_clg
         src/clg/clg.cpp
         src/clg/CommandLineArguments.cpp
         src/clg/CommandLineArguments.hpp
+        src/clg/ControllerMonitoringThread.cpp
+        src/clg/ControllerMonitoringThread.hpp
         src/compressor_frontend/Constants.hpp
         src/compressor_frontend/finite_automata/RegexAST.hpp
         src/compressor_frontend/finite_automata/RegexAST.tpp
@@ -362,6 +364,12 @@ set(SOURCE_FILES_clg
         src/compressor_frontend/utils.hpp
         src/database_utils.cpp
         src/database_utils.hpp
+        src/networking/socket_utils.cpp
+        src/networking/socket_utils.hpp
+        src/networking/SocketOperationFailed.cpp
+        src/networking/SocketOperationFailed.hpp
+        src/Thread.cpp
+        src/Thread.hpp
         src/Defs.h
         src/dictionary_utils.cpp
         src/dictionary_utils.hpp
@@ -638,6 +646,10 @@ set(SOURCE_FILES_unitTest
         src/clp/FileToCompress.hpp
         src/clp/run.cpp
         src/clp/run.hpp
+        src/networking/socket_utils.cpp
+        src/networking/socket_utils.hpp
+        src/networking/SocketOperationFailed.cpp
+        src/networking/SocketOperationFailed.hpp
         src/clp/StructuredFileToCompress.cpp
         src/clp/StructuredFileToCompress.hpp
         src/clp/utils.cpp

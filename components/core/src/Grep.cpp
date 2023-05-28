@@ -8,12 +8,24 @@
 #include "EncodedVariableInterpreter.hpp"
 #include "StringReader.hpp"
 #include "Utils.hpp"
+#include "./networking/socket_utils.hpp"
+#include "./streaming_archive/Constants.hpp"
+
+
+// msgpack
+#include <msgpack.hpp>
 
 using std::string;
 using std::vector;
 using streaming_archive::reader::Archive;
 using streaming_archive::reader::File;
 using streaming_archive::reader::Message;
+
+enum class SearchFilesResult {
+    OpenFailure,
+    ResultSendFailure,
+    Success
+};
 
 // Local types
 enum class SubQueryMatchabilityResult {
@@ -76,6 +88,17 @@ private:
     // Index of the current possible type selected for generating a subquery
     size_t m_current_possible_type_ix;
 };
+
+/**
+ * Sends the search result to the search controller
+ * @param orig_file_path
+ * @param compressed_msg
+ * @param decompressed_msg
+ * @param controller_socket_fd
+ * @return Same as networking::try_send
+ */
+static ErrorCode send_result (const string& orig_file_path, const Message& compressed_msg,
+                              const string& decompressed_msg, int controller_socket_fd);
 
 QueryToken::QueryToken (const string& query_string, const size_t begin_pos, const size_t end_pos, const bool is_var) : m_current_possible_type_ix(0) {
     m_begin_pos = begin_pos;
@@ -690,7 +713,8 @@ void Grep::calculate_sub_queries_relevant_to_file (const File& compressed_file, 
     }
 }
 
-size_t Grep::search_and_output (const Query& query, size_t limit, Archive& archive, File& compressed_file, OutputFunc output_func, void* output_func_arg) {
+size_t Grep::search_and_output (const Query& query, size_t limit, Archive& archive, File& compressed_file, OutputFunc output_func, void* output_func_arg, 
+            const std::atomic_bool& query_cancelled, int controller_socket_fd) {
     size_t num_matches = 0;
 
     Message compressed_msg;
@@ -724,11 +748,32 @@ size_t Grep::search_and_output (const Query& query, size_t limit, Archive& archi
         }
 
         // Print match
-        output_func(orig_file_path, compressed_msg, decompressed_msg, output_func_arg);
+        // output_func(orig_file_path, compressed_msg, decompressed_msg, output_func_arg);
+        ErrorCode error_code;
+        SearchFilesResult result = SearchFilesResult::Success;
+        if (false == query_cancelled){
+            error_code = send_result(orig_file_path, compressed_msg, decompressed_msg,
+                                     controller_socket_fd);
+            if (ErrorCode_Success != error_code) {
+                result = SearchFilesResult::ResultSendFailure;
+                break;
+            }
+        }
+
         ++num_matches;
     }
 
     return num_matches;
+}
+
+static ErrorCode send_result (const string& orig_file_path, const Message& compressed_msg,
+                              const string& decompressed_msg, int controller_socket_fd)
+{
+    msgpack::type::tuple<std::string, epochtime_t, std::string> src(orig_file_path, compressed_msg.get_ts_in_milli(),
+                                                                    decompressed_msg);
+    msgpack::sbuffer m;
+    msgpack::pack(m, src);
+    return networking::try_send(controller_socket_fd, m.data(), m.size());
 }
 
 bool Grep::search_and_decompress (const Query& query, Archive& archive, File& compressed_file, Message& compressed_msg, string& decompressed_msg) {

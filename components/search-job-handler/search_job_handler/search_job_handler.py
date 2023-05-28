@@ -38,7 +38,8 @@ logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
-
+search_logs_received = dict()
+search_logs_received["counter"] = 0
 
 def get_clp_home():
     # Determine CLP_HOME from an environment variable or this script's path
@@ -200,19 +201,13 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
 
             if context is not None:
                 job_stmt = f"""
-                    with temp as 
-                        (
-                            select DISTINCT archive_id, DENSE_RANK() OVER (ORDER BY archive_id) as no 
-                            from clp_files 
-                            where 
-                                begin_timestamp < {uppertlimit*1000}
-                                and 
-                                begin_timestamp > {lowertlimit*1000}  
-                            order by archive_id
-                        )
-                    select archive_id from temp
-                    WHERE `no` >= {next_pagination_id} 
-                    LIMIT {pagination_limit}
+                    select archive_id, DENSE_RANK() OVER (ORDER BY archive_id) as no 
+                    from clp_files 
+                    where begin_timestamp between 
+                    {lowertlimit*1000}
+                    and 
+                    {uppertlimit*1000} 
+                    group by archive_id limit {pagination_limit} offset {next_pagination_id};
                     """
             else:
                 job_stmt = f"""
@@ -231,6 +226,7 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
             INSERT INTO `search_tasks` (`job_id`, `archive_id`, `scheduled_time`) 
             VALUES ({"), (".join(f"{job_id}, '{row['archive_id']}', '{datetime.datetime.utcnow()}'" for row in rows)})
             """
+
             db_cursor.execute(stmt)
             db_conn.commit()
             num_tasks_added += len(rows)
@@ -248,13 +244,14 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
             while not job_complete and counter.get() <= 100:
                 time.sleep(1)
                 db_cursor.execute(f"SELECT `status`, `status_msg` FROM `search_jobs` WHERE `id` = {job_id}")
-                # There will only ever be one row since it's zimpossible to have more than one job with the same ID
                 row = db_cursor.fetchall()[0]
+
                 if JobStatus.SUCCEEDED == row['status']:
                     job_complete = True
                 elif JobStatus.FAILED == row['status']:
                     logger.error(row['status_msg'])
                     job_complete = True
+
                 db_conn.commit()
 
 
@@ -262,9 +259,9 @@ async def increment_results_counter():
     counter.increment()
     return 0
 
-
 async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
     try:
+        
         unpacker = msgpack.Unpacker()
         while True:
             # Read some data from the worker and feed it to msgpack
@@ -276,6 +273,7 @@ async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
 
             for unpacked in unpacker:
                 print(f"{unpacked[0]}: {unpacked[2]}", end='')
+
                 task = asyncio.create_task(increment_results_counter())
                 await task
 
@@ -373,7 +371,6 @@ def parsecontext(context):
     if not context[4:-1].isdigit():
         return -1
     ctx = {'unit': unit, 'interval': int(context[4:-1])}
-    print(ctx)
     return ctx
 
 

@@ -1,9 +1,11 @@
 // C libraries
 #include <sys/stat.h>
+#include <sys/socket.h>
 
 // C++ libraries
 #include <iostream>
 #include <filesystem>
+#include <memory>
 
 // spdlog
 #include <spdlog/sinks/stdout_sinks.h>
@@ -18,6 +20,9 @@
 #include "../Profiler.hpp"
 #include "../streaming_archive/Constants.hpp"
 #include "CommandLineArguments.hpp"
+#include "ControllerMonitoringThread.hpp"
+#include "../networking/socket_utils.hpp"
+#include "../Utils.hpp"
 
 using clg::CommandLineArguments;
 using compressor_frontend::load_lexer_from_file;
@@ -32,6 +37,14 @@ using streaming_archive::reader::Archive;
 using streaming_archive::reader::File;
 using streaming_archive::reader::Message;
 
+/**
+ * Connects to the search controller
+ * @param controller_host
+ * @param controller_port
+ * @return -1 on failure
+ * @return Search controller socket file descriptor otherwise
+ */
+static int connect_to_search_controller (const string& controller_host, const string& controller_port);
 /**
  * Opens the archive and reads the dictionaries
  * @param archive_path
@@ -64,7 +77,7 @@ static bool open_compressed_file (MetadataDB::FileIterator& file_metadata_ix, Ar
  * @return The total number of matches found across all files
  */
 static size_t search_files (vector<Query>& queries, CommandLineArguments::OutputMethod output_method, Archive& archive,
-                            MetadataDB::FileIterator& file_metadata_ix);
+                            MetadataDB::FileIterator& file_metadata_ix, const std::atomic_bool& query_cancelled, int controller_socket_fd);
 /**
  * Prints search result to stdout in text format
  * @param orig_file_path
@@ -89,6 +102,50 @@ static void print_result_binary (const string& orig_file_path, const Message& co
  * @return An archive iterator
  */
 static GlobalMetadataDB::ArchiveIterator* get_archive_iterator (GlobalMetadataDB& global_metadata_db, const std::string& file_path);
+
+static int connect_to_search_controller (const string& controller_host, const string& controller_port) {
+    // Get address info for controller
+    struct addrinfo hints = {};
+    // Address can be IPv4 or IPV6
+    hints.ai_family = AF_UNSPEC;
+    // TCP socket
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = 0;
+    hints.ai_protocol = 0;
+    struct addrinfo* addresses_head = nullptr;
+    int error = getaddrinfo(controller_host.c_str(), controller_port.c_str(), &hints, &addresses_head);
+    if (0 != error) {
+        SPDLOG_ERROR("Failed to get address information for search controller, error={}", error);
+        return -1;
+    }
+
+    // Try each address until a socket can be created and connected to
+    int controller_socket_fd = -1;
+    for (auto curr = addresses_head; nullptr != curr; curr = curr->ai_next) {
+        // Create socket
+        controller_socket_fd = socket(curr->ai_family, curr->ai_socktype, curr->ai_protocol);
+        if (-1 == controller_socket_fd) {
+            continue;
+        }
+
+        // Connect to address
+        if (connect(controller_socket_fd, curr->ai_addr, curr->ai_addrlen) != -1) {
+            break;
+        }
+
+        // Failed to connect, so close socket
+        close(controller_socket_fd);
+        controller_socket_fd = -1;
+    }
+    freeaddrinfo(addresses_head);
+    if (-1 == controller_socket_fd) {
+        SPDLOG_ERROR("Failed to connect to search controller, errno={}", errno);
+        return -1;
+    }
+
+    return controller_socket_fd;
+}
+
 
 static GlobalMetadataDB::ArchiveIterator* get_archive_iterator (GlobalMetadataDB& global_metadata_db, const std::string& file_path) {
     if (file_path.empty()) {
@@ -132,7 +189,8 @@ static bool open_archive (const string& archive_path, Archive& archive_reader) {
 }
 
 static bool search (const vector<string>& search_strings, CommandLineArguments& command_line_args, Archive& archive,
-                    compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer, bool use_heuristic) {
+                    compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer, bool use_heuristic,
+                    const std::atomic_bool& query_cancelled, int controller_socket_fd) {
     ErrorCode error_code;
     auto search_begin_ts = command_line_args.get_search_begin_ts();
     auto search_end_ts = command_line_args.get_search_end_ts();
@@ -174,14 +232,14 @@ static bool search (const vector<string>& search_strings, CommandLineArguments& 
             size_t num_matches;
             if (is_superseding_query) {
                 auto file_metadata_ix = archive.get_file_iterator(search_begin_ts, search_end_ts, command_line_args.get_file_path());
-                num_matches = search_files(queries, command_line_args.get_output_method(), archive, *file_metadata_ix);
+                num_matches = search_files(queries, command_line_args.get_output_method(), archive, *file_metadata_ix, query_cancelled, controller_socket_fd);
             } else {
                 auto file_metadata_ix_ptr = archive.get_file_iterator(search_begin_ts, search_end_ts, command_line_args.get_file_path(), cInvalidSegmentId);
                 auto& file_metadata_ix = *file_metadata_ix_ptr;
-                num_matches = search_files(queries, command_line_args.get_output_method(), archive, file_metadata_ix);
+                num_matches = search_files(queries, command_line_args.get_output_method(), archive, file_metadata_ix, query_cancelled, controller_socket_fd);
                 for (auto segment_id : ids_of_segments_to_search) {
                     file_metadata_ix.set_segment_id(segment_id);
-                    num_matches += search_files(queries, command_line_args.get_output_method(), archive, file_metadata_ix);
+                    num_matches += search_files(queries, command_line_args.get_output_method(), archive, file_metadata_ix, query_cancelled, controller_socket_fd);
                 }
             }
             SPDLOG_DEBUG("# matches found: {}", num_matches);
@@ -218,7 +276,8 @@ static bool open_compressed_file (MetadataDB::FileIterator& file_metadata_ix, Ar
 }
 
 static size_t search_files (vector<Query>& queries, const CommandLineArguments::OutputMethod output_method, Archive& archive,
-                            MetadataDB::FileIterator& file_metadata_ix)
+                            MetadataDB::FileIterator& file_metadata_ix, 
+                            const std::atomic_bool& query_cancelled, int controller_socket_fd)
 {
     size_t num_matches = 0;
 
@@ -247,7 +306,7 @@ static size_t search_files (vector<Query>& queries, const CommandLineArguments::
 
             for (const auto& query : queries) {
                 archive.reset_file_indices(compressed_file);
-                num_matches += Grep::search_and_output(query, SIZE_MAX, archive, compressed_file, output_func, output_func_arg);
+                num_matches += Grep::search_and_output(query, SIZE_MAX, archive, compressed_file, output_func, output_func_arg, query_cancelled, controller_socket_fd);
             }
         }
         archive.close_file(compressed_file);
@@ -321,11 +380,14 @@ int main (int argc, const char* argv[]) {
         spdlog::set_pattern("%Y-%m-%d %H:%M:%S,%e [%l] %v");
     } catch (std::exception& e) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
+        std::cout<<e.what();
         return -1;
     }
-    Profiler::init();
-    TimestampPattern::init();
+    
 
+    try{
+        Profiler::init();
+    TimestampPattern::init();
     CommandLineArguments command_line_args("clg");
     auto parsing_result = command_line_args.parse_arguments(argc, argv);
     switch (parsing_result) {
@@ -342,19 +404,8 @@ int main (int argc, const char* argv[]) {
 
     // Create vector of search strings
     vector<string> search_strings;
-    if (command_line_args.get_search_strings_file_path().empty()) {
-        search_strings.push_back(command_line_args.get_search_string());
-    } else {
-        FileReader file_reader;
-        file_reader.open(command_line_args.get_search_strings_file_path());
-        string line;
-        while (file_reader.read_to_delimiter('\n', false, false, line)) {
-            if (!line.empty()) {
-                search_strings.push_back(line);
-            }
-        }
-        file_reader.close();
-    }
+    search_strings.push_back(command_line_args.get_search_string());
+    
 
     // Validate archives directory
     struct stat archives_dir_stat = {};
@@ -379,7 +430,7 @@ int main (int argc, const char* argv[]) {
     Archive archive_reader;
     
         
-    auto archive_path = command_line_args.get_archive_path();
+    const std::string archive_path = command_line_args.get_archive_path();
 
     if (false == std::filesystem::exists(archive_path)) {
         SPDLOG_WARN("Archive {} does not exist in '{}'.", archive_path, command_line_args.get_archive_path());
@@ -387,9 +438,17 @@ int main (int argc, const char* argv[]) {
     }
 
     // Open archive
-    if (!open_archive(archive_path.string(), archive_reader)) {
+    if (!open_archive(archive_path, archive_reader)) {
         return -1;
     }
+
+    int controller_socket_fd = connect_to_search_controller(command_line_args.get_search_controller_host(),
+                                                            command_line_args.get_search_controller_port());
+    if (-1 == controller_socket_fd) {
+        return -1;
+    }
+    ControllerMonitoringThread controller_monitoring_thread(controller_socket_fd);
+    controller_monitoring_thread.start(); 
     
     // Generate lexer if schema file exists
     auto schema_file_path = archive_path + "/" + streaming_archive::cSchemaFileName;
@@ -433,9 +492,11 @@ int main (int argc, const char* argv[]) {
         }
     }
 
+    int return_value = 0;
     // Perform search
-    if (!search(search_strings, command_line_args, archive_reader, *forward_lexer_ptr, *reverse_lexer_ptr, use_heuristic)) {
-        return -1;
+    if (!search(search_strings, command_line_args, archive_reader, *forward_lexer_ptr, *reverse_lexer_ptr, use_heuristic,  
+            controller_monitoring_thread.get_query_cancelled(), controller_socket_fd)) {
+        return_value = -1;
     }
     archive_reader.close();
 
@@ -443,5 +504,34 @@ int main (int argc, const char* argv[]) {
     Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::Search>();
     LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::Search)
 
-    return 0;
+    auto shutdown_result = shutdown(controller_socket_fd, SHUT_RDWR);
+    if (0 != shutdown_result) {
+        if (ENOTCONN != shutdown_result) {
+            SPDLOG_ERROR("Failed to shutdown socket, error={}", shutdown_result);
+        } // else connection already disconnected, so nothing to do
+    }
+
+    try {
+        controller_monitoring_thread.join();
+    } catch (TraceableException& e) {
+        auto error_code = e.get_error_code();
+        if (ErrorCode_errno == error_code) {
+            SPDLOG_ERROR("Failed to join with controller monitoring thread: {}:{} {}, errno={}",
+                         e.get_filename(), e.get_line_number(), e.what(), errno);
+        } else {
+            SPDLOG_ERROR("Failed to join with controller monitoring thread: {}:{} {}, "
+                         "error_code={}", e.get_filename(), e.get_line_number(), e.what(),
+                         error_code);
+        }
+        return_value = -1;
+    }
+
+    return return_value;
+
+    }catch (std::exception& e) {
+        std::cout<<e.what();
+        // NOTE: We can't log an exception if the logger couldn't be constructed
+        return -1;
+    }
+    
 }

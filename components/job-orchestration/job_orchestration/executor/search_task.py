@@ -72,37 +72,40 @@ def run_clo(job_id: int, task_id: int, clp_home: pathlib.Path, archive_output_di
 
 @app.task()
 def search(job_id: int, task_id: int, search_config_json: str, archive_id: str):
-    clp_home = os.getenv('CLP_HOME')
-    archive_output_dir = os.getenv('CLP_ARCHIVE_OUTPUT_DIR')
-    logs_dir = os.getenv('CLP_LOGS_DIR')
-    celery_broker_url = os.getenv('BROKER_URL')
+    try:
+        clp_home = os.getenv('CLP_HOME')
+        archive_output_dir = os.getenv('CLP_ARCHIVE_OUTPUT_DIR')
+        logs_dir = os.getenv('CLP_LOGS_DIR')
+        celery_broker_url = os.getenv('BROKER_URL')
 
-    search_config = SearchConfig.parse_raw(search_config_json)
+        search_config = SearchConfig.parse_raw(search_config_json)
 
-    task_update = TaskUpdate(
-        type=TaskUpdateType.SEARCH,
-        job_id=job_id,
-        task_id=task_id,
-        status=TaskStatus.IN_PROGRESS
-    )
-    append_message_to_task_results_queue(celery_broker_url, True, task_update.dict())
-    logger.info(f"[job_id={job_id} task_id={task_id}] Search started.")
-
-    search_successful, worker_output = run_clo(job_id, task_id, pathlib.Path(clp_home),
-                                               pathlib.Path(archive_output_dir), pathlib.Path(logs_dir),
-                                               search_config.search_controller_host,
-                                               search_config.search_controller_port, archive_id,
-                                               search_config.wildcard_query, search_config.path_filter)
-
-    if search_successful:
-        task_update.status = TaskStatus.SUCCEEDED
-    else:
-        task_update = TaskFailureUpdate(
+        task_update = TaskUpdate(
             type=TaskUpdateType.SEARCH,
             job_id=job_id,
             task_id=task_id,
-            status=TaskStatus.FAILED,
-            error_message=worker_output
+            status=TaskStatus.IN_PROGRESS
         )
-    append_message_to_task_results_queue(celery_broker_url, False, task_update.dict())
-    logger.info(f"[job_id={job_id} task_id={task_id}] Search complete.")
+        append_message_to_task_results_queue(celery_broker_url, True, task_update.dict())
+        logger.info(f"[job_id={job_id} task_id={task_id}] Search started.")
+
+        search_successful, worker_output = run_clo(job_id, task_id, pathlib.Path(clp_home),
+                                                pathlib.Path(archive_output_dir), pathlib.Path(logs_dir),
+                                                search_config.search_controller_host,
+                                                search_config.search_controller_port, archive_id,
+                                                search_config.wildcard_query, search_config.path_filter)
+
+        if search_successful:
+            task_update.status = TaskStatus.SUCCEEDED
+        else:
+            task_update = TaskFailureUpdate(
+                type=TaskUpdateType.SEARCH,
+                job_id=job_id,
+                task_id=task_id,
+                status=TaskStatus.FAILED,
+                error_message=worker_output
+            )
+        append_message_to_task_results_queue(celery_broker_url, False, task_update.dict())
+        logger.info(f"[job_id={job_id} task_id={task_id}] Search complete.")
+    except Exception as e:
+        logger.info(e)
