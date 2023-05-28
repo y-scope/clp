@@ -258,6 +258,7 @@ async def increment_results_counter():
     counter.increment()
     return 0
 
+
 async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
     try:
         
