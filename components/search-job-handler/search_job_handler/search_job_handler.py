@@ -38,8 +38,7 @@ logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
-search_logs_received = dict()
-search_logs_received["counter"] = 0
+
 
 def get_clp_home():
     # Determine CLP_HOME from an environment variable or this script's path
