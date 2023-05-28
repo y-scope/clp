@@ -12,6 +12,7 @@ import sys
 import time
 from asyncio import StreamReader, StreamWriter
 from contextlib import closing
+import threading
 
 import enum
 import errno
@@ -141,6 +142,25 @@ async def run_function_in_process(function, *args, initializer=None, init_args=N
         pool.close()
 
 
+class Counter(object):
+
+    def __init__(self, start = 0):
+        self.lock = threading.Lock()
+        self.value = start
+
+    def increment(self):
+        self.lock.acquire()
+        try:
+            self.value = self.value + 1
+        finally:
+            self.lock.release()
+
+    def get(self):
+        return self.value
+
+
+counter = Counter()
+
 def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_filter: str,
                                  search_controller_host: str, search_controller_port: int, context):
     search_config = SearchConfig(
@@ -160,10 +180,17 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
         job_id = db_cursor.lastrowid
 
         # Create a task for each archive, in batches
+<<<<<<< Updated upstream
         next_pagination_id = 0
         pagination_limit = 64
+=======
+        next_pagination_id = -7
+        pagination_limit = 7
+
+>>>>>>> Stashed changes
         num_tasks_added = 0
         num_archives_searched = 0
+
         if context is not None:
             if context["unit"] == "HOUR":
                 uppertlimit = calendar.timegm(datetime.datetime.utcnow().timetuple())
@@ -173,8 +200,10 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
                 uppertlimit = calendar.timegm(datetime.datetime.utcnow().timetuple())
                 lowertlimit = calendar.timegm(
                     (datetime.datetime.utcnow() - datetime.timedelta(minutes=context["interval"])).timetuple())
-        while True:
-            # Get next `limit` rows
+
+        while counter.get() <= 100:
+            next_pagination_id += pagination_limit
+
             if context is not None:
                 job_stmt = f"""
                     with temp as 
@@ -197,10 +226,17 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
                 WHERE `pagination_id` >= {next_pagination_id} 
                 LIMIT {pagination_limit}
                 """
+
             db_cursor.execute(job_stmt)
             rows = db_cursor.fetchall()
             num_archives_searched += len(rows)
+<<<<<<< Updated upstream
             # Insert tasks
+=======
+
+            if len(rows) == 0:
+                break
+>>>>>>> Stashed changes
             
             stmt = f"""
             INSERT INTO `search_tasks` (`job_id`, `archive_id`, `scheduled_time`) 
@@ -210,10 +246,40 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
             db_conn.commit()
             num_tasks_added += len(rows)
 
+<<<<<<< Updated upstream
             if len(rows) < pagination_limit:
                 # Less than limit rows returned, so there are no more rows
                 break
             next_pagination_id += pagination_limit
+=======
+            # Mark job as scheduled
+            db_cursor.execute(f"""
+            UPDATE `search_jobs`
+            SET num_tasks={num_tasks_added}, status = '{JobStatus.SCHEDULED}'
+            WHERE id = {job_id}
+            """)
+            db_conn.commit()
+
+            # Wait for the job to be marked complete
+            job_complete = False
+            while not job_complete:
+                db_cursor.execute(f"SELECT `status`, `status_msg` FROM `search_jobs` WHERE `id` = {job_id}")
+                # There will only ever be one row since it's impossible to have more than one job with the same ID
+                row = db_cursor.fetchall()[0]
+                if JobStatus.SUCCEEDED == row['status']:
+                    job_complete = True
+                elif JobStatus.FAILED == row['status']:
+                    logger.error(row['status_msg'])
+                    job_complete = True
+                db_conn.commit()
+
+                time.sleep(1)
+
+
+async def increment_results_counter():
+    counter.increment()
+    return 0
+>>>>>>> Stashed changes
 
         print("number of archives searched: ", num_archives_searched)
         # Mark job as scheduled
@@ -251,9 +317,14 @@ async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
                 return
             unpacker.feed(buf)
 
-            # Print out any messages we can decode
             for unpacked in unpacker:
                 print(f"{unpacked[0]}: {unpacked[2]}", end='')
+<<<<<<< Updated upstream
+=======
+                task = asyncio.create_task(increment_results_counter())
+                await task
+
+>>>>>>> Stashed changes
     except asyncio.CancelledError:
         return
     finally:
