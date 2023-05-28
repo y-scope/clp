@@ -320,9 +320,9 @@ def main(argv):
 
     args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")
     args_parser.add_argument('--config', '-c', required=True, help="CLP configuration file.")
-    args_parser.add_argument('wildcard_query', help="Wildcard query.")
+    args_parser.add_argument('wildcard_query', required=True, help="Wildcard query.")
     args_parser.add_argument('--file-path', help="File to search.")
-    args_parser.add_argument('--context', help="Time context to search") #eg., last15m, last1h
+    args_parser.add_argument('--context', required=True, help="Time context to search")
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate and load config file
