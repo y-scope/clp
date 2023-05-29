@@ -275,7 +275,7 @@ async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
         writer.close()
 
 
-def do_search(db_config: Database, wildcard_query: str, path_filter: str, host: str, context):
+async def do_search(db_config: Database, wildcard_query: str, path_filter: str, host: str, context):
     # Start server to receive and print results
     try:
         server = await asyncio.start_server(client_connected_cb=worker_connection_handler, host=host, port=0,
@@ -306,7 +306,7 @@ def do_search(db_config: Database, wildcard_query: str, path_filter: str, host: 
         await db_monitor_task
 
 
-def main(argv):
+async def main(argv):
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")
@@ -342,7 +342,7 @@ def main(argv):
     else:
         context = None
 
-    do_search(clp_config.database, parsed_args.wildcard_query, parsed_args.file_path, host_ip, context)
+    asyncio.run(do_search(clp_config.database, parsed_args.wildcard_query, parsed_args.file_path, host_ip, context))
 
     return 0
 
@@ -364,5 +364,4 @@ def parsecontext(context):
     return ctx
 
 
-if '__main__' == __name__:
-    sys.exit(main(sys.argv))
+asyncio.run(main(sys.argv))
