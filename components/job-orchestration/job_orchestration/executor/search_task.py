@@ -38,7 +38,8 @@ def run_clo(job_id: int, task_id: int, clp_home: pathlib.Path, archive_output_di
         search_controller_host,
         str(search_controller_port),
         str(archive_output_dir / archive_id),
-        wildcard_query
+        wildcard_query,
+        "--ignore-case"
     ]
     if path_filter is not None:
         cmd.append(path_filter)
