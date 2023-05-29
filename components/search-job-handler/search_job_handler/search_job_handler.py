@@ -211,7 +211,7 @@ def create_and_monitor_job_in_db(
         rows = db_cursor.fetchall()
 
         if len(rows) == 0:
-            return
+            return -1
 
         stmt = f"""
         INSERT INTO `search_tasks` (`job_id`, `archive_id`, `scheduled_time`) 
@@ -300,7 +300,7 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
 
         try:
             done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
-            if db_monitor_task not in done:
+            if db_monitor_task not in done or db_monitor_task.result() == -1:
                 break
         except:
             pass
