@@ -162,7 +162,7 @@ class Counter(object):
 counter = Counter()
 
 
-def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_filter: str,
+async def create_and_monitor_job_in_db(future: asyncio.Future, db_config: Database, wildcard_query: str, path_filter: str,
                                  search_controller_host: str, search_controller_port: int, context):
     search_config = SearchConfig(
         search_controller_host=search_controller_host,
@@ -253,6 +253,8 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
 
                 db_conn.commit()
 
+    future.set_result(True)
+
 
 async def increment_results_counter():
     counter.increment()
@@ -292,16 +294,26 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
         # Search cancelled
         return
     port = server.sockets[0].getsockname()[1]
-    asyncio.ensure_future(server.serve_forever())
+    server_task = asyncio.ensure_future(server.serve_forever())
 
-    create_and_monitor_job_in_db(db_config, wildcard_query, path_filter, host, port, context)
+    loop = asyncio.get_running_loop()
+    db_monitor_task = loop.create_future()
+    loop.create_task(create_and_monitor_job_in_db(db_config, wildcard_query, path_filter, host, port, context))
 
+    pending = [server_task, db_monitor_task]
     try:
-        server.close()
-        await server.wait_closed()
+        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+        if db_monitor_task in done:
+            server.close()
+            await server.wait_closed()
+        else:
+            logger.error("server task unexpectedly returned")
+            db_monitor_task.cancel()
+            await db_monitor_task
     except asyncio.CancelledError:
         server.close()
         await server.wait_closed()
+        await db_monitor_task
 
 def main(argv):
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
