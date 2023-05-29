@@ -197,24 +197,16 @@ def create_and_monitor_job_in_db(
                     (datetime.datetime.utcnow() - datetime.timedelta(minutes=context["interval"])).timetuple())
 
         next_pagination_id += pagination_limit
-
-        if context is not None:
-            job_stmt = f"""
-                select archive_id, DENSE_RANK() OVER (ORDER BY archive_id) as no 
-                from clp_files 
-                where begin_timestamp between 
-                {lowertlimit*1000}
-                and 
-                {uppertlimit*1000} 
-                group by archive_id limit {pagination_limit} offset {next_pagination_id};
-                """
-        else:
-            job_stmt = f"""
-            SELECT `id` FROM {CLP_METADATA_TABLE_PREFIX}archives 
-            WHERE `pagination_id` >= {next_pagination_id} 
-            LIMIT {pagination_limit}
+        job_stmt = f"""
+            select archive_id, DENSE_RANK() OVER (ORDER BY archive_id) as no 
+            from clp_files 
+            where begin_timestamp between 
+            {lowertlimit*1000}
+            and 
+            {uppertlimit*1000} 
+            group by archive_id limit {pagination_limit} offset {next_pagination_id};
             """
-
+        logger.info(job_stmt)
         db_cursor.execute(job_stmt)
         rows = db_cursor.fetchall()
 
