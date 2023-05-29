@@ -270,9 +270,9 @@ async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
                     application_log = log_with_time[log_with_time.find(" "):]
                     parsed_app_log = json.loads(application_log)
                     parsed_app_log = json.dumps(parsed_app_log, indent=4)
-                    print(parsed_app_log, end='')
+                    print(parsed_app_log)
                 except:
-                    print(f"{unpacked[0]}: {unpacked[2]}", end='')
+                    print(f"{unpacked[0]}: {unpacked[2]}")
 
                 task = asyncio.create_task(increment_results_counter())
                 await task
