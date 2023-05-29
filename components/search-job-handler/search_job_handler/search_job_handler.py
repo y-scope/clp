@@ -109,6 +109,7 @@ def validate_and_load_config_file(config_file_path: pathlib.Path, default_config
 
     return clp_config
 
+
 async def run_function_in_process(function, *args, initializer=None, init_args=None):
     """
     Runs the given function in a separate process wrapped in a *cancellable*
@@ -120,26 +121,16 @@ async def run_function_in_process(function, *args, initializer=None, init_args=N
     :param init_args: Arguments for the initializer
     :return: Return value of the method
     """
-    pool = multiprocessing.Pool(1, initializer, init_args)
 
     loop = asyncio.get_event_loop()
     fut = loop.create_future()
 
-    def process_done_callback(obj):
-        loop.call_soon_threadsafe(fut.set_result, obj)
-
-    def process_error_callback(err):
-        loop.call_soon_threadsafe(fut.set_exception, err)
-
-    pool.apply_async(function, args, callback=process_done_callback, error_callback=process_error_callback)
+    loop.create_task(function(fut, args))
 
     try:
         return await fut
     except asyncio.CancelledError:
         pass
-    finally:
-        pool.terminate()
-        pool.close()
 
 
 class Counter(object):
@@ -162,7 +153,7 @@ class Counter(object):
 counter = Counter()
 
 
-async def create_and_monitor_job_in_db(future: asyncio.Future, db_config: Database, wildcard_query: str, path_filter: str,
+async def create_and_monitor_job_in_db(future, db_config: Database, wildcard_query: str, path_filter: str,
                                  search_controller_host: str, search_controller_port: int, context):
     search_config = SearchConfig(
         search_controller_host=search_controller_host,
@@ -253,7 +244,7 @@ async def create_and_monitor_job_in_db(future: asyncio.Future, db_config: Databa
 
                 db_conn.commit()
 
-    future.set_result(True)
+    future.set_result("done")
 
 
 async def increment_results_counter():
@@ -294,13 +285,13 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
         # Search cancelled
         return
     port = server.sockets[0].getsockname()[1]
+
     server_task = asyncio.ensure_future(server.serve_forever())
 
-    loop = asyncio.get_running_loop()
-    db_monitor_task = loop.create_future()
-    loop.create_task(create_and_monitor_job_in_db(
-        db_monitor_task, db_config, wildcard_query, path_filter, host, port, context))
+    db_monitor_task = asyncio.ensure_future(
+        run_function_in_process(create_and_monitor_job_in_db, db_config, wildcard_query, path_filter, host, port))
 
+    # Wait for the job to complete or an error to occur
     pending = [server_task, db_monitor_task]
     try:
         done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
