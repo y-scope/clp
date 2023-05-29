@@ -12,6 +12,7 @@ import sys
 import time
 from asyncio import StreamReader, StreamWriter
 from contextlib import closing
+import threading
 
 import enum
 import errno
@@ -37,8 +38,7 @@ logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
-search_logs_received = dict()
-search_logs_received["counter"] = 0
+
 
 def get_clp_home():
     # Determine CLP_HOME from an environment variable or this script's path
@@ -142,6 +142,26 @@ async def run_function_in_process(function, *args, initializer=None, init_args=N
         pool.close()
 
 
+class Counter(object):
+
+    def __init__(self, start = 0):
+        self.lock = threading.Lock()
+        self.value = start
+
+    def increment(self):
+        self.lock.acquire()
+        try:
+            self.value = self.value + 1
+        finally:
+            self.lock.release()
+
+    def get(self):
+        return self.value
+
+
+counter = Counter()
+
+
 def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_filter: str,
                                  search_controller_host: str, search_controller_port: int, context):
     search_config = SearchConfig(
@@ -160,11 +180,11 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
         db_conn.commit()
         job_id = db_cursor.lastrowid
 
-        # Create a task for each archive, in batches
-        next_pagination_id = 0
-        pagination_limit = 10
+        next_pagination_id = -7
+        pagination_limit = 7
+
         num_tasks_added = 0
-        num_archives_searched = 0
+
         if context is not None:
             if context["unit"] == "HOUR":
                 uppertlimit = calendar.timegm(datetime.datetime.utcnow().timetuple())
@@ -174,8 +194,10 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
                 uppertlimit = calendar.timegm(datetime.datetime.utcnow().timetuple())
                 lowertlimit = calendar.timegm(
                     (datetime.datetime.utcnow() - datetime.timedelta(minutes=context["interval"])).timetuple())
-        while True:
-            # Get next `limit` rows
+
+        while counter.get() <= 100:
+            next_pagination_id += pagination_limit
+
             if context is not None:
                 job_stmt = f"""
                     select archive_id, DENSE_RANK() OVER (ORDER BY archive_id) as no 
@@ -192,13 +214,13 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
                 WHERE `pagination_id` >= {next_pagination_id} 
                 LIMIT {pagination_limit}
                 """
+
             db_cursor.execute(job_stmt)
             rows = db_cursor.fetchall()
-            num_archives_searched += len(rows)
-            # Insert tasks
+
             if len(rows) == 0:
                 break
-            
+
             stmt = f"""
             INSERT INTO `search_tasks` (`job_id`, `archive_id`, `scheduled_time`) 
             VALUES ({"), (".join(f"{job_id}, '{row['archive_id']}', '{datetime.datetime.utcnow()}'" for row in rows)})
@@ -218,24 +240,23 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
 
             # Wait for the job to be marked complete
             job_complete = False
-            while not job_complete:
+            while not job_complete and counter.get() <= 100:
+                time.sleep(1)
                 db_cursor.execute(f"SELECT `status`, `status_msg` FROM `search_jobs` WHERE `id` = {job_id}")
-                # There will only ever be one row since it's impossible to have more than one job with the same ID
                 row = db_cursor.fetchall()[0]
+
                 if JobStatus.SUCCEEDED == row['status']:
                     job_complete = True
                 elif JobStatus.FAILED == row['status']:
                     logger.error(row['status_msg'])
                     job_complete = True
+
                 db_conn.commit()
 
-                time.sleep(1)
-            logger.info("no of logs received: {f}".format(f=search_logs_received))
-            if len(rows) < pagination_limit or search_logs_received["counter"] > 500:
-                
-                # Less than limit rows returned, so there are no more rows
-                break
-            next_pagination_id += pagination_limit
+
+async def increment_results_counter():
+    counter.increment()
+    return 0
 
 
 async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
@@ -250,11 +271,12 @@ async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
                 return
             unpacker.feed(buf)
 
-            # Print out any messages we can decode
             for unpacked in unpacker:
                 print(f"{unpacked[0]}: {unpacked[2]}", end='')
-                search_logs_received["counter"] = search_logs_received["counter"] + 1
-                logger.info(f"counter updated {search_logs_received['counter']}")
+
+                task = asyncio.create_task(increment_results_counter())
+                await task
+
     except asyncio.CancelledError:
         return
     finally:
@@ -299,9 +321,9 @@ def main(argv):
 
     args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")
     args_parser.add_argument('--config', '-c', required=True, help="CLP configuration file.")
-    args_parser.add_argument('wildcard_query', help="Wildcard query.")
+    args_parser.add_argument('--wildcard_query', required=True, help="Wildcard query.")
     args_parser.add_argument('--file-path', help="File to search.")
-    args_parser.add_argument('--context', help="Time context to search") #eg., last15m, last1h
+    args_parser.add_argument('--context', required=True, help="Time context to search")
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate and load config file
