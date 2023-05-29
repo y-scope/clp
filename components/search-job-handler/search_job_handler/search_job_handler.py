@@ -377,5 +377,5 @@ def parsecontext(context):
 
 
 if '__main__' == __name__:
-    sys.exit(main(sys.argv)
+    sys.exit(main(sys.argv))
 
