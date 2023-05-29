@@ -292,35 +292,33 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
         # Search cancelled
         return
     port = server.sockets[0].getsockname()[1]
-
     server_task = asyncio.ensure_future(server.serve_forever())
 
-    pagination_limit = 2
-    next_pagination_id = -2
+    pagination_limit = 5
+    next_pagination_id = -5
 
-    db_monitor_task = asyncio.ensure_future(
-        run_function_in_process(
-            create_and_monitor_job_in_db, db_config, wildcard_query,
-            path_filter, host, port, pagination_limit, next_pagination_id, time_context))
+    while counter.get() <= 100:
+        next_pagination_id += pagination_limit
 
-    # Wait for the job to complete or an error to occur
-    pending = [server_task, db_monitor_task]
+        db_monitor_task = asyncio.ensure_future(
+            run_function_in_process(
+                create_and_monitor_job_in_db, db_config, wildcard_query,
+                path_filter, host, port, pagination_limit, next_pagination_id, time_context))
+        pending = [server_task, db_monitor_task]
+
+        try:
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+            if db_monitor_task not in done:
+                break
+        except:
+            pass
+
     try:
-        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
-        print(f"total results: {counter.get()}")
-
-        if db_monitor_task in done:
-            server.close()
-            await server.wait_closed()
-        else:
-            logger.error("server task unexpectedly returned")
-            db_monitor_task.cancel()
-            await db_monitor_task
+        server.close()
+        await server.wait_closed()
     except asyncio.CancelledError:
         server.close()
         await server.wait_closed()
-        await db_monitor_task
-
 
 def main(argv):
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
