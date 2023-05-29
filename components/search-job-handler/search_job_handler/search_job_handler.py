@@ -86,6 +86,7 @@ from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.job_config import SearchConfig
 from job_orchestration.scheduler.constants import JobStatus
 
+
 def validate_and_load_config_file(config_file_path: pathlib.Path, default_config_file_path: pathlib.Path,
                                   clp_home: pathlib.Path):
     if config_file_path.exists():
@@ -153,7 +154,7 @@ class Counter(object):
 counter = Counter()
 
 
-async def create_and_monitor_job_in_db(future, db_config: Database, wildcard_query: str, path_filter: str,
+async def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_filter: str,
                                  search_controller_host: str, search_controller_port: int, context):
     search_config = SearchConfig(
         search_controller_host=search_controller_host,
@@ -244,8 +245,6 @@ async def create_and_monitor_job_in_db(future, db_config: Database, wildcard_que
 
                 db_conn.commit()
 
-    future.set_result("done")
-
 
 async def increment_results_counter():
     counter.increment()
@@ -287,10 +286,8 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
     port = server.sockets[0].getsockname()[1]
     server_task = asyncio.ensure_future(server.serve_forever())
 
-    loop = asyncio.get_event_loop()
-    fut = loop.create_future()
-    loop.create_task(create_and_monitor_job_in_db(fut, db_config, wildcard_query, path_filter, host, port, context))
-    db_monitor_task = asyncio.ensure_future(await fut)
+    db_monitor_task = asyncio.ensure_future(
+        create_and_monitor_job_in_db(db_config, wildcard_query, path_filter, host, port, context))
 
     # Wait for the job to complete or an error to occur
     pending = [server_task, db_monitor_task]
@@ -307,6 +304,7 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
         server.close()
         await server.wait_closed()
         await db_monitor_task
+
 
 def main(argv):
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
