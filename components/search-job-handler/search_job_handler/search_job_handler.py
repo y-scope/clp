@@ -285,11 +285,12 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
         # Search cancelled
         return
     port = server.sockets[0].getsockname()[1]
-
     server_task = asyncio.ensure_future(server.serve_forever())
 
-    db_monitor_task = asyncio.ensure_future(
-        run_function_in_process(create_and_monitor_job_in_db, db_config, wildcard_query, path_filter, host, port))
+    loop = asyncio.get_event_loop()
+    fut = loop.create_future()
+    loop.create_task(create_and_monitor_job_in_db(fut, db_config, wildcard_query, path_filter, host, port, context))
+    db_monitor_task = asyncio.ensure_future(await fut)
 
     # Wait for the job to complete or an error to occur
     pending = [server_task, db_monitor_task]
