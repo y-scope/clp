@@ -206,7 +206,6 @@ def create_and_monitor_job_in_db(
             {uppertlimit*1000} 
             group by archive_id limit {pagination_limit} offset {next_pagination_id};
             """
-        logger.info(job_stmt)
         db_cursor.execute(job_stmt)
         rows = db_cursor.fetchall()
 
