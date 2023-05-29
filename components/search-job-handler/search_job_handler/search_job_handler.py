@@ -122,16 +122,26 @@ async def run_function_in_process(function, *args, initializer=None, init_args=N
     :param init_args: Arguments for the initializer
     :return: Return value of the method
     """
+    pool = multiprocessing.Pool(1, initializer, init_args)
 
     loop = asyncio.get_event_loop()
     fut = loop.create_future()
 
-    loop.create_task(function(fut, args))
+    def process_done_callback(obj):
+        loop.call_soon_threadsafe(fut.set_result, obj)
+
+    def process_error_callback(err):
+        loop.call_soon_threadsafe(fut.set_exception, err)
+
+    pool.apply_async(function, args, callback=process_done_callback, error_callback=process_error_callback)
 
     try:
         return await fut
     except asyncio.CancelledError:
         pass
+    finally:
+        pool.terminate()
+        pool.close()
 
 
 class Counter(object):
@@ -154,8 +164,10 @@ class Counter(object):
 counter = Counter()
 
 
-async def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_filter: str,
-                                 search_controller_host: str, search_controller_port: int, context):
+async def create_and_monitor_job_in_db(
+        db_config: Database, wildcard_query: str, path_filter: str,
+        search_controller_host: str, search_controller_port: int,
+        pagination_limit: int, next_pagination_id: int, context):
     search_config = SearchConfig(
         search_controller_host=search_controller_host,
         search_controller_port=search_controller_port,
@@ -172,9 +184,6 @@ async def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str,
         db_conn.commit()
         job_id = db_cursor.lastrowid
 
-        next_pagination_id = -7
-        pagination_limit = 7
-
         num_tasks_added = 0
 
         if context is not None:
@@ -187,63 +196,62 @@ async def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str,
                 lowertlimit = calendar.timegm(
                     (datetime.datetime.utcnow() - datetime.timedelta(minutes=context["interval"])).timetuple())
 
-        while counter.get() <= 100:
-            next_pagination_id += pagination_limit
+        next_pagination_id += pagination_limit
 
-            if context is not None:
-                job_stmt = f"""
-                    select archive_id, DENSE_RANK() OVER (ORDER BY archive_id) as no 
-                    from clp_files 
-                    where begin_timestamp between 
-                    {lowertlimit*1000}
-                    and 
-                    {uppertlimit*1000} 
-                    group by archive_id limit {pagination_limit} offset {next_pagination_id};
-                    """
-            else:
-                job_stmt = f"""
-                SELECT `id` FROM {CLP_METADATA_TABLE_PREFIX}archives 
-                WHERE `pagination_id` >= {next_pagination_id} 
-                LIMIT {pagination_limit}
+        if context is not None:
+            job_stmt = f"""
+                select archive_id, DENSE_RANK() OVER (ORDER BY archive_id) as no 
+                from clp_files 
+                where begin_timestamp between 
+                {lowertlimit*1000}
+                and 
+                {uppertlimit*1000} 
+                group by archive_id limit {pagination_limit} offset {next_pagination_id};
                 """
-
-            db_cursor.execute(job_stmt)
-            rows = db_cursor.fetchall()
-
-            if len(rows) == 0:
-                break
-
-            stmt = f"""
-            INSERT INTO `search_tasks` (`job_id`, `archive_id`, `scheduled_time`) 
-            VALUES ({"), (".join(f"{job_id}, '{row['archive_id']}', '{datetime.datetime.utcnow()}'" for row in rows)})
+        else:
+            job_stmt = f"""
+            SELECT `id` FROM {CLP_METADATA_TABLE_PREFIX}archives 
+            WHERE `pagination_id` >= {next_pagination_id} 
+            LIMIT {pagination_limit}
             """
 
-            db_cursor.execute(stmt)
+        db_cursor.execute(job_stmt)
+        rows = db_cursor.fetchall()
+
+        if len(rows) == 0:
+            return
+
+        stmt = f"""
+        INSERT INTO `search_tasks` (`job_id`, `archive_id`, `scheduled_time`) 
+        VALUES ({"), (".join(f"{job_id}, '{row['archive_id']}', '{datetime.datetime.utcnow()}'" for row in rows)})
+        """
+
+        db_cursor.execute(stmt)
+        db_conn.commit()
+        num_tasks_added += len(rows)
+
+        # Mark job as scheduled
+        db_cursor.execute(f"""
+        UPDATE `search_jobs`
+        SET num_tasks={num_tasks_added}, status = '{JobStatus.SCHEDULED}'
+        WHERE id = {job_id}
+        """)
+        db_conn.commit()
+
+        # Wait for the job to be marked complete
+        job_complete = False
+        while not job_complete:
+            time.sleep(1)
+            db_cursor.execute(f"SELECT `status`, `status_msg` FROM `search_jobs` WHERE `id` = {job_id}")
+            row = db_cursor.fetchall()[0]
+
+            if JobStatus.SUCCEEDED == row['status']:
+                job_complete = True
+            elif JobStatus.FAILED == row['status']:
+                logger.error(row['status_msg'])
+                job_complete = True
+
             db_conn.commit()
-            num_tasks_added += len(rows)
-
-            # Mark job as scheduled
-            db_cursor.execute(f"""
-            UPDATE `search_jobs`
-            SET num_tasks={num_tasks_added}, status = '{JobStatus.SCHEDULED}'
-            WHERE id = {job_id}
-            """)
-            db_conn.commit()
-
-            # Wait for the job to be marked complete
-            job_complete = False
-            while not job_complete and counter.get() <= 100:
-                time.sleep(1)
-                db_cursor.execute(f"SELECT `status`, `status_msg` FROM `search_jobs` WHERE `id` = {job_id}")
-                row = db_cursor.fetchall()[0]
-
-                if JobStatus.SUCCEEDED == row['status']:
-                    job_complete = True
-                elif JobStatus.FAILED == row['status']:
-                    logger.error(row['status_msg'])
-                    job_complete = True
-
-                db_conn.commit()
 
 
 async def increment_results_counter():
@@ -274,8 +282,7 @@ async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
     finally:
         writer.close()
 
-
-async def do_search(db_config: Database, wildcard_query: str, path_filter: str, host: str, context):
+async def do_search(db_config: Database, wildcard_query: str, path_filter: str, host: str, time_context):
     # Start server to receive and print results
     try:
         server = await asyncio.start_server(client_connected_cb=worker_connection_handler, host=host, port=0,
@@ -284,15 +291,19 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
         # Search cancelled
         return
     port = server.sockets[0].getsockname()[1]
+
     server_task = asyncio.ensure_future(server.serve_forever())
 
     db_monitor_task = asyncio.ensure_future(
-        create_and_monitor_job_in_db(db_config, wildcard_query, path_filter, host, port, context))
+        run_function_in_process(
+            create_and_monitor_job_in_db, db_config, wildcard_query, path_filter, host, port, 2, -2, time_context))
 
     # Wait for the job to complete or an error to occur
     pending = [server_task, db_monitor_task]
     try:
         done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+        print(f"total results: {counter.get()}")
+
         if db_monitor_task in done:
             server.close()
             await server.wait_closed()
@@ -306,7 +317,8 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
         await db_monitor_task
 
 
-async def main(argv):
+
+def main(argv):
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")
@@ -364,4 +376,6 @@ def parsecontext(context):
     return ctx
 
 
-asyncio.run(main(sys.argv))
+if '__main__' == __name__:
+    sys.exit(main(sys.argv)
+
