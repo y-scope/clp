@@ -164,7 +164,7 @@ class Counter(object):
 counter = Counter()
 
 
-async def create_and_monitor_job_in_db(
+def create_and_monitor_job_in_db(
         db_config: Database, wildcard_query: str, path_filter: str,
         search_controller_host: str, search_controller_port: int,
         pagination_limit: int, next_pagination_id: int, context):
