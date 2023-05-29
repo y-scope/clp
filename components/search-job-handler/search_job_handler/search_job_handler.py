@@ -275,7 +275,7 @@ async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
         writer.close()
 
 
-async def do_search(db_config: Database, wildcard_query: str, path_filter: str, host: str, context):
+def do_search(db_config: Database, wildcard_query: str, path_filter: str, host: str, context):
     # Start server to receive and print results
     try:
         server = await asyncio.start_server(client_connected_cb=worker_connection_handler, host=host, port=0,
@@ -342,7 +342,7 @@ def main(argv):
     else:
         context = None
 
-    asyncio.run(do_search(clp_config.database, parsed_args.wildcard_query, parsed_args.file_path, host_ip, context))
+    do_search(clp_config.database, parsed_args.wildcard_query, parsed_args.file_path, host_ip, context)
 
     return 0
 
