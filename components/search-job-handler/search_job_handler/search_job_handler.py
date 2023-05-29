@@ -282,6 +282,7 @@ async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
     finally:
         writer.close()
 
+
 async def do_search(db_config: Database, wildcard_query: str, path_filter: str, host: str, time_context):
     # Start server to receive and print results
     try:
@@ -294,9 +295,13 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
 
     server_task = asyncio.ensure_future(server.serve_forever())
 
+    pagination_limit = 2
+    next_pagination_id = -2
+
     db_monitor_task = asyncio.ensure_future(
         run_function_in_process(
-            create_and_monitor_job_in_db, db_config, wildcard_query, path_filter, host, port, 2, -2, time_context))
+            create_and_monitor_job_in_db, db_config, wildcard_query,
+            path_filter, host, port, pagination_limit, next_pagination_id, time_context))
 
     # Wait for the job to complete or an error to occur
     pending = [server_task, db_monitor_task]
@@ -315,7 +320,6 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
         server.close()
         await server.wait_closed()
         await db_monitor_task
-
 
 
 def main(argv):
