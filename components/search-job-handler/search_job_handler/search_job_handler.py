@@ -247,6 +247,7 @@ def create_and_monitor_job_in_db(
 
     return 0
 
+
 async def increment_results_counter():
     counter.increment()
     return 0
@@ -320,6 +321,7 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
         server.close()
         await server.wait_closed()
 
+
 def main(argv):
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -336,7 +338,7 @@ def main(argv):
         clp_config = validate_and_load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_logs_dir()
     except:
-        logger.exception("Failed to load config.")
+        print("failed to load config.")
         return -1
 
     # Get IP of local machine
@@ -345,13 +347,13 @@ def main(argv):
         host_ip = ip
         break
     if host_ip is None:
-        logger.error("Could not determine IP of local machine.")
+        print("could not determine ip of local machine.")
         return -1
 
     if parsed_args.context is not None:
-        context = parsecontext(parsed_args.context)
+        context = parse_context(parsed_args.context)
         if context == -1:
-            logger.error("Invalid context given")
+            print("invalid context given")
             return
     else:
         context = None
@@ -361,7 +363,7 @@ def main(argv):
     return 0
 
 
-def parsecontext(context):
+def parse_context(context):
     if len(context) < 6:
         return -1
     if context[:4] != "last":
@@ -372,8 +374,19 @@ def parsecontext(context):
         unit = "MINUTE"
     else:
         return -1
+
     if not context[4:-1].isdigit():
         return -1
+
+    value = int(context[4:-1])
+    if value > 24 and unit == "HOUR":
+        print("can only filter logs upto 24 hours")
+        return -1
+
+    if value > 60 and unit == "MINUTE":
+        print("can filter logs upto 60 mins only. use hours instead")
+        return -1
+
     ctx = {'unit': unit, 'interval': int(context[4:-1])}
     return ctx
 
