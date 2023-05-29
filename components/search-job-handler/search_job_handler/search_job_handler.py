@@ -244,6 +244,7 @@ def create_and_monitor_job_in_db(
 
             db_conn.commit()
 
+    return 0
 
 async def increment_results_counter():
     counter.increment()
