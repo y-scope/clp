@@ -298,7 +298,8 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
 
     loop = asyncio.get_running_loop()
     db_monitor_task = loop.create_future()
-    loop.create_task(create_and_monitor_job_in_db(db_config, wildcard_query, path_filter, host, port, context))
+    loop.create_task(create_and_monitor_job_in_db(
+        db_monitor_task, db_config, wildcard_query, path_filter, host, port, context))
 
     pending = [server_task, db_monitor_task]
     try:
