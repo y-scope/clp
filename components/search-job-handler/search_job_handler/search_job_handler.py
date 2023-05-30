@@ -353,7 +353,7 @@ def main(argv):
     if parsed_args.context is not None:
         context = parse_context(parsed_args.context)
         if context == -1:
-            print("invalid context given")
+            print("invalid date context given.should be of something like 'last15m', 'last1h', etc")
             return
     else:
         context = None
