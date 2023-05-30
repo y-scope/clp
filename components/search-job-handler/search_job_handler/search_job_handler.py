@@ -314,6 +314,7 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
         except:
             pass
 
+    print(f"no of logs fetched from the given context: {counter.get()}")
     try:
         server.close()
         await server.wait_closed()
