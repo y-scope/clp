@@ -43,7 +43,7 @@ def run_clo(job_id: int, task_id: int, clp_home: pathlib.Path, archive_output_di
     ]
     if path_filter is not None:
         cmd.append(path_filter)
-
+    logger.debug(f"command sent to clo for execution: {str(cmd)}")
     # Open stderr log file
     stderr_filename = f'search-job-{job_id}-task-{task_id}-stderr.log'
     stderr_log_path = logs_dir / stderr_filename
