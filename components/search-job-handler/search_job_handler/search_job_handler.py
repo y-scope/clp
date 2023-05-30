@@ -197,7 +197,6 @@ def create_and_monitor_job_in_db(
                 lowertlimit = calendar.timegm(
                     (datetime.datetime.utcnow() - datetime.timedelta(minutes=context["interval"])).timetuple())
 
-        next_pagination_id += pagination_limit
         job_stmt = f"""
             select archive_id, DENSE_RANK() OVER (ORDER BY archive_id) as no 
             from clp_files 
