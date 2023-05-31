@@ -23,8 +23,7 @@ public:
     };
 
     // Constructors
-    BufferReader () : m_data(nullptr), m_data_size(0), m_cursor_pos(0) {}
-    BufferReader (const char* data, size_t size) : m_data(data), m_data_size(size), m_cursor_pos(0) {}
+    BufferReader (const char* data, size_t data_size);
 
     // Methods implementing the ReaderInterface
     /**

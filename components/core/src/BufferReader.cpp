@@ -4,12 +4,16 @@
 #include <algorithm>
 #include <cstring>
 
-using std::string_view;
+BufferReader::BufferReader (const char* data, size_t data_size) {
+    if (data == nullptr || data_size == 0) {
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+    m_data = data;
+    m_data_size = data_size;
+    m_cursor_pos = 0;
+}
 
 ErrorCode BufferReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
-    if (nullptr == m_data) {
-        return ErrorCode_NotInit;
-    }
     if (nullptr == buf && num_bytes_to_read > 0) {
         return ErrorCode_BadParam;
     }
@@ -28,9 +32,6 @@ ErrorCode BufferReader::try_read (char* buf, size_t num_bytes_to_read, size_t& n
 }
 
 [[nodiscard]] ErrorCode BufferReader::try_seek_from_begin (size_t pos) {
-    if (nullptr == m_data) {
-        return ErrorCode_NotInit;
-    }
     if (pos > m_data_size) {
         return ErrorCode_OutOfBounds;
     }
@@ -39,9 +40,6 @@ ErrorCode BufferReader::try_read (char* buf, size_t num_bytes_to_read, size_t& n
 }
 
 [[nodiscard]] ErrorCode BufferReader::try_get_pos (size_t& pos) {
-    if (nullptr == m_data) {
-        return ErrorCode_NotInit;
-    }
     pos = m_cursor_pos;
     return ErrorCode_Success;
 }

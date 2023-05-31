@@ -206,15 +206,16 @@ static void set_timestamp_info (const nlohmann::json& metadata_json, TimestampIn
 
 TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
     bool is_four_bytes_encoding;
-    BufferReader ir_buffer;
     // Test eight-byte encoding
     vector<int8_t> eight_byte_encoding_vec{EightByteEncodingMagicNumber,
                                            EightByteEncodingMagicNumber + MagicNumberLength};
 
     // Test eight-byte encoding
-    ir_buffer.set_buffer(reinterpret_cast<const char*>(eight_byte_encoding_vec.data()),
-                         eight_byte_encoding_vec.size());
-    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
+    BufferReader eight_byte_encoding_buffer (
+            reinterpret_cast<const char*>(eight_byte_encoding_vec.data()),
+            eight_byte_encoding_vec.size()
+    );
+    REQUIRE(get_encoding_type(eight_byte_encoding_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<eight_byte_encoded_variable_t>(is_four_bytes_encoding));
 
@@ -222,29 +223,30 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
     vector<int8_t> four_byte_encoding_vec{FourByteEncodingMagicNumber,
                                           FourByteEncodingMagicNumber + MagicNumberLength};
 
-    ir_buffer.set_buffer(reinterpret_cast<const char*>(four_byte_encoding_vec.data()),
-                         four_byte_encoding_vec.size());
-    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
+    BufferReader four_byte_encoding_buffer (
+            reinterpret_cast<const char*>(four_byte_encoding_vec.data()),
+             four_byte_encoding_vec.size()
+    );
+    REQUIRE(get_encoding_type(four_byte_encoding_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<four_byte_encoded_variable_t>(is_four_bytes_encoding));
 
-    // Test error on empty and incomplete ir_buffer
-    const vector<int8_t> empty_ir_vec;
-    ir_buffer.set_buffer(reinterpret_cast<const char*>(empty_ir_vec.data()),
-                         empty_ir_vec.size());
-    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
-            IRErrorCode::IRErrorCode_Incomplete_IR);
+    // Test error on incomplete ir_buffer
+    BufferReader incomplete_buffer (
+            reinterpret_cast<const char*>(four_byte_encoding_vec.data()),
+            four_byte_encoding_vec.size() - 1
+    );
 
-    ir_buffer.set_buffer(reinterpret_cast<const char*>(four_byte_encoding_vec.data()),
-                         four_byte_encoding_vec.size() - 1);
-    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
+    REQUIRE(get_encoding_type(incomplete_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Incomplete_IR);
 
     // Test error on invalid encoding
     const vector<int8_t> invalid_ir_vec{0x02, 0x43, 0x24, 0x34};
-    ir_buffer.set_buffer(reinterpret_cast<const char*>(invalid_ir_vec.data()),
-                         invalid_ir_vec.size());
-    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
+    BufferReader invalid_ir_buffer (
+            reinterpret_cast<const char*>(invalid_ir_vec.data()),
+            invalid_ir_vec.size()
+    );
+    REQUIRE(get_encoding_type(invalid_ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Corrupted_IR);
 
 }
@@ -253,7 +255,6 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
                    eight_byte_encoded_variable_t)
 {
     vector<int8_t> ir_buf;
-    BufferReader ir_buffer;
     constexpr char timestamp_pattern[] = "%Y-%m-%d %H:%M:%S,%3";
     constexpr char timestamp_pattern_syntax[] = "yyyy-MM-dd HH:mm:ss";
     constexpr char time_zone_id[] = "Asia/Tokyo";
@@ -263,29 +264,31 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
     const size_t encoded_preamble_end_pos = ir_buf.size();
 
     // Check if encoding type is properly read
-    ir_buffer.set_buffer(reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size());
+    BufferReader encoding_buffer (
+            reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size()
+    );
     bool is_four_bytes_encoding;
-    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
+    REQUIRE(get_encoding_type(encoding_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<TestType>(is_four_bytes_encoding));
-    REQUIRE(MagicNumberLength == ir_buffer.get_pos());
+    REQUIRE(MagicNumberLength == encoding_buffer.get_pos());
 
     // Test if preamble can be decoded correctly
     TimestampInfo ts_info;
     encoded_tag_t metadata_type{0};
     size_t metadata_pos{0};
     uint16_t metadata_size{0};
-    REQUIRE(decode_preamble(ir_buffer, metadata_type, metadata_pos, metadata_size) ==
+    REQUIRE(decode_preamble(encoding_buffer, metadata_type, metadata_pos, metadata_size) ==
             IRErrorCode::IRErrorCode_Success);
-    REQUIRE(encoded_preamble_end_pos == ir_buffer.get_pos());
+    REQUIRE(encoded_preamble_end_pos == encoding_buffer.get_pos());
     
     auto json_metadata_ptr = reinterpret_cast<char*>(ir_buf.data() + metadata_pos);
     string_view json_metadata_ref {json_metadata_ptr, metadata_size};
 
     // Test if preamble can be decoded by the string copy method
     std::vector<int8_t> json_metadata_vec;
-    ir_buffer.seek_from_begin(MagicNumberLength);
-    REQUIRE(decode_preamble(ir_buffer, metadata_type, json_metadata_vec) ==
+    encoding_buffer.seek_from_begin(MagicNumberLength);
+    REQUIRE(decode_preamble(encoding_buffer, metadata_type, json_metadata_vec) ==
             IRErrorCode::IRErrorCode_Success);
     string_view json_metadata_copied { reinterpret_cast<const char*>(json_metadata_vec.data()),
                                        json_metadata_vec.size() };
@@ -299,7 +302,7 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);
     REQUIRE(time_zone_id == ts_info.time_zone_id);
     REQUIRE(timestamp_pattern == ts_info.timestamp_pattern);
-    REQUIRE(encoded_preamble_end_pos == ir_buffer.get_pos());
+    REQUIRE(encoded_preamble_end_pos == encoding_buffer.get_pos());
 
     if constexpr (is_same_v<TestType, four_byte_encoded_variable_t>) {
         REQUIRE(reference_ts ==
@@ -319,7 +322,6 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
 
     // Test if corrupted IR can be detected
     ir_buf[MagicNumberLength] = 0x23;
-    ir_buffer.seek_from_begin(MagicNumberLength);
     BufferReader corrupted_preamble_buffer(reinterpret_cast<const char*>(ir_buf.data()),
                                            ir_buf.size());
     REQUIRE(decode_preamble(
@@ -331,7 +333,6 @@ TEMPLATE_TEST_CASE("decode_next_message_general", "[ffi][decode_next_message]",
                    four_byte_encoded_variable_t, eight_byte_encoded_variable_t)
 {
     vector<int8_t> ir_buf;
-    BufferReader ir_buffer;
     string logtype;
 
     string placeholder_as_string{enum_to_underlying_type(VariablePlaceholder::Dictionary)};
@@ -343,7 +344,8 @@ TEMPLATE_TEST_CASE("decode_next_message_general", "[ffi][decode_next_message]",
     const size_t encoded_message_start_pos = 0;
 
     // Test if message can be decoded properly
-    ir_buffer.set_buffer(reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size());
+
+    BufferReader ir_buffer(reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size());
     string decoded_message;
     epoch_time_ms_t timestamp;
 
@@ -371,7 +373,6 @@ TEMPLATE_TEST_CASE("decode_next_message_general", "[ffi][decode_next_message]",
 TEST_CASE("message_decode_error", "[ffi][decode_next_message]")
 {
     vector<int8_t> ir_buf;
-    BufferReader ir_buffer;
     string logtype;
 
     string placeholder_as_string{enum_to_underlying_type(VariablePlaceholder::Dictionary)};
@@ -393,20 +394,26 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]")
     // Test if a trailing escape triggers a decoder error
     auto ir_with_extra_escape {ir_buf};
     ir_with_extra_escape.at(logtype_end_pos - 1) = ffi::cVariablePlaceholderEscapeCharacter;
-    ir_buffer.set_buffer(reinterpret_cast<const char*>(ir_with_extra_escape.data()),
-                         ir_with_extra_escape.size());
+    BufferReader ir_with_extra_escape_buffer (
+            reinterpret_cast<const char*>(ir_with_extra_escape.data()),
+            ir_with_extra_escape.size()
+    );
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error ==
-            decode_next_message<eight_byte_encoded_variable_t>(ir_buffer, decoded_message,
+            decode_next_message<eight_byte_encoded_variable_t>(ir_with_extra_escape_buffer,
+                                                               decoded_message,
                                                                timestamp));
 
     // Test if an extra placeholder triggers a decoder error
     auto ir_with_extra_placeholder{ir_buf};
     ir_with_extra_placeholder.at(logtype_end_pos - 1) =
             enum_to_underlying_type(VariablePlaceholder::Dictionary);
-    ir_buffer.set_buffer(reinterpret_cast<const char*>(ir_with_extra_placeholder.data()),
-                         ir_with_extra_placeholder.size());
+    BufferReader ir_with_extra_placeholder_buffer (
+            reinterpret_cast<const char*>(ir_with_extra_placeholder.data()),
+            ir_with_extra_placeholder.size()
+    );
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error ==
-            decode_next_message<eight_byte_encoded_variable_t>(ir_buffer, decoded_message,
+            decode_next_message<eight_byte_encoded_variable_t>(ir_with_extra_placeholder_buffer,
+                                                               decoded_message,
                                                                timestamp));
 }
 
