@@ -5,7 +5,7 @@
 #include "ReaderInterface.hpp"
 
 /**
- * Class that represents a ReaderInterface to a fixed size buffer
+ * Class for reading from a fixed size in memory buffer
  */
 class BufferReader : public ReaderInterface {
 public:
@@ -43,7 +43,7 @@ public:
      * Tries to seek from the beginning of the buffer to the given position
      * @param pos
      * @return ErrorCode_NotInit if the buffer is not initialized
-     * @return ErrorCode_OutOfBounds if the given position >= the buffer's size
+     * @return ErrorCode_OutOfBounds if the given position > the buffer's size
      * @return ErrorCode_Success on success
      */
     [[nodiscard]] ErrorCode try_seek_from_begin (size_t pos) override;

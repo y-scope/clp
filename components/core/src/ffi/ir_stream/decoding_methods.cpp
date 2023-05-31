@@ -54,8 +54,8 @@ namespace ffi::ir_stream {
      * @return IRErrorCode_Incomplete_IR if input buffer doesn't contain enough
      * data to decode
      */
-    static IRErrorCode parse_dictionary_var (ReaderInterface& reader,
-                                             encoded_tag_t encoded_tag, string& dict_var);
+    static IRErrorCode parse_dictionary_var (ReaderInterface& reader, encoded_tag_t encoded_tag,
+                                             string& dict_var);
 
     /**
      * Parses the next timestamp from reader
@@ -491,7 +491,6 @@ namespace ffi::ir_stream {
             return error_code;
         }
         metadata_pos = reader.get_pos();
-        //TODO: this might not be optimal
         if (ErrorCode_Success != reader.try_seek_from_begin(metadata_pos + metadata_size)) {
             return IRErrorCode_Incomplete_IR;
         }

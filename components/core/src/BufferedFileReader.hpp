@@ -15,7 +15,7 @@
 #include "TraceableException.hpp"
 
 /**
- * Class that represents a on-disk-file with customized buffering
+ * Class for reading from a on-disk file with custom buffering
  */
 class BufferedFileReader : public ReaderInterface {
 public:
