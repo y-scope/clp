@@ -27,7 +27,7 @@ public:
     };
 
     // Methods
-    static bool parse_four_bytes_encoded_message(BufferedReaderInterface& reader,
+    static bool parse_four_bytes_encoded_message(ReaderInterface& reader,
                                                  ParsedIrMessage& msg,
                                                  epochtime_t& reference_ts);
 };

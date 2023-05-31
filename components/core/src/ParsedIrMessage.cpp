@@ -11,6 +11,8 @@
 // spdlog
 #include "spdlog/spdlog.h"
 
+using std::string;
+
 void ParsedIrMessage::set_ts (epochtime_t ts) {
     m_ts = ts;
 }
@@ -23,8 +25,8 @@ void ParsedIrMessage::set_ts_pattern (const TimestampPattern* timestamp_pattern)
     m_ts_patt = timestamp_pattern;
 }
 
-void ParsedIrMessage::append_to_logtype (const char* begin, size_t length) {
-    m_logtype.append(begin, length);
+void ParsedIrMessage::append_to_logtype (const string& value, size_t begin_pos, size_t length) {
+    m_logtype.append(value, begin_pos, length);
     m_orig_num_bytes += length;
 }
 
@@ -40,7 +42,7 @@ void ParsedIrMessage::clear_except_ts_patt () {
     m_logtype.clear();
 }
 
-void ParsedIrMessage::add_dictionary_var (std::string_view dictionary_var) {
+void ParsedIrMessage::add_dictionary_var (const string& dictionary_var) {
     m_variables.emplace_back(dictionary_var);
     m_var_positions.push_back(m_logtype.length());
     m_logtype += enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Dictionary);

@@ -30,7 +30,7 @@ public:
     };
     class EncodedIrVariable {
     public:
-        EncodedIrVariable(std::string_view dict_var) {
+        EncodedIrVariable(const std::string& dict_var) {
             m_dict_var = dict_var;
             m_type = VariableType::DictVar;
         }
@@ -69,10 +69,10 @@ public:
     void set_ts_pattern (const TimestampPattern* timestamp_pattern);
 
     // note, this logtype is already escaped
-    void append_to_logtype (const char* begin, size_t length);
+    void append_to_logtype (const std::string& value, size_t begin_pos, size_t length);
     void add_encoded_integer (encoded_variable_t var, size_t original_size_in_bytes);
     void add_encoded_float (encoded_variable_t var, size_t original_size_in_bytes);
-    void add_dictionary_var (std::string_view dictionary_var);
+    void add_dictionary_var (const std::string& dictionary_var);
 
     // getter
     epochtime_t get_ts () const { return m_ts; }

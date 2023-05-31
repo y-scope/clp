@@ -75,10 +75,10 @@ namespace ffi::ir_stream {
         IRErrorCode decode_next_message (ReaderInterface& ir_buf, std::string& message,
                                          epoch_time_ms_t& timestamp);
 
-        IRErrorCode decode_tokens (BufferedReaderInterface& buffer_reader,
-                                   BufferedReaderInterface::MyStringView& logtype,
+        IRErrorCode decode_tokens (ReaderInterface& buffer_reader,
+                                   std::string& logtype,
                                    std::vector<eight_byte_encoded_variable_t>& encoded_vars,
-                                   std::vector<BufferedReaderInterface::MyStringView>& dict_vars,
+                                   std::vector<std::string>& dict_vars,
                                    epoch_time_ms_t& timestamp);
     }
 
@@ -99,10 +99,10 @@ namespace ffi::ir_stream {
         IRErrorCode decode_next_message (ReaderInterface& ir_buf, std::string& message,
                                          epoch_time_ms_t& timestamp_delta);
 
-        IRErrorCode decode_tokens (BufferedReaderInterface& buffer_reader,
-                                   BufferedReaderInterface::MyStringView& logtype,
+        IRErrorCode decode_tokens (ReaderInterface& buffer_reader,
+                                   std::string& logtype,
                                    std::vector<four_byte_encoded_variable_t>& encoded_vars,
-                                   std::vector<BufferedReaderInterface::MyStringView>& dict_vars,
+                                   std::vector<std::string>& dict_vars,
                                    epoch_time_ms_t& timestamp);
     }
 }

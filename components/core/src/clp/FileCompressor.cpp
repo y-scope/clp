@@ -45,7 +45,7 @@ static void compute_and_add_empty_directories (const set<string>& directories, c
  */
 static void write_message_to_encoded_file (const ParsedMessage& msg, streaming_archive::writer::Archive& archive);
 
-static bool is_ir_encoded(BufferedFileReader& reader, bool& is_four_bytes_encoded);
+static bool is_ir_encoded(ReaderInterface& reader, bool& is_four_bytes_encoded);
 
 static void compute_and_add_empty_directories (const set<string>& directories, const set<string>& parent_directories,
                                                const boost::filesystem::path& parent_path, streaming_archive::writer::Archive& archive)
@@ -121,25 +121,10 @@ namespace clp {
                                  file_to_compress.get_group_id(), archive_writer, m_file_reader);
             }
         } else {
-            bool is_four_bytes_encoded_ir;
-            if (is_ir_encoded(m_file_reader, is_four_bytes_encoded_ir)) {
-                if (false == try_compressing_as_ir(target_data_size_of_dicts,
-                                                   archive_user_config,
-                                                   target_encoded_file_size,
-                                                   file_to_compress.get_path_for_compression(),
-                                                   file_to_compress.get_group_id(),
-                                                   archive_writer,
-                                                   m_file_reader,
-                                                   is_four_bytes_encoded_ir))
-                {
-                    succeeded = false;
-                }
-            } else {
-                if (false == try_compressing_as_archive(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, file_to_compress,
-                                                        archive_writer, use_heuristic))
-                {
-                    succeeded = false;
-                }
+            if (false == try_compressing_as_archive(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, file_to_compress,
+                                                    archive_writer, use_heuristic))
+            {
+                succeeded = false;
             }
         }
 
@@ -288,6 +273,7 @@ namespace clp {
                     continue;
                 }
             }
+            bool is_four_bytes_encoded {false};
             if (is_utf8_sequence(m_utf8_validation_buf_length, m_utf8_validation_buf)) {
                 auto boost_path_for_compression = parent_boost_path / m_libarchive_reader.get_path();
                 if (use_heuristic) {
@@ -298,8 +284,16 @@ namespace clp {
                     parse_and_encode(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, boost_path_for_compression.string(),
                                      file_to_compress.get_group_id(), archive_writer, m_libarchive_file_reader);
                 }
+            } else if (is_ir_encoded(m_libarchive_file_reader, is_four_bytes_encoded)) {
+                auto boost_path_for_compression = parent_boost_path / m_libarchive_reader.get_path();
+                if (false == try_compressing_as_ir(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, boost_path_for_compression.string(),
+                                                   file_to_compress.get_group_id(), archive_writer, m_libarchive_file_reader, is_four_bytes_encoded)) {
+                    SPDLOG_ERROR("SOME Error message to be printed");
+
+                }
+
             } else {
-                SPDLOG_ERROR("Cannot compress {} - not UTF-8 encoded.", m_libarchive_reader.get_path());
+                SPDLOG_ERROR("Cannot compress {} - not UTF-8 or IR encoded.", m_libarchive_reader.get_path());
                 succeeded = false;
             }
 
@@ -318,7 +312,7 @@ namespace clp {
                                                 const std::string& path_for_compression,
                                                 group_id_t group_id,
                                                 streaming_archive::writer::Archive& archive_writer,
-                                                BufferedFileReader& reader,
+                                                ReaderInterface& reader,
                                                 bool is_four_bytes_encoded)
     {
         printf("IR compressing\n");
@@ -332,12 +326,10 @@ namespace clp {
 
         // Decode and parse metadata
         ffi::ir_stream::encoded_tag_t metadata_type;
-        size_t metadata_pos;
-        uint16_t metadata_size;
+        std::vector<uint8_t> json_metadata_vec;
         epochtime_t reference_ts;
 
-        reader.mark_pos();
-        if (ffi::ir_stream::IRErrorCode_Success != ffi::ir_stream::decode_preamble(reader, metadata_type, metadata_pos, metadata_size)) {
+        if (ffi::ir_stream::IRErrorCode_Success != ffi::ir_stream::decode_preamble(reader, metadata_type, json_metadata_vec)) {
             SPDLOG_ERROR("Failed to parse metadata");
             return false;
         }
@@ -347,8 +339,8 @@ namespace clp {
             return false;
         }
 
-        auto json_metadata_ptr = reader.get_buffer_ptr() + metadata_pos;
-        std::string_view json_metadata {json_metadata_ptr, metadata_size};
+        std::string_view json_metadata {reinterpret_cast<const char*>(json_metadata_vec.data()),
+                                        json_metadata_vec.size()};
         try {
             auto metadata_json = nlohmann::json::parse(json_metadata);
             string version = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey);
@@ -364,7 +356,6 @@ namespace clp {
             SPDLOG_ERROR("Failed to parse json metadata");
             return false;
         }
-        reader.reset_checkpoint();
 
         archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
 
@@ -374,9 +365,7 @@ namespace clp {
         m_parsed_ir_message.set_ts_pattern(&mocked_ts_pattern);
 
         while (true) {
-            m_file_reader.mark_pos();
             if (false == IrMessageParser::parse_four_bytes_encoded_message(reader, m_parsed_ir_message, reference_ts)) {
-                m_file_reader.reset_checkpoint();
                 break;
             }
             if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
@@ -385,7 +374,6 @@ namespace clp {
                 split_file(path_for_compression, group_id, &mocked_ts_pattern, archive_writer);
             }
             write_ir_message_to_encoded_file(m_parsed_ir_message, archive_writer);
-            m_file_reader.reset_checkpoint();
         }
         close_file_and_append_to_segment(archive_writer);
 
@@ -393,17 +381,10 @@ namespace clp {
     }
 }
 
-static bool is_ir_encoded (BufferedFileReader& reader, bool& is_four_bytes_encoded) {
-    auto file_pos = reader.mark_pos();
-    bool is_ir_encoded {false};
+static bool is_ir_encoded (ReaderInterface& reader, bool& is_four_bytes_encoded) {
     if (ffi::ir_stream::IRErrorCode_Success !=
             ffi::ir_stream::get_encoding_type(reader, is_four_bytes_encoded)) {
-        reader.seek_from_begin(file_pos);
-    } else {
-        // else, encoding type was successfully obtained.
-        is_ir_encoded = true;
+        return false;
     }
-
-    reader.reset_checkpoint();
-    return is_ir_encoded;
+    return true;
 }

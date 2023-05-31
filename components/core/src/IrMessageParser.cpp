@@ -16,13 +16,14 @@ using ffi::ir_stream::IRErrorCode;
 using ffi::VariablePlaceholder;
 using ffi::cVariablePlaceholderEscapeCharacter;
 using ffi::four_byte_encoded_variable_t;
+using std::string;
 
-bool IrMessageParser::parse_four_bytes_encoded_message(BufferedReaderInterface& reader,
+bool IrMessageParser::parse_four_bytes_encoded_message(ReaderInterface& reader,
                                                        ParsedIrMessage& msg,
                                                        epochtime_t& reference_ts) {
     std::vector<four_byte_encoded_variable_t> encoded_vars;
-    std::vector<BufferedReaderInterface::MyStringView> dict_vars;
-    BufferedReaderInterface::MyStringView logtype;
+    std::vector<string> dict_vars;
+    string logtype;
     epochtime_t ts;
 
     auto error_code = ffi::ir_stream::four_byte_encoding::decode_tokens(
@@ -41,21 +42,17 @@ bool IrMessageParser::parse_four_bytes_encoded_message(BufferedReaderInterface& 
     reference_ts += ts;
     msg.set_ts(reference_ts);
 
-    std::string logtype_str;
-
-    auto buffer_begin_ptr = reader.get_buffer_ptr();
     size_t encoded_vars_length = encoded_vars.size();
     size_t dict_vars_length = dict_vars.size();
     size_t next_static_text_begin_pos = 0;
 
     size_t dictionary_vars_ix = 0;
     size_t encoded_vars_ix = 0;
-    auto logtype_ptr = buffer_begin_ptr + logtype.m_buffer_pos;
-    for (size_t cur_pos = 0; cur_pos < logtype.m_size; ++cur_pos) {
-        auto c = logtype_ptr[cur_pos];
+    for (size_t cur_pos = 0; cur_pos < logtype.size(); ++cur_pos) {
+        auto c = logtype[cur_pos];
         switch(c) {
             case enum_to_underlying_type(VariablePlaceholder::Float): {
-                msg.append_to_logtype(logtype_ptr + next_static_text_begin_pos,
+                msg.append_to_logtype(logtype, next_static_text_begin_pos,
                                       cur_pos - next_static_text_begin_pos);
                 next_static_text_begin_pos = cur_pos + 1;
                 if (encoded_vars_ix >= encoded_vars_length) {
@@ -77,7 +74,7 @@ bool IrMessageParser::parse_four_bytes_encoded_message(BufferedReaderInterface& 
             }
 
             case enum_to_underlying_type(VariablePlaceholder::Integer): {
-                msg.append_to_logtype(logtype_ptr + next_static_text_begin_pos,
+                msg.append_to_logtype(logtype, next_static_text_begin_pos,
                                       cur_pos - next_static_text_begin_pos);
                 next_static_text_begin_pos = cur_pos + 1;
                 if (encoded_vars_ix >= encoded_vars_length) {
@@ -96,7 +93,7 @@ bool IrMessageParser::parse_four_bytes_encoded_message(BufferedReaderInterface& 
             }
 
             case enum_to_underlying_type(VariablePlaceholder::Dictionary): {
-                msg.append_to_logtype(logtype_ptr + next_static_text_begin_pos,
+                msg.append_to_logtype(logtype, next_static_text_begin_pos,
                                       cur_pos - next_static_text_begin_pos);
                 next_static_text_begin_pos = cur_pos + 1;
                 if (dictionary_vars_ix >= dict_vars_length) {
@@ -104,9 +101,7 @@ bool IrMessageParser::parse_four_bytes_encoded_message(BufferedReaderInterface& 
                     return false;
                 }
 
-                auto offset = dict_vars[dictionary_vars_ix].m_buffer_pos;
-                auto size = dict_vars[dictionary_vars_ix].m_size;
-                std::string var_string {buffer_begin_ptr + offset, size};
+                const auto& var_string {dict_vars[dictionary_vars_ix]} ;
 
                 encoded_variable_t converted_var;
                 if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(var_string, converted_var)) {
@@ -125,10 +120,10 @@ bool IrMessageParser::parse_four_bytes_encoded_message(BufferedReaderInterface& 
             case cVariablePlaceholderEscapeCharacter: {
                 // Ensure the escape character is followed by a
                 // character that's being escaped
-                if (cur_pos == logtype.m_size - 1) {
+                if (cur_pos == logtype.size() - 1) {
                     SPDLOG_ERROR("Some error message");
                 }
-                msg.append_to_logtype(logtype_ptr + next_static_text_begin_pos,
+                msg.append_to_logtype(logtype, next_static_text_begin_pos,
                                       cur_pos - next_static_text_begin_pos);
 
                 // Skip the escape character
@@ -145,9 +140,9 @@ bool IrMessageParser::parse_four_bytes_encoded_message(BufferedReaderInterface& 
         }
     }
     // Add remainder
-    if (next_static_text_begin_pos < logtype.m_size) {
-        msg.append_to_logtype(logtype_ptr + next_static_text_begin_pos,
-                              logtype.m_size - next_static_text_begin_pos);
+    if (next_static_text_begin_pos < logtype.size()) {
+        msg.append_to_logtype(logtype, next_static_text_begin_pos,
+                              logtype.size() - next_static_text_begin_pos);
     }
 
     return true;
