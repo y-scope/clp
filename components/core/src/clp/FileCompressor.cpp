@@ -326,7 +326,7 @@ namespace clp {
 
         // Decode and parse metadata
         ffi::ir_stream::encoded_tag_t metadata_type;
-        std::vector<uint8_t> json_metadata_vec;
+        std::vector<int8_t> json_metadata_vec;
         epochtime_t reference_ts;
 
         if (ffi::ir_stream::IRErrorCode_Success != ffi::ir_stream::decode_preamble(reader, metadata_type, json_metadata_vec)) {

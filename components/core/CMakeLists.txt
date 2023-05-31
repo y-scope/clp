@@ -752,6 +752,8 @@ set(SOURCE_FILES_unitTest
         src/LogTypeDictionaryWriter.hpp
         src/MessageParser.cpp
         src/MessageParser.hpp
+        src/IrMessageParser.cpp
+        src/IrMessageParser.hpp
         src/MySQLDB.cpp
         src/MySQLDB.hpp
         src/MySQLParamBindings.cpp
