@@ -65,13 +65,12 @@ CLP can be run in Docker containers, in one of two deployments:
   * You can use a configuration file at a different location, but you will need
     to pass the location to any CLP command you run
     (`sbin/<command> --config <file path>`).
-* You can use schema file to specify the delimiters and variable patterns for
-  compressing and searching logs.
-  * To apply the customized schema, you need to specify all the patterns in
-    `etc/clp-schema.txt`. 
-
-  A template schema file with some example patterns is given as `etc/clp-schema.template.txt`.
-  Check [this page](https://github.com/y-scope/clp/blob/main/components/core/README-Schema.md) for more details.
+* To specify the delimiters and variables patterns that should be used to
+  compress and search logs, you can place a schema file at `etc/clp-schema.txt`
+  * A template schema file with some example patterns is at
+    `etc/clp-schema.template.txt`. The syntax of the schema file is described
+    [here](https://github.com/y-scope/clp/blob/main/components/core/README-Schema.md).
+  * If no schema file is found, CLP uses its default schemas.
 * Note: In most cases, changing any configurations will require restarting CLP.
 
 ## Multi-node deployment
