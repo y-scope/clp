@@ -30,6 +30,13 @@ public:
     static bool parse_four_bytes_encoded_message(ReaderInterface& reader,
                                                  ParsedIrMessage& msg,
                                                  epochtime_t& reference_ts);
+
+    static bool decode_four_bytes_preamble (ReaderInterface& reader, std::string& ts_pattern,
+                                            epochtime_t& reference_ts);
+
+
+
+    static bool is_ir_encoded (ReaderInterface& reader, bool& is_four_bytes_encoded);
 };
 
 #endif // IrMessageParser_HPP

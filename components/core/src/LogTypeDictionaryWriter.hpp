@@ -33,8 +33,7 @@ public:
      * @param logtype_entry
      * @param logtype_id ID of the logtype matching the given entry
      */
-    bool add_entry (LogTypeDictionaryEntry& logtype_entry, logtype_dictionary_id_t& logtype_id,
-                    bool require_escape);
+    bool add_entry (LogTypeDictionaryEntry& logtype_entry, logtype_dictionary_id_t& logtype_id);
 };
 
 #endif // LOGTYPEDICTIONARYWRITER_HPP

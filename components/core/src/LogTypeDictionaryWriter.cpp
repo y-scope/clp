@@ -6,8 +6,7 @@
 using std::string;
 
 bool LogTypeDictionaryWriter::add_entry (LogTypeDictionaryEntry& logtype_entry,
-                                         logtype_dictionary_id_t& logtype_id,
-                                         bool require_escape) {
+                                         logtype_dictionary_id_t& logtype_id) {
     bool is_new_entry = false;
 
     const string& value = logtype_entry.get_value();
@@ -50,7 +49,7 @@ bool LogTypeDictionaryWriter::add_entry (LogTypeDictionaryEntry& logtype_entry,
         // TODO: This doesn't account for the segment index that's constantly updated
         m_data_size += logtype_entry.get_data_size();
 
-        logtype_entry.write_to_file(m_dictionary_compressor, require_escape);
+        logtype_entry.write_to_file(m_dictionary_compressor);
     }
     return is_new_entry;
 }

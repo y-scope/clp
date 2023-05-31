@@ -5,18 +5,25 @@
 // C++ standard libraries
 
 // Project headers
-#include "ffi/encoding_methods.hpp"
-#include "LogTypeDictionaryEntry.hpp"
+#include "BufferReader.hpp"
 #include "EncodedVariableInterpreter.hpp"
+#include "ffi/encoding_methods.hpp"
+#include "ffi/ir_stream/protocol_constants.hpp"
 
 // spdlog
 #include "spdlog/spdlog.h"
 
-using ffi::ir_stream::IRErrorCode;
-using ffi::VariablePlaceholder;
+// json
+#include "../../../submodules/json/single_include/nlohmann/json.hpp"
+
 using ffi::cVariablePlaceholderEscapeCharacter;
 using ffi::four_byte_encoded_variable_t;
+using ffi::ir_stream::cProtocol::MagicNumberLength;
+using ffi::ir_stream::IRErrorCode;
+using ffi::VariablePlaceholder;
 using std::string;
+
+static bool decode_json_preamble (ReaderInterface& reader, std::string& json_metadata);
 
 bool IrMessageParser::parse_four_bytes_encoded_message(ReaderInterface& reader,
                                                        ParsedIrMessage& msg,
@@ -144,6 +151,68 @@ bool IrMessageParser::parse_four_bytes_encoded_message(ReaderInterface& reader,
         msg.append_to_logtype(logtype, next_static_text_begin_pos,
                               logtype.size() - next_static_text_begin_pos);
     }
+
+    return true;
+}
+
+bool IrMessageParser::decode_four_bytes_preamble (ReaderInterface& reader, std::string& ts_pattern,
+                                                  epochtime_t& reference_ts)
+{
+    string json_metadata;
+    const string mocked_ts_pattern = "%Y-%m-%dT%H:%M:%S.%3";
+    if (false == decode_json_preamble(reader, json_metadata)) {
+        return false;
+    }
+    try {
+        auto metadata_json = nlohmann::json::parse(json_metadata);
+        string version = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey);
+        if (version != ffi::ir_stream::cProtocol::Metadata::VersionValue) {
+            SPDLOG_ERROR("Unsupported version");
+            return false;
+        }
+
+        // For now, use a fixed timestamp pattern
+        ts_pattern = mocked_ts_pattern;
+
+        reference_ts = std::stoll(metadata_json.at(
+                ffi::ir_stream::cProtocol::Metadata::ReferenceTimestampKey).get<string>());
+
+    } catch (const nlohmann::json::parse_error& e) {
+        SPDLOG_ERROR("Failed to parse json metadata");
+        return false;
+    }
+
+    return true;
+}
+
+bool IrMessageParser::is_ir_encoded (ReaderInterface& reader, bool& is_four_bytes_encoded) {
+
+    // Note. currently this method doesn't recover file pos.
+    if (ffi::ir_stream::IRErrorCode_Success !=
+        ffi::ir_stream::get_encoding_type(reader, is_four_bytes_encoded)) {
+        return false;
+    }
+    return true;
+}
+
+static bool decode_json_preamble (ReaderInterface& reader, std::string& json_metadata) {
+    // Decode and parse metadata
+    ffi::ir_stream::encoded_tag_t metadata_type;
+    std::vector<int8_t> metadata_vec;
+
+    if (ffi::ir_stream::IRErrorCode_Success !=
+        ffi::ir_stream::decode_preamble(reader, metadata_type, metadata_vec)) {
+        SPDLOG_ERROR("Failed to parse metadata");
+        return false;
+    }
+
+    if (ffi::ir_stream::cProtocol::Metadata::EncodingJson != metadata_type) {
+        SPDLOG_ERROR("Unexpected metadata type");
+        return false;
+    }
+
+    json_metadata.assign(reinterpret_cast<const char*>(metadata_vec.data()),
+                         metadata_vec.size());
 
     return true;
 }

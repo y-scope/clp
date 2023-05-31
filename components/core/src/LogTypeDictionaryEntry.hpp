@@ -143,7 +143,7 @@ public:
      * Writes an entry to file
      * @param compressor
      */
-    void write_to_file (streaming_compression::Compressor& compressor, bool require_escape) const;
+    void write_to_file (streaming_compression::Compressor& compressor) const;
     /**
      * Tries to read an entry from the given decompressor
      * @param decompressor

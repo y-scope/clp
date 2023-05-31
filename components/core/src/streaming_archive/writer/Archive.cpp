@@ -266,7 +266,7 @@ namespace streaming_archive::writer {
         vector<variable_dictionary_id_t> var_ids;
         EncodedVariableInterpreter::encode_and_add_to_dictionary(message, m_logtype_dict_entry, m_var_dict, encoded_vars, var_ids);
         logtype_dictionary_id_t logtype_id;
-        m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id, true);
+        m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
 
         m_file->write_encoded_msg(timestamp, logtype_id, encoded_vars, var_ids, num_uncompressed_bytes);
 
@@ -292,7 +292,7 @@ namespace streaming_archive::writer {
         // first, handle logtype
         m_logtype_dict_entry.set_logtype(logtype_string);
         m_logtype_dict_entry.set_var_positions(msg.get_var_positions());
-        m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id, true);
+        m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
 
         // Then handle variables
         for (const auto& var : variables) {
@@ -419,7 +419,7 @@ namespace streaming_archive::writer {
         }
         if (!m_logtype_dict_entry.get_value().empty()) {
             logtype_dictionary_id_t logtype_id;
-            m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id, true);
+            m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
             m_file->write_encoded_msg(timestamp, logtype_id, m_encoded_vars, m_var_ids, num_uncompressed_bytes);
 
             // Update segment indices

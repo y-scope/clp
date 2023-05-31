@@ -17,9 +17,6 @@
 #include "utils.hpp"
 #include "../ffi/ir_stream/protocol_constants.hpp"
 
-// json
-#include "../../../submodules/json/single_include/nlohmann/json.hpp"
-
 using std::cout;
 using std::endl;
 using std::set;
@@ -44,8 +41,6 @@ static void compute_and_add_empty_directories (const set<string>& directories, c
  * @param file
  */
 static void write_message_to_encoded_file (const ParsedMessage& msg, streaming_archive::writer::Archive& archive);
-
-static bool is_ir_encoded(ReaderInterface& reader, bool& is_four_bytes_encoded);
 
 static void compute_and_add_empty_directories (const set<string>& directories, const set<string>& parent_directories,
                                                const boost::filesystem::path& parent_path, streaming_archive::writer::Archive& archive)
@@ -284,8 +279,10 @@ namespace clp {
                     parse_and_encode(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, boost_path_for_compression.string(),
                                      file_to_compress.get_group_id(), archive_writer, m_libarchive_file_reader);
                 }
-            } else if (is_ir_encoded(m_libarchive_file_reader, is_four_bytes_encoded)) {
+            } else if (IrMessageParser::is_ir_encoded(m_libarchive_file_reader, is_four_bytes_encoded)) {
+                // TODO: fix compressed file path
                 auto boost_path_for_compression = parent_boost_path / m_libarchive_reader.get_path();
+
                 if (false == try_compressing_as_ir(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, boost_path_for_compression.string(),
                                                    file_to_compress.get_group_id(), archive_writer, m_libarchive_file_reader, is_four_bytes_encoded)) {
                     SPDLOG_ERROR("SOME Error message to be printed");
@@ -315,63 +312,39 @@ namespace clp {
                                                 ReaderInterface& reader,
                                                 bool is_four_bytes_encoded)
     {
-        printf("IR compressing\n");
         m_parsed_ir_message.clear();
 
-        // Open compressed file
         if (!is_four_bytes_encoded) {
             SPDLOG_ERROR("not supported yet");
             throw;
         }
 
-        // Decode and parse metadata
-        ffi::ir_stream::encoded_tag_t metadata_type;
-        std::vector<int8_t> json_metadata_vec;
+        // Parse metadata
+        string ts_pattern_string;
         epochtime_t reference_ts;
-
-        if (ffi::ir_stream::IRErrorCode_Success != ffi::ir_stream::decode_preamble(reader, metadata_type, json_metadata_vec)) {
-            SPDLOG_ERROR("Failed to parse metadata");
+        if (false == IrMessageParser::decode_four_bytes_preamble(reader, ts_pattern_string,
+                                                                 reference_ts)) {
             return false;
         }
 
-        if (ffi::ir_stream::cProtocol::Metadata::EncodingJson != metadata_type) {
-            SPDLOG_ERROR("Unexpected metadata type");
-            return false;
-        }
-
-        std::string_view json_metadata {reinterpret_cast<const char*>(json_metadata_vec.data()),
-                                        json_metadata_vec.size()};
-        try {
-            auto metadata_json = nlohmann::json::parse(json_metadata);
-            string version = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey);
-            if (version != ffi::ir_stream::cProtocol::Metadata::VersionValue) {
-                SPDLOG_ERROR("Unsupported version");
-                return false;
-            }
-
-            // assume that we only need reference timestamp
-            reference_ts = std::stoll(metadata_json.at(
-                    ffi::ir_stream::cProtocol::Metadata::ReferenceTimestampKey).get<string>());
-        } catch (const nlohmann::json::parse_error& e) {
-            SPDLOG_ERROR("Failed to parse json metadata");
-            return false;
-        }
-
+        // Open compressed file
         archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
 
-        // TODO: use a mocked ts pattern for this now
-        TimestampPattern mocked_ts_pattern(0, "%Y-%m-%dT%H:%M:%S.%3");
-        archive_writer.change_ts_pattern(&mocked_ts_pattern);
-        m_parsed_ir_message.set_ts_pattern(&mocked_ts_pattern);
+        TimestampPattern ts_pattern(0, ts_pattern_string);
+        archive_writer.change_ts_pattern(&ts_pattern);
+        m_parsed_ir_message.set_ts_pattern(&ts_pattern);
 
         while (true) {
-            if (false == IrMessageParser::parse_four_bytes_encoded_message(reader, m_parsed_ir_message, reference_ts)) {
+            if (false == IrMessageParser::parse_four_bytes_encoded_message(
+                    reader, m_parsed_ir_message, reference_ts))
+            {
                 break;
             }
             if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
-                split_file_and_archive(archive_user_config, path_for_compression, group_id, &mocked_ts_pattern, archive_writer);
+                split_file_and_archive(archive_user_config, path_for_compression, group_id,
+                                       &ts_pattern, archive_writer);
             } else if (archive_writer.get_file().get_encoded_size_in_bytes() >= target_encoded_file_size) {
-                split_file(path_for_compression, group_id, &mocked_ts_pattern, archive_writer);
+                split_file(path_for_compression, group_id, &ts_pattern, archive_writer);
             }
             write_ir_message_to_encoded_file(m_parsed_ir_message, archive_writer);
         }
@@ -379,12 +352,4 @@ namespace clp {
 
         return true;
     }
-}
-
-static bool is_ir_encoded (ReaderInterface& reader, bool& is_four_bytes_encoded) {
-    if (ffi::ir_stream::IRErrorCode_Success !=
-            ffi::ir_stream::get_encoding_type(reader, is_four_bytes_encoded)) {
-        return false;
-    }
-    return true;
 }
