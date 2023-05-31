@@ -144,7 +144,7 @@ sbin/stop-clp
 
 ### ModuleNotFoundError
 
-**Error message**: ``ModuleNotFoundError: No module named 'dataclasses'``
+**Error message**: `ModuleNotFoundError: No module named 'dataclasses'`
 
 **Cause**: When starting the package on some older platforms like Ubuntu 18.04, some required Python modules are not in
 the standard library
