@@ -63,6 +63,8 @@ public:
      */
     static void convert_encoded_float_to_string (encoded_variable_t encoded_var, std::string& value);
 
+    static encoded_variable_t convert_four_bytes_float_to_clp_encoded_float (encoded_variable_t var);
+
     /**
      * Parses all variables from a message (while constructing the logtype) and encodes them (adding them to the variable dictionary if necessary)
      * @param message

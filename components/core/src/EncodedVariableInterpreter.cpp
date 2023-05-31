@@ -197,6 +197,39 @@ void EncodedVariableInterpreter::convert_encoded_float_to_string (encoded_variab
     value[value_length - 1 - decimal_pos] = '.';
 }
 
+encoded_variable_t
+EncodedVariableInterpreter::convert_four_bytes_float_to_clp_encoded_float (encoded_variable_t encoded_float)
+{
+    encoded_float = bit_cast<uint64_t>(encoded_float);
+
+    size_t decimal_pos;
+    size_t num_digits;
+    size_t digits;
+    bool is_negative;
+
+    // Decode according to the format described in encode_string_as_float_compact_var
+    decimal_pos = (encoded_float & 0x07) + 1;
+    encoded_float >>= 3;
+    num_digits = (encoded_float & 0x07) + 1;
+    encoded_float >>= 3;
+    digits = encoded_float & ffi::cFourByteEncodedFloatDigitsBitMask;
+    encoded_float >>= 25;
+    is_negative = encoded_float > 0;
+
+    // encode again.
+    uint64_t clp_encoded_float = 0;
+    if (is_negative) {
+        clp_encoded_float = 1;
+    }
+    clp_encoded_float <<= 55;  // 1 unused + 54 for digits of the float
+    clp_encoded_float |= digits & cEightByteEncodedFloatDigitsBitMask;
+    clp_encoded_float <<= 4;
+    clp_encoded_float |= (num_digits - 1) & 0x0F;
+    clp_encoded_float <<= 4;
+    clp_encoded_float |= (decimal_pos - 1) & 0x0F;
+    return bit_cast<encoded_variable_t>(clp_encoded_float);
+}
+
 void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& message, LogTypeDictionaryEntry& logtype_dict_entry,
                                                                VariableDictionaryWriter& var_dict, vector<encoded_variable_t>& encoded_vars,
                                                                vector<variable_dictionary_id_t>& var_ids)

@@ -94,7 +94,19 @@ public:
      * @param length
      */
     void add_constant (const std::string& value_containing_constant, size_t begin_pos, size_t length);
+
     /**
+     * Sets the logtype from a given string_view
+     * @param value_containing_constant
+     */
+    void set_logtype (std::string_view logtype);
+
+    /**
+     * set_var_positions
+     */
+    void set_var_positions(const std::vector<size_t>& var_positions);
+
+    /*
      * Adds an int variable delimiter
      */
     void add_int_var ();
@@ -131,7 +143,7 @@ public:
      * Writes an entry to file
      * @param compressor
      */
-    void write_to_file (streaming_compression::Compressor& compressor) const;
+    void write_to_file (streaming_compression::Compressor& compressor, bool require_escape) const;
     /**
      * Tries to read an entry from the given decompressor
      * @param decompressor

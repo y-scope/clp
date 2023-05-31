@@ -57,6 +57,14 @@ void LogTypeDictionaryEntry::add_constant (const string& value_containing_consta
     m_value.append(value_containing_constant, begin_pos, length);
 }
 
+void LogTypeDictionaryEntry::set_logtype (std::string_view logtype) {
+    m_value = logtype;
+}
+
+void LogTypeDictionaryEntry::set_var_positions(const std::vector<size_t>& var_positions) {
+    m_var_positions = var_positions;
+}
+
 void LogTypeDictionaryEntry::add_dictionary_var () {
     m_var_positions.push_back(m_value.length());
     add_dict_var(m_value);
@@ -95,14 +103,20 @@ void LogTypeDictionaryEntry::clear () {
     m_var_positions.clear();
 }
 
-void LogTypeDictionaryEntry::write_to_file (streaming_compression::Compressor& compressor) const {
+void LogTypeDictionaryEntry::write_to_file (streaming_compression::Compressor& compressor,
+                                            bool require_escape) const {
     compressor.write_numeric_value(m_id);
     compressor.write_numeric_value<uint8_t>(m_verbosity);
 
-    string escaped_value;
-    get_value_with_unfounded_variables_escaped(escaped_value);
-    compressor.write_numeric_value<uint64_t>(escaped_value.length());
-    compressor.write_string(escaped_value);
+    if (require_escape) {
+        string escaped_value;
+        get_value_with_unfounded_variables_escaped(escaped_value);
+        compressor.write_numeric_value<uint64_t>(escaped_value.length());
+        compressor.write_string(escaped_value);
+    } else {
+        compressor.write_numeric_value<uint64_t>(m_value.length());
+        compressor.write_string(m_value);
+    }
 }
 
 ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::Decompressor& decompressor) {

@@ -266,7 +266,7 @@ namespace streaming_archive::writer {
         vector<variable_dictionary_id_t> var_ids;
         EncodedVariableInterpreter::encode_and_add_to_dictionary(message, m_logtype_dict_entry, m_var_dict, encoded_vars, var_ids);
         logtype_dictionary_id_t logtype_id;
-        m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
+        m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id, true);
 
         m_file->write_encoded_msg(timestamp, logtype_id, encoded_vars, var_ids, num_uncompressed_bytes);
 
@@ -279,7 +279,48 @@ namespace streaming_archive::writer {
             m_var_ids_for_file_with_unassigned_segment.insert(var_ids.cbegin(), var_ids.cend());
         }
     }
-    
+
+    void Archive::write_msg (const ParsedIrMessage& msg) {
+        logtype_dictionary_id_t logtype_id;
+        vector<encoded_variable_t> encoded_vars;
+        vector<variable_dictionary_id_t> var_ids;
+
+        const auto& logtype_string = msg.get_logtype();
+        epochtime_t timestamp = msg.get_ts();
+        const auto& variables = msg.get_vars();
+
+        // first, handle logtype
+        m_logtype_dict_entry.set_logtype(logtype_string);
+        m_logtype_dict_entry.set_var_positions(msg.get_var_positions());
+        m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id, true);
+
+        // Then handle variables
+        for (const auto& var : variables) {
+            if (var.type() == ParsedIrMessage::VariableType::EncodedVar) {
+                encoded_vars.push_back(var.get_encoded_var());
+            } else if (var.type() == ParsedIrMessage::VariableType::DictVar) {
+                variable_dictionary_id_t id;
+                m_var_dict.add_entry(var.get_dict_var(), id);
+                encoded_vars.push_back(EncodedVariableInterpreter::encode_var_dict_id(id));
+                var_ids.push_back(id);
+            } else {
+                throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
+            }
+        }
+
+        m_file->write_encoded_msg(timestamp, logtype_id, encoded_vars, var_ids, msg.get_orig_num_bytes());
+
+        // Update segment indices
+        if (m_file->has_ts_pattern()) {
+            m_logtype_ids_in_segment_for_files_with_timestamps.insert(logtype_id);
+            m_var_ids_in_segment_for_files_with_timestamps.insert_all(var_ids);
+        } else {
+            m_logtype_ids_for_file_with_unassigned_segment.insert(logtype_id);
+            m_var_ids_for_file_with_unassigned_segment.insert(var_ids.cbegin(), var_ids.cend());
+        }
+
+    }
+
     void Archive::write_msg_using_schema (compressor_frontend::Token*& uncompressed_msg, uint32_t uncompressed_msg_pos, const bool has_delimiter,
                                           const bool has_timestamp) {
         epochtime_t timestamp = 0;
@@ -378,7 +419,7 @@ namespace streaming_archive::writer {
         }
         if (!m_logtype_dict_entry.get_value().empty()) {
             logtype_dictionary_id_t logtype_id;
-            m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
+            m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id, true);
             m_file->write_encoded_msg(timestamp, logtype_id, m_encoded_vars, m_var_ids, num_uncompressed_bytes);
 
             // Update segment indices
