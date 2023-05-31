@@ -274,14 +274,15 @@ ErrorCode BufferedFileReader::set_buffer_size (size_t buffer_size) {
         SPDLOG_ERROR("Buffer size {} is not a multiple of page size", buffer_size);
         return ErrorCode_BadParam;
     }
-    // Calculate the logarithm base 2 of the number
-    double exponent = log(buffer_size) / log(2);
-    if (ceil(exponent) != floor(exponent)) {
+    // fast calculation to check if buffer_size is a power of 2 leveraged
+    // from https://stackoverflow.com/questions/51094594/
+    // how-to-check-if-exactly-one-bit-is-set-in-an-int
+    if (false == (!(buffer_size & (buffer_size-1)))) {
         SPDLOG_ERROR("Buffer size {} is not a power of 2", buffer_size);
         return ErrorCode_BadParam;
     }
 
-    m_buffer_exp = static_cast<size_t>(exponent);
+    m_buffer_exp = static_cast<size_t>(log2(static_cast<double>(buffer_size)));
     m_buffer_size = buffer_size;
     m_buffer_aligned_mask = ~(m_buffer_size - 1);
     return ErrorCode_Success;

@@ -6,11 +6,12 @@
 #include <vector>
 
 // Project headers
-#include "../encoding_methods.hpp"
 #include "../../ReaderInterface.hpp"
-namespace ffi::ir_stream {
+#include "../encoding_methods.hpp"
 
-    using encoded_tag_t = uint8_t;
+namespace ffi::ir_stream {
+    using encoded_tag_t = int8_t;
+
     typedef enum {
         IRErrorCode_Success,
         IRErrorCode_Decode_Error,
@@ -55,7 +56,7 @@ namespace ffi::ir_stream {
      * data to decode
      */
     IRErrorCode decode_preamble (ReaderInterface& ir_buf, encoded_tag_t& metadata_type,
-                                 std::vector<uint8_t>& metadata);
+                                 std::vector<int8_t>& metadata);
 
     namespace eight_byte_encoding {
         /**

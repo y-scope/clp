@@ -1,9 +1,12 @@
-#ifndef BufferReader_HPP
-#define BufferReader_HPP
+#ifndef BUFFERREADER_HPP
+#define BUFFERREADER_HPP
 
 // Project headers
 #include "ReaderInterface.hpp"
 
+/**
+ * Class that represents a ReaderInterface to a fixed size buffer
+ */
 class BufferReader : public ReaderInterface {
 public:
     // Types
@@ -20,8 +23,8 @@ public:
     };
 
     // Constructors
-    BufferReader () : m_data(nullptr), m_size(0), m_cursor_pos(0) {}
-    BufferReader (const char* data, size_t size) : m_data(data), m_size(size), m_cursor_pos(0) {}
+    BufferReader () : m_data(nullptr), m_data_size(0), m_cursor_pos(0) {}
+    BufferReader (const char* data, size_t size) : m_data(data), m_data_size(size), m_cursor_pos(0) {}
 
     // Methods implementing the ReaderInterface
     /**
@@ -46,29 +49,27 @@ public:
     [[nodiscard]] ErrorCode try_seek_from_begin (size_t pos) override;
     /**
      * Tries to get the current position of the read head in the buffer
-     * @param pos Position of the read head in the buffer
+     * @param pos Returns the position of the read head in the buffer
      * @return ErrorCode_NotInit if the buffer is not initialized
      * @return ErrorCode_Success on success
      */
     [[nodiscard]] ErrorCode try_get_pos (size_t& pos) override;
 
     /**
-     * Lets the BufferReader points to data with given size.
+     * Sets the underlying buffer for this reader.
      * @param data
-     * @param size
+     * @param data_size
      **/
-    void reset_buffer (const char* data, size_t size) {
+    void set_buffer (const char* data, size_t data_size) {
         m_data = data;
-        m_size = size;
+        m_data_size = data_size;
         m_cursor_pos = 0;
     }
 
-
 private:
     const char* m_data;
-    size_t m_size;
+    size_t m_data_size;
     size_t m_cursor_pos;
 };
-
 
 #endif // BufferReader_HPP

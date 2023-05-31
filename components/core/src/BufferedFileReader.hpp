@@ -14,10 +14,11 @@
 #include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
 
-
+/**
+ * Class that represents a on-disk-file with customized buffering
+ */
 class BufferedFileReader : public ReaderInterface {
 public:
-    static constexpr size_t cDefaultBufferSize = 65536;
     // Types
     class OperationFailed : public TraceableException {
     public:
@@ -34,6 +35,7 @@ public:
     // Constructors
     BufferedFileReader();
     ~BufferedFileReader();
+
     // Methods implementing the ReaderInterface
     /**
      * Tries to get the current position of the read head in the file
@@ -191,7 +193,10 @@ private:
      */
     [[nodiscard]] ErrorCode refill_reader_buffer(size_t refill_size, size_t& num_bytes_refilled);
 
-    // Types
+    // Constants
+    static constexpr size_t cDefaultBufferSize = 65536;
+
+    // Variables
     size_t m_file_pos;
     int m_fd;
     std::string m_path;
@@ -201,7 +206,7 @@ private:
     size_t m_data_size;
     size_t m_buffer_begin_pos;
 
-    // constant for buffer related calculation
+    // Values for buffer related calculation
     size_t m_buffer_exp;
     size_t m_buffer_size;
     size_t m_buffer_aligned_mask;

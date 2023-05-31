@@ -212,8 +212,8 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
                                            EightByteEncodingMagicNumber + MagicNumberLength};
 
     // Test eight-byte encoding
-    ir_buffer.reset_buffer(reinterpret_cast<const char*>(eight_byte_encoding_vec.data()),
-                           eight_byte_encoding_vec.size());
+    ir_buffer.set_buffer(reinterpret_cast<const char*>(eight_byte_encoding_vec.data()),
+                         eight_byte_encoding_vec.size());
     REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<eight_byte_encoded_variable_t>(is_four_bytes_encoding));
@@ -222,28 +222,28 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
     vector<int8_t> four_byte_encoding_vec{FourByteEncodingMagicNumber,
                                           FourByteEncodingMagicNumber + MagicNumberLength};
 
-    ir_buffer.reset_buffer(reinterpret_cast<const char*>(four_byte_encoding_vec.data()),
-                           four_byte_encoding_vec.size());
+    ir_buffer.set_buffer(reinterpret_cast<const char*>(four_byte_encoding_vec.data()),
+                         four_byte_encoding_vec.size());
     REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<four_byte_encoded_variable_t>(is_four_bytes_encoding));
 
     // Test error on empty and incomplete ir_buffer
     const vector<int8_t> empty_ir_vec;
-    ir_buffer.reset_buffer(reinterpret_cast<const char*>(empty_ir_vec.data()),
-                           empty_ir_vec.size());
+    ir_buffer.set_buffer(reinterpret_cast<const char*>(empty_ir_vec.data()),
+                         empty_ir_vec.size());
     REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Incomplete_IR);
 
-    ir_buffer.reset_buffer(reinterpret_cast<const char*>(four_byte_encoding_vec.data()),
-                           four_byte_encoding_vec.size() - 1);
+    ir_buffer.set_buffer(reinterpret_cast<const char*>(four_byte_encoding_vec.data()),
+                         four_byte_encoding_vec.size() - 1);
     REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Incomplete_IR);
 
     // Test error on invalid encoding
     const vector<int8_t> invalid_ir_vec{0x02, 0x43, 0x24, 0x34};
-    ir_buffer.reset_buffer(reinterpret_cast<const char*>(invalid_ir_vec.data()),
-                           invalid_ir_vec.size());
+    ir_buffer.set_buffer(reinterpret_cast<const char*>(invalid_ir_vec.data()),
+                         invalid_ir_vec.size());
     REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Corrupted_IR);
 
@@ -263,7 +263,7 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
     const size_t encoded_preamble_end_pos = ir_buf.size();
 
     // Check if encoding type is properly read
-    ir_buffer.reset_buffer(reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size());
+    ir_buffer.set_buffer(reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size());
     bool is_four_bytes_encoding;
     REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
@@ -283,12 +283,12 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
     string_view json_metadata_ref {json_metadata_ptr, metadata_size};
 
     // Test if preamble can be decoded by the string copy method
-    std::vector<uint8_t> json_metadata_vec;
+    std::vector<int8_t> json_metadata_vec;
     ir_buffer.seek_from_begin(MagicNumberLength);
     REQUIRE(decode_preamble(ir_buffer, metadata_type, json_metadata_vec) ==
             IRErrorCode::IRErrorCode_Success);
-    string_view json_metadata_copied {reinterpret_cast<const char*>(json_metadata_vec.data()),
-                                      json_metadata_vec.size()};
+    string_view json_metadata_copied { reinterpret_cast<const char*>(json_metadata_vec.data()),
+                                       json_metadata_vec.size() };
     REQUIRE (json_metadata_copied == json_metadata_ref);
 
     auto metadata_json = nlohmann::json::parse(json_metadata_ref);
@@ -343,7 +343,7 @@ TEMPLATE_TEST_CASE("decode_next_message_general", "[ffi][decode_next_message]",
     const size_t encoded_message_start_pos = 0;
 
     // Test if message can be decoded properly
-    ir_buffer.reset_buffer(reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size());
+    ir_buffer.set_buffer(reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size());
     string decoded_message;
     epoch_time_ms_t timestamp;
 
@@ -360,7 +360,7 @@ TEMPLATE_TEST_CASE("decode_next_message_general", "[ffi][decode_next_message]",
 
     // Test incomplete IR
     ir_buf.resize(encoded_message_end_pos - 4);
-    ir_buffer.reset_buffer(reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size());
+    ir_buffer.set_buffer(reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size());
     REQUIRE(IRErrorCode::IRErrorCode_Incomplete_IR ==
             decode_next_message<TestType>(ir_buffer, message, timestamp));
 }
@@ -393,8 +393,8 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]")
     // Test if a trailing escape triggers a decoder error
     auto ir_with_extra_escape {ir_buf};
     ir_with_extra_escape.at(logtype_end_pos - 1) = ffi::cVariablePlaceholderEscapeCharacter;
-    ir_buffer.reset_buffer(reinterpret_cast<const char*>(ir_with_extra_escape.data()),
-                           ir_with_extra_escape.size());
+    ir_buffer.set_buffer(reinterpret_cast<const char*>(ir_with_extra_escape.data()),
+                         ir_with_extra_escape.size());
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error ==
             decode_next_message<eight_byte_encoded_variable_t>(ir_buffer, decoded_message,
                                                                timestamp));
@@ -403,8 +403,8 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]")
     auto ir_with_extra_placeholder{ir_buf};
     ir_with_extra_placeholder.at(logtype_end_pos - 1) =
             enum_to_underlying_type(VariablePlaceholder::Dictionary);
-    ir_buffer.reset_buffer(reinterpret_cast<const char*>(ir_with_extra_placeholder.data()),
-                           ir_with_extra_placeholder.size());
+    ir_buffer.set_buffer(reinterpret_cast<const char*>(ir_with_extra_placeholder.data()),
+                         ir_with_extra_placeholder.size());
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error ==
             decode_next_message<eight_byte_encoded_variable_t>(ir_buffer, decoded_message,
                                                                timestamp));
