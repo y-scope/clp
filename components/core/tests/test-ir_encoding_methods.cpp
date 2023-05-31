@@ -279,10 +279,19 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(encoded_preamble_end_pos == ir_buffer.get_pos());
     
-    auto json_metadata_ptr = ir_buffer.get_buffer_ptr() + metadata_pos;
-    string_view json_metadata {json_metadata_ptr, metadata_size};
+    auto json_metadata_ptr = reinterpret_cast<char*>(ir_buf.data() + metadata_pos);
+    string_view json_metadata_ref {json_metadata_ptr, metadata_size};
 
-    auto metadata_json = nlohmann::json::parse(json_metadata);
+    // Test if preamble can be decoded by the string copy method
+    std::vector<uint8_t> json_metadata_vec;
+    ir_buffer.seek_from_begin(MagicNumberLength);
+    REQUIRE(decode_preamble(ir_buffer, metadata_type, json_metadata_vec) ==
+            IRErrorCode::IRErrorCode_Success);
+    string_view json_metadata_copied {reinterpret_cast<const char*>(json_metadata_vec.data()),
+                                      json_metadata_vec.size()};
+    REQUIRE (json_metadata_copied == json_metadata_ref);
+
+    auto metadata_json = nlohmann::json::parse(json_metadata_ref);
     REQUIRE(ffi::ir_stream::cProtocol::Metadata::VersionValue ==
             metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey));
     REQUIRE(ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
@@ -471,7 +480,7 @@ TEMPLATE_TEST_CASE("decode_ir_complete", "[ffi][decode_next_message]",
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(encoded_preamble_end_pos == complete_encoding_buffer.get_pos());
 
-    auto json_metadata_ptr = complete_encoding_buffer.get_buffer_ptr() + metadata_pos;
+    auto json_metadata_ptr = reinterpret_cast<char*>(ir_buf.data() + metadata_pos);
     string_view json_metadata {json_metadata_ptr, metadata_size};
     auto metadata_json = nlohmann::json::parse(json_metadata);
     REQUIRE(ffi::ir_stream::cProtocol::Metadata::VersionValue ==

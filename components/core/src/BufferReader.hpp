@@ -2,9 +2,9 @@
 #define BufferReader_HPP
 
 // Project headers
-#include "BufferedReaderInterface.hpp"
+#include "ReaderInterface.hpp"
 
-class BufferReader : public BufferedReaderInterface {
+class BufferReader : public ReaderInterface {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -52,17 +52,6 @@ public:
      */
     [[nodiscard]] ErrorCode try_get_pos (size_t& pos) override;
 
-    // Methods
-    /**
-     * Tries reading a string view of size = read_size from the buffered data
-     * @param str_view Returns the string view
-     * @param read_size
-     * @return true on success, false if the BufferReader doesn't contain
-     * enough data
-     **/
-    [[nodiscard]] virtual bool try_read_string_view (MyStringView& str_view,
-                                                     size_t read_size) override;
-
     /**
      * Lets the BufferReader points to data with given size.
      * @param data
@@ -73,12 +62,6 @@ public:
         m_size = size;
         m_cursor_pos = 0;
     }
-
-    /**
-     * Returns a pointer pointing to the data
-     * @return
-     */
-    [[nodiscard]] virtual const char* get_buffer_ptr () override;
 
 
 private:

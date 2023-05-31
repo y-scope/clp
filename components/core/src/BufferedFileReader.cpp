@@ -354,30 +354,6 @@ ErrorCode BufferedFileReader::refill_reader_buffer (size_t refill_size,
     return ErrorCode_Success;
 }
 
-bool BufferedFileReader::try_read_string_view (MyStringView& str_view, size_t read_size) {
-    if (-1 == m_fd) {
-        return false;
-    }
-    if (false == m_checkpoint_enabled) {
-        SPDLOG_ERROR("Can't read string view when checkpoint is not enabled");
-        throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
-    }
-    str_view.m_buffer_pos = cursor_pos();
-    // try to seek to the string view pos. as to pretend that the string has
-    // been read passed
-    if (auto error_code = try_seek_from_begin(m_file_pos + read_size);
-        error_code != ErrorCode_Success) {
-        SPDLOG_ERROR("Unexpected error happened");
-        throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
-    }
-    str_view.m_size = read_size;
-    return true;
-}
-
-const char* BufferedFileReader::get_buffer_ptr () {
-    return m_buffer.get();
-}
-
 static ErrorCode try_read_into_buffer(int fd, char* buffer, size_t num_bytes_to_read,
                                       size_t& num_bytes_read) {
     num_bytes_read = 0;

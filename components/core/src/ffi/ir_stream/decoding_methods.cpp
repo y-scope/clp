@@ -6,9 +6,7 @@
 
 using std::is_same_v;
 using std::string;
-using std::string_view;
 using std::vector;
-using MyStringView = BufferedReaderInterface::MyStringView;
 
 namespace ffi::ir_stream {
     /**
@@ -30,7 +28,7 @@ namespace ffi::ir_stream {
      * to decode
      */
     template <typename integer_t>
-    static bool decode_int (BufferedReaderInterface& ir_buf, integer_t& value);
+    static bool decode_int (ReaderInterface& ir_buf, integer_t& value);
 
     /**
      * Decodes the next logtype string from ir_buf
@@ -42,8 +40,8 @@ namespace ffi::ir_stream {
      * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
      * to decode
      */
-    static IRErrorCode parse_logtype (BufferedReaderInterface& ir_buf, encoded_tag_t encoded_tag,
-                                      MyStringView& logtype);
+    static IRErrorCode parse_logtype (ReaderInterface& ir_buf, encoded_tag_t encoded_tag,
+                                      string& logtype);
 
     /**
      * Decodes the next dictionary-type variable string from ir_buf
@@ -55,8 +53,8 @@ namespace ffi::ir_stream {
      * @return IRErrorCode_Incomplete_IR if input buffer doesn't contain enough
      * data to decode
      */
-    static IRErrorCode parse_dictionary_var (BufferedReaderInterface& ir_buf,
-                                             encoded_tag_t encoded_tag, MyStringView& dict_var);
+    static IRErrorCode parse_dictionary_var (ReaderInterface& ir_buf,
+                                             encoded_tag_t encoded_tag, string& dict_var);
 
     /**
      * Parses the next timestamp from ir_buf
@@ -72,7 +70,7 @@ namespace ffi::ir_stream {
      * to decode
      */
     template <typename encoded_variable_t>
-    IRErrorCode parse_timestamp (BufferedReaderInterface& ir_buf, encoded_tag_t encoded_tag,
+    IRErrorCode parse_timestamp (ReaderInterface& ir_buf, encoded_tag_t encoded_tag,
                                  epoch_time_ms_t& ts);
 
     /**
@@ -91,7 +89,7 @@ namespace ffi::ir_stream {
      * to decode
      */
     template <typename encoded_variable_t>
-    static IRErrorCode generic_decode_next_message (BufferedReaderInterface& ir_buf,
+    static IRErrorCode generic_decode_next_message (ReaderInterface& ir_buf,
                                                     string& message,
                                                     epoch_time_ms_t& timestamp);
 
@@ -106,7 +104,7 @@ namespace ffi::ir_stream {
      * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
      * to decode
      */
-    static IRErrorCode read_metadata_info (BufferedReaderInterface& ir_buf,
+    static IRErrorCode read_metadata_info (ReaderInterface& ir_buf,
                                            encoded_tag_t& metadata_type, uint16_t& metadata_size);
 
     /**
@@ -123,10 +121,9 @@ namespace ffi::ir_stream {
      */
     template <typename encoded_variable_t>
     static string decode_message (
-        MyStringView& logtype,
-        const char* buffer_begin_ptr,
+        const string& logtype,
         const vector<encoded_variable_t>& encoded_vars,
-        const vector<MyStringView>& dictionary_vars
+        const vector<string>& dictionary_vars
     );
 
     template <typename encoded_variable_t>
@@ -156,7 +153,7 @@ namespace ffi::ir_stream {
     }
 
     template <typename integer_t>
-    static bool decode_int (BufferedReaderInterface& ir_buf, integer_t& value) {
+    static bool decode_int (ReaderInterface& ir_buf, integer_t& value) {
         integer_t value_small_endian;
         if (ir_buf.try_read_numeric_value(value_small_endian) != ErrorCode_Success) {
             return false;
@@ -176,8 +173,8 @@ namespace ffi::ir_stream {
         return true;
     }
 
-    static IRErrorCode parse_logtype (BufferedReaderInterface& ir_buf, encoded_tag_t encoded_tag,
-                                      MyStringView& logtype)
+    static IRErrorCode parse_logtype (ReaderInterface& ir_buf, encoded_tag_t encoded_tag,
+                                      string& logtype)
     {
         size_t logtype_length;
         if (encoded_tag == cProtocol::Payload::LogtypeStrLenUByte) {
@@ -202,14 +199,14 @@ namespace ffi::ir_stream {
             return IRErrorCode_Corrupted_IR;
         }
 
-        if (ir_buf.try_read_string_view(logtype, logtype_length) == false) {
+        if (ErrorCode_Success != ir_buf.try_read_string(logtype_length, logtype)) {
             return IRErrorCode_Incomplete_IR;
         }
         return IRErrorCode_Success;
     }
 
-    static IRErrorCode parse_dictionary_var (BufferedReaderInterface& ir_buf,
-                                             encoded_tag_t encoded_tag, MyStringView& dict_var) {
+    static IRErrorCode parse_dictionary_var (ReaderInterface& ir_buf,
+                                             encoded_tag_t encoded_tag, string& dict_var) {
         // Decode variable's length
         size_t var_length;
         if (cProtocol::Payload::VarStrLenUByte == encoded_tag) {
@@ -235,7 +232,7 @@ namespace ffi::ir_stream {
         }
 
         // Read the dictionary variable
-        if (false == ir_buf.try_read_string_view(dict_var, var_length)) {
+        if (ErrorCode_Success != ir_buf.try_read_string(var_length, dict_var)) {
             return IRErrorCode_Incomplete_IR;
         }
 
@@ -243,7 +240,7 @@ namespace ffi::ir_stream {
     }
 
     template <typename encoded_variable_t>
-    IRErrorCode parse_timestamp (BufferedReaderInterface& ir_buf, encoded_tag_t encoded_tag, epoch_time_ms_t& ts)
+    IRErrorCode parse_timestamp (ReaderInterface& ir_buf, encoded_tag_t encoded_tag, epoch_time_ms_t& ts)
     {
         static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> ||
                       is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
@@ -282,7 +279,7 @@ namespace ffi::ir_stream {
     }
 
     template <typename encoded_variable_t>
-    static IRErrorCode generic_decode_next_message (BufferedReaderInterface& ir_buf, string& message,
+    static IRErrorCode generic_decode_next_message (ReaderInterface& ir_buf, string& message,
                                                     epoch_time_ms_t& timestamp)
     {
         encoded_tag_t encoded_tag;
@@ -295,9 +292,9 @@ namespace ffi::ir_stream {
 
         // Handle variables
         vector<encoded_variable_t> encoded_vars;
-        vector<MyStringView> dict_vars;
+        vector<string> dict_vars;
         encoded_variable_t encoded_variable;
-        MyStringView var_str;
+        string var_str;
         bool is_encoded_var;
         while (is_variable_tag<encoded_variable_t>(encoded_tag, is_encoded_var)) {
             if (is_encoded_var) {
@@ -319,7 +316,7 @@ namespace ffi::ir_stream {
         }
 
         // Handle logtype
-        MyStringView logtype;
+        string logtype;
         if (auto error_code = parse_logtype(ir_buf, encoded_tag, logtype);
                 IRErrorCode_Success != error_code)
         {
@@ -338,15 +335,14 @@ namespace ffi::ir_stream {
         }
 
         try {
-            auto buffer_begin_ptr = ir_buf.get_buffer_ptr();
-            message = decode_message(logtype, buffer_begin_ptr, encoded_vars, dict_vars);
+            message = decode_message(logtype, encoded_vars, dict_vars);
         } catch (const EncodingException& e) {
             return IRErrorCode_Decode_Error;
         }
         return IRErrorCode_Success;
     }
 
-    static IRErrorCode read_metadata_info (BufferedReaderInterface& ir_buf, encoded_tag_t& metadata_type,
+    static IRErrorCode read_metadata_info (ReaderInterface& ir_buf, encoded_tag_t& metadata_type,
                                            uint16_t& metadata_size) {
         if (ErrorCode_Success != ir_buf.try_read_numeric_value(metadata_type)) {
             return IRErrorCode_Incomplete_IR;
@@ -380,10 +376,9 @@ namespace ffi::ir_stream {
 
     template <typename encoded_variable_t>
     static string decode_message (
-            MyStringView& logtype,
-            const char* buffer_begin_ptr,
+            const string& logtype,
             const vector<encoded_variable_t>& encoded_vars,
-            const vector<MyStringView>& dictionary_vars
+            const vector<string>& dictionary_vars
     ) {
         string message;
         size_t encoded_vars_length = encoded_vars.size();
@@ -392,12 +387,11 @@ namespace ffi::ir_stream {
 
         size_t dictionary_vars_ix = 0;
         size_t encoded_vars_ix = 0;
-        auto logtype_ptr = buffer_begin_ptr + logtype.m_buffer_pos;
-        for (size_t cur_pos = 0; cur_pos < logtype.m_size; ++cur_pos) {
-            auto c = logtype_ptr[cur_pos];
+        for (size_t cur_pos = 0; cur_pos < logtype.size(); ++cur_pos) {
+            auto c = logtype[cur_pos];
             switch(c) {
                 case enum_to_underlying_type(VariablePlaceholder::Float): {
-                    message.append(logtype_ptr + next_static_text_begin_pos,
+                    message.append(logtype, next_static_text_begin_pos,
                                    cur_pos - next_static_text_begin_pos);
                     next_static_text_begin_pos = cur_pos + 1;
                     if (encoded_vars_ix >= encoded_vars_length) {
@@ -411,7 +405,7 @@ namespace ffi::ir_stream {
                 }
 
                 case enum_to_underlying_type(VariablePlaceholder::Integer): {
-                    message.append(logtype_ptr + next_static_text_begin_pos,
+                    message.append(logtype, next_static_text_begin_pos,
                                    cur_pos - next_static_text_begin_pos);
                     next_static_text_begin_pos = cur_pos + 1;
                     if (encoded_vars_ix >= encoded_vars_length) {
@@ -425,16 +419,14 @@ namespace ffi::ir_stream {
                 }
 
                 case enum_to_underlying_type(VariablePlaceholder::Dictionary): {
-                    message.append(logtype_ptr + next_static_text_begin_pos,
+                    message.append(logtype, next_static_text_begin_pos,
                                    cur_pos - next_static_text_begin_pos);
                     next_static_text_begin_pos = cur_pos + 1;
                     if (dictionary_vars_ix >= dict_vars_length) {
                         throw EncodingException(ErrorCode_Corrupt, __FILENAME__, __LINE__,
                                                 cTooFewDictionaryVarsErrorMessage);
                     }
-                    auto offset = dictionary_vars[dictionary_vars_ix].m_buffer_pos;
-                    auto size = dictionary_vars[dictionary_vars_ix].m_size;
-                    message.append(buffer_begin_ptr + offset, size);
+                    message.append(dictionary_vars[dictionary_vars_ix]);
                     ++dictionary_vars_ix;
 
                     break;
@@ -443,11 +435,11 @@ namespace ffi::ir_stream {
                 case cVariablePlaceholderEscapeCharacter: {
                     // Ensure the escape character is followed by a
                     // character that's being escaped
-                    if (cur_pos == logtype.m_size - 1) {
+                    if (cur_pos == logtype.size() - 1) {
                         throw EncodingException(ErrorCode_Corrupt, __FILENAME__, __LINE__,
                                                 cUnexpectedEscapeCharacterMessage);
                     }
-                    message.append(logtype_ptr + next_static_text_begin_pos,
+                    message.append(logtype, next_static_text_begin_pos,
                                    cur_pos - next_static_text_begin_pos);
 
                     // Skip the escape character
@@ -464,15 +456,15 @@ namespace ffi::ir_stream {
             }
         }
         // Add remainder
-        if (next_static_text_begin_pos < logtype.m_size) {
-            message.append(logtype_ptr + next_static_text_begin_pos,
-                           logtype.m_size - next_static_text_begin_pos);
+        if (next_static_text_begin_pos < logtype.size()) {
+            message.append(logtype, next_static_text_begin_pos,
+                           logtype.size() - next_static_text_begin_pos);
         }
 
         return message;
     }
 
-    IRErrorCode get_encoding_type (BufferedReaderInterface& ir_buf, bool& is_four_bytes_encoding) {
+    IRErrorCode get_encoding_type (ReaderInterface& ir_buf, bool& is_four_bytes_encoding) {
         char buffer[cProtocol::MagicNumberLength];
         size_t num_bytes_read;
         auto error_code = ir_buf.try_read(buffer, cProtocol::MagicNumberLength, num_bytes_read);
@@ -491,7 +483,7 @@ namespace ffi::ir_stream {
         return IRErrorCode_Success;
     }
 
-    IRErrorCode decode_preamble (BufferedReaderInterface& ir_buf, encoded_tag_t& metadata_type,
+    IRErrorCode decode_preamble (ReaderInterface& ir_buf, encoded_tag_t& metadata_type,
                                  size_t& metadata_pos, uint16_t& metadata_size)
     {
         if (auto error_code = read_metadata_info(ir_buf, metadata_type, metadata_size);
@@ -506,8 +498,25 @@ namespace ffi::ir_stream {
         return IRErrorCode_Success;
     }
 
+    IRErrorCode decode_preamble (ReaderInterface& ir_buf, encoded_tag_t& metadata_type,
+                                 std::vector<uint8_t>& metadata)
+    {
+        uint16_t metadata_size;
+        if (auto error_code = read_metadata_info(ir_buf, metadata_type, metadata_size);
+                error_code != IRErrorCode_Success) {
+            return error_code;
+        }
+
+        metadata.resize(metadata_size);
+        if (ErrorCode_Success != ir_buf.try_read_exact_length(
+                reinterpret_cast<char*>(metadata.data()), metadata_size)) {
+            return IRErrorCode_Incomplete_IR;
+        }
+        return IRErrorCode_Success;
+    }
+
     namespace four_byte_encoding {
-        IRErrorCode decode_next_message (BufferedReaderInterface& ir_buf, string& message,
+        IRErrorCode decode_next_message (ReaderInterface& ir_buf, string& message,
                                          epoch_time_ms_t& timestamp_delta)
         {
             return generic_decode_next_message<four_byte_encoded_variable_t>(
@@ -517,7 +526,7 @@ namespace ffi::ir_stream {
     }
 
     namespace eight_byte_encoding {
-        IRErrorCode decode_next_message (BufferedReaderInterface& ir_buf, string& message,
+        IRErrorCode decode_next_message (ReaderInterface& ir_buf, string& message,
                                          epoch_time_ms_t& timestamp)
         {
             return generic_decode_next_message<eight_byte_encoded_variable_t>(

@@ -11,11 +11,11 @@
 // Project headers
 #include "Defs.h"
 #include "ErrorCode.hpp"
-#include "BufferedReaderInterface.hpp"
+#include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
 
 
-class BufferedFileReader : public BufferedReaderInterface {
+class BufferedFileReader : public ReaderInterface {
 public:
     static constexpr size_t cDefaultBufferSize = 65536;
     // Types
@@ -141,21 +141,6 @@ public:
      */
     [[nodiscard]] ErrorCode peek_buffered_data(size_t size_to_peek, const char*& data_ptr,
                                                size_t& peek_size);
-
-    /**
-     * Tries reading a string view of size = read_size from the ir_buf.
-     * @param str_view Returns the string view
-     * @param read_size
-     * @return true on success, false if the file doesn't contain enough
-     * data
-     **/
-    [[nodiscard]] virtual bool try_read_string_view (MyStringView& str_view,
-                                                     size_t read_size) override;
-
-    /**
-     * returns a const pointer to the internal buffer
-     */
-    [[nodiscard]] virtual const char* get_buffer_ptr () override;
 
     /**
      * Sets a checkpoint pos. the BufferedFileReader guarantees that

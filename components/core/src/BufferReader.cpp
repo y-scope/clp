@@ -40,20 +40,3 @@ ErrorCode BufferReader::try_read (char* buf, size_t num_bytes_to_read, size_t& n
     pos = m_cursor_pos;
     return ErrorCode_Success;
 }
-
-bool BufferReader::try_read_string_view (MyStringView& str_view, size_t read_size) {
-    if (nullptr == m_data) {
-        return ErrorCode_NotInit;
-    }
-    if ((m_cursor_pos + read_size) > m_size) {
-        return false;
-    }
-    str_view.m_buffer_pos = m_cursor_pos;
-    str_view.m_size = read_size;
-    m_cursor_pos += read_size;
-    return true;
-}
-
-const char* BufferReader::get_buffer_ptr () {
-    return m_data;
-}
