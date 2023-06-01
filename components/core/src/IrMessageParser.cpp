@@ -59,15 +59,22 @@ IrMessageParser::IrMessageParser (ReaderInterface& reader) : m_reader(reader) {
     m_msg.set_ts_pattern(&m_ts_pattern);
 }
 
-bool IrMessageParser::parse_next_encoded_message() {
-
-    std::vector<four_byte_encoded_variable_t> encoded_vars;
+template <typename ir_encoded_variable_t, typename ConstantHandler, typename TimestampHandler,
+          typename EncodedIntHandler, typename EncodedFloatHandler, typename DictVarHandler>
+static bool generic_parse_next_msg(ReaderInterface& reader,
+                                   ConstantHandler constant_handler,
+                                   TimestampHandler timestamp_handler,
+                                   EncodedIntHandler encoded_int_handler,
+                                   EncodedFloatHandler encoded_float_handler,
+                                   DictVarHandler dict_var_handler)
+{
+    std::vector<ir_encoded_variable_t> encoded_vars;
     std::vector<string> dict_vars;
     string logtype;
     epochtime_t ts;
 
-    auto error_code = ffi::ir_stream::four_byte_encoding::decode_tokens(
-            m_reader, logtype, encoded_vars, dict_vars, ts
+    auto error_code = ffi::ir_stream::generic_decode_tokens(
+            reader, logtype, encoded_vars, dict_vars, ts
     );
 
     if (IRErrorCode::IRErrorCode_Success != error_code) {
@@ -77,15 +84,7 @@ bool IrMessageParser::parse_next_encoded_message() {
         return false;
     }
 
-    m_msg.clear();
-
-    // handle ts as ts_delta if four bytes encoding
-    if (m_is_four_bytes_encoded) {
-        m_reference_timestamp += ts;
-        ts = m_reference_timestamp;
-    }
-
-    m_msg.set_ts(ts);
+    timestamp_handler(ts);
 
     size_t encoded_vars_length = encoded_vars.size();
     size_t dict_vars_length = dict_vars.size();
@@ -97,8 +96,8 @@ bool IrMessageParser::parse_next_encoded_message() {
         auto c = logtype[cur_pos];
         switch(c) {
             case enum_to_underlying_type(VariablePlaceholder::Float): {
-                m_msg.append_to_logtype(logtype, next_static_text_begin_pos,
-                                        cur_pos - next_static_text_begin_pos);
+                constant_handler(logtype, next_static_text_begin_pos,
+                                 cur_pos - next_static_text_begin_pos);
                 next_static_text_begin_pos = cur_pos + 1;
                 if (encoded_vars_ix >= encoded_vars_length) {
 
@@ -106,21 +105,16 @@ bool IrMessageParser::parse_next_encoded_message() {
                 }
 
                 auto encoded_float = encoded_vars[encoded_vars_ix];
+                encoded_float_handler(encoded_float);
                 auto decoded_float = ffi::decode_float_var(encoded_float);
-                if (m_is_four_bytes_encoded) {
-                    // handle float
-                    // assume that we need the actual size
-                    encoded_float = EncodedVariableInterpreter::convert_four_bytes_float_to_clp_encoded_float(encoded_float);
-                }
-                m_msg.add_encoded_float(encoded_float, decoded_float.size());
 
                 ++encoded_vars_ix;
                 break;
             }
 
             case enum_to_underlying_type(VariablePlaceholder::Integer): {
-                m_msg.append_to_logtype(logtype, next_static_text_begin_pos,
-                                        cur_pos - next_static_text_begin_pos);
+                constant_handler(logtype, next_static_text_begin_pos,
+                                 cur_pos - next_static_text_begin_pos);
                 next_static_text_begin_pos = cur_pos + 1;
                 if (encoded_vars_ix >= encoded_vars_length) {
                     SPDLOG_ERROR("Some error message");
@@ -128,38 +122,21 @@ bool IrMessageParser::parse_next_encoded_message() {
                 }
 
                 // handle integer
-                auto encoded_int = encoded_vars[encoded_vars_ix];
-                // assume that we need the actual size
-                auto decoded_int = ffi::decode_integer_var(encoded_int);
-                m_msg.add_encoded_integer(encoded_int, decoded_int.size());
+                encoded_int_handler(encoded_vars[encoded_vars_ix]);
 
                 ++encoded_vars_ix;
                 break;
             }
 
             case enum_to_underlying_type(VariablePlaceholder::Dictionary): {
-                m_msg.append_to_logtype(logtype, next_static_text_begin_pos,
-                                        cur_pos - next_static_text_begin_pos);
+                constant_handler(logtype, next_static_text_begin_pos,
+                                 cur_pos - next_static_text_begin_pos);
                 next_static_text_begin_pos = cur_pos + 1;
                 if (dictionary_vars_ix >= dict_vars_length) {
                     SPDLOG_ERROR("Some error message");
                     return false;
                 }
-
-                const auto& var_string {dict_vars[dictionary_vars_ix]} ;
-
-                if (m_is_four_bytes_encoded) {
-                    encoded_variable_t converted_var;
-                    if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(var_string, converted_var)) {
-                        m_msg.add_encoded_integer(converted_var, var_string.size());
-                    } else if (EncodedVariableInterpreter::convert_string_to_representable_float_var(var_string, converted_var)) {
-                        m_msg.add_encoded_float(converted_var, var_string.size());
-                    } else {
-                        m_msg.add_dictionary_var(var_string);
-                    }
-                } else {
-                    m_msg.add_dictionary_var(var_string);
-                }
+                dict_var_handler(dict_vars[dictionary_vars_ix]);
                 ++dictionary_vars_ix;
 
                 break;
@@ -171,8 +148,8 @@ bool IrMessageParser::parse_next_encoded_message() {
                 if (cur_pos == logtype.size() - 1) {
                     SPDLOG_ERROR("Some error message");
                 }
-                m_msg.append_to_logtype(logtype, next_static_text_begin_pos,
-                                        cur_pos - next_static_text_begin_pos);
+                constant_handler(logtype, next_static_text_begin_pos,
+                                 cur_pos - next_static_text_begin_pos);
 
                 // Skip the escape character
                 next_static_text_begin_pos = cur_pos + 1;
@@ -189,11 +166,69 @@ bool IrMessageParser::parse_next_encoded_message() {
     }
     // Add remainder
     if (next_static_text_begin_pos < logtype.size()) {
-        m_msg.append_to_logtype(logtype, next_static_text_begin_pos,
-                                logtype.size() - next_static_text_begin_pos);
+        constant_handler(logtype, next_static_text_begin_pos,
+                         logtype.size() - next_static_text_begin_pos);
     }
 
     return true;
+}
+
+bool IrMessageParser::parse_next_encoded_message () {
+    if (m_is_four_bytes_encoded) {
+        return parse_next_four_bytes_message();
+    }
+    return false;
+}
+
+bool IrMessageParser::parse_next_four_bytes_message () {
+    m_msg.clear();
+
+    // timestamp handler
+    auto ts_handler = [this] (epochtime_t ts) {
+        m_reference_timestamp += ts;
+        m_msg.set_ts(m_reference_timestamp);
+    };
+
+    // constant handler
+    auto constant_handler = [this] (const std::string& value, size_t begin_pos, size_t length) {
+        m_msg.append_to_logtype(value, begin_pos, length);
+    };
+
+    auto encoded_int_handler = [this] (four_byte_encoded_variable_t value) {
+        // assume that we need the actual size
+        auto decoded_int = ffi::decode_integer_var(value);
+        m_msg.add_encoded_integer(value, decoded_int.length());
+    };
+
+    // float handler
+    auto encoded_float_handler = [this] (four_byte_encoded_variable_t encoded_float) {
+        auto decoded_float = ffi::decode_float_var(encoded_float);
+        if (m_is_four_bytes_encoded) {
+            // handle float
+            // assume that we need the actual size
+            encoded_float = EncodedVariableInterpreter::convert_four_bytes_float_to_clp_encoded_float(encoded_float);
+        }
+        m_msg.add_encoded_float(encoded_float, decoded_float.size());
+    };
+
+    // Dict var handler
+    auto dict_var_handler = [this] (const string& dict_var) {
+        encoded_variable_t converted_var;
+        if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(dict_var, converted_var)) {
+            m_msg.add_encoded_integer(converted_var, dict_var.size());
+        } else if (EncodedVariableInterpreter::convert_string_to_representable_float_var(dict_var, converted_var)) {
+            m_msg.add_encoded_float(converted_var, dict_var.size());
+        } else {
+            m_msg.add_dictionary_var(dict_var);
+        }
+    };
+
+    return generic_parse_next_msg<four_byte_encoded_variable_t>(m_reader,
+                                                                constant_handler,
+                                                                ts_handler,
+                                                                encoded_int_handler,
+                                                                encoded_float_handler,
+                                                                dict_var_handler);
 }
 
 bool IrMessageParser::is_ir_encoded (ReaderInterface& reader, bool& is_four_bytes_encoded) {

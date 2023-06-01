@@ -109,14 +109,7 @@ namespace ffi::ir_stream {
                                            encoded_tag_t& metadata_type, uint16_t& metadata_size);
 
     template <typename encoded_variable_t>
-    static IRErrorCode generic_decode_tokens (ReaderInterface& buffer_reader,
-                                              string& logtype,
-                                              vector<encoded_variable_t>& encoded_vars,
-                                              vector<string>& dict_vars,
-                                              epoch_time_ms_t& timestamp);
-
-    template <typename encoded_variable_t>
-    static IRErrorCode generic_decode_tokens (
+    IRErrorCode generic_decode_tokens (
         ReaderInterface& buffer_reader,
         string& logtype,
         vector<encoded_variable_t>& encoded_vars,

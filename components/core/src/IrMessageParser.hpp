@@ -33,10 +33,11 @@ public:
     TimestampPattern* get_ts_pattern () { return &m_ts_pattern; }
     const ParsedIrMessage& get_parsed_msg () const { return m_msg; }
     LogTypeDictionaryEntry& get_msg_logtype_entry() { return m_msg.get_logtype_entry(); }
-
-private:
     bool parse_next_encoded_message ();
 
+private:
+
+    bool parse_next_four_bytes_message();
     bool decode_json_preamble (std::string& json_metadata);
     bool is_ir_encoded (ReaderInterface& reader, bool& is_four_bytes_encoded);
 
