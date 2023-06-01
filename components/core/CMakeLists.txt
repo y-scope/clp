@@ -188,6 +188,7 @@ set(SOURCE_FILES_clp
         src/ffi/ir_stream/byteswap.hpp
         src/ffi/ir_stream/decoding_methods.cpp
         src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.tpp
         src/ffi/ir_stream/encoding_methods.cpp
         src/ffi/ir_stream/encoding_methods.hpp
         src/compressor_frontend/Constants.hpp
@@ -708,6 +709,7 @@ set(SOURCE_FILES_unitTest
         src/ffi/ir_stream/byteswap.hpp
         src/ffi/ir_stream/decoding_methods.cpp
         src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.tpp
         src/ffi/ir_stream/encoding_methods.cpp
         src/ffi/ir_stream/encoding_methods.hpp
         src/ffi/ir_stream/protocol_constants.hpp
@@ -938,6 +940,7 @@ set(SOURCE_FILES_testbench
         src/ffi/ir_stream/byteswap.hpp
         src/ffi/ir_stream/decoding_methods.cpp
         src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.tpp
         src/ffi/ir_stream/encoding_methods.cpp
         src/ffi/ir_stream/encoding_methods.hpp
         src/ffi/ir_stream/protocol_constants.hpp

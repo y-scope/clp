@@ -3,7 +3,6 @@
 // Project headers
 #include "byteswap.hpp"
 #include "protocol_constants.hpp"
-#include "../../type_utils.hpp"
 
 using std::is_same_v;
 using std::string;
@@ -343,17 +342,42 @@ namespace ffi::ir_stream {
     static IRErrorCode generic_decode_next_message (ReaderInterface& reader, string& message,
                                                     epoch_time_ms_t& timestamp)
     {
+        message.clear();
+
         vector<encoded_variable_t> encoded_vars;
         vector<string> dict_vars;
         string logtype;
-        if (auto error_code = generic_parse_tokens(reader, logtype, encoded_vars,
-                                                   dict_vars, timestamp);
+        if (auto error_code = generic_parse_tokens(reader, logtype, encoded_vars, dict_vars,
+                                                   timestamp);
             IRErrorCode_Success != error_code) {
             return error_code;
         }
+
+        // constant handler
+        auto constant_handler = [&message] (const string& value, size_t begin_pos, size_t length) {
+            message.append(value, begin_pos, length);
+        };
+
+        // encoded int handler
+        auto encoded_int_handler = [&message] (encoded_variable_t value) {
+            message.append(decode_integer_var(value));
+        };
+
+        // encoded float handler
+        auto encoded_float_handler = [&message] (encoded_variable_t encoded_float) {
+            message.append(decode_float_var(encoded_float));
+        };
+
+        // dict var handler
+        auto dict_var_handler = [&message] (const string& dict_var) {
+            message.append(dict_var);
+        };
+
         try {
-            message = decode_message(logtype, encoded_vars, dict_vars);
-        } catch (const EncodingException& e) {
+            generic_decode_message(logtype, encoded_vars, dict_vars,
+                                   constant_handler, encoded_int_handler,
+                                   encoded_float_handler, dict_var_handler);
+        } catch (const DecodingException& e) {
             return IRErrorCode_Decode_Error;
         }
         return IRErrorCode_Success;
@@ -389,96 +413,6 @@ namespace ffi::ir_stream {
                 return IRErrorCode_Corrupted_IR;
         }
         return IRErrorCode_Success;
-    }
-
-    template <typename encoded_variable_t>
-    static string decode_message (
-            const string& logtype,
-            const vector<encoded_variable_t>& encoded_vars,
-            const vector<string>& dictionary_vars
-    ) {
-        string message;
-        size_t encoded_vars_length = encoded_vars.size();
-        size_t dict_vars_length = dictionary_vars.size();
-        size_t next_static_text_begin_pos = 0;
-
-        size_t dictionary_vars_ix = 0;
-        size_t encoded_vars_ix = 0;
-        for (size_t cur_pos = 0; cur_pos < logtype.length(); ++cur_pos) {
-            auto c = logtype[cur_pos];
-            switch(c) {
-                case enum_to_underlying_type(VariablePlaceholder::Float): {
-                    message.append(logtype, next_static_text_begin_pos,
-                                   cur_pos - next_static_text_begin_pos);
-                    next_static_text_begin_pos = cur_pos + 1;
-                    if (encoded_vars_ix >= encoded_vars_length) {
-                        throw EncodingException(ErrorCode_Corrupt, __FILENAME__, __LINE__,
-                                                cTooFewEncodedVarsErrorMessage);
-                    }
-                    message.append(decode_float_var(encoded_vars[encoded_vars_ix]));
-                    ++encoded_vars_ix;
-
-                    break;
-                }
-
-                case enum_to_underlying_type(VariablePlaceholder::Integer): {
-                    message.append(logtype, next_static_text_begin_pos,
-                                   cur_pos - next_static_text_begin_pos);
-                    next_static_text_begin_pos = cur_pos + 1;
-                    if (encoded_vars_ix >= encoded_vars_length) {
-                        throw EncodingException(ErrorCode_Corrupt, __FILENAME__, __LINE__,
-                                                cTooFewEncodedVarsErrorMessage);
-                    }
-                    message.append(decode_integer_var(encoded_vars[encoded_vars_ix]));
-                    ++encoded_vars_ix;
-
-                    break;
-                }
-
-                case enum_to_underlying_type(VariablePlaceholder::Dictionary): {
-                    message.append(logtype, next_static_text_begin_pos,
-                                   cur_pos - next_static_text_begin_pos);
-                    next_static_text_begin_pos = cur_pos + 1;
-                    if (dictionary_vars_ix >= dict_vars_length) {
-                        throw EncodingException(ErrorCode_Corrupt, __FILENAME__, __LINE__,
-                                                cTooFewDictionaryVarsErrorMessage);
-                    }
-                    message.append(dictionary_vars[dictionary_vars_ix]);
-                    ++dictionary_vars_ix;
-
-                    break;
-                }
-
-                case cVariablePlaceholderEscapeCharacter: {
-                    // Ensure the escape character is followed by a
-                    // character that's being escaped
-                    if (cur_pos == logtype.length() - 1) {
-                        throw EncodingException(ErrorCode_Corrupt, __FILENAME__, __LINE__,
-                                                cUnexpectedEscapeCharacterMessage);
-                    }
-                    message.append(logtype, next_static_text_begin_pos,
-                                   cur_pos - next_static_text_begin_pos);
-
-                    // Skip the escape character
-                    next_static_text_begin_pos = cur_pos + 1;
-                    // The character after the escape character is static text
-                    // (regardless of whether it is a variable placeholder), so
-                    // increment cur_pos by 1 to ensure we don't process the
-                    // next character in any of the other cases (instead it will
-                    // be added to the message).
-                    ++cur_pos;
-
-                    break;
-                }
-            }
-        }
-        // Add remainder
-        if (next_static_text_begin_pos < logtype.length()) {
-            message.append(logtype, next_static_text_begin_pos,
-                           logtype.length() - next_static_text_begin_pos);
-        }
-
-        return message;
     }
 
     IRErrorCode get_encoding_type (ReaderInterface& reader, bool& is_four_bytes_encoding) {
@@ -549,4 +483,19 @@ namespace ffi::ir_stream {
             );
         }
     }
+
+    // Explicitly declare specializations
+    template IRErrorCode generic_parse_tokens<four_byte_encoded_variable_t> (
+            ReaderInterface& buffer_reader,
+            string& logtype,
+            vector<four_byte_encoded_variable_t>& encoded_vars,
+            vector<string>& dict_vars,
+            epoch_time_ms_t& timestamp);
+
+    template IRErrorCode generic_parse_tokens<eight_byte_encoded_variable_t> (
+            ReaderInterface& buffer_reader,
+            string& logtype,
+            vector<eight_byte_encoded_variable_t>& encoded_vars,
+            vector<string>& dict_vars,
+            epoch_time_ms_t& timestamp);
 }

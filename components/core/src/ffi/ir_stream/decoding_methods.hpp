@@ -20,6 +20,23 @@ namespace ffi::ir_stream {
         IRErrorCode_Incomplete_IR,
     } IRErrorCode;
 
+    class DecodingException : public TraceableException {
+    public:
+        // Constructors
+        DecodingException (ErrorCode error_code, const char* const filename, int line_number,
+                           std::string message) :
+                TraceableException(error_code, filename, line_number),
+                m_message(std::move(message)) {}
+
+        // Methods
+        [[nodiscard]] const char* what() const noexcept override {
+            return m_message.c_str();
+        }
+
+    private:
+        std::string m_message;
+    };
+
     /**
      * Decodes the encoding type for the encoded IR stream
      * @param ir_buf
@@ -101,5 +118,7 @@ namespace ffi::ir_stream {
                                          epoch_time_ms_t& timestamp_delta);
     }
 }
+
+#include "decoding_methods.tpp"
 
 #endif //FFI_IR_STREAM_DECODING_METHODS_HPP
