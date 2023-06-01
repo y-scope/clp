@@ -6,6 +6,7 @@
 // C++ libraries
 #include <cstdio>
 #include <memory>
+#include <optional>
 #include <string>
 
 // Project headers
@@ -212,8 +213,7 @@ private:
     size_t m_buffer_aligned_mask;
 
     // Variables for checkpoint support
-    bool m_checkpoint_enabled;
-    size_t m_checkpoint_pos;
+    std::optional<size_t> m_checkpoint_pos;
 };
 
 
