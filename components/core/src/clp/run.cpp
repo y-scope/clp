@@ -7,8 +7,10 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 
+// Log Surgeon
+#include <log_surgeon/LogParser.hpp>
+
 // Project headers
-#include "../compressor_frontend/LogParser.hpp"
 #include "../Profiler.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
@@ -60,10 +62,10 @@ namespace clp {
 
         if (CommandLineArguments::Command::Compress == command_line_args.get_command()) {
             /// TODO: make this not a unique_ptr and test performance difference
-            std::unique_ptr<compressor_frontend::LogParser> log_parser;
+            std::unique_ptr<log_surgeon::ReaderParser> reader_parser;
             if (!command_line_args.get_use_heuristic()) {
                 const std::string& schema_file_path = command_line_args.get_schema_file_path();
-                log_parser = std::make_unique<compressor_frontend::LogParser>(schema_file_path);
+                reader_parser = std::make_unique<log_surgeon::ReaderParser>(schema_file_path);
             }
 
             boost::filesystem::path path_prefix_to_remove(command_line_args.get_path_prefix_to_remove());
@@ -91,8 +93,10 @@ namespace clp {
 
             bool compression_successful;
             try {
-                compression_successful = compress(command_line_args, files_to_compress, empty_directory_paths, grouped_files_to_compress,
-                                                  command_line_args.get_target_encoded_file_size(), std::move(log_parser),
+                compression_successful = compress(command_line_args, files_to_compress, 
+                                                  empty_directory_paths, grouped_files_to_compress,
+                                                  command_line_args.get_target_encoded_file_size(),
+                                                  std::move(reader_parser),
                                                   command_line_args.get_use_heuristic());
             } catch (TraceableException& e) {
                 ErrorCode error_code = e.get_error_code();

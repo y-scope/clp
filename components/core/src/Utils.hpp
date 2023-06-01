@@ -8,6 +8,9 @@
 #include <unordered_set>
 #include <vector>
 
+// Log surgeon
+#include <log_surgeon/Lexer.hpp>
+
 // Project headers
 #include "Defs.h"
 #include "ErrorCode.hpp"
@@ -107,5 +110,15 @@ std::string get_unambiguous_path (const std::string& path);
  * @return Otherwise, same as FileReader::try_open and FileReader::try_read_to_delimiter
  */
 ErrorCode read_list_of_paths (const std::string& list_path, std::vector<std::string>& paths);
+
+/**
+ * Loads a lexer from a file
+ * @param schema_file_path 
+ * @param done 
+ * @param forward_lexer_ptr 
+ */
+void load_lexer_from_file (std::string schema_file_path,
+                           bool done,
+                           log_surgeon::lexers::ByteLexer& forward_lexer_ptr);
 
 #endif // UTILS_HPP

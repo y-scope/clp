@@ -4,12 +4,14 @@
 // C++ libraries
 #include <string>
 
+// Log surgeon
+#include <log_surgeon/Lexer.hpp>
+
 // Project headers
 #include "Defs.h"
 #include "Query.hpp"
 #include "streaming_archive/reader/Archive.hpp"
 #include "streaming_archive/reader/File.hpp"
-#include "compressor_frontend/Lexer.hpp"
 
 class Grep {
 
@@ -37,8 +39,8 @@ public:
      * @return true if query may match messages, false otherwise
      */
     static bool process_raw_query (const streaming_archive::reader::Archive& archive, const std::string& search_string, epochtime_t search_begin_ts,
-                                   epochtime_t search_end_ts, bool ignore_case, Query& query, compressor_frontend::lexers::ByteLexer& forward_lexer,
-                                   compressor_frontend::lexers::ByteLexer& reverse_lexer, bool use_heuristic);
+                                   epochtime_t search_end_ts, bool ignore_case, Query& query, log_surgeon::lexers::ByteLexer& forward_lexer,
+                                   log_surgeon::lexers::ByteLexer& reverse_lexer, bool use_heuristic);
 
     /**
      * Returns bounds of next potential variable (either a definite variable or a token with wildcards)
@@ -58,11 +60,17 @@ public:
      * @param is_var Whether the token is definitely a variable
      * @param forward_lexer DFA for determining if input is in the schema
      * @param reverse_lexer DFA for determining if reverse of input is in the schema
+     * @param post_processed_string 
+     * @param is_typed 
+     * @param typed_begin_pos 
+     * @param typed_end_pos 
      * @return true if another potential variable was found, false otherwise
      */
-    static bool get_bounds_of_next_potential_var (const std::string& value, size_t& begin_pos, size_t& end_pos, bool& is_var,
-                                                  compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer);
-    
+    static bool get_bounds_of_next_potential_var (const std::string& value, size_t& begin_pos, 
+                              size_t& end_pos, bool& is_var,
+                              log_surgeon::lexers::ByteLexer& forward_lexer,
+                              log_surgeon::lexers::ByteLexer& reverse_lexer,
+                              std::string& post_processed_string);    
     /**
      * Marks which sub-queries in each query are relevant to the given file
      * @param compressed_file
@@ -97,6 +105,16 @@ public:
      * @throw TimestampPattern::OperationFailed if failed to insert timestamp into message
      */
     static size_t search (const Query& query, size_t limit, streaming_archive::reader::Archive& archive, streaming_archive::reader::File& compressed_file);
+};
+
+
+/**
+ * Wraps the tokens normally return from the log_surgeon lexer, and storing the variable ids of the
+ * tokens in a search query in a set. This allows for optimized search performance.
+ */
+class SearchToken : public log_surgeon::Token {
+public:
+    std::set<int> m_type_ids_set;
 };
 
 #endif // GREP_HPP

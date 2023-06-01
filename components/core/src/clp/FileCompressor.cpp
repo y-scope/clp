@@ -11,10 +11,18 @@
 // libarchive
 #include <archive_entry.h>
 
+// Log surgeon
+#include <log_surgeon/LogEvent.hpp>
+#include <log_surgeon/ReaderParser.hpp>
+
 // Project headers
 #include "../Profiler.hpp"
 #include "utils.hpp"
 
+using log_surgeon::LogEventView;
+using log_surgeon::ReaderParser;
+using log_surgeon::Reader;
+using log_surgeon::ReaderParser;
 using std::cout;
 using std::endl;
 using std::set;
@@ -104,9 +112,11 @@ namespace clp {
                                                 file_to_compress.get_path_for_compression(),
                                                 file_to_compress.get_group_id(), archive_writer, m_file_reader);
             } else {
-                parse_and_encode(target_data_size_of_dicts, archive_user_config, target_encoded_file_size,
-                                 file_to_compress.get_path_for_compression(),
-                                 file_to_compress.get_group_id(), archive_writer, m_file_reader);
+                parse_and_encode_with_library(target_data_size_of_dicts, archive_user_config, 
+                                              target_encoded_file_size, 
+                                              file_to_compress.get_path_for_compression(),
+                                              file_to_compress.get_group_id(), archive_writer,
+                                              m_file_reader);
             }
         } else {
             if (false == try_compressing_as_archive(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, file_to_compress,
@@ -125,9 +135,11 @@ namespace clp {
         return succeeded;
     }
 
-    void FileCompressor::parse_and_encode (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
-                                           size_t target_encoded_file_size, const string& path_for_compression, group_id_t group_id,
-                                           streaming_archive::writer::Archive& archive_writer, ReaderInterface& reader)
+    void FileCompressor::parse_and_encode_with_library (size_t target_data_size_of_dicts, 
+            streaming_archive::writer::Archive::UserConfig& archive_user_config,
+            size_t target_encoded_file_size, const string& path_for_compression, 
+            group_id_t group_id, streaming_archive::writer::Archive& archive_writer,
+            ReaderInterface& reader)
     {
         archive_writer.m_target_data_size_of_dicts = target_data_size_of_dicts;
         archive_writer.m_archive_user_config = archive_user_config;
@@ -136,30 +148,30 @@ namespace clp {
         archive_writer.m_target_encoded_file_size = target_encoded_file_size;
         // Open compressed file
         archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
-        // TODO: decide what to actually do about this
-        // for now reset reader rather than try reading m_utf8_validation_buf as it would be
-        // very awkward to combine sources to/in the parser
+        /// TODO:Add the m_utf8_validation_buf into the start of the input buffer
         reader.seek_from_begin(0);
-        m_log_parser->set_archive_writer_ptr(&archive_writer);
-        m_log_parser->get_archive_writer_ptr()->old_ts_pattern.clear();
-        try {
-            m_log_parser->parse(reader);
-        } catch (std::string const err) {
-            if (err.find("Lexer failed to find a match after checking entire buffer") != std::string::npos) {
-                close_file_and_append_to_segment(archive_writer);
-                SPDLOG_ERROR(err);
-            } else {
-                throw (err);
+        archive_writer.m_old_ts_pattern.clear();
+        archive_writer.m_timestamp_set = false;
+        Reader reader_wrapper{[&](char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode {
+            reader.read(buf, count, read_to);
+            if (read_to == 0) {
+                return log_surgeon::ErrorCode::EndOfFile;
             }
+            return log_surgeon::ErrorCode::Success;
+        }};
+        m_reader_parser->reset_and_set_reader(reader_wrapper);
+        static LogEventView log_view{&m_reader_parser->get_log_parser()};
+        while (false == m_reader_parser->done()) {
+            if (log_surgeon::ErrorCode err{m_reader_parser->get_next_event_view(log_view)};
+                    log_surgeon::ErrorCode::Success != err) {
+                SPDLOG_ERROR("Parsing Failed");
+                throw (std::runtime_error("Parsing Failed"));
+            }
+            archive_writer.write_msg_using_schema(log_view);
         }
-        // TODO: separate variables from static text
-        //Stopwatch close_file_watch("close_file_watch");
-        //close_file_watch.start();
         close_file_and_append_to_segment(archive_writer);
         // archive_writer_config needs to persist between files
         archive_user_config = archive_writer.m_archive_user_config;
-        //close_file_watch.stop();
-        //close_file_watch.print();
     }
 
     void FileCompressor::parse_and_encode_with_heuristic (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
@@ -279,8 +291,11 @@ namespace clp {
                                                     boost_path_for_compression.string(), file_to_compress.get_group_id(), archive_writer,
                                                     m_libarchive_file_reader);
                 } else {
-                    parse_and_encode(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, boost_path_for_compression.string(),
-                                     file_to_compress.get_group_id(), archive_writer, m_libarchive_file_reader);
+                    parse_and_encode_with_library(target_data_size_of_dicts, archive_user_config, 
+                                                  target_encoded_file_size, 
+                                                  boost_path_for_compression.string(),
+                                                  file_to_compress.get_group_id(), archive_writer,
+                                                  m_libarchive_file_reader);
                 }
             } else {
                 SPDLOG_ERROR("Cannot compress {} - not UTF-8 encoded.", m_libarchive_reader.get_path());

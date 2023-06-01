@@ -13,13 +13,16 @@
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid.hpp>
 
+// Log Surgeon
+#include <log_surgeon/LogEvent.hpp>
+#include <log_surgeon/ReaderParser.hpp>
+
 // Project headers
 #include "../../ArrayBackedPosIntSet.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../GlobalMetadataDB.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
-#include "../../compressor_frontend/Token.hpp"
 #include "../MetadataDB.hpp"
 
 namespace streaming_archive { namespace writer { 
@@ -59,8 +62,8 @@ namespace streaming_archive { namespace writer {
             }
         };
 
-        TimestampPattern old_ts_pattern;
-
+        TimestampPattern m_old_ts_pattern;
+        bool m_timestamp_set;
         size_t m_target_data_size_of_dicts;
         UserConfig m_archive_user_config;
         std::string m_path_for_compression;
@@ -70,7 +73,7 @@ namespace streaming_archive { namespace writer {
 
         // Constructors
         Archive () : m_segments_dir_fd(-1), m_compression_level(0), m_global_metadata_db(nullptr),
-                old_ts_pattern(), m_schema_file_path() {}
+                m_old_ts_pattern(), m_timestamp_set(false), m_schema_file_path() {}
 
         // Destructor
         ~Archive ();
@@ -136,7 +139,7 @@ namespace streaming_archive { namespace writer {
          * @param has_timestamp
          * @throw FileWriter::OperationFailed if any write fails
          */
-        void write_msg_using_schema (compressor_frontend::Token*& uncompressed_msg, uint32_t uncompressed_msg_pos, bool has_delimiter, bool has_timestamp);
+        void write_msg_using_schema (log_surgeon::LogEventView& log_event_view);
 
         /**
          * Writes snapshot of archive to disk including metadata of all files and new dictionary entries

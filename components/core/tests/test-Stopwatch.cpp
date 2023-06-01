@@ -38,6 +38,7 @@ TEST_CASE("Stopwatch", "[Stopwatch]") {
         REQUIRE(time_taken < 1.1);
     }
 
+    ///TODO: this test fails all the time
     SECTION("Test multiple measurements") {
         // Measure some work
         stopwatch.start();
