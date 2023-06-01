@@ -280,21 +280,17 @@ namespace streaming_archive::writer {
         }
     }
 
-    void Archive::write_msg (const ParsedIrMessage& msg) {
+    void Archive::write_ir_message (epochtime_t timestamp,
+                                    LogTypeDictionaryEntry& logtype_entry,
+                                    const std::vector<ParsedIrMessage::IrVariable>& variables,
+                                    size_t num_uncompressed_bytes) {
+        // Encode logtype
         logtype_dictionary_id_t logtype_id;
+        m_logtype_dict.add_entry(logtype_entry, logtype_id);
+
         vector<encoded_variable_t> encoded_vars;
         vector<variable_dictionary_id_t> var_ids;
-
-        const auto& logtype_string = msg.get_logtype();
-        epochtime_t timestamp = msg.get_ts();
-        const auto& variables = msg.get_vars();
-
-        // first, handle logtype
-        m_logtype_dict_entry.set_logtype(logtype_string);
-        m_logtype_dict_entry.set_var_positions(msg.get_var_positions());
-        m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
-
-        // Then handle variables
+        // Encode variable base on type
         for (const auto& var : variables) {
             if (var.type() == ParsedIrMessage::VariableType::EncodedVar) {
                 encoded_vars.push_back(var.get_encoded_var());
@@ -308,7 +304,8 @@ namespace streaming_archive::writer {
             }
         }
 
-        m_file->write_encoded_msg(timestamp, logtype_id, encoded_vars, var_ids, msg.get_orig_num_bytes());
+        m_file->write_encoded_msg(timestamp, logtype_id, encoded_vars,
+                                  var_ids, num_uncompressed_bytes);
 
         // Update segment indices
         if (m_file->has_ts_pattern()) {

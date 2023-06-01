@@ -23,18 +23,51 @@ using ffi::ir_stream::IRErrorCode;
 using ffi::VariablePlaceholder;
 using std::string;
 
-static bool decode_json_preamble (ReaderInterface& reader, std::string& json_metadata);
+IrMessageParser::IrMessageParser (ReaderInterface& reader) : m_reader(reader) {
 
-bool IrMessageParser::parse_four_bytes_encoded_message(ReaderInterface& reader,
-                                                       ParsedIrMessage& msg,
-                                                       epochtime_t& reference_ts) {
+    if (false == is_ir_encoded(m_reader, m_is_four_bytes_encoded)) {
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+
+    string json_metadata;
+    if (false == decode_json_preamble(json_metadata)) {
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+
+    const string mocked_ts_pattern = "%Y-%m-%dT%H:%M:%S.%3";
+    try {
+        auto metadata_json = nlohmann::json::parse(json_metadata);
+        string version = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey);
+        if (version != ffi::ir_stream::cProtocol::Metadata::VersionValue) {
+            SPDLOG_ERROR("Unsupported version");
+            throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        }
+
+        // For now, use a fixed timestamp pattern
+        m_ts_pattern = TimestampPattern(0, mocked_ts_pattern);
+
+        if (m_is_four_bytes_encoded) {
+            m_reference_timestamp = std::stoll(metadata_json.at(
+                    ffi::ir_stream::cProtocol::Metadata::ReferenceTimestampKey).get<string>());
+            m_msg.set_ts(m_reference_timestamp);
+        }
+
+    } catch (const nlohmann::json::parse_error& e) {
+        SPDLOG_ERROR("Failed to parse json metadata");
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+    m_msg.set_ts_pattern(&m_ts_pattern);
+}
+
+bool IrMessageParser::parse_next_encoded_message() {
+
     std::vector<four_byte_encoded_variable_t> encoded_vars;
     std::vector<string> dict_vars;
     string logtype;
     epochtime_t ts;
 
     auto error_code = ffi::ir_stream::four_byte_encoding::decode_tokens(
-            reader, logtype, encoded_vars, dict_vars, ts
+            m_reader, logtype, encoded_vars, dict_vars, ts
     );
 
     if (IRErrorCode::IRErrorCode_Success != error_code) {
@@ -44,10 +77,15 @@ bool IrMessageParser::parse_four_bytes_encoded_message(ReaderInterface& reader,
         return false;
     }
 
-    msg.clear();
+    m_msg.clear();
 
-    reference_ts += ts;
-    msg.set_ts(reference_ts);
+    // handle ts as ts_delta if four bytes encoding
+    if (m_is_four_bytes_encoded) {
+        m_reference_timestamp += ts;
+        ts = m_reference_timestamp;
+    }
+
+    m_msg.set_ts(ts);
 
     size_t encoded_vars_length = encoded_vars.size();
     size_t dict_vars_length = dict_vars.size();
@@ -59,8 +97,8 @@ bool IrMessageParser::parse_four_bytes_encoded_message(ReaderInterface& reader,
         auto c = logtype[cur_pos];
         switch(c) {
             case enum_to_underlying_type(VariablePlaceholder::Float): {
-                msg.append_to_logtype(logtype, next_static_text_begin_pos,
-                                      cur_pos - next_static_text_begin_pos);
+                m_msg.append_to_logtype(logtype, next_static_text_begin_pos,
+                                        cur_pos - next_static_text_begin_pos);
                 next_static_text_begin_pos = cur_pos + 1;
                 if (encoded_vars_ix >= encoded_vars_length) {
 
@@ -68,21 +106,21 @@ bool IrMessageParser::parse_four_bytes_encoded_message(ReaderInterface& reader,
                 }
 
                 auto encoded_float = encoded_vars[encoded_vars_ix];
-
-                // handle float
-                // assume that we need the actual size
                 auto decoded_float = ffi::decode_float_var(encoded_float);
-                auto clp_encoded_float = EncodedVariableInterpreter::convert_four_bytes_float_to_clp_encoded_float(encoded_float);
-
-                msg.add_encoded_float(clp_encoded_float, decoded_float.size());
+                if (m_is_four_bytes_encoded) {
+                    // handle float
+                    // assume that we need the actual size
+                    encoded_float = EncodedVariableInterpreter::convert_four_bytes_float_to_clp_encoded_float(encoded_float);
+                }
+                m_msg.add_encoded_float(encoded_float, decoded_float.size());
 
                 ++encoded_vars_ix;
                 break;
             }
 
             case enum_to_underlying_type(VariablePlaceholder::Integer): {
-                msg.append_to_logtype(logtype, next_static_text_begin_pos,
-                                      cur_pos - next_static_text_begin_pos);
+                m_msg.append_to_logtype(logtype, next_static_text_begin_pos,
+                                        cur_pos - next_static_text_begin_pos);
                 next_static_text_begin_pos = cur_pos + 1;
                 if (encoded_vars_ix >= encoded_vars_length) {
                     SPDLOG_ERROR("Some error message");
@@ -93,15 +131,15 @@ bool IrMessageParser::parse_four_bytes_encoded_message(ReaderInterface& reader,
                 auto encoded_int = encoded_vars[encoded_vars_ix];
                 // assume that we need the actual size
                 auto decoded_int = ffi::decode_integer_var(encoded_int);
-                msg.add_encoded_integer(encoded_int, decoded_int.size());
+                m_msg.add_encoded_integer(encoded_int, decoded_int.size());
 
                 ++encoded_vars_ix;
                 break;
             }
 
             case enum_to_underlying_type(VariablePlaceholder::Dictionary): {
-                msg.append_to_logtype(logtype, next_static_text_begin_pos,
-                                      cur_pos - next_static_text_begin_pos);
+                m_msg.append_to_logtype(logtype, next_static_text_begin_pos,
+                                        cur_pos - next_static_text_begin_pos);
                 next_static_text_begin_pos = cur_pos + 1;
                 if (dictionary_vars_ix >= dict_vars_length) {
                     SPDLOG_ERROR("Some error message");
@@ -110,15 +148,18 @@ bool IrMessageParser::parse_four_bytes_encoded_message(ReaderInterface& reader,
 
                 const auto& var_string {dict_vars[dictionary_vars_ix]} ;
 
-                encoded_variable_t converted_var;
-                if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(var_string, converted_var)) {
-                    msg.add_encoded_integer(converted_var, var_string.size());
-                } else if (EncodedVariableInterpreter::convert_string_to_representable_float_var(var_string, converted_var)) {
-                    msg.add_encoded_float(converted_var, var_string.size());
+                if (m_is_four_bytes_encoded) {
+                    encoded_variable_t converted_var;
+                    if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(var_string, converted_var)) {
+                        m_msg.add_encoded_integer(converted_var, var_string.size());
+                    } else if (EncodedVariableInterpreter::convert_string_to_representable_float_var(var_string, converted_var)) {
+                        m_msg.add_encoded_float(converted_var, var_string.size());
+                    } else {
+                        m_msg.add_dictionary_var(var_string);
+                    }
                 } else {
-                    msg.add_dictionary_var(var_string);
+                    m_msg.add_dictionary_var(var_string);
                 }
-
                 ++dictionary_vars_ix;
 
                 break;
@@ -130,8 +171,8 @@ bool IrMessageParser::parse_four_bytes_encoded_message(ReaderInterface& reader,
                 if (cur_pos == logtype.size() - 1) {
                     SPDLOG_ERROR("Some error message");
                 }
-                msg.append_to_logtype(logtype, next_static_text_begin_pos,
-                                      cur_pos - next_static_text_begin_pos);
+                m_msg.append_to_logtype(logtype, next_static_text_begin_pos,
+                                        cur_pos - next_static_text_begin_pos);
 
                 // Skip the escape character
                 next_static_text_begin_pos = cur_pos + 1;
@@ -148,38 +189,8 @@ bool IrMessageParser::parse_four_bytes_encoded_message(ReaderInterface& reader,
     }
     // Add remainder
     if (next_static_text_begin_pos < logtype.size()) {
-        msg.append_to_logtype(logtype, next_static_text_begin_pos,
-                              logtype.size() - next_static_text_begin_pos);
-    }
-
-    return true;
-}
-
-bool IrMessageParser::decode_four_bytes_preamble (ReaderInterface& reader, std::string& ts_pattern,
-                                                  epochtime_t& reference_ts)
-{
-    string json_metadata;
-    const string mocked_ts_pattern = "%Y-%m-%dT%H:%M:%S.%3";
-    if (false == decode_json_preamble(reader, json_metadata)) {
-        return false;
-    }
-    try {
-        auto metadata_json = nlohmann::json::parse(json_metadata);
-        string version = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey);
-        if (version != ffi::ir_stream::cProtocol::Metadata::VersionValue) {
-            SPDLOG_ERROR("Unsupported version");
-            return false;
-        }
-
-        // For now, use a fixed timestamp pattern
-        ts_pattern = mocked_ts_pattern;
-
-        reference_ts = std::stoll(metadata_json.at(
-                ffi::ir_stream::cProtocol::Metadata::ReferenceTimestampKey).get<string>());
-
-    } catch (const nlohmann::json::parse_error& e) {
-        SPDLOG_ERROR("Failed to parse json metadata");
-        return false;
+        m_msg.append_to_logtype(logtype, next_static_text_begin_pos,
+                                logtype.size() - next_static_text_begin_pos);
     }
 
     return true;
@@ -195,13 +206,27 @@ bool IrMessageParser::is_ir_encoded (ReaderInterface& reader, bool& is_four_byte
     return true;
 }
 
-static bool decode_json_preamble (ReaderInterface& reader, std::string& json_metadata) {
+bool IrMessageParser::is_ir_encoded (size_t sequence_length, const char* data) {
+    if (sequence_length < MagicNumberLength) {
+        return false;
+    }
+    bool is_four_bytes_encoded;
+    BufferReader encoding_data (data, MagicNumberLength);
+    // Note. currently this method doesn't recover file pos.
+    if (ffi::ir_stream::IRErrorCode_Success !=
+        ffi::ir_stream::get_encoding_type(encoding_data, is_four_bytes_encoded)) {
+        return false;
+    }
+    return true;
+}
+
+bool IrMessageParser::decode_json_preamble (std::string& json_metadata) {
     // Decode and parse metadata
     ffi::ir_stream::encoded_tag_t metadata_type;
     std::vector<int8_t> metadata_vec;
 
     if (ffi::ir_stream::IRErrorCode_Success !=
-        ffi::ir_stream::decode_preamble(reader, metadata_type, metadata_vec)) {
+        ffi::ir_stream::decode_preamble(m_reader, metadata_type, metadata_vec)) {
         SPDLOG_ERROR("Failed to parse metadata");
         return false;
     }

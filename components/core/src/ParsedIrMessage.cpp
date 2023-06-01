@@ -26,7 +26,7 @@ void ParsedIrMessage::set_ts_pattern (const TimestampPattern* timestamp_pattern)
 }
 
 void ParsedIrMessage::append_to_logtype (const string& value, size_t begin_pos, size_t length) {
-    m_logtype.append(value, begin_pos, length);
+    m_logtype_entry.add_constant(value, begin_pos, length);
     m_orig_num_bytes += length;
 }
 
@@ -37,28 +37,24 @@ void ParsedIrMessage::clear () {
 
 void ParsedIrMessage::clear_except_ts_patt () {
     m_variables.clear();
-    m_var_positions.clear();
     m_orig_num_bytes = 0;
-    m_logtype.clear();
+    m_logtype_entry.clear();
 }
 
 void ParsedIrMessage::add_dictionary_var (const string& dictionary_var) {
     m_variables.emplace_back(dictionary_var);
-    m_var_positions.push_back(m_logtype.length());
-    m_logtype += enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Dictionary);
+    m_logtype_entry.add_dictionary_var();
     m_orig_num_bytes += dictionary_var.size();
 }
 
 void ParsedIrMessage::add_encoded_integer (encoded_variable_t var, size_t orginal_size_in_bytes) {
     m_variables.emplace_back(var);
-    m_var_positions.push_back(m_logtype.length());
-    m_logtype += enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Integer);
+    m_logtype_entry.add_int_var();
     m_orig_num_bytes += orginal_size_in_bytes;
 }
 
 void ParsedIrMessage::add_encoded_float (encoded_variable_t var, size_t orginal_size_in_bytes) {
     m_variables.emplace_back(var);
-    m_var_positions.push_back(m_logtype.length());
-    m_logtype += enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Float);
+    m_logtype_entry.add_float_var();
     m_orig_num_bytes += orginal_size_in_bytes;
 }

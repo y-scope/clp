@@ -8,6 +8,7 @@
 
 // Project headers
 #include "Defs.h"
+#include "LogTypeDictionaryEntry.hpp"
 #include "TimestampPattern.hpp"
 
 class ParsedIrMessage {
@@ -28,13 +29,13 @@ public:
         DictVar,
         Length
     };
-    class EncodedIrVariable {
+    class IrVariable {
     public:
-        EncodedIrVariable(const std::string& dict_var) {
+        IrVariable(const std::string& dict_var) {
             m_dict_var = dict_var;
             m_type = VariableType::DictVar;
         }
-        EncodedIrVariable(encoded_variable_t encoded_var) {
+        IrVariable(encoded_variable_t encoded_var) {
             m_encoded_var = encoded_var;
             m_type = VariableType::EncodedVar;
         }
@@ -60,6 +61,9 @@ public:
         VariableType m_type;
     };
 
+    // Construtor
+    ParsedIrMessage() : m_ts_patt(nullptr) {}
+
     // Methods
     void clear();
     void clear_except_ts_patt ();
@@ -76,18 +80,16 @@ public:
 
     // getter
     epochtime_t get_ts () const { return m_ts; }
-    const std::string& get_logtype () const { return m_logtype; }
-    const std::vector<EncodedIrVariable>& get_vars () const { return m_variables; }
-    const std::vector<size_t>& get_var_positions () const { return m_var_positions; }
+    LogTypeDictionaryEntry& get_logtype_entry () { return m_logtype_entry; }
+    const std::vector<IrVariable>& get_vars () const { return m_variables; }
     size_t get_orig_num_bytes() const { return m_orig_num_bytes; }
-private:
 
+private:
     // Variables
     const TimestampPattern* m_ts_patt;
     epochtime_t m_ts;
-    std::string m_logtype;
-    std::vector<EncodedIrVariable> m_variables;
-    std::vector<size_t> m_var_positions;
+    LogTypeDictionaryEntry m_logtype_entry;
+    std::vector<IrVariable> m_variables;
     size_t m_orig_num_bytes;
 };
 

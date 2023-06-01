@@ -198,7 +198,8 @@ void EncodedVariableInterpreter::convert_encoded_float_to_string (encoded_variab
 }
 
 encoded_variable_t
-EncodedVariableInterpreter::convert_four_bytes_float_to_clp_encoded_float (encoded_variable_t encoded_float)
+EncodedVariableInterpreter::convert_four_bytes_float_to_clp_encoded_float (
+        encoded_variable_t encoded_float)
 {
     encoded_float = bit_cast<uint64_t>(encoded_float);
 

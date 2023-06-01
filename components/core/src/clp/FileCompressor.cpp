@@ -80,10 +80,6 @@ static void write_message_to_encoded_file (const ParsedMessage& msg, streaming_a
     archive.write_msg(msg.get_ts(), msg.get_content(), msg.get_orig_num_bytes());
 }
 
-static void write_ir_message_to_encoded_file (const ParsedIrMessage& msg, streaming_archive::writer::Archive& archive) {
-    archive.write_msg(msg);
-}
-
 namespace clp {
     bool FileCompressor::compress_file (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
                                         size_t target_encoded_file_size, const FileToCompress& file_to_compress,
@@ -279,12 +275,12 @@ namespace clp {
                     parse_and_encode(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, boost_path_for_compression.string(),
                                      file_to_compress.get_group_id(), archive_writer, m_libarchive_file_reader);
                 }
-            } else if (IrMessageParser::is_ir_encoded(m_libarchive_file_reader, is_four_bytes_encoded)) {
+            } else if (IrMessageParser::is_ir_encoded(m_utf8_validation_buf_length, m_utf8_validation_buf)) {
                 // TODO: fix compressed file path
                 auto boost_path_for_compression = parent_boost_path / m_libarchive_reader.get_path();
 
                 if (false == try_compressing_as_ir(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, boost_path_for_compression.string(),
-                                                   file_to_compress.get_group_id(), archive_writer, m_libarchive_file_reader, is_four_bytes_encoded)) {
+                                                   file_to_compress.get_group_id(), archive_writer, m_libarchive_file_reader)) {
                     SPDLOG_ERROR("SOME Error message to be printed");
 
                 }
@@ -309,47 +305,41 @@ namespace clp {
                                                 const std::string& path_for_compression,
                                                 group_id_t group_id,
                                                 streaming_archive::writer::Archive& archive_writer,
-                                                ReaderInterface& reader,
-                                                bool is_four_bytes_encoded)
+                                                ReaderInterface& reader)
     {
-        m_parsed_ir_message.clear();
+        // Construct the MessageParser which parse encoding type and metadata
+        // as part of the construction process
+        try {
+            IrMessageParser ir_message_parser(reader);
+            // Open compressed file
+            archive_writer.create_and_open_file(path_for_compression, group_id,
+                                                m_uuid_generator(), 0);
 
-        if (!is_four_bytes_encoded) {
-            SPDLOG_ERROR("not supported yet");
-            throw;
-        }
+            // Assume one encoded file only has one timestamp pattern
+            archive_writer.change_ts_pattern(ir_message_parser.get_ts_pattern());
 
-        // Parse metadata
-        string ts_pattern_string;
-        epochtime_t reference_ts;
-        if (false == IrMessageParser::decode_four_bytes_preamble(reader, ts_pattern_string,
-                                                                 reference_ts)) {
+            while (true) {
+                if (false == ir_message_parser.parse_next_encoded_message()) {
+                    break;
+                }
+                if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
+                    split_file_and_archive(archive_user_config, path_for_compression, group_id,
+                                           ir_message_parser.get_ts_pattern(), archive_writer);
+                } else if (archive_writer.get_file().get_encoded_size_in_bytes() >=
+                           target_encoded_file_size) {
+                    split_file(path_for_compression, group_id, ir_message_parser.get_ts_pattern(),
+                               archive_writer);
+                }
+                const auto& parsed_msg = ir_message_parser.get_parsed_msg();
+                archive_writer.write_ir_message(parsed_msg.get_ts(),
+                                                ir_message_parser.get_msg_logtype_entry(),
+                                                parsed_msg.get_vars(),
+                                                parsed_msg.get_orig_num_bytes());
+            }
+            close_file_and_append_to_segment(archive_writer);
+            return true;
+        } catch (TraceableException& e) {
             return false;
         }
-
-        // Open compressed file
-        archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
-
-        TimestampPattern ts_pattern(0, ts_pattern_string);
-        archive_writer.change_ts_pattern(&ts_pattern);
-        m_parsed_ir_message.set_ts_pattern(&ts_pattern);
-
-        while (true) {
-            if (false == IrMessageParser::parse_four_bytes_encoded_message(
-                    reader, m_parsed_ir_message, reference_ts))
-            {
-                break;
-            }
-            if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
-                split_file_and_archive(archive_user_config, path_for_compression, group_id,
-                                       &ts_pattern, archive_writer);
-            } else if (archive_writer.get_file().get_encoded_size_in_bytes() >= target_encoded_file_size) {
-                split_file(path_for_compression, group_id, &ts_pattern, archive_writer);
-            }
-            write_ir_message_to_encoded_file(m_parsed_ir_message, archive_writer);
-        }
-        close_file_and_append_to_segment(archive_writer);
-
-        return true;
     }
 }
