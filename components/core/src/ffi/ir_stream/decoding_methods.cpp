@@ -109,7 +109,7 @@ namespace ffi::ir_stream {
                                            encoded_tag_t& metadata_type, uint16_t& metadata_size);
 
     template <typename encoded_variable_t>
-    IRErrorCode generic_decode_tokens (
+    IRErrorCode generic_parse_tokens (
         ReaderInterface& buffer_reader,
         string& logtype,
         vector<encoded_variable_t>& encoded_vars,
@@ -537,17 +537,6 @@ namespace ffi::ir_stream {
                     reader, message, timestamp_delta
             );
         }
-
-        IRErrorCode decode_tokens (ReaderInterface& buffer_reader,
-                                   string& logtype,
-                                   vector<four_byte_encoded_variable_t>& encoded_vars,
-                                   vector<string>& dict_vars,
-                                   epoch_time_ms_t& timestamp)
-        {
-            return generic_decode_tokens<four_byte_encoded_variable_t>(
-                    buffer_reader, logtype, encoded_vars, dict_vars, timestamp
-            );
-        }
     }
 
     namespace eight_byte_encoding {
@@ -556,17 +545,6 @@ namespace ffi::ir_stream {
         {
             return generic_decode_next_message<eight_byte_encoded_variable_t>(
                     reader, message, timestamp
-            );
-        }
-
-        IRErrorCode decode_tokens (ReaderInterface& buffer_reader,
-                                   string& logtype,
-                                   vector<eight_byte_encoded_variable_t>& encoded_vars,
-                                   vector<string>& dict_vars,
-                                   epoch_time_ms_t& timestamp)
-        {
-            return generic_decode_tokens<eight_byte_encoded_variable_t>(
-                    buffer_reader, logtype, encoded_vars, dict_vars, timestamp
             );
         }
     }

@@ -59,11 +59,11 @@ namespace ffi::ir_stream {
                                  std::vector<int8_t>& metadata);
 
     template <typename encoded_variable_t>
-    IRErrorCode generic_decode_tokens (ReaderInterface& buffer_reader,
-                                       std::string& logtype,
-                                       std::vector<encoded_variable_t>& encoded_vars,
-                                       std::vector<std::string>& dict_vars,
-                                       epoch_time_ms_t& timestamp);
+    IRErrorCode generic_parse_tokens (ReaderInterface& buffer_reader,
+                                      std::string& logtype,
+                                      std::vector<encoded_variable_t>& encoded_vars,
+                                      std::vector<std::string>& dict_vars,
+                                      epoch_time_ms_t& timestamp);
 
     namespace eight_byte_encoding {
         /**
@@ -81,12 +81,6 @@ namespace ffi::ir_stream {
          */
         IRErrorCode decode_next_message (ReaderInterface& ir_buf, std::string& message,
                                          epoch_time_ms_t& timestamp);
-
-        IRErrorCode decode_tokens (ReaderInterface& buffer_reader,
-                                   std::string& logtype,
-                                   std::vector<eight_byte_encoded_variable_t>& encoded_vars,
-                                   std::vector<std::string>& dict_vars,
-                                   epoch_time_ms_t& timestamp);
     }
 
     namespace four_byte_encoding {
@@ -105,12 +99,6 @@ namespace ffi::ir_stream {
          */
         IRErrorCode decode_next_message (ReaderInterface& ir_buf, std::string& message,
                                          epoch_time_ms_t& timestamp_delta);
-
-        IRErrorCode decode_tokens (ReaderInterface& buffer_reader,
-                                   std::string& logtype,
-                                   std::vector<four_byte_encoded_variable_t>& encoded_vars,
-                                   std::vector<std::string>& dict_vars,
-                                   epoch_time_ms_t& timestamp);
     }
 }
 

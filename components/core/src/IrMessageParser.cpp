@@ -22,6 +22,7 @@ using ffi::ir_stream::cProtocol::MagicNumberLength;
 using ffi::ir_stream::IRErrorCode;
 using ffi::VariablePlaceholder;
 using std::string;
+using std::vector;
 
 IrMessageParser::IrMessageParser (ReaderInterface& reader) : m_reader(reader) {
 
@@ -59,33 +60,16 @@ IrMessageParser::IrMessageParser (ReaderInterface& reader) : m_reader(reader) {
     m_msg.set_ts_pattern(&m_ts_pattern);
 }
 
-template <typename ir_encoded_variable_t, typename ConstantHandler, typename TimestampHandler,
+template <typename ir_encoded_variable_t, typename ConstantHandler,
           typename EncodedIntHandler, typename EncodedFloatHandler, typename DictVarHandler>
-static bool generic_parse_next_msg(ReaderInterface& reader,
+static bool generic_parse_next_msg(const string& logtype,
+                                   const vector<ir_encoded_variable_t>& encoded_vars,
+                                   const vector<string>& dict_vars,
                                    ConstantHandler constant_handler,
-                                   TimestampHandler timestamp_handler,
                                    EncodedIntHandler encoded_int_handler,
                                    EncodedFloatHandler encoded_float_handler,
                                    DictVarHandler dict_var_handler)
 {
-    std::vector<ir_encoded_variable_t> encoded_vars;
-    std::vector<string> dict_vars;
-    string logtype;
-    epochtime_t ts;
-
-    auto error_code = ffi::ir_stream::generic_decode_tokens(
-            reader, logtype, encoded_vars, dict_vars, ts
-    );
-
-    if (IRErrorCode::IRErrorCode_Success != error_code) {
-        if (IRErrorCode::IRErrorCode_Eof != error_code) {
-            SPDLOG_ERROR("Corrupted IR with error code {}", error_code);
-        }
-        return false;
-    }
-
-    timestamp_handler(ts);
-
     size_t encoded_vars_length = encoded_vars.size();
     size_t dict_vars_length = dict_vars.size();
     size_t next_static_text_begin_pos = 0;
@@ -183,11 +167,24 @@ bool IrMessageParser::parse_next_encoded_message () {
 bool IrMessageParser::parse_next_four_bytes_message () {
     m_msg.clear();
 
-    // timestamp handler
-    auto ts_handler = [this] (epochtime_t ts) {
-        m_reference_timestamp += ts;
-        m_msg.set_ts(m_reference_timestamp);
-    };
+    epochtime_t ts;
+    vector<four_byte_encoded_variable_t> encoded_vars;
+    vector<string> dict_vars;
+    string logtype;
+
+    auto error_code = ffi::ir_stream::generic_parse_tokens(
+            m_reader, logtype, encoded_vars, dict_vars, ts
+    );
+
+    if (IRErrorCode::IRErrorCode_Success != error_code) {
+        if (IRErrorCode::IRErrorCode_Eof != error_code) {
+            SPDLOG_ERROR("Corrupted IR with error code {}", error_code);
+        }
+        return false;
+    }
+
+    m_reference_timestamp += ts;
+    m_msg.set_ts(m_reference_timestamp);
 
     // constant handler
     auto constant_handler = [this] (const std::string& value, size_t begin_pos, size_t length) {
@@ -223,12 +220,9 @@ bool IrMessageParser::parse_next_four_bytes_message () {
         }
     };
 
-    return generic_parse_next_msg<four_byte_encoded_variable_t>(m_reader,
-                                                                constant_handler,
-                                                                ts_handler,
-                                                                encoded_int_handler,
-                                                                encoded_float_handler,
-                                                                dict_var_handler);
+    return generic_parse_next_msg(logtype, encoded_vars, dict_vars,
+                                  constant_handler, encoded_int_handler,
+                                  encoded_float_handler, dict_var_handler);
 }
 
 bool IrMessageParser::is_ir_encoded (ReaderInterface& reader, bool& is_four_bytes_encoded) {
