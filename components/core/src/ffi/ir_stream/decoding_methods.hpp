@@ -49,6 +49,58 @@ namespace ffi::ir_stream {
     IRErrorCode get_encoding_type (ReaderInterface& ir_buf, bool& is_four_bytes_encoding);
 
     /**
+     * Parse logtypes, dictionary variables and encoded variables
+     * from the next encoded IR message. Returns the parsed tokens by
+     * reference
+     * @tparam encoded_variable_t
+     * @param reader
+     * @param logtype
+     * @param encoded_vars
+     * @param dict_vars
+     * @param timestamp
+     * @return IRErrorCode_Success on success
+     * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
+     * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
+     */
+    template <typename encoded_variable_t>
+    IRErrorCode generic_parse_tokens (ReaderInterface& reader,
+                                      std::string& logtype,
+                                      std::vector<encoded_variable_t>& encoded_vars,
+                                      std::vector<std::string>& dict_vars,
+                                      epoch_time_ms_t& timestamp);
+
+    /**
+     * Decodes the message consists of the tokens and calls the given methods
+     * to handle specific components of the message.
+     * @tparam encoded_variable_t Type of the encoded variable
+     * @tparam ConstantHandler Method to handle constants. Signature:
+     * (const std::string&, size_t, size_t) -> void
+     * @tparam EncodedIntHandler Method to handle encoded integers.
+     * Signature: (encoded_variable_t) -> void
+     * @tparam EncodedFloatHandler Method to handle encoded float.
+     * Signature: (encoded_variable_t) -> void
+     * @tparam DictVarHandler Method to handle dictionary variables.
+     * Signature: (const std::string&) -> void
+     * @param logtype
+     * @param encoded_vars
+     * @param dict_vars
+     * @param constant_handler
+     * @param encoded_int_handler
+     * @param encoded_float_handler
+     * @param dict_var_handler
+     * @throw DecodingException if the message can not be decoded properly
+     */
+    template <typename encoded_variable_t, typename ConstantHandler,
+            typename EncodedIntHandler, typename EncodedFloatHandler, typename DictVarHandler>
+    void generic_decode_message (const std::string& logtype,
+                                 const std::vector<encoded_variable_t>& encoded_vars,
+                                 const std::vector<std::string>& dict_vars,
+                                 ConstantHandler constant_handler,
+                                 EncodedIntHandler encoded_int_handler,
+                                 EncodedFloatHandler encoded_float_handler,
+                                 DictVarHandler dict_var_handler);
+
+    /**
      * Decodes the preamble for an IR stream.
      * @param ir_buf
      * @param metadata_type Returns the type of the metadata found in the IR
@@ -74,13 +126,6 @@ namespace ffi::ir_stream {
      */
     IRErrorCode decode_preamble (ReaderInterface& ir_buf, encoded_tag_t& metadata_type,
                                  std::vector<int8_t>& metadata);
-
-    template <typename encoded_variable_t>
-    IRErrorCode generic_parse_tokens (ReaderInterface& buffer_reader,
-                                      std::string& logtype,
-                                      std::vector<encoded_variable_t>& encoded_vars,
-                                      std::vector<std::string>& dict_vars,
-                                      epoch_time_ms_t& timestamp);
 
     namespace eight_byte_encoding {
         /**

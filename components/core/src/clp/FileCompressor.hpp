@@ -76,7 +76,7 @@ namespace clp {
                                          streaming_archive::writer::Archive& archive_writer, bool use_heuristic);
 
         /**
-         * Parses and encodes content from the given reader into the given archive_writer
+         * Parses and encodes IR from the given reader into the given archive_writer
          * @param target_data_size_of_dicts
          * @param archive_user_config
          * @param target_encoded_file_size
@@ -85,9 +85,13 @@ namespace clp {
          * @param archive_writer
          * @param reader
          */
-        bool try_compressing_as_ir (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
-                                    size_t target_encoded_file_size, const std::string& path_for_compression, group_id_t group_id,
-                                    streaming_archive::writer::Archive& archive_writer, ReaderInterface& reader);
+        bool try_compressing_as_ir (size_t target_data_size_of_dicts,
+                                    streaming_archive::writer::Archive::UserConfig& archive_user_config,
+                                    size_t target_encoded_file_size,
+                                    const std::string& path_for_compression,
+                                    group_id_t group_id,
+                                    streaming_archive::writer::Archive& archive_writer,
+                                    ReaderInterface& reader);
 
         // Variables
         boost::uuids::random_generator& m_uuid_generator;

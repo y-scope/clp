@@ -107,66 +107,6 @@ namespace ffi::ir_stream {
     static IRErrorCode read_metadata_info (ReaderInterface& reader,
                                            encoded_tag_t& metadata_type, uint16_t& metadata_size);
 
-    template <typename encoded_variable_t>
-    IRErrorCode generic_parse_tokens (
-        ReaderInterface& buffer_reader,
-        string& logtype,
-        vector<encoded_variable_t>& encoded_vars,
-        vector<string>& dict_vars,
-        epoch_time_ms_t& timestamp)
-    {
-        encoded_tag_t encoded_tag;
-        if (ErrorCode_Success != buffer_reader.try_read_numeric_value(encoded_tag)) {
-            return IRErrorCode_Incomplete_IR;
-        }
-        if (cProtocol::Eof == encoded_tag) {
-            return IRErrorCode_Eof;
-        }
-
-        // Handle variables
-        encoded_variable_t encoded_variable;
-        string var_str;
-        bool is_encoded_var;
-        while (is_variable_tag<encoded_variable_t>(encoded_tag, is_encoded_var)) {
-            if (is_encoded_var) {
-                if (false == decode_int(buffer_reader, encoded_variable)) {
-                    return IRErrorCode_Incomplete_IR;
-                }
-                encoded_vars.push_back(encoded_variable);
-            } else {
-                if (auto error_code = parse_dictionary_var(buffer_reader, encoded_tag, var_str);
-                        IRErrorCode_Success != error_code)
-                {
-                    return error_code;
-                }
-                dict_vars.emplace_back(var_str);
-            }
-            if (ErrorCode_Success != buffer_reader.try_read_numeric_value(encoded_tag)) {
-                return IRErrorCode_Incomplete_IR;
-            }
-        }
-
-        // Handle logtype
-        if (auto error_code = parse_logtype(buffer_reader, encoded_tag, logtype);
-                IRErrorCode_Success != error_code)
-        {
-            return error_code;
-        }
-
-        // NOTE: for the eight-byte encoding, the timestamp is the actual
-        // timestamp; for the four-byte encoding, the timestamp is a timestamp
-        // delta
-        if (ErrorCode_Success != buffer_reader.try_read_numeric_value(encoded_tag)) {
-            return IRErrorCode_Incomplete_IR;
-        }
-        if (auto error_code = parse_timestamp<encoded_variable_t>(buffer_reader,
-                                                                  encoded_tag, timestamp);
-                IRErrorCode_Success != error_code) {
-            return error_code;
-        }
-        return IRErrorCode_Success;
-    }
-
     /**
      * Decodes the message from the given logtype, encoded variables, and
      * dictionary variables. This function properly handles escaped variable
@@ -339,6 +279,66 @@ namespace ffi::ir_stream {
     }
 
     template <typename encoded_variable_t>
+    IRErrorCode generic_parse_tokens (
+            ReaderInterface& reader,
+            string& logtype,
+            vector<encoded_variable_t>& encoded_vars,
+            vector<string>& dict_vars,
+            epoch_time_ms_t& timestamp)
+    {
+        encoded_tag_t encoded_tag;
+        if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
+            return IRErrorCode_Incomplete_IR;
+        }
+        if (cProtocol::Eof == encoded_tag) {
+            return IRErrorCode_Eof;
+        }
+
+        // Handle variables
+        encoded_variable_t encoded_variable;
+        string var_str;
+        bool is_encoded_var;
+        while (is_variable_tag<encoded_variable_t>(encoded_tag, is_encoded_var)) {
+            if (is_encoded_var) {
+                if (false == decode_int(reader, encoded_variable)) {
+                    return IRErrorCode_Incomplete_IR;
+                }
+                encoded_vars.push_back(encoded_variable);
+            } else {
+                if (auto error_code = parse_dictionary_var(reader, encoded_tag, var_str);
+                        IRErrorCode_Success != error_code)
+                {
+                    return error_code;
+                }
+                dict_vars.emplace_back(var_str);
+            }
+            if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
+                return IRErrorCode_Incomplete_IR;
+            }
+        }
+
+        // Handle logtype
+        if (auto error_code = parse_logtype(reader, encoded_tag, logtype);
+                IRErrorCode_Success != error_code)
+        {
+            return error_code;
+        }
+
+        // NOTE: for the eight-byte encoding, the timestamp is the actual
+        // timestamp; for the four-byte encoding, the timestamp is a timestamp
+        // delta
+        if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
+            return IRErrorCode_Incomplete_IR;
+        }
+        if (auto error_code = parse_timestamp<encoded_variable_t>(reader,
+                                                                  encoded_tag, timestamp);
+                IRErrorCode_Success != error_code) {
+            return error_code;
+        }
+        return IRErrorCode_Success;
+    }
+
+    template <typename encoded_variable_t>
     static IRErrorCode generic_decode_next_message (ReaderInterface& reader, string& message,
                                                     epoch_time_ms_t& timestamp)
     {
@@ -486,14 +486,14 @@ namespace ffi::ir_stream {
 
     // Explicitly declare specializations
     template IRErrorCode generic_parse_tokens<four_byte_encoded_variable_t> (
-            ReaderInterface& buffer_reader,
+            ReaderInterface& reader,
             string& logtype,
             vector<four_byte_encoded_variable_t>& encoded_vars,
             vector<string>& dict_vars,
             epoch_time_ms_t& timestamp);
 
     template IRErrorCode generic_parse_tokens<eight_byte_encoded_variable_t> (
-            ReaderInterface& buffer_reader,
+            ReaderInterface& reader,
             string& logtype,
             vector<eight_byte_encoded_variable_t>& encoded_vars,
             vector<string>& dict_vars,

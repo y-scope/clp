@@ -11,6 +11,10 @@
 #include "ffi/ir_stream/decoding_methods.hpp"
 #include "ParsedIrMessage.hpp"
 
+/*
+ * Class representing the parser that parses messages from encoded IR and
+ * converts the message into CLP encoding format
+ */
 class IrMessageParser {
 public:
     // Types

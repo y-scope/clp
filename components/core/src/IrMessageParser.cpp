@@ -25,6 +25,13 @@ using ffi::VariablePlaceholder;
 using std::string;
 using std::vector;
 
+/**
+ * Constructs the class by setting the internal reader, parsing the metadata
+ * and initializing variable based on the metadata
+ * @param reader
+ * @throw OperationFailed if the reader doesn't contain IR encoded data,
+ * or IR data that can't be properly decoded
+ */
 IrMessageParser::IrMessageParser (ReaderInterface& reader) : m_reader(reader) {
 
     if (false == is_ir_encoded(m_reader, m_is_four_bytes_encoded)) {
@@ -41,7 +48,7 @@ IrMessageParser::IrMessageParser (ReaderInterface& reader) : m_reader(reader) {
         auto metadata_json = nlohmann::json::parse(json_metadata);
         string version = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey);
         if (version != ffi::ir_stream::cProtocol::Metadata::VersionValue) {
-            SPDLOG_ERROR("Unsupported version");
+            SPDLOG_ERROR("Input IR has unsupported version {}", version);
             throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
         }
 
@@ -55,7 +62,7 @@ IrMessageParser::IrMessageParser (ReaderInterface& reader) : m_reader(reader) {
         }
 
     } catch (const nlohmann::json::parse_error& e) {
-        SPDLOG_ERROR("Failed to parse json metadata");
+        SPDLOG_ERROR("Failed to parse json metadata from reader");
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
     m_msg.set_ts_pattern(&m_ts_pattern);
@@ -82,7 +89,7 @@ bool IrMessageParser::parse_next_eight_bytes_message () {
 
     if (IRErrorCode::IRErrorCode_Success != error_code) {
         if (IRErrorCode::IRErrorCode_Eof != error_code) {
-            SPDLOG_ERROR("Corrupted IR with error code {}", error_code);
+            SPDLOG_ERROR("Corrupted IR, error code: {}", error_code);
         }
         return false;
     }
@@ -105,6 +112,7 @@ bool IrMessageParser::parse_next_eight_bytes_message () {
         m_msg.add_dictionary_var(dict_var);
     };
 
+    // handle timestamp
     m_msg.set_ts(ts);
     try {
         ffi::ir_stream::generic_decode_message(logtype, encoded_vars, dict_vars,
@@ -132,7 +140,7 @@ bool IrMessageParser::parse_next_four_bytes_message () {
 
     if (IRErrorCode::IRErrorCode_Success != error_code) {
         if (IRErrorCode::IRErrorCode_Eof != error_code) {
-            SPDLOG_ERROR("Corrupted IR with error code {}", error_code);
+            SPDLOG_ERROR("Corrupted IR, error code: {}", error_code);
         }
         return false;
     }
@@ -164,6 +172,7 @@ bool IrMessageParser::parse_next_four_bytes_message () {
         }
     };
 
+    // handle timestamp
     m_reference_timestamp += ts;
     m_msg.set_ts(m_reference_timestamp);
     try {
@@ -212,7 +221,7 @@ bool IrMessageParser::decode_json_preamble (std::string& json_metadata) {
     }
 
     if (ffi::ir_stream::cProtocol::Metadata::EncodingJson != metadata_type) {
-        SPDLOG_ERROR("Unexpected metadata type");
+        SPDLOG_ERROR("Unexpected metadata type {}", metadata_type);
         return false;
     }
 

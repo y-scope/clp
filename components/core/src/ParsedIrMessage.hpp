@@ -11,24 +11,33 @@
 #include "LogTypeDictionaryEntry.hpp"
 #include "TimestampPattern.hpp"
 
+/**
+ * ParsedIRMessage represents a (potentially multiline) log message parsed from encoded ir
+ * into four primary fields: logtype_entry, variables, timestamp and timestamp pattern.
+ */
 class ParsedIrMessage {
 public:
     // Types
     class OperationFailed : public TraceableException {
     public:
         // Constructors
-        OperationFailed (ErrorCode error_code, const char* const filename, int line_number) : TraceableException (error_code, filename, line_number) {}
+        OperationFailed (ErrorCode error_code, const char* const filename, int line_number) :
+            TraceableException (error_code, filename, line_number) {}
 
         // Methods
         const char* what () const noexcept override {
             return "ParsedIrMessage operation failed";
         }
     };
+
     enum class VariableType {
         EncodedVar = 0,
         DictVar,
         Length
     };
+
+    // Helper class to keep variables in the order as they appear in the
+    // original log messages
     class IrVariable {
     public:
         IrVariable(const std::string& dict_var) {

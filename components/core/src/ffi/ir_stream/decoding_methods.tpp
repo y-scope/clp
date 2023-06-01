@@ -12,22 +12,6 @@
 #include "protocol_constants.hpp"
 
 namespace ffi::ir_stream {
-
-    /**
-     * TBD
-     * @tparam encoded_variable_t
-     * @tparam ConstantHandler
-     * @tparam EncodedIntHandler
-     * @tparam EncodedFloatHandler
-     * @tparam DictVarHandler
-     * @param logtype
-     * @param encoded_vars
-     * @param dict_vars
-     * @param constant_handler
-     * @param encoded_int_handler
-     * @param encoded_float_handler
-     * @param dict_var_handler
-     */
     template <typename encoded_variable_t, typename ConstantHandler,
               typename EncodedIntHandler, typename EncodedFloatHandler, typename DictVarHandler>
     void generic_decode_message (const std::string& logtype,
