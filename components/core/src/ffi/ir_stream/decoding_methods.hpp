@@ -2,7 +2,7 @@
 #define FFI_IR_STREAM_DECODING_METHODS_HPP
 
 // C++ standard libraries
-#include <string_view>
+#include <string>
 #include <vector>
 
 // Project headers

@@ -91,6 +91,7 @@ private:
     LogTypeDictionaryEntry m_logtype_entry;
     std::vector<IrVariable> m_variables;
     size_t m_orig_num_bytes;
+    size_t m_ts_bytes;
 };
 
 
