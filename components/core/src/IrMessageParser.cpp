@@ -18,6 +18,7 @@
 
 using ffi::cVariablePlaceholderEscapeCharacter;
 using ffi::four_byte_encoded_variable_t;
+using ffi::eight_byte_encoded_variable_t;
 using ffi::ir_stream::cProtocol::MagicNumberLength;
 using ffi::ir_stream::IRErrorCode;
 using ffi::VariablePlaceholder;
@@ -60,6 +61,22 @@ IrMessageParser::IrMessageParser (ReaderInterface& reader) : m_reader(reader) {
     m_msg.set_ts_pattern(&m_ts_pattern);
 }
 
+/**
+ * TBD
+ * @tparam ir_encoded_variable_t
+ * @tparam ConstantHandler
+ * @tparam EncodedIntHandler
+ * @tparam EncodedFloatHandler
+ * @tparam DictVarHandler
+ * @param logtype
+ * @param encoded_vars
+ * @param dict_vars
+ * @param constant_handler
+ * @param encoded_int_handler
+ * @param encoded_float_handler
+ * @param dict_var_handler
+ * @return
+ */
 template <typename ir_encoded_variable_t, typename ConstantHandler,
           typename EncodedIntHandler, typename EncodedFloatHandler, typename DictVarHandler>
 static bool generic_parse_next_msg(const string& logtype,
@@ -161,7 +178,51 @@ bool IrMessageParser::parse_next_encoded_message () {
     if (m_is_four_bytes_encoded) {
         return parse_next_four_bytes_message();
     }
-    return false;
+    return parse_next_eight_bytes_message();
+}
+
+bool IrMessageParser::parse_next_eight_bytes_message () {
+    m_msg.clear();
+
+    epochtime_t ts;
+    vector<eight_byte_encoded_variable_t> encoded_vars;
+    vector<string> dict_vars;
+    string logtype;
+
+    auto error_code = ffi::ir_stream::generic_parse_tokens(
+            m_reader, logtype, encoded_vars, dict_vars, ts
+    );
+
+    if (IRErrorCode::IRErrorCode_Success != error_code) {
+        if (IRErrorCode::IRErrorCode_Eof != error_code) {
+            SPDLOG_ERROR("Corrupted IR with error code {}", error_code);
+        }
+        return false;
+    }
+
+    auto constant_handler = [this] (const std::string& value, size_t begin_pos, size_t length) {
+        m_msg.append_to_logtype(value, begin_pos, length);
+    };
+
+    auto encoded_int_handler = [this] (eight_byte_encoded_variable_t value) {
+        auto decoded_int = ffi::decode_integer_var(value);
+        m_msg.add_encoded_integer(value, decoded_int.length());
+    };
+
+    auto encoded_float_handler = [this] (eight_byte_encoded_variable_t encoded_float) {
+        auto decoded_float = ffi::decode_float_var(encoded_float);
+        m_msg.add_encoded_float(encoded_float, decoded_float.size());
+    };
+
+    auto dict_var_handler = [this] (const string& dict_var) {
+        m_msg.add_dictionary_var(dict_var);
+    };
+
+    m_msg.set_ts(ts);
+    return generic_parse_next_msg(logtype, encoded_vars, dict_vars,
+                                  constant_handler, encoded_int_handler,
+                                  encoded_float_handler, dict_var_handler);
+
 }
 
 bool IrMessageParser::parse_next_four_bytes_message () {
@@ -183,10 +244,6 @@ bool IrMessageParser::parse_next_four_bytes_message () {
         return false;
     }
 
-    m_reference_timestamp += ts;
-    m_msg.set_ts(m_reference_timestamp);
-
-    // constant handler
     auto constant_handler = [this] (const std::string& value, size_t begin_pos, size_t length) {
         m_msg.append_to_logtype(value, begin_pos, length);
     };
@@ -197,18 +254,12 @@ bool IrMessageParser::parse_next_four_bytes_message () {
         m_msg.add_encoded_integer(value, decoded_int.length());
     };
 
-    // float handler
     auto encoded_float_handler = [this] (four_byte_encoded_variable_t encoded_float) {
         auto decoded_float = ffi::decode_float_var(encoded_float);
-        if (m_is_four_bytes_encoded) {
-            // handle float
-            // assume that we need the actual size
-            encoded_float = EncodedVariableInterpreter::convert_four_bytes_float_to_clp_encoded_float(encoded_float);
-        }
-        m_msg.add_encoded_float(encoded_float, decoded_float.size());
+        auto converted_float = EncodedVariableInterpreter::convert_four_bytes_float_to_clp_encoded_float(encoded_float);
+        m_msg.add_encoded_float(converted_float, decoded_float.size());
     };
 
-    // Dict var handler
     auto dict_var_handler = [this] (const string& dict_var) {
         encoded_variable_t converted_var;
         if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(dict_var, converted_var)) {
@@ -220,6 +271,8 @@ bool IrMessageParser::parse_next_four_bytes_message () {
         }
     };
 
+    m_reference_timestamp += ts;
+    m_msg.set_ts(m_reference_timestamp);
     return generic_parse_next_msg(logtype, encoded_vars, dict_vars,
                                   constant_handler, encoded_int_handler,
                                   encoded_float_handler, dict_var_handler);

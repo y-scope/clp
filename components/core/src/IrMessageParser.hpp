@@ -38,6 +38,7 @@ public:
 private:
 
     bool parse_next_four_bytes_message();
+    bool parse_next_eight_bytes_message();
     bool decode_json_preamble (std::string& json_metadata);
     bool is_ir_encoded (ReaderInterface& reader, bool& is_four_bytes_encoded);
 

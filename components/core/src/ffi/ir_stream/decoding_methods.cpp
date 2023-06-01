@@ -346,7 +346,8 @@ namespace ffi::ir_stream {
         vector<encoded_variable_t> encoded_vars;
         vector<string> dict_vars;
         string logtype;
-        if (auto error_code = generic_decode_tokens(reader, logtype, encoded_vars, dict_vars, timestamp);
+        if (auto error_code = generic_parse_tokens(reader, logtype, encoded_vars,
+                                                   dict_vars, timestamp);
             IRErrorCode_Success != error_code) {
             return error_code;
         }
