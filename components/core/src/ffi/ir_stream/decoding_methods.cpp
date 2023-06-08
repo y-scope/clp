@@ -295,11 +295,11 @@ namespace ffi::ir_stream {
         }
 
         // Handle variables
-        encoded_variable_t encoded_variable;
         string var_str;
         bool is_encoded_var;
         while (is_variable_tag<encoded_variable_t>(encoded_tag, is_encoded_var)) {
             if (is_encoded_var) {
+                encoded_variable_t encoded_variable;
                 if (false == decode_int(reader, encoded_variable)) {
                     return IRErrorCode_Incomplete_IR;
                 }
