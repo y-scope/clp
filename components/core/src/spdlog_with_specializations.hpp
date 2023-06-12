@@ -1,12 +1,28 @@
-#ifndef FFI_SEARCH_FMTLIB_SPECIALIZATIONS_HPP
-#define FFI_SEARCH_FMTLIB_SPECIALIZATIONS_HPP
+#ifndef SPDLOG_WITH_SPECIALIZATIONS_HPP
+#define SPDLOG_WITH_SPECIALIZATIONS_HPP
 
-// fmtlib
 #include <fmt/format.h>
+#include <spdlog/spdlog.h>
 
-// Project headers
-#include "ExactVariableToken.hpp"
-#include "WildcardToken.hpp"
+#include "ErrorCode.hpp"
+#include "ffi/search/ExactVariableToken.hpp"
+#include "ffi/search/WildcardToken.hpp"
+
+template <>
+struct fmt::formatter<ErrorCode> {
+    template <typename ParseContext>
+    constexpr auto parse (ParseContext& ctx) {
+        return ctx.begin();
+    }
+
+    template <typename FormatContext>
+    auto format (
+            const ErrorCode& error_code,
+            FormatContext& ctx
+    ) {
+        return fmt::format_to(ctx.out(), "{}", static_cast<size_t>(error_code));
+    }
+};
 
 template <typename encoded_variable_t>
 struct fmt::formatter<ffi::search::ExactVariableToken<encoded_variable_t>> {
@@ -45,4 +61,4 @@ struct fmt::formatter<ffi::search::WildcardToken<encoded_variable_t>> {
     }
 };
 
-#endif // FFI_SEARCH_FMTLIB_SPECIALIZATIONS_HPP
+#endif // SPDLOG_WITH_SPECIALIZATIONS_HPP

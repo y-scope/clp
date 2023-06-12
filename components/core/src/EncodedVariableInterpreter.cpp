@@ -4,12 +4,10 @@
 #include <cassert>
 #include <cmath>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "Defs.h"
 #include "ffi/encoding_methods.hpp"
+#include "spdlog_with_specializations.hpp"
 #include "string_utils.hpp"
 #include "type_utils.hpp"
 

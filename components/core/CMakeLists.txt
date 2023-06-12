@@ -255,6 +255,7 @@ set(SOURCE_FILES_clp
         src/Query.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
+        src/spdlog_with_specializations.hpp
         src/SQLiteDB.cpp
         src/SQLiteDB.hpp
         src/SQLitePreparedStatement.cpp
@@ -407,6 +408,7 @@ set(SOURCE_FILES_clg
         src/Query.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
+        src/spdlog_with_specializations.hpp
         src/SQLiteDB.cpp
         src/SQLiteDB.hpp
         src/SQLitePreparedStatement.cpp
@@ -546,6 +548,7 @@ set(SOURCE_FILES_clo
         src/Query.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
+        src/spdlog_with_specializations.hpp
         src/SQLiteDB.cpp
         src/SQLiteDB.hpp
         src/SQLitePreparedStatement.cpp
@@ -691,7 +694,6 @@ set(SOURCE_FILES_unitTest
         src/ffi/search/CompositeWildcardToken.hpp
         src/ffi/search/ExactVariableToken.cpp
         src/ffi/search/ExactVariableToken.hpp
-        src/ffi/search/fmtlib_specializations.hpp
         src/ffi/search/query_methods.cpp
         src/ffi/search/query_methods.hpp
         src/ffi/search/QueryMethodFailed.hpp
@@ -745,6 +747,7 @@ set(SOURCE_FILES_unitTest
         src/Query.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
+        src/spdlog_with_specializations.hpp
         src/SQLiteDB.cpp
         src/SQLiteDB.hpp
         src/SQLitePreparedStatement.cpp

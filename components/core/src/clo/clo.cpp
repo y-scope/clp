@@ -13,7 +13,6 @@
 
 // spdlog
 #include <spdlog/sinks/stdout_sinks.h>
-#include <spdlog/spdlog.h>
 
 // Project headers
 #include "../Defs.h"
@@ -21,6 +20,7 @@
 #include "../Grep.hpp"
 #include "../Profiler.hpp"
 #include "../networking/socket_utils.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/Constants.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"

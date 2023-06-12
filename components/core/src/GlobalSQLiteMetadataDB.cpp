@@ -7,11 +7,9 @@
 // fmt
 #include <fmt/core.h>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "database_utils.hpp"
+#include "spdlog_with_specializations.hpp"
 #include "streaming_archive/Constants.hpp"
 #include "type_utils.hpp"
 

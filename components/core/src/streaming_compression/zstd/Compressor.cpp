@@ -1,10 +1,8 @@
 #include "Compressor.hpp"
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "../../Defs.h"
+#include "../../spdlog_with_specializations.hpp"
 
 namespace streaming_compression { namespace zstd {
     Compressor::Compressor () : ::streaming_compression::Compressor(CompressorType::ZSTD), m_compression_stream_contains_data(false),

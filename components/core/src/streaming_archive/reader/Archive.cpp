@@ -11,11 +11,9 @@
 // Boost libraries
 #include <boost/filesystem.hpp>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "../../EncodedVariableInterpreter.hpp"
+#include "../../spdlog_with_specializations.hpp"
 #include "../../Utils.hpp"
 #include "../Constants.hpp"
 

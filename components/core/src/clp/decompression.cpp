@@ -7,14 +7,12 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "../ErrorCode.hpp"
 #include "../FileWriter.hpp"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/reader/Archive.hpp"
 #include "../TraceableException.hpp"
 #include "../Utils.hpp"

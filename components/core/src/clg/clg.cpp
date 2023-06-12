@@ -7,7 +7,6 @@
 
 // spdlog
 #include <spdlog/sinks/stdout_sinks.h>
-#include <spdlog/spdlog.h>
 
 // Project headers
 #include "../Defs.h"
@@ -16,6 +15,7 @@
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
 #include "../Profiler.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/Constants.hpp"
 #include "CommandLineArguments.hpp"
 
