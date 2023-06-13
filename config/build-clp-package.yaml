@@ -1,5 +1,5 @@
 working_dir: out
-version: 0.0.1
+version: 0.0.2
 artifact_name: clp-package-ubuntu-focal
 build_parallelism: 0   # 0 -> attempt to compile with available cores on the machine
 builder_image: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main
