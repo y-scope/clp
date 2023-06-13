@@ -10,12 +10,10 @@
 // libarchive
 #include <archive_entry.h>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/writer/Archive.hpp"
 #include "../Utils.hpp"
 #include "FileCompressor.hpp"

@@ -4,8 +4,8 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
 
-// spdlog
-#include <spdlog/spdlog.h>
+// Project headers
+#include "../spdlog_with_specializations.hpp"
 
 using std::string;
 

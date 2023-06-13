@@ -18,14 +18,12 @@
 // json
 #include "../../../submodules/json/single_include/nlohmann/json.hpp"
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
+#include "../../compressor_frontend/LogParser.hpp"
 #include "../../EncodedVariableInterpreter.hpp"
+#include "../../spdlog_with_specializations.hpp"
 #include "../../Utils.hpp"
 #include "../Constants.hpp"
-#include "../../compressor_frontend/LogParser.hpp"
 
 using std::list;
 using std::make_unique;

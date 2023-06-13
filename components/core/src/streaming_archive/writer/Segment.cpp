@@ -8,12 +8,10 @@
 #include <cmath>
 #include <cstring>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "../../ErrorCode.hpp"
 #include "../../FileWriter.hpp"
+#include "../../spdlog_with_specializations.hpp"
 
 using std::make_unique;
 using std::string;

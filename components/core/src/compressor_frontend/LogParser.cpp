@@ -3,10 +3,10 @@
 // C++ standard libraries
 #include <filesystem>
 #include <iostream>
-#include <spdlog/spdlog.h>
 
 // Project headers
 #include "../clp/utils.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "Constants.hpp"
 #include "SchemaParser.hpp"
 

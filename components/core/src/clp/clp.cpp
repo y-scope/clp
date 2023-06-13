@@ -1,7 +1,7 @@
 #include <string>
 
-#include <spdlog/spdlog.h>
-
+// Project headers
+#include "../spdlog_with_specializations.hpp"
 #include "run.hpp"
 
 int main (int argc, const char* argv[]) {

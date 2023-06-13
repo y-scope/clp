@@ -6,11 +6,9 @@
 // Boost libraries
 #include <boost/filesystem.hpp>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "../../Defs.h"
+#include "../../spdlog_with_specializations.hpp"
 
 namespace streaming_compression { namespace zstd {
     Decompressor::Decompressor () : ::streaming_compression::Decompressor(CompressorType::ZSTD), m_input_type(InputType::NotInitialized),

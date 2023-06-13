@@ -8,8 +8,8 @@
 // Date library
 #include "../submodules/date/include/date/date.h"
 
-// spdlog
-#include <spdlog/spdlog.h>
+// Project headers
+#include "spdlog_with_specializations.hpp"
 
 using std::string;
 using std::to_string;

@@ -1,10 +1,8 @@
 #include "SQLitePreparedStatement.hpp"
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "Defs.h"
+#include "spdlog_with_specializations.hpp"
 
 using std::string;
 

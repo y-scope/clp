@@ -5,12 +5,12 @@
 
 // C++ standard libraries
 #include <cassert>
-#include <spdlog/spdlog.h>
 #include <string>
 #include <vector>
 
 // Project headers
 #include "../FileReader.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "Constants.hpp"
 #include "finite_automata/RegexAST.hpp"
 

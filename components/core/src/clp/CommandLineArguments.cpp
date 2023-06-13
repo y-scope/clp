@@ -8,11 +8,9 @@
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "../Defs.h"
+#include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
 #include "../version.hpp"
 

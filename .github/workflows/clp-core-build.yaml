@@ -3,12 +3,14 @@ name: build-clp-core
 on:
   push:
     paths:
-      - 'components/core/**'
       - '.github/workflows/clp-core-build.yaml'
+      - 'components/core/**'
+      - '!components/core/tools/scripts/lib_install/macos-12/**'
   pull_request:
     paths:
-      - 'components/core/**'
       - '.github/workflows/clp-core-build.yaml'
+      - 'components/core/**'
+      - '!components/core/tools/scripts/lib_install/macos-12/**'
   workflow_dispatch:
   workflow_run:
     workflows: ["generate-build-dependency-image"]
@@ -106,20 +108,6 @@ jobs:
 
       - name: Workaround actions/runner-images/issues/6775
         run: chown $(id -u):$(id -g) -R .
-
-      - name: Build CLP Core
-        uses: ./.github/actions/clp-core-build
-
-  build-macos:
-    runs-on: macos-12
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-            submodules: recursive
-
-      - name: Install dependencies
-        run: ./components/core/tools/scripts/lib_install/macos-12/install-all.sh
 
       - name: Build CLP Core
         uses: ./.github/actions/clp-core-build
