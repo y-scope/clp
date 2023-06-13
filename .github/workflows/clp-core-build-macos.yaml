@@ -1,0 +1,43 @@
+name: build-clp-core-macos
+
+on:
+  push:
+    paths:
+      - '.github/workflows/clp-core-build-macos.yaml'
+      - 'components/core/cmake/**'
+      - 'components/core/CMakeLists.txt'
+      - 'components/core/config/**'
+      - 'components/core/src/**'
+      - 'components/core/tests/**'
+      - 'components/core/tools/scripts/db/**'
+      - 'components/core/tools/scripts/deps-download/**'
+      - 'components/core/tools/scripts/lib_install/macos-12/**'
+      - 'components/core/tools/scripts/lib_install/utils/**'
+  pull_request:
+    paths:
+      - '.github/workflows/clp-core-build-macos.yaml'
+      - 'components/core/cmake/**'
+      - 'components/core/CMakeLists.txt'
+      - 'components/core/config/**'
+      - 'components/core/src/**'
+      - 'components/core/tests/**'
+      - 'components/core/tools/scripts/db/**'
+      - 'components/core/tools/scripts/deps-download/**'
+      - 'components/core/tools/scripts/lib_install/macos-12/**'
+      - 'components/core/tools/scripts/lib_install/utils/**'
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+            submodules: recursive
+
+      - name: Install dependencies
+        run: ./components/core/tools/scripts/lib_install/macos-12/install-all.sh
+
+      - name: Build CLP Core
+        uses: ./.github/actions/clp-core-build

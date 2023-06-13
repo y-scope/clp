@@ -109,17 +109,3 @@ jobs:
 
       - name: Build CLP Core
         uses: ./.github/actions/clp-core-build
-
-  build-macos:
-    runs-on: macos-12
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-            submodules: recursive
-
-      - name: Install dependencies
-        run: ./components/core/tools/scripts/lib_install/macos-12/install-all.sh
-
-      - name: Build CLP Core
-        uses: ./.github/actions/clp-core-build
