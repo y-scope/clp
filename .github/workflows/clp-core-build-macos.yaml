@@ -3,28 +3,20 @@ name: build-clp-core-macos
 on:
   push:
     paths:
+      # NOTE: The order of these paths is important since we're using exclusions
       - '.github/workflows/clp-core-build-macos.yaml'
-      - 'components/core/cmake/**'
-      - 'components/core/CMakeLists.txt'
-      - 'components/core/config/**'
-      - 'components/core/src/**'
-      - 'components/core/tests/**'
-      - 'components/core/tools/scripts/db/**'
-      - 'components/core/tools/scripts/deps-download/**'
+      - 'components/core/**'
+      - '!components/core/tools/docker-images/**'
+      - '!components/core/tools/scripts/lib_install/**'
       - 'components/core/tools/scripts/lib_install/macos-12/**'
-      - 'components/core/tools/scripts/lib_install/utils/**'
   pull_request:
     paths:
+      # NOTE: The order of these paths is important since we're using exclusions
       - '.github/workflows/clp-core-build-macos.yaml'
-      - 'components/core/cmake/**'
-      - 'components/core/CMakeLists.txt'
-      - 'components/core/config/**'
-      - 'components/core/src/**'
-      - 'components/core/tests/**'
-      - 'components/core/tools/scripts/db/**'
-      - 'components/core/tools/scripts/deps-download/**'
+      - 'components/core/**'
+      - '!components/core/tools/docker-images/**'
+      - '!components/core/tools/scripts/lib_install/**'
       - 'components/core/tools/scripts/lib_install/macos-12/**'
-      - 'components/core/tools/scripts/lib_install/utils/**'
   workflow_dispatch:
 
 jobs:
