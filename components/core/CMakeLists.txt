@@ -351,6 +351,13 @@ target_compile_features(clp
         PRIVATE cxx_std_17
         )
 
+# Generate C++ Kibana Parser
+# This needs to be done using add_subdirectory because antlr's c++ build
+# system can't handle having the grammar (.g4) in a different directory than the
+# CMakeLists.txt file.
+add_subdirectory(src/grammar/kibana)
+include_directories(${ANTLR4_INCLUDE_DIRS} ${GENERATED_KIBANA_INCLUDE_DIR})
+
 set(SOURCE_FILES_clg
         src/clg/clg.cpp
         src/clg/CommandLineArguments.cpp
@@ -488,6 +495,7 @@ target_link_libraries(clg
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
+        Kibana
         MariaDBClient::MariaDBClient
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
