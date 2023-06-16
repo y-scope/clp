@@ -5,6 +5,7 @@ yum install -y \
   centos-release-scl \
   gcc \
   gcc-c++ \
+  java-11-openjdk \
   make \
   openssl-devel \
   openssl-static \

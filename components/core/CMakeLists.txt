@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.5.1)
 project(CLP LANGUAGES CXX C)
+set(CMAKE_CXX_STANDARD 17)
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
@@ -72,6 +73,19 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         set(STD_FS_LIBS "c++fs")
     endif ()
 endif ()
+
+# Find and setup Antlr Library
+# We build and link to the static library
+set(ANTLR4_TAG 4.11.1)
+add_definitions(-DANTLR4CPP_STATIC)
+set(ANTLR_EXECUTABLE ${PROJECT_SOURCE_DIR}/thirdparty/antlr/antlr-4.11.1-complete.jar)
+include( ExternalAntlr4Cpp )
+find_package(ANTLR REQUIRED)
+if (ANTLR_FOUND)
+        message(STATUS "Found ANTLR ${ANTLR_VERSION}")
+else()
+        message(FATAL_ERROR "Could not find libraries for ANTLR ${ANTLR4_TAG}")
+endif()
 
 # Find and setup Boost Library
 if(CLP_USE_STATIC_LIBS)

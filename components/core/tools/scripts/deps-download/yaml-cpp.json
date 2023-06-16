@@ -1,5 +1,6 @@
 {
   "url": "https://github.com/jbeder/yaml-cpp/archive/refs/tags/yaml-cpp-0.7.0.zip",
+  "unzip": true,
   "targets": [
     {
       "source": "yaml-cpp-yaml-cpp-0.7.0",
