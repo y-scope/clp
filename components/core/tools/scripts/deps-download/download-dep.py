@@ -76,7 +76,7 @@ def main(argv):
             shutil.rmtree(target_dest_path, ignore_errors=True)
         else:
             # Create destination parent
-            if config['unzip']:
+            if config["unzip"]:
                 target_dest_parent.parent.mkdir(parents=True, exist_ok=True)
             else:
                 target_dest_parent.mkdir(parents=True, exist_ok=True)

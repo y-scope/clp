@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.5.1)
 project(CLP LANGUAGES CXX C)
-set(CMAKE_CXX_STANDARD 17)
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
@@ -86,7 +85,7 @@ endif ()
 set(ANTLR4_TAG 4.11.1)
 add_definitions(-DANTLR4CPP_STATIC)
 set(ANTLR_EXECUTABLE ${PROJECT_SOURCE_DIR}/thirdparty/antlr/antlr-4.11.1-complete.jar)
-include( ExternalAntlr4Cpp )
+include(ExternalAntlr4Cpp)
 find_package(ANTLR REQUIRED)
 if (ANTLR_FOUND)
         message(STATUS "Found ANTLR ${ANTLR_VERSION}")
@@ -363,7 +362,6 @@ target_compile_features(clp
 # system can't handle having the grammar (.g4) in a different directory than the
 # CMakeLists.txt file.
 add_subdirectory(src/grammar/kibana)
-include_directories(${ANTLR4_INCLUDE_DIRS} ${GENERATED_KIBANA_INCLUDE_DIR})
 
 set(SOURCE_FILES_clg
         src/clg/clg.cpp
