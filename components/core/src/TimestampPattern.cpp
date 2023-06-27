@@ -131,12 +131,16 @@ void TimestampPattern::init () {
     patterns.emplace_back(4, "%a %b %e %H:%M:%S %Y");
     // E.g. <<<2016-11-10 03:02:29:936
     patterns.emplace_back(0, "<<<%Y-%m-%d %H:%M:%S:%3");
+    // E.g. Sun Jan 1 15:50:45 2015
+    patterns.emplace_back(0, "%a %b %e %H:%M:%S %Y");
 
     // TODO These patterns are imprecise and will prevent searching by timestamp; but for now, it's no worse than not parsing a timestamp
     // E.g. Jan 21 11:56:42
     patterns.emplace_back(0, "%b %d %H:%M:%S");
     // E.g. 01-21 11:56:42.392
     patterns.emplace_back(0, "%m-%d %H:%M:%S.%3");
+    // E.g. 916321
+    patterns.emplace_back(0, "%r");
 
     // Initialize m_known_ts_patterns with vector's contents
     m_known_ts_patterns_len = patterns.size();
@@ -503,6 +507,36 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     break;
                 }
 
+                case 'r': { // Relative timestamp in millisecond
+                    int cFieldLength = 0;
+                    // no leading zeroes currently supported for relative timestamp
+                    if(line[line_ix] == '0') {
+                        return false;
+                    }
+                    while(line_ix + cFieldLength < line_length) {
+                        if('0' <= line[line_ix + cFieldLength] && line[line_ix + cFieldLength] <=
+                                                                  '9')
+                        {
+                            cFieldLength++;
+                        } else {
+                            break;
+                        }
+                    }
+                    if(cFieldLength == 0) {
+                        return false;
+                    }
+                    int value;
+                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
+                                                  value) || value < 0)
+                    {
+                        return false;
+                    }
+                    millisecond = value;
+                    line_ix += cFieldLength;
+
+                    break;
+                }
+                
                 default:
                     return false;
             }
@@ -698,6 +732,10 @@ void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, 
                     append_padded_value(millisecond, '0', 3, new_msg);
                     break;
 
+                case 'r': // Relative timestamp
+                    new_msg += std::to_string(timestamp);
+                    break;
+                    
                 default: {
                     throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
                 }
