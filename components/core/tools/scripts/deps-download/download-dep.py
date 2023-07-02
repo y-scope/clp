@@ -54,9 +54,9 @@ def main(argv):
 
     # Download file
     file_path = extraction_dir / filename
-    urllib.request.urlretrieve(target_url, str(file_path))
+    urllib.request.urlretrieve(target_url, file_path)
     if config["unzip"]:
-        shutil.unpack_archive(str(file_path), extraction_dir)
+        shutil.unpack_archive(file_path, extraction_dir)
 
     if "hash" in config:
         # Verify hash
@@ -76,10 +76,7 @@ def main(argv):
             shutil.rmtree(target_dest_path, ignore_errors=True)
         else:
             # Create destination parent
-            if config["unzip"]:
-                target_dest_parent.parent.mkdir(parents=True, exist_ok=True)
-            else:
-                target_dest_parent.mkdir(parents=True, exist_ok=True)
+            target_dest_parent.mkdir(parents=True, exist_ok=True)
 
         # Copy destination to target
         if config["unzip"]:

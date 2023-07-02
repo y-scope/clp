@@ -1,4 +1,4 @@
-grammar Kibana;
+grammar KQL;
 
 start: query EOF ;
 

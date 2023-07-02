@@ -1,3 +1,12 @@
+# Note: FindAntlr.cmake taken from https://github.com/antlr/antlr4/blob/v4.11.0/runtime/Cpp/cmake/FindANTLR.cmake
+# The ANTLR project is maintained under the BSD 3-Clause found here https://github.com/antlr/antlr4/blob/v4.11.0/LICENSE.txt
+
+# TODO: Clean up ANTLR cmake files
+set(ANTLR4_TAG 4.11.1)
+add_definitions(-DANTLR4CPP_STATIC)
+set(ANTLR_EXECUTABLE ${PROJECT_SOURCE_DIR}/third-party/antlr/antlr-${ANTLR4_TAG}-complete.jar)
+include(ExternalAntlr4Cpp)
+
 find_package(Java QUIET COMPONENTS Runtime)
 
 if(NOT ANTLR_EXECUTABLE)

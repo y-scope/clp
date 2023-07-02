@@ -73,19 +73,15 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif ()
 endif ()
 
-# Java 11 is a dependency for antlr. The way we install java
-# with brew doesn't also make it the default version of java on the system. 
-# Set JAVA_HOME to java 11 install location here.
+# Java 11 is a dependency for ANTLR. The way we install Java
+# with brew doesn't also make it the default version of Java on the system. 
+# Set JAVA_HOME to Java 11 install location here.
 if (APPLE)
-    set (ENV{JAVA_HOME} "/usr/local/opt/openjdk@11/")
+    set(ENV{JAVA_HOME} "/usr/local/opt/openjdk@11/")
 endif ()
 
-# Find and setup Antlr Library
+# Find and setup ANTLR Library
 # We build and link to the static library
-set(ANTLR4_TAG 4.11.1)
-add_definitions(-DANTLR4CPP_STATIC)
-set(ANTLR_EXECUTABLE ${PROJECT_SOURCE_DIR}/thirdparty/antlr/antlr-4.11.1-complete.jar)
-include(ExternalAntlr4Cpp)
 find_package(ANTLR REQUIRED)
 if (ANTLR_FOUND)
         message(STATUS "Found ANTLR ${ANTLR_VERSION}")
@@ -357,11 +353,11 @@ target_compile_features(clp
         PRIVATE cxx_std_17
         )
 
-# Generate C++ Kibana Parser
-# This needs to be done using add_subdirectory because antlr's c++ build
+# Generate C++ KQL Parser
+# This needs to be done using add_subdirectory because ANTLR's c++ build
 # system can't handle having the grammar (.g4) in a different directory than the
 # CMakeLists.txt file.
-add_subdirectory(src/grammar/kibana)
+add_subdirectory(src/grammar/kql)
 
 set(SOURCE_FILES_clg
         src/clg/clg.cpp
@@ -500,7 +496,7 @@ target_link_libraries(clg
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
-        Kibana
+        KQL
         MariaDBClient::MariaDBClient
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}

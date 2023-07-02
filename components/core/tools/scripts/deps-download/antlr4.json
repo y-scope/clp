@@ -8,7 +8,7 @@
     "targets": [
       {
         "source": "antlr-4.11.1-complete.jar",
-        "destination": "thirdparty/antlr/antlr-4.11.1-complete.jar"
+        "destination": "third-party/antlr/antlr-4.11.1-complete.jar"
       }
     ]
   }
