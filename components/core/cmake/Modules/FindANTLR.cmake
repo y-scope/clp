@@ -1,5 +1,7 @@
-# Note: FindAntlr.cmake taken from https://github.com/antlr/antlr4/blob/v4.11.0/runtime/Cpp/cmake/FindANTLR.cmake
-# The ANTLR project is maintained under the BSD 3-Clause found here https://github.com/antlr/antlr4/blob/v4.11.0/LICENSE.txt
+# Note: FindANTLR.cmake taken from
+# https://github.com/antlr/antlr4/blob/v4.11.0/runtime/Cpp/cmake/FindANTLR.cmake
+# The ANTLR project is maintained under the BSD 3-Clause found here
+# https://github.com/antlr/antlr4/blob/v4.11.0/LICENSE.txt
 
 # TODO: Clean up ANTLR cmake files
 set(ANTLR4_TAG 4.11.1)

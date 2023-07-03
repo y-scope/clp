@@ -84,9 +84,9 @@ endif ()
 # We build and link to the static library
 find_package(ANTLR REQUIRED)
 if (ANTLR_FOUND)
-        message(STATUS "Found ANTLR ${ANTLR_VERSION}")
+	message(STATUS "Found ANTLR ${ANTLR_VERSION}")
 else()
-        message(FATAL_ERROR "Could not find libraries for ANTLR ${ANTLR4_TAG}")
+	message(FATAL_ERROR "Could not find libraries for ANTLR ${ANTLR4_TAG}")
 endif()
 
 # Find and setup Boost Library
@@ -354,7 +354,7 @@ target_compile_features(clp
         )
 
 # Generate C++ KQL Parser
-# This needs to be done using add_subdirectory because ANTLR's c++ build
+# This needs to be done using add_subdirectory because ANTLR's C++ build
 # system can't handle having the grammar (.g4) in a different directory than the
 # CMakeLists.txt file.
 add_subdirectory(src/grammar/kql)

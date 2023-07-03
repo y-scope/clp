@@ -1,5 +1,7 @@
-# Note: ExternalAntlr4Cpp.cmake taken from https://github.com/antlr/antlr4/blob/v4.11.0/runtime/Cpp/cmake/ExternalAntlr4Cpp.cmake
-# The ANTLR project is maintained under the BSD 3-Clause found here https://github.com/antlr/antlr4/blob/v4.11.0/LICENSE.txt
+# Note: ExternalAntlr4Cpp.cmake taken from
+# https://github.com/antlr/antlr4/blob/v4.11.0/runtime/Cpp/cmake/ExternalAntlr4Cpp.cmake
+# The ANTLR project is maintained under the BSD 3-Clause found here
+# https://github.com/antlr/antlr4/blob/v4.11.0/LICENSE.txt
 
 cmake_minimum_required(VERSION 3.7)
 
