@@ -510,33 +510,33 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                 case 'r': { // Relative timestamp in millisecond
                     int cFieldLength = 0;
                     // no leading zeroes currently supported for relative timestamp
-                    if(line[line_ix] == '0') {
+                    if (line[line_ix] == '0') {
                         return false;
                     }
-                    while(line_ix + cFieldLength < line_length) {
-                        if('0' <= line[line_ix + cFieldLength] && line[line_ix + cFieldLength] <=
-                                                                  '9')
+                    while (line_ix + cFieldLength < line_length) {
+                        if ('0' <= line[line_ix + cFieldLength] &&
+                            line[line_ix + cFieldLength] <= '9')
                         {
                             cFieldLength++;
                         } else {
                             break;
                         }
                     }
-                    if(cFieldLength == 0) {
+                    if (cFieldLength == 0) {
                         return false;
                     }
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
-                                                  value) || value < 0)
+                    if (0 > value || false == convert_string_to_number(line, line_ix,
+                                                                       line_ix + cFieldLength,
+                                                                       '0', value))
                     {
                         return false;
                     }
                     millisecond = value;
                     line_ix += cFieldLength;
-
                     break;
                 }
-                
+
                 default:
                     return false;
             }
@@ -735,7 +735,7 @@ void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, 
                 case 'r': // Relative timestamp
                     new_msg += std::to_string(timestamp);
                     break;
-                    
+
                 default: {
                     throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
                 }
