@@ -140,7 +140,7 @@ void TimestampPattern::init () {
     // E.g. 01-21 11:56:42.392
     patterns.emplace_back(0, "%m-%d %H:%M:%S.%3");
     // E.g. 916321
-    patterns.emplace_back(0, "%r");
+    patterns.emplace_back(0, "%#3");
 
     // Initialize m_known_ts_patterns with vector's contents
     m_known_ts_patterns_len = patterns.size();
@@ -210,8 +210,9 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
     const size_t format_length = m_format.length();
     size_t format_ix = 0;
     bool is_specifier = false;
+    bool is_relative = false;
     for (; format_ix < format_length && line_ix < line_length; ++format_ix) {
-        if (!is_specifier) {
+        if (false == is_specifier && false == is_relative) {
             if ('%' == m_format[format_ix]) {
                 is_specifier = true;
             } else {
@@ -221,7 +222,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                 }
                 ++line_ix;
             }
-        } else {
+        } else if (is_specifier && false == is_relative) {
             // Parse fields
             switch (m_format[format_ix]) {
                 case '%':
@@ -239,7 +240,8 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0', value) || value < 0 || value > 99) {
+                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
+                                                  value) || value < 0 || value > 99) {
                         return false;
                     }
                     year = value;
@@ -262,7 +264,8 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0', value) || value < 0 || value > 9999) {
+                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
+                                                  value) || value < 0 || value > 9999) {
                         return false;
                     }
                     year = value;
@@ -313,7 +316,8 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0', value) || value < 1 || value > 12) {
+                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
+                                                  value) || value < 1 || value > 12) {
                         return false;
                     }
                     month = value;
@@ -330,7 +334,8 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0', value) || value < 1 || value > 31) {
+                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
+                                                  value) || value < 1 || value > 31) {
                         return false;
                     }
                     date = value;
@@ -347,7 +352,8 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, ' ', value) || value < 1 || value > 31) {
+                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, ' ',
+                                                  value) || value < 1 || value > 31) {
                         return false;
                     }
                     date = value;
@@ -360,7 +366,8 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     bool match_found = false;
                     for (int day_ix = 0; !match_found && day_ix < cNumDaysInWeek; ++day_ix) {
                         const size_t abbrev_length = strlen(cAbbrevDaysOfWeek[day_ix]);
-                        if (0 == line.compare(line_ix, abbrev_length, cAbbrevDaysOfWeek[day_ix])) {
+                        if (0 ==
+                            line.compare(line_ix, abbrev_length, cAbbrevDaysOfWeek[day_ix])) {
                             match_found = true;
                             line_ix += abbrev_length;
                         }
@@ -394,7 +401,8 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0', value) || value < 0 || value > 23) {
+                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
+                                                  value) || value < 0 || value > 23) {
                         return false;
                     }
                     hour = value;
@@ -411,7 +419,8 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, ' ', value) || value < 0 || value > 23) {
+                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, ' ',
+                                                  value) || value < 0 || value > 23) {
                         return false;
                     }
                     hour = value;
@@ -428,7 +437,8 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0', value) || value < 1 || value > 12) {
+                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
+                                                  value) || value < 1 || value > 12) {
                         return false;
                     }
                     hour = value;
@@ -446,7 +456,8 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, ' ', value) || value < 1 || value > 12) {
+                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, ' ',
+                                                  value) || value < 1 || value > 12) {
                         return false;
                     }
                     hour = value;
@@ -464,7 +475,8 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0', value) || value < 0 || value > 59) {
+                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
+                                                  value) || value < 0 || value > 59) {
                         return false;
                     }
                     minute = value;
@@ -481,7 +493,8 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0', value) || value < 0 || value > 60) {
+                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
+                                                  value) || value < 0 || value > 60) {
                         return false;
                     }
                     second = value;
@@ -498,7 +511,8 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0', value) || value < 0 || value > 999) {
+                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
+                                                  value) || value < 0 || value > 999) {
                         return false;
                     }
                     millisecond = value;
@@ -507,33 +521,8 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     break;
                 }
 
-                case 'r': { // Relative timestamp in millisecond
-                    int cFieldLength = 0;
-                    // no leading zeroes currently supported for relative timestamp
-                    if (line[line_ix] == '0') {
-                        return false;
-                    }
-                    while (line_ix + cFieldLength < line_length) {
-                        if ('0' <= line[line_ix + cFieldLength] &&
-                            line[line_ix + cFieldLength] <= '9')
-                        {
-                            cFieldLength++;
-                        } else {
-                            break;
-                        }
-                    }
-                    if (cFieldLength == 0) {
-                        return false;
-                    }
-                    int value;
-                    if (0 > value || false == convert_string_to_number(line, line_ix,
-                                                                       line_ix + cFieldLength,
-                                                                       '0', value))
-                    {
-                        return false;
-                    }
-                    millisecond = value;
-                    line_ix += cFieldLength;
+                case '#': {
+                    is_relative = true;
                     break;
                 }
 
@@ -541,6 +530,47 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     return false;
             }
             is_specifier = false;
+        } else if (is_relative) {
+            int cFieldLength = 0;
+            // no leading zeroes currently supported for relative timestamp
+            if (line[line_ix] == '0') {
+                return false;
+            }
+            while (line_ix + cFieldLength < line_length) {
+                if ('0' <= line[line_ix + cFieldLength] &&
+                    line[line_ix + cFieldLength] <= '9') {
+                    cFieldLength++;
+                } else {
+                    break;
+                }
+            }
+            if (cFieldLength == 0) {
+                return false;
+            }
+            int value;
+            if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0', value)
+                || 0 > value) {
+                return false;
+            }
+            switch (m_format[format_ix]) {
+                case '3': { // Relative timestamp in millisecond
+                    millisecond = value;
+                    break;
+                }
+                case '6': { // Relative timestamp in microsecond
+                    millisecond = value / 1000;
+                    break;
+                }
+                case '9': { // Relative timestamp in nanoseconds
+                    millisecond = value / 1000000;
+                    break;
+                }
+                default: {
+                    return false;
+                }
+            }
+            line_ix += cFieldLength;
+            is_relative = false;
         }
     }
     if (format_ix < format_length) {
@@ -626,14 +656,15 @@ void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, 
 
     const size_t format_length = m_format.length();
     bool is_specifier = false;
+    bool is_relative = false;
     for (size_t format_ix = 0; format_ix < format_length; ++format_ix) {
-        if (!is_specifier) {
+        if (false == is_specifier && false == is_relative) {
             if ('%' == m_format[format_ix]) {
                 is_specifier = true;
             } else {
                 new_msg += m_format[format_ix];
             }
-        } else {
+        } else if (is_specifier && false == is_relative) {
             // Parse fields
             switch (m_format[format_ix]) {
                 case '%':
@@ -732,8 +763,8 @@ void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, 
                     append_padded_value(millisecond, '0', 3, new_msg);
                     break;
 
-                case 'r': // Relative timestamp
-                    new_msg += std::to_string(timestamp);
+                case '#': // Relative timestamp
+                    is_relative = true;
                     break;
 
                 default: {
@@ -741,6 +772,25 @@ void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, 
                 }
             }
             is_specifier = false;
+        } else if (is_relative) {
+            switch (m_format[format_ix]) {
+                case '3': { // Relative timestamp in milliseconds
+                    new_msg += std::to_string(timestamp);
+                    break;
+                }
+                case '6': { // Relative timestamp in microsecond
+                    new_msg += std::to_string(timestamp * 1000);
+                    break;
+                }
+                case '9': { // Relative timestamp in nanoseconds
+                    new_msg += std::to_string(timestamp * 1000000);
+                    break;
+                }
+                default: {
+                    throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+                }
+            }
+            is_relative = false;
         }
     }
 
