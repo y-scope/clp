@@ -73,13 +73,6 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif ()
 endif ()
 
-# Java 11 is a dependency for ANTLR. The way we install Java
-# with brew doesn't also make it the default version of Java on the system. 
-# Set JAVA_HOME to Java 11 install location here.
-if (APPLE)
-    set(ENV{JAVA_HOME} "/usr/local/opt/openjdk@11/")
-endif ()
-
 # Find and setup ANTLR Library
 # We build and link to the static library
 find_package(ANTLR REQUIRED)

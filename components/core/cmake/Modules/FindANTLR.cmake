@@ -4,12 +4,19 @@
 # https://github.com/antlr/antlr4/blob/v4.11.0/LICENSE.txt
 
 # TODO: Clean up ANTLR cmake files
+# Java 11 is a dependency for ANTLR. The way we install Java
+# with brew doesn't also make it the default version of Java on the system. 
+# Set JAVA_HOME to Java 11 install location here.
+if (APPLE)
+    set(ENV{JAVA_HOME} "/usr/local/opt/openjdk@11/")
+endif ()
+
 set(ANTLR4_TAG 4.11.1)
 add_definitions(-DANTLR4CPP_STATIC)
 set(ANTLR_EXECUTABLE ${PROJECT_SOURCE_DIR}/third-party/antlr/antlr-${ANTLR4_TAG}-complete.jar)
 include(ExternalAntlr4Cpp)
 
-find_package(Java QUIET COMPONENTS Runtime)
+find_package(Java 11 REQUIRED COMPONENTS Runtime)
 
 if(NOT ANTLR_EXECUTABLE)
   find_program(ANTLR_EXECUTABLE
