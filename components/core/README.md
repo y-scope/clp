@@ -73,7 +73,7 @@ docker run --rm -it \
   -v$(readlink -f /path/to/clp/components/core):/mnt/clp \
   -v$(readlink -f /path/to/my/logs):/mnt/logs \
   ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main \
-  /bin/bash
+  /bin/bash -l
 
 cd /mnt/clp
 ```
