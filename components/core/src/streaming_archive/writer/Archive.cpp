@@ -16,7 +16,7 @@
 #include <boost/uuid/uuid_io.hpp>
 
 // json
-#include "../../../submodules/json/single_include/nlohmann/json.hpp"
+#include <json/single_include/nlohmann/json.hpp>
 
 // Project headers
 #include "../../compressor_frontend/LogParser.hpp"

@@ -1,7 +1,7 @@
 #include "encoding_methods.hpp"
 
 // json
-#include "../../../submodules/json/single_include/nlohmann/json.hpp"
+#include <json/single_include/nlohmann/json.hpp>
 
 // Project headers
 #include "byteswap.hpp"

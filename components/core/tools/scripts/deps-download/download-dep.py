@@ -56,7 +56,9 @@ def main(argv):
     file_path = extraction_dir / filename
     urllib.request.urlretrieve(target_url, file_path)
     if config["unzip"]:
-        shutil.unpack_archive(file_path, extraction_dir)
+        # NOTE: We need to convert file_path to a str since unpack_archive only
+        # accepts a path-like object on Python versions >= 3.7
+        shutil.unpack_archive(str(file_path), extraction_dir)
 
     if "hash" in config:
         # Verify hash

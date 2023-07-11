@@ -324,12 +324,14 @@ set(SOURCE_FILES_clp
         src/version.hpp
         src/WriterInterface.cpp
         src/WriterInterface.hpp
-        submodules/date/include/date/date.h
-        submodules/json/single_include/nlohmann/json.hpp
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         )
 add_executable(clp ${SOURCE_FILES_clp})
+target_include_directories(clp
+        PRIVATE
+        ${CMAKE_SOURCE_DIR}/submodules
+        )
 target_link_libraries(clp
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
@@ -479,12 +481,15 @@ set(SOURCE_FILES_clg
         src/version.hpp
         src/WriterInterface.cpp
         src/WriterInterface.hpp
-        submodules/date/include/date/date.h
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
         )
 add_executable(clg ${SOURCE_FILES_clg})
+target_include_directories(clg
+        PRIVATE
+        ${CMAKE_SOURCE_DIR}/submodules
+        )
 target_link_libraries(clg
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
@@ -622,12 +627,15 @@ set(SOURCE_FILES_clo
         src/version.hpp
         src/WriterInterface.cpp
         src/WriterInterface.hpp
-        submodules/date/include/date/date.h
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
         )
 add_executable(clo ${SOURCE_FILES_clo})
+target_include_directories(clo
+        PRIVATE
+        ${CMAKE_SOURCE_DIR}/submodules
+        )
 target_link_libraries(clo
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
@@ -824,9 +832,6 @@ set(SOURCE_FILES_unitTest
         src/version.hpp
         src/WriterInterface.cpp
         src/WriterInterface.hpp
-        submodules/Catch2/single_include/catch2/catch.hpp
-        submodules/date/include/date/date.h
-        submodules/json/single_include/nlohmann/json.hpp
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
@@ -845,6 +850,10 @@ set(SOURCE_FILES_unitTest
         tests/test-Utils.cpp
         )
 add_executable(unitTest ${SOURCE_FILES_unitTest})
+target_include_directories(unitTest
+        PRIVATE
+        ${CMAKE_SOURCE_DIR}/submodules
+        )
 target_link_libraries(unitTest
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
