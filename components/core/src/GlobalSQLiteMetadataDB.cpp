@@ -94,6 +94,24 @@ static SQLitePreparedStatement get_archives_select_statement (SQLiteDB& db) {
     return db.prepare_statement(statement_string.c_str(), statement_string.length());
 }
 
+
+static SQLitePreparedStatement get_archives_for_time_window_select_statement (SQLiteDB& db, epochtime_t begin_ts, epochtime_t end_ts) {
+    auto statement_string = fmt::format("SELECT DISTINCT {}.{} FROM {} JOIN {} ON {}.{} = {}.{} WHERE {}.{} <= ? AND {}.{} >= ? ORDER BY {} ASC, {} ASC",
+                                        streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::Archive::Id,
+                                        streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::FilesTableName,
+                                        streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::Archive::Id,
+                                        streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::ArchiveId,
+                                        streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::BeginTimestamp,
+                                        streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::EndTimestamp,
+                                        streaming_archive::cMetadataDB::Archive::CreatorId, streaming_archive::cMetadataDB::Archive::CreationIx);
+    SPDLOG_DEBUG("{}", statement_string);
+    auto statement = db.prepare_statement(statement_string.c_str(), statement_string.length());
+    statement.bind_int64(1, end_ts);
+    statement.bind_int64(2, begin_ts);
+
+    return statement;
+}
+
 static SQLitePreparedStatement get_archives_for_file_select_statement (SQLiteDB& db, const string& file_path) {
     auto statement_string = fmt::format("SELECT DISTINCT {}.{} FROM {} JOIN {} ON {}.{} = {}.{} WHERE {}.{} = ? ORDER BY {} ASC, {} ASC",
                                         streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::Archive::Id,
@@ -110,6 +128,11 @@ static SQLitePreparedStatement get_archives_for_file_select_statement (SQLiteDB&
 }
 
 GlobalSQLiteMetadataDB::ArchiveIterator::ArchiveIterator (SQLiteDB& db) : m_statement(get_archives_select_statement(db)) {
+    m_statement.step();
+}
+
+GlobalSQLiteMetadataDB::ArchiveIterator::ArchiveIterator (SQLiteDB& db, epochtime_t begin_ts, epochtime_t end_ts) : m_statement(get_archives_select_statement(db))
+{
     m_statement.step();
 }
 

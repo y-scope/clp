@@ -93,10 +93,12 @@ static void print_result_binary (const string& orig_file_path, const Message& co
 static GlobalMetadataDB::ArchiveIterator* get_archive_iterator (GlobalMetadataDB& global_metadata_db, const std::string& file_path, epochtime_t begin_ts, epochtime_t end_ts);
 
 static GlobalMetadataDB::ArchiveIterator* get_archive_iterator (GlobalMetadataDB& global_metadata_db, const std::string& file_path, epochtime_t begin_ts, epochtime_t end_ts) {
-    if (file_path.empty()) {
-        return global_metadata_db.get_archive_iterator(begin_ts, end_ts);
-    } else {
+    if (!file_path.empty()) {
         return global_metadata_db.get_archive_iterator_for_file_path(file_path);
+    } else if (begin_ts == cEpochTimeMin && end_ts == cEpochTimeMax) {
+        return global_metadata_db.get_archive_iterator();
+    } else {
+        return global_metadata_db.get_archive_iterator_for_time_window(begin_ts, end_ts);
     }
 }
 

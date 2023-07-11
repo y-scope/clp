@@ -197,15 +197,28 @@ void GlobalMySQLMetadataDB::update_metadata_for_files (const std::string& archiv
     }
 }
 
-GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator (epochtime_t begin_ts, epochtime_t end_ts) {
-    auto statement_string = fmt::format("SELECT DISTINCT {}{}.{} FROM {}{} JOIN {}{} ON {}{}.{} = {}{}.{} WHERE {}{}.{} > {} AND {}{}.{} < {} ORDER BY {} ASC, {} ASC",
+GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator () {
+    auto statement_string = fmt::format("SELECT {} FROM {}{} ORDER BY {} ASC, {} ASC", streaming_archive::cMetadataDB::Archive::Id, m_table_prefix,
+                                        streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::Archive::CreatorId,
+                                        streaming_archive::cMetadataDB::Archive::CreationIx);
+    SPDLOG_DEBUG("{}", statement_string);
+
+    if (false == m_db.execute_query(statement_string)) {
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+
+    return new ArchiveIterator(m_db.get_iterator());
+}
+
+GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator_for_time_window (epochtime_t begin_ts, epochtime_t end_ts) {
+    auto statement_string = fmt::format("SELECT DISTINCT {}{}.{} FROM {}{} JOIN {}{} ON {}{}.{} = {}{}.{} WHERE {}{}.{} <= {} AND {}{}.{} >= {} ORDER BY {} ASC, {} ASC",
                                         m_table_prefix, streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::Archive::Id,
                                         m_table_prefix, streaming_archive::cMetadataDB::ArchivesTableName,
                                         m_table_prefix, streaming_archive::cMetadataDB::FilesTableName,
                                         m_table_prefix, streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::Archive::Id,
                                         m_table_prefix, streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::ArchiveId,
-                                        m_table_prefix, streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::BeginTimestamp, begin_ts,
-                                        m_table_prefix, streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::EndTimestamp, end_ts,
+                                        m_table_prefix, streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::BeginTimestamp, end_ts,
+                                        m_table_prefix, streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::EndTimestamp, begin_ts,
                                         streaming_archive::cMetadataDB::Archive::CreatorId, streaming_archive::cMetadataDB::Archive::CreationIx);
     SPDLOG_DEBUG("{}", statement_string);
 

@@ -8,7 +8,6 @@
 #include <boost/filesystem/path.hpp>
 
 // Project headers
-#include "../Defs.h"
 #include "../ErrorCode.hpp"
 #include "../FileWriter.hpp"
 #include "../GlobalMySQLMetadataDB.hpp"
@@ -70,7 +69,7 @@ namespace clp {
             std::unordered_map<string, string> temp_path_to_final_path;
             global_metadata_db->open();
             if (files_to_decompress.empty()) {
-                for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(global_metadata_db->get_archive_iterator(cEpochTimeMin, cEpochTimeMax));
+                for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(global_metadata_db->get_archive_iterator());
                         archive_ix->contains_element(); archive_ix->get_next())
                 {
                     archive_ix->get_id(archive_id);
@@ -132,7 +131,7 @@ namespace clp {
                     archive_reader.close();
                 }
             } else { // files_to_decompress.size() > 1
-                for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(global_metadata_db->get_archive_iterator(cEpochTimeMin, cEpochTimeMax));
+                for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(global_metadata_db->get_archive_iterator());
                         archive_ix->contains_element(); archive_ix->get_next())
                 {
                     archive_ix->get_id(archive_id);

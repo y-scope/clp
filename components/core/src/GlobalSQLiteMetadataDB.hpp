@@ -47,6 +47,7 @@ public:
         // Constructors
         explicit ArchiveIterator (SQLiteDB& db);
         ArchiveIterator (SQLiteDB& db, const std::string& file_path);
+        ArchiveIterator (SQLiteDB& db, epochtime_t begin_ts, epochtime_t end_ts);
 
         // Methods
         bool contains_element () const override;
@@ -60,6 +61,7 @@ public:
 
     // Constructors
     GlobalSQLiteMetadataDB (const std::string& path) : m_path(path) {}
+    GlobalSQLiteMetadataDB (epochtime_t begin_ts, epochtime_t end_ts) {}
 
     // Methods
     void open () override;
@@ -71,7 +73,8 @@ public:
                               uint64_t size) override;
     void update_metadata_for_files (const std::string& archive_id, const std::vector<streaming_archive::writer::File*>& files) override;
 
-    GlobalMetadataDB::ArchiveIterator* get_archive_iterator (epochtime_t begin_ts, epochtime_t end_ts) override { return new ArchiveIterator(m_db); }
+    GlobalMetadataDB::ArchiveIterator* get_archive_iterator () override { return new ArchiveIterator(m_db); }
+    GlobalMetadataDB::ArchiveIterator* get_archive_iterator_for_time_window (epochtime_t begin_ts, epochtime_t end_ts) override { return new ArchiveIterator(m_db, begin_ts, end_ts); }
     GlobalMetadataDB::ArchiveIterator* get_archive_iterator_for_file_path (const std::string& path) override { return new ArchiveIterator(m_db, path); }
 
 private:
