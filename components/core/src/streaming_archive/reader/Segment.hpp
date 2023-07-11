@@ -1,14 +1,11 @@
 #ifndef STREAMING_ARCHIVE_READER_SEGMENT_HPP
 #define STREAMING_ARCHIVE_READER_SEGMENT_HPP
 
-// C++ standard libraries
 #include <memory>
 #include <string>
 
-// Boost libraries
 #include <boost/iostreams/device/mapped_file.hpp>
 
-// Project headers
 #include "../../Defs.h"
 #include "../../ErrorCode.hpp"
 #include "../../streaming_compression/passthrough/Decompressor.hpp"
@@ -17,15 +14,16 @@
 
 namespace streaming_archive { namespace reader {
     /**
-     * Class for reading segments. A segment is a container for multiple compressed buffers that itself may be further compressed and stored on disk.
+     * Class for reading segments. A segment is a container for multiple compressed buffers that
+     * itself may be further compressed and stored on disk.
      */
     class Segment {
     public:
         // Constructor
-        Segment () : m_segment_path({}) {};
+        Segment() : m_segment_path({}){};
 
         // Destructor
-        ~Segment ();
+        ~Segment();
 
         /**
          * Opens a segment with the given ID from the given directory
@@ -34,12 +32,12 @@ namespace streaming_archive { namespace reader {
          * @return ErrorCode_Failure if unable to memory map the segment file
          * @return ErrorCode_Success on success
          */
-        ErrorCode try_open (const std::string& segment_dir_path, segment_id_t segment_id);
+        ErrorCode try_open(std::string const& segment_dir_path, segment_id_t segment_id);
 
         /**
          * Closes the segment
          */
-        void close ();
+        void close();
 
         /**
          * Reads content with the given offset and length into a buffer
@@ -50,7 +48,8 @@ namespace streaming_archive { namespace reader {
          * @return ErrorCode_Failure if decompression failed
          * @return ErrorCode_Success on success
          */
-        ErrorCode try_read (uint64_t decompressed_stream_pos, char* extraction_buf, uint64_t extraction_len);
+        ErrorCode
+        try_read(uint64_t decompressed_stream_pos, char* extraction_buf, uint64_t extraction_len);
 
     private:
         std::string m_segment_path;
@@ -64,6 +63,6 @@ namespace streaming_archive { namespace reader {
         static_assert(false, "Unsupported compression mode.");
 #endif
     };
-} }
+}}  // namespace streaming_archive::reader
 
-#endif // STREAMING_ARCHIVE_READER_SEGMENT_HPP
+#endif  // STREAMING_ARCHIVE_READER_SEGMENT_HPP
