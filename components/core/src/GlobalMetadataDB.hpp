@@ -72,7 +72,12 @@ public:
      * @param end_ts
      * @return The archive iterator
      */
-    virtual ArchiveIterator* get_archive_iterator (epochtime_t begin_ts, epochtime_t end_ts) = 0;
+    virtual ArchiveIterator* get_archive_iterator () = 0;
+/**
+     * Gets an iterator to iterate over every archive that contains a given start and end time stamp in the global metadata database
+     * @return The archive iterator
+     */
+virtual ArchiveIterator* get_archive_iterator_for_time_range (epochtime_t begin_ts, epochtime_t end_ts) = 0;
     /**
      * Gets an iterator to iterate over every archive that contains a given file path in the global metadata database
      * @return The archive iterator
