@@ -565,11 +565,11 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                 return false;
             }
             switch (m_format[format_ix]) {
-                case '3': { // Relative timestamp in millisecond
+                case '3': { // Relative timestamp in milliseconds
                     millisecond = value;
                     break;
                 }
-                case '6': { // Relative timestamp in microsecond
+                case '6': { // Relative timestamp in microseconds
                     millisecond = value / 1000;
                     break;
                 }
@@ -790,7 +790,7 @@ void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, 
                     new_msg += std::to_string(timestamp);
                     break;
                 }
-                case '6': { // Relative timestamp in microsecond
+                case '6': { // Relative timestamp in microseconds
                     new_msg += std::to_string(timestamp * 1000);
                     break;
                 }
