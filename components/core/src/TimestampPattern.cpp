@@ -548,13 +548,12 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
             if (line[line_ix] == '0') {
                 return false;
             }
-            while (line_ix + field_length < line_length) {
-                if ('0' <= line[line_ix + field_length] &&
-                    line[line_ix + field_length] <= '9') {
-                    field_length++;
-                } else {
+            for (int i = line_ix + field_length; i < line_length; ++i) {
+                int c = line[i];
+                if (c < '0' || '9' < c) {
                     break;
                 }
+                ++field_length;
             }
             if (field_length == 0) {
                 return false;
