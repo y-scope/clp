@@ -209,380 +209,340 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
 
     const size_t format_length = m_format.length();
     size_t format_ix = 0;
-    bool is_specifier = false;
-    bool is_relative = false;
+    FormatType format_type = FormatType::StaticText;
     for (; format_ix < format_length && line_ix < line_length; ++format_ix) {
-        if (false == is_specifier && false == is_relative) {
-            if ('%' == m_format[format_ix]) {
-                is_specifier = true;
-            } else {
-                if (m_format[format_ix] != line[line_ix]) {
-                    // Doesn't match
-                    return false;
-                }
-                ++line_ix;
-            }
-        } else if (is_specifier && false == is_relative) {
-            // Parse fields
-            switch (m_format[format_ix]) {
-                case '%':
-                    if ('%' != line[line_ix]) {
+        switch(format_type) {
+            case (FormatType::StaticText) :
+                if ('%' == m_format[format_ix]) {
+                    format_type = FormatType::Specifier;
+                } else {
+                    if (m_format[format_ix] != line[line_ix]) {
+                        // Doesn't match
                         return false;
                     }
                     ++line_ix;
-                    break;
-
-                case 'y': { // Zero-padded year in century
-                    constexpr int cFieldLength = 2;
-                    if (line_ix + cFieldLength > line_length) {
-                        // Too short
-                        return false;
-                    }
-
-                    int value;
-                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                          '0', value) || value < 0 || value > 99)
-                    {
-                        return false;
-                    }
-                    year = value;
-                    // Year >= 69 treated as 1900s, year below 69 treated as 2000s
-                    if (year >= 69) {
-                        year += 1900;
-                    } else {
-                        year += 2000;
-                    }
-                    line_ix += cFieldLength;
-
-                    break;
                 }
-
-                case 'Y': { // Zero-padded year with century
-                    constexpr int cFieldLength = 4;
-                    if (line_ix + cFieldLength > line_length) {
-                        // Too short
-                        return false;
-                    }
-
-                    int value;
-                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                          '0', value) || value < 0 || value > 9999)
-                    {
-                        return false;
-                    }
-                    year = value;
-                    line_ix += cFieldLength;
-
-                    break;
-                }
-
-                case 'B': { // Month name
-                    bool match_found = false;
-                    for (int month_ix = 0; !match_found && month_ix < cNumMonths; ++month_ix) {
-                        const size_t length = strlen(cMonthNames[month_ix]);
-                        if (0 == line.compare(line_ix, length, cMonthNames[month_ix])) {
-                            month = month_ix + 1;
-                            match_found = true;
-                            line_ix += length;
+                break;
+            case (FormatType::Specifier) : {
+                format_type = FormatType::StaticText;
+                // Parse fields
+                switch (m_format[format_ix]) {
+                    case '%':
+                        if ('%' != line[line_ix]) {
+                            return false;
                         }
-                    }
-                    if (!match_found) {
-                        return false;
-                    }
-
-                    break;
-                }
-
-                case 'b': { // Abbreviated month name
-                    bool match_found = false;
-                    for (int month_ix = 0; !match_found && month_ix < cNumMonths; ++month_ix) {
-                        const size_t length = strlen(cAbbrevMonthNames[month_ix]);
-                        if (0 == line.compare(line_ix, length, cAbbrevMonthNames[month_ix])) {
-                            month = month_ix + 1;
-                            match_found = true;
-                            line_ix += length;
+                        ++line_ix;
+                        break;
+                    case 'y': { // Zero-padded year in century
+                        constexpr int cFieldLength = 2;
+                        if (line_ix + cFieldLength > line_length) {
+                            // Too short
+                            return false;
                         }
-                    }
-                    if (!match_found) {
-                        return false;
-                    }
-
-                    break;
-                }
-
-                case 'm': { // Zero-padded month
-                    constexpr int cFieldLength = 2;
-                    if (line_ix + cFieldLength > line_length) {
-                        // Too short
-                        return false;
-                    }
-
-                    int value;
-                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                          '0', value) || value < 1 || value > 12)
-                    {
-                        return false;
-                    }
-                    month = value;
-                    line_ix += cFieldLength;
-
-                    break;
-                }
-
-                case 'd': { // Zero-padded day in month
-                    constexpr int cFieldLength = 2;
-                    if (line_ix + cFieldLength > line_length) {
-                        // Too short
-                        return false;
-                    }
-
-                    int value;
-                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                          '0', value) || value < 1 || value > 31)
-                    {
-                        return false;
-                    }
-                    date = value;
-                    line_ix += cFieldLength;
-
-                    break;
-                }
-
-                case 'e': { // Space-padded day in month
-                    constexpr int cFieldLength = 2;
-                    if (line_ix + cFieldLength > line_length) {
-                        // Too short
-                        return false;
-                    }
-
-                    int value;
-                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                          ' ', value) || value < 1 || value > 31)
-                    {
-                        return false;
-                    }
-                    date = value;
-                    line_ix += cFieldLength;
-
-                    break;
-                }
-
-                case 'a': { // Abbreviated day of week
-                    bool match_found = false;
-                    for (int day_ix = 0; !match_found && day_ix < cNumDaysInWeek; ++day_ix) {
-                        const size_t abbrev_length = strlen(cAbbrevDaysOfWeek[day_ix]);
-                        if (0 ==
-                            line.compare(line_ix, abbrev_length, cAbbrevDaysOfWeek[day_ix])) {
-                            match_found = true;
-                            line_ix += abbrev_length;
+                        int value;
+                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                             '0', value) || value < 0 || value > 99)
+                        {
+                            return false;
                         }
+                        year = value;
+                        // Year >= 69 treated as 1900s, year below 69 treated as 2000s
+                        if (year >= 69) {
+                            year += 1900;
+                        } else {
+                            year += 2000;
+                        }
+                        line_ix += cFieldLength;
+                        break;
                     }
-                    if (!match_found) {
+                    case 'Y': { // Zero-padded year with century
+                        constexpr int cFieldLength = 4;
+                        if (line_ix + cFieldLength > line_length) {
+                            // Too short
+                            return false;
+                        }
+                        int value;
+                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                           '0', value) || value < 0 || value > 9999)
+                        {
+                            return false;
+                        }
+                        year = value;
+                        line_ix += cFieldLength;
+                        break;
+                    }
+                    case 'B': { // Month name
+                        bool match_found = false;
+                        for (int month_ix = 0; !match_found && month_ix < cNumMonths; ++month_ix) {
+                            const size_t length = strlen(cMonthNames[month_ix]);
+                            if (0 == line.compare(line_ix, length, cMonthNames[month_ix])) {
+                                month = month_ix + 1;
+                                match_found = true;
+                                line_ix += length;
+                            }
+                        }
+                        if (!match_found) {
+                            return false;
+                        }
+                        break;
+                    }
+                    case 'b': { // Abbreviated month name
+                        bool match_found = false;
+                        for (int month_ix = 0; !match_found && month_ix < cNumMonths; ++month_ix) {
+                            const size_t length = strlen(cAbbrevMonthNames[month_ix]);
+                            if (0 == line.compare(line_ix, length, cAbbrevMonthNames[month_ix])) {
+                                month = month_ix + 1;
+                                match_found = true;
+                                line_ix += length;
+                            }
+                        }
+                        if (!match_found) {
+                            return false;
+                        }
+                        break;
+                    }
+                    case 'm': { // Zero-padded month
+                        constexpr int cFieldLength = 2;
+                        if (line_ix + cFieldLength > line_length) {
+                            // Too short
+                            return false;
+                        }
+                        int value;
+                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                             '0', value) || value < 1 || value > 12)
+                        {
+                            return false;
+                        }
+                        month = value;
+                        line_ix += cFieldLength;
+                        break;
+                    }
+                    case 'd': { // Zero-padded day in month
+                        constexpr int cFieldLength = 2;
+                        if (line_ix + cFieldLength > line_length) {
+                            // Too short
+                            return false;
+                        }
+                        int value;
+                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                             '0', value) || value < 1 || value > 31)
+                        {
+                            return false;
+                        }
+                        date = value;
+                        line_ix += cFieldLength;
+                        break;
+                    }
+                    case 'e': { // Space-padded day in month
+                        constexpr int cFieldLength = 2;
+                        if (line_ix + cFieldLength > line_length) {
+                            // Too short
+                            return false;
+                        }
+                        int value;
+                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                             ' ', value) || value < 1 || value > 31)
+                        {
+                            return false;
+                        }
+                        date = value;
+                        line_ix += cFieldLength;
+                        break;
+                    }
+                    case 'a': { // Abbreviated day of week
+                        bool match_found = false;
+                        for (int day_ix = 0; !match_found && day_ix < cNumDaysInWeek; ++day_ix) {
+                            const size_t abbrev_length = strlen(cAbbrevDaysOfWeek[day_ix]);
+                            if (0 ==
+                                line.compare(line_ix, abbrev_length, cAbbrevDaysOfWeek[day_ix])) {
+                                match_found = true;
+                                line_ix += abbrev_length;
+                            }
+                        }
+                        if (!match_found) {
+                            return false;
+                        }
+                        // Weekday is not useful in determining absolute timestamp, so we don't do
+                        // anything with it
+                        break;
+                    }
+                    case 'p': // Part of day
+                        if (0 == line.compare(line_ix, 2, "AM")) {
+                            is_pm = false;
+                        } else if (0 == line.compare(line_ix, 2, "PM")) {
+                            is_pm = true;
+                        } else {
+                            return false;
+                        }
+                        line_ix += 2;
+                        break;
+                    case 'H': { // Zero-padded hour on 24-hour clock
+                        constexpr int cFieldLength = 2;
+                        if (line_ix + cFieldLength > line_length) {
+                            // Too short
+                            return false;
+                        }
+                        int value;
+                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                             '0', value) || value < 0 || value > 23)
+                        {
+                            return false;
+                        }
+                        hour = value;
+                        line_ix += cFieldLength;
+                        break;
+                    }
+                    case 'k': { // Space-padded hour on 24-hour clock
+                        constexpr int cFieldLength = 2;
+                        if (line_ix + cFieldLength > line_length) {
+                            // Too short
+                            return false;
+                        }
+                        int value;
+                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                             ' ', value) || value < 0 || value > 23)
+                        {
+                            return false;
+                        }
+                        hour = value;
+                        line_ix += cFieldLength;
+                        break;
+                    }
+                    case 'I': { // Zero-padded hour on 12-hour clock
+                        constexpr int cFieldLength = 2;
+                        if (line_ix + cFieldLength > line_length) {
+                            // Too short
+                            return false;
+                        }
+                        int value;
+                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                             '0', value) || value < 1 || value > 12)
+                        {
+                            return false;
+                        }
+                        hour = value;
+                        uses_12_hour_clock = true;
+                        line_ix += cFieldLength;
+                        break;
+                    }
+                    case 'l': { // Space-padded hour on 12-hour clock
+                        constexpr int cFieldLength = 2;
+                        if (line_ix + cFieldLength > line_length) {
+                            // Too short
+                            return false;
+                        }
+                        int value;
+                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                             ' ', value) || value < 1 || value > 12)
+                        {
+                            return false;
+                        }
+                        hour = value;
+                        uses_12_hour_clock = true;
+                        line_ix += cFieldLength;
+                        break;
+                    }
+                    case 'M': { // Zero-padded minute
+                        constexpr int cFieldLength = 2;
+                        if (line_ix + cFieldLength > line_length) {
+                            // Too short
+                            return false;
+                        }
+                        int value;
+                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                             '0', value) || value < 0 || value > 59)
+                        {
+                            return false;
+                        }
+                        minute = value;
+                        line_ix += cFieldLength;
+                        break;
+                    }
+                    case 'S': { // Zero-padded second
+                        constexpr int cFieldLength = 2;
+                        if (line_ix + cFieldLength > line_length) {
+                            // Too short
+                            return false;
+                        }
+                        int value;
+                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                             '0', value) || value < 0 || value > 60)
+                        {
+                            return false;
+                        }
+                        second = value;
+                        line_ix += cFieldLength;
+                        break;
+                    }
+                    case '3': { // Zero-padded millisecond
+                        constexpr int cFieldLength = 3;
+                        if (line_ix + cFieldLength > line_length) {
+                            // Too short
+                            return false;
+                        }
+                        int value;
+                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                            '0', value) || value < 0 || value > 999)
+                        {
+                            return false;
+                        }
+                        millisecond = value;
+                        line_ix += cFieldLength;
+                        break;
+                    }
+                    case '#':
+                        format_type = FormatType::Relative;
+                        break;
+                    default:
                         return false;
-                    }
-                    // Weekday is not useful in determining absolute timestamp, so we don't do anything with it
-
-                    break;
                 }
-
-                case 'p': { // Part of day
-                    if (0 == line.compare(line_ix, 2, "AM")) {
-                        is_pm = false;
-                    } else if (0 == line.compare(line_ix, 2, "PM")) {
-                        is_pm = true;
-                    } else {
-                        return false;
-                    }
-                    line_ix += 2;
-
-                    break;
-                }
-
-                case 'H': { // Zero-padded hour on 24-hour clock
-                    constexpr int cFieldLength = 2;
-                    if (line_ix + cFieldLength > line_length) {
-                        // Too short
-                        return false;
-                    }
-
-                    int value;
-                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                          '0', value) || value < 0 || value > 23)
-                    {
-                        return false;
-                    }
-                    hour = value;
-                    line_ix += cFieldLength;
-
-                    break;
-                }
-
-                case 'k': { // Space-padded hour on 24-hour clock
-                    constexpr int cFieldLength = 2;
-                    if (line_ix + cFieldLength > line_length) {
-                        // Too short
-                        return false;
-                    }
-
-                    int value;
-                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                          ' ', value) || value < 0 || value > 23)
-                    {
-                        return false;
-                    }
-                    hour = value;
-                    line_ix += cFieldLength;
-
-                    break;
-                }
-
-                case 'I': { // Zero-padded hour on 12-hour clock
-                    constexpr int cFieldLength = 2;
-                    if (line_ix + cFieldLength > line_length) {
-                        // Too short
-                        return false;
-                    }
-
-                    int value;
-                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                          '0', value) || value < 1 || value > 12)
-                    {
-                        return false;
-                    }
-                    hour = value;
-                    uses_12_hour_clock = true;
-                    line_ix += cFieldLength;
-
-                    break;
-                }
-
-                case 'l': { // Space-padded hour on 12-hour clock
-                    constexpr int cFieldLength = 2;
-                    if (line_ix + cFieldLength > line_length) {
-                        // Too short
-                        return false;
-                    }
-
-                    int value;
-                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                          ' ', value) || value < 1 || value > 12)
-                    {
-                        return false;
-                    }
-                    hour = value;
-                    uses_12_hour_clock = true;
-                    line_ix += cFieldLength;
-
-                    break;
-                }
-
-                case 'M': { // Zero-padded minute
-                    constexpr int cFieldLength = 2;
-                    if (line_ix + cFieldLength > line_length) {
-                        // Too short
-                        return false;
-                    }
-
-                    int value;
-                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                          '0', value) || value < 0 || value > 59)
-                    {
-                        return false;
-                    }
-                    minute = value;
-                    line_ix += cFieldLength;
-
-                    break;
-                }
-
-                case 'S': { // Zero-padded second
-                    constexpr int cFieldLength = 2;
-                    if (line_ix + cFieldLength > line_length) {
-                        // Too short
-                        return false;
-                    }
-
-                    int value;
-                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                          '0', value) || value < 0 || value > 60)
-                    {
-                        return false;
-                    }
-                    second = value;
-                    line_ix += cFieldLength;
-
-                    break;
-                }
-
-                case '3': { // Zero-padded millisecond
-                    constexpr int cFieldLength = 3;
-                    if (line_ix + cFieldLength > line_length) {
-                        // Too short
-                        return false;
-                    }
-
-                    int value;
-                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                          '0', value) || value < 0 || value > 999)
-                    {
-                        return false;
-                    }
-                    millisecond = value;
-                    line_ix += cFieldLength;
-
-                    break;
-                }
-
-                case '#': {
-                    is_relative = true;
-                    break;
-                }
-
-                default:
-                    return false;
+                break;
             }
-            is_specifier = false;
-        } else if (is_relative) {
-            int field_length = 0;
-            // no leading zeroes currently supported for relative timestamp
-            if (line[line_ix] == '0') {
-                return false;
-            }
-            for (int i = line_ix; i < line_length; ++i) {
-                int c = line[i];
-                if (c < '0' || '9' < c) {
-                    break;
-                }
-                ++field_length;
-            }
-            if (field_length == 0) {
-                return false;
-            }
-            int value;
-            if (false == convert_string_to_number(line, line_ix, line_ix + field_length, '0',
-                                                  value) || 0 > value)
-            {
-                return false;
-            }
-            switch (m_format[format_ix]) {
-                case '3': { // Relative timestamp in milliseconds
-                    millisecond = value;
-                    break;
-                }
-                case '6': { // Relative timestamp in microseconds
-                    millisecond = value / 1000;
-                    break;
-                }
-                case '9': { // Relative timestamp in nanoseconds
-                    millisecond = value / 1000000;
-                    break;
-                }
-                default: {
+            case (FormatType::Relative) : {
+                int field_length = 0;
+                // no leading zeroes currently supported for relative timestamp
+                if (line[line_ix] == '0') {
                     return false;
                 }
+                for (int i = line_ix; i < line_length; ++i) {
+                    int c = line[i];
+                    if (c < '0' || '9' < c) {
+                        break;
+                    }
+                    ++field_length;
+                }
+                if (field_length == 0) {
+                    return false;
+                }
+                int value;
+                if (false == convert_string_to_number(line, line_ix, line_ix + field_length, '0',
+                                                      value) || 0 > value)
+                {
+                    return false;
+                }
+                switch (m_format[format_ix]) {
+                    case '3': { // Relative timestamp in milliseconds
+                        millisecond = value;
+                        break;
+                    }
+                    case '6': { // Relative timestamp in microseconds
+                        millisecond = value / 1000;
+                        break;
+                    }
+                    case '9': { // Relative timestamp in nanoseconds
+                        millisecond = value / 1000000;
+                        break;
+                    }
+                    default: {
+                        return false;
+                    }
+                }
+                line_ix += field_length;
+                format_type = FormatType::StaticText;
+                break;
             }
-            line_ix += field_length;
-            is_relative = false;
+            default:
+                throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
     }
     if (format_ix < format_length) {
@@ -667,148 +627,128 @@ void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, 
     int millisecond = time_of_day.subseconds().count();
 
     const size_t format_length = m_format.length();
-    bool is_specifier = false;
-    bool is_relative = false;
+    FormatType format_type = FormatType::StaticText;
     for (size_t format_ix = 0; format_ix < format_length; ++format_ix) {
-        if (false == is_specifier && false == is_relative) {
-            if ('%' == m_format[format_ix]) {
-                is_specifier = true;
-            } else {
-                new_msg += m_format[format_ix];
-            }
-        } else if (is_specifier && false == is_relative) {
-            // Parse fields
-            switch (m_format[format_ix]) {
-                case '%':
+        switch(format_type) {
+            case (FormatType::StaticText) :
+                if ('%' == m_format[format_ix]) {
+                    format_type = FormatType::Specifier;
+                } else {
                     new_msg += m_format[format_ix];
-                    break;
-
-                case 'y': { // Zero-padded year in century
-                    int value = year;
-                    if (year >= 2000) {
-                        // year must be in range [2000,2068]
-                        value -= 2000;
-                    } else {
-                        // year must be in range [1969,1999]
-                        value -= 1900;
+                }
+                break;
+            case (FormatType::Specifier) : {
+                format_type = FormatType::StaticText;
+                // Parse fields
+                switch (m_format[format_ix]) {
+                    case '%':
+                        new_msg += m_format[format_ix];
+                        break;
+                    case 'y': { // Zero-padded year in century
+                        int value = year;
+                        if (year >= 2000) {
+                            // year must be in range [2000,2068]
+                            value -= 2000;
+                        } else {
+                            // year must be in range [1969,1999]
+                            value -= 1900;
+                        }
+                        append_padded_value(value, '0', 2, new_msg);
+                        break;
                     }
-                    append_padded_value(value, '0', 2, new_msg);
-                    break;
-                }
-
-                case 'Y': // Zero-padded year with century
-                    append_padded_value(year, '0', 4, new_msg);
-                    break;
-
-                case 'B': // Month name
-                    new_msg += cMonthNames[month - 1];
-                    break;
-
-                case 'b': // Abbreviated month name
-                    new_msg += cAbbrevMonthNames[month - 1];
-                    break;
-
-                case 'm': // Zero-padded month
-                    append_padded_value(month, '0', 2, new_msg);
-                    break;
-
-                case 'd': // Zero-padded day in month
-                    append_padded_value(date, '0', 2, new_msg);
-                    break;
-
-                case 'e': // Space-padded day in month
-                    append_padded_value(date, ' ', 2, new_msg);
-                    break;
-
-                case 'a': // Abbreviated day of week
-                    new_msg += cAbbrevDaysOfWeek[day_of_week_ix];
-                    break;
-
-                case 'p': { // Part of day
-                    if (hour > 11) {
-                        new_msg += "PM";
-                    } else {
-                        new_msg += "AM";
+                    case 'Y': // Zero-padded year with century
+                        append_padded_value(year, '0', 4, new_msg);
+                        break;
+                    case 'B': // Month name
+                        new_msg += cMonthNames[month - 1];
+                        break;
+                    case 'b': // Abbreviated month name
+                        new_msg += cAbbrevMonthNames[month - 1];
+                        break;
+                    case 'm': // Zero-padded month
+                        append_padded_value(month, '0', 2, new_msg);
+                        break;
+                    case 'd': // Zero-padded day in month
+                        append_padded_value(date, '0', 2, new_msg);
+                        break;
+                    case 'e': // Space-padded day in month
+                        append_padded_value(date, ' ', 2, new_msg);
+                        break;
+                    case 'a': // Abbreviated day of week
+                        new_msg += cAbbrevDaysOfWeek[day_of_week_ix];
+                        break;
+                    case 'p': // Part of day
+                        if (hour > 11) {
+                            new_msg += "PM";
+                        } else {
+                            new_msg += "AM";
+                        }
+                        break;
+                    case 'H': // Zero-padded hour on 24-hour clock
+                        append_padded_value(hour, '0', 2, new_msg);
+                        break;
+                    case 'k': // Space-padded hour on 24-hour clock
+                        append_padded_value(hour, ' ', 2, new_msg);
+                        break;
+                    case 'I': { // Zero-padded hour on 12-hour clock
+                        int value = hour;
+                        if (0 == value) {
+                            value = 12;
+                        } else if (value > 13) {
+                            value -= 12;
+                        }
+                        append_padded_value(value, '0', 2, new_msg);
+                        break;
                     }
-                    break;
-                }
-
-                case 'H': // Zero-padded hour on 24-hour clock
-                    append_padded_value(hour, '0', 2, new_msg);
-                    break;
-
-                case 'k': // Space-padded hour on 24-hour clock
-                    append_padded_value(hour, ' ', 2, new_msg);
-                    break;
-
-                case 'I': { // Zero-padded hour on 12-hour clock
-                    int value = hour;
-                    if (0 == value) {
-                        value = 12;
-                    } else if (value > 13) {
-                        value -= 12;
+                    case 'l': { // Space-padded hour on 12-hour clock
+                        int value = hour;
+                        if (0 == value) {
+                            value = 12;
+                        } else if (value > 13) {
+                            value -= 12;
+                        }
+                        append_padded_value(value, ' ', 2, new_msg);
+                        break;
                     }
-                    append_padded_value(value, '0', 2, new_msg);
-                    break;
+                    case 'M': // Zero-padded minute
+                        append_padded_value(minute, '0', 2, new_msg);
+                        break;
+                    case 'S': // Zero-padded second
+                        append_padded_value(second, '0', 2, new_msg);
+                        break;
+                    case '3': // Zero-padded millisecond
+                        append_padded_value(millisecond, '0', 3, new_msg);
+                        break;
+                    case '#': // Relative timestamp
+                        format_type = FormatType::Relative;
+                        break;
+                    default:
+                        throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
                 }
-
-                case 'l': { // Space-padded hour on 12-hour clock
-                    int value = hour;
-                    if (0 == value) {
-                        value = 12;
-                    } else if (value > 13) {
-                        value -= 12;
-                    }
-                    append_padded_value(value, ' ', 2, new_msg);
-                    break;
-                }
-
-                case 'M': // Zero-padded minute
-                    append_padded_value(minute, '0', 2, new_msg);
-                    break;
-
-                case 'S': // Zero-padded second
-                    append_padded_value(second, '0', 2, new_msg);
-                    break;
-
-                case '3': // Zero-padded millisecond
-                    append_padded_value(millisecond, '0', 3, new_msg);
-                    break;
-
-                case '#': // Relative timestamp
-                    is_relative = true;
-                    break;
-
-                default: {
-                    throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
-                }
+                break;
             }
-            is_specifier = false;
-        } else if (is_relative) {
-            switch (m_format[format_ix]) {
-                case '3': { // Relative timestamp in milliseconds
-                    new_msg += std::to_string(timestamp);
-                    break;
+            case (FormatType::Relative) :
+                switch (m_format[format_ix]) {
+                    case '3': // Relative timestamp in milliseconds
+                        new_msg += std::to_string(timestamp);
+                        break;
+                    case '6': // Relative timestamp in microseconds
+                        new_msg += std::to_string(timestamp * 1000);
+                        break;
+                    case '9': // Relative timestamp in nanoseconds
+                        new_msg += std::to_string(timestamp * 1'000'000);
+                        break;
+                    default:
+                        throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
                 }
-                case '6': { // Relative timestamp in microseconds
-                    new_msg += std::to_string(timestamp * 1000);
-                    break;
-                }
-                case '9': { // Relative timestamp in nanoseconds
-                    new_msg += std::to_string(timestamp * 1'000'000);
-                    break;
-                }
-                default: {
-                    throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
-                }
-            }
-            is_relative = false;
+                format_type = FormatType::StaticText;
+                break;
+            default :
+                throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
     }
-
     // Copy text after timestamp
     new_msg.append(msg, ts_begin_ix, string::npos);
-
     msg = new_msg;
 }
 

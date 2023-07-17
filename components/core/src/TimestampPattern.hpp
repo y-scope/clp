@@ -40,6 +40,12 @@
  */
 class TimestampPattern {
 public:
+    enum class FormatType : uint16_t {
+        StaticText = 0,
+        Specifier,
+        Relative
+    };
+            
     // Types
     class OperationFailed : public TraceableException {
     public:
