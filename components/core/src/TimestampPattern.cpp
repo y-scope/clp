@@ -131,7 +131,7 @@ void TimestampPattern::init () {
     patterns.emplace_back(4, "%a %b %e %H:%M:%S %Y");
     // E.g. <<<2016-11-10 03:02:29:936
     patterns.emplace_back(0, "<<<%Y-%m-%d %H:%M:%S:%3");
-    // E.g. Sun Jan 1 15:50:45 2015
+    // E.g. Sun Jan  1 15:50:45 2015
     patterns.emplace_back(0, "%a %b %e %H:%M:%S %Y");
 
     // TODO These patterns are imprecise and will prevent searching by timestamp; but for now, it's no worse than not parsing a timestamp
