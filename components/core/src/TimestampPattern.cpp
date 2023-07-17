@@ -548,7 +548,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
             if (line[line_ix] == '0') {
                 return false;
             }
-            for (int i = line_ix + field_length; i < line_length; ++i) {
+            for (int i = line_ix; i < line_length; ++i) {
                 int c = line[i];
                 if (c < '0' || '9' < c) {
                     break;
