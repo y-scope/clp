@@ -543,24 +543,24 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
             }
             is_specifier = false;
         } else if (is_relative) {
-            int cFieldLength = 0;
+            int field_length = 0;
             // no leading zeroes currently supported for relative timestamp
             if (line[line_ix] == '0') {
                 return false;
             }
-            while (line_ix + cFieldLength < line_length) {
-                if ('0' <= line[line_ix + cFieldLength] &&
-                    line[line_ix + cFieldLength] <= '9') {
-                    cFieldLength++;
+            while (line_ix + field_length < line_length) {
+                if ('0' <= line[line_ix + field_length] &&
+                    line[line_ix + field_length] <= '9') {
+                    field_length++;
                 } else {
                     break;
                 }
             }
-            if (cFieldLength == 0) {
+            if (field_length == 0) {
                 return false;
             }
             int value;
-            if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
+            if (false == convert_string_to_number(line, line_ix, line_ix + field_length, '0',
                                                   value) || 0 > value)
             {
                 return false;
@@ -582,7 +582,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     return false;
                 }
             }
-            line_ix += cFieldLength;
+            line_ix += field_length;
             is_relative = false;
         }
     }
