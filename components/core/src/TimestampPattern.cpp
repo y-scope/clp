@@ -795,7 +795,7 @@ void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, 
                     break;
                 }
                 case '9': { // Relative timestamp in nanoseconds
-                    new_msg += std::to_string(timestamp * 1000000);
+                    new_msg += std::to_string(timestamp * 1'000'000);
                     break;
                 }
                 default: {
