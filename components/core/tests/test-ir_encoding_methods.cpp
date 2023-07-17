@@ -211,10 +211,10 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
                                            EightByteEncodingMagicNumber + MagicNumberLength};
 
     // Test eight-byte encoding
-    BufferReader eight_byte_encoding_buffer (
-            reinterpret_cast<const char*>(eight_byte_encoding_vec.data()),
+    BufferReader eight_byte_encoding_buffer{
+            size_checked_pointer_cast<const char>(eight_byte_encoding_vec.data()),
             eight_byte_encoding_vec.size()
-    );
+    };
     REQUIRE(get_encoding_type(eight_byte_encoding_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<eight_byte_encoded_variable_t>(is_four_bytes_encoding));
@@ -223,29 +223,29 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
     vector<int8_t> four_byte_encoding_vec{FourByteEncodingMagicNumber,
                                           FourByteEncodingMagicNumber + MagicNumberLength};
 
-    BufferReader four_byte_encoding_buffer (
-            reinterpret_cast<const char*>(four_byte_encoding_vec.data()),
-             four_byte_encoding_vec.size()
-    );
+    BufferReader four_byte_encoding_buffer{
+            size_checked_pointer_cast<const char>(four_byte_encoding_vec.data()),
+            four_byte_encoding_vec.size()
+    };
     REQUIRE(get_encoding_type(four_byte_encoding_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<four_byte_encoded_variable_t>(is_four_bytes_encoding));
 
     // Test error on incomplete ir_buffer
-    BufferReader incomplete_buffer (
-            reinterpret_cast<const char*>(four_byte_encoding_vec.data()),
+    BufferReader incomplete_buffer{
+            size_checked_pointer_cast<const char>(four_byte_encoding_vec.data()),
             four_byte_encoding_vec.size() - 1
-    );
+    };
 
     REQUIRE(get_encoding_type(incomplete_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Incomplete_IR);
 
     // Test error on invalid encoding
     const vector<int8_t> invalid_ir_vec{0x02, 0x43, 0x24, 0x34};
-    BufferReader invalid_ir_buffer (
-            reinterpret_cast<const char*>(invalid_ir_vec.data()),
+    BufferReader invalid_ir_buffer{
+            size_checked_pointer_cast<const char>(invalid_ir_vec.data()),
             invalid_ir_vec.size()
-    );
+    };
     REQUIRE(get_encoding_type(invalid_ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Corrupted_IR);
 
@@ -264,9 +264,9 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
     const size_t encoded_preamble_end_pos = ir_buf.size();
 
     // Check if encoding type is properly read
-    BufferReader encoding_buffer (
-            reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size()
-    );
+    BufferReader encoding_buffer{
+            size_checked_pointer_cast<const char>(ir_buf.data()), ir_buf.size()
+    };
     bool is_four_bytes_encoding;
     REQUIRE(get_encoding_type(encoding_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
@@ -313,8 +313,8 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
 
     // Test if incomplete IR can be detected
     ir_buf.resize(encoded_preamble_end_pos - 1);
-    BufferReader incomplete_preamble_buffer(reinterpret_cast<const char*>(ir_buf.data()),
-                                            ir_buf.size());
+    BufferReader incomplete_preamble_buffer{size_checked_pointer_cast<const char>(ir_buf.data()),
+                                            ir_buf.size()};
     incomplete_preamble_buffer.seek_from_begin(MagicNumberLength);
     REQUIRE(decode_preamble(
                     incomplete_preamble_buffer, metadata_type, metadata_pos, metadata_size) ==
@@ -322,8 +322,8 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
 
     // Test if corrupted IR can be detected
     ir_buf[MagicNumberLength] = 0x23;
-    BufferReader corrupted_preamble_buffer(reinterpret_cast<const char*>(ir_buf.data()),
-                                           ir_buf.size());
+    BufferReader corrupted_preamble_buffer{size_checked_pointer_cast<const char>(ir_buf.data()),
+                                           ir_buf.size()};
     REQUIRE(decode_preamble(
                     corrupted_preamble_buffer, metadata_type, metadata_pos, metadata_size) ==
             IRErrorCode::IRErrorCode_Corrupted_IR);
@@ -345,7 +345,7 @@ TEMPLATE_TEST_CASE("decode_next_message_general", "[ffi][decode_next_message]",
 
     // Test if message can be decoded properly
 
-    BufferReader ir_buffer(reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size());
+    BufferReader ir_buffer{size_checked_pointer_cast<const char>(ir_buf.data()), ir_buf.size()};
     string decoded_message;
     epoch_time_ms_t timestamp;
 
@@ -362,9 +362,10 @@ TEMPLATE_TEST_CASE("decode_next_message_general", "[ffi][decode_next_message]",
 
     // Test incomplete IR
     ir_buf.resize(encoded_message_end_pos - 4);
-    ir_buffer.set_buffer(reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size());
+    BufferReader incomplete_preamble_buffer{size_checked_pointer_cast<const char>(ir_buf.data()),
+                                            ir_buf.size()};
     REQUIRE(IRErrorCode::IRErrorCode_Incomplete_IR ==
-            decode_next_message<TestType>(ir_buffer, message, timestamp));
+            decode_next_message<TestType>(incomplete_preamble_buffer, message, timestamp));
 }
 
 // NOTE: This test only tests eight_byte_encoded_variable_t because we trigger
@@ -394,10 +395,10 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]")
     // Test if a trailing escape triggers a decoder error
     auto ir_with_extra_escape {ir_buf};
     ir_with_extra_escape.at(logtype_end_pos - 1) = ffi::cVariablePlaceholderEscapeCharacter;
-    BufferReader ir_with_extra_escape_buffer (
-            reinterpret_cast<const char*>(ir_with_extra_escape.data()),
+    BufferReader ir_with_extra_escape_buffer{
+            size_checked_pointer_cast<const char>(ir_with_extra_escape.data()),
             ir_with_extra_escape.size()
-    );
+    };
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error ==
             decode_next_message<eight_byte_encoded_variable_t>(ir_with_extra_escape_buffer,
                                                                decoded_message,
@@ -407,10 +408,10 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]")
     auto ir_with_extra_placeholder{ir_buf};
     ir_with_extra_placeholder.at(logtype_end_pos - 1) =
             enum_to_underlying_type(VariablePlaceholder::Dictionary);
-    BufferReader ir_with_extra_placeholder_buffer (
-            reinterpret_cast<const char*>(ir_with_extra_placeholder.data()),
+    BufferReader ir_with_extra_placeholder_buffer{
+            size_checked_pointer_cast<const char>(ir_with_extra_placeholder.data()),
             ir_with_extra_placeholder.size()
-    );
+    };
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error ==
             decode_next_message<eight_byte_encoded_variable_t>(ir_with_extra_placeholder_buffer,
                                                                decoded_message,
@@ -427,7 +428,7 @@ TEST_CASE("decode_next_message_four_byte_negative_delta", "[ffi][decode_next_mes
     REQUIRE(true == encode_message<four_byte_encoded_variable_t>(reference_delta_ts_negative,
                                                                  message, logtype, ir_buf));
 
-    BufferReader ir_buffer(reinterpret_cast<const char*>(ir_buf.data()), ir_buf.size());
+    BufferReader ir_buffer{size_checked_pointer_cast<const char>(ir_buf.data()), ir_buf.size()};
     string decoded_message;
     epoch_time_ms_t delta_ts;
     REQUIRE(IRErrorCode::IRErrorCode_Success ==
@@ -470,8 +471,8 @@ TEMPLATE_TEST_CASE("decode_ir_complete", "[ffi][decode_next_message]",
     reference_messages.push_back(message);
     reference_timestamps.push_back(ts);
 
-    BufferReader complete_encoding_buffer(reinterpret_cast<const char*>(ir_buf.data()),
-                                          ir_buf.size());
+    BufferReader complete_encoding_buffer{size_checked_pointer_cast<const char>(ir_buf.data()),
+                                          ir_buf.size()};
 
     bool is_four_bytes_encoding;
     REQUIRE(get_encoding_type(complete_encoding_buffer, is_four_bytes_encoding) ==

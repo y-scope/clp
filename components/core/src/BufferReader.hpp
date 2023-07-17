@@ -5,7 +5,7 @@
 #include "ReaderInterface.hpp"
 
 /**
- * Class for reading from a fixed size in memory buffer
+ * Class for reading from a fixed-size in-memory buffer
  */
 class BufferReader : public ReaderInterface {
 public:
@@ -14,7 +14,7 @@ public:
     public:
         // Constructors
         OperationFailed (ErrorCode error_code, const char* const filename, int line_number) :
-            TraceableException (error_code, filename, line_number) {}
+                TraceableException (error_code, filename, line_number) {}
 
         // Methods
         [[nodiscard]] const char* what () const noexcept override {
@@ -31,7 +31,6 @@ public:
      * @param buf
      * @param num_bytes_to_read The number of bytes to try and read
      * @param num_bytes_read The actual number of bytes read
-     * @return ErrorCode_NotInit if the buffer is not initialized
      * @return ErrorCode_BadParam if buf is invalid
      * @return ErrorCode_EndOfFile if buffer doesn't contain more data
      * @return ErrorCode_Success on success
@@ -41,34 +40,20 @@ public:
     /**
      * Tries to seek from the beginning of the buffer to the given position
      * @param pos
-     * @return ErrorCode_NotInit if the buffer is not initialized
      * @return ErrorCode_OutOfBounds if the given position > the buffer's size
      * @return ErrorCode_Success on success
      */
     [[nodiscard]] ErrorCode try_seek_from_begin (size_t pos) override;
     /**
-     * Tries to get the current position of the read head in the buffer
      * @param pos Returns the position of the read head in the buffer
-     * @return ErrorCode_NotInit if the buffer is not initialized
-     * @return ErrorCode_Success on success
+     * @return ErrorCode_Success
      */
     [[nodiscard]] ErrorCode try_get_pos (size_t& pos) override;
 
-    /**
-     * Sets the underlying buffer for this reader.
-     * @param data
-     * @param data_size
-     **/
-    void set_buffer (const char* data, size_t data_size) {
-        m_data = data;
-        m_data_size = data_size;
-        m_cursor_pos = 0;
-    }
-
 private:
-    const char* m_data;
-    size_t m_data_size;
-    size_t m_cursor_pos;
+    const char* m_internal_buf;
+    size_t m_internal_buf_size;
+    size_t m_internal_buf_pos{0};
 };
 
-#endif // BufferReader_HPP
+#endif // BUFFERREADER_HPP
