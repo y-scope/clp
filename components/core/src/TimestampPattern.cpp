@@ -240,8 +240,9 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
-                                                  value) || value < 0 || value > 99) {
+                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                          '0', value) || value < 0 || value > 99)
+                    {
                         return false;
                     }
                     year = value;
@@ -264,8 +265,9 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
-                                                  value) || value < 0 || value > 9999) {
+                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                          '0', value) || value < 0 || value > 9999)
+                    {
                         return false;
                     }
                     year = value;
@@ -316,8 +318,9 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
-                                                  value) || value < 1 || value > 12) {
+                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                          '0', value) || value < 1 || value > 12)
+                    {
                         return false;
                     }
                     month = value;
@@ -334,8 +337,9 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
-                                                  value) || value < 1 || value > 31) {
+                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                          '0', value) || value < 1 || value > 31)
+                    {
                         return false;
                     }
                     date = value;
@@ -352,8 +356,9 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, ' ',
-                                                  value) || value < 1 || value > 31) {
+                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                          ' ', value) || value < 1 || value > 31)
+                    {
                         return false;
                     }
                     date = value;
@@ -401,8 +406,9 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
-                                                  value) || value < 0 || value > 23) {
+                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                          '0', value) || value < 0 || value > 23)
+                    {
                         return false;
                     }
                     hour = value;
@@ -419,8 +425,9 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, ' ',
-                                                  value) || value < 0 || value > 23) {
+                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                          ' ', value) || value < 0 || value > 23)
+                    {
                         return false;
                     }
                     hour = value;
@@ -437,8 +444,9 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
-                                                  value) || value < 1 || value > 12) {
+                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                          '0', value) || value < 1 || value > 12)
+                    {
                         return false;
                     }
                     hour = value;
@@ -456,8 +464,9 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, ' ',
-                                                  value) || value < 1 || value > 12) {
+                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                          ' ', value) || value < 1 || value > 12)
+                    {
                         return false;
                     }
                     hour = value;
@@ -475,8 +484,9 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
-                                                  value) || value < 0 || value > 59) {
+                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                          '0', value) || value < 0 || value > 59)
+                    {
                         return false;
                     }
                     minute = value;
@@ -493,8 +503,9 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
-                                                  value) || value < 0 || value > 60) {
+                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                          '0', value) || value < 0 || value > 60)
+                    {
                         return false;
                     }
                     second = value;
@@ -511,8 +522,9 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
 
                     int value;
-                    if (!convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
-                                                  value) || value < 0 || value > 999) {
+                    if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
+                                                          '0', value) || value < 0 || value > 999)
+                    {
                         return false;
                     }
                     millisecond = value;
@@ -548,8 +560,9 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                 return false;
             }
             int value;
-            if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0', value)
-                || 0 > value) {
+            if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength, '0',
+                                                  value) || 0 > value)
+            {
                 return false;
             }
             switch (m_format[format_ix]) {
