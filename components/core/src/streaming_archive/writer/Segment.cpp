@@ -1,11 +1,14 @@
 #include "Segment.hpp"
 
-#include <cmath>
+// C standard libraries
 #include <sys/stat.h>
 
+// C++ standard libraries
 #include <climits>
+#include <cmath>
 #include <cstring>
 
+// Project headers
 #include "../../ErrorCode.hpp"
 #include "../../FileWriter.hpp"
 #include "../../spdlog_with_specializations.hpp"
@@ -16,17 +19,13 @@ using std::to_string;
 using std::unique_ptr;
 
 namespace streaming_archive { namespace writer {
-    Segment::~Segment() {
+    Segment::~Segment () {
         if (!m_segment_path.empty()) {
-            SPDLOG_ERROR(
-                    "streaming_archive::writer::Segment: Segment {} not closed before being "
-                    "destroyed causing possible data loss",
-                    m_segment_path.c_str()
-            );
+            SPDLOG_ERROR("streaming_archive::writer::Segment: Segment {} not closed before being destroyed causing possible data loss", m_segment_path.c_str());
         }
     }
 
-    void Segment::open(string const& segments_dir_path, segment_id_t id, int compression_level) {
+    void Segment::open (const string& segments_dir_path, segment_id_t id, int compression_level) {
         if (!m_segment_path.empty()) {
             throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
         }
@@ -47,7 +46,7 @@ namespace streaming_archive { namespace writer {
 #endif
     }
 
-    void Segment::close() {
+    void Segment::close () {
         m_compressor.close();
         m_file_writer.flush();
         m_file_writer.close();
@@ -57,7 +56,7 @@ namespace streaming_archive { namespace writer {
         m_segment_path.clear();
     }
 
-    void Segment::append(char const* buf, const uint64_t buf_len, uint64_t& offset) {
+    void Segment::append (const char* buf, const uint64_t buf_len, uint64_t& offset) {
         // Compress
         m_compressor.write(buf, buf_len);
 
@@ -66,11 +65,11 @@ namespace streaming_archive { namespace writer {
         m_offset += buf_len;
     }
 
-    uint64_t Segment::get_uncompressed_size() {
+    uint64_t Segment::get_uncompressed_size () {
         return m_offset;
     }
 
-    bool Segment::is_open() const {
+    bool Segment::is_open () const {
         return !m_segment_path.empty();
     }
-}}  // namespace streaming_archive::writer
+} }

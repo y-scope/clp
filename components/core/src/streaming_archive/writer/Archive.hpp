@@ -1,25 +1,28 @@
 #ifndef STREAMING_ARCHIVE_WRITER_ARCHIVE_HPP
 #define STREAMING_ARCHIVE_WRITER_ARCHIVE_HPP
 
-#include <filesystem>
+// C++ libraries
 #include <memory>
 #include <set>
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <filesystem>
 
+// Boost libraries
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid.hpp>
 
+// Project headers
 #include "../../ArrayBackedPosIntSet.hpp"
-#include "../../compressor_frontend/Token.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../GlobalMetadataDB.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
+#include "../../compressor_frontend/Token.hpp"
 #include "../MetadataDB.hpp"
 
-namespace streaming_archive { namespace writer {
+namespace streaming_archive { namespace writer { 
     class Archive {
     public:
         // Types
@@ -32,8 +35,7 @@ namespace streaming_archive { namespace writer {
          * @param compression_level Compression level of the compressor being opened
          * @param output_dir Output directory
          * @param global_metadata_db
-         * @param print_archive_stats_progress Enable printing statistics about the archive as it's
-         * compressed
+         * @param print_archive_stats_progress Enable printing statistics about the archive as it's compressed
          */
         struct UserConfig {
             boost::uuids::uuid id;
@@ -49,11 +51,10 @@ namespace streaming_archive { namespace writer {
         class OperationFailed : public TraceableException {
         public:
             // Constructors
-            OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                    : TraceableException(error_code, filename, line_number) {}
+            OperationFailed (ErrorCode error_code, const char* const filename, int line_number) : TraceableException (error_code, filename, line_number) {}
 
             // Methods
-            char const* what() const noexcept override {
+            const char* what () const noexcept override {
                 return "streaming_archive::writer::Archive operation failed";
             }
         };
@@ -68,37 +69,30 @@ namespace streaming_archive { namespace writer {
         std::string m_schema_file_path;
 
         // Constructors
-        Archive()
-                : m_segments_dir_fd(-1),
-                  m_compression_level(0),
-                  m_global_metadata_db(nullptr),
-                  old_ts_pattern(),
-                  m_schema_file_path() {}
+        Archive () : m_segments_dir_fd(-1), m_compression_level(0), m_global_metadata_db(nullptr),
+                old_ts_pattern(), m_schema_file_path() {}
 
         // Destructor
-        ~Archive();
+        ~Archive ();
 
         // Methods
         /**
          * Creates the directory structure for the archive and opens writers for the dictionaries
          * @param user_config Settings configurable by the user
          * @throw FileWriter::OperationFailed if any dictionary writer could not be opened
-         * @throw streaming_archive::writer::Archive::OperationFailed if archive already exists, if
-         it could not be stat-ed, if the directory structure could not be created, if the file is
-         not reset or problems with medatadata.
+         * @throw streaming_archive::writer::Archive::OperationFailed if archive already exists, if it could not be stat-ed, if the directory structure could
+                  not be created, if the file is not reset or problems with medatadata.
          */
-        void open(UserConfig const& user_config);
+        void open (const UserConfig& user_config);
         /**
-         * Writes a final snapshot of the archive, closes all open files, and closes the
-         * dictionaries
+         * Writes a final snapshot of the archive, closes all open files, and closes the dictionaries
          * @throw FileWriter::OperationFailed if any writer could not be closed
-         * @throw streaming_archive::writer::Archive::OperationFailed if any empty directories could
-         * not be removed
+         * @throw streaming_archive::writer::Archive::OperationFailed if any empty directories could not be removed
          * @throw streaming_archive::writer::Archive::OperationFailed if the file is not reset
          * @throw Same as streaming_archive::writer::SegmentManager::close
          * @throw Same as streaming_archive::writer::Archive::write_dir_snapshot
          */
-        void close();
+        void close ();
 
         /**
          * Creates and opens a file with the given path
@@ -108,28 +102,23 @@ namespace streaming_archive { namespace writer {
          * @param split_ix
          * @return Pointer to the new file
          */
-        void create_and_open_file(
-                std::string const& path,
-                group_id_t group_id,
-                boost::uuids::uuid const& orig_file_id,
-                size_t split_ix
-        );
+        void create_and_open_file (const std::string& path, group_id_t group_id, const boost::uuids::uuid& orig_file_id, size_t split_ix);
 
-        void close_file();
+        void close_file ();
 
-        File const& get_file() const;
+        const File& get_file () const;
 
         /**
          * Sets the split status of the current encoded file
          * @param is_split
          */
-        void set_file_is_split(bool is_split);
+        void set_file_is_split (bool is_split);
 
         /**
          * Wrapper for streaming_archive::writer::File::change_ts_pattern
          * @param pattern
          */
-        void change_ts_pattern(TimestampPattern const* pattern);
+        void change_ts_pattern (const TimestampPattern* pattern);
         /**
          * Encodes and writes a message to the current encoded file
          * @param timestamp
@@ -137,8 +126,7 @@ namespace streaming_archive { namespace writer {
          * @param num_uncompressed_bytes
          * @throw FileWriter::OperationFailed if any write fails
          */
-        void
-        write_msg(epochtime_t timestamp, std::string const& message, size_t num_uncompressed_bytes);
+        void write_msg (epochtime_t timestamp, const std::string& message, size_t num_uncompressed_bytes);
         /**
          * Encodes and writes a message to the given file using schema file
          * @param file
@@ -148,45 +136,34 @@ namespace streaming_archive { namespace writer {
          * @param has_timestamp
          * @throw FileWriter::OperationFailed if any write fails
          */
-        void write_msg_using_schema(
-                compressor_frontend::Token*& uncompressed_msg,
-                uint32_t uncompressed_msg_pos,
-                bool has_delimiter,
-                bool has_timestamp
-        );
+        void write_msg_using_schema (compressor_frontend::Token*& uncompressed_msg, uint32_t uncompressed_msg_pos, bool has_delimiter, bool has_timestamp);
 
         /**
-         * Writes snapshot of archive to disk including metadata of all files and new dictionary
-         * entries
+         * Writes snapshot of archive to disk including metadata of all files and new dictionary entries
          * @throw FileWriter::OperationFailed if failed to write or flush dictionaries
          * @throw std::out_of_range if dictionary ID unexpectedly didn't exist
          * @throw Same as streaming_archive::writer::Archive::persist_file_metadata
          */
-        void write_dir_snapshot();
+        void write_dir_snapshot ();
 
         /**
          * Adds the encoded file to the segment
-         * @throw streaming_archive::writer::Archive::OperationFailed if failed the file is not
-         * tracked by the current archive
+         * @throw streaming_archive::writer::Archive::OperationFailed if failed the file is not tracked by the current archive
          * @throw Same as streaming_archive::writer::Archive::persist_file_metadata
          */
-        void append_file_to_segment();
+        void append_file_to_segment ();
 
         /**
          * Adds empty directories to the archive
          * @param empty_directory_paths
-         * @throw streaming_archive::writer::Archive::OperationFailed if failed to insert paths to
-         * the database
+         * @throw streaming_archive::writer::Archive::OperationFailed if failed to insert paths to the database
          */
-        void add_empty_directories(std::vector<std::string> const& empty_directory_paths);
+        void add_empty_directories (const std::vector<std::string>& empty_directory_paths);
 
-        boost::uuids::uuid const& get_id() const { return m_id; }
+        const boost::uuids::uuid& get_id () const { return m_id; }
+        const std::string& get_id_as_string () const { return m_id_as_string; }
 
-        std::string const& get_id_as_string() const { return m_id_as_string; }
-
-        size_t get_data_size_of_dictionaries() const {
-            return m_logtype_dict.get_data_size() + m_var_dict.get_data_size();
-        }
+        size_t get_data_size_of_dictionaries () const { return m_logtype_dict.get_data_size() + m_var_dict.get_data_size(); }
 
     private:
         // Types
@@ -200,7 +177,7 @@ namespace streaming_archive { namespace writer {
         class FileGroupIdAndEndTimestampLTSetComparator {
         public:
             // Methods
-            bool operator()(File const* lhs, File const* rhs) const {
+            bool operator() (const File* lhs, const File* rhs) const {
                 // Primary sort by file's group ID
                 if (lhs->get_group_id() != rhs->get_group_id()) {
                     return lhs->get_group_id() < rhs->get_group_id();
@@ -228,23 +205,17 @@ namespace streaming_archive { namespace writer {
          * @param var_ids_in_segment
          * @param files_in_segment
          */
-        void append_file_contents_to_segment(
-                Segment& segment,
-                ArrayBackedPosIntSet<logtype_dictionary_id_t>& logtype_ids_in_segment,
-                ArrayBackedPosIntSet<variable_dictionary_id_t>& var_ids_in_segment,
-                std::vector<File*>& files_in_segment
-        );
+        void append_file_contents_to_segment (Segment& segment, ArrayBackedPosIntSet<logtype_dictionary_id_t>& logtype_ids_in_segment,
+                                              ArrayBackedPosIntSet<variable_dictionary_id_t>& var_ids_in_segment, std::vector<File*>& files_in_segment);
         /**
          * Writes the given files' metadata to the database using bulk writes
          * @param files
-         * @throw streaming_archive::writer::Archive::OperationFailed if failed to replace old
-         * metadata for any file
+         * @throw streaming_archive::writer::Archive::OperationFailed if failed to replace old metadata for any file
          * @throw mongocxx::logic_error if invalid database operation is created
          */
-        void persist_file_metadata(std::vector<File*> const& files);
+        void persist_file_metadata (const std::vector<File*>& files);
         /**
-         * Closes a given segment, persists the metadata of the files in the segment, and cleans up
-         * any data remaining outside the segment
+         * Closes a given segment, persists the metadata of the files in the segment, and cleans up any data remaining outside the segment
          * @param segment
          * @param files
          * @param segment_logtype_ids
@@ -252,36 +223,31 @@ namespace streaming_archive { namespace writer {
          * @throw Same as streaming_archive::writer::Segment::close
          * @throw Same as streaming_archive::writer::Archive::persist_file_metadata
          */
-        void close_segment_and_persist_file_metadata(
-                Segment& segment,
-                std::vector<File*>& files,
-                ArrayBackedPosIntSet<logtype_dictionary_id_t>& segment_logtype_ids,
-                ArrayBackedPosIntSet<variable_dictionary_id_t>& segment_var_ids
-        );
+        void close_segment_and_persist_file_metadata (Segment& segment, std::vector<File*>& files,
+                                                      ArrayBackedPosIntSet<logtype_dictionary_id_t>& segment_logtype_ids,
+                                                      ArrayBackedPosIntSet<variable_dictionary_id_t>& segment_var_ids);
 
         /**
-         * Gets the size of uncompressed data that has been compressed into the archive and will not
-         * be changed
+         * Gets the size of uncompressed data that has been compressed into the archive and will not be changed
          * @return Size in bytes
          */
-        size_t get_stable_uncompressed_size() const;
+        size_t get_stable_uncompressed_size () const;
         /**
          * Gets the size of the portion of the archive that will not be changed
          * @return Size in bytes
          */
-        size_t get_stable_size() const;
+        size_t get_stable_size () const;
         /**
          * Updates the archive's metadata
          */
-        void update_metadata();
+        void update_metadata ();
 
         // Variables
         boost::uuids::uuid m_id;
         std::string m_id_as_string;
 
         // Used to order the archives created by a single thread
-        // NOTE: This is necessary because files may be split across archives and we want to
-        // decompress their parts in order.
+        // NOTE: This is necessary because files may be split across archives and we want to decompress their parts in order.
         boost::uuids::uuid m_creator_id;
         std::string m_creator_id_as_string;
         size_t m_creation_num;
@@ -303,31 +269,24 @@ namespace streaming_archive { namespace writer {
         boost::uuids::random_generator m_uuid_generator;
 
         file_id_t m_next_file_id;
-        // Since we batch metadata persistence operations, we need to keep track of files whose
-        // metadata should be persisted Accordingly:
-        // - m_files_with_timestamps_in_segment contains files that 1) have been moved to an open
-        // segment and 2) contain timestamps
-        // - m_files_without_timestamps_in_segment contains files that 1) have been moved to an open
-        // segment and 2) do not contain timestamps
+        // Since we batch metadata persistence operations, we need to keep track of files whose metadata should be persisted
+        // Accordingly:
+        // - m_files_with_timestamps_in_segment contains files that 1) have been moved to an open segment and 2) contain timestamps
+        // - m_files_without_timestamps_in_segment contains files that 1) have been moved to an open segment and 2) do not contain timestamps
         segment_id_t m_next_segment_id;
         std::vector<File*> m_files_with_timestamps_in_segment;
         std::vector<File*> m_files_without_timestamps_in_segment;
 
         size_t m_target_segment_uncompressed_size;
         Segment m_segment_for_files_with_timestamps;
-        ArrayBackedPosIntSet<logtype_dictionary_id_t>
-                m_logtype_ids_in_segment_for_files_with_timestamps;
-        ArrayBackedPosIntSet<variable_dictionary_id_t>
-                m_var_ids_in_segment_for_files_with_timestamps;
-        // Logtype and variable IDs for a file that hasn't yet been assigned to the timestamp or
-        // timestamp-less segment
+        ArrayBackedPosIntSet<logtype_dictionary_id_t> m_logtype_ids_in_segment_for_files_with_timestamps;
+        ArrayBackedPosIntSet<variable_dictionary_id_t> m_var_ids_in_segment_for_files_with_timestamps;
+        // Logtype and variable IDs for a file that hasn't yet been assigned to the timestamp or timestamp-less segment
         std::unordered_set<logtype_dictionary_id_t> m_logtype_ids_for_file_with_unassigned_segment;
         std::unordered_set<variable_dictionary_id_t> m_var_ids_for_file_with_unassigned_segment;
         Segment m_segment_for_files_without_timestamps;
-        ArrayBackedPosIntSet<logtype_dictionary_id_t>
-                m_logtype_ids_in_segment_for_files_without_timestamps;
-        ArrayBackedPosIntSet<variable_dictionary_id_t>
-                m_var_ids_in_segment_for_files_without_timestamps;
+        ArrayBackedPosIntSet<logtype_dictionary_id_t> m_logtype_ids_in_segment_for_files_without_timestamps;
+        ArrayBackedPosIntSet<variable_dictionary_id_t> m_var_ids_in_segment_for_files_without_timestamps;
 
         size_t m_stable_uncompressed_size;
         size_t m_stable_size;
@@ -342,6 +301,6 @@ namespace streaming_archive { namespace writer {
 
         bool m_print_archive_stats_progress;
     };
-}}  // namespace streaming_archive::writer
+} }
 
-#endif  // STREAMING_ARCHIVE_WRITER_ARCHIVE_HPP
+#endif // STREAMING_ARCHIVE_WRITER_ARCHIVE_HPP
