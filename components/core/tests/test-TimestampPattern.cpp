@@ -26,7 +26,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(0 == timestamp_begin_pos);
     REQUIRE(23 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -40,7 +40,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(0 == timestamp_begin_pos);
     REQUIRE(23 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -54,7 +54,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(0 == timestamp_begin_pos);
     REQUIRE(20 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -68,7 +68,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(0 == timestamp_begin_pos);
     REQUIRE(19 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -82,7 +82,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(0 == timestamp_begin_pos);
     REQUIRE(23 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -96,7 +96,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(0 == timestamp_begin_pos);
     REQUIRE(23 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -110,7 +110,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(0 == timestamp_begin_pos);
     REQUIRE(25 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -124,7 +124,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(0 == timestamp_begin_pos);
     REQUIRE(19 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -138,7 +138,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(0 == timestamp_begin_pos);
     REQUIRE(19 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -152,7 +152,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(0 == timestamp_begin_pos);
     REQUIRE(17 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -166,7 +166,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(0 == timestamp_begin_pos);
     REQUIRE(15 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -180,7 +180,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(0 == timestamp_begin_pos);
     REQUIRE(24 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -194,7 +194,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(0 == timestamp_begin_pos);
     REQUIRE(24 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -208,7 +208,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(0 == timestamp_begin_pos);
     REQUIRE(23 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -222,7 +222,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(2 == timestamp_begin_pos);
     REQUIRE(23 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -236,7 +236,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(14 == timestamp_begin_pos);
     REQUIRE(35 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -250,7 +250,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(12 == timestamp_begin_pos);
     REQUIRE(35 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -264,7 +264,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(57 == timestamp_begin_pos);
     REQUIRE(76 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -278,7 +278,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(20 == timestamp_begin_pos);
     REQUIRE(39 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -292,7 +292,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(25 == timestamp_begin_pos);
     REQUIRE(49 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -306,7 +306,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(0 == timestamp_begin_pos);
     REQUIRE(26 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -319,7 +319,7 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(0 == timestamp_begin_pos);
     REQUIRE(15 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
 
@@ -332,21 +332,51 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     REQUIRE(0 == timestamp_begin_pos);
     REQUIRE(18 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
     
-    line = "626515 content after";
+    line = "626515123 content after";
     pattern = TimestampPattern::search_known_ts_patterns(line, timestamp, timestamp_begin_pos,
                                                          timestamp_end_pos);
     REQUIRE(nullptr != pattern);
     REQUIRE(pattern->get_num_spaces_before_ts() == 0);
     REQUIRE(pattern->get_format() == "%#3");
-    REQUIRE(626515 == timestamp);
+    REQUIRE(626515123 == timestamp);
     REQUIRE(0 == timestamp_begin_pos);
-    REQUIRE(6 == timestamp_end_pos);
+    REQUIRE(9 == timestamp_end_pos);
     content.assign(line, 0, timestamp_begin_pos);
-    content.append(line, timestamp_end_pos, timestamp_end_pos - line.size());
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     pattern->insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
+
+    // The patterns below overlap with the known timestamp patterns, so we can
+    // only test them by specifying them manually
+    // NOTE: Since the timestamp's stored by CLP are in milliseconds right now,
+    // microsecond and nanosecond-precision timestamps get truncated.
+    line = "626515123 content after";
+    auto specific_pattern = TimestampPattern{0, "%#6"};
+    specific_pattern.parse_timestamp(line, timestamp, timestamp_begin_pos, timestamp_end_pos);
+    REQUIRE(specific_pattern.get_num_spaces_before_ts() == 0);
+    REQUIRE(specific_pattern.get_format() == "%#6");
+    REQUIRE(626515 == timestamp);
+    REQUIRE(0 == timestamp_begin_pos);
+    REQUIRE(9 == timestamp_end_pos);
+    content.assign(line, 0, timestamp_begin_pos);
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
+    specific_pattern.insert_formatted_timestamp(timestamp, content);
+    REQUIRE("626515000 content after" == content);
+
+    line = "626515123 content after";
+    specific_pattern = TimestampPattern{0, "%#9"};
+    specific_pattern.parse_timestamp(line, timestamp, timestamp_begin_pos, timestamp_end_pos);
+    REQUIRE(specific_pattern.get_num_spaces_before_ts() == 0);
+    REQUIRE(specific_pattern.get_format() == "%#9");
+    REQUIRE(626 == timestamp);
+    REQUIRE(0 == timestamp_begin_pos);
+    REQUIRE(9 == timestamp_end_pos);
+    content.assign(line, 0, timestamp_begin_pos);
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
+    specific_pattern.insert_formatted_timestamp(timestamp, content);
+    REQUIRE("626000000 content after" == content);
 }

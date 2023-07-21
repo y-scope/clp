@@ -19,6 +19,14 @@ using std::vector;
 std::unique_ptr<TimestampPattern[]> TimestampPattern::m_known_ts_patterns = nullptr;
 size_t TimestampPattern::m_known_ts_patterns_len = 0;
 
+namespace {
+enum class ParserState {
+    Literal = 0,
+    FormatSpecifier,
+    RelativeTimestampUnit
+};
+}  // namespace
+
 // File-scope constants
 static constexpr int cNumDaysInWeek = 7;
 static const char* cAbbrevDaysOfWeek[cNumDaysInWeek] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
@@ -203,18 +211,20 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
     int hour = 0;
     bool uses_12_hour_clock = false;
     int minute = 0;
-    int second = 0;
-    int millisecond = 0;
+    long second = 0;
+    long millisecond = 0;
+    long microsecond = 0;
+    long nanosecond = 0;
     bool is_pm = false;
 
     const size_t format_length = m_format.length();
     size_t format_ix = 0;
-    FormatType format_type = FormatType::StaticText;
+    ParserState state = ParserState::Literal;
     for (; format_ix < format_length && line_ix < line_length; ++format_ix) {
-        switch(format_type) {
-            case (FormatType::StaticText) :
+        switch (state) {
+            case (ParserState::Literal):
                 if ('%' == m_format[format_ix]) {
-                    format_type = FormatType::Specifier;
+                    state = ParserState::FormatSpecifier;
                 } else {
                     if (m_format[format_ix] != line[line_ix]) {
                         // Doesn't match
@@ -223,8 +233,12 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     ++line_ix;
                 }
                 break;
-            case (FormatType::Specifier) : {
-                format_type = FormatType::StaticText;
+            case (ParserState::FormatSpecifier): {
+                // NOTE: We set the next state here so that we don't have to set
+                // it before breaking out of every case below. Any cases which
+                // don't transition to this next state should set their next
+                // state before breaking.
+                state = ParserState::Literal;
                 // Parse fields
                 switch (m_format[format_ix]) {
                     case '%':
@@ -233,7 +247,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                         }
                         ++line_ix;
                         break;
-                    case 'y': { // Zero-padded year in century
+                    case 'y': {  // Zero-padded year in century
                         constexpr int cFieldLength = 2;
                         if (line_ix + cFieldLength > line_length) {
                             // Too short
@@ -255,7 +269,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                         line_ix += cFieldLength;
                         break;
                     }
-                    case 'Y': { // Zero-padded year with century
+                    case 'Y': {  // Zero-padded year with century
                         constexpr int cFieldLength = 4;
                         if (line_ix + cFieldLength > line_length) {
                             // Too short
@@ -271,7 +285,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                         line_ix += cFieldLength;
                         break;
                     }
-                    case 'B': { // Month name
+                    case 'B': {  // Month name
                         bool match_found = false;
                         for (int month_ix = 0; !match_found && month_ix < cNumMonths; ++month_ix) {
                             const size_t length = strlen(cMonthNames[month_ix]);
@@ -286,7 +300,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                         }
                         break;
                     }
-                    case 'b': { // Abbreviated month name
+                    case 'b': {  // Abbreviated month name
                         bool match_found = false;
                         for (int month_ix = 0; !match_found && month_ix < cNumMonths; ++month_ix) {
                             const size_t length = strlen(cAbbrevMonthNames[month_ix]);
@@ -301,7 +315,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                         }
                         break;
                     }
-                    case 'm': { // Zero-padded month
+                    case 'm': {  // Zero-padded month
                         constexpr int cFieldLength = 2;
                         if (line_ix + cFieldLength > line_length) {
                             // Too short
@@ -317,7 +331,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                         line_ix += cFieldLength;
                         break;
                     }
-                    case 'd': { // Zero-padded day in month
+                    case 'd': {  // Zero-padded day in month
                         constexpr int cFieldLength = 2;
                         if (line_ix + cFieldLength > line_length) {
                             // Too short
@@ -333,7 +347,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                         line_ix += cFieldLength;
                         break;
                     }
-                    case 'e': { // Space-padded day in month
+                    case 'e': {  // Space-padded day in month
                         constexpr int cFieldLength = 2;
                         if (line_ix + cFieldLength > line_length) {
                             // Too short
@@ -349,7 +363,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                         line_ix += cFieldLength;
                         break;
                     }
-                    case 'a': { // Abbreviated day of week
+                    case 'a': {  // Abbreviated day of week
                         bool match_found = false;
                         for (int day_ix = 0; !match_found && day_ix < cNumDaysInWeek; ++day_ix) {
                             const size_t abbrev_length = strlen(cAbbrevDaysOfWeek[day_ix]);
@@ -362,11 +376,11 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                         if (!match_found) {
                             return false;
                         }
-                        // Weekday is not useful in determining absolute timestamp, so we don't do
-                        // anything with it
+                        // Weekday is not useful in determining absolute
+                        // timestamp, so we don't do anything with it
                         break;
                     }
-                    case 'p': // Part of day
+                    case 'p':  // Part of day
                         if (0 == line.compare(line_ix, 2, "AM")) {
                             is_pm = false;
                         } else if (0 == line.compare(line_ix, 2, "PM")) {
@@ -376,7 +390,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                         }
                         line_ix += 2;
                         break;
-                    case 'H': { // Zero-padded hour on 24-hour clock
+                    case 'H': {  // Zero-padded hour on 24-hour clock
                         constexpr int cFieldLength = 2;
                         if (line_ix + cFieldLength > line_length) {
                             // Too short
@@ -392,7 +406,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                         line_ix += cFieldLength;
                         break;
                     }
-                    case 'k': { // Space-padded hour on 24-hour clock
+                    case 'k': {  // Space-padded hour on 24-hour clock
                         constexpr int cFieldLength = 2;
                         if (line_ix + cFieldLength > line_length) {
                             // Too short
@@ -408,7 +422,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                         line_ix += cFieldLength;
                         break;
                     }
-                    case 'I': { // Zero-padded hour on 12-hour clock
+                    case 'I': {  // Zero-padded hour on 12-hour clock
                         constexpr int cFieldLength = 2;
                         if (line_ix + cFieldLength > line_length) {
                             // Too short
@@ -425,7 +439,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                         line_ix += cFieldLength;
                         break;
                     }
-                    case 'l': { // Space-padded hour on 12-hour clock
+                    case 'l': {  // Space-padded hour on 12-hour clock
                         constexpr int cFieldLength = 2;
                         if (line_ix + cFieldLength > line_length) {
                             // Too short
@@ -442,7 +456,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                         line_ix += cFieldLength;
                         break;
                     }
-                    case 'M': { // Zero-padded minute
+                    case 'M': {  // Zero-padded minute
                         constexpr int cFieldLength = 2;
                         if (line_ix + cFieldLength > line_length) {
                             // Too short
@@ -458,7 +472,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                         line_ix += cFieldLength;
                         break;
                     }
-                    case 'S': { // Zero-padded second
+                    case 'S': {  // Zero-padded second
                         constexpr int cFieldLength = 2;
                         if (line_ix + cFieldLength > line_length) {
                             // Too short
@@ -474,7 +488,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                         line_ix += cFieldLength;
                         break;
                     }
-                    case '3': { // Zero-padded millisecond
+                    case '3': {  // Zero-padded millisecond
                         constexpr int cFieldLength = 3;
                         if (line_ix + cFieldLength > line_length) {
                             // Too short
@@ -491,16 +505,17 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                         break;
                     }
                     case '#':
-                        format_type = FormatType::Relative;
+                        state = ParserState::RelativeTimestampUnit;
                         break;
                     default:
                         return false;
                 }
                 break;
             }
-            case (FormatType::Relative) : {
+            case (ParserState::RelativeTimestampUnit): {
                 int field_length = 0;
-                // no leading zeroes currently supported for relative timestamp
+                // Leading zeroes are not currently supported for relative
+                // timestamps
                 if (line[line_ix] == '0') {
                     return false;
                 }
@@ -521,16 +536,16 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     return false;
                 }
                 switch (m_format[format_ix]) {
-                    case '3': { // Relative timestamp in milliseconds
+                    case '3': {  // Relative timestamp in milliseconds
                         millisecond = value;
                         break;
                     }
-                    case '6': { // Relative timestamp in microseconds
-                        millisecond = value / 1000;
+                    case '6': {  // Relative timestamp in microseconds
+                        microsecond = value;
                         break;
                     }
-                    case '9': { // Relative timestamp in nanoseconds
-                        millisecond = value / 1000000;
+                    case '9': {  // Relative timestamp in nanoseconds
+                        nanosecond = value;
                         break;
                     }
                     default: {
@@ -538,7 +553,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     }
                 }
                 line_ix += field_length;
-                format_type = FormatType::StaticText;
+                state = ParserState::Literal;
                 break;
             }
             default:
@@ -572,14 +587,17 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
         return false;
     }
     // Convert complete timestamp into a time point with millisecond resolution
-    auto timestamp_point = date::sys_days(year_month_date) + std::chrono::hours(hour) + std::chrono::minutes(minute) + std::chrono::seconds(second) +
-                           std::chrono::milliseconds(millisecond);
+    auto timestamp_point = date::sys_days{year_month_date} + std::chrono::hours{hour}
+                           + std::chrono::minutes{minute} + std::chrono::seconds{second}
+                           + std::chrono::milliseconds{millisecond}
+                           + std::chrono::microseconds{microsecond}
+                           + std::chrono::nanoseconds{nanosecond};
     // Get time point since epoch
     auto unix_epoch_point = date::sys_days(date::year(1970)/1/1);
     // Get timestamp since epoch
     auto duration_since_epoch = timestamp_point - unix_epoch_point;
     // Convert to raw milliseconds
-    timestamp = duration_since_epoch.count();
+    timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(duration_since_epoch).count();
 
     timestamp_begin_pos = ts_begin_ix;
     timestamp_end_pos = line_ix;
@@ -623,28 +641,28 @@ void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, 
     auto time_of_day = date::make_time(time_of_day_duration);
     int hour = time_of_day.hours().count();
     int minute = time_of_day.minutes().count();
-    int second = time_of_day.seconds().count();
-    int millisecond = time_of_day.subseconds().count();
+    long second = time_of_day.seconds().count();
+    long millisecond = time_of_day.subseconds().count();
 
     const size_t format_length = m_format.length();
-    FormatType format_type = FormatType::StaticText;
+    ParserState state = ParserState::Literal;
     for (size_t format_ix = 0; format_ix < format_length; ++format_ix) {
-        switch(format_type) {
-            case (FormatType::StaticText) :
+        switch (state) {
+            case (ParserState::Literal):
                 if ('%' == m_format[format_ix]) {
-                    format_type = FormatType::Specifier;
+                    state = ParserState::FormatSpecifier;
                 } else {
                     new_msg += m_format[format_ix];
                 }
                 break;
-            case (FormatType::Specifier) : {
-                format_type = FormatType::StaticText;
+            case (ParserState::FormatSpecifier): {
+                state = ParserState::Literal;
                 // Parse fields
                 switch (m_format[format_ix]) {
                     case '%':
                         new_msg += m_format[format_ix];
                         break;
-                    case 'y': { // Zero-padded year in century
+                    case 'y': {  // Zero-padded year in century
                         int value = year;
                         if (year >= 2000) {
                             // year must be in range [2000,2068]
@@ -656,41 +674,41 @@ void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, 
                         append_padded_value(value, '0', 2, new_msg);
                         break;
                     }
-                    case 'Y': // Zero-padded year with century
+                    case 'Y':  // Zero-padded year with century
                         append_padded_value(year, '0', 4, new_msg);
                         break;
-                    case 'B': // Month name
+                    case 'B':  // Month name
                         new_msg += cMonthNames[month - 1];
                         break;
-                    case 'b': // Abbreviated month name
+                    case 'b':  // Abbreviated month name
                         new_msg += cAbbrevMonthNames[month - 1];
                         break;
-                    case 'm': // Zero-padded month
+                    case 'm':  // Zero-padded month
                         append_padded_value(month, '0', 2, new_msg);
                         break;
-                    case 'd': // Zero-padded day in month
+                    case 'd':  // Zero-padded day in month
                         append_padded_value(date, '0', 2, new_msg);
                         break;
-                    case 'e': // Space-padded day in month
+                    case 'e':  // Space-padded day in month
                         append_padded_value(date, ' ', 2, new_msg);
                         break;
-                    case 'a': // Abbreviated day of week
+                    case 'a':  // Abbreviated day of week
                         new_msg += cAbbrevDaysOfWeek[day_of_week_ix];
                         break;
-                    case 'p': // Part of day
+                    case 'p':  // Part of day
                         if (hour > 11) {
                             new_msg += "PM";
                         } else {
                             new_msg += "AM";
                         }
                         break;
-                    case 'H': // Zero-padded hour on 24-hour clock
+                    case 'H':  // Zero-padded hour on 24-hour clock
                         append_padded_value(hour, '0', 2, new_msg);
                         break;
-                    case 'k': // Space-padded hour on 24-hour clock
+                    case 'k':  // Space-padded hour on 24-hour clock
                         append_padded_value(hour, ' ', 2, new_msg);
                         break;
-                    case 'I': { // Zero-padded hour on 12-hour clock
+                    case 'I': {  // Zero-padded hour on 12-hour clock
                         int value = hour;
                         if (0 == value) {
                             value = 12;
@@ -700,7 +718,7 @@ void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, 
                         append_padded_value(value, '0', 2, new_msg);
                         break;
                     }
-                    case 'l': { // Space-padded hour on 12-hour clock
+                    case 'l': {  // Space-padded hour on 12-hour clock
                         int value = hour;
                         if (0 == value) {
                             value = 12;
@@ -710,40 +728,52 @@ void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, 
                         append_padded_value(value, ' ', 2, new_msg);
                         break;
                     }
-                    case 'M': // Zero-padded minute
+                    case 'M':  // Zero-padded minute
                         append_padded_value(minute, '0', 2, new_msg);
                         break;
-                    case 'S': // Zero-padded second
+                    case 'S':  // Zero-padded second
                         append_padded_value(second, '0', 2, new_msg);
                         break;
-                    case '3': // Zero-padded millisecond
+                    case '3':  // Zero-padded millisecond
                         append_padded_value(millisecond, '0', 3, new_msg);
                         break;
-                    case '#': // Relative timestamp
-                        format_type = FormatType::Relative;
+                    case '#':  // Relative timestamp
+                        state = ParserState::RelativeTimestampUnit;
                         break;
                     default:
                         throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
                 }
                 break;
             }
-            case (FormatType::Relative) :
+            case (ParserState::RelativeTimestampUnit):
                 switch (m_format[format_ix]) {
-                    case '3': // Relative timestamp in milliseconds
+                    case '3':  // Relative timestamp in milliseconds
                         new_msg += std::to_string(timestamp);
                         break;
-                    case '6': // Relative timestamp in microseconds
-                        new_msg += std::to_string(timestamp * 1000);
+                    case '6': {  // Relative timestamp in microseconds
+                        auto millisecond_duration = std::chrono::milliseconds{timestamp};
+                        auto microsecond_duration
+                                = std::chrono::duration_cast<std::chrono::microseconds>(
+                                        millisecond_duration
+                                );
+                        new_msg += std::to_string(microsecond_duration.count());
                         break;
-                    case '9': // Relative timestamp in nanoseconds
-                        new_msg += std::to_string(timestamp * 1'000'000);
+                    }
+                    case '9': {  // Relative timestamp in nanoseconds
+                        auto millisecond_duration = std::chrono::milliseconds{timestamp};
+                        auto nanosecond_duration
+                                = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                        millisecond_duration
+                                );
+                        new_msg += std::to_string(nanosecond_duration.count());
                         break;
+                    }
                     default:
                         throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
                 }
-                format_type = FormatType::StaticText;
+                state = ParserState::Literal;
                 break;
-            default :
+            default:
                 throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
     }

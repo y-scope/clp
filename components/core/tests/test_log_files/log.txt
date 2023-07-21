@@ -1,6 +1,6 @@
-123123 relative timestamp
 2016-05-08 07:34:05.251 MyDog123 APet4123\test.txt
 2016-05-08 07:34:05.252 statictext123
 2016-05-08 07:34:05.253 123
 2016-05-08 07:34:05.254 123.123
 2016-05-08 07:34:05.255 Some Static Text Then MyDog123 APet4123\test.txt Then 123 then 123.123
+123123 relative timestamp

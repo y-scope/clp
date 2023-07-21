@@ -37,15 +37,15 @@
  * - M  2-digit 0-padded minute (00-59)
  * - S  2-digit 0-padded second (00-60) (60 to account for leap seconds)
  * - 3  0-padded millisecond (000-999)
+ * - #  A relative timestamp with the unit indicated by the number following.
+ *      NOTE: Currently, clp only supports timestamps up to millisecond
+ *      precision, so microsecond and nanosecond timestamps will be truncated.
+ *      - 3  Milliseconds
+ *      - 6  Microseconds
+ *      - 9  Nanoseconds
  */
 class TimestampPattern {
 public:
-    enum class FormatType : uint16_t {
-        StaticText = 0,
-        Specifier,
-        Relative
-    };
-            
     // Types
     class OperationFailed : public TraceableException {
     public:
