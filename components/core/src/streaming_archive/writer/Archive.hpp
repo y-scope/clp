@@ -25,7 +25,7 @@
 #include "../../VariableDictionaryWriter.hpp"
 #include "../MetadataDB.hpp"
 
-namespace streaming_archive { namespace writer { 
+namespace streaming_archive { namespace writer {
     class Archive {
     public:
         // Types

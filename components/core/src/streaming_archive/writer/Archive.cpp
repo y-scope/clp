@@ -284,7 +284,7 @@ namespace streaming_archive::writer {
             m_var_ids_for_file_with_unassigned_segment.insert(var_ids.cbegin(), var_ids.cend());
         }
     }
-    
+
     void Archive::write_msg_using_schema (LogEventView& log_view) {
         epochtime_t timestamp = 0;
         TimestampPattern* timestamp_pattern = nullptr;
@@ -292,7 +292,7 @@ namespace streaming_archive::writer {
             size_t start;
             size_t end;
             timestamp_pattern = (TimestampPattern*) TimestampPattern::search_known_ts_patterns(
-                    log_view.get_log_output_buffer()->get_mutable_token(0).to_string(), timestamp, 
+                    log_view.get_log_output_buffer()->get_mutable_token(0).to_string(), timestamp,
                     start, end);
             if (m_old_ts_pattern != *timestamp_pattern) {
                 change_ts_pattern(timestamp_pattern);
@@ -308,7 +308,7 @@ namespace streaming_archive::writer {
             }
         }
         if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts) {
-            clp::split_file_and_archive(m_archive_user_config, m_path_for_compression, m_group_id, 
+            clp::split_file_and_archive(m_archive_user_config, m_path_for_compression, m_group_id,
                                         timestamp_pattern, *this);
         } else if (m_file->get_encoded_size_in_bytes() >= m_target_encoded_file_size) {
             clp::split_file(m_path_for_compression, m_group_id, timestamp_pattern, *this);
@@ -334,7 +334,7 @@ namespace streaming_archive::writer {
             int token_type = token.m_type_ids_ptr->at(0);
             if (log_view.get_log_output_buffer()->has_delimiters() &&
                   token_type != (int) log_surgeon::SymbolID::TokenUncaughtStringID &&
-                  token_type != (int) log_surgeon::SymbolID::TokenNewlineId) 
+                  token_type != (int) log_surgeon::SymbolID::TokenNewlineId)
             {
                 m_logtype_dict_entry.add_constant(token.get_delimiter(), 0, 1);
                 if (token.m_start_pos == token.m_buffer_size - 1) {
@@ -344,7 +344,7 @@ namespace streaming_archive::writer {
                 }
             }
             switch (token_type) {
-                case (int) log_surgeon::SymbolID::TokenNewlineId: 
+                case (int) log_surgeon::SymbolID::TokenNewlineId:
                 case (int) log_surgeon::SymbolID::TokenUncaughtStringID: {
                     m_logtype_dict_entry.add_constant(token.to_string(), 0, token.get_length());
                     break;

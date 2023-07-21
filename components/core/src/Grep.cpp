@@ -35,9 +35,9 @@ enum class SubQueryMatchabilityResult {
  * @param logtype
  * @return true if this token might match a message, false otherwise
  */
-static bool process_var_token (const QueryToken& query_token, 
-                               const Archive& archive, 
-                               bool ignore_case, 
+static bool process_var_token (const QueryToken& query_token,
+                               const Archive& archive,
+                               bool ignore_case,
                                SubQuery& sub_query,
                                string& logtype,
                                bool use_heuristic);
@@ -65,7 +65,7 @@ static bool find_matching_message (const Query& query, Archive& archive, const S
 static SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archive& archive, string& processed_search_string,
                                                                            vector<QueryToken>& query_tokens, bool ignore_case, SubQuery& sub_query);
 
-static bool process_var_token (const QueryToken& query_token, const Archive& archive, 
+static bool process_var_token (const QueryToken& query_token, const Archive& archive,
                                bool ignore_case, SubQuery& sub_query, string& logtype) {
     // Even though we may have a precise variable, we still fallback to decompressing to ensure that it is in the right place in the message
     sub_query.mark_wildcard_match_required();
@@ -227,7 +227,7 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     } else {
         std::string post_processed_search_string;
         post_processed_search_string.reserve(processed_search_string.size());
-        while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos, 
+        while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos,
                                                 is_var, forward_lexer, reverse_lexer,
                                                 post_processed_search_string)) {
             query_tokens.emplace_back(post_processed_search_string, begin_pos,
@@ -258,11 +258,11 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
         sub_query.clear();
 
         // Compute logtypes and variables for query
-        auto matchability = generate_logtypes_and_vars_for_subquery(archive, 
-                                                                    processed_search_string, 
-                                                                    query_tokens, 
-                                                                    query.get_ignore_case(), 
-                                                                    sub_query, 
+        auto matchability = generate_logtypes_and_vars_for_subquery(archive,
+                                                                    processed_search_string,
+                                                                    query_tokens,
+                                                                    query.get_ignore_case(),
+                                                                    sub_query,
                                                                     use_heuristic);
         switch (matchability) {
             case SubQueryMatchabilityResult::SupercedesAllSubQueries:
@@ -293,7 +293,7 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     return query.contains_sub_queries();
 }
 
-bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, 
+bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos,
                                              size_t& end_pos, bool& is_var) {
     const auto value_length = value.length();
     if (end_pos >= value_length) {
@@ -406,9 +406,9 @@ bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_
     return (value_length != begin_pos);
 }
 
-bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, 
+bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos,
                                  size_t& end_pos, bool& is_var,
-                                 log_surgeon::lexers::ByteLexer& forward_lexer, 
+                                 log_surgeon::lexers::ByteLexer& forward_lexer,
                                  log_surgeon::lexers::ByteLexer& reverse_lexer,
                                  string& post_processed_value) {
 
@@ -501,7 +501,7 @@ bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_
                 }};
                 log_surgeon::ParserInputBuffer parser_input_buffer;
                 if (has_suffix_wildcard) { //text*
-                    /// TODO: this is way to convoluted, can't you just set the string as the 
+                    /// TODO: this is way to convoluted, can't you just set the string as the
                     /// buffer storage?
                     stringReader.open(value.substr(begin_pos, end_pos - begin_pos - 1));
                     parser_input_buffer.read_if_safe(reader_wrapper);

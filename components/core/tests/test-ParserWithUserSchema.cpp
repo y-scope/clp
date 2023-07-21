@@ -1,5 +1,5 @@
 /// TODO: move this test to log_surgeon
-/// TODO: move load_lexer_from_file into SearchParser in log_surgeon 
+/// TODO: move load_lexer_from_file into SearchParser in log_surgeon
 
 // C libraries
 #include <sys/stat.h>
@@ -57,7 +57,7 @@ std::unique_ptr<LogParser> generate_log_parser(const std::string& schema_file) {
 void compress(const std::string& output_dir, const std::string& file_to_compress, std::string schema_file, bool old = false) {
     std::vector<std::string> arguments;
     if(old) {
-        arguments = {"main.cpp", "c", output_dir, file_to_compress};        
+        arguments = {"main.cpp", "c", output_dir, file_to_compress};
     } else {
         arguments = {"main.cpp", "c", output_dir, file_to_compress, "--schema-path", std::move(schema_file)};
     }
@@ -161,7 +161,7 @@ TEST_CASE("Test forward lexer", "[Search]") {
         SPDLOG_INFO("token:" + token.to_string() + "\n");
         SPDLOG_INFO("token.m_type_ids->back():" + forward_lexer.m_id_symbol[token.m_type_ids_ptr->back()] + "\n");
         log_surgeon::ErrorCode error_code = forward_lexer.scan(parser_input_buffer, token);
-        REQUIRE(error_code == log_surgeon::ErrorCode::Success);    
+        REQUIRE(error_code == log_surgeon::ErrorCode::Success);
     }
 }
 

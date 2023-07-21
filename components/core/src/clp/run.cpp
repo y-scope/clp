@@ -93,7 +93,7 @@ namespace clp {
 
             bool compression_successful;
             try {
-                compression_successful = compress(command_line_args, files_to_compress, 
+                compression_successful = compress(command_line_args, files_to_compress,
                                                   empty_directory_paths, grouped_files_to_compress,
                                                   command_line_args.get_target_encoded_file_size(),
                                                   std::move(reader_parser),

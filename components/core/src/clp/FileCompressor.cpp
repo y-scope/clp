@@ -112,8 +112,8 @@ namespace clp {
                                                 file_to_compress.get_path_for_compression(),
                                                 file_to_compress.get_group_id(), archive_writer, m_file_reader);
             } else {
-                parse_and_encode_with_library(target_data_size_of_dicts, archive_user_config, 
-                                              target_encoded_file_size, 
+                parse_and_encode_with_library(target_data_size_of_dicts, archive_user_config,
+                                              target_encoded_file_size,
                                               file_to_compress.get_path_for_compression(),
                                               file_to_compress.get_group_id(), archive_writer,
                                               m_file_reader);
@@ -135,9 +135,9 @@ namespace clp {
         return succeeded;
     }
 
-    void FileCompressor::parse_and_encode_with_library (size_t target_data_size_of_dicts, 
+    void FileCompressor::parse_and_encode_with_library (size_t target_data_size_of_dicts,
             streaming_archive::writer::Archive::UserConfig& archive_user_config,
-            size_t target_encoded_file_size, const string& path_for_compression, 
+            size_t target_encoded_file_size, const string& path_for_compression,
             group_id_t group_id, streaming_archive::writer::Archive& archive_writer,
             ReaderInterface& reader)
     {
@@ -291,8 +291,8 @@ namespace clp {
                                                     boost_path_for_compression.string(), file_to_compress.get_group_id(), archive_writer,
                                                     m_libarchive_file_reader);
                 } else {
-                    parse_and_encode_with_library(target_data_size_of_dicts, archive_user_config, 
-                                                  target_encoded_file_size, 
+                    parse_and_encode_with_library(target_data_size_of_dicts, archive_user_config,
+                                                  target_encoded_file_size,
                                                   boost_path_for_compression.string(),
                                                   file_to_compress.get_group_id(), archive_writer,
                                                   m_libarchive_file_reader);

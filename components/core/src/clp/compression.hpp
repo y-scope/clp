@@ -29,9 +29,9 @@ namespace clp {
      * @param use_heuristic
      * @return true if compression was successful, false otherwise
      */
-    bool compress (CommandLineArguments& command_line_args, 
+    bool compress (CommandLineArguments& command_line_args,
                    std::vector<FileToCompress>& files_to_compress,
-                   const std::vector<std::string>& empty_directory_paths, 
+                   const std::vector<std::string>& empty_directory_paths,
                    std::vector<FileToCompress>& grouped_files_to_compress,
                    size_t target_encoded_file_size,
                    std::unique_ptr<log_surgeon::ReaderParser> reader_parser, bool use_heuristic);

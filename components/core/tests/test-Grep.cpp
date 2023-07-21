@@ -35,7 +35,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
     str = "";
     begin_pos = string::npos;
     end_pos = string::npos;
-    REQUIRE(Grep::get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var, forward_lexer, 
+    REQUIRE(Grep::get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var, forward_lexer,
                                                    reverse_lexer, post_string) == false);
 
     // Empty string

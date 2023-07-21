@@ -41,7 +41,7 @@ set(SOURCE_FILES_make-dictionaries-readable
 add_executable(make-dictionaries-readable ${SOURCE_FILES_make-dictionaries-readable})
 target_link_libraries(make-dictionaries-readable
         PRIVATE
-        Boost::filesystem Boost::iostreams Boost::program_options 
+        Boost::filesystem Boost::iostreams Boost::program_options
         log_surgeon::log_surgeon
         spdlog::spdlog
         ZStd::ZStd

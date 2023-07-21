@@ -113,9 +113,9 @@ ErrorCode read_list_of_paths (const std::string& list_path, std::vector<std::str
 
 /**
  * Loads a lexer from a file
- * @param schema_file_path 
- * @param done 
- * @param forward_lexer_ptr 
+ * @param schema_file_path
+ * @param done
+ * @param forward_lexer_ptr
  */
 void load_lexer_from_file (std::string schema_file_path,
                            bool done,

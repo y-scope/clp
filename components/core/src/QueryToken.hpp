@@ -37,7 +37,7 @@ public:
 
 private:
     // Types
-    // Type for the purpose of generating different subqueries. E.g., if a token is of type 
+    // Type for the purpose of generating different subqueries. E.g., if a token is of type
     // DictOrIntVar, it would generate a different subquery than if it was of type Logtype.
     enum class Type {
         Wildcard,

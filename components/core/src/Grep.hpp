@@ -60,17 +60,17 @@ public:
      * @param is_var Whether the token is definitely a variable
      * @param forward_lexer DFA for determining if input is in the schema
      * @param reverse_lexer DFA for determining if reverse of input is in the schema
-     * @param post_processed_string 
-     * @param is_typed 
-     * @param typed_begin_pos 
-     * @param typed_end_pos 
+     * @param post_processed_string
+     * @param is_typed
+     * @param typed_begin_pos
+     * @param typed_end_pos
      * @return true if another potential variable was found, false otherwise
      */
-    static bool get_bounds_of_next_potential_var (const std::string& value, size_t& begin_pos, 
+    static bool get_bounds_of_next_potential_var (const std::string& value, size_t& begin_pos,
                               size_t& end_pos, bool& is_var,
                               log_surgeon::lexers::ByteLexer& forward_lexer,
                               log_surgeon::lexers::ByteLexer& reverse_lexer,
-                              std::string& post_processed_string);    
+                              std::string& post_processed_string);
     /**
      * Marks which sub-queries in each query are relevant to the given file
      * @param compressed_file

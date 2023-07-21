@@ -146,7 +146,7 @@ static bool search (const vector<string>& search_strings, CommandLineArguments& 
         bool is_superseding_query = false;
         for (const auto& search_string : search_strings) {
             Query query;
-            if (Grep::process_raw_query(archive, search_string, search_begin_ts, search_end_ts, command_line_args.ignore_case(), query, forward_lexer, 
+            if (Grep::process_raw_query(archive, search_string, search_begin_ts, search_end_ts, command_line_args.ignore_case(), query, forward_lexer,
                                         reverse_lexer, use_heuristic)) {
             //if (Grep::process_raw_query(archive, search_string, search_begin_ts, search_end_ts, command_line_args.ignore_case(), query, parser)) {
                 no_queries_match = false;
@@ -414,7 +414,6 @@ int main (int argc, const char* argv[]) {
         if (!open_archive(archive_path.string(), archive_reader)) {
             return -1;
         }
-        
         // Generate lexer if schema file exists
         auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
         bool use_heuristic = true;
