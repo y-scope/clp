@@ -9,7 +9,8 @@ namespace streaming_compression { namespace passthrough {
         }
 
         if (0 == data_length) {
-            // Nothing needs to be done because we do not need to compress anything
+            // Nothing needs to be done because we do not need to compress
+            // anything
             return;
         }
         if (nullptr == data) {

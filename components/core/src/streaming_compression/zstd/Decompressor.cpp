@@ -117,12 +117,13 @@ namespace streaming_compression { namespace zstd {
 
         // Check if we've already decompressed passed the desired position
         if (m_decompressed_stream_pos > pos) {
-            // ZStd has no way for us to seek back to the desired position, so just reset the stream
-            // to the beginning
+            // ZStd has no way for us to seek back to the desired position, so
+            // just reset the stream to the beginning
             reset_stream();
         }
 
-        // We need to fast forward the decompression stream to decompressed_stream_pos
+        // We need to fast forward the decompression stream to
+        // decompressed_stream_pos
         ErrorCode error;
         while (m_decompressed_stream_pos < pos) {
             size_t num_bytes_to_decompress = std::min(
@@ -209,7 +210,8 @@ namespace streaming_compression { namespace zstd {
         }
         m_input_type = InputType::MemoryMappedCompressedFile;
 
-        // Create memory mapping for compressed_file_path, use boost read only memory mapped file
+        // Create memory mapping for compressed_file_path, use boost read only
+        // memory mapped file
         boost::system::error_code boost_error_code;
         size_t compressed_file_size
                 = boost::filesystem::file_size(compressed_file_path, boost_error_code);
@@ -227,8 +229,9 @@ namespace streaming_compression { namespace zstd {
         memory_map_params.path = compressed_file_path;
         memory_map_params.flags = boost::iostreams::mapped_file::readonly;
         memory_map_params.length = compressed_file_size;
-        memory_map_params.hint = m_memory_mapped_compressed_file.data(
-        );  // Try to map it to the same memory location as previous memory mapped file
+        // Try to map it to the same memory location as previous memory mapped
+        // file
+        memory_map_params.hint = m_memory_mapped_compressed_file.data();
         m_memory_mapped_compressed_file.open(memory_map_params);
         if (!m_memory_mapped_compressed_file.is_open()) {
             SPDLOG_ERROR(

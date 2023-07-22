@@ -55,7 +55,8 @@ namespace streaming_compression { namespace passthrough {
          * Tries to seek from the beginning to the given position
          * @param pos
          * @return ErrorCode_NotInit if the decompressor is not open
-         * @return ErrorCode_Truncated if the position is past the last byte in the file
+         * @return ErrorCode_Truncated if the position is past the last byte in
+         * the file
          * @return ErrorCode_Success on success
          */
         ErrorCode try_seek_from_begin(size_t pos) override;
@@ -77,7 +78,8 @@ namespace streaming_compression { namespace passthrough {
          * @param decompressed_stream_pos
          * @param extraction_buf
          * @param extraction_len
-         * @return Same as streaming_compression::passthrough::Decompressor::try_seek_from_begin
+         * @return Same as
+         * streaming_compression::passthrough::Decompressor::try_seek_from_begin
          * @return Same as ReaderInterface::try_read_exact_length
          */
         ErrorCode get_decompressed_stream_region(

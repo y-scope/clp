@@ -1,12 +1,11 @@
 #ifndef STREAMING_COMPRESSION_ZSTD_DECOMPRESSOR_HPP
 #define STREAMING_COMPRESSION_ZSTD_DECOMPRESSOR_HPP
 
-#include <zstd.h>
-
 #include <memory>
 #include <string>
 
 #include <boost/iostreams/device/mapped_file.hpp>
+#include <zstd.h>
 
 #include "../../FileReader.hpp"
 #include "../../TraceableException.hpp"
@@ -30,7 +29,8 @@ namespace streaming_compression { namespace zstd {
 
         // Constructor
         /**
-         * @throw Decompressor::OperationFailed if zstd decompressor stream cannot be initialized
+         * @throw Decompressor::OperationFailed if zstd decompressor stream
+         * cannot be initialized
          */
         Decompressor();
 
@@ -47,7 +47,8 @@ namespace streaming_compression { namespace zstd {
          * @param buf
          * @param num_bytes_to_read The number of bytes to try and read
          * @param num_bytes_read The actual number of bytes read
-         * @return Same as FileReader::try_read if the decompressor is attached to a file
+         * @return Same as FileReader::try_read if the decompressor is attached
+         * to a file
          * @return ErrorCode_NotInit if the decompressor is not open
          * @return ErrorCode_BadParam if buf is invalid
          * @return ErrorCode_EndOfFile on EOF
@@ -81,7 +82,8 @@ namespace streaming_compression { namespace zstd {
          * @param decompressed_stream_pos
          * @param extraction_buf
          * @param extraction_len
-         * @return Same as streaming_compression::zstd::Decompressor::try_seek_from_begin
+         * @return Same as
+         * streaming_compression::zstd::Decompressor::try_seek_from_begin
          * @return Same as ReaderInterface::try_read_exact_length
          */
         ErrorCode get_decompressed_stream_region(
@@ -92,11 +94,12 @@ namespace streaming_compression { namespace zstd {
 
         // Methods
         /***
-         * Initialize streaming decompressor to decompress from a compressed file specified by the
-         * given path
+         * Initialize streaming decompressor to decompress from a compressed
+         * file specified by the given path
          * @param compressed_file_path
          * @param decompressed_stream_block_size
-         * @return ErrorCode_Failure if the provided path cannot be memory mapped
+         * @return ErrorCode_Failure if the provided path cannot be memory
+         * mapped
          * @return ErrorCode_Success on success
          */
         ErrorCode open(std::string const& compressed_file_path);
@@ -104,8 +107,9 @@ namespace streaming_compression { namespace zstd {
     private:
         // Enum class
         enum class InputType {
-            NotInitialized,  // Note: do nothing but generate an error to prevent this required
-                             // parameter is not initialized properly
+            // Note: do nothing but generate an error to prevent this required
+            // parameter is not initialized properly
+            NotInitialized,
             CompressedDataBuf,
             MemoryMappedCompressedFile,
             File
@@ -113,8 +117,8 @@ namespace streaming_compression { namespace zstd {
 
         // Methods
         /**
-         * Reset streaming decompression state so it will start decompressing from the beginning of
-         * the stream afterwards
+         * Reset streaming decompression state so it will start decompressing
+         * from the beginning of the stream afterwards
          */
         void reset_stream();
 

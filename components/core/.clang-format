@@ -68,7 +68,7 @@ IncludeBlocks: Regroup
 IncludeCategories:
   # NOTE: A header is grouped by first matching regex
   # Third-party headers. Update when adding new third-party libraries.
-  - Regex: '^<(archive|boost|catch2|date|fmt|json|mariadb|spdlog|sqlite3|yaml-cpp)\/'
+  - Regex: '^<(archive|boost|catch2|date|fmt|json|mariadb|spdlog|sqlite3|yaml-cpp|zstd)'
     Priority: 3
   # C system headers
   - Regex: '^<.+.h>'
