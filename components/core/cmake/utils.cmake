@@ -18,7 +18,6 @@ set(SOURCE_FILES_make-dictionaries-readable
         ${CMAKE_CURRENT_SOURCE_DIR}/src/ReaderInterface.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/ReaderInterface.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/spdlog_with_specializations.hpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/streaming_compression/Decompressor.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/streaming_compression/Decompressor.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/streaming_compression/passthrough/Decompressor.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/streaming_compression/passthrough/Decompressor.hpp
