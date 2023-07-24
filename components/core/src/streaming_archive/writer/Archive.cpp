@@ -72,8 +72,7 @@ namespace streaming_archive::writer {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
         const auto& archive_path_string = archive_path.string();
-        m_stable_uncompressed_size = 0;
-        m_stable_size = 0;
+        m_local_metadata = std::make_optional<ArchiveMetadata>(cArchiveFormatVersion, m_creator_id_as_string, m_creation_num);
 
         // Create internal directories if necessary
         retval = mkdir(archive_path_string.c_str(), 0750);
@@ -134,12 +133,7 @@ namespace streaming_archive::writer {
         auto metadata_file_path = archive_path / cMetadataFileName;
         try {
             m_metadata_file_writer.open(metadata_file_path.string(), FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_SEEKABLE_WRITING);
-            // Update size before we write the metadata file so we can store the size in the metadata file
-            m_stable_size += sizeof(cArchiveFormatVersion) + sizeof(m_stable_uncompressed_size) + sizeof(m_stable_size);
-
-            m_metadata_file_writer.write_numeric_value(cArchiveFormatVersion);
-            m_metadata_file_writer.write_numeric_value(m_stable_uncompressed_size);
-            m_metadata_file_writer.write_numeric_value(m_stable_size);
+            m_local_metadata->write_to_file(m_metadata_file_writer);
             m_metadata_file_writer.flush();
         } catch (FileWriter::OperationFailed& e) {
             SPDLOG_CRITICAL("Failed to write archive file metadata collection in file: {}", metadata_file_path.c_str());
@@ -149,7 +143,7 @@ namespace streaming_archive::writer {
         m_global_metadata_db = user_config.global_metadata_db;
 
         m_global_metadata_db->open();
-        m_global_metadata_db->add_archive(m_id_as_string, m_stable_uncompressed_size, m_stable_size, m_creator_id_as_string, m_creation_num);
+        m_global_metadata_db->add_archive(m_id_as_string, *m_local_metadata);
         m_global_metadata_db->close();
 
         m_file = nullptr;
@@ -216,9 +210,6 @@ namespace streaming_archive::writer {
         m_metadata_file_writer.close();
 
         m_global_metadata_db = nullptr;
-
-        m_stable_uncompressed_size = 0;
-        m_stable_size = 0;
 
         m_metadata_db.close();
 
@@ -420,6 +411,8 @@ namespace streaming_archive::writer {
 
         m_file->append_to_segment(m_logtype_dict, segment);
         files_in_segment.emplace_back(m_file);
+        m_local_metadata->increment_static_uncompressed_size(m_file->get_num_uncompressed_bytes());
+        m_local_metadata->expand_time_range(m_file->get_begin_ts(), m_file->get_end_ts());
 
         // Close current segment if its uncompressed size is greater than the target
         if (segment.get_uncompressed_size() >= m_target_segment_uncompressed_size) {
@@ -474,9 +467,9 @@ namespace streaming_archive::writer {
         m_logtype_dict.index_segment(segment_id, segment_logtype_ids);
         m_var_dict.index_segment(segment_id, segment_var_ids);
 
-        m_stable_size += segment.get_compressed_size();
-
         segment.close();
+
+        m_local_metadata->increment_static_compressed_size(segment.get_compressed_size());
 
         #if FLUSH_TO_DISK_ENABLED
             // fsync segments directory to flush segment's directory entry
@@ -500,7 +493,6 @@ namespace streaming_archive::writer {
         m_global_metadata_db->close();
 
         for (auto file : files) {
-            m_stable_uncompressed_size += file->get_num_uncompressed_bytes();
             delete file;
         }
         files.clear();
@@ -514,24 +506,13 @@ namespace streaming_archive::writer {
         m_metadata_db.add_empty_directories(empty_directory_paths);
     }
 
-    size_t Archive::get_stable_uncompressed_size () const {
-        size_t uncompressed_size = m_stable_uncompressed_size;
+    uint64_t Archive::get_dynamic_compressed_size () {
+        uint64_t on_disk_size = m_logtype_dict.get_on_disk_size() + m_var_dict.get_on_disk_size();
 
-        // Add size of files in an unclosed segment
-        for (auto file : m_files_with_timestamps_in_segment) {
-            uncompressed_size += file->get_num_uncompressed_bytes();
+        // Add size of unclosed segments
+        if (m_segment_for_files_with_timestamps.is_open()) {
+            on_disk_size += m_segment_for_files_with_timestamps.get_compressed_size();
         }
-        for (auto file : m_files_without_timestamps_in_segment) {
-            uncompressed_size += file->get_num_uncompressed_bytes();
-        }
-
-        return uncompressed_size;
-    }
-
-    size_t Archive::get_stable_size () const {
-        size_t on_disk_size = m_stable_size + m_logtype_dict.get_on_disk_size() + m_var_dict.get_on_disk_size();
-
-        // Add size of unclosed segment
         if (m_segment_for_files_without_timestamps.is_open()) {
             on_disk_size += m_segment_for_files_without_timestamps.get_compressed_size();
         }
@@ -540,20 +521,19 @@ namespace streaming_archive::writer {
     }
 
     void Archive::update_metadata () {
-        auto stable_uncompressed_size = get_stable_uncompressed_size();
-        auto stable_size = get_stable_size();
+        m_local_metadata->set_dynamic_uncompressed_size(0);
+        m_local_metadata->set_dynamic_compressed_size(get_dynamic_compressed_size());
+        // Rewrite (overwrite) the metadata file
+        m_metadata_file_writer.seek_from_begin(0);
+        m_local_metadata->write_to_file(m_metadata_file_writer);
 
-        m_metadata_file_writer.seek_from_current(-((int64_t)(sizeof(m_stable_uncompressed_size) + sizeof(m_stable_size))));
-        m_metadata_file_writer.write_numeric_value(stable_uncompressed_size);
-        m_metadata_file_writer.write_numeric_value(stable_size);
-
-        m_global_metadata_db->update_archive_size(m_id_as_string, stable_uncompressed_size, stable_size);
+        m_global_metadata_db->update_archive_metadata(m_id_as_string, *m_local_metadata);
 
         if (m_print_archive_stats_progress) {
             nlohmann::json json_msg;
             json_msg["id"] = m_id_as_string;
-            json_msg["uncompressed_size"] = stable_uncompressed_size;
-            json_msg["size"] = stable_size;
+            json_msg["uncompressed_size"] = m_local_metadata->get_uncompressed_size_bytes();
+            json_msg["size"] = m_local_metadata->get_compressed_size_bytes();
             std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore) << std::endl;
         }
     }

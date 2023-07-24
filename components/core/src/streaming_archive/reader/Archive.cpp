@@ -15,6 +15,7 @@
 #include "../../EncodedVariableInterpreter.hpp"
 #include "../../spdlog_with_specializations.hpp"
 #include "../../Utils.hpp"
+#include "../ArchiveMetadata.hpp"
 #include "../Constants.hpp"
 
 using std::string;
@@ -22,15 +23,6 @@ using std::unordered_set;
 using std::vector;
 
 namespace streaming_archive { namespace reader {
-    void Archive::read_metadata_file (const string& path, archive_format_version_t& format_version, size_t& stable_uncompressed_size, size_t& stable_size) {
-        FileReader file_reader;
-        file_reader.open(path);
-        file_reader.read_numeric_value(format_version, false);
-        file_reader.read_numeric_value(stable_uncompressed_size, false);
-        file_reader.read_numeric_value(stable_size, false);
-        file_reader.close();
-    }
-
     void Archive::open (const string& path) {
         // Determine whether path is file or directory
         struct stat path_stat = {};
@@ -47,11 +39,13 @@ namespace streaming_archive { namespace reader {
 
         // Read the metadata file
         string metadata_file_path = path + '/' + cMetadataFileName;
-        uint16_t format_version;
-        size_t stable_uncompressed_size;
-        size_t stable_size;
+        archive_format_version_t format_version{};
         try {
-            read_metadata_file(metadata_file_path, format_version, stable_uncompressed_size, stable_size);
+            FileReader file_reader;
+            file_reader.open(metadata_file_path);
+            const ArchiveMetadata metadata{file_reader};
+            format_version = metadata.get_archive_format_version();
+            file_reader.close();
         } catch (TraceableException& traceable_exception) {
             auto error_code = traceable_exception.get_error_code();
             if (ErrorCode_errno == error_code) {

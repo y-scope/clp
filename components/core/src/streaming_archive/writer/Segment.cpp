@@ -36,6 +36,9 @@ namespace streaming_archive { namespace writer {
         m_segment_path = segments_dir_path;
         m_segment_path += std::to_string(m_id);
 
+        m_offset = 0;
+        m_compressed_size = 0;
+
         m_file_writer.open(m_segment_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
 #if USE_PASSTHROUGH_COMPRESSION
         m_compressor.open(m_file_writer);
@@ -48,11 +51,12 @@ namespace streaming_archive { namespace writer {
 
     void Segment::close () {
         m_compressor.close();
+        m_compressed_size = m_file_writer.get_pos();
+
         m_file_writer.flush();
         m_file_writer.close();
 
         // Clear Segment
-        m_offset = 0;
         m_segment_path.clear();
     }
 
@@ -67,6 +71,15 @@ namespace streaming_archive { namespace writer {
 
     uint64_t Segment::get_uncompressed_size () {
         return m_offset;
+    }
+
+    size_t Segment::get_compressed_size () {
+        if (is_open()) {
+            // NOTE: We update the compressed size only on request to avoid
+            // any potential overhead from getting the file writer's position
+            m_compressed_size = m_file_writer.get_pos();
+        }
+        return m_compressed_size;
     }
 
     bool Segment::is_open () const {
