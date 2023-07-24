@@ -131,7 +131,7 @@ GlobalSQLiteMetadataDB::ArchiveIterator::ArchiveIterator (SQLiteDB& db) : m_stat
     m_statement.step();
 }
 
-GlobalSQLiteMetadataDB::ArchiveIterator::ArchiveIterator (SQLiteDB& db, epochtime_t begin_ts, epochtime_t end_ts) : m_statement(get_archives_select_statement(db))
+GlobalSQLiteMetadataDB::ArchiveIterator::ArchiveIterator (SQLiteDB& db, epochtime_t begin_ts, epochtime_t end_ts) : m_statement(get_archives_for_time_window_select_statement(db, begin_ts, end_ts))
 {
     m_statement.step();
 }
