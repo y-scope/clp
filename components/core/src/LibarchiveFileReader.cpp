@@ -3,8 +3,8 @@
 // C++ standard libraries
 #include <cstring>
 
-// spdlog
-#include <spdlog/spdlog.h>
+// Project headers
+#include "spdlog_with_specializations.hpp"
 
 ErrorCode LibarchiveFileReader::try_get_pos (size_t& pos) {
     if (nullptr == m_archive) {

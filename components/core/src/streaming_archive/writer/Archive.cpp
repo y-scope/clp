@@ -16,10 +16,7 @@
 #include <boost/uuid/uuid_io.hpp>
 
 // json
-#include "../../../submodules/json/single_include/nlohmann/json.hpp"
-
-// spdlog
-#include <spdlog/spdlog.h>
+#include <json/single_include/nlohmann/json.hpp>
 
 // Log surgeon
 #include "../../../submodules/log-surgeon/src/log_surgeon/LogEvent.hpp"
@@ -28,6 +25,7 @@
 // Project headers
 #include "../../clp/utils.hpp"
 #include "../../EncodedVariableInterpreter.hpp"
+#include "../../spdlog_with_specializations.hpp"
 #include "../../Utils.hpp"
 #include "../Constants.hpp"
 

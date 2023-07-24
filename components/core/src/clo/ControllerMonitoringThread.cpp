@@ -3,11 +3,9 @@
 // C standard libraries
 #include <unistd.h>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "../networking/socket_utils.hpp"
+#include "../spdlog_with_specializations.hpp"
 
 void ControllerMonitoringThread::thread_method () {
     // Wait for the controller socket to close

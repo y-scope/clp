@@ -8,12 +8,10 @@
 #include <cassert>
 #include <cerrno>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "Defs.h"
 #include "Platform.hpp"
+#include "spdlog_with_specializations.hpp"
 
 // Define a fdatasync shim for compilation (just compilation) on macOS
 #if defined(__APPLE__) || defined(__MACH__)

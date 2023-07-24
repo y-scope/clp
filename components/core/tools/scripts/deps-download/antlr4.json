@@ -1,0 +1,15 @@
+{
+    "url": "https://www.antlr.org/download/antlr-4.11.1-complete.jar",
+    "unzip": false,
+    "hash": {
+      "algo": "sha3_256",
+      "digest": "ffdd929dc165c145b668af42a5afb3f9747996f09293d9c55ab7f6cafd88c45f"
+    },
+    "targets": [
+      {
+        "source": "antlr-4.11.1-complete.jar",
+        "destination": "third-party/antlr/antlr-4.11.1-complete.jar"
+      }
+    ]
+  }
+  

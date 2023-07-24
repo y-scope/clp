@@ -5,13 +5,11 @@
 
 // Boost libraries
 #include <boost/filesystem/operations.hpp>
-
-// spdlog
-#include <spdlog/spdlog.h>
 #include <boost/uuid/random_generator.hpp>
 
 // Project headers
 #include "../ErrorCode.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
 
 using std::string;

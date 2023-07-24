@@ -1,5 +1,6 @@
 {
   "url": "https://www.sqlite.org/2021/sqlite-amalgamation-3360000.zip",
+  "unzip": true,
   "hash": {
     "algo": "sha3_256",
     "digest": "d25609210ec93b3c8c7da66a03cf82e2c9868cfbd2d7d866982861855e96f972"

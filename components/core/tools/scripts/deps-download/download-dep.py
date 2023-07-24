@@ -54,8 +54,11 @@ def main(argv):
 
     # Download file
     file_path = extraction_dir / filename
-    urllib.request.urlretrieve(target_url, str(file_path))
-    shutil.unpack_archive(str(file_path), extraction_dir)
+    urllib.request.urlretrieve(target_url, file_path)
+    if config["unzip"]:
+        # NOTE: We need to convert file_path to a str since unpack_archive only
+        # accepts a path-like object on Python versions >= 3.7
+        shutil.unpack_archive(str(file_path), extraction_dir)
 
     if "hash" in config:
         # Verify hash
@@ -75,10 +78,13 @@ def main(argv):
             shutil.rmtree(target_dest_path, ignore_errors=True)
         else:
             # Create destination parent
-            target_dest_parent.parent.mkdir(parents=True, exist_ok=True)
+            target_dest_parent.mkdir(parents=True, exist_ok=True)
 
         # Copy destination to target
-        shutil.copytree(target_source_path, target_dest_path)
+        if config["unzip"]:
+            shutil.copytree(target_source_path, target_dest_path)
+        else:
+            shutil.copy(target_source_path, target_dest_path)
 
     shutil.rmtree(extraction_dir)
 

@@ -10,13 +10,11 @@
 #include <cstring>
 #include <vector>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "Defs.h"
 #include "ErrorCode.hpp"
 #include "Platform.hpp"
+#include "spdlog_with_specializations.hpp"
 #include "TraceableException.hpp"
 
 // Define a MREMAP_MAYMOVE shim for compilation (just compilation) on macOS
