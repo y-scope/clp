@@ -18,7 +18,7 @@
 #include <spdlog/spdlog.h>
 
 // Log surgeon
-#include "../submodules/log-surgeon/src/log_surgeon/SchemaParser.hpp"
+#include <log-surgeon/src/log_surgeon/SchemaParser.hpp>
 
 // Project headers
 #include "spdlog_with_specializations.hpp"

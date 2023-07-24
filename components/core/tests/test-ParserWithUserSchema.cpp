@@ -12,7 +12,7 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 
 // Log Surgeon
-#include "../submodules/log-surgeon/src/log_surgeon/LogParser.hpp"
+#include <log-surgeon/src/log_surgeon/LogParser.hpp>
 
 // Project headers
 #include "../src/clp/run.hpp"

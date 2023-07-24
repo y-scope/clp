@@ -5,7 +5,7 @@
 #include <string>
 
 // Log surgeon
-#include "../submodules/log-surgeon/src/log_surgeon/Lexer.hpp"
+#include <log-surgeon/src/log_surgeon/Lexer.hpp>
 
 // Project headers
 #include "Defs.h"
