@@ -15,6 +15,8 @@ using std::vector;
 // Types
 enum class ArchivesTableFieldIndexes : uint16_t {
     Id = 0,
+    BeginTimestamp,
+    EndTimestamp,
     UncompressedSize,
     Size,
     CreatorId,
@@ -22,7 +24,9 @@ enum class ArchivesTableFieldIndexes : uint16_t {
     Length,
 };
 enum class UpdateArchiveSizeStmtFieldIndexes : uint16_t {
-    UncompressedSize = 0,
+    BeginTimestamp = 0,
+    EndTimestamp,
+    UncompressedSize,
     Size,
     Length,
 };
@@ -52,6 +56,8 @@ void GlobalMySQLMetadataDB::open () {
 
     vector<string> archive_field_names(enum_to_underlying_type(ArchivesTableFieldIndexes::Length));
     archive_field_names[enum_to_underlying_type(ArchivesTableFieldIndexes::Id)] = streaming_archive::cMetadataDB::Archive::Id;
+    archive_field_names[enum_to_underlying_type(ArchivesTableFieldIndexes::BeginTimestamp)] = streaming_archive::cMetadataDB::Archive::BeginTimestamp;
+    archive_field_names[enum_to_underlying_type(ArchivesTableFieldIndexes::EndTimestamp)] = streaming_archive::cMetadataDB::Archive::EndTimestamp;
     archive_field_names[enum_to_underlying_type(ArchivesTableFieldIndexes::UncompressedSize)] = streaming_archive::cMetadataDB::Archive::UncompressedSize;
     archive_field_names[enum_to_underlying_type(ArchivesTableFieldIndexes::Size)] = streaming_archive::cMetadataDB::Archive::Size;
     archive_field_names[enum_to_underlying_type(ArchivesTableFieldIndexes::CreatorId)] = streaming_archive::cMetadataDB::Archive::CreatorId;
@@ -67,6 +73,10 @@ void GlobalMySQLMetadataDB::open () {
     statement_buffer.clear();
 
     vector<string> update_archive_size_stmt_field_names(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Length));
+    update_archive_size_stmt_field_names[enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::BeginTimestamp)] =
+            streaming_archive::cMetadataDB::Archive::BeginTimestamp;
+    update_archive_size_stmt_field_names[enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::EndTimestamp)] =
+            streaming_archive::cMetadataDB::Archive::EndTimestamp;
     update_archive_size_stmt_field_names[enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::UncompressedSize)] =
             streaming_archive::cMetadataDB::Archive::UncompressedSize;
     update_archive_size_stmt_field_names[enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Size)] =
@@ -107,35 +117,46 @@ void GlobalMySQLMetadataDB::close () {
     m_is_open = false;
 }
 
-void GlobalMySQLMetadataDB::add_archive (const string& id, uint64_t uncompressed_size,
-                                         uint64_t size, const string& creator_id,
-                                         uint64_t creation_num)
-{
+void GlobalMySQLMetadataDB::add_archive (const string& id, const streaming_archive::ArchiveMetadata& metadata) {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
     auto& statement_bindings = m_insert_archive_statement->get_statement_bindings();
     statement_bindings.bind_varchar(enum_to_underlying_type(ArchivesTableFieldIndexes::Id), id.c_str(), id.length());
+    auto begin_timestamp = metadata.get_begin_timestamp();
+    statement_bindings.bind_int64(enum_to_underlying_type(ArchivesTableFieldIndexes::BeginTimestamp), begin_timestamp);
+    auto end_timestamp = metadata.get_end_timestamp();
+    statement_bindings.bind_int64(enum_to_underlying_type(ArchivesTableFieldIndexes::EndTimestamp), end_timestamp);
+    auto uncompressed_size = metadata.get_uncompressed_size_bytes();
     statement_bindings.bind_uint64(enum_to_underlying_type(ArchivesTableFieldIndexes::UncompressedSize), uncompressed_size);
-    statement_bindings.bind_uint64(enum_to_underlying_type(ArchivesTableFieldIndexes::Size), size);
+    auto compressed_size = metadata.get_compressed_size_bytes();
+    statement_bindings.bind_uint64(enum_to_underlying_type(ArchivesTableFieldIndexes::Size), compressed_size);
+    const auto& creator_id = metadata.get_creator_id();
     statement_bindings.bind_varchar(enum_to_underlying_type(ArchivesTableFieldIndexes::CreatorId), creator_id.c_str(), creator_id.length());
+    auto creation_num = metadata.get_creation_idx();
     statement_bindings.bind_uint64(enum_to_underlying_type(ArchivesTableFieldIndexes::CreationIx), creation_num);
     if (false == m_insert_archive_statement->execute()) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
 }
 
-void GlobalMySQLMetadataDB::update_archive_size (const std::string& archive_id,
-                                                 uint64_t uncompressed_size, uint64_t size)
+void GlobalMySQLMetadataDB::update_archive_metadata (const std::string& archive_id,
+                                                     const streaming_archive::ArchiveMetadata& metadata)
 {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
     auto& statement_bindings = m_update_archive_size_statement->get_statement_bindings();
+    auto begin_timestamp = metadata.get_begin_timestamp();
+    statement_bindings.bind_int64(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::BeginTimestamp), begin_timestamp);
+    auto end_timestamp = metadata.get_end_timestamp();
+    statement_bindings.bind_int64(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::EndTimestamp), end_timestamp);
+    auto uncompressed_size = metadata.get_uncompressed_size_bytes();
     statement_bindings.bind_uint64(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::UncompressedSize), uncompressed_size);
-    statement_bindings.bind_uint64(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Size), size);
+    auto compressed_size = metadata.get_compressed_size_bytes();
+    statement_bindings.bind_uint64(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Size), compressed_size);
     statement_bindings.bind_varchar(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Length), archive_id.c_str(), archive_id.length());
     if (false == m_update_archive_size_statement->execute()) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
@@ -211,14 +232,11 @@ GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator (
 }
 
 GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator_for_time_window (epochtime_t begin_ts, epochtime_t end_ts) {
-    auto statement_string = fmt::format("SELECT DISTINCT {}{}.{} FROM {}{} JOIN {}{} ON {}{}.{} = {}{}.{} WHERE {}{}.{} <= {} AND {}{}.{} >= {} ORDER BY {} ASC, {} ASC",
-                                        m_table_prefix, streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::Archive::Id,
+    auto statement_string = fmt::format("SELECT DISTINCT {} FROM {}{} WHERE {} <= {} AND {} >= {} ORDER BY {} ASC, {} ASC",
+                                        streaming_archive::cMetadataDB::Archive::Id,
                                         m_table_prefix, streaming_archive::cMetadataDB::ArchivesTableName,
-                                        m_table_prefix, streaming_archive::cMetadataDB::FilesTableName,
-                                        m_table_prefix, streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::Archive::Id,
-                                        m_table_prefix, streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::ArchiveId,
-                                        m_table_prefix, streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::BeginTimestamp, end_ts,
-                                        m_table_prefix, streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::EndTimestamp, begin_ts,
+                                        streaming_archive::cMetadataDB::File::BeginTimestamp, end_ts,
+                                        streaming_archive::cMetadataDB::File::EndTimestamp, begin_ts,
                                         streaming_archive::cMetadataDB::Archive::CreatorId, streaming_archive::cMetadataDB::Archive::CreationIx);
     SPDLOG_DEBUG("{}", statement_string);
 

@@ -16,6 +16,8 @@
 // Types
 enum class ArchivesTableFieldIndexes : uint16_t {
     Id = 0,
+    BeginTimestamp,
+    EndTimestamp,
     UncompressedSize,
     Size,
     CreatorId,
@@ -23,7 +25,9 @@ enum class ArchivesTableFieldIndexes : uint16_t {
     Length,
 };
 enum class UpdateArchiveSizeStmtFieldIndexes : uint16_t {
-    UncompressedSize = 0,
+    BeginTimestamp = 0,
+    EndTimestamp,
+    UncompressedSize,
     Size,
     Length,
 };
@@ -96,13 +100,9 @@ static SQLitePreparedStatement get_archives_select_statement (SQLiteDB& db) {
 
 
 static SQLitePreparedStatement get_archives_for_time_window_select_statement (SQLiteDB& db, epochtime_t begin_ts, epochtime_t end_ts) {
-    auto statement_string = fmt::format("SELECT DISTINCT {}.{} FROM {} JOIN {} ON {}.{} = {}.{} WHERE {}.{} <= ? AND {}.{} >= ? ORDER BY {} ASC, {} ASC",
-                                        streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::Archive::Id,
-                                        streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::FilesTableName,
-                                        streaming_archive::cMetadataDB::ArchivesTableName, streaming_archive::cMetadataDB::Archive::Id,
-                                        streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::ArchiveId,
-                                        streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::BeginTimestamp,
-                                        streaming_archive::cMetadataDB::FilesTableName, streaming_archive::cMetadataDB::File::EndTimestamp,
+    auto statement_string = fmt::format("SELECT {} FROM {} WHERE {} <= ? AND {} >= ? ORDER BY {} ASC, {} ASC",
+                                        streaming_archive::cMetadataDB::Archive::Id, streaming_archive::cMetadataDB::ArchivesTableName,
+                                        streaming_archive::cMetadataDB::File::BeginTimestamp, streaming_archive::cMetadataDB::File::EndTimestamp,
                                         streaming_archive::cMetadataDB::Archive::CreatorId, streaming_archive::cMetadataDB::Archive::CreationIx);
     SPDLOG_DEBUG("{}", statement_string);
     auto statement = db.prepare_statement(statement_string.c_str(), statement_string.length());
@@ -131,8 +131,8 @@ GlobalSQLiteMetadataDB::ArchiveIterator::ArchiveIterator (SQLiteDB& db) : m_stat
     m_statement.step();
 }
 
-GlobalSQLiteMetadataDB::ArchiveIterator::ArchiveIterator (SQLiteDB& db, epochtime_t begin_ts, epochtime_t end_ts) : m_statement(get_archives_for_time_window_select_statement(db, begin_ts, end_ts))
-{
+GlobalSQLiteMetadataDB::ArchiveIterator::ArchiveIterator(SQLiteDB& db, epochtime_t begin_ts, epochtime_t end_ts) :
+        m_statement(get_archives_for_time_window_select_statement(db, begin_ts, end_ts)) {
     m_statement.step();
 }
 
@@ -164,6 +164,14 @@ void GlobalSQLiteMetadataDB::open () {
     vector<pair<string, string>> archive_field_names_and_types(enum_to_underlying_type(ArchivesTableFieldIndexes::Length));
     archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::Id)].first = streaming_archive::cMetadataDB::Archive::Id;
     archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::Id)].second = "TEXT PRIMARY KEY";
+
+    archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::BeginTimestamp)].first =
+            streaming_archive::cMetadataDB::Archive::BeginTimestamp;
+    archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::BeginTimestamp)].second = "INTEGER";
+
+    archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::EndTimestamp)].first =
+            streaming_archive::cMetadataDB::Archive::EndTimestamp;
+    archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::EndTimestamp)].second = "INTEGER";
 
     archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::UncompressedSize)].first =
             streaming_archive::cMetadataDB::Archive::UncompressedSize;
@@ -218,6 +226,10 @@ void GlobalSQLiteMetadataDB::open () {
     statement_buffer.clear();
 
     vector<string> update_archive_size_stmt_field_names(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Length));
+    update_archive_size_stmt_field_names[enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::BeginTimestamp)] =
+            streaming_archive::cMetadataDB::Archive::BeginTimestamp;
+    update_archive_size_stmt_field_names[enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::EndTimestamp)] =
+            streaming_archive::cMetadataDB::Archive::EndTimestamp;
     update_archive_size_stmt_field_names[enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::UncompressedSize)] =
             streaming_archive::cMetadataDB::Archive::UncompressedSize;
     update_archive_size_stmt_field_names[enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Size)] =
@@ -256,32 +268,38 @@ void GlobalSQLiteMetadataDB::close () {
     m_is_open = false;
 }
 
-void GlobalSQLiteMetadataDB::add_archive (const string& id, uint64_t uncompressed_size,
-                                          uint64_t size, const string& creator_id,
-                                          uint64_t creation_num)
+void GlobalSQLiteMetadataDB::add_archive (const string& id, const streaming_archive::ArchiveMetadata& metadata)
 {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
     m_insert_archive_statement->bind_text(enum_to_underlying_type(ArchivesTableFieldIndexes::Id) + 1, id, false);
-    m_insert_archive_statement->bind_int64(enum_to_underlying_type(ArchivesTableFieldIndexes::UncompressedSize) + 1, (int64_t)uncompressed_size);
-    m_insert_archive_statement->bind_int64(enum_to_underlying_type(ArchivesTableFieldIndexes::Size) + 1, (int64_t)size);
-    m_insert_archive_statement->bind_text(enum_to_underlying_type(ArchivesTableFieldIndexes::CreatorId) + 1, creator_id, false);
-    m_insert_archive_statement->bind_int64(enum_to_underlying_type(ArchivesTableFieldIndexes::CreationIx) + 1, (int64_t)creation_num);
+    m_insert_archive_statement->bind_int64(enum_to_underlying_type(ArchivesTableFieldIndexes::BeginTimestamp) + 1, (int64_t)metadata.get_begin_timestamp());
+    m_insert_archive_statement->bind_int64(enum_to_underlying_type(ArchivesTableFieldIndexes::EndTimestamp) + 1, (int64_t)metadata.get_end_timestamp());
+    m_insert_archive_statement->bind_int64(
+            enum_to_underlying_type(ArchivesTableFieldIndexes::UncompressedSize) + 1,
+            (int64_t)metadata.get_uncompressed_size_bytes());
+    m_insert_archive_statement->bind_int64(enum_to_underlying_type(ArchivesTableFieldIndexes::Size) + 1, (int64_t)metadata.get_compressed_size_bytes());
+    m_insert_archive_statement->bind_text(enum_to_underlying_type(ArchivesTableFieldIndexes::CreatorId) + 1, metadata.get_creator_id(), false);
+    m_insert_archive_statement->bind_int64(enum_to_underlying_type(ArchivesTableFieldIndexes::CreationIx) + 1, (int64_t)metadata.get_creation_idx());
     m_insert_archive_statement->step();
     m_insert_archive_statement->reset();
 }
 
-void GlobalSQLiteMetadataDB::update_archive_size (const string& archive_id,
-                                                  uint64_t uncompressed_size, uint64_t size)
-{
+void GlobalSQLiteMetadataDB::update_archive_metadata (const string& archive_id, const streaming_archive::ArchiveMetadata& metadata) {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
-    m_update_archive_size_statement->bind_int64(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::UncompressedSize) + 1, (int64_t)uncompressed_size);
-    m_update_archive_size_statement->bind_int64(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Size) + 1, (int64_t)size);
+    m_update_archive_size_statement->bind_int64(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::BeginTimestamp) + 1, (int64_t)metadata.get_begin_timestamp());
+    m_update_archive_size_statement->bind_int64(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::EndTimestamp) + 1, (int64_t)metadata.get_end_timestamp());
+    m_update_archive_size_statement->bind_int64(
+            enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::UncompressedSize) + 1,
+            (int64_t)metadata.get_uncompressed_size_bytes());
+    m_update_archive_size_statement->bind_int64(
+            enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Size) + 1,
+            (int64_t)metadata.get_compressed_size_bytes());
     m_update_archive_size_statement->bind_text(enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Length) + 1, archive_id, false);
     m_update_archive_size_statement->step();
     m_update_archive_size_statement->reset();

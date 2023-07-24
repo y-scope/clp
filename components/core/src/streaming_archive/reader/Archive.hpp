@@ -36,14 +36,6 @@ namespace streaming_archive { namespace reader {
 
         // Methods
         /**
-         * Read the metadata file
-         * @param path
-         * @param id
-         */
-        static void read_metadata_file (const std::string& path, archive_format_version_t& format_version, size_t& stable_uncompressed_size,
-                                        size_t& stable_size);
-
-        /**
          * Opens archive for reading
          * @param path
          * @throw streaming_archive::reader::Archive::OperationFailed if could not stat file or it isn't a directory or metadata is corrupted

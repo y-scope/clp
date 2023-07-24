@@ -20,9 +20,10 @@
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
 #include "../../compressor_frontend/Token.hpp"
+#include "../ArchiveMetadata.hpp"
 #include "../MetadataDB.hpp"
 
-namespace streaming_archive { namespace writer { 
+namespace streaming_archive { namespace writer {
     class Archive {
     public:
         // Types
@@ -228,15 +229,10 @@ namespace streaming_archive { namespace writer {
                                                       ArrayBackedPosIntSet<variable_dictionary_id_t>& segment_var_ids);
 
         /**
-         * Gets the size of uncompressed data that has been compressed into the archive and will not be changed
-         * @return Size in bytes
+         * @return The size (in bytes) of compressed data whose size may change
+         * before the archive is closed
          */
-        size_t get_stable_uncompressed_size () const;
-        /**
-         * Gets the size of the portion of the archive that will not be changed
-         * @return Size in bytes
-         */
-        size_t get_stable_size () const;
+        size_t get_dynamic_compressed_size ();
         /**
          * Updates the archive's metadata
          */
@@ -288,13 +284,11 @@ namespace streaming_archive { namespace writer {
         ArrayBackedPosIntSet<logtype_dictionary_id_t> m_logtype_ids_in_segment_for_files_without_timestamps;
         ArrayBackedPosIntSet<variable_dictionary_id_t> m_var_ids_in_segment_for_files_without_timestamps;
 
-        size_t m_stable_uncompressed_size;
-        size_t m_stable_size;
-
         int m_compression_level;
 
         MetadataDB m_metadata_db;
 
+        std::optional<ArchiveMetadata> m_local_metadata;
         FileWriter m_metadata_file_writer;
 
         GlobalMetadataDB* m_global_metadata_db;
