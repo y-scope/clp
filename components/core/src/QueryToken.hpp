@@ -11,7 +11,10 @@
 #include "VariableDictionaryReader.hpp"
 #include "VariableDictionaryWriter.hpp"
 
-// Class representing a token in a query. It is used to interpret a token in user's search string.
+/**
+ *  Class representing a token in a query. It is used to interpret a token in
+ *  user's search string.
+ */
 class QueryToken {
 public:
     // Constructors
@@ -37,8 +40,9 @@ public:
 
 private:
     // Types
-    // Type for the purpose of generating different subqueries. E.g., if a token is of type
-    // DictOrIntVar, it would generate a different subquery than if it was of type Logtype.
+    // Type for the purpose of generating different subqueries. E.g., if a token
+    // is of type DictOrIntVar, it would generate a different subquery than if
+    // it was of type Logtype.
     enum class Type {
         Wildcard,
         // Ambiguous indicates the token can be more than one of the types listed below

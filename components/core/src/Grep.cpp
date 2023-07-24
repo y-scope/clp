@@ -67,7 +67,8 @@ static SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const
 
 static bool process_var_token (const QueryToken& query_token, const Archive& archive,
                                bool ignore_case, SubQuery& sub_query, string& logtype) {
-    // Even though we may have a precise variable, we still fallback to decompressing to ensure that it is in the right place in the message
+    // Even though we may have a precise variable, we still fallback to
+    // decompressing to ensure that it is in the right place in the message
     sub_query.mark_wildcard_match_required();
 
     // Create QueryVar corresponding to token
@@ -217,7 +218,9 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     if (use_heuristic) {
         query.set_search_string(processed_search_string);
 
-        // Replace non-greedy wildcards with greedy wildcards since we currently have no support for searching compressed files with non-greedy wildcards
+        // Replace non-greedy wildcards with greedy wildcards since we currently
+        // have no support for searching compressed files with non-greedy
+        // wildcards
         std::replace(processed_search_string.begin(), processed_search_string.end(), '?', '*');
         // Clean-up in case any instances of "?*" or "*?" were changed into "**"
         processed_search_string = clean_up_wildcard_search_string(processed_search_string);
@@ -237,7 +240,9 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
         query.set_search_string(processed_search_string);
     }
 
-    // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in the middle since we fall-back to decompression + wildcard matching for those.
+    // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in
+    // the middle since we fall-back to decompression + wildcard matching for
+    // those.
     vector<QueryToken*> ambiguous_tokens;
     for (auto& query_token : query_tokens) {
         if (!query_token.has_greedy_wildcard_in_middle() && query_token.is_ambiguous_token()) {
@@ -266,10 +271,12 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                                                                     use_heuristic);
         switch (matchability) {
             case SubQueryMatchabilityResult::SupercedesAllSubQueries:
-                // Clear all sub-queries since they will be superceded by this sub-query
+                // Clear all sub-queries since they will be superseded by this
+                // sub-query
                 query.clear_sub_queries();
 
-                // Since other sub-queries will be superceded by this one, we can stop processing now
+                // Since other sub-queries will be superseded by this one, we
+                // can stop processing now
                 return true;
             case SubQueryMatchabilityResult::MayMatch:
                 query.add_sub_query(sub_query);
@@ -501,8 +508,8 @@ bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_
                 }};
                 log_surgeon::ParserInputBuffer parser_input_buffer;
                 if (has_suffix_wildcard) { //text*
-                    /// TODO: this is way to convoluted, can't you just set the string as the
-                    /// buffer storage?
+                    // TODO: this is way too convoluted, can't you just set the
+                    // string as the buffer storage?
                     stringReader.open(value.substr(begin_pos, end_pos - begin_pos - 1));
                     parser_input_buffer.read_if_safe(reader_wrapper);
                     forward_lexer.reset();

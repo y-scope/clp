@@ -109,8 +109,9 @@ public:
 
 
 /**
- * Wraps the tokens normally return from the log_surgeon lexer, and storing the variable ids of the
- * tokens in a search query in a set. This allows for optimized search performance.
+ * Wraps the tokens returned from the log_surgeon lexer, and stores the variable
+ * ids of the tokens in a search query in a set. This allows for optimized
+ * search performance.
  */
 class SearchToken : public log_surgeon::Token {
 public:

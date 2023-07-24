@@ -63,7 +63,6 @@ QueryToken::QueryToken (const string& query_string, const size_t begin_pos, cons
             }
 
             if (!converts_to_non_dict_var) {
-                // Dictionary variable
                 m_type = Type::DictionaryVar;
                 m_cannot_convert_to_non_dict_var = true;
             } else {

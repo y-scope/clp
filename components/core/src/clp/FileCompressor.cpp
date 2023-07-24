@@ -148,7 +148,7 @@ namespace clp {
         archive_writer.m_target_encoded_file_size = target_encoded_file_size;
         // Open compressed file
         archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
-        /// TODO:Add the m_utf8_validation_buf into the start of the input buffer
+        // TODO:Add the m_utf8_validation_buf into the start of the input buffer
         reader.seek_from_begin(0);
         archive_writer.m_old_ts_pattern.clear();
         archive_writer.m_timestamp_set = false;
