@@ -290,10 +290,8 @@ set(SOURCE_FILES_clp
         src/streaming_archive/writer/File.hpp
         src/streaming_archive/writer/Segment.cpp
         src/streaming_archive/writer/Segment.hpp
-        src/streaming_compression/Compressor.cpp
         src/streaming_compression/Compressor.hpp
         src/streaming_compression/Constants.hpp
-        src/streaming_compression/Decompressor.cpp
         src/streaming_compression/Decompressor.hpp
         src/streaming_compression/passthrough/Compressor.cpp
         src/streaming_compression/passthrough/Compressor.hpp
@@ -450,7 +448,6 @@ set(SOURCE_FILES_clg
         src/streaming_archive/writer/Segment.cpp
         src/streaming_archive/writer/Segment.hpp
         src/streaming_compression/Constants.hpp
-        src/streaming_compression/Decompressor.cpp
         src/streaming_compression/Decompressor.hpp
         src/streaming_compression/passthrough/Compressor.cpp
         src/streaming_compression/passthrough/Compressor.hpp
@@ -594,7 +591,6 @@ set(SOURCE_FILES_clo
         src/streaming_archive/writer/Segment.cpp
         src/streaming_archive/writer/Segment.hpp
         src/streaming_compression/Constants.hpp
-        src/streaming_compression/Decompressor.cpp
         src/streaming_compression/Decompressor.hpp
         src/streaming_compression/passthrough/Compressor.cpp
         src/streaming_compression/passthrough/Compressor.hpp
@@ -797,10 +793,8 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/writer/File.hpp
         src/streaming_archive/writer/Segment.cpp
         src/streaming_archive/writer/Segment.hpp
-        src/streaming_compression/Compressor.cpp
         src/streaming_compression/Compressor.hpp
         src/streaming_compression/Constants.hpp
-        src/streaming_compression/Decompressor.cpp
         src/streaming_compression/Decompressor.hpp
         src/streaming_compression/passthrough/Compressor.cpp
         src/streaming_compression/passthrough/Compressor.hpp
