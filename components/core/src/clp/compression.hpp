@@ -9,8 +9,8 @@
 #include <boost/filesystem/path.hpp>
 
 // Log surgeon
-#include <log-surgeon/src/log_surgeon/LogEvent.hpp>
-#include <log-surgeon/src/log_surgeon/ReaderParser.hpp>
+#include <log_surgeon/LogEvent.hpp>
+#include <log_surgeon/ReaderParser.hpp>
 
 // Project headers
 #include "CommandLineArguments.hpp"

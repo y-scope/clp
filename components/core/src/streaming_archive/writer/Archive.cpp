@@ -19,8 +19,8 @@
 #include <json/single_include/nlohmann/json.hpp>
 
 // Log surgeon
-#include <log-surgeon/src/log_surgeon/LogEvent.hpp>
-#include <log-surgeon/src/log_surgeon/LogParser.hpp>
+#include <log_surgeon/LogEvent.hpp>
+#include <log_surgeon/LogParser.hpp>
 
 // Project headers
 #include "../../clp/utils.hpp"

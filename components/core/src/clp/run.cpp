@@ -7,7 +7,7 @@
 #include <spdlog/sinks/stdout_sinks.h>
 
 // Log Surgeon
-#include <log-surgeon/src/log_surgeon/LogParser.hpp>
+#include <log_surgeon/LogParser.hpp>
 
 // Project headers
 #include "../Profiler.hpp"

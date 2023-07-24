@@ -782,6 +782,7 @@ target_link_libraries(unitTest
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
+        log_surgeon::log_surgeon
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
         spdlog::spdlog

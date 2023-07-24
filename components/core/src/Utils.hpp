@@ -9,7 +9,7 @@
 #include <vector>
 
 // Log surgeon
-#include <log-surgeon/src/log_surgeon/Lexer.hpp>
+#include <log_surgeon/Lexer.hpp>
 
 // Project headers
 #include "Defs.h"
