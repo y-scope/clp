@@ -47,15 +47,6 @@ if (IS_BIG_ENDIAN)
     message(FATAL_ERROR "Big-endian machines are not supported")
 endif()
 
-# Set log surgeon library
-set(log_surgeon_DIR "/home/sharaf/.local/lib/cmake/log_surgeon/")
-find_package(log_surgeon REQUIRED)
-if(log_surgeon_FOUND)
-    message(STATUS "Found spdlog ${log_surgeon_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find static libraries for log_surgeon")
-endif()
-
 # Detect linking mode (static or shared); Default to static.
 set(CLP_USE_STATIC_LIBS ON CACHE BOOL "Whether to link against static libraries")
 if (CLP_USE_STATIC_LIBS AND APPLE)
@@ -69,6 +60,9 @@ else()
     set(CLP_LIBS_STRING "shared")
 endif()
 message(STATUS "Building using ${CLP_LIBS_STRING} libraries")
+
+# Add log surgeon
+add_subdirectory(submodules/log-surgeon EXCLUDE_FROM_ALL)
 
 # Link against c++fs if required by the compiler being used
 set(STD_FS_LIBS "")
@@ -322,6 +316,10 @@ target_link_libraries(clp
         yaml-cpp::yaml-cpp
         ZStd::ZStd
         )
+target_include_directories(clp
+        PRIVATE
+        $(CMAKE_SOURCE_DIR)/submodules/log-surgeon/src/
+        )
 target_compile_features(clp
         PRIVATE cxx_std_17
         )
@@ -452,6 +450,10 @@ target_link_libraries(clg
         yaml-cpp::yaml-cpp
         ZStd::ZStd
         )
+target_include_directories(clg
+        PRIVATE
+        $(CMAKE_SOURCE_DIR)/submodules/log-surgeon/src/
+        )
 target_compile_features(clg
         PRIVATE cxx_std_17
         )
@@ -574,6 +576,10 @@ target_link_libraries(clo
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
         ZStd::ZStd
+        )
+target_include_directories(clo
+        PRIVATE
+        $(CMAKE_SOURCE_DIR)/submodules/log-surgeon/src/
         )
 target_compile_features(clo
         PRIVATE cxx_std_17
@@ -774,6 +780,10 @@ target_link_libraries(unitTest
         ${STD_FS_LIBS}
         yaml-cpp::yaml-cpp
         ZStd::ZStd
+        )
+target_include_directories(unitTest
+        PRIVATE
+        $(CMAKE_SOURCE_DIR)/submodules/log-surgeon/src/
         )
 target_compile_features(unitTest
         PRIVATE cxx_std_17

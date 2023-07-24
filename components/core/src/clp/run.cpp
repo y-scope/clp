@@ -8,7 +8,7 @@
 #include <spdlog/spdlog.h>
 
 // Log Surgeon
-#include <log_surgeon/LogParser.hpp>
+#include "../../submodules/log-surgeon/src/log_surgeon/LogParser.hpp"
 
 // Project headers
 #include "../Profiler.hpp"

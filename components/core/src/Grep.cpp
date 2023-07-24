@@ -4,7 +4,7 @@
 #include <algorithm>
 
 // Log surgeon
-#include <log_surgeon/Constants.hpp>
+#include "../submodules/log-surgeon/src/log_surgeon/Constants.hpp"
 
 // Project headers
 #include "EncodedVariableInterpreter.hpp"

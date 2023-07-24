@@ -5,8 +5,8 @@
 #include "../submodules/Catch2/single_include/catch2/catch.hpp"
 
 // Log Surgeon
-#include <log_surgeon/Lexer.hpp>
-#include <log_surgeon/SchemaParser.hpp>
+#include "../submodules/log-surgeon/src/log_surgeon/Lexer.hpp"
+#include "../submodules/log-surgeon/src/log_surgeon/SchemaParser.hpp"
 
 // Project headers
 #include "../src/Grep.hpp"

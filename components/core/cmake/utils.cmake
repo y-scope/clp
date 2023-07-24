@@ -46,6 +46,10 @@ target_link_libraries(make-dictionaries-readable
         spdlog::spdlog
         ZStd::ZStd
         )
+target_include_directories(make-dictionaries-readable
+        PRIVATE
+        $(CMAKE_SOURCE_DIR)/submodules/log-surgeon/src/
+        )
 target_compile_features(make-dictionaries-readable
         PRIVATE cxx_std_17
         )

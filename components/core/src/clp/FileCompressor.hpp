@@ -5,8 +5,8 @@
 #include <boost/uuid/random_generator.hpp>
 
 // Log surgeon
-#include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/ReaderParser.hpp>
+#include "../../submodules/log-surgeon/src/log_surgeon/LogEvent.hpp"
+#include "../../submodules/log-surgeon/src/log_surgeon/ReaderParser.hpp"
 
 // Project headers
 #include "../FileReader.hpp"

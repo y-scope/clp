@@ -11,3 +11,6 @@
 [submodule "components/core/submodules/yaml-cpp"]
 	path = components/core/submodules/yaml-cpp
 	url = https://github.com/jbeder/yaml-cpp.git
+[submodule "components/core/submodules/log-surgeon"]
+	path = components/core/submodules/log-surgeon
+	url = https://github.com/y-scope/log-surgeon.git
