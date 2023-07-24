@@ -15,7 +15,7 @@
 
 // Log Surgeon
 #include <log-surgeon/src/log_surgeon/LogEvent.hpp>
-#include <submodules/log-surgeon/src/log_surgeon/ReaderParser.hpp>
+#include <log-surgeon/src/log_surgeon/ReaderParser.hpp>
 
 // Project headers
 #include "../../ArrayBackedPosIntSet.hpp"
