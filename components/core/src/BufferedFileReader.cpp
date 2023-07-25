@@ -63,23 +63,23 @@ ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
                          pos, m_checkpoint_pos.value());
             return ErrorCode_Failure;
         }
+        // adjust the buffer reader pos
         m_buffer_reader->seek_from_begin(pos - m_buffer_begin_pos);
     } else {
-        off_t seek_distance = pos - m_file_pos;
         if (m_buffer_reader.has_value()) {
-            if (ErrorCode_Success == m_buffer_reader->try_seek_from_current(seek_distance)) {
+            if (ErrorCode_Success == m_buffer_reader->try_seek_from_begin(pos - m_buffer_begin_pos)) {
                 m_file_pos = pos;
                 return ErrorCode_Success;
             }
         }
-        // Handle the case where buffer doesn't contain enough data for seek
+        // Handle the case where buffer is empty or doesn't contain enough data for seek
         if (false == m_checkpoint_pos.has_value()) {
+            // if checkpoint is not set, simply move the file_pos and invalidate the buffer reader
             m_buffer_begin_pos = pos & m_buffer_aligned_mask;
             auto offset = lseek(m_fd, m_buffer_begin_pos, SEEK_SET);
             if (offset == -1) {
                 return ErrorCode_errno;
             }
-            // invalidate buffered_data
             m_buffer_reader.reset();
         } else {
             auto data_size = get_data_size();
@@ -113,24 +113,29 @@ ErrorCode BufferedFileReader::try_read (char* buf, size_t num_bytes_to_read,
     }
 
     num_bytes_read = 0;
+    if (false == m_buffer_reader.has_value()) {
+        // refill the buffer if not initialized
+        auto error_code = refill_reader_buffer(m_buffer_size);
+        if (ErrorCode_Success != error_code) {
+            return error_code;
+        }
+    }
     // keep reading until enough data is read or an eof is seen
     while (true) {
-        if (m_buffer_reader.has_value()) {
-            size_t bytes_read {0};
-            auto remaining_bytes_to_read = num_bytes_to_read - num_bytes_read;
-            ErrorCode error_code = m_buffer_reader->try_read(buf + num_bytes_read, remaining_bytes_to_read, bytes_read);
-            if (ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code) {
-                return error_code;
-            }
-            num_bytes_read += bytes_read;
-            m_file_pos += bytes_read;
+        size_t bytes_read {0};
+        auto remaining_bytes_to_read = num_bytes_to_read - num_bytes_read;
+        auto error_code = m_buffer_reader->try_read(buf + num_bytes_read, remaining_bytes_to_read, bytes_read);
+        if (ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code) {
+            return error_code;
+        }
+        num_bytes_read += bytes_read;
+        m_file_pos += bytes_read;
 
-            if (num_bytes_read == num_bytes_to_read) {
-                break;
-            }
+        if (num_bytes_read == num_bytes_to_read) {
+            break;
         }
         // refill the buffer if more bytes are to be read
-        auto error_code = refill_reader_buffer(m_buffer_size);
+        error_code = refill_reader_buffer(m_buffer_size);
         if (ErrorCode_EndOfFile == error_code) {
            break;
         } else if (ErrorCode_Success != error_code) {
@@ -151,15 +156,21 @@ ErrorCode BufferedFileReader::try_read_to_delimiter (char delim, bool keep_delim
 
     bool found_delim {false};
     size_t read_size {0};
-    while (false == found_delim) {
-        if (m_buffer_reader.has_value()) {
-            size_t length {0};
-            if (ErrorCode_Success == m_buffer_reader->try_read_to_delimiter(delim, keep_delimiter, append, str, length)) {
-                found_delim = true;
-            }
-            m_file_pos += length;
-            read_size += length;
+    if (false == m_buffer_reader.has_value()) {
+        // refill the buffer if not initialized
+        auto error_code = refill_reader_buffer(m_buffer_size);
+        if (ErrorCode_Success != error_code) {
+            return error_code;
         }
+    }
+    while (false == found_delim) {
+        size_t length {0};
+        if (ErrorCode_Success == m_buffer_reader->try_read_to_delimiter(delim, keep_delimiter, append, str, length)) {
+            found_delim = true;
+        }
+        m_file_pos += length;
+        read_size += length;
+
         if (false == found_delim) {
             auto error_code = refill_reader_buffer(m_buffer_size);
             if (ErrorCode_EndOfFile == error_code) {
@@ -246,23 +257,26 @@ void BufferedFileReader::reset_checkpoint () {
     if (false == m_checkpoint_pos.has_value()) {
         return;
     }
-    if (m_buffer_reader.has_value()) {
-        auto data_size = m_buffer_reader->get_buffer_size();
-        if (data_size != m_buffer_size) {
-            // allocate new buffer for buffered data that hasn't been seek passed
-            auto copy_pos = m_buffer_reader->get_pos() & m_buffer_aligned_mask;
-            auto new_data_size = data_size - copy_pos;
-            // Use a quantized size for the new buffer size
-            auto new_buffer_size = quantize_to_buffer_size(new_data_size);
+    if (false == m_buffer_reader.has_value()) {
+        m_checkpoint_pos.reset();
+        return;
+    }
 
-            auto new_buffer = make_unique<char[]>(new_buffer_size);
-            memcpy(new_buffer.get(), &m_buffer[copy_pos], new_data_size);
-            m_buffer = std::move(new_buffer);
+    auto data_size = m_buffer_reader->get_buffer_size();
+    if (data_size != m_buffer_size) {
+        // allocate new buffer for buffered data that hasn't been seek passed
+        auto copy_pos = m_buffer_reader->get_pos() & m_buffer_aligned_mask;
+        auto new_data_size = data_size - copy_pos;
+        // Use a quantized size for the new buffer size
+        auto new_buffer_size = quantize_to_buffer_size(new_data_size);
 
-            m_buffer_begin_pos += copy_pos;
-            m_buffer_reader.emplace(m_buffer.get(), new_data_size);
-            m_buffer_reader->seek_from_begin(m_file_pos - m_buffer_begin_pos);
-        }
+        auto new_buffer = make_unique<char[]>(new_buffer_size);
+        memcpy(new_buffer.get(), &m_buffer[copy_pos], new_data_size);
+        m_buffer = std::move(new_buffer);
+
+        m_buffer_begin_pos += copy_pos;
+        m_buffer_reader.emplace(m_buffer.get(), new_data_size);
+        m_buffer_reader->seek_from_begin(m_file_pos - m_buffer_begin_pos);
     }
     m_checkpoint_pos.reset();
 }
@@ -345,7 +359,14 @@ ErrorCode BufferedFileReader::refill_reader_buffer (size_t refill_size,
         m_buffer_begin_pos += data_size;
         m_buffer_reader.emplace(m_buffer.get(), num_bytes_refilled);
     } else {
-        if (m_buffer_reader.has_value()) {
+        if (false == m_buffer_reader.has_value()) {
+            auto error_code = try_read_into_buffer(m_fd, m_buffer.get(), refill_size,
+                                                   num_bytes_refilled);
+            if (error_code != ErrorCode_Success) {
+                return error_code;
+            }
+            m_buffer_reader.emplace(m_buffer.get(), num_bytes_refilled);
+        } else {
             // Messy way of copying data from old buffer to new buffer
             auto data_size = m_buffer_reader->get_buffer_size();
             auto new_buffer = make_unique<char[]>(data_size + refill_size);
@@ -358,13 +379,6 @@ ErrorCode BufferedFileReader::refill_reader_buffer (size_t refill_size,
             m_buffer = std::move(new_buffer);
             data_size += num_bytes_refilled;
             m_buffer_reader.emplace(m_buffer.get(), data_size);
-        } else {
-            auto error_code = try_read_into_buffer(m_fd, m_buffer.get(), refill_size,
-                                                   num_bytes_refilled);
-            if (error_code != ErrorCode_Success) {
-                return error_code;
-            }
-            m_buffer_reader.emplace(m_buffer.get(), num_bytes_refilled);
         }
     }
     m_buffer_reader->seek_from_begin(m_file_pos - m_buffer_begin_pos);
@@ -376,7 +390,8 @@ static ErrorCode try_read_into_buffer(int fd, char* buffer, size_t num_bytes_to_
     num_bytes_read = 0;
     // keep reading from the fd until seeing a 0, which means eof
     while (true) {
-        auto bytes_read = ::read(fd, buffer + num_bytes_read, num_bytes_to_read);
+        size_t remaining_bytes_to_read = num_bytes_to_read - num_bytes_read;
+        auto bytes_read = ::read(fd, buffer + num_bytes_read, remaining_bytes_to_read);
         if (bytes_read == -1) {
             return ErrorCode_errno;
         }
@@ -384,8 +399,7 @@ static ErrorCode try_read_into_buffer(int fd, char* buffer, size_t num_bytes_to_
             break;
         }
         num_bytes_read += bytes_read;
-        num_bytes_to_read -= bytes_read;
-        if (num_bytes_to_read == 0) {
+        if (num_bytes_read == num_bytes_to_read) {
             return ErrorCode_Success;
         }
     }

@@ -40,14 +40,6 @@ ErrorCode BufferReader::try_seek_from_begin (size_t pos) {
     return ErrorCode_Success;
 }
 
-ErrorCode BufferReader::try_seek_from_current (off_t offset) {
-    if (m_internal_buf_pos + offset > m_internal_buf_size) {
-        return ErrorCode_OutOfBounds;
-    }
-    m_internal_buf_pos += offset;
-    return ErrorCode_Success;
-}
-
 ErrorCode BufferReader::try_get_pos (size_t& pos) {
     pos = m_internal_buf_pos;
     return ErrorCode_Success;

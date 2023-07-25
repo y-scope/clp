@@ -45,13 +45,6 @@ public:
      */
     [[nodiscard]] ErrorCode try_seek_from_begin (size_t pos) override;
     /**
-     * Tries to seek from the current pos of the buffer by the given amount
-     * @param pos
-     * @return ErrorCode_OutOfBounds if the offset exceeds the buffer's size
-     * @return ErrorCode_Success on success
-     */
-    [[nodiscard]] ErrorCode try_seek_from_current (off_t offset);
-    /**
      * @param pos Returns the position of the read head in the buffer
      * @return ErrorCode_Success
      */
