@@ -232,7 +232,7 @@ namespace streaming_archive { namespace writer {
          * @return The size (in bytes) of compressed data whose size may change
          * before the archive is closed
          */
-        size_t get_dynamic_compressed_size ();
+        uint64_t get_dynamic_compressed_size ();
         /**
          * Updates the archive's metadata
          */
