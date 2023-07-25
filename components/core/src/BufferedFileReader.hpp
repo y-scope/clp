@@ -10,6 +10,7 @@
 #include <string>
 
 // Project headers
+#include "BufferReader.hpp"
 #include "Defs.h"
 #include "ErrorCode.hpp"
 #include "ReaderInterface.hpp"
@@ -160,9 +161,7 @@ public:
 
 private:
     // Methods
-    [[nodiscard]] size_t cursor_pos() const { return m_file_pos - m_buffer_begin_pos; }
-    [[nodiscard]] char* buffer_head() const { return m_buffer.get() + cursor_pos(); }
-    [[nodiscard]] size_t remaining_data_size() const;
+    [[nodiscard]] size_t get_data_size() const;
 
     /**
      * Quantize the given size to be the next integer multiple of buffer_size
@@ -204,7 +203,7 @@ private:
 
     // Buffer specific data
     std::unique_ptr<char[]> m_buffer;
-    size_t m_data_size;
+    std::optional<BufferReader> m_buffer_reader;
     size_t m_buffer_begin_pos;
 
     // Values for buffer related calculation

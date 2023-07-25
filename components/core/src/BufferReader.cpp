@@ -3,6 +3,9 @@
 // C++ standard libraries
 #include <algorithm>
 
+#include <stdio.h>
+#include <string.h>
+
 BufferReader::BufferReader (const char* data, size_t data_size) {
     if (nullptr == data || 0 == data_size) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
@@ -37,7 +40,43 @@ ErrorCode BufferReader::try_seek_from_begin (size_t pos) {
     return ErrorCode_Success;
 }
 
+ErrorCode BufferReader::try_seek_from_current (off_t offset) {
+    if (m_internal_buf_pos + offset > m_internal_buf_size) {
+        return ErrorCode_OutOfBounds;
+    }
+    m_internal_buf_pos += offset;
+    return ErrorCode_Success;
+}
+
 ErrorCode BufferReader::try_get_pos (size_t& pos) {
     pos = m_internal_buf_pos;
     return ErrorCode_Success;
+}
+
+void BufferReader::peek_buffer (size_t size_to_peek, const char*& data_ptr, size_t& peek_size) {
+    peek_size = std::min(size_to_peek, m_internal_buf_size - m_internal_buf_pos);
+    data_ptr = m_internal_buf + m_internal_buf_pos;
+}
+
+ErrorCode BufferReader::try_read_to_delimiter (char delim, bool keep_delimiter, bool append,
+                                               std::string& str, size_t& length) {
+    // find the pointer pointing to the delimiter
+    const char* buffer_head = m_internal_buf + m_internal_buf_pos;
+    const char* delim_ptr = reinterpret_cast<const char*>(
+            memchr(buffer_head, delim, m_internal_buf_size - m_internal_buf_pos)
+    );
+    ErrorCode ret_code;
+    size_t delim_pos;
+    if (delim_ptr != nullptr) {
+        delim_pos = (delim_ptr - m_internal_buf) + 1;
+        ret_code = ErrorCode_Success;
+    } else {
+        delim_pos = m_internal_buf_size;
+        ret_code = ErrorCode_EndOfFile;
+    }
+    // append to strings
+    length = delim_pos - m_internal_buf_pos;
+    str.append(buffer_head, length);
+    m_internal_buf_pos = delim_pos;
+    return ret_code;
 }

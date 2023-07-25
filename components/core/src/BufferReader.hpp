@@ -45,10 +45,25 @@ public:
      */
     [[nodiscard]] ErrorCode try_seek_from_begin (size_t pos) override;
     /**
+     * Tries to seek from the current pos of the buffer by the given amount
+     * @param pos
+     * @return ErrorCode_OutOfBounds if the offset exceeds the buffer's size
+     * @return ErrorCode_Success on success
+     */
+    [[nodiscard]] ErrorCode try_seek_from_current (off_t offset);
+    /**
      * @param pos Returns the position of the read head in the buffer
      * @return ErrorCode_Success
      */
     [[nodiscard]] ErrorCode try_get_pos (size_t& pos) override;
+
+    // Helper functions
+    [[nodiscard]] size_t get_buffer_size() const { return m_internal_buf_size; }
+
+    void peek_buffer (size_t size_to_peek, const char*& data_ptr, size_t& peek_size);
+
+    ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter,
+                                     bool append, std::string& str, size_t& length);
 
 private:
     const char* m_internal_buf;
