@@ -149,22 +149,25 @@ ErrorCode BufferedFileReader::try_read_to_delimiter (char delim, bool keep_delim
         return ErrorCode_NotInit;
     }
 
-    if (false == append) {
-        str.clear();
-    }
-
     bool found_delim {false};
+    size_t read_size {0};
     while (false == found_delim) {
         if (m_buffer_reader.has_value()) {
-            size_t length;
+            size_t length {0};
             if (ErrorCode_Success == m_buffer_reader->try_read_to_delimiter(delim, keep_delimiter, append, str, length)) {
                 found_delim = true;
             }
             m_file_pos += length;
+            read_size += length;
         }
         if (false == found_delim) {
-            if (auto error_code = refill_reader_buffer(m_buffer_size);
-                    ErrorCode_Success != error_code) {
+            auto error_code = refill_reader_buffer(m_buffer_size);
+            if (ErrorCode_EndOfFile == error_code) {
+                if (read_size == 0) {
+                    return ErrorCode_EndOfFile;
+                }
+                return ErrorCode_Success;
+            } else if (ErrorCode_Success != error_code) {
                 return error_code;
             }
         }

@@ -60,6 +60,10 @@ void BufferReader::peek_buffer (size_t size_to_peek, const char*& data_ptr, size
 
 ErrorCode BufferReader::try_read_to_delimiter (char delim, bool keep_delimiter, bool append,
                                                std::string& str, size_t& length) {
+
+    if (false == append) {
+        str.clear();
+    }
     // find the pointer pointing to the delimiter
     const char* buffer_head = m_internal_buf + m_internal_buf_pos;
     const char* delim_ptr = reinterpret_cast<const char*>(
@@ -76,6 +80,9 @@ ErrorCode BufferReader::try_read_to_delimiter (char delim, bool keep_delimiter, 
     }
     // append to strings
     length = delim_pos - m_internal_buf_pos;
+    if (false == keep_delimiter && delim == m_internal_buf[delim_pos - 1]) {
+        --length;
+    }
     str.append(buffer_head, length);
     m_internal_buf_pos = delim_pos;
     return ret_code;
