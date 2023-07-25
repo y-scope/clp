@@ -23,6 +23,8 @@ namespace streaming_archive {
 
         namespace Archive {
             constexpr char Id[] = "id";
+            constexpr char BeginTimestamp[] = "begin_timestamp";
+            constexpr char EndTimestamp[] = "end_timestamp";
             constexpr char UncompressedSize[] = "uncompressed_size";
             constexpr char Size[] = "size";
             constexpr char CreatorId[] = "creator_id";

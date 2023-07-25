@@ -60,13 +60,12 @@ public:
     void open () override;
     void close () override;
 
-    void add_archive (const std::string& id, uint64_t uncompressed_size, uint64_t size,
-                      const std::string& creator_id, uint64_t creation_num) override;
-    void update_archive_size (const std::string& archive_id, uint64_t uncompressed_size,
-                              uint64_t size) override;
+    void add_archive (const std::string& id, const streaming_archive::ArchiveMetadata& metadata) override;
+    void update_archive_metadata (const std::string& archive_id, const streaming_archive::ArchiveMetadata& metadata) override;
     void update_metadata_for_files (const std::string& archive_id, const std::vector<streaming_archive::writer::File*>& files) override;
 
     GlobalMetadataDB::ArchiveIterator* get_archive_iterator () override;
+    GlobalMetadataDB::ArchiveIterator* get_archive_iterator_for_time_window (epochtime_t begin_ts, epochtime_t end_ts) override;
     GlobalMetadataDB::ArchiveIterator* get_archive_iterator_for_file_path (const std::string& file_path) override;
 
 private:

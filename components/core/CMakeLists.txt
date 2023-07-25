@@ -271,6 +271,8 @@ set(SOURCE_FILES_clp
         src/SQLitePreparedStatement.hpp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
+        src/streaming_archive/ArchiveMetadata.cpp
+        src/streaming_archive/ArchiveMetadata.hpp
         src/streaming_archive/Constants.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
@@ -430,6 +432,8 @@ set(SOURCE_FILES_clg
         src/SQLitePreparedStatement.hpp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
+        src/streaming_archive/ArchiveMetadata.cpp
+        src/streaming_archive/ArchiveMetadata.hpp
         src/streaming_archive/Constants.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
@@ -573,6 +577,8 @@ set(SOURCE_FILES_clo
         src/SQLitePreparedStatement.hpp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
+        src/streaming_archive/ArchiveMetadata.cpp
+        src/streaming_archive/ArchiveMetadata.hpp
         src/streaming_archive/Constants.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
@@ -774,6 +780,8 @@ set(SOURCE_FILES_unitTest
         src/SQLitePreparedStatement.hpp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
+        src/streaming_archive/ArchiveMetadata.cpp
+        src/streaming_archive/ArchiveMetadata.hpp
         src/streaming_archive/Constants.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
