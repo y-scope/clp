@@ -21,20 +21,31 @@ public:
     QueryToken (const std::string& query_string, size_t begin_pos, size_t end_pos, bool is_var);
 
     // Methods
-    bool cannot_convert_to_non_dict_var () const;
-    bool contains_wildcards () const;
-    bool has_greedy_wildcard_in_middle () const;
-    bool has_prefix_greedy_wildcard () const;
-    bool has_suffix_greedy_wildcard () const;
-    bool is_ambiguous_token () const;
-    bool is_float_var () const;
-    bool is_int_var () const;
-    bool is_var () const;
-    bool is_wildcard () const;
+    [[nodiscard]] bool cannot_convert_to_non_dict_var () const;
 
-    size_t get_begin_pos () const;
-    size_t get_end_pos () const;
-    const std::string& get_value () const;
+    [[nodiscard]] bool contains_wildcards () const;
+
+    [[nodiscard]] bool has_greedy_wildcard_in_middle () const;
+
+    [[nodiscard]] bool has_prefix_greedy_wildcard () const;
+
+    [[nodiscard]] bool has_suffix_greedy_wildcard () const;
+
+    [[nodiscard]] bool is_ambiguous_token () const;
+
+    [[nodiscard]] bool is_float_var () const;
+
+    [[nodiscard]] bool is_int_var () const;
+
+    [[nodiscard]] bool is_var () const;
+
+    [[nodiscard]] bool is_wildcard () const;
+
+    [[nodiscard]] size_t get_begin_pos () const;
+
+    [[nodiscard]] size_t get_end_pos () const;
+
+    [[nodiscard]] const std::string& get_value () const;
 
     bool change_to_next_possible_type ();
 
@@ -45,7 +56,8 @@ private:
     // it was of type Logtype.
     enum class Type {
         Wildcard,
-        // Ambiguous indicates the token can be more than one of the types listed below
+        // Ambiguous indicates the token can be more than one of the types
+        // listed below
         Ambiguous,
         Logtype,
         DictionaryVar,
