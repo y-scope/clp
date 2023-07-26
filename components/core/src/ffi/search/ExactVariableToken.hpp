@@ -8,8 +8,8 @@
 namespace ffi::search {
 /**
  * A token representing an exact variable (as opposed to a variable with
- * wildcards). Note that the original query string is stored by reference,
- * so it must remain valid while the token exists.
+ * wildcards). Note that the original query string is stored by reference, so it
+ * must remain valid while the token exists.
  * @tparam encoded_variable_t Type for encoded variable values
  */
 template <typename encoded_variable_t>
@@ -17,8 +17,8 @@ class ExactVariableToken : public QueryToken {
 public:
     // Constructors
     /**
-     * Constructs an exact variable token. NOTE: It's the callers
-     * responsibility to ensure that the token is indeed a variable.
+     * Constructs an exact variable token. NOTE: It's the callers responsibility
+     * to ensure that the token is indeed a variable.
      * @param query
      * @param begin_pos
      * @param end_pos

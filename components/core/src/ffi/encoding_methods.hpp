@@ -7,8 +7,7 @@
 #include "../TraceableException.hpp"
 
 // TODO Some of the methods in this file are mostly duplicated from code that
-//  exists elsewhere in the repo. They should be consolidated in a future
-//  commit.
+// exists elsewhere in the repo. They should be consolidated in a future commit.
 namespace ffi {
 // Types
 using epoch_time_ms_t = int64_t;
@@ -43,11 +42,11 @@ private:
 
 // Constants
 /*
- * These constants can be used by callers to store the version of the
- * schemas and encoding methods they're using. At some point, we may update
- * and/or add built-in schemas/encoding methods. So callers must store the
- * versions they used for encoding to ensure that they can choose the same
- * versions for decoding.
+ * These constants can be used by callers to store the version of the schemas
+ * and encoding methods they're using. At some point, we may update and/or add
+ * built-in schemas/encoding methods. So callers must store the versions they
+ * used for encoding to ensure that they can choose the same versions for
+ * decoding.
  *
  * We use versions which look like package names in anticipation of users
  * writing their own custom schemas and encoding methods.
@@ -124,8 +123,7 @@ bool get_bounds_of_next_var(
 );
 
 /**
- * Encodes the given string into a representable float variable if
- * possible
+ * Encodes the given string into a representable float variable if possible
  * @tparam encoded_variable_t Type of the encoded variable
  * @param str
  * @param encoded_var
@@ -166,8 +164,7 @@ template <typename encoded_variable_t>
 std::string decode_float_var(encoded_variable_t encoded_var);
 
 /**
- * Encodes the given string into a representable integer variable if
- * possible
+ * Encodes the given string into a representable integer variable if possible
  * @tparam encoded_variable_t Type of the encoded variable
  * @param str
  * @param encoded_var
@@ -223,9 +220,8 @@ bool encode_message_generically(
 );
 
 /**
- * Encodes the given message. The simplistic interface is to make it
- * efficient to transfer data between the caller language and this native
- * code.
+ * Encodes the given message. The simplistic interface is to make it efficient
+ * to transfer data between the caller language and this native code.
  * @tparam encoded_variable_t Type of the encoded variable
  * @param message
  * @param logtype
@@ -245,9 +241,9 @@ bool encode_message(
 );
 
 /**
- * Decodes the message from the given logtype, encoded variables, and
- * dictionary variables. The simplistic interface is to make it efficient
- * to transfer data between the caller language and this native code.
+ * Decodes the message from the given logtype, encoded variables, and dictionary
+ * variables. The simplistic interface is to make it efficient to transfer data
+ * between the caller language and this native code.
  * @tparam encoded_variable_t Type of the encoded variable
  * @param logtype
  * @param encoded_vars
@@ -271,9 +267,9 @@ std::string decode_message(
 
 /**
  * Checks if any encoded variable matches the given wildcard query
- * NOTE: This method checks for *either* matching integer encoded variables
- * or matching float encoded variables, based on the variable placeholder
- * template parameter.
+ * NOTE: This method checks for *either* matching integer encoded variables or
+ * matching float encoded variables, based on the variable placeholder template
+ * parameter.
  * @tparam var_placeholder Placeholder for the type of encoded variables
  * that should be checked for matches
  * @tparam encoded_variable_t Type of the encoded variable
@@ -292,10 +288,10 @@ bool wildcard_query_matches_any_encoded_var(
 );
 
 /**
- * Checks whether the given wildcard strings match the given encoded
- * variables (from a message). Specifically, let {w in W} be the set of
- * wildcard strings and {e in E} be the set of encoded variables. This
- * method will return true only if:
+ * Checks whether the given wildcard strings match the given encoded variables
+ * (from a message). Specifically, let {w in W} be the set of wildcard strings
+ * and {e in E} be the set of encoded variables. This method will return true
+ * only if:
  * (1) Each unique `w` matches a unique `e`.
  * (2) When (1) is true, the order of elements in both W and E is unchanged.
  * NOTE: Instead of taking an array of objects, this method takes arrays of

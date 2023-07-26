@@ -8,8 +8,7 @@ using std::string_view;
 namespace ffi {
 /*
  * For performance, we rely on the ASCII ordering of characters to compare
- * ranges of characters at a time instead of comparing individual
- * characters
+ * ranges of characters at a time instead of comparing individual characters
  */
 bool is_delim(signed char c) {
     return !(

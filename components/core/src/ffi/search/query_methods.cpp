@@ -16,11 +16,11 @@ static auto TokenGetEndPos = [](auto const& token) { return token.get_end_pos();
 /**
  * Finds the next delimiter that's not also a wildcard
  * @param value
- * @param pos Position to the start the search from, returns the position of
- * the delimiter (if found)
+ * @param pos Position to the start the search from, returns the position of the
+ * delimiter (if found)
  * @param contains_alphabet Returns whether the string contains an alphabet
- * @param contains_decimal_digit Returns whether the string contains a
- * decimal digit
+ * @param contains_decimal_digit Returns whether the string contains a decimal
+ * digit
  * @param contains_wildcard Returns whether the string contains a wildcard
  */
 static void find_delimiter(
@@ -31,25 +31,25 @@ static void find_delimiter(
         bool& contains_wildcard
 );
 /**
- * Finds the next wildcard or non-delimiter in the given string, starting
- * from the given position
+ * Finds the next wildcard or non-delimiter in the given string, starting from
+ * the given position
  * @param value
- * @param pos Position to the start the search from, returns the position of
- * the wildcard or non-delimiter (if found)
+ * @param pos Position to the start the search from, returns the position of the
+ * wildcard or non-delimiter (if found)
  * @param contains_wildcard Returns whether the string contains a wildcard
  * @return Whether a wildcard/non-delimiter was found
  */
 static bool find_wildcard_or_non_delimiter(string_view value, size_t& pos, bool& contains_wildcard);
 
 /**
- * Tokenizes the given wildcard query into exact variables (as would be
- * found by ffi::get_bounds_of_next_var) and potential variables, i.e., any
- * token with a wildcard.
+ * Tokenizes the given wildcard query into exact variables (as would be found by
+ * ffi::get_bounds_of_next_var) and potential variables, i.e., any token with a
+ * wildcard.
  * @tparam encoded_variable_t Type for encoded variable values
  * @param wildcard_query
  * @param tokens
- * @param composite_wildcard_token_indexes Indexes of the tokens in \p
- * tokens which contain wildcards
+ * @param composite_wildcard_token_indexes Indexes of the tokens in \p tokens
+ * which contain wildcards
  */
 template <typename encoded_variable_t>
 static void tokenize_query(

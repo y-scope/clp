@@ -10,9 +10,9 @@
 
 namespace ffi::search {
 /**
- * A class representing a subquery. Each subquery encompasses a single
- * logtype query and zero or more variable queries. Both the logtype and
- * variables may contain wildcards.
+ * A class representing a subquery. Each subquery encompasses a single logtype
+ * query and zero or more variable queries. Both the logtype and variables may
+ * contain wildcards.
  * @tparam encoded_variable_t The type of encoded variables
  */
 template <typename encoded_variable_t>

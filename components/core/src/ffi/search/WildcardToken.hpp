@@ -8,9 +8,8 @@
 
 namespace ffi::search {
 /**
- * A token containing one or more wildcards. Note that the original query
- * string is stored by reference, so it must remain valid while the token
- * exists.
+ * A token containing one or more wildcards. Note that the original query string
+ * is stored by reference, so it must remain valid while the token exists.
  * @tparam encoded_variable_t
  */
 template <typename encoded_variable_t>
@@ -46,9 +45,9 @@ public:
 
     /**
      * Adds this token to the given logtype query. NOTE: We don't add this
-     * token's suffix '*' (if any) to the logtype query since we expect it
-     * will be added as the next token's prefix '*' (or if this is the last
-     * token, we expect the caller will add the suffix '*').
+     * token's suffix '*' (if any) to the logtype query since we expect it will
+     * be added as the next token's prefix '*' (or if this is the last token, we
+     * expect the caller will add the suffix '*').
      * @param logtype_query
      * @return true if the token is interpreted as a variable
      * @return false if the token is interpreted as static text

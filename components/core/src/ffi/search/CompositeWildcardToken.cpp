@@ -42,21 +42,19 @@ void CompositeWildcardToken<encoded_variable_t>::add_to_query(
         vector<variant<ExactVariableToken<encoded_variable_t>, WildcardToken<encoded_variable_t>>>&
                 variable_tokens
 ) const {
-    // We need to handle '*' carefully when building the logtype query since
-    // we may have a token like "a1*b2" with interpretation ["a1*", "*b2"].
-    // In this case, we want to make sure the logtype query only ends up
-    // with one '*' rather than one for the suffix of "a1*" and one for the
-    // prefix of "*b2". So the algorithm below only adds a '*' to the
-    // logtype query if the current variable has a prefix '*' (i.e., we
-    // ignore suffix '*'). Then after the loop, if the last variable had a
-    // suffix '*', we add a '*' to the logtype query before adding any
-    // remaining query content.
+    // We need to handle '*' carefully when building the logtype query since we
+    // may have a token like "a1*b2" with interpretation ["a1*", "*b2"]. In this
+    // case, we want to make sure the logtype query only ends up with one '*'
+    // rather than one for the suffix of "a1*" and one for the prefix of "*b2".
+    // So the algorithm below only adds a '*' to the logtype query if the
+    // current variable has a prefix '*' (i.e., we ignore suffix '*'). Then
+    // after the loop, if the last variable had a suffix '*', we add a '*' to
+    // the logtype query before adding any remaining query content.
     auto constant_begin_pos = m_begin_pos;
     for (auto const& var : m_variables) {
         auto begin_pos = std::visit(TokenGetBeginPos, var);
-        // Copy from the end of the last variable to the beginning of this
-        // one (if this wildcard variable doesn't overlap with the previous
-        // one)
+        // Copy from the end of the last variable to the beginning of this one
+        // (if this wildcard variable doesn't overlap with the previous one)
         if (begin_pos > constant_begin_pos) {
             logtype_query.append(m_query, constant_begin_pos, begin_pos - constant_begin_pos);
         }
@@ -155,11 +153,11 @@ bool CompositeWildcardToken<encoded_variable_t>::generate_next_interpretation() 
  * - If instead only the first '?' is interpreted as matching a delimiter,
  *   then the tokens will be ["*abc*def", "ghi?123"].
  *
- * NOTE: We could cache wildcard variables that we generate (using their
- * bounds in the query as the cache key) so that we don't end up
- * regenerating them in other tokenizations. This isn't a performance
- * problem now, but could be an issue if we need to search the variable
- * dictionary for each generated WildcardToken.
+ * NOTE: We could cache wildcard variables that we generate (using their bounds
+ * in the query as the cache key) so that we don't end up regenerating them in
+ * other tokenizations. This isn't a performance problem now, but could be an
+ * issue if we need to search the variable dictionary for each generated
+ * WildcardToken.
  */
 template <typename encoded_variable_t>
 void CompositeWildcardToken<encoded_variable_t>::tokenize_into_wildcard_variable_tokens() {
@@ -177,8 +175,8 @@ void CompositeWildcardToken<encoded_variable_t>::tokenize_into_wildcard_variable
                 auto wildcard_pos = w.get_pos_in_query();
                 if (wildcard_pos == m_begin_pos) {
                     last_wildcard = &w;
-                    // Nothing to do yet since wildcard is at the beginning
-                    // of the token
+                    // Nothing to do yet since wildcard is at the beginning of
+                    // the token
                     continue;
                 }
 

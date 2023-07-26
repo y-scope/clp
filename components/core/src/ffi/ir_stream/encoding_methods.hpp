@@ -73,8 +73,8 @@ namespace four_byte_encoding {
     );
 
     /**
-     * Encodes the given message into the four-byte encoding IR stream
-     * without encoding timestamp delta
+     * Encodes the given message into the four-byte encoding IR stream without
+     * encoding timestamp delta
      * @param message
      * @param logtype
      * @param ir_buf
@@ -84,8 +84,7 @@ namespace four_byte_encoding {
     encode_message(std::string_view message, std::string& logtype, std::vector<int8_t>& ir_buf);
 
     /**
-     * Encodes the given timestamp delta into the four-byte encoding IR
-     * stream
+     * Encodes the given timestamp delta into the four-byte encoding IR stream
      * @param timestamp_delta
      * @param ir_buf
      * @return true on success, false otherwise

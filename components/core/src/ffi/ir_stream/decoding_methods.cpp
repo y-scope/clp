@@ -149,7 +149,10 @@ bool IrBuffer::try_read(void* dest, size_t read_size) {
 
 template <typename encoded_variable_t>
 static bool is_variable_tag(encoded_tag_t tag, bool& is_encoded_var) {
-    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+    static_assert(
+            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+             || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+    );
 
     if (tag == cProtocol::Payload::VarStrLenUByte || tag == cProtocol::Payload::VarStrLenUShort
         || tag == cProtocol::Payload::VarStrLenInt)
@@ -260,7 +263,10 @@ parse_dictionary_var(IrBuffer& ir_buf, encoded_tag_t encoded_tag, string_view& d
 
 template <typename encoded_variable_t>
 IRErrorCode parse_timestamp(IrBuffer& ir_buf, encoded_tag_t encoded_tag, epoch_time_ms_t& ts) {
-    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+    static_assert(
+            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+             || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+    );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
         if (cProtocol::Payload::TimestampVal != encoded_tag) {
@@ -341,9 +347,8 @@ generic_decode_next_message(IrBuffer& ir_buf, string& message, epoch_time_ms_t& 
         return error_code;
     }
 
-    // NOTE: for the eight-byte encoding, the timestamp is the actual
-    // timestamp; for the four-byte encoding, the timestamp is a timestamp
-    // delta
+    // NOTE: for the eight-byte encoding, the timestamp is the actual timestamp;
+    // for the four-byte encoding, the timestamp is a timestamp delta
     if (false == ir_buf.try_read(encoded_tag)) {
         return IRErrorCode_Incomplete_IR;
     }
@@ -475,8 +480,8 @@ static string decode_message(
             }
 
             case cVariablePlaceholderEscapeCharacter: {
-                // Ensure the escape character is followed by a
-                // character that's being escaped
+                // Ensure the escape character is followed by a character that's
+                // being escaped
                 if (cur_pos == logtype.length() - 1) {
                     throw EncodingException(
                             ErrorCode_Corrupt,
@@ -495,9 +500,9 @@ static string decode_message(
                 next_static_text_begin_pos = cur_pos + 1;
                 // The character after the escape character is static text
                 // (regardless of whether it is a variable placeholder), so
-                // increment cur_pos by 1 to ensure we don't process the
-                // next character in any of the other cases (instead it will
-                // be added to the message).
+                // increment cur_pos by 1 to ensure we don't process the next
+                // character in any of the other cases (instead it will be added
+                // to the message).
                 ++cur_pos;
 
                 break;

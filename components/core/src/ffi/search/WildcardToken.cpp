@@ -104,11 +104,11 @@ static bool could_be_int_var(const string_view token) {
 }
 
 /**
- * To check if the token could be static text, formally, we need to check if
- * the token matches the complement of all variable schemas ORed together
- * (~((schema1)|(schema2)|...). Another way of looking at this is if the
- * token contains anything which indicates it's definitely a variable, then
- * it can't be static text.
+ * To check if the token could be static text, formally, we need to check if the
+ * token matches the complement of all variable schemas ORed together
+ * (~((schema1)|(schema2)|...). Another way of looking at this is if the token
+ * contains anything which indicates it's definitely a variable, then it can't
+ * be static text.
  */
 static bool could_be_static_text(string_view query, size_t begin_pos, size_t end_pos) {
     bool is_escaped = false;
@@ -129,8 +129,8 @@ static bool could_be_static_text(string_view query, size_t begin_pos, size_t end
     if (begin_pos > 0 && '=' == query[begin_pos - 1]) {
         if ('?' == query[begin_pos] && contains_alphabet) {
             // "=?...<alphabet>..." must be a variable since
-            // 1. '?' would only be included in the variable token if it
-            //    was treated as a non-delimiter, and
+            // 1. '?' would only be included in the variable token if it was
+            //    treated as a non-delimiter, and
             // 2. an '=' followed by non-delimiters and an alphabet is
             //    definitely a variable.
             return false;

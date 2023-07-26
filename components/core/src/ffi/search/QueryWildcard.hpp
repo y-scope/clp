@@ -49,8 +49,8 @@ public:
      * Constructs a query wildcard
      * @param wildcard
      * @param pos_in_query
-     * @param is_boundary_wildcard Whether this wildcard is at either end of
-     * the query token
+     * @param is_boundary_wildcard Whether this wildcard is at either end of the
+     * query token
      */
     QueryWildcard(char wildcard, size_t pos_in_query, bool is_boundary_wildcard);
 
