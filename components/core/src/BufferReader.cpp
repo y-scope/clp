@@ -7,7 +7,7 @@
 #include <string.h>
 
 BufferReader::BufferReader (const char* data, size_t data_size) {
-    if (nullptr == data || 0 == data_size) {
+    if (nullptr == data) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
     m_internal_buf = data;

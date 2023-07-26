@@ -186,8 +186,6 @@ public:
 
 private:
     // Methods
-    [[nodiscard]] size_t get_data_size() const;
-
     /**
      * Quantize the given size to be the next integer multiple of buffer_size
      * @param size
