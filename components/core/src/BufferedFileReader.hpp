@@ -17,7 +17,11 @@
 #include "TraceableException.hpp"
 
 /**
- * Class for reading from a on-disk file with custom buffering
+ * Class for reading from a on-disk file with custom buffering.
+ * The BufferedFileReader is designed to support files that only allow
+ * sequential access, such as files in S3. The class uses a checkpoint
+ * mechanism to support seeking and reading from a previous file position
+ * without having to actually accessing the file.
  */
 class BufferedFileReader : public ReaderInterface {
 public:
@@ -147,15 +151,36 @@ public:
                                                size_t& peek_size);
 
     /**
-     * Sets a checkpoint pos. the BufferedFileReader guarantees that
-     * all data after checkpoint pos will be buffered in the memory and
-     * support seek.
+     * Sets a checkpoint at the current file pos.
+     * By default, the checkpoint is not set and the BufferedFileReader only
+     * maintains a fixed size buffer. Seeking before the reading pos is not
+     * supported since the data might not be in the buffer anymore.
+     *
+     * When the checkpoint is set, the BufferedFileReader increases its
+     * internal buffer size on demand and buffer all data between the
+     * checkpoint pos and largest ever file_pos in the memory.
+     * It then support seeking back to a previous file pos that's after the
+     * checkpoint pos, as the data is guaranteed to be available in the internal
+     * buffer.
+     *
+     * Note: Setting a checkpoint may result in higher memory usage since
+     * the BufferedFileReader needs to exhaustively buffer the data it reads
+     * in the buffer.
      * @return current file pos
      */
     size_t mark_pos();
 
     /**
      * Disable the checkpoint pos and release buffered data from memory
+     * The function resize the internal buffer based on the following rules.
+     * 1. If the current reading_pos is within the same m_buffer_size region as
+     * the buffer end pos (the file pos that end of buffer corresponds to). i.e.
+     * buffer_end_pos - file_pos < m_buffer_size
+     * the buffer will be resized to m_buffer_size bytes
+     * 2. Else, The buffer will be resized to the rounded result of
+     * quantizing (buffer_end_pos - file_pos) to the nearest multiple of
+     * 'm_buffer_size' using the rounding method. This ensures that the current
+     * read pos still resides in the resized buffer
      */
     void reset_checkpoint ();
 
@@ -197,9 +222,9 @@ private:
     static constexpr size_t cDefaultBufferSize = 65536;
 
     // Variables
-    size_t m_file_pos;
     int m_fd;
     std::string m_path;
+    size_t m_file_pos;
 
     // Buffer specific data
     std::unique_ptr<char[]> m_buffer;
@@ -216,4 +241,4 @@ private:
 };
 
 
-#endif // BufferedFileReader
+#endif // BufferedFileReader_HPP
