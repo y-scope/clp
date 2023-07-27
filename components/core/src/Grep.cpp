@@ -539,7 +539,7 @@ bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_
                     forward_lexer.scan(parser_input_buffer, search_token);
                     search_token.m_type_ids_set.insert(search_token.m_type_ids_ptr->at(0));
                 }
-                const auto& set = search_token.m_type_ids_set;
+                auto const& set = search_token.m_type_ids_set;
                 if (set.find((int) log_surgeon::SymbolID::TokenUncaughtStringID) == set.end() &&
                     set.find((int) log_surgeon::SymbolID::TokenEndID) == set.end())
                 {
