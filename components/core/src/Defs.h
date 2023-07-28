@@ -42,17 +42,6 @@ typedef uint64_t pipeline_id_t;
 constexpr pipeline_id_t cPipelineIdMax = std::numeric_limits<pipeline_id_t>::max();
 typedef std::atomic_uint64_t atomic_pipeline_id_t;
 
-enum LogVerbosity : uint8_t {
-    LogVerbosity_FATAL = 0,
-    LogVerbosity_ERROR,
-    LogVerbosity_WARN,
-    LogVerbosity_INFO,
-    LogVerbosity_DEBUG,
-    LogVerbosity_TRACE,
-    LogVerbosity_UNKNOWN,
-    LogVerbosity_Length
-};
-
 // Macros
 // Rounds up VALUE to be a multiple of MULTIPLE
 #define ROUND_UP_TO_MULTIPLE(VALUE, MULTIPLE) ((VALUE + MULTIPLE - 1) / MULTIPLE) * MULTIPLE
