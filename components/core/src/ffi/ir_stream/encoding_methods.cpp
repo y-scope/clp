@@ -172,7 +172,7 @@ namespace ffi::ir_stream {
     }
 
     static bool append_constant_to_logtype (string_view constant,
-                                            bool contains_variable_placeholder, string& logtype)
+                                            bool /*contains_variable_placeholder*/, string& logtype)
     {
         size_t begin_pos = 0;
         auto constant_len = constant.length();
