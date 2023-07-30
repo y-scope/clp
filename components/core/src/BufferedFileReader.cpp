@@ -64,9 +64,9 @@ ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
             return ErrorCode_Failure;
         }
         // adjust the buffer reader pos
-        m_buffer_reader->seek_from_begin(pos - m_buffer_begin_pos);
+        m_buffer_reader->seek_from_begin(get_equivalent_buffer_pos(pos));
     } else {
-        if (ErrorCode_Success == m_buffer_reader->try_seek_from_begin(pos - m_buffer_begin_pos)) {
+        if (ErrorCode_Success == m_buffer_reader->try_seek_from_begin(get_equivalent_buffer_pos(pos))) {
             m_file_pos = pos;
             highest_read_pos = std::max(highest_read_pos, m_file_pos);
             return ErrorCode_Success;
@@ -81,8 +81,7 @@ ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
             m_buffer_reader.emplace(m_buffer.get(), 0);
             m_buffer_begin_pos = pos;
         } else {
-            auto data_size = m_buffer_reader->get_buffer_size();
-            size_t num_bytes_to_refill = pos - (m_buffer_begin_pos + data_size);
+            size_t num_bytes_to_refill = pos - (m_buffer_begin_pos + m_buffer_reader->get_buffer_size());
 
             size_t num_bytes_refilled {0};
             auto error_code = refill_reader_buffer(num_bytes_to_refill, num_bytes_refilled);
@@ -93,7 +92,7 @@ ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
             if (ErrorCode_Success != error_code) {
                 return error_code;
             }
-            m_buffer_reader->seek_from_begin(pos - m_buffer_begin_pos);
+            m_buffer_reader->seek_from_begin(get_equivalent_buffer_pos(pos));
         }
     }
     m_file_pos = pos;
@@ -252,7 +251,7 @@ size_t BufferedFileReader::set_checkpoint() {
             if (m_buffer_reader->get_buffer_size() != m_buffer_size) {
                 // allocate new buffer for buffered data starting from pos
                 resize_buffer_from_pos(m_buffer_reader->get_pos());
-                m_buffer_reader->seek_from_begin(m_file_pos - m_buffer_begin_pos);
+                m_buffer_reader->seek_from_begin(get_equivalent_buffer_pos(m_file_pos));
             }
         }
     }
@@ -270,8 +269,7 @@ void BufferedFileReader::clear_checkpoint () {
     }
 
     m_file_pos = highest_read_pos;
-    const auto copy_pos = m_file_pos - m_buffer_begin_pos;
-    resize_buffer_from_pos(copy_pos);
+    resize_buffer_from_pos(get_equivalent_buffer_pos(m_file_pos));
     m_checkpoint_pos.reset();
 }
 
@@ -354,7 +352,7 @@ ErrorCode BufferedFileReader::refill_reader_buffer (size_t num_bytes_to_refill,
         }
         m_buffer = std::move(new_buffer);
         m_buffer_reader.emplace(m_buffer.get(), data_size + num_bytes_refilled);
-        m_buffer_reader->seek_from_begin(m_file_pos - m_buffer_begin_pos);
+        m_buffer_reader->seek_from_begin(get_equivalent_buffer_pos(m_file_pos));
     }
     return ErrorCode_Success;
 }

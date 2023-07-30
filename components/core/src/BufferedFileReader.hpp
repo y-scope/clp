@@ -218,6 +218,8 @@ private:
 
     void resize_buffer_from_pos(size_t pos);
 
+    [[nodiscard]] size_t get_equivalent_buffer_pos(size_t file_pos) const { return file_pos - m_buffer_begin_pos; }
+
     // Constants
     static constexpr size_t cDefaultBufferSize = 65536;
 
