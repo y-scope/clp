@@ -168,7 +168,7 @@ public:
      * in the buffer.
      * @return current file pos
      */
-    size_t mark_pos();
+    size_t set_checkpoint();
 
     /**
      * Disable the checkpoint pos and release buffered data from memory
@@ -182,7 +182,7 @@ public:
      * 'm_buffer_size' using the rounding method. This ensures that the current
      * read pos still resides in the resized buffer
      */
-    void reset_checkpoint ();
+    void clear_checkpoint ();
 
 private:
     // Methods
@@ -209,12 +209,14 @@ private:
     /**
      * Similar to refill_reader_buffer, except that number of bytes refilled
      * is returned by reference
-     * @param refill_size
+     * @param num_bytes_to_refill
      * @param num_bytes_refilled Returns the number of bytes refilled by
      * reference
      * @return Same as refill_reader_buffer(size_t refill_size)
      */
-    [[nodiscard]] ErrorCode refill_reader_buffer(size_t refill_size, size_t& num_bytes_refilled);
+    [[nodiscard]] ErrorCode refill_reader_buffer(size_t num_bytes_to_refill, size_t& num_bytes_refilled);
+
+    void resize_buffer_from_pos(size_t pos);
 
     // Constants
     static constexpr size_t cDefaultBufferSize = 65536;
@@ -232,10 +234,11 @@ private:
     // Values for buffer related calculation
     size_t m_buffer_exp;
     size_t m_buffer_size;
-    size_t m_buffer_aligned_mask;
 
     // Variables for checkpoint support
     std::optional<size_t> m_checkpoint_pos;
+    size_t highest_read_pos {0};
+
 };
 
 

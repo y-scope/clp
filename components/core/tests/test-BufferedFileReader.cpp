@@ -106,7 +106,7 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
         REQUIRE(file_reader.get_pos() == num_bytes_to_read_1);
 
         // set a checkpoint
-        size_t checkpoint_pos = file_reader.mark_pos();
+        size_t checkpoint_pos = file_reader.set_checkpoint();
 
         // keep reading some data
         size_t num_bytes_to_read_2 = 345212;
@@ -136,21 +136,31 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
                                                           num_byte_read));
         REQUIRE(num_bytes_to_read_3 == num_byte_read);
         REQUIRE(0 == memcmp(read_buffer, test_data + latest_file_pos, num_bytes_to_read_3));
+        // update the latest_file_pos
+        latest_file_pos = file_reader.get_pos();
 
-        // reset, and then seek back should fail
-        file_reader.reset_checkpoint();
+        // seek back to somewhere between the checkpoint and latest data, and set a new checkpoint
+        file_reader.seek_from_begin((latest_file_pos + checkpoint_pos) / 2);
+        file_reader.set_checkpoint();
+        // the previous seek_pos should be unavailable
         REQUIRE(ErrorCode_Failure == file_reader.try_seek_from_begin(seek_pos_1));
 
-        // make sure data read after checkpoint-reset are still correct
-        size_t num_bytes_to_read_4 = 65780;
+        // make sure data read after checkpoint-set are still correct
+        size_t num_bytes_to_read_4 = 4096;
         REQUIRE(ErrorCode_Success == file_reader.try_read(read_buffer, num_bytes_to_read_4,
                                                           num_byte_read));
         REQUIRE(num_bytes_to_read_4 == num_byte_read);
-        REQUIRE(0 == memcmp(read_buffer, test_data + latest_file_pos + num_bytes_to_read_3,
+        REQUIRE(0 == memcmp(read_buffer, test_data + (latest_file_pos + checkpoint_pos) / 2,
                             num_bytes_to_read_4));
 
-        // Make sure now we can't reset back to checkpoint
-        REQUIRE(ErrorCode_Failure == file_reader.try_seek_from_begin(seek_pos_1));
+
+        file_reader.clear_checkpoint();
+        size_t default_buffer_size = 65536;
+        // make sure data read after checkpoint-reset are still correct;
+        REQUIRE(ErrorCode_Success == file_reader.try_read(read_buffer, default_buffer_size,
+                                                          num_byte_read));
+        REQUIRE(default_buffer_size == num_byte_read);
+        REQUIRE(0 == memcmp(read_buffer, test_data + latest_file_pos, default_buffer_size));
     }
 
     SECTION("seek with delayed read") {
@@ -158,10 +168,11 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
         file_reader.open(test_file_path);
 
         // first, advance to some random file_pos
-        REQUIRE(ErrorCode_Success == file_reader.try_seek_from_begin(45313));
+        size_t begin_read_pos = 45313;
+        REQUIRE(ErrorCode_Success == file_reader.try_seek_from_begin(begin_read_pos));
 
         // set a checkpoint
-        size_t checkpoint_pos = file_reader.mark_pos();
+        size_t checkpoint_pos = file_reader.set_checkpoint();
 
         // keep reading some data
         size_t num_bytes_to_read;
@@ -171,6 +182,7 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
         REQUIRE(ErrorCode_Success == file_reader.try_read(read_buffer, num_bytes_to_read,
                                                           num_byte_read));
         REQUIRE(file_reader.get_pos() == checkpoint_pos + num_bytes_to_read);
+        REQUIRE(0 == memcmp(read_buffer, test_data + begin_read_pos, num_bytes_to_read));
 
         // now seek back to some where between
         size_t seek_pos = file_reader.get_pos() / 2;

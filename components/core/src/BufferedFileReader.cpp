@@ -68,24 +68,24 @@ ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
     } else {
         if (ErrorCode_Success == m_buffer_reader->try_seek_from_begin(pos - m_buffer_begin_pos)) {
             m_file_pos = pos;
+            highest_read_pos = std::max(highest_read_pos, m_file_pos);
             return ErrorCode_Success;
         }
         // Handle the case where buffer is empty or doesn't contain enough data for seek
         if (false == m_checkpoint_pos.has_value()) {
             // if checkpoint is not set, simply move the file_pos and invalidate the buffer reader
-            m_buffer_begin_pos = pos & m_buffer_aligned_mask;
-            auto offset = lseek(m_fd, m_buffer_begin_pos, SEEK_SET);
+            auto offset = lseek(m_fd, pos, SEEK_SET);
             if (offset == -1) {
                 return ErrorCode_errno;
             }
             m_buffer_reader.emplace(m_buffer.get(), 0);
+            m_buffer_begin_pos = pos;
         } else {
             auto data_size = m_buffer_reader->get_buffer_size();
             size_t num_bytes_to_refill = pos - (m_buffer_begin_pos + data_size);
-            size_t quantized_refill_size = quantize_to_buffer_size(num_bytes_to_refill);
 
             size_t num_bytes_refilled {0};
-            auto error_code = refill_reader_buffer(quantized_refill_size, num_bytes_refilled);
+            auto error_code = refill_reader_buffer(num_bytes_to_refill, num_bytes_refilled);
             if (ErrorCode_EndOfFile == error_code || num_bytes_refilled < num_bytes_to_refill) {
                 SPDLOG_ERROR("not expecting to seek pass the Entire file");
                 throw OperationFailed(ErrorCode_EndOfFile, __FILENAME__, __LINE__);
@@ -96,8 +96,8 @@ ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
             m_buffer_reader->seek_from_begin(pos - m_buffer_begin_pos);
         }
     }
-
     m_file_pos = pos;
+    highest_read_pos = std::max(highest_read_pos, m_file_pos);
     return ErrorCode_Success;
 }
 
@@ -130,7 +130,7 @@ ErrorCode BufferedFileReader::try_read (char* buf, size_t num_bytes_to_read,
         // refill the buffer if more bytes are to be read
         error_code = refill_reader_buffer(m_buffer_size);
         if (ErrorCode_EndOfFile == error_code) {
-           break;
+            break;
         } else if (ErrorCode_Success != error_code) {
             return error_code;
         }
@@ -138,6 +138,7 @@ ErrorCode BufferedFileReader::try_read (char* buf, size_t num_bytes_to_read,
     if (num_bytes_read == 0) {
         return ErrorCode_EndOfFile;
     }
+    highest_read_pos = std::max(highest_read_pos, m_file_pos);
     return ErrorCode_Success;
 }
 
@@ -169,6 +170,7 @@ ErrorCode BufferedFileReader::try_read_to_delimiter (char delim, bool keep_delim
             }
         }
     }
+    highest_read_pos = std::max(highest_read_pos, m_file_pos);
     return ErrorCode_Success;
 }
 
@@ -210,7 +212,6 @@ void BufferedFileReader::close () {
         m_fd = -1;
 
         if (m_checkpoint_pos.has_value()) {
-            SPDLOG_DEBUG("close file without resetting checkpoint");
             m_buffer = make_unique<char[]>(m_buffer_size);
             m_checkpoint_pos.reset();
         }
@@ -229,36 +230,48 @@ ErrorCode BufferedFileReader::try_fstat (struct stat& stat_buffer) const {
     return ErrorCode_Success;
 }
 
-size_t BufferedFileReader::mark_pos() {
+void BufferedFileReader::resize_buffer_from_pos (size_t pos) {
+
+    const auto copy_size = m_buffer_reader->get_buffer_size() - pos;
+    // Use a quantized size for the underlying buffer size
+    auto new_buffer_size = quantize_to_buffer_size(copy_size);
+
+    auto new_buffer = make_unique<char[]>(new_buffer_size);
+    memcpy(new_buffer.get(), &m_buffer[pos], copy_size);
+    m_buffer = std::move(new_buffer);
+    m_buffer_begin_pos += pos;
+
+    m_buffer_reader.emplace(m_buffer.get(), copy_size);
+}
+
+size_t BufferedFileReader::set_checkpoint() {
     if (m_checkpoint_pos.has_value()) {
-        SPDLOG_ERROR("mark_pos can not be called twice");
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        if (m_checkpoint_pos > m_file_pos) {
+            throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        } else if (m_checkpoint_pos < m_file_pos) {
+            if (m_buffer_reader->get_buffer_size() != m_buffer_size) {
+                // allocate new buffer for buffered data starting from pos
+                resize_buffer_from_pos(m_buffer_reader->get_pos());
+                m_buffer_reader->seek_from_begin(m_file_pos - m_buffer_begin_pos);
+            }
+        }
     }
     m_checkpoint_pos = m_file_pos;
     return m_file_pos;
 }
 
-void BufferedFileReader::reset_checkpoint () {
-    // alternatively, we can keep claiming back the memory
+void BufferedFileReader::clear_checkpoint () {
     if (false == m_checkpoint_pos.has_value()) {
         return;
     }
-    auto data_size = m_buffer_reader->get_buffer_size();
-    if (data_size != m_buffer_size) {
-        // allocate new buffer for buffered data that hasn't been seek passed
-        auto copy_pos = m_buffer_reader->get_pos() & m_buffer_aligned_mask;
-        auto new_data_size = data_size - copy_pos;
-        // Use a quantized size for the new buffer size
-        auto new_buffer_size = quantize_to_buffer_size(new_data_size);
-
-        auto new_buffer = make_unique<char[]>(new_buffer_size);
-        memcpy(new_buffer.get(), &m_buffer[copy_pos], new_data_size);
-        m_buffer = std::move(new_buffer);
-
-        m_buffer_begin_pos += copy_pos;
-        m_buffer_reader.emplace(m_buffer.get(), new_data_size);
-        m_buffer_reader->seek_from_begin(m_file_pos - m_buffer_begin_pos);
+    const auto buffer_end_file_pos = m_buffer_reader->get_buffer_size() + m_buffer_begin_pos;
+    if (buffer_end_file_pos <= highest_read_pos || buffer_end_file_pos - highest_read_pos > m_buffer_size) {
+        throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
     }
+
+    m_file_pos = highest_read_pos;
+    const auto copy_pos = m_file_pos - m_buffer_begin_pos;
+    resize_buffer_from_pos(copy_pos);
     m_checkpoint_pos.reset();
 }
 
@@ -285,7 +298,6 @@ ErrorCode BufferedFileReader::set_buffer_size (size_t buffer_size) {
 
     m_buffer_exp = static_cast<size_t>(log2(static_cast<double>(buffer_size)));
     m_buffer_size = buffer_size;
-    m_buffer_aligned_mask = ~(m_buffer_size - 1);
     return ErrorCode_Success;
 }
 
@@ -316,40 +328,34 @@ ErrorCode BufferedFileReader::refill_reader_buffer (size_t refill_size) {
     return refill_reader_buffer (refill_size, num_bytes_refilled);
 }
 
-ErrorCode BufferedFileReader::refill_reader_buffer (size_t refill_size,
+ErrorCode BufferedFileReader::refill_reader_buffer (size_t num_bytes_to_refill,
                                                     size_t& num_bytes_refilled) {
     num_bytes_refilled = 0;
+    const auto quantized_refill_size = quantize_to_buffer_size(num_bytes_to_refill);
     if (false == m_checkpoint_pos.has_value()) {
-        auto data_size = m_buffer_reader->get_buffer_size();
-        // recover from a previous reset if necessary
-        if (data_size > refill_size) {
-            m_buffer = make_unique<char[]>(refill_size);
-        }
         auto error_code = try_read_into_buffer(m_fd, m_buffer.get(),
-                                               refill_size, num_bytes_refilled);
+                                               quantized_refill_size, num_bytes_refilled);
         if (error_code != ErrorCode_Success) {
             return error_code;
         }
-        m_buffer_begin_pos += data_size;
         m_buffer_reader.emplace(m_buffer.get(), num_bytes_refilled);
+        m_buffer_begin_pos = m_file_pos;
     } else {
         // Messy way of copying data from old buffer to new buffer
         auto data_size = m_buffer_reader->get_buffer_size();
-        auto new_buffer = make_unique<char[]>(data_size + refill_size);
+        auto new_buffer = make_unique<char[]>(data_size + quantized_refill_size);
         memcpy(new_buffer.get(), m_buffer.get(), data_size);
 
         // Read data to the new buffer, with offset = data_size
-        auto error_code = try_read_into_buffer(m_fd, &new_buffer[data_size], refill_size,
+        auto error_code = try_read_into_buffer(m_fd, &new_buffer[data_size], quantized_refill_size,
                                                num_bytes_refilled);
         if (error_code != ErrorCode_Success) {
             return error_code;
         }
         m_buffer = std::move(new_buffer);
         m_buffer_reader.emplace(m_buffer.get(), data_size + num_bytes_refilled);
+        m_buffer_reader->seek_from_begin(m_file_pos - m_buffer_begin_pos);
     }
-    // this line is here to handle if we have seek to a position
-    // before calling refill. if we
-    m_buffer_reader->seek_from_begin(m_file_pos - m_buffer_begin_pos);
     return ErrorCode_Success;
 }
 
