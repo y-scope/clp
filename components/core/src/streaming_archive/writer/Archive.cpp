@@ -316,7 +316,9 @@ namespace streaming_archive::writer {
         if (start_pos <= end_pos) {
             num_uncompressed_bytes = end_pos - start_pos;
         } else {
-            num_uncompressed_bytes = log_view.get_log_output_buffer()->get_token(0).m_buffer_size - start_pos + end_pos;
+            num_uncompressed_bytes =
+                    log_view.get_log_output_buffer()->get_token(0).m_buffer_size - start_pos +
+                    end_pos;
         }
         for (uint32_t i = 1; i < log_view.get_log_output_buffer()->pos(); i++) {
             log_surgeon::Token& token = log_view.get_log_output_buffer()->get_mutable_token(i);
@@ -367,7 +369,8 @@ namespace streaming_archive::writer {
                     break;
                 }
                 default: {
-                    // Variable string looks like a dictionary variable, so encode it as so
+                    // Variable string looks like a dictionary variable, so
+                    // encode it as so
                     encoded_variable_t encoded_var;
                     variable_dictionary_id_t id;
                     m_var_dict.add_entry(token.to_string(), id);
@@ -383,7 +386,8 @@ namespace streaming_archive::writer {
         if (!m_logtype_dict_entry.get_value().empty()) {
             logtype_dictionary_id_t logtype_id;
             m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
-            m_file->write_encoded_msg(timestamp, logtype_id, m_encoded_vars, m_var_ids, num_uncompressed_bytes);
+            m_file->write_encoded_msg(timestamp, logtype_id, m_encoded_vars, m_var_ids,
+                                      num_uncompressed_bytes);
 
             // Update segment indices
             if (m_file->has_ts_pattern()) {
@@ -391,7 +395,8 @@ namespace streaming_archive::writer {
                 m_var_ids_in_segment_for_files_with_timestamps.insert_all(m_var_ids);
             } else {
                 m_logtype_ids_for_file_with_unassigned_segment.insert(logtype_id);
-                m_var_ids_for_file_with_unassigned_segment.insert(m_var_ids.cbegin(), m_var_ids.cend());
+                m_var_ids_for_file_with_unassigned_segment.insert(m_var_ids.cbegin(),
+                                                                  m_var_ids.cend());
             }
         }
     }
