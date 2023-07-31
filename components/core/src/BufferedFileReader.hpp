@@ -40,6 +40,7 @@ public:
 
     // Constructors
     BufferedFileReader();
+    BufferedFileReader(size_t buffer_size);
     ~BufferedFileReader();
 
     // Methods implementing the ReaderInterface
@@ -121,17 +122,6 @@ public:
      * @return ErrorCode_Success on success
      */
     [[nodiscard]] ErrorCode try_fstat (struct stat& stat_buffer) const;
-
-    /**
-     * Set the internal buffer
-     * @param buffer_size
-     * @return ErrorCode_Success on success
-     * @return ErrorCode_Failure if the file is not closed
-     * @return ErrorCode_BadParam if either:
-     *         1. buffer_size is not a integer multiple of 4096
-     *         2. buffer_size is not a power of 2
-     */
-    [[nodiscard]] ErrorCode set_buffer_size(size_t buffer_size);
 
     /**
      * Peeks the next peek_size bytes of data without advancing the file
@@ -244,7 +234,6 @@ private:
     size_t m_buffer_begin_pos;
 
     // Values for buffer related calculation
-    size_t m_buffer_exp;
     size_t m_buffer_size;
 
     // Variables for checkpoint support

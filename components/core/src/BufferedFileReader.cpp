@@ -21,15 +21,16 @@ using std::string;
 static ErrorCode try_read_into_buffer(int fd, char* buffer, size_t num_bytes_to_read,
                                       size_t& num_bytes_read);
 
-BufferedFileReader::BufferedFileReader () {
+BufferedFileReader::BufferedFileReader () : BufferedFileReader(cDefaultBufferSize) {}
+
+BufferedFileReader::BufferedFileReader (size_t buffer_size) {
     m_file_pos = 0;
     m_fd = -1;
     m_checkpoint_pos.reset();
-    if (auto error_code = set_buffer_size(cDefaultBufferSize);
-        ErrorCode_Success != error_code) {
-        SPDLOG_ERROR("Failed to init reader buffer size to be {}", cDefaultBufferSize);
-        throw OperationFailed(error_code, __FILENAME__, __LINE__);
+    if (buffer_size % 4096 != 0) {
+        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
+    m_buffer_size = buffer_size;
     m_buffer = make_unique<char[]>(m_buffer_size);
 }
 
@@ -115,17 +116,16 @@ ErrorCode BufferedFileReader::try_read (char* buf, size_t num_bytes_to_read,
         size_t bytes_read {0};
         auto remaining_bytes_to_read = num_bytes_to_read - num_bytes_read;
         auto error_code = m_buffer_reader->try_read(buf + num_bytes_read, remaining_bytes_to_read, bytes_read);
-        // here EOF is allowed because it simply means we have exhausted the
-        // buffer, but not necessarily the file itself
-        if (ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code) {
+        if (ErrorCode_Success == error_code) {
+            num_bytes_read += bytes_read;
+            m_file_pos += bytes_read;
+            if (num_bytes_read == num_bytes_to_read) {
+                break;
+            }
+        } else if (ErrorCode_EndOfFile != error_code) {
             return error_code;
         }
-        num_bytes_read += bytes_read;
-        m_file_pos += bytes_read;
 
-        if (num_bytes_read == num_bytes_to_read) {
-            break;
-        }
         // refill the buffer if more bytes are to be read
         error_code = refill_reader_buffer(m_buffer_size);
         if (ErrorCode_EndOfFile == error_code) {
@@ -259,32 +259,6 @@ void BufferedFileReader::clear_checkpoint () {
     m_checkpoint_pos.reset();
 }
 
-ErrorCode BufferedFileReader::set_buffer_size (size_t buffer_size) {
-    if (m_fd != -1) {
-        SPDLOG_ERROR("Buffer size can not be changed when the file is open");
-        return ErrorCode_Failure;
-    }
-    if (buffer_size == 0) {
-        SPDLOG_ERROR("Buffer size can not be set to 0");
-        return ErrorCode_BadParam;
-    }
-    if (buffer_size % 4096 != 0) {
-        SPDLOG_ERROR("Buffer size {} is not a multiple of page size", buffer_size);
-        return ErrorCode_BadParam;
-    }
-    // fast calculation to check if buffer_size is a power of 2 leveraged
-    // from https://stackoverflow.com/questions/51094594/
-    // how-to-check-if-exactly-one-bit-is-set-in-an-int
-    if (false == (!(buffer_size & (buffer_size-1)))) {
-        SPDLOG_ERROR("Buffer size {} is not a power of 2", buffer_size);
-        return ErrorCode_BadParam;
-    }
-
-    m_buffer_exp = static_cast<size_t>(log2(static_cast<double>(buffer_size)));
-    m_buffer_size = buffer_size;
-    return ErrorCode_Success;
-}
-
 ErrorCode BufferedFileReader::peek_buffered_data (size_t size_to_peek, const char*& data_ptr,
                                                   size_t& peek_size) {
     if (-1 == m_fd) {
@@ -304,7 +278,7 @@ ErrorCode BufferedFileReader::peek_buffered_data (size_t size_to_peek, const cha
 }
 
 size_t BufferedFileReader::quantize_to_buffer_size (size_t size) {
-    return (1 + ((size - 1) >> m_buffer_exp)) << m_buffer_exp;
+    return (1 + ((size - 1) / m_buffer_size)) * m_buffer_size;
 }
 
 ErrorCode BufferedFileReader::refill_reader_buffer (size_t refill_size) {
