@@ -30,7 +30,7 @@ using std::vector;
 
 ErrorCode create_directory (const string& path, mode_t mode, bool exist_ok) {
     int retval = mkdir(path.c_str(), mode);
-    if (0 != retval ) {
+    if (0 != retval) {
         if (EEXIST != errno) {
             return ErrorCode_errno;
         } else if (false == exist_ok) {
@@ -130,9 +130,9 @@ bool get_bounds_of_next_var (const string& msg, size_t& begin_pos, size_t& end_p
         // - it contains a decimal digit, or
         // - it's directly preceded by an equals sign and contains an alphabet, or
         // - it could be a multi-digit hex value
-        if (contains_decimal_digit || (begin_pos > 0 && '=' == msg[begin_pos - 1] && contains_alphabet) ||
-            could_be_multi_digit_hex_value(msg, begin_pos, end_pos))
-        {
+        if (contains_decimal_digit ||
+            (begin_pos > 0 && '=' == msg[begin_pos - 1] && contains_alphabet) ||
+            could_be_multi_digit_hex_value(msg, begin_pos, end_pos)) {
             break;
         }
     }
@@ -168,7 +168,7 @@ string get_unambiguous_path (const string& path) {
     // Remove ambiguous components
     list<string> unambiguous_components;
     size_t num_components_to_ignore = 0;
-    for (size_t i = path_components.size(); i-- > 0; ) {
+    for (size_t i = path_components.size(); i-- > 0;) {
         if (".." == path_components[i]) {
             ++num_components_to_ignore;
         } else if ("." == path_components[i] || path_components[i].empty()) {
@@ -226,7 +226,7 @@ void load_lexer_from_file (std::string schema_file_path,
     FileReader schema_reader;
     schema_reader.try_open(schema_file_path);
     /// TODO: this wrapper is repeated a lot
-    log_surgeon::Reader reader_wrapper {
+    log_surgeon::Reader reader_wrapper{
         [&] (char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode {
             schema_reader.read(buf, count, read_to);
             if (read_to == 0) {
@@ -243,37 +243,39 @@ void load_lexer_from_file (std::string schema_file_path,
         throw std::runtime_error("Error: symbol_ids initialized before setting enum symbol_ids");
     }
     /// TODO: this is a copy of other code
-    lexer.m_symbol_id[log_surgeon::cTokenEnd] = (int) log_surgeon::SymbolID::TokenEndID;
+    lexer.m_symbol_id[log_surgeon::cTokenEnd] = (int)log_surgeon::SymbolID::TokenEndID;
     lexer.m_symbol_id[log_surgeon::cTokenUncaughtString] =
-            (int) log_surgeon::SymbolID::TokenUncaughtStringID;
-    lexer.m_symbol_id[log_surgeon::cTokenInt] = (int) log_surgeon::SymbolID::TokenIntId;
-    lexer.m_symbol_id[log_surgeon::cTokenFloat] = (int) log_surgeon::SymbolID::TokenFloatId;
-    lexer.m_symbol_id[log_surgeon::cTokenFirstTimestamp] = (int) log_surgeon::SymbolID::TokenFirstTimestampId;
-    lexer.m_symbol_id[log_surgeon::cTokenNewlineTimestamp] = (int) log_surgeon::SymbolID::TokenNewlineTimestampId;
-    lexer.m_symbol_id[log_surgeon::cTokenNewline] = (int) log_surgeon::SymbolID::TokenNewlineId;
+            (int)log_surgeon::SymbolID::TokenUncaughtStringID;
+    lexer.m_symbol_id[log_surgeon::cTokenInt] = (int)log_surgeon::SymbolID::TokenIntId;
+    lexer.m_symbol_id[log_surgeon::cTokenFloat] = (int)log_surgeon::SymbolID::TokenFloatId;
+    lexer.m_symbol_id[log_surgeon::cTokenFirstTimestamp] =
+            (int)log_surgeon::SymbolID::TokenFirstTimestampId;
+    lexer.m_symbol_id[log_surgeon::cTokenNewlineTimestamp] =
+            (int)log_surgeon::SymbolID::TokenNewlineTimestampId;
+    lexer.m_symbol_id[log_surgeon::cTokenNewline] = (int)log_surgeon::SymbolID::TokenNewlineId;
 
-    lexer.m_id_symbol[(int) log_surgeon::SymbolID::TokenEndID] = log_surgeon::cTokenEnd;
-    lexer.m_id_symbol[(int) log_surgeon::SymbolID::TokenUncaughtStringID] =
+    lexer.m_id_symbol[(int)log_surgeon::SymbolID::TokenEndID] = log_surgeon::cTokenEnd;
+    lexer.m_id_symbol[(int)log_surgeon::SymbolID::TokenUncaughtStringID] =
             log_surgeon::cTokenUncaughtString;
-    lexer.m_id_symbol[(int) log_surgeon::SymbolID::TokenIntId] = log_surgeon::cTokenInt;
-    lexer.m_id_symbol[(int) log_surgeon::SymbolID::TokenFloatId] = log_surgeon::cTokenFloat;
-    lexer.m_id_symbol[(int) log_surgeon::SymbolID::TokenFirstTimestampId] =
+    lexer.m_id_symbol[(int)log_surgeon::SymbolID::TokenIntId] = log_surgeon::cTokenInt;
+    lexer.m_id_symbol[(int)log_surgeon::SymbolID::TokenFloatId] = log_surgeon::cTokenFloat;
+    lexer.m_id_symbol[(int)log_surgeon::SymbolID::TokenFirstTimestampId] =
             log_surgeon::cTokenFirstTimestamp;
-    lexer.m_id_symbol[(int) log_surgeon::SymbolID::TokenNewlineTimestampId] =
+    lexer.m_id_symbol[(int)log_surgeon::SymbolID::TokenNewlineTimestampId] =
             log_surgeon::cTokenNewlineTimestamp;
-    lexer.m_id_symbol[(int) log_surgeon::SymbolID::TokenNewlineId] = log_surgeon::cTokenNewline;
+    lexer.m_id_symbol[(int)log_surgeon::SymbolID::TokenNewlineId] = log_surgeon::cTokenNewline;
 
-    /// TODO: figure out why this needs to be specially added
+    // TODO: figure out why this needs to be specially added
     lexer.add_rule(lexer.m_symbol_id["newLine"],
                    std::move(std::make_unique<log_surgeon::finite_automata::RegexASTLiteral<
-                                              log_surgeon::finite_automata::RegexNFAByteState>>(
-            log_surgeon::finite_automata::RegexASTLiteral<
-                    log_surgeon::finite_automata::RegexNFAByteState>('\n'))));
+                           log_surgeon::finite_automata::RegexNFAByteState>>(
+                           log_surgeon::finite_automata::RegexASTLiteral<
+                                   log_surgeon::finite_automata::RegexNFAByteState>('\n'))));
 
     if (delimiters_ptr != nullptr) {
         lexer.add_delimiters(delimiters_ptr->m_delimiters);
     }
-    for (std::unique_ptr<log_surgeon::ParserAST> const& parser_ast: schema_ast->m_schema_vars) {
+    for (std::unique_ptr<log_surgeon::ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
         auto* rule = dynamic_cast<log_surgeon::SchemaVarAST*>(parser_ast.get());
 
         if ("timestamp" == rule->m_name) {
@@ -295,7 +297,7 @@ void load_lexer_from_file (std::string schema_file_path,
         rule->m_regex_ptr->set_possible_inputs_to_true(is_possible_input);
         bool contains_delimiter = false;
         uint32_t delimiter_name;
-        for (uint32_t delimiter: delimiters_ptr->m_delimiters) {
+        for (uint32_t delimiter : delimiters_ptr->m_delimiters) {
             if (is_possible_input[delimiter]) {
                 contains_delimiter = true;
                 delimiter_name = delimiter;
@@ -306,8 +308,11 @@ void load_lexer_from_file (std::string schema_file_path,
             FileReader schema_reader;
             ErrorCode error_code = schema_reader.try_open(schema_ast->m_file_path);
             if (ErrorCode_Success != error_code) {
-                throw std::runtime_error(schema_file_path + ":" + std::to_string(rule->m_line_num + 1) + ": error: '" + rule->m_name
-                                         + "' has regex pattern which contains delimiter '" + char(delimiter_name) + "'.\n");
+                throw std::runtime_error(
+                        schema_file_path + ":" + std::to_string(rule->m_line_num + 1) +
+                        ": error: '" + rule->m_name
+                        + "' has regex pattern which contains delimiter '" + char(delimiter_name) +
+                        "'.\n");
             } else {
                 // more detailed debugging based on looking at the file
                 string line;
@@ -325,13 +330,14 @@ void load_lexer_from_file (std::string schema_file_path,
                 string spaces(colon_pos, ' ');
                 string arrows(line.size() - colon_pos, '^');
 
-                throw std::runtime_error(schema_file_path + ":" + std::to_string(rule->m_line_num + 1) + ": error: '" + rule->m_name
-                                         + "' has regex pattern which contains delimiter '" + char(delimiter_name) + "'.\n"
-                                         + indent + line + "\n" + indent + spaces + arrows + "\n");
-
+                throw std::runtime_error(
+                        schema_file_path + ":" + std::to_string(rule->m_line_num + 1) +
+                        ": error: '" + rule->m_name
+                        + "' has regex pattern which contains delimiter '" + char(delimiter_name) +
+                        "'.\n"
+                        + indent + line + "\n" + indent + spaces + arrows + "\n");
             }
         }
-
         lexer.add_rule(lexer.m_symbol_id[rule->m_name], std::move(rule->m_regex_ptr));
     }
     if (reverse) {
@@ -339,6 +345,5 @@ void load_lexer_from_file (std::string schema_file_path,
     } else {
         lexer.generate();
     }
-
     schema_reader.close();
 }
