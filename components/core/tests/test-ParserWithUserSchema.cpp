@@ -133,7 +133,7 @@ TEST_CASE("Test creating log parser without delimiters", "[LALR1Parser][LogParse
 //          "[LALR1Parser]SchemaParser]") {
 //    std::string file_path = "../tests/test_schema_files/schema_with_delimiter_in_regex_error.txt";
 //    std::string file_name = boost::filesystem::canonical(file_path).string();
-//    REQUIRE_THROWS_WITH(generate_log_parser(file_path), 
+//    REQUIRE_THROWS_WITH(generate_log_parser(file_path),
 //                        file_name +
 //                        ":2: error: 'equals' has regex pattern which contains delimiter '='.\n"
 //                        + "          equals:.*=.*\n"

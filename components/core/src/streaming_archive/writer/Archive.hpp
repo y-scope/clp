@@ -130,14 +130,12 @@ namespace streaming_archive { namespace writer {
          * @param num_uncompressed_bytes
          * @throw FileWriter::OperationFailed if any write fails
          */
-        void write_msg (epochtime_t timestamp, const std::string& message, size_t num_uncompressed_bytes);
+        void write_msg (epochtime_t timestamp, const std::string& message,
+                        size_t num_uncompressed_bytes);
+
         /**
          * Encodes and writes a message to the given file using schema file
-         * @param file
-         * @param uncompressed_msg
-         * @param uncompressed_msg_pos
-         * @param has_delimiter
-         * @param has_timestamp
+         * @param log_event_view
          * @throw FileWriter::OperationFailed if any write fails
          */
         void write_msg_using_schema (log_surgeon::LogEventView& log_event_view);
