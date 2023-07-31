@@ -503,7 +503,7 @@ bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_
                 // DO NOTHING
             } else {
                 StringReader stringReader;
-                log_surgeon::Reader reader_wrapper{
+                log_surgeon::Reader reader_wrapper {
                     [&] (char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode {
                         stringReader.read(buf, count, read_to);
                         if (read_to == 0) {

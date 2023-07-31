@@ -33,13 +33,15 @@ std::unique_ptr<SchemaAST> generate_schema_ast(const std::string& schema_file) {
     SchemaParser schema_parser;
     FileReader schema_reader;
     /// TODO: this wrapper is repeated a lot
-    log_surgeon::Reader reader_wrapper{[&](char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode {
-        schema_reader.read(buf, count, read_to);
-        if (read_to == 0) {
-            return log_surgeon::ErrorCode::EndOfFile;
+    log_surgeon::Reader reader_wrapper {
+        [&] (char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode {
+            schema_reader.read(buf, count, read_to);
+            if (read_to == 0) {
+                return log_surgeon::ErrorCode::EndOfFile;
+            }
+            return log_surgeon::ErrorCode::Success;
         }
-        return log_surgeon::ErrorCode::Success;
-    }};
+    };
     schema_reader.open(schema_file);
     REQUIRE(schema_reader.is_open());
     std::unique_ptr<SchemaAST> schema_ast = schema_parser.generate_schema_ast(reader_wrapper);
@@ -54,12 +56,14 @@ std::unique_ptr<LogParser> generate_log_parser(const std::string& schema_file) {
     return log_parser;
 }
 
-void compress(const std::string& output_dir, const std::string& file_to_compress, std::string schema_file, bool old = false) {
+void compress (const std::string& output_dir, const std::string& file_to_compress,
+               std::string schema_file, bool old = false) {
     std::vector<std::string> arguments;
     if(old) {
         arguments = {"main.cpp", "c", output_dir, file_to_compress};
     } else {
-        arguments = {"main.cpp", "c", output_dir, file_to_compress, "--schema-path", std::move(schema_file)};
+        arguments = {"main.cpp", "c", output_dir, file_to_compress, "--schema-path",
+                     std::move(schema_file)};
     }
     std::vector<char*> argv;
     for (const auto& arg : arguments)
@@ -69,7 +73,8 @@ void compress(const std::string& output_dir, const std::string& file_to_compress
 }
 
 void decompress(std::string archive_dir, std::string output_dir) {
-    std::vector<std::string> arguments = {"main.cpp", "x", std::move(archive_dir), std::move(output_dir)};
+    std::vector<std::string> arguments = {"main.cpp", "x", std::move(archive_dir),
+                                          std::move(output_dir)};
     std::vector<char*> argv;
     for (const auto& arg : arguments)
         argv.push_back((char*)arg.data());
@@ -94,16 +99,18 @@ TEST_CASE("Test error for empty schema file", "[LALR1Parser][SchemaParser]") {
 
 TEST_CASE("Test error for colon missing schema file", "[LALR1Parser][SchemaParser]") {
     std::string file_path = "../tests/test_schema_files/colon_missing_schema.txt";
-    REQUIRE_THROWS_WITH(generate_schema_ast(file_path), "Schema:3:4: error: expected ':','AlphaNumeric' before ' ' token\n"
-                                                        "          int [0-9]+\n"
-                                                        "             ^\n");
+    REQUIRE_THROWS_WITH(generate_schema_ast(file_path),
+                        "Schema:3:4: error: expected ':','AlphaNumeric' before ' ' token\n"
+                        "          int [0-9]+\n"
+                        "             ^\n");
 }
 
 TEST_CASE("Test error for multi-character tokens in schema file", "[LALR1Parser][SchemaParser]") {
     std::string file_path = "../tests/test_schema_files/schema_with_multicharacter_token_error.txt";
-    REQUIRE_THROWS_WITH(generate_schema_ast(file_path), "Schema:2:11: error: expected ':' before ' ' token\n"
-                                                        "          delimiters : \\r\\n\n"
-                                                        "                    ^\n");
+    REQUIRE_THROWS_WITH(generate_schema_ast(file_path),
+                        "Schema:2:11: error: expected ':' before ' ' token\n"
+                        "          delimiters : \\r\\n\n"
+                        "                    ^\n");
 }
 
 TEST_CASE("Test creating schema parser", "[LALR1Parser][SchemaParser]") {
@@ -115,24 +122,31 @@ TEST_CASE("Test creating log parser with delimiters", "[LALR1Parser][LogParser]"
 }
 
 TEST_CASE("Test creating log parser without delimiters", "[LALR1Parser][LogParser]") {
-    REQUIRE_THROWS_WITH(generate_log_parser("../tests/test_schema_files/schema_without_delimiters.txt"),
-                        "When using --schema-path, \"delimiters:\" line must be used.");
+    REQUIRE_THROWS_WITH(
+            generate_log_parser("../tests/test_schema_files/schema_without_delimiters.txt"),
+            "When using --schema-path, \"delimiters:\" line must be used.");
 }
 
-/// TODO: This test doesn't currently work because delimiters are allowed in schema files, and there is no option to disable this yet
-//TEST_CASE("Test error for creating log file with delimiter in regex pattern", "[LALR1Parser]SchemaParser]") {
+// TODO: This test doesn't currently work because delimiters are allowed in
+// schema files, and there is no option to disable this yet
+//TEST_CASE("Test error for creating log file with delimiter in regex pattern",
+//          "[LALR1Parser]SchemaParser]") {
 //    std::string file_path = "../tests/test_schema_files/schema_with_delimiter_in_regex_error.txt";
 //    std::string file_name = boost::filesystem::canonical(file_path).string();
-//    REQUIRE_THROWS_WITH(generate_log_parser(file_path), file_name + ":2: error: 'equals' has regex pattern which contains delimiter '='.\n"
-//                                                        + "          equals:.*=.*\n"
-//                                                        + "                 ^^^^^\n");
+//    REQUIRE_THROWS_WITH(generate_log_parser(file_path), 
+//                        file_name +
+//                        ":2: error: 'equals' has regex pattern which contains delimiter '='.\n"
+//                        + "          equals:.*=.*\n"
+//                        + "                 ^^^^^\n");
 //}
 
-/// TODO: This error check is performed correctly by CLP, but it is handled by something different now so this test will fail as is
+// TODO: This error check is performed correctly by CLP, but it is handled by
+// something different now so this test will fail as is
 //TEST_CASE("Test error for missing log file", "[LALR1Parser][LogParser]") {
 //    std::string file_name = "../tests/test_log_files/missing_log.txt";
 //    std::string file_path = boost::filesystem::weakly_canonical(file_name).string();
-//    REQUIRE_THROWS(compress("../tests/test_archives", file_name, "../tests/test_schema_files/schema_that_does_not_exist.txt"),
+//    REQUIRE_THROWS(compress("../tests/test_archives", file_name,
+//                            "../tests/test_schema_files/schema_that_does_not_exist.txt"),
 //                   "Specified schema file does not exist.");
 //}
 
@@ -143,13 +157,15 @@ TEST_CASE("Test forward lexer", "[Search]") {
     load_lexer_from_file(schema_file_path, false, forward_lexer);
     FileReader reader;
     /// TODO: this wrapper is repeated a lot
-    log_surgeon::Reader reader_wrapper{[&](char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode {
-        reader.read(buf, count, read_to);
-        if (read_to == 0) {
-            return log_surgeon::ErrorCode::EndOfFile;
+    log_surgeon::Reader reader_wrapper {
+        [&] (char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode {
+            reader.read(buf, count, read_to);
+            if (read_to == 0) {
+                return log_surgeon::ErrorCode::EndOfFile;
+            }
+            return log_surgeon::ErrorCode::Success;
         }
-        return log_surgeon::ErrorCode::Success;
-    }};
+    };
     reader.open("../tests/test_search_queries/easy.txt");
     log_surgeon::ParserInputBuffer parser_input_buffer;
     parser_input_buffer.read_if_safe(reader_wrapper);
@@ -159,7 +175,8 @@ TEST_CASE("Test forward lexer", "[Search]") {
     REQUIRE(error_code == log_surgeon::ErrorCode::Success);
     while (token.m_type_ids_ptr->at(0) != (int)log_surgeon::SymbolID::TokenEndID) {
         SPDLOG_INFO("token:" + token.to_string() + "\n");
-        SPDLOG_INFO("token.m_type_ids->back():" + forward_lexer.m_id_symbol[token.m_type_ids_ptr->back()] + "\n");
+        SPDLOG_INFO("token.m_type_ids->back():" +
+                    forward_lexer.m_id_symbol[token.m_type_ids_ptr->back()] + "\n");
         log_surgeon::ErrorCode error_code = forward_lexer.scan(parser_input_buffer, token);
         REQUIRE(error_code == log_surgeon::ErrorCode::Success);
     }
@@ -172,13 +189,15 @@ TEST_CASE("Test reverse lexer", "[Search]") {
     load_lexer_from_file(schema_file_path, false, reverse_lexer);
     FileReader reader;
     /// TODO: this wrapper is repeated a lot
-    log_surgeon::Reader reader_wrapper{[&](char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode {
-        reader.read(buf, count, read_to);
-        if (read_to == 0) {
-            return log_surgeon::ErrorCode::EndOfFile;
+    log_surgeon::Reader reader_wrapper {
+        [&] (char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode {
+            reader.read(buf, count, read_to);
+            if (read_to == 0) {
+                return log_surgeon::ErrorCode::EndOfFile;
+            }
+            return log_surgeon::ErrorCode::Success;
         }
-        return log_surgeon::ErrorCode::Success;
-    }};
+    };
     reader.open("../tests/test_search_queries/easy.txt");
     log_surgeon::ParserInputBuffer parser_input_buffer;
     parser_input_buffer.read_if_safe(reader_wrapper);
@@ -188,7 +207,8 @@ TEST_CASE("Test reverse lexer", "[Search]") {
     REQUIRE(error_code == log_surgeon::ErrorCode::Success);
     while (token.m_type_ids_ptr->at(0) != (int)log_surgeon::SymbolID::TokenEndID) {
         SPDLOG_INFO("token:" + token.to_string() + "\n");
-        SPDLOG_INFO("token.m_type_ids->back():" + reverse_lexer.m_id_symbol[token.m_type_ids_ptr->back()] + "\n");
+        SPDLOG_INFO("token.m_type_ids->back():" +
+                    reverse_lexer.m_id_symbol[token.m_type_ids_ptr->back()] + "\n");
         log_surgeon::ErrorCode error_code = reverse_lexer.scan(parser_input_buffer, token);
         REQUIRE(error_code == log_surgeon::ErrorCode::Success);
     }

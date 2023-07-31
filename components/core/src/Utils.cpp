@@ -226,13 +226,15 @@ void load_lexer_from_file (std::string schema_file_path,
     FileReader schema_reader;
     schema_reader.try_open(schema_file_path);
     /// TODO: this wrapper is repeated a lot
-    log_surgeon::Reader reader_wrapper{[&](char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode {
-        schema_reader.read(buf, count, read_to);
-        if (read_to == 0) {
-            return log_surgeon::ErrorCode::EndOfFile;
+    log_surgeon::Reader reader_wrapper {
+        [&] (char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode {
+            schema_reader.read(buf, count, read_to);
+            if (read_to == 0) {
+                return log_surgeon::ErrorCode::EndOfFile;
+            }
+            return log_surgeon::ErrorCode::Success;
         }
-        return log_surgeon::ErrorCode::Success;
-    }};
+    };
     log_surgeon::SchemaParser sp;
     std::unique_ptr<log_surgeon::SchemaAST> schema_ast = sp.generate_schema_ast(reader_wrapper);
     auto* delimiters_ptr = dynamic_cast<log_surgeon::DelimiterStringAST*>(
