@@ -227,7 +227,6 @@ private:
 
     // Values for buffer related calculation
     size_t m_buffer_size;
-
     // Variables for checkpoint support
     std::optional<size_t> m_checkpoint_pos;
     size_t highest_read_pos {0};

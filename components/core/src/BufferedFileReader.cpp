@@ -252,6 +252,9 @@ void BufferedFileReader::clear_checkpoint () {
     if (false == m_checkpoint_pos.has_value()) {
         return;
     }
+
+    // TODO: a check to make sure that highest_read_pos should always be in
+    //  the same default_buffer_size range with buffer_end_file_pos
     const auto buffer_end_file_pos = get_buffer_end_pos();
     if (buffer_end_file_pos <= highest_read_pos || buffer_end_file_pos - highest_read_pos > m_buffer_size) {
         throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
@@ -281,35 +284,46 @@ ErrorCode BufferedFileReader::peek_buffered_data (size_t size_to_peek, const cha
 }
 
 size_t BufferedFileReader::quantize_to_buffer_size (size_t size) {
+    if (size == 0) {
+        return 0;
+    }
     return (1 + ((size - 1) / m_buffer_size)) * m_buffer_size;
 }
 
 ErrorCode BufferedFileReader::refill_reader_buffer (size_t num_bytes_to_refill) {
     size_t num_bytes_refilled = 0;
-    const auto quantized_refill_size = quantize_to_buffer_size(num_bytes_to_refill);
+
+    const auto buffer_end_pos = get_buffer_end_pos();
+    size_t num_bytes_alignment = m_buffer_size - (buffer_end_pos % m_buffer_size);
+
     if (false == m_checkpoint_pos.has_value()) {
         auto error_code = try_read_into_buffer(m_fd, m_buffer.get(),
-                                               quantized_refill_size, num_bytes_refilled);
+                                               num_bytes_alignment, num_bytes_refilled);
         if (error_code != ErrorCode_Success) {
             return error_code;
         }
+        m_buffer_begin_pos = buffer_end_pos;
         m_buffer_reader.emplace(m_buffer.get(), num_bytes_refilled);
-        m_buffer_begin_pos = m_file_pos;
     } else {
+        while (num_bytes_alignment < num_bytes_to_refill) {
+            num_bytes_alignment += m_buffer_size;
+        }
         // Messy way of copying data from old buffer to new buffer
         auto data_size = m_buffer_reader->get_buffer_size();
-        auto new_buffer = make_unique<char[]>(data_size + quantized_refill_size);
+        const auto new_buffer_size = data_size + num_bytes_alignment;
+        auto new_buffer = make_unique<char[]>(new_buffer_size);
         memcpy(new_buffer.get(), m_buffer.get(), data_size);
 
         // Read data to the new buffer, with offset = data_size
-        auto error_code = try_read_into_buffer(m_fd, &new_buffer[data_size], quantized_refill_size,
+        auto error_code = try_read_into_buffer(m_fd, &new_buffer[data_size], num_bytes_alignment,
                                                num_bytes_refilled);
         if (error_code != ErrorCode_Success) {
             return error_code;
         }
         m_buffer = std::move(new_buffer);
+        const auto prev_pos = m_buffer_reader->get_pos();
         m_buffer_reader.emplace(m_buffer.get(), data_size + num_bytes_refilled);
-        m_buffer_reader->seek_from_begin(get_corresponding_offset(m_file_pos));
+        m_buffer_reader->seek_from_begin(prev_pos);
     }
     return ErrorCode_Success;
 }
