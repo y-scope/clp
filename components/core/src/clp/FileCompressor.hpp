@@ -58,9 +58,13 @@ namespace clp {
          * @param archive_writer
          * @param reader
          */
-        void parse_and_encode_with_library (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
-                               size_t target_encoded_file_size, const std::string& path_for_compression, group_id_t group_id,
-                               streaming_archive::writer::Archive& archive_writer, ReaderInterface& reader);
+        void parse_and_encode_with_library (size_t target_data_size_of_dicts,
+                                            streaming_archive::writer::Archive::UserConfig& archive_user_config,
+                                            size_t target_encoded_file_size,
+                                            const std::string& path_for_compression,
+                                            group_id_t group_id,
+                                            streaming_archive::writer::Archive& archive_writer,
+                                            ReaderInterface& reader);
 
         void parse_and_encode_with_heuristic (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
                                               size_t target_encoded_file_size, const std::string& path_for_compression, group_id_t group_id,
