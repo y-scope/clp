@@ -54,47 +54,47 @@ ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
         return ErrorCode_Success;
     }
 
-    if (pos <= m_file_pos) {
-        if (false == m_checkpoint_pos.has_value()) {
-            SPDLOG_ERROR("Error: Seek back when checkpoint is not enabled");
+    if (m_checkpoint_pos.has_value() == false) {
+        if (pos < m_file_pos) {
             return ErrorCode_Failure;
         }
-        if (pos < m_checkpoint_pos) {
-            SPDLOG_ERROR("Error: trying to seek to {} which is ahead of checkpoint: {}",
-                         pos, m_checkpoint_pos.value());
-            return ErrorCode_Failure;
-        }
-        // adjust the buffer reader pos
-        m_buffer_reader->seek_from_begin(get_corresponding_offset(pos));
-    } else {
-        if (ErrorCode_Success == m_buffer_reader->try_seek_from_begin(get_corresponding_offset(pos))) {
+        if (ErrorCode_Success ==
+            m_buffer_reader->try_seek_from_begin(get_corresponding_offset(pos))){
             m_file_pos = pos;
             highest_read_pos = std::max(highest_read_pos, m_file_pos);
             return ErrorCode_Success;
         }
-        // Handle the case where buffer is empty or doesn't contain enough data for seek
-        if (false == m_checkpoint_pos.has_value()) {
-            // if checkpoint is not set, simply move the file_pos and invalidate the buffer reader
-            auto offset = lseek(m_fd, pos, SEEK_SET);
-            if (offset == -1) {
-                return ErrorCode_errno;
-            }
-            m_buffer_reader.emplace(m_buffer.get(), 0);
-            m_buffer_begin_pos = pos;
-        } else {
-            size_t num_bytes_to_refill = pos - (m_buffer_begin_pos + m_buffer_reader->get_buffer_size());
-
-            size_t num_bytes_refilled {0};
-            auto error_code = refill_reader_buffer(num_bytes_to_refill, num_bytes_refilled);
-            if (ErrorCode_EndOfFile == error_code || num_bytes_refilled < num_bytes_to_refill) {
-                SPDLOG_ERROR("not expecting to seek pass the Entire file");
-                throw OperationFailed(ErrorCode_EndOfFile, __FILENAME__, __LINE__);
-            }
-            if (ErrorCode_Success != error_code) {
-                return error_code;
-            }
+        // if checkpoint is not set, simply move the file_pos and invalidate the buffer reader
+        auto offset = lseek(m_fd, pos, SEEK_SET);
+        if (offset == -1) {
+            return ErrorCode_errno;
+        }
+        m_buffer_reader.emplace(m_buffer.get(), 0);
+        m_buffer_begin_pos = pos;
+    } else {
+        if (pos < m_checkpoint_pos) {
+            return ErrorCode_Failure;
+        } else if (pos < m_file_pos) {
             m_buffer_reader->seek_from_begin(get_corresponding_offset(pos));
         }
+        if (ErrorCode_Success ==
+            m_buffer_reader->try_seek_from_begin(get_corresponding_offset(pos))) {
+            m_file_pos = pos;
+            highest_read_pos = std::max(highest_read_pos, m_file_pos);
+            return ErrorCode_Success;
+        }
+
+        size_t num_bytes_to_refill = pos - get_buffer_end_pos();
+        size_t num_bytes_refilled{0};
+        auto error_code = refill_reader_buffer(num_bytes_to_refill, num_bytes_refilled);
+        if (ErrorCode_EndOfFile == error_code || num_bytes_refilled < num_bytes_to_refill) {
+            SPDLOG_ERROR("not expecting to seek pass the Entire file");
+            throw OperationFailed(ErrorCode_EndOfFile, __FILENAME__, __LINE__);
+        }
+        if (ErrorCode_Success != error_code) {
+            return error_code;
+        }
+        m_buffer_reader->seek_from_begin(get_corresponding_offset(pos));
     }
     m_file_pos = pos;
     highest_read_pos = std::max(highest_read_pos, m_file_pos);
@@ -249,7 +249,7 @@ void BufferedFileReader::clear_checkpoint () {
     if (false == m_checkpoint_pos.has_value()) {
         return;
     }
-    const auto buffer_end_file_pos = m_buffer_reader->get_buffer_size() + m_buffer_begin_pos;
+    const auto buffer_end_file_pos = get_buffer_end_pos();
     if (buffer_end_file_pos <= highest_read_pos || buffer_end_file_pos - highest_read_pos > m_buffer_size) {
         throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
     }
@@ -333,6 +333,10 @@ void BufferedFileReader::resize_buffer_from_pos (size_t pos) {
 
 size_t BufferedFileReader::get_corresponding_offset (size_t file_pos) const {
     return file_pos - m_buffer_begin_pos;
+}
+
+size_t BufferedFileReader::get_buffer_end_pos () const {
+    return m_buffer_begin_pos + m_buffer_reader->get_buffer_size();
 }
 
 static ErrorCode try_read_into_buffer(int fd, char* buffer, size_t num_bytes_to_read,

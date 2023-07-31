@@ -220,6 +220,8 @@ private:
      */
     [[nodiscard]] size_t get_corresponding_offset(size_t file_pos) const;
 
+    [[nodiscard]] size_t get_buffer_end_pos() const;
+
     // Constants
     static constexpr size_t cDefaultBufferSize = 65536;
 
