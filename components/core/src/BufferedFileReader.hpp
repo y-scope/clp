@@ -216,9 +216,19 @@ private:
      */
     [[nodiscard]] ErrorCode refill_reader_buffer(size_t num_bytes_to_refill, size_t& num_bytes_refilled);
 
+    /**
+     * Resize the internal reader buffer by "dropping" all data before pos
+     * offset in the buffer
+     * @param pos
+     */
     void resize_buffer_from_pos(size_t pos);
 
-    [[nodiscard]] size_t get_equivalent_buffer_pos(size_t file_pos) const { return file_pos - m_buffer_begin_pos; }
+    /**
+     * return the file_pos's corresponding offset in the internal buffer
+     * @param file_pos
+     * @return
+     */
+    [[nodiscard]] size_t get_corresponding_offset(size_t file_pos) const;
 
     // Constants
     static constexpr size_t cDefaultBufferSize = 65536;

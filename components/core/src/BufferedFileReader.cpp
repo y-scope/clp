@@ -64,9 +64,9 @@ ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
             return ErrorCode_Failure;
         }
         // adjust the buffer reader pos
-        m_buffer_reader->seek_from_begin(get_equivalent_buffer_pos(pos));
+        m_buffer_reader->seek_from_begin(get_corresponding_offset(pos));
     } else {
-        if (ErrorCode_Success == m_buffer_reader->try_seek_from_begin(get_equivalent_buffer_pos(pos))) {
+        if (ErrorCode_Success == m_buffer_reader->try_seek_from_begin(get_corresponding_offset(pos))) {
             m_file_pos = pos;
             highest_read_pos = std::max(highest_read_pos, m_file_pos);
             return ErrorCode_Success;
@@ -92,7 +92,7 @@ ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
             if (ErrorCode_Success != error_code) {
                 return error_code;
             }
-            m_buffer_reader->seek_from_begin(get_equivalent_buffer_pos(pos));
+            m_buffer_reader->seek_from_begin(get_corresponding_offset(pos));
         }
     }
     m_file_pos = pos;
@@ -229,20 +229,6 @@ ErrorCode BufferedFileReader::try_fstat (struct stat& stat_buffer) const {
     return ErrorCode_Success;
 }
 
-void BufferedFileReader::resize_buffer_from_pos (size_t pos) {
-
-    const auto copy_size = m_buffer_reader->get_buffer_size() - pos;
-    // Use a quantized size for the underlying buffer size
-    auto new_buffer_size = quantize_to_buffer_size(copy_size);
-
-    auto new_buffer = make_unique<char[]>(new_buffer_size);
-    memcpy(new_buffer.get(), &m_buffer[pos], copy_size);
-    m_buffer = std::move(new_buffer);
-    m_buffer_begin_pos += pos;
-
-    m_buffer_reader.emplace(m_buffer.get(), copy_size);
-}
-
 size_t BufferedFileReader::set_checkpoint() {
     if (m_checkpoint_pos.has_value()) {
         if (m_checkpoint_pos > m_file_pos) {
@@ -251,7 +237,7 @@ size_t BufferedFileReader::set_checkpoint() {
             if (m_buffer_reader->get_buffer_size() != m_buffer_size) {
                 // allocate new buffer for buffered data starting from pos
                 resize_buffer_from_pos(m_buffer_reader->get_pos());
-                m_buffer_reader->seek_from_begin(get_equivalent_buffer_pos(m_file_pos));
+                m_buffer_reader->seek_from_begin(get_corresponding_offset(m_file_pos));
             }
         }
     }
@@ -269,7 +255,7 @@ void BufferedFileReader::clear_checkpoint () {
     }
 
     m_file_pos = highest_read_pos;
-    resize_buffer_from_pos(get_equivalent_buffer_pos(m_file_pos));
+    resize_buffer_from_pos(get_corresponding_offset(m_file_pos));
     m_checkpoint_pos.reset();
 }
 
@@ -352,9 +338,27 @@ ErrorCode BufferedFileReader::refill_reader_buffer (size_t num_bytes_to_refill,
         }
         m_buffer = std::move(new_buffer);
         m_buffer_reader.emplace(m_buffer.get(), data_size + num_bytes_refilled);
-        m_buffer_reader->seek_from_begin(get_equivalent_buffer_pos(m_file_pos));
+        m_buffer_reader->seek_from_begin(get_corresponding_offset(m_file_pos));
     }
     return ErrorCode_Success;
+}
+
+void BufferedFileReader::resize_buffer_from_pos (size_t pos) {
+
+    const auto copy_size = m_buffer_reader->get_buffer_size() - pos;
+    // Use a quantized size for the underlying buffer size
+    auto new_buffer_size = quantize_to_buffer_size(copy_size);
+
+    auto new_buffer = make_unique<char[]>(new_buffer_size);
+    memcpy(new_buffer.get(), &m_buffer[pos], copy_size);
+    m_buffer = std::move(new_buffer);
+    m_buffer_begin_pos += pos;
+
+    m_buffer_reader.emplace(m_buffer.get(), copy_size);
+}
+
+size_t BufferedFileReader::get_corresponding_offset (size_t file_pos) const {
+    return file_pos - m_buffer_begin_pos;
 }
 
 static ErrorCode try_read_into_buffer(int fd, char* buffer, size_t num_bytes_to_read,
