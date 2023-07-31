@@ -51,9 +51,11 @@ namespace clp {
         return boost::filesystem::last_write_time(lhs.get_path()) < boost::filesystem::last_write_time(rhs.get_path());
     }
 
-    bool compress (CommandLineArguments& command_line_args, vector<FileToCompress>& files_to_compress, const vector<string>& empty_directory_paths,
-                   vector<FileToCompress>& grouped_files_to_compress, size_t target_encoded_file_size,
-                   std::unique_ptr<log_surgeon::ReaderParser> reader_parser, bool use_heuristic) {
+    bool
+    compress (CommandLineArguments& command_line_args, vector <FileToCompress>& files_to_compress,
+              const vector <string>& empty_directory_paths,
+              vector <FileToCompress>& grouped_files_to_compress, size_t target_encoded_file_size,
+              std::unique_ptr<log_surgeon::ReaderParser> reader_parser, bool use_heuristic) {
         auto output_dir = boost::filesystem::path(command_line_args.get_output_dir());
 
         // Create output directory in case it doesn't exist
