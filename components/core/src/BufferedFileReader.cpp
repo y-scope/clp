@@ -85,16 +85,16 @@ ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
         }
 
         size_t num_bytes_to_refill = pos - get_buffer_end_pos();
-        size_t num_bytes_refilled{0};
-        auto error_code = refill_reader_buffer(num_bytes_to_refill, num_bytes_refilled);
-        if (ErrorCode_EndOfFile == error_code || num_bytes_refilled < num_bytes_to_refill) {
-            SPDLOG_ERROR("not expecting to seek pass the Entire file");
+        auto error_code = refill_reader_buffer(num_bytes_to_refill);
+        if (ErrorCode_EndOfFile == error_code) {
             throw OperationFailed(ErrorCode_EndOfFile, __FILENAME__, __LINE__);
         }
         if (ErrorCode_Success != error_code) {
             return error_code;
         }
-        m_buffer_reader->seek_from_begin(get_corresponding_offset(pos));
+        if (ErrorCode_Success != m_buffer_reader->try_seek_from_begin(get_corresponding_offset(pos))) {
+            throw OperationFailed(ErrorCode_EndOfFile, __FILENAME__, __LINE__);
+        }
     }
     m_file_pos = pos;
     highest_read_pos = std::max(highest_read_pos, m_file_pos);
@@ -281,14 +281,8 @@ size_t BufferedFileReader::quantize_to_buffer_size (size_t size) {
     return (1 + ((size - 1) / m_buffer_size)) * m_buffer_size;
 }
 
-ErrorCode BufferedFileReader::refill_reader_buffer (size_t refill_size) {
-    size_t num_bytes_refilled;
-    return refill_reader_buffer (refill_size, num_bytes_refilled);
-}
-
-ErrorCode BufferedFileReader::refill_reader_buffer (size_t num_bytes_to_refill,
-                                                    size_t& num_bytes_refilled) {
-    num_bytes_refilled = 0;
+ErrorCode BufferedFileReader::refill_reader_buffer (size_t num_bytes_to_refill) {
+    size_t num_bytes_refilled = 0;
     const auto quantized_refill_size = quantize_to_buffer_size(num_bytes_to_refill);
     if (false == m_checkpoint_pos.has_value()) {
         auto error_code = try_read_into_buffer(m_fd, m_buffer.get(),

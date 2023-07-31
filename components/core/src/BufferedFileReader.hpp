@@ -197,16 +197,6 @@ private:
     [[nodiscard]] ErrorCode refill_reader_buffer(size_t refill_size);
 
     /**
-     * Similar to refill_reader_buffer, except that number of bytes refilled
-     * is returned by reference
-     * @param num_bytes_to_refill
-     * @param num_bytes_refilled Returns the number of bytes refilled by
-     * reference
-     * @return Same as refill_reader_buffer(size_t refill_size)
-     */
-    [[nodiscard]] ErrorCode refill_reader_buffer(size_t num_bytes_to_refill, size_t& num_bytes_refilled);
-
-    /**
      * Resize the internal reader buffer by "dropping" all data before pos
      * offset in the buffer
      * @param pos
