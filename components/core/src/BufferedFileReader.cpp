@@ -109,17 +109,20 @@ ErrorCode BufferedFileReader::try_read (char* buf, size_t num_bytes_to_read,
     if (nullptr == buf) {
         return ErrorCode_BadParam;
     }
+    if (num_bytes_to_read == 0) {
+        return ErrorCode_Success;
+    }
 
     num_bytes_read = 0;
-    // keep reading until enough data is read or an eof is seen
     while (true) {
         size_t bytes_read {0};
-        auto remaining_bytes_to_read = num_bytes_to_read - num_bytes_read;
-        auto error_code = m_buffer_reader->try_read(buf + num_bytes_read, remaining_bytes_to_read, bytes_read);
+        auto error_code = m_buffer_reader->try_read(buf, num_bytes_to_read, bytes_read);
         if (ErrorCode_Success == error_code) {
+            buf += bytes_read;
             num_bytes_read += bytes_read;
+            num_bytes_to_read -= bytes_read;
             m_file_pos += bytes_read;
-            if (num_bytes_read == num_bytes_to_read) {
+            if (0 == num_bytes_to_read) {
                 break;
             }
         } else if (ErrorCode_EndOfFile != error_code) {
