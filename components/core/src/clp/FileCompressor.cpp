@@ -152,13 +152,15 @@ namespace clp {
         reader.seek_from_begin(0);
         archive_writer.m_old_ts_pattern.clear();
         archive_writer.m_timestamp_set = false;
-        Reader reader_wrapper{[&](char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode {
-            reader.read(buf, count, read_to);
-            if (read_to == 0) {
-                return log_surgeon::ErrorCode::EndOfFile;
+        Reader reader_wrapper{
+            [&] (char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode {
+                reader.read(buf, count, read_to);
+                if (read_to == 0) {
+                    return log_surgeon::ErrorCode::EndOfFile;
+                }
+                return log_surgeon::ErrorCode::Success;
             }
-            return log_surgeon::ErrorCode::Success;
-        }};
+        };
         m_reader_parser->reset_and_set_reader(reader_wrapper);
         static LogEventView log_view{&m_reader_parser->get_log_parser()};
         while (false == m_reader_parser->done()) {
