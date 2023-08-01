@@ -40,7 +40,7 @@ public:
 
     // Constructors
     BufferedFileReader();
-    BufferedFileReader(size_t buffer_size);
+    BufferedFileReader(size_t base_buffer_size);
     ~BufferedFileReader();
 
     // Methods implementing the ReaderInterface
@@ -226,6 +226,7 @@ private:
     size_t m_buffer_begin_pos;
 
     // Values for buffer related calculation
+    size_t m_base_buffer_size;
     size_t m_buffer_size;
     // Variables for checkpoint support
     std::optional<size_t> m_checkpoint_pos;
