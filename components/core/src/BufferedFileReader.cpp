@@ -235,15 +235,11 @@ ErrorCode BufferedFileReader::try_fstat (struct stat& stat_buffer) const {
 }
 
 size_t BufferedFileReader::set_checkpoint() {
-    if (m_checkpoint_pos.has_value()) {
-        if (m_checkpoint_pos > m_file_pos) {
-            throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
-        } else if (m_checkpoint_pos < m_file_pos) {
-            if (m_buffer_reader->get_buffer_size() != m_base_buffer_size) {
-                // allocate new buffer for buffered data starting from pos
-                resize_buffer_from_pos(m_buffer_reader->get_pos());
-                m_buffer_reader->seek_from_begin(get_corresponding_offset(m_file_pos));
-            }
+    if (m_checkpoint_pos.has_value() && m_checkpoint_pos < m_file_pos) {
+        if (m_buffer_reader->get_buffer_size() != m_base_buffer_size) {
+            // allocate new buffer for buffered data starting from pos
+            resize_buffer_from_pos(m_buffer_reader->get_pos());
+            m_buffer_reader->seek_from_begin(get_corresponding_offset(m_file_pos));
         }
     }
     m_checkpoint_pos = m_file_pos;
@@ -253,13 +249,6 @@ size_t BufferedFileReader::set_checkpoint() {
 void BufferedFileReader::clear_checkpoint () {
     if (false == m_checkpoint_pos.has_value()) {
         return;
-    }
-
-    // TODO: a check to make sure that highest_read_pos should always be in
-    //  the same default_buffer_size range with buffer_end_file_pos
-    const auto buffer_end_file_pos = get_buffer_end_pos();
-    if (buffer_end_file_pos <= highest_read_pos || buffer_end_file_pos - highest_read_pos > m_base_buffer_size) {
-        throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
     }
 
     m_file_pos = highest_read_pos;
@@ -285,7 +274,7 @@ ErrorCode BufferedFileReader::peek_buffered_data (size_t size_to_peek, const cha
     return ErrorCode_Success;
 }
 
-size_t BufferedFileReader::quantize_to_buffer_size (size_t size) {
+size_t BufferedFileReader::quantize_to_buffer_size (size_t size) const {
     if (size == 0) {
         return 0;
     }
@@ -345,6 +334,9 @@ ErrorCode BufferedFileReader::refill_reader_buffer (size_t num_bytes_to_refill) 
 }
 
 void BufferedFileReader::resize_buffer_from_pos (size_t pos) {
+    if (pos > m_buffer_reader->get_buffer_size()) {
+        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+    }
 
     const auto copy_size = m_buffer_reader->get_buffer_size() - pos;
     // Use a quantized size for the underlying buffer size
@@ -358,6 +350,9 @@ void BufferedFileReader::resize_buffer_from_pos (size_t pos) {
 }
 
 size_t BufferedFileReader::get_corresponding_offset (size_t file_pos) const {
+    if (file_pos < m_buffer_begin_pos) {
+        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+    }
     return file_pos - m_buffer_begin_pos;
 }
 

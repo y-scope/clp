@@ -181,7 +181,7 @@ private:
      * @param size
      * @return quantized size
      */
-    [[nodiscard]] size_t quantize_to_buffer_size(size_t size);
+    [[nodiscard]] size_t quantize_to_buffer_size(size_t size) const;
 
     /**
      * Reads next refill_size bytes from file descriptor to the internal buffer
@@ -197,14 +197,14 @@ private:
     [[nodiscard]] ErrorCode refill_reader_buffer(size_t refill_size);
 
     /**
-     * Resize the internal reader buffer by "dropping" all data before pos
-     * offset in the buffer
+     * Resize the internal reader buffer and copy over data from the original
+     * buffer staring from pos to the beginning of the resized the buffer
      * @param pos
      */
     void resize_buffer_from_pos(size_t pos);
 
     /**
-     * return the file_pos's corresponding offset in the internal buffer
+     * return the file_pos's corresponding pos in the internal buffer
      * @param file_pos
      * @return
      */
