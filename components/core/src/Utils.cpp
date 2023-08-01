@@ -220,6 +220,10 @@ ErrorCode read_list_of_paths (const string& list_path, vector<string>& paths) {
     return ErrorCode_Success;
 }
 
+// TODO: duplicates code in log_surgeon/parser.tpp, should implement a
+// SearchParser in log_surgeon instead and use it here. Specifically,
+// initialization of lexer.m_symbol_id , contains_delimiter error, and add_rule
+// logic.
 void load_lexer_from_file (std::string schema_file_path,
                            bool reverse,
                            log_surgeon::lexers::ByteLexer& lexer) {
@@ -242,16 +246,23 @@ void load_lexer_from_file (std::string schema_file_path,
     if (!lexer.m_symbol_id.empty()) {
         throw std::runtime_error("Error: symbol_ids initialized before setting enum symbol_ids");
     }
-    /// TODO: this is a copy of other code
+
+    // cTokenEnd and cTokenUncaughtString never need to be added as a rule to
+    // the lexer as they are not parsed
     lexer.m_symbol_id[log_surgeon::cTokenEnd] = (int)log_surgeon::SymbolID::TokenEndID;
     lexer.m_symbol_id[log_surgeon::cTokenUncaughtString] =
             (int)log_surgeon::SymbolID::TokenUncaughtStringID;
+    // cTokenInt, cTokenFloat, cTokenFirstTimestamp, and cTokenNewlineTimestamp
+    // each have unknown rule(s) until specified by the user so can't be
+    // explicitly added and are done by looping over schema_vars (user schema)
     lexer.m_symbol_id[log_surgeon::cTokenInt] = (int)log_surgeon::SymbolID::TokenIntId;
     lexer.m_symbol_id[log_surgeon::cTokenFloat] = (int)log_surgeon::SymbolID::TokenFloatId;
     lexer.m_symbol_id[log_surgeon::cTokenFirstTimestamp] =
             (int)log_surgeon::SymbolID::TokenFirstTimestampId;
     lexer.m_symbol_id[log_surgeon::cTokenNewlineTimestamp] =
             (int)log_surgeon::SymbolID::TokenNewlineTimestampId;
+    // cTokenNewline is not added in schema_vars and can be explicitly added
+    // as '\n' to catch the end of non-timestamped log messages
     lexer.m_symbol_id[log_surgeon::cTokenNewline] = (int)log_surgeon::SymbolID::TokenNewlineId;
 
     lexer.m_id_symbol[(int)log_surgeon::SymbolID::TokenEndID] = log_surgeon::cTokenEnd;
@@ -265,7 +276,6 @@ void load_lexer_from_file (std::string schema_file_path,
             log_surgeon::cTokenNewlineTimestamp;
     lexer.m_id_symbol[(int)log_surgeon::SymbolID::TokenNewlineId] = log_surgeon::cTokenNewline;
 
-    // TODO: figure out why this needs to be specially added
     lexer.add_rule(lexer.m_symbol_id["newLine"],
                    std::move(std::make_unique<log_surgeon::finite_automata::RegexASTLiteral<
                            log_surgeon::finite_automata::RegexNFAByteState>>(
@@ -290,9 +300,6 @@ void load_lexer_from_file (std::string schema_file_path,
         // transform '.' from any-character into any non-delimiter character
         rule->m_regex_ptr->remove_delimiters_from_wildcard(delimiters_ptr->m_delimiters);
 
-        /// TODO: this error function is a copy
-        // currently, error out if non-timestamp pattern contains a delimiter
-        // check if regex contains a delimiter
         bool is_possible_input[log_surgeon::cUnicodeMax] = {false};
         rule->m_regex_ptr->set_possible_inputs_to_true(is_possible_input);
         bool contains_delimiter = false;
@@ -304,6 +311,7 @@ void load_lexer_from_file (std::string schema_file_path,
                 break;
             }
         }
+
         if (contains_delimiter) {
             FileReader schema_reader;
             ErrorCode error_code = schema_reader.try_open(schema_ast->m_file_path);
