@@ -40,7 +40,7 @@ public:
     };
 
     // Constructors
-    DictionaryWriter () : m_is_open(false) {}
+    DictionaryWriter (bool use_segment_index = true) : m_is_open(false), m_use_segment_index(use_segment_index) {}
 
     ~DictionaryWriter () = default;
 
@@ -51,6 +51,8 @@ public:
      * @param segment_index_path
      */
     void open (const std::string& dictionary_path, const std::string& segment_index_path, DictionaryIdType max_id);
+    void open (const std::string& dictionary_path, DictionaryIdType max_id);
+
     /**
      * Closes the dictionary
      */
@@ -68,6 +70,7 @@ public:
      * @param max_id
      */
     void open_and_preload (const std::string& dictionary_path, const std::string& segment_index_path, variable_dictionary_id_t max_id);
+    void open_and_preload (const std::string& dictionary_path, variable_dictionary_id_t max_id);
 
     /**
      * Adds the given segment and IDs to the segment index
@@ -80,7 +83,7 @@ public:
      * Gets the size of the dictionary when it is stored on disk
      * @return Size in bytes
      */
-    size_t get_on_disk_size () const { return m_dictionary_file_writer.get_pos() + m_segment_index_file_writer.get_pos(); }
+    size_t get_on_disk_size () const { return m_dictionary_file_writer.get_pos() + m_use_segment_index? m_segment_index_file_writer.get_pos(): 0; }
 
     /**
      * Gets the size (in-memory) of the data contained in the dictionary
@@ -94,6 +97,7 @@ protected:
 
     // Variables
     bool m_is_open;
+    bool m_use_segment_index;
 
     // Variables related to on-disk storage
     FileWriter m_dictionary_file_writer;
@@ -119,6 +123,21 @@ protected:
 
 template <typename DictionaryIdType, typename EntryType>
 void DictionaryWriter<DictionaryIdType, EntryType>::open (const std::string& dictionary_path, const std::string& segment_index_path, DictionaryIdType max_id) {
+    if (false == m_use_segment_index) {
+        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+    }
+
+    open(dictionary_path, max_id);
+
+    m_segment_index_file_writer.open(segment_index_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
+    // Write header
+    m_segment_index_file_writer.write_numeric_value<uint64_t>(0);
+    // Open compressor
+    m_segment_index_compressor.open(m_segment_index_file_writer);
+    m_num_segments_in_index = 0;
+}
+template <typename DictionaryIdType, typename EntryType>
+void DictionaryWriter<DictionaryIdType, EntryType>::open (const std::string& dictionary_path, DictionaryIdType max_id) {
     if (m_is_open) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }
@@ -129,13 +148,6 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open (const std::string& dic
     // Open compressor
     m_dictionary_compressor.open(m_dictionary_file_writer);
 
-    m_segment_index_file_writer.open(segment_index_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
-    // Write header
-    m_segment_index_file_writer.write_numeric_value<uint64_t>(0);
-    // Open compressor
-    m_segment_index_compressor.open(m_segment_index_file_writer);
-    m_num_segments_in_index = 0;
-
     m_next_id = 0;
     m_max_id = max_id;
 
@@ -144,6 +156,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open (const std::string& dic
     m_is_open = true;
 }
 
+
 template <typename DictionaryIdType, typename EntryType>
 void DictionaryWriter<DictionaryIdType, EntryType>::close () {
     if (false == m_is_open) {
@@ -151,8 +164,12 @@ void DictionaryWriter<DictionaryIdType, EntryType>::close () {
     }
 
     write_header_and_flush_to_disk();
-    m_segment_index_compressor.close();
-    m_segment_index_file_writer.close();
+
+    if (m_use_segment_index) {
+        m_segment_index_compressor.close();
+        m_segment_index_file_writer.close();
+    }
+
     m_dictionary_compressor.close();
     m_dictionary_file_writer.close();
 
@@ -173,8 +190,11 @@ void DictionaryWriter<DictionaryIdType, EntryType>::write_header_and_flush_to_di
     m_dictionary_file_writer.write_numeric_value<uint64_t>(m_value_to_id.size());
     m_dictionary_file_writer.seek_from_begin(dictionary_file_writer_pos);
 
-    m_segment_index_compressor.flush();
-    m_segment_index_file_writer.flush();
+    if (m_use_segment_index) {
+        m_segment_index_compressor.flush();
+        m_segment_index_file_writer.flush();
+    }
+
     m_dictionary_compressor.flush();
     m_dictionary_file_writer.flush();
 }
@@ -183,6 +203,25 @@ template <typename DictionaryIdType, typename EntryType>
 void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload (const std::string& dictionary_path, const std::string& segment_index_path,
                                                                       const variable_dictionary_id_t max_id)
 {
+    if (false == m_use_segment_index) {
+        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+    }
+
+    open_and_preload(dictionary_path, max_id);
+
+    FileReader segment_index_file_reader;
+    segment_index_file_reader.open(segment_index_path);
+    m_num_segments_in_index = read_segment_index_header(segment_index_file_reader);
+    segment_index_file_reader.close();
+
+    m_segment_index_file_writer.open(segment_index_path, FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_SEEKABLE_WRITING);
+    // Open compressor
+    m_segment_index_compressor.open(m_segment_index_file_writer);
+}
+
+template <typename DictionaryIdType, typename EntryType>
+void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload (const std::string& dictionary_path, const variable_dictionary_id_t max_id)
+{
     if (m_is_open) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }
@@ -190,19 +229,15 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload (const std:
     m_max_id = max_id;
 
     FileReader dictionary_file_reader;
-    FileReader segment_index_file_reader;
 #if USE_PASSTHROUGH_COMPRESSION
     streaming_compression::passthrough::Decompressor dictionary_decompressor;
-    streaming_compression::passthrough::Decompressor segment_index_decompressor;
 #elif USE_ZSTD_COMPRESSION
     streaming_compression::zstd::Decompressor dictionary_decompressor;
-    streaming_compression::zstd::Decompressor segment_index_decompressor;
 #else
     static_assert(false, "Unsupported compression mode.");
 #endif
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024; // 64 KB
-    open_dictionary_for_reading(dictionary_path, segment_index_path, cDecompressorFileReadBufferCapacity, dictionary_file_reader, dictionary_decompressor,
-                                segment_index_file_reader, segment_index_decompressor);
+    open_dictionary_for_reading(dictionary_path, cDecompressorFileReadBufferCapacity, dictionary_file_reader, dictionary_decompressor);
 
     auto num_dictionary_entries = read_dictionary_header(dictionary_file_reader);
     if (num_dictionary_entries > m_max_id) {
@@ -226,18 +261,12 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload (const std:
 
     m_next_id = num_dictionary_entries;
 
-    segment_index_decompressor.close();
-    segment_index_file_reader.close();
     dictionary_decompressor.close();
     dictionary_file_reader.close();
 
     m_dictionary_file_writer.open(dictionary_path, FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_SEEKABLE_WRITING);
     // Open compressor
     m_dictionary_compressor.open(m_dictionary_file_writer);
-
-    m_segment_index_file_writer.open(segment_index_path, FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_SEEKABLE_WRITING);
-    // Open compressor
-    m_segment_index_compressor.open(m_segment_index_file_writer);
 
     m_is_open = true;
 }
@@ -246,6 +275,10 @@ template <typename DictionaryIdType, typename EntryType>
 void DictionaryWriter<DictionaryIdType, EntryType>::index_segment (segment_id_t segment_id, const ArrayBackedPosIntSet<DictionaryIdType>& ids) {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+    }
+
+    if (false == m_use_segment_index) {
+        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }
 
     m_segment_index_compressor.write_numeric_value(segment_id);

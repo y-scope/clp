@@ -9,6 +9,7 @@ namespace streaming_archive {
     constexpr char cSegmentsDirname[] = "s";
     constexpr char cSegmentListFilename[] = "segment_list.txt";
     constexpr char cLogTypeDictFilename[] = "logtype.dict";
+    constexpr char cTsDictFilename[] = "ts.dict";
     constexpr char cVarDictFilename[] = "var.dict";
     constexpr char cLogTypeSegmentIndexFilename[] = "logtype.segindex";
     constexpr char cVarSegmentIndexFilename[] = "var.segindex";

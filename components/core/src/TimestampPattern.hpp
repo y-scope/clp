@@ -90,6 +90,11 @@ public:
      */
     uint8_t get_num_spaces_before_ts () const;
     /**
+     * Gets the encoded string representation of the timestamp pattern
+     * @return See description
+     */
+    const std::string get_encoded_string () const;
+    /**
      * Gets if the timestamp pattern is empty
      * @return true if empty, false otherwise
      */

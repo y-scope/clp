@@ -86,7 +86,7 @@ namespace streaming_archive { namespace writer {
          * Changes timestamp pattern in use at current message in file
          * @param pattern
          */
-        void change_ts_pattern (const TimestampPattern* pattern);
+        void change_ts_pattern (const timestamp_dictionary_id_t id);
 
         /**
          * Returns whether the file contains any timestamp pattern
@@ -146,7 +146,7 @@ namespace streaming_archive { namespace writer {
         std::string get_id_as_string () const { return boost::uuids::to_string(m_id); }
         epochtime_t get_begin_ts () const { return m_begin_ts; }
         epochtime_t get_end_ts () const { return m_end_ts; }
-        const std::vector<std::pair<int64_t, TimestampPattern>>& get_timestamp_patterns () const { return m_timestamp_patterns; }
+        const std::vector<std::pair<int64_t, timestamp_dictionary_id_t>>& get_timestamp_patterns () const { return m_timestamp_patterns; }
         std::string get_encoded_timestamp_patterns () const;
         uint64_t get_num_messages () const { return m_num_messages; }
         uint64_t get_num_variables () const { return m_num_variables; }
@@ -187,7 +187,7 @@ namespace streaming_archive { namespace writer {
 
         epochtime_t m_begin_ts;
         epochtime_t m_end_ts;
-        std::vector<std::pair<int64_t, TimestampPattern>> m_timestamp_patterns;
+        std::vector<std::pair<int64_t, timestamp_dictionary_id_t>> m_timestamp_patterns;
 
         group_id_t m_group_id;
 

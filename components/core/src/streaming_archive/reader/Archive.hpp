@@ -14,6 +14,7 @@
 #include "../../LogTypeDictionaryReader.hpp"
 #include "../../Query.hpp"
 #include "../../SQLiteDB.hpp"
+#include "../../TimestampDictionaryReader.hpp"
 #include "../../VariableDictionaryReader.hpp"
 #include "../MetadataDB.hpp"
 #include "File.hpp"
@@ -51,6 +52,7 @@ namespace streaming_archive { namespace reader {
         void refresh_dictionaries ();
         const LogTypeDictionaryReader& get_logtype_dictionary () const;
         const VariableDictionaryReader& get_var_dictionary () const;
+        const TimestampDictionaryReader& get_ts_dictionary () const;
 
         /**
          * Opens file with given path
@@ -117,6 +119,7 @@ namespace streaming_archive { namespace reader {
         std::string m_segments_dir_path;
         LogTypeDictionaryReader m_logtype_dictionary;
         VariableDictionaryReader m_var_dictionary;
+        TimestampDictionaryReader m_ts_dictionary;
 
         SegmentManager m_segment_manager;
 

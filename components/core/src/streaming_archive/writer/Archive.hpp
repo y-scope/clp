@@ -18,6 +18,7 @@
 #include "../../ErrorCode.hpp"
 #include "../../GlobalMetadataDB.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
+#include "../../TimestampDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
 #include "../../compressor_frontend/Token.hpp"
 #include "../ArchiveMetadata.hpp"
@@ -261,6 +262,7 @@ namespace streaming_archive { namespace writer {
         std::vector<encoded_variable_t> m_encoded_vars;
         std::vector<variable_dictionary_id_t> m_var_ids;
         VariableDictionaryWriter m_var_dict;
+        TimestampDictionaryWriter m_ts_dict;
 
         boost::uuids::random_generator m_uuid_generator;
 

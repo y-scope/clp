@@ -21,6 +21,11 @@ typedef int64_t logtype_dictionary_id_t;
 constexpr logtype_dictionary_id_t cLogtypeDictionaryIdMax =
         std::numeric_limits<logtype_dictionary_id_t>::max();
 
+typedef int8_t timestamp_dictionary_id_t;
+constexpr variable_dictionary_id_t cTimestampDictionaryIdMax =
+        std::numeric_limits<timestamp_dictionary_id_t>::max();
+#define INVALID_TIMESTAMP_DICTIONARY_ID -1        
+
 typedef uint16_t archive_format_version_t;
 // This flag is used to maintain two separate streams of archive format
 // versions:

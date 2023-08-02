@@ -38,7 +38,7 @@ public:
     };
 
     // Constructors
-    DictionaryReader () : m_is_open(false), m_num_segments_read_from_index(0) {
+    DictionaryReader (bool use_segment_index = true) : m_is_open(false), m_use_segment_index(use_segment_index), m_num_segments_read_from_index(0) {
         static_assert(std::is_base_of<DictionaryEntry<DictionaryIdType>, EntryType>::value, "EntryType must be DictionaryEntry or a derivative.");
     }
 
@@ -49,6 +49,7 @@ public:
      * @param segment_index_path
      */
     void open (const std::string& dictionary_path, const std::string& segment_index_path);
+    void open (const std::string& dictionary_path);
     /**
      * Closes the dictionary
      */
@@ -102,6 +103,8 @@ protected:
 
     // Variables
     bool m_is_open;
+    bool m_use_segment_index;
+
     FileReader m_dictionary_file_reader;
     FileReader m_segment_index_file_reader;
 #if USE_PASSTHROUGH_COMPRESSION
@@ -119,14 +122,26 @@ protected:
 
 template <typename DictionaryIdType, typename EntryType>
 void DictionaryReader<DictionaryIdType, EntryType>::open (const std::string& dictionary_path, const std::string& segment_index_path) {
+    if (false == m_use_segment_index) {
+        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+    }
+
+    open(dictionary_path);
+
+    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024; // 64 KB
+
+    open_segment_index_for_reading(segment_index_path, cDecompressorFileReadBufferCapacity, m_segment_index_file_reader, m_segment_index_decompressor);
+}
+
+template <typename DictionaryIdType, typename EntryType>
+void DictionaryReader<DictionaryIdType, EntryType>::open (const std::string& dictionary_path) {
     if (m_is_open) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }
 
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024; // 64 KB
 
-    open_dictionary_for_reading(dictionary_path, segment_index_path, cDecompressorFileReadBufferCapacity, m_dictionary_file_reader, m_dictionary_decompressor,
-                                m_segment_index_file_reader, m_segment_index_decompressor);
+    open_dictionary_for_reading(dictionary_path, cDecompressorFileReadBufferCapacity, m_dictionary_file_reader, m_dictionary_decompressor);
 
     m_is_open = true;
 }
@@ -137,12 +152,15 @@ void DictionaryReader<DictionaryIdType, EntryType>::close () {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
-    m_segment_index_decompressor.close();
-    m_segment_index_file_reader.close();
+    if (m_use_segment_index) {
+        m_segment_index_decompressor.close();
+        m_segment_index_file_reader.close();
+        m_num_segments_read_from_index = 0;
+    }
+
     m_dictionary_decompressor.close();
     m_dictionary_file_reader.close();
 
-    m_num_segments_read_from_index = 0;
     m_entries.clear();
 
     m_is_open = false;
@@ -174,18 +192,20 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries () {
         }
     }
 
-    // Read segment index header
-    auto num_segments = read_segment_index_header(m_segment_index_file_reader);
+    if (m_use_segment_index) {
+        // Read segment index header
+        auto num_segments = read_segment_index_header(m_segment_index_file_reader);
 
-    // Validate segment index header
-    if (num_segments < m_num_segments_read_from_index) {
-        throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
-    }
+        // Validate segment index header
+        if (num_segments < m_num_segments_read_from_index) {
+            throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
+        }
 
-    // Read new segments from index
-    if (num_segments > m_num_segments_read_from_index) {
-        for (size_t i = m_num_segments_read_from_index; i < num_segments; ++i) {
-            read_segment_ids();
+        // Read new segments from index
+        if (num_segments > m_num_segments_read_from_index) {
+            for (size_t i = m_num_segments_read_from_index; i < num_segments; ++i) {
+                read_segment_ids();
+            }
         }
     }
 }

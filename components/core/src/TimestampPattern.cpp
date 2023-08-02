@@ -180,6 +180,10 @@ uint8_t TimestampPattern::get_num_spaces_before_ts () const {
     return m_num_spaces_before_ts;
 }
 
+const string TimestampPattern::get_encoded_string() const {
+    return to_string(m_num_spaces_before_ts) + m_format;
+}
+
 bool TimestampPattern::is_empty () const {
     return m_format.empty();
 }

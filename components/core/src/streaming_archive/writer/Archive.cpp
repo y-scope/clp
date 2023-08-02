@@ -153,6 +153,10 @@ namespace streaming_archive::writer {
         string var_dict_segment_index_path = archive_path_string + '/' + cVarSegmentIndexFilename;
         m_var_dict.open(var_dict_path, var_dict_segment_index_path, cVariableDictionaryIdMax);
 
+        // Open timestamp dictionary
+        string ts_dict_path = archive_path_string + '/' + cTsDictFilename;
+        m_ts_dict.open(ts_dict_path, cTimestampDictionaryIdMax);
+
         #if FLUSH_TO_DISK_ENABLED
             // fsync archive directory now that everything in the archive directory has been created
             if (fsync(archive_dir_fd) != 0) {
@@ -194,6 +198,7 @@ namespace streaming_archive::writer {
         m_logtype_dict.close();
         m_logtype_dict_entry.clear();
         m_var_dict.close();
+        m_ts_dict.close();
 
         if (::close(m_segments_dir_fd) != 0) {
             // We've already fsynced, so this error shouldn't affect us. Therefore, just log it.
@@ -246,7 +251,11 @@ namespace streaming_archive::writer {
         if (m_file == nullptr) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
-        m_file->change_ts_pattern(pattern);
+
+        timestamp_dictionary_id_t id;
+        m_ts_dict.add_entry(pattern->get_encoded_string(), id);        
+
+        m_file->change_ts_pattern(id);
     }
 
     void Archive::write_msg (epochtime_t timestamp, const string& message, size_t num_uncompressed_bytes) {
@@ -385,6 +394,7 @@ namespace streaming_archive::writer {
         // Flush dictionaries
         m_logtype_dict.write_header_and_flush_to_disk();
         m_var_dict.write_header_and_flush_to_disk();
+        m_ts_dict.write_header_and_flush_to_disk();
     }
 
     void Archive::append_file_contents_to_segment (Segment& segment, ArrayBackedPosIntSet<logtype_dictionary_id_t>& logtype_ids_in_segment,
@@ -467,6 +477,7 @@ namespace streaming_archive::writer {
         // Flush dictionaries
         m_logtype_dict.write_header_and_flush_to_disk();
         m_var_dict.write_header_and_flush_to_disk();
+        m_ts_dict.write_header_and_flush_to_disk();
 
         for (auto file : files) {
             file->mark_as_in_committed_segment();
@@ -492,7 +503,7 @@ namespace streaming_archive::writer {
     }
 
     uint64_t Archive::get_dynamic_compressed_size () {
-        uint64_t on_disk_size = m_logtype_dict.get_on_disk_size() + m_var_dict.get_on_disk_size();
+        uint64_t on_disk_size = m_logtype_dict.get_on_disk_size() + m_var_dict.get_on_disk_size() + m_ts_dict.get_on_disk_size();
 
         // Add size of unclosed segments
         if (m_segment_for_files_with_timestamps.is_open()) {

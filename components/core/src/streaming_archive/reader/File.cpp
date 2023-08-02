@@ -20,9 +20,8 @@ namespace streaming_archive::reader {
         return m_end_ts;
     }
 
-    ErrorCode File::open_me (const LogTypeDictionaryReader& archive_logtype_dict,
-                             MetadataDB::FileIterator& file_metadata_ix,
-                             SegmentManager& segment_manager)
+    ErrorCode File::open_me (const LogTypeDictionaryReader& archive_logtype_dict, const TimestampDictionaryReader& ts_dict,
+                             MetadataDB::FileIterator& file_metadata_ix, SegmentManager& segment_manager)
     {
         m_archive_logtype_dict = &archive_logtype_dict;
 
@@ -47,22 +46,18 @@ namespace streaming_archive::reader {
             size_t msg_num = strtoull(&encoded_timestamp_patterns[begin_pos], nullptr, 10);
             begin_pos = end_pos + 1;
 
-            end_pos = encoded_timestamp_patterns.find_first_of(':', begin_pos);
-            if (string::npos == end_pos) {
-                // Unexpected truncation
-                throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
-            }
-            uint8_t num_spaces_before_ts = strtol(&encoded_timestamp_patterns[begin_pos], nullptr,
-                                                  10);
-            begin_pos = end_pos + 1;
-
             end_pos = encoded_timestamp_patterns.find_first_of('\n', begin_pos);
             if (string::npos == end_pos) {
                 // Unexpected truncation
                 throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
             }
-            timestamp_format.assign(encoded_timestamp_patterns, begin_pos, end_pos - begin_pos);
+            timestamp_dictionary_id_t id = strtol(&encoded_timestamp_patterns[begin_pos], nullptr,
+                                                  10);
             begin_pos = end_pos + 1;
+
+            string encoded_timestamp_format = ts_dict.get_value(id);
+            uint8_t num_spaces_before_ts = encoded_timestamp_format[0] - '0';
+            timestamp_format.assign(encoded_timestamp_format, 1);
 
             m_timestamp_patterns.emplace_back(
                     std::piecewise_construct,

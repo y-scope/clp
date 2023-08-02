@@ -23,6 +23,7 @@ public:
         }
     };
 
+    // Methods
     /**
      * Adds the given variable to the dictionary if it doesn't exist.
      * @param value

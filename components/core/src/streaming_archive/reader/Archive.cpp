@@ -85,6 +85,11 @@ namespace streaming_archive { namespace reader {
         var_segment_index_path += cVarSegmentIndexFilename;
         m_var_dictionary.open(var_dict_path, var_segment_index_path);
 
+        string ts_dict_path = m_path;
+        ts_dict_path += '/';
+        ts_dict_path += cTsDictFilename;
+        m_ts_dictionary.open(var_dict_path);
+
         // Open segment manager
         m_segments_dir_path = m_path;
         m_segments_dir_path += '/';
@@ -100,6 +105,7 @@ namespace streaming_archive { namespace reader {
     void Archive::close () {
         m_logtype_dictionary.close();
         m_var_dictionary.close();
+        m_ts_dictionary.close();
         m_segment_manager.close();
         m_segments_dir_path.clear();
         m_metadata_db.close();
@@ -109,10 +115,11 @@ namespace streaming_archive { namespace reader {
     void Archive::refresh_dictionaries () {
         m_logtype_dictionary.read_new_entries();
         m_var_dictionary.read_new_entries();
+        m_ts_dictionary.read_new_entries();
     }
 
     ErrorCode Archive::open_file (File& file, MetadataDB::FileIterator& file_metadata_ix) {
-        return file.open_me(m_logtype_dictionary, file_metadata_ix, m_segment_manager);
+        return file.open_me(m_logtype_dictionary, m_ts_dictionary, file_metadata_ix, m_segment_manager);
     }
 
     void Archive::close_file (File& file) {
@@ -129,6 +136,10 @@ namespace streaming_archive { namespace reader {
 
     const VariableDictionaryReader& Archive::get_var_dictionary () const {
         return m_var_dictionary;
+    }
+
+    const TimestampDictionaryReader& Archive::get_ts_dictionary () const {
+        return m_ts_dictionary;
     }
 
     bool Archive::find_message_in_time_range (File& file, epochtime_t search_begin_timestamp, epochtime_t search_end_timestamp, Message& msg) {

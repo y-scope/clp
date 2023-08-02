@@ -11,6 +11,7 @@
 #include "../../ErrorCode.hpp"
 #include "../../LogTypeDictionaryReader.hpp"
 #include "../../Query.hpp"
+#include "../../TimestampDictionaryReader.hpp"
 #include "../../TimestampPattern.hpp"
 #include "../MetadataDB.hpp"
 #include "Message.hpp"
@@ -75,9 +76,8 @@ namespace streaming_archive::reader {
          * @return Same as SegmentManager::try_read
          * @return ErrorCode_Success on success
          */
-        ErrorCode open_me (const LogTypeDictionaryReader& archive_logtype_dict,
-                           MetadataDB::FileIterator& file_metadata_ix,
-                           SegmentManager& segment_manager);
+        ErrorCode open_me (const LogTypeDictionaryReader& archive_logtype_dict, const TimestampDictionaryReader& ts_dict,
+                           MetadataDB::FileIterator& file_metadata_ix, SegmentManager& segment_manager);
         /**
          * Closes the file
          */
