@@ -19,7 +19,8 @@ Subquery<encoded_variable_t>::Subquery(string logtype_query, Subquery::QueryVari
             is_escaped = false;
         } else if ('\\' == c) {
             is_escaped = true;
-        } else if (enum_to_underlying_type(WildcardType::ZeroOrMoreChars) == c || enum_to_underlying_type(WildcardType::AnyChar) == c)
+        } else if ((enum_to_underlying_type(WildcardType::ZeroOrMoreChars) == c
+                    || enum_to_underlying_type(WildcardType::AnyChar) == c))
         {
             m_logtype_query_contains_wildcards = true;
             break;

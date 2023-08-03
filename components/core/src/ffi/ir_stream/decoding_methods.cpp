@@ -526,7 +526,12 @@ IRErrorCode get_encoding_type(IrBuffer& ir_buf, bool& is_four_bytes_encoding) {
     }
     if (0 == memcmp(buffer, cProtocol::FourByteEncodingMagicNumber, cProtocol::MagicNumberLength)) {
         is_four_bytes_encoding = true;
-    } else if (0 == memcmp(buffer, cProtocol::EightByteEncodingMagicNumber, cProtocol::MagicNumberLength))
+    } else if ((0
+                == memcmp(
+                        buffer,
+                        cProtocol::EightByteEncodingMagicNumber,
+                        cProtocol::MagicNumberLength
+                )))
     {
         is_four_bytes_encoding = false;
     } else {
