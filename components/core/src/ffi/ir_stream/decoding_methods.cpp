@@ -24,8 +24,8 @@ static bool is_variable_tag(encoded_tag_t tag, bool& is_encoded_var);
  * @tparam integer_t Type of the integer to decode
  * @param ir_buf
  * @param value Returns the decoded integer
- * @return true on success, false if the ir_buf doesn't contain enough data
- * to decode
+ * @return true on success, false if the ir_buf doesn't contain enough data to
+ * decode
  */
 template <typename integer_t>
 static bool decode_int(IrBuffer& ir_buf, integer_t& value);
@@ -37,8 +37,8 @@ static bool decode_int(IrBuffer& ir_buf, integer_t& value);
  * @param logtype Returns the logtype string
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
- * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
- * to decode
+ * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data to
+ * decode
  */
 static IRErrorCode parse_logtype(IrBuffer& ir_buf, encoded_tag_t encoded_tag, string_view& logtype);
 
@@ -49,8 +49,8 @@ static IRErrorCode parse_logtype(IrBuffer& ir_buf, encoded_tag_t encoded_tag, st
  * @param dict_var Returns the dictionary variable
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
- * @return IRErrorCode_Incomplete_IR if input buffer doesn't contain enough
- * data to decode
+ * @return IRErrorCode_Incomplete_IR if input buffer doesn't contain enough data
+ * to decode
  */
 static IRErrorCode
 parse_dictionary_var(IrBuffer& ir_buf, encoded_tag_t encoded_tag, string_view& dict_var);
@@ -61,12 +61,12 @@ parse_dictionary_var(IrBuffer& ir_buf, encoded_tag_t encoded_tag, string_view& d
  * @param ir_buf
  * @param encoded_tag
  * @param ts Returns the timestamp delta if
- * encoded_variable_t == four_byte_encoded_variable_t or the actual
- * timestamp if encoded_variable_t == eight_byte_encoded_variable_t
+ * encoded_variable_t == four_byte_encoded_variable_t or the actual timestamp if
+ * encoded_variable_t == eight_byte_encoded_variable_t
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
- * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
- * to decode
+ * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data to
+ * decode
  */
 template <typename encoded_variable_t>
 IRErrorCode parse_timestamp(IrBuffer& ir_buf, encoded_tag_t encoded_tag, epoch_time_ms_t& ts);
@@ -77,14 +77,14 @@ IRErrorCode parse_timestamp(IrBuffer& ir_buf, encoded_tag_t encoded_tag, epoch_t
  * @param ir_buf
  * @param message Returns the decoded message
  * @param timestamp Returns the timestamp delta if
- * encoded_variable_t == four_byte_encoded_variable_t or the actual
- * timestamp if encoded_variable_t == eight_byte_encoded_variable_t
+ * encoded_variable_t == four_byte_encoded_variable_t or the actual timestamp if
+ * encoded_variable_t == eight_byte_encoded_variable_t
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
- * @return IRErrorCode_Decode_Error if the encoded message cannot be
- * properly decoded
- * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
- * to decode
+ * @return IRErrorCode_Decode_Error if the encoded message cannot be properly
+ * decoded
+ * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data to
+ * decode
  */
 template <typename encoded_variable_t>
 static IRErrorCode
@@ -98,17 +98,17 @@ generic_decode_next_message(IrBuffer& ir_buf, string& message, epoch_time_ms_t& 
  * @param metadata_size Returns the size of the metadata written in the IR
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
- * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
- * to decode
+ * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data to
+ * decode
  */
 static IRErrorCode
 read_metadata_info(IrBuffer& ir_buf, encoded_tag_t& metadata_type, uint16_t& metadata_size);
 
 /**
- * Decodes the message from the given logtype, encoded variables, and
- * dictionary variables. This function properly handles escaped variable
- * placeholders in the logtype, as opposed to ffi::decode_message that
- * doesn't handle escaped placeholders for simplicity
+ * Decodes the message from the given logtype, encoded variables, and dictionary
+ * variables. This function properly handles escaped variable placeholders in
+ * the logtype, as opposed to ffi::decode_message that doesn't handle escaped
+ * placeholders for simplicity
  * @tparam encoded_variable_t Type of the encoded variable
  * @param logtype
  * @param encoded_vars

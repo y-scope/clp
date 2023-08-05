@@ -168,12 +168,12 @@ WildcardToken<encoded_variable_t>::WildcardToken(
 
 template <typename encoded_variable_t>
 bool WildcardToken<encoded_variable_t>::add_to_logtype_query(string& logtype_query) const {
-    // Recall from CompositeWildcardToken::add_to_query: We need to handle
-    // '*' carefully when adding to the logtype query since we may have a
-    // token like "a1*b2" with interpretation ["a1*", "*b2"], i.e., the
-    // first token's suffix '*' is the second token's prefix '*'. So we only
-    // add the current token's prefix '*' below and ignore any suffix '*'
-    // since they will be captured by the next token.
+    // Recall from CompositeWildcardToken::add_to_query: We need to handle '*'
+    // carefully when adding to the logtype query since we may have a token like
+    // "a1*b2" with interpretation ["a1*", "*b2"], i.e., the first token's
+    // suffix '*' is the second token's prefix '*'. So we only add the current
+    // token's prefix '*' below and ignore any suffix '*' since they will be
+    // captured by the next token.
     auto current_interpretation = m_possible_variable_types[m_current_interpretation_idx];
     if (TokenType::StaticText == current_interpretation) {
         if (m_has_suffix_star_wildcard) {

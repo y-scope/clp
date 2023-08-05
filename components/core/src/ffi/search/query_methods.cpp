@@ -214,8 +214,8 @@ static void find_delimiter(
             is_escaped = false;
 
             if (is_delim(c)) {
-                // Found escaped delimiter, so reverse the index to
-                // exclude the escape character
+                // Found escaped delimiter, so reverse the index to exclude the
+                // escape character
                 --pos;
                 return;
             }
@@ -249,8 +249,8 @@ find_wildcard_or_non_delimiter(string_view value, size_t& pos, bool& contains_wi
             is_escaped = false;
 
             if (false == is_delim(c)) {
-                // Found escaped non-delimiter, so reverse the index to
-                // retain the escape character
+                // Found escaped non-delimiter, so reverse the index to retain
+                // the escape character
                 --pos;
                 return true;
             }

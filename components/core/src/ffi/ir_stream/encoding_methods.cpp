@@ -54,8 +54,8 @@ static void add_base_metadata_fields(
  * Appends a constant to the logtype, escaping variable placeholders when
  * @p contains_variable_placeholder is true
  * @param constant
- * @param contains_variable_placeholder Whether the constant contains a
- * variable placeholder
+ * @param contains_variable_placeholder Whether the constant contains a variable
+ * placeholder
  * @param logtype
  * @return true
  */

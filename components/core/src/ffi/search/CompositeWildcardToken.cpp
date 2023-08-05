@@ -111,8 +111,8 @@ bool CompositeWildcardToken<encoded_variable_t>::generate_next_interpretation() 
 }
 
 /**
- * To turn a CompositeWildcardToken into ExactVariableTokens and
- * WildcardTokens, we use the following algorithm.
+ * To turn a CompositeWildcardToken into ExactVariableTokens and WildcardTokens,
+ * we use the following algorithm.
  *
  * Glossary:
  * - "token" - either an ExactVariableToken or a WildcardToken.

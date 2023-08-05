@@ -10,9 +10,9 @@ namespace ffi::ir_stream {
 using encoded_tag_t = int8_t;
 
 /**
- * Class representing an IR buffer that the decoder sequentially reads from.
- * The class maintains an internal cursor such that every successful read
- * increments the cursor.
+ * Class representing an IR buffer that the decoder sequentially reads from. The
+ * class maintains an internal cursor such that every successful read increments
+ * the cursor.
  */
 class IrBuffer {
 public:
@@ -37,17 +37,17 @@ public:
      * Tries reading a string view of size = read_size from the ir_buf.
      * @param str_view Returns the string view
      * @param read_size
-     * @return true on success, false if the ir_buf doesn't contain enough
-     * data to decode
-     **/
+     * @return true on success, false if the ir_buf doesn't contain enough data
+     * to decode
+     */
     [[nodiscard]] bool try_read(std::string_view& str_view, size_t read_size);
 
     /**
      * Tries reading an integer of size = sizeof(integer_t) from the ir_buf
      * @tparam integer_t
      * @param data Returns the integer
-     * @return true on success, false if the ir_buf doesn't contain enough
-     * data to decode
+     * @return true on success, false if the ir_buf doesn't contain enough data
+     * to decode
      */
     template <typename integer_t>
     [[nodiscard]] bool try_read(integer_t& data);
@@ -57,8 +57,8 @@ public:
      * stores the data into dest.
      * @param dest
      * @param read_size
-     * @return true on success, false if the ir_buf doesn't contain enough
-     * data to decode
+     * @return true on success, false if the ir_buf doesn't contain enough data
+     * to decode
      */
     [[nodiscard]] bool try_read(void* dest, size_t read_size);
 
@@ -109,8 +109,8 @@ IRErrorCode get_encoding_type(IrBuffer& ir_buf, bool& is_four_bytes_encoding);
  * @param metadata_size Returns the size of the metadata written in the IR
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
- * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough
- * data to decode
+ * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough data to
+ * decode
  */
 IRErrorCode decode_preamble(
         IrBuffer& ir_buf,
@@ -127,10 +127,10 @@ namespace eight_byte_encoding {
      * @param timestamp Returns the decoded timestamp
      * @return ErrorCode_Success on success
      * @return ErrorCode_Corrupted_IR if ir_buf contains invalid IR
-     * @return ErrorCode_Decode_Error if the encoded message cannot be
-     * properly decoded
-     * @return ErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
-     * to decode
+     * @return ErrorCode_Decode_Error if the encoded message cannot be properly
+     * decoded
+     * @return ErrorCode_Incomplete_IR if ir_buf doesn't contain enough data to
+     * decode
      * @return ErrorCode_End_of_IR if the IR ends
      */
     IRErrorCode
@@ -145,10 +145,10 @@ namespace four_byte_encoding {
      * @param timestamp_delta Returns the decoded timestamp delta
      * @return ErrorCode_Success on success
      * @return ErrorCode_Corrupted_IR if ir_buf contains invalid IR
-     * @return ErrorCode_Decode_Error if the encoded message cannot be
-     * properly decoded
-     * @return ErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
-     * to decode
+     * @return ErrorCode_Decode_Error if the encoded message cannot be properly
+     * decoded
+     * @return ErrorCode_Incomplete_IR if ir_buf doesn't contain enough data to
+     * decode
      * @return ErrorCode_End_of_IR if the IR ends
      */
     IRErrorCode
