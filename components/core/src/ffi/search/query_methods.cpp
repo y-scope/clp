@@ -96,13 +96,15 @@ void generate_subqueries(
 
             std::visit(
                     overloaded{
-                            [&logtype_query,
-                             &query_vars](ExactVariableToken<encoded_variable_t> const& token) {
+                            [&logtype_query, &query_vars](  // clang-format off
+                                    ExactVariableToken<encoded_variable_t> const& token
+                            ) {  // clang-format on
                                 token.add_to_logtype_query(logtype_query);
                                 query_vars.emplace_back(token);
                             },
-                            [&logtype_query,
-                             &query_vars](CompositeWildcardToken<encoded_variable_t> const& token) {
+                            [&logtype_query, &query_vars](  // clang-format off
+                                    CompositeWildcardToken<encoded_variable_t> const& token
+                            ) {  // clang-format on
                                 token.add_to_query(logtype_query, query_vars);
                             }},
                     token

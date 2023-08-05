@@ -60,14 +60,15 @@ void CompositeWildcardToken<encoded_variable_t>::add_to_query(
         }
         std::visit(
                 overloaded{
-                        [&logtype_query,
-                         &variable_tokens](ExactVariableToken<encoded_variable_t> const& exact_var
-                        ) {
+                        [&logtype_query, &variable_tokens](  // clang-format off
+                                ExactVariableToken<encoded_variable_t> const& exact_var
+                        ) {  // clang-format on
                             exact_var.add_to_logtype_query(logtype_query);
                             variable_tokens.emplace_back(exact_var);
                         },
-                        [&logtype_query,
-                         &variable_tokens](WildcardToken<encoded_variable_t> const& wildcard_var) {
+                        [&logtype_query, &variable_tokens](  // clang-format off
+                                WildcardToken<encoded_variable_t> const& wildcard_var
+                        ) {  // clang-format on
                             if (wildcard_var.add_to_logtype_query(logtype_query)) {
                                 variable_tokens.emplace_back(wildcard_var);
                             }

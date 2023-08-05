@@ -399,16 +399,18 @@ bool encode_message(
         std::vector<encoded_variable_t>& encoded_vars,
         std::vector<int32_t>& dictionary_var_bounds
 ) {
-    auto constant_handler
-            = [](std::string_view constant, bool contains_variable_placeholder, std::string& logtype
-              ) {
-                  if (contains_variable_placeholder) {
-                      return false;
-                  }
+    auto constant_handler = [](  // clang-format off
+            std::string_view constant,
+            bool contains_variable_placeholder,
+            std::string& logtype
+    ) {  // clang-format on
+        if (contains_variable_placeholder) {
+            return false;
+        }
 
-                  logtype.append(constant);
-                  return true;
-              };
+        logtype.append(constant);
+        return true;
+    };
     auto final_constant_handler =
             [&constant_handler](std::string_view constant, std::string& logtype) {
                 // Ensure final constant doesn't contain a variable placeholder
