@@ -514,8 +514,11 @@ bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_
                 };
                 log_surgeon::ParserInputBuffer parser_input_buffer;
                 if (has_suffix_wildcard) { //text*
-                    // TODO: this is convoluted, should but improved when adding
-                    // a SearchParser to log_surgeon
+                    // TODO: creating a string reader, setting it equal to a 
+                    //  string, to read it into the ParserInputBuffer, seems
+                    //  like a convoluted way to set a string equal to a string,
+                    //  should be improved when adding a SearchParser to 
+                    //  log_surgeon
                     stringReader.open(value.substr(begin_pos, end_pos - begin_pos - 1));
                     parser_input_buffer.read_if_safe(reader_wrapper);
                     forward_lexer.reset();
