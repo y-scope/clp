@@ -142,18 +142,9 @@ TEST_CASE("Test forward lexer", "[Search]") {
     std::string schema_file_name = "../tests/test_schema_files/search_schema.txt";
     std::string schema_file_path = boost::filesystem::weakly_canonical(schema_file_name).string();
     load_lexer_from_file(schema_file_path, false, forward_lexer);
-    FileReader reader;
-    /// TODO: this wrapper is repeated a lot
-    log_surgeon::Reader reader_wrapper {
-        [&] (char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode {
-            reader.read(buf, count, read_to);
-            if (read_to == 0) {
-                return log_surgeon::ErrorCode::EndOfFile;
-            }
-            return log_surgeon::ErrorCode::Success;
-        }
-    };
-    reader.open("../tests/test_search_queries/easy.txt");
+    std::shared_ptr<FileReader> reader = std::make_shared<FileReader>();
+    ReaderInterfaceWrapper reader_wrapper(reader);
+    reader->open("../tests/test_search_queries/easy.txt");
     log_surgeon::ParserInputBuffer parser_input_buffer;
     parser_input_buffer.read_if_safe(reader_wrapper);
     forward_lexer.reset();
@@ -174,18 +165,9 @@ TEST_CASE("Test reverse lexer", "[Search]") {
     std::string schema_file_name = "../tests/test_schema_files/search_schema.txt";
     std::string schema_file_path = boost::filesystem::weakly_canonical(schema_file_name).string();
     load_lexer_from_file(schema_file_path, false, reverse_lexer);
-    FileReader reader;
-    /// TODO: this wrapper is repeated a lot
-    log_surgeon::Reader reader_wrapper {
-        [&] (char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode {
-            reader.read(buf, count, read_to);
-            if (read_to == 0) {
-                return log_surgeon::ErrorCode::EndOfFile;
-            }
-            return log_surgeon::ErrorCode::Success;
-        }
-    };
-    reader.open("../tests/test_search_queries/easy.txt");
+    std::shared_ptr<FileReader> reader = std::make_shared<FileReader>();
+    ReaderInterfaceWrapper reader_wrapper(reader);
+    reader->open("../tests/test_search_queries/easy.txt");
     log_surgeon::ParserInputBuffer parser_input_buffer;
     parser_input_buffer.read_if_safe(reader_wrapper);
     reverse_lexer.reset();

@@ -95,10 +95,11 @@ namespace clp {
         PROFILER_SPDLOG_INFO("Start parsing {}", file_name)
         Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
 
-        m_file_reader.open(file_to_compress.get_path());
+        m_file_reader->open(file_to_compress.get_path());
 
         // Check that file is UTF-8 encoded
-        auto error_code = m_file_reader.try_read(m_utf8_validation_buf, cUtf8ValidationBufCapacity, m_utf8_validation_buf_length);
+        auto error_code = m_file_reader->try_read(m_utf8_validation_buf, cUtf8ValidationBufCapacity,
+                                                  m_utf8_validation_buf_length);
         if (ErrorCode_Success != error_code) {
             if (ErrorCode_EndOfFile != error_code) {
                 SPDLOG_ERROR("Failed to read {}, errno={}", file_to_compress.get_path().c_str(), errno);
@@ -108,9 +109,11 @@ namespace clp {
         bool succeeded = true;
         if (is_utf8_sequence(m_utf8_validation_buf_length, m_utf8_validation_buf)) {
             if (use_heuristic) {
-                parse_and_encode_with_heuristic(target_data_size_of_dicts, archive_user_config, target_encoded_file_size,
+                parse_and_encode_with_heuristic(target_data_size_of_dicts, archive_user_config,
+                                                target_encoded_file_size,
                                                 file_to_compress.get_path_for_compression(),
-                                                file_to_compress.get_group_id(), archive_writer, m_file_reader);
+                                                file_to_compress.get_group_id(), archive_writer,
+                                                *m_file_reader);
             } else {
                 parse_and_encode_with_library(target_data_size_of_dicts, archive_user_config,
                                               target_encoded_file_size,
@@ -126,7 +129,7 @@ namespace clp {
             }
         }
 
-        m_file_reader.close();
+        m_file_reader->close();
 
         Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
         LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::ParseLogFile)
@@ -139,7 +142,7 @@ namespace clp {
             streaming_archive::writer::Archive::UserConfig& archive_user_config,
             size_t target_encoded_file_size, const string& path_for_compression,
             group_id_t group_id, streaming_archive::writer::Archive& archive_writer,
-            ReaderInterface& reader)
+            std::shared_ptr<ReaderInterface> reader)
     {
         archive_writer.m_target_data_size_of_dicts = target_data_size_of_dicts;
         archive_writer.m_archive_user_config = archive_user_config;
@@ -149,18 +152,10 @@ namespace clp {
         // Open compressed file
         archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
         // TODO: Add the m_utf8_validation_buf into the start of the input buffer
-        reader.seek_from_begin(0);
+        reader->seek_from_begin(0);
         archive_writer.m_old_ts_pattern.clear();
         archive_writer.m_timestamp_set = false;
-        Reader reader_wrapper{
-            [&] (char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode {
-                reader.read(buf, count, read_to);
-                if (read_to == 0) {
-                    return log_surgeon::ErrorCode::EndOfFile;
-                }
-                return log_surgeon::ErrorCode::Success;
-            }
-        };
+        ReaderInterfaceWrapper reader_wrapper(reader);
         m_reader_parser->reset_and_set_reader(reader_wrapper);
         static LogEventView log_view{&m_reader_parser->get_log_parser()};
         while (false == m_reader_parser->done()) {
@@ -227,7 +222,9 @@ namespace clp {
         }
 
         // Check if it's an archive
-        auto error_code = m_libarchive_reader.try_open(m_utf8_validation_buf_length, m_utf8_validation_buf, m_file_reader, filename_if_compressed);
+        auto error_code = m_libarchive_reader.try_open(m_utf8_validation_buf_length,
+                                                       m_utf8_validation_buf, *m_file_reader,
+                                                       filename_if_compressed);
         if (ErrorCode_Success != error_code) {
             SPDLOG_ERROR("Cannot compress {} - failed to open with libarchive.", file_to_compress.get_path().c_str());
             return false;
@@ -274,14 +271,16 @@ namespace clp {
                 split_archive(archive_user_config, archive_writer);
             }
 
-            m_libarchive_reader.open_file_reader(m_libarchive_file_reader);
+            m_libarchive_reader.open_file_reader(*m_libarchive_file_reader);
 
             // Check that file is UTF-8 encoded
-            error_code = m_libarchive_file_reader.try_read(m_utf8_validation_buf, cUtf8ValidationBufCapacity, m_utf8_validation_buf_length);
+            error_code = m_libarchive_file_reader->try_read(m_utf8_validation_buf,
+                                                            cUtf8ValidationBufCapacity,
+                                                            m_utf8_validation_buf_length);
             if (ErrorCode_Success != error_code) {
                 if (ErrorCode_EndOfFile != error_code) {
                     SPDLOG_ERROR("Failed to read {} from {}.", m_libarchive_reader.get_path(), file_to_compress.get_path().c_str());
-                    m_libarchive_file_reader.close();
+                    m_libarchive_file_reader->close();
                     succeeded = false;
                     continue;
                 }
@@ -291,7 +290,7 @@ namespace clp {
                 if (use_heuristic) {
                     parse_and_encode_with_heuristic(target_data_size_of_dicts, archive_user_config, target_encoded_file_size,
                                                     boost_path_for_compression.string(), file_to_compress.get_group_id(), archive_writer,
-                                                    m_libarchive_file_reader);
+                                                    *m_libarchive_file_reader);
                 } else {
                     parse_and_encode_with_library(target_data_size_of_dicts, archive_user_config,
                                                   target_encoded_file_size,
@@ -304,7 +303,7 @@ namespace clp {
                 succeeded = false;
             }
 
-            m_libarchive_file_reader.close();
+            m_libarchive_file_reader->close();
         }
         compute_and_add_empty_directories(directories, parent_directories, parent_boost_path, archive_writer);
 

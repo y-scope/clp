@@ -341,5 +341,4 @@ void load_lexer_from_file (std::string schema_file_path,
     } else {
         lexer.generate();
     }
-    schema_reader.close();
 }

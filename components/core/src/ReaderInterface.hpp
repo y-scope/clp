@@ -3,12 +3,15 @@
 
 // C++ standard libraries
 #include <cstddef>
+#include <memory>
 #include <string>
 
 // Project headers
 #include "Defs.h"
 #include "ErrorCode.hpp"
 #include "TraceableException.hpp"
+
+#include <log_surgeon/Reader.hpp>
 
 class ReaderInterface {
 public:
@@ -147,5 +150,18 @@ bool ReaderInterface::read_numeric_value (ValueType& value, bool eof_possible) {
     }
     return true;
 }
+
+/*
+ * Wrapper providing a read function that works with the parsers in log_surgeon.
+ */
+class ReaderInterfaceWrapper : public log_surgeon::Reader {
+public:
+    ReaderInterfaceWrapper (std::shared_ptr<ReaderInterface> reader_interface);
+
+    auto read (char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode;
+
+private:
+    std::shared_ptr<ReaderInterface> m_reader_interface;
+};
 
 #endif // READERINTERFACE_HPP

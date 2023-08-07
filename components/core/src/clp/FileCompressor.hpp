@@ -28,8 +28,9 @@ namespace clp {
         // Constructors
         FileCompressor (boost::uuids::random_generator& uuid_generator,
                         std::unique_ptr<log_surgeon::ReaderParser> reader_parser) :
-                        m_uuid_generator(uuid_generator),
-                        m_reader_parser(std::move(reader_parser)) {}
+                m_uuid_generator(uuid_generator), m_reader_parser(std::move(reader_parser)),
+                m_file_reader(std::make_shared<FileReader>()),
+                m_libarchive_file_reader(std::make_shared<LibarchiveFileReader>()) {}
 
         // Methods
         /**
@@ -64,7 +65,7 @@ namespace clp {
                                             const std::string& path_for_compression,
                                             group_id_t group_id,
                                             streaming_archive::writer::Archive& archive_writer,
-                                            ReaderInterface& reader);
+                                            std::shared_ptr<ReaderInterface> reader);
 
         void parse_and_encode_with_heuristic (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
                                               size_t target_encoded_file_size, const std::string& path_for_compression, group_id_t group_id,
@@ -86,9 +87,9 @@ namespace clp {
 
         // Variables
         boost::uuids::random_generator& m_uuid_generator;
-        FileReader m_file_reader;
+        std::shared_ptr<FileReader> m_file_reader;
         LibarchiveReader m_libarchive_reader;
-        LibarchiveFileReader m_libarchive_file_reader;
+        std::shared_ptr<LibarchiveFileReader> m_libarchive_file_reader;
         char m_utf8_validation_buf[cUtf8ValidationBufCapacity];
         size_t m_utf8_validation_buf_length;
         MessageParser m_message_parser;
