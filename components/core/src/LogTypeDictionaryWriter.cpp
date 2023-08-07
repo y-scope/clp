@@ -16,25 +16,6 @@ bool LogTypeDictionaryWriter::add_entry (LogTypeDictionaryEntry& logtype_entry, 
     } else {
         // Dictionary entry doesn't exist so create it
 
-        // Determine verbosity
-        LogVerbosity verbosity;
-        if (string::npos != value.find("FATAL")) {
-            verbosity = LogVerbosity_FATAL;
-        } else if (string::npos != value.find("ERROR")) {
-            verbosity = LogVerbosity_ERROR;
-        } else if (string::npos != value.find("WARN")) {
-            verbosity = LogVerbosity_WARN;
-        } else if (string::npos != value.find("INFO")) {
-            verbosity = LogVerbosity_INFO;
-        } else if (string::npos != value.find("DEBUG")) {
-            verbosity = LogVerbosity_DEBUG;
-        } else if (string::npos != value.find("TRACE")) {
-            verbosity = LogVerbosity_TRACE;
-        } else {
-            verbosity = LogVerbosity_UNKNOWN;
-        }
-        logtype_entry.set_verbosity(verbosity);
-
         // Assign ID
         logtype_id = m_next_id;
         ++m_next_id;

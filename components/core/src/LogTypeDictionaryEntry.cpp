@@ -49,7 +49,7 @@ size_t LogTypeDictionaryEntry::get_var_info (size_t var_ix, VarDelim& var_delim)
 
 size_t LogTypeDictionaryEntry::get_data_size () const {
     // NOTE: sizeof(vector[0]) is executed at compile time so there's no risk of an exception at runtime
-    return sizeof(m_id) + sizeof(m_verbosity) + m_value.length() + m_var_positions.size() * sizeof(m_var_positions[0]) +
+    return sizeof(m_id) + m_value.length() + m_var_positions.size() * sizeof(m_var_positions[0]) +
            m_ids_of_segments_containing_entry.size() * sizeof(segment_id_t);
 }
 
@@ -91,13 +91,11 @@ bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begi
 
 void LogTypeDictionaryEntry::clear () {
     m_value.clear();
-    m_verbosity = LogVerbosity_Length;
     m_var_positions.clear();
 }
 
 void LogTypeDictionaryEntry::write_to_file (streaming_compression::Compressor& compressor) const {
     compressor.write_numeric_value(m_id);
-    compressor.write_numeric_value<uint8_t>(m_verbosity);
 
     string escaped_value;
     get_value_with_unfounded_variables_escaped(escaped_value);
@@ -114,13 +112,6 @@ ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::Dec
     if (ErrorCode_Success != error_code) {
         return error_code;
     }
-
-    uint8_t verbosity;
-    error_code = decompressor.try_read_numeric_value<uint8_t>(verbosity);
-    if (ErrorCode_Success != error_code) {
-        return error_code;
-    }
-    m_verbosity = (LogVerbosity)verbosity;
 
     uint64_t escaped_value_length;
     error_code = decompressor.try_read_numeric_value(escaped_value_length);
