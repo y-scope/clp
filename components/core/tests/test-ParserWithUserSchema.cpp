@@ -31,20 +31,7 @@ using log_surgeon::Token;
 
 std::unique_ptr<SchemaAST> generate_schema_ast(const std::string& schema_file) {
     SchemaParser schema_parser;
-    FileReader schema_reader;
-    /// TODO: this wrapper is repeated a lot
-    log_surgeon::Reader reader_wrapper {
-        [&] (char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode {
-            schema_reader.read(buf, count, read_to);
-            if (read_to == 0) {
-                return log_surgeon::ErrorCode::EndOfFile;
-            }
-            return log_surgeon::ErrorCode::Success;
-        }
-    };
-    schema_reader.open(schema_file);
-    REQUIRE(schema_reader.is_open());
-    std::unique_ptr<SchemaAST> schema_ast = schema_parser.generate_schema_ast(reader_wrapper);
+    std::unique_ptr<SchemaAST> schema_ast = schema_parser.try_schema_file(schema_file);
     REQUIRE(schema_ast.get() != nullptr);
     return schema_ast;
 }
