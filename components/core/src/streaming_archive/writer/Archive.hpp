@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <vector>
 #include <filesystem>
+#include <optional>
 
 // Boost libraries
 #include <boost/uuid/random_generator.hpp>
@@ -22,7 +23,7 @@
 #include "../../compressor_frontend/Token.hpp"
 #include "../ArchiveMetadata.hpp"
 #include "../MetadataDB.hpp"
-#include <optional>
+
 
 
 namespace streaming_archive { namespace writer {
