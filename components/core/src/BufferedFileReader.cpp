@@ -4,8 +4,6 @@
 #include <boost/filesystem.hpp>
 
 // C standard libraries
-// C libraries
-#include <sys/stat.h>
 #include <fcntl.h>
 
 // C++ standard libraries
@@ -331,9 +329,8 @@ ErrorCode BufferedFileReader::refill_reader_buffer (size_t num_bytes_to_refill) 
         if (error_code != ErrorCode_Success) {
             return error_code;
         }
-        m_buffer = std::move(new_buffer);
-        const auto prev_pos = m_buffer_reader->get_pos();
-        m_buffer_reader.emplace(m_buffer.get(), data_size + num_bytes_refilled, prev_pos);
+        m_buffer = move(new_buffer);
+        m_buffer_reader.emplace(m_buffer.get(), data_size + num_bytes_refilled, m_buffer_reader->get_pos());
     }
     return ErrorCode_Success;
 }
@@ -348,7 +345,7 @@ void BufferedFileReader::resize_buffer_from_pos (size_t pos) {
     m_buffer_size = quantize_to_buffer_size(copy_size);
     auto new_buffer = make_unique<char[]>(m_buffer_size);
     memcpy(new_buffer.get(), &m_buffer[pos], copy_size);
-    m_buffer = std::move(new_buffer);
+    m_buffer = move(new_buffer);
     m_buffer_begin_pos += pos;
 
     m_buffer_reader.emplace(m_buffer.get(), copy_size);
