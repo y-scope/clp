@@ -53,10 +53,10 @@ public:
     // Helper functions
     [[nodiscard]] size_t get_buffer_size() const { return m_internal_buf_size; }
 
-    void peek_buffer (size_t size_to_peek, const char*& data_ptr, size_t& peek_size);
+    void peek_buffer (const char*& buf, size_t& peek_size);
 
     ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter,
-                                     bool append, std::string& str, size_t& length);
+                                     bool append, std::string& str, size_t& num_bytes_read);
 
 private:
     const char* m_internal_buf;

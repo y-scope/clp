@@ -3,7 +3,6 @@
 // C++ standard libraries
 #include <algorithm>
 
-#include <stdio.h>
 #include <string.h>
 
 BufferReader::BufferReader (const char* data, size_t data_size) {
@@ -16,7 +15,7 @@ BufferReader::BufferReader (const char* data, size_t data_size) {
 
 ErrorCode BufferReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
     if (nullptr == buf && num_bytes_to_read > 0) {
-        return ErrorCode_BadParam;
+        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
 
     auto remaining_data_size = m_internal_buf_size - m_internal_buf_pos;
@@ -45,18 +44,18 @@ ErrorCode BufferReader::try_get_pos (size_t& pos) {
     return ErrorCode_Success;
 }
 
-void BufferReader::peek_buffer (size_t size_to_peek, const char*& data_ptr, size_t& peek_size) {
-    peek_size = std::min(size_to_peek, m_internal_buf_size - m_internal_buf_pos);
-    data_ptr = m_internal_buf + m_internal_buf_pos;
+void BufferReader::peek_buffer (const char*& buf, size_t& peek_size) {
+    peek_size = m_internal_buf_size - m_internal_buf_pos;
+    buf = m_internal_buf + m_internal_buf_pos;
 }
 
 ErrorCode BufferReader::try_read_to_delimiter (char delim, bool keep_delimiter, bool append,
-                                               std::string& str, size_t& length) {
+                                               std::string& str, size_t& num_bytes_read) {
 
     if (false == append) {
         str.clear();
     }
-    // find the pointer pointing to the delimiter
+    // Find the delimiter
     const char* buffer_head = m_internal_buf + m_internal_buf_pos;
     const char* delim_ptr = reinterpret_cast<const char*>(
             memchr(buffer_head, delim, m_internal_buf_size - m_internal_buf_pos)
@@ -71,11 +70,11 @@ ErrorCode BufferReader::try_read_to_delimiter (char delim, bool keep_delimiter, 
         ret_code = ErrorCode_EndOfFile;
     }
     // append to strings
-    length = delim_pos - m_internal_buf_pos;
+    num_bytes_read = delim_pos - m_internal_buf_pos;
     if (false == keep_delimiter && delim == m_internal_buf[delim_pos - 1]) {
-        --length;
+        --num_bytes_read;
     }
-    str.append(buffer_head, length);
+    str.append(buffer_head, num_bytes_read);
     m_internal_buf_pos = delim_pos;
     return ret_code;
 }
