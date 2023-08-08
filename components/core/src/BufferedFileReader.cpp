@@ -165,13 +165,16 @@ ErrorCode BufferedFileReader::try_read_to_delimiter (char delim, bool keep_delim
     if (-1 == m_fd) {
         return ErrorCode_NotInit;
     }
-
+    if (false == append) {
+        str.clear();
+    }
     bool found_delim {false};
     size_t total_append_length {0};
     while (false == found_delim) {
         size_t length {0};
-        if (ErrorCode_Success == m_buffer_reader->try_read_to_delimiter(delim, keep_delimiter, append, str, length)) {
-            found_delim = true;
+        if (auto ret_code = m_buffer_reader->try_read_to_delimiter(delim, keep_delimiter, str, found_delim, length);
+            ret_code != ErrorCode_Success && ret_code != ErrorCode_EndOfFile) {
+            return ret_code;
         }
         m_file_pos += length;
         total_append_length += length;
