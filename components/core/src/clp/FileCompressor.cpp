@@ -90,8 +90,7 @@ namespace clp {
         m_file_reader.open(file_to_compress.get_path());
 
         // Check that file is UTF-8 encoded
-        if (auto error_code = m_file_reader.peek_buffered_data(cUtf8ValidationBufCapacity,
-                                                               m_utf8_validation_buf,
+        if (auto error_code = m_file_reader.peek_buffered_data(m_utf8_validation_buf,
                                                                m_utf8_validation_buf_length);
             ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code) {
             SPDLOG_ERROR("Failed to peek data from {}, errno={}",

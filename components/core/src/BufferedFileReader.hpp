@@ -1,5 +1,5 @@
-#ifndef BufferedFileReader_HPP
-#define BufferedFileReader_HPP
+#ifndef BUFFEREDFILEREADER_HPP
+#define BUFFEREDFILEREADER_HPP
 
 // C standard libraries
 
@@ -39,8 +39,8 @@ public:
     };
 
     // Constructors
-    BufferedFileReader();
     BufferedFileReader(size_t base_buffer_size);
+    BufferedFileReader() : BufferedFileReader(cDefaultBufferSize) {}
     ~BufferedFileReader();
 
     // Methods implementing the ReaderInterface
@@ -116,29 +116,19 @@ public:
     [[nodiscard]] const std::string& get_path () const { return m_path; }
 
     /**
-     * Tries to stat the current file
-     * @param stat_buffer
-     * @return ErrorCode_errno on error
-     * @return ErrorCode_Success on success
-     */
-    [[nodiscard]] ErrorCode try_fstat (struct stat& stat_buffer) const;
-
-    /**
-     * Peeks the next peek_size bytes of data without advancing the file
+     * Peeks the buffer without advancing the file
      * pos.
      * Note: If further operation such as read or peek is called on the
-     * BufferedFileReader after peek_buffered_data, the data_ptr could
+     * BufferedFileReader after peek_buffered_data, the buf could
      * point to invalid data
-     * @param size_to_peek
-     * @param data_ptr pointer pointing to peeked data
+     * @param buf pointer pointing to peeked data
      * @param peek_size returns number of bytes peeked by reference
      * @return ErrorCode_Success on success
      * @return ErrorCode_errno on error
      * @return ErrorCode_NotInit if the file is not opened
      * @return ErrorCode_EndOfFile if already reaching the eof
      */
-    [[nodiscard]] ErrorCode peek_buffered_data(size_t size_to_peek, const char*& data_ptr,
-                                               size_t& peek_size);
+    [[nodiscard]] ErrorCode peek_buffered_data(const char*& data_ptr, size_t& peek_size);
 
     /**
      * Sets a checkpoint at the current file pos.
@@ -208,31 +198,31 @@ private:
      * @param file_pos
      * @return
      */
-    [[nodiscard]] size_t get_corresponding_offset(size_t file_pos) const;
+    [[nodiscard]] size_t get_buffer_relative_pos(size_t file_pos) const { return file_pos - m_buffer_begin_pos; }
 
-    [[nodiscard]] size_t get_buffer_end_pos() const;
+    [[nodiscard]] size_t get_buffer_end_pos() const { return m_buffer_begin_pos + m_buffer_reader->get_buffer_size(); }
 
     // Constants
-    static constexpr size_t cDefaultBufferSize = 65536;
+    static constexpr size_t cMinBufferSize = (1ULL << 12);
+    static constexpr size_t cDefaultBufferSize = (16 * cMinBufferSize);
 
     // Variables
-    int m_fd;
+    int m_fd{-1};
     std::string m_path;
-    size_t m_file_pos;
+    size_t m_file_pos{0};
 
     // Buffer specific data
     std::unique_ptr<char[]> m_buffer;
     std::optional<BufferReader> m_buffer_reader;
-    size_t m_buffer_begin_pos;
+    size_t m_buffer_begin_pos{0};
 
     // Values for buffer related calculation
     size_t m_base_buffer_size;
     size_t m_buffer_size;
     // Variables for checkpoint support
     std::optional<size_t> m_checkpoint_pos;
-    size_t highest_read_pos {0};
+    size_t m_highest_read_pos{0};
 
 };
 
-
-#endif // BufferedFileReader_HPP
+#endif // BUFFEREDFILEREADER_HPP

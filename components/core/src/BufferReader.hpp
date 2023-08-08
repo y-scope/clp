@@ -23,7 +23,8 @@ public:
     };
 
     // Constructors
-    BufferReader (const char* data, size_t data_size);
+    BufferReader (const char* data, size_t data_size) : BufferReader(data, data_size, 0) {}
+    BufferReader (const char* data, size_t data_size, size_t pos);
 
     // Methods implementing the ReaderInterface
     /**
@@ -50,18 +51,22 @@ public:
      */
     [[nodiscard]] ErrorCode try_get_pos (size_t& pos) override;
 
+    [[nodiscard]] ErrorCode try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string &str) override;
+
     // Helper functions
     [[nodiscard]] size_t get_buffer_size() const { return m_internal_buf_size; }
 
-    void peek_buffer (size_t size_to_peek, const char*& data_ptr, size_t& peek_size);
+    void peek_buffer (const char*& buf, size_t& peek_size);
 
-    ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter,
-                                     bool append, std::string& str, size_t& length);
+    ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter, std::string& str, bool& found_delim, size_t& num_bytes_read);
 
 private:
+    // Method
+    [[nodiscard]] size_t get_remaining_data_size() const { return m_internal_buf_size - m_internal_buf_pos; }
+    // Variables
     const char* m_internal_buf;
     size_t m_internal_buf_size;
-    size_t m_internal_buf_pos{0};
+    size_t m_internal_buf_pos;
 };
 
 #endif // BUFFERREADER_HPP

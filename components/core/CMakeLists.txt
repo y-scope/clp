@@ -632,10 +632,10 @@ target_compile_features(clo
         )
 
 set(SOURCE_FILES_unitTest
-        src/BufferReader.cpp
-        src/BufferReader.hpp
         src/BufferedFileReader.cpp
         src/BufferedFileReader.hpp
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clp/CommandLineArguments.cpp
         src/clp/CommandLineArguments.hpp
         src/clp/compression.cpp
