@@ -205,3 +205,37 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
     delete[] test_data;
     delete[] read_buffer;
 }
+
+#include "../src/FileReader.hpp"
+TEST_CASE("Test delimiter", "[BufferedFileReader]") {
+
+    // Initialize data for testing
+    size_t test_data_size = 1L * 1024 * 1024;     // 1MB
+    char* test_data = new char[test_data_size];
+    for (size_t i = 0; i < test_data_size; ++i) {
+        test_data[i] = (char)('a' + (i % 26));
+    }
+
+    std::string test_file_path {"BufferedFileReader.delimiter.test"};
+    // write to test file
+    FileWriter file_writer;
+    file_writer.open(test_file_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
+    file_writer.write(test_data, test_data_size);
+    file_writer.close();
+
+    BufferedFileReader buffered_file_reader;
+    buffered_file_reader.open(test_file_path);
+    std::string test_string;
+
+    FileReader file_reader;
+    file_reader.open(test_file_path);
+    std::string ref_string;
+
+    ErrorCode error_code = ErrorCode_Success;
+    while(ErrorCode_EndOfFile != error_code) {
+        error_code = file_reader.try_read_to_delimiter('n', true, false, ref_string);
+        auto error_code2 = buffered_file_reader.try_read_to_delimiter('n', true, false, test_string);
+        REQUIRE(error_code2 == error_code);
+        REQUIRE(test_string == ref_string);
+    }
+}
