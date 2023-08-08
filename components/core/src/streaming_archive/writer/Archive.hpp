@@ -22,6 +22,8 @@
 #include "../../compressor_frontend/Token.hpp"
 #include "../ArchiveMetadata.hpp"
 #include "../MetadataDB.hpp"
+#include <optional>
+
 
 namespace streaming_archive { namespace writer {
     class Archive {
