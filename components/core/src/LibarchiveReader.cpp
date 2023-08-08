@@ -9,7 +9,7 @@
 // Project headers
 #include "Defs.h"
 
-ErrorCode LibarchiveReader::try_open (ReaderInterface& file_reader, const std::string& path_if_compressed_file) {
+ErrorCode LibarchiveReader::try_open (ReaderInterface&reader, const std::string& path_if_compressed_file) {
     // Create and initialize internal libarchive
     m_archive = archive_read_new();
     if (nullptr == m_archive) {
@@ -34,12 +34,11 @@ ErrorCode LibarchiveReader::try_open (ReaderInterface& file_reader, const std::s
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
 
-    m_file_reader = &file_reader;
+    m_reader = &reader;
     m_filename_if_compressed = path_if_compressed_file;
 
-    return_value = archive_read_open2(m_archive, this, libarchive_open_callback,
-                                      libarchive_read_callback, libarchive_skip_callback,
-                                      libarchive_close_callback);
+    return_value = archive_read_open(m_archive, this, libarchive_open_callback,
+                                     libarchive_read_callback, libarchive_close_callback);
     if (ARCHIVE_OK != return_value) {
         SPDLOG_DEBUG("Failed to open libarchive - {}", archive_error_string(m_archive));
         release_resources();
@@ -153,21 +152,6 @@ la_ssize_t LibarchiveReader::libarchive_read_callback (struct archive* archive, 
     return num_bytes_read;
 }
 
-la_int64_t LibarchiveReader::libarchive_skip_callback (struct archive* archive, void* client_data, off_t request) {
-    auto& libarchive_reader = *reinterpret_cast<LibarchiveReader*>(client_data);
-
-    size_t num_bytes_skipped;
-    auto error_code = libarchive_reader.libarchive_skip_callback(request, num_bytes_skipped);
-    if (ErrorCode_Success != error_code) {
-        if (ErrorCode_errno == error_code) {
-            archive_set_error(archive, errno, "Failed to skip.");
-        }
-        return ARCHIVE_FATAL;
-    }
-
-    return num_bytes_skipped;
-}
-
 void LibarchiveReader::libarchive_open_callback () {
     m_is_opened_by_libarchive = true;
 }
@@ -180,9 +164,10 @@ ErrorCode LibarchiveReader::libarchive_read_callback (const void** buffer, size_
     if (false == m_is_opened_by_libarchive) {
         return ErrorCode_NotInit;
     }
+
     constexpr size_t cTargetBufferLength = 4096;
     m_buffer.resize(cTargetBufferLength);
-    auto error_code = m_file_reader->try_read(m_buffer.data(), cTargetBufferLength, num_bytes_read);
+    auto error_code = m_reader->try_read(m_buffer.data(), cTargetBufferLength, num_bytes_read);
     if (ErrorCode_Success != error_code) {
         return error_code;
     }
@@ -193,21 +178,6 @@ ErrorCode LibarchiveReader::libarchive_read_callback (const void** buffer, size_
     return ErrorCode_Success;
 }
 
-ErrorCode LibarchiveReader::libarchive_skip_callback (off_t num_bytes_to_skip,
-                                                      size_t& num_bytes_skipped) {
-
-    // skip bytes by simply reading data into a temporary buffer
-    std::vector<char> temporary_read_buffer;
-    auto error_code = m_file_reader->try_read(temporary_read_buffer.data(), num_bytes_to_skip,
-                                              num_bytes_skipped);
-    if (ErrorCode_EndOfFile == error_code) {
-        num_bytes_skipped = 0;
-    } else if (ErrorCode_Success != error_code) {
-        return error_code;
-    }
-    return ErrorCode_Success;
-}
-
 void LibarchiveReader::release_resources () {
     auto return_value = archive_read_free(m_archive);
     if (ARCHIVE_OK != return_value) {
@@ -215,6 +185,6 @@ void LibarchiveReader::release_resources () {
     }
     m_archive = nullptr;
 
-    m_file_reader = nullptr;
+    m_reader = nullptr;
     m_buffer.clear();
 }

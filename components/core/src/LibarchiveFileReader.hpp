@@ -72,17 +72,16 @@ public:
     ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter, bool append, std::string& str) override;
 
     /**
-     * Tries to peek up to a given number of bytes from the next data block
-     * if no enough data is available in the next data block, a smaller peek
-     * size will be returned
-     * @param size_to_peek
-     * @param data_ptr
-     * @param peek_size Return the number of bytes peeked by reference
+     * Tries to peek from the next data block and returns the available
+     * data size
+     * @param buf
+     * @param buf_size Returns the number of bytes in the buffer
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_Failure on failure
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] ErrorCode peek_data_block(size_t size_to_peek, const char*& data_ptr, size_t& peek_size);
+    [[nodiscard]] ErrorCode try_peek_data_block(const char*&buf, size_t&buf_size);
+
     // Methods
     /**
      * Opens the file reader
