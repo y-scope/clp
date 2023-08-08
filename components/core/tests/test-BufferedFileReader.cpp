@@ -212,8 +212,9 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
     // Initialize data for testing
     size_t test_data_size = 1L * 1024 * 1024;     // 1MB
     char* test_data = new char[test_data_size];
+    std::srand(0);
     for (size_t i = 0; i < test_data_size; ++i) {
-        test_data[i] = (char)('a' + (i % 26));
+        test_data[i] = (char)('a' + (std::rand() % 26));
     }
 
     std::string test_file_path {"BufferedFileReader.delimiter.test"};
@@ -232,9 +233,10 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
     std::string ref_string;
 
     ErrorCode error_code = ErrorCode_Success;
+    char delimiter = (char)('a' + (std::rand() % 26));
     while(ErrorCode_EndOfFile != error_code) {
-        error_code = file_reader.try_read_to_delimiter('n', true, false, ref_string);
-        auto error_code2 = buffered_file_reader.try_read_to_delimiter('n', true, false, test_string);
+        error_code = file_reader.try_read_to_delimiter(delimiter, true, false, ref_string);
+        auto error_code2 = buffered_file_reader.try_read_to_delimiter(delimiter, true, false, test_string);
         REQUIRE(error_code2 == error_code);
         REQUIRE(test_string == ref_string);
     }
