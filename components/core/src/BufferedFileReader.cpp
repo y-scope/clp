@@ -37,7 +37,7 @@ namespace {
                 return ErrorCode_errno;
             }
         }
-        if (num_bytes_read == 0) {
+        if (0 == num_bytes_read) {
             return ErrorCode_EndOfFile;
         }
         return ErrorCode_Success;
@@ -45,7 +45,7 @@ namespace {
 }
 
 BufferedFileReader::BufferedFileReader (size_t base_buffer_size) {
-    if (base_buffer_size % 4096 != 0) {
+    if (base_buffer_size % cMinBufferSize != 0) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
     m_base_buffer_size = base_buffer_size;
@@ -307,8 +307,7 @@ ErrorCode BufferedFileReader::refill_reader_buffer (size_t num_bytes_to_refill) 
         if (error_code != ErrorCode_Success) {
             return error_code;
         }
-        m_buffer_reader.emplace(m_buffer.get(), num_bytes_refilled + data_size);
-        m_buffer_reader->seek_from_begin(data_size);
+        m_buffer_reader.emplace(m_buffer.get(), num_bytes_refilled + data_size, data_size);
         return ErrorCode_Success;
     }
 
@@ -334,8 +333,7 @@ ErrorCode BufferedFileReader::refill_reader_buffer (size_t num_bytes_to_refill) 
         }
         m_buffer = std::move(new_buffer);
         const auto prev_pos = m_buffer_reader->get_pos();
-        m_buffer_reader.emplace(m_buffer.get(), data_size + num_bytes_refilled);
-        m_buffer_reader->seek_from_begin(prev_pos);
+        m_buffer_reader.emplace(m_buffer.get(), data_size + num_bytes_refilled, prev_pos);
     }
     return ErrorCode_Success;
 }

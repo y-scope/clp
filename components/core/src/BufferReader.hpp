@@ -23,7 +23,8 @@ public:
     };
 
     // Constructors
-    BufferReader (const char* data, size_t data_size);
+    BufferReader (const char* data, size_t data_size) : BufferReader(data, data_size, 0) {}
+    BufferReader (const char* data, size_t data_size, size_t pos);
 
     // Methods implementing the ReaderInterface
     /**
@@ -65,7 +66,7 @@ private:
     // Variables
     const char* m_internal_buf;
     size_t m_internal_buf_size;
-    size_t m_internal_buf_pos{0};
+    size_t m_internal_buf_pos;
 };
 
 #endif // BUFFERREADER_HPP

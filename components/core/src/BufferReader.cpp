@@ -8,12 +8,13 @@ namespace {
 
 }
 
-BufferReader::BufferReader (const char* data, size_t data_size) {
+BufferReader::BufferReader (const char* data, size_t data_size, size_t pos) {
     if (nullptr == data) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
     m_internal_buf = data;
     m_internal_buf_size = data_size;
+    m_internal_buf_pos = pos;
 }
 
 ErrorCode BufferReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
