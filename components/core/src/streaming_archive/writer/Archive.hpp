@@ -2,27 +2,27 @@
 #define STREAMING_ARCHIVE_WRITER_ARCHIVE_HPP
 
 // C++ libraries
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <set>
 #include <string>
 #include <unordered_set>
 #include <vector>
-#include <filesystem>
 
 // Boost libraries
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid.hpp>
 
 // Project headers
+#include "../ArchiveMetadata.hpp"
 #include "../../ArrayBackedPosIntSet.hpp"
+#include "../../compressor_frontend/Token.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../GlobalMetadataDB.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
-#include "../../VariableDictionaryWriter.hpp"
-#include "../../compressor_frontend/Token.hpp"
-#include "../ArchiveMetadata.hpp"
 #include "../MetadataDB.hpp"
+#include "../../VariableDictionaryWriter.hpp"
 
 namespace streaming_archive { namespace writer {
     class Archive {
