@@ -87,7 +87,7 @@ bool encode_message (epoch_time_ms_t timestamp, string_view message, string& log
  * Helper function that decodes a message of encoding type = encoded_variable_t
  * from the ir_buf
  * @tparam encoded_variable_t Type of the encoded variable
- * @param ir_buf
+ * @param reader
  * @param message
  * @param decoded_ts Returns the decoded timestamp
  * @return IRErrorCode_Success on success, otherwise
@@ -97,7 +97,7 @@ bool encode_message (epoch_time_ms_t timestamp, string_view message, string& log
  * encoded_variable_t == four_byte_encoded_variable_t
  */
 template <typename encoded_variable_t>
-IRErrorCode decode_next_message (BufferReader& ir_buf, string& message, epoch_time_ms_t& decoded_ts);
+IRErrorCode decode_next_message (BufferReader& reader, string& message, epoch_time_ms_t& decoded_ts);
 
 /**
  * Struct to hold the timestamp info from the IR stream's metadata
@@ -184,15 +184,15 @@ bool encode_message (epoch_time_ms_t timestamp, string_view message, string& log
 }
 
 template <typename encoded_variable_t>
-IRErrorCode decode_next_message (BufferReader& ir_buf, string& message, epoch_time_ms_t& decoded_ts) {
+IRErrorCode decode_next_message (BufferReader& reader, string& message, epoch_time_ms_t& decoded_ts) {
     static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> ||
                   is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
-        return ffi::ir_stream::eight_byte_encoding::decode_next_message(ir_buf, message,
+        return ffi::ir_stream::eight_byte_encoding::decode_next_message(reader, message,
                                                                         decoded_ts);
     } else {
-        return ffi::ir_stream::four_byte_encoding::decode_next_message(ir_buf, message, decoded_ts);
+        return ffi::ir_stream::four_byte_encoding::decode_next_message(reader, message, decoded_ts);
     }
 }
 
@@ -206,16 +206,16 @@ static void set_timestamp_info (const nlohmann::json& metadata_json, TimestampIn
 
 TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
     bool is_four_bytes_encoding;
+
     // Test eight-byte encoding
     vector<int8_t> eight_byte_encoding_vec{EightByteEncodingMagicNumber,
                                            EightByteEncodingMagicNumber + MagicNumberLength};
 
-    // Test eight-byte encoding
-    BufferReader eight_byte_encoding_buffer{
+    BufferReader eight_byte_ir_buffer{
             size_checked_pointer_cast<const char>(eight_byte_encoding_vec.data()),
             eight_byte_encoding_vec.size()
     };
-    REQUIRE(get_encoding_type(eight_byte_encoding_buffer, is_four_bytes_encoding) ==
+    REQUIRE(get_encoding_type(eight_byte_ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<eight_byte_encoded_variable_t>(is_four_bytes_encoding));
 
@@ -223,20 +223,23 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
     vector<int8_t> four_byte_encoding_vec{FourByteEncodingMagicNumber,
                                           FourByteEncodingMagicNumber + MagicNumberLength};
 
-    BufferReader four_byte_encoding_buffer{
+    BufferReader four_byte_ir_buffer{
             size_checked_pointer_cast<const char>(four_byte_encoding_vec.data()),
             four_byte_encoding_vec.size()
     };
-    REQUIRE(get_encoding_type(four_byte_encoding_buffer, is_four_bytes_encoding) ==
+    REQUIRE(get_encoding_type(four_byte_ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<four_byte_encoded_variable_t>(is_four_bytes_encoding));
 
-    // Test error on incomplete ir_buffer
+    // Test error on empty and incomplete ir_buffer
+    BufferReader empty_ir_buffer(size_checked_pointer_cast<const char>(four_byte_encoding_vec.data()), 0);
+    REQUIRE(get_encoding_type(empty_ir_buffer, is_four_bytes_encoding) ==
+            IRErrorCode::IRErrorCode_Incomplete_IR);
+
     BufferReader incomplete_buffer{
             size_checked_pointer_cast<const char>(four_byte_encoding_vec.data()),
             four_byte_encoding_vec.size() - 1
     };
-
     REQUIRE(get_encoding_type(incomplete_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Incomplete_IR);
 
@@ -264,37 +267,28 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
     const size_t encoded_preamble_end_pos = ir_buf.size();
 
     // Check if encoding type is properly read
-    BufferReader encoding_buffer{
+    BufferReader ir_buffer{
             size_checked_pointer_cast<const char>(ir_buf.data()), ir_buf.size()
     };
     bool is_four_bytes_encoding;
-    REQUIRE(get_encoding_type(encoding_buffer, is_four_bytes_encoding) ==
+    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<TestType>(is_four_bytes_encoding));
-    REQUIRE(MagicNumberLength == encoding_buffer.get_pos());
+    REQUIRE(MagicNumberLength == ir_buffer.get_pos());
 
     // Test if preamble can be decoded correctly
     TimestampInfo ts_info;
     encoded_tag_t metadata_type{0};
     size_t metadata_pos{0};
     uint16_t metadata_size{0};
-    REQUIRE(decode_preamble(encoding_buffer, metadata_type, metadata_pos, metadata_size) ==
+    REQUIRE(decode_preamble(ir_buffer, metadata_type, metadata_pos, metadata_size) ==
             IRErrorCode::IRErrorCode_Success);
-    REQUIRE(encoded_preamble_end_pos == encoding_buffer.get_pos());
-    
-    auto json_metadata_ptr = reinterpret_cast<char*>(ir_buf.data() + metadata_pos);
-    string_view json_metadata_ref {json_metadata_ptr, metadata_size};
+    REQUIRE(encoded_preamble_end_pos == ir_buffer.get_pos());
 
-    // Test if preamble can be decoded by the string copy method
-    std::vector<int8_t> json_metadata_vec;
-    encoding_buffer.seek_from_begin(MagicNumberLength);
-    REQUIRE(decode_preamble(encoding_buffer, metadata_type, json_metadata_vec) ==
-            IRErrorCode::IRErrorCode_Success);
-    string_view json_metadata_copied { reinterpret_cast<const char*>(json_metadata_vec.data()),
-                                       json_metadata_vec.size() };
-    REQUIRE (json_metadata_copied == json_metadata_ref);
+    char* metadata_ptr{size_checked_pointer_cast<char>(ir_buf.data()) + metadata_pos};
+    string_view json_metadata{metadata_ptr, metadata_size};
 
-    auto metadata_json = nlohmann::json::parse(json_metadata_ref);
+    auto metadata_json = nlohmann::json::parse(json_metadata);
     REQUIRE(ffi::ir_stream::cProtocol::Metadata::VersionValue ==
             metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey));
     REQUIRE(ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
@@ -302,7 +296,7 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);
     REQUIRE(time_zone_id == ts_info.time_zone_id);
     REQUIRE(timestamp_pattern == ts_info.timestamp_pattern);
-    REQUIRE(encoded_preamble_end_pos == encoding_buffer.get_pos());
+    REQUIRE(encoded_preamble_end_pos == ir_buffer.get_pos());
 
     if constexpr (is_same_v<TestType, four_byte_encoded_variable_t>) {
         REQUIRE(reference_ts ==
@@ -310,6 +304,15 @@ TEMPLATE_TEST_CASE("decode_preamble", "[ffi][decode_preamble]", four_byte_encode
                         metadata_json.at(ffi::ir_stream::cProtocol::Metadata::ReferenceTimestampKey)
                                 .get<string>()));
     }
+
+    // Test if preamble can be decoded by the string copy method
+    std::vector<int8_t> json_metadata_vec;
+    ir_buffer.seek_from_begin(MagicNumberLength);
+    REQUIRE(decode_preamble(ir_buffer, metadata_type, json_metadata_vec) ==
+            IRErrorCode::IRErrorCode_Success);
+    string_view json_metadata_copied {size_checked_pointer_cast<const char>(json_metadata_vec.data()), json_metadata_vec.size()};
+    // Crosscheck with the json_metadata decoded previously
+    REQUIRE (json_metadata_copied == json_metadata);
 
     // Test if incomplete IR can be detected
     ir_buf.resize(encoded_preamble_end_pos - 1);
@@ -343,12 +346,11 @@ TEMPLATE_TEST_CASE("decode_next_message_general", "[ffi][decode_next_message]",
     const size_t encoded_message_end_pos = ir_buf.size();
     const size_t encoded_message_start_pos = 0;
 
-    // Test if message can be decoded properly
-
     BufferReader ir_buffer{size_checked_pointer_cast<const char>(ir_buf.data()), ir_buf.size()};
     string decoded_message;
     epoch_time_ms_t timestamp;
 
+    // Test if message can be decoded properly
     REQUIRE(IRErrorCode::IRErrorCode_Success ==
             decode_next_message<TestType>(ir_buffer, decoded_message, timestamp));
     REQUIRE(message == decoded_message);
@@ -393,7 +395,7 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]")
     epoch_time_ms_t timestamp;
 
     // Test if a trailing escape triggers a decoder error
-    auto ir_with_extra_escape {ir_buf};
+    auto ir_with_extra_escape{ir_buf};
     ir_with_extra_escape.at(logtype_end_pos - 1) = ffi::cVariablePlaceholderEscapeCharacter;
     BufferReader ir_with_extra_escape_buffer{
             size_checked_pointer_cast<const char>(ir_with_extra_escape.data()),
@@ -471,11 +473,11 @@ TEMPLATE_TEST_CASE("decode_ir_complete", "[ffi][decode_next_message]",
     reference_messages.push_back(message);
     reference_timestamps.push_back(ts);
 
-    BufferReader complete_encoding_buffer{size_checked_pointer_cast<const char>(ir_buf.data()),
+    BufferReader complete_ir_buffer{size_checked_pointer_cast<const char>(ir_buf.data()),
                                           ir_buf.size()};
 
     bool is_four_bytes_encoding;
-    REQUIRE(get_encoding_type(complete_encoding_buffer, is_four_bytes_encoding) ==
+    REQUIRE(get_encoding_type(complete_ir_buffer, is_four_bytes_encoding) ==
             IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<TestType>(is_four_bytes_encoding));
 
@@ -484,11 +486,11 @@ TEMPLATE_TEST_CASE("decode_ir_complete", "[ffi][decode_next_message]",
     encoded_tag_t metadata_type;
     size_t metadata_pos;
     uint16_t metadata_size;
-    REQUIRE(decode_preamble(complete_encoding_buffer, metadata_type, metadata_pos, metadata_size) ==
+    REQUIRE(decode_preamble(complete_ir_buffer, metadata_type, metadata_pos, metadata_size) ==
             IRErrorCode::IRErrorCode_Success);
-    REQUIRE(encoded_preamble_end_pos == complete_encoding_buffer.get_pos());
+    REQUIRE(encoded_preamble_end_pos == complete_ir_buffer.get_pos());
 
-    auto json_metadata_ptr = reinterpret_cast<char*>(ir_buf.data() + metadata_pos);
+    auto* json_metadata_ptr{size_checked_pointer_cast<char>(ir_buf.data() + metadata_pos)};
     string_view json_metadata {json_metadata_ptr, metadata_size};
     auto metadata_json = nlohmann::json::parse(json_metadata);
     REQUIRE(ffi::ir_stream::cProtocol::Metadata::VersionValue ==
@@ -503,10 +505,10 @@ TEMPLATE_TEST_CASE("decode_ir_complete", "[ffi][decode_next_message]",
     epoch_time_ms_t timestamp;
     for (size_t ix = 0; ix < reference_messages.size(); ix++) {
         REQUIRE(IRErrorCode::IRErrorCode_Success ==
-                decode_next_message<TestType>(complete_encoding_buffer, decoded_message,
+                decode_next_message<TestType>(complete_ir_buffer, decoded_message,
                                               timestamp));
         REQUIRE(decoded_message == reference_messages[ix]);
         REQUIRE(timestamp == reference_timestamps[ix]);
     }
-    REQUIRE(complete_encoding_buffer.get_pos() == ir_buf.size());
+    REQUIRE(complete_ir_buffer.get_pos() == ir_buf.size());
 }
