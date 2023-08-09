@@ -37,7 +37,7 @@ ErrorCode BufferReader::try_read (char* buf, size_t num_bytes_to_read, size_t& n
 
 ErrorCode BufferReader::try_seek_from_begin (size_t pos) {
     if (pos > m_internal_buf_size) {
-        return ErrorCode_OutOfBounds;
+        return ErrorCode_Truncated;
     }
     m_internal_buf_pos = pos;
     return ErrorCode_Success;

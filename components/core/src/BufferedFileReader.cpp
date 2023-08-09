@@ -71,45 +71,41 @@ ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
         return ErrorCode_Success;
     }
 
-    if (m_checkpoint_pos.has_value() == false) {
-        if (pos < m_file_pos) {
-            return ErrorCode_Failure;
-        }
-        if (ErrorCode_Success ==
-            m_buffer_reader->try_seek_from_begin(get_buffer_relative_pos(pos))){
-            m_file_pos = pos;
-            m_highest_read_pos = std::max(m_highest_read_pos, m_file_pos);
-            return ErrorCode_Success;
-        }
-        // if checkpoint is not set, simply move the file_pos and invalidate the buffer reader
-        auto offset = lseek(m_fd, static_cast<__off64_t>(pos), SEEK_SET);
-        if (-1 == offset) {
-            return ErrorCode_errno;
-        }
-        m_buffer_reader.emplace(m_buffer.get(), 0);
-        m_buffer_begin_pos = pos;
-    } else {
-        if (pos < m_checkpoint_pos) {
-            return ErrorCode_Failure;
-        }
-        if (ErrorCode_Success ==
-            m_buffer_reader->try_seek_from_begin(get_buffer_relative_pos(pos))) {
-            m_file_pos = pos;
-            m_highest_read_pos = std::max(m_highest_read_pos, m_file_pos);
-            return ErrorCode_Success;
-        }
+    size_t seek_lower_bound = m_file_pos;
+    if (m_checkpoint_pos.has_value()) {
+        seek_lower_bound = m_checkpoint_pos.value();
+    }
 
-        size_t num_bytes_to_refill = pos - get_buffer_end_pos();
-        auto error_code = refill_reader_buffer(num_bytes_to_refill);
-        if (ErrorCode_EndOfFile == error_code) {
-            throw OperationFailed(ErrorCode_EndOfFile, __FILENAME__, __LINE__);
+    if (pos < seek_lower_bound) {
+        return ErrorCode_Failure;
+    }
+
+    auto error_code = m_buffer_reader->try_seek_from_begin(get_buffer_relative_pos(pos));
+    if (ErrorCode_Truncated == error_code) {
+        if (false == m_checkpoint_pos.has_value()) {
+            // if checkpoint is not set, simply move the file_pos and invalidate the buffer reader
+            auto offset = lseek(m_fd, static_cast<__off64_t>(pos), SEEK_SET);
+            if (-1 == offset) {
+                return ErrorCode_errno;
+            }
+            m_buffer_reader.emplace(m_buffer.get(), 0);
+            m_buffer_begin_pos = pos;
+        } else {
+            size_t num_bytes_to_refill = pos - get_buffer_end_pos();
+            error_code = refill_reader_buffer(num_bytes_to_refill);
+            if (ErrorCode_EndOfFile == error_code) {
+                return ErrorCode_Truncated;
+            }
+            if (ErrorCode_Success != error_code) {
+                return error_code;
+            }
+            error_code = m_buffer_reader->try_seek_from_begin(get_buffer_relative_pos(pos));
+            if (ErrorCode_Success != error_code){
+                return error_code;
+            }
         }
-        if (ErrorCode_Success != error_code) {
-            return error_code;
-        }
-        if (ErrorCode_Success != m_buffer_reader->try_seek_from_begin(get_buffer_relative_pos(pos))) {
-            throw OperationFailed(ErrorCode_EndOfFile, __FILENAME__, __LINE__);
-        }
+    } else if (ErrorCode_Success != error_code) {
+        return error_code;
     }
     m_file_pos = pos;
     m_highest_read_pos = std::max(m_highest_read_pos, m_file_pos);
