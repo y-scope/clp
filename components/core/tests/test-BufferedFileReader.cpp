@@ -1,6 +1,3 @@
-// C libraries
-#include <unistd.h>
-
 // Boost libraries
 #include <boost/filesystem.hpp>
 
@@ -114,7 +111,7 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
         REQUIRE(file_reader.get_pos() == num_bytes_to_read_1 + num_bytes_to_read_2);
         size_t latest_file_pos = file_reader.get_pos();
 
-        // now seek back to some where between
+        // now seek back to somewhere between
         size_t seek_pos_1 = checkpoint_pos + 500;
         REQUIRE(ErrorCode_Success == file_reader.try_seek_from_begin(seek_pos_1));
         REQUIRE(ErrorCode_Success
@@ -186,7 +183,7 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
         REQUIRE(file_reader.get_pos() == checkpoint_pos + num_bytes_to_read);
         REQUIRE(0 == memcmp(read_buffer, test_data + begin_read_pos, num_bytes_to_read));
 
-        // now seek back to some where between
+        // now seek back to somewhere between
         size_t seek_pos = file_reader.get_pos() / 2;
         REQUIRE(ErrorCode_Success == file_reader.try_seek_from_begin(seek_pos));
         REQUIRE(ErrorCode_Success
