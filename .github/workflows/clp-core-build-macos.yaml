@@ -1,0 +1,43 @@
+name: build-clp-core-macos
+
+on:
+  push:
+    paths:
+      # NOTE: The order of these paths is important since we're using exclusions
+      - '.github/workflows/clp-core-build-macos.yaml'
+      - 'components/core/**'
+      - '!components/core/tools/docker-images/**'
+      - '!components/core/tools/scripts/lib_install/**'
+      - 'components/core/tools/scripts/lib_install/macos-12/**'
+  pull_request:
+    paths:
+      # NOTE: The order of these paths is important since we're using exclusions
+      - '.github/workflows/clp-core-build-macos.yaml'
+      - 'components/core/**'
+      - '!components/core/tools/docker-images/**'
+      - '!components/core/tools/scripts/lib_install/**'
+      - 'components/core/tools/scripts/lib_install/macos-12/**'
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+            submodules: recursive
+      
+      # See https://github.com/actions/setup-python/issues/577
+      - name: Remove preinstalled binaries which conflict with brew's installs
+        run: |
+          rm -f /usr/local/bin/2to3*
+          rm -f /usr/local/bin/idle3*
+          rm -f /usr/local/bin/pydoc3*
+          rm -f /usr/local/bin/python3*
+
+      - name: Install dependencies
+        run: ./components/core/tools/scripts/lib_install/macos-12/install-all.sh
+
+      - name: Build CLP Core
+        uses: ./.github/actions/clp-core-build

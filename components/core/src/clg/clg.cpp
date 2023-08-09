@@ -7,7 +7,6 @@
 
 // spdlog
 #include <spdlog/sinks/stdout_sinks.h>
-#include <spdlog/spdlog.h>
 
 // Project headers
 #include "../Defs.h"
@@ -16,6 +15,7 @@
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
 #include "../Profiler.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/Constants.hpp"
 #include "CommandLineArguments.hpp"
 
@@ -86,15 +86,19 @@ static void print_result_binary (const string& orig_file_path, const Message& co
  * Gets an archive iterator for the given file path or for all files if the file path is empty
  * @param global_metadata_db
  * @param file_path
+ * @param begin_ts
+ * @param end_ts
  * @return An archive iterator
  */
-static GlobalMetadataDB::ArchiveIterator* get_archive_iterator (GlobalMetadataDB& global_metadata_db, const std::string& file_path);
+static GlobalMetadataDB::ArchiveIterator* get_archive_iterator (GlobalMetadataDB& global_metadata_db, const std::string& file_path, epochtime_t begin_ts, epochtime_t end_ts);
 
-static GlobalMetadataDB::ArchiveIterator* get_archive_iterator (GlobalMetadataDB& global_metadata_db, const std::string& file_path) {
-    if (file_path.empty()) {
+static GlobalMetadataDB::ArchiveIterator* get_archive_iterator (GlobalMetadataDB& global_metadata_db, const std::string& file_path, epochtime_t begin_ts, epochtime_t end_ts) {
+    if (!file_path.empty()) {
+        return global_metadata_db.get_archive_iterator_for_file_path(file_path);
+    } else if (begin_ts == cEpochTimeMin && end_ts == cEpochTimeMax) {
         return global_metadata_db.get_archive_iterator();
     } else {
-        return global_metadata_db.get_archive_iterator_for_file_path(file_path);
+        return global_metadata_db.get_archive_iterator_for_time_window(begin_ts, end_ts);
     }
 }
 
@@ -397,7 +401,7 @@ int main (int argc, const char* argv[]) {
 
     string archive_id;
     Archive archive_reader;
-    for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(get_archive_iterator(*global_metadata_db, command_line_args.get_file_path()));
+    for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(get_archive_iterator(*global_metadata_db, command_line_args.get_file_path(), command_line_args.get_search_begin_ts(), command_line_args.get_search_end_ts()));
             archive_ix->contains_element(); archive_ix->get_next())
     {
         archive_ix->get_id(archive_id);

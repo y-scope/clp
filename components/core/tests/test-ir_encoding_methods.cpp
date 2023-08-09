@@ -1,8 +1,8 @@
 // Catch2
-#include "../submodules/Catch2/single_include/catch2/catch.hpp"
+#include <Catch2/single_include/catch2/catch.hpp>
 
 // json
-#include "../submodules/json/single_include/nlohmann/json.hpp"
+#include <json/single_include/nlohmann/json.hpp>
 
 // Project headers
 #include "../src/ffi/encoding_methods.hpp"

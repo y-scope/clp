@@ -3,11 +3,9 @@
 // libarchive
 #include <archive_entry.h>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "Defs.h"
+#include "spdlog_with_specializations.hpp"
 
 ErrorCode LibarchiveReader::try_open (ReaderInterface&reader, const std::string& path_if_compressed_file) {
     // Create and initialize internal libarchive

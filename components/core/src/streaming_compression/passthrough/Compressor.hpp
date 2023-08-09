@@ -1,7 +1,6 @@
 #ifndef STREAMING_COMPRESSION_PASSTHROUGH_COMPRESSOR_HPP
 #define STREAMING_COMPRESSION_PASSTHROUGH_COMPRESSOR_HPP
 
-// Project headers
 #include "../../FileWriter.hpp"
 #include "../../TraceableException.hpp"
 #include "../Compressor.hpp"
@@ -16,20 +15,23 @@ namespace streaming_compression { namespace passthrough {
         class OperationFailed : public TraceableException {
         public:
             // Constructors
-            OperationFailed (ErrorCode error_code, const char* const filename, int line_number) : TraceableException(error_code, filename, line_number) {}
+            OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                    : TraceableException(error_code, filename, line_number) {}
 
             // Methods
-            const char* what () const noexcept override {
+            char const* what() const noexcept override {
                 return "streaming_compression::passthrough::Compressor operation failed";
             }
         };
 
         // Constructors
-        Compressor () : ::streaming_compression::Compressor(CompressorType::Passthrough), m_compressed_stream_file_writer(nullptr) {}
+        Compressor()
+                : ::streaming_compression::Compressor(CompressorType::Passthrough),
+                  m_compressed_stream_file_writer(nullptr) {}
 
         // Explicitly disable copy and move constructor/assignment
-        Compressor (const Compressor&) = delete;
-        Compressor& operator = (const Compressor&) = delete;
+        Compressor(Compressor const&) = delete;
+        Compressor& operator=(Compressor const&) = delete;
 
         // Methods implementing the WriterInterface
         /**
@@ -37,36 +39,36 @@ namespace streaming_compression { namespace passthrough {
          * @param data
          * @param data_length
          */
-        void write (const char* data, size_t data_length) override;
+        void write(char const* data, size_t data_length) override;
         /**
          * Flushes any buffered data
          */
-        void flush () override;
+        void flush() override;
         /**
          * Tries to get the current position of the write head
          * @param pos Position of the write head
          * @return ErrorCode_NotInit if the compressor is not open
          * @return Same as FileWriter::try_get_pos
          */
-        ErrorCode try_get_pos (size_t& pos) const override;
+        ErrorCode try_get_pos(size_t& pos) const override;
 
         // Methods implementing the Compressor interface
         /**
          * Closes the compressor
          */
-        void close () override;
+        void close() override;
 
         // Methods
         /**
          * Initializes the compressor
          * @param file_writer
          */
-        void open (FileWriter& file_writer);
+        void open(FileWriter& file_writer);
 
     private:
         // Variables
         FileWriter* m_compressed_stream_file_writer;
     };
-}}
+}}  // namespace streaming_compression::passthrough
 
-#endif //STREAMING_COMPRESSION_PASSTHROUGH_COMPRESSOR_HPP
+#endif  // STREAMING_COMPRESSION_PASSTHROUGH_COMPRESSOR_HPP

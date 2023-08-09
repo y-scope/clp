@@ -7,14 +7,14 @@
 
 // spdlog
 #include <spdlog/sinks/stdout_sinks.h>
-#include <spdlog/spdlog.h>
 
 // Project headers
 #include "../../FileWriter.hpp"
 #include "../../LogTypeDictionaryReader.hpp"
-#include "../../VariableDictionaryReader.hpp"
+#include "../../spdlog_with_specializations.hpp"
 #include "../../streaming_archive/Constants.hpp"
 #include "../../type_utils.hpp"
+#include "../../VariableDictionaryReader.hpp"
 #include "CommandLineArguments.hpp"
 
 using std::string;

@@ -5,11 +5,11 @@
 
 // spdlog
 #include <spdlog/sinks/stdout_sinks.h>
-#include <spdlog/spdlog.h>
 
 // Project headers
 #include "../compressor_frontend/LogParser.hpp"
 #include "../Profiler.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "compression.hpp"

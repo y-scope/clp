@@ -3,9 +3,6 @@
 
 #include "RegexAST.hpp"
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // C++ standard libraries
 #include <algorithm>
 #include <cassert>
@@ -13,6 +10,7 @@
 #include <stack>
 
 // Project headers
+#include "../../spdlog_with_specializations.hpp"
 #include "../Constants.hpp"
 #include "RegexNFA.hpp"
 #include "UnicodeIntervalTree.hpp"

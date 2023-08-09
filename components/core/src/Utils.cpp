@@ -14,10 +14,8 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
+#include "spdlog_with_specializations.hpp"
 #include "string_utils.hpp"
 
 using std::list;

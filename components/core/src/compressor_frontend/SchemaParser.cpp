@@ -4,11 +4,9 @@
 #include <cmath>
 #include <memory>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "../FileReader.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "Constants.hpp"
 #include "finite_automata/RegexAST.hpp"
 #include "LALR1Parser.hpp"

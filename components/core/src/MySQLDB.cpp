@@ -1,7 +1,7 @@
 #include "MySQLDB.hpp"
 
-// spdlog
-#include <spdlog/spdlog.h>
+// Project headers
+#include "spdlog_with_specializations.hpp"
 
 using std::string;
 

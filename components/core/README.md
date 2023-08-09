@@ -36,9 +36,10 @@ tools/scripts/deps-download/download-all.sh
 ```
 
 This will download:
-* [Catch2](https://github.com/catchorg/Catch2.git) (v2.13.6)
+* [ANTLR v4](https://www.antlr.org/download.html) (v4.11.1)
+* [Catch2](https://github.com/catchorg/Catch2.git) (v2.13.7)
 * [date](https://github.com/HowardHinnant/date.git) (v3.0.1)
-* [json](https://github.com/nlohmann/json.git) (v3.10.2)
+* [json](https://github.com/nlohmann/json.git) (v3.10.4)
 * [SQLite3](https://www.sqlite.org/download.html) (v3.36.0)
 * [yaml-cpp](https://github.com/jbeder/yaml-cpp.git) (v0.7.0)
 
@@ -73,7 +74,7 @@ docker run --rm -it \
   -v$(readlink -f /path/to/clp/components/core):/mnt/clp \
   -v$(readlink -f /path/to/my/logs):/mnt/logs \
   ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main \
-  /bin/bash
+  /bin/bash -l
 
 cd /mnt/clp
 ```

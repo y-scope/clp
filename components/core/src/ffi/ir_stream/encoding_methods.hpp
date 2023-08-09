@@ -1,11 +1,9 @@
 #ifndef FFI_IR_STREAM_ENCODING_METHODS_HPP
 #define FFI_IR_STREAM_ENCODING_METHODS_HPP
 
-// C++ standard libraries
 #include <string_view>
 #include <vector>
 
-// Project headers
 #include "../encoding_methods.hpp"
 
 namespace ffi::ir_stream {

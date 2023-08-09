@@ -5,11 +5,9 @@
 #include <unordered_set>
 #include <vector>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "Defs.h"
+#include "spdlog_with_specializations.hpp"
 #include "streaming_compression/zstd/Compressor.hpp"
 #include "TraceableException.hpp"
 

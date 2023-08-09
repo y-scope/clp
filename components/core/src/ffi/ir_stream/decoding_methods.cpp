@@ -1,7 +1,5 @@
 #include "decoding_methods.hpp"
 
-// Project headers
-#include "../../type_utils.hpp"
 #include "byteswap.hpp"
 #include "protocol_constants.hpp"
 
@@ -129,7 +127,6 @@ static string decode_message(
 template <typename encoded_variable_t>
 static bool is_variable_tag(encoded_tag_t tag, bool& is_encoded_var) {
     static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
-
     if (tag == cProtocol::Payload::VarStrLenUByte || tag == cProtocol::Payload::VarStrLenUShort
         || tag == cProtocol::Payload::VarStrLenInt)
     {
@@ -319,9 +316,8 @@ generic_decode_next_message(ReaderInterface& reader, string& message, epoch_time
         return error_code;
     }
 
-    // NOTE: for the eight-byte encoding, the timestamp is the actual
-    // timestamp; for the four-byte encoding, the timestamp is a timestamp
-    // delta
+    // NOTE: for the eight-byte encoding, the timestamp is the actual timestamp;
+    // for the four-byte encoding, the timestamp is a timestamp delta
     if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
         return IRErrorCode_Incomplete_IR;
     }
@@ -451,8 +447,8 @@ static string decode_message(
             }
 
             case cVariablePlaceholderEscapeCharacter: {
-                // Ensure the escape character is followed by a
-                // character that's being escaped
+                // Ensure the escape character is followed by a character that's
+                // being escaped
                 if (cur_pos == logtype.length() - 1) {
                     throw EncodingException(
                             ErrorCode_Corrupt,
@@ -471,9 +467,9 @@ static string decode_message(
                 next_static_text_begin_pos = cur_pos + 1;
                 // The character after the escape character is static text
                 // (regardless of whether it is a variable placeholder), so
-                // increment cur_pos by 1 to ensure we don't process the
-                // next character in any of the other cases (instead it will
-                // be added to the message).
+                // increment cur_pos by 1 to ensure we don't process the next
+                // character in any of the other cases (instead it will be added
+                // to the message).
                 ++cur_pos;
 
                 break;
@@ -500,7 +496,12 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
     }
     if (0 == memcmp(buffer, cProtocol::FourByteEncodingMagicNumber, cProtocol::MagicNumberLength)) {
         is_four_bytes_encoding = true;
-    } else if (0 == memcmp(buffer, cProtocol::EightByteEncodingMagicNumber, cProtocol::MagicNumberLength))
+    } else if ((0
+                == memcmp(
+                        buffer,
+                        cProtocol::EightByteEncodingMagicNumber,
+                        cProtocol::MagicNumberLength
+                )))
     {
         is_four_bytes_encoding = false;
     } else {
@@ -538,7 +539,6 @@ IRErrorCode decode_preamble(
     {
         return error_code;
     }
-
     metadata.resize(metadata_size);
     if (ErrorCode_Success
         != reader.try_read_exact_length(
