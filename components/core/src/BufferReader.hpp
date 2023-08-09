@@ -13,18 +13,19 @@ public:
     class OperationFailed : public TraceableException {
     public:
         // Constructors
-        OperationFailed (ErrorCode error_code, const char* const filename, int line_number) :
-                TraceableException (error_code, filename, line_number) {}
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        [[nodiscard]] const char* what () const noexcept override {
+        [[nodiscard]] char const* what() const noexcept override {
             return "BufferReader operation failed";
         }
     };
 
     // Constructors
-    BufferReader (const char* data, size_t data_size) : BufferReader(data, data_size, 0) {}
-    BufferReader (const char* data, size_t data_size, size_t pos);
+    BufferReader(char const* data, size_t data_size) : BufferReader(data, data_size, 0) {}
+
+    BufferReader(char const* data, size_t data_size, size_t pos);
 
     // Methods implementing the ReaderInterface
     /**
@@ -36,37 +37,47 @@ public:
      * @return ErrorCode_EndOfFile if buffer doesn't contain more data
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] ErrorCode try_read (char* buf, size_t num_bytes_to_read,
-                                      size_t& num_bytes_read) override;
+    [[nodiscard]] ErrorCode
+    try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) override;
     /**
      * Tries to seek from the beginning of the buffer to the given position
      * @param pos
      * @return ErrorCode_OutOfBounds if the given position > the buffer's size
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] ErrorCode try_seek_from_begin (size_t pos) override;
+    [[nodiscard]] ErrorCode try_seek_from_begin(size_t pos) override;
     /**
      * @param pos Returns the position of the read head in the buffer
      * @return ErrorCode_Success
      */
-    [[nodiscard]] ErrorCode try_get_pos (size_t& pos) override;
+    [[nodiscard]] ErrorCode try_get_pos(size_t& pos) override;
 
-    [[nodiscard]] ErrorCode try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string &str) override;
+    [[nodiscard]] ErrorCode
+    try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str) override;
 
     // Helper functions
     [[nodiscard]] size_t get_buffer_size() const { return m_internal_buf_size; }
 
-    void peek_buffer (const char*& buf, size_t& peek_size);
+    void peek_buffer(char const*& buf, size_t& peek_size);
 
-    ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter, std::string& str, bool& found_delim, size_t& num_bytes_read);
+    ErrorCode try_read_to_delimiter(
+            char delim,
+            bool keep_delimiter,
+            std::string& str,
+            bool& found_delim,
+            size_t& num_bytes_read
+    );
 
 private:
     // Method
-    [[nodiscard]] size_t get_remaining_data_size() const { return m_internal_buf_size - m_internal_buf_pos; }
+    [[nodiscard]] size_t get_remaining_data_size() const {
+        return m_internal_buf_size - m_internal_buf_pos;
+    }
+
     // Variables
-    const char* m_internal_buf;
+    char const* m_internal_buf;
     size_t m_internal_buf_size;
     size_t m_internal_buf_pos;
 };
 
-#endif // BUFFERREADER_HPP
+#endif  // BUFFERREADER_HPP

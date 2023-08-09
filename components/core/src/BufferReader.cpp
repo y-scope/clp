@@ -8,7 +8,7 @@ namespace {
 
 }
 
-BufferReader::BufferReader (const char* data, size_t data_size, size_t pos) {
+BufferReader::BufferReader(char const* data, size_t data_size, size_t pos) {
     if (nullptr == data) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
@@ -17,7 +17,7 @@ BufferReader::BufferReader (const char* data, size_t data_size, size_t pos) {
     m_internal_buf_pos = pos;
 }
 
-ErrorCode BufferReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
+ErrorCode BufferReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
     if (nullptr == buf && num_bytes_to_read > 0) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
@@ -35,7 +35,7 @@ ErrorCode BufferReader::try_read (char* buf, size_t num_bytes_to_read, size_t& n
     return ErrorCode_Success;
 }
 
-ErrorCode BufferReader::try_seek_from_begin (size_t pos) {
+ErrorCode BufferReader::try_seek_from_begin(size_t pos) {
     if (pos > m_internal_buf_size) {
         return ErrorCode_Truncated;
     }
@@ -43,13 +43,17 @@ ErrorCode BufferReader::try_seek_from_begin (size_t pos) {
     return ErrorCode_Success;
 }
 
-ErrorCode BufferReader::try_get_pos (size_t& pos) {
+ErrorCode BufferReader::try_get_pos(size_t& pos) {
     pos = m_internal_buf_pos;
     return ErrorCode_Success;
 }
 
-ErrorCode BufferReader::try_read_to_delimiter (char delim, bool keep_delimiter, bool append,
-                                               std::string& str) {
+ErrorCode BufferReader::try_read_to_delimiter(
+        char delim,
+        bool keep_delimiter,
+        bool append,
+        std::string& str
+) {
     bool found_delim;
     size_t num_bytes_read;
     if (false == append) {
@@ -58,27 +62,27 @@ ErrorCode BufferReader::try_read_to_delimiter (char delim, bool keep_delimiter, 
     return try_read_to_delimiter(delim, keep_delimiter, str, found_delim, num_bytes_read);
 }
 
-void BufferReader::peek_buffer (const char*& buf, size_t& peek_size) {
+void BufferReader::peek_buffer(char const*& buf, size_t& peek_size) {
     peek_size = get_remaining_data_size();
     buf = m_internal_buf + m_internal_buf_pos;
 }
 
-ErrorCode BufferReader::try_read_to_delimiter (char delim,
-                                               bool keep_delimiter,
-                                               std::string& str,
-                                               bool& found_delim,
-                                               size_t& num_bytes_read) {
-
+ErrorCode BufferReader::try_read_to_delimiter(
+        char delim,
+        bool keep_delimiter,
+        std::string& str,
+        bool& found_delim,
+        size_t& num_bytes_read
+) {
     found_delim = false;
-    const auto remaining_data_size = get_remaining_data_size();
+    auto const remaining_data_size = get_remaining_data_size();
     if (0 == remaining_data_size) {
         return ErrorCode_EndOfFile;
     }
     // Find the delimiter
-    const char* buffer_head = m_internal_buf + m_internal_buf_pos;
-    const char* delim_ptr = reinterpret_cast<const char*>(
-            memchr(buffer_head, delim, remaining_data_size)
-    );
+    char const* buffer_head = m_internal_buf + m_internal_buf_pos;
+    char const* delim_ptr
+            = reinterpret_cast<char const*>(memchr(buffer_head, delim, remaining_data_size));
 
     size_t delim_pos;
     if (delim_ptr != nullptr) {
