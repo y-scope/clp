@@ -502,8 +502,8 @@ bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_
             if (has_wildcard_in_middle || (has_prefix_wildcard && has_suffix_wildcard)) {
                 // DO NOTHING
             } else {
-                std::shared_ptr<StringReader> stringReader = std::make_shared<StringReader>();
-                ReaderInterfaceWrapper reader_wrapper(stringReader);
+                std::shared_ptr<StringReader> string_reader = std::make_shared<StringReader>();
+                ReaderInterfaceWrapper reader_wrapper(string_reader);
                 log_surgeon::ParserInputBuffer parser_input_buffer;
                 if (has_suffix_wildcard) { //text*
                     // TODO: creating a string reader, setting it equal to a 
@@ -511,7 +511,7 @@ bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_
                     //  like a convoluted way to set a string equal to a string,
                     //  should be improved when adding a SearchParser to 
                     //  log_surgeon
-                    stringReader->open(value.substr(begin_pos, end_pos - begin_pos - 1));
+                    string_reader->open(value.substr(begin_pos, end_pos - begin_pos - 1));
                     parser_input_buffer.read_if_safe(reader_wrapper);
                     forward_lexer.reset();
                     forward_lexer.scan_with_wildcard(parser_input_buffer,
@@ -521,14 +521,14 @@ bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_
                     std::string value_reverse = value.substr(begin_pos + 1,
                                                              end_pos - begin_pos - 1);
                     std::reverse(value_reverse.begin(), value_reverse.end());
-                    stringReader->open(value_reverse);
+                    string_reader->open(value_reverse);
                     parser_input_buffer.read_if_safe(reader_wrapper);
                     reverse_lexer.reset();
                     reverse_lexer.scan_with_wildcard(parser_input_buffer,
                                                      value[begin_pos],
                                                      search_token);
                 } else { // no wildcards
-                    stringReader->open(value.substr(begin_pos, end_pos - begin_pos));
+                    string_reader->open(value.substr(begin_pos, end_pos - begin_pos));
                     parser_input_buffer.read_if_safe(reader_wrapper);
                     forward_lexer.reset();
                     forward_lexer.scan(parser_input_buffer, search_token);
