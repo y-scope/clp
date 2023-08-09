@@ -287,47 +287,40 @@ ErrorCode BufferedFileReader::refill_reader_buffer (size_t num_bytes_to_refill) 
 
     const auto buffer_end_pos = get_buffer_end_pos();
     const auto data_size = m_buffer_reader->get_buffer_size();
+    const auto available_buffer_space = m_buffer_size - data_size;
+    size_t buf_internal_pos;
 
-    size_t num_bytes_alignment = m_base_buffer_size - (buffer_end_pos % m_base_buffer_size);
+    size_t bytes_to_read = m_base_buffer_size - (buffer_end_pos % m_base_buffer_size);
     if (m_checkpoint_pos.has_value()) {
-        while (num_bytes_alignment < num_bytes_to_refill) {
-            num_bytes_alignment += m_base_buffer_size;
+        while (bytes_to_read < num_bytes_to_refill) {
+            bytes_to_read += m_base_buffer_size;
         }
-    }
-    // Don't extend the underlying buffer if enough space is available
-    if (num_bytes_alignment < m_buffer_size - data_size) {
-        auto error_code = try_read_into_buffer(m_fd, m_buffer.get() + data_size,
-                                               num_bytes_alignment, num_bytes_refilled);
-        if (error_code != ErrorCode_Success) {
-            return error_code;
+        // Grow the buffer if bytes_to_read is more
+        // than available space in the buffer
+        if (bytes_to_read > available_buffer_space) {
+            m_buffer_size = data_size + bytes_to_read;
+            auto new_buffer = make_unique<char[]>(m_buffer_size);
+            memcpy(new_buffer.get(), m_buffer.get(), data_size);
+            m_buffer = std::move(new_buffer);
         }
-        m_buffer_reader.emplace(m_buffer.get(), num_bytes_refilled + data_size, data_size);
-        return ErrorCode_Success;
-    }
-
-    if (false == m_checkpoint_pos.has_value()) {
-        auto error_code = try_read_into_buffer(m_fd, m_buffer.get(),
-                                               num_bytes_alignment, num_bytes_refilled);
-        if (error_code != ErrorCode_Success) {
-            return error_code;
-        }
-        m_buffer_begin_pos = buffer_end_pos;
-        m_buffer_reader.emplace(m_buffer.get(), num_bytes_refilled);
+        // make Buffer-reader's pos pointing to end of current data
+        buf_internal_pos = data_size;
     } else {
-        // Messy way of copying data from old buffer to new buffer
-        m_buffer_size = data_size + num_bytes_alignment;
-        auto new_buffer = make_unique<char[]>(m_buffer_size);
-        memcpy(new_buffer.get(), m_buffer.get(), data_size);
-
-        // Read data to the new buffer, with offset = data_size
-        auto error_code = try_read_into_buffer(m_fd, &new_buffer[data_size], num_bytes_alignment,
-                                               num_bytes_refilled);
-        if (error_code != ErrorCode_Success) {
-            return error_code;
+        if (bytes_to_read > available_buffer_space) {
+            // advance the buffer
+            buf_internal_pos = 0;
+            m_buffer_begin_pos = buffer_end_pos;
+        } else {
+            buf_internal_pos = data_size;
         }
-        m_buffer = move(new_buffer);
-        m_buffer_reader.emplace(m_buffer.get(), data_size + num_bytes_refilled, m_buffer_reader->get_pos());
     }
+
+    auto error_code = try_read_into_buffer(m_fd, m_buffer.get() + buf_internal_pos,
+                                           bytes_to_read, num_bytes_refilled);
+    if (error_code != ErrorCode_Success) {
+        return error_code;
+    }
+    m_buffer_reader.emplace(m_buffer.get(), num_bytes_refilled + buf_internal_pos, buf_internal_pos);
     return ErrorCode_Success;
 }
 
