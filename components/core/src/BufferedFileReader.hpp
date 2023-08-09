@@ -38,6 +38,20 @@ public:
         }
     };
 
+    class OperationFailedWithMsg : public TraceableException {
+    public:
+        // Constructors
+        OperationFailedWithMsg (ErrorCode error_code, const char* const filename, int line_number, std::string message) :
+                TraceableException (error_code, filename, line_number), m_message(message) {}
+
+        // Methods
+        [[nodiscard]] const char* what () const noexcept override {
+            return "BufferedFileReader operation failed";
+        }
+    private:
+        std::string m_message;
+    };
+
     // Constructors
     BufferedFileReader(size_t base_buffer_size);
     BufferedFileReader() : BufferedFileReader(cDefaultBufferSize) {}
@@ -201,6 +215,8 @@ private:
     [[nodiscard]] size_t get_buffer_relative_pos(size_t file_pos) const { return file_pos - m_buffer_begin_pos; }
 
     [[nodiscard]] size_t get_buffer_end_pos() const { return m_buffer_begin_pos + m_buffer_reader->get_buffer_size(); }
+
+    void update_file_pos(size_t pos);
 
     // Constants
     static constexpr size_t cMinBufferSize = (1ULL << 12);

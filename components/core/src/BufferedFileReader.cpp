@@ -9,11 +9,7 @@
 // C++ standard libraries
 #include <cerrno>
 
-// Project headers
-#include <spdlog/spdlog.h>
-
 using std::make_unique;
-using std::move;
 using std::string;
 
 namespace {
@@ -107,8 +103,7 @@ ErrorCode BufferedFileReader::try_seek_from_begin (size_t pos) {
     } else if (ErrorCode_Success != error_code) {
         return error_code;
     }
-    m_file_pos = pos;
-    m_highest_read_pos = std::max(m_highest_read_pos, m_file_pos);
+    update_file_pos(pos);
     return ErrorCode_Success;
 }
 
@@ -132,7 +127,7 @@ ErrorCode BufferedFileReader::try_read (char* buf, size_t num_bytes_to_read,
             buf += bytes_read;
             num_bytes_read += bytes_read;
             num_bytes_to_read -= bytes_read;
-            m_file_pos += bytes_read;
+            update_file_pos(m_file_pos + bytes_read);
             if (0 == num_bytes_to_read) {
                 break;
             }
@@ -150,7 +145,6 @@ ErrorCode BufferedFileReader::try_read (char* buf, size_t num_bytes_to_read,
     if (0 == num_bytes_read) {
         return ErrorCode_EndOfFile;
     }
-    m_highest_read_pos = std::max(m_highest_read_pos, m_file_pos);
     return ErrorCode_Success;
 }
 
@@ -170,7 +164,7 @@ ErrorCode BufferedFileReader::try_read_to_delimiter (char delim, bool keep_delim
             ret_code != ErrorCode_Success && ret_code != ErrorCode_EndOfFile) {
             return ret_code;
         }
-        m_file_pos += length;
+        update_file_pos(m_file_pos + length);
         total_append_length += length;
 
         if (false == found_delim) {
@@ -185,7 +179,6 @@ ErrorCode BufferedFileReader::try_read_to_delimiter (char delim, bool keep_delim
             }
         }
     }
-    m_highest_read_pos = std::max(m_highest_read_pos, m_file_pos);
     return ErrorCode_Success;
 }
 
@@ -212,8 +205,8 @@ void BufferedFileReader::open (const string& path) {
     ErrorCode error_code = try_open(path);
     if (ErrorCode_Success != error_code) {
         if (ErrorCode_FileNotFound == error_code) {
-            SPDLOG_ERROR("File not found: {}", boost::filesystem::weakly_canonical(path).string());
-            throw OperationFailed(error_code, __FILENAME__, __LINE__);
+            throw OperationFailedWithMsg(error_code, __FILENAME__, __LINE__,
+                                         "File not found: " + boost::filesystem::weakly_canonical(path).string());
         } else {
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
@@ -303,11 +296,10 @@ ErrorCode BufferedFileReader::refill_reader_buffer (size_t num_bytes_to_refill) 
             memcpy(new_buffer.get(), m_buffer.get(), data_size);
             m_buffer = std::move(new_buffer);
         }
-        // make Buffer-reader's pos pointing to end of current data
         buf_internal_pos = data_size;
     } else {
         if (bytes_to_read > available_buffer_space) {
-            // advance the buffer
+            // advance the entire buffer
             buf_internal_pos = 0;
             m_buffer_begin_pos = buffer_end_pos;
         } else {
@@ -334,8 +326,13 @@ void BufferedFileReader::resize_buffer_from_pos (size_t pos) {
     m_buffer_size = quantize_to_buffer_size(copy_size);
     auto new_buffer = make_unique<char[]>(m_buffer_size);
     memcpy(new_buffer.get(), &m_buffer[pos], copy_size);
-    m_buffer = move(new_buffer);
+    m_buffer = std::move(new_buffer);
     m_buffer_begin_pos += pos;
 
     m_buffer_reader.emplace(m_buffer.get(), copy_size);
+}
+
+void BufferedFileReader::update_file_pos (size_t pos) {
+    m_file_pos = pos;
+    m_highest_read_pos = std::max(m_file_pos, m_highest_read_pos);
 }
