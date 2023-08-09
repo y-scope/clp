@@ -3,12 +3,13 @@
 
 // C++ libraries
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <unordered_set>
 #include <vector>
 #include <filesystem>
-#include <optional>
+
 
 // Boost libraries
 #include <boost/uuid/random_generator.hpp>
@@ -23,8 +24,6 @@
 #include "../../compressor_frontend/Token.hpp"
 #include "../ArchiveMetadata.hpp"
 #include "../MetadataDB.hpp"
-
-
 
 namespace streaming_archive { namespace writer {
     class Archive {
