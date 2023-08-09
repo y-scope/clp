@@ -156,12 +156,12 @@ bool ReaderInterface::read_numeric_value (ValueType& value, bool eof_possible) {
  */
 class ReaderInterfaceWrapper : public log_surgeon::Reader {
 public:
-    ReaderInterfaceWrapper (std::shared_ptr<ReaderInterface> reader_interface);
+    ReaderInterfaceWrapper (ReaderInterface& reader_interface);
 
     auto read (char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode;
 
 private:
-    std::shared_ptr<ReaderInterface> m_reader_interface;
+    ReaderInterface& m_reader_interface;
 };
 
 #endif // READERINTERFACE_HPP
