@@ -33,7 +33,7 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        [[nodiscard]] char const* what() const noexcept override {
+        [[nodiscard]] auto what() const noexcept -> char const* override {
             return "BufferedFileReader operation failed";
         }
     };
@@ -48,10 +48,10 @@ public:
                 std::string message
         )
                 : TraceableException(error_code, filename, line_number),
-                  m_message(message) {}
+                  m_message(std::move(message)) {}
 
         // Methods
-        [[nodiscard]] char const* what() const noexcept override {
+        [[nodiscard]] auto what() const noexcept -> char const* override {
             return "BufferedFileReader operation failed";
         }
 
@@ -66,6 +66,12 @@ public:
 
     ~BufferedFileReader();
 
+    // explicitly disable copy or move
+    BufferedFileReader(BufferedFileReader const&) = delete;
+    BufferedFileReader(BufferedFileReader&&) = delete;
+    auto operator=(BufferedFileReader) -> BufferedFileReader& = delete;
+    auto operator=(BufferedFileReader&&) -> BufferedFileReader& = delete;
+
     // Methods implementing the ReaderInterface
     /**
      * Tries to get the current position of the read head in the file
@@ -74,7 +80,7 @@ public:
      * @return ErrorCode_errno on error
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] ErrorCode try_get_pos(size_t& pos) override;
+    [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override;
     /**
      * Tries to seek from the beginning of the file to the given position
      * @param pos
@@ -82,7 +88,7 @@ public:
      * @return ErrorCode_errno on error
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] ErrorCode try_seek_from_begin(size_t pos) override;
+    [[nodiscard]] auto try_seek_from_begin(size_t pos) -> ErrorCode override;
 
     /**
      * Tries to read up to a given number of bytes from the file
@@ -95,8 +101,8 @@ public:
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] ErrorCode
-    try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) override;
+    [[nodiscard]] auto try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
+            -> ErrorCode override;
 
     /**
      * Tries to read a string from the file until it reaches
@@ -111,11 +117,12 @@ public:
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_errno otherwise
      */
-    [[nodiscard]] ErrorCode
-    try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str) override;
+    [[nodiscard]] auto
+    try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str)
+            -> ErrorCode override;
 
     // Methods
-    [[nodiscard]] bool is_open() const { return -1 != m_fd; }
+    [[nodiscard]] auto is_open() const -> bool { return -1 != m_fd; }
 
     /**
      * Tries to open a file
@@ -124,19 +131,19 @@ public:
      * @return ErrorCode_FileNotFound if the file was not found
      * @return ErrorCode_errno otherwise
      */
-    [[nodiscard]] ErrorCode try_open(std::string const& path);
+    [[nodiscard]] auto try_open(std::string const& path) -> ErrorCode;
     /**
      * Opens a file
      * @param path
      * @throw BufferedFileReader::OperationFailed on failure
      */
-    void open(std::string const& path);
+    auto open(std::string const& path) -> void;
     /**
      * Closes the file if it's open
      */
-    void close();
+    auto close() -> void;
 
-    [[nodiscard]] std::string const& get_path() const { return m_path; }
+    [[nodiscard]] auto get_path() const -> std::string const& { return m_path; }
 
     /**
      * Peeks the buffer without advancing the file
@@ -151,7 +158,7 @@ public:
      * @return ErrorCode_NotInit if the file is not opened
      * @return ErrorCode_EndOfFile if already reaching the eof
      */
-    [[nodiscard]] ErrorCode peek_buffered_data(char const*& data_ptr, size_t& peek_size);
+    [[nodiscard]] auto peek_buffered_data(char const*& data_ptr, size_t& peek_size) -> ErrorCode;
 
     /**
      * Sets a checkpoint at the current file pos.
@@ -171,7 +178,7 @@ public:
      * in the buffer.
      * @return current file pos
      */
-    size_t set_checkpoint();
+    auto set_checkpoint() -> size_t;
 
     /**
      * Disable the checkpoint pos and release buffered data from memory
@@ -185,7 +192,7 @@ public:
      * 'm_buffer_size' using the rounding method. This ensures that the current
      * read pos still resides in the resized buffer
      */
-    void clear_checkpoint();
+    auto clear_checkpoint() -> void;
 
 private:
     // Methods
@@ -194,7 +201,7 @@ private:
      * @param size
      * @return quantized size
      */
-    [[nodiscard]] size_t quantize_to_buffer_size(size_t size) const;
+    [[nodiscard]] auto quantize_to_buffer_size(size_t size) const -> size_t;
 
     /**
      * Reads next refill_size bytes from file descriptor to the internal buffer
@@ -207,29 +214,29 @@ private:
      * @return ErrorCode_NotInit if the file is not opened
      * @return ErrorCode_EndOfFile if already reaching the eof
      */
-    [[nodiscard]] ErrorCode refill_reader_buffer(size_t refill_size);
+    [[nodiscard]] auto refill_reader_buffer(size_t refill_size) -> ErrorCode;
 
     /**
      * Resize the internal reader buffer and copy over data from the original
      * buffer staring from pos to the beginning of the resized the buffer
      * @param pos
      */
-    void resize_buffer_from_pos(size_t pos);
+    auto resize_buffer_from_pos(size_t pos) -> void;
 
     /**
      * return the file_pos's corresponding pos in the internal buffer
      * @param file_pos
      * @return
      */
-    [[nodiscard]] size_t get_buffer_relative_pos(size_t file_pos) const {
+    [[nodiscard]] auto get_buffer_relative_pos(size_t file_pos) const -> size_t {
         return file_pos - m_buffer_begin_pos;
     }
 
-    [[nodiscard]] size_t get_buffer_end_pos() const {
+    [[nodiscard]] auto get_buffer_end_pos() const -> size_t {
         return m_buffer_begin_pos + m_buffer_reader->get_buffer_size();
     }
 
-    void update_file_pos(size_t pos);
+    auto update_file_pos(size_t pos) -> void;
 
     // Constants
     static constexpr size_t cMinBufferSize = (1ULL << 12);

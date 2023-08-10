@@ -17,7 +17,7 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        [[nodiscard]] char const* what() const noexcept override {
+        [[nodiscard]] auto what() const noexcept -> char const* override {
             return "BufferReader operation failed";
         }
     };
@@ -37,40 +37,41 @@ public:
      * @return ErrorCode_EndOfFile if buffer doesn't contain more data
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] ErrorCode
-    try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) override;
+    [[nodiscard]] auto try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
+            -> ErrorCode override;
     /**
      * Tries to seek from the beginning of the buffer to the given position
      * @param pos
      * @return ErrorCode_OutOfBounds if the given position > the buffer's size
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] ErrorCode try_seek_from_begin(size_t pos) override;
+    [[nodiscard]] auto try_seek_from_begin(size_t pos) -> ErrorCode override;
     /**
      * @param pos Returns the position of the read head in the buffer
      * @return ErrorCode_Success
      */
-    [[nodiscard]] ErrorCode try_get_pos(size_t& pos) override;
+    [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override;
 
-    [[nodiscard]] ErrorCode
-    try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str) override;
+    [[nodiscard]] auto
+    try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str)
+            -> ErrorCode override;
 
     // Helper functions
-    [[nodiscard]] size_t get_buffer_size() const { return m_internal_buf_size; }
+    [[nodiscard]] auto get_buffer_size() const -> size_t { return m_internal_buf_size; }
 
-    void peek_buffer(char const*& buf, size_t& peek_size);
+    auto peek_buffer(char const*& buf, size_t& peek_size) -> void;
 
-    ErrorCode try_read_to_delimiter(
+    auto try_read_to_delimiter(
             char delim,
             bool keep_delimiter,
             std::string& str,
             bool& found_delim,
             size_t& num_bytes_read
-    );
+    ) -> ErrorCode;
 
 private:
     // Method
-    [[nodiscard]] size_t get_remaining_data_size() const {
+    [[nodiscard]] auto get_remaining_data_size() const -> size_t {
         return m_internal_buf_size - m_internal_buf_pos;
     }
 
