@@ -60,7 +60,7 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
         size_t read_size4 = 1;
         REQUIRE(ErrorCode_EndOfFile
                 == file_reader.try_read(read_buffer + buffer_offset, read_size4, num_bytes_read));
-        file_reader.close();
+        std::ignore = file_reader.close();
     }
 
     SECTION("Simple Seek without checkpoint") {
@@ -223,21 +223,24 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
     file_writer.write(test_data, test_data_size);
     file_writer.close();
 
-    BufferedFileReader buffered_file_reader;
-    buffered_file_reader.open(test_file_path);
+    BufferedFileReader file_reader;
+    file_reader.open(test_file_path);
     std::string test_string;
 
-    FileReader file_reader;
-    file_reader.open(test_file_path);
+    FileReader ref_file_reader;
+    ref_file_reader.open(test_file_path);
     std::string ref_string;
 
     ErrorCode error_code = ErrorCode_Success;
     char delimiter = (char)('a' + (std::rand() % 26));
     while (ErrorCode_EndOfFile != error_code) {
-        error_code = file_reader.try_read_to_delimiter(delimiter, true, false, ref_string);
+        error_code = ref_file_reader.try_read_to_delimiter(delimiter, true, false, ref_string);
         auto error_code2
-                = buffered_file_reader.try_read_to_delimiter(delimiter, true, false, test_string);
+                = file_reader.try_read_to_delimiter(delimiter, true, false, test_string);
         REQUIRE(error_code2 == error_code);
         REQUIRE(test_string == ref_string);
     }
+
+    ref_file_reader.close();
+    std::ignore = file_reader.close();
 }

@@ -46,7 +46,7 @@ BufferedFileReader::BufferedFileReader(size_t base_buffer_size) {
 }
 
 BufferedFileReader::~BufferedFileReader() {
-    close();
+    std::ignore = close();
 }
 
 auto BufferedFileReader::try_get_pos(size_t& pos) -> ErrorCode {
@@ -224,18 +224,21 @@ void BufferedFileReader::open(string const& path) {
     }
 }
 
-void BufferedFileReader::close() {
+auto BufferedFileReader::close() -> ErrorCode {
+    int close_result{0};
     if (-1 != m_fd) {
-        // NOTE: We don't check errors for fclose since it seems
-        // the only reason it could fail is if it was interrupted by a signal
-        ::close(m_fd);
-        m_fd = -1;
+        close_result = ::close(m_fd);
 
+        m_fd = -1;
         if (m_checkpoint_pos.has_value()) {
             m_buffer.resize(m_base_buffer_size);
             m_checkpoint_pos.reset();
         }
     }
+    if (0 != close_result) {
+        return ErrorCode_errno;
+    }
+    return ErrorCode_Success;
 }
 
 auto BufferedFileReader::set_checkpoint() -> size_t {

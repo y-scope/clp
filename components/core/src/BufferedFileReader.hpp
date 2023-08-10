@@ -140,7 +140,7 @@ public:
     /**
      * Closes the file if it's open
      */
-    auto close() -> void;
+    [[nodiscard]] auto close() -> ErrorCode;
 
     [[nodiscard]] auto get_path() const -> std::string const& { return m_path; }
 
