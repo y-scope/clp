@@ -4,6 +4,7 @@
 // C++ standard libraries
 #include <cassert>
 #include <string>
+#include <utility>
 #include <vector>
 
 // Project headers
@@ -21,11 +22,11 @@ public:
     class OperationFailed : public TraceableException {
     public:
         // Constructors
-        OperationFailed (ErrorCode error_code, const char* const filename, int line_number) :
-                  TraceableException (error_code, filename, line_number) {}
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        const char* what () const noexcept override {
+        [[nodiscard]] auto what() const noexcept -> char const* override {
             return "ParsedIrMessage operation failed";
         }
     };
@@ -40,68 +41,64 @@ public:
     // original log messages
     class IrVariable {
     public:
-        IrVariable(const std::string& dict_var) {
-            m_dict_var = dict_var;
-            m_type = VariableType::DictVar;
-        }
-        IrVariable(encoded_variable_t encoded_var) {
-            m_encoded_var = encoded_var;
-            m_type = VariableType::EncodedVar;
-        }
+        explicit IrVariable(std::string dict_var)
+                : m_dict_var(std::move(dict_var)),
+                  m_type(VariableType::DictVar) {}
+
+        explicit IrVariable(encoded_variable_t encoded_var)
+                : m_encoded_var(encoded_var),
+                  m_type(VariableType::EncodedVar) {}
 
         // Methods
-        VariableType type() const {
-            return m_type;
-        }
+        [[nodiscard]] auto type() const -> VariableType { return m_type; }
 
-        encoded_variable_t get_encoded_var () const {
+        [[nodiscard]] auto get_encoded_var() const -> encoded_variable_t {
             assert(m_type == VariableType::EncodedVar);
             return m_encoded_var;
         }
 
-        const std::string& get_dict_var () const {
+        [[nodiscard]] auto get_dict_var() const -> std::string const& {
             assert(m_type == VariableType::DictVar);
             return m_dict_var;
         }
 
     private:
         std::string m_dict_var;
-        encoded_variable_t m_encoded_var;
+        encoded_variable_t m_encoded_var{0};
         VariableType m_type;
     };
 
-    // Construtor
-    ParsedIrMessage() : m_ts_patt(nullptr) {}
-
     // Methods
     void clear();
-    void clear_except_ts_patt ();
+    void clear_except_ts_patt();
 
     // setter
-    void set_ts (epochtime_t ts);
-    void set_ts_pattern (const TimestampPattern* timestamp_pattern);
+    void set_ts(epochtime_t ts);
+    void set_ts_pattern(TimestampPattern const* timestamp_pattern);
 
     // note, this logtype is already escaped
-    void append_to_logtype (const std::string& value, size_t begin_pos, size_t length);
-    void add_encoded_integer (encoded_variable_t var, size_t original_size_in_bytes);
-    void add_encoded_float (encoded_variable_t var, size_t original_size_in_bytes);
-    void add_dictionary_var (const std::string& dictionary_var);
+    void append_to_logtype(std::string const& value, size_t begin_pos, size_t length);
+    void add_encoded_integer(encoded_variable_t var, size_t original_size_in_bytes);
+    void add_encoded_float(encoded_variable_t var, size_t original_size_in_bytes);
+    void add_dictionary_var(std::string const& dictionary_var);
 
     // getter
-    epochtime_t get_ts () const { return m_ts; }
-    LogTypeDictionaryEntry& get_logtype_entry () { return m_logtype_entry; }
-    const std::vector<IrVariable>& get_vars () const { return m_variables; }
-    size_t get_orig_num_bytes() const { return m_orig_num_bytes; }
+    [[nodiscard]] auto get_ts() const -> epochtime_t { return m_ts; }
+
+    auto get_logtype_entry() -> LogTypeDictionaryEntry& { return m_logtype_entry; }
+
+    [[nodiscard]] auto get_vars() const -> std::vector<IrVariable> const& { return m_variables; }
+
+    [[nodiscard]] auto get_orig_num_bytes() const -> size_t { return m_orig_num_bytes; }
 
 private:
     // Variables
-    const TimestampPattern* m_ts_patt;
-    epochtime_t m_ts;
+    TimestampPattern const* m_ts_patt{nullptr};
+    epochtime_t m_ts{0};
     LogTypeDictionaryEntry m_logtype_entry;
     std::vector<IrVariable> m_variables;
-    size_t m_orig_num_bytes;
-    size_t m_ts_bytes;
+    size_t m_orig_num_bytes{0};
+    size_t m_ts_bytes{0};
 };
 
-
-#endif // ParsedIrMessage_HPP
+#endif  // ParsedIrMessage_HPP

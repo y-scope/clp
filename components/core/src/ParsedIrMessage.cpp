@@ -5,7 +5,6 @@
 // C++ standard libraries
 
 // Project headers
-#include "type_utils.hpp"
 #include "LogTypeDictionaryEntry.hpp"
 
 // spdlog
@@ -13,14 +12,14 @@
 
 using std::string;
 
-void ParsedIrMessage::set_ts (epochtime_t ts) {
+auto ParsedIrMessage::set_ts(epochtime_t ts) -> void {
     m_ts = ts;
     if (ts != 0) {
         m_orig_num_bytes += m_ts_bytes;
     }
 }
 
-void ParsedIrMessage::set_ts_pattern (const TimestampPattern* timestamp_pattern) {
+auto ParsedIrMessage::set_ts_pattern(TimestampPattern const* timestamp_pattern) -> void {
     if (m_ts_patt != nullptr) {
         SPDLOG_ERROR("Can not set different timestamp for an IR file");
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
@@ -30,39 +29,39 @@ void ParsedIrMessage::set_ts_pattern (const TimestampPattern* timestamp_pattern)
     string empty_msg;
     m_ts_patt->insert_formatted_timestamp(0, empty_msg);
     m_ts_bytes = empty_msg.length();
-
 }
 
-void ParsedIrMessage::append_to_logtype (const string& value, size_t begin_pos, size_t length) {
+auto ParsedIrMessage::append_to_logtype(string const& value, size_t begin_pos, size_t length) -> void {
     m_logtype_entry.add_constant(value, begin_pos, length);
     m_orig_num_bytes += length;
 }
 
-void ParsedIrMessage::clear () {
+auto ParsedIrMessage::clear() -> void {
     m_ts_patt = nullptr;
     m_ts_bytes = 0;
     clear_except_ts_patt();
 }
 
-void ParsedIrMessage::clear_except_ts_patt () {
+auto ParsedIrMessage::clear_except_ts_patt() -> void {
     m_variables.clear();
     m_orig_num_bytes = 0;
+    m_ts = 0;
     m_logtype_entry.clear();
 }
 
-void ParsedIrMessage::add_dictionary_var (const string& dictionary_var) {
+auto ParsedIrMessage::add_dictionary_var(string const& dictionary_var) -> void {
     m_variables.emplace_back(dictionary_var);
     m_logtype_entry.add_dictionary_var();
     m_orig_num_bytes += dictionary_var.size();
 }
 
-void ParsedIrMessage::add_encoded_integer (encoded_variable_t var, size_t orginal_size_in_bytes) {
+auto ParsedIrMessage::add_encoded_integer(encoded_variable_t var, size_t orginal_size_in_bytes) -> void {
     m_variables.emplace_back(var);
     m_logtype_entry.add_int_var();
     m_orig_num_bytes += orginal_size_in_bytes;
 }
 
-void ParsedIrMessage::add_encoded_float (encoded_variable_t var, size_t orginal_size_in_bytes) {
+auto ParsedIrMessage::add_encoded_float(encoded_variable_t var, size_t orginal_size_in_bytes) -> void {
     m_variables.emplace_back(var);
     m_logtype_entry.add_float_var();
     m_orig_num_bytes += orginal_size_in_bytes;
