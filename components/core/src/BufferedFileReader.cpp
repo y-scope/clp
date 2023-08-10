@@ -192,7 +192,7 @@ auto BufferedFileReader::try_read_to_delimiter(
 
 auto BufferedFileReader::try_open(string const& path) -> ErrorCode {
     // Cleanup in case caller forgot to call close before calling this function
-    close();
+    std::ignore = close();
 
     m_fd = ::open(path.c_str(), O_RDONLY);
     if (-1 == m_fd) {
