@@ -10,6 +10,7 @@
 #include "../LibarchiveReader.hpp"
 #include "../MessageParser.hpp"
 #include "../ParsedMessage.hpp"
+#include "../ParsedIrMessage.hpp"
 #include "../streaming_archive/writer/Archive.hpp"
 #include "FileToCompress.hpp"
 #include "../compressor_frontend/LogParser.hpp"
@@ -74,6 +75,24 @@ namespace clp {
         bool try_compressing_as_archive (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
                                          size_t target_encoded_file_size, const FileToCompress& file_to_compress,
                                          streaming_archive::writer::Archive& archive_writer, bool use_heuristic);
+
+        /**
+         * Parses and encodes IR from the given reader into the given archive_writer
+         * @param target_data_size_of_dicts
+         * @param archive_user_config
+         * @param target_encoded_file_size
+         * @param path_for_compression
+         * @param group_id
+         * @param archive_writer
+         * @param reader
+         */
+        bool try_compressing_as_ir (size_t target_data_size_of_dicts,
+                                   streaming_archive::writer::Archive::UserConfig& archive_user_config,
+                                   size_t target_encoded_file_size,
+                                   const std::string& path_for_compression,
+                                   group_id_t group_id,
+                                   streaming_archive::writer::Archive& archive_writer,
+                                   ReaderInterface& reader);
 
         // Variables
         boost::uuids::random_generator& m_uuid_generator;

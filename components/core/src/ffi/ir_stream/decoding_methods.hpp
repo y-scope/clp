@@ -1,7 +1,7 @@
 #ifndef FFI_IR_STREAM_DECODING_METHODS_HPP
 #define FFI_IR_STREAM_DECODING_METHODS_HPP
 
-#include <string_view>
+#include <string>
 #include <vector>
 
 #include "../../ReaderInterface.hpp"
@@ -18,6 +18,25 @@ typedef enum {
     IRErrorCode_Incomplete_IR,
 } IRErrorCode;
 
+class DecodingException : public TraceableException {
+public:
+    // Constructors
+    DecodingException(
+            ErrorCode error_code,
+            char const* const filename,
+            int line_number,
+            std::string message
+    )
+            : TraceableException(error_code, filename, line_number),
+              m_message(std::move(message)) {}
+
+    // Methods
+    [[nodiscard]] char const* what() const noexcept override { return m_message.c_str(); }
+
+private:
+    std::string m_message;
+};
+
 /**
  * Decodes the encoding type for the encoded IR stream
  * @param ir_buf
@@ -28,6 +47,66 @@ typedef enum {
  * decode
  */
 IRErrorCode get_encoding_type(ReaderInterface& ir_buf, bool& is_four_bytes_encoding);
+
+/**
+ * Parse logtypes, dictionary variables and encoded variables
+ * from the next encoded IR message. Returns the parsed tokens by
+ * reference
+ * @tparam encoded_variable_t
+ * @param reader
+ * @param logtype
+ * @param encoded_vars
+ * @param dict_vars
+ * @param timestamp
+ * @return IRErrorCode_Success on success
+ * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
+ */
+template <typename encoded_variable_t>
+IRErrorCode generic_parse_tokens(
+        ReaderInterface& reader,
+        std::string& logtype,
+        std::vector<encoded_variable_t>& encoded_vars,
+        std::vector<std::string>& dict_vars,
+        epoch_time_ms_t& timestamp
+);
+
+/**
+ * Decodes the message consists of the tokens and calls the given methods
+ * to handle specific components of the message.
+ * @tparam encoded_variable_t Type of the encoded variable
+ * @tparam ConstantHandler Method to handle constants. Signature:
+ * (const std::string&, size_t, size_t) -> void
+ * @tparam EncodedIntHandler Method to handle encoded integers.
+ * Signature: (encoded_variable_t) -> void
+ * @tparam EncodedFloatHandler Method to handle encoded float.
+ * Signature: (encoded_variable_t) -> void
+ * @tparam DictVarHandler Method to handle dictionary variables.
+ * Signature: (const std::string&) -> void
+ * @param logtype
+ * @param encoded_vars
+ * @param dict_vars
+ * @param constant_handler
+ * @param encoded_int_handler
+ * @param encoded_float_handler
+ * @param dict_var_handler
+ * @throw DecodingException if the message can not be decoded properly
+ */
+template <
+        typename encoded_variable_t,
+        typename ConstantHandler,
+        typename EncodedIntHandler,
+        typename EncodedFloatHandler,
+        typename DictVarHandler>
+void generic_decode_message(
+        std::string const& logtype,
+        std::vector<encoded_variable_t> const& encoded_vars,
+        std::vector<std::string> const& dict_vars,
+        ConstantHandler constant_handler,
+        EncodedIntHandler encoded_int_handler,
+        EncodedFloatHandler encoded_float_handler,
+        DictVarHandler dict_var_handler
+);
 
 /**
  * Decodes the preamble for an IR stream.
@@ -102,5 +181,7 @@ namespace four_byte_encoding {
     );
 }  // namespace four_byte_encoding
 }  // namespace ffi::ir_stream
+
+#include "decoding_methods.tpp"
 
 #endif  // FFI_IR_STREAM_DECODING_METHODS_HPP

@@ -191,6 +191,15 @@ set(SOURCE_FILES_clp
         src/clp/StructuredFileToCompress.hpp
         src/clp/utils.cpp
         src/clp/utils.hpp
+        src/ffi/encoding_methods.cpp
+        src/ffi/encoding_methods.hpp
+        src/ffi/encoding_methods.tpp
+        src/ffi/ir_stream/byteswap.hpp
+        src/ffi/ir_stream/decoding_methods.cpp
+        src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.tpp
+        src/ffi/ir_stream/encoding_methods.cpp
+        src/ffi/ir_stream/encoding_methods.hpp
         src/compressor_frontend/Constants.hpp
         src/compressor_frontend/finite_automata/RegexAST.hpp
         src/compressor_frontend/finite_automata/RegexAST.tpp
@@ -239,6 +248,8 @@ set(SOURCE_FILES_clp
         src/GlobalMySQLMetadataDB.hpp
         src/GlobalSQLiteMetadataDB.cpp
         src/GlobalSQLiteMetadataDB.hpp
+        src/IrMessageParser.cpp
+        src/IrMessageParser.hpp
         src/LibarchiveFileReader.cpp
         src/LibarchiveFileReader.hpp
         src/LibarchiveReader.cpp
@@ -261,6 +272,8 @@ set(SOURCE_FILES_clp
         src/PageAllocatedVector.hpp
         src/ParsedMessage.cpp
         src/ParsedMessage.hpp
+        src/ParsedIrMessage.cpp
+        src/ParsedIrMessage.hpp
         src/Platform.hpp
         src/Profiler.cpp
         src/Profiler.hpp
@@ -725,6 +738,7 @@ set(SOURCE_FILES_unitTest
         src/ffi/ir_stream/byteswap.hpp
         src/ffi/ir_stream/decoding_methods.cpp
         src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.tpp
         src/ffi/ir_stream/encoding_methods.cpp
         src/ffi/ir_stream/encoding_methods.hpp
         src/ffi/ir_stream/protocol_constants.hpp
@@ -756,6 +770,8 @@ set(SOURCE_FILES_unitTest
         src/GlobalSQLiteMetadataDB.hpp
         src/Grep.cpp
         src/Grep.hpp
+        src/IrMessageParser.cpp
+        src/IrMessageParser.hpp
         src/LibarchiveFileReader.cpp
         src/LibarchiveFileReader.hpp
         src/LibarchiveReader.cpp
@@ -776,6 +792,8 @@ set(SOURCE_FILES_unitTest
         src/MySQLPreparedStatement.hpp
         src/PageAllocatedVector.cpp
         src/PageAllocatedVector.hpp
+        src/ParsedIrMessage.cpp
+        src/ParsedIrMessage.hpp
         src/ParsedMessage.cpp
         src/ParsedMessage.hpp
         src/Platform.hpp

@@ -86,6 +86,16 @@ public:
      * @return Size of the data contained in this entry
      */
     size_t get_data_size () const;
+    /**
+     * Sets the logtype from a given string_view
+     * @param value_containing_constant
+     */
+    void set_logtype (std::string_view logtype);
+
+    /**
+     * set_var_positions
+     */
+    void set_var_positions(const std::vector<size_t>& var_positions);
 
     /**
      * Adds a constant to the logtype

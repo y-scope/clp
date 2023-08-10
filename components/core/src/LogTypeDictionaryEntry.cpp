@@ -53,6 +53,14 @@ size_t LogTypeDictionaryEntry::get_data_size () const {
            m_ids_of_segments_containing_entry.size() * sizeof(segment_id_t);
 }
 
+void LogTypeDictionaryEntry::set_logtype (std::string_view logtype) {
+    m_value = logtype;
+}
+
+void LogTypeDictionaryEntry::set_var_positions(const std::vector<size_t>& var_positions) {
+    m_var_positions = var_positions;
+}
+
 void LogTypeDictionaryEntry::add_constant (const string& value_containing_constant, size_t begin_pos, size_t length) {
     m_value.append(value_containing_constant, begin_pos, length);
 }

@@ -18,6 +18,7 @@
 #include "../../ErrorCode.hpp"
 #include "../../GlobalMetadataDB.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
+#include "../../ParsedIrMessage.hpp"
 #include "../../VariableDictionaryWriter.hpp"
 #include "../../compressor_frontend/Token.hpp"
 #include "../ArchiveMetadata.hpp"
@@ -128,6 +129,17 @@ namespace streaming_archive { namespace writer {
          * @throw FileWriter::OperationFailed if any write fails
          */
         void write_msg (epochtime_t timestamp, const std::string& message, size_t num_uncompressed_bytes);
+        /**
+         * Encodes and writes a message to the current encoded file
+         * @param timestamp
+         * @param logtype_entry
+         * @param variables
+         * @param num_uncompressed_bytes
+         * @throw FileWriter::OperationFailed if any write fails
+         */
+        void write_ir_message (epochtime_t timestamp, LogTypeDictionaryEntry& logtype_entry,
+                               const std::vector<ParsedIrMessage::IrVariable>& variables,
+                               size_t num_uncompressed_bytes);
         /**
          * Encodes and writes a message to the given file using schema file
          * @param file
