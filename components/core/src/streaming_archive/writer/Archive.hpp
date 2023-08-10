@@ -16,12 +16,12 @@
 
 // Project headers
 #include "../ArchiveMetadata.hpp"
+#include "../MetadataDB.hpp"
 #include "../../ArrayBackedPosIntSet.hpp"
 #include "../../compressor_frontend/Token.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../GlobalMetadataDB.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
-#include "../MetadataDB.hpp"
 #include "../../VariableDictionaryWriter.hpp"
 
 namespace streaming_archive { namespace writer {
