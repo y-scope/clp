@@ -9,7 +9,6 @@
 // C++ standard libraries
 #include <cerrno>
 
-using std::make_unique;
 using std::string;
 
 namespace {
@@ -43,8 +42,7 @@ BufferedFileReader::BufferedFileReader(size_t base_buffer_size) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
     m_base_buffer_size = base_buffer_size;
-    m_buffer_size = m_base_buffer_size;
-    m_buffer = make_unique<char[]>(m_buffer_size);
+    m_buffer.resize(m_base_buffer_size);
 }
 
 BufferedFileReader::~BufferedFileReader() {
@@ -85,7 +83,7 @@ auto BufferedFileReader::try_seek_from_begin(size_t pos) -> ErrorCode {
             if (-1 == offset) {
                 return ErrorCode_errno;
             }
-            m_buffer_reader.emplace(m_buffer.get(), 0);
+            m_buffer_reader.emplace(m_buffer.data(), 0);
             m_buffer_begin_pos = pos;
         } else {
             auto const num_bytes_to_refill = pos - get_buffer_end_pos();
@@ -206,7 +204,7 @@ auto BufferedFileReader::try_open(string const& path) -> ErrorCode {
     m_path = path;
     m_file_pos = 0;
     m_buffer_begin_pos = 0;
-    m_buffer_reader.emplace(m_buffer.get(), 0);
+    m_buffer_reader.emplace(m_buffer.data(), 0);
     m_highest_read_pos = 0;
     return ErrorCode_Success;
 }
@@ -234,8 +232,7 @@ void BufferedFileReader::close() {
         m_fd = -1;
 
         if (m_checkpoint_pos.has_value()) {
-            m_buffer_size = m_base_buffer_size;
-            m_buffer = make_unique<char[]>(m_buffer_size);
+            m_buffer.resize(m_base_buffer_size);
             m_checkpoint_pos.reset();
         }
     }
@@ -292,7 +289,7 @@ auto BufferedFileReader::refill_reader_buffer(size_t num_bytes_to_refill) -> Err
 
     auto const buffer_end_pos = get_buffer_end_pos();
     auto const data_size = m_buffer_reader->get_buffer_size();
-    auto const available_buffer_space = m_buffer_size - data_size;
+    auto const available_buffer_space = m_buffer.size() - data_size;
     size_t buf_internal_pos{0};
 
     size_t bytes_to_read = m_base_buffer_size - (buffer_end_pos % m_base_buffer_size);
@@ -303,10 +300,7 @@ auto BufferedFileReader::refill_reader_buffer(size_t num_bytes_to_refill) -> Err
         // Grow the buffer if bytes_to_read is more
         // than available space in the buffer
         if (bytes_to_read > available_buffer_space) {
-            m_buffer_size = data_size + bytes_to_read;
-            auto new_buffer = make_unique<char[]>(m_buffer_size);
-            memcpy(new_buffer.get(), m_buffer.get(), data_size);
-            m_buffer = std::move(new_buffer);
+            m_buffer.resize(data_size + bytes_to_read);
         }
         buf_internal_pos = data_size;
     } else {
@@ -321,7 +315,7 @@ auto BufferedFileReader::refill_reader_buffer(size_t num_bytes_to_refill) -> Err
 
     auto error_code = try_read_into_buffer(
             m_fd,
-            m_buffer.get() + buf_internal_pos,
+            &m_buffer[buf_internal_pos],
             bytes_to_read,
             num_bytes_refilled
     );
@@ -329,7 +323,7 @@ auto BufferedFileReader::refill_reader_buffer(size_t num_bytes_to_refill) -> Err
         return error_code;
     }
     m_buffer_reader
-            .emplace(m_buffer.get(), num_bytes_refilled + buf_internal_pos, buf_internal_pos);
+            .emplace(m_buffer.data(), num_bytes_refilled + buf_internal_pos, buf_internal_pos);
     return ErrorCode_Success;
 }
 
@@ -338,15 +332,15 @@ auto BufferedFileReader::resize_buffer_from_pos(size_t pos) -> void {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
 
-    auto const copy_size = m_buffer_reader->get_buffer_size() - pos;
+    auto const new_data_size = m_buffer_reader->get_buffer_size() - pos;
     // Use a quantized size for the underlying buffer size
-    m_buffer_size = quantize_to_buffer_size(copy_size);
-    auto new_buffer = make_unique<char[]>(m_buffer_size);
-    memcpy(new_buffer.get(), &m_buffer[pos], copy_size);
-    m_buffer = std::move(new_buffer);
+    auto const buffer_size = quantize_to_buffer_size(new_data_size);
+
+    m_buffer.erase(m_buffer.begin(), m_buffer.begin() + static_cast<long>(pos));
+    m_buffer.resize(buffer_size);
     m_buffer_begin_pos += pos;
 
-    m_buffer_reader.emplace(m_buffer.get(), copy_size);
+    m_buffer_reader.emplace(m_buffer.data(), new_data_size);
 }
 
 auto BufferedFileReader::update_file_pos(size_t pos) -> void {

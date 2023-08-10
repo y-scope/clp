@@ -1,13 +1,12 @@
 #ifndef BUFFEREDFILEREADER_HPP
 #define BUFFEREDFILEREADER_HPP
 
-// C standard libraries
-
 // C++ libraries
 #include <cstdio>
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 // Project headers
 #include "BufferReader.hpp"
@@ -217,8 +216,8 @@ private:
     [[nodiscard]] auto refill_reader_buffer(size_t refill_size) -> ErrorCode;
 
     /**
-     * Resize the internal reader buffer and copy over data from the original
-     * buffer staring from pos to the beginning of the resized the buffer
+     * Discard the data before pos from internal reader buffer and resize the
+     * buffer
      * @param pos
      */
     auto resize_buffer_from_pos(size_t pos) -> void;
@@ -248,13 +247,11 @@ private:
     size_t m_file_pos{0};
 
     // Buffer specific data
-    std::unique_ptr<char[]> m_buffer;
+    std::vector<char> m_buffer;
+    size_t m_base_buffer_size;
     std::optional<BufferReader> m_buffer_reader;
     size_t m_buffer_begin_pos{0};
 
-    // Values for buffer related calculation
-    size_t m_base_buffer_size;
-    size_t m_buffer_size;
     // Variables for checkpoint support
     std::optional<size_t> m_checkpoint_pos;
     size_t m_highest_read_pos{0};
