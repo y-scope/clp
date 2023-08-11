@@ -15,14 +15,14 @@
 #include <boost/uuid/uuid.hpp>
 
 // Project headers
-#include "../ArchiveMetadata.hpp"
-#include "../MetadataDB.hpp"
 #include "../../ArrayBackedPosIntSet.hpp"
 #include "../../compressor_frontend/Token.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../GlobalMetadataDB.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
+#include "../ArchiveMetadata.hpp"
+#include "../MetadataDB.hpp"
 
 namespace streaming_archive { namespace writer {
     class Archive {
