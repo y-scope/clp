@@ -62,8 +62,15 @@ public:
      * @param value
      */
     static void convert_encoded_float_to_string (encoded_variable_t encoded_var, std::string& value);
-
-    static encoded_variable_t convert_four_bytes_float_to_clp_encoded_float (encoded_variable_t var);
+    /**
+     * Converts the four bytes encoded float to eight byte encoded float
+     * @param four_bytes_float
+     * @param eight_bytes_float
+     */
+    static void convert_four_bytes_float_to_eight_byte(
+            encoded_variable_t four_bytes_float,
+            encoded_variable_t& eight_bytes_float
+    );
     /**
      * Parses all variables from a message (while constructing the logtype) and encodes them (adding them to the variable dictionary if necessary)
      * @param message

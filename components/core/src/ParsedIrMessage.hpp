@@ -69,18 +69,18 @@ public:
     };
 
     // Methods
-    void clear();
-    void clear_except_ts_patt();
+    auto clear() -> void;
+    auto clear_except_ts_patt() -> void;
 
     // setter
-    void set_ts(epochtime_t ts);
-    void set_ts_pattern(TimestampPattern const* timestamp_pattern);
+    auto set_ts(epochtime_t ts) -> void;
+    auto set_ts_pattern(TimestampPattern const* timestamp_pattern) -> void;
 
     // note, this logtype is already escaped
-    void append_to_logtype(std::string const& value, size_t begin_pos, size_t length);
-    void add_encoded_integer(encoded_variable_t var, size_t original_size_in_bytes);
-    void add_encoded_float(encoded_variable_t var, size_t original_size_in_bytes);
-    void add_dictionary_var(std::string const& dictionary_var);
+    auto append_to_logtype(std::string const& value, size_t begin_pos, size_t length) -> void;
+    auto add_encoded_integer(encoded_variable_t var, size_t original_size_in_bytes) -> void;
+    auto add_encoded_float(encoded_variable_t var, size_t original_size_in_bytes) -> void;
+    auto add_dictionary_var(std::string const& dictionary_var) -> void;
 
     // getter
     [[nodiscard]] auto get_ts() const -> epochtime_t { return m_ts; }

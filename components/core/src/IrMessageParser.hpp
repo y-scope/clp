@@ -25,26 +25,25 @@ public:
                   TraceableException (error_code, filename, line_number) {}
 
         // Methods
-        const char* what () const noexcept override {
+        [[nodiscard]] auto what () const noexcept -> const char* override {
             return "IrMessageParser operation failed";
         }
     };
     // Constructor
-    IrMessageParser (ReaderInterface& reader);
+    explicit IrMessageParser (ReaderInterface& reader);
 
     // Methods
+    auto get_ts_pattern () -> TimestampPattern* { return &m_ts_pattern; }
+    [[nodiscard]] auto get_parsed_msg () const -> const ParsedIrMessage& { return m_msg; }
+    auto get_msg_logtype_entry() -> LogTypeDictionaryEntry& { return m_msg.get_logtype_entry(); }
+    [[nodiscard]] auto parse_next_encoded_message () -> bool;
     static bool is_ir_encoded (size_t sequence_length, const char* data);
-    TimestampPattern* get_ts_pattern () { return &m_ts_pattern; }
-    const ParsedIrMessage& get_parsed_msg () const { return m_msg; }
-    LogTypeDictionaryEntry& get_msg_logtype_entry() { return m_msg.get_logtype_entry(); }
-    bool parse_next_encoded_message ();
 
 private:
 
-    bool parse_next_four_bytes_message();
-    bool parse_next_eight_bytes_message();
-    bool decode_json_preamble (std::string& json_metadata);
-    bool is_ir_encoded (ReaderInterface& reader, bool& is_four_bytes_encoded);
+    [[nodiscard]] auto parse_next_four_bytes_message() -> bool;
+    [[nodiscard]] auto parse_next_eight_bytes_message() -> bool;
+    [[nodiscard]] auto decode_json_preamble (std::string& json_metadata) -> bool;
 
     // member variables
     bool m_is_four_bytes_encoded;

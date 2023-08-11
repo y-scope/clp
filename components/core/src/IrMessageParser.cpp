@@ -1,9 +1,5 @@
 #include "IrMessageParser.hpp"
 
-// C standard libraries
-
-// C++ standard libraries
-
 // Project headers
 #include "BufferReader.hpp"
 #include "EncodedVariableInterpreter.hpp"
@@ -25,6 +21,24 @@ using ffi::VariablePlaceholder;
 using std::string;
 using std::vector;
 
+namespace {
+/**
+ * Decodes Ir header from the reader and return its encoding type by reference
+ * @param reader
+ * @param is_four_bytes_encoded Returns the encoding type
+ * or Ir header that can't be properly decoded
+ */
+[[nodiscard]] auto decode_ir_magic_number(ReaderInterface& reader, bool& is_four_bytes_encoded) -> bool {
+    // Note. On failure, this method doesn't recover file pos.
+    if (ffi::ir_stream::IRErrorCode_Success
+        != ffi::ir_stream::get_encoding_type(reader, is_four_bytes_encoded))
+    {
+        return false;
+    }
+    return true;
+}
+}  // namespace
+
 /**
  * Constructs the class by setting the internal reader, parsing the metadata
  * and initializing variable based on the metadata
@@ -33,8 +47,7 @@ using std::vector;
  * or IR data that can't be properly decoded
  */
 IrMessageParser::IrMessageParser (ReaderInterface& reader) : m_reader(reader) {
-
-    if (false == is_ir_encoded(m_reader, m_is_four_bytes_encoded)) {
+    if (false == decode_ir_magic_number(m_reader, m_is_four_bytes_encoded)) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
 
@@ -68,17 +81,17 @@ IrMessageParser::IrMessageParser (ReaderInterface& reader) : m_reader(reader) {
     m_msg.set_ts_pattern(&m_ts_pattern);
 }
 
-bool IrMessageParser::parse_next_encoded_message () {
+auto IrMessageParser::parse_next_encoded_message () -> bool {
     if (m_is_four_bytes_encoded) {
         return parse_next_four_bytes_message();
     }
     return parse_next_eight_bytes_message();
 }
 
-bool IrMessageParser::parse_next_eight_bytes_message () {
+auto IrMessageParser::parse_next_eight_bytes_message () -> bool {
     m_msg.clear();
 
-    epochtime_t ts;
+    epochtime_t ts{0};
     vector<eight_byte_encoded_variable_t> encoded_vars;
     vector<string> dict_vars;
     string logtype;
@@ -126,10 +139,10 @@ bool IrMessageParser::parse_next_eight_bytes_message () {
     return true;
 }
 
-bool IrMessageParser::parse_next_four_bytes_message () {
+auto IrMessageParser::parse_next_four_bytes_message () -> bool {
     m_msg.clear();
 
-    epochtime_t ts;
+    epochtime_t ts{0};
     vector<four_byte_encoded_variable_t> encoded_vars;
     vector<string> dict_vars;
     string logtype;
@@ -156,13 +169,14 @@ bool IrMessageParser::parse_next_four_bytes_message () {
     };
 
     auto encoded_float_handler = [this] (four_byte_encoded_variable_t encoded_float) {
-        auto decoded_float = ffi::decode_float_var(encoded_float);
-        auto converted_float = EncodedVariableInterpreter::convert_four_bytes_float_to_clp_encoded_float(encoded_float);
-        m_msg.add_encoded_float(converted_float, decoded_float.size());
+        const auto original_size_in_bytes = ffi::decode_float_var(encoded_float).size();
+        eight_byte_encoded_variable_t converted_float {0};
+        EncodedVariableInterpreter::convert_four_bytes_float_to_eight_byte(encoded_float, converted_float);
+        m_msg.add_encoded_float(converted_float, original_size_in_bytes);
     };
 
     auto dict_var_handler = [this] (const string& dict_var) {
-        encoded_variable_t converted_var;
+        encoded_variable_t converted_var{0};
         if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(dict_var, converted_var)) {
             m_msg.add_encoded_integer(converted_var, dict_var.size());
         } else if (EncodedVariableInterpreter::convert_string_to_representable_float_var(dict_var, converted_var)) {
@@ -187,31 +201,9 @@ bool IrMessageParser::parse_next_four_bytes_message () {
     return true;
 }
 
-bool IrMessageParser::is_ir_encoded (ReaderInterface& reader, bool& is_four_bytes_encoded) {
-    // Note. currently this method doesn't recover file pos.
-    if (ffi::ir_stream::IRErrorCode_Success !=
-        ffi::ir_stream::get_encoding_type(reader, is_four_bytes_encoded)) {
-        return false;
-    }
-    return true;
-}
-
-bool IrMessageParser::is_ir_encoded (size_t sequence_length, const char* data) {
-    if (sequence_length < MagicNumberLength) {
-        return false;
-    }
-    bool is_four_bytes_encoded;
-    BufferReader encoding_data (data, MagicNumberLength);
-    if (ffi::ir_stream::IRErrorCode_Success !=
-        ffi::ir_stream::get_encoding_type(encoding_data, is_four_bytes_encoded)) {
-        return false;
-    }
-    return true;
-}
-
-bool IrMessageParser::decode_json_preamble (std::string& json_metadata) {
+auto IrMessageParser::decode_json_preamble (std::string& json_metadata) -> bool {
     // Decode and parse metadata
-    ffi::ir_stream::encoded_tag_t metadata_type;
+    ffi::ir_stream::encoded_tag_t metadata_type{0};
     std::vector<int8_t> metadata_vec;
 
     if (ffi::ir_stream::IRErrorCode_Success !=
@@ -225,8 +217,21 @@ bool IrMessageParser::decode_json_preamble (std::string& json_metadata) {
         return false;
     }
 
-    json_metadata.assign(reinterpret_cast<const char*>(metadata_vec.data()),
+    json_metadata.assign(size_checked_pointer_cast<const char>(metadata_vec.data()),
                          metadata_vec.size());
 
+    return true;
+}
+
+auto IrMessageParser::is_ir_encoded (size_t sequence_length, const char* data) -> bool {
+    if (sequence_length < MagicNumberLength) {
+        return false;
+    }
+    bool is_four_bytes_encoded{false};
+    BufferReader encoding_data (data, MagicNumberLength);
+    if (ffi::ir_stream::IRErrorCode_Success !=
+        ffi::ir_stream::get_encoding_type(encoding_data, is_four_bytes_encoded)) {
+        return false;
+    }
     return true;
 }
