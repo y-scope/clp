@@ -1,6 +1,5 @@
 #include "BufferReader.hpp"
 
-// C++ standard libraries
 #include <algorithm>
 #include <cstring>
 
@@ -51,11 +50,11 @@ auto BufferReader::try_read_to_delimiter(
         bool append,
         std::string& str
 ) -> ErrorCode {
-    bool found_delim{false};
-    size_t num_bytes_read{0};
     if (false == append) {
         str.clear();
     }
+    bool found_delim{false};
+    size_t num_bytes_read{0};
     return try_read_to_delimiter(delim, keep_delimiter, str, found_delim, num_bytes_read);
 }
 
@@ -76,10 +75,10 @@ auto BufferReader::try_read_to_delimiter(
     if (0 == remaining_data_size) {
         return ErrorCode_EndOfFile;
     }
+
     // Find the delimiter
-    char const* buffer_head = m_internal_buf + m_internal_buf_pos;
-    char const* delim_ptr
-            = static_cast<char const*>(memchr(buffer_head, delim, remaining_data_size));
+    auto const* buffer_head = m_internal_buf + m_internal_buf_pos;
+    auto* delim_ptr = static_cast<char const*>(memchr(buffer_head, delim, remaining_data_size));
 
     size_t delim_pos{0};
     if (delim_ptr != nullptr) {
@@ -93,7 +92,6 @@ auto BufferReader::try_read_to_delimiter(
         delim_pos = m_internal_buf_size;
         num_bytes_read = remaining_data_size;
     }
-    // append to strings
     str.append(buffer_head, num_bytes_read);
     m_internal_buf_pos = delim_pos;
     return ErrorCode_Success;
