@@ -78,24 +78,23 @@ auto BufferReader::try_read_to_delimiter(
 
     // Find the delimiter
     auto const* buffer_head = m_internal_buf + m_internal_buf_pos;
-    auto* delim_ptr = static_cast<char const*>(memchr(buffer_head, delim, remaining_data_size));
+    auto const* delim_ptr
+            = static_cast<char const*>(memchr(buffer_head, delim, remaining_data_size));
 
-    size_t delim_pos{0};
     size_t append_length{0};
     if (delim_ptr != nullptr) {
-        delim_pos = (delim_ptr - m_internal_buf) + 1;
-        num_bytes_read = delim_pos - m_internal_buf_pos;
+        auto const delim_pos{delim_ptr - m_internal_buf};
+        num_bytes_read = (delim_pos - m_internal_buf_pos) + 1;
         append_length = num_bytes_read;
-        if (false == keep_delimiter && delim == m_internal_buf[delim_pos - 1]) {
+        if (false == keep_delimiter) {
             --append_length;
         }
         found_delim = true;
     } else {
-        delim_pos = m_internal_buf_size;
         num_bytes_read = remaining_data_size;
         append_length = num_bytes_read;
     }
     str.append(buffer_head, append_length);
-    m_internal_buf_pos = delim_pos;
+    m_internal_buf_pos += num_bytes_read;
     return ErrorCode_Success;
 }
