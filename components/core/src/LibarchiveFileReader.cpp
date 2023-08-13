@@ -167,8 +167,7 @@ ErrorCode LibarchiveFileReader::try_read_to_delimiter (char delim, bool keep_del
     return ErrorCode_Success;
 }
 
-ErrorCode LibarchiveFileReader::try_peek_data_block(const char*&buf,
-                                                 size_t&buf_size) {
+ErrorCode LibarchiveFileReader::try_peek_buffered_data(char const*& buf, size_t& buf_size) {
     if (nullptr == m_archive) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
@@ -190,16 +189,16 @@ ErrorCode LibarchiveFileReader::try_peek_data_block(const char*&buf,
         // Position in the file is within the data block, so we can directly
         // return a const pointer to the current data block
         buf_size = m_data_block_length - m_pos_in_data_block;
-        buf = static_cast<const char*>(m_data_block);
+        buf = static_cast<char const*>(m_data_block);
         return ErrorCode_Success;
     }
 
     auto num_sparse_bytes = m_data_block_pos_in_file - m_pos_in_file;
     buf_size = num_sparse_bytes + m_data_block_length;
     m_data_for_peek.resize(buf_size, '\0');
-    buf = static_cast<const char*>(m_data_for_peek.data());
+    buf = static_cast<char const*>(m_data_for_peek.data());
 
-    size_t remaining_bytes_to_peek = buf_size - num_sparse_bytes;
+    size_t const remaining_bytes_to_peek = buf_size - num_sparse_bytes;
     memcpy(&m_data_for_peek[num_sparse_bytes], m_data_block, remaining_bytes_to_peek);
 
     return ErrorCode_Success;

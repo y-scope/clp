@@ -7,7 +7,7 @@
 #include "Defs.h"
 #include "spdlog_with_specializations.hpp"
 
-ErrorCode LibarchiveReader::try_open (ReaderInterface&reader, const std::string& path_if_compressed_file) {
+ErrorCode LibarchiveReader::try_open (ReaderInterface& reader, const std::string& path_if_compressed_file) {
     // Create and initialize internal libarchive
     m_archive = archive_read_new();
     if (nullptr == m_archive) {

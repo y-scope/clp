@@ -42,7 +42,7 @@ public:
 
     // Methods
     /**
-     * Tries to open the archive or compressed file contained in the reader
+     * Tries to open the archive or compressed file from the given reader
      * @param reader
      * @param path_if_compressed_file Path to use if the data is a single compressed file
      * @return ErrorCode_Success on success
@@ -148,7 +148,7 @@ private:
     struct archive_entry* m_archive_entry;
 
     std::vector<char> m_buffer;
-    ReaderInterface*m_reader;
+    ReaderInterface* m_reader;
 
     std::string m_filename_if_compressed;
 
