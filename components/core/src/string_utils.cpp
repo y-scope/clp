@@ -22,8 +22,7 @@ static inline bool advance_tame_to_next_match(
         char const*& tame_current,
         char const*& tame_bookmark,
         char const* tame_end,
-        char const*& wild_current,
-        char const*& wild_bookmark
+        char const*& wild_current
 );
 
 size_t find_first_of(
@@ -129,8 +128,7 @@ static inline bool advance_tame_to_next_match(
         char const*& tame_current,
         char const*& tame_bookmark,
         char const* tame_end,
-        char const*& wild_current,
-        char const*& wild_bookmark
+        char const*& wild_current
 ) {
     auto w = *wild_current;
     if ('?' != w) {
@@ -226,13 +224,7 @@ bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
             // Set wild and tame bookmarks
             wild_bookmark = wild_current;
             if (false
-                == advance_tame_to_next_match(
-                        tame_current,
-                        tame_bookmark,
-                        tame_end,
-                        wild_current,
-                        wild_bookmark
-                ))
+                == advance_tame_to_next_match(tame_current, tame_bookmark, tame_end, wild_current))
             {
                 return false;
             }
@@ -261,8 +253,7 @@ bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
                             tame_current,
                             tame_bookmark,
                             tame_end,
-                            wild_current,
-                            wild_bookmark
+                            wild_current
                     ))
                 {
                     return false;
@@ -290,8 +281,7 @@ bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
                                 tame_current,
                                 tame_bookmark,
                                 tame_end,
-                                wild_current,
-                                wild_bookmark
+                                wild_current
                         ))
                     {
                         return false;
@@ -300,22 +290,4 @@ bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
             }
         }
     }
-}
-
-bool convert_string_to_double(std::string const& raw, double& converted) {
-    if (raw.empty()) {
-        // Can't convert an empty string
-        return false;
-    }
-
-    char const* c_str = raw.c_str();
-    char* end_ptr;
-    // Reset errno so we can detect a new error
-    errno = 0;
-    double raw_as_double = strtod(c_str, &end_ptr);
-    if (ERANGE == errno || (0.0 == raw_as_double && ((end_ptr - c_str) < raw.length()))) {
-        return false;
-    }
-    converted = raw_as_double;
-    return true;
 }
