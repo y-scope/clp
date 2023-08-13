@@ -19,97 +19,97 @@ template <typename encoded_variable_t>
 static bool is_variable_tag(encoded_tag_t tag, bool& is_encoded_var);
 
 /**
- * Decodes an integer from reader
+ * Decodes an integer from the given reader
  * @tparam integer_t Type of the integer to decode
  * @param reader
  * @param value Returns the decoded integer
- * @return true on success, false if the reader doesn't contain enough data
- * to decode
+ * @return true on success, false if the reader doesn't contain enough data to
+ * decode
  */
 template <typename integer_t>
 static bool decode_int(ReaderInterface& reader, integer_t& value);
 
 /**
- * Decodes the next logtype string from reader
+ * Decodes the next logtype string from the given reader
  * @param reader
  * @param encoded_tag
  * @param logtype Returns the logtype string
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
- * to decode
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to
+ * decode
  */
 static IRErrorCode
 parse_logtype(ReaderInterface& reader, encoded_tag_t encoded_tag, string& logtype);
 
 /**
- * Decodes the next dictionary-type variable string from reader
+ * Decodes the next dictionary-type variable string from the given reader
  * @param reader
  * @param encoded_tag
  * @param dict_var Returns the dictionary variable
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if input buffer doesn't contain enough
- * data to decode
+ * @return IRErrorCode_Incomplete_IR if input buffer doesn't contain enough data
+ * to decode
  */
 static IRErrorCode
 parse_dictionary_var(ReaderInterface& reader, encoded_tag_t encoded_tag, string& dict_var);
 
 /**
- * Parses the next timestamp from reader
+ * Parses the next timestamp from the given reader
  * @tparam encoded_variable_t Type of the encoded variable
  * @param reader
  * @param encoded_tag
  * @param ts Returns the timestamp delta if
- * encoded_variable_t == four_byte_encoded_variable_t or the actual
- * timestamp if encoded_variable_t == eight_byte_encoded_variable_t
+ * encoded_variable_t == four_byte_encoded_variable_t or the actual timestamp if
+ * encoded_variable_t == eight_byte_encoded_variable_t
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
- * to decode
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to
+ * decode
  */
 template <typename encoded_variable_t>
 IRErrorCode
 parse_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_ms_t& ts);
 
 /**
- * Decodes the next encoded message from reader
+ * Decodes the next encoded message from the given reader
  * @tparam encoded_variable_t Type of the encoded variable
  * @param reader
  * @param message Returns the decoded message
  * @param timestamp Returns the timestamp delta if
- * encoded_variable_t == four_byte_encoded_variable_t or the actual
- * timestamp if encoded_variable_t == eight_byte_encoded_variable_t
+ * encoded_variable_t == four_byte_encoded_variable_t or the actual timestamp if
+ * encoded_variable_t == eight_byte_encoded_variable_t
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Decode_Error if the encoded message cannot be
- * properly decoded
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
- * to decode
+ * @return IRErrorCode_Decode_Error if the encoded message cannot be properly
+ * decoded
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to
+ * decode
  */
 template <typename encoded_variable_t>
 static IRErrorCode
 generic_decode_next_message(ReaderInterface& reader, string& message, epoch_time_ms_t& timestamp);
 
 /**
- * Reads metadata information from the reader
+ * Reads metadata information from the given reader
  * @param reader
  * @param metadata_type Returns the type of the metadata found in the IR
  * @param metadata_pos Returns the starting position of the metadata in reader
  * @param metadata_size Returns the size of the metadata written in the IR
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
- * to decode
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to
+ * decode
  */
 static IRErrorCode
 read_metadata_info(ReaderInterface& reader, encoded_tag_t& metadata_type, uint16_t& metadata_size);
 
 /**
- * Decodes the message from the given logtype, encoded variables, and
- * dictionary variables. This function properly handles escaped variable
- * placeholders in the logtype, as opposed to ffi::decode_message that
- * doesn't handle escaped placeholders for simplicity
+ * Decodes the message from the given logtype, encoded variables, and dictionary
+ * variables. This function properly handles escaped variable placeholders in
+ * the logtype, as opposed to ffi::decode_message that doesn't handle escaped
+ * placeholders for simplicity
  * @tparam encoded_variable_t Type of the encoded variable
  * @param logtype
  * @param encoded_vars
@@ -126,7 +126,11 @@ static string decode_message(
 
 template <typename encoded_variable_t>
 static bool is_variable_tag(encoded_tag_t tag, bool& is_encoded_var) {
-    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+    static_assert(
+            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+             || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+    );
+
     if (tag == cProtocol::Payload::VarStrLenUByte || tag == cProtocol::Payload::VarStrLenUShort
         || tag == cProtocol::Payload::VarStrLenInt)
     {
@@ -237,7 +241,10 @@ parse_dictionary_var(ReaderInterface& reader, encoded_tag_t encoded_tag, string&
 template <typename encoded_variable_t>
 IRErrorCode
 parse_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_ms_t& ts) {
-    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+    static_assert(
+            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+             || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+    );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
         if (cProtocol::Payload::TimestampVal != encoded_tag) {
@@ -478,11 +485,7 @@ static string decode_message(
     }
     // Add remainder
     if (next_static_text_begin_pos < logtype.length()) {
-        message.append(
-                logtype,
-                next_static_text_begin_pos,
-                logtype.length() - next_static_text_begin_pos
-        );
+        message.append(logtype, next_static_text_begin_pos);
     }
 
     return message;
@@ -533,7 +536,7 @@ IRErrorCode decode_preamble(
         encoded_tag_t& metadata_type,
         std::vector<int8_t>& metadata
 ) {
-    uint16_t metadata_size;
+    uint16_t metadata_size{0};
     if (auto error_code = read_metadata_info(reader, metadata_type, metadata_size);
         error_code != IRErrorCode_Success)
     {

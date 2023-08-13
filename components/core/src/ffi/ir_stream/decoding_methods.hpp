@@ -20,28 +20,28 @@ typedef enum {
 
 /**
  * Decodes the encoding type for the encoded IR stream
- * @param ir_buf
+ * @param reader
  * @param is_four_bytes_encoding Returns the encoding type
  * @return ErrorCode_Success on success
- * @return ErrorCode_Corrupted_IR if ir_buf contains invalid IR
- * @return ErrorCode_Incomplete_IR if ir_buf doesn't contain enough data to
+ * @return ErrorCode_Corrupted_IR if reader contains invalid IR
+ * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to
  * decode
  */
-IRErrorCode get_encoding_type(ReaderInterface& ir_buf, bool& is_four_bytes_encoding);
+IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding);
 
 /**
  * Decodes the preamble for an IR stream.
- * @param ir_buf
+ * @param reader
  * @param metadata_type Returns the type of the metadata found in the IR
- * @param metadata_pos Returns the starting position of the metadata in ir_buf
+ * @param metadata_pos Returns the starting position of the metadata in reader
  * @param metadata_size Returns the size of the metadata written in the IR
  * @return IRErrorCode_Success on success
- * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
- * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough
- * data to decode
+ * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to
+ * decode
  */
 IRErrorCode decode_preamble(
-        ReaderInterface& ir_buf,
+        ReaderInterface& reader,
         encoded_tag_t& metadata_type,
         size_t& metadata_pos,
         uint16_t& metadata_size
@@ -49,16 +49,16 @@ IRErrorCode decode_preamble(
 
 /**
  * Decodes the preamble for an IR stream.
- * @param ir_buf
+ * @param reader
  * @param metadata_type Returns the type of the metadata found in the IR
- * @param metadata Returns the metadata as a vector by reference
+ * @param metadata Returns the metadata in the given vector
  * @return IRErrorCode_Success on success
- * @return IRErrorCode_Corrupted_IR if ir_buf contains invalid IR
- * @return IRErrorCode_Incomplete_IR if ir_buf doesn't contain enough
+ * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough
  * data to decode
  */
 IRErrorCode decode_preamble(
-        ReaderInterface& ir_buf,
+        ReaderInterface& reader,
         encoded_tag_t& metadata_type,
         std::vector<int8_t>& metadata
 );
@@ -66,37 +66,37 @@ IRErrorCode decode_preamble(
 namespace eight_byte_encoding {
     /**
      * Decodes the next message for the eight-byte encoding IR stream.
-     * @param ir_buf
+     * @param reader
      * @param message Returns the decoded message
      * @param timestamp Returns the decoded timestamp
      * @return ErrorCode_Success on success
-     * @return ErrorCode_Corrupted_IR if ir_buf contains invalid IR
-     * @return ErrorCode_Decode_Error if the encoded message cannot be
-     * properly decoded
-     * @return ErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
-     * to decode
+     * @return ErrorCode_Corrupted_IR if reader contains invalid IR
+     * @return ErrorCode_Decode_Error if the encoded message cannot be properly
+     * decoded
+     * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to
+     * decode
      * @return ErrorCode_End_of_IR if the IR ends
      */
     IRErrorCode
-    decode_next_message(ReaderInterface& ir_buf, std::string& message, epoch_time_ms_t& timestamp);
+    decode_next_message(ReaderInterface& reader, std::string& message, epoch_time_ms_t& timestamp);
 }  // namespace eight_byte_encoding
 
 namespace four_byte_encoding {
     /**
      * Decodes the next message for the four-byte encoding IR stream.
-     * @param ir_buf
+     * @param reader
      * @param message Returns the decoded message
      * @param timestamp_delta Returns the decoded timestamp delta
      * @return ErrorCode_Success on success
-     * @return ErrorCode_Corrupted_IR if ir_buf contains invalid IR
-     * @return ErrorCode_Decode_Error if the encoded message cannot be
-     * properly decoded
-     * @return ErrorCode_Incomplete_IR if ir_buf doesn't contain enough data
-     * to decode
+     * @return ErrorCode_Corrupted_IR if reader contains invalid IR
+     * @return ErrorCode_Decode_Error if the encoded message cannot be properly
+     * decoded
+     * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to
+     * decode
      * @return ErrorCode_End_of_IR if the IR ends
      */
     IRErrorCode decode_next_message(
-            ReaderInterface& ir_buf,
+            ReaderInterface& reader,
             std::string& message,
             epoch_time_ms_t& timestamp_delta
     );
