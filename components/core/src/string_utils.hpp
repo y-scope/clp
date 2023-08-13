@@ -122,14 +122,6 @@ bool wildcard_match_unsafe_case_sensitive(std::string_view tame, std::string_vie
 template <typename integer_t>
 bool convert_string_to_int(std::string_view raw, integer_t& converted);
 
-/**
- * Converts the given string to a double if possible
- * @param raw
- * @param converted
- * @return true if the conversion was successful, false otherwise
- */
-bool convert_string_to_double(std::string const& raw, double& converted);
-
 #include "string_utils.tpp"
 
 #endif  // STRING_UTILS_HPP
