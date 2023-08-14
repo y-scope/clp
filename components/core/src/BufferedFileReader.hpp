@@ -203,11 +203,10 @@ private:
     [[nodiscard]] auto refill_reader_buffer(size_t refill_size) -> ErrorCode;
 
     /**
-     * Discard the data before pos from internal reader buffer and resize the
-     * buffer
-     * @param pos
+     * Discards the data before the current position and resizes the buffer
+     * accordingly.
      */
-    auto resize_buffer_from_pos(size_t pos) -> void;
+    auto drop_content_before_current_pos() -> void;
 
     /**
      * return the file_pos's corresponding pos in the internal buffer

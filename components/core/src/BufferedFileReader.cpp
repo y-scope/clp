@@ -246,9 +246,7 @@ auto BufferedFileReader::set_checkpoint() -> size_t {
     if (m_checkpoint_pos.has_value() && m_checkpoint_pos < m_file_pos
         && m_buffer_reader->get_buffer_size() != m_base_buffer_size)
     {
-        // allocate new buffer for buffered data starting from pos
-        resize_buffer_from_pos(m_buffer_reader->get_pos());
-        m_buffer_reader->seek_from_begin(get_buffer_relative_pos(m_file_pos));
+        drop_content_before_current_pos();
     }
     m_checkpoint_pos = m_file_pos;
     return m_file_pos;
@@ -259,8 +257,12 @@ auto BufferedFileReader::clear_checkpoint() -> void {
         return;
     }
 
-    m_file_pos = m_highest_read_pos;
-    resize_buffer_from_pos(get_buffer_relative_pos(m_file_pos));
+    auto error_code = try_seek_from_begin(m_highest_read_pos);
+    if (ErrorCode_Success != error_code) {
+        // Should never happen
+        throw OperationFailed(error_code, __FILENAME__, __LINE__);
+    }
+    drop_content_before_current_pos();
     m_checkpoint_pos.reset();
 }
 
@@ -327,17 +329,14 @@ auto BufferedFileReader::refill_reader_buffer(size_t num_bytes_to_refill) -> Err
     return error_code;
 }
 
-auto BufferedFileReader::resize_buffer_from_pos(size_t pos) -> void {
-    if (pos > m_buffer_reader->get_buffer_size()) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
+auto BufferedFileReader::drop_content_before_current_pos() -> void {
+    auto buffer_reader_pos = m_buffer_reader->get_pos();
+    auto const new_data_size = m_buffer_reader->get_buffer_size() - buffer_reader_pos;
+    auto const new_buffer_size = int_round_up_to_multiple(new_data_size, m_base_buffer_size);
 
-    auto const new_data_size = m_buffer_reader->get_buffer_size() - pos;
-    auto const buffer_size = int_round_up_to_multiple(new_data_size, m_base_buffer_size);
-
-    m_buffer.erase(m_buffer.begin(), m_buffer.begin() + static_cast<long>(pos));
-    m_buffer.resize(buffer_size);
-    m_buffer_begin_pos += pos;
+    m_buffer.erase(m_buffer.begin(), m_buffer.begin() + static_cast<long>(buffer_reader_pos));
+    m_buffer.resize(new_buffer_size);
+    m_buffer_begin_pos += buffer_reader_pos;
 
     m_buffer_reader.emplace(m_buffer.data(), new_data_size);
 }
