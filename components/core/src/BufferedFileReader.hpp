@@ -87,6 +87,60 @@ public:
     auto operator=(BufferedFileReader) -> BufferedFileReader& = delete;
     auto operator=(BufferedFileReader&&) -> BufferedFileReader& = delete;
 
+    // Methods
+    /**
+     * Tries to open a file
+     * @param path
+     * @return ErrorCode_Success on success
+     * @return ErrorCode_FileNotFound if the file was not found
+     * @return ErrorCode_errno otherwise
+     */
+    [[nodiscard]] auto try_open(std::string const& path) -> ErrorCode;
+
+    auto open(std::string const& path) -> void;
+
+    /**
+     * Closes the file if it's open
+     * @return ErrorCode_errno on error closing the underlying file
+     * @return ErrorCode_Success on success
+     */
+    [[nodiscard]] auto close() -> ErrorCode;
+
+    [[nodiscard]] auto get_path() const -> std::string const& { return m_path; }
+
+    /**
+     * Peeks the remaining buffered content without advancing the read head.
+     *
+     * NOTE: Any subsequent read or seek operations may invalidate the returned
+     * buffer.
+     * @param buf Returns a pointer to the remaining content in the buffer
+     * @param peek_size Returns the size of the remaining content in the buffer
+     * @return ErrorCode_NotInit if the file is not opened
+     * @return ErrorCode_errno on on error reading from the underlying file
+     * @return ErrorCode_EndOfFile if we've already reached EOF
+     * @return ErrorCode_Success on success
+     */
+    [[nodiscard]] auto peek_buffered_data(char const*& data_ptr, size_t& peek_size) -> ErrorCode;
+
+    /**
+     * Sets a checkpoint at the current position in the file. If a checkpoint is
+     * already set, this method will discard any buffered content from before
+     * the current checkpoint.
+     *
+     * NOTE: Setting a checkpoint may result in higher memory usage since the
+     * BufferedFileReader needs to buffer all the data it reads after the
+     * checkpoint.
+     * @return The current position in the file
+     */
+    auto set_checkpoint() -> size_t;
+
+    /**
+     * Clears the current checkpoint and moves the read head to the highest
+     * position that the caller read/seeked to. This will shrink the buffer to
+     * its original size, discarding any excess data.
+     */
+    auto clear_checkpoint() -> void;
+
     // Methods implementing the ReaderInterface
     /**
      * @param pos Returns the position of the read head in the file
@@ -144,60 +198,6 @@ public:
     [[nodiscard]] auto
     try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str)
             -> ErrorCode override;
-
-    // Methods
-    /**
-     * Tries to open a file
-     * @param path
-     * @return ErrorCode_Success on success
-     * @return ErrorCode_FileNotFound if the file was not found
-     * @return ErrorCode_errno otherwise
-     */
-    [[nodiscard]] auto try_open(std::string const& path) -> ErrorCode;
-    /**
-     * Opens a file
-     * @param path
-     */
-    auto open(std::string const& path) -> void;
-    /**
-     * Closes the file if it's open
-     */
-    [[nodiscard]] auto close() -> ErrorCode;
-
-    [[nodiscard]] auto get_path() const -> std::string const& { return m_path; }
-
-    /**
-     * Peeks the remaining buffered content without advancing the read head.
-     *
-     * NOTE: Any subsequent read or seek operations may invalidate the returned
-     * buffer.
-     * @param buf Returns a pointer to the remaining content in the buffer
-     * @param peek_size Returns the size of the remaining content in the buffer
-     * @return ErrorCode_NotInit if the file is not opened
-     * @return ErrorCode_errno on on error reading from the underlying file
-     * @return ErrorCode_EndOfFile if we've already reached EOF
-     * @return ErrorCode_Success on success
-     */
-    [[nodiscard]] auto peek_buffered_data(char const*& data_ptr, size_t& peek_size) -> ErrorCode;
-
-    /**
-     * Sets a checkpoint at the current position in the file. If a checkpoint is
-     * already set, this method will discard any buffered content from before
-     * the current checkpoint.
-     *
-     * NOTE: Setting a checkpoint may result in higher memory usage since the
-     * BufferedFileReader needs to buffer all the data it reads after the
-     * checkpoint.
-     * @return The current position in the file
-     */
-    auto set_checkpoint() -> size_t;
-
-    /**
-     * Clears the current checkpoint and moves the read head to the highest
-     * position that the caller read/seeked to. This will shrink the buffer to
-     * its original size, discarding any excess data.
-     */
-    auto clear_checkpoint() -> void;
 
 private:
     // Methods
