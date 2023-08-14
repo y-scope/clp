@@ -1,14 +1,12 @@
 #ifndef BUFFEREDFILEREADER_HPP
 #define BUFFEREDFILEREADER_HPP
 
-// C++ libraries
 #include <cstdio>
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
-// Project headers
 #include "BufferReader.hpp"
 #include "Defs.h"
 #include "ErrorCode.hpp"

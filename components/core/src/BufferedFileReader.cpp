@@ -1,13 +1,10 @@
 #include "BufferedFileReader.hpp"
 
-// Boost libraries
-#include <boost/filesystem.hpp>
-
-// C standard libraries
 #include <fcntl.h>
 
-// C++ standard libraries
 #include <cerrno>
+
+#include <boost/filesystem.hpp>
 
 #include "math_utils.hpp"
 

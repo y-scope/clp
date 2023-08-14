@@ -1,10 +1,6 @@
-// Boost libraries
 #include <boost/filesystem.hpp>
+#include <Catch2/single_include/catch2/catch.hpp>
 
-// Catch2
-#include "../submodules/Catch2/single_include/catch2/catch.hpp"
-
-// Project headers
 #include "../src/BufferedFileReader.hpp"
 #include "../src/FileWriter.hpp"
 
