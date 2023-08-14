@@ -14,11 +14,25 @@
 #include "TraceableException.hpp"
 
 /**
- * Class for reading from a on-disk file with custom buffering.
- * The BufferedFileReader is designed to support files that only allow
- * sequential access, such as files in S3. The class uses a checkpoint
- * mechanism to support seeking and reading from a previous file position
- * without having to actually accessing the file.
+ * Class for performing buffered (in memory) reads from an on-disk file with
+ * control over when and how much data is buffered. This allows us to support
+ * use cases where we want to perform unordered reads from files which only
+ * support sequential access (e.g. files from block storage like S3).
+ *
+ * To control how much data is buffered, we allow callers to set a checkpoint
+ * such that all reads and seeks past the checkpoint will be buffered until the
+ * checkpoint is cleared. This allows callers to perform random seeks and reads
+ * of any data after (and including) the checkpoint. When no checkpoint is set,
+ * we maintain a fixed-size buffer.
+ *
+ * NOTE 1: Unless otherwise noted, the "file position" mentioned in docstrings
+ * is the position in the buffered file, not the position in the on-disk file.
+ *
+ * NOTE 2: This class restricts the buffer size to a multiple of the page size
+ * and we avoid reading anything less than a page to avoid multiple page faults.
+ *
+ * NOTE 3: Although the FILE stream interface provided by glibc also performs
+ * buffered reads, it does not allow us to control the buffering.
  */
 class BufferedFileReader : public ReaderInterface {
 public:
@@ -52,14 +66,22 @@ public:
         std::string m_message;
     };
 
+    // Constants
+    static constexpr size_t cMinBufferSize = (1ULL << 12);
+
     // Constructors
-    BufferedFileReader(size_t base_buffer_size);
+    /**
+     * @param base_buffer_size The size for the fixed-size buffer used when no
+     * checkpoint is set. It must be a multiple of
+     * BufferedFileReader::cMinBufferSize.
+     */
+    explicit BufferedFileReader(size_t base_buffer_size);
 
     BufferedFileReader() : BufferedFileReader(cDefaultBufferSize) {}
 
     ~BufferedFileReader();
 
-    // explicitly disable copy or move
+    // Disable copy/move construction/assignment
     BufferedFileReader(BufferedFileReader const&) = delete;
     BufferedFileReader(BufferedFileReader&&) = delete;
     auto operator=(BufferedFileReader) -> BufferedFileReader& = delete;
@@ -67,18 +89,26 @@ public:
 
     // Methods implementing the ReaderInterface
     /**
-     * Tries to get the current position of the read head in the file
-     * @param pos Position of the read head in the file
-     * @return ErrorCode_NotInit if the file is not open
-     * @return ErrorCode_errno on error
+     * @param pos Returns the position of the read head in the file
+     * @return ErrorCode_NotInit if the file isn't open
      * @return ErrorCode_Success on success
      */
     [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override;
+
     /**
-     * Tries to seek from the beginning of the file to the given position
+     * Tries to seek to the given position relative to the beginning of the
+     * file. When no checkpoint is set, callers can only seek forwards in the
+     * file; When a checkpoint is set, callers can seek to any position in the
+     * file that's after and including the checkpoint.
      * @param pos
-     * @return ErrorCode_NotInit if the file is not open
-     * @return ErrorCode_errno on error
+     * @return ErrorCode_NotInit if the file isn't open
+     * @return ErrorCode_Unsupported if a checkpoint is set and the requested
+     * position is less than the checkpoint, or no checkpoint is set and the
+     * requested position is less the current read head's position.
+     * @return ErrorCode_Truncated if we reached the end of the file before we
+     * reached the given position
+     * @return ErrorCode_errno on error reading from the underlying file
+     * @return Same as BufferReader::try_seek_from_begin if it fails
      * @return ErrorCode_Success on success
      */
     [[nodiscard]] auto try_seek_from_begin(size_t pos) -> ErrorCode override;
@@ -89,8 +119,8 @@ public:
      * @param num_bytes_to_read The number of bytes to try and read
      * @param num_bytes_read The actual number of bytes read
      * @return ErrorCode_NotInit if the file is not open
-     * @return ErrorCode_BadParam if buf is invalid
-     * @return ErrorCode_errno on error
+     * @return ErrorCode_BadParam if buf is null
+     * @return ErrorCode_errno on error reading from the underlying file
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_Success on success
      */
@@ -98,25 +128,24 @@ public:
             -> ErrorCode override;
 
     /**
-     * Tries to read a string from the file until it reaches
-     * the specified delimiter
-     * @param delim The delimiter to stop at
-     * @param keep_delimiter Whether to include the delimiter in the
-     * output string or not
-     * @param append Whether to append to the given string or
-     * replace its contents
-     * @param str The string read
-     * @return ErrorCode_Success on success
+     * Tries to read up to an occurrence of the given delimiter
+     * @param delim
+     * @param keep_delimiter Whether to include the delimiter in the output
+     * string
+     * @param append Whether to append to the given string or replace its
+     * contents
+     * @param str Returns the content read
+     * @return ErrorCode_NotInit if the file is not open
      * @return ErrorCode_EndOfFile on EOF
-     * @return ErrorCode_errno otherwise
+     * @return ErrorCode_errno on error reading from the underlying file
+     * @return Same as BufferReader::try_read_to_delimiter if it fails
+     * @return ErrorCode_Success on success
      */
     [[nodiscard]] auto
     try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str)
             -> ErrorCode override;
 
     // Methods
-    [[nodiscard]] auto is_open() const -> bool { return -1 != m_fd; }
-
     /**
      * Tries to open a file
      * @param path
@@ -128,7 +157,6 @@ public:
     /**
      * Opens a file
      * @param path
-     * @throw BufferedFileReader::OperationFailed on failure
      */
     auto open(std::string const& path) -> void;
     /**
@@ -139,68 +167,50 @@ public:
     [[nodiscard]] auto get_path() const -> std::string const& { return m_path; }
 
     /**
-     * Peeks the buffer without advancing the file
-     * pos.
-     * Note: If further operation such as read or peek is called on the
-     * BufferedFileReader after peek_buffered_data, the buf could
-     * point to invalid data
-     * @param buf pointer pointing to peeked data
-     * @param peek_size returns number of bytes peeked by reference
-     * @return ErrorCode_Success on success
-     * @return ErrorCode_errno on error
+     * Peeks the remaining buffered content without advancing the read head.
+     *
+     * NOTE: Any subsequent read or seek operations may invalidate the returned
+     * buffer.
+     * @param buf Returns a pointer to the remaining content in the buffer
+     * @param peek_size Returns the size of the remaining content in the buffer
      * @return ErrorCode_NotInit if the file is not opened
-     * @return ErrorCode_EndOfFile if already reaching the eof
+     * @return ErrorCode_errno on on error reading from the underlying file
+     * @return ErrorCode_EndOfFile if we've already reached EOF
+     * @return ErrorCode_Success on success
      */
     [[nodiscard]] auto peek_buffered_data(char const*& data_ptr, size_t& peek_size) -> ErrorCode;
 
     /**
-     * Sets a checkpoint at the current file pos.
-     * By default, the checkpoint is not set and the BufferedFileReader only
-     * maintains a fixed size buffer. Seeking before the reading pos is not
-     * supported since the data might not be in the buffer anymore.
+     * Sets a checkpoint at the current position in the file. If a checkpoint is
+     * already set, this method will discard any buffered content from before
+     * the current checkpoint.
      *
-     * When the checkpoint is set, the BufferedFileReader increases its
-     * internal buffer size on demand and buffer all data between the
-     * checkpoint pos and largest ever file_pos in the memory.
-     * It then support seeking back to a previous file pos that's after the
-     * checkpoint pos, as the data is guaranteed to be available in the internal
-     * buffer.
-     *
-     * Note: Setting a checkpoint may result in higher memory usage since
-     * the BufferedFileReader needs to exhaustively buffer the data it reads
-     * in the buffer.
-     * @return current file pos
+     * NOTE: Setting a checkpoint may result in higher memory usage since the
+     * BufferedFileReader needs to buffer all the data it reads after the
+     * checkpoint.
+     * @return The current position in the file
      */
     auto set_checkpoint() -> size_t;
 
     /**
-     * Disable the checkpoint pos and release buffered data from memory
-     * The function resize the internal buffer based on the following rules.
-     * 1. If the current reading_pos is within the same m_buffer_size region as
-     * the buffer end pos (the file pos that end of buffer corresponds to). i.e.
-     * buffer_end_pos - file_pos < m_buffer_size
-     * the buffer will be resized to m_buffer_size bytes
-     * 2. Else, The buffer will be resized to the rounded result of
-     * quantizing (buffer_end_pos - file_pos) to the nearest multiple of
-     * 'm_buffer_size' using the rounding method. This ensures that the current
-     * read pos still resides in the resized buffer
+     * Clears the current checkpoint and moves the read head to the highest
+     * position that the caller read/seeked to. This will shrink the buffer to
+     * its original size, discarding any excess data.
      */
     auto clear_checkpoint() -> void;
 
 private:
     // Methods
     /**
-     * Reads next refill_size bytes from file descriptor to the internal buffer
-     * and sets the data size of the internal buffer
-     * Note: the function returns success even if the number of bytes read from
-     * the fd is less than the refill_size
+     * Refills the buffer with up to the given number of bytes from the
+     * underlying file.
+     *
+     * NOTE: Callers must ensure the current buffer has been exhausted before
+     * calling this method (i.e., the read head is at the end of the buffer).
      * @param refill_size
-     * @return ErrorCode_Success on success
-     * @return ErrorCode_errno on error
-     * @return ErrorCode_NotInit if the file is not opened
-     * @return ErrorCode_EndOfFile if already reaching the eof
+     * @return Same as read_into_buffer
      */
-    [[nodiscard]] auto refill_reader_buffer(size_t refill_size) -> ErrorCode;
+    [[nodiscard]] auto refill_reader_buffer(size_t num_bytes_to_refill) -> ErrorCode;
 
     /**
      * Discards the data before the current position and resizes the buffer
@@ -209,9 +219,8 @@ private:
     auto drop_content_before_current_pos() -> void;
 
     /**
-     * return the file_pos's corresponding pos in the internal buffer
      * @param file_pos
-     * @return
+     * @return \p file_pos relative to the beginning of the buffer
      */
     [[nodiscard]] auto get_buffer_relative_pos(size_t file_pos) const -> size_t {
         return file_pos - m_buffer_begin_pos;
@@ -224,7 +233,6 @@ private:
     auto update_file_pos(size_t pos) -> void;
 
     // Constants
-    static constexpr size_t cMinBufferSize = (1ULL << 12);
     static constexpr size_t cDefaultBufferSize = (16 * cMinBufferSize);
 
     // Variables
