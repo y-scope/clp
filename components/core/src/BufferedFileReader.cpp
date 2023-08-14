@@ -282,46 +282,48 @@ auto BufferedFileReader::peek_buffered_data(char const*& buf, size_t& peek_size)
 }
 
 auto BufferedFileReader::refill_reader_buffer(size_t num_bytes_to_refill) -> ErrorCode {
-    size_t num_bytes_refilled = 0;
-
     auto const buffer_end_pos = get_buffer_end_pos();
     auto const data_size = m_buffer_reader->get_buffer_size();
     auto const available_buffer_space = m_buffer.size() - data_size;
-    size_t buf_internal_pos{0};
 
-    size_t bytes_to_read = m_base_buffer_size - (buffer_end_pos % m_base_buffer_size);
+    size_t num_bytes_to_read{0};
+    size_t next_buffer_pos{0};
+    auto next_buffer_begin_pos = m_buffer_begin_pos;
     if (m_checkpoint_pos.has_value()) {
-        while (bytes_to_read < num_bytes_to_refill) {
-            bytes_to_read += m_base_buffer_size;
+        num_bytes_to_read = int_round_up_to_multiple(
+                buffer_end_pos + num_bytes_to_refill,
+                m_base_buffer_size
+        );
+        // Grow the buffer if necessary
+        if (num_bytes_to_read > available_buffer_space) {
+            m_buffer.resize(data_size + num_bytes_to_read);
         }
-        // Grow the buffer if bytes_to_read is more
-        // than available space in the buffer
-        if (bytes_to_read > available_buffer_space) {
-            m_buffer.resize(data_size + bytes_to_read);
-        }
-        buf_internal_pos = data_size;
+        next_buffer_pos = data_size;
     } else {
-        if (bytes_to_read > available_buffer_space) {
-            // advance the entire buffer
-            buf_internal_pos = 0;
-            m_buffer_begin_pos = buffer_end_pos;
+        num_bytes_to_read = m_base_buffer_size - (buffer_end_pos % m_base_buffer_size);
+        if (num_bytes_to_read > available_buffer_space) {
+            // Advance the entire buffer since we don't grow the buffer if
+            // there's no checkpoint
+            next_buffer_pos = 0;
+            next_buffer_begin_pos = buffer_end_pos;
         } else {
-            buf_internal_pos = data_size;
+            next_buffer_pos = data_size;
         }
     }
 
+    size_t num_bytes_read{0};
     auto error_code = try_read_into_buffer(
             m_fd,
-            &m_buffer[buf_internal_pos],
-            bytes_to_read,
-            num_bytes_refilled
+            &m_buffer[next_buffer_pos],
+            num_bytes_to_read,
+            num_bytes_read
     );
     if (error_code != ErrorCode_Success && ErrorCode_EndOfFile != error_code) {
         return error_code;
     }
     // NOTE: We still want to set the buffer reader if no bytes were read on EOF
-    m_buffer_reader
-            .emplace(m_buffer.data(), num_bytes_refilled + buf_internal_pos, buf_internal_pos);
+    m_buffer_reader.emplace(m_buffer.data(), next_buffer_pos + num_bytes_read, next_buffer_pos);
+    m_buffer_begin_pos = next_buffer_begin_pos;
     return error_code;
 }
 
