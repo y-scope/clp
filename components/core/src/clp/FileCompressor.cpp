@@ -108,9 +108,11 @@ namespace clp {
             }
             return false;
         }
-        m_file_reader.peek_buffered_data(m_utf8_validation_buf, m_utf8_validation_buf_length);
+        char const* utf8_validation_buf{nullptr};
+        size_t utf8_validation_buf_len{0};
+        m_file_reader.peek_buffered_data(utf8_validation_buf, utf8_validation_buf_len);
         bool succeeded = true;
-        if (is_utf8_sequence(m_utf8_validation_buf_length, m_utf8_validation_buf)) {
+        if (is_utf8_sequence(utf8_validation_buf_len, utf8_validation_buf)) {
             if (use_heuristic) {
                 parse_and_encode_with_heuristic(target_data_size_of_dicts, archive_user_config, target_encoded_file_size,
                                                 file_to_compress.get_path_for_compression(),
@@ -148,9 +150,6 @@ namespace clp {
         archive_writer.m_target_encoded_file_size = target_encoded_file_size;
         // Open compressed file
         archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
-        // TODO: decide what to actually do about this
-        // for now reset reader rather than try reading m_utf8_validation_buf as it would be
-        // very awkward to combine sources to/in the parser
         m_log_parser->set_archive_writer_ptr(&archive_writer);
         m_log_parser->get_archive_writer_ptr()->old_ts_pattern.clear();
         try {
@@ -274,11 +273,13 @@ namespace clp {
                 succeeded = false;
                 continue;
             }
+            char const* utf8_validation_buf{nullptr};
+            size_t utf8_validation_buf_len{0};
             m_libarchive_file_reader.peek_buffered_data(
-                    m_utf8_validation_buf,
-                    m_utf8_validation_buf_length
+                    utf8_validation_buf,
+                    utf8_validation_buf_len
             );
-            if (is_utf8_sequence(m_utf8_validation_buf_length, m_utf8_validation_buf)) {
+            if (is_utf8_sequence(utf8_validation_buf_len, utf8_validation_buf)) {
                 auto boost_path_for_compression = parent_boost_path / m_libarchive_reader.get_path();
                 if (use_heuristic) {
                     parse_and_encode_with_heuristic(target_data_size_of_dicts, archive_user_config, target_encoded_file_size,
