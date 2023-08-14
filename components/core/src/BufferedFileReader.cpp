@@ -138,7 +138,7 @@ auto BufferedFileReader::try_peek_buffered_data(char const*& buf, size_t& peek_s
     return ErrorCode_Success;
 }
 
-void BufferedFileReader::peek_buffered_data(const char *& buf, size_t& peek_size) const {
+void BufferedFileReader::peek_buffered_data(char const*& buf, size_t& peek_size) const {
     auto error_code = try_peek_buffered_data(buf, peek_size);
     if (ErrorCode_Success != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
