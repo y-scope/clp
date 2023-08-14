@@ -15,6 +15,7 @@ namespace ffi::ir_stream {
 template <
         typename encoded_variable_t,
         typename ConstantHandler,
+        typename ConstantRemainderHandler,
         typename EncodedIntHandler,
         typename EncodedFloatHandler,
         typename DictVarHandler>
@@ -23,6 +24,7 @@ void generic_decode_message(
         std::vector<encoded_variable_t> const& encoded_vars,
         std::vector<std::string> const& dict_vars,
         ConstantHandler constant_handler,
+        ConstantRemainderHandler constant_remainder_handler,
         EncodedIntHandler encoded_int_handler,
         EncodedFloatHandler encoded_float_handler,
         DictVarHandler dict_var_handler
@@ -132,11 +134,7 @@ void generic_decode_message(
     }
     // Add remainder
     if (next_static_text_begin_pos < logtype_length) {
-        constant_handler(
-                logtype,
-                next_static_text_begin_pos,
-                logtype_length - next_static_text_begin_pos
-        );
+        constant_remainder_handler(logtype, next_static_text_begin_pos);
     }
 }
 }  // namespace ffi::ir_stream

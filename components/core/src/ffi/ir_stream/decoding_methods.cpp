@@ -159,17 +159,20 @@ namespace {
      * @param reader
      * @param encoded_tag
      * @param ts Returns the timestamp delta if
-     * encoded_variable_t == four_byte_encoded_variable_t or the actual timestamp if
-     * encoded_variable_t == eight_byte_encoded_variable_t
+     * encoded_variable_t == four_byte_encoded_variable_t or the actual
+     * timestamp if encoded_variable_t == eight_byte_encoded_variable_t
      * @return IRErrorCode_Success on success
      * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
-     * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to
-     * decode
+     * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
+     * to decode
      */
     template <typename encoded_variable_t>
     IRErrorCode
     parse_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_ms_t& ts) {
-        static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+        static_assert(
+                (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+                || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+        );
 
         if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
             if (cProtocol::Payload::TimestampVal != encoded_tag) {
@@ -210,14 +213,14 @@ namespace {
      * @param reader
      * @param message Returns the decoded message
      * @param timestamp Returns the timestamp delta if
-     * encoded_variable_t == four_byte_encoded_variable_t or the actual timestamp if
-     * encoded_variable_t == eight_byte_encoded_variable_t
+     * encoded_variable_t == four_byte_encoded_variable_t or the actual
+     * timestamp if encoded_variable_t == eight_byte_encoded_variable_t
      * @return IRErrorCode_Success on success
      * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
-     * @return IRErrorCode_Decode_Error if the encoded message cannot be properly
-     * decoded
-     * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to
-     * decode
+     * @return IRErrorCode_Decode_Error if the encoded message cannot be
+     * properly decoded
+     * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
+     * to decode
      */
     template <typename encoded_variable_t>
     IRErrorCode generic_decode_next_message(
@@ -242,6 +245,11 @@ namespace {
             message.append(value, begin_pos, length);
         };
 
+        // constant handler
+        auto constant_remainder_handler = [&message](string const& value, size_t begin_pos) {
+            message.append(value, begin_pos);
+        };
+
         // encoded int handler
         auto encoded_int_handler = [&message](encoded_variable_t value) {
             message.append(decode_integer_var(value));
@@ -261,6 +269,7 @@ namespace {
                     encoded_vars,
                     dict_vars,
                     constant_handler,
+                    constant_remainder_handler,
                     encoded_int_handler,
                     encoded_float_handler,
                     dict_var_handler
@@ -272,10 +281,11 @@ namespace {
     }
 
     /**
-     * Reads metadata information from the reader
+     * Reads metadata information from the given reader
      * @param reader
      * @param metadata_type Returns the type of the metadata found in the IR
-     * @param metadata_pos Returns the starting position of the metadata in reader
+     * @param metadata_pos Returns the starting position of the metadata in
+     * reader
      * @param metadata_size Returns the size of the metadata written in the IR
      * @return IRErrorCode_Success on success
      * @return IRErrorCode_Corrupted_IR if reader contains invalid IR

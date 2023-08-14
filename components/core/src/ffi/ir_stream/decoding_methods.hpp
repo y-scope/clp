@@ -75,8 +75,10 @@ IRErrorCode generic_parse_tokens(
  * Decodes the message consists of the tokens and calls the given methods
  * to handle specific components of the message.
  * @tparam encoded_variable_t Type of the encoded variable
- * @tparam ConstantHandler Method to handle constants. Signature:
- * (const std::string&, size_t, size_t) -> void
+ * @tparam ConstantHandler Method to handle constants in the logtypes.
+ * Signature: (const std::string&, size_t, size_t) -> void
+ * @tparam ConstantRemainderHandler Method to handle remaining constant in the
+ * logtypes. Signature: (const std::string&, size_t, size_t) -> void
  * @tparam EncodedIntHandler Method to handle encoded integers.
  * Signature: (encoded_variable_t) -> void
  * @tparam EncodedFloatHandler Method to handle encoded float.
@@ -87,6 +89,7 @@ IRErrorCode generic_parse_tokens(
  * @param encoded_vars
  * @param dict_vars
  * @param constant_handler
+ * @param constant_remainder_handler
  * @param encoded_int_handler
  * @param encoded_float_handler
  * @param dict_var_handler
@@ -95,6 +98,7 @@ IRErrorCode generic_parse_tokens(
 template <
         typename encoded_variable_t,
         typename ConstantHandler,
+        typename ConstantRemainderHandler,
         typename EncodedIntHandler,
         typename EncodedFloatHandler,
         typename DictVarHandler>
@@ -103,6 +107,7 @@ void generic_decode_message(
         std::vector<encoded_variable_t> const& encoded_vars,
         std::vector<std::string> const& dict_vars,
         ConstantHandler constant_handler,
+        ConstantRemainderHandler constant_remainder_handler,
         EncodedIntHandler encoded_int_handler,
         EncodedFloatHandler encoded_float_handler,
         DictVarHandler dict_var_handler

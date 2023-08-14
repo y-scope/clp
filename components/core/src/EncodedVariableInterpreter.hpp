@@ -62,6 +62,7 @@ public:
      * @param value
      */
     static void convert_encoded_float_to_string (encoded_variable_t encoded_var, std::string& value);
+
     /**
      * Converts the four bytes encoded float to eight byte encoded float
      * @param four_bytes_float
