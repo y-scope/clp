@@ -29,18 +29,14 @@ public:
     public:
         // Constructors
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
+                : OperationFailed(
+                        error_code,
+                        filename,
+                        line_number,
+                        "BufferedFileReader operation failed"
+                ) {}
 
-        // Methods
-        [[nodiscard]] auto what() const noexcept -> char const* override {
-            return "BufferedFileReader operation failed";
-        }
-    };
-
-    class OperationFailedWithMsg : public TraceableException {
-    public:
-        // Constructors
-        OperationFailedWithMsg(
+        OperationFailed(
                 ErrorCode error_code,
                 char const* const filename,
                 int line_number,
@@ -51,7 +47,7 @@ public:
 
         // Methods
         [[nodiscard]] auto what() const noexcept -> char const* override {
-            return "BufferedFileReader operation failed";
+            return m_message.c_str();
         }
 
     private:

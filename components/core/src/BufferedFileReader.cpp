@@ -217,7 +217,7 @@ void BufferedFileReader::open(string const& path) {
     auto const error_code = try_open(path);
     if (ErrorCode_Success != error_code) {
         if (ErrorCode_FileNotFound == error_code) {
-            throw OperationFailedWithMsg(
+            throw OperationFailed(
                     error_code,
                     __FILENAME__,
                     __LINE__,
