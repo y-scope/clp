@@ -31,8 +31,7 @@ public:
     };
 
     // Constructors
-    LibarchiveFileReader () : m_archive(nullptr), m_archive_entry(nullptr), m_data_block(nullptr),
-                              m_reached_eof(false), m_pos_in_file(0) {}
+    LibarchiveFileReader () : m_archive(nullptr), m_archive_entry(nullptr), m_data_block(nullptr), m_reached_eof(false), m_pos_in_file(0) {}
 
     // Methods implementing the ReaderInterface
     /**
@@ -72,15 +71,13 @@ public:
     ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter, bool append, std::string& str) override;
 
     /**
-     * Tries to peek from the next data block and returns the available
-     * data size
-     * @param buf
+     * @param buf Returns a pointer to any buffered data
      * @param buf_size Returns the number of bytes in the buffer
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_Failure on failure
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] ErrorCode try_peek_data_block(const char*&buf, size_t&buf_size);
+    [[nodiscard]] ErrorCode try_peek_buffered_data(char const*& buf, size_t& buf_size);
 
     // Methods
     /**

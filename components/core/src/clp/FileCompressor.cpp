@@ -293,8 +293,10 @@ namespace clp {
             }
 
             m_libarchive_reader.open_file_reader(m_libarchive_file_reader);
-            error_code = m_libarchive_file_reader.try_peek_data_block(
-                m_utf8_validation_buf, m_utf8_validation_buf_length);
+            error_code = m_libarchive_file_reader.try_peek_buffered_data(
+                    m_utf8_validation_buf,
+                    m_utf8_validation_buf_length
+            );
             // Check that file is UTF-8 encoded
             if (ErrorCode_Success != error_code) {
                 if (ErrorCode_EndOfFile != error_code) {

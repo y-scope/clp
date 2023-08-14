@@ -1,7 +1,6 @@
 #ifndef BUFFERREADER_HPP
 #define BUFFERREADER_HPP
 
-// Project headers
 #include "ReaderInterface.hpp"
 
 /**
@@ -27,40 +26,26 @@ public:
 
     BufferReader(char const* data, size_t data_size, size_t pos);
 
-    // Methods implementing the ReaderInterface
-    /**
-     * Tries to read up to a given number of bytes from the buffer
-     * @param buf
-     * @param num_bytes_to_read The number of bytes to try and read
-     * @param num_bytes_read The actual number of bytes read
-     * @return ErrorCode_BadParam if buf is invalid
-     * @return ErrorCode_EndOfFile if buffer doesn't contain more data
-     * @return ErrorCode_Success on success
-     */
-    [[nodiscard]] auto try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
-            -> ErrorCode override;
-    /**
-     * Tries to seek from the beginning of the buffer to the given position
-     * @param pos
-     * @return ErrorCode_OutOfBounds if the given position > the buffer's size
-     * @return ErrorCode_Success on success
-     */
-    [[nodiscard]] auto try_seek_from_begin(size_t pos) -> ErrorCode override;
-    /**
-     * @param pos Returns the position of the read head in the buffer
-     * @return ErrorCode_Success
-     */
-    [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override;
-
-    [[nodiscard]] auto
-    try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str)
-            -> ErrorCode override;
-
-    // Helper functions
+    // Methods
     [[nodiscard]] auto get_buffer_size() const -> size_t { return m_internal_buf_size; }
 
+    /**
+     * @param buf Returns a pointer to the remaining content in the buffer
+     * @param peek_size Returns the size of the remaining content in the buffer
+     */
     auto peek_buffer(char const*& buf, size_t& peek_size) -> void;
 
+    /**
+     * Tries to read up to an occurrence of the given delimiter
+     * @param delim
+     * @param keep_delimiter Whether to include the delimiter in the output
+     * string
+     * @param str Returns the content read from the buffer
+     * @param found_delim Whether a delimiter was found
+     * @param num_bytes_read How many bytes were read from the buffer
+     * @return ErrorCode_EndOfFile if the buffer doesn't contain any more data
+     * @return ErrorCode_Success on success
+     */
     auto try_read_to_delimiter(
             char delim,
             bool keep_delimiter,
@@ -69,8 +54,50 @@ public:
             size_t& num_bytes_read
     ) -> ErrorCode;
 
+    // Methods implementing the ReaderInterface
+    /**
+     * Tries to read up to a given number of bytes from the buffer
+     * @param buf
+     * @param num_bytes_to_read
+     * @param num_bytes_read Returns the number of bytes read
+     * @return ErrorCode_EndOfFile if the buffer doesn't contain any more data
+     * @return ErrorCode_Success on success
+     */
+    [[nodiscard]] auto try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
+            -> ErrorCode override;
+
+    /**
+     * Tries to seek to the given position, relative to the beginning of the
+     * buffer
+     * @param pos
+     * @return ErrorCode_Truncated if \p pos > the buffer's size
+     * @return ErrorCode_Success on success
+     */
+    [[nodiscard]] auto try_seek_from_begin(size_t pos) -> ErrorCode override;
+
+    /**
+     * @param pos Returns the position of the read head in the buffer
+     * @return ErrorCode_Success
+     */
+    [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override;
+
+    /**
+     * Tries to read up to an occurrence of the given delimiter
+     * @param delim
+     * @param keep_delimiter Whether to include the delimiter in the output
+     * string
+     * @param append Whether to append to the given string or replace its
+     * contents
+     * @param str Returns the content read from the buffer
+     * @return Same as BufferReader::try_read_to_delimiter(char, bool,
+     * std::string&, bool&, size_t&)
+     */
+    [[nodiscard]] auto
+    try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str)
+            -> ErrorCode override;
+
 private:
-    // Method
+    // Methods
     [[nodiscard]] auto get_remaining_data_size() const -> size_t {
         return m_internal_buf_size - m_internal_buf_pos;
     }

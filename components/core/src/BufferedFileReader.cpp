@@ -161,23 +161,27 @@ auto BufferedFileReader::try_read_to_delimiter(
         str.clear();
     }
     bool found_delim{false};
-    size_t total_append_length{0};
+    size_t total_num_bytes_read{0};
     while (false == found_delim) {
-        size_t length{0};
-        if (auto ret_code
-            = m_buffer_reader
-                      ->try_read_to_delimiter(delim, keep_delimiter, str, found_delim, length);
+        size_t num_bytes_read{0};
+        if (auto ret_code = m_buffer_reader->try_read_to_delimiter(
+                    delim,
+                    keep_delimiter,
+                    str,
+                    found_delim,
+                    num_bytes_read
+            );
             ret_code != ErrorCode_Success && ret_code != ErrorCode_EndOfFile)
         {
             return ret_code;
         }
-        update_file_pos(m_file_pos + length);
-        total_append_length += length;
+        update_file_pos(m_file_pos + num_bytes_read);
+        total_num_bytes_read += num_bytes_read;
 
         if (false == found_delim) {
             auto error_code = refill_reader_buffer(m_base_buffer_size);
             if (ErrorCode_EndOfFile == error_code) {
-                if (total_append_length == 0) {
+                if (total_num_bytes_read == 0) {
                     return ErrorCode_EndOfFile;
                 }
                 return ErrorCode_Success;

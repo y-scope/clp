@@ -41,7 +41,7 @@ namespace {
     }
 
     /**
-     * Decodes an integer from reader
+     * Decodes an integer from the given reader
      * @tparam integer_t Type of the integer to decode
      * @param reader
      * @param value Returns the decoded integer
@@ -70,7 +70,7 @@ namespace {
     }
 
     /**
-     * Decodes the next logtype string from reader
+     * Decodes the next logtype string from the given reader
      * @param reader
      * @param encoded_tag
      * @param logtype Returns the logtype string
@@ -110,7 +110,7 @@ namespace {
     }
 
     /**
-     * Decodes the next dictionary-type variable string from reader
+     * Decodes the next dictionary-type variable string from the given reader
      * @param reader
      * @param encoded_tag
      * @param dict_var Returns the dictionary variable
@@ -154,63 +154,17 @@ namespace {
     }
 
     /**
-     * Reads metadata information from the reader
-     * @param reader
-     * @param metadata_type Returns the type of the metadata found in the IR
-     * @param metadata_pos Returns the starting position of the metadata in reader
-     * @param metadata_size Returns the size of the metadata written in the IR
-     * @return IRErrorCode_Success on success
-     * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
-     * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
-     * to decode
-     */
-    IRErrorCode read_metadata_info(
-            ReaderInterface& reader,
-            encoded_tag_t& metadata_type,
-            uint16_t& metadata_size
-    ) {
-        if (ErrorCode_Success != reader.try_read_numeric_value(metadata_type)) {
-            return IRErrorCode_Incomplete_IR;
-        }
-
-        // Read metadata length
-        encoded_tag_t encoded_tag;
-        if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
-            return IRErrorCode_Incomplete_IR;
-        }
-        switch (encoded_tag) {
-            case cProtocol::Metadata::LengthUByte:
-                uint8_t ubyte_res;
-                if (false == decode_int(reader, ubyte_res)) {
-                    return IRErrorCode_Incomplete_IR;
-                }
-                metadata_size = ubyte_res;
-                break;
-            case cProtocol::Metadata::LengthUShort:
-                uint16_t ushort_res;
-                if (false == decode_int(reader, ushort_res)) {
-                    return IRErrorCode_Incomplete_IR;
-                }
-                metadata_size = ushort_res;
-                break;
-            default:
-                return IRErrorCode_Corrupted_IR;
-        }
-        return IRErrorCode_Success;
-    }
-
-    /**
-     * Parses the next timestamp from reader
+     * Parses the next timestamp from the given reader
      * @tparam encoded_variable_t Type of the encoded variable
      * @param reader
      * @param encoded_tag
      * @param ts Returns the timestamp delta if
-     * encoded_variable_t == four_byte_encoded_variable_t or the actual
-     * timestamp if encoded_variable_t == eight_byte_encoded_variable_t
+     * encoded_variable_t == four_byte_encoded_variable_t or the actual timestamp if
+     * encoded_variable_t == eight_byte_encoded_variable_t
      * @return IRErrorCode_Success on success
      * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
-     * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
-     * to decode
+     * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to
+     * decode
      */
     template <typename encoded_variable_t>
     IRErrorCode
@@ -250,6 +204,21 @@ namespace {
         return IRErrorCode_Success;
     }
 
+    /**
+     * Decodes the next encoded message from the given reader
+     * @tparam encoded_variable_t Type of the encoded variable
+     * @param reader
+     * @param message Returns the decoded message
+     * @param timestamp Returns the timestamp delta if
+     * encoded_variable_t == four_byte_encoded_variable_t or the actual timestamp if
+     * encoded_variable_t == eight_byte_encoded_variable_t
+     * @return IRErrorCode_Success on success
+     * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
+     * @return IRErrorCode_Decode_Error if the encoded message cannot be properly
+     * decoded
+     * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to
+     * decode
+     */
     template <typename encoded_variable_t>
     IRErrorCode generic_decode_next_message(
             ReaderInterface& reader,
@@ -298,6 +267,52 @@ namespace {
             );
         } catch (DecodingException const& e) {
             return IRErrorCode_Decode_Error;
+        }
+        return IRErrorCode_Success;
+    }
+
+    /**
+     * Reads metadata information from the reader
+     * @param reader
+     * @param metadata_type Returns the type of the metadata found in the IR
+     * @param metadata_pos Returns the starting position of the metadata in reader
+     * @param metadata_size Returns the size of the metadata written in the IR
+     * @return IRErrorCode_Success on success
+     * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
+     * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
+     * to decode
+     */
+    IRErrorCode read_metadata_info(
+            ReaderInterface& reader,
+            encoded_tag_t& metadata_type,
+            uint16_t& metadata_size
+    ) {
+        if (ErrorCode_Success != reader.try_read_numeric_value(metadata_type)) {
+            return IRErrorCode_Incomplete_IR;
+        }
+
+        // Read metadata length
+        encoded_tag_t encoded_tag;
+        if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
+            return IRErrorCode_Incomplete_IR;
+        }
+        switch (encoded_tag) {
+            case cProtocol::Metadata::LengthUByte:
+                uint8_t ubyte_res;
+                if (false == decode_int(reader, ubyte_res)) {
+                    return IRErrorCode_Incomplete_IR;
+                }
+                metadata_size = ubyte_res;
+                break;
+            case cProtocol::Metadata::LengthUShort:
+                uint16_t ushort_res;
+                if (false == decode_int(reader, ushort_res)) {
+                    return IRErrorCode_Incomplete_IR;
+                }
+                metadata_size = ushort_res;
+                break;
+            default:
+                return IRErrorCode_Corrupted_IR;
         }
         return IRErrorCode_Success;
     }
