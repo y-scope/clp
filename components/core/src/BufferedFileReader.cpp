@@ -88,7 +88,7 @@ auto BufferedFileReader::try_seek_from_begin(size_t pos) -> ErrorCode {
         if (false == m_checkpoint_pos.has_value()) {
             // If checkpoint is not set, simply move the file_pos and invalidate
             // the buffer reader
-            auto offset = lseek(m_fd, static_cast<off64_t>(pos), SEEK_SET);
+            auto offset = lseek(m_fd, static_cast<off_t>(pos), SEEK_SET);
             if (-1 == offset) {
                 return ErrorCode_errno;
             }
