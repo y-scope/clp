@@ -167,6 +167,35 @@ ErrorCode LibarchiveFileReader::try_read_to_delimiter (char delim, bool keep_del
     return ErrorCode_Success;
 }
 
+void LibarchiveFileReader::open (struct archive* archive, struct archive_entry* archive_entry) {
+    if (nullptr == archive) {
+        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+    }
+    if (nullptr == archive_entry) {
+        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+    }
+    if (nullptr != m_archive) {
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+    }
+
+    m_archive = archive;
+    m_archive_entry = archive_entry;
+}
+
+void LibarchiveFileReader::close () {
+    if (nullptr == m_archive) {
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+    }
+
+    m_archive = nullptr;
+    m_archive_entry = nullptr;
+
+    m_data_block = nullptr;
+    m_reached_eof = false;
+
+    m_pos_in_file = 0;
+}
+
 ErrorCode LibarchiveFileReader::try_load_data_block() {
     if (nullptr == m_archive) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
@@ -202,35 +231,6 @@ void LibarchiveFileReader::peek_buffered_data(char const*& buf, size_t& buf_size
         buf_size = m_data_block_length - m_pos_in_data_block;
         buf = static_cast<char const*>(m_data_block);
     }
-}
-
-void LibarchiveFileReader::open (struct archive* archive, struct archive_entry* archive_entry) {
-    if (nullptr == archive) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
-    if (nullptr == archive_entry) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
-    if (nullptr != m_archive) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
-    }
-
-    m_archive = archive;
-    m_archive_entry = archive_entry;
-}
-
-void LibarchiveFileReader::close () {
-    if (nullptr == m_archive) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
-    }
-
-    m_archive = nullptr;
-    m_archive_entry = nullptr;
-
-    m_data_block = nullptr;
-    m_reached_eof = false;
-
-    m_pos_in_file = 0;
 }
 
 ErrorCode LibarchiveFileReader::read_next_data_block () {

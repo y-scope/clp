@@ -70,6 +70,18 @@ public:
      */
     ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter, bool append, std::string& str) override;
 
+    // Methods
+    /**
+     * Opens the file reader
+     * @param archive
+     * @param archive_entry
+     */
+    void open (struct archive* archive, struct archive_entry* archive_entry);
+    /**
+     * Closes the file reader
+     */
+    void close ();
+
     /**
      * Tries to the load a data block from the file if none is loaded
      * @return ErrorCode_EndOfFile on EOF
@@ -87,18 +99,6 @@ public:
      * @param buf_size Returns the number of bytes in the buffer
      */
     void peek_buffered_data(char const*& buf, size_t& buf_size) const;
-
-    // Methods
-    /**
-     * Opens the file reader
-     * @param archive
-     * @param archive_entry
-     */
-    void open (struct archive* archive, struct archive_entry* archive_entry);
-    /**
-     * Closes the file reader
-     */
-    void close ();
 
 private:
     // Methods
