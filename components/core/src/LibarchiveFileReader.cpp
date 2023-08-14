@@ -196,6 +196,46 @@ void LibarchiveFileReader::close () {
     m_pos_in_file = 0;
 }
 
+ErrorCode LibarchiveFileReader::try_load_data_block() {
+    if (nullptr == m_archive) {
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+    }
+    if (nullptr == m_archive_entry) {
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+    }
+
+    if (m_data_block != nullptr) {
+        return ErrorCode_Success;
+    }
+    return read_next_data_block();
+}
+
+void LibarchiveFileReader::peek_buffered_data(char const*& buf, size_t& buf_size) const {
+    if (nullptr == m_archive) {
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+    }
+    if (nullptr == m_archive_entry) {
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+    }
+
+    if (m_pos_in_file < m_data_block_pos_in_file) {
+        // Position in the file is before the current data block, so we return
+        // nulls corresponding to the sparse bytes before the data block
+        // NOTE: We don't return ALL sparse bytes before the data block since
+        // that might require allocating more bytes, violating the const-ness of
+        // this method. Since peek is a best-effort method, this should be
+        // sufficient for most callers.
+        buf = m_nulls_for_peek.data();
+        buf_size = std::min(
+                m_nulls_for_peek.size(),
+                static_cast<size_t>(m_data_block_pos_in_file - m_pos_in_file)
+        );
+    } else {
+        buf_size = m_data_block_length - m_pos_in_data_block;
+        buf = static_cast<char const*>(m_data_block);
+    }
+}
+
 ErrorCode LibarchiveFileReader::read_next_data_block () {
     auto return_value = archive_read_data_block(m_archive, &m_data_block, &m_data_block_length, &m_data_block_pos_in_file);
     if (ARCHIVE_OK != return_value) {

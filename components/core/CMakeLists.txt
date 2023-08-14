@@ -168,6 +168,10 @@ FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 set(SOURCE_FILES_clp
         src/ArrayBackedPosIntSet.cpp
         src/ArrayBackedPosIntSet.hpp
+        src/BufferedFileReader.cpp
+        src/BufferedFileReader.hpp
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clp/clp.cpp
         src/clp/CommandLineArguments.cpp
         src/clp/CommandLineArguments.hpp
@@ -245,6 +249,7 @@ set(SOURCE_FILES_clp
         src/LogTypeDictionaryReader.hpp
         src/LogTypeDictionaryWriter.cpp
         src/LogTypeDictionaryWriter.hpp
+        src/math_utils.hpp
         src/MessageParser.cpp
         src/MessageParser.hpp
         src/MySQLDB.cpp
@@ -355,6 +360,8 @@ target_compile_features(clp
 add_subdirectory(src/grammar/kql)
 
 set(SOURCE_FILES_clg
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clg/clg.cpp
         src/clg/CommandLineArguments.cpp
         src/clg/CommandLineArguments.hpp
@@ -508,6 +515,8 @@ target_compile_features(clg
         )
 
 set(SOURCE_FILES_clo
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clo/clo.cpp
         src/clo/CommandLineArguments.cpp
         src/clo/CommandLineArguments.hpp
@@ -653,6 +662,10 @@ target_compile_features(clo
         )
 
 set(SOURCE_FILES_unitTest
+        src/BufferedFileReader.cpp
+        src/BufferedFileReader.hpp
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clp/CommandLineArguments.cpp
         src/clp/CommandLineArguments.hpp
         src/clp/compression.cpp
@@ -754,6 +767,7 @@ set(SOURCE_FILES_unitTest
         src/LogTypeDictionaryReader.hpp
         src/LogTypeDictionaryWriter.cpp
         src/LogTypeDictionaryWriter.hpp
+        src/math_utils.hpp
         src/MessageParser.cpp
         src/MessageParser.hpp
         src/MySQLDB.cpp
@@ -837,11 +851,13 @@ set(SOURCE_FILES_unitTest
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
+        tests/test-BufferedFileReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
         tests/test-Grep.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-main.cpp
+        tests/test-math_utils.cpp
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
         tests/test-Segment.cpp
