@@ -318,12 +318,13 @@ auto BufferedFileReader::refill_reader_buffer(size_t num_bytes_to_refill) -> Err
             bytes_to_read,
             num_bytes_refilled
     );
-    if (error_code != ErrorCode_Success) {
+    if (error_code != ErrorCode_Success && ErrorCode_EndOfFile != error_code) {
         return error_code;
     }
+    // NOTE: We still want to set the buffer reader if no bytes were read on EOF
     m_buffer_reader
             .emplace(m_buffer.data(), num_bytes_refilled + buf_internal_pos, buf_internal_pos);
-    return ErrorCode_Success;
+    return error_code;
 }
 
 auto BufferedFileReader::resize_buffer_from_pos(size_t pos) -> void {
