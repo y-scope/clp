@@ -56,7 +56,7 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
         size_t read_size4 = 1;
         REQUIRE(ErrorCode_EndOfFile
                 == file_reader.try_read(read_buffer + buffer_offset, read_size4, num_bytes_read));
-        std::ignore = file_reader.close();
+        file_reader.close();
     }
 
     SECTION("Simple Seek without checkpoint") {
@@ -238,5 +238,5 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
     }
 
     ref_file_reader.close();
-    std::ignore = file_reader.close();
+    file_reader.close();
 }

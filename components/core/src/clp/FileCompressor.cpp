@@ -128,7 +128,7 @@ namespace clp {
             }
         }
 
-        std::ignore = m_file_reader.close();
+        m_file_reader.close();
 
         Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
         LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::ParseLogFile)

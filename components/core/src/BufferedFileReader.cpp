@@ -59,12 +59,12 @@ BufferedFileReader::BufferedFileReader(size_t base_buffer_size) {
 }
 
 BufferedFileReader::~BufferedFileReader() {
-    std::ignore = close();
+    close();
 }
 
 auto BufferedFileReader::try_open(string const& path) -> ErrorCode {
     // Cleanup in case caller forgot to call close before calling this function
-    std::ignore = close();
+    close();
 
     m_fd = ::open(path.c_str(), O_RDONLY);
     if (-1 == m_fd) {
@@ -96,20 +96,20 @@ void BufferedFileReader::open(string const& path) {
     }
 }
 
-auto BufferedFileReader::close() -> ErrorCode {
-    if (-1 != m_fd) {
-        if (m_checkpoint_pos.has_value()) {
-            m_buffer.resize(m_base_buffer_size);
-            m_checkpoint_pos.reset();
-        }
-
-        auto close_result = ::close(m_fd);
-        m_fd = -1;
-        if (0 != close_result) {
-            return ErrorCode_errno;
-        }
+auto BufferedFileReader::close() -> void {
+    if (-1 == m_fd) {
+        return;
     }
-    return ErrorCode_Success;
+
+    if (m_checkpoint_pos.has_value()) {
+        m_buffer.resize(m_base_buffer_size);
+        m_checkpoint_pos.reset();
+    }
+
+    // NOTE: We don't check errors for close since, in the read case, it seems
+    // the only reason it could fail is if it was interrupted by a signal
+    ::close(m_fd);
+    m_fd = -1;
 }
 
 auto BufferedFileReader::try_refill_buffer_if_empty() -> ErrorCode {

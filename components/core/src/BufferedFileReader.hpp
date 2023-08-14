@@ -101,10 +101,8 @@ public:
 
     /**
      * Closes the file if it's open
-     * @return ErrorCode_errno on error closing the underlying file
-     * @return ErrorCode_Success on success
      */
-    [[nodiscard]] auto close() -> ErrorCode;
+    auto close() -> void;
 
     [[nodiscard]] auto get_path() const -> std::string const& { return m_path; }
 
