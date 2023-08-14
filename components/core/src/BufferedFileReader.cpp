@@ -67,7 +67,7 @@ auto BufferedFileReader::try_seek_from_begin(size_t pos) -> ErrorCode {
 
     auto seek_lower_bound = m_checkpoint_pos.has_value() ? m_checkpoint_pos.value() : m_file_pos;
     if (pos < seek_lower_bound) {
-        return ErrorCode_Failure;
+        return ErrorCode_Unsupported;
     }
 
     auto error_code = m_buffer_reader->try_seek_from_begin(get_buffer_relative_pos(pos));

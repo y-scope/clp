@@ -82,7 +82,7 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
         REQUIRE(0 == memcmp(read_buffer, test_data + seek_pos2, num_bytes_to_read));
 
         // the seek should fail on a backward seek when checkpoint is not enabled
-        REQUIRE(ErrorCode_Failure == file_reader.try_seek_from_begin(seek_pos2));
+        REQUIRE(ErrorCode_Unsupported == file_reader.try_seek_from_begin(seek_pos2));
     }
 
     SECTION("seek with checkpoint") {
@@ -118,7 +118,7 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
         latest_file_pos = std::max(latest_file_pos, file_reader.get_pos());
 
         // now try to seek back to a pos that's before the checkpoint
-        REQUIRE(ErrorCode_Failure == file_reader.try_seek_from_begin(checkpoint_pos - 1));
+        REQUIRE(ErrorCode_Unsupported == file_reader.try_seek_from_begin(checkpoint_pos - 1));
 
         // now go back to latest data
         REQUIRE(ErrorCode_Success == file_reader.try_seek_from_begin(latest_file_pos));
@@ -135,7 +135,7 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
         file_reader.seek_from_begin((latest_file_pos + checkpoint_pos) / 2);
         file_reader.set_checkpoint();
         // the previous seek_pos should be unavailable
-        REQUIRE(ErrorCode_Failure == file_reader.try_seek_from_begin(seek_pos_1));
+        REQUIRE(ErrorCode_Unsupported == file_reader.try_seek_from_begin(seek_pos_1));
 
         // make sure data read after checkpoint-set are still correct
         size_t num_bytes_to_read_4 = 4096;
