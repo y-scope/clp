@@ -1,3 +1,5 @@
+#include <array>
+
 #include <boost/filesystem.hpp>
 #include <Catch2/single_include/catch2/catch.hpp>
 
