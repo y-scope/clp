@@ -16,17 +16,18 @@ auto try_read_into_buffer(int fd, char* buf, size_t num_bytes_to_read, size_t& n
     num_bytes_read = 0;
     while (true) {
         auto const bytes_read = ::read(fd, buf, num_bytes_to_read);
-        if (bytes_read > 0) {
-            buf += bytes_read;
-            num_bytes_read += bytes_read;
-            num_bytes_to_read -= bytes_read;
-            if (num_bytes_read == num_bytes_to_read) {
-                return ErrorCode_Success;
-            }
-        } else if (0 == bytes_read) {
+        if (0 == bytes_read) {
             break;
-        } else {
+        }
+        if (bytes_read < 0) {
             return ErrorCode_errno;
+        }
+
+        buf += bytes_read;
+        num_bytes_read += bytes_read;
+        num_bytes_to_read -= bytes_read;
+        if (num_bytes_read == num_bytes_to_read) {
+            return ErrorCode_Success;
         }
     }
     if (0 == num_bytes_read) {
@@ -64,11 +65,7 @@ auto BufferedFileReader::try_seek_from_begin(size_t pos) -> ErrorCode {
         return ErrorCode_Success;
     }
 
-    size_t seek_lower_bound = m_file_pos;
-    if (m_checkpoint_pos.has_value()) {
-        seek_lower_bound = m_checkpoint_pos.value();
-    }
-
+    auto seek_lower_bound = m_checkpoint_pos.has_value() ? m_checkpoint_pos.value() : m_file_pos;
     if (pos < seek_lower_bound) {
         return ErrorCode_Failure;
     }
@@ -161,7 +158,7 @@ auto BufferedFileReader::try_read_to_delimiter(
     }
     bool found_delim{false};
     size_t total_num_bytes_read{0};
-    while (false == found_delim) {
+    while (true) {
         size_t num_bytes_read{0};
         if (auto ret_code = m_buffer_reader->try_read_to_delimiter(
                     delim,
@@ -176,18 +173,19 @@ auto BufferedFileReader::try_read_to_delimiter(
         }
         update_file_pos(m_file_pos + num_bytes_read);
         total_num_bytes_read += num_bytes_read;
+        if (found_delim) {
+            break;
+        }
 
-        if (false == found_delim) {
-            auto error_code = refill_reader_buffer(m_base_buffer_size);
-            if (ErrorCode_EndOfFile == error_code) {
-                if (total_num_bytes_read == 0) {
-                    return ErrorCode_EndOfFile;
-                }
-                return ErrorCode_Success;
+        auto error_code = refill_reader_buffer(m_base_buffer_size);
+        if (ErrorCode_EndOfFile == error_code) {
+            if (total_num_bytes_read == 0) {
+                return ErrorCode_EndOfFile;
             }
-            if (ErrorCode_Success != error_code) {
-                return error_code;
-            }
+            break;
+        }
+        if (ErrorCode_Success != error_code) {
+            return error_code;
         }
     }
     return ErrorCode_Success;
@@ -245,12 +243,12 @@ auto BufferedFileReader::close() -> ErrorCode {
 }
 
 auto BufferedFileReader::set_checkpoint() -> size_t {
-    if (m_checkpoint_pos.has_value() && m_checkpoint_pos < m_file_pos) {
-        if (m_buffer_reader->get_buffer_size() != m_base_buffer_size) {
-            // allocate new buffer for buffered data starting from pos
-            resize_buffer_from_pos(m_buffer_reader->get_pos());
-            m_buffer_reader->seek_from_begin(get_buffer_relative_pos(m_file_pos));
-        }
+    if (m_checkpoint_pos.has_value() && m_checkpoint_pos < m_file_pos
+        && m_buffer_reader->get_buffer_size() != m_base_buffer_size)
+    {
+        // allocate new buffer for buffered data starting from pos
+        resize_buffer_from_pos(m_buffer_reader->get_pos());
+        m_buffer_reader->seek_from_begin(get_buffer_relative_pos(m_file_pos));
     }
     m_checkpoint_pos = m_file_pos;
     return m_file_pos;
