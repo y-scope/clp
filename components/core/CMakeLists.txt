@@ -249,6 +249,7 @@ set(SOURCE_FILES_clp
         src/LogTypeDictionaryReader.hpp
         src/LogTypeDictionaryWriter.cpp
         src/LogTypeDictionaryWriter.hpp
+        src/math_utils.hpp
         src/MessageParser.cpp
         src/MessageParser.hpp
         src/MySQLDB.cpp
@@ -766,6 +767,7 @@ set(SOURCE_FILES_unitTest
         src/LogTypeDictionaryReader.hpp
         src/LogTypeDictionaryWriter.cpp
         src/LogTypeDictionaryWriter.hpp
+        src/math_utils.hpp
         src/MessageParser.cpp
         src/MessageParser.hpp
         src/MySQLDB.cpp
@@ -855,6 +857,7 @@ set(SOURCE_FILES_unitTest
         tests/test-Grep.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-main.cpp
+        tests/test-math_utils.cpp
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
         tests/test-Segment.cpp

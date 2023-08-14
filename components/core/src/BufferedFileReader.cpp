@@ -9,6 +9,8 @@
 // C++ standard libraries
 #include <cerrno>
 
+#include "math_utils.hpp"
+
 using std::string;
 
 namespace {
@@ -284,13 +286,6 @@ auto BufferedFileReader::peek_buffered_data(char const*& buf, size_t& peek_size)
     return ErrorCode_Success;
 }
 
-auto BufferedFileReader::quantize_to_buffer_size(size_t size) const -> size_t {
-    if (size == 0) {
-        return 0;
-    }
-    return (1 + ((size - 1) / m_base_buffer_size)) * m_base_buffer_size;
-}
-
 auto BufferedFileReader::refill_reader_buffer(size_t num_bytes_to_refill) -> ErrorCode {
     size_t num_bytes_refilled = 0;
 
@@ -340,8 +335,7 @@ auto BufferedFileReader::resize_buffer_from_pos(size_t pos) -> void {
     }
 
     auto const new_data_size = m_buffer_reader->get_buffer_size() - pos;
-    // Use a quantized size for the underlying buffer size
-    auto const buffer_size = quantize_to_buffer_size(new_data_size);
+    auto const buffer_size = int_round_up_to_multiple(new_data_size, m_base_buffer_size);
 
     m_buffer.erase(m_buffer.begin(), m_buffer.begin() + static_cast<long>(pos));
     m_buffer.resize(buffer_size);

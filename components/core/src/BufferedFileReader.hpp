@@ -192,13 +192,6 @@ public:
 private:
     // Methods
     /**
-     * Quantize the given size to be the next integer multiple of buffer_size
-     * @param size
-     * @return quantized size
-     */
-    [[nodiscard]] auto quantize_to_buffer_size(size_t size) const -> size_t;
-
-    /**
      * Reads next refill_size bytes from file descriptor to the internal buffer
      * and sets the data size of the internal buffer
      * Note: the function returns success even if the number of bytes read from
