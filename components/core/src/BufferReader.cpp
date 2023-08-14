@@ -12,7 +12,7 @@ BufferReader::BufferReader(char const* data, size_t data_size, size_t pos) {
     m_internal_buf_pos = pos;
 }
 
-auto BufferReader::peek_buffer(char const*& buf, size_t& peek_size) -> void {
+auto BufferReader::peek_buffer(char const*& buf, size_t& peek_size) const -> void {
     peek_size = get_remaining_data_size();
     buf = m_internal_buf + m_internal_buf_pos;
 }

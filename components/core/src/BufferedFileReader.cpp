@@ -112,21 +112,37 @@ auto BufferedFileReader::close() -> ErrorCode {
     return ErrorCode_Success;
 }
 
-auto BufferedFileReader::peek_buffered_data(char const*& buf, size_t& peek_size) -> ErrorCode {
+auto BufferedFileReader::try_refill_buffer_if_empty() -> ErrorCode {
     if (-1 == m_fd) {
         return ErrorCode_NotInit;
     }
-    // Refill the buffer if it is not loaded yet
-    if (0 == m_buffer_reader->get_buffer_size()) {
-        auto error_code = refill_reader_buffer(m_base_buffer_size);
-        if (ErrorCode_Success != error_code) {
-            buf = nullptr;
-            peek_size = 0;
-            return error_code;
-        }
+    if (m_buffer_reader->get_buffer_size() > 0) {
+        return ErrorCode_Success;
+    }
+    return refill_reader_buffer(m_base_buffer_size);
+}
+
+void BufferedFileReader::refill_buffer_if_empty() {
+    auto error_code = try_refill_buffer_if_empty();
+    if (ErrorCode_Success != error_code) {
+        throw OperationFailed(error_code, __FILENAME__, __LINE__);
+    }
+}
+
+auto BufferedFileReader::try_peek_buffered_data(char const*& buf, size_t& peek_size) const
+        -> ErrorCode {
+    if (-1 == m_fd) {
+        return ErrorCode_NotInit;
     }
     m_buffer_reader->peek_buffer(buf, peek_size);
     return ErrorCode_Success;
+}
+
+void BufferedFileReader::peek_buffered_data(const char *& buf, size_t& peek_size) const {
+    auto error_code = try_peek_buffered_data(buf, peek_size);
+    if (ErrorCode_Success != error_code) {
+        throw OperationFailed(error_code, __FILENAME__, __LINE__);
+    }
 }
 
 auto BufferedFileReader::set_checkpoint() -> size_t {

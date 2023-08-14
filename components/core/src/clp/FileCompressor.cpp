@@ -90,13 +90,25 @@ namespace clp {
         m_file_reader.open(file_to_compress.get_path());
 
         // Check that file is UTF-8 encoded
-        if (auto error_code = m_file_reader.peek_buffered_data(m_utf8_validation_buf,
-                                                               m_utf8_validation_buf_length);
-            ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code) {
-            SPDLOG_ERROR("Failed to peek data from {}, errno={}",
-                         file_to_compress.get_path().c_str(), errno);
-            return error_code;
+        if (auto error_code = m_file_reader.try_refill_buffer_if_empty();
+            ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code)
+        {
+            if (ErrorCode_errno == error_code) {
+                SPDLOG_ERROR(
+                        "Failed to read {} into buffer, errno={}",
+                        file_to_compress.get_path(),
+                        errno
+                );
+            } else {
+                SPDLOG_ERROR(
+                        "Failed to read {} into buffer, error={}",
+                        file_to_compress.get_path(),
+                        error_code
+                );
+            }
+            return false;
         }
+        m_file_reader.peek_buffered_data(m_utf8_validation_buf, m_utf8_validation_buf_length);
         bool succeeded = true;
         if (is_utf8_sequence(m_utf8_validation_buf_length, m_utf8_validation_buf)) {
             if (use_heuristic) {
@@ -248,20 +260,24 @@ namespace clp {
             }
 
             m_libarchive_reader.open_file_reader(m_libarchive_file_reader);
-            error_code = m_libarchive_file_reader.try_peek_buffered_data(
+
+            // Check that file is UTF-8 encoded
+            if (auto error_code = m_libarchive_file_reader.try_load_data_block();
+                ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code)
+            {
+                SPDLOG_ERROR(
+                        "Failed to load data block from {}, error={}",
+                        file_to_compress.get_path(),
+                        error_code
+                );
+                m_libarchive_file_reader.close();
+                succeeded = false;
+                continue;
+            }
+            m_libarchive_file_reader.peek_buffered_data(
                     m_utf8_validation_buf,
                     m_utf8_validation_buf_length
             );
-            // Check that file is UTF-8 encoded
-            if (ErrorCode_Success != error_code) {
-                if (ErrorCode_EndOfFile != error_code) {
-                    SPDLOG_ERROR("Failed to peek data from {}, errno={}",
-                                 file_to_compress.get_path().c_str(), errno);
-                    m_libarchive_file_reader.close();
-                    succeeded = false;
-                    continue;
-                }
-            }
             if (is_utf8_sequence(m_utf8_validation_buf_length, m_utf8_validation_buf)) {
                 auto boost_path_for_compression = parent_boost_path / m_libarchive_reader.get_path();
                 if (use_heuristic) {

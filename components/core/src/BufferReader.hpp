@@ -33,7 +33,7 @@ public:
      * @param buf Returns a pointer to the remaining content in the buffer
      * @param peek_size Returns the size of the remaining content in the buffer
      */
-    auto peek_buffer(char const*& buf, size_t& peek_size) -> void;
+    auto peek_buffer(char const*& buf, size_t& peek_size) const -> void;
 
     /**
      * Tries to read up to an occurrence of the given delimiter

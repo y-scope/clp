@@ -109,18 +109,42 @@ public:
     [[nodiscard]] auto get_path() const -> std::string const& { return m_path; }
 
     /**
-     * Peeks the remaining buffered content without advancing the read head.
+     * Tries to fill the internal buffer if it's empty
+     * @return ErrorCode_NotInit if the file is not opened
+     * @return ErrorCode_errno on error reading from the underlying file
+     * @return ErrorCode_EndOfFile on EOF
+     * @return ErrorCode_Success on success
+     */
+    [[nodiscard]] auto try_refill_buffer_if_empty() -> ErrorCode;
+
+    /**
+     * Fills the internal buffer if it's empty
+     */
+    void refill_buffer_if_empty();
+
+    /**
+     * Tries to peek the remaining buffered content without advancing the read
+     * head.
      *
      * NOTE: Any subsequent read or seek operations may invalidate the returned
      * buffer.
      * @param buf Returns a pointer to the remaining content in the buffer
      * @param peek_size Returns the size of the remaining content in the buffer
      * @return ErrorCode_NotInit if the file is not opened
-     * @return ErrorCode_errno on on error reading from the underlying file
-     * @return ErrorCode_EndOfFile if we've already reached EOF
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] auto peek_buffered_data(char const*& data_ptr, size_t& peek_size) -> ErrorCode;
+    [[nodiscard]] auto try_peek_buffered_data(char const*& buf, size_t& peek_size) const
+            -> ErrorCode;
+
+    /**
+     * Peeks the remaining buffered content without advancing the read head.
+     *
+     * NOTE: Any subsequent read or seek operations may invalidate the returned
+     * buffer.
+     * @param buf Returns a pointer to the remaining content in the buffer
+     * @param peek_size Returns the size of the remaining content in the buffer
+     */
+    void peek_buffered_data(char const*& buf, size_t& peek_size) const;
 
     /**
      * Sets a checkpoint at the current position in the file. If a checkpoint is
