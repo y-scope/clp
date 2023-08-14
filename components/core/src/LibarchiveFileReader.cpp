@@ -226,7 +226,10 @@ void LibarchiveFileReader::peek_buffered_data(char const*& buf, size_t& buf_size
         // this method. Since peek is a best-effort method, this should be
         // sufficient for most callers.
         buf = m_nulls_for_peek.data();
-        buf_size = std::min(m_nulls_for_peek.size(), m_data_block_pos_in_file - m_pos_in_file);
+        buf_size = std::min(
+                m_nulls_for_peek.size(),
+                static_cast<size_t>(m_data_block_pos_in_file - m_pos_in_file)
+        );
     } else {
         buf_size = m_data_block_length - m_pos_in_data_block;
         buf = static_cast<char const*>(m_data_block);
