@@ -1,13 +1,7 @@
 #include "ParsedIrMessage.hpp"
 
-// C standard libraries
-
-// C++ standard libraries
-
-// Project headers
 #include "LogTypeDictionaryEntry.hpp"
 
-// spdlog
 #include "spdlog/spdlog.h"
 
 using std::string;
@@ -31,7 +25,8 @@ auto ParsedIrMessage::set_ts_pattern(TimestampPattern const* timestamp_pattern) 
     m_ts_bytes = empty_msg.length();
 }
 
-auto ParsedIrMessage::append_to_logtype(string const& value, size_t begin_pos, size_t length) -> void {
+auto ParsedIrMessage::append_to_logtype(string const& value, size_t begin_pos, size_t length)
+        -> void {
     m_logtype_entry.add_constant(value, begin_pos, length);
     m_orig_num_bytes += length;
 }
@@ -55,13 +50,15 @@ auto ParsedIrMessage::add_dictionary_var(string const& dictionary_var) -> void {
     m_orig_num_bytes += dictionary_var.size();
 }
 
-auto ParsedIrMessage::add_encoded_integer(encoded_variable_t var, size_t orginal_size_in_bytes) -> void {
+auto ParsedIrMessage::add_encoded_integer(encoded_variable_t var, size_t orginal_size_in_bytes)
+        -> void {
     m_variables.emplace_back(var);
     m_logtype_entry.add_int_var();
     m_orig_num_bytes += orginal_size_in_bytes;
 }
 
-auto ParsedIrMessage::add_encoded_float(encoded_variable_t var, size_t orginal_size_in_bytes) -> void {
+auto ParsedIrMessage::add_encoded_float(encoded_variable_t var, size_t orginal_size_in_bytes)
+        -> void {
     m_variables.emplace_back(var);
     m_logtype_entry.add_float_var();
     m_orig_num_bytes += orginal_size_in_bytes;

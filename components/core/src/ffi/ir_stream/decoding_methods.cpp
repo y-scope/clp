@@ -18,7 +18,8 @@ namespace {
      */
     template <typename encoded_variable_t>
     auto is_variable_tag(encoded_tag_t tag, bool& is_encoded_var) -> bool {
-        static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+        static_assert((is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
+                      || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>));
         if (tag == cProtocol::Payload::VarStrLenUByte || tag == cProtocol::Payload::VarStrLenUShort
             || tag == cProtocol::Payload::VarStrLenInt)
         {
@@ -79,8 +80,8 @@ namespace {
      * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
      * to decode
      */
-    IRErrorCode parse_logtype(ReaderInterface& reader, encoded_tag_t encoded_tag, string& logtype) {
-        size_t logtype_length;
+    auto parse_logtype(ReaderInterface& reader, encoded_tag_t encoded_tag, string& logtype) -> IRErrorCode {
+        size_t logtype_length{0};
         if (encoded_tag == cProtocol::Payload::LogtypeStrLenUByte) {
             uint8_t length;
             if (false == decode_int(reader, length)) {
@@ -119,8 +120,8 @@ namespace {
      * @return IRErrorCode_Incomplete_IR if input buffer doesn't contain enough
      * data to decode
      */
-    IRErrorCode
-    parse_dictionary_var(ReaderInterface& reader, encoded_tag_t encoded_tag, string& dict_var) {
+    auto
+    parse_dictionary_var(ReaderInterface& reader, encoded_tag_t encoded_tag, string& dict_var) -> IRErrorCode {
         // Decode variable's length
         size_t var_length;
         if (cProtocol::Payload::VarStrLenUByte == encoded_tag) {
@@ -167,8 +168,8 @@ namespace {
      * to decode
      */
     template <typename encoded_variable_t>
-    IRErrorCode
-    parse_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_ms_t& ts) {
+    auto
+    parse_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_ms_t& ts) -> IRErrorCode {
         static_assert(
                 (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
                 || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
@@ -223,11 +224,11 @@ namespace {
      * to decode
      */
     template <typename encoded_variable_t>
-    IRErrorCode generic_decode_next_message(
+    auto generic_decode_next_message(
             ReaderInterface& reader,
             string& message,
             epoch_time_ms_t& timestamp
-    ) {
+    ) -> IRErrorCode {
         message.clear();
 
         vector<encoded_variable_t> encoded_vars;
@@ -292,11 +293,11 @@ namespace {
      * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
      * to decode
      */
-    IRErrorCode read_metadata_info(
+    auto read_metadata_info(
             ReaderInterface& reader,
             encoded_tag_t& metadata_type,
             uint16_t& metadata_size
-    ) {
+    ) -> IRErrorCode {
         if (ErrorCode_Success != reader.try_read_numeric_value(metadata_type)) {
             return IRErrorCode_Incomplete_IR;
         }

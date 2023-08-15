@@ -41,7 +41,7 @@ public:
     auto get_msg_logtype_entry() -> LogTypeDictionaryEntry& { return m_msg.get_logtype_entry(); }
 
     [[nodiscard]] auto parse_next_encoded_message() -> bool;
-    static bool is_ir_encoded(size_t sequence_length, char const* data);
+    static auto is_ir_encoded(size_t sequence_length, char const* data) -> bool;
 
 private:
     [[nodiscard]] auto parse_next_four_bytes_message() -> bool;
@@ -49,7 +49,7 @@ private:
     [[nodiscard]] auto decode_json_preamble(std::string& json_metadata) -> bool;
 
     // member variables
-    bool m_is_four_bytes_encoded;
+    bool m_is_four_bytes_encoded{false};
     epochtime_t m_reference_timestamp;
     TimestampPattern m_ts_pattern;
     ParsedIrMessage m_msg;

@@ -1,13 +1,11 @@
-#ifndef ParsedIrMessage_HPP
-#define ParsedIrMessage_HPP
+#ifndef PARSEDIRMESSAGE_HPP
+#define PARSEDIRMESSAGE_HPP
 
-// C++ standard libraries
 #include <cassert>
 #include <string>
 #include <utility>
 #include <vector>
 
-// Project headers
 #include "Defs.h"
 #include "LogTypeDictionaryEntry.hpp"
 #include "TimestampPattern.hpp"
@@ -101,4 +99,4 @@ private:
     size_t m_ts_bytes{0};
 };
 
-#endif  // ParsedIrMessage_HPP
+#endif  // PARSEDIRMESSAGE_HPP

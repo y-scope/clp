@@ -46,7 +46,7 @@ private:
  * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to
  * decode
  */
-IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding);
+auto get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding) -> IRErrorCode;
 
 /**
  * Parse logtypes, dictionary variables and encoded variables
@@ -63,13 +63,13 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
  */
 template <typename encoded_variable_t>
-IRErrorCode generic_parse_tokens(
+auto generic_parse_tokens(
         ReaderInterface& reader,
         std::string& logtype,
         std::vector<encoded_variable_t>& encoded_vars,
         std::vector<std::string>& dict_vars,
         epoch_time_ms_t& timestamp
-);
+) -> IRErrorCode;
 
 /**
  * Decodes the message consists of the tokens and calls the given methods
@@ -77,7 +77,7 @@ IRErrorCode generic_parse_tokens(
  * @tparam encoded_variable_t Type of the encoded variable
  * @tparam ConstantHandler Method to handle constants in the logtypes.
  * Signature: (const std::string&, size_t, size_t) -> void
- * @tparam ConstantRemainderHandler Method to handle remaining constant in the
+ * @tparam ConstantRemainderHandler Method to handle the last constant in the
  * logtypes. Signature: (const std::string&, size_t, size_t) -> void
  * @tparam EncodedIntHandler Method to handle encoded integers.
  * Signature: (encoded_variable_t) -> void
@@ -124,12 +124,12 @@ void generic_decode_message(
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to
  * decode
  */
-IRErrorCode decode_preamble(
+auto decode_preamble(
         ReaderInterface& reader,
         encoded_tag_t& metadata_type,
         size_t& metadata_pos,
         uint16_t& metadata_size
-);
+) -> IRErrorCode;
 
 /**
  * Decodes the preamble for an IR stream.
@@ -141,11 +141,11 @@ IRErrorCode decode_preamble(
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough
  * data to decode
  */
-IRErrorCode decode_preamble(
+auto decode_preamble(
         ReaderInterface& reader,
         encoded_tag_t& metadata_type,
         std::vector<int8_t>& metadata
-);
+) -> IRErrorCode;
 
 namespace eight_byte_encoding {
     /**
@@ -161,8 +161,9 @@ namespace eight_byte_encoding {
      * decode
      * @return ErrorCode_End_of_IR if the IR ends
      */
-    IRErrorCode
-    decode_next_message(ReaderInterface& reader, std::string& message, epoch_time_ms_t& timestamp);
+    auto
+    decode_next_message(ReaderInterface& reader, std::string& message, epoch_time_ms_t& timestamp)
+            -> IRErrorCode;
 }  // namespace eight_byte_encoding
 
 namespace four_byte_encoding {
@@ -179,11 +180,11 @@ namespace four_byte_encoding {
      * decode
      * @return ErrorCode_End_of_IR if the IR ends
      */
-    IRErrorCode decode_next_message(
+    auto decode_next_message(
             ReaderInterface& reader,
             std::string& message,
             epoch_time_ms_t& timestamp_delta
-    );
+    ) -> IRErrorCode;
 }  // namespace four_byte_encoding
 }  // namespace ffi::ir_stream
 
