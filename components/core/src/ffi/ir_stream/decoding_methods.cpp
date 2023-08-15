@@ -26,7 +26,6 @@ namespace {
             is_encoded_var = false;
             return true;
         }
-
         if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
             if (tag == cProtocol::Payload::VarEightByteEncoding) {
                 is_encoded_var = true;
