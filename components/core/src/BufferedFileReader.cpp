@@ -1,33 +1,46 @@
 #include "BufferedFileReader.hpp"
 
-// Boost libraries
-#include <boost/filesystem.hpp>
-
-// C standard libraries
 #include <fcntl.h>
 
-// C++ standard libraries
 #include <cerrno>
+
+#include <boost/filesystem.hpp>
+
+#include "math_utils.hpp"
 
 using std::string;
 
 namespace {
-auto try_read_into_buffer(int fd, char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
+/**
+ * Reads from the given file descriptor
+ * @param fd
+ * @param buf
+ * @param num_bytes_to_read
+ * @param num_bytes_read
+ * @return ErrorCode_errno on error
+ * @return ErrorCode_EndOfFile on EOF
+ * @return ErrorCode_Success on success
+ */
+auto read_into_buffer(int fd, char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
+        -> ErrorCode;
+
+auto read_into_buffer(int fd, char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
         -> ErrorCode {
     num_bytes_read = 0;
     while (true) {
         auto const bytes_read = ::read(fd, buf, num_bytes_to_read);
-        if (bytes_read > 0) {
-            buf += bytes_read;
-            num_bytes_read += bytes_read;
-            num_bytes_to_read -= bytes_read;
-            if (num_bytes_read == num_bytes_to_read) {
-                return ErrorCode_Success;
-            }
-        } else if (0 == bytes_read) {
+        if (0 == bytes_read) {
             break;
-        } else {
+        }
+        if (bytes_read < 0) {
             return ErrorCode_errno;
+        }
+
+        buf += bytes_read;
+        num_bytes_read += bytes_read;
+        num_bytes_to_read -= bytes_read;
+        if (num_bytes_read == num_bytes_to_read) {
+            return ErrorCode_Success;
         }
     }
     if (0 == num_bytes_read) {
@@ -46,7 +59,114 @@ BufferedFileReader::BufferedFileReader(size_t base_buffer_size) {
 }
 
 BufferedFileReader::~BufferedFileReader() {
-    std::ignore = close();
+    close();
+}
+
+auto BufferedFileReader::try_open(string const& path) -> ErrorCode {
+    // Cleanup in case caller forgot to call close before calling this function
+    close();
+
+    m_fd = ::open(path.c_str(), O_RDONLY);
+    if (-1 == m_fd) {
+        if (ENOENT == errno) {
+            return ErrorCode_FileNotFound;
+        }
+        return ErrorCode_errno;
+    }
+    m_path = path;
+    m_file_pos = 0;
+    m_buffer_begin_pos = 0;
+    m_buffer_reader.emplace(m_buffer.data(), 0);
+    m_highest_read_pos = 0;
+    return ErrorCode_Success;
+}
+
+void BufferedFileReader::open(string const& path) {
+    auto const error_code = try_open(path);
+    if (ErrorCode_Success != error_code) {
+        if (ErrorCode_FileNotFound == error_code) {
+            throw OperationFailed(
+                    error_code,
+                    __FILENAME__,
+                    __LINE__,
+                    "File not found: " + boost::filesystem::weakly_canonical(path).string()
+            );
+        }
+        throw OperationFailed(error_code, __FILENAME__, __LINE__);
+    }
+}
+
+auto BufferedFileReader::close() -> void {
+    if (-1 == m_fd) {
+        return;
+    }
+
+    if (m_checkpoint_pos.has_value()) {
+        m_buffer.resize(m_base_buffer_size);
+        m_checkpoint_pos.reset();
+    }
+
+    // NOTE: We don't check errors for close since, in the read case, it seems
+    // the only reason it could fail is if it was interrupted by a signal
+    ::close(m_fd);
+    m_fd = -1;
+}
+
+auto BufferedFileReader::try_refill_buffer_if_empty() -> ErrorCode {
+    if (-1 == m_fd) {
+        return ErrorCode_NotInit;
+    }
+    if (m_buffer_reader->get_buffer_size() > 0) {
+        return ErrorCode_Success;
+    }
+    return refill_reader_buffer(m_base_buffer_size);
+}
+
+void BufferedFileReader::refill_buffer_if_empty() {
+    auto error_code = try_refill_buffer_if_empty();
+    if (ErrorCode_Success != error_code) {
+        throw OperationFailed(error_code, __FILENAME__, __LINE__);
+    }
+}
+
+auto BufferedFileReader::try_peek_buffered_data(char const*& buf, size_t& peek_size) const
+        -> ErrorCode {
+    if (-1 == m_fd) {
+        return ErrorCode_NotInit;
+    }
+    m_buffer_reader->peek_buffer(buf, peek_size);
+    return ErrorCode_Success;
+}
+
+void BufferedFileReader::peek_buffered_data(char const*& buf, size_t& peek_size) const {
+    auto error_code = try_peek_buffered_data(buf, peek_size);
+    if (ErrorCode_Success != error_code) {
+        throw OperationFailed(error_code, __FILENAME__, __LINE__);
+    }
+}
+
+auto BufferedFileReader::set_checkpoint() -> size_t {
+    if (m_checkpoint_pos.has_value() && m_checkpoint_pos < m_file_pos
+        && m_buffer_reader->get_buffer_size() != m_base_buffer_size)
+    {
+        drop_content_before_current_pos();
+    }
+    m_checkpoint_pos = m_file_pos;
+    return m_file_pos;
+}
+
+auto BufferedFileReader::clear_checkpoint() -> void {
+    if (false == m_checkpoint_pos.has_value()) {
+        return;
+    }
+
+    auto error_code = try_seek_from_begin(m_highest_read_pos);
+    if (ErrorCode_Success != error_code) {
+        // Should never happen
+        throw OperationFailed(error_code, __FILENAME__, __LINE__);
+    }
+    drop_content_before_current_pos();
+    m_checkpoint_pos.reset();
 }
 
 auto BufferedFileReader::try_get_pos(size_t& pos) -> ErrorCode {
@@ -65,21 +185,17 @@ auto BufferedFileReader::try_seek_from_begin(size_t pos) -> ErrorCode {
         return ErrorCode_Success;
     }
 
-    size_t seek_lower_bound = m_file_pos;
-    if (m_checkpoint_pos.has_value()) {
-        seek_lower_bound = m_checkpoint_pos.value();
-    }
-
+    auto seek_lower_bound = m_checkpoint_pos.has_value() ? m_checkpoint_pos.value() : m_file_pos;
     if (pos < seek_lower_bound) {
-        return ErrorCode_Failure;
+        return ErrorCode_Unsupported;
     }
 
     auto error_code = m_buffer_reader->try_seek_from_begin(get_buffer_relative_pos(pos));
     if (ErrorCode_Truncated == error_code) {
         if (false == m_checkpoint_pos.has_value()) {
-            // if checkpoint is not set, simply move the file_pos and invalidate
+            // If checkpoint is not set, simply move the file_pos and invalidate
             // the buffer reader
-            auto offset = lseek(m_fd, static_cast<__off64_t>(pos), SEEK_SET);
+            auto offset = lseek(m_fd, static_cast<off_t>(pos), SEEK_SET);
             if (-1 == offset) {
                 return ErrorCode_errno;
             }
@@ -162,7 +278,7 @@ auto BufferedFileReader::try_read_to_delimiter(
     }
     bool found_delim{false};
     size_t total_num_bytes_read{0};
-    while (false == found_delim) {
+    while (true) {
         size_t num_bytes_read{0};
         if (auto ret_code = m_buffer_reader->try_read_to_delimiter(
                     delim,
@@ -177,175 +293,74 @@ auto BufferedFileReader::try_read_to_delimiter(
         }
         update_file_pos(m_file_pos + num_bytes_read);
         total_num_bytes_read += num_bytes_read;
-
-        if (false == found_delim) {
-            auto error_code = refill_reader_buffer(m_base_buffer_size);
-            if (ErrorCode_EndOfFile == error_code) {
-                if (total_num_bytes_read == 0) {
-                    return ErrorCode_EndOfFile;
-                }
-                return ErrorCode_Success;
-            }
-            if (ErrorCode_Success != error_code) {
-                return error_code;
-            }
+        if (found_delim) {
+            break;
         }
-    }
-    return ErrorCode_Success;
-}
 
-auto BufferedFileReader::try_open(string const& path) -> ErrorCode {
-    // Cleanup in case caller forgot to call close before calling this function
-    std::ignore = close();
-
-    m_fd = ::open(path.c_str(), O_RDONLY);
-    if (-1 == m_fd) {
-        if (ENOENT == errno) {
-            return ErrorCode_FileNotFound;
-        }
-        return ErrorCode_errno;
-    }
-    m_path = path;
-    m_file_pos = 0;
-    m_buffer_begin_pos = 0;
-    m_buffer_reader.emplace(m_buffer.data(), 0);
-    m_highest_read_pos = 0;
-    return ErrorCode_Success;
-}
-
-void BufferedFileReader::open(string const& path) {
-    auto const error_code = try_open(path);
-    if (ErrorCode_Success != error_code) {
-        if (ErrorCode_FileNotFound == error_code) {
-            throw OperationFailedWithMsg(
-                    error_code,
-                    __FILENAME__,
-                    __LINE__,
-                    "File not found: " + boost::filesystem::weakly_canonical(path).string()
-            );
-        }
-        throw OperationFailed(error_code, __FILENAME__, __LINE__);
-    }
-}
-
-auto BufferedFileReader::close() -> ErrorCode {
-    int close_result{0};
-    if (-1 != m_fd) {
-        close_result = ::close(m_fd);
-
-        m_fd = -1;
-        if (m_checkpoint_pos.has_value()) {
-            m_buffer.resize(m_base_buffer_size);
-            m_checkpoint_pos.reset();
-        }
-    }
-    if (0 != close_result) {
-        return ErrorCode_errno;
-    }
-    return ErrorCode_Success;
-}
-
-auto BufferedFileReader::set_checkpoint() -> size_t {
-    if (m_checkpoint_pos.has_value() && m_checkpoint_pos < m_file_pos) {
-        if (m_buffer_reader->get_buffer_size() != m_base_buffer_size) {
-            // allocate new buffer for buffered data starting from pos
-            resize_buffer_from_pos(m_buffer_reader->get_pos());
-            m_buffer_reader->seek_from_begin(get_buffer_relative_pos(m_file_pos));
-        }
-    }
-    m_checkpoint_pos = m_file_pos;
-    return m_file_pos;
-}
-
-auto BufferedFileReader::clear_checkpoint() -> void {
-    if (false == m_checkpoint_pos.has_value()) {
-        return;
-    }
-
-    m_file_pos = m_highest_read_pos;
-    resize_buffer_from_pos(get_buffer_relative_pos(m_file_pos));
-    m_checkpoint_pos.reset();
-}
-
-auto BufferedFileReader::peek_buffered_data(char const*& buf, size_t& peek_size) -> ErrorCode {
-    if (-1 == m_fd) {
-        return ErrorCode_NotInit;
-    }
-    // Refill the buffer if it is not loaded yet
-    if (0 == m_buffer_reader->get_buffer_size()) {
         auto error_code = refill_reader_buffer(m_base_buffer_size);
+        if (ErrorCode_EndOfFile == error_code) {
+            if (0 == total_num_bytes_read) {
+                return ErrorCode_EndOfFile;
+            }
+            break;
+        }
         if (ErrorCode_Success != error_code) {
-            buf = nullptr;
-            peek_size = 0;
             return error_code;
         }
     }
-    m_buffer_reader->peek_buffer(buf, peek_size);
     return ErrorCode_Success;
-}
-
-auto BufferedFileReader::quantize_to_buffer_size(size_t size) const -> size_t {
-    if (size == 0) {
-        return 0;
-    }
-    return (1 + ((size - 1) / m_base_buffer_size)) * m_base_buffer_size;
 }
 
 auto BufferedFileReader::refill_reader_buffer(size_t num_bytes_to_refill) -> ErrorCode {
-    size_t num_bytes_refilled = 0;
-
     auto const buffer_end_pos = get_buffer_end_pos();
     auto const data_size = m_buffer_reader->get_buffer_size();
     auto const available_buffer_space = m_buffer.size() - data_size;
-    size_t buf_internal_pos{0};
 
-    size_t bytes_to_read = m_base_buffer_size - (buffer_end_pos % m_base_buffer_size);
+    size_t num_bytes_to_read{0};
+    size_t next_buffer_pos{0};
+    auto next_buffer_begin_pos = m_buffer_begin_pos;
     if (m_checkpoint_pos.has_value()) {
-        while (bytes_to_read < num_bytes_to_refill) {
-            bytes_to_read += m_base_buffer_size;
+        num_bytes_to_read = int_round_up_to_multiple(
+                buffer_end_pos + num_bytes_to_refill,
+                m_base_buffer_size
+        );
+        // Grow the buffer if necessary
+        if (num_bytes_to_read > available_buffer_space) {
+            m_buffer.resize(data_size + num_bytes_to_read);
         }
-        // Grow the buffer if bytes_to_read is more
-        // than available space in the buffer
-        if (bytes_to_read > available_buffer_space) {
-            m_buffer.resize(data_size + bytes_to_read);
-        }
-        buf_internal_pos = data_size;
+        next_buffer_pos = data_size;
     } else {
-        if (bytes_to_read > available_buffer_space) {
-            // advance the entire buffer
-            buf_internal_pos = 0;
-            m_buffer_begin_pos = buffer_end_pos;
+        num_bytes_to_read = m_base_buffer_size - (buffer_end_pos % m_base_buffer_size);
+        if (num_bytes_to_read > available_buffer_space) {
+            // Advance the entire buffer since we don't grow the buffer if
+            // there's no checkpoint
+            next_buffer_pos = 0;
+            next_buffer_begin_pos = buffer_end_pos;
         } else {
-            buf_internal_pos = data_size;
+            next_buffer_pos = data_size;
         }
     }
 
-    auto error_code = try_read_into_buffer(
-            m_fd,
-            &m_buffer[buf_internal_pos],
-            bytes_to_read,
-            num_bytes_refilled
-    );
-    if (error_code != ErrorCode_Success) {
+    size_t num_bytes_read{0};
+    auto error_code
+            = read_into_buffer(m_fd, &m_buffer[next_buffer_pos], num_bytes_to_read, num_bytes_read);
+    if (error_code != ErrorCode_Success && ErrorCode_EndOfFile != error_code) {
         return error_code;
     }
-    m_buffer_reader
-            .emplace(m_buffer.data(), num_bytes_refilled + buf_internal_pos, buf_internal_pos);
-    return ErrorCode_Success;
+    // NOTE: We still want to set the buffer reader if no bytes were read on EOF
+    m_buffer_reader.emplace(m_buffer.data(), next_buffer_pos + num_bytes_read, next_buffer_pos);
+    m_buffer_begin_pos = next_buffer_begin_pos;
+    return error_code;
 }
 
-auto BufferedFileReader::resize_buffer_from_pos(size_t pos) -> void {
-    if (pos > m_buffer_reader->get_buffer_size()) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
+auto BufferedFileReader::drop_content_before_current_pos() -> void {
+    auto buffer_reader_pos = m_buffer_reader->get_pos();
+    auto const new_data_size = m_buffer_reader->get_buffer_size() - buffer_reader_pos;
+    auto const new_buffer_size = int_round_up_to_multiple(new_data_size, m_base_buffer_size);
 
-    auto const new_data_size = m_buffer_reader->get_buffer_size() - pos;
-    // Use a quantized size for the underlying buffer size
-    auto const buffer_size = quantize_to_buffer_size(new_data_size);
-
-    m_buffer.erase(m_buffer.begin(), m_buffer.begin() + static_cast<long>(pos));
-    m_buffer.resize(buffer_size);
-    m_buffer_begin_pos += pos;
+    m_buffer.erase(m_buffer.begin(), m_buffer.begin() + static_cast<long>(buffer_reader_pos));
+    m_buffer.resize(new_buffer_size);
+    m_buffer_begin_pos += buffer_reader_pos;
 
     m_buffer_reader.emplace(m_buffer.data(), new_data_size);
 }

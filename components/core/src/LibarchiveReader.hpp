@@ -48,7 +48,7 @@ public:
      * @return ErrorCode_Success on success
      * @return ErrorCode_Failure on failure
      */
-    ErrorCode try_open (ReaderInterface&reader, const std::string& path_if_compressed_file);
+    ErrorCode try_open (ReaderInterface& reader, const std::string& path_if_compressed_file);
     /**
      * Closes the reader
      */

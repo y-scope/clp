@@ -91,15 +91,29 @@ namespace clp {
         m_file_reader.open(file_to_compress.get_path());
 
         // Check that file is UTF-8 encoded
-        if (auto error_code = m_file_reader.peek_buffered_data(m_utf8_validation_buf,
-                                                               m_utf8_validation_buf_length);
-            ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code) {
-            SPDLOG_ERROR("Failed to peek data from {}, errno={}",
-                         file_to_compress.get_path().c_str(), errno);
-            return error_code;
+        if (auto error_code = m_file_reader.try_refill_buffer_if_empty();
+            ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code)
+        {
+            if (ErrorCode_errno == error_code) {
+                SPDLOG_ERROR(
+                        "Failed to read {} into buffer, errno={}",
+                        file_to_compress.get_path(),
+                        errno
+                );
+            } else {
+                SPDLOG_ERROR(
+                        "Failed to read {} into buffer, error={}",
+                        file_to_compress.get_path(),
+                        error_code
+                );
+            }
+            return false;
         }
+        char const* utf8_validation_buf{nullptr};
+        size_t utf8_validation_buf_len{0};
+        m_file_reader.peek_buffered_data(utf8_validation_buf, utf8_validation_buf_len);
         bool succeeded = true;
-        if (is_utf8_sequence(m_utf8_validation_buf_length, m_utf8_validation_buf)) {
+        if (is_utf8_sequence(utf8_validation_buf_len, utf8_validation_buf)) {
             if (use_heuristic) {
                 parse_and_encode_with_heuristic(target_data_size_of_dicts, archive_user_config, target_encoded_file_size,
                                                 file_to_compress.get_path_for_compression(),
@@ -117,7 +131,7 @@ namespace clp {
             }
         }
 
-        std::ignore = m_file_reader.close();
+        m_file_reader.close();
 
         Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
         LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::ParseLogFile)
@@ -137,9 +151,6 @@ namespace clp {
         archive_writer.m_target_encoded_file_size = target_encoded_file_size;
         // Open compressed file
         archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
-        // TODO: decide what to actually do about this
-        // for now reset reader rather than try reading m_utf8_validation_buf as it would be
-        // very awkward to combine sources to/in the parser
         m_log_parser->set_archive_writer_ptr(&archive_writer);
         m_log_parser->get_archive_writer_ptr()->old_ts_pattern.clear();
         try {
@@ -293,22 +304,28 @@ namespace clp {
             }
 
             m_libarchive_reader.open_file_reader(m_libarchive_file_reader);
-            error_code = m_libarchive_file_reader.try_peek_buffered_data(
-                    m_utf8_validation_buf,
-                    m_utf8_validation_buf_length
-            );
+
             // Check that file is UTF-8 encoded
-            if (ErrorCode_Success != error_code) {
-                if (ErrorCode_EndOfFile != error_code) {
-                    SPDLOG_ERROR("Failed to peek data from {}, errno={}",
-                                 file_to_compress.get_path().c_str(), errno);
-                    m_libarchive_file_reader.close();
-                    succeeded = false;
-                    continue;
-                }
+            if (auto error_code = m_libarchive_file_reader.try_load_data_block();
+                ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code)
+            {
+                SPDLOG_ERROR(
+                        "Failed to load data block from {}, error={}",
+                        file_to_compress.get_path(),
+                        error_code
+                );
+                m_libarchive_file_reader.close();
+                succeeded = false;
+                continue;
             }
             auto file_path = std::string(m_libarchive_reader.get_path());
-            if (is_utf8_sequence(m_utf8_validation_buf_length, m_utf8_validation_buf)) {
+            char const* utf8_validation_buf{nullptr};
+            size_t utf8_validation_buf_len{0};
+            m_libarchive_file_reader.peek_buffered_data(
+                    utf8_validation_buf,
+                    utf8_validation_buf_len
+            );
+            if (is_utf8_sequence(utf8_validation_buf_len, utf8_validation_buf)) {
                 auto boost_path_for_compression = parent_boost_path / file_path;
                 if (use_heuristic) {
                     parse_and_encode_with_heuristic(target_data_size_of_dicts, archive_user_config, target_encoded_file_size,
@@ -318,8 +335,8 @@ namespace clp {
                     parse_and_encode(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, boost_path_for_compression.string(),
                                      file_to_compress.get_group_id(), archive_writer, m_libarchive_file_reader);
                 }
-            } else if (IrMessageParser::is_ir_encoded(m_utf8_validation_buf_length,
-                                                      m_utf8_validation_buf)) {
+            } else if (IrMessageParser::is_ir_encoded(utf8_validation_buf_len,
+                                                      utf8_validation_buf)) {
                 // Remove .clp suffix if found
                 if (file_path.length() > 4 &&
                     file_path.substr(file_path.length() - 4) == ".clp")

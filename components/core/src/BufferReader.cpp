@@ -12,7 +12,7 @@ BufferReader::BufferReader(char const* data, size_t data_size, size_t pos) {
     m_internal_buf_pos = pos;
 }
 
-auto BufferReader::peek_buffer(char const*& buf, size_t& peek_size) -> void {
+auto BufferReader::peek_buffer(char const*& buf, size_t& peek_size) const -> void {
     peek_size = get_remaining_data_size();
     buf = m_internal_buf + m_internal_buf_pos;
 }
@@ -65,8 +65,8 @@ auto BufferReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_byt
     }
 
     num_bytes_read = std::min(remaining_data_size, num_bytes_to_read);
-    const auto* copy_begin = m_internal_buf + m_internal_buf_pos;
-    const auto* copy_end = copy_begin + num_bytes_read;
+    auto const* copy_begin = m_internal_buf + m_internal_buf_pos;
+    auto const* copy_end = copy_begin + num_bytes_read;
     std::copy(copy_begin, copy_end, buf);
     m_internal_buf_pos += num_bytes_read;
     return ErrorCode_Success;
