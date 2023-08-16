@@ -233,13 +233,11 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
             query_tokens.emplace_back(processed_search_string, begin_pos, end_pos, is_var);
         }
     } else {
-        std::string post_processed_search_string;
-        post_processed_search_string.reserve(processed_search_string.size());
         while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos, is_var,
                                                 forward_lexer, reverse_lexer)) {
-            query_tokens.emplace_back(post_processed_search_string, begin_pos, end_pos, is_var);
+            query_tokens.emplace_back(processed_search_string, begin_pos, end_pos, is_var);
         }
-        processed_search_string = post_processed_search_string;
+        processed_search_string = processed_search_string;
         query.set_search_string(processed_search_string);
     }
 
