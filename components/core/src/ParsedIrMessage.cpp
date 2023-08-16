@@ -1,8 +1,8 @@
 #include "ParsedIrMessage.hpp"
 
-#include "LogTypeDictionaryEntry.hpp"
+#include <spdlog/spdlog.h>
 
-#include "spdlog/spdlog.h"
+#include "LogTypeDictionaryEntry.hpp"
 
 using std::string;
 

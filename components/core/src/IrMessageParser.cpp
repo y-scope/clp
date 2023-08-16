@@ -1,11 +1,12 @@
 #include "IrMessageParser.hpp"
 
-#include "../../../submodules/json/single_include/nlohmann/json.hpp"
+#include <json/single_include/nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
+
 #include "BufferReader.hpp"
 #include "EncodedVariableInterpreter.hpp"
 #include "ffi/encoding_methods.hpp"
 #include "ffi/ir_stream/protocol_constants.hpp"
-#include "spdlog/spdlog.h"
 
 using ffi::cVariablePlaceholderEscapeCharacter;
 using ffi::eight_byte_encoded_variable_t;

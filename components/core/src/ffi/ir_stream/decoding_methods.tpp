@@ -1,11 +1,9 @@
 #ifndef FFI_IR_STREAM_DECODING_METHODS_TPP
 #define FFI_IR_STREAM_DECODING_METHODS_TPP
 
-// C++ standard libraries
 #include <string_view>
 #include <vector>
 
-// Project headers
 #include "../../ReaderInterface.hpp"
 #include "../encoding_methods.hpp"
 #include "decoding_methods.hpp"

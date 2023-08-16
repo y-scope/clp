@@ -1,12 +1,6 @@
-
 #ifndef IrMessageParser_HPP
 #define IrMessageParser_HPP
 
-// C standard libraries
-
-// C++ standard libraries
-
-// Project headers
 #include "ffi/ir_stream/decoding_methods.hpp"
 #include "ParsedIrMessage.hpp"
 #include "TraceableException.hpp"
