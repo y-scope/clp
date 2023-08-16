@@ -4,14 +4,14 @@
 #include <boost/uuid/random_generator.hpp>
 
 #include "../BufferedFileReader.hpp"
+#include "../compressor_frontend/LogParser.hpp"
 #include "../LibarchiveFileReader.hpp"
 #include "../LibarchiveReader.hpp"
 #include "../MessageParser.hpp"
-#include "../ParsedMessage.hpp"
 #include "../ParsedIrMessage.hpp"
+#include "../ParsedMessage.hpp"
 #include "../streaming_archive/writer/Archive.hpp"
 #include "FileToCompress.hpp"
-#include "../compressor_frontend/LogParser.hpp"
 
 namespace clp {
     /**

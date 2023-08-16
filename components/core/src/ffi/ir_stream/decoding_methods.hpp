@@ -46,7 +46,7 @@ private:
  * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to
  * decode
  */
-auto get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding) -> IRErrorCode;
+IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding);
 
 /**
  * Parse logtypes, dictionary variables and encoded variables
@@ -124,12 +124,12 @@ void generic_decode_message(
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to
  * decode
  */
-auto decode_preamble(
+IRErrorCode decode_preamble(
         ReaderInterface& reader,
         encoded_tag_t& metadata_type,
         size_t& metadata_pos,
         uint16_t& metadata_size
-) -> IRErrorCode;
+);
 
 /**
  * Decodes the preamble for an IR stream.
@@ -141,11 +141,11 @@ auto decode_preamble(
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough
  * data to decode
  */
-auto decode_preamble(
+IRErrorCode decode_preamble(
         ReaderInterface& reader,
         encoded_tag_t& metadata_type,
         std::vector<int8_t>& metadata
-) -> IRErrorCode;
+);
 
 namespace eight_byte_encoding {
     /**
@@ -161,9 +161,8 @@ namespace eight_byte_encoding {
      * decode
      * @return ErrorCode_End_of_IR if the IR ends
      */
-    auto
-    decode_next_message(ReaderInterface& reader, std::string& message, epoch_time_ms_t& timestamp)
-            -> IRErrorCode;
+    IRErrorCode
+    decode_next_message(ReaderInterface& reader, std::string& message, epoch_time_ms_t& timestamp);
 }  // namespace eight_byte_encoding
 
 namespace four_byte_encoding {
@@ -180,11 +179,11 @@ namespace four_byte_encoding {
      * decode
      * @return ErrorCode_End_of_IR if the IR ends
      */
-    auto decode_next_message(
+    IRErrorCode decode_next_message(
             ReaderInterface& reader,
             std::string& message,
             epoch_time_ms_t& timestamp_delta
-    ) -> IRErrorCode;
+    );
 }  // namespace four_byte_encoding
 }  // namespace ffi::ir_stream
 
