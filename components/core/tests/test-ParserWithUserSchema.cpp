@@ -2,6 +2,7 @@
 /// TODO: move load_lexer_from_file into SearchParser in log_surgeon
 
 // C libraries
+#include <string>
 #include <sys/stat.h>
 
 // Boost libraries
@@ -73,8 +74,9 @@ void decompress(std::string archive_dir, std::string output_dir) {
 TEST_CASE("Test error for missing schema file", "[LALR1Parser][SchemaParser]") {
     std::string file_path = "../tests/test_schema_files/missing_schema.txt";
     std::string file_name = boost::filesystem::weakly_canonical(file_path).string();
-    REQUIRE_THROWS_WITH(generate_schema_ast(file_path), "File not found: " + file_name + "\n");
-    SPDLOG_INFO("File not found: " + file_name + "\n");
+    REQUIRE_THROWS_WITH(generate_schema_ast(file_path),
+                        "Failed to read '" + file_path + "', error_code=" +
+                        std::to_string((int)log_surgeon::ErrorCode::FileNotFound));
 }
 
 TEST_CASE("Test error for empty schema file", "[LALR1Parser][SchemaParser]") {

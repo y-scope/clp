@@ -158,8 +158,6 @@ class ReaderInterfaceWrapper : public log_surgeon::Reader {
 public:
     ReaderInterfaceWrapper (ReaderInterface& reader_interface);
 
-    auto read (char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode;
-
 private:
     ReaderInterface& m_reader_interface;
 };
