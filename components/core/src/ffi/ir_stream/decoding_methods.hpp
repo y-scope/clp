@@ -78,7 +78,7 @@ auto generic_parse_tokens(
  * @tparam ConstantHandler Method to handle constants in the logtypes.
  * Signature: (const std::string&, size_t, size_t) -> void
  * @tparam ConstantRemainderHandler Method to handle the last constant in the
- * logtypes. Signature: (const std::string&, size_t, size_t) -> void
+ * logtypes. Signature: (const std::string&, size_t) -> void
  * @tparam EncodedIntHandler Method to handle encoded integers.
  * Signature: (encoded_variable_t) -> void
  * @tparam EncodedFloatHandler Method to handle encoded float.

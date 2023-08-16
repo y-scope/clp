@@ -275,27 +275,22 @@ generic_decode_next_message(ReaderInterface& reader, string& message, epoch_time
         return error_code;
     }
 
-    // constant handler
     auto constant_handler = [&message](string const& value, size_t begin_pos, size_t length) {
         message.append(value, begin_pos, length);
     };
 
-    // constant handler
     auto constant_remainder_handler = [&message](string const& value, size_t begin_pos) {
         message.append(value, begin_pos);
     };
 
-    // encoded int handler
     auto encoded_int_handler = [&message](encoded_variable_t value) {
         message.append(decode_integer_var(value));
     };
 
-    // encoded float handler
     auto encoded_float_handler = [&message](encoded_variable_t encoded_float) {
         message.append(decode_float_var(encoded_float));
     };
 
-    // dict var handler
     auto dict_var_handler = [&message](string const& dict_var) { message.append(dict_var); };
 
     try {
