@@ -236,8 +236,7 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
         std::string post_processed_search_string;
         post_processed_search_string.reserve(processed_search_string.size());
         while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos, is_var,
-                                                forward_lexer, reverse_lexer,
-                                                post_processed_search_string)) {
+                                                forward_lexer, reverse_lexer)) {
             query_tokens.emplace_back(post_processed_search_string, begin_pos, end_pos, is_var);
         }
         processed_search_string = post_processed_search_string;
@@ -420,8 +419,7 @@ bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_
 bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos,
                                  size_t& end_pos, bool& is_var,
                                  log_surgeon::lexers::ByteLexer& forward_lexer,
-                                 log_surgeon::lexers::ByteLexer& reverse_lexer,
-                                 string& post_processed_value) {
+                                 log_surgeon::lexers::ByteLexer& reverse_lexer) {
 
     const size_t value_length = value.length();
     if (end_pos >= value_length) {

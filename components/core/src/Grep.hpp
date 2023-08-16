@@ -82,8 +82,7 @@ public:
     static bool get_bounds_of_next_potential_var (const std::string& value, size_t& begin_pos,
                                                   size_t& end_pos, bool& is_var,
                                                   log_surgeon::lexers::ByteLexer& forward_lexer,
-                                                  log_surgeon::lexers::ByteLexer& reverse_lexer,
-                                                  std::string& post_processed_string);
+                                                  log_surgeon::lexers::ByteLexer& reverse_lexer);
     /**
      * Marks which sub-queries in each query are relevant to the given file
      * @param compressed_file
