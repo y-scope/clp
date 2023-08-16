@@ -16,25 +16,6 @@ using ffi::VariablePlaceholder;
 using std::string;
 using std::vector;
 
-namespace {
-/**
- * Decodes Ir header from the reader and return its encoding type by reference
- * @param reader
- * @param is_four_bytes_encoded Returns the encoding type
- * or Ir header that can't be properly decoded
- */
-[[nodiscard]] auto decode_ir_magic_number(ReaderInterface& reader, bool& is_four_bytes_encoded)
-        -> bool {
-    // Note. On failure, this method doesn't recover file pos.
-    if (ffi::ir_stream::IRErrorCode_Success
-        != ffi::ir_stream::get_encoding_type(reader, is_four_bytes_encoded))
-    {
-        return false;
-    }
-    return true;
-}
-}  // namespace
-
 /**
  * Constructs the class by setting the internal reader, parsing the metadata
  * and initializing variable based on the metadata
@@ -43,7 +24,8 @@ namespace {
  * or IR data that can't be properly decoded
  */
 IrMessageParser::IrMessageParser(ReaderInterface& reader) : m_reader(reader) {
-    if (false == decode_ir_magic_number(m_reader, m_is_four_bytes_encoded)) {
+    if (ffi::ir_stream::IRErrorCode_Success
+        != ffi::ir_stream::get_encoding_type(reader, m_is_four_bytes_encoded)) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
 
@@ -84,6 +66,20 @@ auto IrMessageParser::parse_next_encoded_message() -> bool {
         return parse_next_four_bytes_message();
     }
     return parse_next_eight_bytes_message();
+}
+
+auto IrMessageParser::is_ir_encoded(size_t sequence_length, char const* data) -> bool {
+    if (sequence_length < MagicNumberLength) {
+        return false;
+    }
+    bool is_four_bytes_encoded{false};
+    BufferReader encoding_data(data, MagicNumberLength);
+    if (ffi::ir_stream::IRErrorCode_Success
+        != ffi::ir_stream::get_encoding_type(encoding_data, is_four_bytes_encoded))
+    {
+        return false;
+    }
+    return true;
 }
 
 auto IrMessageParser::parse_next_eight_bytes_message() -> bool {
@@ -252,19 +248,5 @@ auto IrMessageParser::decode_json_preamble(std::string& json_metadata) -> bool {
             metadata_vec.size()
     );
 
-    return true;
-}
-
-auto IrMessageParser::is_ir_encoded(size_t sequence_length, char const* data) -> bool {
-    if (sequence_length < MagicNumberLength) {
-        return false;
-    }
-    bool is_four_bytes_encoded{false};
-    BufferReader encoding_data(data, MagicNumberLength);
-    if (ffi::ir_stream::IRErrorCode_Success
-        != ffi::ir_stream::get_encoding_type(encoding_data, is_four_bytes_encoded))
-    {
-        return false;
-    }
     return true;
 }

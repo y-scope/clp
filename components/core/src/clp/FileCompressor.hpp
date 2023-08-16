@@ -1,10 +1,8 @@
 #ifndef CLP_FILECOMPRESSOR_HPP
 #define CLP_FILECOMPRESSOR_HPP
 
-// Boost libraries
 #include <boost/uuid/random_generator.hpp>
 
-// Project headers
 #include "../BufferedFileReader.hpp"
 #include "../LibarchiveFileReader.hpp"
 #include "../LibarchiveReader.hpp"
@@ -16,8 +14,6 @@
 #include "../compressor_frontend/LogParser.hpp"
 
 namespace clp {
-    constexpr size_t cUtf8ValidationBufCapacity = 4096;
-
     /**
      * Class to parse and compress a file into a streaming archive
      */

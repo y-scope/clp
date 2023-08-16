@@ -269,10 +269,12 @@ namespace streaming_archive::writer {
         }
     }
 
-    void Archive::write_ir_message (epochtime_t timestamp,
-                                   LogTypeDictionaryEntry& logtype_entry,
-                                    const std::vector<ParsedIrMessage::IrVariable>& variables,
-                                   size_t num_uncompressed_bytes) {
+    void Archive::write_ir_message(
+            epochtime_t timestamp,
+            LogTypeDictionaryEntry& logtype_entry,
+            std::vector<ParsedIrMessage::IrVariable> const& variables,
+            size_t num_uncompressed_bytes
+    ) {
         // Encode logtype
         logtype_dictionary_id_t logtype_id;
         m_logtype_dict.add_entry(logtype_entry, logtype_id);
@@ -280,7 +282,7 @@ namespace streaming_archive::writer {
         vector<encoded_variable_t> encoded_vars;
         vector<variable_dictionary_id_t> var_ids;
         // Encode variable base on type
-        for (const auto& var : variables) {
+        for (auto const& var : variables) {
             if (var.type() == ParsedIrMessage::VariableType::EncodedVar) {
                 encoded_vars.push_back(var.get_encoded_var());
             } else if (var.type() == ParsedIrMessage::VariableType::DictVar) {
@@ -293,8 +295,13 @@ namespace streaming_archive::writer {
             }
         }
 
-        m_file->write_encoded_msg(timestamp, logtype_id, encoded_vars,
-                                  var_ids, num_uncompressed_bytes);
+        m_file->write_encoded_msg(
+                timestamp,
+                logtype_id,
+                encoded_vars,
+                var_ids,
+                num_uncompressed_bytes
+        );
 
         // Update segment indices
         if (m_file->has_ts_pattern()) {
@@ -304,7 +311,6 @@ namespace streaming_archive::writer {
             m_logtype_ids_for_file_with_unassigned_segment.insert(logtype_id);
             m_var_ids_for_file_with_unassigned_segment.insert(var_ids.cbegin(), var_ids.cend());
         }
-
     }
 
     void Archive::write_msg_using_schema (compressor_frontend::Token*& uncompressed_msg, uint32_t uncompressed_msg_pos, const bool has_delimiter,

@@ -34,7 +34,7 @@ public:
     explicit IrMessageParser(ReaderInterface& reader);
 
     // Methods
-    auto get_ts_pattern() -> TimestampPattern* { return &m_ts_pattern; }
+    auto get_ts_pattern() const -> TimestampPattern const* { return &m_ts_pattern; }
 
     [[nodiscard]] auto get_parsed_msg() const -> ParsedIrMessage const& { return m_msg; }
 

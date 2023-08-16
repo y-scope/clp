@@ -196,63 +196,6 @@ namespace clp {
         close_file_and_append_to_segment(archive_writer);
     }
 
-    bool FileCompressor::try_compressing_as_ir(
-            size_t target_data_size_of_dicts,
-            streaming_archive::writer::Archive::UserConfig& archive_user_config,
-            size_t target_encoded_file_size,
-            std::string const& path_for_compression,
-            group_id_t group_id,
-            streaming_archive::writer::Archive& archive_writer,
-            ReaderInterface& reader
-    ) {
-        // Construct the MessageParser which parse encoding type and metadata
-        // as part of the construction process
-        try {
-            IrMessageParser ir_message_parser(reader);
-            // Open compressed file
-            archive_writer
-                    .create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
-
-            // Assume one encoded file only has one timestamp pattern
-            archive_writer.change_ts_pattern(ir_message_parser.get_ts_pattern());
-
-            while (true) {
-                if (false == ir_message_parser.parse_next_encoded_message()) {
-                    break;
-                }
-                if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
-                    split_file_and_archive(
-                            archive_user_config,
-                            path_for_compression,
-                            group_id,
-                            ir_message_parser.get_ts_pattern(),
-                            archive_writer
-                    );
-                } else if (archive_writer.get_file().get_encoded_size_in_bytes() >=
-                           target_encoded_file_size)
-                {
-                    split_file(
-                            path_for_compression,
-                            group_id,
-                            ir_message_parser.get_ts_pattern(),
-                            archive_writer
-                    );
-                }
-                auto const& parsed_msg = ir_message_parser.get_parsed_msg();
-                archive_writer.write_ir_message(
-                        parsed_msg.get_ts(),
-                        ir_message_parser.get_msg_logtype_entry(),
-                        parsed_msg.get_vars(),
-                        parsed_msg.get_orig_num_bytes()
-                );
-            }
-            close_file_and_append_to_segment(archive_writer);
-            return true;
-        } catch (TraceableException& e) {
-            return false;
-        }
-    }
-
     bool FileCompressor::try_compressing_as_archive (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
                                                      size_t target_encoded_file_size, const FileToCompress& file_to_compress,
                                                      streaming_archive::writer::Archive& archive_writer, bool use_heuristic)
@@ -378,5 +321,63 @@ namespace clp {
         m_libarchive_reader.close();
 
         return succeeded;
+    }
+
+    bool FileCompressor::try_compressing_as_ir(
+            size_t target_data_size_of_dicts,
+            streaming_archive::writer::Archive::UserConfig& archive_user_config,
+            size_t target_encoded_file_size,
+            std::string const& path_for_compression,
+            group_id_t group_id,
+            streaming_archive::writer::Archive& archive_writer,
+            ReaderInterface& reader
+    ) {
+        try {
+            // Construct the IrMessageParser which parse encoding type and
+            // metadata as part of the construction process
+            IrMessageParser ir_message_parser(reader);
+
+            // Open compressed file
+            archive_writer
+                    .create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
+
+            // Assume one encoded file only has one timestamp pattern
+            archive_writer.change_ts_pattern(ir_message_parser.get_ts_pattern());
+
+            while (true) {
+                if (false == ir_message_parser.parse_next_encoded_message()) {
+                    break;
+                }
+                if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
+                    split_file_and_archive(
+                            archive_user_config,
+                            path_for_compression,
+                            group_id,
+                            ir_message_parser.get_ts_pattern(),
+                            archive_writer
+                    );
+                } else if (archive_writer.get_file().get_encoded_size_in_bytes() >=
+                           target_encoded_file_size)
+                {
+                    split_file(
+                            path_for_compression,
+                            group_id,
+                            ir_message_parser.get_ts_pattern(),
+                            archive_writer
+                    );
+                }
+                auto const& parsed_msg = ir_message_parser.get_parsed_msg();
+                archive_writer.write_ir_message(
+                        parsed_msg.get_ts(),
+                        ir_message_parser.get_msg_logtype_entry(),
+                        parsed_msg.get_vars(),
+                        parsed_msg.get_orig_num_bytes()
+                );
+            }
+            close_file_and_append_to_segment(archive_writer);
+            return true;
+        } catch (TraceableException& e) {
+            return false;
+        }
     }
 }

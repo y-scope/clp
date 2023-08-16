@@ -138,9 +138,12 @@ namespace streaming_archive { namespace writer {
          * @param num_uncompressed_bytes
          * @throw FileWriter::OperationFailed if any write fails
          */
-        void write_ir_message (epochtime_t timestamp, LogTypeDictionaryEntry& logtype_entry,
-                               const std::vector<ParsedIrMessage::IrVariable>& variables,
-                               size_t num_uncompressed_bytes);
+        void write_ir_message(
+                epochtime_t timestamp,
+                LogTypeDictionaryEntry& logtype_entry,
+                std::vector<ParsedIrMessage::IrVariable> const& variables,
+                size_t num_uncompressed_bytes
+        );
         /**
          * Encodes and writes a message to the given file using schema file
          * @param file
