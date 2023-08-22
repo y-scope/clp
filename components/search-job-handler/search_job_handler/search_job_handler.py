@@ -294,8 +294,8 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
     port = server.sockets[0].getsockname()[1]
     server_task = asyncio.ensure_future(server.serve_forever())
 
-    pagination_limit = 30
-    next_pagination_id = -30
+    pagination_limit = 1000
+    next_pagination_id = -1000
 
     while counter.get() <= 100:
         next_pagination_id += pagination_limit
