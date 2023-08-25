@@ -229,8 +229,6 @@ void load_lexer_from_file (std::string schema_file_path,
                            log_surgeon::lexers::ByteLexer& lexer) {
     log_surgeon::SchemaParser sp;
     std::unique_ptr<log_surgeon::SchemaAST> schema_ast = sp.try_schema_file(schema_file_path);
-    auto* delimiters_ptr = dynamic_cast<log_surgeon::DelimiterStringAST*>(
-            schema_ast->m_delimiters.get());
     if (!lexer.m_symbol_id.empty()) {
         throw std::runtime_error("Error: symbol_ids initialized before setting enum symbol_ids");
     }
@@ -270,8 +268,17 @@ void load_lexer_from_file (std::string schema_file_path,
                            log_surgeon::finite_automata::RegexASTLiteral<
                                    log_surgeon::finite_automata::RegexNFAByteState>('\n'))));
 
-    if (delimiters_ptr != nullptr) {
-        lexer.add_delimiters(delimiters_ptr->m_delimiters);
+    for (auto const& delimitersAST : schema_ast->m_delimiters) {
+        auto* delimiters_ptr = dynamic_cast<log_surgeon::DelimiterStringAST*>(delimitersAST.get());
+        if (delimiters_ptr != nullptr) {
+            lexer.add_delimiters(delimiters_ptr->m_delimiters);
+        }
+    }
+    vector<uint32_t> delimiters;
+    for (uint32_t i = 0; i < log_surgeon::cSizeOfByte; i++) {
+        if (lexer.is_delimiter(i)) {
+            delimiters.push_back(i);
+        }
     }
     for (std::unique_ptr<log_surgeon::ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
         auto* rule = dynamic_cast<log_surgeon::SchemaVarAST*>(parser_ast.get());
@@ -286,13 +293,13 @@ void load_lexer_from_file (std::string schema_file_path,
         }
 
         // transform '.' from any-character into any non-delimiter character
-        rule->m_regex_ptr->remove_delimiters_from_wildcard(delimiters_ptr->m_delimiters);
+        rule->m_regex_ptr->remove_delimiters_from_wildcard(delimiters);
 
         bool is_possible_input[log_surgeon::cUnicodeMax] = {false};
         rule->m_regex_ptr->set_possible_inputs_to_true(is_possible_input);
         bool contains_delimiter = false;
         uint32_t delimiter_name;
-        for (uint32_t delimiter : delimiters_ptr->m_delimiters) {
+        for (uint32_t delimiter : delimiters) {
             if (is_possible_input[delimiter]) {
                 contains_delimiter = true;
                 delimiter_name = delimiter;
