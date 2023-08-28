@@ -10,11 +10,9 @@
 // Boost libraries
 #include <boost/filesystem.hpp>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "../../FileReader.hpp"
+#include "../../spdlog_with_specializations.hpp"
 
 using std::make_unique;
 using std::string;

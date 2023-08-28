@@ -6,6 +6,7 @@
 #include <vector>
 
 // Project headers
+#include "streaming_archive/ArchiveMetadata.hpp"
 #include "streaming_archive/writer/File.hpp"
 
 /**
@@ -44,21 +45,15 @@ public:
     /**
      * Adds an archive to the global metadata database
      * @param id
-     * @param uncompressed_size
-     * @param size
-     * @param creator_id
-     * @param creation_num
+     * @param metadata
      */
-    virtual void add_archive (const std::string& id, uint64_t uncompressed_size, uint64_t size,
-                              const std::string& creator_id, uint64_t creation_num) = 0;
+    virtual void add_archive (const std::string& id, const streaming_archive::ArchiveMetadata& metadata) = 0;
     /**
      * Updates the size of the archive identified by the given ID in the global metadata database
      * @param archive_id
-     * @param uncompressed_size
-     * @param size
+     * @param metadata
      */
-    virtual void update_archive_size (const std::string& archive_id, uint64_t uncompressed_size,
-                                      uint64_t size) = 0;
+    virtual void update_archive_metadata (const std::string& archive_id, const streaming_archive::ArchiveMetadata& metadata) = 0;
     /**
      * Updates the metadata of the given files in the global metadata database
      * @param archive_id
@@ -71,6 +66,13 @@ public:
      * @return The archive iterator
      */
     virtual ArchiveIterator* get_archive_iterator () = 0;
+    /**
+     * Gets an iterator to iterate over every archive that falls in the given time window in the global metadata database
+     * @param begin_ts
+     * @param end_ts
+     * @return The archive iterator
+     */
+    virtual ArchiveIterator* get_archive_iterator_for_time_window (epochtime_t begin_ts, epochtime_t end_ts) = 0;
     /**
      * Gets an iterator to iterate over every archive that contains a given file path in the global metadata database
      * @return The archive iterator

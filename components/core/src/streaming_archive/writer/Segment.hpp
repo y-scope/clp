@@ -64,8 +64,18 @@ namespace streaming_archive { namespace writer {
 
         segment_id_t get_id () const { return m_id; }
         bool is_open () const;
+        /**
+         * @return The amount of data (in bytes) appended (input) to the
+         * segment. Calling this after the segment has been closed will return
+         * the final uncompressed size of the segment.
+         */
         uint64_t get_uncompressed_size ();
-        size_t get_compressed_size () const { return m_file_writer.get_pos(); }
+        /**
+         * @return The on-disk size (in bytes) of the segment. Calling this
+         * after the segment has been closed will return the final compressed
+         * size of the segment.
+         */
+        size_t get_compressed_size ();
 
     private:
         // Variables
@@ -73,6 +83,7 @@ namespace streaming_archive { namespace writer {
         segment_id_t m_id;
 
         uint64_t m_offset;      // total input bytes processed
+        uint64_t m_compressed_size;
 
         FileWriter m_file_writer;
 #if USE_PASSTHROUGH_COMPRESSION

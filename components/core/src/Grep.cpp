@@ -35,7 +35,8 @@ public:
     bool has_prefix_greedy_wildcard () const;
     bool has_suffix_greedy_wildcard () const;
     bool is_ambiguous_token () const;
-    bool is_double_var () const;
+    bool is_float_var () const;
+    bool is_int_var () const;
     bool is_var () const;
     bool is_wildcard () const;
 
@@ -54,8 +55,9 @@ private:
         // Ambiguous indicates the token can be more than one of the types listed below
         Ambiguous,
         Logtype,
-        DictOrIntVar,
-        DoubleVar
+        DictionaryVar,
+        FloatVar,
+        IntVar
     };
 
     // Variables
@@ -77,7 +79,9 @@ private:
     size_t m_current_possible_type_ix;
 };
 
-QueryToken::QueryToken (const string& query_string, const size_t begin_pos, const size_t end_pos, const bool is_var) : m_current_possible_type_ix(0) {
+QueryToken::QueryToken (const string& query_string, const size_t begin_pos, const size_t end_pos,
+                        const bool is_var) : m_current_possible_type_ix(0)
+{
     m_begin_pos = begin_pos;
     m_end_pos = end_pos;
     m_value.assign(query_string, m_begin_pos, m_end_pos - m_begin_pos);
@@ -101,7 +105,8 @@ QueryToken::QueryToken (const string& query_string, const size_t begin_pos, cons
             }
         }
 
-        m_contains_wildcards = (m_has_prefix_greedy_wildcard || m_has_suffix_greedy_wildcard || m_has_greedy_wildcard_in_middle);
+        m_contains_wildcards = (m_has_prefix_greedy_wildcard || m_has_suffix_greedy_wildcard ||
+                                m_has_greedy_wildcard_in_middle);
 
         if (!is_var) {
             if (!m_contains_wildcards) {
@@ -109,8 +114,9 @@ QueryToken::QueryToken (const string& query_string, const size_t begin_pos, cons
             } else {
                 m_type = Type::Ambiguous;
                 m_possible_types.push_back(Type::Logtype);
-                m_possible_types.push_back(Type::DictOrIntVar);
-                m_possible_types.push_back(Type::DoubleVar);
+                m_possible_types.push_back(Type::IntVar);
+                m_possible_types.push_back(Type::FloatVar);
+                m_possible_types.push_back(Type::DictionaryVar);
             }
         } else {
             string value_without_wildcards = m_value;
@@ -123,20 +129,22 @@ QueryToken::QueryToken (const string& query_string, const size_t begin_pos, cons
 
             encoded_variable_t encoded_var;
             bool converts_to_non_dict_var = false;
-            if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(value_without_wildcards, encoded_var) ||
-                EncodedVariableInterpreter::convert_string_to_representable_double_var(value_without_wildcards, encoded_var))
-            {
+            if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(
+                    value_without_wildcards, encoded_var) ||
+                EncodedVariableInterpreter::convert_string_to_representable_float_var(
+                        value_without_wildcards, encoded_var)) {
                 converts_to_non_dict_var = true;
             }
 
             if (!converts_to_non_dict_var) {
                 // Dictionary variable
-                m_type = Type::DictOrIntVar;
+                m_type = Type::DictionaryVar;
                 m_cannot_convert_to_non_dict_var = true;
             } else {
                 m_type = Type::Ambiguous;
-                m_possible_types.push_back(Type::DictOrIntVar);
-                m_possible_types.push_back(Type::DoubleVar);
+                m_possible_types.push_back(Type::IntVar);
+                m_possible_types.push_back(Type::FloatVar);
+                m_possible_types.push_back(Type::DictionaryVar);
                 m_cannot_convert_to_non_dict_var = false;
             }
         }
@@ -167,14 +175,24 @@ bool QueryToken::is_ambiguous_token () const {
     return Type::Ambiguous == m_type;
 }
 
-bool QueryToken::is_double_var () const {
+bool QueryToken::is_float_var () const {
     Type type;
     if (Type::Ambiguous == m_type) {
         type = m_possible_types[m_current_possible_type_ix];
     } else {
         type = m_type;
     }
-    return Type::DoubleVar == type;
+    return Type::FloatVar == type;
+}
+
+bool QueryToken::is_int_var () const {
+    Type type;
+    if (Type::Ambiguous == m_type) {
+        type = m_possible_types[m_current_possible_type_ix];
+    } else {
+        type = m_type;
+    }
+    return Type::IntVar == type;
 }
 
 bool QueryToken::is_var () const {
@@ -184,7 +202,7 @@ bool QueryToken::is_var () const {
     } else {
         type = m_type;
     }
-    return (Type::DictOrIntVar == type || Type::DoubleVar == type);
+    return (Type::IntVar == type || Type::FloatVar == type || Type::DictionaryVar == type);
 }
 
 bool QueryToken::is_wildcard () const {
@@ -265,10 +283,12 @@ static bool process_var_token (const QueryToken& query_token, const Archive& arc
             logtype += '*';
         }
 
-        if (query_token.is_double_var()) {
-            LogTypeDictionaryEntry::add_double_var(logtype);
+        if (query_token.is_float_var()) {
+            LogTypeDictionaryEntry::add_float_var(logtype);
+        } else if (query_token.is_int_var()) {
+            LogTypeDictionaryEntry::add_int_var(logtype);
         } else {
-            LogTypeDictionaryEntry::add_non_double_var(logtype);
+            LogTypeDictionaryEntry::add_dict_var(logtype);
 
             if (query_token.cannot_convert_to_non_dict_var()) {
                 // Must be a dictionary variable, so search variable dictionary
@@ -331,7 +351,7 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
                 logtype += '*';
             } else {
                 logtype += '*';
-                LogTypeDictionaryEntry::add_non_double_var(logtype);
+                LogTypeDictionaryEntry::add_dict_var(logtype);
                 logtype += '*';
             }
         } else {

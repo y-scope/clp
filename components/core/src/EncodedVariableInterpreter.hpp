@@ -40,9 +40,6 @@ public:
     };
 
     // Methods
-    static encoded_variable_t get_var_dict_id_range_begin ();
-    static encoded_variable_t get_var_dict_id_range_end ();
-    static bool is_var_dict_id (encoded_variable_t encoded_var);
     static encoded_variable_t encode_var_dict_id (variable_dictionary_id_t id);
     static variable_dictionary_id_t decode_var_dict_id (encoded_variable_t encoded_var);
     /**
@@ -53,22 +50,18 @@ public:
      */
     static bool convert_string_to_representable_integer_var (const std::string& value, encoded_variable_t& encoded_var);
     /**
-     * Converts the given string into a representable double variable if possible
-     * A representable double:
-     * - is base-10
-     * - has 16-digits with a decimal point, where at least one digit is after the decimal point
-     * - has an optional negative sign
+     * Converts the given string into a representable float variable if possible
      * @param value
      * @param encoded_var
      * @return true if was successfully converted, false otherwise
      */
-    static bool convert_string_to_representable_double_var (const std::string& value, encoded_variable_t& encoded_var);
+    static bool convert_string_to_representable_float_var (const std::string& value, encoded_variable_t& encoded_var);
     /**
-     * Converts the given encoded double into a string
+     * Converts the given encoded float into a string
      * @param encoded_var
      * @param value
      */
-    static void convert_encoded_double_to_string (encoded_variable_t encoded_var, std::string& value);
+    static void convert_encoded_float_to_string (encoded_variable_t encoded_var, std::string& value);
 
     /**
      * Parses all variables from a message (while constructing the logtype) and encodes them (adding them to the variable dictionary if necessary)
@@ -113,13 +106,6 @@ public:
      */
     static bool wildcard_search_dictionary_and_get_encoded_matches (const std::string& var_wildcard_str, const VariableDictionaryReader& var_dict,
                                                                     bool ignore_case, SubQuery& sub_query);
-
-private:
-    // Variables
-    // The beginning of the range used for encoding variable dictionary IDs
-    static constexpr encoded_variable_t m_var_dict_id_range_begin = 1LL << 62;
-    // The end (exclusive) of the range used for encoding variable dictionary IDs
-    static constexpr encoded_variable_t m_var_dict_id_range_end = (1ULL << 63) - 1;
 };
 
 #endif // ENCODEDVARIABLEINTERPRETER_HPP

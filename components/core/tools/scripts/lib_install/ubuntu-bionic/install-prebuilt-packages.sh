@@ -13,6 +13,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   libboost-iostreams-dev \
   libboost-program-options-dev \
   libssl-dev \
+  openjdk-11-jdk \
   python3 \
   python3-pip \
   rsync \

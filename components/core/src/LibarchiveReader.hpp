@@ -36,22 +36,19 @@ public:
     LibarchiveReader () :
             m_archive(nullptr),
             m_archive_entry(nullptr),
-            m_file_reader(nullptr),
-            m_initial_buffer_content_exhausted(false),
+            m_reader(nullptr),
             m_is_opened_by_libarchive(false)
             {}
 
     // Methods
     /**
-     * Tries to open the archive or compressed file contained across the given buffer and FileReader
-     * @param buffer_length
-     * @param buffer
-     * @param file_reader
+     * Tries to open the archive or compressed file from the given reader
+     * @param reader
      * @param path_if_compressed_file Path to use if the data is a single compressed file
      * @return ErrorCode_Success on success
      * @return ErrorCode_Failure on failure
      */
-    ErrorCode try_open (size_t buffer_length, const char* buffer, FileReader& file_reader, const std::string& path_if_compressed_file);
+    ErrorCode try_open (ReaderInterface& reader, const std::string& path_if_compressed_file);
     /**
      * Closes the reader
      */
@@ -111,15 +108,6 @@ private:
      * @return -1 on failure
      */
     static la_ssize_t libarchive_read_callback (struct archive* archive, void* client_data, const void** buffer);
-    /**
-     * Callback for libarchive->skip
-     * @param archive
-     * @param client_data
-     * @param request
-     * @return Number of bytes skipped on success
-     * @return ARCHIVE_FATAL on failure
-     */
-    static la_int64_t libarchive_skip_callback (struct archive* archive, void* client_data, off_t request);
 
     /**
      * Marks the archive opened by libarchive
@@ -160,8 +148,7 @@ private:
     struct archive_entry* m_archive_entry;
 
     std::vector<char> m_buffer;
-    FileReader* m_file_reader;
-    bool m_initial_buffer_content_exhausted;
+    ReaderInterface* m_reader;
 
     std::string m_filename_if_compressed;
 

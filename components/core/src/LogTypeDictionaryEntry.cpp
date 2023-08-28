@@ -1,6 +1,7 @@
 #include "LogTypeDictionaryEntry.hpp"
 
 // Project headers
+#include "type_utils.hpp"
 #include "Utils.hpp"
 
 using std::string;
@@ -23,7 +24,10 @@ static void escape_variable_delimiters (const string& value, size_t begin_ix, si
         auto c = value[i];
 
         // Add escape character if necessary
-        if ((char)LogTypeDictionaryEntry::VarDelim::NonDouble == c || (char)LogTypeDictionaryEntry::VarDelim::Double == c || cEscapeChar == c) {
+        if (enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Integer) == c ||
+            enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Float) == c ||
+            enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Dictionary) == c ||
+            cEscapeChar == c) {
             escaped_value += cEscapeChar;
         }
 
@@ -43,31 +47,9 @@ size_t LogTypeDictionaryEntry::get_var_info (size_t var_ix, VarDelim& var_delim)
     return m_var_positions[var_ix];
 }
 
-LogTypeDictionaryEntry::VarDelim LogTypeDictionaryEntry::get_var_delim (size_t var_ix) const {
-    if (var_ix >= m_var_positions.size()) {
-        return VarDelim::Length;
-    }
-
-    auto var_position = m_var_positions[var_ix];
-    return (VarDelim)m_value[var_position];
-}
-
-size_t LogTypeDictionaryEntry::get_var_length_in_logtype (size_t var_ix) const {
-    auto var_delim = get_var_delim(var_ix);
-    switch (var_delim) {
-        case VarDelim::NonDouble:
-            return 1;
-        case VarDelim::Double:
-            return 2;
-        case VarDelim::Length:
-        default:
-            throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
-}
-
 size_t LogTypeDictionaryEntry::get_data_size () const {
     // NOTE: sizeof(vector[0]) is executed at compile time so there's no risk of an exception at runtime
-    return sizeof(m_id) + sizeof(m_verbosity) + m_value.length() + m_var_positions.size() * sizeof(m_var_positions[0]) +
+    return sizeof(m_id) + m_value.length() + m_var_positions.size() * sizeof(m_var_positions[0]) +
            m_ids_of_segments_containing_entry.size() * sizeof(segment_id_t);
 }
 
@@ -75,14 +57,19 @@ void LogTypeDictionaryEntry::add_constant (const string& value_containing_consta
     m_value.append(value_containing_constant, begin_pos, length);
 }
 
-void LogTypeDictionaryEntry::add_non_double_var () {
+void LogTypeDictionaryEntry::add_dictionary_var () {
     m_var_positions.push_back(m_value.length());
-    add_non_double_var(m_value);
+    add_dict_var(m_value);
 }
 
-void LogTypeDictionaryEntry::add_double_var () {
+void LogTypeDictionaryEntry::add_int_var () {
     m_var_positions.push_back(m_value.length());
-    add_double_var(m_value);
+    add_int_var(m_value);
+}
+
+void LogTypeDictionaryEntry::add_float_var () {
+    m_var_positions.push_back(m_value.length());
+    add_float_var(m_value);
 }
 
 bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begin_pos, size_t& var_end_pos, string& var) {
@@ -104,13 +91,11 @@ bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begi
 
 void LogTypeDictionaryEntry::clear () {
     m_value.clear();
-    m_verbosity = LogVerbosity_Length;
     m_var_positions.clear();
 }
 
 void LogTypeDictionaryEntry::write_to_file (streaming_compression::Compressor& compressor) const {
     compressor.write_numeric_value(m_id);
-    compressor.write_numeric_value<uint8_t>(m_verbosity);
 
     string escaped_value;
     get_value_with_unfounded_variables_escaped(escaped_value);
@@ -127,13 +112,6 @@ ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::Dec
     if (ErrorCode_Success != error_code) {
         return error_code;
     }
-
-    uint8_t verbosity;
-    error_code = decompressor.try_read_numeric_value<uint8_t>(verbosity);
-    if (ErrorCode_Success != error_code) {
-        return error_code;
-    }
-    m_verbosity = (LogVerbosity)verbosity;
 
     uint64_t escaped_value_length;
     error_code = decompressor.try_read_numeric_value(escaped_value_length);
@@ -158,17 +136,21 @@ ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::Dec
         } else if (cEscapeChar == c) {
             is_escaped = true;
         } else {
-            if ((char)LogTypeDictionaryEntry::VarDelim::NonDouble == c) {
+            if (enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Integer) == c) {
                 add_constant(constant, 0, constant.length());
                 constant.clear();
-
-                add_non_double_var();
-            } else if ((char)LogTypeDictionaryEntry::VarDelim::Double == c) {
+                add_int_var();
+            } else if (enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Float) == c) {
                 add_constant(constant, 0, constant.length());
                 constant.clear();
-
-                add_double_var();
-            } else {
+                add_float_var();
+            } else if (enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Dictionary) == c)
+            {
+                add_constant(constant, 0, constant.length());
+                constant.clear();
+                add_dictionary_var();
+            }
+            else {
                 constant += c;
             }
         }

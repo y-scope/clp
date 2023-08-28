@@ -73,6 +73,15 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif ()
 endif ()
 
+# Find and setup ANTLR Library
+# We build and link to the static library
+find_package(ANTLR REQUIRED)
+if (ANTLR_FOUND)
+	message(STATUS "Found ANTLR ${ANTLR_VERSION}")
+else()
+	message(FATAL_ERROR "Could not find libraries for ANTLR ${ANTLR4_TAG}")
+endif()
+
 # Find and setup Boost Library
 if(CLP_USE_STATIC_LIBS)
     set(Boost_USE_STATIC_LIBS ON)
@@ -159,6 +168,10 @@ FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 set(SOURCE_FILES_clp
         src/ArrayBackedPosIntSet.cpp
         src/ArrayBackedPosIntSet.hpp
+        src/BufferedFileReader.cpp
+        src/BufferedFileReader.hpp
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clp/clp.cpp
         src/clp/CommandLineArguments.cpp
         src/clp/CommandLineArguments.hpp
@@ -236,6 +249,7 @@ set(SOURCE_FILES_clp
         src/LogTypeDictionaryReader.hpp
         src/LogTypeDictionaryWriter.cpp
         src/LogTypeDictionaryWriter.hpp
+        src/math_utils.hpp
         src/MessageParser.cpp
         src/MessageParser.hpp
         src/MySQLDB.cpp
@@ -255,12 +269,15 @@ set(SOURCE_FILES_clp
         src/Query.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
+        src/spdlog_with_specializations.hpp
         src/SQLiteDB.cpp
         src/SQLiteDB.hpp
         src/SQLitePreparedStatement.cpp
         src/SQLitePreparedStatement.hpp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
+        src/streaming_archive/ArchiveMetadata.cpp
+        src/streaming_archive/ArchiveMetadata.hpp
         src/streaming_archive/Constants.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
@@ -280,10 +297,8 @@ set(SOURCE_FILES_clp
         src/streaming_archive/writer/File.hpp
         src/streaming_archive/writer/Segment.cpp
         src/streaming_archive/writer/Segment.hpp
-        src/streaming_compression/Compressor.cpp
         src/streaming_compression/Compressor.hpp
         src/streaming_compression/Constants.hpp
-        src/streaming_compression/Decompressor.cpp
         src/streaming_compression/Decompressor.hpp
         src/streaming_compression/passthrough/Compressor.cpp
         src/streaming_compression/passthrough/Compressor.hpp
@@ -314,12 +329,14 @@ set(SOURCE_FILES_clp
         src/version.hpp
         src/WriterInterface.cpp
         src/WriterInterface.hpp
-        submodules/date/include/date/date.h
-        submodules/json/single_include/nlohmann/json.hpp
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         )
 add_executable(clp ${SOURCE_FILES_clp})
+target_include_directories(clp
+        PRIVATE
+        ${CMAKE_SOURCE_DIR}/submodules
+        )
 target_link_libraries(clp
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
@@ -336,7 +353,15 @@ target_compile_features(clp
         PRIVATE cxx_std_17
         )
 
+# Generate C++ KQL Parser
+# This needs to be done using add_subdirectory because ANTLR's C++ build
+# system can't handle having the grammar (.g4) in a different directory than the
+# CMakeLists.txt file.
+add_subdirectory(src/grammar/kql)
+
 set(SOURCE_FILES_clg
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clg/clg.cpp
         src/clg/CommandLineArguments.cpp
         src/clg/CommandLineArguments.hpp
@@ -407,12 +432,15 @@ set(SOURCE_FILES_clg
         src/Query.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
+        src/spdlog_with_specializations.hpp
         src/SQLiteDB.cpp
         src/SQLiteDB.hpp
         src/SQLitePreparedStatement.cpp
         src/SQLitePreparedStatement.hpp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
+        src/streaming_archive/ArchiveMetadata.cpp
+        src/streaming_archive/ArchiveMetadata.hpp
         src/streaming_archive/Constants.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
@@ -431,7 +459,6 @@ set(SOURCE_FILES_clg
         src/streaming_archive/writer/Segment.cpp
         src/streaming_archive/writer/Segment.hpp
         src/streaming_compression/Constants.hpp
-        src/streaming_compression/Decompressor.cpp
         src/streaming_compression/Decompressor.hpp
         src/streaming_compression/passthrough/Compressor.cpp
         src/streaming_compression/passthrough/Compressor.hpp
@@ -462,16 +489,20 @@ set(SOURCE_FILES_clg
         src/version.hpp
         src/WriterInterface.cpp
         src/WriterInterface.hpp
-        submodules/date/include/date/date.h
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
         )
 add_executable(clg ${SOURCE_FILES_clg})
+target_include_directories(clg
+        PRIVATE
+        ${CMAKE_SOURCE_DIR}/submodules
+        )
 target_link_libraries(clg
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
+        KQL
         MariaDBClient::MariaDBClient
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
@@ -484,6 +515,8 @@ target_compile_features(clg
         )
 
 set(SOURCE_FILES_clo
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clo/clo.cpp
         src/clo/CommandLineArguments.cpp
         src/clo/CommandLineArguments.hpp
@@ -546,12 +579,15 @@ set(SOURCE_FILES_clo
         src/Query.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
+        src/spdlog_with_specializations.hpp
         src/SQLiteDB.cpp
         src/SQLiteDB.hpp
         src/SQLitePreparedStatement.cpp
         src/SQLitePreparedStatement.hpp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
+        src/streaming_archive/ArchiveMetadata.cpp
+        src/streaming_archive/ArchiveMetadata.hpp
         src/streaming_archive/Constants.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
@@ -570,7 +606,6 @@ set(SOURCE_FILES_clo
         src/streaming_archive/writer/Segment.cpp
         src/streaming_archive/writer/Segment.hpp
         src/streaming_compression/Constants.hpp
-        src/streaming_compression/Decompressor.cpp
         src/streaming_compression/Decompressor.hpp
         src/streaming_compression/passthrough/Compressor.cpp
         src/streaming_compression/passthrough/Compressor.hpp
@@ -603,12 +638,15 @@ set(SOURCE_FILES_clo
         src/version.hpp
         src/WriterInterface.cpp
         src/WriterInterface.hpp
-        submodules/date/include/date/date.h
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
         )
 add_executable(clo ${SOURCE_FILES_clo})
+target_include_directories(clo
+        PRIVATE
+        ${CMAKE_SOURCE_DIR}/submodules
+        )
 target_link_libraries(clo
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
@@ -624,6 +662,10 @@ target_compile_features(clo
         )
 
 set(SOURCE_FILES_unitTest
+        src/BufferedFileReader.cpp
+        src/BufferedFileReader.hpp
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clp/CommandLineArguments.cpp
         src/clp/CommandLineArguments.hpp
         src/clp/compression.cpp
@@ -682,6 +724,8 @@ set(SOURCE_FILES_unitTest
         src/ffi/encoding_methods.hpp
         src/ffi/encoding_methods.tpp
         src/ffi/ir_stream/byteswap.hpp
+        src/ffi/ir_stream/decoding_methods.cpp
+        src/ffi/ir_stream/decoding_methods.hpp
         src/ffi/ir_stream/encoding_methods.cpp
         src/ffi/ir_stream/encoding_methods.hpp
         src/ffi/ir_stream/protocol_constants.hpp
@@ -695,6 +739,8 @@ set(SOURCE_FILES_unitTest
         src/ffi/search/QueryToken.hpp
         src/ffi/search/QueryWildcard.cpp
         src/ffi/search/QueryWildcard.hpp
+        src/ffi/search/Subquery.cpp
+        src/ffi/search/Subquery.hpp
         src/ffi/search/WildcardToken.cpp
         src/ffi/search/WildcardToken.hpp
         src/FileReader.cpp
@@ -721,6 +767,7 @@ set(SOURCE_FILES_unitTest
         src/LogTypeDictionaryReader.hpp
         src/LogTypeDictionaryWriter.cpp
         src/LogTypeDictionaryWriter.hpp
+        src/math_utils.hpp
         src/MessageParser.cpp
         src/MessageParser.hpp
         src/MySQLDB.cpp
@@ -740,12 +787,15 @@ set(SOURCE_FILES_unitTest
         src/Query.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
+        src/spdlog_with_specializations.hpp
         src/SQLiteDB.cpp
         src/SQLiteDB.hpp
         src/SQLitePreparedStatement.cpp
         src/SQLitePreparedStatement.hpp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
+        src/streaming_archive/ArchiveMetadata.cpp
+        src/streaming_archive/ArchiveMetadata.hpp
         src/streaming_archive/Constants.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
@@ -765,10 +815,8 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/writer/File.hpp
         src/streaming_archive/writer/Segment.cpp
         src/streaming_archive/writer/Segment.hpp
-        src/streaming_compression/Compressor.cpp
         src/streaming_compression/Compressor.hpp
         src/streaming_compression/Constants.hpp
-        src/streaming_compression/Decompressor.cpp
         src/streaming_compression/Decompressor.hpp
         src/streaming_compression/passthrough/Compressor.cpp
         src/streaming_compression/passthrough/Compressor.hpp
@@ -800,16 +848,16 @@ set(SOURCE_FILES_unitTest
         src/version.hpp
         src/WriterInterface.cpp
         src/WriterInterface.hpp
-        submodules/Catch2/single_include/catch2/catch.hpp
-        submodules/date/include/date/date.h
-        submodules/json/single_include/nlohmann/json.hpp
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
+        tests/test-BufferedFileReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
         tests/test-Grep.cpp
+        tests/test-ir_encoding_methods.cpp
         tests/test-main.cpp
+        tests/test-math_utils.cpp
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
         tests/test-Segment.cpp
@@ -820,6 +868,10 @@ set(SOURCE_FILES_unitTest
         tests/test-Utils.cpp
         )
 add_executable(unitTest ${SOURCE_FILES_unitTest})
+target_include_directories(unitTest
+        PRIVATE
+        ${CMAKE_SOURCE_DIR}/submodules
+        )
 target_link_libraries(unitTest
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options

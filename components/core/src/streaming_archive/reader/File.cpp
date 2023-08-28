@@ -4,11 +4,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "../../EncodedVariableInterpreter.hpp"
+#include "../../spdlog_with_specializations.hpp"
 #include "../Constants.hpp"
 #include "SegmentManager.hpp"
 

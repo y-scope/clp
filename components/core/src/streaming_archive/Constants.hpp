@@ -5,7 +5,7 @@
 #define STREAMING_ARCHIVE_CONSTANTS_HPP
 
 namespace streaming_archive {
-    constexpr archive_format_version_t cArchiveFormatVersion = cArchiveFormatDevelopmentVersionFlag | 5;
+    constexpr archive_format_version_t cArchiveFormatVersion = cArchiveFormatDevVersionFlag | 7;
     constexpr char cSegmentsDirname[] = "s";
     constexpr char cSegmentListFilename[] = "segment_list.txt";
     constexpr char cLogTypeDictFilename[] = "logtype.dict";
@@ -23,6 +23,8 @@ namespace streaming_archive {
 
         namespace Archive {
             constexpr char Id[] = "id";
+            constexpr char BeginTimestamp[] = "begin_timestamp";
+            constexpr char EndTimestamp[] = "end_timestamp";
             constexpr char UncompressedSize[] = "uncompressed_size";
             constexpr char Size[] = "size";
             constexpr char CreatorId[] = "creator_id";

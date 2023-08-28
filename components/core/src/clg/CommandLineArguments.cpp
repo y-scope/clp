@@ -7,10 +7,8 @@
 // Boost libraries
 #include <boost/program_options.hpp>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
+#include "../spdlog_with_specializations.hpp"
 #include "../version.hpp"
 
 namespace po = boost::program_options;
