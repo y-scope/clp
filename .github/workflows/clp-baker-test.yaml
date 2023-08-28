@@ -37,6 +37,7 @@ jobs:
           echo "hello world" >> a.txt
           cat a.txt
       # we can go to any directory in baker
+      # this is a comment
       - name: toy example 2
         run: |
           cd /home/ycx
