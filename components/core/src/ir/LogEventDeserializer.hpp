@@ -3,7 +3,7 @@
 
 #include <optional>
 
-#include <boost/outcome/std_result.hpp>
+#include <boost-outcome/include/boost/outcome/std_result.hpp>
 
 #include "../ffi/encoding_methods.hpp"
 #include "../ReaderInterface.hpp"
@@ -41,7 +41,11 @@ public:
      * Creates a log event deserializer for the given stream
      * @param reader A reader for the IR stream
      * @return A result containing the serializer or an error code indicating
-     * the failure
+     * the failure:
+     * - std::errc::result_out_of_range if the IR stream is truncated
+     * - std::errc::protocol_error if the IR stream is corrupted
+     * - std::errc::protocol_not_supported if the IR stream contains an
+     *   unsupported metadata format or uses an unsupported version
      */
     static auto create(ReaderInterface& reader)
             -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>>;
@@ -62,7 +66,10 @@ public:
     /**
      * Deserializes a log event from the stream
      * @return A result containing the log event or an error code indicating
-     * the failure
+     * the failure:
+     * - std::errc::no_message_available on reaching the end of the IR stream
+     * - std::errc::result_out_of_range if the IR stream is truncated
+     * - std::errc::result_out_of_range if the IR stream is corrupted
      */
     [[nodiscard]] auto deserialize_log_event()
             -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<encoded_variable_t>>;
