@@ -1,14 +1,19 @@
 #ifndef CLP_FILECOMPRESSOR_HPP
 #define CLP_FILECOMPRESSOR_HPP
 
+// C++ standard libraries
+#include <system_error>
+
+// Boost libraries
 #include <boost/uuid/random_generator.hpp>
 
+// Project headers
 #include "../BufferedFileReader.hpp"
 #include "../compressor_frontend/LogParser.hpp"
+#include "../ir/LogEventDeserializer.hpp"
 #include "../LibarchiveFileReader.hpp"
 #include "../LibarchiveReader.hpp"
 #include "../MessageParser.hpp"
-#include "../ParsedIrMessage.hpp"
 #include "../ParsedMessage.hpp"
 #include "../streaming_archive/writer/Archive.hpp"
 #include "FileToCompress.hpp"
@@ -73,22 +78,49 @@ namespace clp {
                                          streaming_archive::writer::Archive& archive_writer, bool use_heuristic);
 
         /**
-         * Parses and encodes IR from the given reader into the given archive_writer
+         * Compresses the IR stream from the given reader into the archive
          * @param target_data_size_of_dicts
          * @param archive_user_config
          * @param target_encoded_file_size
-         * @param path_for_compression
+         * @param path
          * @param group_id
          * @param archive_writer
          * @param reader
+         * @return Whether the IR stream was compressed successfully
          */
-        bool try_compressing_as_ir (size_t target_data_size_of_dicts,
-                                   streaming_archive::writer::Archive::UserConfig& archive_user_config,
-                                   size_t target_encoded_file_size,
-                                   const std::string& path_for_compression,
-                                   group_id_t group_id,
-                                   streaming_archive::writer::Archive& archive_writer,
-                                   ReaderInterface& reader);
+        bool compress_ir_stream(
+                size_t target_data_size_of_dicts,
+                streaming_archive::writer::Archive::UserConfig& archive_user_config,
+                size_t target_encoded_file_size,
+                std::string const& path,
+                group_id_t group_id,
+                streaming_archive::writer::Archive& archive_writer,
+                ReaderInterface& reader
+        );
+
+        /**
+         * Compresses an IR stream using the eight-byte or four-byte encoding
+         * based on the given template parameter.
+         * @tparam encoded_variable_t
+         * @param target_data_size_of_dicts
+         * @param archive_user_config
+         * @param target_encoded_file_size
+         * @param path
+         * @param group_id
+         * @param archive
+         * @param log_event_deserializer
+         * @return An error code
+         */
+        template<typename encoded_variable_t>
+        std::error_code compress_ir_stream_by_encoding(
+                size_t target_data_size_of_dicts,
+                streaming_archive::writer::Archive::UserConfig& archive_user_config,
+                size_t target_encoded_file_size,
+                std::string const& path,
+                group_id_t group_id,
+                streaming_archive::writer::Archive& archive,
+                ir::LogEventDeserializer<encoded_variable_t>& log_event_deserializer
+        );
 
         // Variables
         boost::uuids::random_generator& m_uuid_generator;
@@ -100,5 +132,7 @@ namespace clp {
         std::unique_ptr<compressor_frontend::LogParser> m_log_parser;
     };
 }
+
+#include "FileCompressor.tpp"
 
 #endif // CLP_FILECOMPRESSOR_HPP

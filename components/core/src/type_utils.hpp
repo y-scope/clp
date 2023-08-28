@@ -6,6 +6,19 @@
 #include <type_traits>
 
 /**
+ * A template-parameterized false-constant which can be used to make static
+ * assertions conditional based on deduced template parameters
+ */
+template <class... T>
+[[maybe_unused]] constexpr bool cAlwaysFalse{false};
+
+/**
+ * An empty type which can be used to declare variables conditionally based on
+ * template parameters
+ */
+struct EmptyType {};
+
+/**
  * Gets the underlying type of the given enum
  * @tparam T
  * @param enum_member
@@ -65,6 +78,5 @@ std::enable_if_t<sizeof(Destination) == sizeof(Source), Destination*>
 {
     return reinterpret_cast<Destination*>(src);
 }
-
 
 #endif // TYPE_UTILS_HPP

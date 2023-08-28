@@ -81,11 +81,9 @@ parse_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_m
  * encoded_variable_t == four_byte_encoded_variable_t or the actual timestamp if
  * encoded_variable_t == eight_byte_encoded_variable_t
  * @return IRErrorCode_Success on success
- * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
  * @return IRErrorCode_Decode_Error if the encoded message cannot be properly
  * decoded
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to
- * decode
+ * @return Same as ffi::ir_stream::generic_parse_tokens
  */
 template <typename encoded_variable_t>
 static IRErrorCode
@@ -275,23 +273,19 @@ generic_decode_next_message(ReaderInterface& reader, string& message, epoch_time
         return error_code;
     }
 
-    auto constant_handler = [&message](string const& value, size_t begin_pos, size_t length) {
+    auto constant_handler = [&](string const& value, size_t begin_pos, size_t length) {
         message.append(value, begin_pos, length);
     };
 
-    auto constant_remainder_handler = [&message](string const& value, size_t begin_pos) {
-        message.append(value, begin_pos);
-    };
-
-    auto encoded_int_handler = [&message](encoded_variable_t value) {
+    auto encoded_int_handler = [&](encoded_variable_t value) {
         message.append(decode_integer_var(value));
     };
 
-    auto encoded_float_handler = [&message](encoded_variable_t encoded_float) {
+    auto encoded_float_handler = [&](encoded_variable_t encoded_float) {
         message.append(decode_float_var(encoded_float));
     };
 
-    auto dict_var_handler = [&message](string const& dict_var) { message.append(dict_var); };
+    auto dict_var_handler = [&](string const& dict_var) { message.append(dict_var); };
 
     try {
         generic_decode_message(
@@ -299,7 +293,6 @@ generic_decode_next_message(ReaderInterface& reader, string& message, epoch_time
                 encoded_vars,
                 dict_vars,
                 constant_handler,
-                constant_remainder_handler,
                 encoded_int_handler,
                 encoded_float_handler,
                 dict_var_handler

@@ -1,10 +1,9 @@
 #ifndef FFI_IR_STREAM_DECODING_METHODS_TPP
 #define FFI_IR_STREAM_DECODING_METHODS_TPP
 
-#include <string_view>
+#include <string>
 #include <vector>
 
-#include "../../ReaderInterface.hpp"
 #include "../encoding_methods.hpp"
 #include "decoding_methods.hpp"
 #include "protocol_constants.hpp"
@@ -13,7 +12,6 @@ namespace ffi::ir_stream {
 template <
         typename encoded_variable_t,
         typename ConstantHandler,
-        typename ConstantRemainderHandler,
         typename EncodedIntHandler,
         typename EncodedFloatHandler,
         typename DictVarHandler>
@@ -22,14 +20,13 @@ void generic_decode_message(
         std::vector<encoded_variable_t> const& encoded_vars,
         std::vector<std::string> const& dict_vars,
         ConstantHandler constant_handler,
-        ConstantRemainderHandler constant_remainder_handler,
         EncodedIntHandler encoded_int_handler,
         EncodedFloatHandler encoded_float_handler,
         DictVarHandler dict_var_handler
 ) {
-    size_t const logtype_length = logtype.length();
-    size_t const encoded_vars_length = encoded_vars.size();
-    size_t const dict_vars_length = dict_vars.size();
+    auto const logtype_length = logtype.length();
+    auto const encoded_vars_length = encoded_vars.size();
+    auto const dict_vars_length = dict_vars.size();
     size_t next_static_text_begin_pos = 0;
 
     size_t dictionary_vars_ix = 0;
@@ -132,7 +129,11 @@ void generic_decode_message(
     }
     // Add remainder
     if (next_static_text_begin_pos < logtype_length) {
-        constant_remainder_handler(logtype, next_static_text_begin_pos);
+        constant_handler(
+                logtype,
+                next_static_text_begin_pos,
+                logtype_length - next_static_text_begin_pos
+        );
     }
 }
 }  // namespace ffi::ir_stream

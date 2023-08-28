@@ -6,6 +6,7 @@
 #include <vector>
 
 // Project headers
+#include "ir/LogEvent.hpp"
 #include "Query.hpp"
 #include "TraceableException.hpp"
 #include "VariableDictionaryReader.hpp"
@@ -64,15 +65,6 @@ public:
     static void convert_encoded_float_to_string (encoded_variable_t encoded_var, std::string& value);
 
     /**
-     * Converts the four bytes encoded float to eight byte encoded float
-     * @param four_bytes_float
-     * @param eight_bytes_float
-     */
-    static void convert_four_bytes_float_to_eight_byte(
-            encoded_variable_t four_bytes_float,
-            encoded_variable_t& eight_bytes_float
-    );
-    /**
      * Parses all variables from a message (while constructing the logtype) and encodes them (adding them to the variable dictionary if necessary)
      * @param message
      * @param logtype_dict_entry
@@ -82,6 +74,32 @@ public:
      */
     static void encode_and_add_to_dictionary (const std::string& message, LogTypeDictionaryEntry& logtype_dict_entry, VariableDictionaryWriter& var_dict,
                                               std::vector<encoded_variable_t>& encoded_vars, std::vector<variable_dictionary_id_t>& var_ids);
+
+    /**
+     * Encodes the given IR log event, constructing a logtype dictionary entry,
+     * and adding any dictionary variables to the dictionary. NOTE: Four-byte
+     * encoded variables will be converted to eight-byte encoded variables.
+     * @tparam encoded_variable_t The type of the encoded variables in the log
+     * event
+     * @param log_event
+     * @param logtype_dict_entry
+     * @param var_dict
+     * @param encoded_vars A container to store the encoded variables in
+     * @param var_ids A container to store the dictionary IDs for dictionary
+     * variables
+     * @param raw_num_bytes Returns an estimate of the number of bytes that
+     * this log event would occupy if it was not encoded in CLP's IR
+     */
+    template<typename encoded_variable_t>
+    static void encode_and_add_to_dictionary(
+            ir::LogEvent<encoded_variable_t> const& log_event,
+            LogTypeDictionaryEntry& logtype_dict_entry,
+            VariableDictionaryWriter& var_dict,
+            std::vector<ffi::eight_byte_encoded_variable_t>& encoded_vars,
+            std::vector<variable_dictionary_id_t>& var_ids,
+            size_t& raw_num_bytes
+    );
+
     /**
      * Decodes all variables and decompresses them into a message
      * @param logtype_dict_entry
@@ -115,6 +133,40 @@ public:
      */
     static bool wildcard_search_dictionary_and_get_encoded_matches (const std::string& var_wildcard_str, const VariableDictionaryReader& var_dict,
                                                                     bool ignore_case, SubQuery& sub_query);
+
+private:
+    /**
+     * Encodes the given string as a dictionary or non-dictionary variable and
+     * adds a corresponding placeholder to the logtype
+     * @param var
+     * @param logtype_dict_entry
+     * @param var_dict
+     * @param var_ids A container to add the dictionary ID to (if the string is
+     * a dictionary variable)
+     * @return The encoded variable
+     */
+    static encoded_variable_t encode_var(
+            std::string const& var,
+            LogTypeDictionaryEntry& logtype_dict_entry,
+            VariableDictionaryWriter& var_dict,
+            std::vector<variable_dictionary_id_t>& var_ids
+    );
+
+    /**
+     * Adds the given string to the variable dictionary and adds a corresponding
+     * placeholder to logtype
+     * @param var
+     * @param logtype_dict_entry
+     * @param var_dict
+     * @param var_ids A container to add the dictionary ID to
+     * @return The dictionary ID
+     */
+    static variable_dictionary_id_t add_dict_var(
+            std::string const& var,
+            LogTypeDictionaryEntry& logtype_dict_entry,
+            VariableDictionaryWriter& var_dict,
+            std::vector<variable_dictionary_id_t>& var_ids
+    );
 };
 
 #endif // ENCODEDVARIABLEINTERPRETER_HPP

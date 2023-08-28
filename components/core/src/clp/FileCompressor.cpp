@@ -12,10 +12,12 @@
 #include <archive_entry.h>
 
 // Project headers
-#include "../IrMessageParser.hpp"
+#include "../ir/utils.hpp"
 #include "../Profiler.hpp"
 #include "utils.hpp"
 
+using ir::has_ir_stream_magic_number;
+using ir::LogEventDeserializer;
 using std::cout;
 using std::endl;
 using std::set;
@@ -274,13 +276,13 @@ namespace clp {
                 succeeded = false;
                 continue;
             }
-            auto file_path = std::string(m_libarchive_reader.get_path());
             char const* utf8_validation_buf{nullptr};
             size_t utf8_validation_buf_len{0};
             m_libarchive_file_reader.peek_buffered_data(
                     utf8_validation_buf,
                     utf8_validation_buf_len
             );
+            string file_path{m_libarchive_reader.get_path()};
             if (is_utf8_sequence(utf8_validation_buf_len, utf8_validation_buf)) {
                 auto boost_path_for_compression = parent_boost_path / file_path;
                 if (use_heuristic) {
@@ -291,26 +293,27 @@ namespace clp {
                     parse_and_encode(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, boost_path_for_compression.string(),
                                      file_to_compress.get_group_id(), archive_writer, m_libarchive_file_reader);
                 }
-            } else if (IrMessageParser::is_ir_encoded(utf8_validation_buf_len,
-                                                      utf8_validation_buf)) {
+            } else if (has_ir_stream_magic_number({utf8_validation_buf, utf8_validation_buf_len})) {
                 // Remove .clp suffix if found
-                if (file_path.length() > 4 &&
-                    file_path.substr(file_path.length() - 4) == ".clp")
-                {
-                    file_path = file_path.substr(0, file_path.length() - 4);
+                static constexpr char cIrStreamExtension[] = ".clp";
+                if (boost::iends_with(file_path, cIrStreamExtension)) {
+                    file_path.resize(file_path.length() - strlen(cIrStreamExtension));
                 }
                 auto boost_path_for_compression = parent_boost_path / file_path;
-                if (false == try_compressing_as_ir(target_data_size_of_dicts,
-                                                   archive_user_config,
-                                                   target_encoded_file_size,
-                                                   boost_path_for_compression.string(),
-                                                   file_to_compress.get_group_id(),
-                                                   archive_writer,
-                                                   m_libarchive_file_reader)) {
-                    SPDLOG_ERROR("Failed to compress {} - corrupted IR", file_path);
+
+                if (false == compress_ir_stream(
+                            target_data_size_of_dicts,
+                            archive_user_config,
+                            target_encoded_file_size,
+                            boost_path_for_compression.string(),
+                            file_to_compress.get_group_id(),
+                            archive_writer,
+                            m_libarchive_file_reader
+                    )) {
+                    succeeded = false;
                 }
             } else {
-                SPDLOG_ERROR("Cannot compress {} - not UTF-8 or IR encoded", file_path);
+                SPDLOG_ERROR("Cannot compress {} - not an IR stream or UTF-8 encoded", file_path);
                 succeeded = false;
             }
 
@@ -323,61 +326,89 @@ namespace clp {
         return succeeded;
     }
 
-    bool FileCompressor::try_compressing_as_ir(
+    bool FileCompressor::compress_ir_stream(
             size_t target_data_size_of_dicts,
             streaming_archive::writer::Archive::UserConfig& archive_user_config,
             size_t target_encoded_file_size,
-            std::string const& path_for_compression,
+            string const& path,
             group_id_t group_id,
             streaming_archive::writer::Archive& archive_writer,
             ReaderInterface& reader
     ) {
-        try {
-            // Construct the IrMessageParser which parse encoding type and
-            // metadata as part of the construction process
-            IrMessageParser ir_message_parser(reader);
-
-            // Open compressed file
-            archive_writer
-                    .create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
-
-            // Assume one encoded file only has one timestamp pattern
-            archive_writer.change_ts_pattern(ir_message_parser.get_ts_pattern());
-
-            while (true) {
-                if (false == ir_message_parser.parse_next_encoded_message()) {
-                    break;
-                }
-                if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
-                    split_file_and_archive(
-                            archive_user_config,
-                            path_for_compression,
-                            group_id,
-                            ir_message_parser.get_ts_pattern(),
-                            archive_writer
-                    );
-                } else if (archive_writer.get_file().get_encoded_size_in_bytes() >=
-                           target_encoded_file_size)
-                {
-                    split_file(
-                            path_for_compression,
-                            group_id,
-                            ir_message_parser.get_ts_pattern(),
-                            archive_writer
-                    );
-                }
-                auto const& parsed_msg = ir_message_parser.get_parsed_msg();
-                archive_writer.write_ir_message(
-                        parsed_msg.get_ts(),
-                        ir_message_parser.get_msg_logtype_entry(),
-                        parsed_msg.get_vars(),
-                        parsed_msg.get_orig_num_bytes()
-                );
-            }
-            close_file_and_append_to_segment(archive_writer);
-            return true;
-        } catch (TraceableException& e) {
+        bool uses_four_byte_encoding{false};
+        auto ir_error_code = ffi::ir_stream::get_encoding_type(reader, uses_four_byte_encoding);
+        if (ffi::ir_stream::IRErrorCode_Success != ir_error_code) {
+            SPDLOG_ERROR("Cannot compress {}, IR error={}", path, static_cast<int>(ir_error_code));
             return false;
         }
+
+        try {
+            std::error_code error_code{};
+            if (uses_four_byte_encoding) {
+                auto result
+                        = LogEventDeserializer<ffi::four_byte_encoded_variable_t>::create(reader);
+                if (result.has_error()) {
+                    error_code = result.error();
+                } else {
+                    error_code = compress_ir_stream_by_encoding(
+                            target_data_size_of_dicts,
+                            archive_user_config,
+                            target_encoded_file_size,
+                            path,
+                            group_id,
+                            archive_writer,
+                            result.value()
+                    );
+                }
+            } else {
+                auto result
+                        = LogEventDeserializer<ffi::eight_byte_encoded_variable_t>::create(reader);
+                if (result.has_error()) {
+                    error_code = result.error();
+                } else {
+                    error_code = compress_ir_stream_by_encoding(
+                            target_data_size_of_dicts,
+                            archive_user_config,
+                            target_encoded_file_size,
+                            path,
+                            group_id,
+                            archive_writer,
+                            result.value()
+                    );
+                }
+            }
+            if (0 != error_code.value()) {
+                SPDLOG_ERROR(
+                        "Failed to compress {} - {}:{}",
+                        error_code.category().name(),
+                        error_code.message()
+                );
+                return false;
+            }
+        } catch (TraceableException& e) {
+            auto error_code = e.get_error_code();
+            if (ErrorCode_errno == error_code) {
+                SPDLOG_ERROR(
+                        "Failed to compress {} - {}:{} {}, errno={}",
+                        path,
+                        e.get_filename(),
+                        e.get_line_number(),
+                        e.what(),
+                        errno
+                );
+            } else {
+                SPDLOG_ERROR(
+                        "Failed to compress {} - {}:{} {}, error_code={}",
+                        path,
+                        e.get_filename(),
+                        e.get_line_number(),
+                        e.what(),
+                        error_code
+                );
+            }
+            return false;
+        }
+
+        return true;
     }
 }

@@ -19,8 +19,8 @@
 #include "../../compressor_frontend/Token.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../GlobalMetadataDB.hpp"
+#include "../../ir/LogEvent.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
-#include "../../ParsedIrMessage.hpp"
 #include "../../VariableDictionaryWriter.hpp"
 #include "../ArchiveMetadata.hpp"
 #include "../MetadataDB.hpp"
@@ -131,19 +131,13 @@ namespace streaming_archive { namespace writer {
          */
         void write_msg (epochtime_t timestamp, const std::string& message, size_t num_uncompressed_bytes);
         /**
-         * Encodes and writes a message to the current encoded file
-         * @param timestamp
-         * @param logtype_entry
-         * @param variables
-         * @param num_uncompressed_bytes
-         * @throw FileWriter::OperationFailed if any write fails
+         * Writes an IR log event to the current encoded file
+         * @tparam encoded_variable_t The type of the encoded variables in the
+         * log event
+         * @param log_event
          */
-        void write_ir_message(
-                epochtime_t timestamp,
-                LogTypeDictionaryEntry& logtype_entry,
-                std::vector<ParsedIrMessage::IrVariable> const& variables,
-                size_t num_uncompressed_bytes
-        );
+        template<typename encoded_variable_t>
+        void write_log_event_ir(ir::LogEvent<encoded_variable_t> const& log_event);
         /**
          * Encodes and writes a message to the given file using schema file
          * @param file
@@ -312,5 +306,7 @@ namespace streaming_archive { namespace writer {
         bool m_print_archive_stats_progress;
     };
 } }
+
+#include "Archive.tpp"
 
 #endif // STREAMING_ARCHIVE_WRITER_ARCHIVE_HPP

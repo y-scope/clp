@@ -49,6 +49,7 @@ private:
 IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding);
 
 /**
+ * TODO Rename
  * Parse logtypes, dictionary variables and encoded variables
  * from the next encoded IR message. Returns the parsed tokens by
  * reference
@@ -61,6 +62,7 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
+ * @return IRErrorCode_Eof on reaching the end of the stream
  */
 template <typename encoded_variable_t>
 auto generic_parse_tokens(
@@ -77,8 +79,6 @@ auto generic_parse_tokens(
  * @tparam encoded_variable_t Type of the encoded variable
  * @tparam ConstantHandler Method to handle constants in the logtypes.
  * Signature: (const std::string&, size_t, size_t) -> void
- * @tparam ConstantRemainderHandler Method to handle the last constant in the
- * logtypes. Signature: (const std::string&, size_t) -> void
  * @tparam EncodedIntHandler Method to handle encoded integers.
  * Signature: (encoded_variable_t) -> void
  * @tparam EncodedFloatHandler Method to handle encoded float.
@@ -89,7 +89,6 @@ auto generic_parse_tokens(
  * @param encoded_vars
  * @param dict_vars
  * @param constant_handler
- * @param constant_remainder_handler
  * @param encoded_int_handler
  * @param encoded_float_handler
  * @param dict_var_handler
@@ -98,7 +97,6 @@ auto generic_parse_tokens(
 template <
         typename encoded_variable_t,
         typename ConstantHandler,
-        typename ConstantRemainderHandler,
         typename EncodedIntHandler,
         typename EncodedFloatHandler,
         typename DictVarHandler>
@@ -107,7 +105,6 @@ void generic_decode_message(
         std::vector<encoded_variable_t> const& encoded_vars,
         std::vector<std::string> const& dict_vars,
         ConstantHandler constant_handler,
-        ConstantRemainderHandler constant_remainder_handler,
         EncodedIntHandler encoded_int_handler,
         EncodedFloatHandler encoded_float_handler,
         DictVarHandler dict_var_handler

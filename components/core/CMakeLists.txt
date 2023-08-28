@@ -181,6 +181,7 @@ set(SOURCE_FILES_clp
         src/clp/decompression.hpp
         src/clp/FileCompressor.cpp
         src/clp/FileCompressor.hpp
+        src/clp/FileCompressor.tpp
         src/clp/FileDecompressor.cpp
         src/clp/FileDecompressor.hpp
         src/clp/FileToCompress.cpp
@@ -191,15 +192,6 @@ set(SOURCE_FILES_clp
         src/clp/StructuredFileToCompress.hpp
         src/clp/utils.cpp
         src/clp/utils.hpp
-        src/ffi/encoding_methods.cpp
-        src/ffi/encoding_methods.hpp
-        src/ffi/encoding_methods.tpp
-        src/ffi/ir_stream/byteswap.hpp
-        src/ffi/ir_stream/decoding_methods.cpp
-        src/ffi/ir_stream/decoding_methods.hpp
-        src/ffi/ir_stream/decoding_methods.tpp
-        src/ffi/ir_stream/encoding_methods.cpp
-        src/ffi/ir_stream/encoding_methods.hpp
         src/compressor_frontend/Constants.hpp
         src/compressor_frontend/finite_automata/RegexAST.hpp
         src/compressor_frontend/finite_automata/RegexAST.tpp
@@ -236,6 +228,15 @@ set(SOURCE_FILES_clp
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
         src/ErrorCode.hpp
+        src/ffi/encoding_methods.cpp
+        src/ffi/encoding_methods.hpp
+        src/ffi/encoding_methods.tpp
+        src/ffi/ir_stream/byteswap.hpp
+        src/ffi/ir_stream/decoding_methods.cpp
+        src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.tpp
+        src/ffi/ir_stream/encoding_methods.cpp
+        src/ffi/ir_stream/encoding_methods.hpp
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
@@ -248,8 +249,11 @@ set(SOURCE_FILES_clp
         src/GlobalMySQLMetadataDB.hpp
         src/GlobalSQLiteMetadataDB.cpp
         src/GlobalSQLiteMetadataDB.hpp
-        src/IrMessageParser.cpp
-        src/IrMessageParser.hpp
+        src/ir/LogEvent.hpp
+        src/ir/LogEventDeserializer.hpp
+        src/ir/LogEventDeserializer.tpp
+        src/ir/utils.cpp
+        src/ir/utils.hpp
         src/LibarchiveFileReader.cpp
         src/LibarchiveFileReader.hpp
         src/LibarchiveReader.cpp
@@ -273,8 +277,6 @@ set(SOURCE_FILES_clp
         src/PageAllocatedVector.hpp
         src/ParsedMessage.cpp
         src/ParsedMessage.hpp
-        src/ParsedIrMessage.cpp
-        src/ParsedIrMessage.hpp
         src/Platform.hpp
         src/Profiler.cpp
         src/Profiler.hpp
@@ -306,6 +308,7 @@ set(SOURCE_FILES_clp
         src/streaming_archive/reader/SegmentManager.hpp
         src/streaming_archive/writer/Archive.cpp
         src/streaming_archive/writer/Archive.hpp
+        src/streaming_archive/writer/Archive.tpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
         src/streaming_archive/writer/Segment.cpp
@@ -410,6 +413,12 @@ set(SOURCE_FILES_clg
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
         src/ErrorCode.hpp
+        src/ffi/encoding_methods.cpp
+        src/ffi/encoding_methods.hpp
+        src/ffi/encoding_methods.tpp
+        src/ffi/ir_stream/decoding_methods.cpp
+        src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.tpp
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
@@ -424,6 +433,7 @@ set(SOURCE_FILES_clg
         src/GlobalSQLiteMetadataDB.hpp
         src/Grep.cpp
         src/Grep.hpp
+        src/ir/LogEvent.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
@@ -567,12 +577,19 @@ set(SOURCE_FILES_clo
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
         src/ErrorCode.hpp
+        src/ffi/encoding_methods.cpp
+        src/ffi/encoding_methods.hpp
+        src/ffi/encoding_methods.tpp
+        src/ffi/ir_stream/decoding_methods.cpp
+        src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.tpp
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
         src/Grep.cpp
         src/Grep.hpp
+        src/ir/LogEvent.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
@@ -687,6 +704,7 @@ set(SOURCE_FILES_unitTest
         src/clp/decompression.hpp
         src/clp/FileCompressor.cpp
         src/clp/FileCompressor.hpp
+        src/clp/FileCompressor.tpp
         src/clp/FileDecompressor.cpp
         src/clp/FileDecompressor.hpp
         src/clp/FileToCompress.cpp
@@ -771,8 +789,9 @@ set(SOURCE_FILES_unitTest
         src/GlobalSQLiteMetadataDB.hpp
         src/Grep.cpp
         src/Grep.hpp
-        src/IrMessageParser.cpp
-        src/IrMessageParser.hpp
+        src/ir/LogEvent.hpp
+        src/ir/utils.cpp
+        src/ir/utils.hpp
         src/LibarchiveFileReader.cpp
         src/LibarchiveFileReader.hpp
         src/LibarchiveReader.cpp
@@ -794,8 +813,6 @@ set(SOURCE_FILES_unitTest
         src/MySQLPreparedStatement.hpp
         src/PageAllocatedVector.cpp
         src/PageAllocatedVector.hpp
-        src/ParsedIrMessage.cpp
-        src/ParsedIrMessage.hpp
         src/ParsedMessage.cpp
         src/ParsedMessage.hpp
         src/Platform.hpp
@@ -829,6 +846,7 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/reader/SegmentManager.hpp
         src/streaming_archive/writer/Archive.cpp
         src/streaming_archive/writer/Archive.hpp
+        src/streaming_archive/writer/Archive.tpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
         src/streaming_archive/writer/Segment.cpp
