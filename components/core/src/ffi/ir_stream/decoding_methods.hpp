@@ -49,39 +49,37 @@ private:
 IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding);
 
 /**
- * TODO Rename
- * Parse logtypes, dictionary variables and encoded variables
- * from the next encoded IR message. Returns the parsed tokens by
- * reference
+ * Deserializes an IR message from the given stream
  * @tparam encoded_variable_t
  * @param reader
- * @param logtype
- * @param encoded_vars
- * @param dict_vars
- * @param timestamp
+ * @param logtype Returns the logtype
+ * @param encoded_vars Returns the encoded variables
+ * @param dict_vars Returns the dictionary variables
+ * @param timestamp_or_timestamp_delta Returns the timestamp (in the eight-byte
+ * encoding case) or the timestamp delta (in the four-byte encoding case)
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
  * @return IRErrorCode_Eof on reaching the end of the stream
  */
 template <typename encoded_variable_t>
-auto generic_parse_tokens(
+auto deserialize_ir_message(
         ReaderInterface& reader,
         std::string& logtype,
         std::vector<encoded_variable_t>& encoded_vars,
         std::vector<std::string>& dict_vars,
-        epoch_time_ms_t& timestamp
+        epoch_time_ms_t& timestamp_or_timestamp_delta
 ) -> IRErrorCode;
 
 /**
- * Decodes the message consists of the tokens and calls the given methods
- * to handle specific components of the message.
+ * Decodes the IR message calls the given methods to handle each component of
+ * the message
  * @tparam encoded_variable_t Type of the encoded variable
- * @tparam ConstantHandler Method to handle constants in the logtypes.
+ * @tparam ConstantHandler Method to handle constants in the logtype.
  * Signature: (const std::string&, size_t, size_t) -> void
  * @tparam EncodedIntHandler Method to handle encoded integers.
  * Signature: (encoded_variable_t) -> void
- * @tparam EncodedFloatHandler Method to handle encoded float.
+ * @tparam EncodedFloatHandler Method to handle encoded floats.
  * Signature: (encoded_variable_t) -> void
  * @tparam DictVarHandler Method to handle dictionary variables.
  * Signature: (const std::string&) -> void

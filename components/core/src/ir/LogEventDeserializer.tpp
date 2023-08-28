@@ -74,7 +74,7 @@ auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event()
     std::vector<std::string> dict_vars;
     std::vector<encoded_variable_t> encoded_vars;
 
-    auto ir_error_code = ffi::ir_stream::generic_parse_tokens(
+    auto ir_error_code = ffi::ir_stream::deserialize_ir_message(
             m_reader,
             logtype,
             encoded_vars,

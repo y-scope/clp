@@ -209,6 +209,11 @@ namespace streaming_archive { namespace writer {
         };
 
         // Methods
+        void update_segment_indices(
+                logtype_dictionary_id_t logtype_id,
+                std::vector<variable_dictionary_id_t> const& var_ids
+        );
+
         /**
          * Appends the content of the current encoded file to the given segment
          * @param segment

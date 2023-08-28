@@ -32,15 +32,7 @@ void Archive::write_log_event_ir(ir::LogEvent<encoded_variable_t> const& log_eve
             original_num_bytes
     );
 
-    // TODO deduplicate
-    // Update segment indices
-    if (m_file->has_ts_pattern()) {
-        m_logtype_ids_in_segment_for_files_with_timestamps.insert(logtype_id);
-        m_var_ids_in_segment_for_files_with_timestamps.insert_all(var_ids);
-    } else {
-        m_logtype_ids_for_file_with_unassigned_segment.insert(logtype_id);
-        m_var_ids_for_file_with_unassigned_segment.insert(var_ids.cbegin(), var_ids.cend());
-    }
+    update_segment_indices(logtype_id, var_ids);
 }
 }  // namespace streaming_archive::writer
 

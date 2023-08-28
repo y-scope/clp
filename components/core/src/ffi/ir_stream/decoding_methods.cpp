@@ -83,7 +83,7 @@ parse_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_m
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Decode_Error if the encoded message cannot be properly
  * decoded
- * @return Same as ffi::ir_stream::generic_parse_tokens
+ * @return Same as ffi::ir_stream::deserialize_ir_message
  */
 template <typename encoded_variable_t>
 static IRErrorCode
@@ -267,7 +267,7 @@ generic_decode_next_message(ReaderInterface& reader, string& message, epoch_time
     vector<string> dict_vars;
     string logtype;
     if (auto error_code
-        = generic_parse_tokens(reader, logtype, encoded_vars, dict_vars, timestamp);
+        = deserialize_ir_message(reader, logtype, encoded_vars, dict_vars, timestamp);
         IRErrorCode_Success != error_code)
     {
         return error_code;
@@ -336,12 +336,12 @@ read_metadata_info(ReaderInterface& reader, encoded_tag_t& metadata_type, uint16
 }
 
 template <typename encoded_variable_t>
-auto generic_parse_tokens(
+auto deserialize_ir_message(
         ReaderInterface& reader,
         string& logtype,
         vector<encoded_variable_t>& encoded_vars,
         vector<string>& dict_vars,
-        epoch_time_ms_t& timestamp
+        epoch_time_ms_t& timestamp_or_timestamp_delta
 ) -> IRErrorCode {
     encoded_tag_t encoded_tag{cProtocol::Eof};
     if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
@@ -386,7 +386,8 @@ auto generic_parse_tokens(
     if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
         return IRErrorCode_Incomplete_IR;
     }
-    if (auto error_code = parse_timestamp<encoded_variable_t>(reader, encoded_tag, timestamp);
+    if (auto error_code
+        = parse_timestamp<encoded_variable_t>(reader, encoded_tag, timestamp_or_timestamp_delta);
         IRErrorCode_Success != error_code)
     {
         return error_code;
@@ -483,19 +484,19 @@ namespace eight_byte_encoding {
 }  // namespace eight_byte_encoding
 
 // Explicitly declare specializations
-template auto generic_parse_tokens<four_byte_encoded_variable_t>(
+template auto deserialize_ir_message<four_byte_encoded_variable_t>(
         ReaderInterface& reader,
         string& logtype,
         vector<four_byte_encoded_variable_t>& encoded_vars,
         vector<string>& dict_vars,
-        epoch_time_ms_t& timestamp
+        epoch_time_ms_t& timestamp_or_timestamp_delta
 ) -> IRErrorCode;
 
-template auto generic_parse_tokens<eight_byte_encoded_variable_t>(
+template auto deserialize_ir_message<eight_byte_encoded_variable_t>(
         ReaderInterface& reader,
         string& logtype,
         vector<eight_byte_encoded_variable_t>& encoded_vars,
         vector<string>& dict_vars,
-        epoch_time_ms_t& timestamp
+        epoch_time_ms_t& timestamp_or_timestamp_delta
 ) -> IRErrorCode;
 }  // namespace ffi::ir_stream

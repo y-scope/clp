@@ -259,14 +259,7 @@ namespace streaming_archive::writer {
 
         m_file->write_encoded_msg(timestamp, logtype_id, encoded_vars, var_ids, num_uncompressed_bytes);
 
-        // Update segment indices
-        if (m_file->has_ts_pattern()) {
-            m_logtype_ids_in_segment_for_files_with_timestamps.insert(logtype_id);
-            m_var_ids_in_segment_for_files_with_timestamps.insert_all(var_ids);
-        } else {
-            m_logtype_ids_for_file_with_unassigned_segment.insert(logtype_id);
-            m_var_ids_for_file_with_unassigned_segment.insert(var_ids.cbegin(), var_ids.cend());
-        }
+        update_segment_indices(logtype_id, var_ids);
     }
 
     void Archive::write_msg_using_schema (compressor_frontend::Token*& uncompressed_msg, uint32_t uncompressed_msg_pos, const bool has_delimiter,
@@ -370,14 +363,7 @@ namespace streaming_archive::writer {
             m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
             m_file->write_encoded_msg(timestamp, logtype_id, m_encoded_vars, m_var_ids, num_uncompressed_bytes);
 
-            // Update segment indices
-            if (m_file->has_ts_pattern()) {
-                m_logtype_ids_in_segment_for_files_with_timestamps.insert(logtype_id);
-                m_var_ids_in_segment_for_files_with_timestamps.insert_all(m_var_ids);
-            } else {
-                m_logtype_ids_for_file_with_unassigned_segment.insert(logtype_id);
-                m_var_ids_for_file_with_unassigned_segment.insert(m_var_ids.cbegin(), m_var_ids.cend());
-            }
+            update_segment_indices(logtype_id, m_var_ids);
         }
     }
 
@@ -385,6 +371,19 @@ namespace streaming_archive::writer {
         // Flush dictionaries
         m_logtype_dict.write_header_and_flush_to_disk();
         m_var_dict.write_header_and_flush_to_disk();
+    }
+
+    void Archive::update_segment_indices(
+            logtype_dictionary_id_t logtype_id,
+            vector<variable_dictionary_id_t> const& var_ids
+    ) {
+        if (m_file->has_ts_pattern()) {
+            m_logtype_ids_in_segment_for_files_with_timestamps.insert(logtype_id);
+            m_var_ids_in_segment_for_files_with_timestamps.insert_all(var_ids);
+        } else {
+            m_logtype_ids_for_file_with_unassigned_segment.insert(logtype_id);
+            m_var_ids_for_file_with_unassigned_segment.insert(var_ids.cbegin(), var_ids.cend());
+        }
     }
 
     void Archive::append_file_contents_to_segment (Segment& segment, ArrayBackedPosIntSet<logtype_dictionary_id_t>& logtype_ids_in_segment,
