@@ -12,6 +12,7 @@
 #include <archive_entry.h>
 
 // Project headers
+#include "../ffi/ir_stream/decoding_methods.hpp"
 #include "../ir/utils.hpp"
 #include "../Profiler.hpp"
 #include "utils.hpp"

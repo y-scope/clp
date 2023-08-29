@@ -1,12 +1,10 @@
-#ifndef IR_LOGEVENTDESERIALIZER_TPP
-#define IR_LOGEVENTDESERIALIZER_TPP
+#include "LogEventDeserializer.hpp"
 
 #include <vector>
 
 #include <json/single_include/nlohmann/json.hpp>
 
 #include "../ffi/ir_stream/decoding_methods.hpp"
-#include "LogEventDeserializer.hpp"
 
 namespace ir {
 template <typename encoded_variable_t>
@@ -47,7 +45,8 @@ auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader)
 
     if constexpr (std::is_same_v<encoded_variable_t, ffi::eight_byte_encoded_variable_t>) {
         return LogEventDeserializer<encoded_variable_t>{reader};
-    } else if constexpr (std::is_same_v<encoded_variable_t, ffi::four_byte_encoded_variable_t>) {
+    }
+    if constexpr (std::is_same_v<encoded_variable_t, ffi::four_byte_encoded_variable_t>) {
         // Get reference timestamp
         auto ref_timestamp_iter
                 = metadata_json.find(ffi::ir_stream::cProtocol::Metadata::ReferenceTimestampKey);
@@ -61,8 +60,6 @@ auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader)
         }
 
         return LogEventDeserializer<encoded_variable_t>{reader, ref_timestamp};
-    } else {
-        static_assert(cAlwaysFalse<encoded_variable_t>);
     }
 }
 
@@ -96,15 +93,26 @@ auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event()
     ffi::epoch_time_ms_t timestamp{};
     if constexpr (std::is_same_v<encoded_variable_t, ffi::eight_byte_encoded_variable_t>) {
         timestamp = timestamp_or_timestamp_delta;
-    } else if constexpr (std::is_same_v<encoded_variable_t, ffi::four_byte_encoded_variable_t>) {
+    } else {  // std::is_same_v<encoded_variable_t, ffi::four_byte_encoded_variable_t>
         m_prev_msg_timestamp += timestamp_or_timestamp_delta;
         timestamp = m_prev_msg_timestamp;
-    } else {
-        static_assert(cAlwaysFalse<encoded_variable_t>);
     }
 
     return LogEvent<encoded_variable_t>{timestamp, logtype, dict_vars, encoded_vars};
 }
-}  // namespace ir
 
-#endif  // IR_LOGEVENTDESERIALIZER_TPP
+// Explicitly declare template specializations so that we can define the
+// template methods in this file
+template auto
+LogEventDeserializer<ffi::eight_byte_encoded_variable_t>::create(ReaderInterface& reader)
+        -> BOOST_OUTCOME_V2_NAMESPACE::std_result<
+                LogEventDeserializer<ffi::eight_byte_encoded_variable_t>>;
+template auto
+LogEventDeserializer<ffi::four_byte_encoded_variable_t>::create(ReaderInterface& reader)
+        -> BOOST_OUTCOME_V2_NAMESPACE::std_result<
+                LogEventDeserializer<ffi::four_byte_encoded_variable_t>>;
+template auto LogEventDeserializer<ffi::eight_byte_encoded_variable_t>::deserialize_log_event()
+        -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<ffi::eight_byte_encoded_variable_t>>;
+template auto LogEventDeserializer<ffi::four_byte_encoded_variable_t>::deserialize_log_event()
+        -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<ffi::four_byte_encoded_variable_t>>;
+}  // namespace ir

@@ -250,8 +250,8 @@ set(SOURCE_FILES_clp
         src/GlobalSQLiteMetadataDB.cpp
         src/GlobalSQLiteMetadataDB.hpp
         src/ir/LogEvent.hpp
+        src/ir/LogEventDeserializer.cpp
         src/ir/LogEventDeserializer.hpp
-        src/ir/LogEventDeserializer.tpp
         src/ir/utils.cpp
         src/ir/utils.hpp
         src/LibarchiveFileReader.cpp
@@ -790,6 +790,8 @@ set(SOURCE_FILES_unitTest
         src/Grep.cpp
         src/Grep.hpp
         src/ir/LogEvent.hpp
+        src/ir/LogEventDeserializer.cpp
+        src/ir/LogEventDeserializer.hpp
         src/ir/utils.cpp
         src/ir/utils.hpp
         src/LibarchiveFileReader.cpp

@@ -23,19 +23,6 @@ namespace ir {
 template <typename encoded_variable_t>
 class LogEventDeserializer {
 public:
-    // Types
-    class OperationFailed : public TraceableException {
-    public:
-        // Constructors
-        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
-
-        // Methods
-        [[nodiscard]] auto what() const noexcept -> char const* override {
-            return "ir::LogEventParser operation failed";
-        }
-    };
-
     // Factory functions
     /**
      * Creates a log event deserializer for the given stream
@@ -57,6 +44,8 @@ public:
     // Define default move constructor and assignment
     LogEventDeserializer(LogEventDeserializer&&) = default;
     auto operator=(LogEventDeserializer&&) -> LogEventDeserializer& = default;
+
+    ~LogEventDeserializer() = default;
 
     // Methods
     [[nodiscard]] auto get_timestamp_pattern() const -> TimestampPattern const& {
@@ -92,7 +81,5 @@ private:
     ReaderInterface& m_reader;
 };
 }  // namespace ir
-
-#include "LogEventDeserializer.tpp"
 
 #endif  // IR_LOGEVENTDESERIALIZER_HPP
