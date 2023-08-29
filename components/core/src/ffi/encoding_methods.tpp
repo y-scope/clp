@@ -165,17 +165,16 @@ encoded_variable_t encode_float_properties(
 }
 
 template <typename encoded_variable_t>
-std::string decode_float_var(encoded_variable_t encoded_var) {
-    std::string value;
-
-    uint8_t decimal_point_pos;
-    uint8_t num_digits;
-    std::conditional_t<
-            std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
-            uint32_t,
-            uint64_t>
-            digits;
-    bool is_negative;
+void decode_float_properties(
+        encoded_variable_t encoded_var,
+        bool& is_negative,
+        std::conditional_t<
+                std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
+                uint32_t,
+                uint64_t>& digits,
+        uint8_t& num_digits,
+        uint8_t& decimal_point_pos
+) {
     static_assert(
             (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
              || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
@@ -216,6 +215,21 @@ std::string decode_float_var(encoded_variable_t encoded_var) {
         encoded_float >>= 25;
         is_negative = encoded_float > 0;
     }
+}
+
+template <typename encoded_variable_t>
+std::string decode_float_var(encoded_variable_t encoded_var) {
+    std::string value;
+
+    uint8_t decimal_point_pos;
+    uint8_t num_digits;
+    std::conditional_t<
+            std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
+            uint32_t,
+            uint64_t>
+            digits;
+    bool is_negative;
+    decode_float_properties(encoded_var, is_negative, digits, num_digits, decimal_point_pos);
 
     if (num_digits < decimal_point_pos) {
         throw EncodingException(

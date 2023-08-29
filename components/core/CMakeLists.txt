@@ -227,6 +227,15 @@ set(SOURCE_FILES_clp
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
         src/ErrorCode.hpp
+        src/ffi/encoding_methods.cpp
+        src/ffi/encoding_methods.hpp
+        src/ffi/encoding_methods.tpp
+        src/ffi/ir_stream/byteswap.hpp
+        src/ffi/ir_stream/decoding_methods.cpp
+        src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.tpp
+        src/ffi/ir_stream/encoding_methods.cpp
+        src/ffi/ir_stream/encoding_methods.hpp
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
@@ -239,6 +248,11 @@ set(SOURCE_FILES_clp
         src/GlobalMySQLMetadataDB.hpp
         src/GlobalSQLiteMetadataDB.cpp
         src/GlobalSQLiteMetadataDB.hpp
+        src/ir/LogEvent.hpp
+        src/ir/LogEventDeserializer.cpp
+        src/ir/LogEventDeserializer.hpp
+        src/ir/utils.cpp
+        src/ir/utils.hpp
         src/LibarchiveFileReader.cpp
         src/LibarchiveFileReader.hpp
         src/LibarchiveReader.cpp
@@ -397,6 +411,12 @@ set(SOURCE_FILES_clg
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
         src/ErrorCode.hpp
+        src/ffi/encoding_methods.cpp
+        src/ffi/encoding_methods.hpp
+        src/ffi/encoding_methods.tpp
+        src/ffi/ir_stream/decoding_methods.cpp
+        src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.tpp
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
@@ -411,6 +431,7 @@ set(SOURCE_FILES_clg
         src/GlobalSQLiteMetadataDB.hpp
         src/Grep.cpp
         src/Grep.hpp
+        src/ir/LogEvent.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
@@ -554,12 +575,19 @@ set(SOURCE_FILES_clo
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
         src/ErrorCode.hpp
+        src/ffi/encoding_methods.cpp
+        src/ffi/encoding_methods.hpp
+        src/ffi/encoding_methods.tpp
+        src/ffi/ir_stream/decoding_methods.cpp
+        src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.tpp
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
         src/Grep.cpp
         src/Grep.hpp
+        src/ir/LogEvent.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
@@ -726,6 +754,7 @@ set(SOURCE_FILES_unitTest
         src/ffi/ir_stream/byteswap.hpp
         src/ffi/ir_stream/decoding_methods.cpp
         src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.tpp
         src/ffi/ir_stream/encoding_methods.cpp
         src/ffi/ir_stream/encoding_methods.hpp
         src/ffi/ir_stream/protocol_constants.hpp
@@ -757,6 +786,11 @@ set(SOURCE_FILES_unitTest
         src/GlobalSQLiteMetadataDB.hpp
         src/Grep.cpp
         src/Grep.hpp
+        src/ir/LogEvent.hpp
+        src/ir/LogEventDeserializer.cpp
+        src/ir/LogEventDeserializer.hpp
+        src/ir/utils.cpp
+        src/ir/utils.hpp
         src/LibarchiveFileReader.cpp
         src/LibarchiveFileReader.hpp
         src/LibarchiveReader.cpp

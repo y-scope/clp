@@ -19,6 +19,7 @@
 #include "../../compressor_frontend/Token.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../GlobalMetadataDB.hpp"
+#include "../../ir/LogEvent.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
 #include "../ArchiveMetadata.hpp"
@@ -141,6 +142,15 @@ namespace streaming_archive { namespace writer {
         void write_msg_using_schema (compressor_frontend::Token*& uncompressed_msg, uint32_t uncompressed_msg_pos, bool has_delimiter, bool has_timestamp);
 
         /**
+         * Writes an IR log event to the current encoded file
+         * @tparam encoded_variable_t The type of the encoded variables in the
+         * log event
+         * @param log_event
+         */
+        template<typename encoded_variable_t>
+        void write_log_event_ir(ir::LogEvent<encoded_variable_t> const& log_event);
+
+        /**
          * Writes snapshot of archive to disk including metadata of all files and new dictionary entries
          * @throw FileWriter::OperationFailed if failed to write or flush dictionaries
          * @throw std::out_of_range if dictionary ID unexpectedly didn't exist
@@ -200,6 +210,11 @@ namespace streaming_archive { namespace writer {
         };
 
         // Methods
+        void update_segment_indices(
+                logtype_dictionary_id_t logtype_id,
+                std::vector<variable_dictionary_id_t> const& var_ids
+        );
+
         /**
          * Appends the content of the current encoded file to the given segment
          * @param segment

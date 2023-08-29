@@ -133,6 +133,15 @@ template <typename encoded_variable_t>
 bool encode_float_string(std::string_view str, encoded_variable_t& encoded_var);
 
 /**
+ * Encodes the given four-byte encoded float using the eight-byte encoding
+ * @param four_byte_encoded_var
+ * @return The float using the eight-byte encoding
+ */
+eight_byte_encoded_variable_t encode_four_byte_float_as_eight_byte(
+        four_byte_encoded_variable_t four_byte_encoded_var
+);
+
+/**
  * Encodes a float value with the given properties into an encoded variable
  * @tparam encoded_variable_t Type of the encoded variable
  * @param is_negative
@@ -155,6 +164,29 @@ encoded_variable_t encode_float_properties(
 );
 
 /**
+ * Decodes an encoded float variable into its properties
+ * @tparam encoded_variable_t Type of the encoded variable
+ * @param encoded_var
+ * @param is_negative Returns whether the float is negative
+ * @param digits Returns the digits of the float, ignoring the decimal, as an
+ * integer
+ * @param num_digits Returns the number of digits in \p digits
+ * @param decimal_point_pos Returns the position of the decimal point from the
+ * right of the value
+ */
+template <typename encoded_variable_t>
+void decode_float_properties(
+        encoded_variable_t encoded_var,
+        bool& is_negative,
+        std::conditional_t<
+                std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
+                uint32_t,
+                uint64_t>& digits,
+        uint8_t& num_digits,
+        uint8_t& decimal_point_pos
+);
+
+/**
  * Decodes the given encoded float variable into a string
  * @tparam encoded_variable_t Type of the encoded variable
  * @param encoded_var
@@ -172,6 +204,16 @@ std::string decode_float_var(encoded_variable_t encoded_var);
  */
 template <typename encoded_variable_t>
 bool encode_integer_string(std::string_view str, encoded_variable_t& encoded_var);
+
+/**
+ * Encodes the given four-byte encoded integer using the eight-byte encoding
+ * @param four_byte_encoded_var
+ * @return The integer using the eight-byte encoding
+ */
+eight_byte_encoded_variable_t encode_four_byte_integer_as_eight_byte(
+        four_byte_encoded_variable_t four_byte_encoded_var
+);
+
 /**
  * Decodes the given encoded integer variable into a string
  * @tparam encoded_variable_t Type of the encoded variable

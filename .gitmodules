@@ -11,3 +11,6 @@
 [submodule "components/core/submodules/yaml-cpp"]
 	path = components/core/submodules/yaml-cpp
 	url = https://github.com/jbeder/yaml-cpp.git
+[submodule "components/core/submodules/boost-outcome"]
+	path = components/core/submodules/boost-outcome
+	url = git@github.com:boostorg/outcome.git
