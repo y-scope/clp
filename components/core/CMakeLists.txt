@@ -181,7 +181,6 @@ set(SOURCE_FILES_clp
         src/clp/decompression.hpp
         src/clp/FileCompressor.cpp
         src/clp/FileCompressor.hpp
-        src/clp/FileCompressor.tpp
         src/clp/FileDecompressor.cpp
         src/clp/FileDecompressor.hpp
         src/clp/FileToCompress.cpp
@@ -704,7 +703,6 @@ set(SOURCE_FILES_unitTest
         src/clp/decompression.hpp
         src/clp/FileCompressor.cpp
         src/clp/FileCompressor.hpp
-        src/clp/FileCompressor.tpp
         src/clp/FileDecompressor.cpp
         src/clp/FileDecompressor.hpp
         src/clp/FileToCompress.cpp

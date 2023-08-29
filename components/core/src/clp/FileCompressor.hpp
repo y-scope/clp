@@ -133,6 +133,4 @@ namespace clp {
     };
 }
 
-#include "FileCompressor.tpp"
-
 #endif // CLP_FILECOMPRESSOR_HPP
