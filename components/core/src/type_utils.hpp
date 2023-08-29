@@ -6,13 +6,6 @@
 #include <type_traits>
 
 /**
- * A template-parameterized false-constant which can be used to make static
- * assertions conditional based on deduced template parameters
- */
-template <class... T>
-[[maybe_unused]] constexpr bool cAlwaysFalse{false};
-
-/**
  * An empty type which can be used to declare variables conditionally based on
  * template parameters
  */
