@@ -307,7 +307,6 @@ set(SOURCE_FILES_clp
         src/streaming_archive/reader/SegmentManager.hpp
         src/streaming_archive/writer/Archive.cpp
         src/streaming_archive/writer/Archive.hpp
-        src/streaming_archive/writer/Archive.tpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
         src/streaming_archive/writer/Segment.cpp
@@ -846,7 +845,6 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/reader/SegmentManager.hpp
         src/streaming_archive/writer/Archive.cpp
         src/streaming_archive/writer/Archive.hpp
-        src/streaming_archive/writer/Archive.tpp
         src/streaming_archive/writer/File.cpp
         src/streaming_archive/writer/File.hpp
         src/streaming_archive/writer/Segment.cpp

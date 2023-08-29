@@ -131,14 +131,6 @@ namespace streaming_archive { namespace writer {
          */
         void write_msg (epochtime_t timestamp, const std::string& message, size_t num_uncompressed_bytes);
         /**
-         * Writes an IR log event to the current encoded file
-         * @tparam encoded_variable_t The type of the encoded variables in the
-         * log event
-         * @param log_event
-         */
-        template<typename encoded_variable_t>
-        void write_log_event_ir(ir::LogEvent<encoded_variable_t> const& log_event);
-        /**
          * Encodes and writes a message to the given file using schema file
          * @param file
          * @param uncompressed_msg
@@ -148,6 +140,15 @@ namespace streaming_archive { namespace writer {
          * @throw FileWriter::OperationFailed if any write fails
          */
         void write_msg_using_schema (compressor_frontend::Token*& uncompressed_msg, uint32_t uncompressed_msg_pos, bool has_delimiter, bool has_timestamp);
+
+        /**
+         * Writes an IR log event to the current encoded file
+         * @tparam encoded_variable_t The type of the encoded variables in the
+         * log event
+         * @param log_event
+         */
+        template<typename encoded_variable_t>
+        void write_log_event_ir(ir::LogEvent<encoded_variable_t> const& log_event);
 
         /**
          * Writes snapshot of archive to disk including metadata of all files and new dictionary entries
@@ -311,7 +312,5 @@ namespace streaming_archive { namespace writer {
         bool m_print_archive_stats_progress;
     };
 } }
-
-#include "Archive.tpp"
 
 #endif // STREAMING_ARCHIVE_WRITER_ARCHIVE_HPP

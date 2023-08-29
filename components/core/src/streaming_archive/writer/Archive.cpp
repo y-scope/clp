@@ -367,6 +367,34 @@ namespace streaming_archive::writer {
         }
     }
 
+    template <typename encoded_variable_t>
+    void Archive::write_log_event_ir(ir::LogEvent<encoded_variable_t> const& log_event) {
+        vector<ffi::eight_byte_encoded_variable_t> encoded_vars;
+        vector<variable_dictionary_id_t> var_ids;
+        size_t original_num_bytes{0};
+        EncodedVariableInterpreter::encode_and_add_to_dictionary(
+                log_event,
+                m_logtype_dict_entry,
+                m_var_dict,
+                encoded_vars,
+                var_ids,
+                original_num_bytes
+        );
+
+        logtype_dictionary_id_t logtype_id{cLogtypeDictionaryIdMax};
+        m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
+
+        m_file->write_encoded_msg(
+                log_event.get_timestamp(),
+                logtype_id,
+                encoded_vars,
+                var_ids,
+                original_num_bytes
+        );
+
+        update_segment_indices(logtype_id, var_ids);
+    }
+
     void Archive::write_dir_snapshot () {
         // Flush dictionaries
         m_logtype_dict.write_header_and_flush_to_disk();
@@ -521,4 +549,13 @@ namespace streaming_archive::writer {
             std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore) << std::endl;
         }
     }
+
+    // Explicitly declare template specializations so that we can define the
+    // template methods in this file
+    template void Archive::write_log_event_ir<ffi::eight_byte_encoded_variable_t>(
+            ir::LogEvent<ffi::eight_byte_encoded_variable_t> const& log_event
+    );
+    template void Archive::write_log_event_ir<ffi::four_byte_encoded_variable_t>(
+            ir::LogEvent<ffi::four_byte_encoded_variable_t> const& log_event
+    );
 }

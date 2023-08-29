@@ -6,6 +6,7 @@
 #include <set>
 
 // Boost libraries
+#include <boost/algorithm/string.hpp>
 #include <boost/filesystem/path.hpp>
 
 // libarchive
