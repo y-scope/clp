@@ -538,7 +538,7 @@ bool wildcard_query_matches_any_encoded_var(
         std::string_view wildcard_query,
         std::string_view logtype,
         encoded_variable_t* encoded_vars,
-        int encoded_vars_length
+        size_t encoded_vars_length
 ) {
     size_t encoded_vars_ix = 0;
     for (auto c : logtype) {
