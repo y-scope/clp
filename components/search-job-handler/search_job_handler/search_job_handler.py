@@ -14,6 +14,7 @@ from asyncio import StreamReader, StreamWriter
 from contextlib import closing
 import threading
 import json
+import pytz
 
 import enum
 import errno
@@ -187,7 +188,7 @@ def create_and_monitor_job_in_db(
 
         num_tasks_added = 0
 
-        if context is not None:
+        if context is not None and context['type'] == "relative":
             if context["unit"] == "HOUR":
                 uppertlimit = calendar.timegm(datetime.datetime.utcnow().timetuple())
                 lowertlimit = calendar.timegm(
@@ -196,6 +197,10 @@ def create_and_monitor_job_in_db(
                 uppertlimit = calendar.timegm(datetime.datetime.utcnow().timetuple())
                 lowertlimit = calendar.timegm(
                     (datetime.datetime.utcnow() - datetime.timedelta(minutes=context["interval"])).timetuple())
+
+        if context is not None and context['type'] == "absolute":
+            uppertlimit = context['endTime']
+            lowertlimit = context['startTime']
 
         job_stmt = f"""
             select archive_id, DENSE_RANK() OVER (ORDER BY archive_id) as no 
@@ -353,7 +358,7 @@ def main(argv):
     if parsed_args.context is not None:
         context = parse_context(parsed_args.context)
         if context == -1:
-            print("invalid date context given.should be of something like 'last15m', 'last1h', etc")
+            print("invalid date context given.should be of something like 'last15m', 'last1h', etc for relative and in case of absolute, '2023-09-30 15:45:00', etc")
             return
     else:
         context = None
@@ -362,12 +367,32 @@ def main(argv):
 
     return 0
 
+def parse_daterange_context(context):
+    dates = context.split("-")
+    if len(dates) != 6:
+        return -1
+    startTime = convert_to_unix_timestamp_from_ist("-".join(dates[:3]))
+    endTime = convert_to_unix_timestamp_from_ist("-".join(dates[3:]))
+    if startTime == -1 or endTime == -1:
+        return -1
+
+    return {'type': 'absolute', 'startTime': startTime, 'endTime': endTime}
+
+def convert_to_unix_timestamp_from_ist(date_str):
+    try:
+        ist_timezone = pytz.timezone('Asia/Kolkata')
+        ist_datetime = datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+        ist_datetime = ist_timezone.localize(ist_datetime)
+        unix_timestamp = int(ist_datetime.timestamp())
+        return unix_timestamp
+    except ValueError:
+        return None
 
 def parse_context(context):
     if len(context) < 6:
         return -1
     if context[:4] != "last":
-        return -1
+        return parse_daterange_context(context)
     if context[-1] == "h":
         unit = "HOUR"
     elif context[-1] == "m":
@@ -387,7 +412,7 @@ def parse_context(context):
         print("can filter logs upto 60 mins only. use hours instead")
         return -1
 
-    ctx = {'unit': unit, 'interval': int(context[4:-1])}
+    ctx = {'type': 'relative', 'unit': unit, 'interval': int(context[4:-1])}
     return ctx
 
 
