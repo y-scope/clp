@@ -367,6 +367,7 @@ def main(argv):
 
     return 0
 
+#An example of absolute context --> "2023-09-01 15:00:00-2023-09-01 15:15:00"
 def parse_daterange_context(context):
     dates = context.split("-")
     if len(dates) != 6:
