@@ -358,7 +358,7 @@ def main(argv):
     if parsed_args.context is not None:
         context = parse_context(parsed_args.context)
         if context == -1:
-            print("invalid date context given.should be of something like 'last15m', 'last1h', etc for relative and in case of absolute, '2023-09-30 15:45:00', etc")
+            print("invalid date context given.should be of something like 'last15m', 'last1h', etc for relative and in case of absolute, '2023-09-30 15:45:00-2023-09-30 15:50:00', etc")
             return
     else:
         context = None
@@ -387,7 +387,7 @@ def convert_to_unix_timestamp_from_ist(date_str):
         unix_timestamp = int(ist_datetime.timestamp())
         return unix_timestamp
     except ValueError:
-        return None
+        return -1
 
 def parse_context(context):
     if len(context) < 6:
