@@ -342,6 +342,7 @@ namespace streaming_archive {
                        streaming_archive::cMetadataDB::EmptyDirectory::Path);
         SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
         m_insert_empty_directories_statement = make_unique<SQLitePreparedStatement>(m_db.prepare_statement(statement_buffer.data(), statement_buffer.size()));
+        m_is_open = true;
     }
 
     void MetadataDB::close () {
