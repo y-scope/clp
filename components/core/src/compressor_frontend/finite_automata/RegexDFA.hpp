@@ -81,6 +81,6 @@ namespace compressor_frontend::finite_automata {
     };
 }
 
-#include "RegexDFA.tpp"
+#include "RegexDFA.inc"
 
 #endif // COMPRESSOR_FRONTEND_FINITE_AUTOMATA_REGEX_DFA_HPP

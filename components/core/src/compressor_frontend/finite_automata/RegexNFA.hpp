@@ -135,6 +135,6 @@ namespace compressor_frontend::finite_automata {
     };
 }
 
-#include "RegexNFA.tpp"
+#include "RegexNFA.inc"
 
 #endif // COMPRESSOR_FRONTEND_FINITE_AUTOMATA_REGEX_NFA_HPP

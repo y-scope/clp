@@ -416,6 +416,6 @@ namespace compressor_frontend {
     };
 }
 
-#include "LALR1Parser.tpp"
+#include "LALR1Parser.inc"
 
 #endif // COMPRESSOR_FRONTEND_LALR1_PARSER_HPP

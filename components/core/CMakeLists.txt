@@ -193,18 +193,18 @@ set(SOURCE_FILES_clp
         src/clp/utils.hpp
         src/compressor_frontend/Constants.hpp
         src/compressor_frontend/finite_automata/RegexAST.hpp
-        src/compressor_frontend/finite_automata/RegexAST.tpp
+        src/compressor_frontend/finite_automata/RegexAST.inc
         src/compressor_frontend/finite_automata/RegexDFA.hpp
-        src/compressor_frontend/finite_automata/RegexDFA.tpp
+        src/compressor_frontend/finite_automata/RegexDFA.inc
         src/compressor_frontend/finite_automata/RegexNFA.hpp
-        src/compressor_frontend/finite_automata/RegexNFA.tpp
+        src/compressor_frontend/finite_automata/RegexNFA.inc
         src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
+        src/compressor_frontend/finite_automata/UnicodeIntervalTree.inc
         src/compressor_frontend/LALR1Parser.cpp
         src/compressor_frontend/LALR1Parser.hpp
-        src/compressor_frontend/LALR1Parser.tpp
+        src/compressor_frontend/LALR1Parser.inc
         src/compressor_frontend/Lexer.hpp
-        src/compressor_frontend/Lexer.tpp
+        src/compressor_frontend/Lexer.inc
         src/compressor_frontend/LogParser.cpp
         src/compressor_frontend/LogParser.hpp
         src/compressor_frontend/SchemaParser.cpp
@@ -229,11 +229,11 @@ set(SOURCE_FILES_clp
         src/ErrorCode.hpp
         src/ffi/encoding_methods.cpp
         src/ffi/encoding_methods.hpp
-        src/ffi/encoding_methods.tpp
+        src/ffi/encoding_methods.inc
         src/ffi/ir_stream/byteswap.hpp
         src/ffi/ir_stream/decoding_methods.cpp
         src/ffi/ir_stream/decoding_methods.hpp
-        src/ffi/ir_stream/decoding_methods.tpp
+        src/ffi/ir_stream/decoding_methods.inc
         src/ffi/ir_stream/encoding_methods.cpp
         src/ffi/ir_stream/encoding_methods.hpp
         src/FileReader.cpp
@@ -381,18 +381,18 @@ set(SOURCE_FILES_clg
         src/clg/CommandLineArguments.hpp
         src/compressor_frontend/Constants.hpp
         src/compressor_frontend/finite_automata/RegexAST.hpp
-        src/compressor_frontend/finite_automata/RegexAST.tpp
+        src/compressor_frontend/finite_automata/RegexAST.inc
         src/compressor_frontend/finite_automata/RegexDFA.hpp
-        src/compressor_frontend/finite_automata/RegexDFA.tpp
+        src/compressor_frontend/finite_automata/RegexDFA.inc
         src/compressor_frontend/finite_automata/RegexNFA.hpp
-        src/compressor_frontend/finite_automata/RegexNFA.tpp
+        src/compressor_frontend/finite_automata/RegexNFA.inc
         src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
+        src/compressor_frontend/finite_automata/UnicodeIntervalTree.inc
         src/compressor_frontend/LALR1Parser.cpp
         src/compressor_frontend/LALR1Parser.hpp
-        src/compressor_frontend/LALR1Parser.tpp
+        src/compressor_frontend/LALR1Parser.inc
         src/compressor_frontend/Lexer.hpp
-        src/compressor_frontend/Lexer.tpp
+        src/compressor_frontend/Lexer.inc
         src/compressor_frontend/SchemaParser.cpp
         src/compressor_frontend/SchemaParser.hpp
         src/compressor_frontend/Token.cpp
@@ -413,10 +413,10 @@ set(SOURCE_FILES_clg
         src/ErrorCode.hpp
         src/ffi/encoding_methods.cpp
         src/ffi/encoding_methods.hpp
-        src/ffi/encoding_methods.tpp
+        src/ffi/encoding_methods.inc
         src/ffi/ir_stream/decoding_methods.cpp
         src/ffi/ir_stream/decoding_methods.hpp
-        src/ffi/ir_stream/decoding_methods.tpp
+        src/ffi/ir_stream/decoding_methods.inc
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
@@ -545,18 +545,18 @@ set(SOURCE_FILES_clo
         src/clo/ControllerMonitoringThread.hpp
         src/compressor_frontend/Constants.hpp
         src/compressor_frontend/finite_automata/RegexAST.hpp
-        src/compressor_frontend/finite_automata/RegexAST.tpp
+        src/compressor_frontend/finite_automata/RegexAST.inc
         src/compressor_frontend/finite_automata/RegexDFA.hpp
-        src/compressor_frontend/finite_automata/RegexDFA.tpp
+        src/compressor_frontend/finite_automata/RegexDFA.inc
         src/compressor_frontend/finite_automata/RegexNFA.hpp
-        src/compressor_frontend/finite_automata/RegexNFA.tpp
+        src/compressor_frontend/finite_automata/RegexNFA.inc
         src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
+        src/compressor_frontend/finite_automata/UnicodeIntervalTree.inc
         src/compressor_frontend/LALR1Parser.cpp
         src/compressor_frontend/LALR1Parser.hpp
-        src/compressor_frontend/LALR1Parser.tpp
+        src/compressor_frontend/LALR1Parser.inc
         src/compressor_frontend/Lexer.hpp
-        src/compressor_frontend/Lexer.tpp
+        src/compressor_frontend/Lexer.inc
         src/compressor_frontend/SchemaParser.cpp
         src/compressor_frontend/SchemaParser.hpp
         src/compressor_frontend/Token.cpp
@@ -577,10 +577,10 @@ set(SOURCE_FILES_clo
         src/ErrorCode.hpp
         src/ffi/encoding_methods.cpp
         src/ffi/encoding_methods.hpp
-        src/ffi/encoding_methods.tpp
+        src/ffi/encoding_methods.inc
         src/ffi/ir_stream/decoding_methods.cpp
         src/ffi/ir_stream/decoding_methods.hpp
-        src/ffi/ir_stream/decoding_methods.tpp
+        src/ffi/ir_stream/decoding_methods.inc
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
@@ -714,18 +714,18 @@ set(SOURCE_FILES_unitTest
         src/clp/utils.hpp
         src/compressor_frontend/Constants.hpp
         src/compressor_frontend/finite_automata/RegexAST.hpp
-        src/compressor_frontend/finite_automata/RegexAST.tpp
+        src/compressor_frontend/finite_automata/RegexAST.inc
         src/compressor_frontend/finite_automata/RegexDFA.hpp
-        src/compressor_frontend/finite_automata/RegexDFA.tpp
+        src/compressor_frontend/finite_automata/RegexDFA.inc
         src/compressor_frontend/finite_automata/RegexNFA.hpp
-        src/compressor_frontend/finite_automata/RegexNFA.tpp
+        src/compressor_frontend/finite_automata/RegexNFA.inc
         src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
+        src/compressor_frontend/finite_automata/UnicodeIntervalTree.inc
         src/compressor_frontend/LALR1Parser.cpp
         src/compressor_frontend/LALR1Parser.hpp
-        src/compressor_frontend/LALR1Parser.tpp
+        src/compressor_frontend/LALR1Parser.inc
         src/compressor_frontend/Lexer.hpp
-        src/compressor_frontend/Lexer.tpp
+        src/compressor_frontend/Lexer.inc
         src/compressor_frontend/LogParser.cpp
         src/compressor_frontend/LogParser.hpp
         src/compressor_frontend/SchemaParser.cpp
@@ -750,11 +750,11 @@ set(SOURCE_FILES_unitTest
         src/ErrorCode.hpp
         src/ffi/encoding_methods.cpp
         src/ffi/encoding_methods.hpp
-        src/ffi/encoding_methods.tpp
+        src/ffi/encoding_methods.inc
         src/ffi/ir_stream/byteswap.hpp
         src/ffi/ir_stream/decoding_methods.cpp
         src/ffi/ir_stream/decoding_methods.hpp
-        src/ffi/ir_stream/decoding_methods.tpp
+        src/ffi/ir_stream/decoding_methods.inc
         src/ffi/ir_stream/encoding_methods.cpp
         src/ffi/ir_stream/encoding_methods.hpp
         src/ffi/ir_stream/protocol_constants.hpp
@@ -863,7 +863,7 @@ set(SOURCE_FILES_unitTest
         src/streaming_compression/zstd/Decompressor.hpp
         src/string_utils.cpp
         src/string_utils.hpp
-        src/string_utils.tpp
+        src/string_utils.inc
         src/StringReader.cpp
         src/StringReader.hpp
         src/TimestampPattern.cpp

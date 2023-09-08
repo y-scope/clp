@@ -194,6 +194,6 @@ namespace compressor_frontend {
     };
 }
 
-#include "Lexer.tpp"
+#include "Lexer.inc"
 
 #endif // COMPRESSOR_FRONTEND_LEXER_HPP

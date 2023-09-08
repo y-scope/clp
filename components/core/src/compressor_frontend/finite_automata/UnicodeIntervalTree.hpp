@@ -181,6 +181,6 @@ namespace compressor_frontend::finite_automata {
 }
 
 // Implementation of template class must be included in anything wanting to use it
-#include "UnicodeIntervalTree.tpp"
+#include "UnicodeIntervalTree.inc"
 
 #endif // COMPRESSOR_FRONTEND_FINITE_AUTOMATA_UNICODE_INTERVAL_TREE_HPP
