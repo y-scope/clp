@@ -363,6 +363,6 @@ bool wildcard_match_encoded_vars(
 );
 }  // namespace ffi
 
-#include "encoding_methods.tpp"
+#include "encoding_methods.inc"
 
 #endif  // FFI_ENCODING_METHODS_HPP

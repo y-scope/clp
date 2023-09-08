@@ -182,6 +182,6 @@ namespace four_byte_encoding {
 }  // namespace four_byte_encoding
 }  // namespace ffi::ir_stream
 
-#include "decoding_methods.tpp"
+#include "decoding_methods.inc"
 
 #endif  // FFI_IR_STREAM_DECODING_METHODS_HPP

@@ -444,6 +444,6 @@ namespace compressor_frontend::finite_automata {
     };
 }
 
-#include "RegexAST.tpp"
+#include "RegexAST.inc"
 
 #endif // COMPRESSOR_FRONTEND_FINITE_AUTOMATA_REGEX_AST_HPP
