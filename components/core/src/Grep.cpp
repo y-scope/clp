@@ -770,7 +770,8 @@ static ErrorCode send_result (const string& orig_file_path, const Message& compr
                               const string& decompressed_msg, int controller_socket_fd)
 {
     msgpack::sbuffer m;
-    msgpack::pack(m, decompressed_msg);
+    size_t spacePos = decompressed_msg.find(" ");
+    msgpack::pack(m, decompressed_msg.substr(spacePos + 1));
     return networking::try_send(controller_socket_fd, m.data(), m.size());
 }
 
