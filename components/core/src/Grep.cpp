@@ -769,10 +769,8 @@ size_t Grep::search_and_output (const Query& query, size_t limit, Archive& archi
 static ErrorCode send_result (const string& orig_file_path, const Message& compressed_msg,
                               const string& decompressed_msg, int controller_socket_fd)
 {
-    msgpack::type::tuple<std::string, epochtime_t, std::string> src(orig_file_path, compressed_msg.get_ts_in_milli(),
-                                                                    decompressed_msg);
     msgpack::sbuffer m;
-    msgpack::pack(m, src);
+    msgpack::pack(m, decompressed_msg);
     return networking::try_send(controller_socket_fd, m.data(), m.size());
 }
 
