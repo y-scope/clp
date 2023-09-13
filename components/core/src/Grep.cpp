@@ -771,12 +771,7 @@ static ErrorCode send_result (const string& orig_file_path, const Message& compr
 {
     msgpack::sbuffer m;
     size_t spacePos = decompressed_msg.find(" ");
-    std::string stripped_log = decompressed_msg;
-    if (delimiterPosition != std::string::npos)
-    {
-        stripped_log = decompressed_msg.substr(delimiterPosition + 1);
-    }
-    msgpack::pack(m, stripped_log);
+    msgpack::pack(m, decompressed_msg.substr(spacePos + 1));
     return networking::try_send(controller_socket_fd, m.data(), m.size());
 }
 
