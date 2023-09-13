@@ -14,3 +14,6 @@
 [submodule "components/core/submodules/log-surgeon"]
 	path = components/core/submodules/log-surgeon
 	url = https://github.com/y-scope/log-surgeon.git
+[submodule "components/core/submodules/boost-outcome"]
+	path = components/core/submodules/boost-outcome
+	url = https://github.com/boostorg/outcome.git

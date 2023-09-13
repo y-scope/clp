@@ -171,6 +171,10 @@ FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 set(SOURCE_FILES_clp
         src/ArrayBackedPosIntSet.cpp
         src/ArrayBackedPosIntSet.hpp
+        src/BufferedFileReader.cpp
+        src/BufferedFileReader.hpp
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clp/clp.cpp
         src/clp/CommandLineArguments.cpp
         src/clp/CommandLineArguments.hpp
@@ -204,6 +208,15 @@ set(SOURCE_FILES_clp
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
         src/ErrorCode.hpp
+        src/ffi/encoding_methods.cpp
+        src/ffi/encoding_methods.hpp
+        src/ffi/encoding_methods.inc
+        src/ffi/ir_stream/byteswap.hpp
+        src/ffi/ir_stream/decoding_methods.cpp
+        src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.inc
+        src/ffi/ir_stream/encoding_methods.cpp
+        src/ffi/ir_stream/encoding_methods.hpp
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
@@ -216,6 +229,11 @@ set(SOURCE_FILES_clp
         src/GlobalMySQLMetadataDB.hpp
         src/GlobalSQLiteMetadataDB.cpp
         src/GlobalSQLiteMetadataDB.hpp
+        src/ir/LogEvent.hpp
+        src/ir/LogEventDeserializer.cpp
+        src/ir/LogEventDeserializer.hpp
+        src/ir/utils.cpp
+        src/ir/utils.hpp
         src/LibarchiveFileReader.cpp
         src/LibarchiveFileReader.hpp
         src/LibarchiveReader.cpp
@@ -226,6 +244,7 @@ set(SOURCE_FILES_clp
         src/LogTypeDictionaryReader.hpp
         src/LogTypeDictionaryWriter.cpp
         src/LogTypeDictionaryWriter.hpp
+        src/math_utils.hpp
         src/MessageParser.cpp
         src/MessageParser.hpp
         src/MySQLDB.cpp
@@ -339,6 +358,8 @@ target_compile_features(clp
 add_subdirectory(src/grammar/kql)
 
 set(SOURCE_FILES_clg
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clg/clg.cpp
         src/clg/CommandLineArguments.cpp
         src/clg/CommandLineArguments.hpp
@@ -354,6 +375,12 @@ set(SOURCE_FILES_clg
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
         src/ErrorCode.hpp
+        src/ffi/encoding_methods.cpp
+        src/ffi/encoding_methods.hpp
+        src/ffi/encoding_methods.inc
+        src/ffi/ir_stream/decoding_methods.cpp
+        src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.inc
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
@@ -368,6 +395,7 @@ set(SOURCE_FILES_clg
         src/GlobalSQLiteMetadataDB.hpp
         src/Grep.cpp
         src/Grep.hpp
+        src/ir/LogEvent.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
@@ -475,6 +503,8 @@ target_compile_features(clg
         )
 
 set(SOURCE_FILES_clo
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clo/clo.cpp
         src/clo/CommandLineArguments.cpp
         src/clo/CommandLineArguments.hpp
@@ -492,12 +522,19 @@ set(SOURCE_FILES_clo
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
         src/ErrorCode.hpp
+        src/ffi/encoding_methods.cpp
+        src/ffi/encoding_methods.hpp
+        src/ffi/encoding_methods.inc
+        src/ffi/ir_stream/decoding_methods.cpp
+        src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.inc
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
         src/Grep.cpp
         src/Grep.hpp
+        src/ir/LogEvent.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
@@ -603,6 +640,10 @@ target_compile_features(clo
         )
 
 set(SOURCE_FILES_unitTest
+        src/BufferedFileReader.cpp
+        src/BufferedFileReader.hpp
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clp/CommandLineArguments.cpp
         src/clp/CommandLineArguments.hpp
         src/clp/compression.cpp
@@ -637,10 +678,11 @@ set(SOURCE_FILES_unitTest
         src/ErrorCode.hpp
         src/ffi/encoding_methods.cpp
         src/ffi/encoding_methods.hpp
-        src/ffi/encoding_methods.tpp
+        src/ffi/encoding_methods.inc
         src/ffi/ir_stream/byteswap.hpp
         src/ffi/ir_stream/decoding_methods.cpp
         src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.inc
         src/ffi/ir_stream/encoding_methods.cpp
         src/ffi/ir_stream/encoding_methods.hpp
         src/ffi/ir_stream/protocol_constants.hpp
@@ -672,6 +714,11 @@ set(SOURCE_FILES_unitTest
         src/GlobalSQLiteMetadataDB.hpp
         src/Grep.cpp
         src/Grep.hpp
+        src/ir/LogEvent.hpp
+        src/ir/LogEventDeserializer.cpp
+        src/ir/LogEventDeserializer.hpp
+        src/ir/utils.cpp
+        src/ir/utils.hpp
         src/LibarchiveFileReader.cpp
         src/LibarchiveFileReader.hpp
         src/LibarchiveReader.cpp
@@ -682,6 +729,7 @@ set(SOURCE_FILES_unitTest
         src/LogTypeDictionaryReader.hpp
         src/LogTypeDictionaryWriter.cpp
         src/LogTypeDictionaryWriter.hpp
+        src/math_utils.hpp
         src/MessageParser.cpp
         src/MessageParser.hpp
         src/MySQLDB.cpp
@@ -745,7 +793,7 @@ set(SOURCE_FILES_unitTest
         src/streaming_compression/zstd/Decompressor.hpp
         src/string_utils.cpp
         src/string_utils.hpp
-        src/string_utils.tpp
+        src/string_utils.inc
         src/StringReader.cpp
         src/StringReader.hpp
         src/TimestampPattern.cpp
@@ -767,11 +815,13 @@ set(SOURCE_FILES_unitTest
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
+        tests/test-BufferedFileReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
         tests/test-Grep.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-main.cpp
+        tests/test-math_utils.cpp
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
         tests/test-Segment.cpp

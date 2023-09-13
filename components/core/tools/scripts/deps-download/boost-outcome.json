@@ -1,0 +1,10 @@
+{
+  "url": "https://github.com/boostorg/outcome/archive/refs/tags/boost-1.83.0.zip",
+  "unzip": true,
+  "targets": [
+    {
+      "source": "outcome-boost-1.83.0",
+      "destination": "submodules/boost-outcome"
+    }
+  ]
+}

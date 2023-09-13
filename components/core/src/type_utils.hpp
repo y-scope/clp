@@ -6,6 +6,12 @@
 #include <type_traits>
 
 /**
+ * An empty type which can be used to declare variables conditionally based on
+ * template parameters
+ */
+struct EmptyType {};
+
+/**
  * Gets the underlying type of the given enum
  * @tparam T
  * @param enum_member
@@ -65,6 +71,5 @@ std::enable_if_t<sizeof(Destination) == sizeof(Source), Destination*>
 {
     return reinterpret_cast<Destination*>(src);
 }
-
 
 #endif // TYPE_UTILS_HPP

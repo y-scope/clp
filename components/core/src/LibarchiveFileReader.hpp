@@ -2,6 +2,7 @@
 #define LIBARCHIVEFILEREADER_HPP
 
 // C++ standard libraries
+#include <array>
 #include <string>
 
 // libarchive
@@ -81,6 +82,24 @@ public:
      */
     void close ();
 
+    /**
+     * Tries to the load a data block from the file if none is loaded
+     * @return ErrorCode_EndOfFile on EOF
+     * @return ErrorCode_Failure on failure
+     * @return ErrorCode_Success on success
+     */
+    [[nodiscard]] ErrorCode try_load_data_block();
+
+    /**
+     * Peeks the remaining buffered content without advancing the read head.
+     *
+     * NOTE: Any subsequent read or seek operations may invalidate the returned
+     * buffer.
+     * @param buf Returns a pointer to any buffered data
+     * @param buf_size Returns the number of bytes in the buffer
+     */
+    void peek_buffered_data(char const*& buf, size_t& buf_size) const;
+
 private:
     // Methods
     /**
@@ -102,6 +121,9 @@ private:
     bool m_reached_eof;
 
     size_t m_pos_in_file;
+
+    // Nulls for peek
+    std::array<char, 4096> m_nulls_for_peek{0};
 };
 
 #endif // LIBARCHIVEFILEREADER_HPP

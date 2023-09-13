@@ -41,7 +41,7 @@ public:
     };
 
     // Constructors
-    LogTypeDictionaryEntry () : m_verbosity(LogVerbosity_Length) {}
+    LogTypeDictionaryEntry () = default;
     // Use default copy constructor
     LogTypeDictionaryEntry (const LogTypeDictionaryEntry&) = default;
 
@@ -123,7 +123,6 @@ public:
      */
     void reserve_constant_length (size_t length) { m_value.reserve(length); }
     void set_id (logtype_dictionary_id_t id) { m_id = id; }
-    void set_verbosity (LogVerbosity verbosity) { m_verbosity = verbosity; }
 
     void clear ();
 
@@ -154,7 +153,6 @@ private:
     void get_value_with_unfounded_variables_escaped (std::string& escaped_logtype_value) const;
 
     // Variables
-    LogVerbosity m_verbosity;
     std::vector<size_t> m_var_positions;
 };
 

@@ -65,6 +65,10 @@ namespace streaming_archive { namespace reader {
         }
 
         auto metadata_db_path = boost::filesystem::path(path) / cMetadataDBFileName;
+        if (false == boost::filesystem::exists(metadata_db_path)) {
+            SPDLOG_ERROR("streaming_archive::reader::Archive: Metadata DB not found: {}", metadata_db_path.string());
+            throw OperationFailed(ErrorCode_FileNotFound, __FILENAME__, __LINE__);
+        }
         m_metadata_db.open(metadata_db_path.string());
 
         // Open log-type dictionary

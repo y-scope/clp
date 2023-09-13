@@ -21,6 +21,7 @@ python3 "${script_dir}/download-dep.py" "${script_dir}/antlr4.json"
 if [ -e "$project_root_dir/.git" ] ; then
   git submodule update --init --recursive
 else
+  python3 "${script_dir}/download-dep.py" "${script_dir}/boost-outcome.json"
   python3 "${script_dir}/download-dep.py" "${script_dir}/Catch2.json"
   python3 "${script_dir}/download-dep.py" "${script_dir}/date.json"
   python3 "${script_dir}/download-dep.py" "${script_dir}/json.json"
