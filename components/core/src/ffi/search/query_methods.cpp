@@ -1,8 +1,10 @@
 #include "query_methods.hpp"
 
+#include "../../ir/parsing.hpp"
 #include "CompositeWildcardToken.hpp"
 #include "QueryMethodFailed.hpp"
 
+using ir::is_delim;
 using std::pair;
 using std::string;
 using std::string_view;
@@ -188,7 +190,7 @@ void tokenize_query(
             // - it could be a multi-digit hex value
             if (contains_decimal_digit
                 || (begin_pos > 0 && '=' == wildcard_query[begin_pos - 1] && contains_alphabet)
-                || ffi::could_be_multi_digit_hex_value(variable))
+                || ir::could_be_multi_digit_hex_value(variable))
             {
                 tokens.emplace_back(
                         std::in_place_type<ExactVariableToken<encoded_variable_t>>,
@@ -295,5 +297,4 @@ template void tokenize_query<ffi::four_byte_encoded_variable_t>(
                         CompositeWildcardToken<four_byte_encoded_variable_t>>>& tokens,
         vector<size_t>& composite_wildcard_token_indexes
 );
-
 }  // namespace ffi::search

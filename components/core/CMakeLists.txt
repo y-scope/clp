@@ -251,6 +251,8 @@ set(SOURCE_FILES_clp
         src/ir/LogEvent.hpp
         src/ir/LogEventDeserializer.cpp
         src/ir/LogEventDeserializer.hpp
+        src/ir/parsing.cpp
+        src/ir/parsing.hpp
         src/ir/utils.cpp
         src/ir/utils.hpp
         src/LibarchiveFileReader.cpp
@@ -789,6 +791,8 @@ set(SOURCE_FILES_unitTest
         src/ir/LogEvent.hpp
         src/ir/LogEventDeserializer.cpp
         src/ir/LogEventDeserializer.hpp
+        src/ir/parsing.cpp
+        src/ir/parsing.hpp
         src/ir/utils.cpp
         src/ir/utils.hpp
         src/LibarchiveFileReader.cpp
@@ -890,6 +894,7 @@ set(SOURCE_FILES_unitTest
         tests/test-encoding_methods.cpp
         tests/test-Grep.cpp
         tests/test-ir_encoding_methods.cpp
+        tests/test-ir_parsing.cpp
         tests/test-main.cpp
         tests/test-math_utils.cpp
         tests/test-ParserWithUserSchema.cpp

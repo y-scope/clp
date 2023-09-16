@@ -3,8 +3,11 @@
 
 #include <algorithm>
 
+#include "../ir/parsing.hpp"
 #include "../string_utils.hpp"
 #include "../type_utils.hpp"
+
+using ir::VariablePlaceholder;
 
 namespace ffi {
 template <typename encoded_variable_t>
@@ -364,7 +367,7 @@ bool encode_message_generically(
     size_t constant_begin_pos = 0;
     logtype.clear();
     logtype.reserve(message.length());
-    while (get_bounds_of_next_var(
+    while (ir::get_bounds_of_next_var(
             message,
             var_begin_pos,
             var_end_pos,
@@ -428,8 +431,11 @@ bool encode_message(
     auto final_constant_handler =
             [&constant_handler](std::string_view constant, std::string& logtype) {
                 // Ensure final constant doesn't contain a variable placeholder
-                bool contains_variable_placeholder
-                        = std::any_of(constant.cbegin(), constant.cend(), is_variable_placeholder);
+                bool contains_variable_placeholder = std::any_of(
+                        constant.cbegin(),
+                        constant.cend(),
+                        ir::is_variable_placeholder
+                );
                 return constant_handler(constant, contains_variable_placeholder, logtype);
             };
     auto encoded_variable_handler = [&encoded_vars](encoded_variable_t encoded_variable) {

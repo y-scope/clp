@@ -10,6 +10,7 @@
 #include "../src/ffi/ir_stream/decoding_methods.hpp"
 #include "../src/ffi/ir_stream/encoding_methods.hpp"
 #include "../src/ffi/ir_stream/protocol_constants.hpp"
+#include "../src/ir/parsing.hpp"
 
 using ffi::decode_float_var;
 using ffi::decode_integer_var;
@@ -20,7 +21,6 @@ using ffi::encode_integer_string;
 using ffi::encode_message;
 using ffi::epoch_time_ms_t;
 using ffi::four_byte_encoded_variable_t;
-using ffi::get_bounds_of_next_var;
 using ffi::ir_stream::cProtocol::EightByteEncodingMagicNumber;
 using ffi::ir_stream::cProtocol::FourByteEncodingMagicNumber;
 using ffi::ir_stream::cProtocol::MagicNumberLength;
@@ -28,8 +28,8 @@ using ffi::ir_stream::decode_preamble;
 using ffi::ir_stream::encoded_tag_t;
 using ffi::ir_stream::get_encoding_type;
 using ffi::ir_stream::IRErrorCode;
-using ffi::VariablePlaceholder;
 using ffi::wildcard_query_matches_any_encoded_var;
+using ir::VariablePlaceholder;
 using std::chrono::duration_cast;
 using std::chrono::milliseconds;
 using std::chrono::system_clock;
@@ -443,7 +443,7 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]") {
 
     // Test if a trailing escape triggers a decoder error
     auto ir_with_extra_escape{ir_buf};
-    ir_with_extra_escape.at(logtype_end_pos - 1) = ffi::cVariablePlaceholderEscapeCharacter;
+    ir_with_extra_escape.at(logtype_end_pos - 1) = ir::cVariablePlaceholderEscapeCharacter;
     BufferReader ir_with_extra_escape_buffer{
             size_checked_pointer_cast<char const>(ir_with_extra_escape.data()),
             ir_with_extra_escape.size()};

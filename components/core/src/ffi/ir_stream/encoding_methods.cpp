@@ -2,6 +2,7 @@
 
 #include <json/single_include/nlohmann/json.hpp>
 
+#include "../../ir/parsing.hpp"
 #include "byteswap.hpp"
 #include "protocol_constants.hpp"
 
@@ -182,9 +183,9 @@ static bool append_constant_to_logtype(string_view constant, bool, string& logty
     auto constant_len = constant.length();
     for (size_t i = 0; i < constant_len; ++i) {
         auto c = constant[i];
-        if (cVariablePlaceholderEscapeCharacter == c || is_variable_placeholder(c)) {
+        if (ir::cVariablePlaceholderEscapeCharacter == c || ir::is_variable_placeholder(c)) {
             logtype.append(constant, begin_pos, i - begin_pos);
-            logtype += cVariablePlaceholderEscapeCharacter;
+            logtype += ir::cVariablePlaceholderEscapeCharacter;
             // NOTE: We don't need to append the character of interest
             // immediately since the next constant copy operation will get it
             begin_pos = i;
