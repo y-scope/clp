@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "../ir/parsing.hpp"
 #include "../TraceableException.hpp"
 
 // TODO Some of the methods in this file are mostly duplicated from code that
@@ -14,12 +15,6 @@ using epoch_time_ms_t = int64_t;
 
 using eight_byte_encoded_variable_t = int64_t;
 using four_byte_encoded_variable_t = int32_t;
-
-enum class VariablePlaceholder : char {
-    Integer = 0x11,
-    Dictionary = 0x12,
-    Float = 0x13,
-};
 
 class EncodingException : public TraceableException {
 public:
@@ -55,13 +50,11 @@ static constexpr char cVariableEncodingMethodsVersion[]
         = "com.yscope.clp.VariableEncodingMethodsV1";
 static constexpr char cVariablesSchemaVersion[] = "com.yscope.clp.VariablesSchemaV2";
 
-constexpr char cVariablePlaceholderEscapeCharacter = '\\';
-
 static constexpr char cTooFewDictionaryVarsErrorMessage[]
-        = "There are fewer dictionary variables than dictionary variable delimiters in the "
+        = "There are fewer dictionary variables than dictionary variable placeholders in the "
           "logtype.";
 static constexpr char cTooFewEncodedVarsErrorMessage[]
-        = "There are fewer encoded variables than encoded variable delimiters in the logtype.";
+        = "There are fewer encoded variables than encoded variable placeholders in the logtype.";
 static constexpr char cUnexpectedEscapeCharacterMessage[]
         = "Unexpected escape character without escaped value at the end of the logtype.";
 
@@ -69,58 +62,6 @@ constexpr size_t cMaxDigitsInRepresentableEightByteFloatVar = 16;
 constexpr size_t cMaxDigitsInRepresentableFourByteFloatVar = 8;
 constexpr uint64_t cEightByteEncodedFloatDigitsBitMask = (1ULL << 54) - 1;
 constexpr uint32_t cFourByteEncodedFloatDigitsBitMask = (1UL << 25) - 1;
-
-/**
- * Checks if the given character is a delimiter
- * We treat everything *except* the following quoted characters as a
- * delimiter: "+-.0-9A-Z\_a-z"
- * @param c
- * @return Whether c is a delimiter
- */
-bool is_delim(signed char c);
-
-/**
- * @param c
- * @return Whether the character is a variable placeholder
- */
-bool is_variable_placeholder(char c);
-
-/**
- * @param str
- * @return Whether the given string could be a multi-digit hex value
- */
-bool could_be_multi_digit_hex_value(std::string_view str);
-
-/**
- * @param value
- * @return Whether the given value is a variable according to the schemas
- * specified in ffi::get_bounds_of_next_var
- */
-bool is_var(std::string_view value);
-
-/**
- * Gets the bounds of the next variable in the given string
- * A variable is a token (word between two delimiters) that matches one of
- * these schemas:
- * - ".*[0-9].*"
- * - "=(.*[a-zA-Z].*)" (the variable is within the capturing group)
- * - "[a-fA-F0-9]{2,}"
- * @param str String to search within
- * @param begin_pos Begin position of last variable, changes to begin
- * position of next variable
- * @param end_pos End position of last variable, changes to end position of
- * next variable
- * @param contains_var_placeholder Whether the string already contains a
- * variable placeholder (for efficiency, this is only set to true, so the
- * caller must reset it to false if necessary)
- * @return true if a variable was found, false otherwise
- */
-bool get_bounds_of_next_var(
-        std::string_view str,
-        size_t& begin_pos,
-        size_t& end_pos,
-        bool& contains_var_placeholder
-);
 
 /**
  * Encodes the given string into a representable float variable if possible
@@ -228,10 +169,6 @@ std::string decode_integer_var(encoded_variable_t encoded_var);
  * components of the message.
  * @tparam encoded_variable_t Type of the encoded variable
  * @tparam ConstantHandler Method to handle constants. Signature:
- * (std::string_view constant, bool constant_contains_variable_placeholder,
- * std::string& logtype) -> bool
- * @tparam FinalConstantHandler Method to handle the constant after the last
- * variable. Signature:
  * (std::string_view constant, std::string& logtype) -> bool
  * @tparam EncodedVariableHandler Method to handle encoded variables.
  * Signature: (encoded_variable_t) -> void
@@ -241,7 +178,6 @@ std::string decode_integer_var(encoded_variable_t encoded_var);
  * @param message
  * @param logtype
  * @param constant_handler
- * @param final_constant_handler
  * @param encoded_variable_handler
  * @param dictionary_variable_handler
  * @return true on success, false otherwise
@@ -249,14 +185,12 @@ std::string decode_integer_var(encoded_variable_t encoded_var);
 template <
         typename encoded_variable_t,
         typename ConstantHandler,
-        typename FinalConstantHandler,
         typename EncodedVariableHandler,
         typename DictionaryVariableHandler>
 bool encode_message_generically(
         std::string_view message,
         std::string& logtype,
         ConstantHandler constant_handler,
-        FinalConstantHandler final_constant_handler,
         EncodedVariableHandler encoded_variable_handler,
         DictionaryVariableHandler dictionary_variable_handler
 );
@@ -321,7 +255,7 @@ std::string decode_message(
  * @param encoded_vars_length
  * @return true if a match was found, false otherwise
  */
-template <VariablePlaceholder var_placeholder, typename encoded_variable_t>
+template <ir::VariablePlaceholder var_placeholder, typename encoded_variable_t>
 bool wildcard_query_matches_any_encoded_var(
         std::string_view wildcard_query,
         std::string_view logtype,

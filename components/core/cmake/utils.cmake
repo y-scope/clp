@@ -9,6 +9,8 @@ set(SOURCE_FILES_make-dictionaries-readable
         ${CMAKE_CURRENT_SOURCE_DIR}/src/FileReader.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/FileWriter.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/FileWriter.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ir/parsing.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ir/parsing.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/LogTypeDictionaryEntry.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/LogTypeDictionaryEntry.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/LogTypeDictionaryReader.cpp

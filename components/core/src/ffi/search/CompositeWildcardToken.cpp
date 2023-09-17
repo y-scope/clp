@@ -1,5 +1,7 @@
 #include "CompositeWildcardToken.hpp"
 
+#include "../../ir/parsing.hpp"
+
 using std::string;
 using std::string_view;
 using std::variant;
@@ -256,7 +258,7 @@ void CompositeWildcardToken<encoded_variable_t>::try_add_wildcard_variable(
         );
     } else {
         string_view var(m_query.cbegin() + begin_pos, end_pos - begin_pos);
-        if (is_var(var)) {
+        if (ir::is_var(var)) {
             m_variables.emplace_back(
                     std::in_place_type<ExactVariableToken<encoded_variable_t>>,
                     m_query,

@@ -2,6 +2,7 @@
 
 #include <json/single_include/nlohmann/json.hpp>
 
+#include "../../ir/parsing.hpp"
 #include "byteswap.hpp"
 #include "protocol_constants.hpp"
 
@@ -51,28 +52,15 @@ static void add_base_metadata_fields(
 );
 
 /**
- * Appends a constant to the logtype, escaping variable placeholders when
- * @p contains_variable_placeholder is true
+ * Appends a constant to the logtype, escaping any variable placeholders
  * @param constant
- * @param contains_variable_placeholder Whether the constant contains a variable
- * placeholder
  * @param logtype
  * @return true
  */
 static bool append_constant_to_logtype(
         string_view constant,
-        bool contains_variable_placeholder,
         string& logtype
 );
-
-/**
- * Appends the final constant to the logtype, escaping variable placeholders as
- * necessary
- * @param constant
- * @param logtype
- * @return Same as append_constant_to_logtype
- */
-static bool append_final_constant_to_logtype(string_view constant, string& logtype);
 
 /**
  * A functor for encoding dictionary variables in a message
@@ -177,28 +165,9 @@ static void add_base_metadata_fields(
     metadata[cProtocol::Metadata::TimeZoneIdKey] = time_zone_id;
 }
 
-static bool append_constant_to_logtype(string_view constant, bool, string& logtype) {
-    size_t begin_pos = 0;
-    auto constant_len = constant.length();
-    for (size_t i = 0; i < constant_len; ++i) {
-        auto c = constant[i];
-        if (cVariablePlaceholderEscapeCharacter == c || is_variable_placeholder(c)) {
-            logtype.append(constant, begin_pos, i - begin_pos);
-            logtype += cVariablePlaceholderEscapeCharacter;
-            // NOTE: We don't need to append the character of interest
-            // immediately since the next constant copy operation will get it
-            begin_pos = i;
-        }
-    }
-    logtype.append(constant, begin_pos, constant_len - begin_pos);
+static bool append_constant_to_logtype(string_view constant, string& logtype) {
+    ir::escape_and_append_constant_to_logtype(constant, logtype);
     return true;
-}
-
-static bool append_final_constant_to_logtype(string_view constant, string& logtype) {
-    // Since we don't know if the last constant contains a variable placeholder,
-    // we'll simply say it does and append_constant_to_logtype will escape one
-    // if it finds one
-    return append_constant_to_logtype(constant, true, logtype);
 }
 
 namespace eight_byte_encoding {
@@ -241,7 +210,6 @@ namespace eight_byte_encoding {
                     message,
                     logtype,
                     append_constant_to_logtype,
-                    append_final_constant_to_logtype,
                     encoded_var_handler,
                     DictionaryVariableHandler(ir_buf)
             ))
@@ -316,7 +284,6 @@ namespace four_byte_encoding {
                     message,
                     logtype,
                     append_constant_to_logtype,
-                    append_final_constant_to_logtype,
                     encoded_var_handler,
                     DictionaryVariableHandler(ir_buf)
             ))

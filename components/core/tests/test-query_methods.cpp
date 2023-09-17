@@ -10,6 +10,7 @@
 #include "../src/ffi/search/query_methods.hpp"
 #include "../src/ffi/search/QueryMethodFailed.hpp"
 #include "../src/ffi/search/WildcardToken.hpp"
+#include "../src/ir/parsing.hpp"
 
 using ffi::eight_byte_encoded_variable_t;
 using ffi::four_byte_encoded_variable_t;
@@ -18,7 +19,7 @@ using ffi::search::generate_subqueries;
 using ffi::search::Subquery;
 using ffi::search::TokenType;
 using ffi::search::WildcardToken;
-using ffi::VariablePlaceholder;
+using ir::VariablePlaceholder;
 using std::string;
 using std::variant;
 using std::vector;

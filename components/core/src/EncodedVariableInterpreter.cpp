@@ -8,6 +8,7 @@
 #include "Defs.h"
 #include "ffi/encoding_methods.hpp"
 #include "ffi/ir_stream/decoding_methods.hpp"
+#include "ir/parsing.hpp"
 #include "spdlog_with_specializations.hpp"
 #include "string_utils.hpp"
 #include "type_utils.hpp"
@@ -296,25 +297,25 @@ bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDic
         return false;
     }
 
-    LogTypeDictionaryEntry::VarDelim var_delim;
+    ir::VariablePlaceholder var_placeholder;
     size_t constant_begin_pos = 0;
     string float_str;
     variable_dictionary_id_t var_dict_id;
     for (size_t i = 0; i < num_vars_in_logtype; ++i) {
-        size_t var_position = logtype_dict_entry.get_var_info(i, var_delim);
+        size_t var_position = logtype_dict_entry.get_var_info(i, var_placeholder);
 
         // Add the constant that's between the last variable and this one
         decompressed_msg.append(logtype_value, constant_begin_pos,
                                 var_position - constant_begin_pos);
-        switch (var_delim) {
-            case LogTypeDictionaryEntry::VarDelim::Integer:
+        switch (var_placeholder) {
+            case ir::VariablePlaceholder::Integer:
                 decompressed_msg += std::to_string(encoded_vars[i]);
                 break;
-            case LogTypeDictionaryEntry::VarDelim::Float:
+            case ir::VariablePlaceholder::Float:
                 convert_encoded_float_to_string(encoded_vars[i], float_str);
                 decompressed_msg += float_str;
                 break;
-            case LogTypeDictionaryEntry::VarDelim::Dictionary:
+            case ir::VariablePlaceholder::Dictionary:
                 var_dict_id = decode_var_dict_id(encoded_vars[i]);
                 decompressed_msg += var_dict.get_value(var_dict_id);
                 break;
@@ -323,10 +324,10 @@ bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDic
                     "EncodedVariableInterpreter: Logtype '{}' contains "
                     "unexpected variable placeholder 0x{:x}",
                     logtype_value,
-                    enum_to_underlying_type(var_delim));
+                    enum_to_underlying_type(var_placeholder));
                 return false;
         }
-        // Move past the variable delimiter
+        // Move past the variable placeholder
         constant_begin_pos = var_position + 1;
     }
     // Append remainder of logtype, if any

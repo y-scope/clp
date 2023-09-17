@@ -9,6 +9,7 @@
 #include "DictionaryEntry.hpp"
 #include "ErrorCode.hpp"
 #include "FileReader.hpp"
+#include "ir/parsing.hpp"
 #include "streaming_compression/zstd/Compressor.hpp"
 #include "streaming_compression/zstd/Decompressor.hpp"
 #include "TraceableException.hpp"
@@ -31,15 +32,6 @@ public:
         }
     };
 
-    // Constants
-    enum class VarDelim : char {
-        // NOTE: These values are used within logtypes to denote variables, so care must be taken when changing them
-        Integer = 0x11,
-        Dictionary = 0x12,
-        Float = 0x13,
-        Length = 3
-    };
-
     // Constructors
     LogTypeDictionaryEntry () = default;
     // Use default copy constructor
@@ -51,35 +43,35 @@ public:
 
     // Methods
     /**
-     * Adds a dictionary variable delimiter to the given logtype
+     * Adds a dictionary variable placeholder to the given logtype
      * @param logtype
      */
     static void add_dict_var (std::string& logtype) {
-        logtype += enum_to_underlying_type(VarDelim::Dictionary);
+        logtype += enum_to_underlying_type(ir::VariablePlaceholder::Dictionary);
     }
     /**
-     * Adds an integer variable delimiter to the given logtype
+     * Adds an integer variable placeholder to the given logtype
      * @param logtype
      */
     static void add_int_var (std::string& logtype) {
-        logtype += enum_to_underlying_type(VarDelim::Integer);
+        logtype += enum_to_underlying_type(ir::VariablePlaceholder::Integer);
     }
     /**
-     * Adds a float variable delimiter to the given logtype
+     * Adds a float variable placeholder to the given logtype
      * @param logtype
      */
     static void add_float_var (std::string& logtype) {
-        logtype += enum_to_underlying_type(VarDelim::Float);
+        logtype += enum_to_underlying_type(ir::VariablePlaceholder::Float);
     }
 
     size_t get_num_vars () const { return m_var_positions.size(); }
     /**
      * Gets all info about a variable in the logtype
      * @param var_ix The index of the variable to get the info for
-     * @param var_delim
+     * @param var_placeholder
      * @return The variable's position in the logtype, or SIZE_MAX if var_ix is out of bounds
      */
-    size_t get_var_info (size_t var_ix, VarDelim& var_delim) const;
+    size_t get_var_info (size_t var_ix, ir::VariablePlaceholder& var_placeholder) const;
 
     /**
      * Gets the size (in-memory) of the data contained in this entry
@@ -95,15 +87,15 @@ public:
      */
     void add_constant (const std::string& value_containing_constant, size_t begin_pos, size_t length);
     /**
-     * Adds an int variable delimiter
+     * Adds an int variable placeholder
      */
     void add_int_var ();
     /**
-     * Adds a float variable delimiter
+     * Adds a float variable placeholder
      */
     void add_float_var ();
     /**
-     * Adds a dictionary variable delimiter
+     * Adds a dictionary variable placeholder
      */
     void add_dictionary_var ();
 
@@ -147,7 +139,8 @@ public:
 private:
     // Methods
     /**
-     * Escapes any variable delimiters that don't correspond to the positions of variables in the logtype entry's value
+     * Escapes any variable placeholders that don't correspond to the positions
+     * of variables in the logtype entry's value
      * @param escaped_logtype_value
      */
     void get_value_with_unfounded_variables_escaped (std::string& escaped_logtype_value) const;
