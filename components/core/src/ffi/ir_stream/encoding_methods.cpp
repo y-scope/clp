@@ -166,19 +166,7 @@ static void add_base_metadata_fields(
 }
 
 static bool append_constant_to_logtype(string_view constant, string& logtype) {
-    size_t begin_pos = 0;
-    auto constant_len = constant.length();
-    for (size_t i = 0; i < constant_len; ++i) {
-        auto c = constant[i];
-        if (ir::cVariablePlaceholderEscapeCharacter == c || ir::is_variable_placeholder(c)) {
-            logtype.append(constant, begin_pos, i - begin_pos);
-            logtype += ir::cVariablePlaceholderEscapeCharacter;
-            // NOTE: We don't need to append the character of interest
-            // immediately since the next constant copy operation will get it
-            begin_pos = i;
-        }
-    }
-    logtype.append(constant, begin_pos, constant_len - begin_pos);
+    ir::escape_and_append_constant_to_logtype(constant, logtype);
     return true;
 }
 

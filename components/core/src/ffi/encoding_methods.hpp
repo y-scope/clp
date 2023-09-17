@@ -51,10 +51,10 @@ static constexpr char cVariableEncodingMethodsVersion[]
 static constexpr char cVariablesSchemaVersion[] = "com.yscope.clp.VariablesSchemaV2";
 
 static constexpr char cTooFewDictionaryVarsErrorMessage[]
-        = "There are fewer dictionary variables than dictionary variable delimiters in the "
+        = "There are fewer dictionary variables than dictionary variable placeholders in the "
           "logtype.";
 static constexpr char cTooFewEncodedVarsErrorMessage[]
-        = "There are fewer encoded variables than encoded variable delimiters in the logtype.";
+        = "There are fewer encoded variables than encoded variable placeholders in the logtype.";
 static constexpr char cUnexpectedEscapeCharacterMessage[]
         = "Unexpected escape character without escaped value at the end of the logtype.";
 

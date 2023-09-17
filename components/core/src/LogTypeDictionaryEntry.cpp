@@ -7,43 +7,16 @@
 
 using std::string;
 
-// Constants
-static constexpr char cEscapeChar = '\\';
-
-// Local function prototypes
-/**
- * Escapes any variable delimiters in the identified portion of the given value
- * @param value
- * @param begin_ix
- * @param end_ix
- * @param escaped_value
- */
-static void escape_variable_delimiters (const std::string& value, size_t begin_ix, size_t end_ix, std::string& escaped_value);
-
-static void escape_variable_delimiters (const string& value, size_t begin_ix, size_t end_ix, string& escaped_value) {
-    for (size_t i = begin_ix; i < end_ix; ++i) {
-        auto c = value[i];
-
-        // Add escape character if necessary
-        if (enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Integer) == c ||
-            enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Float) == c ||
-            enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Dictionary) == c ||
-            cEscapeChar == c) {
-            escaped_value += cEscapeChar;
-        }
-
-        // Add character
-        escaped_value += value[i];
-    }
-}
-
-size_t LogTypeDictionaryEntry::get_var_info (size_t var_ix, VarDelim& var_delim) const {
+size_t LogTypeDictionaryEntry::get_var_info(
+        size_t var_ix,
+        ir::VariablePlaceholder& var_placeholder
+) const {
     if (var_ix >= m_var_positions.size()) {
         return SIZE_MAX;
     }
 
     auto var_position = m_var_positions[var_ix];
-    var_delim = (VarDelim)m_value[var_position];
+    var_placeholder = static_cast<ir::VariablePlaceholder>(m_value[var_position]);
 
     return m_var_positions[var_ix];
 }
@@ -134,18 +107,18 @@ ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::Dec
         if (is_escaped) {
             constant += c;
             is_escaped = false;
-        } else if (cEscapeChar == c) {
+        } else if (ir::cVariablePlaceholderEscapeCharacter == c) {
             is_escaped = true;
         } else {
-            if (enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Integer) == c) {
+            if (enum_to_underlying_type(ir::VariablePlaceholder::Integer) == c) {
                 add_constant(constant, 0, constant.length());
                 constant.clear();
                 add_int_var();
-            } else if (enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Float) == c) {
+            } else if (enum_to_underlying_type(ir::VariablePlaceholder::Float) == c) {
                 add_constant(constant, 0, constant.length());
                 constant.clear();
                 add_float_var();
-            } else if (enum_to_underlying_type(LogTypeDictionaryEntry::VarDelim::Dictionary) == c)
+            } else if (enum_to_underlying_type(ir::VariablePlaceholder::Dictionary) == c)
             {
                 add_constant(constant, 0, constant.length());
                 constant.clear();
@@ -171,21 +144,25 @@ void LogTypeDictionaryEntry::read_from_file (streaming_compression::Decompressor
 }
 
 void LogTypeDictionaryEntry::get_value_with_unfounded_variables_escaped (string& escaped_logtype_value) const {
+    auto value_view = static_cast<std::string_view>(m_value);
     size_t begin_ix = 0;
     // Reset escaped value and reserve enough space to at least contain the whole value
     escaped_logtype_value.clear();
-    escaped_logtype_value.reserve(m_value.length());
+    escaped_logtype_value.reserve(value_view.length());
     for (auto var_position : m_var_positions) {
         size_t end_ix = var_position;
 
-        escape_variable_delimiters(m_value, begin_ix, end_ix, escaped_logtype_value);
+        ir::escape_and_append_constant_to_logtype(
+                value_view.substr(begin_ix, end_ix - begin_ix),
+                escaped_logtype_value
+        );
 
-        // Add variable delimiter
-        escaped_logtype_value += m_value[end_ix];
+        // Add variable placeholder
+        escaped_logtype_value += value_view[end_ix];
 
         // Move begin to start of next portion of logtype between variables
         begin_ix = end_ix + 1;
     }
-    // Escape any variable delimiters in remainder of value
-    escape_variable_delimiters(m_value, begin_ix, m_value.length(), escaped_logtype_value);
+    // Escape any variable placeholders in remainder of value
+    ir::escape_and_append_constant_to_logtype(value_view.substr(begin_ix), escaped_logtype_value);
 }

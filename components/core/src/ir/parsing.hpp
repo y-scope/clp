@@ -78,11 +78,14 @@ bool is_var(std::string_view value);
  * next variable
  * @return true if a variable was found, false otherwise
  */
-bool get_bounds_of_next_var(
-        std::string_view str,
-        size_t& begin_pos,
-        size_t& end_pos
-);
+bool get_bounds_of_next_var(std::string_view str, size_t& begin_pos, size_t& end_pos);
+
+/**
+ * Appends the given constant to the logtype, escaping any variable placeholders
+ * @param constant
+ * @param logtype
+ */
+void escape_and_append_constant_to_logtype(std::string_view constant, std::string& logtype);
 }  // namespace ir
 
 #endif  // IR_PARSING_HPP

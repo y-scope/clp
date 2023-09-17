@@ -10,6 +10,7 @@
 
 // Project headers
 #include "../../FileWriter.hpp"
+#include "../../ir/parsing.hpp"
 #include "../../LogTypeDictionaryReader.hpp"
 #include "../../spdlog_with_specializations.hpp"
 #include "../../streaming_archive/Constants.hpp"
@@ -66,28 +67,28 @@ int main (int argc, const char* argv[]) {
 
         size_t constant_begin_pos = 0;
         for (size_t var_ix = 0; var_ix < entry.get_num_vars(); ++var_ix) {
-            LogTypeDictionaryEntry::VarDelim var_delim;
-            size_t var_pos = entry.get_var_info(var_ix, var_delim);
+            ir::VariablePlaceholder var_placeholder;
+            size_t var_pos = entry.get_var_info(var_ix, var_placeholder);
 
             // Add the constant that's between the last variable and this one, with newlines escaped
             human_readable_value.append(value, constant_begin_pos, var_pos - constant_begin_pos);
 
-            switch (var_delim) {
-                case LogTypeDictionaryEntry::VarDelim::Integer:
+            switch (var_placeholder) {
+                case ir::VariablePlaceholder::Integer:
                     human_readable_value += "\\i";
                     break;
-                case LogTypeDictionaryEntry::VarDelim::Float:
+                case ir::VariablePlaceholder::Float:
                     human_readable_value += "\\f";
                     break;
-                case LogTypeDictionaryEntry::VarDelim::Dictionary:
+                case ir::VariablePlaceholder::Dictionary:
                     human_readable_value += "\\d";
                     break;
                 default:
                     SPDLOG_ERROR("Logtype '{}' contains unexpected variable placeholder 0x{:x}",
-                                 value, enum_to_underlying_type(var_delim));
+                                 value, enum_to_underlying_type(var_placeholder));
                     return -1;
             }
-            // Move past the variable delimiter
+            // Move past the variable placeholder
             constant_begin_pos = var_pos + 1;
         }
         // Append remainder of value, if any

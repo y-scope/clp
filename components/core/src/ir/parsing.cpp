@@ -34,11 +34,7 @@ bool is_var(std::string_view value) {
     }
 }
 
-bool get_bounds_of_next_var(
-        string_view const str,
-        size_t& begin_pos,
-        size_t& end_pos
-) {
+bool get_bounds_of_next_var(string_view const str, size_t& begin_pos, size_t& end_pos) {
     auto const msg_length = str.length();
     if (end_pos >= msg_length) {
         return false;
@@ -89,5 +85,21 @@ bool get_bounds_of_next_var(
     }
 
     return (msg_length != begin_pos);
+}
+
+void escape_and_append_constant_to_logtype(string_view constant, std::string& logtype) {
+    size_t begin_pos = 0;
+    auto constant_len = constant.length();
+    for (size_t i = 0; i < constant_len; ++i) {
+        auto c = constant[i];
+        if (cVariablePlaceholderEscapeCharacter == c || is_variable_placeholder(c)) {
+            logtype.append(constant, begin_pos, i - begin_pos);
+            logtype += ir::cVariablePlaceholderEscapeCharacter;
+            // NOTE: We don't need to append the character of interest
+            // immediately since the next constant copy operation will get it
+            begin_pos = i;
+        }
+    }
+    logtype.append(constant, begin_pos, constant_len - begin_pos);
 }
 }  // namespace ir
