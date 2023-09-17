@@ -317,6 +317,7 @@ namespace streaming_archive::writer {
             log_surgeon::Token& token = log_view.get_log_output_buffer()->get_mutable_token(i);
             int token_type = token.m_type_ids_ptr->at(0);
             if (log_view.get_log_output_buffer()->has_delimiters() &&
+                  (timestamp_pattern != nullptr || i > 1) &&
                   token_type != (int) log_surgeon::SymbolID::TokenUncaughtStringID &&
                   token_type != (int) log_surgeon::SymbolID::TokenNewlineId)
             {
