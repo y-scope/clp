@@ -37,10 +37,25 @@ bool is_delim(signed char c);
 bool is_variable_placeholder(char c);
 
 /**
+ * NOTE: This method is marked inline for a 1-2% performance improvement
  * @param str
  * @return Whether the given string could be a multi-digit hex value
  */
-bool could_be_multi_digit_hex_value(std::string_view str);
+inline bool could_be_multi_digit_hex_value(std::string_view str) {
+    if (str.length() < 2) {
+        return false;
+    }
+
+    // NOTE: This is 1-2% faster than using std::all_of with the opposite
+    // condition
+    for (auto c : str) {
+        if (!(('a' <= c && c <= 'f') || ('A' <= c && c <= 'F') || ('0' <= c && c <= '9'))) {
+            return false;
+        }
+    }
+
+    return true;
+}
 
 /**
  * @param value
