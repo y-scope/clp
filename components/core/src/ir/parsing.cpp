@@ -1,7 +1,5 @@
 #include "parsing.hpp"
 
-#include <algorithm>
-
 #include "../string_utils.hpp"
 #include "../type_utils.hpp"
 
@@ -25,21 +23,27 @@ bool is_variable_placeholder(char c) {
            || (enum_to_underlying_type(VariablePlaceholder::Float) == c);
 }
 
-bool could_be_multi_digit_hex_value(string_view const str) {
+// NOTE: `inline` improves performance by 1-2%
+inline bool could_be_multi_digit_hex_value(string_view str) {
     if (str.length() < 2) {
         return false;
     }
 
-    return std::all_of(str.cbegin(), str.cend(), [](char c) {
-        return ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F') || ('0' <= c && c <= '9');
-    });
+    // NOTE: This is 1-2% faster than using std::all_of with the opposite
+    // condition
+    for (auto c : str) {
+        if (!(('a' <= c && c <= 'f') || ('A' <= c && c <= 'F') || ('0' <= c && c <= '9'))) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 bool is_var(std::string_view value) {
     size_t begin_pos = 0;
     size_t end_pos = 0;
-    bool contains_var_placeholder;
-    if (get_bounds_of_next_var(value, begin_pos, end_pos, contains_var_placeholder)) {
+    if (get_bounds_of_next_var(value, begin_pos, end_pos)) {
         // Ensure the entire value is a variable
         return (0 == begin_pos && value.length() == end_pos);
     } else {
@@ -50,8 +54,7 @@ bool is_var(std::string_view value) {
 bool get_bounds_of_next_var(
         string_view const str,
         size_t& begin_pos,
-        size_t& end_pos,
-        bool& contains_var_placeholder
+        size_t& end_pos
 ) {
     auto const msg_length = str.length();
     if (end_pos >= msg_length) {
@@ -62,21 +65,10 @@ bool get_bounds_of_next_var(
         begin_pos = end_pos;
 
         // Find next non-delimiter
-        bool char_before_var_was_equals_sign = false;
-        char previous_char = 0;
         for (; begin_pos < msg_length; ++begin_pos) {
             auto c = str[begin_pos];
             if (false == is_delim(c)) {
-                char_before_var_was_equals_sign = ('=' == previous_char);
                 break;
-            }
-            previous_char = c;
-
-            if (enum_to_underlying_type(VariablePlaceholder::Integer) == c
-                || enum_to_underlying_type(VariablePlaceholder::Dictionary) == c
-                || enum_to_underlying_type(VariablePlaceholder::Float) == c)
-            {
-                contains_var_placeholder = true;
             }
         }
         if (msg_length == begin_pos) {
@@ -100,12 +92,13 @@ bool get_bounds_of_next_var(
             }
         }
 
-        string_view variable(str.cbegin() + begin_pos, end_pos - begin_pos);
+        auto variable = str.substr(begin_pos, end_pos - begin_pos);
         // Treat token as variable if:
         // - it contains a decimal digit, or
         // - it's directly preceded by '=' and contains an alphabet char, or
         // - it could be a multi-digit hex value
-        if (contains_decimal_digit || (char_before_var_was_equals_sign && contains_alphabet)
+        if (contains_decimal_digit
+            || (begin_pos > 0 && '=' == str[begin_pos - 1] && contains_alphabet)
             || could_be_multi_digit_hex_value(variable))
         {
             break;

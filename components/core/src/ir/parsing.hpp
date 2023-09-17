@@ -61,16 +61,12 @@ bool is_var(std::string_view value);
  * position of next variable
  * @param end_pos End position of last variable, changes to end position of
  * next variable
- * @param contains_var_placeholder Whether the string already contains a
- * variable placeholder (for efficiency, this is only set to true, so the
- * caller must reset it to false if necessary)
  * @return true if a variable was found, false otherwise
  */
 bool get_bounds_of_next_var(
         std::string_view str,
         size_t& begin_pos,
-        size_t& end_pos,
-        bool& contains_var_placeholder
+        size_t& end_pos
 );
 }  // namespace ir
 

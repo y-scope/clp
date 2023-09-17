@@ -75,8 +75,7 @@ void LogTypeDictionaryEntry::add_float_var () {
 
 bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begin_pos, size_t& var_end_pos, string& var) {
     auto last_var_end_pos = var_end_pos;
-    bool contains_var_placeholder{};
-    if (ir::get_bounds_of_next_var(msg, var_begin_pos, var_end_pos, contains_var_placeholder)) {
+    if (ir::get_bounds_of_next_var(msg, var_begin_pos, var_end_pos)) {
         // Append to log type: from end of last variable to start of current variable
         add_constant(msg, last_var_end_pos, var_begin_pos - last_var_end_pos);
 

@@ -169,10 +169,6 @@ std::string decode_integer_var(encoded_variable_t encoded_var);
  * components of the message.
  * @tparam encoded_variable_t Type of the encoded variable
  * @tparam ConstantHandler Method to handle constants. Signature:
- * (std::string_view constant, bool constant_contains_variable_placeholder,
- * std::string& logtype) -> bool
- * @tparam FinalConstantHandler Method to handle the constant after the last
- * variable. Signature:
  * (std::string_view constant, std::string& logtype) -> bool
  * @tparam EncodedVariableHandler Method to handle encoded variables.
  * Signature: (encoded_variable_t) -> void
@@ -182,7 +178,6 @@ std::string decode_integer_var(encoded_variable_t encoded_var);
  * @param message
  * @param logtype
  * @param constant_handler
- * @param final_constant_handler
  * @param encoded_variable_handler
  * @param dictionary_variable_handler
  * @return true on success, false otherwise
@@ -190,14 +185,12 @@ std::string decode_integer_var(encoded_variable_t encoded_var);
 template <
         typename encoded_variable_t,
         typename ConstantHandler,
-        typename FinalConstantHandler,
         typename EncodedVariableHandler,
         typename DictionaryVariableHandler>
 bool encode_message_generically(
         std::string_view message,
         std::string& logtype,
         ConstantHandler constant_handler,
-        FinalConstantHandler final_constant_handler,
         EncodedVariableHandler encoded_variable_handler,
         DictionaryVariableHandler dictionary_variable_handler
 );
