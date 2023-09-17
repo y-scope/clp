@@ -12,10 +12,10 @@ using ffi::four_byte_encoded_variable_t;
 using ffi::encode_float_string;
 using ffi::encode_integer_string;
 using ffi::encode_message;
-using ffi::get_bounds_of_next_var;
-using ffi::VariablePlaceholder;
 using ffi::wildcard_match_encoded_vars;
 using ffi::wildcard_query_matches_any_encoded_var;
+using ir::get_bounds_of_next_var;
+using ir::VariablePlaceholder;
 using std::string;
 using std::string_view;
 using std::vector;
@@ -28,123 +28,6 @@ using std::vector;
  */
 static void string_views_from_strings (const vector<string>& strings,
                                        vector<string_view>& string_views);
-
-TEST_CASE("ffi::get_bounds_of_next_var", "[ffi][get_bounds_of_next_var]") {
-    string str;
-    size_t begin_pos;
-    size_t end_pos;
-    bool contains_var_placeholder = false;
-
-    // Since the outputs we use to validate depend on the schema/encoding
-    // methods, we validate the versions
-    REQUIRE(strcmp("com.yscope.clp.VariableEncodingMethodsV1",
-                   ffi::cVariableEncodingMethodsVersion) == 0);
-    REQUIRE(strcmp("com.yscope.clp.VariablesSchemaV2", ffi::cVariablesSchemaVersion) == 0);
-
-    // Corner cases
-    // Empty string
-    str = "";
-    begin_pos = 0;
-    end_pos = 0;
-    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == false);
-    REQUIRE(false == contains_var_placeholder);
-
-    // end_pos past the end of the string
-    str = "abc";
-    begin_pos = 0;
-    end_pos = string::npos;
-    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == false);
-    REQUIRE(false == contains_var_placeholder);
-
-    // Non-variables
-    str = "/";
-    begin_pos = 0;
-    end_pos = 0;
-    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == false);
-    REQUIRE(str.length() == begin_pos);
-    REQUIRE(false == contains_var_placeholder);
-
-    str = "xyz";
-    begin_pos = 0;
-    end_pos = 0;
-    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == false);
-    REQUIRE(str.length() == begin_pos);
-    REQUIRE(false == contains_var_placeholder);
-
-    str = "=";
-    begin_pos = 0;
-    end_pos = 0;
-    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == false);
-    REQUIRE(str.length() == begin_pos);
-    REQUIRE(false == contains_var_placeholder);
-
-    // Variables
-    str = "~=x!abc123;1.2%x:+394/-";
-    begin_pos = 0;
-    end_pos = 0;
-
-    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == true);
-    REQUIRE("x" == str.substr(begin_pos, end_pos - begin_pos));
-    REQUIRE(false == contains_var_placeholder);
-
-    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == true);
-    REQUIRE("abc123" == str.substr(begin_pos, end_pos - begin_pos));
-    REQUIRE(false == contains_var_placeholder);
-
-    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == true);
-    REQUIRE("1.2" == str.substr(begin_pos, end_pos - begin_pos));
-    REQUIRE(false == contains_var_placeholder);
-
-    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == true);
-    REQUIRE("+394" == str.substr(begin_pos, end_pos - begin_pos));
-    REQUIRE(false == contains_var_placeholder);
-
-    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == false);
-    REQUIRE(false == contains_var_placeholder);
-
-    str = " ad ff 95 24 0d ff ";
-    begin_pos = 0;
-    end_pos = 0;
-
-    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == true);
-    REQUIRE("ad" == str.substr(begin_pos, end_pos - begin_pos));
-    REQUIRE(false == contains_var_placeholder);
-
-    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == true);
-    REQUIRE("ff" == str.substr(begin_pos, end_pos - begin_pos));
-    REQUIRE(false == contains_var_placeholder);
-
-    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == true);
-    REQUIRE("95" == str.substr(begin_pos, end_pos - begin_pos));
-    REQUIRE(false == contains_var_placeholder);
-
-    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == true);
-    REQUIRE("24" == str.substr(begin_pos, end_pos - begin_pos));
-    REQUIRE(false == contains_var_placeholder);
-
-    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == true);
-    REQUIRE("0d" == str.substr(begin_pos, end_pos - begin_pos));
-    REQUIRE(false == contains_var_placeholder);
-
-    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == true);
-    REQUIRE("ff" == str.substr(begin_pos, end_pos - begin_pos));
-    REQUIRE(false == contains_var_placeholder);
-
-    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == false);
-    REQUIRE(str.length() == begin_pos);
-    REQUIRE(false == contains_var_placeholder);
-
-    // String containing variable placeholder
-    str = " text ";
-    str += enum_to_underlying_type(VariablePlaceholder::Integer);
-    str += " var123 ";
-    begin_pos = 0;
-    end_pos = 0;
-
-    REQUIRE(get_bounds_of_next_var(str, begin_pos, end_pos, contains_var_placeholder) == true);
-    REQUIRE(contains_var_placeholder);
-    REQUIRE("var123" == str.substr(begin_pos, end_pos - begin_pos));
-}
 
 TEMPLATE_TEST_CASE("Encoding integers", "[ffi][encode-integer]", eight_byte_encoded_variable_t,
                    four_byte_encoded_variable_t)

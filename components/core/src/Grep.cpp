@@ -6,9 +6,11 @@
 // Project headers
 #include "compressor_frontend/Constants.hpp"
 #include "EncodedVariableInterpreter.hpp"
+#include "ir/parsing.hpp"
 #include "StringReader.hpp"
 #include "Utils.hpp"
 
+using ir::is_delim;
 using std::string;
 using std::vector;
 using streaming_archive::reader::Archive;
@@ -556,7 +558,8 @@ bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_
         // - it contains a decimal digit, or
         // - it could be a multi-digit hex value, or
         // - it's directly preceded by an equals sign and contains an alphabet without a wildcard between the equals sign and the first alphabet of the token
-        if (contains_decimal_digit || could_be_multi_digit_hex_value(value, begin_pos, end_pos)) {
+        auto variable = static_cast<std::string_view>(value).substr(begin_pos, end_pos - begin_pos);
+        if (contains_decimal_digit || ir::could_be_multi_digit_hex_value(variable)) {
             is_var = true;
         } else if (begin_pos > 0 && '=' == value[begin_pos - 1] && contains_alphabet) {
             // Find first alphabet or wildcard in token

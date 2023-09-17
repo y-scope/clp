@@ -85,55 +85,6 @@ ErrorCode create_directory_structure (const string& path, mode_t mode) {
     return ErrorCode_Success;
 }
 
-bool get_bounds_of_next_var (const string& msg, size_t& begin_pos, size_t& end_pos) {
-    const auto msg_length = msg.length();
-    if (end_pos >= msg_length) {
-        return false;
-    }
-
-    while (true) {
-        begin_pos = end_pos;
-        // Find next non-delimiter
-        for (; begin_pos < msg_length; ++begin_pos) {
-            if (false == is_delim(msg[begin_pos])) {
-                break;
-            }
-        }
-        if (msg_length == begin_pos) {
-            // Early exit for performance
-            return false;
-        }
-
-        bool contains_decimal_digit = false;
-        bool contains_alphabet = false;
-
-        // Find next delimiter
-        end_pos = begin_pos;
-        for (; end_pos < msg_length; ++end_pos) {
-            char c = msg[end_pos];
-            if (is_decimal_digit(c)) {
-                contains_decimal_digit = true;
-            } else if (is_alphabet(c)) {
-                contains_alphabet = true;
-            } else if (is_delim(c)) {
-                break;
-            }
-        }
-
-        // Treat token as variable if:
-        // - it contains a decimal digit, or
-        // - it's directly preceded by an equals sign and contains an alphabet, or
-        // - it could be a multi-digit hex value
-        if (contains_decimal_digit || (begin_pos > 0 && '=' == msg[begin_pos - 1] && contains_alphabet) ||
-            could_be_multi_digit_hex_value(msg, begin_pos, end_pos))
-        {
-            break;
-        }
-    }
-
-    return (msg_length != begin_pos);
-}
-
 string get_parent_directory_path (const string& path) {
     string dirname = get_unambiguous_path(path);
 

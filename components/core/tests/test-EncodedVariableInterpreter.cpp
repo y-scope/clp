@@ -230,7 +230,7 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
 
         string large_val_str = to_string(cVariableDictionaryIdMax) + "0";
         vector<string> var_strs = {"4938", large_val_str, "-25.5196868642755",
-                                   "-00.00", "bin/python2.7.3"};
+                                   "-00.00", "python2.7.3"};
         msg = "here is a string with a small int " + var_strs[0] +
                 " and a very large int " + var_strs[1] +
                 " and a double " + var_strs[2] +
@@ -245,10 +245,10 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
 
         // Test var_ids is correctly populated
         size_t encoded_var_id_ix = 0;
-        LogTypeDictionaryEntry::VarDelim var_placeholder;
+        ir::VariablePlaceholder var_placeholder;
         for (auto var_ix = 0; var_ix < logtype_dict_entry.get_num_vars(); var_ix++) {
             std::ignore = logtype_dict_entry.get_var_info(var_ix, var_placeholder);
-            if (LogTypeDictionaryEntry::VarDelim::Dictionary == var_placeholder) {
+            if (ir::VariablePlaceholder::Dictionary == var_placeholder) {
                 auto var = encoded_vars[var_ix];
                 REQUIRE(var_ids.size() > encoded_var_id_ix);
                 REQUIRE(EncodedVariableInterpreter::decode_var_dict_id(var) ==

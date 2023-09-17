@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "../../ir/parsing.hpp"
 #include "../encoding_methods.hpp"
 #include "decoding_methods.hpp"
 #include "protocol_constants.hpp"
@@ -97,7 +98,7 @@ void generic_decode_message(
                 break;
             }
 
-            case cVariablePlaceholderEscapeCharacter: {
+            case ir::cVariablePlaceholderEscapeCharacter: {
                 // Ensure the escape character is followed by a
                 // character that's being escaped
                 if (cur_pos == logtype_length - 1) {
