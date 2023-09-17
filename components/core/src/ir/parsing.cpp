@@ -11,10 +11,9 @@ namespace ir {
  * ranges of characters at a time instead of comparing individual characters
  */
 bool is_delim(signed char c) {
-    return !(
-            '+' == c || ('-' <= c && c <= '.') || ('0' <= c && c <= '9') || ('A' <= c && c <= 'Z')
-            || '\\' == c || '_' == c || ('a' <= c && c <= 'z')
-    );
+    return false
+           == ('+' == c || ('-' <= c && c <= '.') || ('0' <= c && c <= '9')
+               || ('A' <= c && c <= 'Z') || '\\' == c || '_' == c || ('a' <= c && c <= 'z'));
 }
 
 bool is_variable_placeholder(char c) {
