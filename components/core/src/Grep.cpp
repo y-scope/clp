@@ -6,6 +6,7 @@
 // Project headers
 #include "compressor_frontend/Constants.hpp"
 #include "EncodedVariableInterpreter.hpp"
+#include "ir/parsing.hpp"
 #include "StringReader.hpp"
 #include "Utils.hpp"
 
