@@ -17,7 +17,7 @@ delimiters: \t\r\n:,!;%
 timestamp:\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2}(\.\d{3}){0,1}
 timestamp:\[\d{8}\-\d{2}:\d{2}:\d{2}\]
 int:\-{0,1}[0-9]+
-double:\-{0,1}[0-9]+\.[0-9]+
+float:\-{0,1}[0-9]+\.[0-9]+
 
 // Custom variables
 hex:[a-fA-F]+
@@ -49,7 +49,7 @@ equals:.*=.*[a-zA-Z0-9].*
   start of the file then a newline is used to indicate the beginning of a new
   log message. Timestamp patterns are not matched midline and are not stored as
   dictionary variables as they may contain delimiters.
-* `int` and `double` are keywords. These are encoded specially for compression
+* `int` and `float` are keywords. These are encoded specially for compression
   performance.
 
 ## Supported Regex
