@@ -118,8 +118,7 @@ ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::Dec
                 add_constant(constant, 0, constant.length());
                 constant.clear();
                 add_float_var();
-            } else if (enum_to_underlying_type(ir::VariablePlaceholder::Dictionary) == c)
-            {
+            } else if (enum_to_underlying_type(ir::VariablePlaceholder::Dictionary) == c) {
                 add_constant(constant, 0, constant.length());
                 constant.clear();
                 add_dictionary_var();

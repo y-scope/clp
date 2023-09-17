@@ -36,7 +36,7 @@ bool is_var(std::string_view value) {
 
 bool get_bounds_of_next_var(string_view const str, size_t& begin_pos, size_t& end_pos) {
     auto const msg_length = str.length();
-    if (end_pos >= msg_length) {
+    if (msg_length <= end_pos) {
         return false;
     }
 
@@ -77,7 +77,7 @@ bool get_bounds_of_next_var(string_view const str, size_t& begin_pos, size_t& en
         // - it's directly preceded by '=' and contains an alphabet char, or
         // - it could be a multi-digit hex value
         if (contains_decimal_digit
-            || (begin_pos > 0 && '=' == str[begin_pos - 1] && contains_alphabet)
+            || (0 < begin_pos && '=' == str[begin_pos - 1] && contains_alphabet)
             || could_be_multi_digit_hex_value(variable))
         {
             break;

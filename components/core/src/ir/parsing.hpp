@@ -49,7 +49,7 @@ inline bool could_be_multi_digit_hex_value(std::string_view str) {
     // NOTE: This is 1-2% faster than using std::all_of with the opposite
     // condition
     for (auto c : str) {
-        if (!(('a' <= c && c <= 'f') || ('A' <= c && c <= 'F') || ('0' <= c && c <= '9'))) {
+        if (false == (('a' <= c && c <= 'f') || ('A' <= c && c <= 'F') || ('0' <= c && c <= '9'))) {
             return false;
         }
     }
