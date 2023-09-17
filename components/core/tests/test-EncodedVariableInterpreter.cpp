@@ -230,7 +230,7 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
 
         string large_val_str = to_string(cVariableDictionaryIdMax) + "0";
         vector<string> var_strs = {"4938", large_val_str, "-25.5196868642755",
-                                   "-00.00", "bin/python2.7.3"};
+                                   "-00.00", "python2.7.3"};
         msg = "here is a string with a small int " + var_strs[0] +
                 " and a very large int " + var_strs[1] +
                 " and a double " + var_strs[2] +

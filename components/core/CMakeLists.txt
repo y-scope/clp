@@ -434,6 +434,8 @@ set(SOURCE_FILES_clg
         src/Grep.cpp
         src/Grep.hpp
         src/ir/LogEvent.hpp
+        src/ir/parsing.cpp
+        src/ir/parsing.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
@@ -590,6 +592,8 @@ set(SOURCE_FILES_clo
         src/Grep.cpp
         src/Grep.hpp
         src/ir/LogEvent.hpp
+        src/ir/parsing.cpp
+        src/ir/parsing.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
