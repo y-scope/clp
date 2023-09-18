@@ -358,7 +358,7 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
             }
         } else {
             if (!query_token.is_var()) {
-                logtype += query_token.get_value();
+                ir::escape_and_append_constant_to_logtype(query_token.get_value(), logtype);
             } else if (!process_var_token(query_token, archive, ignore_case, sub_query, logtype)) {
                 return SubQueryMatchabilityResult::WontMatch;
             }
@@ -370,9 +370,6 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
         logtype.append(processed_search_string, last_token_end_pos, string::npos);
         last_token_end_pos = processed_search_string.length();
     }
-    std::string const uncleaned_logtype = logtype;
-    logtype.clear();
-    ir::escape_and_append_constant_to_logtype(uncleaned_logtype, logtype);
 
     if ("*" == logtype) {
         // Logtype will match all messages
