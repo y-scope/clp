@@ -319,6 +319,8 @@ bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDic
                 var_dict_id = decode_var_dict_id(encoded_vars[i]);
                 decompressed_msg += var_dict.get_value(var_dict_id);
                 break;
+            case ir::VariablePlaceholder::Escape:
+                break;
             default:
                 SPDLOG_ERROR(
                     "EncodedVariableInterpreter: Logtype '{}' contains "
