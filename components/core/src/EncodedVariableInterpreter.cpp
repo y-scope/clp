@@ -287,13 +287,14 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary(
 bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDictionaryEntry& logtype_dict_entry, const VariableDictionaryReader& var_dict,
                                                                 const vector<encoded_variable_t>& encoded_vars, string& decompressed_msg)
 {
-    size_t num_vars_in_logtype = logtype_dict_entry.get_num_vars();
+    size_t const num_placeholders_in_logtype = logtype_dict_entry.get_num_placeholders();
+    size_t const num_vars = logtype_dict_entry.get_num_variables();
 
     // Ensure the number of variables in the logtype matches the number of encoded variables given
     const auto& logtype_value = logtype_dict_entry.get_value();
-    if (num_vars_in_logtype != encoded_vars.size()) {
+    if (num_vars != encoded_vars.size()) {
         SPDLOG_ERROR("EncodedVariableInterpreter: Logtype '{}' contains {} variables, but {} were given for decoding.", logtype_value.c_str(),
-                     num_vars_in_logtype, encoded_vars.size());
+                     num_vars, encoded_vars.size());
         return false;
     }
 
@@ -301,22 +302,22 @@ bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDic
     size_t constant_begin_pos = 0;
     string float_str;
     variable_dictionary_id_t var_dict_id;
-    for (size_t i = 0; i < num_vars_in_logtype; ++i) {
-        size_t var_position = logtype_dict_entry.get_var_info(i, var_placeholder);
+    for (size_t placeholder_ix = 0, var_ix = 0; placeholder_ix < num_placeholders_in_logtype; ++placeholder_ix) {
+        size_t placeholder_position = logtype_dict_entry.get_placeholder_info(placeholder_ix, var_placeholder);
 
         // Add the constant that's between the last variable and this one
         decompressed_msg.append(logtype_value, constant_begin_pos,
-                                var_position - constant_begin_pos);
+                                placeholder_position - constant_begin_pos);
         switch (var_placeholder) {
             case ir::VariablePlaceholder::Integer:
-                decompressed_msg += std::to_string(encoded_vars[i]);
+                decompressed_msg += std::to_string(encoded_vars[var_ix++]);
                 break;
             case ir::VariablePlaceholder::Float:
-                convert_encoded_float_to_string(encoded_vars[i], float_str);
+                convert_encoded_float_to_string(encoded_vars[var_ix++], float_str);
                 decompressed_msg += float_str;
                 break;
             case ir::VariablePlaceholder::Dictionary:
-                var_dict_id = decode_var_dict_id(encoded_vars[i]);
+                var_dict_id = decode_var_dict_id(encoded_vars[var_ix++]);
                 decompressed_msg += var_dict.get_value(var_dict_id);
                 break;
             case ir::VariablePlaceholder::Escape:
@@ -330,7 +331,7 @@ bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDic
                 return false;
         }
         // Move past the variable placeholder
-        constant_begin_pos = var_position + 1;
+        constant_begin_pos = placeholder_position + 1;
     }
     // Append remainder of logtype, if any
     if (constant_begin_pos < logtype_value.length()) {

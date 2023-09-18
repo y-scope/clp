@@ -246,10 +246,10 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
         // Test var_ids is correctly populated
         size_t encoded_var_id_ix = 0;
         ir::VariablePlaceholder var_placeholder;
-        for (auto var_ix = 0; var_ix < logtype_dict_entry.get_num_vars(); var_ix++) {
-            std::ignore = logtype_dict_entry.get_var_info(var_ix, var_placeholder);
+        for (auto placeholder_ix = 0; placeholder_ix < logtype_dict_entry.get_num_placeholders(); placeholder_ix++) {
+            std::ignore = logtype_dict_entry.get_placeholder_info(placeholder_ix, var_placeholder);
             if (ir::VariablePlaceholder::Dictionary == var_placeholder) {
-                auto var = encoded_vars[var_ix];
+                auto var = encoded_vars[placeholder_ix];
                 REQUIRE(var_ids.size() > encoded_var_id_ix);
                 REQUIRE(EncodedVariableInterpreter::decode_var_dict_id(var) ==
                         var_ids[encoded_var_id_ix]);

@@ -33,7 +33,7 @@ public:
     };
 
     // Constructors
-    LogTypeDictionaryEntry () = default;
+    LogTypeDictionaryEntry () : m_num_escape_placeholders{0} {};
     // Use default copy constructor
     LogTypeDictionaryEntry (const LogTypeDictionaryEntry&) = default;
 
@@ -71,14 +71,26 @@ public:
         logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
     }
 
-    size_t get_num_vars () const { return m_var_positions.size(); }
     /**
-     * Gets all info about a variable in the logtype
+     * @return The total number of placeholders on record. The placeholders may
+     * represent an escape characters.
+    */
+    size_t get_num_placeholders () const { return m_placeholder_positions.size(); }
+
+    /**
+     * @return The total number of variables on record.
+    */
+    size_t get_num_variables () const {
+        return m_placeholder_positions.size() - m_num_escape_placeholders;
+    }
+
+    /**
+     * Gets all info about a placeholder in the logtype
      * @param var_ix The index of the variable to get the info for
      * @param var_placeholder
      * @return The variable's position in the logtype, or SIZE_MAX if var_ix is out of bounds
      */
-    size_t get_var_info (size_t var_ix, ir::VariablePlaceholder& var_placeholder) const;
+    size_t get_placeholder_info (size_t var_ix, ir::VariablePlaceholder& var_placeholder) const;
 
     /**
      * Gets the size (in-memory) of the data contained in this entry
@@ -148,16 +160,9 @@ public:
     void read_from_file (streaming_compression::Decompressor& decompressor);
 
 private:
-    // Methods
-    /**
-     * Escapes any variable placeholders that don't correspond to the positions
-     * of variables in the logtype entry's value
-     * @param escaped_logtype_value
-     */
-    void get_value_with_unfounded_variables_escaped (std::string& escaped_logtype_value) const;
-
     // Variables
-    std::vector<size_t> m_var_positions;
+    std::vector<size_t> m_placeholder_positions;
+    size_t m_num_escape_placeholders;
 };
 
 #endif // LOGTYPEDICTIONARYENTRY_HPP
