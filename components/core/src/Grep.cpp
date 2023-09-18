@@ -370,6 +370,9 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
         logtype.append(processed_search_string, last_token_end_pos, string::npos);
         last_token_end_pos = processed_search_string.length();
     }
+    std::string const uncleaned_logtype = logtype;
+    logtype.clear();
+    ir::escape_and_append_constant_to_logtype(uncleaned_logtype, logtype);
 
     if ("*" == logtype) {
         // Logtype will match all messages
