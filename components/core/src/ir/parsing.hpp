@@ -11,6 +11,7 @@
  */
 
 #include <string_view>
+#include <vector>
 
 namespace ir {
 enum class VariablePlaceholder : char {
@@ -87,6 +88,21 @@ bool get_bounds_of_next_var(std::string_view str, size_t& begin_pos, size_t& end
  * @param logtype
  */
 void escape_and_append_constant_to_logtype(std::string_view constant, std::string& logtype);
+
+/**
+ * Appends the given constant to the logtype, escaping any variable placeholders
+ * and append the position of escaped positions
+ * @param constant
+ * @param logtype
+ * @param escape_placeholder_positions The vector to append the positions of the
+ * added escape placeholders
+ * @return Total number of escape placeholders added
+ */
+[[maybe_unused]] size_t escape_and_append_constant_to_logtype_with_tracking(
+        std::string_view constant,
+        std::string& logtype,
+        std::vector<size_t>& escape_placeholder_positions
+);
 }  // namespace ir
 
 #endif  // IR_PARSING_HPP

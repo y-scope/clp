@@ -101,4 +101,28 @@ void escape_and_append_constant_to_logtype(string_view constant, std::string& lo
     }
     logtype.append(constant, begin_pos, constant_len - begin_pos);
 }
+
+size_t escape_and_append_constant_to_logtype_with_tracking(
+        std::string_view constant,
+        std::string& logtype,
+        std::vector<size_t>& escape_placeholder_positions
+) {
+    size_t num_escape_placeholder_added = 0;
+    size_t begin_pos = 0;
+    auto constant_len = constant.length();
+    for (size_t i = 0; i < constant_len; ++i) {
+        auto c = constant[i];
+        if (cVariablePlaceholderEscapeCharacter == c || is_variable_placeholder(c)) {
+            logtype.append(constant, begin_pos, i - begin_pos);
+            escape_placeholder_positions.push_back(logtype.size());
+            ++num_escape_placeholder_added;
+            logtype += ir::cVariablePlaceholderEscapeCharacter;
+            // NOTE: We don't need to append the character of interest
+            // immediately since the next constant copy operation will get it
+            begin_pos = i;
+        }
+    }
+    logtype.append(constant, begin_pos, constant_len - begin_pos);
+    return num_escape_placeholder_added;
+}
 }  // namespace ir
