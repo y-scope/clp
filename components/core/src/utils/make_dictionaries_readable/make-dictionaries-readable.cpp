@@ -68,7 +68,7 @@ int main (int argc, const char* argv[]) {
         size_t constant_begin_pos = 0;
         for (size_t placeholder_ix = 0; placeholder_ix < entry.get_num_placeholders(); ++placeholder_ix) {
             ir::VariablePlaceholder var_placeholder;
-            size_t placeholder_pos = entry.get_placeholder_info(placeholder_ix, var_placeholder);
+            size_t const placeholder_pos = entry.get_placeholder_info(placeholder_ix, var_placeholder);
 
             // Add the constant that's between the last variable and this one, with newlines escaped
             human_readable_value.append(value, constant_begin_pos, placeholder_pos - constant_begin_pos);
