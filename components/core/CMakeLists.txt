@@ -7,6 +7,8 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
 endif()
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Set general compressor
 set(GENERAL_COMPRESSOR "zstd" CACHE STRING "The general-purpose compressor used as the 2nd-stage compressor")
 set_property(CACHE GENERAL_COMPRESSOR PROPERTY STRINGS passthrough zstd)

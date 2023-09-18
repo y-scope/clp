@@ -63,6 +63,13 @@ public:
     static void add_float_var (std::string& logtype) {
         logtype += enum_to_underlying_type(ir::VariablePlaceholder::Float);
     }
+    /**
+     * Adds an escape variable placeholder to the given logtype
+     * @param logtype
+     */
+    static void add_escape_var (std::string& logtype) {
+        logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+    }
 
     size_t get_num_vars () const { return m_var_positions.size(); }
     /**
@@ -98,6 +105,10 @@ public:
      * Adds a dictionary variable placeholder
      */
     void add_dictionary_var ();
+    /**
+     * Adds an escape variable placeholder
+     */
+    void add_escape_var ();
 
     /**
      * Parses next variable from a message, constructing the constant part of the message's logtype as well

@@ -46,18 +46,25 @@ void LogTypeDictionaryEntry::add_float_var () {
     add_float_var(m_value);
 }
 
+void LogTypeDictionaryEntry::add_escape_var() {
+    m_var_positions.push_back(m_value.length());
+    add_escape_var(m_value);
+}
+
 bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begin_pos, size_t& var_end_pos, string& var) {
     auto last_var_end_pos = var_end_pos;
     if (ir::get_bounds_of_next_var(msg, var_begin_pos, var_end_pos)) {
         // Append to log type: from end of last variable to start of current variable
-        add_constant(msg, last_var_end_pos, var_begin_pos - last_var_end_pos);
+        auto constant = std::string_view(msg).substr(last_var_end_pos, var_begin_pos - last_var_end_pos);
+        ir::escape_and_append_constant_to_logtype(constant, m_value);
 
         var.assign(msg, var_begin_pos, var_end_pos - var_begin_pos);
         return true;
     }
     if (last_var_end_pos < msg.length()) {
         // Append to log type: from end of last variable to end
-        add_constant(msg, last_var_end_pos, msg.length() - last_var_end_pos);
+        auto constant = std::string_view(msg).substr(last_var_end_pos, msg.length() - last_var_end_pos);
+        ir::escape_and_append_constant_to_logtype(constant, m_value);
     }
 
     return false;
@@ -71,10 +78,8 @@ void LogTypeDictionaryEntry::clear () {
 void LogTypeDictionaryEntry::write_to_file (streaming_compression::Compressor& compressor) const {
     compressor.write_numeric_value(m_id);
 
-    string escaped_value;
-    get_value_with_unfounded_variables_escaped(escaped_value);
-    compressor.write_numeric_value<uint64_t>(escaped_value.length());
-    compressor.write_string(escaped_value);
+    compressor.write_numeric_value<uint64_t>(m_value.length());
+    compressor.write_string(m_value);
 }
 
 ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::Decompressor& decompressor) {
@@ -109,6 +114,9 @@ ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::Dec
             is_escaped = false;
         } else if (ir::cVariablePlaceholderEscapeCharacter == c) {
             is_escaped = true;
+            add_constant(constant, 0, constant.length());
+            constant.clear();
+            add_escape_var();
         } else {
             if (enum_to_underlying_type(ir::VariablePlaceholder::Integer) == c) {
                 add_constant(constant, 0, constant.length());
