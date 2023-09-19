@@ -273,7 +273,7 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary(
         encoded_vars.push_back(encoded_var);
     };
 
-    ffi::ir_stream::generic_decode_message(
+    ffi::ir_stream::generic_decode_message<false>(
             log_event.get_logtype(),
             log_event.get_encoded_vars(),
             log_event.get_dict_vars(),

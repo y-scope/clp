@@ -11,6 +11,7 @@
 
 namespace ffi::ir_stream {
 template <
+        bool unescape_logtype,
         typename encoded_variable_t,
         typename ConstantHandler,
         typename EncodedIntHandler,
@@ -109,14 +110,17 @@ void generic_decode_message(
                             cUnexpectedEscapeCharacterMessage
                     );
                 }
-                constant_handler(
-                        logtype,
-                        next_static_text_begin_pos,
-                        cur_pos - next_static_text_begin_pos
-                );
 
-                // Skip the escape character
-                next_static_text_begin_pos = cur_pos + 1;
+                if constexpr (unescape_logtype) {
+                    constant_handler(
+                            logtype,
+                            next_static_text_begin_pos,
+                            cur_pos - next_static_text_begin_pos
+                    );
+
+                    // Skip the escape character
+                    next_static_text_begin_pos = cur_pos + 1;
+                }
                 // The character after the escape character is static text
                 // (regardless of whether it is a variable placeholder), so
                 // increment cur_pos by 1 to ensure we don't process the
