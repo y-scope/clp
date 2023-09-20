@@ -382,6 +382,7 @@ namespace clp {
             if (0 != error_code.value()) {
                 SPDLOG_ERROR(
                         "Failed to compress {} - {}:{}",
+                        path,
                         error_code.category().name(),
                         error_code.message()
                 );
