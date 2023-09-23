@@ -255,6 +255,7 @@ set(SOURCE_FILES_clp
         src/ir/LogEventDeserializer.hpp
         src/ir/parsing.cpp
         src/ir/parsing.hpp
+        src/ir/parsing.inc
         src/ir/utils.cpp
         src/ir/utils.hpp
         src/LibarchiveFileReader.cpp
@@ -438,6 +439,7 @@ set(SOURCE_FILES_clg
         src/ir/LogEvent.hpp
         src/ir/parsing.cpp
         src/ir/parsing.hpp
+        src/ir/parsing.inc
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
@@ -596,6 +598,7 @@ set(SOURCE_FILES_clo
         src/ir/LogEvent.hpp
         src/ir/parsing.cpp
         src/ir/parsing.hpp
+        src/ir/parsing.inc
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
@@ -799,6 +802,7 @@ set(SOURCE_FILES_unitTest
         src/ir/LogEventDeserializer.hpp
         src/ir/parsing.cpp
         src/ir/parsing.hpp
+        src/ir/parsing.inc
         src/ir/utils.cpp
         src/ir/utils.hpp
         src/LibarchiveFileReader.cpp

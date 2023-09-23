@@ -340,7 +340,10 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
     string logtype;
     for (const auto& query_token : query_tokens) {
         // Append from end of last token to beginning of this token, to logtype
-        logtype.append(processed_search_string, last_token_end_pos, query_token.get_begin_pos() - last_token_end_pos);
+        ir::escape_and_append_constant_to_logtype<true>(
+                static_cast<std::string_view>(processed_search_string).substr(last_token_end_pos, query_token.get_begin_pos() - last_token_end_pos),
+                logtype
+        );
         last_token_end_pos = query_token.get_end_pos();
 
         if (query_token.is_wildcard()) {
@@ -358,7 +361,7 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
             }
         } else {
             if (!query_token.is_var()) {
-                ir::escape_and_append_constant_to_logtype(query_token.get_value(), logtype);
+                ir::escape_and_append_constant_to_logtype<true>(query_token.get_value(), logtype);
             } else if (!process_var_token(query_token, archive, ignore_case, sub_query, logtype)) {
                 return SubQueryMatchabilityResult::WontMatch;
             }
@@ -367,7 +370,10 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
 
     if (last_token_end_pos < processed_search_string.length()) {
         // Append from end of last token to end
-        logtype.append(processed_search_string, last_token_end_pos, string::npos);
+        ir::escape_and_append_constant_to_logtype<true>(
+                static_cast<std::string_view>(processed_search_string).substr(last_token_end_pos, string::npos), 
+                logtype
+        );
         last_token_end_pos = processed_search_string.length();
     }
 

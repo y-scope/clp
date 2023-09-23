@@ -84,14 +84,7 @@ bool get_bounds_of_next_var(std::string_view str, size_t& begin_pos, size_t& end
 
 /**
  * Appends the given constant to the logtype, escaping any variable placeholders
- * @param constant
- * @param logtype
- */
-void escape_and_append_constant_to_logtype(std::string_view constant, std::string& logtype);
-
-/**
- * Appends the given constant to the logtype, escaping any variable placeholders
- * and append the position of escaped positions
+ * and track the position of escape characters appended.
  * @param constant
  * @param logtype
  * @param escape_placeholder_positions The vector to append the positions of the
@@ -103,6 +96,34 @@ void escape_and_append_constant_to_logtype(std::string_view constant, std::strin
         std::string& logtype,
         std::vector<size_t>& escape_placeholder_positions
 );
+
+
+/**
+ * Appends the given constant to the logtype, escaping any variable placeholders
+ * @tparam double_escape Whether to escape the variable placeholders twice. This
+ * should be set to true when building a logtype for wildcard search.
+ * @param constant
+ * @param logtype
+ */
+template <bool double_escape = false>
+void escape_and_append_constant_to_logtype(std::string_view constant, std::string& logtype);
+
+/**
+ * Appends the given constant to the logtype, escaping any variable placeholders
+ * by using the escape handler.
+ * @tparam double_escape Whether to escape the variable placeholders twice.
+ * @tparam EscapeHandler Method to append and track escape chars when escaping
+ * variable placeholders. Signature: (std::string& logtype)
+ * @param constant
+ * @param logtype
+*/
+template <bool double_escape = false, typename EscapeHandler>
+void append_constant_to_logtype(
+        std::string_view constant,
+        std::string& logtype,
+        EscapeHandler escape_handler
+);
 }  // namespace ir
 
+#include "parsing.inc"
 #endif  // IR_PARSING_HPP
