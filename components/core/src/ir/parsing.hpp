@@ -97,7 +97,6 @@ bool get_bounds_of_next_var(std::string_view str, size_t& begin_pos, size_t& end
         std::vector<size_t>& escape_placeholder_positions
 );
 
-
 /**
  * Appends the given constant to the logtype, escaping any variable placeholders
  * @tparam double_escape Whether to escape the variable placeholders twice. This
@@ -116,7 +115,7 @@ void escape_and_append_constant_to_logtype(std::string_view constant, std::strin
  * variable placeholders. Signature: (std::string& logtype)
  * @param constant
  * @param logtype
-*/
+ */
 template <bool double_escape = false, typename EscapeHandler>
 void append_constant_to_logtype(
         std::string_view constant,
