@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <regex>
 #include <type_traits>
 
 namespace ffi::ir_stream::cProtocol {
@@ -13,6 +14,11 @@ namespace Metadata {
 
     constexpr char VersionKey[] = "VERSION";
     constexpr char VersionValue[] = "v0.0.1";
+    constexpr char VersionRegex[] =
+            "^v(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)"
+            "(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)"
+            "(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
+            "(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$";
 
     constexpr char TimestampPatternKey[] = "TIMESTAMP_PATTERN";
     constexpr char TimestampPatternSyntaxKey[] = "TIMESTAMP_PATTERN_SYNTAX";

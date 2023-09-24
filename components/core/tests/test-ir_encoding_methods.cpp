@@ -28,6 +28,7 @@ using ffi::ir_stream::decode_preamble;
 using ffi::ir_stream::encoded_tag_t;
 using ffi::ir_stream::get_encoding_type;
 using ffi::ir_stream::IRErrorCode;
+using ffi::ir_stream::validate_protocol_version;
 using ffi::wildcard_query_matches_any_encoded_var;
 using ir::VariablePlaceholder;
 using std::chrono::duration_cast;
@@ -329,8 +330,10 @@ TEMPLATE_TEST_CASE(
     string_view json_metadata{metadata_ptr, metadata_size};
 
     auto metadata_json = nlohmann::json::parse(json_metadata);
-    REQUIRE(ffi::ir_stream::cProtocol::Metadata::VersionValue
-            == metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey));
+    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Supported
+            == validate_protocol_version(
+                    metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey)
+            ));
     REQUIRE(ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
     set_timestamp_info(metadata_json, ts_info);
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);
@@ -471,7 +474,7 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]") {
 
 TEST_CASE("decode_next_message_four_byte_timestamp_delta", "[ffi][decode_next_message]") {
     string const message = "Static <\text>, dictVar1, 123, 456345232.7234223, "
-                     "dictVar2, 987, 654.3, end of static text";
+                           "dictVar2, 987, 654.3, end of static text";
     auto test_timestamp_delta = [&](epoch_time_ms_t ref_ts_delta) {
         vector<int8_t> ir_buf;
         string logtype;
@@ -582,8 +585,10 @@ TEMPLATE_TEST_CASE(
     auto* json_metadata_ptr{size_checked_pointer_cast<char>(ir_buf.data() + metadata_pos)};
     string_view json_metadata{json_metadata_ptr, metadata_size};
     auto metadata_json = nlohmann::json::parse(json_metadata);
-    REQUIRE(ffi::ir_stream::cProtocol::Metadata::VersionValue
-            == metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey));
+    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Supported
+            == validate_protocol_version(
+                    metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey)
+            ));
     REQUIRE(ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
     set_timestamp_info(metadata_json, ts_info);
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);

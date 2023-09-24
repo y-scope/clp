@@ -1,5 +1,7 @@
 #include "decoding_methods.hpp"
 
+#include <regex>
+
 #include "byteswap.hpp"
 #include "protocol_constants.hpp"
 
@@ -283,9 +285,8 @@ generic_decode_next_message(ReaderInterface& reader, string& message, epoch_time
         message.append(value, begin_pos, length);
     };
 
-    auto encoded_int_handler = [&](encoded_variable_t value) {
-        message.append(decode_integer_var(value));
-    };
+    auto encoded_int_handler
+            = [&](encoded_variable_t value) { message.append(decode_integer_var(value)); };
 
     auto encoded_float_handler = [&](encoded_variable_t encoded_float) {
         message.append(decode_float_var(encoded_float));
@@ -462,6 +463,18 @@ IRErrorCode decode_preamble(
         return IRErrorCode_Incomplete_IR;
     }
     return IRErrorCode_Success;
+}
+
+IRProtocolErrorCode validate_protocol_version(std::string const& protocol_version) {
+    std::regex const protocol_version_regex{cProtocol::Metadata::VersionRegex};
+    if (false == std::regex_match(protocol_version, protocol_version_regex)) {
+        return IRProtocolErrorCode_Unknown;
+    }
+    std::string_view current_protocol_version{cProtocol::Metadata::VersionValue};
+    if (current_protocol_version < protocol_version) {
+        return IRProtocolErrorCode_Unsupported;
+    }
+    return IRProtocolErrorCode_Supported;
 }
 
 namespace four_byte_encoding {

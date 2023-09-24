@@ -142,6 +142,24 @@ IRErrorCode decode_preamble(
         std::vector<int8_t>& metadata
 );
 
+typedef enum {
+    IRProtocolErrorCode_Supported,
+    IRProtocolErrorCode_Unsupported,
+    IRProtocolErrorCode_Unknown,
+} IRProtocolErrorCode;
+
+/**
+ * Validates whether the given protocol version can be supported by the current
+ * decoding method implementations.
+ * @param protocol_version Protocol version to be validate.
+ * @return IRProtocolErrorCode_Supported if the protocol version is supported.
+ * @return IRProtocolErrorCode_Unsupported if the protocol version cannot be
+ * supported.
+ * @return IRProtocolErrorCode_Unknow if the protocol version does not follow
+ * the form specified by SemVer.
+ */
+IRProtocolErrorCode validate_protocol_version(std::string const& protocol_version);
+
 namespace eight_byte_encoding {
     /**
      * Decodes the next message for the eight-byte encoding IR stream.
