@@ -149,10 +149,6 @@ namespace clg
             {
                 throw invalid_argument("ARCHIVE_PATHs not specified or empty.");
             }
-            for (const std::string &str : myVector)
-            {
-                std::cout << "specified archive(s)" << str << std::endl;
-            }
 
             // Validate wildcard string
             if (m_search_string.empty())
