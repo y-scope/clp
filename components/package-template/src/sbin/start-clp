@@ -62,10 +62,6 @@ import yaml
 from clp.package_utils import \
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
     CONTAINER_CLP_HOME, \
-    DB_COMPONENT_NAME, \
-    QUEUE_COMPONENT_NAME, \
-    SCHEDULER_COMPONENT_NAME, \
-    WORKER_COMPONENT_NAME, \
     check_dependencies, \
     container_exists, \
     CLPDockerMounts, \
@@ -77,8 +73,16 @@ from clp.package_utils import \
     validate_and_load_queue_credentials_file, \
     validate_db_config, \
     validate_queue_config, \
+    validate_results_cache_config, \
     validate_worker_config
-from clp_py_utils.clp_config import CLPConfig
+from clp_py_utils.clp_config import (
+    CLPConfig,
+    DB_COMPONENT_NAME,
+    QUEUE_COMPONENT_NAME,
+    RESULTS_CACHE_COMPONENT_NAME,
+    SCHEDULER_COMPONENT_NAME,
+    WORKER_COMPONENT_NAME
+)
 from job_orchestration.scheduler.constants import QueueName
 
 
@@ -273,6 +277,52 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
     logger.info(f"Started {QUEUE_COMPONENT_NAME}.")
 
 
+def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
+    component_name = RESULTS_CACHE_COMPONENT_NAME
+
+    logger.info(f"Starting {component_name}...")
+
+    container_name = f'clp-{component_name}-{instance_id}'
+    if container_exists(container_name):
+        logger.info(f"{component_name} already running.")
+        return
+
+    data_dir = clp_config.data_directory / component_name
+    logs_dir = clp_config.logs_directory / component_name
+
+    validate_results_cache_config(clp_config, data_dir, logs_dir)
+
+    # Create directories
+    data_dir.mkdir(exist_ok=True, parents=True)
+    logs_dir.mkdir(exist_ok=True, parents=True)
+
+    # Start container
+    mounts = [
+        DockerMount(DockerMountType.BIND, conf_dir / 'mongo', pathlib.Path('/') / 'etc' / 'mongo',
+                    True),
+        DockerMount(DockerMountType.BIND, data_dir, pathlib.Path('/') / 'data' / 'db'),
+        DockerMount(DockerMountType.BIND, logs_dir, pathlib.Path('/') / 'var' / 'log' / 'mongodb'),
+    ]
+    cmd = [
+        'docker', 'run',
+        '-d',
+        '--rm',
+        '--name', container_name,
+        '-u', f'{os.getuid()}:{os.getgid()}',
+    ]
+    for mount in mounts:
+        cmd.append('--mount')
+        cmd.append(str(mount))
+    append_docker_port_settings_for_host_ips(clp_config.results_cache.host,
+                                             clp_config.results_cache.port, 27017, cmd)
+    cmd.append('mongo:7.0.1')
+    cmd.append('--config')
+    cmd.append(pathlib.Path('/') / 'etc' / 'mongo' / 'mongod.conf')
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+
+    logger.info(f"Started {component_name}.")
+
+
 def start_scheduler(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig, mounts: CLPDockerMounts):
     logger.info(f"Starting {SCHEDULER_COMPONENT_NAME}...")
 
@@ -394,6 +444,7 @@ def main(argv):
     component_args_parser = args_parser.add_subparsers(dest='component_name')
     component_args_parser.add_parser(DB_COMPONENT_NAME)
     component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
+    component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
     component_args_parser.add_parser(SCHEDULER_COMPONENT_NAME)
     worker_args_parser = component_args_parser.add_parser(WORKER_COMPONENT_NAME)
     worker_args_parser.add_argument('--num-cpus', type=int, default=0,
@@ -458,6 +509,8 @@ def main(argv):
         if '' == component_name or DB_COMPONENT_NAME == component_name:
             start_db(instance_id, clp_config, conf_dir)
             create_db_tables(instance_id, clp_config, container_clp_config, mounts)
+        if '' == component_name or RESULTS_CACHE_COMPONENT_NAME == component_name:
+            start_results_cache(instance_id, clp_config, conf_dir)
         if '' == component_name or QUEUE_COMPONENT_NAME == component_name:
             start_queue(instance_id, clp_config)
         if '' == component_name or SCHEDULER_COMPONENT_NAME == component_name:

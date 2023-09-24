@@ -56,14 +56,17 @@ if clp_home is None or not load_bundled_python_lib_path(clp_home):
 
 from clp.package_utils import \
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
-    DB_COMPONENT_NAME, \
-    QUEUE_COMPONENT_NAME, \
-    SCHEDULER_COMPONENT_NAME, \
-    WORKER_COMPONENT_NAME, \
     container_exists, \
     validate_and_load_config_file, \
     validate_and_load_db_credentials_file, \
     validate_and_load_queue_credentials_file
+from clp_py_utils.clp_config import (
+    DB_COMPONENT_NAME,
+    QUEUE_COMPONENT_NAME,
+    RESULTS_CACHE_COMPONENT_NAME,
+    SCHEDULER_COMPONENT_NAME,
+    WORKER_COMPONENT_NAME
+)
 
 
 def stop_container(container_name: str):
@@ -136,6 +139,9 @@ def main(argv):
             queue_config_file_path = logs_dir / f'{container_name}.conf'
             if queue_config_file_path.exists():
                 queue_config_file_path.unlink()
+        if '' == component_name or RESULTS_CACHE_COMPONENT_NAME == component_name:
+            container_name = f'clp-{RESULTS_CACHE_COMPONENT_NAME}-{instance_id}'
+            stop_container(container_name)
         if '' == component_name or DB_COMPONENT_NAME == component_name:
             stop_container(f'clp-{DB_COMPONENT_NAME}-{instance_id}')
 

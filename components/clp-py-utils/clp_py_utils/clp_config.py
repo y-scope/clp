@@ -9,6 +9,14 @@ from .core import get_config_value, make_config_path_absolute, read_yaml_config_
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path('etc') / 'credentials.yml'
 CLP_METADATA_TABLE_PREFIX = 'clp_'
 
+# Component names
+DB_COMPONENT_NAME = 'db'
+RESULTS_CACHE_COMPONENT_NAME = 'results-cache'
+QUEUE_COMPONENT_NAME = 'queue'
+SCHEDULER_COMPONENT_NAME = 'scheduler'
+WORKER_COMPONENT_NAME = 'worker'
+
+
 class Database(BaseModel):
     type: str = 'mariadb'
     host: str = 'localhost'
@@ -89,6 +97,17 @@ class Database(BaseModel):
         return connection_params_and_type
 
 
+class ResultsCache(BaseModel):
+    host: str = 'localhost'
+    port: int = 27017
+
+    @validator('host')
+    def validate_host(cls, field):
+        if '' == field:
+            raise ValueError(f'{RESULTS_CACHE_COMPONENT_NAME}.host cannot be empty.')
+        return field
+
+
 class Scheduler(BaseModel):
     jobs_poll_delay: int = 1  # seconds
 
@@ -148,6 +167,7 @@ class CLPConfig(BaseModel):
     input_logs_directory: pathlib.Path = pathlib.Path('/')
 
     database: Database = Database()
+    results_cache: ResultsCache = ResultsCache()
     scheduler: Scheduler = Scheduler()
     queue: Queue = Queue()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
