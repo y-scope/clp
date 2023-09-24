@@ -581,37 +581,36 @@ int main(int argc, const char *argv[])
 
             Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::Search>();
             LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::Search)
+        }
+        auto shutdown_result = shutdown(controller_socket_fd, SHUT_RDWR);
+        if (0 != shutdown_result)
+        {
+            if (ENOTCONN != shutdown_result)
+            {
+                SPDLOG_ERROR("Failed to shutdown socket, error={}", shutdown_result);
+            } // else connection already disconnected, so nothing to do
+        }
 
-            auto shutdown_result = shutdown(controller_socket_fd, SHUT_RDWR);
-            if (0 != shutdown_result)
+        try
+        {
+            controller_monitoring_thread.join();
+        }
+        catch (TraceableException &e)
+        {
+            auto error_code = e.get_error_code();
+            if (ErrorCode_errno == error_code)
             {
-                if (ENOTCONN != shutdown_result)
-                {
-                    SPDLOG_ERROR("Failed to shutdown socket, error={}", shutdown_result);
-                } // else connection already disconnected, so nothing to do
+                SPDLOG_ERROR("Failed to join with controller monitoring thread: {}:{} {}, errno={}",
+                             e.get_filename(), e.get_line_number(), e.what(), errno);
             }
-
-            try
+            else
             {
-                controller_monitoring_thread.join();
+                SPDLOG_ERROR("Failed to join with controller monitoring thread: {}:{} {}, "
+                             "error_code={}",
+                             e.get_filename(), e.get_line_number(), e.what(),
+                             error_code);
             }
-            catch (TraceableException &e)
-            {
-                auto error_code = e.get_error_code();
-                if (ErrorCode_errno == error_code)
-                {
-                    SPDLOG_ERROR("Failed to join with controller monitoring thread: {}:{} {}, errno={}",
-                                 e.get_filename(), e.get_line_number(), e.what(), errno);
-                }
-                else
-                {
-                    SPDLOG_ERROR("Failed to join with controller monitoring thread: {}:{} {}, "
-                                 "error_code={}",
-                                 e.get_filename(), e.get_line_number(), e.what(),
-                                 error_code);
-                }
-                return -1;
-            }
+            return -1;
         }
         // ================================
         return 0;
