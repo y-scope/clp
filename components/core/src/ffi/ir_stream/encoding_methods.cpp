@@ -308,8 +308,11 @@ namespace four_byte_encoding {
         } else if (INT32_MIN <= timestamp_delta && timestamp_delta <= INT32_MAX) {
             ir_buf.push_back(cProtocol::Payload::TimestampDeltaInt);
             encode_int(static_cast<int32_t>(timestamp_delta), ir_buf);
+        } else if (INT64_MIN <= timestamp_delta && timestamp_delta <= INT64_MAX) {
+            ir_buf.push_back(cProtocol::Payload::TimestampDeltaLong);
+            encode_int(static_cast<int64_t>(timestamp_delta), ir_buf);
         } else {
-            // Delta exceeds maximum representable by an int (24.86 days)
+            // Delta exceeds maximum representable by a 64-bit int
             return false;
         }
 

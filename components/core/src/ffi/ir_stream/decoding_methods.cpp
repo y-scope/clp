@@ -251,6 +251,12 @@ parse_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_m
                 return IRErrorCode_Incomplete_IR;
             }
             ts = ts_delta;
+        } else if (cProtocol::Payload::TimestampDeltaLong == encoded_tag) {
+            int64_t ts_delta;
+            if (false == decode_int(reader, ts_delta)) {
+                return IRErrorCode_Incomplete_IR;
+            }
+            ts = ts_delta;
         } else {
             return IRErrorCode_Corrupted_IR;
         }
