@@ -469,32 +469,54 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]") {
             ));
 }
 
-TEST_CASE("decode_next_message_four_byte_negative_delta", "[ffi][decode_next_message]") {
-    string message = "Static <\text>, dictVar1, 123, 456345232.7234223, "
+TEST_CASE("decode_next_message_four_byte_timestamp_delta", "[ffi][decode_next_message]") {
+    string const message = "Static <\text>, dictVar1, 123, 456345232.7234223, "
                      "dictVar2, 987, 654.3, end of static text";
-    vector<int8_t> ir_buf;
-    string logtype;
+    auto test_timestamp_delta = [&](epoch_time_ms_t ref_ts_delta) {
+        vector<int8_t> ir_buf;
+        string logtype;
+        REQUIRE(true
+                == encode_message<four_byte_encoded_variable_t>(
+                        ref_ts_delta,
+                        message,
+                        logtype,
+                        ir_buf
+                ));
 
-    epoch_time_ms_t reference_delta_ts_negative = -5;
-    REQUIRE(true
-            == encode_message<four_byte_encoded_variable_t>(
-                    reference_delta_ts_negative,
-                    message,
-                    logtype,
-                    ir_buf
-            ));
+        BufferReader ir_buffer{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
+        string decoded_message;
+        epoch_time_ms_t delta_ts;
+        REQUIRE(IRErrorCode::IRErrorCode_Success
+                == decode_next_message<four_byte_encoded_variable_t>(
+                        ir_buffer,
+                        decoded_message,
+                        delta_ts
+                ));
+        REQUIRE(message == decoded_message);
+        REQUIRE(delta_ts == ref_ts_delta);
+    };
 
-    BufferReader ir_buffer{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
-    string decoded_message;
-    epoch_time_ms_t delta_ts;
-    REQUIRE(IRErrorCode::IRErrorCode_Success
-            == decode_next_message<four_byte_encoded_variable_t>(
-                    ir_buffer,
-                    decoded_message,
-                    delta_ts
-            ));
-    REQUIRE(message == decoded_message);
-    REQUIRE(delta_ts == reference_delta_ts_negative);
+    test_timestamp_delta(0);
+
+    test_timestamp_delta(INT8_MIN);
+    test_timestamp_delta(INT8_MIN + 1);
+    test_timestamp_delta(INT8_MAX - 1);
+    test_timestamp_delta(INT8_MAX);
+
+    test_timestamp_delta(INT16_MIN);
+    test_timestamp_delta(INT16_MIN + 1);
+    test_timestamp_delta(INT16_MAX - 1);
+    test_timestamp_delta(INT16_MAX);
+
+    test_timestamp_delta(INT32_MIN);
+    test_timestamp_delta(INT32_MIN + 1);
+    test_timestamp_delta(INT32_MAX - 1);
+    test_timestamp_delta(INT32_MAX);
+
+    test_timestamp_delta(INT64_MIN);
+    test_timestamp_delta(INT64_MIN + 1);
+    test_timestamp_delta(INT64_MAX - 1);
+    test_timestamp_delta(INT64_MAX);
 }
 
 TEMPLATE_TEST_CASE(
