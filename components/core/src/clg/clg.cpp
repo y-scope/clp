@@ -470,7 +470,7 @@ int main(int argc, const char *argv[])
         vector<string> search_strings;
         search_strings.push_back(command_line_args.get_search_string());
 
-                /// TODO: if performance is too slow, can make this more efficient by only diffing files with the same checksum
+        /// TODO: if performance is too slow, can make this more efficient by only diffing files with the same checksum
         const uint32_t max_map_schema_length = 100000;
         std::map<std::string, compressor_frontend::lexers::ByteLexer> forward_lexer_map;
         std::map<std::string, compressor_frontend::lexers::ByteLexer> reverse_lexer_map;
@@ -510,7 +510,7 @@ int main(int argc, const char *argv[])
 
             if (false == std::filesystem::exists(archive_path))
             {
-                SPDLOG_WARN("Archive {} does not exist in '{}'.", archive_path, command_line_args.get_archive_path());
+                SPDLOG_WARN("Archive {} does not exist .", archive_path);
                 return -1;
             }
 
