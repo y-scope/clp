@@ -470,21 +470,7 @@ int main(int argc, const char *argv[])
         vector<string> search_strings;
         search_strings.push_back(command_line_args.get_search_string());
 
-        // Validate archives directory
-        struct stat archives_dir_stat = {};
-        auto archives_dir = std::filesystem::path(command_line_args.get_archive_path());
-        if (0 != stat(archives_dir.c_str(), &archives_dir_stat))
-        {
-            SPDLOG_ERROR("'{}' does not exist or cannot be accessed - {}.", archives_dir.c_str(), strerror(errno));
-            return -1;
-        }
-        else if (S_ISDIR(archives_dir_stat.st_mode) == false)
-        {
-            SPDLOG_ERROR("'{}' is not a directory.", archives_dir.c_str());
-            return -1;
-        }
-
-        /// TODO: if performance is too slow, can make this more efficient by only diffing files with the same checksum
+                /// TODO: if performance is too slow, can make this more efficient by only diffing files with the same checksum
         const uint32_t max_map_schema_length = 100000;
         std::map<std::string, compressor_frontend::lexers::ByteLexer> forward_lexer_map;
         std::map<std::string, compressor_frontend::lexers::ByteLexer> reverse_lexer_map;
@@ -508,6 +494,19 @@ int main(int argc, const char *argv[])
         // ==================
         for (const std::string &archive_path : archive_paths)
         {
+            // Validate archives directory
+            struct stat archives_dir_stat = {};
+            auto archives_dir = std::filesystem::path(archive_path);
+            if (0 != stat(archives_dir.c_str(), &archives_dir_stat))
+            {
+                SPDLOG_ERROR("'{}' does not exist or cannot be accessed - {}.", archives_dir.c_str(), strerror(errno));
+                return -1;
+            }
+            else if (S_ISDIR(archives_dir_stat.st_mode) == false)
+            {
+                SPDLOG_ERROR("'{}' is not a directory.", archives_dir.c_str());
+                return -1;
+            }
 
             if (false == std::filesystem::exists(archive_path))
             {
