@@ -12,7 +12,7 @@ namespace Metadata {
     constexpr int8_t LengthUShort = 0x12;
 
     constexpr char VersionKey[] = "VERSION";
-    constexpr char VersionValue[] = "v0.0.0";
+    constexpr char VersionValue[] = "v0.0.1";
 
     constexpr char TimestampPatternKey[] = "TIMESTAMP_PATTERN";
     constexpr char TimestampPatternSyntaxKey[] = "TIMESTAMP_PATTERN_SYNTAX";
