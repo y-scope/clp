@@ -150,7 +150,7 @@ typedef enum {
 
 /**
  * Validates whether the given protocol version can be supported by the current
- * decoding method implementations.
+ * build.
  * @param protocol_version Protocol version to be validate.
  * @return IRProtocolErrorCode_Supported if the protocol version is supported.
  * @return IRProtocolErrorCode_Unsupported if the protocol version cannot be
