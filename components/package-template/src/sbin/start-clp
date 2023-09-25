@@ -70,18 +70,19 @@ from clp.package_utils import \
     generate_container_config, \
     validate_and_load_config_file, \
     validate_and_load_db_credentials_file, \
-    validate_and_load_queue_credentials_file, \
+    validate_and_load_compression_queue_credentials_file, \
     validate_db_config, \
-    validate_queue_config, \
     validate_results_cache_config, \
-    validate_worker_config
+    validate_worker_config, validate_queue_config
 from clp_py_utils.clp_config import (
     CLPConfig,
     DB_COMPONENT_NAME,
-    QUEUE_COMPONENT_NAME,
+    COMPRESSION_QUEUE_COMPONENT_NAME,
+    Queue,
     RESULTS_CACHE_COMPONENT_NAME,
     SCHEDULER_COMPONENT_NAME,
-    WORKER_COMPONENT_NAME
+    SEARCH_QUEUE_COMPONENT_NAME,
+    WORKER_COMPONENT_NAME,
 )
 from job_orchestration.scheduler.constants import QueueName
 
@@ -218,29 +219,41 @@ def create_db_tables(instance_id: str, clp_config: CLPConfig, container_clp_conf
     logger.info(f"Created {DB_COMPONENT_NAME} tables.")
 
 
-def start_queue(instance_id: str, clp_config: CLPConfig):
-    logger.info(f"Starting {QUEUE_COMPONENT_NAME}...")
+def start_compression_queue(instance_id: str, clp_config: CLPConfig):
+    component_name = COMPRESSION_QUEUE_COMPONENT_NAME
+    queue_logs_dir = clp_config.logs_directory / component_name
+    start_queue(component_name, instance_id, clp_config.compression_queue, queue_logs_dir)
 
-    container_name = f'clp-{QUEUE_COMPONENT_NAME}-{instance_id}'
+
+def start_search_queue(instance_id: str, clp_config: CLPConfig):
+    component_name = SEARCH_QUEUE_COMPONENT_NAME
+    queue_logs_dir = clp_config.logs_directory / component_name
+    start_queue(component_name, instance_id, clp_config.search_queue, queue_logs_dir)
+
+
+def start_queue(component_name: str, instance_id: str, queue_config: Queue,
+                queue_logs_dir: pathlib.Path):
+    logger.info(f"Starting {component_name}...")
+
+    container_name = f'clp-{component_name}-{instance_id}'
     if container_exists(container_name):
-        logger.info(f"{QUEUE_COMPONENT_NAME} already running.")
+        logger.info(f"{component_name} already running.")
         return
 
-    queue_logs_dir = clp_config.logs_directory / QUEUE_COMPONENT_NAME
-    validate_queue_config(clp_config, queue_logs_dir)
+    validate_queue_config(component_name, queue_config, queue_logs_dir)
+
+    # Create directories
+    queue_logs_dir.mkdir(exist_ok=True, parents=True)
 
     log_filename = 'rabbitmq.log'
 
     # Generate config file
     config_filename = f'{container_name}.conf'
-    host_config_file_path = clp_config.logs_directory / config_filename
+    host_config_file_path = queue_logs_dir / config_filename
     with open(host_config_file_path, 'w') as f:
-        f.write(f"default_user = {clp_config.queue.username}\n")
-        f.write(f"default_pass = {clp_config.queue.password}\n")
+        f.write(f"default_user = {queue_config.username}\n")
+        f.write(f"default_pass = {queue_config.password}\n")
         f.write(f"log.file = {log_filename}\n")
-
-    # Create directories
-    queue_logs_dir.mkdir(exist_ok=True, parents=True)
 
     # Start container
     rabbitmq_logs_dir = pathlib.Path('/') / 'var' / 'log' / 'rabbitmq'
@@ -260,7 +273,7 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
         '-e', f'RABBITMQ_PID_FILE={rabbitmq_pid_file_path}',
         '-u', f'{os.getuid()}:{os.getgid()}',
     ]
-    append_docker_port_settings_for_host_ips(clp_config.queue.host, clp_config.queue.port, 5672, cmd)
+    append_docker_port_settings_for_host_ips(queue_config.host, queue_config.port, 5672, cmd)
     for mount in mounts:
         cmd.append('--mount')
         cmd.append(str(mount))
@@ -274,7 +287,7 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
     ]
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
-    logger.info(f"Started {QUEUE_COMPONENT_NAME}.")
+    logger.info(f"Started {component_name}.")
 
 
 def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
@@ -346,8 +359,8 @@ def start_scheduler(instance_id: str, clp_config: CLPConfig, container_clp_confi
         '--name', container_name,
         '-e', f'PYTHONPATH={clp_site_packages_dir}',
         '-e', f'BROKER_URL=amqp://'
-              f'{container_clp_config.queue.username}:{container_clp_config.queue.password}@'
-              f'{container_clp_config.queue.host}:{container_clp_config.queue.port}',
+              f'{container_clp_config.compression_queue.username}:{container_clp_config.compression_queue.password}@'
+              f'{container_clp_config.compression_queue.host}:{container_clp_config.compression_queue.port}',
         '-u', f'{os.getuid()}:{os.getgid()}',
         '--mount', str(mounts.clp_home),
     ]
@@ -395,11 +408,11 @@ def start_worker(instance_id: str, clp_config: CLPConfig, container_clp_config: 
         '--name', container_name,
         '-e', f'PYTHONPATH={clp_site_packages_dir}',
         '-e', f'BROKER_URL=amqp://'
-              f'{container_clp_config.queue.username}:{container_clp_config.queue.password}@'
-              f'{container_clp_config.queue.host}:{container_clp_config.queue.port}',
+              f'{container_clp_config.compression_queue.username}:{container_clp_config.compression_queue.password}@'
+              f'{container_clp_config.compression_queue.host}:{container_clp_config.compression_queue.port}',
         '-e', f'RESULT_BACKEND=rpc://'
-              f'{container_clp_config.queue.username}:{container_clp_config.queue.password}'
-              f'@{container_clp_config.queue.host}:{container_clp_config.queue.port}',
+              f'{container_clp_config.compression_queue.username}:{container_clp_config.compression_queue.password}'
+              f'@{container_clp_config.compression_queue.host}:{container_clp_config.compression_queue.port}',
         '-e', f'CLP_HOME={CONTAINER_CLP_HOME}',
         '-e', f'CLP_DATA_DIR={container_clp_config.data_directory}',
         '-e', f'CLP_ARCHIVE_OUTPUT_DIR={container_clp_config.archive_output.directory}',
@@ -443,9 +456,10 @@ def main(argv):
 
     component_args_parser = args_parser.add_subparsers(dest='component_name')
     component_args_parser.add_parser(DB_COMPONENT_NAME)
-    component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
+    component_args_parser.add_parser(COMPRESSION_QUEUE_COMPONENT_NAME)
     component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
     component_args_parser.add_parser(SCHEDULER_COMPONENT_NAME)
+    component_args_parser.add_parser(SEARCH_QUEUE_COMPONENT_NAME)
     worker_args_parser = component_args_parser.add_parser(WORKER_COMPONENT_NAME)
     worker_args_parser.add_argument('--num-cpus', type=int, default=0,
                                     help="Number of logical CPU cores to use for compression")
@@ -471,8 +485,10 @@ def main(argv):
         # Validate and load necessary credentials
         if component_name in ['', DB_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME]:
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
-        if component_name in ['', QUEUE_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME, WORKER_COMPONENT_NAME]:
-            validate_and_load_queue_credentials_file(clp_config, clp_home, True)
+        if component_name in ['', COMPRESSION_QUEUE_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME,
+                              SEARCH_QUEUE_COMPONENT_NAME, WORKER_COMPONENT_NAME]:
+            # TODO Validate the search queue credentials when the search queue is actually used
+            validate_and_load_compression_queue_credentials_file(clp_config, clp_home, True)
 
         clp_config.validate_data_dir()
         clp_config.validate_logs_dir()
@@ -511,8 +527,10 @@ def main(argv):
             create_db_tables(instance_id, clp_config, container_clp_config, mounts)
         if '' == component_name or RESULTS_CACHE_COMPONENT_NAME == component_name:
             start_results_cache(instance_id, clp_config, conf_dir)
-        if '' == component_name or QUEUE_COMPONENT_NAME == component_name:
-            start_queue(instance_id, clp_config)
+        if '' == component_name or COMPRESSION_QUEUE_COMPONENT_NAME == component_name:
+            start_compression_queue(instance_id, clp_config)
+        if '' == component_name or SEARCH_QUEUE_COMPONENT_NAME == component_name:
+            start_search_queue(instance_id, clp_config)
         if '' == component_name or SCHEDULER_COMPONENT_NAME == component_name:
             start_scheduler(instance_id, clp_config, container_clp_config, mounts)
         if '' == component_name or WORKER_COMPONENT_NAME == component_name:

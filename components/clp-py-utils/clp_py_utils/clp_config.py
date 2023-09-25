@@ -12,8 +12,9 @@ CLP_METADATA_TABLE_PREFIX = 'clp_'
 # Component names
 DB_COMPONENT_NAME = 'db'
 RESULTS_CACHE_COMPONENT_NAME = 'results-cache'
-QUEUE_COMPONENT_NAME = 'queue'
+COMPRESSION_QUEUE_COMPONENT_NAME = 'compression-queue'
 SCHEDULER_COMPONENT_NAME = 'scheduler'
+SEARCH_QUEUE_COMPONENT_NAME = 'search-queue'
 WORKER_COMPONENT_NAME = 'worker'
 
 
@@ -169,7 +170,8 @@ class CLPConfig(BaseModel):
     database: Database = Database()
     results_cache: ResultsCache = ResultsCache()
     scheduler: Scheduler = Scheduler()
-    queue: Queue = Queue()
+    compression_queue: Queue = Queue(port=5672)
+    search_queue: Queue = Queue(port=5673)
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()
@@ -220,15 +222,15 @@ class CLPConfig(BaseModel):
         except KeyError as ex:
             raise ValueError(f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'.")
 
-    def load_queue_credentials_from_file(self):
-        config = read_yaml_config_file(self.credentials_file_path)
-        if config is None:
-            raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
-        try:
-            self.queue.username = get_config_value(config, "queue.user")
-            self.queue.password = get_config_value(config, "queue.password")
-        except KeyError as ex:
-            raise ValueError(f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'.")
+    def load_compression_queue_credentials_from_file(self):
+        self.__load_queue_credentials_from_file(self.credentials_file_path,
+                                                COMPRESSION_QUEUE_COMPONENT_NAME,
+                                                self.compression_queue)
+
+    def load_search_queue_credentials_from_file(self):
+        self.__load_queue_credentials_from_file(self.credentials_file_path,
+                                                SEARCH_QUEUE_COMPONENT_NAME,
+                                                self.search_queue)
 
     def dump_to_primitive_dict(self):
         d = self.dict()
@@ -239,3 +241,15 @@ class CLPConfig(BaseModel):
         d['data_directory'] = str(self.data_directory)
         d['logs_directory'] = str(self.logs_directory)
         return d
+
+    @staticmethod
+    def __load_queue_credentials_from_file(credentials_file_path: pathlib.Path, component_name: str,
+                                           queue_config: Queue):
+        config = read_yaml_config_file(credentials_file_path)
+        if config is None:
+            raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
+        try:
+            queue_config.username = get_config_value(config, f"{component_name}.user")
+            queue_config.password = get_config_value(config, f"{component_name}.password")
+        except KeyError as ex:
+            raise ValueError(f"Credentials file '{credentials_file_path}' does not contain key '{ex}'.")

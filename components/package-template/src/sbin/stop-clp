@@ -58,14 +58,15 @@ from clp.package_utils import \
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
     container_exists, \
     validate_and_load_config_file, \
-    validate_and_load_db_credentials_file, \
-    validate_and_load_queue_credentials_file
+    validate_and_load_compression_queue_credentials_file, \
+    validate_and_load_db_credentials_file
 from clp_py_utils.clp_config import (
     DB_COMPONENT_NAME,
-    QUEUE_COMPONENT_NAME,
+    COMPRESSION_QUEUE_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
     SCHEDULER_COMPONENT_NAME,
-    WORKER_COMPONENT_NAME
+    SEARCH_QUEUE_COMPONENT_NAME,
+    WORKER_COMPONENT_NAME,
 )
 
 
@@ -79,6 +80,15 @@ def stop_container(container_name: str):
     logger.info(f"Stopped {container_name}.")
 
 
+def stop_queue_container(component_name: str, instance_id: str, logs_dir: pathlib.Path):
+    container_name = f'clp-{component_name}-{instance_id}'
+    stop_container(container_name)
+
+    queue_config_file_path = logs_dir / component_name / f'{container_name}.conf'
+    if queue_config_file_path.exists():
+        queue_config_file_path.unlink()
+
+
 def main(argv):
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -88,8 +98,9 @@ def main(argv):
 
     component_args_parser = args_parser.add_subparsers(dest='component_name')
     component_args_parser.add_parser(DB_COMPONENT_NAME)
-    component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
+    component_args_parser.add_parser(COMPRESSION_QUEUE_COMPONENT_NAME)
     component_args_parser.add_parser(SCHEDULER_COMPONENT_NAME)
+    component_args_parser.add_parser(SEARCH_QUEUE_COMPONENT_NAME)
     component_args_parser.add_parser(WORKER_COMPONENT_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
@@ -107,8 +118,10 @@ def main(argv):
         # Validate and load necessary credentials
         if component_name in ['', DB_COMPONENT_NAME]:
             validate_and_load_db_credentials_file(clp_config, clp_home, False)
-        if component_name in ['', QUEUE_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME, WORKER_COMPONENT_NAME]:
-            validate_and_load_queue_credentials_file(clp_config, clp_home, False)
+        if component_name in ['', COMPRESSION_QUEUE_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME,
+                              SEARCH_QUEUE_COMPONENT_NAME, WORKER_COMPONENT_NAME]:
+            # TODO Validate the search queue credentials when the search queue is actually used
+            validate_and_load_compression_queue_credentials_file(clp_config, clp_home, False)
     except:
         logger.exception("Failed to load config.")
         return -1
@@ -132,13 +145,10 @@ def main(argv):
             container_config_file_path = logs_dir / f'{container_name}.yml'
             if container_config_file_path.exists():
                 container_config_file_path.unlink()
-        if '' == component_name or QUEUE_COMPONENT_NAME == component_name:
-            container_name = f'clp-{QUEUE_COMPONENT_NAME}-{instance_id}'
-            stop_container(container_name)
-
-            queue_config_file_path = logs_dir / f'{container_name}.conf'
-            if queue_config_file_path.exists():
-                queue_config_file_path.unlink()
+        if '' == component_name or COMPRESSION_QUEUE_COMPONENT_NAME == component_name:
+            stop_queue_container(COMPRESSION_QUEUE_COMPONENT_NAME, instance_id, logs_dir)
+        if '' == component_name or SEARCH_QUEUE_COMPONENT_NAME == component_name:
+            stop_queue_container(SEARCH_QUEUE_COMPONENT_NAME, instance_id, logs_dir)
         if '' == component_name or RESULTS_CACHE_COMPONENT_NAME == component_name:
             container_name = f'clp-{RESULTS_CACHE_COMPONENT_NAME}-{instance_id}'
             stop_container(container_name)
