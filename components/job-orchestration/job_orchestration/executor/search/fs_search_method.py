@@ -77,7 +77,7 @@ def search(
     archive_directory = Path(os.getenv('CLP_ARCHIVE_OUTPUT_DIR'))
     logger.debug(f"{archive_directory}")
     server_cmd = [
-        "python3", 
+        "python3",
         str(script_dir / "proxy_server.py"),
         output_config["database_ip"],
         str(output_config["database_port"]),

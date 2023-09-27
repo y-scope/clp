@@ -260,7 +260,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_config: Database)
 def update_completed_jobs(db_cursor, job_type: str):
     # Update completed jobs if there are any
     db_cursor.execute(f"""
-        UPDATE {job_type}_jobs 
+        UPDATE {job_type}_jobs
         SET status='{JobStatus.SUCCEEDED}', duration=TIMESTAMPDIFF(SECOND, start_time, CURRENT_TIMESTAMP())
         WHERE status='{JobStatus.SCHEDULED}' AND num_tasks=num_tasks_completed
     """)

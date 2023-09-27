@@ -44,7 +44,7 @@ async def worker_connection_handler(reader: StreamReader, writer: StreamWriter, 
                 # Worker closed
                 process_batched_messages(unpacked_messages, db_config, job_id)
                 unpacked_messages.clear()
-                # This is very hacky. but hopefully it's ok for now and 
+                # This is very hacky. but hopefully it's ok for now and
                 # will be replaced with reducer.
                 print("Finished")
                 sys.stdout.flush()
@@ -68,7 +68,7 @@ async def worker_connection_handler(reader: StreamReader, writer: StreamWriter, 
 async def do_search(host: str, db_config, job_id):
     # Start server to receive and print results
     try:
-        server = await asyncio.start_server(functools.partial(worker_connection_handler, db_config=db_config, job_id = job_id), 
+        server = await asyncio.start_server(functools.partial(worker_connection_handler, db_config=db_config, job_id = job_id),
                                             host=host, port=0, family=socket.AF_INET)
     except asyncio.CancelledError:
         # Search cancelled

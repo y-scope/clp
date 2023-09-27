@@ -104,7 +104,7 @@ def set_job_status(
         update += f' AND status={prev_status}'
 
     cursor.execute(update)
-    
+
     db_conn.commit()
 
     rval = cursor.rowcount != 0
@@ -124,7 +124,7 @@ def poll_and_handle_cancelling_search_jobs(db_conn) -> None:
         if job_id in active_jobs:
             active_jobs[job_id].revoke()
             del active_jobs[job_id]
-        
+
         #TODO: also update time
         set_job_status(db_conn, job_id, JobStatus.CANCELLED, prev_status=CANCELLING)
 
@@ -234,7 +234,7 @@ def handle_jobs(
         poll_and_handle_cancelling_search_jobs(db_conn)
         check_job_status_and_update_db(db_conn)
         time.sleep(0.1)
-    
+
     logger.info("Exiting...")
 
 
