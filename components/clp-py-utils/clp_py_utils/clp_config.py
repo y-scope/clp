@@ -17,7 +17,7 @@ SCHEDULER_COMPONENT_NAME = 'scheduler'
 SEARCH_QUEUE_COMPONENT_NAME = 'search-queue'
 SEARCH_SCHEDULER_COMPONENT_NAME = 'search-scheduler'
 SEARCH_WORKER_COMPONENT_NAME = 'search-worker'
-WORKER_COMPONENT_NAME = 'worker'
+COMPRESSION_WORKER_COMPONENT_NAME = 'compression-worker'
 
 
 class Database(BaseModel):
