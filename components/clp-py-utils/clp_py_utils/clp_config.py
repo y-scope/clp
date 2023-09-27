@@ -15,6 +15,8 @@ RESULTS_CACHE_COMPONENT_NAME = 'results-cache'
 COMPRESSION_QUEUE_COMPONENT_NAME = 'compression-queue'
 SCHEDULER_COMPONENT_NAME = 'scheduler'
 SEARCH_QUEUE_COMPONENT_NAME = 'search-queue'
+SEARCH_SCHEDULER_COMPONENT_NAME = 'search-scheduler'
+SEARCH_WORKER_COMPONENT_NAME = 'search-worker'
 WORKER_COMPONENT_NAME = 'worker'
 
 
@@ -113,6 +115,10 @@ class Scheduler(BaseModel):
     jobs_poll_delay: int = 1  # seconds
 
 
+class SearchScheduler(BaseModel):
+    jobs_poll_delay: int = 1  # seconds
+
+
 class Queue(BaseModel):
     host: str = 'localhost'
     port: int = 5672
@@ -172,6 +178,7 @@ class CLPConfig(BaseModel):
     scheduler: Scheduler = Scheduler()
     compression_queue: Queue = Queue(port=5672)
     search_queue: Queue = Queue(port=5673)
+    search_scheduler: SearchScheduler = SearchScheduler()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()
