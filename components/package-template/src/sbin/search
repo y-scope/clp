@@ -71,7 +71,6 @@ def main(argv):
     args_parser.add_argument('--config', '-c', default=str(default_config_file_path),
                              help="CLP package configuration file.")
     args_parser.add_argument('wildcard_query', help="Wildcard query.")
-    args_parser.add_argument('--file-path', help="File to search.")
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate and load config file
@@ -82,6 +81,7 @@ def main(argv):
 
         # Validate and load necessary credentials
         validate_and_load_db_credentials_file(clp_config, clp_home, True)
+        validate_results_cache_config(clp_config, data_dir, logs_dir)
     except:
         logger.exception("Failed to load config.")
         return -1
@@ -100,6 +100,9 @@ def main(argv):
         '--rm',
         '--network', 'host',
         '-w', str(CONTAINER_CLP_HOME),
+        '-e', f'CLP_HOME={CONTAINER_CLP_HOME}',
+        '-e', f'DB_USER={clp_config.database.username}',
+        '-e', f'DB_PASSWORD={clp_config.database.password}',
         '-u', f'{os.getuid()}:{os.getgid()}',
         '--name', container_name,
         '--mount', str(mounts.clp_home),
@@ -115,13 +118,10 @@ def main(argv):
     container_start_cmd.append(clp_config.execution_container)
 
     search_cmd = [
-        str(CONTAINER_CLP_HOME / 'sbin' / 'native' / 'search'),
+        str(CONTAINER_CLP_HOME / 'sbin' / 'native' / 'distributed_search'),
         '--config', str(container_clp_config.logs_directory / container_config_filename),
         parsed_args.wildcard_query,
     ]
-    if parsed_args.file_path:
-        search_cmd.append('--file-path')
-        search_cmd.append(parsed_args.file_path)
     cmd = container_start_cmd + search_cmd
     subprocess.run(cmd, check=True)
 

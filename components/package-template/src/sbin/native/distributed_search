@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+import argparse
+import logging
+import os
+import pathlib
+import sys
+import time
+
+# Setup logging
+# Create logger
+logger = logging.getLogger(__file__)
+logger.setLevel(logging.INFO)
+# Setup console logging
+logging_console_handler = logging.StreamHandler()
+logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
+logging_console_handler.setFormatter(logging_formatter)
+logger.addHandler(logging_console_handler)
+
+
+def get_clp_home():
+    # Determine CLP_HOME from an environment variable or this script's path
+    _clp_home = None
+    if 'CLP_HOME' in os.environ:
+        _clp_home = pathlib.Path(os.environ['CLP_HOME'])
+    else:
+        for path in pathlib.Path(__file__).resolve().parents:
+            if 'sbin' == path.name:
+                _clp_home = path.parent
+                break
+
+    if _clp_home is None:
+        logger.error("CLP_HOME is not set and could not be determined automatically.")
+        return None
+    elif not _clp_home.exists():
+        logger.error("CLP_HOME set to nonexistent path.")
+        return None
+
+    return _clp_home.resolve()
+
+
+def load_bundled_python_lib_path(_clp_home):
+    python_site_packages_path = _clp_home / 'lib' / 'python3' / 'site-packages'
+    if not python_site_packages_path.is_dir():
+        logger.error("Failed to load python3 packages bundled with CLP.")
+        return False
+
+    # Add packages to the front of the path
+    sys.path.insert(0, str(python_site_packages_path))
+
+    return True
+
+
+clp_home = get_clp_home()
+if clp_home is None or not load_bundled_python_lib_path(clp_home):
+    sys.exit(-1)
+
+import mysql.connector
+import msgpack
+import pymongo
+
+from job_orchestration.scheduler.common import JobStatus  # type: ignore
+from clp_py_utils.core import read_yaml_config_file  # type: ignore
+from clp.package_utils import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, validate_and_load_config_file
+
+def main(argv):
+    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+
+    args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")
+    args_parser.add_argument('--config', '-c', required=True, help="CLP configuration file.")
+    args_parser.add_argument('wildcard_query', help="Wildcard query.")
+    parsed_args = args_parser.parse_args(argv[1:])
+    logger.info(f"CLP HOME IS {clp_home}")
+    # Validate and load config file
+    try:
+        config_file_path = pathlib.Path(parsed_args.config)
+        clp_config = validate_and_load_config_file(config_file_path, default_config_file_path, clp_home)
+        clp_config.validate_logs_dir()
+    except:
+        logger.exception("Failed to load config.")
+        return -1
+
+    current_time = time.time()
+
+    username = os.environ['DB_USER']
+    password = os.environ['DB_PASSWORD']
+
+    db_conn = mysql.connector.connect(
+        host=clp_config.database.host,
+        port=clp_config.database.port,
+        database="clp-db",
+        user=username,
+        password=password,
+    )
+
+    query = parsed_args.wildcard_query
+
+    cursor = db_conn.cursor()
+    # hardcode constant for now
+    search_job_table = "distrbuted_search_jobs"
+    sql = f"INSERT INTO {search_job_table} (search_config) VALUES (%s)"
+    cursor.execute(sql, (msgpack.packb(query),))
+    db_conn.commit()
+
+    job_id = cursor.lastrowid
+
+    prev_status = JobStatus.PENDING
+    logger.info(f"Submitted job {job_id}")
+    while True:
+        cursor.execute(f"SELECT status FROM {search_job_table} WHERE id={job_id}")
+        rows = cursor.fetchall()
+        if len(rows) != 1:
+            logger.error("Invalid database state, exiting...")
+            break
+        status, = rows[0]
+        db_conn.commit()
+
+        if prev_status != status:
+            prev_status = status
+            logger.info(f"Job {job_id} now {JobStatus(status)}")
+
+        if not (status == JobStatus.PENDING or status == JobStatus.RUNNING or status == JobStatus.CANCELLING):
+            break
+
+        time.sleep(0.5)
+    end_time = time.time() - current_time
+    logger.info(f"time elapsed: {end_time} seconds")
+
+    # Set up a connection to your MongoDB instance
+    results_cache_host = clp_config.results_cache.host
+    results_cache_port = clp_config.results_cache.port
+    client = pymongo.MongoClient(f"mongodb://{results_cache_host}:{results_cache_port}")  # Update the connection string as needed
+
+    # Access the database and collection
+    db = client["clp_search"]  # Replace with your database name
+    collection = db[str(job_id)]  # Replace with your collection name
+
+    # Retrieve and print all documents in the collection
+    for document in collection.find():
+        logger.info(document)
+
+    # Close the MongoDB connection
+    client.close()
+
+    cursor.close()
+    db_conn.close()
+
+if "__main__" == __name__:
+    sys.exit(main(sys.argv))
