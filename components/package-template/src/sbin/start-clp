@@ -85,6 +85,7 @@ from clp_py_utils.clp_config import (
     SEARCH_SCHEDULER_COMPONENT_NAME,
     SEARCH_WORKER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
+    COMPRESSION_JOB_HANDLER_COMPONENT_NAME,
 )
 from job_orchestration.scheduler.constants import QueueName
 
@@ -338,6 +339,67 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
     logger.info(f"Started {component_name}.")
 
 
+def start_compression_job_handler(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig, mounts: CLPDockerMounts):
+    component_name = COMPRESSION_JOB_HANDLER_COMPONENT_NAME
+
+    logger.info(f"Starting {component_name}...")
+
+    container_name = f'clp-{component_name}-{instance_id}'
+    if container_exists(container_name):
+        logger.info(f"{component_name} already running.")
+        return
+
+    clp_site_packages_dir = CONTAINER_CLP_HOME / 'lib' / 'python3' / 'site-packages'
+    container_start_cmd = [
+        'docker', 'run',
+        '-di',
+        '--network', 'host',
+        '-w', str(CONTAINER_CLP_HOME),
+        '--rm',
+        '--name', container_name,
+        '-e', f'PYTHONPATH={clp_site_packages_dir}',
+        '-e', f'BROKER_URL=amqp://'
+              f'{container_clp_config.search_queue.username}:{container_clp_config.search_queue.password}@'
+              f'{container_clp_config.search_queue.host}:{container_clp_config.search_queue.port}',
+        '-e', f'RESULT_BACKEND=rpc://'
+              f'{container_clp_config.search_queue.username}:{container_clp_config.search_queue.password}'
+              f'@{container_clp_config.search_queue.host}:{container_clp_config.search_queue.port}',
+        '-u', f'{os.getuid()}:{os.getgid()}',
+        '--mount', str(mounts.clp_home),
+    ]
+    necessary_mounts = [
+        mounts.archives_output_dir,
+        mounts.input_logs_dir,
+        mounts.logs_dir,
+    ]
+    for mount in necessary_mounts:
+        if mount:
+            container_start_cmd.append('--mount')
+            container_start_cmd.append(str(mount))
+    container_start_cmd.append(clp_config.execution_container)
+
+    scheduler_cmd = [
+        'python3', '-u', '-m',
+        'compression_job_handler.main',
+        '--target-archive-size', str(clp_config.archive_output.target_archive_size),
+        '--target-archive-dictionaries-data-size',
+        str(clp_config.archive_output.target_dictionaries_size),
+        '--target-encoded-file-size', str(clp_config.archive_output.target_encoded_file_size),
+        '--target-segment-size', str(clp_config.archive_output.target_segment_size),
+        '--no-progress-reporting',
+        '--clp-db-host', clp_config.database.host,
+        '--clp-db-port', str(clp_config.database.port),
+        '--clp-db-user', str(clp_config.database.username),
+        '--clp-db-passwd', str(clp_config.database.password),
+        'fs',
+        '--archives-dir', str(container_clp_config.archive_output.directory)
+    ]
+    cmd = container_start_cmd + scheduler_cmd
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+
+    logger.info(f"Started {component_name}.")
+
+
 def start_scheduler(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig, mounts: CLPDockerMounts):
     logger.info(f"Starting {SCHEDULER_COMPONENT_NAME}...")
 
@@ -481,7 +543,7 @@ def start_worker(component_name: str, instance_id: str, clp_config: CLPConfig,
     clp_site_packages_dir = CONTAINER_CLP_HOME / 'lib' / 'python3' / 'site-packages'
     container_start_cmd = [
         'docker', 'run',
-        '-di',
+        #'-di',
         '--network', 'host',
         '-w', str(CONTAINER_CLP_HOME),
         '--rm',
@@ -519,7 +581,7 @@ def start_worker(component_name: str, instance_id: str, clp_config: CLPConfig,
         'worker',
         '--concurrency', str(num_cpus),
         '--loglevel', 'WARNING',
-        '-Q', celery_route,
+        #'-Q', celery_route,
         '-n', component_name,
     ]
     cmd = container_start_cmd + worker_cmd
@@ -539,9 +601,9 @@ def main(argv):
     component_args_parser.add_parser(DB_COMPONENT_NAME)
     component_args_parser.add_parser(COMPRESSION_QUEUE_COMPONENT_NAME)
     component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
-    component_args_parser.add_parser(SCHEDULER_COMPONENT_NAME)
     component_args_parser.add_parser(SEARCH_QUEUE_COMPONENT_NAME)
     component_args_parser.add_parser(SEARCH_SCHEDULER_COMPONENT_NAME)
+    component_args_parser.add_parser(COMPRESSION_JOB_HANDLER_COMPONENT_NAME)
     # need to think about how to specify the argument
     component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
     worker_args_parser = component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
@@ -568,10 +630,11 @@ def main(argv):
 
         # Validate and load necessary credentials
         if component_name in ['', DB_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME,
-                              SEARCH_SCHEDULER_COMPONENT_NAME]:
+                              SEARCH_SCHEDULER_COMPONENT_NAME, COMPRESSION_JOB_HANDLER_COMPONENT_NAME]:
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
         if component_name in ['', COMPRESSION_QUEUE_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME,
                               SEARCH_SCHEDULER_COMPONENT_NAME, SEARCH_QUEUE_COMPONENT_NAME,
+                              COMPRESSION_JOB_HANDLER_COMPONENT_NAME,
                               COMPRESSION_WORKER_COMPONENT_NAME, SEARCH_WORKER_COMPONENT_NAME]:
             # TODO Validate the search queue credentials when the search queue is actually used
             validate_and_load_compression_queue_credentials_file(clp_config, clp_home, True)
@@ -584,10 +647,10 @@ def main(argv):
 
     # Get the number of CPU cores to use
     num_cpus = multiprocessing.cpu_count()
-    if "" == component_name:
-        if parsed_args.num_cpus != 0:
-            num_cpus = parsed_args.num_cpus
-        num_cpus /= 2
+    # if '' == component_name:
+    #     if parsed_args.num_cpus != 0:
+    #         num_cpus = parsed_args.num_cpus
+    #     num_cpus /= 2
 
     if COMPRESSION_WORKER_COMPONENT_NAME == component_name and parsed_args.num_cpus != 0:
         num_cpus = parsed_args.num_cpus
@@ -622,14 +685,14 @@ def main(argv):
             start_results_cache(instance_id, clp_config, conf_dir)
         if '' == component_name or COMPRESSION_QUEUE_COMPONENT_NAME == component_name:
             start_compression_queue(instance_id, clp_config)
-        if '' == component_name or SEARCH_QUEUE_COMPONENT_NAME == component_name:
-            start_search_queue(instance_id, clp_config)
-        if '' == component_name or SCHEDULER_COMPONENT_NAME == component_name:
-            start_scheduler(instance_id, clp_config, container_clp_config, mounts)
-        if '' == component_name or SEARCH_SCHEDULER_COMPONENT_NAME == component_name:
-            start_search_scheduler(instance_id, clp_config, container_clp_config, mounts)
-        if '' == component_name or SEARCH_WORKER_COMPONENT_NAME == component_name:
-            start_search_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
+        # if '' == component_name or SEARCH_QUEUE_COMPONENT_NAME == component_name:
+        #     start_search_queue(instance_id, clp_config)
+        # if '' == component_name or COMPRESSION_JOB_HANDLER_COMPONENT_NAME == component_name:
+        #     start_compression_job_handler(instance_id, clp_config, container_clp_config, mounts)
+        # if '' == component_name or SEARCH_SCHEDULER_COMPONENT_NAME == component_name:
+        #     start_search_scheduler(instance_id, clp_config, container_clp_config, mounts)
+        # if '' == component_name or SEARCH_WORKER_COMPONENT_NAME == component_name:
+        #     start_search_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
         if '' == component_name or COMPRESSION_WORKER_COMPONENT_NAME == component_name:
             start_compression_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
     except Exception as ex:

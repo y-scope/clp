@@ -15,7 +15,7 @@ from pydantic import ValidationError
 from clp_py_utils.clp_config import CLPConfig, Database
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.executor.compression.compression_task import compress
+from job_orchestration.executor.compression.fs_to_fs_compress_method import compress
 from job_orchestration.scheduler.constants import \
     QueueName, \
     JobStatus, \

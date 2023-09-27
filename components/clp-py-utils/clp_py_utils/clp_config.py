@@ -12,6 +12,7 @@ CLP_METADATA_TABLE_PREFIX = 'clp_'
 # Component names
 DB_COMPONENT_NAME = 'db'
 RESULTS_CACHE_COMPONENT_NAME = 'results-cache'
+COMPRESSION_JOB_HANDLER_COMPONENT_NAME = 'compression-job-handler'
 COMPRESSION_QUEUE_COMPONENT_NAME = 'compression-queue'
 SCHEDULER_COMPONENT_NAME = 'scheduler'
 SEARCH_QUEUE_COMPONENT_NAME = 'search-queue'
@@ -109,6 +110,10 @@ class ResultsCache(BaseModel):
         if '' == field:
             raise ValueError(f'{RESULTS_CACHE_COMPONENT_NAME}.host cannot be empty.')
         return field
+
+    def get_uri(self):
+        # TODO Make database name configurable
+        return f"mongodb://{self.host}:{self.port}/clp"
 
 
 class Scheduler(BaseModel):

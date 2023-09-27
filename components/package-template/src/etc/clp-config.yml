@@ -7,18 +7,25 @@
 ## File containing credentials for services
 #credentials_file_path: "etc/credentials.yml"
 #
-#database:
-#  type: "mariadb"  # "mariadb" or "mysql"
-#  host: "localhost"
-#  port: 3306
-#  name: "clp-db"
+database:
+ type: "mysql"  # "mariadb" or "mysql"
+ host: "localhost"
+ port: 3306
+ name: "clp-db"
 #
 #scheduler:
 #  jobs_poll_delay: 1  # seconds
 #
-#queue:
-#  host: "localhost"
-#  port: 5672
+# results-cache:
+#   host: 10.1.0.11
+#   port: 27017
+
+compression_queue:
+  host: "localhost"
+  port: 5673
+search_queue:
+  host: "localhost"
+  port: 5674  
 #
 ## Where archives should be output to
 #archive_output:
