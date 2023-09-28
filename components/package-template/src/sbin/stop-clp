@@ -69,6 +69,7 @@ from clp_py_utils.clp_config import (
     SEARCH_SCHEDULER_COMPONENT_NAME,
     SEARCH_WORKER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
+    COMPRESSION_JOB_HANDLER_COMPONENT_NAME,
 )
 
 
@@ -100,6 +101,7 @@ def main(argv):
 
     component_args_parser = args_parser.add_subparsers(dest='component_name')
     component_args_parser.add_parser(DB_COMPONENT_NAME)
+    component_args_parser.add_parser(COMPRESSION_JOB_HANDLER_COMPONENT_NAME)
     component_args_parser.add_parser(COMPRESSION_QUEUE_COMPONENT_NAME)
     component_args_parser.add_parser(SCHEDULER_COMPONENT_NAME)
     component_args_parser.add_parser(SEARCH_QUEUE_COMPONENT_NAME)
@@ -138,6 +140,9 @@ def main(argv):
         with open(instance_id_file_path, 'r') as f:
             instance_id = f.readline()
 
+        if '' == component_name or COMPRESSION_JOB_HANDLER_COMPONENT_NAME == component_name:
+            container_name = f'clp-{COMPRESSION_JOB_HANDLER_COMPONENT_NAME}-{instance_id}'
+            stop_container(container_name)
         if '' == component_name or COMPRESSION_WORKER_COMPONENT_NAME == component_name:
             stop_container(f'clp-{COMPRESSION_WORKER_COMPONENT_NAME}-{instance_id}')
         if '' == component_name or SCHEDULER_COMPONENT_NAME == component_name:

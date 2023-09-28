@@ -16,7 +16,7 @@ from clp_py_utils.compression import (  # type: ignore
     FileMetadata,
     validate_path_and_get_info,
 )
-from job_orchestration.executor.compression.tasks.fs_to_fs_compress_method import (
+from job_orchestration.executor.compression.fs_to_fs_compress_method import (
     compress as fs_to_fs_compress,
 )
 
@@ -97,7 +97,7 @@ def handle_job_impl(
     except Exception as e:
         logger.error(str(e))
         return JobStatus.FAILED
-
+    logger.info(f"Submitting job {job_id_str} to celery")
     jobs_group = group(distributed_compression_jobs)
     active_jobs = jobs_group.apply_async()
     num_compression_jobs = len(active_jobs)
@@ -192,6 +192,10 @@ def prepare_fs_compression_jobs(
             file_metadata, empty_directory_str = validate_path_and_get_info(
                 CONTAINER_INPUT_LOGS_ROOT_DIR, file_path
             )
+            # TODO remove the CONTAINER_INPUT_LOGS_ROOT_DIR
+            # prefix from the file_metadata path, so the
+            # compression worker see the path as real path
+            file_metadata.path = Path('/') / file_metadata.path.relative_to(CONTAINER_INPUT_LOGS_ROOT_DIR)
         except ValueError as e:
             logger.error(str(e))
             path_validation_erred = True
@@ -359,9 +363,6 @@ def main(argv: List[str]) -> int:
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
-
-    logs_dir = Path(parsed_args.logs_dir).resolve()
-    logs_dir.mkdir(parents=True, exist_ok=True)
 
     # Validate target sizes
     if parsed_args.target_archive_size <= 0:

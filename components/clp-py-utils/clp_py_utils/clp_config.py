@@ -113,7 +113,7 @@ class ResultsCache(BaseModel):
 
     def get_uri(self):
         # TODO Make database name configurable
-        return f"mongodb://{self.host}:{self.port}/clp"
+        return f"mongodb://{self.host}:{self.port}"
 
 
 class Scheduler(BaseModel):

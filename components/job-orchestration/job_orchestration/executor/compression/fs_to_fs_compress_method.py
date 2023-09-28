@@ -21,6 +21,7 @@ celery_central_logger.setLevel(logging.INFO)
 def compress(
     self: Task,
     job_id_str: str,
+    # V0.5 TODO: remove this two
     db_config: Dict[str, Any],
     job_input_config: Dict[str, Any],
     job_output_config: Dict[str, Any],
