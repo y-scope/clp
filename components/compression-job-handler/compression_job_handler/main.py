@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import os
 import sys
 import time
 from datetime import datetime
@@ -346,12 +347,6 @@ def main(argv: List[str]) -> int:
     args_parser.add_argument(
         "--clp-db-port", required=True, help="port for CLP globalDB"
     )
-    args_parser.add_argument(
-        "--clp-db-passwd", required=True, help="password for CLP globalDB"
-    )
-    args_parser.add_argument(
-        "--clp-db-user", required=True, help="user for CLP globalDB"
-    )
     # fmt: on
 
     output_type_args_parser = args_parser.add_subparsers(dest="output_type")
@@ -388,11 +383,13 @@ def main(argv: List[str]) -> int:
     db_uri = parsed_args.db_uri
     db_manager: DBManager = MongoDBManager(logger, db_uri)
 
+    db_user = os.getenv('DB_USER')
+    db_password = os.getenv('DB_PASSWORD')
     clp_db_config = {
         "host": parsed_args.clp_db_host,
-        "password": parsed_args.clp_db_passwd,
+        "password": db_password,
         "port": parsed_args.clp_db_port,
-        "username": parsed_args.clp_db_user,
+        "username": db_user,
         # Hardcoded Property
         "autocommit": False,
         "compress": True,

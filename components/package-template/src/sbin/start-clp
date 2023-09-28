@@ -339,7 +339,8 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
     logger.info(f"Started {component_name}.")
 
 
-def start_compression_job_handler(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig, mounts: CLPDockerMounts):
+def start_compression_job_handler(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig,
+                                  mounts: CLPDockerMounts):
     component_name = COMPRESSION_JOB_HANDLER_COMPONENT_NAME
 
     logger.info(f"Starting {component_name}...")
@@ -360,6 +361,8 @@ def start_compression_job_handler(instance_id: str, clp_config: CLPConfig, conta
         '--rm',
         '--name', container_name,
         '-e', f'PYTHONPATH={clp_site_packages_dir}',
+        '-e', f'DB_USER={clp_config.database.username}',
+        '-e', f'DB_PASSWORD={clp_config.database.password}',
         '-e', f'BROKER_URL=amqp://'
               f'{container_clp_config.compression_queue.username}:{container_clp_config.compression_queue.password}@'
               f'{container_clp_config.compression_queue.host}:{container_clp_config.compression_queue.port}',
@@ -389,12 +392,10 @@ def start_compression_job_handler(instance_id: str, clp_config: CLPConfig, conta
         '--target-encoded-file-size', str(clp_config.archive_output.target_encoded_file_size),
         '--target-segment-size', str(clp_config.archive_output.target_segment_size),
         '--no-progress-reporting',
-        # V0.5 TODO: pass those variables using -e
+        # V0.5 TODO: pass those variables using clp config
         '--db-uri', f"{clp_config.results_cache.get_uri()}/metadata-db",
         '--clp-db-host', clp_config.database.host,
         '--clp-db-port', str(clp_config.database.port),
-        '--clp-db-user', str(clp_config.database.username),
-        '--clp-db-passwd', str(clp_config.database.password),
         'fs',
         '--archives-dir', str(container_clp_config.archive_output.directory)
     ]
@@ -451,7 +452,8 @@ def start_scheduler(instance_id: str, clp_config: CLPConfig, container_clp_confi
     logger.info(f"Started {SCHEDULER_COMPONENT_NAME}.")
 
 
-def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig, mounts: CLPDockerMounts):
+def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig,
+                           mounts: CLPDockerMounts):
     logger.info(f"Starting {SEARCH_SCHEDULER_COMPONENT_NAME}...")
 
     container_name = f'clp-{SEARCH_SCHEDULER_COMPONENT_NAME}-{instance_id}'
@@ -495,8 +497,8 @@ def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_cl
     scheduler_cmd = [
         'python3', '-u', '-m',
         'job_orchestration.scheduler.search_scheduler',
-        #'--config', str(container_clp_config.logs_directory / container_config_filename),
-        '--logs-dir', "/opt/clp/var/log/search_scheduler",
+        # '--config', str(container_clp_config.logs_directory / container_config_filename),
+        # V0.5 TODO: pass those variables using clp config
         "--db-host", clp_config.database.host,
         "--db-port", str(clp_config.database.port),
         "--output-db-host", clp_config.results_cache.host,
@@ -520,7 +522,7 @@ def start_compression_worker(instance_id: str, clp_config: CLPConfig, container_
 
 
 def start_search_worker(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig,
-                             num_cpus: int, mounts: CLPDockerMounts):
+                        num_cpus: int, mounts: CLPDockerMounts):
     compression_queue_config = container_clp_config.search_queue
     celery_method = 'job_orchestration.executor.search'
     celery_route = f"{QueueName.SEARCH}"
@@ -609,9 +611,10 @@ def main(argv):
     component_args_parser.add_parser(COMPRESSION_JOB_HANDLER_COMPONENT_NAME)
     # need to think about how to specify the argument
     component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
-    worker_args_parser = component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
-    worker_args_parser.add_argument('--num-cpus', type=int, default=0,
-                                    help="Number of logical CPU cores to use for compression")
+    # V0.5 TODO properly handle num-cpus argument
+    # worker_args_parser = component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
+    args_parser.add_argument('--num-cpus', type=int, default=0,
+                             help="Number of logical CPU cores to use for compression")
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -650,10 +653,10 @@ def main(argv):
 
     # Get the number of CPU cores to use
     num_cpus = multiprocessing.cpu_count()
-    # if '' == component_name:
-    #     if parsed_args.num_cpus != 0:
-    #         num_cpus = parsed_args.num_cpus
-    #     num_cpus /= 2
+    if '' == component_name:
+        if parsed_args.num_cpus != 0:
+            num_cpus = parsed_args.num_cpus
+        num_cpus = int(num_cpus / 2)
 
     if COMPRESSION_WORKER_COMPONENT_NAME == component_name and parsed_args.num_cpus != 0:
         num_cpus = parsed_args.num_cpus

@@ -222,13 +222,10 @@ def check_job_status_and_update_db(db_conn):
             set_job_status(db_conn, job_id, JobStatus.SUCCESS)
 
 def handle_jobs(
-    logs_dir: Path,
     db_conn,
     celery_worker_method_base_kwargs: Dict[str, Any],
 ) -> None:
     # Changes the os directory for job specific logs
-    os.chdir(logs_dir)
-
     while True:
         poll_and_submit_pending_search_jobs(db_conn, celery_worker_method_base_kwargs)
         poll_and_handle_cancelling_search_jobs(db_conn)
@@ -241,10 +238,6 @@ def handle_jobs(
 def main(argv: List[str]) -> int:
     # fmt: off
     args_parser = argparse.ArgumentParser(description="Wait for and run compression jobs.")
-    args_parser.add_argument(
-        "--logs-dir", default="var/log/search-jobs",
-        help="Directory where search job logs should be stored."
-    )
     args_parser.add_argument("--db-host", required=True, help="Metadata Database Host.")
     args_parser.add_argument("--db-port", required=True, type=int, help="Metadata Database Port.")
 
@@ -255,9 +248,6 @@ def main(argv: List[str]) -> int:
     db_password = os.getenv('DB_PASSWORD')
 
     parsed_args = args_parser.parse_args(argv[1:])
-
-    logs_dir = Path(parsed_args.logs_dir).resolve()
-    logs_dir.mkdir(parents=True, exist_ok=True)
 
     fs_input_config = {}
     output_config = {"database_ip" : parsed_args.output_db_host, "database_port" : parsed_args.output_db_port, "db_name": mongo_db_name}
@@ -285,7 +275,6 @@ def main(argv: List[str]) -> int:
     logger.info("search-job-handler started.")
 
     handle_jobs(
-        logs_dir=logs_dir,
         db_conn=db_conn,
         celery_worker_method_base_kwargs=celery_worker_method_base_kwargs,
     )
