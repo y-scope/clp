@@ -161,7 +161,10 @@ def prepare_fs_compression_jobs(
             parsed_list_paths.append(path)
         else:
             for internal_path in path.rglob("*"):
-                parsed_list_paths.append(internal_path)
+                # V0.5 TODO: customization for filer
+                # rglob on filer returns directory
+                if not internal_path.is_dir():
+                    parsed_list_paths.append(internal_path)
 
     # Create the compression buffer
     jobs_arguments: List[Dict[str, Any]] = []

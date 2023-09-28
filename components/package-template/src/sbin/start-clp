@@ -369,7 +369,9 @@ def start_compression_job_handler(instance_id: str, clp_config: CLPConfig, conta
         '-e', f'RESULT_BACKEND=rpc://'
               f'{container_clp_config.compression_queue.username}:{container_clp_config.compression_queue.password}'
               f'@{container_clp_config.compression_queue.host}:{container_clp_config.compression_queue.port}',
-        '-u', f'{os.getuid()}:{os.getgid()}',
+        # V0.5 TODO: customization for filer
+        #'-u', f'{os.getuid()}:{os.getgid()}',
+        '-u', f'root:root',
         '--mount', str(mounts.clp_home),
     ]
     necessary_mounts = [
@@ -483,7 +485,9 @@ def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_cl
         '-e', f'RESULT_BACKEND=rpc://'
               f'{container_clp_config.search_queue.username}:{container_clp_config.search_queue.password}'
               f'@{container_clp_config.search_queue.host}:{container_clp_config.search_queue.port}',
-        '-u', f'{os.getuid()}:{os.getgid()}',
+        # V0.5 TODO: customization for filer
+        #'-u', f'{os.getuid()}:{os.getgid()}',
+        '-u', f'root:root',
         '--mount', str(mounts.clp_home),
     ]
     necessary_mounts = [
@@ -564,7 +568,9 @@ def start_worker(component_name: str, instance_id: str, clp_config: CLPConfig,
         '-e', f'CLP_DATA_DIR={container_clp_config.data_directory}',
         '-e', f'CLP_ARCHIVE_OUTPUT_DIR={container_clp_config.archive_output.directory}',
         '-e', f'CLP_LOGS_DIR={container_clp_config.logs_directory}',
-        '-u', f'{os.getuid()}:{os.getgid()}',
+        # V0.5 TODO: customization for filer
+        #'-u', f'{os.getuid()}:{os.getgid()}',
+        '-u', f'root:root',
         '--mount', str(mounts.clp_home),
     ]
     necessary_mounts = [
