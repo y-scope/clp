@@ -3,7 +3,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <regex>
 #include <type_traits>
 
 namespace ffi::ir_stream::cProtocol {
@@ -13,12 +12,14 @@ namespace Metadata {
     constexpr int8_t LengthUShort = 0x12;
 
     constexpr char VersionKey[] = "VERSION";
-    constexpr char VersionValue[] = "v0.0.1";
-    constexpr char VersionRegex[] =
-            "^v(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)"
-            "(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)"
-            "(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
-            "(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$";
+    constexpr char VersionValue[] = "0.0.1";
+
+    // The following regex can be used to validate a Semantic Versioning string.
+    // The source of the regex can be found here: https://semver.org/
+    constexpr char VersionRegex[] = "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)"
+                                    "(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)"
+                                    "(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
+                                    "(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$";
 
     constexpr char TimestampPatternKey[] = "TIMESTAMP_PATTERN";
     constexpr char TimestampPatternSyntaxKey[] = "TIMESTAMP_PATTERN_SYNTAX";

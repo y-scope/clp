@@ -465,14 +465,32 @@ IRErrorCode decode_preamble(
     return IRErrorCode_Success;
 }
 
-IRProtocolErrorCode validate_protocol_version(std::string const& protocol_version) {
-    std::regex const protocol_version_regex{cProtocol::Metadata::VersionRegex};
-    if (false == std::regex_match(protocol_version, protocol_version_regex)) {
-        return IRProtocolErrorCode_Unknown;
+IRProtocolErrorCode validate_protocol_version(std::string_view protocol_version) {
+    if ("v0.0.0" == protocol_version) {
+        // This version is hardcoded to support the oldest IR protocol version.
+        // When this version is no longer supported, this branch should be
+        // removed.
+        return IRProtocolErrorCode_Supported;
     }
-    std::string_view current_protocol_version{cProtocol::Metadata::VersionValue};
-    if (current_protocol_version < protocol_version) {
-        return IRProtocolErrorCode_Unsupported;
+    std::regex const protocol_version_regex{cProtocol::Metadata::VersionRegex};
+    if (false
+        == std::regex_match(
+                protocol_version.begin(),
+                protocol_version.end(),
+                protocol_version_regex
+        ))
+    {
+        return IRProtocolErrorCode_Invalid;
+    }
+    std::string_view current_build_protocol_version{cProtocol::Metadata::VersionValue};
+    auto get_major_version{[](std::string_view version) {
+        return version.substr(0, version.find('.'));
+    }};
+    if (current_build_protocol_version < protocol_version) {
+        return IRProtocolErrorCode_Too_New;
+    }
+    if (get_major_version(current_build_protocol_version) > get_major_version(protocol_version)) {
+        return IRProtocolErrorCode_Too_Old;
     }
     return IRProtocolErrorCode_Supported;
 }

@@ -130,8 +130,7 @@ static epoch_time_ms_t get_current_ts() {
 
 template <typename encoded_variable_t>
 bool match_encoding_type(bool is_four_bytes_encoding) {
-    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> ||
-                  is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
         return false == is_four_bytes_encoding;
@@ -142,8 +141,7 @@ bool match_encoding_type(bool is_four_bytes_encoding) {
 
 template <typename encoded_variable_t>
 epoch_time_ms_t get_next_timestamp_for_test() {
-    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> ||
-                  is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
 
     // We return an absolute timestamp for the eight-byte encoding and a mocked
     // timestamp delta for the four-byte encoding
@@ -166,8 +164,7 @@ bool encode_preamble(
         epoch_time_ms_t reference_timestamp,
         vector<int8_t>& ir_buf
 ) {
-    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> ||
-                  is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
         return ffi::ir_stream::eight_byte_encoding::encode_preamble(
@@ -194,8 +191,7 @@ bool encode_message(
         string& logtype,
         vector<int8_t>& ir_buf
 ) {
-    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> ||
-                  is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
         return ffi::ir_stream::eight_byte_encoding::encode_message(
@@ -217,8 +213,7 @@ bool encode_message(
 template <typename encoded_variable_t>
 IRErrorCode
 decode_next_message(BufferReader& reader, string& message, epoch_time_ms_t& decoded_ts) {
-    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> ||
-                  is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
         return ffi::ir_stream::eight_byte_encoding::decode_next_message(
@@ -245,11 +240,13 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
     // Test eight-byte encoding
     vector<int8_t> eight_byte_encoding_vec{
             EightByteEncodingMagicNumber,
-            EightByteEncodingMagicNumber + MagicNumberLength};
+            EightByteEncodingMagicNumber + MagicNumberLength
+    };
 
     BufferReader eight_byte_ir_buffer{
             size_checked_pointer_cast<char const>(eight_byte_encoding_vec.data()),
-            eight_byte_encoding_vec.size()};
+            eight_byte_encoding_vec.size()
+    };
     REQUIRE(get_encoding_type(eight_byte_ir_buffer, is_four_bytes_encoding)
             == IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<eight_byte_encoded_variable_t>(is_four_bytes_encoding));
@@ -257,11 +254,13 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
     // Test four-byte encoding
     vector<int8_t> four_byte_encoding_vec{
             FourByteEncodingMagicNumber,
-            FourByteEncodingMagicNumber + MagicNumberLength};
+            FourByteEncodingMagicNumber + MagicNumberLength
+    };
 
     BufferReader four_byte_ir_buffer{
             size_checked_pointer_cast<char const>(four_byte_encoding_vec.data()),
-            four_byte_encoding_vec.size()};
+            four_byte_encoding_vec.size()
+    };
     REQUIRE(get_encoding_type(four_byte_ir_buffer, is_four_bytes_encoding)
             == IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<four_byte_encoded_variable_t>(is_four_bytes_encoding));
@@ -276,7 +275,8 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
 
     BufferReader incomplete_buffer{
             size_checked_pointer_cast<char const>(four_byte_encoding_vec.data()),
-            four_byte_encoding_vec.size() - 1};
+            four_byte_encoding_vec.size() - 1
+    };
     REQUIRE(get_encoding_type(incomplete_buffer, is_four_bytes_encoding)
             == IRErrorCode::IRErrorCode_Incomplete_IR);
 
@@ -284,7 +284,8 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
     vector<int8_t> const invalid_ir_vec{0x02, 0x43, 0x24, 0x34};
     BufferReader invalid_ir_buffer{
             size_checked_pointer_cast<char const>(invalid_ir_vec.data()),
-            invalid_ir_vec.size()};
+            invalid_ir_vec.size()
+    };
     REQUIRE(get_encoding_type(invalid_ir_buffer, is_four_bytes_encoding)
             == IRErrorCode::IRErrorCode_Corrupted_IR);
 }
@@ -330,10 +331,8 @@ TEMPLATE_TEST_CASE(
     string_view json_metadata{metadata_ptr, metadata_size};
 
     auto metadata_json = nlohmann::json::parse(json_metadata);
-    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Supported
-            == validate_protocol_version(
-                    metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey)
-            ));
+    std::string const version = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey);
+    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Supported == validate_protocol_version(version));
     REQUIRE(ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
     set_timestamp_info(metadata_json, ts_info);
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);
@@ -356,7 +355,8 @@ TEMPLATE_TEST_CASE(
             == IRErrorCode::IRErrorCode_Success);
     string_view json_metadata_copied{
             size_checked_pointer_cast<char const>(json_metadata_vec.data()),
-            json_metadata_vec.size()};
+            json_metadata_vec.size()
+    };
     // Crosscheck with the json_metadata decoded previously
     REQUIRE(json_metadata_copied == json_metadata);
 
@@ -364,7 +364,8 @@ TEMPLATE_TEST_CASE(
     ir_buf.resize(encoded_preamble_end_pos - 1);
     BufferReader incomplete_preamble_buffer{
             size_checked_pointer_cast<char const>(ir_buf.data()),
-            ir_buf.size()};
+            ir_buf.size()
+    };
     incomplete_preamble_buffer.seek_from_begin(MagicNumberLength);
     REQUIRE(decode_preamble(incomplete_preamble_buffer, metadata_type, metadata_pos, metadata_size)
             == IRErrorCode::IRErrorCode_Incomplete_IR);
@@ -373,7 +374,8 @@ TEMPLATE_TEST_CASE(
     ir_buf[MagicNumberLength] = 0x23;
     BufferReader corrupted_preamble_buffer{
             size_checked_pointer_cast<char const>(ir_buf.data()),
-            ir_buf.size()};
+            ir_buf.size()
+    };
     REQUIRE(decode_preamble(corrupted_preamble_buffer, metadata_type, metadata_pos, metadata_size)
             == IRErrorCode::IRErrorCode_Corrupted_IR);
 }
@@ -415,7 +417,8 @@ TEMPLATE_TEST_CASE(
     ir_buf.resize(encoded_message_end_pos - 4);
     BufferReader incomplete_preamble_buffer{
             size_checked_pointer_cast<char const>(ir_buf.data()),
-            ir_buf.size()};
+            ir_buf.size()
+    };
     REQUIRE(IRErrorCode::IRErrorCode_Incomplete_IR
             == decode_next_message<TestType>(incomplete_preamble_buffer, message, timestamp));
 }
@@ -449,7 +452,8 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]") {
     ir_with_extra_escape.at(logtype_end_pos - 1) = ir::cVariablePlaceholderEscapeCharacter;
     BufferReader ir_with_extra_escape_buffer{
             size_checked_pointer_cast<char const>(ir_with_extra_escape.data()),
-            ir_with_extra_escape.size()};
+            ir_with_extra_escape.size()
+    };
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error
             == decode_next_message<eight_byte_encoded_variable_t>(
                     ir_with_extra_escape_buffer,
@@ -463,7 +467,8 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]") {
             = enum_to_underlying_type(VariablePlaceholder::Dictionary);
     BufferReader ir_with_extra_placeholder_buffer{
             size_checked_pointer_cast<char const>(ir_with_extra_placeholder.data()),
-            ir_with_extra_placeholder.size()};
+            ir_with_extra_placeholder.size()
+    };
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error
             == decode_next_message<eight_byte_encoded_variable_t>(
                     ir_with_extra_placeholder_buffer,
@@ -475,51 +480,56 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]") {
 TEST_CASE("decode_next_message_four_byte_timestamp_delta", "[ffi][decode_next_message]") {
     string const message = "Static <\text>, dictVar1, 123, 456345232.7234223, "
                            "dictVar2, 987, 654.3, end of static text";
-    auto test_timestamp_delta = [&](epoch_time_ms_t ref_ts_delta) {
+    auto test_timestamp_delta = [&](epoch_time_ms_t ts_delta) {
         vector<int8_t> ir_buf;
         string logtype;
         REQUIRE(true
-                == encode_message<four_byte_encoded_variable_t>(
-                        ref_ts_delta,
-                        message,
-                        logtype,
-                        ir_buf
-                ));
+                == encode_message<four_byte_encoded_variable_t>(ts_delta, message, logtype, ir_buf)
+        );
 
         BufferReader ir_buffer{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
         string decoded_message;
-        epoch_time_ms_t delta_ts;
+        epoch_time_ms_t decoded_delta_ts{};
         REQUIRE(IRErrorCode::IRErrorCode_Success
                 == decode_next_message<four_byte_encoded_variable_t>(
                         ir_buffer,
                         decoded_message,
-                        delta_ts
+                        decoded_delta_ts
                 ));
         REQUIRE(message == decoded_message);
-        REQUIRE(delta_ts == ref_ts_delta);
+        REQUIRE(decoded_delta_ts == ts_delta);
+        return true;
     };
 
-    test_timestamp_delta(0);
+    auto timestamp_deltas = GENERATE(
+            0,
+            INT8_MIN,
+            INT8_MIN + 1,
+            INT8_MAX - 1,
+            INT8_MAX,
+            INT16_MIN,
+            INT16_MIN + 1,
+            INT16_MAX - 1,
+            INT16_MAX,
+            INT32_MIN,
+            INT32_MIN + 1,
+            INT32_MAX - 1,
+            INT32_MAX,
+            INT64_MIN,
+            INT64_MAX
+    );
+    REQUIRE(test_timestamp_delta(timestamp_deltas));
+}
 
-    test_timestamp_delta(INT8_MIN);
-    test_timestamp_delta(INT8_MIN + 1);
-    test_timestamp_delta(INT8_MAX - 1);
-    test_timestamp_delta(INT8_MAX);
+TEST_CASE("validate_protocol_version", "[ffi][validate_version_protocol]") {
+    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Invalid == validate_protocol_version("v0.0.1"));
+    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Invalid == validate_protocol_version("0.1"));
+    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Invalid == validate_protocol_version("0.a.1"));
 
-    test_timestamp_delta(INT16_MIN);
-    test_timestamp_delta(INT16_MIN + 1);
-    test_timestamp_delta(INT16_MAX - 1);
-    test_timestamp_delta(INT16_MAX);
-
-    test_timestamp_delta(INT32_MIN);
-    test_timestamp_delta(INT32_MIN + 1);
-    test_timestamp_delta(INT32_MAX - 1);
-    test_timestamp_delta(INT32_MAX);
-
-    test_timestamp_delta(INT64_MIN);
-    test_timestamp_delta(INT64_MIN + 1);
-    test_timestamp_delta(INT64_MAX - 1);
-    test_timestamp_delta(INT64_MAX);
+    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Too_New == validate_protocol_version("1000.0.0"));
+    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Supported
+            == validate_protocol_version(ffi::ir_stream::cProtocol::Metadata::VersionValue));
+    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Supported == validate_protocol_version("v0.0.0"));
 }
 
 TEMPLATE_TEST_CASE(
@@ -566,7 +576,8 @@ TEMPLATE_TEST_CASE(
 
     BufferReader complete_ir_buffer{
             size_checked_pointer_cast<char const>(ir_buf.data()),
-            ir_buf.size()};
+            ir_buf.size()
+    };
 
     bool is_four_bytes_encoding;
     REQUIRE(get_encoding_type(complete_ir_buffer, is_four_bytes_encoding)
@@ -585,10 +596,8 @@ TEMPLATE_TEST_CASE(
     auto* json_metadata_ptr{size_checked_pointer_cast<char>(ir_buf.data() + metadata_pos)};
     string_view json_metadata{json_metadata_ptr, metadata_size};
     auto metadata_json = nlohmann::json::parse(json_metadata);
-    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Supported
-            == validate_protocol_version(
-                    metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey)
-            ));
+    string const version = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey);
+    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Supported == validate_protocol_version(version));
     REQUIRE(ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
     set_timestamp_info(metadata_json, ts_info);
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);

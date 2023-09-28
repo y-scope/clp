@@ -18,6 +18,13 @@ typedef enum {
     IRErrorCode_Incomplete_IR,
 } IRErrorCode;
 
+typedef enum {
+    IRProtocolErrorCode_Supported,
+    IRProtocolErrorCode_Too_Old,
+    IRProtocolErrorCode_Too_New,
+    IRProtocolErrorCode_Invalid,
+} IRProtocolErrorCode;
+
 class DecodingException : public TraceableException {
 public:
     // Constructors
@@ -142,23 +149,19 @@ IRErrorCode decode_preamble(
         std::vector<int8_t>& metadata
 );
 
-typedef enum {
-    IRProtocolErrorCode_Supported,
-    IRProtocolErrorCode_Unsupported,
-    IRProtocolErrorCode_Unknown,
-} IRProtocolErrorCode;
-
 /**
  * Validates whether the given protocol version can be supported by the current
  * build.
- * @param protocol_version Protocol version to be validate.
+ * @param protocol_version
  * @return IRProtocolErrorCode_Supported if the protocol version is supported.
- * @return IRProtocolErrorCode_Unsupported if the protocol version cannot be
- * supported.
- * @return IRProtocolErrorCode_Unknow if the protocol version does not follow
- * the form specified by SemVer.
+ * @return IRProtocolErrorCode_Too_Old if the protocol version is no longer
+ * supported by the current build version.
+ * @return IRProtocolErrorCode_Too_New if the protocol version is newer than the
+ * build version.
+ * @return IRProtocolErrorCode_Invalid if the protocol version does not follow
+ * the SemVer specification.
  */
-IRProtocolErrorCode validate_protocol_version(std::string const& protocol_version);
+IRProtocolErrorCode validate_protocol_version(std::string_view protocol_version);
 
 namespace eight_byte_encoding {
     /**

@@ -57,10 +57,7 @@ static void add_base_metadata_fields(
  * @param logtype
  * @return true
  */
-static bool append_constant_to_logtype(
-        string_view constant,
-        string& logtype
-);
+static bool append_constant_to_logtype(string_view constant, string& logtype);
 
 /**
  * A functor for encoding dictionary variables in a message
