@@ -130,7 +130,10 @@ static epoch_time_ms_t get_current_ts() {
 
 template <typename encoded_variable_t>
 bool match_encoding_type(bool is_four_bytes_encoding) {
-    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+    static_assert(
+            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
+            || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+    );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
         return false == is_four_bytes_encoding;
@@ -141,7 +144,10 @@ bool match_encoding_type(bool is_four_bytes_encoding) {
 
 template <typename encoded_variable_t>
 epoch_time_ms_t get_next_timestamp_for_test() {
-    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+    static_assert(
+            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
+            || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+    );
 
     // We return an absolute timestamp for the eight-byte encoding and a mocked
     // timestamp delta for the four-byte encoding
@@ -164,7 +170,10 @@ bool encode_preamble(
         epoch_time_ms_t reference_timestamp,
         vector<int8_t>& ir_buf
 ) {
-    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+    static_assert(
+            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
+            || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+    );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
         return ffi::ir_stream::eight_byte_encoding::encode_preamble(
@@ -191,7 +200,10 @@ bool encode_message(
         string& logtype,
         vector<int8_t>& ir_buf
 ) {
-    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+    static_assert(
+            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
+            || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+    );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
         return ffi::ir_stream::eight_byte_encoding::encode_message(
@@ -213,7 +225,10 @@ bool encode_message(
 template <typename encoded_variable_t>
 IRErrorCode
 decode_next_message(BufferReader& reader, string& message, epoch_time_ms_t& decoded_ts) {
-    static_assert(is_same_v<encoded_variable_t, eight_byte_encoded_variable_t> || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+    static_assert(
+            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
+            || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+    );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
         return ffi::ir_stream::eight_byte_encoding::decode_next_message(
