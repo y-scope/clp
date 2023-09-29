@@ -155,9 +155,9 @@ IRErrorCode decode_preamble(
  * @param protocol_version
  * @return IRProtocolErrorCode_Supported if the protocol version is supported.
  * @return IRProtocolErrorCode_Too_Old if the protocol version is no longer
- * supported by the current build version.
- * @return IRProtocolErrorCode_Too_New if the protocol version is newer than the
- * build version.
+ * supported by this build's protocol version.
+ * @return IRProtocolErrorCode_Too_New if the protocol version is newer than this
+ * build's protocol version.
  * @return IRProtocolErrorCode_Invalid if the protocol version does not follow
  * the SemVer specification.
  */
