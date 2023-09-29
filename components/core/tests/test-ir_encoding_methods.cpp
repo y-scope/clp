@@ -495,45 +495,39 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]") {
 TEST_CASE("decode_next_message_four_byte_timestamp_delta", "[ffi][decode_next_message]") {
     string const message = "Static <\text>, dictVar1, 123, 456345232.7234223, "
                            "dictVar2, 987, 654.3, end of static text";
-    auto test_timestamp_delta = [&](epoch_time_ms_t ts_delta) {
-        vector<int8_t> ir_buf;
-        string logtype;
-        REQUIRE(true
-                == encode_message<four_byte_encoded_variable_t>(ts_delta, message, logtype, ir_buf)
-        );
-
-        BufferReader ir_buffer{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
-        string decoded_message;
-        epoch_time_ms_t decoded_delta_ts{};
-        REQUIRE(IRErrorCode::IRErrorCode_Success
-                == decode_next_message<four_byte_encoded_variable_t>(
-                        ir_buffer,
-                        decoded_message,
-                        decoded_delta_ts
-                ));
-        REQUIRE(message == decoded_message);
-        REQUIRE(decoded_delta_ts == ts_delta);
-        return true;
-    };
-
-    auto timestamp_deltas = GENERATE(
-            0,
-            INT8_MIN,
-            INT8_MIN + 1,
-            INT8_MAX - 1,
-            INT8_MAX,
-            INT16_MIN,
-            INT16_MIN + 1,
-            INT16_MAX - 1,
-            INT16_MAX,
-            INT32_MIN,
-            INT32_MIN + 1,
-            INT32_MAX - 1,
-            INT32_MAX,
-            INT64_MIN,
-            INT64_MAX
+    auto ts_delta = GENERATE(
+            static_cast<ffi::epoch_time_ms_t>(0),
+            static_cast<ffi::epoch_time_ms_t>(INT8_MIN),
+            static_cast<ffi::epoch_time_ms_t>(INT8_MIN + 1),
+            static_cast<ffi::epoch_time_ms_t>(INT8_MAX - 1),
+            static_cast<ffi::epoch_time_ms_t>(INT8_MAX),
+            static_cast<ffi::epoch_time_ms_t>(INT16_MIN),
+            static_cast<ffi::epoch_time_ms_t>(INT16_MIN + 1),
+            static_cast<ffi::epoch_time_ms_t>(INT16_MAX - 1),
+            static_cast<ffi::epoch_time_ms_t>(INT16_MAX),
+            static_cast<ffi::epoch_time_ms_t>(INT32_MIN),
+            static_cast<ffi::epoch_time_ms_t>(INT32_MIN + 1),
+            static_cast<ffi::epoch_time_ms_t>(INT32_MAX - 1),
+            static_cast<ffi::epoch_time_ms_t>(INT32_MAX),
+            static_cast<ffi::epoch_time_ms_t>(INT64_MIN),
+            static_cast<ffi::epoch_time_ms_t>(INT64_MAX)
     );
-    REQUIRE(test_timestamp_delta(timestamp_deltas));
+    vector<int8_t> ir_buf;
+    string logtype;
+    REQUIRE(true == encode_message<four_byte_encoded_variable_t>(ts_delta, message, logtype, ir_buf)
+    );
+
+    BufferReader ir_buffer{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
+    string decoded_message;
+    epoch_time_ms_t decoded_delta_ts{};
+    REQUIRE(IRErrorCode::IRErrorCode_Success
+            == decode_next_message<four_byte_encoded_variable_t>(
+                    ir_buffer,
+                    decoded_message,
+                    decoded_delta_ts
+            ));
+    REQUIRE(message == decoded_message);
+    REQUIRE(decoded_delta_ts == ts_delta);
 }
 
 TEST_CASE("validate_protocol_version", "[ffi][validate_version_protocol]") {
