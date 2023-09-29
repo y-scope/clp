@@ -514,8 +514,7 @@ TEST_CASE("decode_next_message_four_byte_timestamp_delta", "[ffi][decode_next_me
     );
     vector<int8_t> ir_buf;
     string logtype;
-    REQUIRE(true == encode_message<four_byte_encoded_variable_t>(ts_delta, message, logtype, ir_buf)
-    );
+    REQUIRE(encode_message<four_byte_encoded_variable_t>(ts_delta, message, logtype, ir_buf));
 
     BufferReader ir_buffer{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
     string decoded_message;
