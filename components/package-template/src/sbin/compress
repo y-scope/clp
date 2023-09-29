@@ -87,7 +87,18 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    container_name = f'clp-compressor-{str(uuid.uuid4())[-4:]}'
+
+    # Create instance-id file
+    instance_id: str
+    instance_id_file_path = clp_config.logs_directory / 'instance-id'
+    if instance_id_file_path.exists():
+        with open(instance_id_file_path, 'r') as f:
+            instance_id = f.readline()
+    else:
+        logger.error("No instance id found. Check if package has been launched")
+        return -1
+
+    container_name = f'clp-compression-issuer-{instance_id}'
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     container_config_filename = f'.{container_name}-config.yml'
@@ -120,13 +131,13 @@ def main(argv):
     compress_cmd = [
         str(CONTAINER_CLP_HOME / 'sbin' / 'native' / 'compress'),
         '--config', str(container_clp_config.logs_directory / container_config_filename),
-        '--remove-path-prefix', str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+        '--path-prefix-to-remove', str(CONTAINER_INPUT_LOGS_ROOT_DIR)
     ]
     for path in parsed_args.paths:
-        # Resolve path and prefix it with CONTAINER_INPUT_LOGS_ROOT_DIR
         resolved_path = pathlib.Path(path).resolve()
-        path = str(CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(resolved_path.anchor))
-        compress_cmd.append(path)
+        # Note, here we don't prepend with CONTAINER_INPUT_LOGS_ROOT_DIR
+        # the simple assumption is that the compress won't process the file
+        compress_cmd.append(str(resolved_path))
     if parsed_args.input_list is not None:
         # Get unused output path
         while True:
@@ -145,8 +156,7 @@ def main(argv):
                         if not resolved_path.is_absolute():
                             logger.error(f"Invalid relative path in input list: {resolved_path}")
                             all_paths_valid = False
-                        path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(resolved_path.anchor)
-                        output_list.write(f'{path}\n')
+                        output_list.write(f'{resolved_path}\n')
                 if not all_paths_valid:
                     raise ValueError("--input-list must only contain absolute paths")
         finally:
