@@ -10,20 +10,24 @@ CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path('etc') / 'credentials.yml'
 CLP_METADATA_TABLE_PREFIX = 'clp_'
 
 # Component names
-DB_COMPONENT_NAME = 'db'
-RESULTS_CACHE_COMPONENT_NAME = 'results-cache'
-COMPRESSION_JOB_HANDLER_COMPONENT_NAME = 'compression-job-handler'
-COMPRESSION_QUEUE_COMPONENT_NAME = 'compression-queue'
+# NOTE: For simplicity with parsing the config file and usage throughout the
+# codebase, these names should be kept in-sync with:
+# * the variable names in CLPConfig
+# * the config-keys in clp-config.yml
+DB_COMPONENT_NAME = 'database'
+RESULTS_CACHE_COMPONENT_NAME = 'results_cache'
+COMPRESSION_JOB_HANDLER_COMPONENT_NAME = 'compression_job_handler'
+COMPRESSION_QUEUE_COMPONENT_NAME = 'compression_queue'
 SCHEDULER_COMPONENT_NAME = 'scheduler'
-SEARCH_QUEUE_COMPONENT_NAME = 'search-queue'
-SEARCH_SCHEDULER_COMPONENT_NAME = 'search-scheduler'
-SEARCH_WORKER_COMPONENT_NAME = 'search-worker'
-COMPRESSION_WORKER_COMPONENT_NAME = 'compression-worker'
+SEARCH_QUEUE_COMPONENT_NAME = 'search_queue'
+SEARCH_SCHEDULER_COMPONENT_NAME = 'search_scheduler'
+SEARCH_WORKER_COMPONENT_NAME = 'search_worker'
+COMPRESSION_WORKER_COMPONENT_NAME = 'compression_worker'
 
 
 class Database(BaseModel):
-    type: str = 'mariadb'
-    host: str = 'localhost'
+    type: str = 'mysql'
+    host: str = '127.0.0.1'
     port: int = 3306
     name: str = 'clp-db'
     ssl_cert: typing.Optional[str] = None
@@ -37,19 +41,21 @@ class Database(BaseModel):
     def validate_database_type(cls, field):
         supported_database_types = ['mysql', 'mariadb']
         if field not in supported_database_types:
-            raise ValueError(f"database.type must be one of the following {'|'.join(supported_database_types)}")
+            raise ValueError(
+                f"{DB_COMPONENT_NAME}.type must be one of the following "
+                f"{'|'.join(supported_database_types)}")
         return field
 
     @validator('name')
     def validate_database_name(cls, field):
         if '' == field:
-            raise ValueError("database.name cannot be empty.")
+            raise ValueError(f"{DB_COMPONENT_NAME}.name cannot be empty.")
         return field
 
     @validator('host')
     def validate_database_host(cls, field):
         if '' == field:
-            raise ValueError("database.host cannot be empty.")
+            raise ValueError(f"{DB_COMPONENT_NAME}.host cannot be empty.")
         return field
 
     def ensure_credentials_loaded(self):
@@ -229,8 +235,8 @@ class CLPConfig(BaseModel):
         if config is None:
             raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
         try:
-            self.database.username = get_config_value(config, 'db.user')
-            self.database.password = get_config_value(config, 'db.password')
+            self.database.username = get_config_value(config, f'{DB_COMPONENT_NAME}.user')
+            self.database.password = get_config_value(config, f'{DB_COMPONENT_NAME}.password')
         except KeyError as ex:
             raise ValueError(f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'.")
 
