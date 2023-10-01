@@ -70,11 +70,28 @@ public:
         return m_compressed_size + m_dynamic_compressed_size;
     }
 
-    void increment_static_compressed_size(uint64_t size_bytes) { m_compressed_size += size_bytes;
+    void increment_static_compressed_size(uint64_t size_bytes) {
+        m_compressed_size += size_bytes;
     }
 
     void set_dynamic_compressed_size(uint64_t size_bytes) {
         m_dynamic_compressed_size = size_bytes;
+    }
+
+    void increment_num_messages(uint64_t num_messages) {
+        m_num_messages += num_messages;
+    }
+
+    [[nodiscard]] auto get_num_messages() const {
+        return m_num_messages;
+    }
+
+    void increment_file_count() {
+        m_num_files += 1;
+    }
+
+    [[nodiscard]] auto get_num_files() const {
+        return m_num_files;
     }
 
     [[nodiscard]] auto get_begin_timestamp() const { return m_begin_timestamp; }
@@ -104,6 +121,10 @@ private:
     // The size of the archive
     uint64_t m_compressed_size{0};
     uint64_t m_dynamic_compressed_size{0};
+    // Note, those two data is only needed for status reporting
+    // The number of messages in the archive
+    uint64_t m_num_messages{0};
+    uint64_t m_num_files{0};
 };
 }  // namespace streaming_archive
 

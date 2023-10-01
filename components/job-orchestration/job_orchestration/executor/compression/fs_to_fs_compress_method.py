@@ -1,8 +1,10 @@
 import logging
 import os
+import sys
 import subprocess
 from pathlib import Path
 from typing import Any, Dict
+import json
 
 import yaml
 from celery.app.task import Task
@@ -15,6 +17,15 @@ from clp.package_utils import CONTAINER_INPUT_LOGS_ROOT_DIR
 
 celery_central_logger = get_task_logger(__name__)
 celery_central_logger.setLevel(logging.INFO)
+
+# V0.5 TODO Deduplicate
+def update_job_results(results: Dict[str, Any], archive_status: Dict[str, Any]):
+    results['total_uncompressed_size'] += archive_status['uncompressed_size']
+    results['total_compressed_size'] += archive_status['size']
+    results['num_messages'] += archive_status['num_messages']
+    results['num_files'] += archive_status['num_files']
+    results['begin_ts'] = min(results['begin_ts'], archive_status['begin_ts'])
+    results['end_ts'] = max(results['end_ts'], archive_status['end_ts'])
 
 
 @app.task(bind=True)
@@ -122,12 +133,43 @@ def compress(
         compression_successful = True
 
         # Remove path lists
+        clp_db_config_file_path.unlink()
         log_list_path.unlink()
-    logger.info("Compressed.")
 
+    # Result storage
+    job_results: Dict[str, Any] = {
+        "status": compression_successful,
+        "total_uncompressed_size": 0,
+        "total_compressed_size": 0,
+        "num_messages": 0,
+        "num_files": 0,
+        "begin_ts": sys.maxsize,
+        "end_ts": 0
+    }
+
+    if compression_successful:
+        # Compute the total amount of data compressed
+        last_archive_stats = None
+        while True:
+            line = proc.stdout.readline()
+            if not line:
+                break
+            # V0.5 TODO: remove this
+            # print(f"task {task_id_str}: {line}")
+            stats = json.loads(line.decode('ascii'))
+            if last_archive_stats is not None and stats['id'] != last_archive_stats['id']:
+                # We've started a new archive so add the previous archive's last
+                # reported size to the total
+                update_job_results(job_results, last_archive_stats)
+            last_archive_stats = stats
+        if last_archive_stats is not None:
+            # Add the last archive's last reported size
+            update_job_results(job_results, last_archive_stats)
+
+    logger.info("Compressed.")
     # Close log files
     stderr_log_file.close()
     logger.removeHandler(celery_logging_file_handler)
     celery_logging_file_handler.close()
 
-    return compression_successful
+    return job_results

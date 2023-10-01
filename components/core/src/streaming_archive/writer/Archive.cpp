@@ -425,7 +425,8 @@ namespace streaming_archive::writer {
         files_in_segment.emplace_back(m_file);
         m_local_metadata->increment_static_uncompressed_size(m_file->get_num_uncompressed_bytes());
         m_local_metadata->expand_time_range(m_file->get_begin_ts(), m_file->get_end_ts());
-
+        m_local_metadata->increment_num_messages(m_file->get_num_messages());
+        m_local_metadata->increment_file_count();
         // Close current segment if its uncompressed size is greater than the target
         if (segment.get_uncompressed_size() >= m_target_segment_uncompressed_size) {
             close_segment_and_persist_file_metadata(segment, files_in_segment, logtype_ids_in_segment, var_ids_in_segment);
@@ -546,6 +547,10 @@ namespace streaming_archive::writer {
             json_msg["id"] = m_id_as_string;
             json_msg["uncompressed_size"] = m_local_metadata->get_uncompressed_size_bytes();
             json_msg["size"] = m_local_metadata->get_compressed_size_bytes();
+            json_msg["begin_ts"] = m_local_metadata->get_begin_timestamp();
+            json_msg["end_ts"] = m_local_metadata->get_end_timestamp();
+            json_msg["num_messages"] = m_local_metadata->get_num_messages();
+            json_msg["num_files"] = m_local_metadata->get_num_files();
             std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore) << std::endl;
         }
     }

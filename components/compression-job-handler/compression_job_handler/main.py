@@ -106,16 +106,37 @@ def handle_job_impl(
 
     # Monitor dispatched jobs' statuses
     all_worker_jobs_successful = True
+    # V0.5 TODO: ideally we should update database for each successful subtask but
+    # I don't have time to do it properly. instead, I do the aggregation here
+    job_result: Dict[str, Any] = {
+        "total_uncompressed_size": 0,
+        "total_compressed_size": 0,
+        "num_messages": 0,
+        "num_files": 0,
+        "begin_ts": sys.maxsize,
+        "end_ts": 0
+    }
+
+    # V0.5 TODO Deduplicate
+    def update_job_results(results: Dict[str, Any], archive_status: Dict[str, Any]):
+        results['total_uncompressed_size'] += archive_status['total_uncompressed_size']
+        results['total_compressed_size'] += archive_status['total_compressed_size']
+        results['num_messages'] += archive_status['num_messages']
+        results['num_files'] += archive_status['num_files']
+        results['begin_ts'] = min(results['begin_ts'], archive_status['begin_ts'])
+        results['end_ts'] = max(results['end_ts'], archive_status['end_ts'])
+
     while True:
         try:
             returned_results = get_results_or_timeout(active_jobs)
             if returned_results != None:
                 # Check for finished jobs
-                for job_result in returned_results:
-                    if not job_result:
+                for subtask_result in returned_results:
+                    if not subtask_result["status"]:
                         all_worker_jobs_successful = False
                         logger.error(f"Worker of {job_id_str} failed. See the worker logs for details.")
                     else:
+                        update_job_results(job_result, subtask_result)
                         db_manager.update_job_progression(job_id_str)
                 break
         except Exception as e:
@@ -131,7 +152,8 @@ def handle_job_impl(
 
     if not all_worker_jobs_successful:
         return JobStatus.FAILED
-    elif job_completed_with_errors:
+    update_job_results(job_result, subtask_result)
+    if job_completed_with_errors:
         return JobStatus.SUCCESS_WITH_ERRORS
     else:
         return JobStatus.SUCCESS
@@ -319,6 +341,7 @@ def handle_jobs(
                         f" `{job_completion_status}`."
                     )
 
+        db_manager.update_compression_stat()
         logger.debug("Sleeping for 1 second.")
         time.sleep(1)
 

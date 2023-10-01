@@ -1,3 +1,4 @@
+import sys
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from logging import Logger
@@ -44,6 +45,14 @@ class DBManager(ABC):
     def update_job_progression(self, job_id: str) -> None:
         pass
 
+    @abstractmethod
+    def update_job_metadata(self, job_id: str, metadata: Dict[str, Any]) -> None:
+        pass
+
+    @abstractmethod
+    def update_compression_stat(self) -> None:
+        pass
+
 
 class MongoDBManager(DBManager):
     def __init__(self, logger: Optional[Logger], db_uri: str) -> None:
@@ -58,7 +67,8 @@ class MongoDBManager(DBManager):
             "stats": self.__archive_db["stats"],
             "empty_directories": self.__archive_db["empty_directories"],
         }
-
+        # V0.5 TODO hack to achieve overwrite
+        self.__stat_id = ObjectId()
         self.__projection: Dict[str, int] = {
             "_id": 1,
             "input_type": 1,
@@ -250,6 +260,50 @@ class MongoDBManager(DBManager):
 
         job_metadata = self.get_job_metadata(job_id)
         return self._millisecond_timestamp_to_datetime(job_metadata["submission_timestamp"])
+
+    def update_job_metadata(self, job_id, metadata: Dict[str, Any]) -> None:
+        find_filter = {"_id": ObjectId(job_id)}
+        jobs_collection = self.__db_collections["cjobs"]
+        jobs_collection.find_one_and_update(
+            filter=find_filter,
+            update={
+                "$set": {
+                    'stats': metadata,
+                }
+            },
+        )
+
+    # can be done with a better ts filter. but brutal force for now
+    def update_compression_stat(self) -> None:
+        filter = {"status": str(JobStatus.DONE)}
+        projection = {'stats': 1}
+        jobs_collection = self.__db_collections["cjobs"]
+
+        final_stat = {
+            'id': 'compression_stats',
+            'total_uncompressed_size': 0,
+            'total_compressed_size': 0,
+            'num_messages': 0,
+            'num_files': 0,
+            'begin_ts': sys.maxsize,
+            'end_ts': 0
+        }
+
+        # V0.5 TODO Deduplicate
+        for doc in jobs_collection.find(filter, projection):
+            stat_data = doc['stats']
+            final_stat['total_uncompressed_size'] += stat_data['total_uncompressed_size']
+            final_stat['total_compressed_size'] += stat_data['total_compressed_size']
+            final_stat['num_messages'] += stat_data['num_messages']
+            final_stat['num_files'] += stat_data['num_files']
+            final_stat['begin_ts'] = min(stat_data['begin_ts'], final_stat['begin_ts'])
+            final_stat['end_ts'] = max(stat_data['end_ts'], final_stat['end_ts'])
+        id_filter = {
+            'id': 'compression_stats',
+        }
+        if final_stat['begin_ts'] == sys.maxsize:
+            final_stat['begin_ts'] = 0
+        self.__db_collections['stats'].update_one(id_filter, {"$set": final_stat}, upsert=True)
 
     def update_job_progression(self, job_id: str) -> None:
         """

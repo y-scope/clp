@@ -18,16 +18,16 @@
 #scheduler:
 #  jobs_poll_delay: 1  # seconds
 #
-#results_cache:
-#  host: "localhost"
-#  port: 27017
-#
-#compression_queue:
-#  host: "localhost"
-#  port: 5672
-#search_queue:
-#  host: "localhost"
-#  port: 5673
+results_cache:
+  host: "10.1.0.11"
+  port: 27017
+
+compression_queue:
+  host: "localhost"
+  port: 5673
+search_queue:
+  host: "localhost"
+  port: 5674
 #
 ## Where archives should be output to
 #archive_output:
