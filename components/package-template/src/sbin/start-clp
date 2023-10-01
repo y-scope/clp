@@ -332,7 +332,7 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
                                              clp_config.results_cache.port, 27017, cmd)
     cmd.append('mongo:7.0.1')
     cmd.append('--config')
-    cmd.append(pathlib.Path('/') / 'etc' / 'mongo' / 'mongod.conf')
+    cmd.append(str(pathlib.Path('/') / 'etc' / 'mongo' / 'mongod.conf'))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     logger.info(f"Started {component_name}.")
