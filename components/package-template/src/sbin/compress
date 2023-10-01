@@ -130,8 +130,7 @@ def main(argv):
 
     compress_cmd = [
         str(CONTAINER_CLP_HOME / 'sbin' / 'native' / 'compress'),
-        '--config', str(container_clp_config.logs_directory / container_config_filename),
-        '--path-prefix-to-remove', str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+        '--config', str(container_clp_config.logs_directory / container_config_filename)
     ]
     for path in parsed_args.paths:
         resolved_path = pathlib.Path(path).resolve()

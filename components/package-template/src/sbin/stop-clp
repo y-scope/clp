@@ -105,6 +105,7 @@ def main(argv):
     component_args_parser.add_parser(COMPRESSION_JOB_HANDLER_COMPONENT_NAME)
     component_args_parser.add_parser(COMPRESSION_QUEUE_COMPONENT_NAME)
     component_args_parser.add_parser(SEARCH_QUEUE_COMPONENT_NAME)
+    component_args_parser.add_parser(SEARCH_SCHEDULER_COMPONENT_NAME)
     component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
     component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
 
@@ -145,6 +146,7 @@ def main(argv):
             stop_container(f'clp-{COMPRESSION_WORKER_COMPONENT_NAME}-{instance_id}')
         if '' == component_name or COMPRESSION_JOB_HANDLER_COMPONENT_NAME == component_name:
             container_name = f'clp-{COMPRESSION_JOB_HANDLER_COMPONENT_NAME}-{instance_id}'
+            stop_container(container_name)
         if '' == component_name or SEARCH_WORKER_COMPONENT_NAME == component_name:
             stop_container(f'clp-{SEARCH_WORKER_COMPONENT_NAME}-{instance_id}')
         if '' == component_name or SEARCH_SCHEDULER_COMPONENT_NAME == component_name:

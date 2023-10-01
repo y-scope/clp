@@ -26,7 +26,6 @@ def compress(
     job_input_config: Dict[str, Any],
     job_output_config: Dict[str, Any],
     clp_db_config: Dict[str, Any],
-    paths_to_compress: Dict[str, Any],
 ) -> bool:
     clp_home = Path(os.getenv("CLP_HOME"))
     celery_logs_dir = Path(os.getenv("CLP_LOGS_DIR"))
@@ -53,10 +52,16 @@ def compress(
         yaml.safe_dump(clp_db_config, f)
 
     # Expand parameters
+    paths_to_compress = job_input_config["paths"]
     file_paths = paths_to_compress["file_paths"]
     empty_directories = paths_to_compress.get("empty_directories")
     archives_dir = Path(os.getenv("CLP_ARCHIVE_OUTPUT_DIR"))
     archives_dir.mkdir(parents=True, exist_ok=True)
+
+    prefix_to_remove = CONTAINER_INPUT_LOGS_ROOT_DIR
+    filer_prefix = job_input_config.get("path_prefix_to_remove")
+    if filer_prefix is not None:
+        prefix_to_remove = prefix_to_remove / Path(filer_prefix).relative_to("/")
 
     # TODO This depends on the input paths being absolute and assumes we're
     # running in a container
@@ -90,7 +95,7 @@ def compress(
         "--db-config-file", str(clp_db_config_file_path),
         "--files-from", str(log_list_path),
         # TODO Remove when we can run outside the container
-        "--remove-path-prefix", str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+        "--remove-path-prefix", str(prefix_to_remove)
     ]
     # fmt: on
     logger.info(compression_cmd)

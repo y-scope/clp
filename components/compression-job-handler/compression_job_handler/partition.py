@@ -124,7 +124,7 @@ class PathsToCompressBuffer:
             self.__empty_directories = []
 
         arguments_for_job = self.__arguments.copy()
-        arguments_for_job["paths_to_compress"] = paths_to_compress
+        arguments_for_job["job_input_config"]["paths"] = paths_to_compress
         self.__jobs_arguments.append(arguments_for_job)
         return partition_total_file_size
 

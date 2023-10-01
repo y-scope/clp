@@ -168,6 +168,9 @@ def prepare_fs_compression_jobs(
 
     # Create the compression buffer
     jobs_arguments: List[Dict[str, Any]] = []
+    job_input_config_template = {
+        "path_prefix_to_remove": job_input_config.get("path_prefix_to_remove")
+    }
     paths_to_compress_buffer = PathsToCompressBuffer(
         logger=logger,
         worker_base_arguments=worker_base_arguments,
@@ -177,7 +180,7 @@ def prepare_fs_compression_jobs(
         maintain_file_ordering=False,
         allow_empty_directories=True,
         job_id_str=job_id_str,
-        job_input_config={"path_prefix_to_remove": job_input_config.get("path_prefix_to_remove")},
+        job_input_config=job_input_config_template,
         job_output_config=job_output_config,
         clp_db_config=clp_db_config,
     )
