@@ -1,0 +1,27 @@
+@import "~bootstrap/scss/bootstrap";
+
+html {
+  font-size: 14px;
+  height: 100%;
+}
+
+body {
+  background-image: linear-gradient(135deg, white, rgba(255, 255, 255, 0.5));
+  font-family: 'Source Sans Pro', sans-serif;
+  height: 100%;
+  padding: 0;
+}
+
+.wrapper {
+  display: flex;
+}
+
+#component-wrapper {
+  height: 100vh;
+  margin-left: 190px;
+  transition: margin-left 0.5s;
+}
+
+#component-wrapper.sidebar-collapsed {
+  margin-left: 3rem;
+}
