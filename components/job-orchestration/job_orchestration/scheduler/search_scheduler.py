@@ -27,6 +27,7 @@ from .common import JobStatus  # type: ignore
 import pymongo
 mongo_uri = ""
 mongo_db_name = "clp_search"
+results_collection = ""
 # Setup logging
 # Create logger
 logger = logging.getLogger("search-job-handler")
@@ -132,15 +133,23 @@ def poll_and_handle_cancelling_search_jobs(db_conn) -> None:
 def make_search_task(
     base_kwargs: str,
     job_id: str,
+    results_collection: str,
     archive_id: str,
     query: str,
 ): #-> Signature
-    return fs_search.s(**base_kwargs, job_id_str=job_id, archive_id=archive_id, search_query={"query" : query})
+    return fs_search.s(
+        **base_kwargs,
+        job_id_str=job_id,
+        results_collection=results_collection,
+        archive_id=archive_id,
+        search_query={"query": query}
+    )
 
 def get_search_tasks_for_job(
     db_conn,
     base_kwargs: Dict[str, Any],
     job_id: str,
+    results_collection: str,
     query: str,
 ): #-> Group
     cursor = db_conn.cursor()
@@ -150,7 +159,7 @@ def get_search_tasks_for_job(
         FROM clp_archives
         '''
     )
-    task = group(make_search_task(base_kwargs, job_id, archive_id, query) for archive_id, in cursor.fetchall())
+    task = group(make_search_task(base_kwargs, job_id, results_collection, archive_id, query) for archive_id, in cursor.fetchall())
     db_conn.commit()
     cursor.close()
     return task
@@ -159,21 +168,11 @@ def dispatch_search_job(
     db_conn,
     base_kwargs: Dict[str, Any],
     job_id: int,
+    results_collection: str,
     query: str,
 ) -> None:
     global active_jobs
-    mongo_uri
-    task_group = get_search_tasks_for_job(db_conn, base_kwargs, str(job_id), query)
-    # A hack for creating empty collection
-    with pymongo.MongoClient(mongo_uri) as db_client:
-        mydb = db_client[mongo_db_name]
-        try:
-            mydb.create_collection(str(job_id))
-        except:
-            logger.error(
-                f"Failed to create search job {job_id} collection"
-                "job may already exists and results might be over written"
-            )
+    task_group = get_search_tasks_for_job(db_conn, base_kwargs, str(job_id), results_collection, query)
     active_jobs[job_id] = task_group.apply_async()
 
 def poll_and_submit_pending_search_jobs(db_conn, base_kwargs) -> None:
@@ -185,7 +184,7 @@ def poll_and_submit_pending_search_jobs(db_conn, base_kwargs) -> None:
     cursor.close()
 
     for job_id, job_status, num_tasks, num_tasks_completed, search_config in new_jobs:
-        dispatch_search_job(db_conn, base_kwargs, job_id, msgpack.unpackb(search_config))
+        dispatch_search_job(db_conn, base_kwargs, job_id, results_collection, msgpack.unpackb(search_config))
         if set_job_status(db_conn, job_id, JobStatus.RUNNING, JobStatus.PENDING):
             logger.info(f"Submitted job {job_id}")
         else:
@@ -256,6 +255,9 @@ def main(argv: List[str]) -> int:
     global mongo_uri
     mongo_uri = f"mongodb://{parsed_args.output_db_host}:{parsed_args.output_db_port}/"
     logger.info(mongo_uri)
+
+    global results_collection
+    results_collection = 'results_cache'
 
     celery_worker_method_base_kwargs: Dict[str, Any] = {
         "fs_input_config": fs_input_config,

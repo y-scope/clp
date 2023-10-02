@@ -44,6 +44,7 @@ def get_clp_home() -> Path:
 def search(
     self: Task,
     job_id_str: str,
+    results_collection: str,
     fs_input_config: Dict[str, Any], # Not used for now
     output_config: Dict[str, Any], # used to indicate how to output the results
     archive_id: str,
@@ -82,7 +83,7 @@ def search(
         output_config["database_ip"],
         str(output_config["database_port"]),
         output_config["db_name"],
-        job_id_str
+        results_collection
     ]
     server_proc = subprocess.Popen(
         server_cmd,

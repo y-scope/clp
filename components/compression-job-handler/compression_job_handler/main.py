@@ -152,7 +152,7 @@ def handle_job_impl(
 
     if not all_worker_jobs_successful:
         return JobStatus.FAILED
-    update_job_results(job_result, subtask_result)
+    db_manager.update_job_stats(job_id_str, job_result)
     if job_completed_with_errors:
         return JobStatus.SUCCESS_WITH_ERRORS
     else:

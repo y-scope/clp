@@ -95,6 +95,15 @@ def main(argv):
     query = parsed_args.wildcard_query
 
     cursor = db_conn.cursor()
+
+    # Set up a connection to your MongoDB instance
+    results_cache_host = clp_config.results_cache.host
+    results_cache_port = clp_config.results_cache.port
+    client = pymongo.MongoClient(f"mongodb://{results_cache_host}:{results_cache_port}")  # Update the connection string as needed
+    search_results_collection = client["clp_search"]['results_cache']  # Replace with your database name
+    # Delete all documents in the collection
+    result = search_results_collection.delete_many({})
+
     # hardcode constant for now
     search_job_table = "distrbuted_search_jobs"
     sql = f"INSERT INTO {search_job_table} (search_config) VALUES (%s)"
@@ -125,17 +134,8 @@ def main(argv):
     end_time = time.time() - current_time
     logger.info(f"time elapsed: {end_time} seconds")
 
-    # Set up a connection to your MongoDB instance
-    results_cache_host = clp_config.results_cache.host
-    results_cache_port = clp_config.results_cache.port
-    client = pymongo.MongoClient(f"mongodb://{results_cache_host}:{results_cache_port}")  # Update the connection string as needed
-
-    # Access the database and collection
-    db = client["clp_search"]  # Replace with your database name
-    collection = db[str(job_id)]  # Replace with your collection name
-
     # Retrieve and print all documents in the collection
-    for document in collection.find():
+    for document in search_results_collection.find():
         logger.info(document)
 
     # Close the MongoDB connection

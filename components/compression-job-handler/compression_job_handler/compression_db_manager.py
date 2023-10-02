@@ -46,7 +46,7 @@ class DBManager(ABC):
         pass
 
     @abstractmethod
-    def update_job_metadata(self, job_id: str, metadata: Dict[str, Any]) -> None:
+    def update_job_stats(self, job_id: str, metadata: Dict[str, Any]) -> None:
         pass
 
     @abstractmethod
@@ -261,7 +261,7 @@ class MongoDBManager(DBManager):
         job_metadata = self.get_job_metadata(job_id)
         return self._millisecond_timestamp_to_datetime(job_metadata["submission_timestamp"])
 
-    def update_job_metadata(self, job_id, metadata: Dict[str, Any]) -> None:
+    def update_job_stats(self, job_id, metadata: Dict[str, Any]) -> None:
         find_filter = {"_id": ObjectId(job_id)}
         jobs_collection = self.__db_collections["cjobs"]
         jobs_collection.find_one_and_update(
