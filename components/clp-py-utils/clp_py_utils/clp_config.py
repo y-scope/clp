@@ -22,6 +22,7 @@ SEARCH_QUEUE_COMPONENT_NAME = 'search_queue'
 SEARCH_SCHEDULER_COMPONENT_NAME = 'search_scheduler'
 SEARCH_WORKER_COMPONENT_NAME = 'search_worker'
 COMPRESSION_WORKER_COMPONENT_NAME = 'compression_worker'
+WEBUI_COMPONENT_NAME = 'webui'
 
 
 class Database(BaseModel):
@@ -180,6 +181,11 @@ class ArchiveOutput(BaseModel):
         return d
 
 
+class WebUi(BaseModel):
+    host: str = 'localhost'
+    port: int = 4000
+
+
 class CLPConfig(BaseModel):
     execution_container: str = 'ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-focal:main'
 
@@ -191,6 +197,7 @@ class CLPConfig(BaseModel):
     compression_queue: Queue = Queue(port=5672)
     search_queue: Queue = Queue(port=5673)
     search_scheduler: SearchScheduler = SearchScheduler()
+    webui: WebUi = WebUi()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()
