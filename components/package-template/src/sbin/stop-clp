@@ -64,7 +64,6 @@ from clp_py_utils.clp_config import (
     DB_COMPONENT_NAME,
     COMPRESSION_QUEUE_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
-    SCHEDULER_COMPONENT_NAME,
     SEARCH_QUEUE_COMPONENT_NAME,
     SEARCH_SCHEDULER_COMPONENT_NAME,
     SEARCH_WORKER_COMPONENT_NAME,
@@ -124,8 +123,8 @@ def main(argv):
         # Validate and load necessary credentials
         if component_name in ['', DB_COMPONENT_NAME]:
             validate_and_load_db_credentials_file(clp_config, clp_home, False)
-        if component_name in ['', COMPRESSION_QUEUE_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME,
-                              SEARCH_QUEUE_COMPONENT_NAME, COMPRESSION_WORKER_COMPONENT_NAME]:
+        if component_name in ['', COMPRESSION_QUEUE_COMPONENT_NAME, SEARCH_QUEUE_COMPONENT_NAME,
+                              COMPRESSION_WORKER_COMPONENT_NAME]:
             # TODO Validate the search queue credentials when the search queue is actually used
             validate_and_load_compression_queue_credentials_file(clp_config, clp_home, False)
     except:
