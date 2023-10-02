@@ -30,6 +30,7 @@ tasks:
       - task: python_component
         vars:
           COMPONENT: job-orchestration
+      - webui
     vars:
       PACKAGE_BUILD_DIR: "{{.CLP_BUILD_DIR}}/clp-package"
     cmds:
@@ -39,6 +40,9 @@ tasks:
       - pip3 install -U components/clp-py-utils/dist/*.whl components/compression-job-handler/dist/*.whl components/job-orchestration/dist/*.whl -t {{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages
       - mkdir -p {{.PACKAGE_BUILD_DIR}}/bin
       - rsync -a {{.CLP_BUILD_DIR}}/core/clg {{.CLP_BUILD_DIR}}/core/clp {{.CLP_BUILD_DIR}}/core/clo {{.PACKAGE_BUILD_DIR}}/bin/.
+      - rsync -a {{.CLP_BUILD_DIR}}/nodejs/node/bin/node {{.PACKAGE_BUILD_DIR}}/bin/.
+      - mkdir -p {{.PACKAGE_BUILD_DIR}}/var/www/
+      - rsync -a --delete {{.CLP_BUILD_DIR}}/webui/built/ {{.PACKAGE_BUILD_DIR}}/var/www/
     sources:
       - "components/clp-py-utils/dist/*.whl"
       - "components/compression-job-handler/dist/*.whl"
@@ -47,10 +51,66 @@ tasks:
       - "{{.CLP_BUILD_DIR}}/core/clp"
       - "{{.CLP_BUILD_DIR}}/core/clo"
       - "components/package-template/src/**/*"
+      - "{{.CLP_BUILD_DIR}}/webui/built/**/*"
     generates:
       - "{{.CLP_BUILD_DIR}}/clp-package/bin/clg"
       - "{{.CLP_BUILD_DIR}}/clp-package/bin/clp"
       - "{{.CLP_BUILD_DIR}}/clp-package/bin/clo"
+      - "{{.CLP_BUILD_DIR}}/clp-package/bin/node"
+      - "{{.CLP_BUILD_DIR}}/clp-package/var/www/**/*"
+  
+  webui:
+    deps: [ webui_bundle ]
+    vars:
+      BUNDLE_DIR: "{{.CLP_BUILD_DIR}}/webui/bundle"
+      BUILD_DIR: "{{.CLP_BUILD_DIR}}/webui/built"
+      NODEJS_BIN_DIR: "{{.CLP_BUILD_DIR}}/nodejs/node/bin/"
+    cmds:
+      - mkdir -p {{.BUILD_DIR}}
+      - rsync -a --delete {{.BUNDLE_DIR}}/ {{.BUILD_DIR}}/
+      - |-
+        cd {{.BUILD_DIR}}/programs/server
+        PATH={{.NODEJS_BIN_DIR}}:$PATH $(readlink -f {{.NODEJS_BIN_DIR}}/npm) install
+    sources:
+      - "{{.BUNDLE_DIR}}/**/*"
+    generates:
+      - "{{.BUILD_DIR}}/**/*"
+  
+  webui_bundle:
+    deps: [ nodejs ]
+    dir: "components/webui"
+    vars:
+      BUILD_DIR: "{{.CLP_BUILD_DIR}}/webui"
+    cmds:
+      - mkdir -p {{.BUILD_DIR}}
+      - meteor npm install --production
+      - rm -rf {{.BUILD_DIR}}/bundle
+      - meteor build --directory {{.BUILD_DIR}}
+    sources:
+      - "./.meteor/*"
+      - "./client/**/*"
+      - "./imports/**/*"
+      - "./server/**/*"
+      - "./tests/**/*"
+      - "./*"
+    generates:
+      - "{{.BUILD_DIR}}/bundle/**/*"
+  
+  nodejs:
+    vars:
+      BUILD_DIR: "{{.CLP_BUILD_DIR}}/nodejs"
+      NODEJS_VERSION: "14.21.3"
+      NODEJS_RELEASE: "v{{.NODEJS_VERSION}}-linux-x64"
+      TAR_FILENAME: "node-{{.NODEJS_RELEASE}}.tar.xz"
+    cmds:
+      - mkdir -p {{.BUILD_DIR}}
+      - curl -fsSL https://nodejs.org/dist/v{{.NODEJS_VERSION}}/{{.TAR_FILENAME}} -o {{.BUILD_DIR}}/{{.TAR_FILENAME}}
+      - tar xf {{.BUILD_DIR}}/{{.TAR_FILENAME}} -C {{.BUILD_DIR}}
+      - mv {{.BUILD_DIR}}/node-{{.NODEJS_RELEASE}} {{.BUILD_DIR}}/node
+    sources:
+      - "{{.BUILD_DIR}}/{{.TAR_FILENAME}}"
+    generates:
+      - "{{.BUILD_DIR}}/node/bin/node"
 
   core:
     deps: [ core_submodules ]
