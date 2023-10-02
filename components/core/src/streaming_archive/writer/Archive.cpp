@@ -426,11 +426,11 @@ namespace streaming_archive::writer {
     ) {
         if (m_file->has_ts_pattern()) {
             m_logtype_ids_in_segment_for_files_with_timestamps.insert(logtype_id);
-            m_var_ids_in_segment_for_files_with_timestamps.insert_all(m_var_ids);
+            m_var_ids_in_segment_for_files_with_timestamps.insert_all(var_ids);
         } else {
             m_logtype_ids_for_file_with_unassigned_segment.insert(logtype_id);
-            m_var_ids_for_file_with_unassigned_segment.insert(m_var_ids.cbegin(),
-                                                              m_var_ids.cend());
+            m_var_ids_for_file_with_unassigned_segment.insert(var_ids.cbegin(),
+                                                              var_ids.cend());
         }
     }
 
