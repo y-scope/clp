@@ -216,6 +216,7 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
 
     // Clean-up search string
     processed_search_string = clean_up_wildcard_search_string(processed_search_string);
+    query.set_search_string(processed_search_string);
 
     // Split search_string into tokens with wildcards
     vector<QueryToken> query_tokens;
@@ -223,8 +224,6 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     size_t end_pos = 0;
     bool is_var;
     if (use_heuristic) {
-        query.set_search_string(processed_search_string);
-
         // Replace non-greedy wildcards with greedy wildcards since we currently
         // have no support for searching compressed files with non-greedy
         // wildcards
@@ -239,8 +238,6 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                                                 forward_lexer, reverse_lexer)) {
             query_tokens.emplace_back(processed_search_string, begin_pos, end_pos, is_var);
         }
-        processed_search_string = processed_search_string;
-        query.set_search_string(processed_search_string);
     }
 
     // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in
