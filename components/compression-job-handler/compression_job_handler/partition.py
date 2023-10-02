@@ -1,3 +1,4 @@
+import copy
 from logging import Logger
 from pathlib import Path
 from typing import Any, Dict, List
@@ -125,7 +126,7 @@ class PathsToCompressBuffer:
 
         arguments_for_job = self.__arguments.copy()
         arguments_for_job["job_input_config"]["paths"] = paths_to_compress
-        self.__jobs_arguments.append(arguments_for_job)
+        self.__jobs_arguments.append(copy.deepcopy(arguments_for_job))
         return partition_total_file_size
 
     def __ordered_partition_and_compress(self, flush_buffer: bool) -> None:

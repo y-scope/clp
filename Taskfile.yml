@@ -46,6 +46,7 @@ tasks:
       - "{{.CLP_BUILD_DIR}}/core/clg"
       - "{{.CLP_BUILD_DIR}}/core/clp"
       - "{{.CLP_BUILD_DIR}}/core/clo"
+      - "components/package_template/src/**/*"
     generates:
       - "{{.CLP_BUILD_DIR}}/clp-package/bin/clg"
       - "{{.CLP_BUILD_DIR}}/clp-package/bin/clp"
