@@ -21,6 +21,8 @@
 #results_cache:
 #  host: "localhost"
 #  port: 27017
+#  db_name: "clp-search"
+#  collection_name: "results_cache"
 #
 #compression_queue:
 #  host: "localhost"

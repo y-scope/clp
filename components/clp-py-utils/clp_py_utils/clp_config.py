@@ -109,6 +109,8 @@ class Database(BaseModel):
 class ResultsCache(BaseModel):
     host: str = 'localhost'
     port: int = 27017
+    db_name: str = 'clp-search'
+    collection_name: str = 'results_cache'
 
     @validator('host')
     def validate_host(cls, field):

@@ -428,8 +428,6 @@ def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_cl
         '--rm',
         '--name', container_name,
         '-e', f'PYTHONPATH={clp_site_packages_dir}',
-        '-e', f'DB_USER={clp_config.database.username}',
-        '-e', f'DB_PASSWORD={clp_config.database.password}',
         '-e', f'BROKER_URL=amqp://'
               f'{container_clp_config.search_queue.username}:{container_clp_config.search_queue.password}@'
               f'{container_clp_config.search_queue.host}:{container_clp_config.search_queue.port}',
@@ -452,12 +450,7 @@ def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_cl
     scheduler_cmd = [
         'python3', '-u', '-m',
         'job_orchestration.scheduler.search_scheduler',
-        # '--config', str(container_clp_config.logs_directory / container_config_filename),
-        # V0.5 TODO: pass those variables using clp config
-        "--db-host", clp_config.database.host,
-        "--db-port", str(clp_config.database.port),
-        "--output-db-host", clp_config.results_cache.host,
-        "--output-db-port", str(clp_config.results_cache.port),
+        '--config', str(container_clp_config.logs_directory / container_config_filename),
     ]
 
     # for now, let's use what we have.

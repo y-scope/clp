@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 import mysql.connector
 
 import msgpack
+import pathlib
 
 #from celery.canvas import Signature
 from celery import group, signature
@@ -22,12 +23,15 @@ from job_orchestration.executor.search.fs_search_method import (
     search as fs_search
 )
 
+from pydantic import ValidationError
+
+from clp_py_utils.clp_config import CLPConfig, Database, ResultsCache
+from clp_py_utils.core import read_yaml_config_file
+
 from .common import JobStatus  # type: ignore
 
 import pymongo
-mongo_uri = ""
-mongo_db_name = "clp_search"
-results_collection = ""
+
 # Setup logging
 # Create logger
 logger = logging.getLogger("search-job-handler")
@@ -129,37 +133,27 @@ def poll_and_handle_cancelling_search_jobs(db_conn) -> None:
         #TODO: also update time
         set_job_status(db_conn, job_id, JobStatus.CANCELLED, prev_status=CANCELLING)
 
-
-def make_search_task(
-    base_kwargs: str,
-    job_id: str,
-    results_collection: str,
-    archive_id: str,
-    query: str,
-): #-> Signature
-    return fs_search.s(
-        **base_kwargs,
-        job_id_str=job_id,
-        results_collection=results_collection,
-        archive_id=archive_id,
-        search_query={"query": query}
-    )
-
 def get_search_tasks_for_job(
     db_conn,
     base_kwargs: Dict[str, Any],
     job_id: str,
-    results_collection: str,
     query: str,
 ): #-> Group
     cursor = db_conn.cursor()
-    #TODO: create more advanced queries and se
+    #TODO: create more advanced queries
     cursor.execute(
         f'''SELECT id as archive_id
         FROM clp_archives
         '''
     )
-    task = group(make_search_task(base_kwargs, job_id, results_collection, archive_id, query) for archive_id, in cursor.fetchall())
+    task = group(
+        fs_search.s(
+            **base_kwargs,
+            job_id_str=job_id,
+            archive_id=archive_id,
+            query=query,
+        ) for archive_id, in cursor.fetchall()
+    )
     db_conn.commit()
     cursor.close()
     return task
@@ -168,11 +162,10 @@ def dispatch_search_job(
     db_conn,
     base_kwargs: Dict[str, Any],
     job_id: int,
-    results_collection: str,
     query: str,
 ) -> None:
     global active_jobs
-    task_group = get_search_tasks_for_job(db_conn, base_kwargs, str(job_id), results_collection, query)
+    task_group = get_search_tasks_for_job(db_conn, base_kwargs, str(job_id), query)
     active_jobs[job_id] = task_group.apply_async()
 
 def poll_and_submit_pending_search_jobs(db_conn, base_kwargs) -> None:
@@ -184,7 +177,7 @@ def poll_and_submit_pending_search_jobs(db_conn, base_kwargs) -> None:
     cursor.close()
 
     for job_id, job_status, num_tasks, num_tasks_completed, search_config in new_jobs:
-        dispatch_search_job(db_conn, base_kwargs, job_id, results_collection, msgpack.unpackb(search_config))
+        dispatch_search_job(db_conn, base_kwargs, job_id, msgpack.unpackb(search_config))
         if set_job_status(db_conn, job_id, JobStatus.RUNNING, JobStatus.PENDING):
             logger.info(f"Submitted job {job_id}")
         else:
@@ -237,49 +230,44 @@ def handle_jobs(
 def main(argv: List[str]) -> int:
     # fmt: off
     args_parser = argparse.ArgumentParser(description="Wait for and run compression jobs.")
-    args_parser.add_argument("--db-host", required=True, help="Metadata Database Host.")
-    args_parser.add_argument("--db-port", required=True, type=int, help="Metadata Database Port.")
-
-    args_parser.add_argument("--output-db-host", required=True, help="Output Database Host.")
-    args_parser.add_argument("--output-db-port", required=True, type=int, help="Output Database Port.")
-
-    db_user = os.getenv('DB_USER')
-    db_password = os.getenv('DB_PASSWORD')
+    args_parser.add_argument('--config', '-c', required=True, help='CLP configuration file.')
 
     parsed_args = args_parser.parse_args(argv[1:])
+    # Load configuration
+    config_path = pathlib.Path(parsed_args.config)
+    try:
+        clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
+    except ValidationError as err:
+        logger.error(err)
+    except Exception as ex:
+        logger.error(ex)
+        # read_yaml_config_file already logs the parsing error inside
+        pass
+    else:
+        fs_input_config = {}
+        output_config = dict(clp_config.results_cache)
 
-    fs_input_config = {}
-    output_config = {"database_ip" : parsed_args.output_db_host, "database_port" : parsed_args.output_db_port, "db_name": mongo_db_name}
+        celery_worker_method_base_kwargs: Dict[str, Any] = {
+            "fs_input_config": fs_input_config,
+            "output_config": output_config
+        }
 
-    # temporary hack
-    global mongo_uri
-    mongo_uri = f"mongodb://{parsed_args.output_db_host}:{parsed_args.output_db_port}/"
-    logger.info(mongo_uri)
+        db_conn = mysql.connector.connect(
+            host=clp_config.database.host,
+            port=clp_config.database.port,
+            database=clp_config.database.name,
+            user=clp_config.database.username,
+            password=clp_config.database.password,
+        )
 
-    global results_collection
-    results_collection = 'results_cache'
+        setup_search_jobs_table(db_conn)
 
-    celery_worker_method_base_kwargs: Dict[str, Any] = {
-        "fs_input_config": fs_input_config,
-        "output_config": output_config
-    }
+        logger.info("search-job-handler started.")
 
-    db_conn = mysql.connector.connect(
-        host=parsed_args.db_host,
-        port=parsed_args.db_port,
-        database="clp-db",
-        user=db_user,
-        password=db_password,
-    )
-
-    setup_search_jobs_table(db_conn)
-
-    logger.info("search-job-handler started.")
-
-    handle_jobs(
-        db_conn=db_conn,
-        celery_worker_method_base_kwargs=celery_worker_method_base_kwargs,
-    )
+        handle_jobs(
+            db_conn=db_conn,
+            celery_worker_method_base_kwargs=celery_worker_method_base_kwargs,
+        )
     return 0
 
 

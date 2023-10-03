@@ -44,11 +44,10 @@ def get_clp_home() -> Path:
 def search(
     self: Task,
     job_id_str: str,
-    results_collection: str,
     fs_input_config: Dict[str, Any], # Not used for now
     output_config: Dict[str, Any], # used to indicate how to output the results
     archive_id: str,
-    search_query: Dict[str, str],
+    query: str,
 ) -> bool:
 
     celery_clp_home_str = get_clp_home()
@@ -80,10 +79,10 @@ def search(
     server_cmd = [
         "python3",
         str(script_dir / "proxy_server.py"),
-        output_config["database_ip"],
-        str(output_config["database_port"]),
+        output_config["host"],
+        str(output_config["port"]),
         output_config["db_name"],
-        results_collection
+        output_config["collection_name"],
     ]
     server_proc = subprocess.Popen(
         server_cmd,
@@ -103,13 +102,8 @@ def search(
         ip,
         port,
         str(archive_directory / archive_id),
+        query
     ]
-    # Append queries and options
-    for option, value in search_query.items():
-        if option != "query":
-            search_cmd.append(f"--{option}")
-        search_cmd.append(value)
-
 
     # Start compression
     logger.debug("Searching...")

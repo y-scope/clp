@@ -100,8 +100,6 @@ def main(argv):
         '--network', 'host',
         '-w', str(CONTAINER_CLP_HOME),
         '-e', f'CLP_HOME={CONTAINER_CLP_HOME}',
-        '-e', f'DB_USER={clp_config.database.username}',
-        '-e', f'DB_PASSWORD={clp_config.database.password}',
         '-u', f'{os.getuid()}:{os.getgid()}',
         '--name', container_name,
         '--mount', str(mounts.clp_home),

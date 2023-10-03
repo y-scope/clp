@@ -61,35 +61,31 @@ import pymongo
 from job_orchestration.scheduler.common import JobStatus  # type: ignore
 from clp_py_utils.core import read_yaml_config_file  # type: ignore
 from clp.package_utils import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, validate_and_load_config_file
+from clp_py_utils.clp_config import CLPConfig
 
 def main(argv):
-    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")
     args_parser.add_argument('--config', '-c', required=True, help="CLP configuration file.")
     args_parser.add_argument('wildcard_query', help="Wildcard query.")
     parsed_args = args_parser.parse_args(argv[1:])
-    logger.info(f"CLP HOME IS {clp_home}")
-    # Validate and load config file
+
+    config_path = pathlib.Path(parsed_args.config)
+    # load config file
     try:
-        config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = validate_and_load_config_file(config_file_path, default_config_file_path, clp_home)
-        clp_config.validate_logs_dir()
+        clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
     except:
         logger.exception("Failed to load config.")
         return -1
 
     current_time = time.time()
 
-    username = os.environ['DB_USER']
-    password = os.environ['DB_PASSWORD']
-
     db_conn = mysql.connector.connect(
         host=clp_config.database.host,
         port=clp_config.database.port,
-        database="clp-db",
-        user=username,
-        password=password,
+        database=clp_config.database.name,
+        user=clp_config.database.username,
+        password=clp_config.database.password,
     )
 
     query = parsed_args.wildcard_query
@@ -97,10 +93,10 @@ def main(argv):
     cursor = db_conn.cursor()
 
     # Set up a connection to your MongoDB instance
-    results_cache_host = clp_config.results_cache.host
-    results_cache_port = clp_config.results_cache.port
-    client = pymongo.MongoClient(f"mongodb://{results_cache_host}:{results_cache_port}")  # Update the connection string as needed
-    search_results_collection = client["clp_search"]['results_cache']  # Replace with your database name
+    db_name = clp_config.results_cache.db_name
+    collection_name = clp_config.results_cache.collection_name
+    client = pymongo.MongoClient(clp_config.results_cache.get_uri())  # Update the connection string as needed
+    search_results_collection = client[db_name][collection_name]  # Replace with your database name
     # Delete all documents in the collection
     result = search_results_collection.delete_many({})
 
@@ -125,7 +121,7 @@ def main(argv):
 
         if prev_status != status:
             prev_status = status
-            logger.info(f"Job {job_id} now {JobStatus(status)}")
+            logger.info(f"Job {job_id} now {JobStatus(status).to_str()}")
 
         if not (status == JobStatus.PENDING or status == JobStatus.RUNNING or status == JobStatus.CANCELLING):
             break
