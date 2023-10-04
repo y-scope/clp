@@ -28,7 +28,6 @@ from .partition import PathsToCompressBuffer  # type: ignore
 # Setup logging
 # Create logger
 logger = logging.getLogger("compression-job-handler")
-logger.setLevel(logging.INFO)
 # Setup console logging
 logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
@@ -369,6 +368,13 @@ def main(argv: List[str]) -> int:
         "--clp-db-port", required=True, help="port for CLP globalDB"
     )
     # fmt: on
+    logger.setLevel(logging.INFO)
+    # Also setup logging to file
+    log_file = Path(os.getenv("CLP_LOGS_DIR")) / "compression_job_handler.log"
+    logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
+    logging_file_handler.setFormatter(logging_formatter)
+    logger.addHandler(logging_file_handler)
+
 
     output_type_args_parser = args_parser.add_subparsers(dest="output_type")
     output_type_args_parser.required = True

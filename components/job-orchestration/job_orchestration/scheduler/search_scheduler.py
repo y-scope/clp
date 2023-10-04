@@ -233,6 +233,14 @@ def main(argv: List[str]) -> int:
     args_parser.add_argument('--config', '-c', required=True, help='CLP configuration file.')
 
     parsed_args = args_parser.parse_args(argv[1:])
+
+    logger.setLevel(logging.INFO)
+    # Also setup logging to file
+    log_file = Path(os.getenv("CLP_LOGS_DIR")) / "compression_job_handler.log"
+    logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
+    logging_file_handler.setFormatter(logging_formatter)
+    logger.addHandler(logging_file_handler)
+
     # Load configuration
     config_path = pathlib.Path(parsed_args.config)
     try:

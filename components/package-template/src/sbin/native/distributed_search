@@ -60,9 +60,7 @@ import pymongo
 
 from job_orchestration.scheduler.common import JobStatus  # type: ignore
 from clp_py_utils.core import read_yaml_config_file  # type: ignore
-from clp.package_utils import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, validate_and_load_config_file
 from clp_py_utils.clp_config import CLPConfig, SEARCH_JOBS_TABLE_NAME
-
 
 def main(argv):
 
