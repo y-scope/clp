@@ -59,7 +59,6 @@ def handle_job_impl(
         job_id_str: str,
         output_type: str,
         output_config: Dict[str, Any],
-        clp_db_config: Dict[str, Any],
         db_manager: DBManager,
         celery_worker_method_base_kwargs: Dict[str, Any],
         progress_reporting_disabled: bool,
@@ -91,7 +90,6 @@ def handle_job_impl(
                 target_archive_size=target_archive_size,
                 job_input_config=job_input_config,
                 job_output_config=job_output_config,
-                clp_db_config=clp_db_config,
             )
         else:
             raise NotImplementedError("Unsupported input/output compression source pair.")
@@ -166,7 +164,6 @@ def prepare_fs_compression_jobs(
         target_archive_size: int,
         job_input_config: Dict[str, Any],
         job_output_config: Dict[str, Any],
-        clp_db_config: Dict[str, Any],
 ) -> bool:
     # Parse the list of paths to compress
     parsed_list_paths: List[Path] = []
@@ -204,7 +201,6 @@ def prepare_fs_compression_jobs(
         job_id_str=job_id_str,
         job_input_config=job_input_config_template,
         job_output_config=job_output_config,
-        clp_db_config=clp_db_config,
     )
 
     # Process the paths list
@@ -256,7 +252,6 @@ def handle_job(
         job_id_str: str,
         output_type: str,
         output_config: Dict[str, Any],
-        clp_db_config: Dict[str, Any],
         db_manager: DBManager,
         celery_worker_method_base_kwargs: Dict[str, Any],
         progress_reporting_disabled: bool,
@@ -267,7 +262,6 @@ def handle_job(
         job_id_str=job_id_str,
         output_type=output_type,
         output_config=output_config,
-        clp_db_config=clp_db_config,
         db_manager=db_manager,
         celery_worker_method_base_kwargs=celery_worker_method_base_kwargs,
         progress_reporting_disabled=progress_reporting_disabled,
@@ -280,7 +274,6 @@ def handle_job(
 def handle_jobs(
         output_type: str,
         output_config: Dict[str, Any],
-        clp_db_config: Dict[str, Any],
         db_manager: DBManager,
         celery_worker_method_base_kwargs: Dict[str, Any],
         progress_reporting_disabled: bool,
@@ -320,7 +313,6 @@ def handle_jobs(
                     job_id_str=job_id,
                     output_type=output_type,
                     output_config=output_config,
-                    clp_db_config=clp_db_config,
                     db_manager=db_manager,
                     celery_worker_method_base_kwargs=celery_worker_method_base_kwargs,
                     progress_reporting_disabled=progress_reporting_disabled,
@@ -428,7 +420,7 @@ def main(argv: List[str]) -> int:
     }
 
     celery_worker_method_base_kwargs: Dict[str, Any] = {
-        "db_config": db_manager.get_db_config(),
+        "clp_db_config": clp_db_config,
     }
 
     logger.info("compression-job-handler started.")
@@ -436,7 +428,6 @@ def main(argv: List[str]) -> int:
     handle_jobs(
         output_type=output_type,
         output_config=output_config,
-        clp_db_config=clp_db_config,
         db_manager=db_manager,
         celery_worker_method_base_kwargs=celery_worker_method_base_kwargs,
         progress_reporting_disabled=parsed_args.no_progress_reporting,

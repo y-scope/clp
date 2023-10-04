@@ -15,9 +15,6 @@ from job_orchestration.executor.compression.celery import app  # type: ignore
 
 from clp.package_utils import CONTAINER_INPUT_LOGS_ROOT_DIR
 
-celery_central_logger = get_task_logger(__name__)
-celery_central_logger.setLevel(logging.INFO)
-
 # V0.5 TODO Deduplicate
 def update_job_results(results: Dict[str, Any], archive_status: Dict[str, Any]):
     results['total_uncompressed_size'] += archive_status['uncompressed_size']
@@ -32,30 +29,32 @@ def update_job_results(results: Dict[str, Any], archive_status: Dict[str, Any]):
 def compress(
     self: Task,
     job_id_str: str,
-    # V0.5 TODO: remove this two
-    db_config: Dict[str, Any],
     job_input_config: Dict[str, Any],
     job_output_config: Dict[str, Any],
     clp_db_config: Dict[str, Any],
 ) -> bool:
-    clp_home = Path(os.getenv("CLP_HOME"))
-    celery_logs_dir = Path(os.getenv("CLP_LOGS_DIR"))
-
     task_id_str = self.request.id
-    celery_central_logger.info(f"Started job {job_id_str}. Task Id={task_id_str}.")
+    clp_home = Path(os.getenv("CLP_HOME"))
+
+    # logging to console
+    logger = get_task_logger(__name__)
+    logger.setLevel(logging.INFO)
+    logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+
+    # Also setup logging to file
+    worker_logs_dir = Path(os.getenv("CLP_LOGS_DIR")) / job_id_str
+    # Create directories
+    worker_logs_dir.mkdir(exist_ok=True, parents=True)
+
+    worker_logs = worker_logs_dir / f"{task_id_str}.log"
+    logging_file_handler = logging.FileHandler(filename=worker_logs, encoding="utf-8")
+    logging_file_handler.setFormatter(logging_formatter)
+    logger.addHandler(logging_file_handler)
+
+    logger.info(f"Started job {job_id_str}. Task Id={task_id_str}.")
 
     # Setup logging and data folder
     celery_data_dir = Path("/") / "tmp"
-
-    # Create logger
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    # Setup logging to file
-    script_log_path = celery_logs_dir / f"{task_id_str}-worker-script.log"
-    celery_logging_file_handler = logging.FileHandler(filename=script_log_path, encoding="utf-8")
-    celery_logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-    celery_logging_file_handler.setFormatter(celery_logging_formatter)
-    logger.addHandler(celery_logging_file_handler)
 
     # Generate database config file
     clp_db_config_file_path = celery_data_dir / f"{task_id_str}-db-config.yml"
@@ -109,10 +108,10 @@ def compress(
         "--remove-path-prefix", str(prefix_to_remove)
     ]
     # fmt: on
-    logger.info(compression_cmd)
+    logger.debug("Compression cmd: " + " ".join(compression_cmd))
 
     # Open stderr log file
-    stderr_log_path = celery_logs_dir / f"{task_id_str}-stderr.log"
+    stderr_log_path = worker_logs_dir / f"{job_id_str}-{task_id_str}-stderr.log"
     stderr_log_file = open(stderr_log_path, "w")
 
     # Start compression
@@ -169,7 +168,7 @@ def compress(
     logger.info("Compressed.")
     # Close log files
     stderr_log_file.close()
-    logger.removeHandler(celery_logging_file_handler)
-    celery_logging_file_handler.close()
+    logger.removeHandler(logging_file_handler)
+    logging_file_handler.close()
 
     return job_results

@@ -23,7 +23,6 @@ class PathsToCompressBuffer:
         job_id_str: str,
         job_input_config: Dict[str, Any],
         job_output_config: Dict[str, Any],
-        clp_db_config: Dict[str, Any],
     ) -> None:
         self.__logger: Logger = logger
         self.__jobs_arguments: List[Dict[str, Any]] = jobs_arguments
@@ -41,7 +40,6 @@ class PathsToCompressBuffer:
             "job_id_str": job_id_str,
             "job_input_config": job_input_config,
             "job_output_config": job_output_config,
-            "clp_db_config": clp_db_config,
         }
 
         self.__arguments.update(worker_base_arguments)

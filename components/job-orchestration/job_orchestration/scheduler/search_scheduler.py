@@ -244,11 +244,9 @@ def main(argv: List[str]) -> int:
         # read_yaml_config_file already logs the parsing error inside
         pass
     else:
-        fs_input_config = {}
         output_config = dict(clp_config.results_cache)
 
         celery_worker_method_base_kwargs: Dict[str, Any] = {
-            "fs_input_config": fs_input_config,
             "output_config": output_config
         }
 

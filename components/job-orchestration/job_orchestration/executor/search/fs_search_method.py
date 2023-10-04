@@ -14,63 +14,38 @@ from celery.utils.log import get_task_logger
 
 from job_orchestration.executor.search.celery import app
 
-celery_central_logger = get_task_logger(__name__)
-celery_central_logger.setLevel(logging.INFO)
-
 script_dir = Path(__file__).parent.resolve()
-
-def get_clp_home() -> Path:
-    # Determine CLP_HOME from an environment variable or this script's path
-    _clp_home = None
-    if "CLP_HOME" in os.environ:
-        _clp_home = Path(os.environ["CLP_HOME"])
-    else:
-        for path in Path(__file__).resolve().parents:
-            if "job_orchestration" == path.name:
-                _clp_home = path.parent / "clp"
-                break
-
-    if _clp_home is None:
-        logger.error("CLP_HOME is not set and could not be determined automatically.")
-        sys.exit(-1)
-    elif not _clp_home.exists():
-        logger.error("CLP_HOME set to nonexistent path.")
-        sys.exit(-1)
-
-    return _clp_home.resolve()
 
 
 @app.task(bind=True)
 def search(
     self: Task,
     job_id_str: str,
-    fs_input_config: Dict[str, Any], # Not used for now
     output_config: Dict[str, Any], # used to indicate how to output the results
     archive_id: str,
     query: str,
 ) -> bool:
-
-    celery_clp_home_str = get_clp_home()
-    celery_logs_dir_str = celery_clp_home_str / "var" / "log" / "celery"
     task_id_str = self.request.id
-    celery_central_logger.info(f"Started distributed search job {job_id_str}. Task Id={task_id_str} on archive {archive_id}")
 
-    # Setup logging folder
-    celery_logs_dir = Path(celery_logs_dir_str).resolve()
-    celery_logs_dir.mkdir(parents=True, exist_ok=True)
-
-    # Create logger
-    logger = logging.getLogger()
+    # logging to console
+    logger = get_task_logger(__name__)
     logger.setLevel(logging.INFO)
-    # Setup logging to file
-    script_log_path = celery_logs_dir / f"{task_id_str}-search-worker-script.log"
-    celery_logging_file_handler = logging.FileHandler(filename=script_log_path, encoding="utf-8")
-    celery_logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-    celery_logging_file_handler.setFormatter(celery_logging_formatter)
-    logger.addHandler(celery_logging_file_handler)
+    logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+
+    # Also setup logging to file
+    worker_logs_dir = Path(os.getenv("CLP_LOGS_DIR")) / job_id_str
+    # Create directories
+    worker_logs_dir.mkdir(exist_ok=True, parents=True)
+
+    worker_logs = worker_logs_dir / f"{task_id_str}.log"
+    logging_file_handler = logging.FileHandler(filename=worker_logs, encoding="utf-8")
+    logging_file_handler.setFormatter(logging_formatter)
+    logger.addHandler(logging_file_handler)
+
+    logger.info(f"Started job {job_id_str}. Task Id={task_id_str}.")
 
     # Open stderr log file
-    stderr_log_path = celery_logs_dir / f"{task_id_str}-stderr.log"
+    stderr_log_path = worker_logs_dir / f"{task_id_str}-stderr.log"
     stderr_log_file = open(stderr_log_path, "w")
 
     # Obtain archive directory info
@@ -96,7 +71,7 @@ def search(
 
     # Assemble the search command
     # fmt: off
-    clp_home = Path(celery_clp_home_str).resolve()
+    clp_home = Path(os.getenv("CLP_HOME"))
     search_cmd = [
         str(clp_home / "bin" / "clo"),
         ip,
@@ -106,7 +81,9 @@ def search(
     ]
 
     # Start compression
-    logger.debug("Searching...")
+    logger.info("Searching...")
+    logger.debug(" ".join(search_cmd))
+
     search_successful = False
 
     proc = subprocess.Popen(
@@ -124,14 +101,16 @@ def search(
         search_successful = True
 
     # a hack to ensure that proxy server flush all data
+    # since the next message will only be print out after
+    # proxy flushes all data
     proxy_end_message = server_proc.stdout.readline().decode()
 
     server_proc.terminate()
     server_proc.wait()
-    logger.debug("Search completed")
+    logger.info("Search completed")
     # Close log files
     stderr_log_file.close()
-    logger.removeHandler(celery_logging_file_handler)
-    celery_logging_file_handler.close()
+    logger.removeHandler(logging_file_handler)
+    logging_file_handler.close()
 
     return search_successful
