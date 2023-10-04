@@ -30,6 +30,9 @@ tasks:
       - task: python_component
         vars:
           COMPONENT: job-orchestration
+      - task: python_component
+        vars:
+          COMPONENT: webui-query-handler
       - webui
     vars:
       PACKAGE_BUILD_DIR: "{{.CLP_BUILD_DIR}}/clp-package"
@@ -37,7 +40,7 @@ tasks:
       - mkdir -p {{.PACKAGE_BUILD_DIR}}
       - rsync -a components/package-template/src/ {{.PACKAGE_BUILD_DIR}}
       - mkdir -p {{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages
-      - pip3 install -U components/clp-py-utils/dist/*.whl components/compression-job-handler/dist/*.whl components/job-orchestration/dist/*.whl -t {{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages
+      - pip3 install -U components/clp-py-utils/dist/*.whl components/compression-job-handler/dist/*.whl components/job-orchestration/dist/*.whl components/webui-query-handler/dist/*.whl -t {{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages
       - mkdir -p {{.PACKAGE_BUILD_DIR}}/bin
       - rsync -a {{.CLP_BUILD_DIR}}/core/clg {{.CLP_BUILD_DIR}}/core/clp {{.CLP_BUILD_DIR}}/core/clo {{.PACKAGE_BUILD_DIR}}/bin/.
       - rsync -a {{.CLP_BUILD_DIR}}/nodejs/node/bin/node {{.PACKAGE_BUILD_DIR}}/bin/.
@@ -47,6 +50,7 @@ tasks:
       - "components/clp-py-utils/dist/*.whl"
       - "components/compression-job-handler/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
+      - "components/webui-query-handler/dist/*.whl"
       - "{{.CLP_BUILD_DIR}}/core/clg"
       - "{{.CLP_BUILD_DIR}}/core/clp"
       - "{{.CLP_BUILD_DIR}}/core/clo"

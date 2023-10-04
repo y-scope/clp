@@ -8,6 +8,7 @@ from .core import get_config_value, make_config_path_absolute, read_yaml_config_
 # Constants
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path('etc') / 'credentials.yml'
 CLP_METADATA_TABLE_PREFIX = 'clp_'
+SEARCH_JOBS_TABLE_NAME = "distributed_search_jobs"
 
 # Component names
 # NOTE: For simplicity with parsing the config file and usage throughout the
@@ -23,6 +24,7 @@ SEARCH_SCHEDULER_COMPONENT_NAME = 'search_scheduler'
 SEARCH_WORKER_COMPONENT_NAME = 'search_worker'
 COMPRESSION_WORKER_COMPONENT_NAME = 'compression_worker'
 WEBUI_COMPONENT_NAME = 'webui'
+WEBUI_QUERY_HANDLER_COMPONENT_NAME = 'webui_query_handler'
 
 
 class Database(BaseModel):
@@ -111,7 +113,8 @@ class ResultsCache(BaseModel):
     host: str = 'localhost'
     port: int = 27017
     db_name: str = 'clp-search'
-    collection_name: str = 'results_cache'
+    results_collection_name: str = 'results'
+    metadata_collection_name: str = 'results-metadata'
 
     @validator('host')
     def validate_host(cls, field):
@@ -119,9 +122,28 @@ class ResultsCache(BaseModel):
             raise ValueError(f'{RESULTS_CACHE_COMPONENT_NAME}.host cannot be empty.')
         return field
 
+    @validator('db_name')
+    def validate_db_name(cls, field):
+        if '' == field:
+            raise ValueError(f'{RESULTS_CACHE_COMPONENT_NAME}.db_name cannot be empty.')
+        return field
+
+    @validator('results_collection_name')
+    def validate_results_collection_name(cls, field):
+        if '' == field:
+            raise ValueError(
+                f'{RESULTS_CACHE_COMPONENT_NAME}.results_collection_name cannot be empty.')
+        return field
+
+    @validator('metadata_collection_name')
+    def validate_metadata_collection_name(cls, field):
+        if '' == field:
+            raise ValueError(
+                f'{RESULTS_CACHE_COMPONENT_NAME}.metadata_collection_name cannot be empty.')
+        return field
+
     def get_uri(self):
-        # TODO Make database name configurable
-        return f"mongodb://{self.host}:{self.port}"
+        return f"mongodb://{self.host}:{self.port}/{self.db_name}"
 
 
 class Scheduler(BaseModel):
@@ -186,6 +208,12 @@ class WebUi(BaseModel):
     port: int = 4000
 
 
+class WebUiQueryHandler(BaseModel):
+    host: str = 'localhost'
+    port: int = 4001
+    max_results: int = 1_000_000
+
+
 class CLPConfig(BaseModel):
     execution_container: str = 'ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-focal:main'
 
@@ -198,6 +226,7 @@ class CLPConfig(BaseModel):
     search_queue: Queue = Queue(port=5673)
     search_scheduler: SearchScheduler = SearchScheduler()
     webui: WebUi = WebUi()
+    webui_query_handler: WebUiQueryHandler = WebUiQueryHandler()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()

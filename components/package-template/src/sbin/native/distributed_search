@@ -6,6 +6,8 @@ import pathlib
 import sys
 import time
 
+from clp_py_utils.clp_config import SEARCH_JOBS_TABLE_NAME
+
 # Setup logging
 # Create logger
 logger = logging.getLogger(__file__)
@@ -94,15 +96,13 @@ def main(argv):
 
     # Set up a connection to your MongoDB instance
     db_name = clp_config.results_cache.db_name
-    collection_name = clp_config.results_cache.collection_name
+    collection_name = clp_config.results_cache.results_collection_name
     client = pymongo.MongoClient(clp_config.results_cache.get_uri())  # Update the connection string as needed
     search_results_collection = client[db_name][collection_name]  # Replace with your database name
     # Delete all documents in the collection
     result = search_results_collection.delete_many({})
 
-    # hardcode constant for now
-    search_job_table = "distrbuted_search_jobs"
-    sql = f"INSERT INTO {search_job_table} (search_config) VALUES (%s)"
+    sql = f"INSERT INTO {SEARCH_JOBS_TABLE_NAME} (search_config) VALUES (%s)"
     cursor.execute(sql, (msgpack.packb(query),))
     db_conn.commit()
 
@@ -111,7 +111,7 @@ def main(argv):
     prev_status = JobStatus.PENDING
     logger.info(f"Submitted job {job_id}")
     while True:
-        cursor.execute(f"SELECT status FROM {search_job_table} WHERE id={job_id}")
+        cursor.execute(f"SELECT status FROM {SEARCH_JOBS_TABLE_NAME} WHERE id={job_id}")
         rows = cursor.fetchall()
         if len(rows) != 1:
             logger.error("Invalid database state, exiting...")

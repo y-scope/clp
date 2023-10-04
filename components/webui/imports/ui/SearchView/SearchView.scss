@@ -1,0 +1,129 @@
+.search-results-container {
+  position: relative;
+}
+
+// NOTE: We use a hierarchical selector to override Bootstrap's hierarchical selector (classes can't override hierarchical selectors without !important)
+.search-results thead th {
+  border: none;
+  padding: 0;
+}
+
+.search-results-th {
+  position: sticky;
+  top: 0;
+
+  &-sortable {
+    cursor: pointer;
+    user-select: none;
+  }
+}
+
+.search-results-table-header {
+  background-color: #fff;
+  border-bottom: 1px solid #ccc;
+  border-top: 1px solid #dee2e6;
+  padding: 10px;
+}
+
+.search-results-message {
+  font-size: 0.93rem;
+  line-height: 1.4rem;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.search-results-path {
+  color: #999;
+  display: block;
+  line-height: 0.93rem;
+  padding-top: 5px;
+}
+
+.search-results-path a:hover {
+  text-decoration: none;
+}
+
+.search-results-display-settings-container {
+  max-width: 100%;
+}
+
+.search-results-display-settings {
+  width: 200px;
+}
+
+.search-results-count {
+  display: block;
+  padding: 0.375rem 0;
+
+  color: #999;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.search-results-title-bar {
+  background-color: #fff;
+  padding: 2px 0;
+}
+
+.search-no-results-status {
+  color: #ccc;
+  font-size: 5rem;
+  line-height: 1;
+
+  padding: 1rem 2rem;
+}
+
+.search-error {
+  padding: 0.5rem;
+
+  background-color: #ffc0c0;
+  color: #8e0000;
+  border-top: 1px solid #ca9b9b;
+  border-bottom: 1px solid #ecb4b4;
+}
+
+.search-error-icon {
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+.search-progress-bar {
+  border-top: 1px solid #ccc;
+  height: 4px;
+}
+
+.search-filter {
+  &-controls-drawer {
+    background-color: #efefef;
+    border-top: 1px solid #fff;
+
+    padding-top: 1rem;
+    position: relative;
+
+    width: 100%;
+  }
+
+  &-control-label {
+    color: #666;
+    width: 90px;
+  }
+}
+
+.timestamp-picker {
+  border: 1px solid rgb(206, 212, 218);
+  border-radius: 0;
+
+  font-size: 0.875rem;
+  line-height: 1.5;
+
+  height: calc(1.5em + 0.5rem + 2px);
+  padding: 0.25rem 0.5rem;
+}
+
+.search-results-timeline-container {
+  background-color: #ffffff;
+  border-top: 1px solid #dee2e6;
+
+  padding-top: 15px;
+}

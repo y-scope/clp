@@ -70,6 +70,7 @@ from clp_py_utils.clp_config import (
     COMPRESSION_WORKER_COMPONENT_NAME,
     COMPRESSION_JOB_HANDLER_COMPONENT_NAME,
     WEBUI_COMPONENT_NAME,
+    WEBUI_QUERY_HANDLER_COMPONENT_NAME,
 )
 
 
@@ -109,6 +110,7 @@ def main(argv):
     component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
     component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
     component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
+    component_args_parser.add_parser(WEBUI_QUERY_HANDLER_COMPONENT_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -145,6 +147,8 @@ def main(argv):
 
         if '' == component_name or WEBUI_COMPONENT_NAME == component_name:
             stop_container(f'clp-{WEBUI_COMPONENT_NAME}-{instance_id}')
+        if '' == component_name or WEBUI_QUERY_HANDLER_COMPONENT_NAME == component_name:
+            stop_container(f'clp-{WEBUI_QUERY_HANDLER_COMPONENT_NAME}-{instance_id}')
         if '' == component_name or COMPRESSION_WORKER_COMPONENT_NAME == component_name:
             stop_container(f'clp-{COMPRESSION_WORKER_COMPONENT_NAME}-{instance_id}')
         if '' == component_name or COMPRESSION_JOB_HANDLER_COMPONENT_NAME == component_name:

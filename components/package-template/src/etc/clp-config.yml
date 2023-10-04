@@ -22,7 +22,8 @@
 #  host: "localhost"
 #  port: 27017
 #  db_name: "clp-search"
-#  collection_name: "results_cache"
+#  results_collection_name: "results"
+#  metadata_collection_name: "results-metadata"
 #
 #compression_queue:
 #  host: "localhost"
@@ -31,6 +32,14 @@
 #  host: "localhost"
 #  port: 5673
 #
+#webui_query_handler:
+#  host: "localhost"
+#  port: 4001
+#  max-results: 1000000
+#
+#webui:
+#  host: "localhost"
+#  port: 4000
 ## Where archives should be output to
 #archive_output:
 #  directory: "var/data/archives"

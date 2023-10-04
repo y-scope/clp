@@ -1,0 +1,9 @@
+.wft {
+  &-wrapper {
+    overflow: hidden;
+  }
+  &-text-container {
+    display: inline-block;
+    transition: font-size 0.5s, line-height 0.5s;
+  }
+}

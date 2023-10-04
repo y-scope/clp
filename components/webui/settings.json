@@ -1,0 +1,11 @@
+{
+  "public": {
+    "SearchResultsCollectionName": "results",
+    "SearchResultsMetadataCollectionName": "results-metadata",
+    "StatsCollectionName": "stats"
+  },
+  "private": {
+    "QueryHandlerHost": "localhost",
+    "QueryHandlerWebsocket": 4001
+  }
+}

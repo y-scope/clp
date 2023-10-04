@@ -1,4 +1,4 @@
-@import "~bootstrap/scss/bootstrap";
+@import "bootstrap-customized.scss";
 
 html {
   font-size: 14px;
@@ -25,3 +25,8 @@ body {
 #component-wrapper.sidebar-collapsed {
   margin-left: 3rem;
 }
+
+@import "IngestView/IngestView.scss";
+@import "SearchView/SearchView.scss";
+@import "Sidebar/Sidebar.scss";
+@import "WidthFittedText/WidthFittedText.scss";

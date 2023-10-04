@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "webui-query-handler"
+version = "0.1.0"
+description = "Script for the WebUi to interact with the search backend"
+authors = ["YScope Inc. <dev@yscope.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8 || 3.10"
+msgpack = "^1.0.6"
+pydantic = "^1.8.2"
+pymongo = "^4.5.0"
+websockets = "^11.0.3"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.9.1"
+docformatter = "^1.7.5"
+mypy = "^1.5.1"
+ruff = "^0.0.291"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

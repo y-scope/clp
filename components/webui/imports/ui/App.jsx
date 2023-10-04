@@ -1,8 +1,10 @@
-import {faFileUpload, faSearch} from "@fortawesome/free-solid-svg-icons";
 import React from "react";
-import {Hello} from "./Hello.jsx";
-import {Info} from "./Info.jsx";
 import {Redirect, Route, Switch} from "react-router";
+
+import {faFileUpload, faSearch} from "@fortawesome/free-solid-svg-icons";
+
+import IngestView from "./IngestView/IngestView.jsx";
+import SearchView from "./SearchView/SearchView.jsx";
 import Sidebar from "./Sidebar/Sidebar.jsx";
 
 import "./App.scss";
@@ -12,13 +14,13 @@ const ROUTES = [
         "path": "/ingest",
         "label": "Ingest",
         "icon": faFileUpload,
-        "component": Hello,
+        "component": IngestView,
     },
     {
         "path": "/search",
         "label": "Search",
         "icon": faSearch,
-        "component": Info,
+        "component": SearchView,
     },
 ];
 
@@ -57,10 +59,10 @@ export const App = () => {
                             <Redirect to="/ingest"/>
                         </Route>
                         <Route exact path={"/ingest"}>
-                            <Hello/>
+                            <IngestView isSidebarCollapsed={isSidebarVisuallyCollapsed}/>
                         </Route>
                         <Route exact path={"/search"}>
-                            <Info/>
+                            <SearchView/>
                         </Route>
                     </Switch>
                 </div>

@@ -183,10 +183,7 @@ def main(argv: List[str]) -> int:
         entry["input_config"]["path_prefix_to_remove"] = args.path_prefix_to_remove
 
     # Connect to database
-    mongo_db_hostname = clp_config.results_cache.host
-    mongo_db_port = clp_config.results_cache.port
-    db_name = "metadata-db"
-    db_client: MongoClient = MongoClient(f"mongodb://{mongo_db_hostname}:{mongo_db_port}/{db_name}")
+    db_client: MongoClient = MongoClient(f"{clp_config.results_cache.get_uri()}")
     archive_db = db_client.get_database()
 
     jobs_collection = archive_db["cjobs"]

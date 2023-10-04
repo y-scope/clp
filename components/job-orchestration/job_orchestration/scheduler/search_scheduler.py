@@ -19,6 +19,7 @@ import pathlib
 from celery import group, signature
 from celery.exceptions import TimeoutError
 
+from clp_py_utils.clp_config import SEARCH_JOBS_TABLE_NAME
 from job_orchestration.executor.search.fs_search_method import (
     search as fs_search
 )
@@ -47,8 +48,6 @@ logger.propagate = False
 # dictionary of active jobs indexed by job id
 active_jobs = {}
 
-search_job_table = "distrbuted_search_jobs"
-
 class SchedulerConfig:
     def __init__(self, host: str, port: int) -> None:
         self.host: str = host
@@ -57,29 +56,29 @@ class SchedulerConfig:
 
 def fetch_new_search_jobs(db_cursor) -> list:
     db_cursor.execute(f"""
-        SELECT {search_job_table}.id as job_id,
-        {search_job_table}.status as job_status,
-        {search_job_table}.num_tasks,
-        {search_job_table}.num_tasks_completed,
-        {search_job_table}.search_config
-        FROM {search_job_table}
-        WHERE {search_job_table}.status='{JobStatus.PENDING}'
+        SELECT {SEARCH_JOBS_TABLE_NAME}.id as job_id,
+        {SEARCH_JOBS_TABLE_NAME}.status as job_status,
+        {SEARCH_JOBS_TABLE_NAME}.num_tasks,
+        {SEARCH_JOBS_TABLE_NAME}.num_tasks_completed,
+        {SEARCH_JOBS_TABLE_NAME}.search_config
+        FROM {SEARCH_JOBS_TABLE_NAME}
+        WHERE {SEARCH_JOBS_TABLE_NAME}.status='{JobStatus.PENDING}'
     """)
     return db_cursor.fetchall()
 
 def fetch_cancelling_search_jobs(db_cursor) -> list:
     db_cursor.execute(f"""
-        SELECT {search_job_table}.id as job_id,
-        {search_job_table}.search_config
-        FROM {search_job_table}
-        WHERE {search_job_table}.status='{JobStatus.CANCELLING}'
+        SELECT {SEARCH_JOBS_TABLE_NAME}.id as job_id,
+        {SEARCH_JOBS_TABLE_NAME}.search_config
+        FROM {SEARCH_JOBS_TABLE_NAME}
+        WHERE {SEARCH_JOBS_TABLE_NAME}.status='{JobStatus.CANCELLING}'
     """)
     return db_cursor.fetchall()
 
 def setup_search_jobs_table(db_conn):
     cursor = db_conn.cursor()
     cursor.execute(f"""
-        CREATE TABLE IF NOT EXISTS `{search_job_table}` (
+        CREATE TABLE IF NOT EXISTS `{SEARCH_JOBS_TABLE_NAME}` (
             `id` INT NOT NULL AUTO_INCREMENT,
             `status` INT NOT NULL DEFAULT '{JobStatus.PENDING}',
             `status_msg` VARCHAR(255) NOT NULL DEFAULT '',
@@ -103,7 +102,7 @@ def set_job_status(
 
     field_set_expressions = [f'{k}="{v}"' for k, v in kwargs.items()]
     field_set_expressions.append(f"status={status}")
-    update = f'UPDATE {search_job_table} SET {", ".join(field_set_expressions)} WHERE id={job_id}'
+    update = f'UPDATE {SEARCH_JOBS_TABLE_NAME} SET {", ".join(field_set_expressions)} WHERE id={job_id}'
 
     if prev_status is not None:
         update += f' AND status={prev_status}'
@@ -127,11 +126,12 @@ def poll_and_handle_cancelling_search_jobs(db_conn) -> None:
 
     for job_id, search_config in cancelling_jobs:
         if job_id in active_jobs:
-            active_jobs[job_id].revoke()
+            active_jobs[job_id].revoke(terminate=True)
             del active_jobs[job_id]
+            logger.info(f"Cancelled job {job_id}")
 
         #TODO: also update time
-        set_job_status(db_conn, job_id, JobStatus.CANCELLED, prev_status=CANCELLING)
+        set_job_status(db_conn, job_id, JobStatus.CANCELLED, prev_status=JobStatus.CANCELLING)
 
 def get_search_tasks_for_job(
     db_conn,

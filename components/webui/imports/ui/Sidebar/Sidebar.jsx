@@ -3,11 +3,8 @@ import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {
     faAngleDoubleLeft,
     faAngleDoubleRight,
-    faSignOutAlt
 } from "@fortawesome/free-solid-svg-icons";
 import {NavLink} from "react-router-dom";
-
-import "./Sidebar.scss";
 
 const Sidebar = ({isSidebarCollapsed, onSidebarToggle, onSidebarTransitioned, routes}) => {
     return (

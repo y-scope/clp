@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import logging
 import multiprocessing
 import os
@@ -74,7 +75,8 @@ from clp.package_utils import \
     validate_db_config, \
     validate_results_cache_config, \
     validate_worker_config, validate_queue_config, \
-    validate_webui_config
+    validate_webui_config, \
+    validate_webui_query_handler_config
 from clp_py_utils.clp_config import (
     CLPConfig,
     DB_COMPONENT_NAME,
@@ -87,6 +89,7 @@ from clp_py_utils.clp_config import (
     COMPRESSION_WORKER_COMPONENT_NAME,
     COMPRESSION_JOB_HANDLER_COMPONENT_NAME,
     WEBUI_COMPONENT_NAME,
+    WEBUI_QUERY_HANDLER_COMPONENT_NAME,
 )
 from job_orchestration.scheduler.constants import QueueName
 
@@ -396,7 +399,7 @@ def start_compression_job_handler(instance_id: str, clp_config: CLPConfig, conta
         '--target-segment-size', str(clp_config.archive_output.target_segment_size),
         '--no-progress-reporting',
         # V0.5 TODO: pass those variables using clp config
-        '--db-uri', f"{clp_config.results_cache.get_uri()}/metadata-db",
+        '--db-uri', f"{clp_config.results_cache.get_uri()}",
         '--clp-db-host', clp_config.database.host,
         '--clp-db-port', str(clp_config.database.port),
         'fs',
@@ -559,17 +562,31 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
 
     validate_webui_config(clp_config)
 
+    settings = {
+        "public": {
+            "SearchResultsCollectionName": clp_config.results_cache.results_collection_name,
+            "SearchResultsMetadataCollectionName": clp_config.results_cache.metadata_collection_name,
+            # TODO Hard-coded
+            "StatsCollectionName": "stats",
+        },
+        "private": {
+            "QueryHandlerHost": clp_config.webui_query_handler.host,
+            "QueryHandlerWebsocket": clp_config.webui_query_handler.port,
+        }
+    }
+
     # Start container
     container_cmd = [
         'docker', 'run',
         '-d',
         '--network', 'host',
-        # '--rm',
+        '--rm',
         '--name', container_name,
         '-u', f'{os.getuid()}:{os.getgid()}',
         '-e', f"MONGO_URL={clp_config.results_cache.get_uri()}",
         '-e', f"PORT={clp_config.webui.port}",
         '-e', f"ROOT_URL=http://{clp_config.webui.host}",
+        '-e', f"METEOR_SETTINGS={json.dumps(settings)}",
     ]
     necessary_mounts = [
         mounts.clp_home,
@@ -585,6 +602,69 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
         str(CONTAINER_CLP_HOME / 'var' / 'www' / 'main.js')
     ]
     cmd = container_cmd + node_cmd
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+
+    logger.info(f"Started {component_name}.")
+
+
+def start_webui_query_handler(instance_id: str, clp_config: CLPConfig,
+                              container_clp_config: CLPConfig, mounts: CLPDockerMounts):
+    component_name = WEBUI_QUERY_HANDLER_COMPONENT_NAME
+
+    logger.info(f"Starting {component_name}...")
+
+    container_name = f'clp-{component_name}-{instance_id}'
+    if container_exists(container_name):
+        logger.info(f"{component_name} already running.")
+        return
+
+    validate_webui_query_handler_config(clp_config)
+
+    # Create necessary directories
+    clp_config.archive_output.directory.mkdir(parents=True, exist_ok=True)
+
+    clp_site_packages_dir = CONTAINER_CLP_HOME / 'lib' / 'python3' / 'site-packages'
+    container_start_cmd = [
+        'docker', 'run',
+        '-di',
+        '--network', 'host',
+        '-w', str(CONTAINER_CLP_HOME),
+        '--rm',
+        '--name', container_name,
+        '-e', f'PYTHONPATH={clp_site_packages_dir}',
+        '-e', f'CLP_DB_USER={clp_config.database.username}',
+        '-e', f'CLP_DB_PASS={clp_config.database.password}',
+        '-u', f'{os.getuid()}:{os.getgid()}',
+        '--mount', str(mounts.clp_home),
+    ]
+    necessary_mounts = [
+        mounts.data_dir,
+        mounts.logs_dir,
+        mounts.archives_output_dir,
+        mounts.input_logs_dir,
+    ]
+    for mount in necessary_mounts:
+        if mount:
+            container_start_cmd.append('--mount')
+            container_start_cmd.append(str(mount))
+    container_start_cmd.append(clp_config.execution_container)
+
+    query_handler_cmd = [
+        "python3",
+        "-u",
+        "-m",
+        "webui_query_handler.main",
+        "--host", str(clp_config.webui_query_handler.host),
+        "--port", str(clp_config.webui_query_handler.port),
+        "--db-host", str(clp_config.database.host),
+        "--db-port", str(clp_config.database.port),
+        "--db-name", str(clp_config.database.name),
+        "--results-cache-uri", f"{clp_config.results_cache.get_uri()}",
+        "--results-cache-results-collection", f"{clp_config.results_cache.results_collection_name}",
+        "--results-cache-metadata-collection",
+        f"{clp_config.results_cache.metadata_collection_name}",
+    ]
+    cmd = container_start_cmd + query_handler_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     logger.info(f"Started {component_name}.")
@@ -612,6 +692,7 @@ def main(argv):
     component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
     component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
     component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
+    component_args_parser.add_parser(WEBUI_QUERY_HANDLER_COMPONENT_NAME)
     # Shortcut for multiple components
     component_args_parser.add_parser(DATABASE_COMPONENTS)
     component_args_parser.add_parser(CONTROLLER_COMPONENTS)
@@ -640,7 +721,8 @@ def main(argv):
 
         # Validate and load necessary credentials
         if component_name in ['', DB_COMPONENT_NAME, SEARCH_SCHEDULER_COMPONENT_NAME,
-                              COMPRESSION_JOB_HANDLER_COMPONENT_NAME, DATABASE_COMPONENTS,
+                              COMPRESSION_JOB_HANDLER_COMPONENT_NAME,
+                              WEBUI_QUERY_HANDLER_COMPONENT_NAME, DATABASE_COMPONENTS,
                               CONTROLLER_COMPONENTS]:
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
         if component_name in [
@@ -712,6 +794,8 @@ def main(argv):
             start_search_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
         if component_name in ['', COMPRESSION_WORKER_COMPONENT_NAME]:
             start_compression_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
+        if component_name in ['', WEBUI_QUERY_HANDLER_COMPONENT_NAME]:
+            start_webui_query_handler(instance_id, clp_config, container_clp_config, mounts)
         if component_name in ['', WEBUI_COMPONENT_NAME]:
             start_webui(instance_id, clp_config, mounts)
     except Exception as ex:
