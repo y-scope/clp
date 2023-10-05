@@ -4,7 +4,7 @@ import typing
 from pydantic import BaseModel, validator
 
 from .core import get_config_value, make_config_path_absolute, read_yaml_config_file, validate_path_could_be_dir
-
+from .clp_logging import is_valid_logging_level, get_supported_logging_level
 # Constants
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path('etc') / 'credentials.yml'
 CLP_METADATA_TABLE_PREFIX = 'clp_'
@@ -146,13 +146,45 @@ class ResultsCache(BaseModel):
         return f"mongodb://{self.host}:{self.port}/{self.db_name}"
 
 
-class Scheduler(BaseModel):
-    jobs_poll_delay: int = 1  # seconds
+def validate_logging_level_static(cls, field):
+    if not is_valid_logging_level(field):
+        raise ValueError(
+            f"{cls.__name__}: logging level '{field}' is not a valid value.\n"
+            f"Use one of the following level {get_supported_logging_level()}"
+        )
+
+
+class CompressionJobHandler(BaseModel):
+    logging_level: str = 'INFO'
+
+    @validator('logging_level')
+    def validate_logging_level(cls, field):
+        validate_logging_level_static(cls, field)
+
+
+class CompressionWorker(BaseModel):
+    logging_level: str = 'INFO'
+
+    @validator('logging_level')
+    def validate_logging_level(cls, field):
+        validate_logging_level_static(cls, field)
 
 
 class SearchScheduler(BaseModel):
-    jobs_poll_delay: int = 1  # seconds
+    jobs_poll_delay: float = 1  # seconds
+    logging_level: str = 'INFO'
 
+    @validator('logging_level')
+    def validate_logging_level(cls, field):
+        validate_logging_level_static(cls, field)
+
+
+class SearchWorker(BaseModel):
+    logging_level: str = 'INFO'
+
+    @validator('logging_level')
+    def validate_logging_level(cls, field):
+        validate_logging_level_static(cls, field)
 
 class Queue(BaseModel):
     host: str = 'localhost'
@@ -212,6 +244,9 @@ class WebUiQueryHandler(BaseModel):
     host: str = 'localhost'
     port: int = 4001
     max_results: int = 1_000_000
+    logging_level: str = 'INFO'
+    def validate_logging_level(cls, field):
+        validate_logging_level_static(cls, field)
 
 
 class CLPConfig(BaseModel):
@@ -221,10 +256,12 @@ class CLPConfig(BaseModel):
 
     database: Database = Database()
     results_cache: ResultsCache = ResultsCache()
-    scheduler: Scheduler = Scheduler()
     compression_queue: Queue = Queue(port=5672)
     search_queue: Queue = Queue(port=5673)
+    compression_job_handler: CompressionJobHandler = CompressionJobHandler()
+    compression_worker: CompressionWorker = CompressionWorker()
     search_scheduler: SearchScheduler = SearchScheduler()
+    search_worker: SearchWorker = SearchWorker()
     webui: WebUi = WebUi()
     webui_query_handler: WebUiQueryHandler = WebUiQueryHandler()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH

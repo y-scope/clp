@@ -11,6 +11,7 @@ from typing import Any, Dict
 
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
+from clp_py_utils.clp_logging import get_logging_level
 
 from job_orchestration.executor.search.celery import app
 
@@ -27,20 +28,21 @@ def search(
 ) -> bool:
     task_id_str = self.request.id
 
-    # logging to console
     logger = get_task_logger(__name__)
-    logger.setLevel(logging.INFO)
     logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
 
-    # Also setup logging to file
+    # Setup logging to file
     worker_logs_dir = Path(os.getenv("CLP_LOGS_DIR")) / job_id_str
-    # Create directories
     worker_logs_dir.mkdir(exist_ok=True, parents=True)
-
     worker_logs = worker_logs_dir / f"{task_id_str}.log"
     logging_file_handler = logging.FileHandler(filename=worker_logs, encoding="utf-8")
     logging_file_handler.setFormatter(logging_formatter)
     logger.addHandler(logging_file_handler)
+
+    # Update logging level based on config
+    logging_level_str = os.getenv("CLP_LOGGING_LEVEL")
+    logging_level = get_logging_level(logging_level_str)
+    logger.setLevel(logging_level)
 
     logger.info(f"Started job {job_id_str}. Task Id={task_id_str}.")
 

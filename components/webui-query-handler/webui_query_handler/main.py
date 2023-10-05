@@ -17,10 +17,12 @@ import mysql.connector
 import pymongo
 import pymongo.errors
 import websockets
+from pathlib import Path
 from pydantic import BaseModel
 from pymongo import ASCENDING, DESCENDING, IndexModel, MongoClient
 
 from clp_py_utils.clp_config import SEARCH_JOBS_TABLE_NAME
+from clp_py_utils.clp_logging import get_logging_level
 from job_orchestration.scheduler.common import JobStatus
 
 # Setup logging
@@ -1009,6 +1011,18 @@ def main(argv):
     results_cache_uri = parsed_args.results_cache_uri
     results_collection_name = parsed_args.results_cache_results_collection
     results_metadata_collection_name = parsed_args.results_cache_metadata_collection
+
+    # Setup logging to file
+    log_file = Path(os.getenv("CLP_LOGS_DIR")) / "webui_query_handler.log"
+    logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
+    logging_file_handler.setFormatter(logging_formatter)
+    logger.addHandler(logging_file_handler)
+
+    # Update logging level based on config
+    logging_level_str = os.getenv("CLP_LOGGING_LEVEL")
+    logging_level = get_logging_level(logging_level_str)
+    logger.setLevel(logging_level)
+    logger.info(f"Start logging level = {logging.getLevelName(logging_level)}")
 
     try:
         # TODO Extract constant names into variables

@@ -13,6 +13,7 @@ from celery import group, signature
 from celery.exceptions import TimeoutError
 
 from clp.package_utils import CONTAINER_INPUT_LOGS_ROOT_DIR
+from clp_py_utils.clp_logging import get_logging_level
 from clp_py_utils.compression import (  # type: ignore
     FileMetadata,
     validate_path_and_get_info,
@@ -368,13 +369,16 @@ def main(argv: List[str]) -> int:
         "--clp-db-port", required=True, help="port for CLP globalDB"
     )
     # fmt: on
-    logger.setLevel(logging.INFO)
-    # Also setup logging to file
+    # Setup logging to file
     log_file = Path(os.getenv("CLP_LOGS_DIR")) / "compression_job_handler.log"
     logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
     logging_file_handler.setFormatter(logging_formatter)
     logger.addHandler(logging_file_handler)
-
+    # Update logging level based on config
+    logging_level_str = os.getenv("CLP_LOGGING_LEVEL")
+    logging_level = get_logging_level(logging_level_str)
+    logger.setLevel(logging_level)
+    logger.info(f"Start logging level = {logging.getLevelName(logging_level)}")
 
     output_type_args_parser = args_parser.add_subparsers(dest="output_type")
     output_type_args_parser.required = True

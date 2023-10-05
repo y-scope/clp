@@ -92,6 +92,7 @@ from clp_py_utils.clp_config import (
     WEBUI_COMPONENT_NAME,
     WEBUI_QUERY_HANDLER_COMPONENT_NAME,
 )
+from pydantic import BaseModel
 from job_orchestration.scheduler.constants import QueueName
 
 
@@ -362,8 +363,8 @@ def start_compression_job_handler(instance_id: str, clp_config: CLPConfig, conta
         return
 
     logs_dir = clp_config.logs_directory / component_name
-    container_logs_dir = container_clp_config.logs_directory / component_name
     logs_dir.mkdir(parents=True, exist_ok=True)
+    container_logs_dir = container_clp_config.logs_directory / component_name
 
     clp_config.archive_output.directory.mkdir(parents=True, exist_ok=True)
 
@@ -384,6 +385,7 @@ def start_compression_job_handler(instance_id: str, clp_config: CLPConfig, conta
               f'{container_clp_config.compression_queue.username}:{container_clp_config.compression_queue.password}'
               f'@{container_clp_config.compression_queue.host}:{container_clp_config.compression_queue.port}',
         '-e', f'CLP_LOGS_DIR={container_logs_dir}',
+        '-e', f'CLP_LOGGING_LEVEL={clp_config.compression_job_handler.logging_level}',
         # V0.5 TODO: customization for filer
         #'-u', f'{os.getuid()}:{os.getgid()}',
         '-u', f'root:root',
@@ -437,8 +439,8 @@ def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_cl
         yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
 
     logs_dir = clp_config.logs_directory / component_name
-    container_logs_dir = container_clp_config.logs_directory / component_name
     logs_dir.mkdir(parents=True, exist_ok=True)
+    container_logs_dir = container_clp_config.logs_directory / component_name
 
     clp_site_packages_dir = CONTAINER_CLP_HOME / 'lib' / 'python3' / 'site-packages'
     container_start_cmd = [
@@ -455,6 +457,7 @@ def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_cl
               f'{container_clp_config.search_queue.username}:{container_clp_config.search_queue.password}'
               f'@{container_clp_config.search_queue.host}:{container_clp_config.search_queue.port}',
         '-e', f'CLP_LOGS_DIR={container_logs_dir}',
+        '-e', f'CLP_LOGGING_LEVEL={clp_config.search_scheduler.logging_level}',
         # V0.5 TODO: customization for filer
         #'-u', f'{os.getuid()}:{os.getgid()}',
         '-u', f'root:root',
@@ -483,23 +486,41 @@ def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_cl
 
 def start_compression_worker(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig,
                              num_cpus: int, mounts: CLPDockerMounts):
-    compression_queue_config = container_clp_config.compression_queue
     celery_method = 'job_orchestration.executor.compression'
     celery_route = f"{QueueName.COMPRESSION}"
-    start_worker(COMPRESSION_WORKER_COMPONENT_NAME, instance_id, clp_config, container_clp_config,
-                 compression_queue_config, celery_method, celery_route, num_cpus, mounts)
+    start_worker(
+        COMPRESSION_WORKER_COMPONENT_NAME,
+        instance_id,
+        clp_config,
+        clp_config.compression_worker,
+        container_clp_config,
+        container_clp_config.compression_queue,
+        celery_method,
+        celery_route,
+        num_cpus,
+        mounts
+    )
 
 
 def start_search_worker(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig,
                         num_cpus: int, mounts: CLPDockerMounts):
-    compression_queue_config = container_clp_config.search_queue
     celery_method = 'job_orchestration.executor.search'
     celery_route = f"{QueueName.SEARCH}"
-    start_worker(SEARCH_WORKER_COMPONENT_NAME, instance_id, clp_config, container_clp_config,
-                 compression_queue_config, celery_method, celery_route, num_cpus, mounts)
+    start_worker(
+        SEARCH_WORKER_COMPONENT_NAME,
+        instance_id,
+        clp_config,
+        clp_config.search_worker,
+        container_clp_config,
+        container_clp_config.search_queue,
+        celery_method,
+        celery_route,
+        num_cpus,
+        mounts
+    )
 
 
-def start_worker(component_name: str, instance_id: str, clp_config: CLPConfig,
+def start_worker(component_name: str, instance_id: str, clp_config: CLPConfig, worker_config: BaseModel,
                  container_clp_config: CLPConfig, queue_config: Queue, celery_method: str,
                  celery_route: str, num_cpus: int, mounts: CLPDockerMounts):
     logger.info(f"Starting {component_name}...")
@@ -511,11 +532,12 @@ def start_worker(component_name: str, instance_id: str, clp_config: CLPConfig,
 
     validate_worker_config(clp_config)
 
+    logs_dir = clp_config.logs_directory / component_name
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    container_logs_dir = container_clp_config.logs_directory / component_name
+
     # Create necessary directories
     clp_config.archive_output.directory.mkdir(parents=True, exist_ok=True)
-    logs_dir = clp_config.logs_directory / component_name
-    container_logs_dir = container_clp_config.logs_directory / component_name
-    logs_dir.mkdir(parents=True, exist_ok=True)
 
     clp_site_packages_dir = CONTAINER_CLP_HOME / 'lib' / 'python3' / 'site-packages'
     container_start_cmd = [
@@ -535,6 +557,7 @@ def start_worker(component_name: str, instance_id: str, clp_config: CLPConfig,
         '-e', f'CLP_DATA_DIR={container_clp_config.data_directory}',
         '-e', f'CLP_ARCHIVE_OUTPUT_DIR={container_clp_config.archive_output.directory}',
         '-e', f'CLP_LOGS_DIR={container_logs_dir}',
+        '-e', f'CLP_LOGGING_LEVEL={worker_config.logging_level}',
         # V0.5 TODO: customization for filer
         #'-u', f'{os.getuid()}:{os.getgid()}',
         '-u', f'root:root',
@@ -638,6 +661,10 @@ def start_webui_query_handler(instance_id: str, clp_config: CLPConfig,
 
     validate_webui_query_handler_config(clp_config)
 
+    logs_dir = clp_config.logs_directory / component_name
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    container_logs_dir = container_clp_config.logs_directory / component_name
+
     # Create necessary directories
     clp_config.archive_output.directory.mkdir(parents=True, exist_ok=True)
 
@@ -651,6 +678,8 @@ def start_webui_query_handler(instance_id: str, clp_config: CLPConfig,
         '-e', f'PYTHONPATH={clp_site_packages_dir}',
         '-e', f'CLP_DB_USER={clp_config.database.username}',
         '-e', f'CLP_DB_PASS={clp_config.database.password}',
+        '-e', f'CLP_LOGS_DIR={container_logs_dir}',
+        '-e', f'CLP_LOGGING_LEVEL={clp_config.webui_query_handler.logging_level}',
         '-u', f'{os.getuid()}:{os.getgid()}',
         '--mount', str(mounts.clp_home),
     ]
@@ -816,13 +845,11 @@ def main(argv):
         if component_name in ['', WEBUI_COMPONENT_NAME]:
             start_webui(instance_id, clp_config, mounts)
     except Exception as ex:
-        # Stop CLP
-        subprocess.run(['python3', str(clp_home / 'sbin' / 'stop-clp')], check=True)
-
         if type(ex) == ValueError:
             logger.error(f"Failed to start CLP: {ex}")
         else:
             logger.exception("Failed to start CLP.")
+
         return -1
 
     return 0

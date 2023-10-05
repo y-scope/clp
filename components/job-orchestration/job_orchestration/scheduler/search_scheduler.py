@@ -27,6 +27,7 @@ from job_orchestration.executor.search.fs_search_method import (
 from pydantic import ValidationError
 
 from clp_py_utils.clp_config import CLPConfig, Database, ResultsCache
+from clp_py_utils.clp_logging import get_logging_level
 from clp_py_utils.core import read_yaml_config_file
 
 from .common import JobStatus  # type: ignore
@@ -216,13 +217,14 @@ def check_job_status_and_update_db(db_conn):
 def handle_jobs(
     db_conn,
     celery_worker_method_base_kwargs: Dict[str, Any],
+    jobs_poll_delay: float,
 ) -> None:
     # Changes the os directory for job specific logs
     while True:
         poll_and_submit_pending_search_jobs(db_conn, celery_worker_method_base_kwargs)
         poll_and_handle_cancelling_search_jobs(db_conn)
         check_job_status_and_update_db(db_conn)
-        time.sleep(0.1)
+        time.sleep(jobs_poll_delay)
 
     logger.info("Exiting...")
 
@@ -234,12 +236,17 @@ def main(argv: List[str]) -> int:
 
     parsed_args = args_parser.parse_args(argv[1:])
 
-    logger.setLevel(logging.INFO)
-    # Also setup logging to file
-    log_file = Path(os.getenv("CLP_LOGS_DIR")) / "compression_job_handler.log"
+    # Setup logging to file
+    log_file = Path(os.getenv("CLP_LOGS_DIR")) / "search_scheduler.log"
     logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
     logging_file_handler.setFormatter(logging_formatter)
     logger.addHandler(logging_file_handler)
+
+    # Update logging level based on config
+    logging_level_str = os.getenv("CLP_LOGGING_LEVEL")
+    logging_level = get_logging_level(logging_level_str)
+    logger.setLevel(logging_level)
+    logger.info(f"Start logging level = {logging.getLevelName(logging_level)}")
 
     # Load configuration
     config_path = pathlib.Path(parsed_args.config)
@@ -268,11 +275,13 @@ def main(argv: List[str]) -> int:
 
         setup_search_jobs_table(db_conn)
 
+        jobs_poll_delay = clp_config.search_scheduler.jobs_poll_delay
         logger.info("search-job-handler started.")
-
+        logger.debug(f"job-poll-delay = {jobs_poll_delay} seconds")
         handle_jobs(
             db_conn=db_conn,
             celery_worker_method_base_kwargs=celery_worker_method_base_kwargs,
+            jobs_poll_delay=jobs_poll_delay
         )
     return 0
 
