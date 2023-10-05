@@ -87,7 +87,15 @@ def main(argv):
         password=clp_config.database.password,
     )
 
-    query = parsed_args.wildcard_query
+    wildcard_query = parsed_args.wildcard_query
+
+    query = {
+        "pipeline_string": wildcard_query,
+        "timestamp_begin": 0,
+        "timestamp_end": sys.maxsize,
+        "path_regex": '',
+        "match_case": True,
+    }
 
     cursor = db_conn.cursor()
 

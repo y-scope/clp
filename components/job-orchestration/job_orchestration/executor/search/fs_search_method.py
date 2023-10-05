@@ -23,7 +23,7 @@ def search(
     job_id_str: str,
     output_config: Dict[str, Any], # used to indicate how to output the results
     archive_id: str,
-    query: str,
+    query: dict,
 ) -> bool:
     task_id_str = self.request.id
 
@@ -77,8 +77,14 @@ def search(
         ip,
         port,
         str(archive_directory / archive_id),
-        query
+        query["pipeline_string"],
+        '--tge', str(query['timestamp_begin']),
+        '--tle', str(query['timestamp_end']),
     ]
+    if query['path_regex']:
+        search_cmd.append(query['path_regex'])
+    if not query['match_case']:
+        search_cmd.append('-i')
 
     # Start compression
     logger.info("Searching...")
@@ -99,11 +105,10 @@ def search(
         logger.error(f"Failed to search, return_code={return_code}")
     else:
         search_successful = True
-
-    # a hack to ensure that proxy server flush all data
-    # since the next message will only be print out after
-    # proxy flushes all data
-    proxy_end_message = server_proc.stdout.readline().decode()
+        # a hack to ensure that proxy server flush all data
+        # since the next message will only be print out after
+        # proxy flushes all data
+        proxy_end_message = server_proc.stdout.readline().decode()
 
     server_proc.terminate()
     server_proc.wait()

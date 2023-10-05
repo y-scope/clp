@@ -146,7 +146,7 @@ def submit_query(
     cursor = db_conn.cursor()
 
     sql = f"INSERT INTO {SEARCH_JOBS_TABLE_NAME} (search_config) VALUES (%s)"
-    cursor.execute(sql, (msgpack.packb(query["pipeline_string"]),))
+    cursor.execute(sql, (msgpack.packb(query),))
     db_conn.commit()
     job_id = cursor.lastrowid
 
@@ -641,6 +641,12 @@ async def query_handler(
                     elif ClientMessageType.QUERY == msg_type:
                         pending_query = msg_from_client["query"]
                         logger.info(pending_query)
+                        if not pending_query['pipeline_string']:
+                            await send_error_msg(
+                                websocket,
+                                "query_handler: Internal error - Query cannot be empty.",
+                            )
+                            return
 
                         # Tell client we're preparing for the query
                         await send_preparing_for_query_msg(websocket)

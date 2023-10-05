@@ -137,7 +137,7 @@ def get_search_tasks_for_job(
     db_conn,
     base_kwargs: Dict[str, Any],
     job_id: str,
-    query: str,
+    query: dict,
 ): #-> Group
     cursor = db_conn.cursor()
     #TODO: create more advanced queries
@@ -162,7 +162,7 @@ def dispatch_search_job(
     db_conn,
     base_kwargs: Dict[str, Any],
     job_id: int,
-    query: str,
+    query: dict,
 ) -> None:
     global active_jobs
     task_group = get_search_tasks_for_job(db_conn, base_kwargs, str(job_id), query)
