@@ -64,6 +64,7 @@ from clp.package_utils import \
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
     CONTAINER_CLP_HOME, \
     check_dependencies, \
+    is_container_running, \
     container_exists, \
     CLPDockerMounts, \
     DockerMount, \
@@ -131,11 +132,15 @@ def wait_for_database_to_init(container_name: str, clp_config: CLPConfig, timeou
 
 
 def start_db(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
-    logger.info(f"Starting {DB_COMPONENT_NAME}...")
+    component_name = DB_COMPONENT_NAME
+    logger.info(f"Starting {component_name}...")
 
-    container_name = f'clp-{DB_COMPONENT_NAME}-{instance_id}'
-    if container_exists(container_name):
-        logger.info(f"{DB_COMPONENT_NAME} already running.")
+    container_name = f'clp-{component_name}-{instance_id}'
+    if is_container_running(container_name):
+        logger.info(f"{container_name} already running.")
+        return
+    elif container_exists(container_name):
+        logger.info(f"{container_name} stopped but not removed.")
         return
 
     db_data_dir = clp_config.data_directory / DB_COMPONENT_NAME
@@ -157,7 +162,6 @@ def start_db(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
     cmd = [
         'docker', 'run',
         '-d',
-        '--rm',
         '--name', container_name,
         '-e', f'MYSQL_ROOT_PASSWORD={clp_config.database.password}',
         '-e', f'MYSQL_USER={clp_config.database.username}',
@@ -176,15 +180,16 @@ def start_db(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     if not wait_for_database_to_init(container_name, clp_config, 150):
-        raise EnvironmentError(f"{DB_COMPONENT_NAME} did not initialize in time")
+        raise EnvironmentError(f"{component_name} did not initialize in time")
 
-    logger.info(f"Started {DB_COMPONENT_NAME}.")
+    logger.info(f"Started {component_name}.")
 
 
 def create_db_tables(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig, mounts: CLPDockerMounts):
-    logger.info(f"Creating {DB_COMPONENT_NAME} tables...")
+    component_name = DB_COMPONENT_NAME
+    logger.info(f"Creating {component_name} tables...")
 
-    container_name = f'clp-{DB_COMPONENT_NAME}-table-creator-{instance_id}'
+    container_name = f'clp-{component_name}-table-creator-{instance_id}'
 
     # Create database config file
     db_config_filename = f'{container_name}.yml'
@@ -223,7 +228,7 @@ def create_db_tables(instance_id: str, clp_config: CLPConfig, container_clp_conf
 
     db_config_file_path.unlink()
 
-    logger.info(f"Created {DB_COMPONENT_NAME} tables.")
+    logger.info(f"Created {component_name} tables.")
 
 
 def start_compression_queue(instance_id: str, clp_config: CLPConfig):
@@ -273,7 +278,6 @@ def start_queue(component_name: str, instance_id: str, queue_config: Queue,
     cmd = [
         'docker', 'run',
         '-d',
-        '--rm',
         '--name', container_name,
         # Override RABBITMQ_LOGS since the image sets it to *only* log to stdout
         '-e', f'RABBITMQ_LOGS={rabbitmq_logs_dir / log_filename}',
@@ -303,8 +307,12 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
     logger.info(f"Starting {component_name}...")
 
     container_name = f'clp-{component_name}-{instance_id}'
-    if container_exists(container_name):
+    if is_container_running(container_name):
         logger.info(f"{component_name} already running.")
+        return
+    elif container_exists(container_name):
+        logger.warning(f"{component_name} stopped but not removed.")
+        logger.warning(f"run docker rm {container_name} to remove the stale container")
         return
 
     data_dir = clp_config.data_directory / component_name
@@ -326,7 +334,6 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
     cmd = [
         'docker', 'run',
         '-d',
-        '--rm',
         '--name', container_name,
         '-u', f'{os.getuid()}:{os.getgid()}',
     ]
@@ -366,7 +373,6 @@ def start_compression_job_handler(instance_id: str, clp_config: CLPConfig, conta
         '-di',
         '--network', 'host',
         '-w', str(CONTAINER_CLP_HOME),
-        '--rm',
         '--name', container_name,
         '-e', f'PYTHONPATH={clp_site_packages_dir}',
         '-e', f'DB_USER={clp_config.database.username}',
@@ -440,7 +446,6 @@ def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_cl
         '-di',
         '--network', 'host',
         '-w', str(CONTAINER_CLP_HOME),
-        '--rm',
         '--name', container_name,
         '-e', f'PYTHONPATH={clp_site_packages_dir}',
         '-e', f'BROKER_URL=amqp://'
@@ -518,7 +523,6 @@ def start_worker(component_name: str, instance_id: str, clp_config: CLPConfig,
         '-di',
         '--network', 'host',
         '-w', str(CONTAINER_CLP_HOME),
-        '--rm',
         '--name', container_name,
         '-e', f'PYTHONPATH={clp_site_packages_dir}',
         '-e', f'BROKER_URL=amqp://'
@@ -595,7 +599,6 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
         'docker', 'run',
         '-d',
         '--network', 'host',
-        '--rm',
         '--name', container_name,
         '-u', f'{os.getuid()}:{os.getgid()}',
         '-e', f"MONGO_URL={clp_config.results_cache.get_uri()}",
@@ -644,7 +647,6 @@ def start_webui_query_handler(instance_id: str, clp_config: CLPConfig,
         '-di',
         '--network', 'host',
         '-w', str(CONTAINER_CLP_HOME),
-        '--rm',
         '--name', container_name,
         '-e', f'PYTHONPATH={clp_site_packages_dir}',
         '-e', f'CLP_DB_USER={clp_config.database.username}',
