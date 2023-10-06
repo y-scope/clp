@@ -231,7 +231,7 @@ def handle_jobs(
 
 def main(argv: List[str]) -> int:
     # fmt: off
-    args_parser = argparse.ArgumentParser(description="Wait for and run compression jobs.")
+    args_parser = argparse.ArgumentParser(description="Wait for and run search jobs.")
     args_parser.add_argument('--config', '-c', required=True, help='CLP configuration file.')
 
     parsed_args = args_parser.parse_args(argv[1:])
@@ -254,35 +254,36 @@ def main(argv: List[str]) -> int:
         clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
     except ValidationError as err:
         logger.error(err)
+        return -1
     except Exception as ex:
         logger.error(ex)
         # read_yaml_config_file already logs the parsing error inside
-        pass
-    else:
-        output_config = dict(clp_config.results_cache)
+        return -1
 
-        celery_worker_method_base_kwargs: Dict[str, Any] = {
-            "output_config": output_config
-        }
+    output_config = dict(clp_config.results_cache)
 
-        db_conn = mysql.connector.connect(
-            host=clp_config.database.host,
-            port=clp_config.database.port,
-            database=clp_config.database.name,
-            user=clp_config.database.username,
-            password=clp_config.database.password,
-        )
+    celery_worker_method_base_kwargs: Dict[str, Any] = {
+        "output_config": output_config
+    }
 
-        setup_search_jobs_table(db_conn)
+    db_conn = mysql.connector.connect(
+        host=clp_config.database.host,
+        port=clp_config.database.port,
+        database=clp_config.database.name,
+        user=clp_config.database.username,
+        password=clp_config.database.password,
+    )
 
-        jobs_poll_delay = clp_config.search_scheduler.jobs_poll_delay
-        logger.info("search-job-handler started.")
-        logger.debug(f"job-poll-delay = {jobs_poll_delay} seconds")
-        handle_jobs(
-            db_conn=db_conn,
-            celery_worker_method_base_kwargs=celery_worker_method_base_kwargs,
-            jobs_poll_delay=jobs_poll_delay
-        )
+    setup_search_jobs_table(db_conn)
+
+    jobs_poll_delay = clp_config.search_scheduler.jobs_poll_delay
+    logger.info("search-job-handler started.")
+    logger.debug(f"job-poll-delay = {jobs_poll_delay} seconds")
+    handle_jobs(
+        db_conn=db_conn,
+        celery_worker_method_base_kwargs=celery_worker_method_base_kwargs,
+        jobs_poll_delay=jobs_poll_delay
+    )
     return 0
 
 

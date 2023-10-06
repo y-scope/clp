@@ -52,6 +52,7 @@
 #
 ## Where archives should be output to
 #archive_output:
+#  type: "fs"
 #  directory: "var/data/archives"
 #
 #  # How much data CLP should try to compress into each archive

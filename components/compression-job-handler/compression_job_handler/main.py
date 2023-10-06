@@ -12,8 +12,13 @@ from typing import Any, Dict, List, Optional
 from celery import group, signature
 from celery.exceptions import TimeoutError
 
+from pydantic import ValidationError
+
 from clp.package_utils import CONTAINER_INPUT_LOGS_ROOT_DIR
+from clp_py_utils.clp_config import CLPConfig, Database, ResultsCache
 from clp_py_utils.clp_logging import get_logging_level
+from clp_py_utils.core import read_yaml_config_file
+
 from clp_py_utils.compression import (  # type: ignore
     FileMetadata,
     validate_path_and_get_info,
@@ -62,6 +67,7 @@ def handle_job_impl(
         db_manager: DBManager,
         celery_worker_method_base_kwargs: Dict[str, Any],
         progress_reporting_disabled: bool,
+        target_archive_size: int,
 ) -> JobStatus:
     # Extract job metadata
     try:
@@ -74,10 +80,11 @@ def handle_job_impl(
         return JobStatus.FAILED
 
     # Override output config with settings specified in the job
+    target_archive_size = job_output_config.get("target_archive_size", target_archive_size)
+
     for key, value in output_config.items():
         if key not in job_output_config:
             job_output_config[key] = value
-    target_archive_size = job_output_config["target_archive_size"]
 
     # Create populate the job buffer with Celery job signatures
     distributed_compression_jobs: List[signature] = []
@@ -255,6 +262,7 @@ def handle_job(
         db_manager: DBManager,
         celery_worker_method_base_kwargs: Dict[str, Any],
         progress_reporting_disabled: bool,
+        target_archive_size: int,
 ) -> JobStatus:
     logger.info(f"Starting job `{job_id_str}`.")
 
@@ -265,6 +273,7 @@ def handle_job(
         db_manager=db_manager,
         celery_worker_method_base_kwargs=celery_worker_method_base_kwargs,
         progress_reporting_disabled=progress_reporting_disabled,
+        target_archive_size=target_archive_size,
     )
 
     logger.info(f"Finished job `{job_id_str}`.")
@@ -277,6 +286,7 @@ def handle_jobs(
         db_manager: DBManager,
         celery_worker_method_base_kwargs: Dict[str, Any],
         progress_reporting_disabled: bool,
+        target_archive_size: int,
 ) -> None:
     last_submission_timestamp: Optional[datetime] = None
     while True:
@@ -316,6 +326,7 @@ def handle_jobs(
                     db_manager=db_manager,
                     celery_worker_method_base_kwargs=celery_worker_method_base_kwargs,
                     progress_reporting_disabled=progress_reporting_disabled,
+                    target_archive_size=target_archive_size,
                 )
 
                 now = datetime.now()
@@ -341,33 +352,13 @@ def handle_jobs(
 def main(argv: List[str]) -> int:
     # fmt: off
     args_parser = argparse.ArgumentParser(description="Wait for and run compression jobs.")
-    args_parser.add_argument("--db-uri", required=True, help="Compression Job Database URI.")
-    args_parser.add_argument(
-        "--target-archive-size", type=int, default=16 * 1024 * 1024 * 1024,  # 16 GB
-        help="Target archive size in bytes.",
-    )
-    args_parser.add_argument(
-        "--target-archive-dictionaries-data-size", type=int, default=10 * 1024 * 1024,  # 10 MB
-        help="Target data size of archive dictionaries in bytes.",
-    )
-    args_parser.add_argument(
-        "--target-encoded-file-size", type=int, default=512 * 1024 * 1024,  # 512 MB
-        help="Target encoded file size in bytes.",
-    )
-    args_parser.add_argument(
-        "--target-segment-size", type=int, default=1 * 1024 * 1024 * 1024,  # 1 GB
-        help="Target segment size in bytes.",
-    )
+    args_parser.add_argument('--config', '-c', required=True, help='CLP configuration file.')
     args_parser.add_argument(
         "--no-progress-reporting", action="store_true",
         help="Disables progress reporting."
     )
-    args_parser.add_argument(
-        "--clp-db-host", required=True, help="Host for CLP globalDB"
-    )
-    args_parser.add_argument(
-        "--clp-db-port", required=True, help="port for CLP globalDB"
-    )
+    parsed_args = args_parser.parse_args(argv[1:])
+
     # fmt: on
     # Setup logging to file
     log_file = Path(os.getenv("CLP_LOGS_DIR")) / "compression_job_handler.log"
@@ -380,57 +371,33 @@ def main(argv: List[str]) -> int:
     logger.setLevel(logging_level)
     logger.info(f"Start logging level = {logging.getLevelName(logging_level)}")
 
-    output_type_args_parser = args_parser.add_subparsers(dest="output_type")
-    output_type_args_parser.required = True
-
-    fs_output_args_parser = output_type_args_parser.add_parser("fs")
-    fs_output_args_parser.add_argument(
-        "--archives-dir", required=True, help="Directory where archives should be stored."
-    )
-
-    parsed_args = args_parser.parse_args(argv[1:])
-
-    # Validate target sizes
-    if parsed_args.target_archive_size <= 0:
-        args_parser.error("--target-archive-size must be greater than 0.")
-    if parsed_args.target_archive_dictionaries_data_size <= 0:
-        args_parser.error("--target-archive-dictionaries-data-size must be greater than 0.")
-    if parsed_args.target_encoded_file_size <= 0:
-        args_parser.error("--target-encoded-file-size must be greater than 0.")
-    if parsed_args.target_segment_size <= 0:
-        args_parser.error("--target-segment-size must be greater than 0.")
+    # Load configuration
+    # Load configuration
+    config_path = Path(parsed_args.config)
+    try:
+        clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
+    except ValidationError as err:
+        logger.error(err)
+        return -1
+    except Exception as ex:
+        logger.error(ex)
+        # read_yaml_config_file already logs the parsing error inside
+        return -1
 
     output_config = {
-        "target_archive_size": parsed_args.target_archive_size,
-        "target_archive_dictionaries_data_size": parsed_args.target_archive_dictionaries_data_size,
-        "target_encoded_file_size": parsed_args.target_encoded_file_size,
-        "target_segment_size": parsed_args.target_segment_size,
+        "target_dictionaries_size": clp_config.archive_output.target_dictionaries_size,
+        "target_encoded_file_size": clp_config.archive_output.target_encoded_file_size,
+        "target_segment_size": clp_config.archive_output.target_segment_size,
     }
-
-    output_type = parsed_args.output_type
+    output_type = clp_config.archive_output.type
     if "fs" == output_type:
-        output_config["archives_dir"] = str(Path(parsed_args.archives_dir).resolve())
+        # V0.5 TODO. not used by compression worker yet.
+        output_config["directory"] = str(Path(clp_config.archive_output.directory).resolve())
 
-    db_uri = parsed_args.db_uri
-    db_manager: DBManager = MongoDBManager(logger, db_uri)
-
-    db_user = os.getenv('DB_USER')
-    db_password = os.getenv('DB_PASSWORD')
-    clp_db_config = {
-        "host": parsed_args.clp_db_host,
-        "password": db_password,
-        "port": parsed_args.clp_db_port,
-        "username": db_user,
-        # Hardcoded Property
-        "autocommit": False,
-        "compress": True,
-        "name": "clp-db",
-        "table_prefix": "clp_",
-        "type": "mysql",
-    }
+    db_manager: DBManager = MongoDBManager(logger, clp_config.results_cache.get_uri())
 
     celery_worker_method_base_kwargs: Dict[str, Any] = {
-        "clp_db_config": clp_db_config,
+        "clp_db_config": dict(clp_config.database),
     }
 
     logger.info("compression-job-handler started.")
@@ -441,6 +408,7 @@ def main(argv: List[str]) -> int:
         db_manager=db_manager,
         celery_worker_method_base_kwargs=celery_worker_method_base_kwargs,
         progress_reporting_disabled=parsed_args.no_progress_reporting,
+        target_archive_size=clp_config.archive_output.target_archive_size,
     )
     return 0
 

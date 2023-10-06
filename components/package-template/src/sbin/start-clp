@@ -362,6 +362,11 @@ def start_compression_job_handler(instance_id: str, clp_config: CLPConfig, conta
         logger.info(f"{component_name} already running.")
         return
 
+    container_config_filename = f'{container_name}.yml'
+    container_config_file_path = clp_config.logs_directory / container_config_filename
+    with open(container_config_file_path, 'w') as f:
+        yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
+
     logs_dir = clp_config.logs_directory / component_name
     logs_dir.mkdir(parents=True, exist_ok=True)
     container_logs_dir = container_clp_config.logs_directory / component_name
@@ -376,8 +381,6 @@ def start_compression_job_handler(instance_id: str, clp_config: CLPConfig, conta
         '-w', str(CONTAINER_CLP_HOME),
         '--name', container_name,
         '-e', f'PYTHONPATH={clp_site_packages_dir}',
-        '-e', f'DB_USER={clp_config.database.username}',
-        '-e', f'DB_PASSWORD={clp_config.database.password}',
         '-e', f'BROKER_URL=amqp://'
               f'{container_clp_config.compression_queue.username}:{container_clp_config.compression_queue.password}@'
               f'{container_clp_config.compression_queue.host}:{container_clp_config.compression_queue.port}',
@@ -405,18 +408,8 @@ def start_compression_job_handler(instance_id: str, clp_config: CLPConfig, conta
     scheduler_cmd = [
         'python3', '-u', '-m',
         'compression_job_handler.main',
-        '--target-archive-size', str(clp_config.archive_output.target_archive_size),
-        '--target-archive-dictionaries-data-size',
-        str(clp_config.archive_output.target_dictionaries_size),
-        '--target-encoded-file-size', str(clp_config.archive_output.target_encoded_file_size),
-        '--target-segment-size', str(clp_config.archive_output.target_segment_size),
+        '--config', str(container_clp_config.logs_directory / container_config_filename),
         '--no-progress-reporting',
-        # V0.5 TODO: pass those variables using clp config
-        '--db-uri', f"{clp_config.results_cache.get_uri()}",
-        '--clp-db-host', clp_config.database.host,
-        '--clp-db-port', str(clp_config.database.port),
-        'fs',
-        '--archives-dir', str(container_clp_config.archive_output.directory)
     ]
     cmd = container_start_cmd + scheduler_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)

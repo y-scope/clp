@@ -32,6 +32,7 @@ class Database(BaseModel):
     host: str = '127.0.0.1'
     port: int = 3306
     name: str = 'clp-db'
+    table_prefix: str = CLP_METADATA_TABLE_PREFIX
     ssl_cert: typing.Optional[str] = None
     auto_commit: bool = False
     compress: bool = True
@@ -160,6 +161,7 @@ class CompressionJobHandler(BaseModel):
     @validator('logging_level')
     def validate_logging_level(cls, field):
         validate_logging_level_static(cls, field)
+        return field
 
 
 class CompressionWorker(BaseModel):
@@ -168,6 +170,7 @@ class CompressionWorker(BaseModel):
     @validator('logging_level')
     def validate_logging_level(cls, field):
         validate_logging_level_static(cls, field)
+        return field
 
 
 class SearchScheduler(BaseModel):
@@ -177,6 +180,7 @@ class SearchScheduler(BaseModel):
     @validator('logging_level')
     def validate_logging_level(cls, field):
         validate_logging_level_static(cls, field)
+        return field
 
 
 class SearchWorker(BaseModel):
@@ -185,6 +189,8 @@ class SearchWorker(BaseModel):
     @validator('logging_level')
     def validate_logging_level(cls, field):
         validate_logging_level_static(cls, field)
+        return field
+
 
 class Queue(BaseModel):
     host: str = 'localhost'
@@ -196,6 +202,7 @@ class Queue(BaseModel):
 
 class ArchiveOutput(BaseModel):
     directory: pathlib.Path = pathlib.Path('var') / 'data' / 'archives'
+    type: str = "fs"
     target_archive_size: int = 256 * 1024 * 1024  # 256 MB
     target_dictionaries_size: int = 32 * 1024 * 1024  # 32 MB
     target_encoded_file_size: int = 256 * 1024 * 1024  # 256 MB
@@ -225,6 +232,14 @@ class ArchiveOutput(BaseModel):
             raise ValueError('target_segment_size must be greater than 0')
         return field
 
+    @validator('type')
+    def validate_type(cls, field):
+        supported_type = ["fs"]
+        if field not in supported_type:
+            raise ValueError(f'type {field} is not one of {supported_type}')
+        return field
+
+
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         self.directory = make_config_path_absolute(clp_home, self.directory)
 
@@ -245,6 +260,7 @@ class WebUiQueryHandler(BaseModel):
     port: int = 4001
     max_results: int = 1_000_000
     logging_level: str = 'INFO'
+
     def validate_logging_level(cls, field):
         validate_logging_level_static(cls, field)
 

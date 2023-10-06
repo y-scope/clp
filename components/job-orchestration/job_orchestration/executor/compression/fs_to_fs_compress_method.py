@@ -101,7 +101,7 @@ def compress(
         "c", str(archives_dir),
         "--print-archive-stats-progress",
         "--target-dictionaries-size",
-        str(job_output_config["target_archive_dictionaries_data_size"]),
+        str(job_output_config["target_dictionaries_size"]),
         "--target-segment-size", str(job_output_config["target_segment_size"]),
         "--target-encoded-file-size", str(job_output_config["target_encoded_file_size"]),
         "--db-config-file", str(clp_db_config_file_path),
