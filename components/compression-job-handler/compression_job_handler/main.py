@@ -14,7 +14,7 @@ from celery.exceptions import TimeoutError
 
 from pydantic import ValidationError
 
-from clp.package_utils import CONTAINER_INPUT_LOGS_ROOT_DIR
+from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import CLPConfig, Database, ResultsCache
 from clp_py_utils.clp_logging import get_logging_level
 from clp_py_utils.core import read_yaml_config_file

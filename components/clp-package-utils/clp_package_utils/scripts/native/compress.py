@@ -1,15 +1,19 @@
-#!/usr/bin/env python3
-
 import argparse
 import logging
-import os
-import shutil
 import sys
 import time
-import uuid
 from datetime import timedelta
 from pathlib import Path
 from typing import List, Optional
+
+from bson import ObjectId
+from pydantic import ValidationError
+from pymongo import MongoClient
+
+from clp_package_utils.general import get_clp_home
+from clp_py_utils.clp_config import CLPConfig
+from clp_py_utils.core import read_yaml_config_file
+from compression_job_handler.common import JobStatus
 
 # Setup logging
 # Create logger
@@ -22,51 +26,6 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def get_clp_home() -> Path:
-    # Determine CLP_HOME from an environment variable or this script's path
-    _clp_home = None
-    if "CLP_HOME" in os.environ:
-        _clp_home = Path(os.environ["CLP_HOME"])
-    else:
-        for path in Path(__file__).resolve().parents:
-            if "sbin" == path.name:
-                _clp_home = path.parent
-                break
-
-    if _clp_home is None:
-        logger.error("CLP_HOME is not set and could not be determined automatically.")
-        sys.exit(-1)
-    elif not _clp_home.exists():
-        logger.error("CLP_HOME set to nonexistent path.")
-        sys.exit(-1)
-
-    return _clp_home.resolve()
-
-
-def load_bundled_python_lib_path(_clp_home: Path) -> None:
-    python_site_packages_path = _clp_home / "lib" / "python3" / "site-packages"
-    if not python_site_packages_path.is_dir():
-        logger.error("Failed to load python3 packages bundled with CLP.")
-        sys.exit(-1)
-
-    # Add packages to the front of the path
-    sys.path.insert(0, str(python_site_packages_path))
-
-
-clp_home = get_clp_home()
-load_bundled_python_lib_path(clp_home)
-
-from clp_py_utils.core import read_yaml_config_file  # type: ignore
-from compression_job_handler.common import JobStatus  # type: ignore
-from clp.package_utils import \
-    make_config_path_absolute, \
-    CONTAINER_INPUT_LOGS_ROOT_DIR# type: ignore
-from clp_py_utils.clp_config import CLPConfig, Database
-from pydantic import ValidationError
-
-from bson import ObjectId
-from pymongo import MongoClient
-
 def pretty_size(num, suffix="B"):
     for unit in ["", "K", "M", "G", "T", "P", "E", "Z"]:
         if abs(num) < 1024.0:
@@ -76,6 +35,8 @@ def pretty_size(num, suffix="B"):
 
 
 def main(argv: List[str]) -> int:
+    clp_home = get_clp_home()
+
     args_parser = argparse.ArgumentParser(description="Compress log files.")
     # fmt: off
     args_parser.add_argument(

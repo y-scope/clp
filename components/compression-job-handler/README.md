@@ -16,13 +16,14 @@ Below are a few ways to use this module.
 ### Docker compression wrapper
 
 ```bash
-<clp-package>/sbin/compress <parameters>
+<clp-package>/sbin/compress.sh <parameters>
 ```
 
 ### Native compression wrapper
 
 ```bash
-<clp-package>/sbin/native/compress <parameters>
+PYTHONPATH=<clp_home/lib/python3/site-packages> python3 -m \
+    clp_package_utils.scripts.native.compress <parameters>
 ```
 
 ### Standalone

@@ -1,10 +1,16 @@
-#!/usr/bin/env python3
 import argparse
 import logging
-import os
 import pathlib
 import sys
 import time
+
+import msgpack
+import mysql.connector
+import pymongo
+
+from clp_py_utils.clp_config import CLPConfig, SEARCH_JOBS_TABLE_NAME
+from clp_py_utils.core import read_yaml_config_file
+from job_orchestration.scheduler.common import JobStatus
 
 # Setup logging
 # Create logger
@@ -17,53 +23,7 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def get_clp_home():
-    # Determine CLP_HOME from an environment variable or this script's path
-    _clp_home = None
-    if 'CLP_HOME' in os.environ:
-        _clp_home = pathlib.Path(os.environ['CLP_HOME'])
-    else:
-        for path in pathlib.Path(__file__).resolve().parents:
-            if 'sbin' == path.name:
-                _clp_home = path.parent
-                break
-
-    if _clp_home is None:
-        logger.error("CLP_HOME is not set and could not be determined automatically.")
-        return None
-    elif not _clp_home.exists():
-        logger.error("CLP_HOME set to nonexistent path.")
-        return None
-
-    return _clp_home.resolve()
-
-
-def load_bundled_python_lib_path(_clp_home):
-    python_site_packages_path = _clp_home / 'lib' / 'python3' / 'site-packages'
-    if not python_site_packages_path.is_dir():
-        logger.error("Failed to load python3 packages bundled with CLP.")
-        return False
-
-    # Add packages to the front of the path
-    sys.path.insert(0, str(python_site_packages_path))
-
-    return True
-
-
-clp_home = get_clp_home()
-if clp_home is None or not load_bundled_python_lib_path(clp_home):
-    sys.exit(-1)
-
-import mysql.connector
-import msgpack
-import pymongo
-
-from job_orchestration.scheduler.common import JobStatus  # type: ignore
-from clp_py_utils.core import read_yaml_config_file  # type: ignore
-from clp_py_utils.clp_config import CLPConfig, SEARCH_JOBS_TABLE_NAME
-
 def main(argv):
-
     args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")
     args_parser.add_argument('--config', '-c', required=True, help="CLP configuration file.")
     args_parser.add_argument('wildcard_query', help="Wildcard query.")
@@ -102,8 +62,8 @@ def main(argv):
     # Set up a connection to your MongoDB instance
     db_name = clp_config.results_cache.db_name
     collection_name = clp_config.results_cache.results_collection_name
-    client = pymongo.MongoClient(clp_config.results_cache.get_uri())  # Update the connection string as needed
-    search_results_collection = client[db_name][collection_name]  # Replace with your database name
+    client = pymongo.MongoClient(clp_config.results_cache.get_uri())
+    search_results_collection = client[db_name][collection_name]
     # Delete all documents in the collection
     result = search_results_collection.delete_many({})
 
@@ -144,6 +104,7 @@ def main(argv):
 
     cursor.close()
     db_conn.close()
+
 
 if "__main__" == __name__:
     sys.exit(main(sys.argv))

@@ -1,0 +1,50 @@
+[tool.poetry]
+name = "clp-package-utils"
+version = "0.1.0"
+description = "Utilities for the CLP package."
+authors = ["YScope Inc. <dev@yscope.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8 || ^3.10"
+mariadb = "~1.0.7"
+msgpack = "^1.0.6"
+mysql-connector-python = "~8.0.26"
+pydantic = "^1.8.2"
+pymongo = "^4.5.0"
+PyYAML = "^6.0.1"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.9.1"
+docformatter = "^1.7.5"
+mypy = "^1.5.1"
+ruff = "^0.0.291"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.docformatter]
+make-summary-multi-line = true
+pre-summary-newline = true
+recursive = true
+wrap-summaries = 80
+wrap-descriptions = 80
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+color = true
+preview = true
+
+[tool.mypy]
+strict = true
+pretty = true
+
+[tool.ruff]
+line-length = 100
+select = ["E", "I", "F"]
+src = "src"
+
+[tool.ruff.isort]
+order-by-type = false

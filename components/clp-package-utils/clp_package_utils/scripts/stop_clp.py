@@ -1,66 +1,18 @@
-#!/usr/bin/env python3
 import argparse
 import logging
-import os
 import pathlib
 import subprocess
 import sys
 
-# Setup logging
-# Create logger
-logger = logging.getLogger('clp')
-logger.setLevel(logging.INFO)
-# Setup console logging
-logging_console_handler = logging.StreamHandler()
-logging_formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s')
-logging_console_handler.setFormatter(logging_formatter)
-logger.addHandler(logging_console_handler)
-
-
-def get_clp_home():
-    # Determine CLP_HOME from an environment variable or this script's path
-    _clp_home = None
-    if 'CLP_HOME' in os.environ:
-        _clp_home = pathlib.Path(os.environ['CLP_HOME'])
-    else:
-        for path in pathlib.Path(__file__).resolve().parents:
-            if 'sbin' == path.name:
-                _clp_home = path.parent
-                break
-
-    if _clp_home is None:
-        logger.error("CLP_HOME is not set and could not be determined automatically.")
-        return None
-    elif not _clp_home.exists():
-        logger.error("CLP_HOME set to nonexistent path.")
-        return None
-
-    return _clp_home.resolve()
-
-
-def load_bundled_python_lib_path(_clp_home):
-    python_site_packages_path = _clp_home / 'lib' / 'python3' / 'site-packages'
-    if not python_site_packages_path.is_dir():
-        logger.error("Failed to load python3 packages bundled with CLP.")
-        return False
-
-    # Add packages to the front of the path
-    sys.path.insert(0, str(python_site_packages_path))
-
-    return True
-
-
-clp_home = get_clp_home()
-if clp_home is None or not load_bundled_python_lib_path(clp_home):
-    sys.exit(-1)
-
-from clp.package_utils import \
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
-    is_container_running, \
-    container_exists, \
-    validate_and_load_config_file, \
-    validate_and_load_compression_queue_credentials_file, \
+from clp_package_utils.general import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    container_exists,
+    get_clp_home,
+    is_container_running,
+    validate_and_load_compression_queue_credentials_file,
+    validate_and_load_config_file,
     validate_and_load_db_credentials_file
+)
 from clp_py_utils.clp_config import (
     DB_COMPONENT_NAME,
     COMPRESSION_QUEUE_COMPONENT_NAME,
@@ -73,6 +25,16 @@ from clp_py_utils.clp_config import (
     WEBUI_COMPONENT_NAME,
     WEBUI_QUERY_HANDLER_COMPONENT_NAME,
 )
+
+# Setup logging
+# Create logger
+logger = logging.getLogger('clp')
+logger.setLevel(logging.INFO)
+# Setup console logging
+logging_console_handler = logging.StreamHandler()
+logging_formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s')
+logging_console_handler.setFormatter(logging_formatter)
+logger.addHandler(logging_console_handler)
 
 
 def stop_container(container_name: str, stale_containers: list):
@@ -99,6 +61,7 @@ def stop_queue_container(component_name: str, instance_id: str, logs_dir: pathli
 
 
 def main(argv):
+    clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     args_parser = argparse.ArgumentParser(description="Stops CLP")

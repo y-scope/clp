@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import argparse
 import json
 import logging
@@ -11,73 +10,30 @@ import sys
 import time
 import uuid
 
-# Setup logging
-# Create logger
-logger = logging.getLogger('clp')
-logger.setLevel(logging.INFO)
-# Setup console logging
-logging_console_handler = logging.StreamHandler()
-logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
-logging_console_handler.setFormatter(logging_formatter)
-logger.addHandler(logging_console_handler)
-
-
-def get_clp_home():
-    # Determine CLP_HOME from an environment variable or this script's path
-    _clp_home = None
-    if 'CLP_HOME' in os.environ:
-        _clp_home = pathlib.Path(os.environ['CLP_HOME'])
-    else:
-        for path in pathlib.Path(__file__).resolve().parents:
-            if 'sbin' == path.name:
-                _clp_home = path.parent
-                break
-
-    if _clp_home is None:
-        logger.error("CLP_HOME is not set and could not be determined automatically.")
-        return None
-    elif not _clp_home.exists():
-        logger.error("CLP_HOME set to nonexistent path.")
-        return None
-
-    return _clp_home.resolve()
-
-
-def load_bundled_python_lib_path(_clp_home):
-    python_site_packages_path = _clp_home / 'lib' / 'python3' / 'site-packages'
-    if not python_site_packages_path.is_dir():
-        logger.error("Failed to load python3 packages bundled with CLP.")
-        return False
-
-    # Add packages to the front of the path
-    sys.path.insert(0, str(python_site_packages_path))
-
-    return True
-
-
-clp_home = get_clp_home()
-if clp_home is None or not load_bundled_python_lib_path(clp_home):
-    sys.exit(-1)
-
 import yaml
-from clp.package_utils import \
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
-    CONTAINER_CLP_HOME, \
-    check_dependencies, \
-    is_container_running, \
-    container_exists, \
-    CLPDockerMounts, \
-    DockerMount, \
-    DockerMountType, \
-    generate_container_config, \
-    validate_and_load_config_file, \
-    validate_and_load_db_credentials_file, \
-    validate_and_load_compression_queue_credentials_file, \
-    validate_db_config, \
-    validate_results_cache_config, \
-    validate_worker_config, validate_queue_config, \
-    validate_webui_config, \
-    validate_webui_query_handler_config
+from pydantic import BaseModel
+
+from clp_package_utils.general import (
+    check_dependencies,
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    CLPDockerMounts,
+    CONTAINER_CLP_HOME,
+    container_exists,
+    DockerMount,
+    DockerMountType,
+    generate_container_config,
+    get_clp_home,
+    is_container_running,
+    validate_and_load_compression_queue_credentials_file,
+    validate_and_load_config_file,
+    validate_and_load_db_credentials_file,
+    validate_db_config,
+    validate_queue_config,
+    validate_results_cache_config,
+    validate_webui_config,
+    validate_webui_query_handler_config,
+    validate_worker_config,
+)
 from clp_py_utils.clp_config import (
     CLPConfig,
     DB_COMPONENT_NAME,
@@ -92,8 +48,17 @@ from clp_py_utils.clp_config import (
     WEBUI_COMPONENT_NAME,
     WEBUI_QUERY_HANDLER_COMPONENT_NAME,
 )
-from pydantic import BaseModel
 from job_orchestration.scheduler.constants import QueueName
+
+# Setup logging
+# Create logger
+logger = logging.getLogger('clp')
+logger.setLevel(logging.INFO)
+# Setup console logging
+logging_console_handler = logging.StreamHandler()
+logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
+logging_console_handler.setFormatter(logging_formatter)
+logger.addHandler(logging_console_handler)
 
 
 def append_docker_port_settings_for_host_ips(hostname: str, host_port: int, container_port: int, cmd: [str]):
@@ -710,6 +675,7 @@ def start_webui_query_handler(instance_id: str, clp_config: CLPConfig,
 
 
 def main(argv):
+    clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     args_parser = argparse.ArgumentParser(description="Starts CLP")
