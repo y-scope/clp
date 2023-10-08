@@ -34,7 +34,7 @@ jobs:
           context: components/core/
           file: components/core/tools/docker-images/clp-env-base-focal/Dockerfile
           token: ${{secrets.GITHUB_TOKEN}}
-          push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
+          push_image: ${{'pull_request' != github.event_name && 'refs/heads/v0.5-prototype' == github.ref}}
 
   build-ubuntu-bionic:
     runs-on: ubuntu-20.04

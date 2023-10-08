@@ -31,4 +31,4 @@ jobs:
           image_name: ${{env.IMAGE_NAME}}
           file: ./tools/docker-images/clp-execution-base-focal/Dockerfile
           token: ${{secrets.GITHUB_TOKEN}}
-          push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
+          push_image: ${{'pull_request' != github.event_name && 'refs/heads/v0.5-prototype' == github.ref}}
