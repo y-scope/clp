@@ -27,8 +27,8 @@ package:
 
   ```shell
   MONGO_URL="mongodb://localhost:27017/clp-search" \
-    ROOT_URL="http://<host>>:3000" \
-    meteor --settings settings.json`
+    ROOT_URL="http://<host>:3000" \
+    meteor --settings settings.json
   ```
   
   * Change `<host>` to the IP of the machine you're running the webui on.
