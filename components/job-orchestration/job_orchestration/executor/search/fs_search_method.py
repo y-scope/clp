@@ -17,6 +17,11 @@ from job_orchestration.executor.search.celery import app
 
 script_dir = Path(__file__).parent.resolve()
 
+def time_helper(prev_t):
+    temp_t = time.time()
+    measured_t = temp_t - prev_t
+    prev_t = temp_t
+    return measured_t, prev_t
 
 @app.task(bind=True)
 def search(
@@ -25,7 +30,9 @@ def search(
     output_config: Dict[str, Any], # used to indicate how to output the results
     archive_id: str,
     query: dict,
-) -> bool:
+) -> Dict[str, Any]:
+    prev_t = time.time()
+    task_start_t = prev_t
     task_id_str = self.request.id
 
     logger = get_task_logger(__name__)
@@ -53,6 +60,8 @@ def search(
     # Obtain archive directory info
     archive_directory = Path(os.getenv('CLP_ARCHIVE_OUTPUT_DIR'))
     logger.debug(f"{archive_directory}")
+
+    startup_time, prev_t = time_helper(prev_t)
     server_cmd = [
         "python3",
         str(script_dir / "proxy_server.py"),
@@ -71,6 +80,7 @@ def search(
     ip = ip_and_port[0]
     port = ip_and_port[1]
 
+    proxy_time, prev_t = time_helper(prev_t)
     # Assemble the search command
     # fmt: off
     clp_home = Path(os.getenv("CLP_HOME"))
@@ -80,6 +90,7 @@ def search(
         port,
         str(archive_directory / archive_id),
         query["pipeline_string"],
+        '-c',
         '--tge', str(query['timestamp_begin']),
         '--tle', str(query['timestamp_end']),
     ]
@@ -94,7 +105,7 @@ def search(
 
     search_successful = False
 
-    proc = subprocess.Popen(
+    search_proc = subprocess.Popen(
         search_cmd,
         close_fds=True,
         stdout=subprocess.PIPE,
@@ -102,15 +113,20 @@ def search(
     )
 
     # Wait for compression to finish
-    return_code = proc.wait()
+    return_code = search_proc.wait()
+    search_time, prev_t = time_helper(prev_t)
     if 0 != return_code:
         logger.error(f"Failed to search, return_code={return_code}")
     else:
         search_successful = True
-        # a hack to ensure that proxy server flush all data
-        # since the next message will only be print out after
-        # proxy flushes all data
-        proxy_end_message = server_proc.stdout.readline().decode()
+        parts = search_proc.stdout.readline().decode().split(":")
+        num_matches = int(parts[1].strip())
+
+    # a hack to ensure that proxy server flush all data
+    # since the next message will only be print out after
+    # proxy flushes all data
+    proxy_end_message = server_proc.stdout.readline().decode()
+    flush_time, prev_t = time_helper(prev_t)
 
     server_proc.terminate()
     server_proc.wait()
@@ -119,5 +135,20 @@ def search(
     stderr_log_file.close()
     logger.removeHandler(logging_file_handler)
     logging_file_handler.close()
+    teardown_time, prev_t = time_helper(prev_t)
 
-    return search_successful
+    results = {
+        'status': search_successful,
+        'job_id': job_id_str,
+        'task_id': task_id_str,
+        'num_matches': num_matches,
+        'task_start_ts': task_start_t,
+        'start_up': startup_time,
+        'proxy_start': proxy_time,
+        'clg': search_time,
+        'flush': flush_time,
+        'teardown': teardown_time,
+        'end_to_end': prev_t - task_start_t
+    }
+
+    return results

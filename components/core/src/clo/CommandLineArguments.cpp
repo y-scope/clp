@@ -56,6 +56,7 @@ namespace clo {
                 ("tlt", po::value<epochtime_t>()->value_name("TS"), "Find messages with UNIX timestamp <  TS ms")
                 ("tle", po::value<epochtime_t>()->value_name("TS"), "Find messages with UNIX timestamp <= TS ms")
                 ("ignore-case,i", po::bool_switch(&m_ignore_case), "Ignore case distinctions in both WILDCARD STRING and the input files")
+                ("count-matches,c", po::bool_switch(&m_count_matches), "Count and output number of match results")
                 ;
 
         // Define visible options

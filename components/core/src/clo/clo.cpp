@@ -70,6 +70,7 @@ static ErrorCode send_result (const string& orig_file_path, const Message& compr
  * @param query
  * @param archive
  * @param file_metadata_ix
+ * @param num_matches
  * @param query_cancelled
  * @param controller_socket_fd
  * @return SearchFilesResult::OpenFailure on failure to open a compressed file
@@ -77,7 +78,8 @@ static ErrorCode send_result (const string& orig_file_path, const Message& compr
  * @return SearchFilesResult::Success otherwise
  */
 static SearchFilesResult search_files (Query& query, Archive& archive, MetadataDB::FileIterator& file_metadata_ix,
-                                       const std::atomic_bool& query_cancelled, int controller_socket_fd);
+                                       size_t& num_matches, const std::atomic_bool& query_cancelled,
+                                       int controller_socket_fd);
 /**
  * Searches an archive with the given path
  * @param command_line_args
@@ -87,7 +89,7 @@ static SearchFilesResult search_files (Query& query, Archive& archive, MetadataD
  * @return true on success, false otherwise
  */
 static bool search_archive (const CommandLineArguments& command_line_args, const boost::filesystem::path& archive_path,
-                            const std::atomic_bool& query_cancelled, int controller_socket_fd);
+                            const std::atomic_bool& query_cancelled, int controller_socket_fd, size_t& num_matches);
 
 static int connect_to_search_controller (const string& controller_host, const string& controller_port) {
     // Get address info for controller
@@ -143,7 +145,8 @@ static ErrorCode send_result (const string& orig_file_path, const Message& compr
 }
 
 static SearchFilesResult search_files (Query& query, Archive& archive, MetadataDB::FileIterator& file_metadata_ix,
-                                       const std::atomic_bool& query_cancelled, int controller_socket_fd)
+                                       size_t& num_matches, const std::atomic_bool& query_cancelled,
+                                       int controller_socket_fd)
 {
     SearchFilesResult result = SearchFilesResult::Success;
 
@@ -176,6 +179,7 @@ static SearchFilesResult search_files (Query& query, Archive& archive, MetadataD
                 result = SearchFilesResult::ResultSendFailure;
                 break;
             }
+            num_matches++;
         }
         if (SearchFilesResult::ResultSendFailure == result) {
             // Stop search now since results aren't reaching the controller
@@ -189,7 +193,7 @@ static SearchFilesResult search_files (Query& query, Archive& archive, MetadataD
 }
 
 static bool search_archive (const CommandLineArguments& command_line_args, const boost::filesystem::path& archive_path,
-                            const std::atomic_bool& query_cancelled, int controller_socket_fd)
+                            const std::atomic_bool& query_cancelled, int controller_socket_fd, size_t& num_matches)
 {
     if (false == boost::filesystem::exists(archive_path)) {
         SPDLOG_ERROR("Archive '{}' does not exist.", archive_path.c_str());
@@ -245,7 +249,8 @@ static bool search_archive (const CommandLineArguments& command_line_args, const
     auto& file_metadata_ix = *file_metadata_ix_ptr;
     for (auto segment_id : ids_of_segments_to_search) {
         file_metadata_ix.set_segment_id(segment_id);
-        auto result = search_files(query, archive_reader, file_metadata_ix, query_cancelled, controller_socket_fd);
+        auto result = search_files(query, archive_reader, file_metadata_ix, num_matches, query_cancelled,
+                                   controller_socket_fd);
         if (SearchFilesResult::ResultSendFailure == result) {
             // Stop search now since results aren't reaching the controller
             break;
@@ -295,9 +300,10 @@ int main (int argc, const char* argv[]) {
     controller_monitoring_thread.start();
 
     int return_value = 0;
+    size_t num_matches = 0;
     try {
         if (false == search_archive(command_line_args, archive_path, controller_monitoring_thread.get_query_cancelled(),
-                                    controller_socket_fd))
+                                    controller_socket_fd, num_matches))
         {
             return_value = -1;
         }
@@ -333,6 +339,10 @@ int main (int argc, const char* argv[]) {
                          error_code);
         }
         return_value = -1;
+    }
+
+    if (command_line_args.count_matches()) {
+        std::cout << "Num matches : " << num_matches << "\n";
     }
 
     return return_value;

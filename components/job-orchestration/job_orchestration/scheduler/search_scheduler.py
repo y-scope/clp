@@ -31,8 +31,7 @@ from clp_py_utils.clp_logging import get_logging_level
 from clp_py_utils.core import read_yaml_config_file
 
 from .common import JobStatus  # type: ignore
-
-import pymongo
+from .search_db_manager import DBManager, MongoDBManager
 
 # Setup logging
 # Create logger
@@ -61,7 +60,8 @@ def fetch_new_search_jobs(db_cursor) -> list:
         {SEARCH_JOBS_TABLE_NAME}.status as job_status,
         {SEARCH_JOBS_TABLE_NAME}.num_tasks,
         {SEARCH_JOBS_TABLE_NAME}.num_tasks_completed,
-        {SEARCH_JOBS_TABLE_NAME}.search_config
+        {SEARCH_JOBS_TABLE_NAME}.search_config,
+        {SEARCH_JOBS_TABLE_NAME}.creation_time
         FROM {SEARCH_JOBS_TABLE_NAME}
         WHERE {SEARCH_JOBS_TABLE_NAME}.status='{JobStatus.PENDING}'
     """)
@@ -83,7 +83,7 @@ def setup_search_jobs_table(db_conn):
             `id` INT NOT NULL AUTO_INCREMENT,
             `status` INT NOT NULL DEFAULT '{JobStatus.PENDING}',
             `status_msg` VARCHAR(255) NOT NULL DEFAULT '',
-            `creation_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
             `start_time` DATETIME NULL DEFAULT NULL,
             `duration` INT NULL DEFAULT NULL,
             `num_tasks` INT NOT NULL DEFAULT '0',
@@ -117,7 +117,7 @@ def set_job_status(
     return rval
 
 
-def poll_and_handle_cancelling_search_jobs(db_conn) -> None:
+def poll_and_handle_cancelling_search_jobs(db_conn, mongodb_manager) -> None:
     global active_jobs
 
     cursor = db_conn.cursor()
@@ -133,6 +133,7 @@ def poll_and_handle_cancelling_search_jobs(db_conn) -> None:
 
         #TODO: also update time
         set_job_status(db_conn, job_id, JobStatus.CANCELLED, prev_status=JobStatus.CANCELLING)
+        mongodb_manager.update_job_status(job_id, JobStatus.CANCELLED.to_str())
 
 def get_search_tasks_for_job(
     db_conn,
@@ -169,22 +170,38 @@ def dispatch_search_job(
     task_group = get_search_tasks_for_job(db_conn, base_kwargs, str(job_id), query)
     active_jobs[job_id] = task_group.apply_async()
 
-def poll_and_submit_pending_search_jobs(db_conn, base_kwargs) -> None:
+def poll_and_submit_pending_search_jobs(db_conn, mongodb_manager, base_kwargs) -> None:
     global active_jobs
 
     cursor = db_conn.cursor()
     new_jobs = fetch_new_search_jobs(cursor)
     db_conn.commit()
     cursor.close()
-
-    for job_id, job_status, num_tasks, num_tasks_completed, search_config in new_jobs:
+    job_detection_ts = time.time()
+    jobs_list = []
+    for job_id, job_status, num_tasks, num_tasks_completed, search_config, creation_time in new_jobs:
         dispatch_search_job(db_conn, base_kwargs, job_id, msgpack.unpackb(search_config))
+        enqueued_ts = time.time()
+        job_status_str = JobStatus.RUNNING.to_str()
         if set_job_status(db_conn, job_id, JobStatus.RUNNING, JobStatus.PENDING):
             logger.info(f"Submitted job {job_id}")
         else:
             logger.error(f"Failed to submit job {job_id}... cancelling")
             active_jobs[job_id].revoke()
+            job_status_str = JobStatus.CANCELLED.to_str()
             set_job_status(db_conn, job_id, JobStatus.CANCELLED)
+
+        jobs_list.append(
+            mongodb_manager.prepare_job_document(
+                job_id,
+                creation_time.timestamp(),
+                job_detection_ts,
+                enqueued_ts,
+                job_status_str,
+            )
+        )
+    if len(jobs_list) != 0:
+        mongodb_manager.insert_jobs(jobs_list)
 
 '''
 Polling doesn't appear to work correctly with the amqp backend --
@@ -201,29 +218,56 @@ def get_results_or_timeout(result):
     except TimeoutError:
         return None
 
-def check_job_status_and_update_db(db_conn):
+def check_job_status_and_update_db(db_conn, mongodb_manager):
     global active_jobs
 
     for job_id in list(active_jobs.keys()):
         result = active_jobs[job_id]
         returned_results = get_results_or_timeout(result)
+        if returned_results is not None:
+            # Initialize tracker variables
+            completion_ts = time.time()
+            results_count = 0
+            all_task_succeed = True
+            tasks_list = []
+            job_status = JobStatus.SUCCESS
 
-        if returned_results != None:
-            logger.info(f"Completed job {job_id}")
+            for task_result in returned_results:
+                results_count += task_result["num_matches"]
+                tasks_list.append(task_result)
+                if not task_result['status']:
+                    task_id = task_result['task_id']
+                    all_task_succeed = False
+                    job_status = JobStatus.FAILED
+                    logger.warning(f"task {task_id} failed")
+            # clean up
             del active_jobs[job_id]
-            #FIXME: check for errors before writing SUCCESS
-            set_job_status(db_conn, job_id, JobStatus.SUCCESS)
+            if all_task_succeed:
+                logger.info(f"Completed job {job_id}")
+            else:
+                logger.info(f"job {job_id} finished with failures")
+
+            set_job_status(db_conn, job_id, job_status)
+            job_stats = {
+                "results_count": results_count,
+                "status": job_status.to_str()
+            }
+            # I am hoping those two won't take too long
+            mongodb_manager.finalize_job_stats(job_id, completion_ts, job_stats)
+            mongodb_manager.insert_tasks(tasks_list)
+
 
 def handle_jobs(
     db_conn,
+    mongodb_manager,
     celery_worker_method_base_kwargs: Dict[str, Any],
     jobs_poll_delay: float,
 ) -> None:
     # Changes the os directory for job specific logs
     while True:
-        poll_and_submit_pending_search_jobs(db_conn, celery_worker_method_base_kwargs)
-        poll_and_handle_cancelling_search_jobs(db_conn)
-        check_job_status_and_update_db(db_conn)
+        poll_and_submit_pending_search_jobs(db_conn, mongodb_manager, celery_worker_method_base_kwargs)
+        poll_and_handle_cancelling_search_jobs(db_conn, mongodb_manager)
+        check_job_status_and_update_db(db_conn, mongodb_manager)
         time.sleep(jobs_poll_delay)
 
     logger.info("Exiting...")
@@ -275,12 +319,14 @@ def main(argv: List[str]) -> int:
     )
 
     setup_search_jobs_table(db_conn)
+    mongodb_manager: DBManager = MongoDBManager(logger, clp_config.results_cache.get_uri())
 
     jobs_poll_delay = clp_config.search_scheduler.jobs_poll_delay
     logger.info("search-job-handler started.")
     logger.debug(f"job-poll-delay = {jobs_poll_delay} seconds")
     handle_jobs(
         db_conn=db_conn,
+        mongodb_manager=mongodb_manager,
         celery_worker_method_base_kwargs=celery_worker_method_base_kwargs,
         jobs_poll_delay=jobs_poll_delay
     )
