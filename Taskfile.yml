@@ -163,7 +163,7 @@ tasks:
     cmds:
       - |-
         . {{.VENV_DIR}}/bin/activate
-        poetry build --format wheel
+        poetry --no-cache build --format wheel
     sources:
       - "{{.PACKAGE}}/**/*"
       - pyproject.toml
