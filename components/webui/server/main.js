@@ -6,7 +6,7 @@ import "/imports/api/search/server/constants";
 import "/imports/api/search/server/methods";
 import "/imports/api/search/server/publications";
 import "/imports/api/search/server/query_handler_mediator";
-import {initialize} from "/imports/api/search/server/query_handler_mediator";
+import "/imports/api/user/server/methods";
 
 Meteor.startup(() => {
   if (StatsCollection.find().count() === 0) {
@@ -19,6 +19,4 @@ Meteor.startup(() => {
       num_messages: 10000,
     });
   }
-
-  initialize();
 });

@@ -68,7 +68,7 @@ def search(
         output_config["host"],
         str(output_config["port"]),
         output_config["db_name"],
-        output_config["results_collection_name"],
+        output_config["results_collection_name"] + "_" + query['sessionId'],
     ]
     server_proc = subprocess.Popen(
         server_cmd,

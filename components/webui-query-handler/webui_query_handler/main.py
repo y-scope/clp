@@ -67,9 +67,15 @@ class ClientMessageType(enum.IntEnum):
     UPDATE_TIMELINE_RANGE = 3
 
 
+class HandlerState(enum.IntEnum):
+    READY = 0
+    CLEAR_RESULTS_IN_PROGRESS = 1
+    CLEAR_RESULTS_IN_PROGRESS_BEFORE_QUERY = 2
+    QUERY_IN_PROGRESS = 3
+
+
 # Globals
-g_webui_connected = False
-g_connected_websocket = None
+g_webui_connected = {}
 
 
 async def run_function_in_process(function, *args, initializer=None, init_args=None):
@@ -347,7 +353,7 @@ def update_timeline_and_count(
         ]
 
         exact_ts_period = ts_range_ms / 40
-        # Find closest selection that's >= the exact period
+        # Find the closest selection that's >= the exact period
         ts_period_ms = 0
         ts_period_name = None
         for selection in time_period_selections:
@@ -498,7 +504,6 @@ async def handle_operation_task_completion(websocket, operation_task):
         logger.exception("Operation failed.")
         return False
 
-
 async def handle_receive_from_client_task_completion(websocket, task, pending_tasks):
     receive_successful, msg_from_client = task.result()
     if not receive_successful:
@@ -558,40 +563,33 @@ async def query_handler(
     results_metadata_collection_name: str,
 ):
     logger.info(
-        "query_handler: Received connection from " + str(websocket.remote_address)
+        f"query_handler: Received connection from remote_address={websocket.remote_address} at request_uri={request_uri}"
     )
 
-    global g_webui_connected
+    _, sessionId = request_uri.split('/')
+    logger.debug(f'query_handler: Received sessionId as {sessionId}')
+    g_webui_connected[sessionId] = True
 
-    if g_webui_connected:
-        logger.error("Client already connected. Disconnecting new client.")
-        return
-
-    g_webui_connected = True
+    results_collection_name += f"_{sessionId}"
+    results_metadata_collection_name += f"_{sessionId}"
 
     pending = set()
     job_id = None
-    try:
-        operation_task: typing.Optional[asyncio.Future] = None
-        metadata_update_task: typing.Optional[asyncio.Future] = None
-        query_done_event = multiprocessing.Event()
-        pending_query = None
-        output_result_type = 0
+    operation_task: typing.Optional[asyncio.Future] = None
+    metadata_update_task: typing.Optional[asyncio.Future] = None
+    query_done_event = multiprocessing.Event()
+    pending_query = None
+    output_result_type = 0
+    current_state = HandlerState.READY
+    done = []
 
+    try:
         # Add task to receive message from client
         receive_from_client_task: asyncio.Future = asyncio.ensure_future(
             receive_from_client(websocket)
         )
         pending.add(receive_from_client_task)
 
-        class HandlerState(enum.IntEnum):
-            READY = 0
-            CLEAR_RESULTS_IN_PROGRESS = 1
-            CLEAR_RESULTS_IN_PROGRESS_BEFORE_QUERY = 2
-            QUERY_IN_PROGRESS = 3
-
-        current_state = HandlerState.READY
-        done = []
         while True:
             # Wait for pending tasks
             if len(done) == 0:
@@ -623,6 +621,7 @@ async def query_handler(
                     msg_type = msg_from_client["type"]
                     logger.info(msg_from_client)
                     if ClientMessageType.CANCEL_OPERATION == msg_type:
+                        logger.debug("query_handler: CANCEL_OPERATION")
                         pass
                     elif ClientMessageType.CLEAR_RESULTS == msg_type:
                         if metadata_update_task is not None:
@@ -784,6 +783,7 @@ async def query_handler(
 
                     # Submit query synchronously so that we're guaranteed to get
                     # the job ID back
+                    pending_query['sessionId'] = sessionId
                     job_id = submit_query(db_conn_conf, results_cache_uri,
                                             results_collection_name,
                                             pending_query)
@@ -966,7 +966,7 @@ async def query_handler(
 
         await websocket.close()
 
-        g_webui_connected = False
+        g_webui_connected[sessionId] = False
 
 
 def main(argv):

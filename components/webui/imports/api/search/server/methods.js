@@ -1,14 +1,15 @@
 import {Meteor} from "meteor/meteor";
 
 import {SearchState} from "../constants";
-import {currentServerState, webuiQueryHandlerWebsocket} from "./query_handler_mediator";
+import {currentServerStateList, initCurrentServerState, webuiQueryHandlerWebsocketList} from "./query_handler_mediator";
 import {ClientMessageType} from "./constants";
 
 Meteor.methods({
     "search.submitQuery"({pipelineString, timestampBegin, timestampEnd, pathRegex, matchCase}) {
-        currentServerState.errorMessage = "";
+        initCurrentServerState(this.userId)
+        currentServerStateList[this.userId].errorMessage = "";
 
-        switch (currentServerState.state) {
+        switch (currentServerStateList[this.userId].state) {
             case SearchState.CONNECTING:
                 throw new Error("Lost connection to query handler.");
             case SearchState.WAITING_FOR_QUERY_TO_VALIDATE:
@@ -19,7 +20,7 @@ Meteor.methods({
                 let message = {
                     type: ClientMessageType.CANCEL_OPERATION,
                 };
-                webuiQueryHandlerWebsocket.send(JSON.stringify(message));
+                webuiQueryHandlerWebsocketList[this.userId].send(JSON.stringify(message));
             }
             // Fall through
             case SearchState.READY:
@@ -35,16 +36,17 @@ Meteor.methods({
                     query: query,
                 };
 
-                webuiQueryHandlerWebsocket.send(JSON.stringify(message));
-                currentServerState.state = SearchState.WAITING_FOR_QUERY_TO_VALIDATE;
+                webuiQueryHandlerWebsocketList[this.userId].send(JSON.stringify(message));
+                currentServerStateList[this.userId].state = SearchState.WAITING_FOR_QUERY_TO_VALIDATE;
                 break;
         }
     },
 
     "search.clearResults"() {
-        currentServerState.errorMessage = "";
+        initCurrentServerState(this.userId)
+        currentServerStateList[this.userId].errorMessage = "";
 
-        switch (currentServerState.state) {
+        switch (currentServerStateList[this.userId].state) {
             case SearchState.CONNECTING:
                 throw new Error("Lost connection to query handler.");
             case SearchState.WAITING_FOR_QUERY_TO_VALIDATE:
@@ -55,7 +57,7 @@ Meteor.methods({
                 let message = {
                     type: ClientMessageType.CANCEL_OPERATION,
                 };
-                webuiQueryHandlerWebsocket.send(JSON.stringify(message));
+                webuiQueryHandlerWebsocketList[this.userId].send(JSON.stringify(message));
             }
             // Fall through
             case SearchState.READY:
@@ -63,16 +65,17 @@ Meteor.methods({
                     type: ClientMessageType.CLEAR_RESULTS,
                 };
 
-                webuiQueryHandlerWebsocket.send(JSON.stringify(message));
-                currentServerState.state = SearchState.CLEAR_RESULTS_IN_PROGRESS;
+                webuiQueryHandlerWebsocketList[this.userId].send(JSON.stringify(message));
+                currentServerStateList[this.userId].state = SearchState.CLEAR_RESULTS_IN_PROGRESS;
                 break;
         }
     },
 
     "search.cancelOperation"() {
-        currentServerState.errorMessage = "";
+        initCurrentServerState(this.userId)
+        currentServerStateList[this.userId].errorMessage = "";
 
-        switch (currentServerState.state) {
+        switch (currentServerStateList[this.userId].state) {
             case SearchState.CONNECTING:
                 throw new Error("Lost connection to query handler.");
             case SearchState.WAITING_FOR_QUERY_TO_VALIDATE:
@@ -83,8 +86,8 @@ Meteor.methods({
                 let message = {
                     type: ClientMessageType.CANCEL_OPERATION,
                 };
-                webuiQueryHandlerWebsocket.send(JSON.stringify(message));
-                currentServerState.state = SearchState.READY;
+                webuiQueryHandlerWebsocketList[this.userId].send(JSON.stringify(message));
+                currentServerStateList[this.userId].state = SearchState.READY;
                 break;
             }
             case SearchState.READY:
@@ -94,9 +97,10 @@ Meteor.methods({
     },
 
     "search.updateTimelineRange"({timeRange}) {
-        currentServerState.errorMessage = "";
+        initCurrentServerState(this.userId)
+        currentServerStateList[this.userId].errorMessage = "";
 
-        switch (currentServerState.state) {
+        switch (currentServerStateList[this.userId].state) {
             case SearchState.CONNECTING:
                 throw new Error("Lost connection to query handler.");
             case SearchState.WAITING_FOR_QUERY_TO_VALIDATE:
@@ -112,7 +116,7 @@ Meteor.methods({
                     time_range: timeRange
                 };
 
-                webuiQueryHandlerWebsocket.send(JSON.stringify(message));
+                webuiQueryHandlerWebsocketList[this.userId].send(JSON.stringify(message));
                 break;
         }
     },

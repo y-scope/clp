@@ -1,7 +1,8 @@
 import React from "react";
 import {Redirect, Route, Switch} from "react-router";
-
+import {Meteor} from "meteor/meteor";
 import {faFileUpload, faSearch} from "@fortawesome/free-solid-svg-icons";
+import {v4 as uuidv4} from 'uuid';
 
 import IngestView from "./IngestView/IngestView.jsx";
 import SearchView from "./SearchView/SearchView.jsx";
@@ -24,7 +25,49 @@ const ROUTES = [
     },
 ];
 
+// TODO: implement a full-fledged registration sys
+const CONST_LOCAL_STORAGE_KEY_USERNAME = 'username';
+const CONST_DUMMY_PASSWORD = 'DummyPassword';
+
+let LoginRetryCount = 0;
+const CONST_MAX_LOGIN_RETRY = 3;
+
+const registerAndLoginWithUsername = username => {
+    Meteor.call('user.create', {username, password: CONST_DUMMY_PASSWORD},
+        (error) => {
+            if (error) {
+                console.log('create user error', error);
+                return;
+            }
+            localStorage.setItem(CONST_LOCAL_STORAGE_KEY_USERNAME, username);
+            loginWithUsername(username);
+        });
+};
+
+const loginWithUsername = username => {
+    Meteor.loginWithPassword(username, CONST_DUMMY_PASSWORD,
+        (error) => {
+            if (error) {
+                console.log('login error', error, 'LOGIN_RETRY_COUNT:', LoginRetryCount);
+                if (LoginRetryCount < CONST_MAX_LOGIN_RETRY) {
+                    LoginRetryCount++;
+                    registerAndLoginWithUsername(username);
+                }
+            }
+        });
+};
+
 export const App = () => {
+    React.useEffect(() => {
+        let username = localStorage.getItem(CONST_LOCAL_STORAGE_KEY_USERNAME);
+        if (username === null) {
+            username = uuidv4();
+            registerAndLoginWithUsername(username);
+        } else {
+            loginWithUsername(username);
+        }
+    }, []);
+
     const [isSidebarStateCollapsed, setSidebarStateCollapsed] = React.useState("true" === localStorage.getItem("isSidebarCollapsed") || false);
     React.useEffect(() => {
         localStorage.setItem("isSidebarCollapsed", isSidebarStateCollapsed.toString());

@@ -27,12 +27,29 @@ import Highcharts from "highcharts";
 import DatePicker from "react-datepicker";
 import ReactVisibilitySensor from "react-visibility-sensor";
 
-import {SearchResultsCollection, SearchResultsMetadataCollection, SearchServerStateCollection} from "../../api/search/publications";
+import {SearchServerStateCollection} from "../../api/search/publications";
 import {SearchState} from "../../api/search/constants";
 
 import "react-datepicker/dist/react-datepicker.css";
 
+const MyCollections = {
+    [Meteor.settings.public.SearchResultsCollectionName]:null,
+    [Meteor.settings.public.SearchResultsMetadataCollectionName]:null,
+}
+
+const InitMyCollections = (sessionId) => {
+        if (MyCollections[Meteor.settings.public.SearchResultsCollectionName] === null){
+        MyCollections[Meteor.settings.public.SearchResultsCollectionName] =
+            new Mongo.Collection(`${Meteor.settings.public.SearchResultsCollectionName}_${sessionId}`);
+    }
+    if (MyCollections[Meteor.settings.public.SearchResultsMetadataCollectionName] === null){
+        MyCollections[Meteor.settings.public.SearchResultsMetadataCollectionName] =
+            new Mongo.Collection(`${Meteor.settings.public.SearchResultsMetadataCollectionName}_${sessionId}`);
+    }
+}
 const SearchView = () => {
+    InitMyCollections(Meteor.userId())
+
     const [operationErrorMsg, setOperationErrorMsg] = useState("");
 
     const [visibleSearchResultsLimit, setVisibleSearchResultsLimit] = useState(10);
@@ -92,7 +109,7 @@ const SearchView = () => {
             findOptions["sort"] = sort;
         }
 
-        return SearchResultsCollection.find({}, findOptions).fetch();
+        return MyCollections[Meteor.settings.public.SearchResultsCollectionName].find({}, findOptions).fetch();
     }, [fieldToSortBy, visibleSearchResultsLimit, visibleTimeRangeBegin, visibleTimeRangeEnd]);
     const [resultHighlightRegex, numSearchResultsOnServer, timeline] = useTracker(() => {
         const subscription = Meteor.subscribe(Meteor.settings.public.SearchResultsMetadataCollectionName);
@@ -102,17 +119,17 @@ const SearchView = () => {
         let numSearchResultsOnServer = 0;
         let timeline = null;
         if (isReady) {
-            const numSearchResultsDoc = SearchResultsMetadataCollection.findOne({_id: "num_search_results"});
+            const numSearchResultsDoc = MyCollections[Meteor.settings.public.SearchResultsMetadataCollectionName].findOne({_id: "num_search_results"});
             if (numSearchResultsDoc) {
                 numSearchResultsOnServer = numSearchResultsDoc["all"];
             }
 
-            const timelineDoc = SearchResultsMetadataCollection.findOne({_id: "timeline"});
+            const timelineDoc = MyCollections[Meteor.settings.public.SearchResultsMetadataCollectionName].findOne({_id: "timeline"});
             if (timelineDoc) {
                 timeline = timelineDoc;
             }
 
-            const generalDoc = SearchResultsMetadataCollection.findOne({_id: "general"});
+            const generalDoc = MyCollections[Meteor.settings.public.SearchResultsMetadataCollectionName].findOne({_id: "general"});
             if (generalDoc) {
                 resultHighlightRegex = generalDoc["regex"];
             }
