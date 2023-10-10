@@ -118,6 +118,14 @@ def start_db(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
     db_data_dir.mkdir(exist_ok=True, parents=True)
     db_logs_dir.mkdir(exist_ok=True, parents=True)
 
+    is_root = os.getuid() == 0
+    if is_root:
+        # Make the directories world-writable so that the default user in the
+        # container can write to them
+        # TODO Find a less brute-force solution
+        db_data_dir.chmod(0o777)
+        db_logs_dir.chmod(0o777)
+
     # Start container
     mounts = [
         DockerMount(DockerMountType.BIND, conf_dir / 'mysql' / 'conf.d', pathlib.Path('/') / 'etc' / 'mysql' / 'conf.d',
@@ -133,12 +141,17 @@ def start_db(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
         '-e', f'MYSQL_USER={clp_config.database.username}',
         '-e', f'MYSQL_PASSWORD={clp_config.database.password}',
         '-e', f'MYSQL_DATABASE={clp_config.database.name}',
-        '-u', f'{os.getuid()}:{os.getgid()}',
     ]
     for mount in mounts:
         cmd.append('--mount')
         cmd.append(str(mount))
     append_docker_port_settings_for_host_ips(clp_config.database.host, clp_config.database.port, 3306, cmd)
+    if not is_root:
+        cmd.append('-u')
+        cmd.append(f'{os.getuid()}:{os.getgid()}')
+    else:
+        cmd.append('-u')
+        cmd.append('mysql')
     if 'mysql' == clp_config.database.type:
         cmd.append('mysql:8.0.23')
     elif 'mariadb' == clp_config.database.type:
@@ -223,6 +236,14 @@ def start_queue(component_name: str, instance_id: str, queue_config: Queue,
     # Create directories
     queue_logs_dir.mkdir(exist_ok=True, parents=True)
 
+    is_root = os.getuid() == 0
+    if is_root:
+        # Make the directories world-writable so that the default user in the
+        # container can write to them
+        # TODO Find a less brute-force solution
+        queue_logs_dir.chmod(0o777)
+        queue_logs_dir.chmod(0o777)
+
     log_filename = 'rabbitmq.log'
 
     # Generate config file
@@ -248,12 +269,17 @@ def start_queue(component_name: str, instance_id: str, queue_config: Queue,
         # Override RABBITMQ_LOGS since the image sets it to *only* log to stdout
         '-e', f'RABBITMQ_LOGS={rabbitmq_logs_dir / log_filename}',
         '-e', f'RABBITMQ_PID_FILE={rabbitmq_pid_file_path}',
-        '-u', f'{os.getuid()}:{os.getgid()}',
     ]
     append_docker_port_settings_for_host_ips(queue_config.host, queue_config.port, 5672, cmd)
     for mount in mounts:
         cmd.append('--mount')
         cmd.append(str(mount))
+    if not is_root:
+        cmd.append('-u')
+        cmd.append(f'{os.getuid()}:{os.getgid()}')
+    else:
+        cmd.append('-u')
+        cmd.append('rabbitmq')
     cmd.append('rabbitmq:3.9.8')
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
@@ -290,6 +316,14 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
     data_dir.mkdir(exist_ok=True, parents=True)
     logs_dir.mkdir(exist_ok=True, parents=True)
 
+    is_root = os.getuid() == 0
+    if is_root:
+        # Make the directories world-writable so that the default user in the
+        # container can write to them
+        # TODO Find a less brute-force solution
+        data_dir.chmod(0o777)
+        logs_dir.chmod(0o777)
+
     # Start container
     mounts = [
         DockerMount(DockerMountType.BIND, conf_dir / 'mongo', pathlib.Path('/') / 'etc' / 'mongo',
@@ -301,13 +335,18 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
         'docker', 'run',
         '-d',
         '--name', container_name,
-        '-u', f'{os.getuid()}:{os.getgid()}',
     ]
     for mount in mounts:
         cmd.append('--mount')
         cmd.append(str(mount))
     append_docker_port_settings_for_host_ips(clp_config.results_cache.host,
                                              clp_config.results_cache.port, 27017, cmd)
+    if not is_root:
+        cmd.append('-u')
+        cmd.append(f'{os.getuid()}:{os.getgid()}')
+    else:
+        cmd.append('-u')
+        cmd.append('mongodb')
     cmd.append('mongo:7.0.1')
     cmd.append('--config')
     cmd.append(str(pathlib.Path('/') / 'etc' / 'mongo' / 'mongod.conf'))
