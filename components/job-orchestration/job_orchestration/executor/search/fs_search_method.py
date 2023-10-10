@@ -135,7 +135,7 @@ def search(
     stderr_log_file.close()
     logger.removeHandler(logging_file_handler)
     logging_file_handler.close()
-    teardown_time, prev_t = time_helper(prev_t)
+    teardown_time, task_end_t = time_helper(prev_t)
 
     results = {
         'status': search_successful,
@@ -148,7 +148,7 @@ def search(
         'clg': search_time,
         'flush': flush_time,
         'teardown': teardown_time,
-        'end_to_end': prev_t - task_start_t
+        'task_end_to_end': task_end_t - task_start_t
     }
 
     return results

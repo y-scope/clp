@@ -10,6 +10,7 @@ class JobStatus(IntEnum):
     SUCCESS = auto()
     SUCCESS_WITH_ERRORS = auto()
     FAILED = auto()
+    FAILED_TO_SUBMIT = auto()
     CANCELLING = auto()
     CANCELLED = auto()
 

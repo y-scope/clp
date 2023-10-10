@@ -29,12 +29,12 @@ class MongoDBManager(DBManager):
         self.__db_client: MongoClient = MongoClient(db_uri)
         self.__archive_db: Database = self.__db_client.get_default_database()
         self.__db_collections: Dict[str, Collection] = {
-            "search_jobs": self.__archive_db["search_jobs"],
-            "search_tasks": self.__archive_db["search_tasks"]
+            "search_jobs_metrics": self.__archive_db["search_jobs_metrics"],
+            "search_tasks_metrics": self.__archive_db["search_tasks_metrics"]
         }
 
-        self.__db_collections["search_jobs"].create_index("creation_time")
-        self.__db_collections["search_tasks"].create_index("job_id")
+        self.__db_collections["search_jobs_metrics"].create_index("creation_time")
+        self.__db_collections["search_tasks_metrics"].create_index("job_id")
 
     @staticmethod
     def prepare_job_document(job_id, creation_ts, detection_ts, enqueue_ts, status):
@@ -52,20 +52,20 @@ class MongoDBManager(DBManager):
         return self.__db_config
 
     def insert_jobs(self, jobs: List[Dict[str, Any]]) -> None:
-        self.__db_collections["search_jobs"].insert_many(jobs)
+        self.__db_collections["search_jobs_metrics"].insert_many(jobs)
 
     def insert_tasks(self, jobs: List[Dict[str, Any]]):
-        self.__db_collections["search_tasks"].insert_many(jobs)
+        self.__db_collections["search_tasks_metrics"].insert_many(jobs)
 
     def update_job_status(self, job_id: str, status: str):
         filter_criteria = {"job_id": job_id}
         update_operation = {"$set": {"status": status}}
-        self.__db_collections["search_jobs"].find_one_and_update(filter_criteria, update_operation)
+        self.__db_collections["search_jobs_metrics"].find_one_and_update(filter_criteria, update_operation)
 
     def finalize_job_stats(self, job_id: str, completion_ts: float, stats: Dict[str, Any]) -> None:
         job_filter = {"job_id": job_id}
 
-        document = self.__db_collections["search_jobs"].find_one(job_filter)
+        document = self.__db_collections["search_jobs_metrics"].find_one(job_filter)
         if document:
             # Access the value of the specific field
             creation_ts = document.get("creation_ts")
@@ -82,4 +82,4 @@ class MongoDBManager(DBManager):
 
         update_operation = {"$set": stats}
 
-        self.__db_collections["search_jobs"].find_one_and_update(job_filter, update_operation)
+        self.__db_collections["search_jobs_metrics"].find_one_and_update(job_filter, update_operation)

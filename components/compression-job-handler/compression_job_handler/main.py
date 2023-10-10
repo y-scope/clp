@@ -7,7 +7,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from celery import group, signature
 from celery.exceptions import TimeoutError
@@ -34,11 +34,13 @@ from .partition import PathsToCompressBuffer  # type: ignore
 # Setup logging
 # Create logger
 logger = logging.getLogger("compression-job-handler")
-# Setup console logging
-logging_console_handler = logging.StreamHandler()
+logger.setLevel(logging.INFO)
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-logging_console_handler.setFormatter(logging_formatter)
-logger.addHandler(logging_console_handler)
+# Setup console logging
+# V0.5 TODO: for some reason propogate = false is not working.
+# logging_console_handler = logging.StreamHandler()
+# logging_console_handler.setFormatter(logging_formatter)
+# logger.addHandler(logging_console_handler)
 # Prevents double logging from sub loggers for specific jobs
 logger.propagate = False
 
@@ -52,117 +54,21 @@ https://github.com/celery/celery/issues/4084
 ^Issue open since 2017 showing that this is a bug
 '''
 
+# V0.5 TODO Deduplicate
+def update_job_results(results: Dict[str, Any], archive_status: Dict[str, Any]):
+    results['total_uncompressed_size'] += archive_status['total_uncompressed_size']
+    results['total_compressed_size'] += archive_status['total_compressed_size']
+    results['num_messages'] += archive_status['num_messages']
+    results['num_files'] += archive_status['num_files']
+    results['begin_ts'] = min(results['begin_ts'], archive_status['begin_ts'])
+    results['end_ts'] = max(results['end_ts'], archive_status['end_ts'])
+
 
 def get_results_or_timeout(result):
     try:
         return result.get(timeout=0.01)
     except TimeoutError:
         return None
-
-
-def handle_job_impl(
-        job_id_str: str,
-        output_type: str,
-        output_config: Dict[str, Any],
-        db_manager: DBManager,
-        celery_worker_method_base_kwargs: Dict[str, Any],
-        progress_reporting_disabled: bool,
-        target_archive_size: int,
-) -> JobStatus:
-    # Extract job metadata
-    try:
-        job_metadata: Dict[str, Any] = db_manager.get_job_metadata(job_id_str)
-        job_input_type: str = job_metadata["input_type"]
-        job_input_config: Dict[str, Any] = job_metadata["input_config"]
-        job_output_config: Dict[str, Any] = job_metadata["output_config"]
-    except Exception as e:
-        logger.error(f"Failed to parse initial job configurations: {e}")
-        return JobStatus.FAILED
-
-    # Override output config with settings specified in the job
-    target_archive_size = job_output_config.get("target_archive_size", target_archive_size)
-
-    for key, value in output_config.items():
-        if key not in job_output_config:
-            job_output_config[key] = value
-
-    # Create populate the job buffer with Celery job signatures
-    distributed_compression_jobs: List[signature] = []
-    try:
-        if "fs" == job_input_type and "fs" == output_type:
-            job_completed_with_errors = prepare_fs_compression_jobs(
-                job_id_str=job_id_str,
-                worker_base_arguments=celery_worker_method_base_kwargs,
-                distributed_compression_jobs=distributed_compression_jobs,
-                target_archive_size=target_archive_size,
-                job_input_config=job_input_config,
-                job_output_config=job_output_config,
-            )
-        else:
-            raise NotImplementedError("Unsupported input/output compression source pair.")
-    except Exception as e:
-        logger.error(str(e))
-        return JobStatus.FAILED
-    logger.info(f"Submitting job {job_id_str} to celery")
-    jobs_group = group(distributed_compression_jobs)
-    active_jobs = jobs_group.apply_async()
-    num_compression_jobs = len(active_jobs)
-    logger.info(f"Waiting for job {job_id_str}'s {num_compression_jobs} sub-job(s) to finish.")
-
-    # Monitor dispatched jobs' statuses
-    all_worker_jobs_successful = True
-    # V0.5 TODO: ideally we should update database for each successful subtask but
-    # I don't have time to do it properly. instead, I do the aggregation here
-    job_result: Dict[str, Any] = {
-        "total_uncompressed_size": 0,
-        "total_compressed_size": 0,
-        "num_messages": 0,
-        "num_files": 0,
-        "begin_ts": sys.maxsize,
-        "end_ts": 0
-    }
-
-    # V0.5 TODO Deduplicate
-    def update_job_results(results: Dict[str, Any], archive_status: Dict[str, Any]):
-        results['total_uncompressed_size'] += archive_status['total_uncompressed_size']
-        results['total_compressed_size'] += archive_status['total_compressed_size']
-        results['num_messages'] += archive_status['num_messages']
-        results['num_files'] += archive_status['num_files']
-        results['begin_ts'] = min(results['begin_ts'], archive_status['begin_ts'])
-        results['end_ts'] = max(results['end_ts'], archive_status['end_ts'])
-
-    while True:
-        try:
-            returned_results = get_results_or_timeout(active_jobs)
-            if returned_results != None:
-                # Check for finished jobs
-                for subtask_result in returned_results:
-                    if not subtask_result["status"]:
-                        all_worker_jobs_successful = False
-                        logger.error(f"Worker of {job_id_str} failed. See the worker logs for details.")
-                    else:
-                        update_job_results(job_result, subtask_result)
-                        db_manager.update_job_progression(job_id_str)
-                break
-        except Exception as e:
-            all_worker_jobs_successful = False
-            logger.error(f"job `{job_id_str}` failed: {e}")
-            break
-
-        if not progress_reporting_disabled:
-            db_manager.update_job_progression(job_id_str)
-
-        logger.info(f"Waiting for sub-job(s) of job {job_id_str} to finish.")
-        time.sleep(1)
-
-    if not all_worker_jobs_successful:
-        return JobStatus.FAILED
-    db_manager.update_job_stats(job_id_str, job_result)
-    if job_completed_with_errors:
-        return JobStatus.SUCCESS_WITH_ERRORS
-    else:
-        return JobStatus.SUCCESS
-
 
 def prepare_fs_compression_jobs(
         job_id_str: str,
@@ -263,21 +169,112 @@ def handle_job(
         celery_worker_method_base_kwargs: Dict[str, Any],
         progress_reporting_disabled: bool,
         target_archive_size: int,
-) -> JobStatus:
+) -> Tuple[JobStatus, float]:
     logger.info(f"Starting job `{job_id_str}`.")
+    # Extract job metadata
+    try:
+        job_metadata: Dict[str, Any] = db_manager.get_job_metadata(job_id_str)
+        job_input_type: str = job_metadata["input_type"]
+        job_input_config: Dict[str, Any] = job_metadata["input_config"]
+        job_output_config: Dict[str, Any] = job_metadata["output_config"]
+        submission_ts: float = job_metadata["submission_timestamp"] / 1000
+        schedule_start_ts: float = job_metadata["begin_timestamp"].timestamp()
+    except Exception as e:
+        logger.error(f"Failed to parse initial job configurations: {e}")
+        return JobStatus.FAILED_TO_SUBMIT, 0
 
-    job_completion_status = handle_job_impl(
-        job_id_str=job_id_str,
-        output_type=output_type,
-        output_config=output_config,
-        db_manager=db_manager,
-        celery_worker_method_base_kwargs=celery_worker_method_base_kwargs,
-        progress_reporting_disabled=progress_reporting_disabled,
-        target_archive_size=target_archive_size,
-    )
+    # Override output config with settings specified in the job
+    target_archive_size = job_output_config.get("target_archive_size", target_archive_size)
 
+    for key, value in output_config.items():
+        if key not in job_output_config:
+            job_output_config[key] = value
+
+    # Create populate the job buffer with Celery job signatures
+    distributed_compression_jobs: List[signature] = []
+    try:
+        if "fs" == job_input_type and "fs" == output_type:
+            job_completed_with_errors = prepare_fs_compression_jobs(
+                job_id_str=job_id_str,
+                worker_base_arguments=celery_worker_method_base_kwargs,
+                distributed_compression_jobs=distributed_compression_jobs,
+                target_archive_size=target_archive_size,
+                job_input_config=job_input_config,
+                job_output_config=job_output_config,
+            )
+        else:
+            raise NotImplementedError("Unsupported input/output compression source pair.")
+    except Exception as e:
+        logger.error(str(e))
+        return JobStatus.FAILED_TO_SUBMIT, 0
+
+    celery_submission_ts = time.time()
+    logger.info(f"Submitting job {job_id_str} to celery")
+    jobs_group = group(distributed_compression_jobs)
+    active_jobs = jobs_group.apply_async()
+    num_compression_jobs = len(active_jobs)
+    logger.info(f"Waiting for job {job_id_str}'s {num_compression_jobs} sub-job(s) to finish.")
+
+    # Monitor dispatched jobs' statuses
+    all_worker_jobs_successful = True
+    # V0.5 TODO: ideally we should update database for each successful subtask but
+    # I don't have time to do it properly. instead, I do the aggregation here
+    job_result: Dict[str, Any] = {
+        "total_uncompressed_size": 0,
+        "total_compressed_size": 0,
+        "num_messages": 0,
+        "num_files": 0,
+        "begin_ts": sys.maxsize,
+        "end_ts": 0
+    }
+
+    task_results_list = []
+    while True:
+        try:
+            returned_results = get_results_or_timeout(active_jobs)
+            if returned_results != None:
+                job_completion_ts = time.time()
+                # Check for finished jobs
+                for task_result in returned_results:
+                    task_results_list.append(task_result)
+                    if not task_result["status"]:
+                        all_worker_jobs_successful = False
+                        logger.error(f"Worker of {job_id_str} failed. See the worker logs for details.")
+                    else:
+                        update_job_results(job_result, task_result["archive_stat"])
+                        db_manager.update_job_progression(job_id_str)
+                break
+        except Exception as e:
+            all_worker_jobs_successful = False
+            logger.error(f"job `{job_id_str}` failed: {e}")
+            break
+
+        if not progress_reporting_disabled:
+            db_manager.update_job_progression(job_id_str)
+
+        logger.info(f"Waiting for sub-job(s) of job {job_id_str} to finish.")
+        time.sleep(1)
     logger.info(f"Finished job `{job_id_str}`.")
-    return job_completion_status
+
+    job_metrics = {
+        "submission_ts": submission_ts,
+        "scheduler_time": schedule_start_ts - submission_ts,
+        "job_setup_time": celery_submission_ts - schedule_start_ts,
+        "celery_worker_time": job_completion_ts - celery_submission_ts,
+        "end_to_end_time": job_completion_ts - submission_ts
+    }
+    if not db_manager.update_job_stats(job_id_str, job_result):
+        logger.warning(f"stats of job {job_id_str} not updated, job doesn't exist")
+    if not db_manager.update_job_metrics(job_id_str, job_metrics):
+        logger.warning(f"metrics of job {job_id_str} not updated, job doesn't exist")
+    db_manager.insert_tasks_metrics(task_results_list)
+
+    if not all_worker_jobs_successful:
+        return JobStatus.FAILED, job_completion_ts
+    if job_completed_with_errors:
+        return JobStatus.SUCCESS_WITH_ERRORS, job_completion_ts
+    else:
+        return JobStatus.SUCCESS, job_completion_ts
 
 
 def handle_jobs(
@@ -319,7 +316,7 @@ def handle_jobs(
                         logger.error(f"Failed to cancel job `{job_id}`.")
                     continue
 
-                job_completion_status = handle_job(
+                job_completion_status, job_completion_time = handle_job(
                     job_id_str=job_id,
                     output_type=output_type,
                     output_config=output_config,
@@ -328,16 +325,15 @@ def handle_jobs(
                     progress_reporting_disabled=progress_reporting_disabled,
                     target_archive_size=target_archive_size,
                 )
-
-                now = datetime.now()
-                if JobStatus.FAILED == job_completion_status:
-                    db_manager.set_job_status(job_id, JobStatus.FAILED, end_timestamp=now)
+                job_completion_time = datetime.fromtimestamp(job_completion_time)
+                if job_completion_status in [JobStatus.FAILED_TO_SUBMIT, JobStatus.FAILED]:
+                    db_manager.set_job_status(job_id, job_completion_status, end_timestamp=job_completion_time)
                 elif JobStatus.SUCCESS_WITH_ERRORS == job_completion_status:
                     db_manager.set_job_status(
-                        job_id, JobStatus.DONE, end_timestamp=now, errors=True
+                        job_id, JobStatus.DONE, end_timestamp=job_completion_time, errors=True
                     )
                 elif JobStatus.SUCCESS == job_completion_status:
-                    db_manager.set_job_status(job_id, JobStatus.DONE, end_timestamp=now)
+                    db_manager.set_job_status(job_id, JobStatus.DONE, end_timestamp=job_completion_time)
                 else:
                     logger.error(
                         f"Job `{job_id}` ended with incorrect completion status"
@@ -371,7 +367,6 @@ def main(argv: List[str]) -> int:
     logger.setLevel(logging_level)
     logger.info(f"Start logging level = {logging.getLevelName(logging_level)}")
 
-    # Load configuration
     # Load configuration
     config_path = Path(parsed_args.config)
     try:

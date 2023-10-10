@@ -3,6 +3,7 @@ import os
 import sys
 import subprocess
 from pathlib import Path
+import time
 from typing import Any, Dict
 import json
 
@@ -17,7 +18,7 @@ from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_logging import get_logging_level
 
 # V0.5 TODO Deduplicate
-def update_job_results(results: Dict[str, Any], archive_status: Dict[str, Any]):
+def update_task_result(results: Dict[str, Any], archive_status: Dict[str, Any]):
     results['total_uncompressed_size'] += archive_status['uncompressed_size']
     results['total_compressed_size'] += archive_status['size']
     results['num_messages'] += archive_status['num_messages']
@@ -34,6 +35,7 @@ def compress(
     job_output_config: Dict[str, Any],
     clp_db_config: Dict[str, Any],
 ) -> bool:
+    task_start_ts = time.time()
     task_id_str = self.request.id
     clp_home = Path(os.getenv("CLP_HOME"))
 
@@ -117,6 +119,7 @@ def compress(
     stderr_log_file = open(stderr_log_path, "w")
 
     # Start compression
+    clp_start_ts = time.time()
     logger.info("Compressing...")
     compression_successful = False
     proc = subprocess.Popen(
@@ -128,18 +131,17 @@ def compress(
 
     # Wait for compression to finish
     return_code = proc.wait()
+    clp_end_ts = time.time()
     if 0 != return_code:
         logger.info(f"Failed to compress, return_code={return_code}")
     else:
         compression_successful = True
-
         # Remove path lists
         clp_db_config_file_path.unlink()
         log_list_path.unlink()
 
     # Result storage
-    job_results: Dict[str, Any] = {
-        "status": compression_successful,
+    archive_stat: Dict[str, Any] = {
         "total_uncompressed_size": 0,
         "total_compressed_size": 0,
         "num_messages": 0,
@@ -161,16 +163,28 @@ def compress(
             if last_archive_stats is not None and stats['id'] != last_archive_stats['id']:
                 # We've started a new archive so add the previous archive's last
                 # reported size to the total
-                update_job_results(job_results, last_archive_stats)
+                update_task_result(archive_stat, last_archive_stats)
             last_archive_stats = stats
         if last_archive_stats is not None:
             # Add the last archive's last reported size
-            update_job_results(job_results, last_archive_stats)
+            update_task_result(archive_stat, last_archive_stats)
 
     logger.info("Compressed.")
     # Close log files
     stderr_log_file.close()
     logger.removeHandler(logging_file_handler)
     logging_file_handler.close()
-
-    return job_results
+    # final profiling
+    task_finish_ts = time.time()
+    task_result: Dict[str, Any] = {
+        "job_id": job_id_str,
+        "task_id": task_id_str,
+        "status": compression_successful,
+        "task_start_ts": task_start_ts,
+        "start_up": clp_start_ts - task_start_ts,
+        "clp_time": clp_end_ts - clp_start_ts,
+        "teardown": task_finish_ts - clp_end_ts,
+        "task_end_to_end": task_finish_ts - task_start_ts,
+        "archive_stat": archive_stat
+    }
+    return task_result

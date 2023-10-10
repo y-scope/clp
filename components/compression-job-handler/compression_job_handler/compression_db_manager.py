@@ -65,6 +65,7 @@ class MongoDBManager(DBManager):
             "files": self.__archive_db["files"],
             "cjobs": self.__archive_db["cjobs"],
             "stats": self.__archive_db["stats"],
+            "c_tasks_stats": self.__archive_db["c_tasks_stats"],
             "empty_directories": self.__archive_db["empty_directories"],
         }
         # V0.5 TODO hack to achieve overwrite
@@ -75,12 +76,14 @@ class MongoDBManager(DBManager):
             "input_config": 1,
             "output_config": 1,
             "submission_timestamp": 1,
+            "begin_timestamp": 1,
             "status": 1,
         }
 
         self.__latest_query_result: Dict[str, Any] = {}
 
         self.__db_collections["cjobs"].create_index("submission_timestamp")
+        self.__db_collections["c_tasks_stats"].create_index("job_id")
 
         self.__job_data_size_aggregation_pipeline: List[Dict[str, Any]] = [
             {"$match": {"_id": None}},
@@ -212,6 +215,24 @@ class MongoDBManager(DBManager):
         job_metadata = self.get_job_metadata(job_id)
         return JobStatus.from_str(job_metadata["status"])
 
+    def insert_tasks_metrics(self, task: List[Dict[str, Any]]):
+        self.__db_collections["c_tasks_stats"].insert_many(task)
+
+    def update_job_metrics(self, job_id: str, metrics: Dict[str, Any]) -> bool:
+        jobs_collection = self.__db_collections["cjobs"]
+        find_filter: Dict[str, Any] = {"_id": ObjectId(job_id)}
+        update_res = jobs_collection.find_one_and_update(
+            filter=find_filter,
+            update={
+                "$set": {
+                    'metrics': metrics,
+                }
+            },
+        )
+        if not update_res:
+            return False
+        return True
+
     def set_job_status(
         self, job_id: str, status: JobStatus, prev_status: Optional[JobStatus] = None, **kwargs
     ) -> bool:
@@ -261,10 +282,10 @@ class MongoDBManager(DBManager):
         job_metadata = self.get_job_metadata(job_id)
         return self._millisecond_timestamp_to_datetime(job_metadata["submission_timestamp"])
 
-    def update_job_stats(self, job_id, metadata: Dict[str, Any]) -> None:
+    def update_job_stats(self, job_id, metadata: Dict[str, Any]) -> bool:
         find_filter = {"_id": ObjectId(job_id)}
         jobs_collection = self.__db_collections["cjobs"]
-        jobs_collection.find_one_and_update(
+        update_res = jobs_collection.find_one_and_update(
             filter=find_filter,
             update={
                 "$set": {
@@ -272,6 +293,10 @@ class MongoDBManager(DBManager):
                 }
             },
         )
+        if not update_res:
+            return False
+        return True
+
 
     # can be done with a better ts filter. but brutal force for now
     def update_compression_stat(self) -> None:
