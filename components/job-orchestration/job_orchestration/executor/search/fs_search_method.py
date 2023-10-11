@@ -115,6 +115,7 @@ def search(
     # Wait for compression to finish
     return_code = search_proc.wait()
     search_time, prev_t = time_helper(prev_t)
+    num_matches: int = 0
     if 0 != return_code:
         logger.error(f"Failed to search, return_code={return_code}")
     else:
