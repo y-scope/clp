@@ -436,6 +436,9 @@ const SearchResultsTable = ({
     if (searchResults.length > 0) {
         let columnNames = Object.keys(searchResults[0]);
 
+        // TODO Using the presence of a "timestamp" column to determine whether
+        // this is a message table or not will break if a non-message
+        // results-set contains a "timestamp" column.
         if (columnNames.includes("timestamp")) {
             // Display results as messages
 
@@ -509,7 +512,11 @@ const SearchResultsTable = ({
                         continue;
                     }
 
-                    columns.push(<td key={columnName}>{searchResult[columnName]}</td>);
+                    let result = searchResult[columnName];
+                    if (typeof(result) === "object") {
+                        result = JSON.stringify(result);
+                    }
+                    columns.push(<td key={columnName}>{result}</td>);
                 }
 
                 rows.push(<tr key={i}>{columns}</tr>);
