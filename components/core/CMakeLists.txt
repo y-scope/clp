@@ -146,6 +146,18 @@ else()
     message(FATAL_ERROR "Could not find msgpack-cxx")
 endif()
 
+# Add nlohmann_json
+#set(JSON_ImplicitConversions OFF)
+#set(JSON_BuildTests OFF)
+#add_subdirectory(submodules/json)
+
+#find_package(nlohmann_json 3.10.4 REQUIRED)
+#if(nlohmann_json_FOUND)
+#    message(STATUS "Found msgpack-cxx ${nlohmann_json_VERSION}")
+#else()
+#    message(FATAL_ERROR "Could not find nlohmann_json")
+#endif()
+
 # Add yaml-cpp
 add_subdirectory(submodules/yaml-cpp EXCLUDE_FROM_ALL)
 
@@ -158,6 +170,19 @@ if(ZStd_FOUND)
     message(STATUS "Found ZStd ${ZStd_VERSION}")
 else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
+endif()
+
+# Find and setup mongocxx
+if(CLP_USE_STATIC_LIBS)
+    set(MONGOCXX_TARGET mongo::mongocxx_static)
+else()
+    set(MONGOCXX_TARGET mongo::mongocxx_shared)
+endif()
+find_package(mongocxx REQUIRED)
+if(mongocxx_FOUND)
+    message(STATUS "Found mongocxx ${mongocxx_VERSION}")
+else()
+    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for mongocxx")
 endif()
 
 # sqlite dependencies
@@ -539,6 +564,23 @@ target_compile_features(clg
         PRIVATE cxx_std_17
         )
 
+set(SOURCE_FILES_aggregation
+        src/clo/aggregation/CountOperator.cpp
+        src/clo/aggregation/CountOperator.hpp
+        src/clo/aggregation/GroupTags.hpp
+        src/clo/aggregation/Operator.cpp
+        src/clo/aggregation/Operator.hpp
+        src/clo/aggregation/Pipeline.cpp
+        src/clo/aggregation/Pipeline.hpp
+        src/clo/aggregation/Record.hpp
+        src/clo/aggregation/RecordGroup.hpp
+        src/clo/aggregation/RecordGroupIterator.hpp
+        src/clo/aggregation/RecordGroupSerdes.cpp
+        src/clo/aggregation/RecordGroupSerdes.hpp
+        src/clo/aggregation/RecordIterator.hpp
+        src/clo/aggregation/RecordValueIterator.hpp
+        )
+
 set(SOURCE_FILES_clo
         src/BufferReader.cpp
         src/BufferReader.hpp
@@ -676,7 +718,7 @@ set(SOURCE_FILES_clo
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
         )
-add_executable(clo ${SOURCE_FILES_clo})
+add_executable(clo ${SOURCE_FILES_clo} ${SOURCE_FILES_aggregation})
 target_include_directories(clo
         PRIVATE
         ${CMAKE_SOURCE_DIR}/submodules
@@ -685,6 +727,7 @@ target_link_libraries(clo
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
+        ${MONGOCXX_TARGET}
         msgpack-cxx
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
@@ -693,6 +736,24 @@ target_link_libraries(clo
         )
 target_compile_features(clo
         PRIVATE cxx_std_17
+        )
+
+add_executable(reducer_server ${SOURCE_FILES_aggregation} src/clo/reducer_server.cpp)
+target_include_directories(reducer_server
+        PRIVATE
+        ${CMAKE_SOURCE_DIR}/submodules
+        )
+target_link_libraries(reducer_server
+        PRIVATE
+        Boost::program_options
+        MariaDBClient::MariaDBClient
+        ${MONGOCXX_TARGET}
+        msgpack-cxx
+        spdlog::spdlog
+        )
+target_compile_features(reducer_server
+        PRIVATE
+        cxx_std_17
         )
 
 set(SOURCE_FILES_unitTest
