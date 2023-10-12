@@ -59,10 +59,24 @@ namespace clo {
                 ("count-matches,c", po::bool_switch(&m_count_matches), "Count and output number of match results")
                 ;
 
+        po::options_description options_aggregation_control("Aggregation Controls");
+        options_aggregation_control.add_options()
+                ("count", po::bool_switch(&m_count), "Perform count aggregation")
+                ;
+
+        po::options_description options_result_cache_control("Result Cache Controls");
+        options_result_cache_control.add_options()
+                ("mongodb-uri", po::value<string>(&m_mongodb_uri), "Mongodb result cache uri")
+                ("mongodb-database", po::value<string>(&m_mongodb_database), "Mongodb database name")
+                ("mongodb-collection", po::value<string>(&m_mongodb_collection), "Mongodb collection name")
+                ;
+
         // Define visible options
         po::options_description visible_options;
         visible_options.add(options_general);
         visible_options.add(options_match_control);
+        visible_options.add(options_aggregation_control);
+        visible_options.add(options_result_cache_control);
 
         // Define hidden positional options (not shown in Boost's program options help message)
         po::options_description hidden_positional_options;
@@ -84,6 +98,8 @@ namespace clo {
         po::options_description all_options;
         all_options.add(options_general);
         all_options.add(options_match_control);
+        all_options.add(options_aggregation_control);
+        all_options.add(options_result_cache_control);
         all_options.add(hidden_positional_options);
 
         // Parse options

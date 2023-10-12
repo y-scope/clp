@@ -25,8 +25,12 @@ namespace clo {
         const std::string& get_search_controller_host () const { return m_search_controller_host; }
         const std::string& get_search_controller_port () const { return m_search_controller_port; }
         const std::string& get_archive_path () const { return m_archive_path; }
+        const std::string& get_mongodb_uri () const { return m_mongodb_uri; }
+        const std::string& get_mongodb_database () const { return m_mongodb_database; }
+        const std::string& get_mongodb_collection () const { return m_mongodb_collection; }
         bool ignore_case () const { return m_ignore_case; }
         bool count_matches ()  const { return m_count_matches; }
+        bool count_aggregation () const { return m_count; }
         const std::string& get_search_string () const { return m_search_string; }
         const std::string& get_file_path () const { return m_file_path; }
         epochtime_t get_search_begin_ts () const { return m_search_begin_ts; }
@@ -40,8 +44,12 @@ namespace clo {
         std::string m_search_controller_host;
         std::string m_search_controller_port;
         std::string m_archive_path;
+        std::string m_mongodb_uri;
+        std::string m_mongodb_database;
+        std::string m_mongodb_collection;
         bool m_ignore_case;
         bool m_count_matches;
+        bool m_count;
         std::string m_search_string;
         std::string m_file_path;
         epochtime_t m_search_begin_ts, m_search_end_ts;
