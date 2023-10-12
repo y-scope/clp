@@ -266,7 +266,7 @@ class WebUiQueryHandler(BaseModel):
 
 
 class CLPConfig(BaseModel):
-    execution_container: str = 'ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-focal:main'
+    execution_container: str = 'ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:v0.5-prototype'
 
     input_logs_directory: pathlib.Path = pathlib.Path('/')
 

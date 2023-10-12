@@ -12,6 +12,9 @@ class JobStatus(IntEnum):
     FAILED = auto()
     CANCELLING = auto()
     CANCELLED = auto()
+    PENDING_REDUCER = auto()
+    REDUCER_READY = auto()
+    PENDING_REDUCER_DONE = auto()
 
     def __str__(self) -> str:
         return str(self.value).lower()

@@ -219,6 +219,9 @@ def wait_for_query_to_complete(
             status == JobStatus.PENDING
             or status == JobStatus.RUNNING
             or status == JobStatus.CANCELLING
+            or status == JobStatus.PENDING_REDUCER
+            or status == JobStatus.REDUCER_READY
+            or status == JobStatus.PENDING_REDUCER_DONE
         ):
             break
 
@@ -318,6 +321,11 @@ def update_timeline_and_count(
             ):
                 time_range["begin"] = doc["ts_min_ms"]
                 time_range["end"] = doc["ts_max_ms"]
+
+        # FIXME: may want to clear time chart
+        if time_range["end"] == None or time_range["begin"] == None:
+            return
+
         ts_range_ms = time_range["end"] - time_range["begin"]
 
         time_period_selections = [

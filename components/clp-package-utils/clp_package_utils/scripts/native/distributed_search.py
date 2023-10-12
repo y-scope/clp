@@ -27,6 +27,7 @@ def main(argv):
     args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")
     args_parser.add_argument('--config', '-c', required=True, help="CLP configuration file.")
     args_parser.add_argument('wildcard_query', help="Wildcard query.")
+    args_parser.add_argument('--count', help="Perform a count aggregation", action="store_true")
     parsed_args = args_parser.parse_args(argv[1:])
 
     config_path = pathlib.Path(parsed_args.config)
@@ -58,13 +59,15 @@ def main(argv):
         "match_case": True,
         "results_collection_name": collection_name
     }
+    if parsed_args.count:
+        query["count"] = True
 
     cursor = db_conn.cursor()
 
     # Set up a connection to your MongoDB instance
     db_name = clp_config.results_cache.db_name
     client = pymongo.MongoClient(clp_config.results_cache.get_uri())
-    search_results_collection = client[db_name][collection_name]
+    search_results_collection = client[db_name][collection_name + "_" + query["sessionId"]]
     # Delete all documents in the collection
     result = search_results_collection.delete_many({})
 
@@ -89,7 +92,7 @@ def main(argv):
             prev_status = status
             logger.info(f"Job {job_id} now {JobStatus(status).to_str()}")
 
-        if not (status == JobStatus.PENDING or status == JobStatus.RUNNING or status == JobStatus.CANCELLING):
+        if not (status == JobStatus.PENDING or status == JobStatus.RUNNING or status == JobStatus.CANCELLING or status == JobStatus.PENDING_REDUCER or status == JobStatus.REDUCER_READY or status == JobStatus.PENDING_REDUCER_DONE):
             break
 
         time.sleep(0.5)

@@ -45,6 +45,11 @@ logger.addHandler(logging_console_handler)
 # Prevents double logging from sub loggers for specific jobs
 logger.propagate = False
 
+class SearchJob:
+    def __init__(self, task: any, reducer: bool) -> None:
+        self.task: any = task
+        self.reducer: bool = reducer
+
 # dictionary of active jobs indexed by job id
 active_jobs = {}
 
@@ -61,9 +66,12 @@ def fetch_new_search_jobs(db_cursor) -> list:
         {SEARCH_JOBS_TABLE_NAME}.num_tasks,
         {SEARCH_JOBS_TABLE_NAME}.num_tasks_completed,
         {SEARCH_JOBS_TABLE_NAME}.search_config,
-        {SEARCH_JOBS_TABLE_NAME}.creation_time
+        {SEARCH_JOBS_TABLE_NAME}.creation_time,
+        {SEARCH_JOBS_TABLE_NAME}.reducer_host,
+        {SEARCH_JOBS_TABLE_NAME}.reducer_port
         FROM {SEARCH_JOBS_TABLE_NAME}
         WHERE {SEARCH_JOBS_TABLE_NAME}.status='{JobStatus.PENDING}'
+        OR {SEARCH_JOBS_TABLE_NAME}.status='{JobStatus.REDUCER_READY}'
     """)
     return db_cursor.fetchall()
 
@@ -88,6 +96,8 @@ def setup_search_jobs_table(db_conn):
             `duration` INT NULL DEFAULT NULL,
             `num_tasks` INT NOT NULL DEFAULT '0',
             `num_tasks_completed` INT NOT NULL DEFAULT '0',
+            `reducer_host` VARCHAR(32) NOT NULL DEFAULT '127.0.0.1',
+            `reducer_port` INT NOT NULL DEFAULT '0',
             `search_config` VARBINARY(60000) NOT NULL,
             PRIMARY KEY (`id`) USING BTREE,
             INDEX `JOB_STATUS` (`status`) USING BTREE
@@ -116,6 +126,19 @@ def set_job_status(
     cursor.close()
     return rval
 
+def set_job_status_and_update_search_config(
+    db_conn, job_id: str, status: JobStatus, prev_status: JobStatus, search_config: dict
+) -> bool:
+    cursor = db_conn.cursor()
+
+    update = f'UPDATE {SEARCH_JOBS_TABLE_NAME} SET status={status}, search_config=%s WHERE id={job_id} AND status={prev_status}'
+    cursor.execute(update, (msgpack.packb(search_config),))
+
+    db_conn.commit()
+
+    rval = cursor.rowcount != 0
+    cursor.close()
+    return rval
 
 def poll_and_handle_cancelling_search_jobs(db_conn, mongodb_manager) -> None:
     global active_jobs
@@ -127,7 +150,7 @@ def poll_and_handle_cancelling_search_jobs(db_conn, mongodb_manager) -> None:
 
     for job_id, search_config in cancelling_jobs:
         if job_id in active_jobs:
-            active_jobs[job_id].revoke(terminate=True)
+            active_jobs[job_id].task.revoke(terminate=True)
             del active_jobs[job_id]
             logger.info(f"Cancelled job {job_id}")
 
@@ -165,10 +188,33 @@ def dispatch_search_job(
     base_kwargs: Dict[str, Any],
     job_id: int,
     query: dict,
+    aggregation_job: bool,
 ) -> None:
     global active_jobs
     task_group = get_search_tasks_for_job(db_conn, base_kwargs, str(job_id), query)
-    active_jobs[job_id] = task_group.apply_async()
+    active_jobs[job_id] = SearchJob(task_group.apply_async(), aggregation_job)
+
+
+def parse_and_modify_query(query_info: dict):
+    split_query = [part.strip() for part in query_info["pipeline_string"].split("|")]
+
+    if len(split_query) != 2:
+        return False
+    
+    if split_query[1] == "count":
+        query_info["pipeline_string"] = split_query[0]
+        query_info["count"] = True
+        return True
+    
+    return False
+
+def is_reducer_job(query_info: dict) -> bool:
+    if "count" in query_info:
+        return True, False
+
+    modified = parse_and_modify_query(query_info)
+    return modified, modified
+    
 
 def poll_and_submit_pending_search_jobs(db_conn, mongodb_manager, base_kwargs) -> None:
     global active_jobs
@@ -177,17 +223,35 @@ def poll_and_submit_pending_search_jobs(db_conn, mongodb_manager, base_kwargs) -
     new_jobs = fetch_new_search_jobs(cursor)
     db_conn.commit()
     cursor.close()
+
     job_detection_ts = time.time()
+    # FIXME: add extra instrumentation to account for reducer job acquisition time
     jobs_list = []
-    for job_id, job_status, num_tasks, num_tasks_completed, search_config, creation_time in new_jobs:
-        dispatch_search_job(db_conn, base_kwargs, job_id, msgpack.unpackb(search_config))
-        enqueued_ts = time.time()
+
+    for job_id, job_status, num_tasks, num_tasks_completed, search_config, creation_time, reducer_host, reducer_port in new_jobs:
+        query_info = msgpack.unpackb(search_config)
+
+        aggregation_job, modified = is_reducer_job(query_info)
+        if job_status == JobStatus.PENDING and aggregation_job:
+            logger.info(f"Requesting reducer for job {job_id}")
+            if modified:
+                set_job_status_and_update_search_config(db_conn, job_id, JobStatus.PENDING_REDUCER, JobStatus.PENDING, query_info)
+            else:
+                set_job_status(db_conn, job_id, JobStatus.PENDING_REDUCER, JobStatus.PENDING)
+            continue
+        elif job_status == JobStatus.REDUCER_READY:
+            query_info["reducer_host"] = reducer_host
+            query_info["reducer_port"] = reducer_port
+            logger.info(f"Got reducer for job {job_id} at {reducer_host}:{reducer_port}")
+        
         job_status_str = JobStatus.RUNNING.to_str()
-        if set_job_status(db_conn, job_id, JobStatus.RUNNING, JobStatus.PENDING):
+        enqueued_ts = time.time()
+        dispatch_search_job(db_conn, base_kwargs, job_id, query_info, aggregation_job)
+        if set_job_status(db_conn, job_id, JobStatus.RUNNING, job_status):
             logger.info(f"Submitted job {job_id}")
         else:
             logger.error(f"Failed to submit job {job_id}... cancelling")
-            active_jobs[job_id].revoke()
+            active_jobs[job_id].task.revoke()
             job_status_str = JobStatus.CANCELLED.to_str()
             set_job_status(db_conn, job_id, JobStatus.CANCELLED)
 
@@ -222,7 +286,8 @@ def check_job_status_and_update_db(db_conn, mongodb_manager):
     global active_jobs
 
     for job_id in list(active_jobs.keys()):
-        result = active_jobs[job_id]
+        result = active_jobs[job_id].task
+        reducer = active_jobs[job_id].reducer
         returned_results = get_results_or_timeout(result)
         if returned_results is not None:
             # Initialize tracker variables
@@ -231,6 +296,8 @@ def check_job_status_and_update_db(db_conn, mongodb_manager):
             all_task_succeed = True
             tasks_list = []
             job_status = JobStatus.SUCCESS
+            if reducer:
+                job_status = JobStatus.PENDING_REDUCER_DONE
 
             for task_result in returned_results:
                 results_count += task_result["num_matches"]
@@ -242,8 +309,9 @@ def check_job_status_and_update_db(db_conn, mongodb_manager):
                     logger.warning(f"task {task_id} failed")
             # clean up
             del active_jobs[job_id]
+
             if all_task_succeed:
-                logger.info(f"Completed job {job_id}")
+                logger.info(f"Completed search phase for job {job_id}")
             else:
                 logger.info(f"job {job_id} finished with failures")
 
@@ -255,7 +323,6 @@ def check_job_status_and_update_db(db_conn, mongodb_manager):
             # I am hoping those two won't take too long
             mongodb_manager.finalize_job_stats(job_id, completion_ts, job_stats)
             mongodb_manager.insert_tasks(tasks_list)
-
 
 def handle_jobs(
     db_conn,

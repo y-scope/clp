@@ -36,6 +36,8 @@ def main(argv):
     args_parser.add_argument('--config', '-c', default=str(default_config_file_path),
                              help="CLP package configuration file.")
     args_parser.add_argument('wildcard_query', help="Wildcard query.")
+    args_parser.add_argument('--count', help="Perform a count aggregation",
+                             action="store_true")
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate and load config file
@@ -86,6 +88,8 @@ def main(argv):
         '--config', str(container_clp_config.logs_directory / container_config_filename),
         parsed_args.wildcard_query,
     ]
+    if parsed_args.count:
+        search_cmd.append("--count")
     cmd = container_start_cmd + search_cmd
     subprocess.run(cmd, check=True)
 

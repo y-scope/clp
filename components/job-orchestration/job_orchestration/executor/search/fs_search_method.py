@@ -23,6 +23,9 @@ def time_helper(prev_t):
     prev_t = temp_t
     return measured_t, prev_t
 
+def is_reducer_job(query_info:dict) -> bool:
+    return 'reducer_host' in query_info and 'reducer_port' in query_info
+
 @app.task(bind=True)
 def search(
     self: Task,
@@ -61,24 +64,18 @@ def search(
     archive_directory = Path(os.getenv('CLP_ARCHIVE_OUTPUT_DIR'))
     logger.debug(f"{archive_directory}")
 
+    # FIXME: consider removing startup time now that we aren't using
+    # proxy server
     startup_time, prev_t = time_helper(prev_t)
-    server_cmd = [
-        "python3",
-        str(script_dir / "proxy_server.py"),
-        output_config["host"],
-        str(output_config["port"]),
-        output_config["db_name"],
-        query["results_collection_name"],
-    ]
-    server_proc = subprocess.Popen(
-        server_cmd,
-        close_fds=True,
-        stdout=subprocess.PIPE,
-        stderr=stderr_log_file,
-    )
-    ip_and_port = server_proc.stdout.readline().decode().strip('\n').split(' ')
-    ip = ip_and_port[0]
-    port = ip_and_port[1]
+    
+    # this is an ugly way to deal with the fact that sometimes we
+    # hit the reducer and sometimes mongodb
+    ip = "localhost"
+    port = "0"
+
+    if is_reducer_job(query):
+        ip = query['reducer_host']
+        port = str(query['reducer_port'])
 
     proxy_time, prev_t = time_helper(prev_t)
     # Assemble the search command
@@ -94,14 +91,25 @@ def search(
         '--tge', str(query['timestamp_begin']),
         '--tle', str(query['timestamp_end']),
     ]
+    if 'count' in query:
+        search_cmd.append('--count')
     if query['path_regex']:
         search_cmd.append(query['path_regex'])
     if not query['match_case']:
         search_cmd.append('-i')
 
+    if not is_reducer_job(query):
+        mongodb_uri = f"mongodb://{output_config['host']}:{output_config['port']}/"
+        search_cmd.append("--mongodb-uri")
+        search_cmd.append(str(mongodb_uri))
+        search_cmd.append("--mongodb-database")
+        search_cmd.append(str(output_config["db_name"]))
+        search_cmd.append("--mongodb-collection")
+        search_cmd.append(str(query['results_collection_name']))
+
     # Start compression
     logger.info("Searching...")
-    logger.debug(" ".join(search_cmd))
+    logger.info(" ".join(search_cmd))
 
     search_successful = False
 
@@ -123,14 +131,10 @@ def search(
         parts = search_proc.stdout.readline().decode().split(":")
         num_matches = int(parts[1].strip())
 
-    # a hack to ensure that proxy server flush all data
-    # since the next message will only be print out after
-    # proxy flushes all data
-    proxy_end_message = server_proc.stdout.readline().decode()
+    # FIXME: consider removing flush_time since we no longer have to flush
+    # from proxy server
     flush_time, prev_t = time_helper(prev_t)
 
-    server_proc.terminate()
-    server_proc.wait()
     logger.info("Search completed")
     # Close log files
     stderr_log_file.close()
