@@ -169,6 +169,7 @@ def get_search_tasks_for_job(
     cursor.execute(
         f'''SELECT id as archive_id
         FROM clp_archives
+        ORDER BY end_timestamp DESC
         '''
     )
     task = group(
