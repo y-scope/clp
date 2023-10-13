@@ -10,20 +10,11 @@ import Sidebar from "./Sidebar/Sidebar.jsx";
 
 import "./App.scss";
 
-const ROUTES = [
-    {
-        "path": "/ingest",
-        "label": "Ingest",
-        "icon": faFileUpload,
-        "component": IngestView,
-    },
-    {
-        "path": "/search",
-        "label": "Search",
-        "icon": faSearch,
-        "component": SearchView,
-    },
-];
+const ROUTES = [{
+    "path": "/ingest", "label": "Ingest", "icon": faFileUpload, "component": IngestView,
+}, {
+    "path": "/search", "label": "Search", "icon": faSearch, "component": SearchView,
+},];
 
 // TODO: implement a full-fledged registration sys
 const CONST_LOCAL_STORAGE_KEY_USERNAME = 'username';
@@ -33,31 +24,32 @@ let LoginRetryCount = 0;
 const CONST_MAX_LOGIN_RETRY = 3;
 
 const registerAndLoginWithUsername = username => {
-    Meteor.call('user.create', {username, password: CONST_DUMMY_PASSWORD},
-        (error) => {
-            if (error) {
-                console.log('create user error', error);
-                return;
-            }
-            localStorage.setItem(CONST_LOCAL_STORAGE_KEY_USERNAME, username);
-            loginWithUsername(username);
-        });
+    Meteor.call('user.create', {username, password: CONST_DUMMY_PASSWORD}, (error) => {
+        if (error) {
+            console.log('create user error', error);
+            return;
+        }
+        localStorage.setItem(CONST_LOCAL_STORAGE_KEY_USERNAME, username);
+        loginWithUsername(username);
+    });
 };
 
 const loginWithUsername = username => {
-    Meteor.loginWithPassword(username, CONST_DUMMY_PASSWORD,
-        (error) => {
-            if (error) {
-                console.log('login error', error, 'LOGIN_RETRY_COUNT:', LoginRetryCount);
-                if (LoginRetryCount < CONST_MAX_LOGIN_RETRY) {
-                    LoginRetryCount++;
-                    registerAndLoginWithUsername(username);
-                }
+    Meteor.loginWithPassword(username, CONST_DUMMY_PASSWORD, (error) => {
+        if (error) {
+            console.log('login error', error, 'LOGIN_RETRY_COUNT:', LoginRetryCount);
+            if (LoginRetryCount < CONST_MAX_LOGIN_RETRY) {
+                LoginRetryCount++;
+                registerAndLoginWithUsername(username);
             }
-        });
+        }
+    });
 };
 
 export const App = () => {
+    const [loggedIn, setLoggedIn] = React.useState(false);
+    const [isSidebarStateCollapsed, setSidebarStateCollapsed] = React.useState("true" === localStorage.getItem("isSidebarCollapsed") || false);
+
     React.useEffect(() => {
         let username = localStorage.getItem(CONST_LOCAL_STORAGE_KEY_USERNAME);
         if (username === null) {
@@ -66,9 +58,11 @@ export const App = () => {
         } else {
             loginWithUsername(username);
         }
+        setTimeout(() => {
+            setLoggedIn(true)
+        }, 500)
     }, []);
 
-    const [isSidebarStateCollapsed, setSidebarStateCollapsed] = React.useState("true" === localStorage.getItem("isSidebarCollapsed") || false);
     React.useEffect(() => {
         localStorage.setItem("isSidebarCollapsed", isSidebarStateCollapsed.toString());
     }, [isSidebarStateCollapsed]);
@@ -85,18 +79,26 @@ export const App = () => {
         setIsSidebarTransitioning(false);
     }
 
-    return (
-        <div className={"wrapper"}>
-            <Sidebar
-                isSidebarCollapsed={isSidebarStateCollapsed}
-                onSidebarToggle={handleSidebarToggle}
-                onSidebarTransitioned={handleSidebarTransitioned}
-                routes={ROUTES}
-            />
-            <div style={{flex: "1 1 auto"}}>
-                <div
-                    className={(isSidebarStateCollapsed ? "sidebar-collapsed" : "")}
-                    id="component-wrapper">
+    return (<div className={"wrapper"}>
+        <Sidebar
+            isSidebarCollapsed={isSidebarStateCollapsed}
+            onSidebarToggle={handleSidebarToggle}
+            onSidebarTransitioned={handleSidebarTransitioned}
+            routes={ROUTES}
+        />
+        <div style={{flex: "1 1 auto"}}>
+            <div
+                className={(isSidebarStateCollapsed ? "sidebar-collapsed" : "")}
+                id="component-wrapper">
+                {!loggedIn ?
+                    <div className="h-100">
+                        <div className="d-flex justify-content-center align-items-center h-100">
+                            <div className="spinner-grow" style={{width: '3rem', height: '3rem'}} role="status">
+                                <span className="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                    :
                     <Switch>
                         <Route exact path="/">
                             <Redirect to="/ingest"/>
@@ -107,9 +109,8 @@ export const App = () => {
                         <Route exact path={"/search"}>
                             <SearchView/>
                         </Route>
-                    </Switch>
-                </div>
+                    </Switch>}
             </div>
         </div>
-    );
+    </div>);
 }
