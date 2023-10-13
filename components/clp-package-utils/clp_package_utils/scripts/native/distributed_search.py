@@ -49,19 +49,20 @@ def main(argv):
 
     wildcard_query = parsed_args.wildcard_query
 
+    collection_name = clp_config.results_cache.results_collection_name
     query = {
         "pipeline_string": wildcard_query,
         "timestamp_begin": 0,
         "timestamp_end": sys.maxsize,
         "path_regex": '',
         "match_case": True,
+        "results_collection_name": collection_name
     }
 
     cursor = db_conn.cursor()
 
     # Set up a connection to your MongoDB instance
     db_name = clp_config.results_cache.db_name
-    collection_name = clp_config.results_cache.results_collection_name
     client = pymongo.MongoClient(clp_config.results_cache.get_uri())
     search_results_collection = client[db_name][collection_name]
     # Delete all documents in the collection

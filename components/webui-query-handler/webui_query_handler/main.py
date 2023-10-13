@@ -570,8 +570,8 @@ async def query_handler(
     logger.debug(f'query_handler: Received sessionId as {sessionId}')
     g_webui_connected[sessionId] = True
 
-    results_collection_name += f"_{sessionId}"
-    results_metadata_collection_name += f"_{sessionId}"
+    session_results_collection_name = f"{results_collection_name}_{sessionId}"
+    session_results_metadata_collection_name = f"{results_metadata_collection_name}_{sessionId}"
 
     pending = set()
     job_id = None
@@ -632,8 +632,8 @@ async def query_handler(
 
                         operation_task = schedule_clear_results_task(
                             results_cache_uri,
-                            results_collection_name,
-                            results_metadata_collection_name,
+                            session_results_collection_name,
+                            session_results_metadata_collection_name,
                             pending,
                         )
 
@@ -660,8 +660,8 @@ async def query_handler(
 
                         operation_task = schedule_clear_results_task(
                             results_cache_uri,
-                            results_collection_name,
-                            results_metadata_collection_name,
+                            session_results_collection_name,
+                            session_results_metadata_collection_name,
                             pending,
                         )
 
@@ -702,8 +702,8 @@ async def query_handler(
                             run_function_in_process(
                                 search_metadata_updater,
                                 results_cache_uri,
-                                results_collection_name,
-                                results_metadata_collection_name,
+                                session_results_collection_name,
+                                session_results_metadata_collection_name,
                                 time_range,
                                 output_result_type,
                                 initializer=load_query_done_event,
@@ -783,10 +783,9 @@ async def query_handler(
 
                     # Submit query synchronously so that we're guaranteed to get
                     # the job ID back
-                    pending_query['sessionId'] = sessionId
+                    pending_query["results_collection_name"] = session_results_collection_name
                     job_id = submit_query(db_conn_conf, results_cache_uri,
-                                            results_collection_name,
-                                            pending_query)
+                                          session_results_collection_name, pending_query)
 
                     operation_task = asyncio.ensure_future(
                         run_function_in_process(
@@ -804,8 +803,8 @@ async def query_handler(
                         run_function_in_process(
                             search_metadata_updater,
                             results_cache_uri,
-                            results_collection_name,
-                            results_metadata_collection_name,
+                            session_results_collection_name,
+                            session_results_metadata_collection_name,
                             {"begin": None, "end": None},
                             output_result_type,
                             initializer=load_query_done_event,
@@ -938,8 +937,8 @@ async def query_handler(
                             run_function_in_process(
                                 search_metadata_updater,
                                 results_cache_uri,
-                                results_collection_name,
-                                results_metadata_collection_name,
+                                session_results_collection_name,
+                                session_results_metadata_collection_name,
                                 time_range,
                                 output_result_type,
                                 initializer=load_query_done_event,
