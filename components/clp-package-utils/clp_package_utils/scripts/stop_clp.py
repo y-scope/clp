@@ -20,6 +20,7 @@ from clp_py_utils.clp_config import (
     SEARCH_QUEUE_COMPONENT_NAME,
     SEARCH_SCHEDULER_COMPONENT_NAME,
     SEARCH_WORKER_COMPONENT_NAME,
+    REDUCER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     COMPRESSION_JOB_HANDLER_COMPONENT_NAME,
     WEBUI_COMPONENT_NAME,
@@ -76,6 +77,7 @@ def main(argv):
     component_args_parser.add_parser(SEARCH_QUEUE_COMPONENT_NAME)
     component_args_parser.add_parser(SEARCH_SCHEDULER_COMPONENT_NAME)
     component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
+    component_args_parser.add_parser(REDUCER_COMPONENT_NAME)
     component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
     component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
     component_args_parser.add_parser(WEBUI_QUERY_HANDLER_COMPONENT_NAME)
@@ -142,6 +144,8 @@ def main(argv):
             stop_container(container_name, stale_containers)
         if '' == component_name or DB_COMPONENT_NAME == component_name:
             stop_container(f'clp-{DB_COMPONENT_NAME}-{instance_id}', stale_containers)
+        if '' == component_name or REDUCER_COMPONENT_NAME == component_name:
+            stop_container(f'clp-{REDUCER_COMPONENT_NAME}-{instance_id}', stale_containers)
 
         if '' == component_name:
             # NOTE: We can only remove the instance ID file if all containers have been stopped.

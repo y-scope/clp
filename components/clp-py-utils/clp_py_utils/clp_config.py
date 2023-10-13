@@ -22,6 +22,7 @@ COMPRESSION_QUEUE_COMPONENT_NAME = 'compression_queue'
 SEARCH_QUEUE_COMPONENT_NAME = 'search_queue'
 SEARCH_SCHEDULER_COMPONENT_NAME = 'search_scheduler'
 SEARCH_WORKER_COMPONENT_NAME = 'search_worker'
+REDUCER_COMPONENT_NAME = "reducer"
 COMPRESSION_WORKER_COMPONENT_NAME = 'compression_worker'
 WEBUI_COMPONENT_NAME = 'webui'
 WEBUI_QUERY_HANDLER_COMPONENT_NAME = 'webui_query_handler'
@@ -191,6 +192,22 @@ class SearchWorker(BaseModel):
         validate_logging_level_static(cls, field)
         return field
 
+class Reducer(BaseModel):
+    logging_level: str = 'INFO'
+    base_port: int = 14009
+    
+    @validator('logging_level')
+    def validate_logging_level(cls, field):
+        validate_logging_level_static(cls, field)
+        return field
+
+    @validator('base_port')
+    def validate_base_port(cls, field):
+        if not field > 0:
+            raise ValueError(
+                f"{cls.__name__}: base port {field} is not a valid value"
+            )
+        return field
 
 class Queue(BaseModel):
     host: str = 'localhost'
@@ -278,6 +295,7 @@ class CLPConfig(BaseModel):
     compression_worker: CompressionWorker = CompressionWorker()
     search_scheduler: SearchScheduler = SearchScheduler()
     search_worker: SearchWorker = SearchWorker()
+    reducer: Reducer = Reducer()
     webui: WebUi = WebUi()
     webui_query_handler: WebUiQueryHandler = WebUiQueryHandler()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH

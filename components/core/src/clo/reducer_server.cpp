@@ -71,7 +71,6 @@ std::ostream& operator<<(std::ostream& os, ServerStatus const& status) {
 struct ServerContext {
     boost::asio::io_context ioctx;
     boost::asio::ip::tcp::acceptor acceptor;
-    std::string ip;
     Pipeline* p;
     MYSQL* db;
     ServerStatus status;
@@ -335,7 +334,7 @@ ServerStatus assign_new_job(ServerContext* ctx) {
     for (auto job = jobs.begin(); job != jobs.end(); ++job) {
         // set reducer_ready where pending_reducer and id=job_id
         std::stringstream ss;
-        ss << "UPDATE distributed_search_jobs SET status=9, reducer_port=" << 14'009
+        ss << "UPDATE distributed_search_jobs SET status=9, reducer_port=" << ctx->port
            << ", reducer_host=\"" << ctx->host << "\" WHERE status=8 and id=" << job->first;
         std::string update = ss.str();
         if (0 != mysql_real_query(ctx->db, update.c_str(), update.length())) {
@@ -523,12 +522,10 @@ int main(int argc, char const* argv[]) {
     // Polling interval
     boost::asio::steady_timer poll_timer(ctx.ioctx, boost::asio::chrono::milliseconds(500));
 
+    std::cout << "Starting on host " << ctx.host << " port " << port << " listening successfully " << ctx.acceptor.is_open() << std::endl;
+
     // Job acquisition loop
     while (true) {
-        boost::asio::ip::address addr;
-        ctx.acceptor.local_endpoint().address(addr);
-        ctx.ip = addr.to_string();
-        std::cout << ctx.ip << std::endl;
         // Queue up polling and tcp accepting
         poll_timer.async_wait(
                 boost::bind(poll_db, boost::asio::placeholders::error, &ctx, &poll_timer)
