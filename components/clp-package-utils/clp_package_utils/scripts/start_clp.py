@@ -604,9 +604,10 @@ def get_host_ip():
 
 def start_reducer(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig,
                   num_cpus: int, mounts: CLPDockerMounts):
-    logger.info(f"Starting {REDUCER_COMPONENT_NAME}...")
+    component_name = REDUCER_COMPONENT_NAME
+    logger.info(f"Starting {component_name}...")
 
-    container_name = f'clp-{REDUCER_COMPONENT_NAME}-{instance_id}'
+    container_name = f'clp-{component_name}-{instance_id}'
     if container_exists(container_name):
         logger.info(f"{component_name} already running.")
         return
@@ -616,9 +617,9 @@ def start_reducer(instance_id: str, clp_config: CLPConfig, container_clp_config:
     with open(container_config_file_path, 'w') as f:
         yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
 
-    logs_dir = clp_config.logs_directory / REDUCER_COMPONENT_NAME
+    logs_dir = clp_config.logs_directory / component_name
     logs_dir.mkdir(parents=True, exist_ok=True)
-    container_logs_dir = container_clp_config.logs_directory / REDUCER_COMPONENT_NAME
+    container_logs_dir = container_clp_config.logs_directory / component_name
 
     clp_site_packages_dir = CONTAINER_CLP_HOME / 'lib' / 'python3' / 'site-packages'
     container_start_cmd = [
@@ -653,7 +654,7 @@ def start_reducer(instance_id: str, clp_config: CLPConfig, container_clp_config:
     cmd = container_start_cmd + reducer_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
-    logger.info(f"Started {REDUCER_COMPONENT_NAME}")
+    logger.info(f"Started {component_name}")
 
 def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts):
     component_name = WEBUI_COMPONENT_NAME
