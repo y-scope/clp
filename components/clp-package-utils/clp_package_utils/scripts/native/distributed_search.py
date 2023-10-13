@@ -67,7 +67,7 @@ def main(argv):
     # Set up a connection to your MongoDB instance
     db_name = clp_config.results_cache.db_name
     client = pymongo.MongoClient(clp_config.results_cache.get_uri())
-    search_results_collection = client[db_name][collection_name + "_" + query["sessionId"]]
+    search_results_collection = client[db_name][collection_name]
     # Delete all documents in the collection
     result = search_results_collection.delete_many({})
 
