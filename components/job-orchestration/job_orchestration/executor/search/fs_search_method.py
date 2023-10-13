@@ -14,6 +14,7 @@ from celery.utils.log import get_task_logger
 from clp_py_utils.clp_logging import get_logging_level
 
 from job_orchestration.executor.search.celery import app
+from job_orchestration.executor.utils import get_profiled_memory_usage
 
 script_dir = Path(__file__).parent.resolve()
 
@@ -82,6 +83,7 @@ def search(
     # fmt: off
     clp_home = Path(os.getenv("CLP_HOME"))
     search_cmd = [
+        str(clp_home / "bin" / "obs"),
         str(clp_home / "bin" / "clo"),
         ip,
         port,
@@ -131,6 +133,8 @@ def search(
         parts = search_proc.stdout.readline().decode().split(":")
         num_matches = int(parts[1].strip())
 
+    peak_memory_in_kbytes = get_profiled_memory_usage("profiling.out", logger)
+
     # FIXME: consider removing flush_time since we no longer have to flush
     # from proxy server
     flush_time, prev_t = time_helper(prev_t)
@@ -146,6 +150,7 @@ def search(
         'status': search_successful,
         'job_id': job_id_str,
         'task_id': task_id_str,
+        'peak_memory_kbytes': peak_memory_in_kbytes,
         'num_matches': num_matches,
         'task_start_ts': task_start_t,
         'start_up': startup_time,

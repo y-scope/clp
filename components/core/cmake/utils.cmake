@@ -50,3 +50,11 @@ target_link_libraries(make-dictionaries-readable
 target_compile_features(make-dictionaries-readable
         PRIVATE cxx_std_17
         )
+
+set(SOURCE_FILES_obs
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/obs/obs.c
+        )
+add_executable(obs ${SOURCE_FILES_obs})
+target_compile_features(make-dictionaries-readable
+        PRIVATE cxx_std_17
+        )

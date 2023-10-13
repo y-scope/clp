@@ -45,7 +45,7 @@ tasks:
       - mkdir -p {{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages
       - pip3 install -U components/clp-package-utils/dist/*.whl components/clp-py-utils/dist/*.whl components/compression-job-handler/dist/*.whl components/job-orchestration/dist/*.whl components/webui-query-handler/dist/*.whl -t {{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages
       - mkdir -p {{.PACKAGE_BUILD_DIR}}/bin
-      - rsync -a {{.CLP_BUILD_DIR}}/core/clg {{.CLP_BUILD_DIR}}/core/clp {{.CLP_BUILD_DIR}}/core/clo {{.CLP_BUILD_DIR}}/core/reducer_server {{.PACKAGE_BUILD_DIR}}/bin/.
+      - rsync -a {{.CLP_BUILD_DIR}}/core/clg {{.CLP_BUILD_DIR}}/core/clp {{.CLP_BUILD_DIR}}/core/clo {{.CLP_BUILD_DIR}}/core/reducer_server {{.CLP_BUILD_DIR}}/core/obs {{.PACKAGE_BUILD_DIR}}/bin/.
       - rsync -a {{.CLP_BUILD_DIR}}/nodejs/node/bin/node {{.PACKAGE_BUILD_DIR}}/bin/.
       - mkdir -p {{.PACKAGE_BUILD_DIR}}/var/www/
       - rsync -a --delete {{.CLP_BUILD_DIR}}/webui/built/ {{.PACKAGE_BUILD_DIR}}/var/www/
@@ -59,6 +59,7 @@ tasks:
       - "{{.CLP_BUILD_DIR}}/core/clp"
       - "{{.CLP_BUILD_DIR}}/core/clo"
       - "{{.CLP_BUILD_DIR}}/core/reducer_server"
+      - "{{.CLP_BUILD_DIR}}/core/obs"
       - "components/package-template/src/**/*"
       - "{{.CLP_BUILD_DIR}}/webui/built/**/*"
     generates:
@@ -66,6 +67,7 @@ tasks:
       - "{{.CLP_BUILD_DIR}}/clp-package/bin/clp"
       - "{{.CLP_BUILD_DIR}}/clp-package/bin/clo"
       - "{{.CLP_BUILD_DIR}}/clp-package/bin/reducer_server"
+      - "{{.CLP_BUILD_DIR}}/clp-package/bin/obs"
       - "{{.CLP_BUILD_DIR}}/clp-package/bin/node"
       - "{{.CLP_BUILD_DIR}}/clp-package/var/www/**/*"
   
@@ -130,7 +132,7 @@ tasks:
     cmds:
       - mkdir -p {{.BUILD_DIR}}
       - cmake -S {{.SRC_DIR}} -B {{.BUILD_DIR}}
-      - cmake --build {{.BUILD_DIR}} --parallel --target clg clp clo reducer_server
+      - cmake --build {{.BUILD_DIR}} --parallel --target clg clp clo obs reducer_server
     sources:
       - "{{.SRC_DIR}}/cmake/**/*"
       - "{{.SRC_DIR}}/src/**/*"
@@ -141,6 +143,7 @@ tasks:
       - "{{.BUILD_DIR}}/clp"
       - "{{.BUILD_DIR}}/clo"
       - "{{.BUILD_DIR}}/reducer_server"
+      - "{{.BUILD_DIR}}/obs"
 
   core_submodules:
     vars:

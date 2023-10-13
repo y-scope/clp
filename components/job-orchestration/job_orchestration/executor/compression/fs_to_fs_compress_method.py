@@ -13,6 +13,7 @@ from celery.utils.log import get_task_logger
 from celery.utils.nodenames import gethostname  # type: ignore
 
 from job_orchestration.executor.compression.celery import app  # type: ignore
+from job_orchestration.executor.utils import get_profiled_memory_usage
 
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_logging import get_logging_level
@@ -99,6 +100,7 @@ def compress(
     # Assemble compression command
     # fmt: off
     compression_cmd = [
+        str(clp_home / "bin" / "obs"),
         str(clp_home / "bin" / "clp"),
         "c", str(archives_dir),
         "--print-archive-stats-progress",
@@ -139,6 +141,8 @@ def compress(
         # Remove path lists
         clp_db_config_file_path.unlink()
         log_list_path.unlink()
+
+    peak_memory_in_kbytes = get_profiled_memory_usage("profiling.out", logger)
 
     # Result storage
     archive_stat: Dict[str, Any] = {
@@ -185,6 +189,7 @@ def compress(
         "clp_time": clp_end_ts - clp_start_ts,
         "teardown": task_finish_ts - clp_end_ts,
         "task_end_to_end": task_finish_ts - task_start_ts,
+        "peak_memory_kbytes": peak_memory_in_kbytes,
         "archive_stat": archive_stat
     }
     return task_result
