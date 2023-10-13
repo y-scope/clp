@@ -1,6 +1,5 @@
 import React from "react";
 import {Redirect, Route, Switch} from "react-router";
-import {Meteor} from "meteor/meteor";
 import {faFileUpload, faSearch} from "@fortawesome/free-solid-svg-icons";
 import {v4 as uuidv4} from 'uuid';
 
@@ -8,7 +7,11 @@ import IngestView from "./IngestView/IngestView.jsx";
 import SearchView from "./SearchView/SearchView.jsx";
 import Sidebar from "./Sidebar/Sidebar.jsx";
 
+import {
+    CONST_LOCAL_STORAGE_KEY_USERNAME, loginWithUsername, registerAndLoginWithUsername
+} from "../api/user/client/methods";
 import "./App.scss";
+
 
 const ROUTES = [{
     "path": "/ingest", "label": "Ingest", "icon": faFileUpload, "component": IngestView,
@@ -16,51 +19,21 @@ const ROUTES = [{
     "path": "/search", "label": "Search", "icon": faSearch, "component": SearchView,
 },];
 
-// TODO: implement a full-fledged registration sys
-const CONST_LOCAL_STORAGE_KEY_USERNAME = 'username';
-const CONST_DUMMY_PASSWORD = 'DummyPassword';
-
-let LoginRetryCount = 0;
-const CONST_MAX_LOGIN_RETRY = 3;
-
-const registerAndLoginWithUsername = username => {
-    Meteor.call('user.create', {username, password: CONST_DUMMY_PASSWORD}, (error) => {
-        if (error) {
-            console.log('create user error', error);
-            return;
-        }
-        localStorage.setItem(CONST_LOCAL_STORAGE_KEY_USERNAME, username);
-        loginWithUsername(username);
-    });
-};
-
-const loginWithUsername = username => {
-    Meteor.loginWithPassword(username, CONST_DUMMY_PASSWORD, (error) => {
-        if (error) {
-            console.log('login error', error, 'LOGIN_RETRY_COUNT:', LoginRetryCount);
-            if (LoginRetryCount < CONST_MAX_LOGIN_RETRY) {
-                LoginRetryCount++;
-                registerAndLoginWithUsername(username);
-            }
-        }
-    });
-};
-
 export const App = () => {
     const [loggedIn, setLoggedIn] = React.useState(false);
     const [isSidebarStateCollapsed, setSidebarStateCollapsed] = React.useState("true" === localStorage.getItem("isSidebarCollapsed") || false);
 
-    React.useEffect(() => {
+    React.useEffect(async () => {
         let username = localStorage.getItem(CONST_LOCAL_STORAGE_KEY_USERNAME);
+        let result;
         if (username === null) {
             username = uuidv4();
-            registerAndLoginWithUsername(username);
+            result = await registerAndLoginWithUsername(username);
         } else {
-            loginWithUsername(username);
+            result = await loginWithUsername(username);
         }
-        setTimeout(() => {
-            setLoggedIn(true)
-        }, 500)
+
+        setLoggedIn(result)
     }, []);
 
     React.useEffect(() => {
@@ -90,26 +63,23 @@ export const App = () => {
             <div
                 className={(isSidebarStateCollapsed ? "sidebar-collapsed" : "")}
                 id="component-wrapper">
-                {!loggedIn ?
-                    <div className="h-100">
-                        <div className="d-flex justify-content-center align-items-center h-100">
-                            <div className="spinner-grow" style={{width: '3rem', height: '3rem'}} role="status">
-                                <span className="visually-hidden">Loading...</span>
-                            </div>
+                {!loggedIn ? <div className="h-100">
+                    <div className="d-flex justify-content-center align-items-center h-100">
+                        <div className="spinner-grow" style={{width: '3rem', height: '3rem'}} role="status">
+                            <span className="visually-hidden">Loading...</span>
                         </div>
                     </div>
-                    :
-                    <Switch>
-                        <Route exact path="/">
-                            <Redirect to="/ingest"/>
-                        </Route>
-                        <Route exact path={"/ingest"}>
-                            <IngestView isSidebarCollapsed={isSidebarVisuallyCollapsed}/>
-                        </Route>
-                        <Route exact path={"/search"}>
-                            <SearchView/>
-                        </Route>
-                    </Switch>}
+                </div> : <Switch>
+                    <Route exact path="/">
+                        <Redirect to="/ingest"/>
+                    </Route>
+                    <Route exact path={"/ingest"}>
+                        <IngestView isSidebarCollapsed={isSidebarVisuallyCollapsed}/>
+                    </Route>
+                    <Route exact path={"/search"}>
+                        <SearchView/>
+                    </Route>
+                </Switch>}
             </div>
         </div>
     </div>);
