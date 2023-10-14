@@ -1,5 +1,7 @@
 import logging
 import os
+import sys
+import signal
 import queue
 import shutil
 import struct
@@ -83,7 +85,6 @@ def search(
     # fmt: off
     clp_home = Path(os.getenv("CLP_HOME"))
     search_cmd = [
-        str(clp_home / "bin" / "obs"),
         str(clp_home / "bin" / "clo"),
         ip,
         port,
@@ -122,6 +123,22 @@ def search(
         stdout=subprocess.PIPE,
         stderr=stderr_log_file,
     )
+
+    def sigterm_handler(_signo, _stack_frame):
+        if search_proc.poll() is None:
+            logger.debug("try to kill search process")
+            search_proc.kill()
+            logger.debug("waiting on pid")
+            os.waitpid(search_proc.pid, 0)
+            logger.info(f"Search task {task_id_str} cancelled")
+        else:
+            logger.debug("Search process is not running")
+        logger.debug(f"Exiting with error code {_signo + 128}")
+        sys.exit(_signo + 128)
+
+    # Register the function to kill the child process at exit
+    signal.signal(signal.SIGTERM, sigterm_handler)
+    logger.info("Registered sigterm handler")
 
     # Wait for compression to finish
     return_code = search_proc.wait()

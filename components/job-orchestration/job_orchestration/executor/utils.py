@@ -7,6 +7,7 @@ def get_profiled_memory_usage(profiler_output_file: str, logger: logging.Logger)
     peak_memory_in_kbytes: int = 0
     if not pathlib.Path(profiler_output_file).is_file():
         logger.error(f"Failed to locate {profiler_output_file}, report 0 memory usage")
+        return peak_memory_in_kbytes
     pattern = r"maxrss:\s*(\d+)"
     found_match = False
     with open("profiling.out", "r") as f:
