@@ -28,6 +28,7 @@ namespace clo {
         const std::string& get_mongodb_uri () const { return m_mongodb_uri; }
         const std::string& get_mongodb_database () const { return m_mongodb_database; }
         const std::string& get_mongodb_collection () const { return m_mongodb_collection; }
+        int32_t get_job_id() const { return m_job_id; }
         bool ignore_case () const { return m_ignore_case; }
         bool count_matches ()  const { return m_count_matches; }
         bool count_aggregation () const { return m_count; }
@@ -47,6 +48,7 @@ namespace clo {
         std::string m_mongodb_uri;
         std::string m_mongodb_database;
         std::string m_mongodb_collection;
+        int32_t m_job_id;
         bool m_ignore_case;
         bool m_count_matches;
         bool m_count;

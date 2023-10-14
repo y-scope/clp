@@ -62,6 +62,7 @@ namespace clo {
         po::options_description options_aggregation_control("Aggregation Controls");
         options_aggregation_control.add_options()
                 ("count", po::bool_switch(&m_count), "Perform count aggregation")
+                ("job-id", po::value<int32_t>(&m_job_id), "Job ID for this search job")
                 ;
 
         po::options_description options_result_cache_control("Result Cache Controls");

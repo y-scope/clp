@@ -63,12 +63,23 @@ enum class SearchFilesResult {
 
 /**
  * Connects to the search controller
- * @param controller_host
- * @param controller_port
+ * @param host
+ * @param port
  * @return -1 on failure
  * @return Search controller socket file descriptor otherwise
  */
-static int connect_to_search_controller (const string& controller_host, const string& controller_port);
+static int connect_to_server (const string& host, const string& port);
+
+/**
+ * Negotiate connection with reducer using job_id
+ * @param reducer_host
+ * @param redcuer_port
+ * @param job_id
+ * @return -1 on failure
+ * @return reducer socket file descriptor otherwise
+ */
+static int connect_to_reducer (const string& reducer_host, const string& reducer_port, int32_t job_id);
+
 /**
  * Sends the search result to the search controller
  * @param orig_file_path
@@ -117,7 +128,7 @@ static SearchFilesResult search_files (Query& query, std::shared_ptr<Pipeline> a
 static bool search_archive (const CommandLineArguments& command_line_args, const boost::filesystem::path& archive_path,
                             int controller_socket_fd, mongocxx::collection &collection, size_t& num_matches);
 
-static int connect_to_search_controller (const string& controller_host, const string& controller_port) {
+static int connect_to_server (const string& host, const string& port) {
     // Get address info for controller
     struct addrinfo hints = {};
     // Address can be IPv4 or IPV6
@@ -127,7 +138,7 @@ static int connect_to_search_controller (const string& controller_host, const st
     hints.ai_flags = 0;
     hints.ai_protocol = 0;
     struct addrinfo* addresses_head = nullptr;
-    int error = getaddrinfo(controller_host.c_str(), controller_port.c_str(), &hints, &addresses_head);
+    int error = getaddrinfo(host.c_str(), port.c_str(), &hints, &addresses_head);
     if (0 != error) {
         SPDLOG_ERROR("Failed to get address information for search controller, error={}", error);
         return -1;
@@ -159,6 +170,30 @@ static int connect_to_search_controller (const string& controller_host, const st
 
     return controller_socket_fd;
 }
+
+static int connect_to_reducer (const string& reducer_host, const string& reducer_port, int32_t job_id) {
+    int reducer_fd = connect_to_server(reducer_host, reducer_port);
+
+    if (reducer_fd == -1) return -1;
+
+    ErrorCode ecode = networking::try_send(reducer_fd, (const char*)&job_id, sizeof(job_id));
+    if (ecode != ErrorCode_Success) {
+        close(reducer_fd);
+        return -1;
+    }
+
+    char accepted = 'n';
+    size_t bytes_received;
+    ecode = networking::try_receive(reducer_fd, &accepted, 1, bytes_received);
+    if (ecode != ErrorCode_Success || accepted != 'y' || bytes_received != 1) {
+        SPDLOG_ERROR("Failed to negotiate reducer connection for job_id={}", errno);
+        close(reducer_fd);
+        return -1;
+    }
+
+    return reducer_fd;
+}
+
 
 static ErrorCode send_result (const string& orig_file_path, const Message& compressed_msg,
                               const string& decompressed_msg, int controller_socket_fd)
@@ -375,19 +410,14 @@ int main (int argc, const char* argv[]) {
     }
 
     int reducer_socket_fd = 0;
-    //ControllerMonitoringThread controller_monitoring_thread;
-    // if performing aggregation connect to reducer
     if (command_line_args.count_aggregation()) {
-        reducer_socket_fd = connect_to_search_controller(command_line_args.get_search_controller_host(),
-                                                            command_line_args.get_search_controller_port());
+        reducer_socket_fd = connect_to_reducer(command_line_args.get_search_controller_host(),
+                                               command_line_args.get_search_controller_port(),
+                                               command_line_args.get_job_id());
 
         if (-1 == reducer_socket_fd) {
             return -1;
         }
-        // FIXME: consider removing this monitoring thread
-        //controller_monitoring_thread.set_socket_fd(reducer_socket_fd);
-        //ControllerMonitoringThread controller_monitoring_thread(reducer_socket_fd);
-        //controller_monitoring_thread.start();
     }
 
     // note: the mongocxx::instance is critical. Mongodb will segfault if
@@ -428,13 +458,21 @@ int main (int argc, const char* argv[]) {
         return_value = -2;
     }
 
-    // Unblock the controller monitoring thread if it's blocked
-    auto shutdown_result = shutdown(reducer_socket_fd, SHUT_RDWR);
-    if (0 != shutdown_result) {
-        if (ENOTCONN != shutdown_result) {
-            SPDLOG_ERROR("Failed to shutdown socket, error={}", shutdown_result);
-        } // else connection already disconnected, so nothing to do
+    if (command_line_args.count_aggregation()) {
+        auto shutdown_result = shutdown(reducer_socket_fd, SHUT_RDWR);
+        if (0 != shutdown_result) {
+            if (ENOTCONN != shutdown_result)
+                SPDLOG_ERROR("Failed to shutdown socket, error={}", shutdown_result);
+        }
     }
+
+    // Unblock the controller monitoring thread if it's blocked
+    //auto shutdown_result = shutdown(reducer_socket_fd, SHUT_RDWR);
+    //if (0 != shutdown_result) {
+    //    if (ENOTCONN != shutdown_result) {
+    //        SPDLOG_ERROR("Failed to shutdown socket, error={}", shutdown_result);
+    //    } // else connection already disconnected, so nothing to do
+    //}
 
     /*try {
         controller_monitoring_thread.join();
