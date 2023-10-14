@@ -52,17 +52,15 @@ export const App = () => {
         setIsSidebarTransitioning(false);
     }
 
-    return (<div className={"wrapper"}>
+    return (<div style={{display: "flex", height: "100%"}}>
         <Sidebar
             isSidebarCollapsed={isSidebarStateCollapsed}
             onSidebarToggle={handleSidebarToggle}
             onSidebarTransitioned={handleSidebarTransitioned}
             routes={ROUTES}
         />
-        <div style={{flex: "1 1 auto"}}>
-            <div
-                className={(isSidebarStateCollapsed ? "sidebar-collapsed" : "")}
-                id="component-wrapper">
+        <div style={{flexGrow: 1, minWidth: 0}}>
+            <div style={{height: "100%"}}>
                 {!loggedIn ? <div className="h-100">
                     <div className="d-flex justify-content-center align-items-center h-100">
                         <div className="spinner-grow" style={{width: '3rem', height: '3rem'}} role="status">
