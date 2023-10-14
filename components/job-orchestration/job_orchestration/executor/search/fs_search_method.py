@@ -92,6 +92,7 @@ def search(
         '-c',
         '--tge', str(query['timestamp_begin']),
         '--tle', str(query['timestamp_end']),
+        '--job-id', job_id_str,
     ]
     if 'count' in query:
         search_cmd.append('--count')

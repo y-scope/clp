@@ -74,7 +74,7 @@ struct ServerContext {
     Pipeline* p;
     MYSQL* db;
     ServerStatus status;
-    std::string job_id;
+    int32_t job_id;
     int port;
     mongocxx::database results_database;
     mongocxx::collection results_collection;
@@ -86,6 +86,7 @@ struct ServerContext {
               p(nullptr),
               db(nullptr),
               status(ServerStatus::IDLE),
+              job_id(-1),
               port(port),
               host(std::move(host)),
               mongodb_collection(std::move(mongodb_collection)) {}
@@ -133,6 +134,13 @@ void receive_task(
         RecordReceiverContext* rctx
 );
 void queue_receive_task(RecordReceiverContext* rctx);
+
+void validate_sender_task(
+        boost::system::error_code const& error,
+        size_t bytes_remaining,
+        RecordReceiverContext* rctx
+);
+void queue_validate_sender_task(RecordReceiverContext* rctx);
 
 void receive_task(
         boost::system::error_code const& error,
@@ -213,6 +221,68 @@ void queue_receive_task(RecordReceiverContext* rctx) {
     );
 }
 
+void validate_sender_task(
+        boost::system::error_code const& error,
+        size_t bytes_remaining,
+        RecordReceiverContext* rctx
+) {
+    // if no new bytes terminate
+    if (bytes_remaining == 0 || error.failed()
+        || !(rctx->ctx->status == ServerStatus::RUNNING
+             || rctx->ctx->status != ServerStatus::CANCELLING))
+    {
+        delete rctx;
+        return;
+    }
+
+    // account for leftover bytes from previous call
+    bytes_remaining += rctx->bytes_occupied;
+
+    int32_t job_id;
+    if (bytes_remaining > sizeof(int32_t)) {
+        delete rctx;
+        return;
+    } else if (bytes_remaining == sizeof(int32_t)) {
+        memcpy(&job_id, rctx->buf, sizeof(int32_t));
+        if (job_id != rctx->ctx->job_id) {
+            std::cout << "Rejecting connection from worker with job_id="
+                      << job_id << " during processing of job_id="
+                      << rctx->ctx->job_id << std::endl;
+            delete rctx;
+            return;
+        }
+        rctx->bytes_occupied = 0;
+        char response = 'y';
+        boost::system::error_code e;
+        int transferred = boost::asio::write(rctx->socket, boost::asio::buffer(&response, 1), e);
+        if (e || transferred < sizeof(response)) {
+            delete rctx;
+            return;
+        }
+
+        queue_receive_task(rctx);
+    } else {
+        rctx->bytes_occupied = bytes_remaining;
+        queue_validate_sender_task(rctx);
+    }
+}
+
+void queue_validate_sender_task(RecordReceiverContext *rctx) {
+    boost::asio::async_read(
+            rctx->socket,
+            boost::asio::buffer(
+                    &rctx->buf[rctx->bytes_occupied],
+                    sizeof(int32_t) - rctx->bytes_occupied
+            ),
+            boost::bind(
+                    validate_sender_task,
+                    boost::asio::placeholders::error,
+                    boost::asio::placeholders::bytes_transferred,
+                    rctx
+            )
+    );
+}
+
 void print_result(RecordGroup const& group) {
     auto tags = group.get_tags();
     auto record = group.record_it();
@@ -232,8 +302,8 @@ void accept_task(
         ServerContext* ctx,
         RecordReceiverContext* rctx
 ) {
-    if (!error.failed()) {
-        queue_receive_task(rctx);
+    if (!error.failed() && ctx->status == ServerStatus::RUNNING) {
+        queue_validate_sender_task(rctx);
         queue_accept_task(ctx);
     } else {
         // tcp acceptor socket was closed
@@ -319,14 +389,16 @@ ServerStatus assign_new_job(ServerContext* ctx) {
         return ServerStatus::FINISHING_ERROR;
     }
 
-    std::map<std::string, std::string> jobs;
+    std::map<int32_t, std::string> jobs;
     SQLIterator* it = new SQLIterator(ctx->db);
     std::string id;
     std::string config;
     while (it->contains_element()) {
+        int32_t job_id;
         it->get_field_as_string(0, id);
         it->get_field_as_string(1, config);
-        jobs[std::move(id)] = std::move(config);
+        job_id = stoi(id);
+        jobs[job_id] = std::move(config);
         it->get_next();
     }
     delete it;
@@ -343,7 +415,7 @@ ServerStatus assign_new_job(ServerContext* ctx) {
         }
 
         if (mysql_affected_rows(ctx->db) > 0) {
-            std::cout << "Taking job: " << job->first << " " << job->second << std::endl;
+            std::cout << "Taking job: " << job->first << std::endl;
             ctx->job_id = job->first;
 
             msgpack::object_handle handle
@@ -378,7 +450,7 @@ int set_job_done(ServerContext* ctx, int status = 3) {
 }
 
 ServerStatus poll_for_job_done(ServerContext* ctx) {
-    std::string query = "SELECT status FROM distributed_search_jobs WHERE id=" + ctx->job_id;
+    std::string query = "SELECT status FROM distributed_search_jobs WHERE id=" + std::to_string(ctx->job_id);
     if (0 != mysql_real_query(ctx->db, query.c_str(), query.length())) {
         std::cout << "SQL ERROR: " << mysql_error(ctx->db) << std::endl;
         return ServerStatus::FINISHING_ERROR;
@@ -576,7 +648,7 @@ int main(int argc, char const* argv[]) {
         delete ctx.p;
         ctx.p = nullptr;
         ctx.status = ServerStatus::IDLE;
-        ctx.job_id.clear();
+        ctx.job_id = -1;
         ctx.acceptor
                 = boost::asio::ip::tcp::acceptor(ctx.ioctx, tcp::endpoint(tcp::v6(), ctx.port));
     }
