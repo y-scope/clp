@@ -50,6 +50,11 @@
 #search_worker:
 #  logging_level: "INFO"
 #
+#reducer:
+#  logging_level: "INFO"
+#  polling_interval: 100 # milliseconds
+#  base_port: 14009
+#
 ## Where archives should be output to
 #archive_output:
 #  type: "fs"

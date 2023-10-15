@@ -649,6 +649,7 @@ def start_reducer(instance_id: str, clp_config: CLPConfig, container_clp_config:
         '--config', str(container_clp_config.logs_directory / container_config_filename),
         '--host', get_host_ip(),
         "--concurrency", str(num_cpus),
+        "--polling-interval-ms", str(clp_config.reducer.polling_interval),
     ]
 
     cmd = container_start_cmd + reducer_cmd
@@ -835,7 +836,7 @@ def main(argv):
         if component_name in ['', DB_COMPONENT_NAME, SEARCH_SCHEDULER_COMPONENT_NAME,
                               COMPRESSION_JOB_HANDLER_COMPONENT_NAME,
                               WEBUI_QUERY_HANDLER_COMPONENT_NAME, DATABASE_COMPONENTS,
-                              CONTROLLER_COMPONENTS]:
+                              CONTROLLER_COMPONENTS, REDUCER_COMPONENT_NAME]:
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
         if component_name in [
             '',

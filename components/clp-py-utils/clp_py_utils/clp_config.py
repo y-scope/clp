@@ -195,6 +195,7 @@ class SearchWorker(BaseModel):
 class Reducer(BaseModel):
     logging_level: str = 'INFO'
     base_port: int = 14009
+    polling_interval: int = 100
     
     @validator('logging_level')
     def validate_logging_level(cls, field):
@@ -206,6 +207,14 @@ class Reducer(BaseModel):
         if not field > 0:
             raise ValueError(
                 f"{cls.__name__}: base port {field} is not a valid value"
+            )
+        return field
+
+    @validator('polling_interval')
+    def validate_polling_interval(cls, field):
+        if not field > 0:
+            raise ValueError(
+                f"{cls.__name__}: polling interval {field} must be greater than zero"
             )
         return field
 

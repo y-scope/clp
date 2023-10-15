@@ -32,6 +32,7 @@ def main(argv: List[str]) -> int:
     args_parser.add_argument('--config', '-c', required=True, help='CLP configuration file.')
     args_parser.add_argument('--host', required=True, help='Host ip this container is running on')
     args_parser.add_argument('--concurrency', required=True, help='Number of reducer servers to run')
+    args_parser.add_argument('--polling-interval-ms', required=True, help='Database polling interval in ms')
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -71,6 +72,7 @@ def main(argv: List[str]) -> int:
         "--mongodb-database", clp_config.results_cache.db_name,
         "--mongodb-uri", f"mongodb://{clp_config.results_cache.host}:{clp_config.results_cache.port}/",
         "--mongodb-collection", clp_config.results_cache.results_collection_name,
+        "--polling-interval-ms", str(parsed_args.polling_interval_ms),
         "--host", parsed_args.host,
         "--port",
     ]
@@ -93,7 +95,7 @@ def main(argv: List[str]) -> int:
         )
 
     logger.info("reducers started.")
-    logger.info(f"Host={parsed_args.host} Base port={clp_config.reducer.base_port} Concurrency={concurrency}")
+    logger.info(f"Host={parsed_args.host} Base port={clp_config.reducer.base_port} Concurrency={concurrency} Polling Interval={parsed_args.polling_interval_ms}")
     for r in reducers:
         r.wait()
 

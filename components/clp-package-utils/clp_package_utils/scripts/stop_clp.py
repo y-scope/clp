@@ -135,6 +135,8 @@ def main(argv):
             container_config_file_path = logs_dir / f'{container_name}.yml'
             if container_config_file_path.exists():
                 container_config_file_path.unlink()
+        if '' == component_name or REDUCER_COMPONENT_NAME == component_name:
+            stop_container(f'clp-{REDUCER_COMPONENT_NAME}-{instance_id}', stale_containers)
         if '' == component_name or COMPRESSION_QUEUE_COMPONENT_NAME == component_name:
             stop_queue_container(COMPRESSION_QUEUE_COMPONENT_NAME, instance_id, logs_dir, stale_containers)
         if '' == component_name or SEARCH_QUEUE_COMPONENT_NAME == component_name:
@@ -144,8 +146,6 @@ def main(argv):
             stop_container(container_name, stale_containers)
         if '' == component_name or DB_COMPONENT_NAME == component_name:
             stop_container(f'clp-{DB_COMPONENT_NAME}-{instance_id}', stale_containers)
-        if '' == component_name or REDUCER_COMPONENT_NAME == component_name:
-            stop_container(f'clp-{REDUCER_COMPONENT_NAME}-{instance_id}', stale_containers)
 
         if '' == component_name:
             # NOTE: We can only remove the instance ID file if all containers have been stopped.

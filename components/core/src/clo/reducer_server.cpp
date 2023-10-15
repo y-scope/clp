@@ -80,8 +80,9 @@ struct ServerContext {
     mongocxx::collection results_collection;
     std::string host;
     std::string mongodb_collection;
+    int polling_interval_ms;
 
-    ServerContext(std::string& host, int port, std::string& mongodb_collection)
+    ServerContext(std::string& host, int port, std::string& mongodb_collection, int polling_interval_ms)
             : acceptor(ioctx, tcp::endpoint(tcp::v6(), port)),
               p(nullptr),
               db(nullptr),
@@ -89,7 +90,8 @@ struct ServerContext {
               job_id(-1),
               port(port),
               host(std::move(host)),
-              mongodb_collection(std::move(mongodb_collection)) {}
+              mongodb_collection(std::move(mongodb_collection)),
+              polling_interval_ms(polling_interval_ms) {}
 };
 
 struct RecordReceiverContext {
@@ -498,7 +500,7 @@ void poll_db(
     }
 
     if (ctx->status == ServerStatus::IDLE || ctx->status == ServerStatus::RUNNING) {
-        poll_timer->expires_at(poll_timer->expiry() + boost::asio::chrono::milliseconds(500));
+        poll_timer->expires_at(poll_timer->expiry() + boost::asio::chrono::milliseconds(ctx->polling_interval_ms));
         poll_timer->async_wait(
                 boost::bind(poll_db, boost::asio::placeholders::error, ctx, poll_timer)
         );
@@ -548,6 +550,7 @@ int main(int argc, char const* argv[]) {
     std::string mongodb_database = "clp-search";
     std::string mongodb_uri = "mongodb://localhost:27017/";
     std::string mongodb_collection = "results";
+    int polling_interval_ms = 100;
 
     po::options_description arguments("Arguments");
     arguments.add_options()
@@ -561,6 +564,7 @@ int main(int argc, char const* argv[]) {
         ("mongodb-database", po::value<std::string>(&mongodb_database)->default_value("clp-search"))
         ("mongodb-uri", po::value<std::string>(&mongodb_uri)->default_value("mongodb://localhost:27017/"))
         ("mongodb-collection", po::value<std::string>(&mongodb_collection)->default_value("results"))
+        ("polling-interval-ms", po::value<int>(&polling_interval_ms)->default_value(100))
         ;
 
     po::variables_map opts;
@@ -573,7 +577,7 @@ int main(int argc, char const* argv[]) {
         return -1;
     }
 
-    ServerContext ctx(host, port, mongodb_collection);
+    ServerContext ctx(host, port, mongodb_collection, polling_interval_ms);
 
     if (connect_to_db(&ctx, db_host, db_port, db_user, db_pass, database) < 0) {
         std::cout << "Failed to connect to the database... exiting" << db_user << " " << db_pass
@@ -592,7 +596,7 @@ int main(int argc, char const* argv[]) {
         return -1;
     }
     // Polling interval
-    boost::asio::steady_timer poll_timer(ctx.ioctx, boost::asio::chrono::milliseconds(500));
+    boost::asio::steady_timer poll_timer(ctx.ioctx, boost::asio::chrono::milliseconds(ctx.polling_interval_ms));
 
     std::cout << "Starting on host " << ctx.host << " port " << port << " listening successfully " << ctx.acceptor.is_open() << std::endl;
 
