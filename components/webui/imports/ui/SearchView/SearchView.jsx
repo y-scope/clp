@@ -767,78 +767,72 @@ const SearchFilterControlsDrawer = ({timeRange, setTimeRange, matchCase, setMatc
                     <Col>
                         <Row>
                             <Col>
-                                <Form.Group>
-                                    <Row>
-                                        <Form.Label column={"sm"} xs={"auto"} className="search-filter-control-label">Time range</Form.Label>
-                                        <Col>
-                                            <InputGroup size={"sm"}>
-                                                <DropdownButton id="time_range_preset_button" as={InputGroup.Prepend} variant="info" size="sm" title="Presets"
-                                                                style={{"display": "inline"}}>
-                                                    {timeRangePresetItems}
-                                                </DropdownButton>
-                                                <DatePicker
-                                                    id="begin_timestamp_picker"
-                                                    dropdownMode={"select"}
-                                                    showTimeSelect
-                                                    timeIntervals={15}
-                                                    timeFormat="HH:mm"
-                                                    dateFormat="MMM d, yyyy h:mm aa"
-                                                    timeCaption="Time"
-                                                    selectsStart
-                                                    selected={timeRange.begin}
-                                                    startDate={timeRange.begin}
-                                                    endDate={timeRange.end}
-                                                    onChange={updateBeginTimestamp}
-                                                    className={"timestamp-picker"}
-                                                />
-                                                <InputGroup.Text className="border-left-0 rounded-0">to</InputGroup.Text>
-                                                <DatePicker
-                                                    id="end_timestamp_picker"
-                                                    dropdownMode={"select"}
-                                                    showTimeSelect
-                                                    timeIntervals={15}
-                                                    timeFormat="HH:mm"
-                                                    dateFormat="MMM d, yyyy h:mm aa"
-                                                    timeCaption="Time"
-                                                    selectsEnd
-                                                    minTime={timestampEndMin}
-                                                    maxTime={timestampEndMax}
-                                                    selected={timeRange.end}
-                                                    startDate={timeRange.begin}
-                                                    endDate={timeRange.end}
-                                                    onChange={updateEndTimestamp}
-                                                    minDate={timestampEndMin}
-                                                    className={"timestamp-picker"}
-                                                />
-                                            </InputGroup>
-                                        </Col>
-                                    </Row>
-                                </Form.Group>
-                                <Form.Group>
-                                    <Row>
-                                        <Form.Label column="sm" xs={"auto"} className="search-filter-control-label">Case sensitivity</Form.Label>
-                                        <Col>
-                                            <ToggleButtonGroup type="radio" name="case-sensitivity" onChange={setMatchCase} defaultValue={matchCase} size="sm">
-                                                <ToggleButton value={1} variant="info" id={"case_sensitive"}>Sensitive</ToggleButton>
-                                                <ToggleButton value={0} variant="info" id={"case_insensitive"}>Insensitive</ToggleButton>
-                                            </ToggleButtonGroup>
-                                        </Col>
-                                    </Row>
-                                </Form.Group>
-                                <Form.Group>
-                                    <Row>
-                                        <Form.Label column="sm" xs={"auto"} className="search-filter-control-label">Path filter</Form.Label>
-                                        <Col>
-                                            <Form.Control
-                                                name="filePathRegex"
-                                                type="text"
-                                                value={filePathRegex}
-                                                placeholder="Enter a regex (PCRE) indicating which paths to search..."
-                                                onChange={handleFilePathRegexChange}
-                                                size="sm"
+                                <Form.Group as={Row} className={"mb-2"}>
+                                    <Form.Label column={"sm"} xs={"auto"} className="search-filter-control-label">Time range</Form.Label>
+                                    <Col>
+                                        <InputGroup size={"sm"}>
+                                            <DropdownButton id="time_range_preset_button" variant="info" size="sm" title="Presets"
+                                                            style={{"display": "inline"}}>
+                                                {timeRangePresetItems}
+                                            </DropdownButton>
+                                            <DatePicker
+                                                id="begin_timestamp_picker"
+                                                dropdownMode={"select"}
+                                                showTimeSelect
+                                                timeIntervals={15}
+                                                timeFormat="HH:mm"
+                                                dateFormat="MMM d, yyyy h:mm aa"
+                                                timeCaption="Time"
+                                                selectsStart
+                                                selected={timeRange.begin}
+                                                startDate={timeRange.begin}
+                                                endDate={timeRange.end}
+                                                onChange={updateBeginTimestamp}
+                                                className={"timestamp-picker"}
                                             />
-                                        </Col>
-                                    </Row>
+                                            <InputGroup.Text className="border-left-0 rounded-0">to</InputGroup.Text>
+                                            <DatePicker
+                                                id="end_timestamp_picker"
+                                                dropdownMode={"select"}
+                                                showTimeSelect
+                                                timeIntervals={15}
+                                                timeFormat="HH:mm"
+                                                dateFormat="MMM d, yyyy h:mm aa"
+                                                timeCaption="Time"
+                                                selectsEnd
+                                                minTime={timestampEndMin}
+                                                maxTime={timestampEndMax}
+                                                selected={timeRange.end}
+                                                startDate={timeRange.begin}
+                                                endDate={timeRange.end}
+                                                onChange={updateEndTimestamp}
+                                                minDate={timestampEndMin}
+                                                className={"timestamp-picker"}
+                                            />
+                                        </InputGroup>
+                                    </Col>
+                                </Form.Group>
+                                <Form.Group as={Row} className={"mb-2"}>
+                                    <Form.Label column="sm" xs={"auto"} className="search-filter-control-label">Case sensitivity</Form.Label>
+                                    <Col>
+                                        <ToggleButtonGroup type="radio" name="case-sensitivity" onChange={setMatchCase} defaultValue={matchCase} size="sm">
+                                            <ToggleButton value={1} variant="info" id={"case_sensitive"}>Sensitive</ToggleButton>
+                                            <ToggleButton value={0} variant="info" id={"case_insensitive"}>Insensitive</ToggleButton>
+                                        </ToggleButtonGroup>
+                                    </Col>
+                                </Form.Group>
+                                <Form.Group as={Row} className={"mb-2"}>
+                                    <Form.Label column="sm" xs={"auto"} className="search-filter-control-label">Path filter</Form.Label>
+                                    <Col>
+                                        <Form.Control
+                                            name="filePathRegex"
+                                            type="text"
+                                            value={filePathRegex}
+                                            placeholder="Enter a regex (PCRE) indicating which paths to search..."
+                                            onChange={handleFilePathRegexChange}
+                                            size="sm"
+                                        />
+                                    </Col>
                                 </Form.Group>
                             </Col>
                         </Row>
