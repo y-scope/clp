@@ -60,7 +60,7 @@ const SearchView = () => {
     const [visibleTimeRangeBegin, setVisibleTimeRangeBegin] = useState(null);
     const [visibleTimeRangeEnd, setVisibleTimeRangeEnd] = useState(null);
 
-    const [fieldToSortBy, setFieldToSortBy] = useState({name: "timestamp", direction: 0});
+    const [fieldToSortBy, setFieldToSortBy] = useState({name: "timestamp", direction: -1});
 
     // Ask the server to update the timeline every time the time range is updated
     useEffect(() => {
@@ -139,7 +139,6 @@ const SearchView = () => {
 
     const resetVisibleResultSettings = () => {
         resetVisibleTimeRange();
-        setFieldToSortBy(null);
         setVisibleSearchResultsLimit(10);
     }
 

@@ -42,7 +42,7 @@ Meteor.publish(Meteor.settings.public.SearchResultsMetadataCollectionName, funct
 
 Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, function search_results_publication({
                                                                                                            visibleTimeRange,
-                                                                                                           fieldToSort,
+                                                                                                           fieldToSortBy,
                                                                                                            visibleSearchResultsLimit
                                                                                                        }) {
     let selector = {};
@@ -55,10 +55,10 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, function sear
     let findOptions = {
         limit: visibleSearchResultsLimit, disableOplog: true, pollingIntervalMs: 250
     };
-    if (fieldToSort) {
+    if (fieldToSortBy) {
         let sort = {};
-        sort[fieldToSort.name] = fieldToSort.direction;
-        sort["_id"] = fieldToSort.direction;
+        sort[fieldToSortBy.name] = fieldToSortBy.direction;
+        sort["_id"] = fieldToSortBy.direction;
         findOptions["sort"] = sort;
     }
 
