@@ -155,7 +155,7 @@ const SearchView = () => {
 
         setVisibleSearchResultsLimit(10);
     }
-    const [matchCase, setMatchCase] = useState(true);
+    const [matchCase, setMatchCase] = useState(0);
     const [maxLinesPerResult, setMaxLinesPerResult] = useState(2);
 
     if (false === serverStateLoaded || SearchState.CONNECTING === serverState.state) {
@@ -461,7 +461,7 @@ const SearchResultsTable = ({
             // Construct rows
             if (null !== resultHighlightRegex) {
                 let flags = "g";
-                if (false === matchCase) {
+                if (matchCase) {
                     flags += 'i';
                 }
                 resultHighlightRegex = new RegExp(resultHighlightRegex, flags);
@@ -959,7 +959,7 @@ const SearchControls = ({serverState, searchResultsExist, matchCase, setMatchCas
             timestampBegin: changeTimezoneToUTCWithoutChangingTime(timeRange.begin).getTime(),
             timestampEnd: changeTimezoneToUTCWithoutChangingTime(timeRange.end).getTime(),
             pathRegex: filePathRegex,
-            matchCase: matchCase,
+            matchCase: Boolean(matchCase),
         };
         Meteor.call("search.submitQuery", args, (error) => {
             if (error) {
