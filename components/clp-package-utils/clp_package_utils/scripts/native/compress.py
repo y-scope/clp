@@ -206,6 +206,9 @@ def main(argv: List[str]) -> int:
             if JobStatus.CANCELLED == job_status:
                 logger.error("Compression cancelled.")
                 break
+            if JobStatus.NO_INPUTS_TO_COMPRESS == job_status:
+                logger.error("invalid input(s)")
+                break
             if JobStatus.DONE == job_status:
                 runtime_delta = doc["end_timestamp"] - doc["begin_timestamp"]
                 if isinstance(runtime_delta, timedelta):

@@ -215,8 +215,11 @@ class MongoDBManager(DBManager):
         job_metadata = self.get_job_metadata(job_id)
         return JobStatus.from_str(job_metadata["status"])
 
-    def insert_tasks_metrics(self, task: List[Dict[str, Any]]):
-        self.__db_collections["c_tasks_stats"].insert_many(task)
+    def insert_tasks_metrics(self, tasks: List[Dict[str, Any]]):
+        if len(tasks) == 0:
+            self.__logger.warning(f"Input List has 0 tasks, skip insertion")
+            return
+        self.__db_collections["c_tasks_stats"].insert_many(tasks)
 
     def update_job_metrics(self, job_id: str, metrics: Dict[str, Any]) -> bool:
         jobs_collection = self.__db_collections["cjobs"]

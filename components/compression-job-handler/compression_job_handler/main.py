@@ -87,12 +87,14 @@ def prepare_fs_compression_jobs(
             continue
         path = Path(stripped_path_str)
         # TODO This assumes we're running in a container
-        path = CONTAINER_INPUT_LOGS_ROOT_DIR / path.relative_to(path.anchor)
-
-        if not path.is_dir():
-            parsed_list_paths.append(path)
+        mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / path.relative_to(path.anchor)
+        if not mounted_path.is_dir():
+            if mounted_path.exists():
+                parsed_list_paths.append(mounted_path)
+            else:
+                logger.warning(f"Skipping non-existent input: {path}")
         else:
-            for internal_path in path.rglob("*"):
+            for internal_path in mounted_path.rglob("*"):
                 # V0.5 TODO: customization for filer
                 # rglob on filer returns directory
                 if not internal_path.is_dir():
@@ -207,6 +209,10 @@ def handle_job(
     except Exception as e:
         logger.error(str(e))
         return JobStatus.FAILED_TO_SUBMIT, 0
+
+    if len(distributed_compression_jobs) == 0:
+        logger.warning(f"No valid inputs, skipping job {job_id_str}")
+        return JobStatus.NO_INPUTS_TO_COMPRESS, 0
 
     celery_submission_ts = time.time()
     logger.info(f"Submitting job {job_id_str} to celery")
@@ -326,7 +332,11 @@ def handle_jobs(
                     target_archive_size=target_archive_size,
                 )
                 job_completion_time = datetime.fromtimestamp(job_completion_time)
-                if job_completion_status in [JobStatus.FAILED_TO_SUBMIT, JobStatus.FAILED]:
+                if job_completion_status in [
+                    JobStatus.FAILED_TO_SUBMIT,
+                    JobStatus.FAILED,
+                    JobStatus.NO_INPUTS_TO_COMPRESS
+                ]:
                     db_manager.set_job_status(job_id, job_completion_status, end_timestamp=job_completion_time)
                 elif JobStatus.SUCCESS_WITH_ERRORS == job_completion_status:
                     db_manager.set_job_status(

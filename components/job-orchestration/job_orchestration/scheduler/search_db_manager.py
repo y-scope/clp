@@ -54,8 +54,11 @@ class MongoDBManager(DBManager):
     def insert_jobs(self, jobs: List[Dict[str, Any]]) -> None:
         self.__db_collections["search_jobs_metrics"].insert_many(jobs)
 
-    def insert_tasks(self, jobs: List[Dict[str, Any]]):
-        self.__db_collections["search_tasks_metrics"].insert_many(jobs)
+    def insert_tasks(self, tasks: List[Dict[str, Any]]):
+        if len(tasks) == 0:
+            self.__logger.warning(f"Input List has 0 tasks, skip insertion")
+            return
+        self.__db_collections["search_tasks_metrics"].insert_many(tasks)
 
     def update_job_status(self, job_id: str, status: str):
         filter_criteria = {"job_id": job_id}

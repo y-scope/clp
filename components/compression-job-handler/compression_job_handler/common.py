@@ -11,6 +11,7 @@ class JobStatus(IntEnum):
     SUCCESS_WITH_ERRORS = auto()
     FAILED = auto()
     FAILED_TO_SUBMIT = auto()
+    NO_INPUTS_TO_COMPRESS = auto()
     CANCELLING = auto()
     CANCELLED = auto()
 

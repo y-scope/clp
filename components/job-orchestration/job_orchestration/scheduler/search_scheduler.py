@@ -158,41 +158,48 @@ def poll_and_handle_cancelling_search_jobs(db_conn, mongodb_manager) -> None:
         set_job_status(db_conn, job_id, JobStatus.CANCELLED, prev_status=JobStatus.CANCELLING)
         mongodb_manager.update_job_status(job_id, JobStatus.CANCELLED.to_str())
 
-def get_search_tasks_for_job(
+def get_archives_for_search(
     db_conn,
-    base_kwargs: Dict[str, Any],
-    job_id: str,
+    #TODO: create more advanced queries using query
     query: dict,
-): #-> Group
+):
     cursor = db_conn.cursor()
-    #TODO: create more advanced queries
     cursor.execute(
         f'''SELECT id as archive_id
         FROM clp_archives
         ORDER BY end_timestamp DESC
         '''
     )
+    archives_for_search = [archive_id for archive_id, in cursor.fetchall()]
+    db_conn.commit()
+    cursor.close()
+    return archives_for_search
+
+def get_search_tasks_for_job(
+    archives_for_search,
+    base_kwargs: Dict[str, Any],
+    job_id: str,
+    query: dict,
+): #-> Group
     task = group(
         fs_search.s(
             **base_kwargs,
             job_id_str=job_id,
             archive_id=archive_id,
             query=query,
-        ) for archive_id, in cursor.fetchall()
+        ) for archive_id in archives_for_search
     )
-    db_conn.commit()
-    cursor.close()
     return task
 
 def dispatch_search_job(
-    db_conn,
+    archives_for_search,
     base_kwargs: Dict[str, Any],
     job_id: int,
     query: dict,
     aggregation_job: bool,
 ) -> None:
     global active_jobs
-    task_group = get_search_tasks_for_job(db_conn, base_kwargs, str(job_id), query)
+    task_group = get_search_tasks_for_job(archives_for_search, base_kwargs, str(job_id), query)
     active_jobs[job_id] = SearchJob(task_group.apply_async(), aggregation_job)
 
 
@@ -232,6 +239,11 @@ def poll_and_submit_pending_search_jobs(db_conn, mongodb_manager, base_kwargs) -
     for job_id, job_status, num_tasks, num_tasks_completed, search_config, creation_time, reducer_host, reducer_port in new_jobs:
         query_info = msgpack.unpackb(search_config)
 
+        archives_for_search = get_archives_for_search(db_conn, query_info)
+        if len(archives_for_search) == 0:
+            set_job_status(db_conn, job_id, JobStatus.NO_MATCHING_ARCHIVE, JobStatus.PENDING)
+            continue
+
         aggregation_job, modified = is_reducer_job(query_info)
         if job_status == JobStatus.PENDING and aggregation_job:
             logger.info(f"Requesting reducer for job {job_id}")
@@ -247,7 +259,7 @@ def poll_and_submit_pending_search_jobs(db_conn, mongodb_manager, base_kwargs) -
         
         job_status_str = JobStatus.RUNNING.to_str()
         enqueued_ts = time.time()
-        dispatch_search_job(db_conn, base_kwargs, job_id, query_info, aggregation_job)
+        dispatch_search_job(archives_for_search, base_kwargs, job_id, query_info, aggregation_job)
         if set_job_status(db_conn, job_id, JobStatus.RUNNING, job_status):
             logger.info(f"Submitted job {job_id}")
         else:
@@ -289,7 +301,15 @@ def check_job_status_and_update_db(db_conn, mongodb_manager):
     for job_id in list(active_jobs.keys()):
         result = active_jobs[job_id].task
         reducer = active_jobs[job_id].reducer
-        returned_results = get_results_or_timeout(result)
+        try:
+            returned_results = get_results_or_timeout(result)
+        except Exception as e:
+            logger.error(f"job `{job_id}` failed: {e}")
+            # clean up
+            del active_jobs[job_id]
+            set_job_status(db_conn, job_id, JobStatus.FAILED)
+            continue
+
         if returned_results is not None:
             # Initialize tracker variables
             completion_ts = time.time()
