@@ -2,8 +2,8 @@ import {useTracker} from "meteor/react-meteor-data";
 import {Meteor} from "meteor/meteor";
 import React, {useEffect, useState} from "react";
 
+import {DateTime} from "luxon";
 import {faBars, faCog, faExclamationCircle, faFile, faSearch, faSort, faSortDown, faSortUp, faTimes, faTrash, faUndo,} from "@fortawesome/free-solid-svg-icons";
-import moment from "moment";
 import {
     Button,
     Col,
@@ -275,83 +275,138 @@ const cTimePresets = [
 ];
 
 function computeTodayTimeRange() {
-    let current_time = moment();
-    // Need to save end time before getting begin time, since moment modifies the underlying date object when a member method is called
-    let end_time = current_time.toDate();
-    return {begin: current_time.startOf('day').toDate(), end: end_time};
+    let endTime = DateTime.utc();
+    let beginTime = endTime.minus({days: 1});
+    return {
+        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
+        end: dateTimeToDateWithoutChangingTimestamp(endTime)
+    };
 }
 
 function computeWeekToDateTimeRange() {
-    let current_time = moment();
-    let end_time = current_time.toDate();
-    return {begin: current_time.startOf("isoWeek").toDate(), end: end_time};
+    let endTime = DateTime.utc();
+    let beginTime = endTime.startOf("week");
+    return {
+        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
+        end: dateTimeToDateWithoutChangingTimestamp(endTime)
+    };
 }
 
 function computeMonthToDateTimeRange() {
-    let current_time = moment();
-    let end_time = current_time.toDate();
-    return {begin: current_time.startOf("month").toDate(), end: end_time};
+    let endTime = DateTime.utc();
+    let beginTime = endTime.startOf("month");
+    return {
+        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
+        end: dateTimeToDateWithoutChangingTimestamp(endTime)
+    };
 }
 
 function computeYearToDateTimeRange() {
-    let current_time = moment();
-    let end_time = current_time.toDate();
-    return {begin: current_time.startOf("year").toDate(), end: end_time};
+    let endTime = DateTime.utc();
+    let beginTime = endTime.startOf("year");
+    return {
+        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
+        end: dateTimeToDateWithoutChangingTimestamp(endTime)
+    };
 }
 
 function computePrevDayTimeRange() {
-    let prev_day = moment().subtract(1, 'days');
-    return {begin: prev_day.startOf('day').toDate(), end: prev_day.endOf('day').toDate()};
+    let endTime = DateTime.utc().minus({days: 1}).endOf("day");
+    let beginTime = endTime.startOf("day");
+    return {
+        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
+        end: dateTimeToDateWithoutChangingTimestamp(endTime)
+    };
 }
 
 function computePrevWeekTimeRange() {
-    let prev_week = moment().subtract(1, 'weeks');
-    return {begin: prev_week.startOf("isoWeek").toDate(), end: prev_week.endOf("isoWeek").toDate()};
+    let endTime = DateTime.utc().minus({weeks: 1}).endOf("week");
+    let beginTime = endTime.startOf("week");
+    return {
+        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
+        end: dateTimeToDateWithoutChangingTimestamp(endTime)
+    };
 }
 
 function computePrevMonthTimeRange() {
-    let prev_month = moment().subtract(1, 'months');
-    return {begin: prev_month.startOf("month").toDate(), end: prev_month.endOf("month").toDate()};
+    let endTime = DateTime.utc().minus({months: 1}).endOf("month");
+    let beginTime = endTime.startOf("month");
+    return {
+        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
+        end: dateTimeToDateWithoutChangingTimestamp(endTime)
+    };
 }
 
 function computePrevYearTimeRange() {
-    let prev_year = moment().subtract(1, 'years');
-    return {begin: prev_year.startOf("year").toDate(), end: prev_year.endOf("year").toDate()};
+    let endTime = DateTime.utc().minus({years: 1}).endOf("year");
+    let beginTime = endTime.startOf("year");
+    return {
+        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
+        end: dateTimeToDateWithoutChangingTimestamp(endTime)
+    };
 }
 
 function computeLast15MinTimeRange() {
-    let current_time = moment();
-    let end_time = current_time.toDate();
-    return {begin: current_time.subtract(15, 'minutes').toDate(), end: end_time};
+    let endTime = DateTime.utc();
+    let beginTime = endTime.minus({minutes: 15});
+    return {
+        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
+        end: dateTimeToDateWithoutChangingTimestamp(endTime)
+    };
 }
 
 function computeLast60MinTimeRange() {
-    let current_time = moment();
-    let end_time = current_time.toDate();
-    return {begin: current_time.subtract(60, 'minutes').toDate(), end: end_time};
+    let endTime = DateTime.utc();
+    let beginTime = endTime.minus({minutes: 60});
+    return {
+        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
+        end: dateTimeToDateWithoutChangingTimestamp(endTime)
+    };
 }
 
 function computeLast4HourTimeRange() {
-    let current_time = moment();
-    let end_time = current_time.toDate();
-    return {begin: current_time.subtract(4, 'hours').toDate(), end: end_time};
+    let endTime = DateTime.utc();
+    let beginTime = endTime.minus({hours: 4});
+    return {
+        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
+        end: dateTimeToDateWithoutChangingTimestamp(endTime)
+    };
 }
 
 function computeLast24HourTimeRange() {
-    let current_time = moment();
-    let end_time = current_time.toDate();
-    return {begin: current_time.subtract(24, 'hours').toDate(), end: end_time};
+    let endTime = DateTime.utc();
+    let beginTime = endTime.minus({hours: 24});
+    return {
+        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
+        end: dateTimeToDateWithoutChangingTimestamp(endTime)
+    };
 }
 
 function computeAllTimeRange() {
-    let endTimestamp = new Date();
-    endTimestamp.setFullYear(endTimestamp.getFullYear() + 1);
-    return {begin: new Date(0), end: endTimestamp};
+    let endTime = DateTime.utc().plus({years: 1});
+    let beginTime = DateTime.fromMillis(0, {zone: "UTC"});
+    return {
+        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
+        end: dateTimeToDateWithoutChangingTimestamp(endTime)
+    };
 }
 
 function changeTimezoneToUTCWithoutChangingTime(date) {
     return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds(),
         date.getMilliseconds()));
+}
+
+// TODO Switch date pickers so we don't have to do this hack
+function dateTimeToDateWithoutChangingTimestamp(dateTime) {
+    return dateTime.toLocal().set({
+        year: dateTime.year,
+        month: dateTime.month,
+        day: dateTime.day,
+        hour: dateTime.hour,
+        minute: dateTime.minute,
+        second: dateTime.second,
+        millisecond: dateTime.millisecond
+    }).toJSDate();
 }
 
 const SearchResultsTable = ({
@@ -921,7 +976,7 @@ const SearchResultsTimeline = ({timeline, visibleTimeRange, setVisibleTimeRange}
         highchartsOptions.xAxis.events.setExtremes = timelineSetExtremesEventHandler;
         highchartsOptions.tooltip = {
             formatter: function () {
-                let html = `${moment(this.x, "x").utc().format("ddd, MMM D, YYYY HH:mm:ss")} <br/>`;
+                let html = `${DateTime.fromMillis(this.x, {zone: "UTC"}).toFormat("ccc, LLL d, y HH:mm:ss")} <br/>`;
                 html += `<strong>${Number(this.y).toLocaleString()}</strong> logs in <strong>${timeline.period_name}</strong>`;
                 return html;
             }
