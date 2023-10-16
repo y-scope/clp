@@ -163,10 +163,16 @@ def get_archives_for_search(
     #TODO: create more advanced queries using query
     query: dict,
 ):
+    if 'timestamp_begin' not in query:
+        query['timestamp_begin'] = 0
+    if 'timestamp_end' not in query:
+        query['timestamp_end'] = int(datetime.now().timestamp() * 1000)
+
     cursor = db_conn.cursor()
     cursor.execute(
         f'''SELECT id as archive_id
         FROM clp_archives
+        WHERE end_timestamp >= {query['timestamp_begin']} AND begin_timestamp <= {query['timestamp_end']}
         ORDER BY end_timestamp DESC
         '''
     )
