@@ -804,14 +804,15 @@ const SearchFilterControlsDrawer = ({timeRange, setTimeRange, matchCase, setMatc
     }
 
     // Compute range of end timestamp so that it's after the begin timestamp
-    let timestampBegin = timeRange.begin;
-    let timestampEnd = timeRange.end;
-    let timestampEndMin = new Date(timestampEnd);
-    timestampEndMin.setHours(0, 0, 0, 0);
-    let timestampEndMax = new Date(timestampEnd);
-    timestampEndMax.setHours(23, 59, 59, 999);
-    if (timestampBegin.getDate() === timestampEnd.getDate()) {
-        timestampEndMin = new Date(timestampBegin);
+    let timestampEndMin = null;
+    let timestampEndMax = null;
+    if (timeRange.begin.getFullYear() === timeRange.end.getFullYear()
+        && timeRange.begin.getMonth() === timeRange.end.getMonth()
+        && timeRange.begin.getDate() === timeRange.end.getDate())
+    {
+        timestampEndMin = new Date(timeRange.begin);
+        // TODO This doesn't handle leap seconds
+        timestampEndMax = new Date(timeRange.end).setHours(23, 59, 59, 999);
     }
 
     return (
@@ -860,7 +861,7 @@ const SearchFilterControlsDrawer = ({timeRange, setTimeRange, matchCase, setMatc
                                                 startDate={timeRange.begin}
                                                 endDate={timeRange.end}
                                                 onChange={updateEndTimestamp}
-                                                minDate={timestampEndMin}
+                                                minDate={timeRange.begin}
                                                 className={"timestamp-picker"}
                                             />
                                         </InputGroup>
