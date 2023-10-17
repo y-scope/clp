@@ -844,6 +844,7 @@ const SearchFilterControlsDrawer = ({timeRange, setTimeRange, matchCase, setMatc
                                                 endDate={timeRange.end}
                                                 onChange={updateBeginTimestamp}
                                                 className={"timestamp-picker"}
+                                                popperClassName="timestamp-picker-popper"
                                             />
                                             <InputGroup.Text className="border-left-0 rounded-0">to</InputGroup.Text>
                                             <DatePicker
@@ -863,6 +864,7 @@ const SearchFilterControlsDrawer = ({timeRange, setTimeRange, matchCase, setMatc
                                                 onChange={updateEndTimestamp}
                                                 minDate={timeRange.begin}
                                                 className={"timestamp-picker"}
+                                                popperClassName="timestamp-picker-popper"
                                             />
                                         </InputGroup>
                                     </Col>

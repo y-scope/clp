@@ -121,6 +121,10 @@
   padding: 0.25rem 0.5rem;
 }
 
+.timestamp-picker-popper {
+  z-index: 2;
+}
+
 .search-results-timeline-container {
   background-color: #ffffff;
   border-top: 1px solid #dee2e6;
