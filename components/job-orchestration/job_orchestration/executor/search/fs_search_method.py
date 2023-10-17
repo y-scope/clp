@@ -20,22 +20,25 @@ from job_orchestration.executor.utils import get_profiled_memory_usage
 
 script_dir = Path(__file__).parent.resolve()
 
+
 def time_helper(prev_t):
     temp_t = time.time()
     measured_t = temp_t - prev_t
     prev_t = temp_t
     return measured_t, prev_t
 
-def is_reducer_job(query_info:dict) -> bool:
+
+def is_reducer_job(query_info: dict) -> bool:
     return 'reducer_host' in query_info and 'reducer_port' in query_info
+
 
 @app.task(bind=True)
 def search(
-    self: Task,
-    job_id_str: str,
-    output_config: Dict[str, Any], # used to indicate how to output the results
-    archive_id: str,
-    query: dict,
+        self: Task,
+        job_id_str: str,
+        output_config: Dict[str, Any],  # used to indicate how to output the results
+        archive_id: str,
+        query: dict,
 ) -> Dict[str, Any]:
     prev_t = time.time()
     task_start_t = prev_t
@@ -70,7 +73,7 @@ def search(
     # FIXME: consider removing startup time now that we aren't using
     # proxy server
     startup_time, prev_t = time_helper(prev_t)
-    
+
     # this is an ugly way to deal with the fact that sometimes we
     # hit the reducer and sometimes mongodb
     ip = "localhost"
@@ -85,6 +88,7 @@ def search(
     # fmt: off
     clp_home = Path(os.getenv("CLP_HOME"))
     search_cmd = [
+        str(clp_home / "bin" / "obs"),
         str(clp_home / "bin" / "clo"),
         ip,
         port,
@@ -119,6 +123,7 @@ def search(
 
     search_proc = subprocess.Popen(
         search_cmd,
+        preexec_fn=os.setpgrp,
         close_fds=True,
         stdout=subprocess.PIPE,
         stderr=stderr_log_file,
@@ -127,10 +132,10 @@ def search(
     def sigterm_handler(_signo, _stack_frame):
         if search_proc.poll() is None:
             logger.debug("try to kill search process")
-            search_proc.kill()
-            logger.debug("waiting on pid")
+            # kill with group id to kill both obs and clo
+            os.killpg(os.getpgid(search_proc.pid), signal.SIGTERM)
             os.waitpid(search_proc.pid, 0)
-            logger.info(f"Search task {task_id_str} cancelled")
+            logger.info(f"Cancelling search task: {task_id_str}")
         else:
             logger.debug("Search process is not running")
         logger.debug(f"Exiting with error code {_signo + 128}")
@@ -138,7 +143,6 @@ def search(
 
     # Register the function to kill the child process at exit
     signal.signal(signal.SIGTERM, sigterm_handler)
-    logger.info("Registered sigterm handler")
 
     # Wait for compression to finish
     return_code = search_proc.wait()
