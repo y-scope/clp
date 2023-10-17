@@ -536,6 +536,43 @@ const SearchResultsTable = ({
                     </tr>
                 );
             }
+        } else if (columnNames.includes("group_tags")) {
+            // Construct header columns
+            let headerColumnNames = [];
+            for (const columnName of Object.keys(searchResults[0]["records"][0])) {
+                headerColumnNames.push(columnName);
+                headerColumns.push(
+                    <th
+                        className={"search-results-th search-results-th-sortable"}
+                        data-column-name={columnName} key={columnName}
+                        onClick={toggleSortDirection}
+                    >
+                        <div className={"search-results-table-header"}>
+                            <FontAwesomeIcon
+                                icon={getSortIcon(fieldToSortBy, columnName)}
+                            /> {columnName}
+                        </div>
+                    </th>
+                );
+            }
+
+            // Construct rows
+            for (let i = 0; i < searchResults.length; ++i) {
+                let searchResult = searchResults[i];
+
+                const records = searchResult["records"];
+                for (let record of records) {
+                    let columns = [];
+                    for (const columnName of headerColumnNames) {
+                        let result = record[columnName];
+                        if (typeof(result) === "object") {
+                            result = JSON.stringify(result);
+                        }
+                        columns.push(<td key={columnName}>{result}</td>);
+                    }
+                    rows.push(<tr key={i}>{columns}</tr>);
+                }
+            }
         } else {
             // Construct header columns
             for (let i = 0; i < columnNames.length; ++i) {
@@ -702,9 +739,10 @@ const SearchResults = ({
     if (timeline) {
         numResultsInTimeRange = timeline.num_results;
     }
+    const isMessageTable = Object.keys(searchResults[0]).includes("timestamp");
     return (
         <>
-            <div className={"flex-column"}>
+            {isMessageTable ? (<div className={"flex-column"}>
                 <SearchResultsHeader
                     numResultsOnServer={realNumResultsOnServer}
                     timeline={timeline}
@@ -714,7 +752,7 @@ const SearchResults = ({
                     maxLinesPerResult={maxLinesPerResult}
                     setMaxLinesPerResult={setMaxLinesPerResult}
                 />
-            </div>
+            </div>) : (<></>)}
             <div className="flex-column overflow-auto">
                 <SearchResultsTable
                     searchResults={searchResults}
