@@ -1038,7 +1038,7 @@ const SearchResultsTimeline = ({timeline, visibleTimeRange, setVisibleTimeRange}
 const SearchControls = ({serverState, searchResultsExist, matchCase, setMatchCase, setOperationErrorMsg, resetVisibleResultSettings}) => {
     const [queryString, setQueryString] = useState("");
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const [timeRange, setTimeRange] = useState(computeAllTimeRange);
+    const [timeRange, setTimeRange] = useState(computeLast15MinTimeRange);
     const [filePathRegex, setFilePathRegex] = useState('');
     const [searchControlsActive, setSearchControlsActive] = useState(true);
 
