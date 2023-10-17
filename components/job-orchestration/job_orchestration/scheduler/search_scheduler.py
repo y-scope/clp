@@ -270,7 +270,7 @@ def poll_and_submit_pending_search_jobs(db_conn, mongodb_manager, base_kwargs) -
             logger.info(f"Submitted job {job_id}")
         else:
             logger.error(f"Failed to submit job {job_id}... cancelling")
-            active_jobs[job_id].task.revoke()
+            active_jobs[job_id].task.revoke(terminate=True)
             job_status_str = JobStatus.CANCELLED.to_str()
             set_job_status(db_conn, job_id, JobStatus.CANCELLED)
 
@@ -297,7 +297,7 @@ https://github.com/celery/celery/issues/4084
 '''
 def get_results_or_timeout(result):
     try:
-        return result.get(timeout=0.01)
+        return result.get(timeout=0.1)
     except TimeoutError:
         return None
 
@@ -320,6 +320,7 @@ def check_job_status_and_update_db(db_conn, mongodb_manager):
             # Initialize tracker variables
             completion_ts = time.time()
             results_count = 0
+            last_task_end_time = 0
             all_task_succeed = True
             tasks_list = []
             job_status = JobStatus.SUCCESS
@@ -328,12 +329,15 @@ def check_job_status_and_update_db(db_conn, mongodb_manager):
 
             for task_result in returned_results:
                 results_count += task_result["num_matches"]
+                task_end_time = task_result["task_end_to_end"] + task_result["task_start_ts"]
+                last_task_end_time = max(last_task_end_time, task_end_time)
                 tasks_list.append(task_result)
                 if not task_result['status']:
                     task_id = task_result['task_id']
                     all_task_succeed = False
                     job_status = JobStatus.FAILED
                     logger.warning(f"task {task_id} failed")
+                    logger.info(task_result)
             # clean up
             del active_jobs[job_id]
 
@@ -345,7 +349,8 @@ def check_job_status_and_update_db(db_conn, mongodb_manager):
             set_job_status(db_conn, job_id, job_status)
             job_stats = {
                 "results_count": results_count,
-                "status": job_status.to_str()
+                "status": job_status.to_str(),
+                'scheduler_delay': completion_ts - last_task_end_time
             }
             # I am hoping those two won't take too long
             mongodb_manager.finalize_job_stats(job_id, completion_ts, job_stats)
