@@ -247,6 +247,7 @@ def poll_and_submit_pending_search_jobs(db_conn, mongodb_manager, base_kwargs) -
 
         archives_for_search = get_archives_for_search(db_conn, query_info)
         if len(archives_for_search) == 0:
+            logger.info(f"No matching archives, skipping job {job_id}")
             set_job_status(db_conn, job_id, JobStatus.NO_MATCHING_ARCHIVE, JobStatus.PENDING)
             continue
 
@@ -281,6 +282,7 @@ def poll_and_submit_pending_search_jobs(db_conn, mongodb_manager, base_kwargs) -
                 job_detection_ts,
                 enqueued_ts,
                 job_status_str,
+                query_info
             )
         )
     if len(jobs_list) != 0:

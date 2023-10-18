@@ -37,14 +37,15 @@ class MongoDBManager(DBManager):
         self.__db_collections["search_tasks_metrics"].create_index("job_id")
 
     @staticmethod
-    def prepare_job_document(job_id, creation_ts, detection_ts, enqueue_ts, status):
+    def prepare_job_document(job_id, creation_ts, detection_ts, enqueue_ts, status, query):
         job_document = {
             "job_id": job_id,
             "creation_ts": creation_ts,
             "enqueue_ts": enqueue_ts,
             "schedule_time": detection_ts - creation_ts,
             "enqueue_time": enqueue_ts - detection_ts,
-            "status": status
+            "status": status,
+            "query": query
         }
         return job_document
 
