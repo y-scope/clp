@@ -96,8 +96,9 @@ def main(argv: List[str]) -> int:
 
     logger.info("reducers started.")
     logger.info(f"Host={parsed_args.host} Base port={clp_config.reducer.base_port} Concurrency={concurrency} Polling Interval={parsed_args.polling_interval_ms}")
-    for r in reducers:
-        r.wait()
+    for i in range(len(reducers)):
+        rcode = reducers[i].wait()
+        logger.info(f"reducer-{i} exited with returncode={rcode}")
 
     logger.error("all reducers terminated")
 

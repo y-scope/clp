@@ -233,6 +233,7 @@ void validate_sender_task(
         || !(rctx->ctx->status == ServerStatus::RUNNING
              || rctx->ctx->status != ServerStatus::CANCELLING))
     {
+        std::cout << "Rejecting connection because of connection error" << std::endl;
         delete rctx;
         return;
     }
@@ -242,6 +243,7 @@ void validate_sender_task(
 
     int32_t job_id;
     if (bytes_remaining > sizeof(int32_t)) {
+        std::cout << "Rejecting connection because of invalid negotiation" << std::endl;
         delete rctx;
         return;
     } else if (bytes_remaining == sizeof(int32_t)) {
@@ -258,6 +260,7 @@ void validate_sender_task(
         boost::system::error_code e;
         int transferred = boost::asio::write(rctx->socket, boost::asio::buffer(&response, 1), e);
         if (e || transferred < sizeof(response)) {
+            std::cout << "Rejecting connection because of connection error while attempting to send acceptance" << std::endl;
             delete rctx;
             return;
         }
@@ -307,10 +310,19 @@ void accept_task(
     if (!error.failed() && ctx->status == ServerStatus::RUNNING) {
         queue_validate_sender_task(rctx);
         queue_accept_task(ctx);
-    } else {
+    } else if (error.failed() && error.value() == boost::system::errc::operation_canceled) {
+        std::cout << "Accept task cancelled" << std::endl;
+        delete rctx;
+    } else if (error.failed()) {
         // tcp acceptor socket was closed
         // clean up rctx and don't re-queue accept task
+        std::cout << "TCP acceptor socket closed" << std::endl;
         delete rctx;
+        if (ctx->acceptor.is_open()) ctx->acceptor.close();
+    } else {
+        std::cout << "Rejecting connection while not in RUNNING state, state=" << ctx->status << std::endl;
+        delete rctx;
+        queue_accept_task(ctx);
     }
 }
 
@@ -505,8 +517,8 @@ void poll_db(
                 boost::bind(poll_db, boost::asio::placeholders::error, ctx, poll_timer)
         );
     } else {
-        std::cout << "Closing acceptor socket in state " << ctx->status << std::endl;
-        ctx->acceptor.close();
+        std::cout << "Cancelling operations on acceptor socket in state " << ctx->status << std::endl;
+        ctx->acceptor.cancel();
     }
 }
 
@@ -598,10 +610,17 @@ int main(int argc, char const* argv[]) {
     // Polling interval
     boost::asio::steady_timer poll_timer(ctx.ioctx, boost::asio::chrono::milliseconds(ctx.polling_interval_ms));
 
-    std::cout << "Starting on host " << ctx.host << " port " << port << " listening successfully " << ctx.acceptor.is_open() << std::endl;
+    std::cout << "Starting on host " << ctx.host << " port " << port << std::endl;
 
     // Job acquisition loop
     while (true) {
+        if (ctx.acceptor.is_open()) {
+            std::cout << "Acceptor socket listening successfully" << std::endl;
+        } else {
+            std::cout << "Failed to bind acceptor socket" << std::endl;
+            return -1;
+        }
+
         // Queue up polling and tcp accepting
         poll_timer.async_wait(
                 boost::bind(poll_db, boost::asio::placeholders::error, &ctx, &poll_timer)
@@ -653,8 +672,6 @@ int main(int argc, char const* argv[]) {
         ctx.p = nullptr;
         ctx.status = ServerStatus::IDLE;
         ctx.job_id = -1;
-        ctx.acceptor
-                = boost::asio::ip::tcp::acceptor(ctx.ioctx, tcp::endpoint(tcp::v6(), ctx.port));
     }
 
     mysql_close(ctx.db);
