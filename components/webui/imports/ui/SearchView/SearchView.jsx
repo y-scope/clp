@@ -739,7 +739,7 @@ const SearchResults = ({
     if (timeline) {
         numResultsInTimeRange = timeline.num_results;
     }
-    const isMessageTable = Object.keys(searchResults[0]).includes("timestamp");
+    const isMessageTable = searchResults.length === 0 || Object.keys(searchResults[0]).includes("timestamp");
     return (
         <>
             {isMessageTable ? (<div className={"flex-column"}>
