@@ -88,6 +88,7 @@ class WebUiQueryHandlerWebsocket {
             case ServerMessageType.QUERY_STARTED:
                 if (SearchState.WAITING_FOR_QUERY_TO_START === currentServerStateList[this.__sessionId].state) {
                     currentServerStateList[this.__sessionId].state = SearchState.QUERY_IN_PROGRESS;
+                    currentServerStateList[this.__sessionId].jobID = message['value']['jobID']
                 } else {
                     // Should not be possible, so disconnect
                     console.error("Got QUERY_STARTED while in impossible state.");
@@ -118,7 +119,7 @@ class WebUiQueryHandlerWebsocket {
 
 export function initCurrentServerState(sessionId) {
     if (currentServerStateList[sessionId] === undefined) {
-        currentServerStateList[sessionId] = {state: null, errorMessage: ""};
+        currentServerStateList[sessionId] = {state: null, errorMessage: "", jobID: null};
     }
 }
 

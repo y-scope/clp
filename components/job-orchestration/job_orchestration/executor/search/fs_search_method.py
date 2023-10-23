@@ -113,7 +113,7 @@ def search(
         search_cmd.append("--mongodb-database")
         search_cmd.append(str(output_config["db_name"]))
         search_cmd.append("--mongodb-collection")
-        search_cmd.append(str(query['results_collection_name']))
+        search_cmd.append(f"{output_config['results_collection_name']}_{job_id_str}")
 
     # Start compression
     logger.info("Searching...")

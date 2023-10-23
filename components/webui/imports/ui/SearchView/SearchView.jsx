@@ -3,7 +3,19 @@ import {Meteor} from "meteor/meteor";
 import React, {useEffect, useState} from "react";
 
 import {DateTime} from "luxon";
-import {faBars, faCog, faExclamationCircle, faFile, faSearch, faSort, faSortDown, faSortUp, faTimes, faTrash, faUndo,} from "@fortawesome/free-solid-svg-icons";
+import {
+    faBars,
+    faCog,
+    faExclamationCircle,
+    faFile,
+    faSearch,
+    faSort,
+    faSortDown,
+    faSortUp,
+    faTimes,
+    faTrash,
+    faUndo,
+} from "@fortawesome/free-solid-svg-icons";
 import {
     Button,
     Col,
@@ -27,29 +39,26 @@ import Highcharts from "highcharts";
 import DatePicker from "react-datepicker";
 import ReactVisibilitySensor from "react-visibility-sensor";
 
-import {SearchServerStateCollection} from "../../api/search/publications";
+import {SearchResultsMetadataCollection, SearchServerStateCollection} from "../../api/search/publications";
 import {SearchState} from "../../api/search/constants";
 
 import "react-datepicker/dist/react-datepicker.css";
 
-const MyCollections = {
-    [Meteor.settings.public.SearchResultsCollectionName]:null,
-    [Meteor.settings.public.SearchResultsMetadataCollectionName]:null,
+const MyCollections = {}
+
+const InitMyCollections = (jobID) => {
+    const collectionName = `${Meteor.settings.public.SearchResultsCollectionName}_${jobID}`;
+
+    if ((MyCollections[Meteor.settings.public.SearchResultsCollectionName] !== undefined) &&
+        (MyCollections[Meteor.settings.public.SearchResultsCollectionName]._name === collectionName)) {
+        return;
+    }
+
+    MyCollections[Meteor.settings.public.SearchResultsCollectionName] =
+        new Mongo.Collection(collectionName);
 }
 
-const InitMyCollections = (sessionId) => {
-        if (MyCollections[Meteor.settings.public.SearchResultsCollectionName] === null){
-        MyCollections[Meteor.settings.public.SearchResultsCollectionName] =
-            new Mongo.Collection(`${Meteor.settings.public.SearchResultsCollectionName}_${sessionId}`);
-    }
-    if (MyCollections[Meteor.settings.public.SearchResultsMetadataCollectionName] === null){
-        MyCollections[Meteor.settings.public.SearchResultsMetadataCollectionName] =
-            new Mongo.Collection(`${Meteor.settings.public.SearchResultsMetadataCollectionName}_${sessionId}`);
-    }
-}
 const SearchView = () => {
-    InitMyCollections(Meteor.userId())
-
     const [operationErrorMsg, setOperationErrorMsg] = useState("");
 
     const [visibleSearchResultsLimit, setVisibleSearchResultsLimit] = useState(10);
@@ -67,8 +76,7 @@ const SearchView = () => {
         if ((null === visibleTimeRangeBegin && null !== visibleTimeRangeEnd) ||
             (null !== visibleTimeRangeBegin && null === visibleTimeRangeEnd) ||
             (null !== visibleTimeRangeBegin && null !== visibleTimeRangeEnd
-                && visibleTimeRangeBegin >= visibleTimeRangeEnd))
-        {
+                && visibleTimeRangeBegin >= visibleTimeRangeEnd)) {
             // Ignore invalid combinations which may occur to due to the two
             // values being updated separately
             return;
@@ -109,9 +117,16 @@ const SearchView = () => {
             findOptions["sort"] = sort;
         }
 
+        if ((!serverState) || !(serverState.jobID)) {
+            return []
+        }
+        InitMyCollections(serverState.jobID)
         return MyCollections[Meteor.settings.public.SearchResultsCollectionName].find({}, findOptions).fetch();
-    }, [fieldToSortBy, visibleSearchResultsLimit, visibleTimeRangeBegin, visibleTimeRangeEnd]);
+    }, [serverState && serverState.jobID, fieldToSortBy, visibleSearchResultsLimit, visibleTimeRangeBegin, visibleTimeRangeEnd]);
     const [resultHighlightRegex, numSearchResultsOnServer, timeline] = useTracker(() => {
+        if ((!serverState) || !(serverState.jobID)) {
+            return []
+        }
         const subscription = Meteor.subscribe(Meteor.settings.public.SearchResultsMetadataCollectionName);
         let isReady = subscription.ready();
 
@@ -119,23 +134,26 @@ const SearchView = () => {
         let numSearchResultsOnServer = 0;
         let timeline = null;
         if (isReady) {
-            const numSearchResultsDoc = MyCollections[Meteor.settings.public.SearchResultsMetadataCollectionName].findOne({_id: "num_search_results"});
-            if (numSearchResultsDoc) {
-                numSearchResultsOnServer = numSearchResultsDoc["all"];
+            // FIXME: add job id
+            const metaDoc = SearchResultsMetadataCollection.findOne({_id: `meta-job-${serverState.jobID}`});
+            if (metaDoc) {
+                timeline = {
+                    "data": metaDoc["data"],
+                    "num_results_in_range": metaDoc["num_results_in_range"],
+                    "period_ms": metaDoc["period_ms"],
+                    "period_name": metaDoc["period_name"],
+                };
+                numSearchResultsOnServer = metaDoc["num_total_results"];
             }
 
-            const timelineDoc = MyCollections[Meteor.settings.public.SearchResultsMetadataCollectionName].findOne({_id: "timeline"});
-            if (timelineDoc) {
-                timeline = timelineDoc;
-            }
-
-            const generalDoc = MyCollections[Meteor.settings.public.SearchResultsMetadataCollectionName].findOne({_id: "general"});
+            // FIXME: check what's the use of this
+            const generalDoc = SearchResultsMetadataCollection.findOne({_id: "general"});
             if (generalDoc) {
                 resultHighlightRegex = generalDoc["regex"];
             }
         }
         return [resultHighlightRegex, numSearchResultsOnServer, timeline];
-    });
+    }, [serverState && serverState.jobID]);
 
     const resetVisibleResultSettings = () => {
         resetVisibleTimeRange();
@@ -497,7 +515,8 @@ const SearchResultsTable = ({
             // Display results as messages
 
             headerColumns.push(
-                <th className={"search-results-th search-results-th-sortable"} data-column-name={"timestamp"} key={"timestamp"} onClick={toggleSortDirection}
+                <th className={"search-results-th search-results-th-sortable"} data-column-name={"timestamp"}
+                    key={"timestamp"} onClick={toggleSortDirection}
                     style={{"width": "144px"}}>
                     <div className={"search-results-table-header"}>
                         <FontAwesomeIcon icon={getSortIcon(fieldToSortBy, "timestamp")}/> Timestamp
@@ -565,7 +584,7 @@ const SearchResultsTable = ({
                     let columns = [];
                     for (const columnName of headerColumnNames) {
                         let result = record[columnName];
-                        if (typeof(result) === "object") {
+                        if (typeof (result) === "object") {
                             result = JSON.stringify(result);
                         }
                         columns.push(<td key={columnName}>{result}</td>);
@@ -584,7 +603,8 @@ const SearchResultsTable = ({
                 }
 
                 headerColumns.push(
-                    <th className={"search-results-th search-results-th-sortable"} data-column-name={columnName} key={columnName} onClick={toggleSortDirection}>
+                    <th className={"search-results-th search-results-th-sortable"} data-column-name={columnName}
+                        key={columnName} onClick={toggleSortDirection}>
                         <div className={"search-results-table-header"}>
                             <FontAwesomeIcon icon={getSortIcon(fieldToSortBy, columnName)}/> {columnName}
                         </div>
@@ -604,7 +624,7 @@ const SearchResultsTable = ({
                     }
 
                     let result = searchResult[columnName];
-                    if (typeof(result) === "object") {
+                    if (typeof (result) === "object") {
                         result = JSON.stringify(result);
                     }
                     columns.push(<td key={columnName}>{result}</td>);
@@ -619,10 +639,10 @@ const SearchResultsTable = ({
         <div className={"search-results-container"}>
             <Table striped hover responsive="sm" className={"border-bottom search-results"}>
                 <thead>
-                    <tr>{headerColumns}</tr>
+                <tr>{headerColumns}</tr>
                 </thead>
                 <tbody>
-                    {rows}
+                {rows}
                 </tbody>
             </Table>
             <ReactVisibilitySensor
@@ -672,7 +692,7 @@ const SearchResultsHeader = ({
         numResultsText = `${numResultsOnServer} results found`;
     }
     if (timeline) {
-        numResultsText += ` | ${timeline.num_results} in selected time range`;
+        numResultsText += ` | ${timeline.num_results_in_range} in selected time range`;
     }
     return (
         <>
@@ -681,13 +701,15 @@ const SearchResultsHeader = ({
                     <Col className={"mr-auto"}><span className={"search-results-count"}>{numResultsText}</span></Col>
                     <Col className={"pr-0"} xs={"auto"}>
                         {null !== visibleTimeRange.begin ? (
-                            <Button variant={"light"} onClick={resetVisibleTimeRange}><FontAwesomeIcon icon={faUndo}/> Reset Zoom</Button>
+                            <Button variant={"light"} onClick={resetVisibleTimeRange}><FontAwesomeIcon
+                                icon={faUndo}/> Reset Zoom</Button>
                         ) : (<></>)}
                         <OverlayTrigger
                             placement={"left"}
                             trigger={"click"}
                             overlay={
-                                <Popover id={"searchResultsDisplaySettings"} className={"search-results-display-settings-container"}>
+                                <Popover id={"searchResultsDisplaySettings"}
+                                         className={"search-results-display-settings-container"}>
                                     <Form onSubmit={handleMaxLinesPerResultSubmission}>
                                         <InputGroup className={"search-results-display-settings"}>
                                             <InputGroup.Text>Max lines per result</InputGroup.Text>
@@ -702,7 +724,8 @@ const SearchResultsHeader = ({
                                     </Form>
                                 </Popover>
                             }>
-                            <Button type={"button"} variant={"light"} title={"Display Settings"}><FontAwesomeIcon icon={faCog}/></Button>
+                            <Button type={"button"} variant={"light"} title={"Display Settings"}><FontAwesomeIcon
+                                icon={faCog}/></Button>
                         </OverlayTrigger>
                     </Col>
                 </Row>
@@ -737,7 +760,7 @@ const SearchResults = ({
     let realNumResultsOnServer = Math.max(numResultsOnServer, searchResults.length);
     let numResultsInTimeRange = realNumResultsOnServer;
     if (timeline) {
-        numResultsInTimeRange = timeline.num_results;
+        numResultsInTimeRange = timeline.num_results_in_range;
     }
     const isMessageTable = searchResults.length === 0 || Object.keys(searchResults[0]).includes("timestamp");
     return (
@@ -773,7 +796,8 @@ const SearchResults = ({
 
 const SearchStatus = ({state, errorMessage, searchResultsExist}) => {
     if ("" !== errorMessage) {
-        return (<div className={"search-error"}><FontAwesomeIcon className="search-error-icon" icon={faExclamationCircle}/>{errorMessage}</div>);
+        return (<div className={"search-error"}><FontAwesomeIcon className="search-error-icon"
+                                                                 icon={faExclamationCircle}/>{errorMessage}</div>);
     } else {
         let noResultsStatus = "";
         if (false === searchResultsExist) {
@@ -801,13 +825,21 @@ const SearchStatus = ({state, errorMessage, searchResultsExist}) => {
                     now={SearchState.READY !== state ? 100 : 0}
                     variant="primary"
                 />
-                {false === searchResultsExist ? (<div className={"search-no-results-status"}>{noResultsStatus}</div>) : (<></>)}
+                {false === searchResultsExist ? (
+                    <div className={"search-no-results-status"}>{noResultsStatus}</div>) : (<></>)}
             </>
         );
     }
 }
 
-const SearchFilterControlsDrawer = ({timeRange, setTimeRange, matchCase, setMatchCase, filePathRegex, setFilePathRegex}) => {
+const SearchFilterControlsDrawer = ({
+                                        timeRange,
+                                        setTimeRange,
+                                        matchCase,
+                                        setMatchCase,
+                                        filePathRegex,
+                                        setFilePathRegex
+                                    }) => {
     const updateBeginTimestamp = (date) => {
         if (date.getTime() > timeRange.end.getTime()) {
             setTimeRange({begin: date, end: date});
@@ -846,8 +878,7 @@ const SearchFilterControlsDrawer = ({timeRange, setTimeRange, matchCase, setMatc
     let timestampEndMax = null;
     if (timeRange.begin.getFullYear() === timeRange.end.getFullYear()
         && timeRange.begin.getMonth() === timeRange.end.getMonth()
-        && timeRange.begin.getDate() === timeRange.end.getDate())
-    {
+        && timeRange.begin.getDate() === timeRange.end.getDate()) {
         timestampEndMin = new Date(timeRange.begin);
         // TODO This doesn't handle leap seconds
         timestampEndMax = new Date(timeRange.end).setHours(23, 59, 59, 999);
@@ -861,10 +892,12 @@ const SearchFilterControlsDrawer = ({timeRange, setTimeRange, matchCase, setMatc
                         <Row>
                             <Col>
                                 <Form.Group as={Row} className={"mb-2"}>
-                                    <Form.Label column={"sm"} xs={"auto"} className="search-filter-control-label">Time range</Form.Label>
+                                    <Form.Label column={"sm"} xs={"auto"} className="search-filter-control-label">Time
+                                        range</Form.Label>
                                     <Col>
                                         <InputGroup size={"sm"}>
-                                            <DropdownButton id="time_range_preset_button" variant="info" size="sm" title="Presets"
+                                            <DropdownButton id="time_range_preset_button" variant="info" size="sm"
+                                                            title="Presets"
                                                             style={{"display": "inline"}}>
                                                 {timeRangePresetItems}
                                             </DropdownButton>
@@ -908,16 +941,21 @@ const SearchFilterControlsDrawer = ({timeRange, setTimeRange, matchCase, setMatc
                                     </Col>
                                 </Form.Group>
                                 <Form.Group as={Row} className={"mb-2"}>
-                                    <Form.Label column="sm" xs={"auto"} className="search-filter-control-label">Case sensitivity</Form.Label>
+                                    <Form.Label column="sm" xs={"auto"} className="search-filter-control-label">Case
+                                        sensitivity</Form.Label>
                                     <Col>
-                                        <ToggleButtonGroup type="radio" name="case-sensitivity" onChange={setMatchCase} defaultValue={matchCase} size="sm">
-                                            <ToggleButton value={1} variant="info" id={"case_sensitive"}>Sensitive</ToggleButton>
-                                            <ToggleButton value={0} variant="info" id={"case_insensitive"}>Insensitive</ToggleButton>
+                                        <ToggleButtonGroup type="radio" name="case-sensitivity" onChange={setMatchCase}
+                                                           defaultValue={matchCase} size="sm">
+                                            <ToggleButton value={1} variant="info"
+                                                          id={"case_sensitive"}>Sensitive</ToggleButton>
+                                            <ToggleButton value={0} variant="info"
+                                                          id={"case_insensitive"}>Insensitive</ToggleButton>
                                         </ToggleButtonGroup>
                                     </Col>
                                 </Form.Group>
                                 <Form.Group as={Row} className={"mb-2"}>
-                                    <Form.Label column="sm" xs={"auto"} className="search-filter-control-label">Path filter</Form.Label>
+                                    <Form.Label column="sm" xs={"auto"} className="search-filter-control-label">Path
+                                        filter</Form.Label>
                                     <Col>
                                         <Form.Control
                                             name="filePathRegex"
@@ -1035,7 +1073,14 @@ const SearchResultsTimeline = ({timeline, visibleTimeRange, setVisibleTimeRange}
     );
 }
 
-const SearchControls = ({serverState, searchResultsExist, matchCase, setMatchCase, setOperationErrorMsg, resetVisibleResultSettings}) => {
+const SearchControls = ({
+                            serverState,
+                            searchResultsExist,
+                            matchCase,
+                            setMatchCase,
+                            setOperationErrorMsg,
+                            resetVisibleResultSettings
+                        }) => {
     const [queryString, setQueryString] = useState("");
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [timeRange, setTimeRange] = useState(computeLast15MinTimeRange);

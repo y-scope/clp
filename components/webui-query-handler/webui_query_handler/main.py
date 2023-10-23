@@ -36,10 +36,7 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 # Constants
-GENERAL_METADATA_DOC_ID = "general"
-TIMELINE_DOC_ID = "timeline"
-NUM_SEARCH_RESULTS_DOC_ID = "num_search_results"
-
+METADATA_DOC_ID_PREFIX = "meta-job-"
 
 class DatabaseConnectionConfig(BaseModel):
     host: str
@@ -268,7 +265,10 @@ async def receive_from_client(websocket) -> typing.Tuple[bool, typing.Optional[s
 
 
 def clear_results(
-    db_uri: str, results_collection_name: str, results_metadata_collection_name: str
+    db_uri: str,
+    results_collection_name: str,
+    results_metadata_collection_name: str,
+    job_id: int
 ):
     # Connect to database
     client = MongoClient(db_uri)
@@ -277,29 +277,24 @@ def clear_results(
     # Clear previous results
     search_results_collection = pymongo.collection.Collection(
         db,
-        results_collection_name,
+        f"{results_collection_name}_{job_id}",
         write_concern=pymongo.collection.WriteConcern(w=1, wtimeout=2000),
     )
     search_results_collection.drop()
     search_results_metadata_collection = pymongo.collection.Collection(
         db, results_metadata_collection_name
     )
-    search_results_metadata_collection.drop()
+    search_results_metadata_collection.delete_one({"_id": f"{METADATA_DOC_ID_PREFIX}{job_id}"})
     return True
 
 
 def update_timeline_and_count(
     search_results_collection: pymongo.collection.Collection,
     search_results_metadata_collection: pymongo.collection.Collection,
+    job_id: int,
     time_range,
     output_result_type: ResultType,
 ):
-    # Update count
-    num_results = search_results_collection.count_documents({})
-    search_results_metadata_collection.update_one(
-        {"_id": NUM_SEARCH_RESULTS_DOC_ID}, {"$set": {"all": num_results}}, upsert=True
-    )
-
     if (
         ResultType.MESSAGE_RESULT == output_result_type
     ):
@@ -426,12 +421,13 @@ def update_timeline_and_count(
         # Update timeline graph
         doc = {
             "data": ts_graph_data,
-            "num_results": num_results,
+            "num_results_in_range": num_results,
             "period_ms": ts_period_ms,
             "period_name": ts_period_name,
+            "num_total_results": search_results_collection.count_documents({}),
         }
         search_results_metadata_collection.update_one(
-            {"_id": TIMELINE_DOC_ID}, {"$set": doc}, upsert=True
+            {"_id": f"{METADATA_DOC_ID_PREFIX}{job_id}"}, {"$set": doc}, upsert=True
         )
 
 
@@ -439,6 +435,7 @@ def search_metadata_updater(
     db_uri: str,
     results_collection_name: str,
     results_metadata_collection_name: str,
+    job_id: int,
     time_range,
     output_result_type: ResultType,
 ):
@@ -447,16 +444,18 @@ def search_metadata_updater(
     db = client.get_default_database()
 
     search_results_collection = pymongo.collection.Collection(
-        db, results_collection_name
+        db, f"{results_collection_name}_{job_id}"
     )
     search_results_metadata_collection = pymongo.collection.Collection(
         db, results_metadata_collection_name
     )
 
+    logger.info(f"{results_collection_name}_{job_id}")
     while True:
         update_timeline_and_count(
             search_results_collection,
             search_results_metadata_collection,
+            job_id,
             time_range,
             output_result_type,
         )
@@ -486,8 +485,8 @@ async def send_preparing_for_query_msg(websocket):
     await send_type_only_msg(websocket, ServerMessageType.PREPARING_FOR_QUERY)
 
 
-async def send_query_started_msg(websocket):
-    await send_type_only_msg(websocket, ServerMessageType.QUERY_STARTED)
+async def send_query_started_msg(websocket, job_id: int):
+    await send_msg(websocket, ServerMessageType.QUERY_STARTED, {"jobID": job_id})
 
 
 async def send_error_msg(websocket, msg):
@@ -534,10 +533,12 @@ async def cancel_metadata_task(task, pending_tasks, query_done_event):
         query_done_event.clear()
 
 
+# FIXME: only clear specific job in meta
 def schedule_clear_results_task(
     db_uri: str,
     results_collection_name: str,
     results_metadata_collection_name: str,
+    job_id: int,
     pending_tasks,
 ):
     operation_task = asyncio.ensure_future(
@@ -546,6 +547,7 @@ def schedule_clear_results_task(
             db_uri,
             results_collection_name,
             results_metadata_collection_name,
+            job_id,
         )
     )
     pending_tasks.add(operation_task)
@@ -577,9 +579,6 @@ async def query_handler(
     _, sessionId = request_uri.split('/')
     logger.debug(f'query_handler: Received sessionId as {sessionId}')
     g_webui_connected[sessionId] = True
-
-    session_results_collection_name = f"{results_collection_name}_{sessionId}"
-    session_results_metadata_collection_name = f"{results_metadata_collection_name}_{sessionId}"
 
     pending = set()
     job_id = None
@@ -640,8 +639,9 @@ async def query_handler(
 
                         operation_task = schedule_clear_results_task(
                             results_cache_uri,
-                            session_results_collection_name,
-                            session_results_metadata_collection_name,
+                            results_collection_name,
+                            results_metadata_collection_name,
+                            job_id,
                             pending,
                         )
 
@@ -668,8 +668,9 @@ async def query_handler(
 
                         operation_task = schedule_clear_results_task(
                             results_cache_uri,
-                            session_results_collection_name,
-                            session_results_metadata_collection_name,
+                            results_collection_name,
+                            results_metadata_collection_name,
+                            job_id,
                             pending,
                         )
 
@@ -710,8 +711,9 @@ async def query_handler(
                             run_function_in_process(
                                 search_metadata_updater,
                                 results_cache_uri,
-                                session_results_collection_name,
-                                session_results_metadata_collection_name,
+                                results_collection_name,
+                                results_metadata_collection_name,
+                                job_id,
                                 time_range,
                                 output_result_type,
                                 initializer=load_query_done_event,
@@ -786,14 +788,13 @@ async def query_handler(
                         logger.debug("CLEAR_RESULTS_IN_PROGRESS_BEFORE_QUERY -> READY")
                         continue
 
-                    # Tell client we've started the query
-                    await send_query_started_msg(websocket)
-
                     # Submit query synchronously so that we're guaranteed to get
                     # the job ID back
-                    pending_query["results_collection_name"] = session_results_collection_name
                     job_id = submit_query(db_conn_conf, results_cache_uri,
-                                          session_results_collection_name, pending_query)
+                                          results_collection_name, pending_query)
+
+                    # Tell client we've started the query
+                    await send_query_started_msg(websocket, job_id)
 
                     operation_task = asyncio.ensure_future(
                         run_function_in_process(
@@ -811,8 +812,9 @@ async def query_handler(
                         run_function_in_process(
                             search_metadata_updater,
                             results_cache_uri,
-                            session_results_collection_name,
-                            session_results_metadata_collection_name,
+                            results_collection_name,
+                            results_metadata_collection_name,
+                            job_id,
                             {"begin": None, "end": None},
                             output_result_type,
                             initializer=load_query_done_event,
@@ -870,7 +872,6 @@ async def query_handler(
                     done.remove(operation_task)
                     await handle_operation_task_completion(websocket, operation_task)
                     operation_task = None
-                    job_id = None
 
                     await send_operation_complete_msg(websocket)
 
@@ -895,7 +896,6 @@ async def query_handler(
                         pending_query = None
 
                         cancel_query(db_conn_conf, job_id)
-                        job_id = None
 
                         # Signal metadata updater to stop
                         query_done_event.set()
@@ -945,8 +945,9 @@ async def query_handler(
                             run_function_in_process(
                                 search_metadata_updater,
                                 results_cache_uri,
-                                session_results_collection_name,
-                                session_results_metadata_collection_name,
+                                results_collection_name,
+                                results_metadata_collection_name,
+                                job_id,
                                 time_range,
                                 output_result_type,
                                 initializer=load_query_done_event,
