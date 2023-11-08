@@ -226,6 +226,20 @@ TEMPLATE_TEST_CASE("Encoding floats", "[ffi][encode-float]", eight_byte_encoded_
     decoded_value = decode_float_var(encoded_var);
     REQUIRE(decoded_value == value);
 
+    // Test out of range
+    if constexpr (std::is_same_v<TestType, four_byte_encoded_variable_t>) {
+        four_byte_encoded_variable_t encoded_var;
+        auto float_out_of_range = GENERATE(
+                std::string("0.33554431"),
+                std::string("-0.33554431"),
+                std::string("3.3554432"),
+                std::string("-3.3554432"),
+                std::string("60.000004"),
+                std::string("-60.000004")
+        );
+        REQUIRE(false == ffi::encode_float_string(float_out_of_range, encoded_var));
+    }
+
     // Test non-floats
     value = "";
     REQUIRE(!encode_float_string(value, encoded_var));

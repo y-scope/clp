@@ -66,6 +66,13 @@ bool encode_float_string(std::string_view str, encoded_variable_t& encoded_var) 
         return false;
     }
 
+    if constexpr (std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>) {
+        if (cFourByteEncodedFloatDigitsBitMask < digits) {
+            // digits is larger than maximum representable
+            return false;
+        }
+    }
+
     encoded_var = encode_float_properties<encoded_variable_t>(
             is_negative,
             digits,
@@ -127,10 +134,6 @@ encoded_variable_t encode_float_properties(
         return bit_cast<encoded_variable_t>(encoded_float);
     } else {
         // std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
-        if (digits > cFourByteEncodedFloatDigitsBitMask) {
-            // digits is larger than maximum representable
-            return false;
-        }
 
         // Encode into 32 bits with the following format (from MSB to LSB):
         // -  1 bit : is negative
