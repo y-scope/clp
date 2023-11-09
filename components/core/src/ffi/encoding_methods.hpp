@@ -83,7 +83,9 @@ eight_byte_encoded_variable_t encode_four_byte_float_as_eight_byte(
 );
 
 /**
- * Encodes a float value with the given properties into an encoded variable
+ * Encodes a float value with the given properties into an encoded variable.
+ * NOTE: It's the caller's responsibility to validate that the input is a
+ * representable float.
  * @tparam encoded_variable_t Type of the encoded variable
  * @param is_negative
  * @param digits The digits of the float, ignoring the decimal, as an
