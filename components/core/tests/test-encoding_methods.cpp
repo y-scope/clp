@@ -260,7 +260,7 @@ TEMPLATE_TEST_CASE("Encoding floats", "[ffi][encode-float]", eight_byte_encoded_
             "1.0F",
             "1.0l",
             "1.0L",
-            // "1.0.0"
+            "1.0.0"
     );
     REQUIRE(false == encode_float_string(non_floating_values, encoded_var));
 }
