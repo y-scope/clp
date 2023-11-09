@@ -226,43 +226,44 @@ TEMPLATE_TEST_CASE("Encoding floats", "[ffi][encode-float]", eight_byte_encoded_
     decoded_value = decode_float_var(encoded_var);
     REQUIRE(decoded_value == value);
 
-    // Test unrepresentable floating values
-    if constexpr (std::is_same_v<TestType, four_byte_encoded_variable_t>) {
-        four_byte_encoded_variable_t encoded_var;
-        std::string unrepresentable_values = GENERATE(
-                "0.33554431",
-                "-0.33554431",
-                "3.3554432",
-                "-3.3554432",
-                "60.000004",
-                "-60.000004"
-        );
-        REQUIRE(false == ffi::encode_float_string(unrepresentable_values, encoded_var));
+    SECTION("Test unrepresentable floats") {
+        if constexpr (std::is_same_v<TestType, four_byte_encoded_variable_t>) {
+            std::string const unrepresentable_values = GENERATE(
+                    "0.33554431",
+                    "-0.33554431",
+                    "3.3554432",
+                    "-3.3554432",
+                    "60.000004",
+                    "-60.000004"
+            );
+            REQUIRE(false == ffi::encode_float_string(unrepresentable_values, encoded_var));
+        }
     }
 
-    // Test non-floats
-    std::string non_floating_values = GENERATE(
-            "",
-            "a",
-            "-",
-            "+",
-            "-a",
-            "+a",
-            "--",
-            "++",
-            ".",
-            "1.",
-            " 1.0",
-            "1.0 ",
-            "- 1.0",
-            "+1.0",
-            "1.0f"
-            "1.0F",
-            "1.0l",
-            "1.0L",
-            "1.0.0"
-    );
-    REQUIRE(false == encode_float_string(non_floating_values, encoded_var));
+    SECTION("Test non-floats") {
+        std::string const non_floating_values = GENERATE(
+                "",
+                "a",
+                "-",
+                "+",
+                "-a",
+                "+a",
+                "--",
+                "++",
+                ".",
+                "1.",
+                " 1.0",
+                "1.0 ",
+                "- 1.0",
+                "+1.0",
+                "1.0f"
+                "1.0F",
+                "1.0l",
+                "1.0L",
+                "1.0.0"
+        );
+        REQUIRE(false == encode_float_string(non_floating_values, encoded_var));
+    }
 }
 
 TEMPLATE_TEST_CASE("encode_float_properties", "[ffi][encode-float]", eight_byte_encoded_variable_t,
