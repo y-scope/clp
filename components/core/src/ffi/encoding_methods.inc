@@ -65,7 +65,6 @@ bool encode_float_string(std::string_view str, encoded_variable_t& encoded_var) 
         // digits found
         return false;
     }
-
     if constexpr (std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>) {
         if (cFourByteEncodedFloatDigitsBitMask < digits) {
             // digits is larger than maximum representable

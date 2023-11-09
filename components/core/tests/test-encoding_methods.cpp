@@ -226,75 +226,43 @@ TEMPLATE_TEST_CASE("Encoding floats", "[ffi][encode-float]", eight_byte_encoded_
     decoded_value = decode_float_var(encoded_var);
     REQUIRE(decoded_value == value);
 
-    // Test out of range
+    // Test unrepresentable floating values
     if constexpr (std::is_same_v<TestType, four_byte_encoded_variable_t>) {
         four_byte_encoded_variable_t encoded_var;
-        auto float_out_of_range = GENERATE(
-                std::string("0.33554431"),
-                std::string("-0.33554431"),
-                std::string("3.3554432"),
-                std::string("-3.3554432"),
-                std::string("60.000004"),
-                std::string("-60.000004")
+        std::string unrepresentable_values = GENERATE(
+                "0.33554431",
+                "-0.33554431",
+                "3.3554432",
+                "-3.3554432",
+                "60.000004",
+                "-60.000004"
         );
-        REQUIRE(false == ffi::encode_float_string(float_out_of_range, encoded_var));
+        REQUIRE(false == ffi::encode_float_string(unrepresentable_values, encoded_var));
     }
 
     // Test non-floats
-    value = "";
-    REQUIRE(!encode_float_string(value, encoded_var));
-
-    value = "a";
-    REQUIRE(!encode_float_string(value, encoded_var));
-
-    value = "-";
-    REQUIRE(!encode_float_string(value, encoded_var));
-
-    value = "+";
-    REQUIRE(!encode_float_string(value, encoded_var));
-
-    value = "-a";
-    REQUIRE(!encode_float_string(value, encoded_var));
-
-    value = "+a";
-    REQUIRE(!encode_float_string(value, encoded_var));
-
-    value = "--";
-    REQUIRE(!encode_float_string(value, encoded_var));
-
-    value = "++";
-    REQUIRE(!encode_float_string(value, encoded_var));
-
-    // Test unrepresentable values
-    value = ".";
-    REQUIRE(!encode_float_string(value, encoded_var));
-
-    value = "1.";
-    REQUIRE(!encode_float_string(value, encoded_var));
-
-    value = " 1.0";
-    REQUIRE(!encode_float_string(value, encoded_var));
-
-    value = "- 1.0";
-    REQUIRE(!encode_float_string(value, encoded_var));
-
-    value = "1.0 ";
-    REQUIRE(!encode_float_string(value, encoded_var));
-
-    value = "+1.0";
-    REQUIRE(!encode_float_string(value, encoded_var));
-
-    value = "1.0f";
-    REQUIRE(!encode_float_string(value, encoded_var));
-
-    value = "1.0F";
-    REQUIRE(!encode_float_string(value, encoded_var));
-
-    value = "1.0l";
-    REQUIRE(!encode_float_string(value, encoded_var));
-
-    value = "1.0L";
-    REQUIRE(!encode_float_string(value, encoded_var));
+    std::string non_floating_values = GENERATE(
+            "",
+            "a",
+            "-",
+            "+",
+            "-a",
+            "+a",
+            "--",
+            "++",
+            ".",
+            "1.",
+            " 1.0",
+            "1.0 ",
+            "- 1.0",
+            "+1.0",
+            "1.0f"
+            "1.0F",
+            "1.0l",
+            "1.0L",
+            // "1.0.0"
+    );
+    REQUIRE(false == encode_float_string(non_floating_values, encoded_var));
 }
 
 TEMPLATE_TEST_CASE("encode_float_properties", "[ffi][encode-float]", eight_byte_encoded_variable_t,
