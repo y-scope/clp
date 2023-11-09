@@ -228,7 +228,7 @@ TEMPLATE_TEST_CASE("Encoding floats", "[ffi][encode-float]", eight_byte_encoded_
 
     SECTION("Test unrepresentable floats") {
         if constexpr (std::is_same_v<TestType, four_byte_encoded_variable_t>) {
-            std::string const unrepresentable_values = GENERATE(
+            string const unrepresentable_values = GENERATE(
                     "0.33554431",
                     "-0.33554431",
                     "3.3554432",
@@ -241,7 +241,7 @@ TEMPLATE_TEST_CASE("Encoding floats", "[ffi][encode-float]", eight_byte_encoded_
     }
 
     SECTION("Test non-floats") {
-        std::string const non_floating_values = GENERATE(
+        string const non_floating_values = GENERATE(
                 "",
                 "a",
                 "-",
