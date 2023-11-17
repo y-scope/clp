@@ -233,70 +233,73 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
         while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos, is_var)) {
             query_tokens.emplace_back(processed_search_string, begin_pos, end_pos, is_var);
         }
+        // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in
+        // the middle since we fall back to decompression + wildcard matching for
+        // those.
+        vector<QueryToken*> ambiguous_tokens;
+        for (auto& query_token : query_tokens) {
+            if (!query_token.has_greedy_wildcard_in_middle() && query_token.is_ambiguous_token()) {
+                ambiguous_tokens.push_back(&query_token);
+            }
+        }
+        // Generate a sub-query for each combination of ambiguous tokens
+        // E.g., if there are two ambiguous tokens each of which could be a logtype or variable, we need to create:
+        // - (token1 as logtype) (token2 as logtype)
+        // - (token1 as logtype) (token2 as var)
+        // - (token1 as var) (token2 as logtype)
+        // - (token1 as var) (token2 as var)
+        SubQuery sub_query;
+        string logtype;
+        bool type_of_one_token_changed = true;
+        while (type_of_one_token_changed) {
+            sub_query.clear();
+
+            // Compute logtypes and variables for query
+            auto matchability = generate_logtypes_and_vars_for_subquery(archive,
+                                                                        processed_search_string,
+                                                                        query_tokens,
+                                                                        query.get_ignore_case(),
+                                                                        sub_query,
+                                                                        use_heuristic);
+            switch (matchability) {
+                case SubQueryMatchabilityResult::SupercedesAllSubQueries:
+                    // Clear all sub-queries since they will be superseded by this
+                    // sub-query
+                    query.clear_sub_queries();
+
+                    // Since other sub-queries will be superseded by this one, we
+                    // can stop processing now
+                    return true;
+                case SubQueryMatchabilityResult::MayMatch:
+                    query.add_sub_query(sub_query);
+                    break;
+                case SubQueryMatchabilityResult::WontMatch:
+                default:
+                    // Do nothing
+                    break;
+            }
+
+            // Update combination of ambiguous tokens
+            type_of_one_token_changed = false;
+            for (auto* ambiguous_token : ambiguous_tokens) {
+                if (ambiguous_token->change_to_next_possible_type()) {
+                    type_of_one_token_changed = true;
+                    break;
+                }
+            }
+        }
     } else {
-        while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos, is_var,
-                                                forward_lexer, reverse_lexer)) {
-            query_tokens.emplace_back(processed_search_string, begin_pos, end_pos, is_var);
-        }
-    }
+        // Generate all possible search types for a query
+        // *...*...*...*
+        for (uint32_t i = 0; i < processed_search_string.size(); i++) {
+            char& current_char = processed_search_string[i];
+            if (current_char == '*') {
 
-    // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in
-    // the middle since we fall back to decompression + wildcard matching for
-    // those.
-    vector<QueryToken*> ambiguous_tokens;
-    for (auto& query_token : query_tokens) {
-        if (!query_token.has_greedy_wildcard_in_middle() && query_token.is_ambiguous_token()) {
-            ambiguous_tokens.push_back(&query_token);
-        }
-    }
+            } else {
 
-    // Generate a sub-query for each combination of ambiguous tokens
-    // E.g., if there are two ambiguous tokens each of which could be a logtype or variable, we need to create:
-    // - (token1 as logtype) (token2 as logtype)
-    // - (token1 as logtype) (token2 as var)
-    // - (token1 as var) (token2 as logtype)
-    // - (token1 as var) (token2 as var)
-    SubQuery sub_query;
-    string logtype;
-    bool type_of_one_token_changed = true;
-    while (type_of_one_token_changed) {
-        sub_query.clear();
-
-        // Compute logtypes and variables for query
-        auto matchability = generate_logtypes_and_vars_for_subquery(archive,
-                                                                    processed_search_string,
-                                                                    query_tokens,
-                                                                    query.get_ignore_case(),
-                                                                    sub_query,
-                                                                    use_heuristic);
-        switch (matchability) {
-            case SubQueryMatchabilityResult::SupercedesAllSubQueries:
-                // Clear all sub-queries since they will be superseded by this
-                // sub-query
-                query.clear_sub_queries();
-
-                // Since other sub-queries will be superseded by this one, we
-                // can stop processing now
-                return true;
-            case SubQueryMatchabilityResult::MayMatch:
-                query.add_sub_query(sub_query);
-                break;
-            case SubQueryMatchabilityResult::WontMatch:
-            default:
-                // Do nothing
-                break;
-        }
-
-        // Update combination of ambiguous tokens
-        type_of_one_token_changed = false;
-        for (auto* ambiguous_token : ambiguous_tokens) {
-            if (ambiguous_token->change_to_next_possible_type()) {
-                type_of_one_token_changed = true;
-                break;
             }
         }
     }
-
     return query.contains_sub_queries();
 }
 
