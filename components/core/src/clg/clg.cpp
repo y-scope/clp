@@ -137,10 +137,14 @@ static bool open_archive (const string& archive_path, Archive& archive_reader) {
     return true;
 }
 
-static bool search (const vector<string>& search_strings, CommandLineArguments& command_line_args,
-                    Archive& archive,
-                    log_surgeon::lexers::ByteLexer& forward_lexer,
-                    log_surgeon::lexers::ByteLexer& reverse_lexer, bool use_heuristic) {
+static bool search(
+        vector<string> const& search_strings,
+        CommandLineArguments& command_line_args,
+        Archive& archive,
+        log_surgeon::lexers::ByteLexer& forward_lexer,
+        log_surgeon::lexers::ByteLexer& reverse_lexer,
+        bool use_heuristic
+) {
     ErrorCode error_code;
     auto search_begin_ts = command_line_args.get_search_begin_ts();
     auto search_end_ts = command_line_args.get_search_end_ts();
@@ -152,8 +156,7 @@ static bool search (const vector<string>& search_strings, CommandLineArguments& 
         bool is_superseding_query = false;
         for (const auto& search_string : search_strings) {
             Query query;
-            if (Grep::process_raw_query(archive, search_string, search_begin_ts, search_end_ts,
-                                        command_line_args.ignore_case(), query, forward_lexer,
+            if (Grep::process_raw_query(archive, search_string, search_begin_ts, search_end_ts, command_line_args.ignore_case(), query, forward_lexer,
                                         reverse_lexer, use_heuristic)) {
                 no_queries_match = false;
 
@@ -421,6 +424,7 @@ int main (int argc, const char* argv[]) {
         if (!open_archive(archive_path.string(), archive_reader)) {
             return -1;
         }
+
         // Generate lexer if schema file exists
         auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
         bool use_heuristic = true;
@@ -436,18 +440,17 @@ int main (int argc, const char* argv[]) {
             if(num_bytes_read < max_map_schema_length) {
                 auto forward_lexer_map_it = forward_lexer_map.find(buf);
                 auto reverse_lexer_map_it = reverse_lexer_map.find(buf);
-                // if there is a chance there might be a difference make a new
-                // lexer as it's pretty fast to create
+                // if there is a chance there might be a difference make a new lexer as it's pretty fast to create
                 if (forward_lexer_map_it == forward_lexer_map.end()) {
                     // Create forward lexer
-                    auto insert_result = forward_lexer_map.emplace(buf,
-                                                                   log_surgeon::lexers::ByteLexer());
+                    auto insert_result
+                            = forward_lexer_map.emplace(buf, log_surgeon::lexers::ByteLexer());
                     forward_lexer_ptr = &insert_result.first->second;
                     load_lexer_from_file(schema_file_path, false, *forward_lexer_ptr);
 
                     // Create reverse lexer
-                    insert_result = reverse_lexer_map.emplace(buf,
-                                                              log_surgeon::lexers::ByteLexer());
+                    insert_result
+                            = reverse_lexer_map.emplace(buf, log_surgeon::lexers::ByteLexer());
                     reverse_lexer_ptr = &insert_result.first->second;
                     load_lexer_from_file(schema_file_path, true, *reverse_lexer_ptr);
                 } else {
@@ -467,8 +470,7 @@ int main (int argc, const char* argv[]) {
         }
 
         // Perform search
-        if (!search(search_strings, command_line_args, archive_reader, *forward_lexer_ptr,
-                    *reverse_lexer_ptr, use_heuristic)) {
+        if (!search(search_strings, command_line_args, archive_reader, *forward_lexer_ptr, *reverse_lexer_ptr, use_heuristic)) {
             return -1;
         }
         archive_reader.close();

@@ -4,7 +4,7 @@
 #include <fmt/core.h>
 
 // yaml-cpp
-#include <yaml-cpp/yaml.h>
+#include <yaml-cpp/include/yaml-cpp/yaml.h>
 
 using std::exception;
 using std::invalid_argument;

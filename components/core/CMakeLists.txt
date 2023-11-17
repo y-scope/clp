@@ -61,9 +61,6 @@ else()
 endif()
 message(STATUS "Building using ${CLP_LIBS_STRING} libraries")
 
-# Add log surgeon
-add_subdirectory(submodules/log-surgeon EXCLUDE_FROM_ALL)
-
 # Link against c++fs if required by the compiler being used
 set(STD_FS_LIBS "")
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -128,6 +125,9 @@ if(LibArchive_FOUND)
 else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for LibArchive")
 endif()
+
+# Add log surgeon
+add_subdirectory(submodules/log-surgeon EXCLUDE_FROM_ALL)
 
 # Find and setup MariaDBClient library
 if(CLP_USE_STATIC_LIBS)

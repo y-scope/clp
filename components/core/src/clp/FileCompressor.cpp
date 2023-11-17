@@ -25,7 +25,6 @@
 using ir::has_ir_stream_magic_number;
 using ir::LogEventDeserializer;
 using log_surgeon::LogEventView;
-using log_surgeon::ReaderParser;
 using log_surgeon::Reader;
 using log_surgeon::ReaderParser;
 using std::cout;
@@ -127,17 +126,19 @@ namespace clp {
         bool succeeded = true;
         if (is_utf8_sequence(utf8_validation_buf_len, utf8_validation_buf)) {
             if (use_heuristic) {
-                parse_and_encode_with_heuristic(target_data_size_of_dicts, archive_user_config,
-                                                target_encoded_file_size,
+                parse_and_encode_with_heuristic(target_data_size_of_dicts, archive_user_config, target_encoded_file_size,
                                                 file_to_compress.get_path_for_compression(),
-                                                file_to_compress.get_group_id(), archive_writer,
-                                                m_file_reader);
+                                                file_to_compress.get_group_id(), archive_writer, m_file_reader);
             } else {
-                parse_and_encode_with_library(target_data_size_of_dicts, archive_user_config,
-                                              target_encoded_file_size,
-                                              file_to_compress.get_path_for_compression(),
-                                              file_to_compress.get_group_id(), archive_writer,
-                                              m_file_reader);
+                parse_and_encode_with_library(
+                        target_data_size_of_dicts,
+                        archive_user_config,
+                        target_encoded_file_size,
+                        file_to_compress.get_path_for_compression(),
+                        file_to_compress.get_group_id(),
+                        archive_writer,
+                        m_file_reader
+                );
             }
         } else {
             if (false == try_compressing_as_archive(target_data_size_of_dicts, archive_user_config, target_encoded_file_size, file_to_compress,
@@ -156,12 +157,15 @@ namespace clp {
         return succeeded;
     }
 
-    void FileCompressor::parse_and_encode_with_library (size_t target_data_size_of_dicts,
+    void FileCompressor::parse_and_encode_with_library(
+            size_t target_data_size_of_dicts,
             streaming_archive::writer::Archive::UserConfig& archive_user_config,
-            size_t target_encoded_file_size, const string& path_for_compression,
-            group_id_t group_id, streaming_archive::writer::Archive& archive_writer,
-            ReaderInterface& reader)
-    {
+            size_t target_encoded_file_size,
+            string const& path_for_compression,
+            group_id_t group_id,
+            streaming_archive::writer::Archive& archive_writer,
+            ReaderInterface& reader
+    ) {
         archive_writer.m_target_data_size_of_dicts = target_data_size_of_dicts;
         archive_writer.m_archive_user_config = archive_user_config;
         archive_writer.m_path_for_compression = path_for_compression;
@@ -302,11 +306,15 @@ namespace clp {
                                                     boost_path_for_compression.string(), file_to_compress.get_group_id(), archive_writer,
                                                     m_libarchive_file_reader);
                 } else {
-                    parse_and_encode_with_library(target_data_size_of_dicts, archive_user_config,
-                                                  target_encoded_file_size,
-                                                  boost_path_for_compression.string(),
-                                                  file_to_compress.get_group_id(), archive_writer,
-                                                  m_libarchive_file_reader);
+                    parse_and_encode_with_library(
+                            target_data_size_of_dicts,
+                            archive_user_config,
+                            target_encoded_file_size,
+                            boost_path_for_compression.string(),
+                            file_to_compress.get_group_id(),
+                            archive_writer,
+                            m_libarchive_file_reader
+                    );
                 }
             } else if (has_ir_stream_magic_number({utf8_validation_buf, utf8_validation_buf_len})) {
                 // Remove .clp suffix if found

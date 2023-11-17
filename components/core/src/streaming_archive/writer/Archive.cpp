@@ -290,8 +290,7 @@ namespace streaming_archive::writer {
             }
         }
         if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts) {
-            clp::split_file_and_archive(m_archive_user_config, m_path_for_compression, m_group_id,
-                                        timestamp_pattern, *this);
+            clp::split_file_and_archive(m_archive_user_config, m_path_for_compression, m_group_id, timestamp_pattern, *this);
         } else if (m_file->get_encoded_size_in_bytes() >= m_target_encoded_file_size) {
             clp::split_file(m_path_for_compression, m_group_id, timestamp_pattern, *this);
         }
@@ -300,26 +299,24 @@ namespace streaming_archive::writer {
         m_logtype_dict_entry.clear();
         size_t num_uncompressed_bytes = 0;
         // Timestamp is included in the uncompressed message size
-        uint32_t start_pos = log_view.get_log_output_buffer()->get_token(0).m_start_pos;
+        auto const& log_output_buffer = log_view.get_log_output_buffer();
+        uint32_t start_pos = log_output_buffer->get_token(0).m_start_pos;
         if (timestamp_pattern == nullptr) {
-            start_pos = log_view.get_log_output_buffer()->get_token(1).m_start_pos;
+            start_pos = log_output_buffer->get_token(1).m_start_pos;
         }
-        uint32_t end_pos = log_view.get_log_output_buffer()->get_token(
-                log_view.get_log_output_buffer()->pos() - 1).m_end_pos;
+        uint32_t end_pos = log_output_buffer->get_token(log_output_buffer->pos() - 1).m_end_pos;
         if (start_pos <= end_pos) {
             num_uncompressed_bytes = end_pos - start_pos;
         } else {
-            num_uncompressed_bytes =
-                    log_view.get_log_output_buffer()->get_token(0).m_buffer_size - start_pos +
-                    end_pos;
+            num_uncompressed_bytes
+                    = log_output_buffer->get_token(0).m_buffer_size - start_pos + end_pos;
         }
-        for (uint32_t i = 1; i < log_view.get_log_output_buffer()->pos(); i++) {
-            log_surgeon::Token& token = log_view.get_log_output_buffer()->get_mutable_token(i);
+        for (uint32_t i = 1; i < log_output_buffer->pos(); i++) {
+            log_surgeon::Token& token = log_output_buffer->get_mutable_token(i);
             int token_type = token.m_type_ids_ptr->at(0);
-            if (log_view.get_log_output_buffer()->has_delimiters() &&
-                  (timestamp_pattern != nullptr || i > 1) &&
-                  token_type != (int) log_surgeon::SymbolID::TokenUncaughtStringID &&
-                  token_type != (int) log_surgeon::SymbolID::TokenNewlineId)
+            if (log_output_buffer->has_delimiters() && (timestamp_pattern != nullptr || i > 1)
+                && token_type != static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID)
+                && token_type != static_cast<int>(log_surgeon::SymbolID::TokenNewlineId))
             {
                 m_logtype_dict_entry.add_constant(token.get_delimiter(), 0, 1);
                 if (token.m_start_pos == token.m_buffer_size - 1) {
@@ -329,15 +326,18 @@ namespace streaming_archive::writer {
                 }
             }
             switch (token_type) {
-                case (int) log_surgeon::SymbolID::TokenNewlineId:
-                case (int) log_surgeon::SymbolID::TokenUncaughtStringID: {
+                case static_cast<int>(log_surgeon::SymbolID::TokenNewlineId):
+                case static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID): {
                     m_logtype_dict_entry.add_constant(token.to_string(), 0, token.get_length());
                     break;
                 }
-                case (int) log_surgeon::SymbolID::TokenIntId: {
+                case static_cast<int>(log_surgeon::SymbolID::TokenIntId): {
                     encoded_variable_t encoded_var;
                     if (!EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                            token.to_string(), encoded_var)) {
+                                token.to_string(),
+                                encoded_var
+                        ))
+                    {
                         variable_dictionary_id_t id;
                         m_var_dict.add_entry(token.to_string(), id);
                         encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
@@ -348,10 +348,13 @@ namespace streaming_archive::writer {
                     m_encoded_vars.push_back(encoded_var);
                     break;
                 }
-                case (int) log_surgeon::SymbolID::TokenFloatId: {
+                case static_cast<int>(log_surgeon::SymbolID::TokenFloatId): {
                     encoded_variable_t encoded_var;
                     if (!EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                            token.to_string(), encoded_var)) {
+                                token.to_string(),
+                                encoded_var
+                        ))
+                    {
                         variable_dictionary_id_t id;
                         m_var_dict.add_entry(token.to_string(), id);
                         encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
@@ -363,8 +366,7 @@ namespace streaming_archive::writer {
                     break;
                 }
                 default: {
-                    // Variable string looks like a dictionary variable, so
-                    // encode it as so
+                    // Variable string looks like a dictionary variable, so encode it as so
                     encoded_variable_t encoded_var;
                     variable_dictionary_id_t id;
                     m_var_dict.add_entry(token.to_string(), id);
@@ -380,8 +382,8 @@ namespace streaming_archive::writer {
         if (!m_logtype_dict_entry.get_value().empty()) {
             logtype_dictionary_id_t logtype_id;
             m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
-            m_file->write_encoded_msg(timestamp, logtype_id, m_encoded_vars, m_var_ids,
-                                      num_uncompressed_bytes);
+            m_file->write_encoded_msg(timestamp, logtype_id, m_encoded_vars, m_var_ids, num_uncompressed_bytes);
+
             update_segment_indices(logtype_id, m_var_ids);
         }
     }
@@ -429,8 +431,7 @@ namespace streaming_archive::writer {
             m_var_ids_in_segment_for_files_with_timestamps.insert_all(var_ids);
         } else {
             m_logtype_ids_for_file_with_unassigned_segment.insert(logtype_id);
-            m_var_ids_for_file_with_unassigned_segment.insert(var_ids.cbegin(),
-                                                              var_ids.cend());
+            m_var_ids_for_file_with_unassigned_segment.insert(var_ids.cbegin(), var_ids.cend());
         }
     }
 

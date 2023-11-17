@@ -93,11 +93,15 @@ namespace clp {
 
             bool compression_successful;
             try {
-                compression_successful = compress(command_line_args, files_to_compress,
-                                                  empty_directory_paths, grouped_files_to_compress,
-                                                  command_line_args.get_target_encoded_file_size(),
-                                                  std::move(reader_parser),
-                                                  command_line_args.get_use_heuristic());
+                compression_successful = compress(
+                        command_line_args,
+                        files_to_compress,
+                        empty_directory_paths,
+                        grouped_files_to_compress,
+                        command_line_args.get_target_encoded_file_size(),
+                        std::move(reader_parser),
+                        command_line_args.get_use_heuristic()
+                );
             } catch (TraceableException& e) {
                 ErrorCode error_code = e.get_error_code();
                 if (ErrorCode_errno == error_code) {
