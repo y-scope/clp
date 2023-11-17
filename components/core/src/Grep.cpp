@@ -235,6 +235,16 @@ bool QueryToken::change_to_next_possible_type () {
     }
 }
 
+/**
+ * Wraps the tokens returned from the log_surgeon lexer, and stores the variable
+ * ids of the tokens in a search query in a set. This allows for optimized
+ * search performance.
+ */
+class SearchToken : public log_surgeon::Token {
+public:
+    std::set<int> m_type_ids_set;
+};
+
 // Local prototypes
 /**
  * Process a QueryToken that is definitely a variable
