@@ -9,7 +9,6 @@
 // Project headers
 #include "EncodedVariableInterpreter.hpp"
 #include "ir/parsing.hpp"
-#include "QueryToken.hpp"
 #include "StringReader.hpp"
 #include "Utils.hpp"
 
@@ -26,6 +25,215 @@ enum class SubQueryMatchabilityResult {
     WontMatch, // The subquery has no chance of matching a message
     SupercedesAllSubQueries // The subquery will cause all messages to be matched
 };
+
+// Class representing a token in a query. It is used to interpret a token in user's search string.
+class QueryToken {
+public:
+    // Constructors
+    QueryToken (const string& query_string, size_t begin_pos, size_t end_pos, bool is_var);
+
+    // Methods
+    bool cannot_convert_to_non_dict_var () const;
+    bool contains_wildcards () const;
+    bool has_greedy_wildcard_in_middle () const;
+    bool has_prefix_greedy_wildcard () const;
+    bool has_suffix_greedy_wildcard () const;
+    bool is_ambiguous_token () const;
+    bool is_float_var () const;
+    bool is_int_var () const;
+    bool is_var () const;
+    bool is_wildcard () const;
+
+    size_t get_begin_pos () const;
+    size_t get_end_pos () const;
+    const string& get_value () const;
+
+    bool change_to_next_possible_type ();
+
+private:
+    // Types
+    // Type for the purpose of generating different subqueries. E.g., if a token is of type DictOrIntVar, it would generate a different subquery than
+    // if it was of type Logtype.
+    enum class Type {
+        Wildcard,
+        // Ambiguous indicates the token can be more than one of the types listed below
+        Ambiguous,
+        Logtype,
+        DictionaryVar,
+        FloatVar,
+        IntVar
+    };
+
+    // Variables
+    bool m_cannot_convert_to_non_dict_var;
+    bool m_contains_wildcards;
+    bool m_has_greedy_wildcard_in_middle;
+    bool m_has_prefix_greedy_wildcard;
+    bool m_has_suffix_greedy_wildcard;
+
+    size_t m_begin_pos;
+    size_t m_end_pos;
+    string m_value;
+
+    // Type if variable has unambiguous type
+    Type m_type;
+    // Types if variable type is ambiguous
+    vector<Type> m_possible_types;
+    // Index of the current possible type selected for generating a subquery
+    size_t m_current_possible_type_ix;
+};
+
+QueryToken::QueryToken (const string& query_string, const size_t begin_pos, const size_t end_pos,
+                        const bool is_var) : m_current_possible_type_ix(0)
+{
+    m_begin_pos = begin_pos;
+    m_end_pos = end_pos;
+    m_value.assign(query_string, m_begin_pos, m_end_pos - m_begin_pos);
+
+    // Set wildcard booleans and determine type
+    if ("*" == m_value) {
+        m_has_prefix_greedy_wildcard = true;
+        m_has_suffix_greedy_wildcard = false;
+        m_has_greedy_wildcard_in_middle = false;
+        m_contains_wildcards = true;
+        m_type = Type::Wildcard;
+    } else {
+        m_has_prefix_greedy_wildcard = ('*' == m_value[0]);
+        m_has_suffix_greedy_wildcard = ('*' == m_value[m_value.length() - 1]);
+
+        m_has_greedy_wildcard_in_middle = false;
+        for (size_t i = 1; i < m_value.length() - 1; ++i) {
+            if ('*' == m_value[i]) {
+                m_has_greedy_wildcard_in_middle = true;
+                break;
+            }
+        }
+
+        m_contains_wildcards = (m_has_prefix_greedy_wildcard || m_has_suffix_greedy_wildcard ||
+                                m_has_greedy_wildcard_in_middle);
+
+        if (!is_var) {
+            if (!m_contains_wildcards) {
+                m_type = Type::Logtype;
+            } else {
+                m_type = Type::Ambiguous;
+                m_possible_types.push_back(Type::Logtype);
+                m_possible_types.push_back(Type::IntVar);
+                m_possible_types.push_back(Type::FloatVar);
+                m_possible_types.push_back(Type::DictionaryVar);
+            }
+        } else {
+            string value_without_wildcards = m_value;
+            if (m_has_prefix_greedy_wildcard) {
+                value_without_wildcards = value_without_wildcards.substr(1);
+            }
+            if (m_has_suffix_greedy_wildcard) {
+                value_without_wildcards.resize(value_without_wildcards.length() - 1);
+            }
+
+            encoded_variable_t encoded_var;
+            bool converts_to_non_dict_var = false;
+            if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(
+                    value_without_wildcards, encoded_var) ||
+                EncodedVariableInterpreter::convert_string_to_representable_float_var(
+                        value_without_wildcards, encoded_var)) {
+                converts_to_non_dict_var = true;
+            }
+
+            if (!converts_to_non_dict_var) {
+                // Dictionary variable
+                m_type = Type::DictionaryVar;
+                m_cannot_convert_to_non_dict_var = true;
+            } else {
+                m_type = Type::Ambiguous;
+                m_possible_types.push_back(Type::IntVar);
+                m_possible_types.push_back(Type::FloatVar);
+                m_possible_types.push_back(Type::DictionaryVar);
+                m_cannot_convert_to_non_dict_var = false;
+            }
+        }
+    }
+}
+
+bool QueryToken::cannot_convert_to_non_dict_var () const {
+    return m_cannot_convert_to_non_dict_var;
+}
+
+bool QueryToken::contains_wildcards () const {
+    return m_contains_wildcards;
+}
+
+bool QueryToken::has_greedy_wildcard_in_middle () const {
+    return m_has_greedy_wildcard_in_middle;
+}
+
+bool QueryToken::has_prefix_greedy_wildcard () const {
+    return m_has_prefix_greedy_wildcard;
+}
+
+bool QueryToken::has_suffix_greedy_wildcard () const {
+    return m_has_suffix_greedy_wildcard;
+}
+
+bool QueryToken::is_ambiguous_token () const {
+    return Type::Ambiguous == m_type;
+}
+
+bool QueryToken::is_float_var () const {
+    Type type;
+    if (Type::Ambiguous == m_type) {
+        type = m_possible_types[m_current_possible_type_ix];
+    } else {
+        type = m_type;
+    }
+    return Type::FloatVar == type;
+}
+
+bool QueryToken::is_int_var () const {
+    Type type;
+    if (Type::Ambiguous == m_type) {
+        type = m_possible_types[m_current_possible_type_ix];
+    } else {
+        type = m_type;
+    }
+    return Type::IntVar == type;
+}
+
+bool QueryToken::is_var () const {
+    Type type;
+    if (Type::Ambiguous == m_type) {
+        type = m_possible_types[m_current_possible_type_ix];
+    } else {
+        type = m_type;
+    }
+    return (Type::IntVar == type || Type::FloatVar == type || Type::DictionaryVar == type);
+}
+
+bool QueryToken::is_wildcard () const {
+    return Type::Wildcard == m_type;
+}
+
+size_t QueryToken::get_begin_pos () const {
+    return m_begin_pos;
+}
+
+size_t QueryToken::get_end_pos () const {
+    return m_end_pos;
+}
+
+const string& QueryToken::get_value () const {
+    return m_value;
+}
+
+bool QueryToken::change_to_next_possible_type () {
+    if (m_current_possible_type_ix < m_possible_types.size() - 1) {
+        ++m_current_possible_type_ix;
+        return true;
+    } else {
+        m_current_possible_type_ix = 0;
+        return false;
+    }
+}
 
 // Local prototypes
 /**
@@ -184,13 +392,17 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
     return SubQueryMatchabilityResult::MayMatch;
 }
 
-bool Grep::process_raw_query (const Archive& archive, const string& search_string,
-                              epochtime_t search_begin_ts, epochtime_t search_end_ts,
-                              bool ignore_case,
-                              Query& query, log_surgeon::lexers::ByteLexer& forward_lexer,
-                              log_surgeon::lexers::ByteLexer& reverse_lexer,
-                              bool use_heuristic)
-{
+bool Grep::process_raw_query(
+        Archive const& archive,
+        string const& search_string,
+        epochtime_t search_begin_ts,
+        epochtime_t search_end_ts,
+        bool ignore_case,
+        Query& query,
+        log_surgeon::lexers::ByteLexer& forward_lexer,
+        log_surgeon::lexers::ByteLexer& reverse_lexer,
+        bool use_heuristic
+) {
     // Set properties which require no processing
     query.set_search_begin_timestamp(search_begin_ts);
     query.set_search_end_timestamp(search_end_ts);
@@ -227,9 +439,7 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
         }
     }
 
-    // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in
-    // the middle since we fall back to decompression + wildcard matching for
-    // those.
+    // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in the middle since we fall-back to decompression + wildcard matching for those.
     vector<QueryToken*> ambiguous_tokens;
     for (auto& query_token : query_tokens) {
         if (!query_token.has_greedy_wildcard_in_middle() && query_token.is_ambiguous_token()) {

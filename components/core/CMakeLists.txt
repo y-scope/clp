@@ -264,8 +264,6 @@ set(SOURCE_FILES_clp
         src/Profiler.hpp
         src/Query.cpp
         src/Query.hpp
-        src/QueryToken.cpp
-        src/QueryToken.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
         src/spdlog_with_specializations.hpp
@@ -419,8 +417,6 @@ set(SOURCE_FILES_clg
         src/Profiler.hpp
         src/Query.cpp
         src/Query.hpp
-        src/QueryToken.cpp
-        src/QueryToken.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
         src/spdlog_with_specializations.hpp
@@ -558,8 +554,6 @@ set(SOURCE_FILES_clo
         src/Profiler.hpp
         src/Query.cpp
         src/Query.hpp
-        src/QueryToken.cpp
-        src/QueryToken.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
         src/spdlog_with_specializations.hpp
@@ -755,8 +749,6 @@ set(SOURCE_FILES_unitTest
         src/Profiler.hpp
         src/Query.cpp
         src/Query.hpp
-        src/QueryToken.cpp
-        src/QueryToken.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
         src/spdlog_with_specializations.hpp
