@@ -62,8 +62,20 @@ jobs:
       - name: Workaround actions/runner-images/issues/6775
         run: chown $(id -u):$(id -g) -R .
 
+      - name: Filter relevant changes
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            src:
+              - '.github/workflows/clp-dependency-image-build.yaml'
+              - 'components/core/tools/docker-images/clp-env-base-bionic/**'
+              - 'components/core/tools/scripts/lib_install/*.sh'
+              - 'components/core/tools/scripts/lib_install/ubuntu-bionic/**'
+
       - name: Build and Push Ubuntu Bionic Docker Image
         uses: ./.github/actions/clp-docker-build-push-action
+        if: steps.filter.outputs.src == 'true'
         with:
           image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-bionic
           context: components/core/
