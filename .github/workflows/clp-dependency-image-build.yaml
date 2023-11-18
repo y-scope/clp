@@ -18,7 +18,9 @@ jobs:
   build-ubuntu-focal:
     runs-on: ubuntu-20.04
     name: Build Image - Ubuntu Focal
-    steps:
+    permissions:
+      pull-requests: read
+    steps:  
       - name: Checkout
         uses: actions/checkout@v3
         with:
@@ -26,9 +28,21 @@ jobs:
 
       - name: Workaround actions/runner-images/issues/6775
         run: chown $(id -u):$(id -g) -R .
+
+      - name: Filter relevant changes
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            src:
+              - '.github/workflows/clp-dependency-image-build.yaml'
+              - 'components/core/tools/docker-images/clp-env-base-focal/**'
+              - 'components/core/tools/scripts/lib_install/*.sh'
+              - 'components/core/tools/scripts/lib_install/ubuntu-focal/**'
     
       - name: Build and Push Ubuntu Focal Docker Image
         uses: ./.github/actions/clp-docker-build-push-action
+        if: steps.filter.outputs.src == 'true'
         with:
           image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-focal
           context: components/core/
