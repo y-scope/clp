@@ -8,6 +8,8 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   curl \
   build-essential \
   git \
+  g++-10 \
+  gcc-10 \
   libboost-filesystem-dev \
   libboost-iostreams-dev \
   libboost-program-options-dev \

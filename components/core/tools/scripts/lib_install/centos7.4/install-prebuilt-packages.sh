@@ -14,5 +14,5 @@ yum install -y \
 
 # Install packages from CentOS' software collections repository (centos-release-scl)
 yum install -y \
-  devtoolset-9 \
+  devtoolset-10 \
   rh-git227
