@@ -6,6 +6,11 @@ on:
       - 'components/core/tools/docker-images/**'
       - 'components/core/tools/scripts/lib_install/**'
       - '.github/workflows/clp-dependency-image-build.yaml'
+  pull_request:
+    paths:
+      - 'components/core/tools/docker-images/**'
+      - 'components/core/tools/scripts/lib_install/**'
+      - '.github/workflows/clp-dependency-image-build.yaml'
   workflow_dispatch:
 
 env:
@@ -53,6 +58,8 @@ jobs:
   build-ubuntu-bionic:
     runs-on: ubuntu-20.04
     name: Build Image - Ubuntu Bionic
+    permissions:
+      pull-requests: read
     steps:
       - name: Checkout
         uses: actions/checkout@v3
