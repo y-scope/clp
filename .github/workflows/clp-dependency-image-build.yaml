@@ -112,7 +112,7 @@ jobs:
             src:
               - '${{env.CORE_COMPONENT_DOCKER_IMGS_DIR}}/clp-env-base-centos7.4/**'
               - '${{env.CORE_COMPONENT_LIB_INSTALL_DIR}}/*.sh'
-              - '${{env.CORE_COMPONENT_LIB_INSTALL_DIR}}/ubuntu-centos7.4/**'
+              - '${{env.CORE_COMPONENT_LIB_INSTALL_DIR}}/centos7.4/**'
               - '${{env.WORKFLOWS_DIR}}/clp-dependency-image-build.yaml'
 
       - name: Build and Push Centos7.4 Docker Image
