@@ -22,8 +22,6 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME_BASE: ${{github.repository}}/clp-core-x86
 
-concurrency: build-${{github.ref}}
-
 jobs:
   focal:
     concurrency:
