@@ -13,9 +13,9 @@ env:
   IMAGE_NAME_BASE: ${{github.repository}}/clp-core-dependencies-x86
 
 jobs:
-  focal:
+  ubuntu-focal:
     concurrency:
-      group: ${{github.workflow}}-focal-${{github.ref}}
+      group: ${{github.workflow}}-ubuntu-focal-${{github.ref}}
       cancel-in-progress: true
     runs-on: ubuntu-20.04
     name: Build Image - Ubuntu Focal
@@ -51,9 +51,9 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
 
-  bionic:
+  ubuntu-bionic:
     concurrency:
-      group: ${{github.workflow}}-bionic-${{github.ref}}
+      group: ${{github.workflow}}-ubuntu-bionic-${{github.ref}}
       cancel-in-progress: true
     runs-on: ubuntu-20.04
     name: Build Image - Ubuntu Bionic
@@ -89,9 +89,9 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
 
-  centos:
+  centos74:
     concurrency:
-      group: ${{github.workflow}}-centos-${{github.ref}}
+      group: ${{github.workflow}}-centos74-${{github.ref}}
       cancel-in-progress: true
     runs-on: ubuntu-20.04
     name: Build Image - CentOS 7.4
