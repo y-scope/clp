@@ -18,9 +18,7 @@ jobs:
   build-ubuntu-focal:
     runs-on: ubuntu-20.04
     name: Build Image - Ubuntu Focal
-    permissions:
-      pull-requests: read
-    steps:  
+    steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
@@ -33,6 +31,7 @@ jobs:
         uses: dorny/paths-filter@v2
         id: filter
         with:
+          # Consider changes between the previous commit and this one
           base: ${{ github.ref_name }}
           filters: |
             src:
@@ -54,8 +53,6 @@ jobs:
   build-ubuntu-bionic:
     runs-on: ubuntu-20.04
     name: Build Image - Ubuntu Bionic
-    permissions:
-      pull-requests: read
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -69,6 +66,7 @@ jobs:
         uses: dorny/paths-filter@v2
         id: filter
         with:
+          # Consider changes between the previous commit and this one
           base: ${{ github.ref_name }}
           filters: |
             src:
@@ -99,8 +97,22 @@ jobs:
       - name: Workaround actions/runner-images/issues/6775
         run: chown $(id -u):$(id -g) -R .
 
+      - name: Filter relevant changes
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          # Consider changes between the previous commit and this one
+          base: ${{ github.ref_name }}
+          filters: |
+            src:
+              - '.github/workflows/clp-dependency-image-build.yaml'
+              - 'components/core/tools/docker-images/clp-env-base-centos7.4/**'
+              - 'components/core/tools/scripts/lib_install/*.sh'
+              - 'components/core/tools/scripts/lib_install/ubuntu-centos7.4/**'
+
       - name: Build and Push Centos7.4 Docker Image
         uses: ./.github/actions/clp-docker-build-push-action
+        if: steps.filter.outputs.src == 'true'
         with:
           image_name: ${{env.IMAGE_NAME_BASE}}-centos7.4
           context: components/core/
