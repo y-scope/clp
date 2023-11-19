@@ -6,6 +6,11 @@ on:
       - '.github/workflows/clp-core-build.yaml'
       - 'components/core/**'
       - '!components/core/tools/scripts/lib_install/macos-12/**'
+  pull_request:
+    paths:
+      - '.github/workflows/clp-core-build.yaml'
+      - 'components/core/**'
+      - '!components/core/tools/scripts/lib_install/macos-12/**'
   workflow_dispatch:
   workflow_run:
     workflows: ["generate-build-dependency-image"]
@@ -17,11 +22,10 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME_BASE: ${{github.repository}}/clp-core-x86
 
+concurrency: build-${{github.ref}}
+
 jobs:
-  ubuntu-focal:
-    concurrency:
-      group: ${{github.workflow}}-ubuntu-focal-${{github.ref}}
-      cancel-in-progress: true
+  build-focal:
     runs-on: ubuntu-latest
     container: 
       image: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main
@@ -47,11 +51,8 @@ jobs:
             path: ${{github.workspace}}/clp-binaries-focal.tar
             if-no-files-found: error
   
-  core-image:
-    concurrency:
-      group: ${{github.workflow}}-core-image-${{github.ref}}
-      cancel-in-progress: true
-    needs: ubuntu-focal
+  build-clp-core-image:
+    needs: build-focal
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -81,10 +82,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
 
-  ubuntu-bionic:
-    concurrency:
-      group: ${{github.workflow}}-ubuntu-bionic-${{github.ref}}
-      cancel-in-progress: true
+  build-bionic:
     runs-on: ubuntu-latest
     container: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-bionic:main
     steps:
@@ -99,10 +97,7 @@ jobs:
       - name: Build CLP Core
         uses: ./.github/actions/clp-core-build
 
-  centos74:
-    concurrency:
-      group: ${{github.workflow}}-centos74-${{github.ref}}
-      cancel-in-progress: true
+  build-centos:
     runs-on: ubuntu-latest
     container: ghcr.io/y-scope/clp/clp-core-dependencies-x86-centos7.4:main
     steps:

@@ -12,11 +12,10 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME_BASE: ${{github.repository}}/clp-core-dependencies-x86
 
+concurrency: build-${{github.ref}}
+
 jobs:
-  ubuntu-focal:
-    concurrency:
-      group: ${{github.workflow}}-ubuntu-focal-${{github.ref}}
-      cancel-in-progress: true
+  build-ubuntu-focal:
     runs-on: ubuntu-20.04
     name: Build Image - Ubuntu Focal
     steps:
@@ -51,10 +50,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
 
-  ubuntu-bionic:
-    concurrency:
-      group: ${{github.workflow}}-ubuntu-bionic-${{github.ref}}
-      cancel-in-progress: true
+  build-ubuntu-bionic:
     runs-on: ubuntu-20.04
     name: Build Image - Ubuntu Bionic
     steps:
@@ -89,10 +85,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
 
-  centos74:
-    concurrency:
-      group: ${{github.workflow}}-centos74-${{github.ref}}
-      cancel-in-progress: true
+  build-centos:
     runs-on: ubuntu-20.04
     name: Build Image - CentOS 7.4
     steps:

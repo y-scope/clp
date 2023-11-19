@@ -9,13 +9,18 @@ on:
       - '!components/core/tools/docker-images/**'
       - '!components/core/tools/scripts/lib_install/**'
       - 'components/core/tools/scripts/lib_install/macos-12/**'
+  pull_request:
+    paths:
+      # NOTE: The order of these paths is important since we're using exclusions
+      - '.github/workflows/clp-core-build-macos.yaml'
+      - 'components/core/**'
+      - '!components/core/tools/docker-images/**'
+      - '!components/core/tools/scripts/lib_install/**'
+      - 'components/core/tools/scripts/lib_install/macos-12/**'
   workflow_dispatch:
 
 jobs:
-  macos:
-    concurrency:
-      group: ${{github.workflow}}-macos-${{github.ref}}
-      cancel-in-progress: true
+  build-macos:
     runs-on: macos-12
     steps:
       - name: Checkout
