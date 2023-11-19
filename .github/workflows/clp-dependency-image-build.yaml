@@ -16,6 +16,9 @@ concurrency: build-${{github.ref}}
 
 jobs:
   build-ubuntu-focal:
+    concurrency:
+      group: ${{github.job}}-${{github.ref}}
+      cancel-in-progress: true
     runs-on: ubuntu-20.04
     name: Build Image - Ubuntu Focal
     steps:
@@ -51,6 +54,9 @@ jobs:
           push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
 
   build-ubuntu-bionic:
+    concurrency:
+      group: ${{github.job}}-${{github.ref}}
+      cancel-in-progress: true
     runs-on: ubuntu-20.04
     name: Build Image - Ubuntu Bionic
     steps:
@@ -86,6 +92,9 @@ jobs:
           push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
 
   build-centos:
+    concurrency:
+      group: ${{github.job}}-${{github.ref}}
+      cancel-in-progress: true
     runs-on: ubuntu-20.04
     name: Build Image - CentOS 7.4
     steps:

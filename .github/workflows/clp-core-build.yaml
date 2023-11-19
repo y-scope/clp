@@ -26,6 +26,9 @@ concurrency: build-${{github.ref}}
 
 jobs:
   build-focal:
+    concurrency:
+      group: ${{github.job}}-${{github.ref}}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     container: 
       image: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main
@@ -52,6 +55,9 @@ jobs:
             if-no-files-found: error
   
   build-clp-core-image:
+    concurrency:
+      group: ${{github.job}}-${{github.ref}}
+      cancel-in-progress: true
     needs: build-focal
     runs-on: ubuntu-latest
     steps:
@@ -83,6 +89,9 @@ jobs:
           push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
 
   build-bionic:
+    concurrency:
+      group: ${{github.job}}-${{github.ref}}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     container: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-bionic:main
     steps:
@@ -98,6 +107,9 @@ jobs:
         uses: ./.github/actions/clp-core-build
 
   build-centos:
+    concurrency:
+      group: ${{github.job}}-${{github.ref}}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     container: ghcr.io/y-scope/clp/clp-core-dependencies-x86-centos7.4:main
     steps:

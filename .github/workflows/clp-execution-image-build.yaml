@@ -14,6 +14,9 @@ env:
 
 jobs:
   build:
+    concurrency:
+      group: ${{github.job}}-${{github.ref}}
+      cancel-in-progress: true
     runs-on: ubuntu-20.04
     name: Build Image
     steps:
