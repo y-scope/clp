@@ -15,9 +15,9 @@ env:
 concurrency: build-${{github.ref}}
 
 jobs:
-  build-ubuntu-focal:
+  focal:
     concurrency:
-      group: ${{github.job}}-${{github.ref}}
+      group: ${{github.workflow}}-focal-${{github.ref}}
       cancel-in-progress: true
     runs-on: ubuntu-20.04
     name: Build Image - Ubuntu Focal
@@ -53,9 +53,9 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
 
-  build-ubuntu-bionic:
+  bionic:
     concurrency:
-      group: ${{github.job}}-${{github.ref}}
+      group: ${{github.workflow}}-bionic-${{github.ref}}
       cancel-in-progress: true
     runs-on: ubuntu-20.04
     name: Build Image - Ubuntu Bionic
@@ -91,9 +91,9 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
 
-  build-centos:
+  centos:
     concurrency:
-      group: ${{github.job}}-${{github.ref}}
+      group: ${{github.workflow}}-centos-${{github.ref}}
       cancel-in-progress: true
     runs-on: ubuntu-20.04
     name: Build Image - CentOS 7.4

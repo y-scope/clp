@@ -25,9 +25,9 @@ env:
 concurrency: build-${{github.ref}}
 
 jobs:
-  build-focal:
+  focal:
     concurrency:
-      group: ${{github.job}}-${{github.ref}}
+      group: ${{github.workflow}}-focal-${{github.ref}}
       cancel-in-progress: true
     runs-on: ubuntu-latest
     container: 
@@ -54,9 +54,9 @@ jobs:
             path: ${{github.workspace}}/clp-binaries-focal.tar
             if-no-files-found: error
   
-  build-clp-core-image:
+  image:
     concurrency:
-      group: ${{github.job}}-${{github.ref}}
+      group: ${{github.workflow}}-image-${{github.ref}}
       cancel-in-progress: true
     needs: build-focal
     runs-on: ubuntu-latest
@@ -88,9 +88,9 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
 
-  build-bionic:
+  bionic:
     concurrency:
-      group: ${{github.job}}-${{github.ref}}
+      group: ${{github.workflow}}-bionic-${{github.ref}}
       cancel-in-progress: true
     runs-on: ubuntu-latest
     container: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-bionic:main
@@ -106,9 +106,9 @@ jobs:
       - name: Build CLP Core
         uses: ./.github/actions/clp-core-build
 
-  build-centos:
+  centos:
     concurrency:
-      group: ${{github.job}}-${{github.ref}}
+      group: ${{github.workflow}}-centos-${{github.ref}}
       cancel-in-progress: true
     runs-on: ubuntu-latest
     container: ghcr.io/y-scope/clp/clp-core-dependencies-x86-centos7.4:main

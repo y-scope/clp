@@ -20,9 +20,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-macos:
+  macos:
     concurrency:
-      group: ${{github.job}}-${{github.ref}}
+      group: ${{github.workflow}}-macos-${{github.ref}}
       cancel-in-progress: true
     runs-on: macos-12
     steps:
