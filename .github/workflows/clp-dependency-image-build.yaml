@@ -3,14 +3,9 @@ name: generate-build-dependency-image
 on:
   push:
     paths:
+      - '.github/workflows/clp-dependency-image-build.yaml'
       - 'components/core/tools/docker-images/**'
       - 'components/core/tools/scripts/lib_install/**'
-      - '.github/workflows/clp-dependency-image-build.yaml'
-  pull_request:
-    paths:
-      - 'components/core/tools/docker-images/**'
-      - 'components/core/tools/scripts/lib_install/**'
-      - '.github/workflows/clp-dependency-image-build.yaml'
   workflow_dispatch:
 
 env:
@@ -38,6 +33,7 @@ jobs:
         uses: dorny/paths-filter@v2
         id: filter
         with:
+          base: ""
           filters: |
             src:
               - '.github/workflows/clp-dependency-image-build.yaml'
@@ -73,6 +69,7 @@ jobs:
         uses: dorny/paths-filter@v2
         id: filter
         with:
+          base: ""
           filters: |
             src:
               - '.github/workflows/clp-dependency-image-build.yaml'
