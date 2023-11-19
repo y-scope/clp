@@ -6,11 +6,6 @@ on:
       - '.github/workflows/clp-core-build.yaml'
       - 'components/core/**'
       - '!components/core/tools/scripts/lib_install/macos-12/**'
-  pull_request:
-    paths:
-      - '.github/workflows/clp-core-build.yaml'
-      - 'components/core/**'
-      - '!components/core/tools/scripts/lib_install/macos-12/**'
   workflow_dispatch:
   workflow_run:
     workflows: ["generate-build-dependency-image"]
