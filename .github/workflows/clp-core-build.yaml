@@ -58,7 +58,7 @@ jobs:
     concurrency:
       group: ${{github.workflow}}-image-${{github.ref}}
       cancel-in-progress: true
-    needs: build-focal
+    needs: focal
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
