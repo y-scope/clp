@@ -33,7 +33,7 @@ jobs:
         uses: dorny/paths-filter@v2
         id: filter
         with:
-          base: ""
+          base: ${{ github.ref_name }}
           filters: |
             src:
               - '.github/workflows/clp-dependency-image-build.yaml'
@@ -69,7 +69,7 @@ jobs:
         uses: dorny/paths-filter@v2
         id: filter
         with:
-          base: ""
+          base: ${{ github.ref_name }}
           filters: |
             src:
               - '.github/workflows/clp-dependency-image-build.yaml'
