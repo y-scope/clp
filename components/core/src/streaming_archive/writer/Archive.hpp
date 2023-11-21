@@ -65,8 +65,7 @@ namespace streaming_archive { namespace writer {
             }
         };
 
-        TimestampPattern m_old_ts_pattern;
-        bool m_timestamp_set;
+        TimestampPattern* m_old_ts_pattern;
         size_t m_target_data_size_of_dicts;
         UserConfig m_archive_user_config;
         std::string m_path_for_compression;
@@ -76,7 +75,7 @@ namespace streaming_archive { namespace writer {
 
         // Constructors
         Archive () : m_segments_dir_fd(-1), m_compression_level(0), m_global_metadata_db(nullptr),
-                m_old_ts_pattern(), m_timestamp_set(false), m_schema_file_path() {}
+                m_old_ts_pattern(nullptr), m_schema_file_path() {}
 
         // Destructor
         ~Archive ();

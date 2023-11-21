@@ -276,17 +276,9 @@ namespace streaming_archive::writer {
             timestamp_pattern = (TimestampPattern*) TimestampPattern::search_known_ts_patterns(
                     log_view.get_log_output_buffer()->get_mutable_token(0).to_string(), timestamp,
                     start, end);
-            if (m_old_ts_pattern != *timestamp_pattern) {
+            if (m_old_ts_pattern != timestamp_pattern) {
                 change_ts_pattern(timestamp_pattern);
-                m_old_ts_pattern = *timestamp_pattern;
-                m_timestamp_set = true;
-            }
-            assert(nullptr != timestamp_pattern);
-        } else {
-            if (false == m_timestamp_set || false == m_old_ts_pattern.get_format().empty()) {
-                change_ts_pattern(nullptr);
-                m_old_ts_pattern.clear();
-                m_timestamp_set = true;
+                m_old_ts_pattern = timestamp_pattern;
             }
         }
         if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts) {

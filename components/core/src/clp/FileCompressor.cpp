@@ -169,8 +169,7 @@ namespace clp {
         archive_writer.m_target_encoded_file_size = target_encoded_file_size;
         // Open compressed file
         archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
-        archive_writer.m_old_ts_pattern.clear();
-        archive_writer.m_timestamp_set = false;
+        archive_writer.m_old_ts_pattern = nullptr;
         ReaderInterfaceWrapper reader_wrapper(reader);
         m_reader_parser->reset_and_set_reader(reader_wrapper);
         static LogEventView log_view{&m_reader_parser->get_log_parser()};
