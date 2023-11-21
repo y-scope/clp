@@ -19,6 +19,7 @@
 // Project headers
 #include "../ffi/ir_stream/decoding_methods.hpp"
 #include "../ir/utils.hpp"
+#include "../LogSurgeonReader.hpp"
 #include "../Profiler.hpp"
 #include "utils.hpp"
 
@@ -174,8 +175,8 @@ namespace clp {
         // Open compressed file
         archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
         archive_writer.m_old_ts_pattern = nullptr;
-        ReaderInterfaceWrapper reader_wrapper(reader);
-        m_reader_parser->reset_and_set_reader(reader_wrapper);
+        LogSurgeonReader log_surgeon_reader(reader);
+        m_reader_parser->reset_and_set_reader(log_surgeon_reader);
         static LogEventView log_view{&m_reader_parser->get_log_parser()};
         while (false == m_reader_parser->done()) {
             if (log_surgeon::ErrorCode err{m_reader_parser->get_next_event_view(log_view)};

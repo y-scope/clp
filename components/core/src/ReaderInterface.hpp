@@ -151,15 +151,4 @@ bool ReaderInterface::read_numeric_value (ValueType& value, bool eof_possible) {
     return true;
 }
 
-/*
- * Wrapper providing a read function that works with the parsers in log_surgeon.
- */
-class ReaderInterfaceWrapper : public log_surgeon::Reader {
-public:
-    ReaderInterfaceWrapper (ReaderInterface& reader_interface);
-
-private:
-    ReaderInterface& m_reader_interface;
-};
-
 #endif // READERINTERFACE_HPP

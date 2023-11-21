@@ -240,6 +240,8 @@ set(SOURCE_FILES_clp
         src/LibarchiveFileReader.hpp
         src/LibarchiveReader.cpp
         src/LibarchiveReader.hpp
+        src/LogSurgeonReader.cpp
+        src/LogSurgeonReader.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
@@ -398,6 +400,8 @@ set(SOURCE_FILES_clg
         src/ir/LogEvent.hpp
         src/ir/parsing.cpp
         src/ir/parsing.hpp
+        src/LogSurgeonReader.cpp
+        src/LogSurgeonReader.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
@@ -537,6 +541,8 @@ set(SOURCE_FILES_clo
         src/ir/LogEvent.hpp
         src/ir/parsing.cpp
         src/ir/parsing.hpp
+        src/LogSurgeonReader.cpp
+        src/LogSurgeonReader.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
@@ -725,6 +731,8 @@ set(SOURCE_FILES_unitTest
         src/LibarchiveFileReader.hpp
         src/LibarchiveReader.cpp
         src/LibarchiveReader.hpp
+        src/LogSurgeonReader.cpp
+        src/LogSurgeonReader.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
