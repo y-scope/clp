@@ -131,8 +131,7 @@ namespace streaming_archive { namespace writer {
          * @param num_uncompressed_bytes
          * @throw FileWriter::OperationFailed if any write fails
          */
-        void write_msg (epochtime_t timestamp, const std::string& message,
-                        size_t num_uncompressed_bytes);
+        void write_msg (epochtime_t timestamp, const std::string& message, size_t num_uncompressed_bytes);
 
         /**
          * Encodes and writes a message to the given file using schema file

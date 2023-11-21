@@ -28,9 +28,12 @@ namespace clp {
     class FileCompressor {
     public:
         // Constructors
-        FileCompressor (boost::uuids::random_generator& uuid_generator,
-                        std::unique_ptr<log_surgeon::ReaderParser> reader_parser) :
-                m_uuid_generator(uuid_generator), m_reader_parser(std::move(reader_parser)) {}
+        FileCompressor(
+                boost::uuids::random_generator& uuid_generator,
+                std::unique_ptr<log_surgeon::ReaderParser> reader_parser
+        )
+                : m_uuid_generator(uuid_generator),
+                  m_reader_parser(std::move(reader_parser)) {}
 
         // Methods
         /**
@@ -59,13 +62,15 @@ namespace clp {
          * @param archive_writer
          * @param reader
          */
-        void parse_and_encode_with_library (size_t target_data_size_of_dicts,
-                                            streaming_archive::writer::Archive::UserConfig& archive_user_config,
-                                            size_t target_encoded_file_size,
-                                            const std::string& path_for_compression,
-                                            group_id_t group_id,
-                                            streaming_archive::writer::Archive& archive_writer,
-                                            ReaderInterface& reader);
+        void parse_and_encode_with_library(
+                size_t target_data_size_of_dicts,
+                streaming_archive::writer::Archive::UserConfig& archive_user_config,
+                size_t target_encoded_file_size,
+                std::string const& path_for_compression,
+                group_id_t group_id,
+                streaming_archive::writer::Archive& archive_writer,
+                ReaderInterface& reader
+        );
 
         void parse_and_encode_with_heuristic (size_t target_data_size_of_dicts, streaming_archive::writer::Archive::UserConfig& archive_user_config,
                                               size_t target_encoded_file_size, const std::string& path_for_compression, group_id_t group_id,

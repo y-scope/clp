@@ -22,7 +22,7 @@ CLP core is the low-level component that performs compression, decompression, an
 * We have built and tested CLP on the OSes listed 
   [below](https://github.com/y-scope/clp/tree/main/components/core#native-environment).
   * If you have trouble building for another OS, file an issue, and we may be able to help.
-* A compiler that supports C++17 (e.g., gcc-8)
+* A compiler that supports C++17 and std::span (e.g., gcc-10)
 
 ## Building
 
