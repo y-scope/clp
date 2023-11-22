@@ -177,13 +177,13 @@ namespace clp {
         archive_writer.m_old_ts_pattern = nullptr;
         LogSurgeonReader log_surgeon_reader(reader);
         m_reader_parser->reset_and_set_reader(log_surgeon_reader);
-        static LogEventView log_view{&m_reader_parser->get_log_parser()};
         while (false == m_reader_parser->done()) {
-            if (log_surgeon::ErrorCode err{m_reader_parser->get_next_event_view(log_view)};
+            if (log_surgeon::ErrorCode err{m_reader_parser->parse_next_event()};
                     log_surgeon::ErrorCode::Success != err) {
                 SPDLOG_ERROR("Parsing Failed");
                 throw (std::runtime_error("Parsing Failed"));
             }
+            LogEventView const& log_view = m_reader_parser->get_log_parser().get_log_event_view();
             archive_writer.write_msg_using_schema(log_view);
         }
         close_file_and_append_to_segment(archive_writer);

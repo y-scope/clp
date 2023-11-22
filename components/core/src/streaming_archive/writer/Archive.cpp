@@ -267,7 +267,7 @@ namespace streaming_archive::writer {
         update_segment_indices(logtype_id, var_ids);
     }
 
-    void Archive::write_msg_using_schema (LogEventView& log_view) {
+    void Archive::write_msg_using_schema (LogEventView const& log_view) {
         epochtime_t timestamp = 0;
         TimestampPattern* timestamp_pattern = nullptr;
         if (log_view.get_log_output_buffer()->has_timestamp()) {

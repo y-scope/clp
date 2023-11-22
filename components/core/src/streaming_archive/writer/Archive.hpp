@@ -138,7 +138,7 @@ namespace streaming_archive { namespace writer {
          * @param log_event_view
          * @throw FileWriter::OperationFailed if any write fails
          */
-        void write_msg_using_schema (log_surgeon::LogEventView& log_event_view);
+        void write_msg_using_schema (log_surgeon::LogEventView const& log_event_view);
 
         /**
          * Writes an IR log event to the current encoded file
