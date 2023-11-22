@@ -296,7 +296,31 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
             if (current_char == '*') {
 
             } else {
+                // *1*
+                // S1 = * | *
+                // S2 = *1 | V1
+                //       1 |
+                // Generate all possible search types for a query
+                vector<vector<vector<char>>> search_matrix(processed_search_string.size(),
+                                                           vector<vector<char>>(
+                                                                   processed_search_string.size()));
+                for (uint32_t i = 0; i < processed_search_string.size(); i++) {
+                    char& current_char = processed_search_string[i];
+                    for (uint32_t j = 0; j <= i; j++) {
+                        std::string current_string = processed_search_string.substr(j, i - j + 1);
+                        if (current_string == "*") {
+                            search_matrix[i][j].push_back('*');
+                        } else if (current_string[0] == '*') {
 
+
+                        } else if (current_string[i - j + 1] == "*") {
+
+
+                        } else {
+
+                        }
+                    }
+                }
             }
         }
     }
