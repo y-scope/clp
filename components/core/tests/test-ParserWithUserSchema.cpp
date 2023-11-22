@@ -18,6 +18,7 @@
 // Project headers
 #include "../src/clp/run.hpp"
 #include "../src/GlobalMySQLMetadataDB.hpp"
+#include "../src/LogSurgeonReader.hpp"
 #include "../src/Utils.hpp"
 
 using log_surgeon::DelimiterStringAST;
@@ -150,7 +151,7 @@ TEST_CASE("Test forward lexer", "[Search]") {
     std::string schema_file_path = boost::filesystem::weakly_canonical(schema_file_name).string();
     load_lexer_from_file(schema_file_path, false, forward_lexer);
     FileReader file_reader;
-    ReaderInterfaceWrapper reader_wrapper(file_reader);
+    LogSurgeonReader reader_wrapper(file_reader);
     file_reader.open("../tests/test_search_queries/easy.txt");
     log_surgeon::ParserInputBuffer parser_input_buffer;
     parser_input_buffer.read_if_safe(reader_wrapper);
@@ -172,7 +173,7 @@ TEST_CASE("Test reverse lexer", "[Search]") {
     std::string schema_file_path = boost::filesystem::weakly_canonical(schema_file_name).string();
     load_lexer_from_file(schema_file_path, false, reverse_lexer);
     FileReader file_reader;
-    ReaderInterfaceWrapper reader_wrapper(file_reader);
+    LogSurgeonReader reader_wrapper(file_reader);
     file_reader.open("../tests/test_search_queries/easy.txt");
     log_surgeon::ParserInputBuffer parser_input_buffer;
     parser_input_buffer.read_if_safe(reader_wrapper);

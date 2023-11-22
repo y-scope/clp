@@ -9,6 +9,7 @@
 // Project headers
 #include "EncodedVariableInterpreter.hpp"
 #include "ir/parsing.hpp"
+#include "LogSurgeonReader.hpp"
 #include "StringReader.hpp"
 #include "Utils.hpp"
 
@@ -701,7 +702,7 @@ bool Grep::get_bounds_of_next_potential_var(
                 // DO NOTHING
             } else {
                 StringReader string_reader;
-                ReaderInterfaceWrapper reader_wrapper(string_reader);
+                LogSurgeonReader reader_wrapper(string_reader);
                 log_surgeon::ParserInputBuffer parser_input_buffer;
                 if (has_suffix_wildcard) { //text*
                     // TODO: creating a string reader, setting it equal to a 
