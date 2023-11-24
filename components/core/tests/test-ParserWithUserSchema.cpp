@@ -74,8 +74,8 @@ TEST_CASE("Test error for missing schema file", "[LALR1Parser][SchemaParser]") {
     std::string file_name = boost::filesystem::weakly_canonical(file_path).string();
     REQUIRE_THROWS_WITH(
             generate_schema_ast(file_path),
-            "Failed to read '" + file_path
-                    + "', error_code=" + std::to_string(static_cast<int>(log_surgeon::ErrorCode::FileNotFound))
+            "Failed to read '" + file_path + "', error_code="
+                    + std::to_string(static_cast<int>(log_surgeon::ErrorCode::FileNotFound))
     );
 }
 

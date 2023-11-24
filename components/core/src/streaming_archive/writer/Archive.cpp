@@ -270,12 +270,16 @@ namespace streaming_archive::writer {
     void Archive::write_msg_using_schema (LogEventView const& log_view) {
         epochtime_t timestamp = 0;
         TimestampPattern* timestamp_pattern = nullptr;
-        if (log_view.get_log_output_buffer()->has_timestamp()) {
+        auto const& log_output_buffer = log_view.get_log_output_buffer();
+        if (log_output_buffer->has_timestamp()) {
             size_t start;
             size_t end;
-            timestamp_pattern = (TimestampPattern*) TimestampPattern::search_known_ts_patterns(
-                    log_view.get_log_output_buffer()->get_mutable_token(0).to_string(), timestamp,
-                    start, end);
+            timestamp_pattern = (TimestampPattern*)TimestampPattern::search_known_ts_patterns(
+                    log_output_buffer->get_mutable_token(0).to_string(),
+                    timestamp,
+                    start,
+                    end
+            );
             if (m_old_ts_pattern != timestamp_pattern) {
                 change_ts_pattern(timestamp_pattern);
                 m_old_ts_pattern = timestamp_pattern;
@@ -291,7 +295,6 @@ namespace streaming_archive::writer {
         m_logtype_dict_entry.clear();
         size_t num_uncompressed_bytes = 0;
         // Timestamp is included in the uncompressed message size
-        auto const& log_output_buffer = log_view.get_log_output_buffer();
         uint32_t start_pos = log_output_buffer->get_token(0).m_start_pos;
         if (timestamp_pattern == nullptr) {
             start_pos = log_output_buffer->get_token(1).m_start_pos;

@@ -3,15 +3,12 @@
 
 // C++ standard libraries
 #include <cstddef>
-#include <memory>
 #include <string>
 
 // Project headers
 #include "Defs.h"
 #include "ErrorCode.hpp"
 #include "TraceableException.hpp"
-
-#include <log_surgeon/Reader.hpp>
 
 class ReaderInterface {
 public:
