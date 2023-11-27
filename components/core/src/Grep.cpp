@@ -2,6 +2,7 @@
 
 // C++ libraries
 #include <algorithm>
+#include <variant>
 
 // Log surgeon
 #include <log_surgeon/Constants.hpp>
@@ -290,37 +291,135 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
         }
     } else {
         // Generate all possible search types for a query
-        // *...*...*...*
+        vector<vector<vector<vector<std::variant<char, int>>>>> logtype_matrix(
+                processed_search_string.size(),
+                vector<vector<vector<std::variant<char, int>>>>(processed_search_string.size()));
         for (uint32_t i = 0; i < processed_search_string.size(); i++) {
-            char& current_char = processed_search_string[i];
-            if (current_char == '*') {
-
-            } else {
-                // *1*
-                // S1 = * | *
-                // S2 = *1 | V1
-                //       1 |
-                // Generate all possible search types for a query
-                vector<vector<vector<char>>> search_matrix(processed_search_string.size(),
-                                                           vector<vector<char>>(
-                                                                   processed_search_string.size()));
-                for (uint32_t i = 0; i < processed_search_string.size(); i++) {
-                    char& current_char = processed_search_string[i];
-                    for (uint32_t j = 0; j <= i; j++) {
-                        std::string current_string = processed_search_string.substr(j, i - j + 1);
-                        if (current_string == "*") {
-                            search_matrix[i][j].push_back('*');
-                        } else if (current_string[0] == '*') {
-
-
-                        } else if (current_string[i - j + 1] == "*") {
-
-
-                        } else {
-
+            for (uint32_t j = 0; j <= i; j++) {
+                std::string current_string = processed_search_string.substr(j, i - j + 1);
+                std::vector<std::vector<std::variant<char, int>>> prefixes;
+                SearchToken search_token;
+                if (current_string == "*") {
+                    prefixes.push_back({});
+                    auto& prefix = prefixes.back();
+                    prefix.insert(prefix.end(), current_string.begin(), current_string.end());
+                } else {
+                    StringReader string_reader;
+                    log_surgeon::ParserInputBuffer parser_input_buffer;
+                    ReaderInterfaceWrapper reader_wrapper(string_reader);
+                    // TODO: probably a smarter way to combing *__, __*, *__*
+                    if (current_string[0] == '*' && current_string.back() == '*') {
+                        std::string current_string_forward = current_string.substr(1, i - j - 1);
+                        std::string current_string_reverse = current_string.substr(1, i - j - 1);
+                        std::reverse(current_string_reverse.begin(), current_string_reverse.end());
+                        string_reader.open(current_string_reverse);
+                        parser_input_buffer.read_if_safe(reader_wrapper);
+                        reverse_lexer.reset();
+                        reverse_lexer.scan_with_wildcard(parser_input_buffer,
+                                                         '*',
+                                                         search_token);
+                        // TODO: test correct check here, currently has_a_# means its never nullptr
+                        if (nullptr != search_token.m_type_ids_ptr) {
+                            for (int id : *(search_token.m_type_ids_ptr)) {
+                                prefixes.push_back({'*', id, '*'});
+                            }
+                        }
+                        string_reader.close();
+                        string_reader.open(current_string_forward);
+                        parser_input_buffer.reset();
+                        parser_input_buffer.read_if_safe(reader_wrapper);
+                        forward_lexer.reset();
+                        forward_lexer.scan_with_wildcard(parser_input_buffer,
+                                                         '*',
+                                                         search_token);
+                        // TODO: test correct check here, currently has_a_# means its never nullptr
+                        if (nullptr != search_token.m_type_ids_ptr) {
+                            for (int id : *(search_token.m_type_ids_ptr)) {
+                                prefixes.push_back({'*', id, '*'});
+                            }
+                        }
+                    } else if (current_string[0] == '*') {
+                        std::string current_string_reverse = current_string.substr(1, i - j);
+                        std::reverse(current_string_reverse.begin(), current_string_reverse.end());
+                        string_reader.open(current_string_reverse);
+                        parser_input_buffer.read_if_safe(reader_wrapper);
+                        reverse_lexer.reset();
+                        reverse_lexer.scan_with_wildcard(parser_input_buffer,
+                                                         '*',
+                                                         search_token);
+                        // TODO: test correct check here, currently has_a_# means its never nullptr
+                        if (nullptr != search_token.m_type_ids_ptr) {
+                            for (int id : *(search_token.m_type_ids_ptr)) {
+                                prefixes.push_back({'*', id});
+                            }
+                        }
+                    } else if (current_string.back() == '*') {
+                        std::string current_string_forward = current_string.substr(0, i - j);
+                        string_reader.open(current_string_forward);
+                        parser_input_buffer.read_if_safe(reader_wrapper);
+                        forward_lexer.reset();
+                        forward_lexer.scan_with_wildcard(parser_input_buffer,
+                                                         '*',
+                                                         search_token);
+                        if (nullptr != search_token.m_type_ids_ptr) {
+                            for (int id : *(search_token.m_type_ids_ptr)) {
+                                prefixes.push_back({id, '*'});
+                            }
+                        }
+                    } else {
+                        string_reader.open(current_string);
+                        parser_input_buffer.read_if_safe(reader_wrapper);
+                        forward_lexer.reset();
+                        forward_lexer.scan(parser_input_buffer, search_token);
+                        if (nullptr != search_token.m_type_ids_ptr) {
+                            for (int id : *(search_token.m_type_ids_ptr)) {
+                                prefixes.push_back({id});
+                            }
                         }
                     }
                 }
+                auto& new_logtypes = logtype_matrix[i][j];
+                for(int k = 0; k < j; k++) {
+                    auto& parent_logtypes = logtype_matrix[j - 1][k];
+                    for(int l = 0; l < parent_logtypes.size(); l++) {
+                        auto& parent_logtype = parent_logtypes[l];
+                        // handles case where  current_string is static-text
+                        for (auto& prefix : prefixes) {
+                            new_logtypes.push_back(parent_logtype);
+                            auto& new_logtype = new_logtypes.back();
+                            new_logtype.insert(new_logtype.end(), prefix.begin(), prefix.end());
+                        }
+                    }
+                }
+                // handles case (e.g. first row) where the previous row in logtype_matrix is empty
+                if(new_logtypes.empty()) {
+                    for (auto& prefix : prefixes) {
+                        new_logtypes.push_back({});
+                        auto& new_logtype = new_logtypes.back();
+                        new_logtype.insert(new_logtype.end(), prefix.begin(), prefix.end());
+                    }
+                }
+            }
+        }
+        SPDLOG_INFO("done");
+        uint32_t last_row = logtype_matrix.size() - 1;
+        for (int j = 0; j < logtype_matrix[last_row].size(); j++) {
+            //LogTypeDictionaryEntry::add_float_var(logtype);
+            //LogTypeDictionaryEntry::add_int_var(logtype);
+            //LogTypeDictionaryEntry::add_dict_var(logtype);
+            //sub_query.add_dict_var(encoded_var, entry);
+            //sub_query.add_non_dict_var(encoded_var, entry);
+            std::string logtype;
+            std::unordered_set<const LogTypeDictionaryEntry*> possible_logtype_entries;
+            archive.get_logtype_dictionary().get_entries_matching_wildcard_string(logtype, ignore_case,
+                                                                                  possible_logtype_entries);
+            if (false == possible_logtype_entries.empty()) {
+                SubQuery sub_query;
+                sub_query.set_possible_logtypes(possible_logtype_entries);
+
+                // Calculate the IDs of the segments that may contain results for the sub-query now that we've calculated the matching logtypes and variables
+                sub_query.calculate_ids_of_matching_segments();
+                query.add_sub_query(sub_query);
             }
         }
     }

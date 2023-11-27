@@ -18,39 +18,39 @@ StringReader::~StringReader () {
 }
 
 ErrorCode StringReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
-    if (input_string.empty()) {
+    if (m_input_string.empty()) {
         return ErrorCode_NotInit;
     }
     if (nullptr == buf) {
         return ErrorCode_BadParam;
     }
-    if(pos == input_string.size()) {
+    if(m_pos == m_input_string.size()) {
         return ErrorCode_EndOfFile;
     }
-    if(pos + num_bytes_to_read > input_string.size()) {
-        num_bytes_to_read = input_string.size() - pos;
+    if(m_pos + num_bytes_to_read > m_input_string.size()) {
+        num_bytes_to_read = m_input_string.size() - m_pos;
     }
     for(int i = 0; i < num_bytes_to_read; i++) {
-        buf[i] = input_string[i + pos];
+        buf[i] = m_input_string[i + m_pos];
     }
     num_bytes_read = num_bytes_to_read;
-    pos += num_bytes_read;
+    m_pos += num_bytes_read;
     return ErrorCode_Success;
 }
 
 ErrorCode StringReader::try_seek_from_begin (size_t pos) {
-    this->pos = pos;
+    m_pos = pos;
     return ErrorCode_Success;
 }
 
 ErrorCode StringReader::try_get_pos (size_t& pos) {
-    pos = this->pos;
+    pos = m_pos;
     return ErrorCode_Success;
 }
 
 ErrorCode StringReader::try_open (const string& input_string) {
-    this->input_string = input_string;
-    string_is_set = true;
+    m_input_string = input_string;
+    m_string_is_set = true;
     return ErrorCode_Success;
 }
 
@@ -59,5 +59,5 @@ void StringReader::open (const string& input_string) {
 }
 
 void StringReader::close () {
-
+    m_pos = 0;
 }
