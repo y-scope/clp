@@ -4,6 +4,8 @@
 #include <string>
 #include <string_view>
 
+#include "../type_utils.hpp"
+
 namespace ir {
 template <bool double_escape, typename EscapeHandler>
 void append_constant_to_logtype(
@@ -15,7 +17,7 @@ void append_constant_to_logtype(
     auto constant_len = constant.length();
     for (size_t i = 0; i < constant_len; ++i) {
         auto const c = constant[i];
-        bool const is_escape_char = (cVariablePlaceholderEscapeCharacter == c);
+        bool const is_escape_char = (enum_to_underlying_type(VariablePlaceholder::Escape) == c);
         if (false == is_escape_char && false == is_variable_placeholder(c)) {
             continue;
         }
@@ -36,8 +38,9 @@ void append_constant_to_logtype(
 
 template <bool double_escape>
 void escape_and_append_constant_to_logtype(std::string_view constant, std::string& logtype) {
-    auto escape_handler
-            = [&](std::string& logtype) { logtype += ir::cVariablePlaceholderEscapeCharacter; };
+    auto escape_handler = [&](std::string& logtype) {
+        logtype += enum_to_underlying_type(VariablePlaceholder::Escape);
+    };
     append_constant_to_logtype<double_escape>(constant, logtype, escape_handler);
 }
 }  // namespace ir
