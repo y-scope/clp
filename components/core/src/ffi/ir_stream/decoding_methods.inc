@@ -99,7 +99,7 @@ void generic_decode_message(
                 break;
             }
 
-            case ir::cVariablePlaceholderEscapeCharacter: {
+            case enum_to_underlying_type(ir::VariablePlaceholder::Escape): {
                 // Ensure the escape character is followed by a
                 // character that's being escaped
                 if (cur_pos == logtype_length - 1) {

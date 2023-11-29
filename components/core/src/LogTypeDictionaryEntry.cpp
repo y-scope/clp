@@ -120,7 +120,7 @@ ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::Dec
         if (is_escaped) {
             constant += c;
             is_escaped = false;
-        } else if (ir::cVariablePlaceholderEscapeCharacter == c) {
+        } else if (enum_to_underlying_type(ir::VariablePlaceholder::Escape) == c) {
             is_escaped = true;
             add_constant(constant, 0, constant.length());
             constant.clear();

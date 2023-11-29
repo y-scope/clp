@@ -95,7 +95,7 @@ size_t escape_and_append_constant_to_logtype_with_tracking(
     auto escape_handler = [&](std::string& logtype) {
         escape_placeholder_positions.push_back(logtype.size());
         ++num_escape_placeholder_added;
-        logtype += ir::cVariablePlaceholderEscapeCharacter;
+        logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
     };
     append_constant_to_logtype(constant, logtype, escape_handler);
     return num_escape_placeholder_added;

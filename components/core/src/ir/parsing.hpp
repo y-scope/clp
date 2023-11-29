@@ -21,8 +21,6 @@ enum class VariablePlaceholder : char {
     Escape = '\\',
 };
 
-constexpr char cVariablePlaceholderEscapeCharacter = '\\';
-
 /**
  * Checks if the given character is a delimiter
  * We treat everything *except* the following quoted characters as a
