@@ -305,7 +305,7 @@ bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDic
     for (size_t placeholder_ix = 0, var_ix = 0; placeholder_ix < num_placeholders_in_logtype; ++placeholder_ix) {
         size_t placeholder_position = logtype_dict_entry.get_placeholder_info(placeholder_ix, var_placeholder);
 
-        // Add the constant that's between the last variable and this one
+        // Add the constant that's between the last placeholder and this one
         decompressed_msg.append(logtype_value, constant_begin_pos,
                                 placeholder_position - constant_begin_pos);
         switch (var_placeholder) {

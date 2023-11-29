@@ -56,7 +56,10 @@ bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begi
     auto last_var_end_pos = var_end_pos;
     if (ir::get_bounds_of_next_var(msg, var_begin_pos, var_end_pos)) {
         // Append to log type: from end of last variable to start of current variable
-        auto constant = std::string_view(msg).substr(last_var_end_pos, var_begin_pos - last_var_end_pos);
+        auto constant = static_cast<std::string_view>(msg).substr(
+                last_var_end_pos,
+                var_begin_pos - last_var_end_pos
+        );
         m_num_escape_placeholders += ir::escape_and_append_constant_to_logtype_with_tracking(constant, m_value, m_placeholder_positions);
 
         var.assign(msg, var_begin_pos, var_end_pos - var_begin_pos);
@@ -64,7 +67,10 @@ bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begi
     }
     if (last_var_end_pos < msg.length()) {
         // Append to log type: from end of last variable to end
-        auto constant = std::string_view(msg).substr(last_var_end_pos, msg.length() - last_var_end_pos);
+        auto constant = static_cast<std::string_view>(msg).substr(
+                last_var_end_pos,
+                msg.length() - last_var_end_pos
+        );
         m_num_escape_placeholders += ir::escape_and_append_constant_to_logtype_with_tracking(constant, m_value, m_placeholder_positions);
     }
 

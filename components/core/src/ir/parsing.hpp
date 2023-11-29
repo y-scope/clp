@@ -18,7 +18,7 @@ enum class VariablePlaceholder : char {
     Integer = 0x11,
     Dictionary = 0x12,
     Float = 0x13,
-    Escape = 0x5c,
+    Escape = '\\',
 };
 
 constexpr char cVariablePlaceholderEscapeCharacter = '\\';

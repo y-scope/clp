@@ -64,21 +64,20 @@ public:
         logtype += enum_to_underlying_type(ir::VariablePlaceholder::Float);
     }
     /**
-     * Adds an escape variable placeholder to the given logtype
+     * Adds an escape character to the given logtype
      * @param logtype
      */
-    static void add_escape_var (std::string& logtype) {
+    static void add_escape (std::string& logtype) {
         logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
     }
 
     /**
-     * @return The total number of placeholders on record. The placeholders may
-     * represent an escape characters.
+     * @return The number of variable placeholders (included escaped ones) in the logtype.
     */
     size_t get_num_placeholders () const { return m_placeholder_positions.size(); }
 
     /**
-     * @return The total number of variables on record.
+     * @return The number of variable placeholders (excluding escaped ones) in the logtype.
     */
     size_t get_num_variables () const {
         return m_placeholder_positions.size() - m_num_escape_placeholders;
@@ -118,9 +117,9 @@ public:
      */
     void add_dictionary_var ();
     /**
-     * Adds an escape variable placeholder
+     * Adds an escape character
      */
-    void add_escape_var ();
+    void add_escape ();
 
     /**
      * Parses next variable from a message, constructing the constant part of the message's logtype as well
@@ -162,7 +161,7 @@ public:
 private:
     // Variables
     std::vector<size_t> m_placeholder_positions;
-    size_t m_num_escape_placeholders;
+    size_t m_num_escaped_placeholders;
 };
 
 #endif // LOGTYPEDICTIONARYENTRY_HPP
