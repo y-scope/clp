@@ -287,11 +287,9 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary(
 bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDictionaryEntry& logtype_dict_entry, const VariableDictionaryReader& var_dict,
                                                                 const vector<encoded_variable_t>& encoded_vars, string& decompressed_msg)
 {
-    size_t const num_placeholders_in_logtype = logtype_dict_entry.get_num_placeholders();
-    size_t const num_vars = logtype_dict_entry.get_num_variables();
-
     // Ensure the number of variables in the logtype matches the number of encoded variables given
     const auto& logtype_value = logtype_dict_entry.get_value();
+    size_t const num_vars = logtype_dict_entry.get_num_variables();
     if (num_vars != encoded_vars.size()) {
         SPDLOG_ERROR("EncodedVariableInterpreter: Logtype '{}' contains {} variables, but {} were given for decoding.", logtype_value.c_str(),
                      num_vars, encoded_vars.size());
@@ -302,6 +300,7 @@ bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDic
     size_t constant_begin_pos = 0;
     string float_str;
     variable_dictionary_id_t var_dict_id;
+    size_t const num_placeholders_in_logtype = logtype_dict_entry.get_num_placeholders();
     for (size_t placeholder_ix = 0, var_ix = 0; placeholder_ix < num_placeholders_in_logtype; ++placeholder_ix) {
         size_t placeholder_position = logtype_dict_entry.get_placeholder_info(placeholder_ix, var_placeholder);
 
