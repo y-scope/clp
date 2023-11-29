@@ -33,7 +33,7 @@ public:
     };
 
     // Constructors
-    LogTypeDictionaryEntry () : m_num_escaped_placeholders{0} {};
+    LogTypeDictionaryEntry () = default;
     // Use default copy constructor
     LogTypeDictionaryEntry (const LogTypeDictionaryEntry&) = default;
 
@@ -161,7 +161,7 @@ public:
 private:
     // Variables
     std::vector<size_t> m_placeholder_positions;
-    size_t m_num_escaped_placeholders;
+    size_t m_num_escaped_placeholders{0};
 };
 
 #endif // LOGTYPEDICTIONARYENTRY_HPP
