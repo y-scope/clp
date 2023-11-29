@@ -237,6 +237,7 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
                 " and a double " + var_strs[2] +
                 " and a weird double " + var_strs[3] +
                 " and a str with numbers " + var_strs[4] +
+                " and an escape " + enum_to_underlying_type(ir::VariablePlaceholder::Escape) +
                 " and an int placeholder " + enum_to_underlying_type(ir::VariablePlaceholder::Integer) +
                 " and a float placeholder " + enum_to_underlying_type(ir::VariablePlaceholder::Float) +
                 " and a dictionary placeholder " + enum_to_underlying_type(ir::VariablePlaceholder::Dictionary);
@@ -279,6 +280,9 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
         REQUIRE(EncodedVariableInterpreter::encode_and_search_dictionary(var_strs[3], var_dict_reader, false, search_logtype, sub_query));
         search_logtype += " and a str with numbers ";
         REQUIRE(EncodedVariableInterpreter::encode_and_search_dictionary(var_strs[4], var_dict_reader, false, search_logtype, sub_query));
+        search_logtype += " and an escape ";
+        search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+        search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
         search_logtype += " and an int placeholder ";
         search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
         search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Integer);
@@ -295,7 +299,7 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
         }
 
         // Test search for unknown variable
-        REQUIRE(!EncodedVariableInterpreter::encode_and_search_dictionary("abc123", var_dict_reader, false, search_logtype, sub_query));
+        REQUIRE(false == EncodedVariableInterpreter::encode_and_search_dictionary("abc123", var_dict_reader, false, search_logtype, sub_query));
 
         REQUIRE(logtype_dict_entry.get_value() == search_logtype);
 
