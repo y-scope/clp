@@ -46,10 +46,10 @@ void LogTypeDictionaryEntry::add_float_var () {
     add_float_var(m_value);
 }
 
-void LogTypeDictionaryEntry::add_escape_var() {
+void LogTypeDictionaryEntry::add_escape() {
     m_placeholder_positions.push_back(m_value.length());
-    add_escape_var(m_value);
-    ++m_num_escape_placeholders;
+    add_escape(m_value);
+    ++m_num_escaped_placeholders;
 }
 
 bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begin_pos, size_t& var_end_pos, string& var) {
@@ -60,7 +60,7 @@ bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begi
                 last_var_end_pos,
                 var_begin_pos - last_var_end_pos
         );
-        m_num_escape_placeholders += ir::escape_and_append_constant_to_logtype_with_tracking(constant, m_value, m_placeholder_positions);
+        m_num_escaped_placeholders += ir::escape_and_append_constant_to_logtype_with_tracking(constant, m_value, m_placeholder_positions);
 
         var.assign(msg, var_begin_pos, var_end_pos - var_begin_pos);
         return true;
@@ -71,7 +71,7 @@ bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begi
                 last_var_end_pos,
                 msg.length() - last_var_end_pos
         );
-        m_num_escape_placeholders += ir::escape_and_append_constant_to_logtype_with_tracking(constant, m_value, m_placeholder_positions);
+        m_num_escaped_placeholders += ir::escape_and_append_constant_to_logtype_with_tracking(constant, m_value, m_placeholder_positions);
     }
 
     return false;
@@ -80,7 +80,7 @@ bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begi
 void LogTypeDictionaryEntry::clear () {
     m_value.clear();
     m_placeholder_positions.clear();
-    m_num_escape_placeholders = 0;
+    m_num_escaped_placeholders = 0;
 }
 
 void LogTypeDictionaryEntry::write_to_file (streaming_compression::Compressor& compressor) const {
@@ -124,7 +124,7 @@ ErrorCode LogTypeDictionaryEntry::try_read_from_file (streaming_compression::Dec
             is_escaped = true;
             add_constant(constant, 0, constant.length());
             constant.clear();
-            add_escape_var();
+            add_escape();
         } else {
             if (enum_to_underlying_type(ir::VariablePlaceholder::Integer) == c) {
                 add_constant(constant, 0, constant.length());

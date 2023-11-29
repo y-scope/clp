@@ -33,7 +33,7 @@ public:
     };
 
     // Constructors
-    LogTypeDictionaryEntry () : m_num_escape_placeholders{0} {};
+    LogTypeDictionaryEntry () : m_num_escaped_placeholders{0} {};
     // Use default copy constructor
     LogTypeDictionaryEntry (const LogTypeDictionaryEntry&) = default;
 
@@ -80,7 +80,7 @@ public:
      * @return The number of variable placeholders (excluding escaped ones) in the logtype.
     */
     size_t get_num_variables () const {
-        return m_placeholder_positions.size() - m_num_escape_placeholders;
+        return m_placeholder_positions.size() - m_num_escaped_placeholders;
     }
 
     /**
