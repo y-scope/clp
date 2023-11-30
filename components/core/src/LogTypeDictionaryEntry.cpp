@@ -54,13 +54,18 @@ void LogTypeDictionaryEntry::add_escape() {
 
 bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begin_pos, size_t& var_end_pos, string& var) {
     auto last_var_end_pos = var_end_pos;
+    auto escape_handler = [&](std::string& logtype, [[maybe_unused]] char char_to_escape) -> void {
+        m_placeholder_positions.push_back(logtype.size());
+        ++m_num_escaped_placeholders;
+        logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+    };
     if (ir::get_bounds_of_next_var(msg, var_begin_pos, var_end_pos)) {
         // Append to log type: from end of last variable to start of current variable
         auto constant = static_cast<std::string_view>(msg).substr(
                 last_var_end_pos,
                 var_begin_pos - last_var_end_pos
         );
-        m_num_escaped_placeholders += ir::escape_and_append_constant_to_logtype_with_tracking(constant, m_value, m_placeholder_positions);
+        ir::escape_and_append_constant_to_logtype(constant, m_value, escape_handler);
 
         var.assign(msg, var_begin_pos, var_end_pos - var_begin_pos);
         return true;
@@ -71,7 +76,7 @@ bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begi
                 last_var_end_pos,
                 msg.length() - last_var_end_pos
         );
-        m_num_escaped_placeholders += ir::escape_and_append_constant_to_logtype_with_tracking(constant, m_value, m_placeholder_positions);
+        ir::escape_and_append_constant_to_logtype(constant, m_value, escape_handler);
     }
 
     return false;

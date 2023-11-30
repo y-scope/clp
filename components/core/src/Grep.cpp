@@ -338,11 +338,19 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
 {
     size_t last_token_end_pos = 0;
     string logtype;
+    auto double_escape_handler = [](std::string& logtype, char char_to_escape) -> void {
+        auto const escape_char{enum_to_underlying_type(ir::VariablePlaceholder::Escape)};
+        logtype += escape_char;
+        if (escape_char != char_to_escape) {
+            logtype += escape_char;
+        }
+    };
     for (const auto& query_token : query_tokens) {
         // Append from end of last token to beginning of this token, to logtype
-        ir::escape_and_append_constant_to_logtype<true>(
+        ir::escape_and_append_constant_to_logtype(
                 static_cast<std::string_view>(processed_search_string).substr(last_token_end_pos, query_token.get_begin_pos() - last_token_end_pos),
-                logtype
+                logtype,
+                double_escape_handler
         );
         last_token_end_pos = query_token.get_end_pos();
 
@@ -361,7 +369,7 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
             }
         } else {
             if (!query_token.is_var()) {
-                ir::escape_and_append_constant_to_logtype<true>(query_token.get_value(), logtype);
+                ir::escape_and_append_constant_to_logtype(query_token.get_value(), logtype, double_escape_handler);
             } else if (!process_var_token(query_token, archive, ignore_case, sub_query, logtype)) {
                 return SubQueryMatchabilityResult::WontMatch;
             }
@@ -370,9 +378,10 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
 
     if (last_token_end_pos < processed_search_string.length()) {
         // Append from end of last token to end
-        ir::escape_and_append_constant_to_logtype<true>(
+        ir::escape_and_append_constant_to_logtype(
                 static_cast<std::string_view>(processed_search_string).substr(last_token_end_pos, string::npos), 
-                logtype
+                logtype,
+                double_escape_handler
         );
         last_token_end_pos = processed_search_string.length();
     }

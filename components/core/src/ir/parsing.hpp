@@ -82,40 +82,16 @@ bool get_bounds_of_next_var(std::string_view str, size_t& begin_pos, size_t& end
 
 /**
  * Appends the given constant to the logtype, escaping any variable placeholders
- * and track the position of escape characters appended.
- * @param constant
- * @param logtype
- * @param escape_placeholder_positions The vector to append the positions of the
- * added escape placeholders
- * @return Total number of escape placeholders added
- */
-[[maybe_unused]] size_t escape_and_append_constant_to_logtype_with_tracking(
-        std::string_view constant,
-        std::string& logtype,
-        std::vector<size_t>& escape_placeholder_positions
-);
-
-/**
- * Appends the given constant to the logtype, escaping any variable placeholders
- * @tparam double_escape Whether to escape the variable placeholders twice. This
- * should be set to true when building a logtype for wildcard search.
- * @param constant
- * @param logtype
- */
-template <bool double_escape = false>
-void escape_and_append_constant_to_logtype(std::string_view constant, std::string& logtype);
-
-/**
- * Appends the given constant to the logtype, escaping any variable placeholders
  * by using the escape handler.
- * @tparam double_escape Whether to escape the variable placeholders twice.
  * @tparam EscapeHandler Method to append and track escape chars when escaping
- * variable placeholders. Signature: (std::string& logtype)
+ * variable placeholders. Signature:
+ * (std::string& logtype, [[maybe_unused]] char char_to_escape) -> void
  * @param constant
  * @param logtype
+ * @param escape_handler
  */
-template <bool double_escape = false, typename EscapeHandler>
-void append_constant_to_logtype(
+template <typename EscapeHandler>
+void escape_and_append_constant_to_logtype(
         std::string_view constant,
         std::string& logtype,
         EscapeHandler escape_handler

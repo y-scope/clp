@@ -7,8 +7,8 @@
 #include "../type_utils.hpp"
 
 namespace ir {
-template <bool double_escape, typename EscapeHandler>
-void append_constant_to_logtype(
+template <typename EscapeHandler>
+void escape_and_append_constant_to_logtype(
         std::string_view constant,
         std::string& logtype,
         EscapeHandler escape_handler
@@ -25,23 +25,9 @@ void append_constant_to_logtype(
         // NOTE: We don't need to append the character of interest
         // immediately since the next constant copy operation will get it
         begin_pos = i;
-        escape_handler(logtype);
-        if constexpr (false == double_escape) {
-            continue;
-        }
-        if (false == is_escape_char) {
-            escape_handler(logtype);
-        }
+        escape_handler(logtype, c);
     }
     logtype.append(constant, begin_pos, constant_len - begin_pos);
-}
-
-template <bool double_escape>
-void escape_and_append_constant_to_logtype(std::string_view constant, std::string& logtype) {
-    auto escape_handler = [&](std::string& logtype) {
-        logtype += enum_to_underlying_type(VariablePlaceholder::Escape);
-    };
-    append_constant_to_logtype<double_escape>(constant, logtype, escape_handler);
 }
 }  // namespace ir
 #endif

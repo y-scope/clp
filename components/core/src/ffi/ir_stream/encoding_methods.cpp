@@ -166,7 +166,10 @@ static void add_base_metadata_fields(
 }
 
 static bool append_constant_to_logtype(string_view constant, string& logtype) {
-    ir::escape_and_append_constant_to_logtype(constant, logtype);
+    auto escape_handler = [&](std::string& logtype, [[maybe_unused]] char char_to_escape) -> void {
+        logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+    };
+    ir::escape_and_append_constant_to_logtype(constant, logtype, escape_handler);
     return true;
 }
 
