@@ -1,5 +1,6 @@
 #include "Subquery.hpp"
 
+#include "../../ir/parsing.hpp"
 #include "QueryWildcard.hpp"
 
 using std::string;
@@ -14,18 +15,44 @@ Subquery<encoded_variable_t>::Subquery(string logtype_query, Subquery::QueryVari
           m_query_vars(variables) {
     // Determine if the query contains variables
     bool is_escaped = false;
-    for (auto const c : m_logtype_query) {
+    auto const logtype_query_length{m_logtype_query.size()};
+    std::vector<size_t> escaped_placeholder_positions;
+    escaped_placeholder_positions.reserve(logtype_query_length / 2);
+    auto const escape_char{enum_to_underlying_type(ir::VariablePlaceholder::Escape)};
+    for (size_t idx = 0; idx < logtype_query_length; ++idx) {
+        char const c{m_logtype_query[idx]};
         if (is_escaped) {
             is_escaped = false;
-        } else if ('\\' == c) {
+            if (escape_char == c) {
+                continue;
+            }
+            escaped_placeholder_positions.push_back(idx);
+        } else if (escape_char == c) {
             is_escaped = true;
         } else if ((enum_to_underlying_type(WildcardType::ZeroOrMoreChars) == c
                     || enum_to_underlying_type(WildcardType::AnyChar) == c))
         {
             m_logtype_query_contains_wildcards = true;
-            break;
         }
     }
+    if (false == m_logtype_query_contains_wildcards) {
+        return;
+    }
+    if (escaped_placeholder_positions.empty()) {
+        return;
+    }
+    std::string double_escaped_logtype_query;
+    size_t curr_pos{0};
+    for (auto const boundary : escaped_placeholder_positions) {
+        double_escaped_logtype_query.append(m_logtype_query, curr_pos, boundary - curr_pos);
+        double_escaped_logtype_query += escape_char;
+        curr_pos = boundary;
+    }
+    if (logtype_query_length != curr_pos) {
+        double_escaped_logtype_query
+                .append(m_logtype_query, curr_pos, logtype_query_length - curr_pos);
+    }
+    m_logtype_query = std::move(double_escaped_logtype_query);
 }
 
 // Explicitly declare specializations to avoid having to validate that the
