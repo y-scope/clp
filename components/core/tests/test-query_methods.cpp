@@ -95,6 +95,14 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         message += " and a weird double " + var_strs[var_ix++];
         message += " and a string with numbers " + var_strs[var_ix++];
         message += " and another string with numbers " + var_strs[var_ix++];
+        message += " and an escape ";
+        message += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+        message += " and an int placeholder ";
+        message += enum_to_underlying_type(ir::VariablePlaceholder::Integer);
+        message += " and a float placeholder ";
+        message += enum_to_underlying_type(ir::VariablePlaceholder::Float);
+        message += " and a dictionary placeholder ";
+        message += enum_to_underlying_type(ir::VariablePlaceholder::Dictionary);
         REQUIRE(ffi::encode_message(message, logtype, encoded_vars, dictionary_var_bounds));
 
         wildcard_query = message;
@@ -752,6 +760,126 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
                 } else {
                     REQUIRE(std::holds_alternative<TestTypeWildcardVariableToken>(query_var));
                     const auto& wildcard_var = std::get<TestTypeWildcardVariableToken>(query_var);
+                    switch (expected_var_type.interpretation) {
+                        case VariablePlaceholder::Integer:
+                            REQUIRE(TokenType::IntegerVariable
+                                    == wildcard_var.get_current_interpretation());
+                            break;
+                        case VariablePlaceholder::Float:
+                            REQUIRE(TokenType::FloatVariable
+                                    == wildcard_var.get_current_interpretation());
+                            break;
+                        case VariablePlaceholder::Dictionary:
+                            REQUIRE(TokenType::DictionaryVariable
+                                    == wildcard_var.get_current_interpretation());
+                            break;
+                        default:
+                            REQUIRE(false);
+                    }
+                }
+            }
+        }
+    }
+
+    // In the following wildcard query, `^Q` represents a char with the value of
+    // VariablePlaceholder::Integer and `^R` represents a char with the value of
+    // VariablePlaceholder::Dictionary.
+    SECTION("*escape ^Q placeholders ^R in subqueries*") {
+        std::string const inner_static_text{
+                std::string(" ") + enum_to_underlying_type(VariablePlaceholder::Integer)
+                + " placeholders " + enum_to_underlying_type(VariablePlaceholder::Dictionary)
+                + " in "};
+        std::string const double_escaped_static_text{
+                std::string(" ") + enum_to_underlying_type(VariablePlaceholder::Escape)
+                + enum_to_underlying_type(VariablePlaceholder::Escape)
+                + enum_to_underlying_type(VariablePlaceholder::Integer) + " placeholders "
+                + enum_to_underlying_type(VariablePlaceholder::Escape)
+                + enum_to_underlying_type(VariablePlaceholder::Escape)
+                + enum_to_underlying_type(VariablePlaceholder::Dictionary) + " in "};
+        std::string const prefix{"*escape"};
+        std::string const postfix{"subqueries*"};
+
+        std::unordered_map<string, ExpectedSubquery> logtype_query_to_expected_subquery;
+        ExpectedSubquery expected_subquery;
+
+        // In the comments below, \d donates VariablePlaceholder::Dictionary
+        // Expected log type: "*escape \\^Q placeholders \\^R in subqueries*"
+        expected_subquery.logtype_query = prefix;
+        expected_subquery.logtype_query += double_escaped_static_text;
+        expected_subquery.logtype_query += postfix;
+        expected_subquery.logtype_query_contains_wildcards = true;
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
+        expected_subquery.clear();
+
+        // Expected log type: "*\d \\^Q placeholders \\^R in subqueries*"
+        expected_subquery.logtype_query = "*";
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += double_escaped_static_text;
+        expected_subquery.logtype_query += postfix;
+        expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query_contains_wildcards = true;
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
+        expected_subquery.clear();
+
+        // Expected log type: "*escape \\^Q placeholders \\^R in \d*"
+        expected_subquery.logtype_query = prefix;
+        expected_subquery.logtype_query += double_escaped_static_text;
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += "*";
+        expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query_contains_wildcards = true;
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
+        expected_subquery.clear();
+
+        // Expected log type: "*\d \\^Q placeholders \\^R in \d*"
+        expected_subquery.logtype_query = "*";
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += double_escaped_static_text;
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += "*";
+        expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
+        expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query_contains_wildcards = true;
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
+        expected_subquery.clear();
+
+        wildcard_query = prefix + inner_static_text + postfix;
+        generate_subqueries(wildcard_query, subqueries);
+
+        REQUIRE(subqueries.size() == logtype_query_to_expected_subquery.size());
+        auto const map_end{logtype_query_to_expected_subquery.cend()};
+        for (auto const& subquery : subqueries) {
+            auto const& logtype_query{subquery.get_logtype_query()};
+            auto const& query_vars{subquery.get_query_vars()};
+
+            auto const idx{logtype_query_to_expected_subquery.find(logtype_query)};
+            REQUIRE(map_end != idx);
+            auto const& expected_subquery{idx->second};
+            REQUIRE(subquery.logtype_query_contains_wildcards()
+                    == expected_subquery.logtype_query_contains_wildcards);
+            auto const& expected_var_types{expected_subquery.query_var_types};
+            REQUIRE(expected_var_types.size() == query_vars.size());
+            for (size_t i{0}; i < expected_var_types.size(); ++i) {
+                auto const& expected_var_type{expected_var_types[i]};
+                auto const& query_var{query_vars[i]};
+
+                if (expected_var_type.is_exact) {
+                    REQUIRE(false);
+                } else {
+                    REQUIRE(std::holds_alternative<TestTypeWildcardVariableToken>(query_var));
+                    auto const& wildcard_var{std::get<TestTypeWildcardVariableToken>(query_var)};
                     switch (expected_var_type.interpretation) {
                         case VariablePlaceholder::Integer:
                             REQUIRE(TokenType::IntegerVariable

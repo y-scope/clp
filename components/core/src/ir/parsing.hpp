@@ -81,6 +81,13 @@ bool is_var(std::string_view value);
 bool get_bounds_of_next_var(std::string_view str, size_t& begin_pos, size_t& end_pos);
 
 /**
+ * Appends a constant to the logtype, escaping any variable placeholders.
+ * @param constant
+ * @param logtype
+*/
+void escape_and_append_const_to_logtype(std::string_view constant, std::string& logtype);
+
+/**
  * Appends the given constant to the logtype, escaping any variable placeholders
  * by using the escape handler.
  * @tparam EscapeHandler Method to append and track escape chars when escaping
@@ -91,7 +98,7 @@ bool get_bounds_of_next_var(std::string_view str, size_t& begin_pos, size_t& end
  * @param escape_handler
  */
 template <typename EscapeHandler>
-void escape_and_append_constant_to_logtype(
+void append_constant_to_logtype(
         std::string_view constant,
         std::string& logtype,
         EscapeHandler escape_handler

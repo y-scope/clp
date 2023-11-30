@@ -366,9 +366,7 @@ bool encode_message_generically(
     logtype.reserve(message.length());
     while (ir::get_bounds_of_next_var(message, var_begin_pos, var_end_pos)) {
         std::string_view constant{&message[constant_begin_pos], var_begin_pos - constant_begin_pos};
-        if (false == constant_handler(constant, logtype)) {
-            return false;
-        }
+        constant_handler(constant, logtype);
         constant_begin_pos = var_end_pos;
 
         // Encode the variable
@@ -392,9 +390,7 @@ bool encode_message_generically(
         std::string_view constant{
                 &message[constant_begin_pos],
                 message.length() - constant_begin_pos};
-        if (false == constant_handler(constant, logtype)) {
-            return false;
-        }
+        constant_handler(constant, logtype);
     }
 
     return true;
@@ -407,20 +403,6 @@ bool encode_message(
         std::vector<encoded_variable_t>& encoded_vars,
         std::vector<int32_t>& dictionary_var_bounds
 ) {
-    auto constant_handler = [](std::string_view constant, std::string& logtype) {
-        // Ensure constant doesn't contain a variable placeholder
-        bool contains_variable_placeholder = std::any_of(
-                constant.cbegin(),
-                constant.cend(),
-                ir::is_variable_placeholder
-        );
-        if (contains_variable_placeholder) {
-            return false;
-        }
-
-        logtype.append(constant);
-        return true;
-    };
     auto encoded_variable_handler = [&encoded_vars](encoded_variable_t encoded_variable) {
         encoded_vars.push_back(encoded_variable);
     };
@@ -439,7 +421,7 @@ bool encode_message(
         == encode_message_generically<encoded_variable_t>(
                 message,
                 logtype,
-                constant_handler,
+                ir::escape_and_append_const_to_logtype,
                 encoded_variable_handler,
                 dictionary_variable_handler
         ))

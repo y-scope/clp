@@ -85,4 +85,11 @@ bool get_bounds_of_next_var(string_view const str, size_t& begin_pos, size_t& en
 
     return (msg_length != begin_pos);
 }
+
+void escape_and_append_const_to_logtype(std::string_view constant, std::string& logtype) {
+    auto escape_handler = [&](std::string& logtype, [[maybe_unused]] char char_to_escape) -> void {
+        logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+    };
+    append_constant_to_logtype(constant, logtype, escape_handler);
+}
 }  // namespace ir

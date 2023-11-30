@@ -65,7 +65,7 @@ bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begi
                 last_var_end_pos,
                 var_begin_pos - last_var_end_pos
         );
-        ir::escape_and_append_constant_to_logtype(constant, m_value, escape_handler);
+        ir::append_constant_to_logtype(constant, m_value, escape_handler);
 
         var.assign(msg, var_begin_pos, var_end_pos - var_begin_pos);
         return true;
@@ -76,7 +76,7 @@ bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begi
                 last_var_end_pos,
                 msg.length() - last_var_end_pos
         );
-        ir::escape_and_append_constant_to_logtype(constant, m_value, escape_handler);
+        ir::append_constant_to_logtype(constant, m_value, escape_handler);
     }
 
     return false;

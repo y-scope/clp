@@ -8,7 +8,7 @@
 
 namespace ir {
 template <typename EscapeHandler>
-void escape_and_append_constant_to_logtype(
+void append_constant_to_logtype(
         std::string_view constant,
         std::string& logtype,
         EscapeHandler escape_handler

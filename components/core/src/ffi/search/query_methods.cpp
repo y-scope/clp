@@ -93,8 +93,10 @@ void generate_subqueries(
         size_t constant_begin_pos = 0;
         for (auto const& token : tokens) {
             auto begin_pos = std::visit(TokenGetBeginPos, token);
-            logtype_query
-                    .append(wildcard_query, constant_begin_pos, begin_pos - constant_begin_pos);
+            ir::escape_and_append_const_to_logtype(
+                    wildcard_query.substr(constant_begin_pos, begin_pos - constant_begin_pos),
+                    logtype_query
+            );
 
             std::visit(
                     overloaded{
@@ -114,7 +116,10 @@ void generate_subqueries(
 
             constant_begin_pos = std::visit(TokenGetEndPos, token);
         }
-        logtype_query.append(wildcard_query, constant_begin_pos);
+        ir::escape_and_append_const_to_logtype(
+                wildcard_query.substr(constant_begin_pos),
+                logtype_query
+        );
 
         // Save sub-query if it's unique
         bool sub_query_exists = false;

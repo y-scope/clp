@@ -10,11 +10,11 @@ using std::vector;
 namespace ffi::search {
 template <typename encoded_variable_t>
 Subquery<encoded_variable_t>::Subquery(string logtype_query, Subquery::QueryVariables variables)
-        : m_logtype_query(std::move(logtype_query)),
-          m_logtype_query_contains_wildcards(false),
-          m_query_vars(variables) {
+        : m_logtype_query{std::move(logtype_query)},
+          m_logtype_query_contains_wildcards{false},
+          m_query_vars{std::move(variables)} {
     // Determine if the query contains variables
-    bool is_escaped = false;
+    bool is_escaped{false};
     auto const logtype_query_length{m_logtype_query.size()};
     std::vector<size_t> escaped_placeholder_positions;
     escaped_placeholder_positions.reserve(logtype_query_length / 2);
@@ -43,10 +43,10 @@ Subquery<encoded_variable_t>::Subquery(string logtype_query, Subquery::QueryVari
     }
     std::string double_escaped_logtype_query;
     size_t curr_pos{0};
-    for (auto const boundary : escaped_placeholder_positions) {
-        double_escaped_logtype_query.append(m_logtype_query, curr_pos, boundary - curr_pos);
+    for (auto const pos : escaped_placeholder_positions) {
+        double_escaped_logtype_query.append(m_logtype_query, curr_pos, pos - curr_pos);
         double_escaped_logtype_query += escape_char;
-        curr_pos = boundary;
+        curr_pos = pos;
     }
     if (logtype_query_length != curr_pos) {
         double_escaped_logtype_query
