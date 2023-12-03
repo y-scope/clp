@@ -3,7 +3,6 @@ name: "clp-core-build-macos"
 on:
   push:
     paths:
-      - ".github/actions/**"
       - ".github/workflows/clp-core-build-macos.yaml"
       - "components/core/cmake/**"
       - "components/core/CMakeLists.txt"
