@@ -13,6 +13,11 @@ on:
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.sh"
   workflow_dispatch:
 
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+  # Cancel in-progress jobs for efficiency
+  cancel-in-progress: true
+
 jobs:
   build-macos:
     runs-on: "macos-12"
