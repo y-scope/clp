@@ -45,4 +45,5 @@ jobs:
       - name: "Build CLP-core and run unit tests"
         shell: "bash"
         working-directory: "./components/core"
-        run: "./tools/scripts/utils/build-and-run-unit-tests.sh . build"
+        # NOTE: We omit the Stopwatch tests since GH's macOS runner is too slow
+        run: "./tools/scripts/utils/build-and-run-unit-tests.sh . build ~[Stopwatch]"
