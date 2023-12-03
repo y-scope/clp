@@ -67,7 +67,7 @@ runs:
         tags: "${{steps.deps_image_meta.outputs.tags}}"
         labels: "${{steps.deps_image_meta.outputs.labels}}"
 
-    - uses: "./.github/actions/clp-core-build-2"
+    - uses: "./.github/actions/clp-core-build"
       with:
         image_name: "${{steps.deps_image_meta.outputs.tags}}"
 
