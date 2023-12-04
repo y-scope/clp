@@ -19,14 +19,14 @@ jobs:
       - name: "Workaround actions/runner-images/issues/6775"
         run: "chown $(id -u):$(id -g) -R ."
 
-      - id: "meta"
-        uses: "docker/login-action@v3"
+      - uses: "docker/login-action@v3"
         with:
           registry: "ghcr.io"
           username: "${{github.actor}}"
           password: "${{secrets.GITHUB_TOKEN}}"
 
-      - uses: "docker/metadata-action@v5"
+      - id: "meta"
+        uses: "docker/metadata-action@v5"
         with:
           images: "${{github.repository}}/clp-execution-x86-ubuntu-focal"
 
