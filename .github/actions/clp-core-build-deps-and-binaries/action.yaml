@@ -29,12 +29,12 @@ runs:
         os_name: "${{inputs.os_name}}"
         clp_core_dir: "components/core"
         push_deps_image: >-
-          ${{'pull_request' != github.event_name
-          && 'refs/heads/main' == github.ref}}
+          ${{github.event_name != 'pull_request'
+          && github.ref == 'refs/heads/main'}}
         push_binaries_image: >-
           ${{inputs.push_binaries_image
-          && 'pull_request' != github.event_name
-          && 'refs/heads/main' == github.ref}}
+          && github.event_name != 'pull_request'
+          && github.ref == 'refs/heads/main'}}
         local_registry_port: "${{inputs.local_registry_port}}"
         token: "${{inputs.token}}"
 
