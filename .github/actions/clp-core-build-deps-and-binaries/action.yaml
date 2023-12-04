@@ -32,7 +32,7 @@ runs:
           ${{github.event_name != 'pull_request'
           && github.ref == 'refs/heads/main'}}
         push_binaries_image: >-
-          ${{inputs.push_binaries_image
+          ${{inputs.push_binaries_image == 'true'
           && github.event_name != 'pull_request'
           && github.ref == 'refs/heads/main'}}
         local_registry_port: "${{inputs.local_registry_port}}"
