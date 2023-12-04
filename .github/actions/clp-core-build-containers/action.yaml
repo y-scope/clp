@@ -38,7 +38,7 @@ runs:
     - id: "get_deps_image_props"
       shell: "bash"
       run: |
-        if [[ "${{inputs.push_deps_image}}" = "true" ]] ; then
+        if [[ "${{inputs.push_deps_image}}" == "true" ]] ; then
           registry=ghcr.io
           branch=${{github.ref_name}}
         else
