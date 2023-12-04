@@ -15,9 +15,9 @@ runs:
 
     - shell: "bash"
       run: >-
-        docker run \
-          --user $(id -u):$(id -g) \
-          --volume "$GITHUB_WORKSPACE/components/core":/mnt/clp \
-          --workdir /mnt/clp \
-          ${{inputs.image_name}} \
-          /mnt/clp/tools/scripts/utils/build-and-run-unit-tests.sh . build 
+        docker run
+        --user $(id -u):$(id -g)
+        --volume "$GITHUB_WORKSPACE/components/core":/mnt/clp
+        --workdir /mnt/clp
+        ${{inputs.image_name}}
+        /mnt/clp/tools/scripts/utils/build-and-run-unit-tests.sh . build 
