@@ -1,0 +1,45 @@
+name: "clp-core-build-deps-and-binaries"
+description: >-
+  Builds a container image containing CLP-core's dependencies, builds CLP-core,
+  and runs CLP-core's unit tests.
+
+inputs:
+  os_name:
+    description: "Name of container OS"
+    required: true
+  deps_image_changed:
+    description: "Whether the dependencies Docker image files have changed"
+    required: true
+  push_binaries_image:
+    description: "Whether to publish a Docker image containing CLP's binaries"
+    required: true
+  local_registry_port:
+    description: "Port number for the local registry"
+    required: true
+  token:
+    description: "Container registry token"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - if: "inputs.deps_image_changed == 'true'"
+      uses: "./.github/actions/clp-core-build-containers"
+      with:
+        os_name: "${{inputs.os_name}}"
+        clp_core_dir: "components/core"
+        push_deps_image: >-
+          ${{github.event_name != 'pull_request'
+          && github.ref == 'refs/heads/main'}}
+        push_binaries_image: >-
+          ${{inputs.push_binaries_image == 'true'
+          && github.event_name != 'pull_request'
+          && github.ref == 'refs/heads/main'}}
+        local_registry_port: "${{inputs.local_registry_port}}"
+        token: "${{inputs.token}}"
+
+    - if: "inputs.deps_image_changed == 'false'"
+      uses: "./.github/actions/clp-core-build"
+      with:
+        image_name: >-
+          ghcr.io/${{github.repository}}/clp-core-dependencies-x86-${{inputs.os_name}}:main

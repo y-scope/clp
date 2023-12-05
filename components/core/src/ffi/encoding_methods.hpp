@@ -171,7 +171,7 @@ std::string decode_integer_var(encoded_variable_t encoded_var);
  * components of the message.
  * @tparam encoded_variable_t Type of the encoded variable
  * @tparam ConstantHandler Method to handle constants. Signature:
- * (std::string_view constant, std::string& logtype) -> bool
+ * (std::string_view constant, std::string& logtype) -> void
  * @tparam EncodedVariableHandler Method to handle encoded variables.
  * Signature: (encoded_variable_t) -> void
  * @tparam DictionaryVariableHandler Method to handle dictionary variables.

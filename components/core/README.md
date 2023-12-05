@@ -57,8 +57,8 @@ See the relevant README for your OS:
 
 * [CentOS 7.4](./tools/scripts/lib_install/centos7.4/README.md)
 * [macOS 12](./tools/scripts/lib_install/macos-12/README.md)
-* [Ubuntu 18.04](./tools/scripts/lib_install/ubuntu-bionic/README.md)
 * [Ubuntu 20.04](./tools/scripts/lib_install/ubuntu-focal/README.md)
+* [Ubuntu 22.04](./tools/scripts/lib_install/ubuntu-jammy/README.md)
 
 Want to build natively on an OS not listed here? You can file a [feature request](https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml).
 

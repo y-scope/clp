@@ -52,14 +52,6 @@ static void add_base_metadata_fields(
 );
 
 /**
- * Appends a constant to the logtype, escaping any variable placeholders
- * @param constant
- * @param logtype
- * @return true
- */
-static bool append_constant_to_logtype(string_view constant, string& logtype);
-
-/**
  * A functor for encoding dictionary variables in a message
  */
 class DictionaryVariableHandler {
@@ -162,11 +154,6 @@ static void add_base_metadata_fields(
     metadata[cProtocol::Metadata::TimeZoneIdKey] = time_zone_id;
 }
 
-static bool append_constant_to_logtype(string_view constant, string& logtype) {
-    ir::escape_and_append_constant_to_logtype(constant, logtype);
-    return true;
-}
-
 namespace eight_byte_encoding {
     bool encode_preamble(
             string_view timestamp_pattern,
@@ -206,7 +193,7 @@ namespace eight_byte_encoding {
             == encode_message_generically<eight_byte_encoded_variable_t>(
                     message,
                     logtype,
-                    append_constant_to_logtype,
+                    ir::escape_and_append_const_to_logtype,
                     encoded_var_handler,
                     DictionaryVariableHandler(ir_buf)
             ))
@@ -280,7 +267,7 @@ namespace four_byte_encoding {
             == encode_message_generically<four_byte_encoded_variable_t>(
                     message,
                     logtype,
-                    append_constant_to_logtype,
+                    ir::escape_and_append_const_to_logtype,
                     encoded_var_handler,
                     DictionaryVariableHandler(ir_buf)
             ))

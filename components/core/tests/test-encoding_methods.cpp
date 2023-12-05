@@ -401,11 +401,11 @@ TEMPLATE_TEST_CASE("Encoding messages", "[ffi][encode-message]", eight_byte_enco
     // Test encoding a message with a variable placeholder after the variables
     message = " test var123 ";
     message += enum_to_underlying_type(VariablePlaceholder::Integer);
-    REQUIRE(false == encode_message(message, logtype, encoded_vars, dictionary_var_bounds));
+    REQUIRE(encode_message(message, logtype, encoded_vars, dictionary_var_bounds));
 
     // Test encoding a message with a variable placeholder before a variable
     message += " var234";
-    REQUIRE(false == encode_message(message, logtype, encoded_vars, dictionary_var_bounds));
+    REQUIRE(encode_message(message, logtype, encoded_vars, dictionary_var_bounds));
 }
 
 TEMPLATE_TEST_CASE("wildcard_query_matches_any_encoded_var",

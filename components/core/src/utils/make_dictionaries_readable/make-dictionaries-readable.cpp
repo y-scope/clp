@@ -66,12 +66,12 @@ int main (int argc, const char* argv[]) {
         human_readable_value.clear();
 
         size_t constant_begin_pos = 0;
-        for (size_t var_ix = 0; var_ix < entry.get_num_vars(); ++var_ix) {
+        for (size_t placeholder_ix = 0; placeholder_ix < entry.get_num_placeholders(); ++placeholder_ix) {
             ir::VariablePlaceholder var_placeholder;
-            size_t var_pos = entry.get_var_info(var_ix, var_placeholder);
+            size_t const placeholder_pos = entry.get_placeholder_info(placeholder_ix, var_placeholder);
 
             // Add the constant that's between the last variable and this one, with newlines escaped
-            human_readable_value.append(value, constant_begin_pos, var_pos - constant_begin_pos);
+            human_readable_value.append(value, constant_begin_pos, placeholder_pos - constant_begin_pos);
 
             switch (var_placeholder) {
                 case ir::VariablePlaceholder::Integer:
@@ -83,13 +83,15 @@ int main (int argc, const char* argv[]) {
                 case ir::VariablePlaceholder::Dictionary:
                     human_readable_value += "\\d";
                     break;
+                case ir::VariablePlaceholder::Escape:
+                    break;
                 default:
                     SPDLOG_ERROR("Logtype '{}' contains unexpected variable placeholder 0x{:x}",
                                  value, enum_to_underlying_type(var_placeholder));
                     return -1;
             }
             // Move past the variable placeholder
-            constant_begin_pos = var_pos + 1;
+            constant_begin_pos = placeholder_pos + 1;
         }
         // Append remainder of value, if any
         if (constant_begin_pos < value.length()) {

@@ -7,6 +7,8 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
 endif()
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Set general compressor
 set(GENERAL_COMPRESSOR "zstd" CACHE STRING "The general-purpose compressor used as the 2nd-stage compressor")
 set_property(CACHE GENERAL_COMPRESSOR PROPERTY STRINGS passthrough zstd)
@@ -234,6 +236,7 @@ set(SOURCE_FILES_clp
         src/ir/LogEventDeserializer.hpp
         src/ir/parsing.cpp
         src/ir/parsing.hpp
+        src/ir/parsing.inc
         src/ir/utils.cpp
         src/ir/utils.hpp
         src/LibarchiveFileReader.cpp
@@ -402,6 +405,7 @@ set(SOURCE_FILES_clg
         src/ir/parsing.hpp
         src/LogSurgeonReader.cpp
         src/LogSurgeonReader.hpp
+        src/ir/parsing.inc
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
@@ -543,6 +547,7 @@ set(SOURCE_FILES_clo
         src/ir/parsing.hpp
         src/LogSurgeonReader.cpp
         src/LogSurgeonReader.hpp
+        src/ir/parsing.inc
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
@@ -725,6 +730,7 @@ set(SOURCE_FILES_unitTest
         src/ir/LogEventDeserializer.hpp
         src/ir/parsing.cpp
         src/ir/parsing.hpp
+        src/ir/parsing.inc
         src/ir/utils.cpp
         src/ir/utils.hpp
         src/LibarchiveFileReader.cpp

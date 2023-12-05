@@ -81,6 +81,8 @@ auto deserialize_ir_message(
 /**
  * Decodes the IR message calls the given methods to handle each component of
  * the message
+ * @tparam unescape_logtype Whether to remove the escape characters from the
+ * logtype before calling \p ConstantHandler
  * @tparam encoded_variable_t Type of the encoded variable
  * @tparam ConstantHandler Method to handle constants in the logtype.
  * Signature: (const std::string&, size_t, size_t) -> void
@@ -100,6 +102,7 @@ auto deserialize_ir_message(
  * @throw DecodingException if the message can not be decoded properly
  */
 template <
+        bool unescape_logtype,
         typename encoded_variable_t,
         typename ConstantHandler,
         typename EncodedIntHandler,
