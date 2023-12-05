@@ -10,8 +10,8 @@ namespace ir {
 template <typename EscapeHandler>
 void append_constant_to_logtype(
         std::string_view constant,
-        std::string& logtype,
-        EscapeHandler escape_handler
+        EscapeHandler escape_handler,
+        std::string& logtype
 ) {
     size_t begin_pos = 0;
     auto constant_len = constant.length();
@@ -25,7 +25,7 @@ void append_constant_to_logtype(
         // NOTE: We don't need to append the character of interest
         // immediately since the next constant copy operation will get it
         begin_pos = i;
-        escape_handler(logtype, c);
+        escape_handler(constant, i, logtype);
     }
     logtype.append(constant, begin_pos, constant_len - begin_pos);
 }

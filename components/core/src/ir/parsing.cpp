@@ -4,6 +4,7 @@
 #include "../type_utils.hpp"
 
 using std::string_view;
+using std::string;
 
 namespace ir {
 /*
@@ -86,10 +87,16 @@ bool get_bounds_of_next_var(string_view const str, size_t& begin_pos, size_t& en
     return (msg_length != begin_pos);
 }
 
-void escape_and_append_const_to_logtype(std::string_view constant, std::string& logtype) {
-    auto escape_handler = [&](std::string& logtype, [[maybe_unused]] char char_to_escape) -> void {
+void escape_and_append_const_to_logtype(string_view constant, string& logtype) {
+    // clang-format off
+    auto escape_handler = [&](
+            [[maybe_unused]] string_view constant,
+            [[maybe_unused]] size_t char_to_escape_pos,
+            string& logtype
+    ) -> void {
         logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
     };
-    append_constant_to_logtype(constant, logtype, escape_handler);
+    // clang-format on
+    append_constant_to_logtype(constant, escape_handler, logtype);
 }
 }  // namespace ir

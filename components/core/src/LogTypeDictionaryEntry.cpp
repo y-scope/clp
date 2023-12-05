@@ -5,20 +5,21 @@
 #include "type_utils.hpp"
 #include "Utils.hpp"
 
+using std::string_view;
 using std::string;
 
 size_t LogTypeDictionaryEntry::get_placeholder_info(
-        size_t var_ix,
-        ir::VariablePlaceholder& var_placeholder
+        size_t placeholder_ix,
+        ir::VariablePlaceholder& placeholder
 ) const {
-    if (var_ix >= m_placeholder_positions.size()) {
+    if (placeholder_ix >= m_placeholder_positions.size()) {
         return SIZE_MAX;
     }
 
-    auto var_position = m_placeholder_positions[var_ix];
-    var_placeholder = static_cast<ir::VariablePlaceholder>(m_value[var_position]);
+    auto var_position = m_placeholder_positions[placeholder_ix];
+    placeholder = static_cast<ir::VariablePlaceholder>(m_value[var_position]);
 
-    return m_placeholder_positions[var_ix];
+    return m_placeholder_positions[placeholder_ix];
 }
 
 size_t LogTypeDictionaryEntry::get_data_size () const {
@@ -54,29 +55,35 @@ void LogTypeDictionaryEntry::add_escape() {
 
 bool LogTypeDictionaryEntry::parse_next_var (const string& msg, size_t& var_begin_pos, size_t& var_end_pos, string& var) {
     auto last_var_end_pos = var_end_pos;
-    auto escape_handler = [&](std::string& logtype, [[maybe_unused]] char char_to_escape) -> void {
+    // clang-format off
+    auto escape_handler = [&](
+            [[maybe_unused]] string_view constant,
+            [[maybe_unused]] size_t char_to_escape_pos,
+            string& logtype
+    ) -> void {
         m_placeholder_positions.push_back(logtype.size());
         ++m_num_escaped_placeholders;
         logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
     };
+    // clang-format on
     if (ir::get_bounds_of_next_var(msg, var_begin_pos, var_end_pos)) {
         // Append to log type: from end of last variable to start of current variable
-        auto constant = static_cast<std::string_view>(msg).substr(
+        auto constant = static_cast<string_view>(msg).substr(
                 last_var_end_pos,
                 var_begin_pos - last_var_end_pos
         );
-        ir::append_constant_to_logtype(constant, m_value, escape_handler);
+        ir::append_constant_to_logtype(constant, escape_handler, m_value);
 
         var.assign(msg, var_begin_pos, var_end_pos - var_begin_pos);
         return true;
     }
     if (last_var_end_pos < msg.length()) {
         // Append to log type: from end of last variable to end
-        auto constant = static_cast<std::string_view>(msg).substr(
+        auto constant = static_cast<string_view>(msg).substr(
                 last_var_end_pos,
                 msg.length() - last_var_end_pos
         );
-        ir::append_constant_to_logtype(constant, m_value, escape_handler);
+        ir::append_constant_to_logtype(constant, escape_handler, m_value);
     }
 
     return false;

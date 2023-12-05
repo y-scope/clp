@@ -72,7 +72,7 @@ public:
     }
 
     /**
-     * @return The number of variable placeholders (included escaped ones) in the logtype.
+     * @return The number of variable placeholders (including escaped ones) in the logtype.
     */
     size_t get_num_placeholders () const { return m_placeholder_positions.size(); }
 
@@ -84,12 +84,12 @@ public:
     }
 
     /**
-     * Gets all info about a placeholder in the logtype
-     * @param var_ix The index of the variable to get the info for
-     * @param var_placeholder
-     * @return The variable's position in the logtype, or SIZE_MAX if var_ix is out of bounds
+     * Gets all info about a variable placeholder in the logtype
+     * @param placeholder_ix The index of the placeholder to get the info for
+     * @param placeholder
+     * @return The placeholder's position in the logtype, or SIZE_MAX if var_ix is out of bounds
      */
-    size_t get_placeholder_info (size_t var_ix, ir::VariablePlaceholder& var_placeholder) const;
+    size_t get_placeholder_info (size_t placeholder_ix, ir::VariablePlaceholder& placeholder) const;
 
     /**
      * Gets the size (in-memory) of the data contained in this entry

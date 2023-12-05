@@ -13,7 +13,8 @@ Subquery<encoded_variable_t>::Subquery(string logtype_query, Subquery::QueryVari
         : m_logtype_query{std::move(logtype_query)},
           m_logtype_query_contains_wildcards{false},
           m_query_vars{std::move(variables)} {
-    // Determine if the query contains variables
+    // Determine if the query contains wildcards and record the positions of the
+    // variable placeholders.
     bool is_escaped{false};
     auto const logtype_query_length{m_logtype_query.size()};
     std::vector<size_t> escaped_placeholder_positions;
@@ -23,10 +24,9 @@ Subquery<encoded_variable_t>::Subquery(string logtype_query, Subquery::QueryVari
         char const c{m_logtype_query[idx]};
         if (is_escaped) {
             is_escaped = false;
-            if (escape_char == c) {
-                continue;
+            if (ir::is_variable_placeholder(c)) {
+                escaped_placeholder_positions.push_back(idx);
             }
-            escaped_placeholder_positions.push_back(idx);
         } else if (escape_char == c) {
             is_escaped = true;
         } else if ((enum_to_underlying_type(WildcardType::ZeroOrMoreChars) == c
@@ -35,22 +35,21 @@ Subquery<encoded_variable_t>::Subquery(string logtype_query, Subquery::QueryVari
             m_logtype_query_contains_wildcards = true;
         }
     }
-    if (false == m_logtype_query_contains_wildcards) {
+    if (false == m_logtype_query_contains_wildcards || escaped_placeholder_positions.empty()) {
         return;
     }
-    if (escaped_placeholder_positions.empty()) {
-        return;
-    }
+
+    // Query contains wildcards and variable placeholders, so we need to add an
+    // additional escape for each variable placeholder.
     std::string double_escaped_logtype_query;
-    size_t curr_pos{0};
-    for (auto const pos : escaped_placeholder_positions) {
-        double_escaped_logtype_query.append(m_logtype_query, curr_pos, pos - curr_pos);
+    size_t pos{0};
+    for (auto const placeholder_pos : escaped_placeholder_positions) {
+        double_escaped_logtype_query.append(m_logtype_query, pos, placeholder_pos - pos);
         double_escaped_logtype_query += escape_char;
-        curr_pos = pos;
+        pos = placeholder_pos;
     }
-    if (logtype_query_length != curr_pos) {
-        double_escaped_logtype_query
-                .append(m_logtype_query, curr_pos, logtype_query_length - curr_pos);
+    if (logtype_query_length != pos) {
+        double_escaped_logtype_query.append(m_logtype_query, pos);
     }
     m_logtype_query = std::move(double_escaped_logtype_query);
 }

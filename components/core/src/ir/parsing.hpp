@@ -88,20 +88,23 @@ bool get_bounds_of_next_var(std::string_view str, size_t& begin_pos, size_t& end
 void escape_and_append_const_to_logtype(std::string_view constant, std::string& logtype);
 
 /**
- * Appends the given constant to the logtype, escaping any variable placeholders
- * by using the escape handler.
- * @tparam EscapeHandler Method to append and track escape chars when escaping
- * variable placeholders. Signature:
- * (std::string& logtype, [[maybe_unused]] char char_to_escape) -> void
+ * Appends the given constant to the logtype, optionally escaping any variable
+ * placeholders found within the constant using the given handler.
+ * @tparam EscapeHandler Method to optionally escape any variable placeholders
+ * found within the constant. Signature: (
+ *         [[maybe_unused]] std::string_view constant,
+ *         [[maybe_unused]] size_t char_to_escape_pos,
+ *         std::string& logtype
+ * ) -> void
  * @param constant
- * @param logtype
  * @param escape_handler
+ * @param logtype
  */
 template <typename EscapeHandler>
 void append_constant_to_logtype(
         std::string_view constant,
-        std::string& logtype,
-        EscapeHandler escape_handler
+        EscapeHandler escape_handler,
+        std::string& logtype
 );
 }  // namespace ir
 
