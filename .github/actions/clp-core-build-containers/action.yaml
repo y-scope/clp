@@ -39,15 +39,12 @@ runs:
       shell: "bash"
       run: |
         if [[ "${{inputs.push_deps_image}}" == "true" ]] ; then
-          registry=ghcr.io
-          branch=${{github.ref_name}}
+          echo "REGISTRY=ghcr.io" >> "$GITHUB_OUTPUT"
+          echo "BRANCH=${{github.ref_name}}" >> "$GITHUB_OUTPUT"
         else
-          registry=localhost:${{inputs.local_registry_port}}
-          branch=latest
+          echo "REGISTRY=localhost:${{inputs.local_registry_port}}" >> "$GITHUB_OUTPUT"
+          echo "BRANCH=latest" >> "$GITHUB_OUTPUT"
         fi
-
-        echo "REGISTRY=$registry" >> "$GITHUB_OUTPUT"
-        echo "BRANCH=$branch" >> "$GITHUB_OUTPUT"
 
     - id: "deps_image_meta"
       uses: "docker/metadata-action@v5"
