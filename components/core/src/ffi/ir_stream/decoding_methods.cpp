@@ -1,5 +1,7 @@
 #include "decoding_methods.hpp"
 
+#include <regex>
+
 #include "byteswap.hpp"
 #include "protocol_constants.hpp"
 
@@ -251,6 +253,12 @@ parse_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_m
                 return IRErrorCode_Incomplete_IR;
             }
             ts = ts_delta;
+        } else if (cProtocol::Payload::TimestampDeltaLong == encoded_tag) {
+            int64_t ts_delta;
+            if (false == decode_int(reader, ts_delta)) {
+                return IRErrorCode_Incomplete_IR;
+            }
+            ts = ts_delta;
         } else {
             return IRErrorCode_Corrupted_IR;
         }
@@ -277,9 +285,8 @@ generic_decode_next_message(ReaderInterface& reader, string& message, epoch_time
         message.append(value, begin_pos, length);
     };
 
-    auto encoded_int_handler = [&](encoded_variable_t value) {
-        message.append(decode_integer_var(value));
-    };
+    auto encoded_int_handler
+            = [&](encoded_variable_t value) { message.append(decode_integer_var(value)); };
 
     auto encoded_float_handler = [&](encoded_variable_t encoded_float) {
         message.append(decode_float_var(encoded_float));
@@ -456,6 +463,36 @@ IRErrorCode decode_preamble(
         return IRErrorCode_Incomplete_IR;
     }
     return IRErrorCode_Success;
+}
+
+IRProtocolErrorCode validate_protocol_version(std::string_view protocol_version) {
+    if ("v0.0.0" == protocol_version) {
+        // This version is hardcoded to support the oldest IR protocol version.
+        // When this version is no longer supported, this branch should be
+        // removed.
+        return IRProtocolErrorCode_Supported;
+    }
+    std::regex const protocol_version_regex{cProtocol::Metadata::VersionRegex};
+    if (false
+        == std::regex_match(
+                protocol_version.begin(),
+                protocol_version.end(),
+                protocol_version_regex
+        ))
+    {
+        return IRProtocolErrorCode_Invalid;
+    }
+    std::string_view current_build_protocol_version{cProtocol::Metadata::VersionValue};
+    auto get_major_version{[](std::string_view version) {
+        return version.substr(0, version.find('.'));
+    }};
+    if (current_build_protocol_version < protocol_version) {
+        return IRProtocolErrorCode_Too_New;
+    }
+    if (get_major_version(current_build_protocol_version) > get_major_version(protocol_version)) {
+        return IRProtocolErrorCode_Too_Old;
+    }
+    return IRProtocolErrorCode_Supported;
 }
 
 namespace four_byte_encoding {
