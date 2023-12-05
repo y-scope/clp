@@ -46,7 +46,7 @@ The packages held by this [repository](https://github.com/orgs/y-scope/packages?
 1. Docker Image `clp/clp-core-dependencies-x86-ubuntu-jammy`
     - A docker image containing all the necessary dependencies to build CLP core in an Ubuntu Jammy x86 environment
 2. Docker Image `clp/clp-core-dependencies-x86-ubuntu-focal`
-     - A docker image containing all the necessary dependencies to build CLP core in an Ubuntu Focal x86 environment
+    - A docker image containing all the necessary dependencies to build CLP core in an Ubuntu Focal x86 environment
 3. Docker Image `clp/clp-core-dependencies-x86-centos7.4`
     - A docker image containing all the necessary dependencies to build CLP core in a Centos 7.4 x86 environment
 4. Docker Image `clp/clp-execution-x86-ubuntu-focal`
