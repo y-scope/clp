@@ -212,7 +212,7 @@ namespace streaming_archive::reader {
 
             // Get number of variables in logtype
             const auto& logtype_dictionary_entry = m_archive_logtype_dict->get_entry(logtype_id);
-            auto num_vars = logtype_dictionary_entry.get_num_vars();
+            auto const num_vars = logtype_dictionary_entry.get_num_variables();
 
             auto timestamp = m_timestamps[m_msgs_ix];
             if (search_begin_timestamp <= timestamp && timestamp <= search_end_timestamp) {
@@ -253,7 +253,7 @@ namespace streaming_archive::reader {
 
             // Get number of variables in logtype
             const auto& logtype_dictionary_entry = m_archive_logtype_dict->get_entry(logtype_id);
-            auto num_vars = logtype_dictionary_entry.get_num_vars();
+            auto const num_vars = logtype_dictionary_entry.get_num_variables();
 
             for (auto sub_query : query.get_relevant_sub_queries()) {
                 // Check if logtype matches search
@@ -315,7 +315,7 @@ namespace streaming_archive::reader {
         // Get variables
         msg.clear_vars();
         const auto& logtype_dictionary_entry = m_archive_logtype_dict->get_entry(logtype_id);
-        auto num_vars = logtype_dictionary_entry.get_num_vars();
+        auto const num_vars = logtype_dictionary_entry.get_num_variables();
         if (m_variables_ix + num_vars > m_num_variables) {
             return false;
         }

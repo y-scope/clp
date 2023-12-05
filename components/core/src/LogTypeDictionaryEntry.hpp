@@ -63,15 +63,33 @@ public:
     static void add_float_var (std::string& logtype) {
         logtype += enum_to_underlying_type(ir::VariablePlaceholder::Float);
     }
-
-    size_t get_num_vars () const { return m_var_positions.size(); }
     /**
-     * Gets all info about a variable in the logtype
-     * @param var_ix The index of the variable to get the info for
-     * @param var_placeholder
-     * @return The variable's position in the logtype, or SIZE_MAX if var_ix is out of bounds
+     * Adds an escape character to the given logtype
+     * @param logtype
      */
-    size_t get_var_info (size_t var_ix, ir::VariablePlaceholder& var_placeholder) const;
+    static void add_escape (std::string& logtype) {
+        logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+    }
+
+    /**
+     * @return The number of variable placeholders (including escaped ones) in the logtype.
+    */
+    size_t get_num_placeholders () const { return m_placeholder_positions.size(); }
+
+    /**
+     * @return The number of variable placeholders (excluding escaped ones) in the logtype.
+    */
+    size_t get_num_variables () const {
+        return m_placeholder_positions.size() - m_num_escaped_placeholders;
+    }
+
+    /**
+     * Gets all info about a variable placeholder in the logtype
+     * @param placeholder_ix The index of the placeholder to get the info for
+     * @param placeholder
+     * @return The placeholder's position in the logtype, or SIZE_MAX if var_ix is out of bounds
+     */
+    size_t get_placeholder_info (size_t placeholder_ix, ir::VariablePlaceholder& placeholder) const;
 
     /**
      * Gets the size (in-memory) of the data contained in this entry
@@ -98,6 +116,10 @@ public:
      * Adds a dictionary variable placeholder
      */
     void add_dictionary_var ();
+    /**
+     * Adds an escape character
+     */
+    void add_escape ();
 
     /**
      * Parses next variable from a message, constructing the constant part of the message's logtype as well
@@ -137,16 +159,9 @@ public:
     void read_from_file (streaming_compression::Decompressor& decompressor);
 
 private:
-    // Methods
-    /**
-     * Escapes any variable placeholders that don't correspond to the positions
-     * of variables in the logtype entry's value
-     * @param escaped_logtype_value
-     */
-    void get_value_with_unfounded_variables_escaped (std::string& escaped_logtype_value) const;
-
     // Variables
-    std::vector<size_t> m_var_positions;
+    std::vector<size_t> m_placeholder_positions;
+    size_t m_num_escaped_placeholders{0};
 };
 
 #endif // LOGTYPEDICTIONARYENTRY_HPP

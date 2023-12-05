@@ -84,6 +84,17 @@ void generate_subqueries(
     tokenize_query(wildcard_query, tokens, composite_wildcard_token_indexes);
 
     bool all_interpretations_complete = false;
+    auto escape_handler
+            = [](string_view constant, size_t char_to_escape_pos, string& logtype) -> void {
+        auto const next_char_pos{char_to_escape_pos + 1};
+        // NOTE: We don't want to add additional escapes for wildcards that have
+        // been escaped. E.g., the query "\\*" should remain unchanged.
+        if (ir::is_variable_placeholder(constant[char_to_escape_pos])
+            || (next_char_pos < constant.length() && false == is_wildcard(constant[next_char_pos])))
+        {
+            logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+        }
+    };
     string logtype_query;
     vector<variant<ExactVariableToken<encoded_variable_t>, WildcardToken<encoded_variable_t>>>
             query_vars;
@@ -93,8 +104,11 @@ void generate_subqueries(
         size_t constant_begin_pos = 0;
         for (auto const& token : tokens) {
             auto begin_pos = std::visit(TokenGetBeginPos, token);
-            logtype_query
-                    .append(wildcard_query, constant_begin_pos, begin_pos - constant_begin_pos);
+            ir::append_constant_to_logtype(
+                    wildcard_query.substr(constant_begin_pos, begin_pos - constant_begin_pos),
+                    escape_handler,
+                    logtype_query
+            );
 
             std::visit(
                     overloaded{
@@ -114,7 +128,11 @@ void generate_subqueries(
 
             constant_begin_pos = std::visit(TokenGetEndPos, token);
         }
-        logtype_query.append(wildcard_query, constant_begin_pos);
+        ir::append_constant_to_logtype(
+                wildcard_query.substr(constant_begin_pos),
+                escape_handler,
+                logtype_query
+        );
 
         // Save sub-query if it's unique
         bool sub_query_exists = false;

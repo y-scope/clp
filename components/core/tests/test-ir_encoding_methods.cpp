@@ -464,7 +464,8 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]") {
 
     // Test if a trailing escape triggers a decoder error
     auto ir_with_extra_escape{ir_buf};
-    ir_with_extra_escape.at(logtype_end_pos - 1) = ir::cVariablePlaceholderEscapeCharacter;
+    ir_with_extra_escape.at(logtype_end_pos - 1)
+            = enum_to_underlying_type(VariablePlaceholder::Escape);
     BufferReader ir_with_extra_escape_buffer{
             size_checked_pointer_cast<char const>(ir_with_extra_escape.data()),
             ir_with_extra_escape.size()

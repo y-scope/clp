@@ -295,7 +295,7 @@ generic_decode_next_message(ReaderInterface& reader, string& message, epoch_time
     auto dict_var_handler = [&](string const& dict_var) { message.append(dict_var); };
 
     try {
-        generic_decode_message(
+        generic_decode_message<true>(
                 logtype,
                 encoded_vars,
                 dict_vars,

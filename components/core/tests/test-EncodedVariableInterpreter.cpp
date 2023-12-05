@@ -6,6 +6,7 @@
 
 // Project headers
 #include "../src/EncodedVariableInterpreter.hpp"
+#include "../src/ir/parsing.hpp"
 #include "../src/streaming_archive/Constants.hpp"
 
 using std::string;
@@ -235,7 +236,11 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
                 " and a very large int " + var_strs[1] +
                 " and a double " + var_strs[2] +
                 " and a weird double " + var_strs[3] +
-                " and a str with numbers " + var_strs[4];
+                " and a str with numbers " + var_strs[4] +
+                " and an escape " + enum_to_underlying_type(ir::VariablePlaceholder::Escape) +
+                " and an int placeholder " + enum_to_underlying_type(ir::VariablePlaceholder::Integer) +
+                " and a float placeholder " + enum_to_underlying_type(ir::VariablePlaceholder::Float) +
+                " and a dictionary placeholder " + enum_to_underlying_type(ir::VariablePlaceholder::Dictionary);
 
         LogTypeDictionaryEntry logtype_dict_entry;
         EncodedVariableInterpreter::encode_and_add_to_dictionary(msg, logtype_dict_entry,
@@ -246,10 +251,10 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
         // Test var_ids is correctly populated
         size_t encoded_var_id_ix = 0;
         ir::VariablePlaceholder var_placeholder;
-        for (auto var_ix = 0; var_ix < logtype_dict_entry.get_num_vars(); var_ix++) {
-            std::ignore = logtype_dict_entry.get_var_info(var_ix, var_placeholder);
+        for (auto placeholder_ix = 0; placeholder_ix < logtype_dict_entry.get_num_placeholders(); placeholder_ix++) {
+            std::ignore = logtype_dict_entry.get_placeholder_info(placeholder_ix, var_placeholder);
             if (ir::VariablePlaceholder::Dictionary == var_placeholder) {
-                auto var = encoded_vars[var_ix];
+                auto var = encoded_vars[placeholder_ix];
                 REQUIRE(var_ids.size() > encoded_var_id_ix);
                 REQUIRE(EncodedVariableInterpreter::decode_var_dict_id(var) ==
                         var_ids[encoded_var_id_ix]);
@@ -275,6 +280,18 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
         REQUIRE(EncodedVariableInterpreter::encode_and_search_dictionary(var_strs[3], var_dict_reader, false, search_logtype, sub_query));
         search_logtype += " and a str with numbers ";
         REQUIRE(EncodedVariableInterpreter::encode_and_search_dictionary(var_strs[4], var_dict_reader, false, search_logtype, sub_query));
+        search_logtype += " and an escape ";
+        search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+        search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+        search_logtype += " and an int placeholder ";
+        search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+        search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Integer);
+        search_logtype += " and a float placeholder ";
+        search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+        search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Float);
+        search_logtype += " and a dictionary placeholder ";
+        search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+        search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Dictionary);
         auto& vars = sub_query.get_vars();
         REQUIRE(vars.size() == encoded_vars.size());
         for (size_t i = 0; i < vars.size(); ++i) {
@@ -282,7 +299,7 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
         }
 
         // Test search for unknown variable
-        REQUIRE(!EncodedVariableInterpreter::encode_and_search_dictionary("abc123", var_dict_reader, false, search_logtype, sub_query));
+        REQUIRE(false == EncodedVariableInterpreter::encode_and_search_dictionary("abc123", var_dict_reader, false, search_logtype, sub_query));
 
         REQUIRE(logtype_dict_entry.get_value() == search_logtype);
 

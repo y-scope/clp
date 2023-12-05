@@ -338,9 +338,30 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
 {
     size_t last_token_end_pos = 0;
     string logtype;
+    auto escape_handler
+            = [](std::string_view constant, size_t char_to_escape_pos, string& logtype) -> void {
+        auto const escape_char{enum_to_underlying_type(ir::VariablePlaceholder::Escape)};
+        auto const next_char_pos{char_to_escape_pos + 1};
+        // NOTE: We don't want to add additional escapes for wildcards that have
+        // been escaped. E.g., the query "\\*" should remain unchanged.
+        if (next_char_pos < constant.length()
+            && false == is_wildcard(constant[next_char_pos]))
+        {
+            logtype += escape_char;
+        } else if (ir::is_variable_placeholder(constant[char_to_escape_pos])) {
+            logtype += escape_char;
+            logtype += escape_char;
+        }
+    };
     for (const auto& query_token : query_tokens) {
         // Append from end of last token to beginning of this token, to logtype
-        logtype.append(processed_search_string, last_token_end_pos, query_token.get_begin_pos() - last_token_end_pos);
+        ir::append_constant_to_logtype(
+                static_cast<std::string_view>(processed_search_string)
+                        .substr(last_token_end_pos,
+                                query_token.get_begin_pos() - last_token_end_pos),
+                escape_handler,
+                logtype
+        );
         last_token_end_pos = query_token.get_end_pos();
 
         if (query_token.is_wildcard()) {
@@ -358,7 +379,10 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
             }
         } else {
             if (!query_token.is_var()) {
-                logtype += query_token.get_value();
+                ir::append_constant_to_logtype(
+                        query_token.get_value(), escape_handler,
+                        logtype
+                );
             } else if (!process_var_token(query_token, archive, ignore_case, sub_query, logtype)) {
                 return SubQueryMatchabilityResult::WontMatch;
             }
@@ -367,7 +391,12 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
 
     if (last_token_end_pos < processed_search_string.length()) {
         // Append from end of last token to end
-        logtype.append(processed_search_string, last_token_end_pos, string::npos);
+        ir::append_constant_to_logtype(
+                static_cast<std::string_view>(processed_search_string)
+                        .substr(last_token_end_pos, string::npos),
+                escape_handler,
+                logtype
+        );
         last_token_end_pos = processed_search_string.length();
     }
 

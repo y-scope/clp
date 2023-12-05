@@ -11,15 +11,15 @@
  */
 
 #include <string_view>
+#include <vector>
 
 namespace ir {
 enum class VariablePlaceholder : char {
     Integer = 0x11,
     Dictionary = 0x12,
     Float = 0x13,
+    Escape = '\\',
 };
-
-constexpr char cVariablePlaceholderEscapeCharacter = '\\';
 
 /**
  * Checks if the given character is a delimiter
@@ -81,11 +81,32 @@ bool is_var(std::string_view value);
 bool get_bounds_of_next_var(std::string_view str, size_t& begin_pos, size_t& end_pos);
 
 /**
- * Appends the given constant to the logtype, escaping any variable placeholders
+ * Appends a constant to the logtype, escaping any variable placeholders.
  * @param constant
  * @param logtype
+*/
+void escape_and_append_const_to_logtype(std::string_view constant, std::string& logtype);
+
+/**
+ * Appends the given constant to the logtype, optionally escaping any variable
+ * placeholders found within the constant using the given handler.
+ * @tparam EscapeHandler Method to optionally escape any variable placeholders
+ * found within the constant. Signature: (
+ *         [[maybe_unused]] std::string_view constant,
+ *         [[maybe_unused]] size_t char_to_escape_pos,
+ *         std::string& logtype
+ * ) -> void
+ * @param constant
+ * @param escape_handler
+ * @param logtype
  */
-void escape_and_append_constant_to_logtype(std::string_view constant, std::string& logtype);
+template <typename EscapeHandler>
+void append_constant_to_logtype(
+        std::string_view constant,
+        EscapeHandler escape_handler,
+        std::string& logtype
+);
 }  // namespace ir
 
+#include "parsing.inc"
 #endif  // IR_PARSING_HPP

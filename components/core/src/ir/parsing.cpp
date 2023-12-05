@@ -4,6 +4,7 @@
 #include "../type_utils.hpp"
 
 using std::string_view;
+using std::string;
 
 namespace ir {
 /*
@@ -86,19 +87,16 @@ bool get_bounds_of_next_var(string_view const str, size_t& begin_pos, size_t& en
     return (msg_length != begin_pos);
 }
 
-void escape_and_append_constant_to_logtype(string_view constant, std::string& logtype) {
-    size_t begin_pos = 0;
-    auto constant_len = constant.length();
-    for (size_t i = 0; i < constant_len; ++i) {
-        auto c = constant[i];
-        if (cVariablePlaceholderEscapeCharacter == c || is_variable_placeholder(c)) {
-            logtype.append(constant, begin_pos, i - begin_pos);
-            logtype += ir::cVariablePlaceholderEscapeCharacter;
-            // NOTE: We don't need to append the character of interest
-            // immediately since the next constant copy operation will get it
-            begin_pos = i;
-        }
-    }
-    logtype.append(constant, begin_pos, constant_len - begin_pos);
+void escape_and_append_const_to_logtype(string_view constant, string& logtype) {
+    // clang-format off
+    auto escape_handler = [&](
+            [[maybe_unused]] string_view constant,
+            [[maybe_unused]] size_t char_to_escape_pos,
+            string& logtype
+    ) -> void {
+        logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+    };
+    // clang-format on
+    append_constant_to_logtype(constant, escape_handler, logtype);
 }
 }  // namespace ir
