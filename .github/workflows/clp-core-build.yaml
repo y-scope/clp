@@ -73,45 +73,6 @@ jobs:
           local_registry_port: "5000"
           token: "${{secrets.GITHUB_TOKEN}}"
 
-  ubuntu-bionic:
-    runs-on: "ubuntu-latest"
-    services:
-      registry:
-        image: "registry:2"
-        ports: [ "5000:5000" ]
-    env:
-      OS_NAME: "ubuntu-bionic"
-    steps:
-      - uses: "actions/checkout@v3"
-        with:
-          submodules: "recursive"
-
-      - name: "Work around actions/runner-images/issues/6775"
-        run: "chown $(id -u):$(id -g) -R ."
-        shell: "bash"
-
-      - name: "Filter relevant changes"
-        uses: "dorny/paths-filter@v2"
-        id: "filter"
-        with:
-          base: "${{env.PATHS_FILTER_BASE}}"
-          filters: |
-            image:
-              - ".github/actions/**"
-              - ".github/workflows/clp-core-build.yaml"
-              - ${{env.PATHS_FILTER_LIB_INSTALL_GLOB}}
-              - "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}/**"
-              - "components/core/tools/scripts/lib_install/${{env.OS_NAME}}/**"
-            ${{inputs.PATHS_FILTER_CLP_FILTER}}
-
-      - uses: "./.github/actions/clp-core-build-deps-and-binaries"
-        with:
-          os_name: "${{env.OS_NAME}}"
-          deps_image_changed: "${{steps.filter.outputs.image}}"
-          push_binaries_image: false
-          local_registry_port: "5000"
-          token: "${{secrets.GITHUB_TOKEN}}"
-
   ubuntu-focal:
     runs-on: "ubuntu-latest"
     services:
@@ -148,5 +109,44 @@ jobs:
           os_name: "${{env.OS_NAME}}"
           deps_image_changed: "${{steps.filter.outputs.image}}"
           push_binaries_image: true
+          local_registry_port: "5000"
+          token: "${{secrets.GITHUB_TOKEN}}"
+
+  ubuntu-jammy:
+    runs-on: "ubuntu-latest"
+    services:
+      registry:
+        image: "registry:2"
+        ports: [ "5000:5000" ]
+    env:
+      OS_NAME: "ubuntu-jammy"
+    steps:
+      - uses: "actions/checkout@v3"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - name: "Filter relevant changes"
+        uses: "dorny/paths-filter@v2"
+        id: "filter"
+        with:
+          base: "${{env.PATHS_FILTER_BASE}}"
+          filters: |
+            image:
+              - ".github/actions/**"
+              - ".github/workflows/clp-core-build.yaml"
+              - ${{env.PATHS_FILTER_LIB_INSTALL_GLOB}}
+              - "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}/**"
+              - "components/core/tools/scripts/lib_install/${{env.OS_NAME}}/**"
+            ${{inputs.PATHS_FILTER_CLP_FILTER}}
+
+      - uses: "./.github/actions/clp-core-build-deps-and-binaries"
+        with:
+          os_name: "${{env.OS_NAME}}"
+          deps_image_changed: "${{steps.filter.outputs.image}}"
+          push_binaries_image: false
           local_registry_port: "5000"
           token: "${{secrets.GITHUB_TOKEN}}"
