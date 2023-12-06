@@ -3,10 +3,13 @@
 // C++ libraries
 #include <algorithm>
 
+// Log surgeon
+#include <log_surgeon/Constants.hpp>
+
 // Project headers
-#include "compressor_frontend/Constants.hpp"
 #include "EncodedVariableInterpreter.hpp"
 #include "ir/parsing.hpp"
+#include "LogSurgeonReader.hpp"
 #include "StringReader.hpp"
 #include "Utils.hpp"
 
@@ -233,6 +236,16 @@ bool QueryToken::change_to_next_possible_type () {
     }
 }
 
+/**
+ * Wraps the tokens returned from the log_surgeon lexer, and stores the variable
+ * ids of the tokens in a search query in a set. This allows for optimized
+ * search performance.
+ */
+class SearchToken : public log_surgeon::Token {
+public:
+    std::set<int> m_type_ids_set;
+};
+
 // Local prototypes
 /**
  * Process a QueryToken that is definitely a variable
@@ -419,10 +432,17 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
     return SubQueryMatchabilityResult::MayMatch;
 }
 
-bool Grep::process_raw_query (const Archive& archive, const string& search_string, epochtime_t search_begin_ts, epochtime_t search_end_ts, bool ignore_case,
-                              Query& query, compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer,
-                              bool use_heuristic)
-{
+bool Grep::process_raw_query(
+        Archive const& archive,
+        string const& search_string,
+        epochtime_t search_begin_ts,
+        epochtime_t search_end_ts,
+        bool ignore_case,
+        Query& query,
+        log_surgeon::lexers::ByteLexer& forward_lexer,
+        log_surgeon::lexers::ByteLexer& reverse_lexer,
+        bool use_heuristic
+) {
     // Set properties which require no processing
     query.set_search_begin_timestamp(search_begin_ts);
     query.set_search_end_timestamp(search_end_ts);
@@ -437,22 +457,24 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     processed_search_string = clean_up_wildcard_search_string(processed_search_string);
     query.set_search_string(processed_search_string);
 
-    // Replace non-greedy wildcards with greedy wildcards since we currently have no support for searching compressed files with non-greedy wildcards
-    std::replace(processed_search_string.begin(), processed_search_string.end(), '?', '*');
-    // Clean-up in case any instances of "?*" or "*?" were changed into "**"
-    processed_search_string = clean_up_wildcard_search_string(processed_search_string);
-
     // Split search_string into tokens with wildcards
     vector<QueryToken> query_tokens;
     size_t begin_pos = 0;
     size_t end_pos = 0;
     bool is_var;
     if (use_heuristic) {
+        // Replace non-greedy wildcards with greedy wildcards since we currently
+        // have no support for searching compressed files with non-greedy
+        // wildcards
+        std::replace(processed_search_string.begin(), processed_search_string.end(), '?', '*');
+        // Clean-up in case any instances of "?*" or "*?" were changed into "**"
+        processed_search_string = clean_up_wildcard_search_string(processed_search_string);
         while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos, is_var)) {
             query_tokens.emplace_back(processed_search_string, begin_pos, end_pos, is_var);
         }
     } else {
-        while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos, is_var, forward_lexer, reverse_lexer)) {
+        while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos, is_var,
+                                                forward_lexer, reverse_lexer)) {
             query_tokens.emplace_back(processed_search_string, begin_pos, end_pos, is_var);
         }
     }
@@ -621,9 +643,14 @@ bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_
     return (value_length != begin_pos);
 }
 
-bool
-Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, size_t& end_pos, bool& is_var,
-                                        compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer) {
+bool Grep::get_bounds_of_next_potential_var(
+        string const& value,
+        size_t& begin_pos,
+        size_t& end_pos,
+        bool& is_var,
+        log_surgeon::lexers::ByteLexer& forward_lexer,
+        log_surgeon::lexers::ByteLexer& reverse_lexer
+) {
     const size_t value_length = value.length();
     if (end_pos >= value_length) {
         return false;
@@ -699,35 +726,59 @@ Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, 
                     break;
                 }
             }
+            SearchToken search_token;
             if (has_wildcard_in_middle || (has_prefix_wildcard && has_suffix_wildcard)) {
                 // DO NOTHING
-            } else if (has_suffix_wildcard) { //asdsas*
-                StringReader stringReader;
-                stringReader.open(value.substr(begin_pos, end_pos - begin_pos - 1));
-                forward_lexer.reset(stringReader);
-                compressor_frontend::Token token = forward_lexer.scan_with_wildcard(value[end_pos - 1]);
-                if (token.m_type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenUncaughtStringID &&
-                    token.m_type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenEndID) {
-                    is_var = true;
+            } else {
+                StringReader string_reader;
+                LogSurgeonReader reader_wrapper(string_reader);
+                log_surgeon::ParserInputBuffer parser_input_buffer;
+                if (has_suffix_wildcard) { //text*
+                    // TODO: creating a string reader, setting it equal to a 
+                    //  string, to read it into the ParserInputBuffer, seems
+                    //  like a convoluted way to set a string equal to a string,
+                    //  should be improved when adding a SearchParser to 
+                    //  log_surgeon
+                    string_reader.open(value.substr(begin_pos, end_pos - begin_pos - 1));
+                    parser_input_buffer.read_if_safe(reader_wrapper);
+                    forward_lexer.reset();
+                    forward_lexer.scan_with_wildcard(
+                            parser_input_buffer,
+                            value[end_pos - 1],
+                            search_token
+                    );
+                } else if (has_prefix_wildcard) { // *text
+                    std::string value_reverse
+                            = value.substr(begin_pos + 1, end_pos - begin_pos - 1);
+                    std::reverse(value_reverse.begin(), value_reverse.end());
+                    string_reader.open(value_reverse);
+                    parser_input_buffer.read_if_safe(reader_wrapper);
+                    reverse_lexer.reset();
+                    reverse_lexer.scan_with_wildcard(
+                            parser_input_buffer,
+                            value[begin_pos],
+                            search_token
+                    );
+                } else { // no wildcards
+                    string_reader.open(value.substr(begin_pos, end_pos - begin_pos));
+                    parser_input_buffer.read_if_safe(reader_wrapper);
+                    forward_lexer.reset();
+                    forward_lexer.scan(parser_input_buffer, search_token);
+                    search_token.m_type_ids_set.insert(search_token.m_type_ids_ptr->at(0));
                 }
-            } else if (has_prefix_wildcard) { // *asdas
-                std::string value_reverse = value.substr(begin_pos + 1, end_pos - begin_pos - 1);
-                std::reverse(value_reverse.begin(), value_reverse.end());
-                StringReader stringReader;
-                stringReader.open(value_reverse);
-                reverse_lexer.reset(stringReader);
-                compressor_frontend::Token token = reverse_lexer.scan_with_wildcard(value[begin_pos]);
-                if (token.m_type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenUncaughtStringID &&
-                    token.m_type_ids->at(0) != (int)compressor_frontend::SymbolID::TokenEndID) {
-                    is_var = true;
-                }
-            } else { // no wildcards
-                StringReader stringReader;
-                stringReader.open(value.substr(begin_pos, end_pos - begin_pos));
-                forward_lexer.reset(stringReader);
-                compressor_frontend::Token token = forward_lexer.scan();
-                if (token.m_type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenUncaughtStringID &&
-                    token.m_type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenEndID) {
+                // TODO: use a set so its faster
+                // auto const& set = search_token.m_type_ids_set;
+                // if (set.find(static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID))
+                //            == set.end()
+                //     && set.find(static_cast<int>(log_surgeon::SymbolID::TokenEndID))
+                //            == set.end())
+                // {
+                //     is_var = true;
+                // }
+                auto const& type = search_token.m_type_ids_ptr->at(0);
+                if (type != static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID)
+                    && type != static_cast<int>(log_surgeon::SymbolID::TokenEndID))
+                {
                     is_var = true;
                 }
             }

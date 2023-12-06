@@ -8,11 +8,14 @@
 // Boost libraries
 #include <boost/filesystem/path.hpp>
 
+// Log surgeon
+#include <log_surgeon/LogEvent.hpp>
+#include <log_surgeon/ReaderParser.hpp>
+
 // Project headers
 #include "CommandLineArguments.hpp"
 #include "FileToCompress.hpp"
 #include "StructuredFileToCompress.hpp"
-#include "../compressor_frontend/LogParser.hpp"
 
 namespace clp {
     /**
@@ -22,13 +25,19 @@ namespace clp {
      * @param empty_directory_paths
      * @param grouped_files_to_compress
      * @param target_encoded_file_size
-     * @param log_parser
+     * @param reader_parser
      * @param use_heuristic
      * @return true if compression was successful, false otherwise
      */
-    bool compress (CommandLineArguments& command_line_args, std::vector<FileToCompress>& files_to_compress,
-                   const std::vector<std::string>& empty_directory_paths, std::vector<FileToCompress>& grouped_files_to_compress,
-                   size_t target_encoded_file_size, std::unique_ptr<compressor_frontend::LogParser> log_parser, bool use_heuristic);
+    bool compress(
+            CommandLineArguments& command_line_args,
+            std::vector<FileToCompress>& files_to_compress,
+            std::vector<std::string> const& empty_directory_paths,
+            std::vector<FileToCompress>& grouped_files_to_compress,
+            size_t target_encoded_file_size,
+            std::unique_ptr<log_surgeon::ReaderParser> reader_parser,
+            bool use_heuristic
+    );
 
     /**
      * Reads a list of grouped files and a list of their IDs

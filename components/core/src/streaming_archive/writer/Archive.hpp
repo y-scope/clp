@@ -14,9 +14,12 @@
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid.hpp>
 
+// Log Surgeon
+#include <log_surgeon/LogEvent.hpp>
+#include <log_surgeon/ReaderParser.hpp>
+
 // Project headers
 #include "../../ArrayBackedPosIntSet.hpp"
-#include "../../compressor_frontend/Token.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../GlobalMetadataDB.hpp"
 #include "../../ir/LogEvent.hpp"
@@ -62,8 +65,7 @@ namespace streaming_archive { namespace writer {
             }
         };
 
-        TimestampPattern old_ts_pattern;
-
+        TimestampPattern* m_old_ts_pattern;
         size_t m_target_data_size_of_dicts;
         UserConfig m_archive_user_config;
         std::string m_path_for_compression;
@@ -73,7 +75,7 @@ namespace streaming_archive { namespace writer {
 
         // Constructors
         Archive () : m_segments_dir_fd(-1), m_compression_level(0), m_global_metadata_db(nullptr),
-                old_ts_pattern(), m_schema_file_path() {}
+                m_old_ts_pattern(nullptr), m_schema_file_path() {}
 
         // Destructor
         ~Archive ();
@@ -130,16 +132,13 @@ namespace streaming_archive { namespace writer {
          * @throw FileWriter::OperationFailed if any write fails
          */
         void write_msg (epochtime_t timestamp, const std::string& message, size_t num_uncompressed_bytes);
+
         /**
          * Encodes and writes a message to the given file using schema file
-         * @param file
-         * @param uncompressed_msg
-         * @param uncompressed_msg_pos
-         * @param has_delimiter
-         * @param has_timestamp
+         * @param log_event_view
          * @throw FileWriter::OperationFailed if any write fails
          */
-        void write_msg_using_schema (compressor_frontend::Token*& uncompressed_msg, uint32_t uncompressed_msg_pos, bool has_delimiter, bool has_timestamp);
+        void write_msg_using_schema (log_surgeon::LogEventView const& log_event_view);
 
         /**
          * Writes an IR log event to the current encoded file

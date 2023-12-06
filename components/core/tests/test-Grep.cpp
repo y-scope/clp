@@ -4,25 +4,26 @@
 // Catch2
 #include <Catch2/single_include/catch2/catch.hpp>
 
+// Log Surgeon
+#include <log_surgeon/Lexer.hpp>
+#include <log_surgeon/SchemaParser.hpp>
+
 // Project headers
-#include "../src/compressor_frontend/Lexer.hpp"
-#include "../src/compressor_frontend/SchemaParser.hpp"
-#include "../src/compressor_frontend/utils.hpp"
 #include "../src/Grep.hpp"
 
-using compressor_frontend::DelimiterStringAST;
-using compressor_frontend::lexers::ByteLexer;
-using compressor_frontend::ParserAST;
-using compressor_frontend::SchemaFileAST;
-using compressor_frontend::SchemaParser;
-using compressor_frontend::SchemaVarAST;
+using log_surgeon::DelimiterStringAST;
+using log_surgeon::lexers::ByteLexer;
+using log_surgeon::ParserAST;
+using log_surgeon::SchemaAST;
+using log_surgeon::SchemaParser;
+using log_surgeon::SchemaVarAST;
 using std::string;
 
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {
     ByteLexer forward_lexer;
-    compressor_frontend::load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, forward_lexer);
+    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, forward_lexer);
     ByteLexer reverse_lexer;
-    compressor_frontend::load_lexer_from_file("../tests/test_schema_files/search_schema.txt", true, reverse_lexer);
+    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", true, reverse_lexer);
 
     string str;
     size_t begin_pos;

@@ -18,13 +18,18 @@
 // json
 #include <json/single_include/nlohmann/json.hpp>
 
+// Log surgeon
+#include <log_surgeon/LogEvent.hpp>
+#include <log_surgeon/LogParser.hpp>
+
 // Project headers
-#include "../../compressor_frontend/LogParser.hpp"
+#include "../../clp/utils.hpp"
 #include "../../EncodedVariableInterpreter.hpp"
 #include "../../spdlog_with_specializations.hpp"
 #include "../../Utils.hpp"
 #include "../Constants.hpp"
 
+using log_surgeon::LogEventView;
 using std::list;
 using std::make_unique;
 using std::string;
@@ -262,66 +267,74 @@ namespace streaming_archive::writer {
         update_segment_indices(logtype_id, var_ids);
     }
 
-    void Archive::write_msg_using_schema (compressor_frontend::Token*& uncompressed_msg, uint32_t uncompressed_msg_pos, const bool has_delimiter,
-                                          const bool has_timestamp) {
+    void Archive::write_msg_using_schema (LogEventView const& log_view) {
         epochtime_t timestamp = 0;
         TimestampPattern* timestamp_pattern = nullptr;
-        if (has_timestamp) {
+        auto const& log_output_buffer = log_view.get_log_output_buffer();
+        if (log_output_buffer->has_timestamp()) {
             size_t start;
             size_t end;
-            timestamp_pattern = (TimestampPattern*) TimestampPattern::search_known_ts_patterns(
-                    uncompressed_msg[0].get_string(), timestamp, start, end);
-            if (old_ts_pattern != *timestamp_pattern) {
+            timestamp_pattern = (TimestampPattern*)TimestampPattern::search_known_ts_patterns(
+                    log_output_buffer->get_mutable_token(0).to_string(),
+                    timestamp,
+                    start,
+                    end
+            );
+            if (m_old_ts_pattern != timestamp_pattern) {
                 change_ts_pattern(timestamp_pattern);
-                old_ts_pattern = *timestamp_pattern;
+                m_old_ts_pattern = timestamp_pattern;
             }
-            assert(nullptr != timestamp_pattern);
         }
         if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts) {
             clp::split_file_and_archive(m_archive_user_config, m_path_for_compression, m_group_id, timestamp_pattern, *this);
         } else if (m_file->get_encoded_size_in_bytes() >= m_target_encoded_file_size) {
             clp::split_file(m_path_for_compression, m_group_id, timestamp_pattern, *this);
         }
-
         m_encoded_vars.clear();
         m_var_ids.clear();
         m_logtype_dict_entry.clear();
-
         size_t num_uncompressed_bytes = 0;
         // Timestamp is included in the uncompressed message size
-        uint32_t start_pos = uncompressed_msg[0].m_start_pos;
+        uint32_t start_pos = log_output_buffer->get_token(0).m_start_pos;
         if (timestamp_pattern == nullptr) {
-            start_pos = uncompressed_msg[1].m_start_pos;
+            start_pos = log_output_buffer->get_token(1).m_start_pos;
         }
-        uint32_t end_pos = uncompressed_msg[uncompressed_msg_pos - 1].m_end_pos;
+        uint32_t end_pos = log_output_buffer->get_token(log_output_buffer->pos() - 1).m_end_pos;
         if (start_pos <= end_pos) {
             num_uncompressed_bytes = end_pos - start_pos;
         } else {
-            num_uncompressed_bytes = *uncompressed_msg[0].m_buffer_size_ptr - start_pos + end_pos;
+            num_uncompressed_bytes
+                    = log_output_buffer->get_token(0).m_buffer_size - start_pos + end_pos;
         }
-        for (uint32_t i = 1; i < uncompressed_msg_pos; i++) {
-            compressor_frontend::Token& token = uncompressed_msg[i];
-            int token_type = token.m_type_ids->at(0);
-            if (has_delimiter && token_type != (int) compressor_frontend::SymbolID::TokenUncaughtStringID &&
-                token_type != (int) compressor_frontend::SymbolID::TokenNewlineId) {
+        for (uint32_t i = 1; i < log_output_buffer->pos(); i++) {
+            log_surgeon::Token& token = log_output_buffer->get_mutable_token(i);
+            int token_type = token.m_type_ids_ptr->at(0);
+            if (log_output_buffer->has_delimiters() && (timestamp_pattern != nullptr || i > 1)
+                && token_type != static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID)
+                && token_type != static_cast<int>(log_surgeon::SymbolID::TokenNewlineId))
+            {
                 m_logtype_dict_entry.add_constant(token.get_delimiter(), 0, 1);
-                if (token.m_start_pos == *token.m_buffer_size_ptr - 1) {
+                if (token.m_start_pos == token.m_buffer_size - 1) {
                     token.m_start_pos = 0;
                 } else {
                     token.m_start_pos++;
                 }
             }
             switch (token_type) {
-                case (int) compressor_frontend::SymbolID::TokenNewlineId:
-                case (int) compressor_frontend::SymbolID::TokenUncaughtStringID: {
-                    m_logtype_dict_entry.add_constant(token.get_string(), 0, token.get_length());
+                case static_cast<int>(log_surgeon::SymbolID::TokenNewlineId):
+                case static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID): {
+                    m_logtype_dict_entry.add_constant(token.to_string(), 0, token.get_length());
                     break;
                 }
-                case (int) compressor_frontend::SymbolID::TokenIntId: {
+                case static_cast<int>(log_surgeon::SymbolID::TokenIntId): {
                     encoded_variable_t encoded_var;
-                    if (!EncodedVariableInterpreter::convert_string_to_representable_integer_var(token.get_string(), encoded_var)) {
+                    if (!EncodedVariableInterpreter::convert_string_to_representable_integer_var(
+                                token.to_string(),
+                                encoded_var
+                        ))
+                    {
                         variable_dictionary_id_t id;
-                        m_var_dict.add_entry(token.get_string(), id);
+                        m_var_dict.add_entry(token.to_string(), id);
                         encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
                         m_logtype_dict_entry.add_dictionary_var();
                     } else {
@@ -330,12 +343,15 @@ namespace streaming_archive::writer {
                     m_encoded_vars.push_back(encoded_var);
                     break;
                 }
-                case (int) compressor_frontend::SymbolID::TokenFloatId: {
+                case static_cast<int>(log_surgeon::SymbolID::TokenFloatId): {
                     encoded_variable_t encoded_var;
                     if (!EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                            token.get_string(), encoded_var)) {
+                                token.to_string(),
+                                encoded_var
+                        ))
+                    {
                         variable_dictionary_id_t id;
-                        m_var_dict.add_entry(token.get_string(), id);
+                        m_var_dict.add_entry(token.to_string(), id);
                         encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
                         m_logtype_dict_entry.add_dictionary_var();
                     } else {
@@ -348,7 +364,7 @@ namespace streaming_archive::writer {
                     // Variable string looks like a dictionary variable, so encode it as so
                     encoded_variable_t encoded_var;
                     variable_dictionary_id_t id;
-                    m_var_dict.add_entry(token.get_string(), id);
+                    m_var_dict.add_entry(token.to_string(), id);
                     encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
                     m_var_ids.push_back(id);
 

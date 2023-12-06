@@ -128,6 +128,9 @@ else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for LibArchive")
 endif()
 
+# Add log surgeon
+add_subdirectory(submodules/log-surgeon EXCLUDE_FROM_ALL)
+
 # Find and setup MariaDBClient library
 if(CLP_USE_STATIC_LIBS)
     # NOTE: We can't statically link to MariaDBClient since it's GPL
@@ -193,28 +196,6 @@ set(SOURCE_FILES_clp
         src/clp/StructuredFileToCompress.hpp
         src/clp/utils.cpp
         src/clp/utils.hpp
-        src/compressor_frontend/Constants.hpp
-        src/compressor_frontend/finite_automata/RegexAST.hpp
-        src/compressor_frontend/finite_automata/RegexAST.inc
-        src/compressor_frontend/finite_automata/RegexDFA.hpp
-        src/compressor_frontend/finite_automata/RegexDFA.inc
-        src/compressor_frontend/finite_automata/RegexNFA.hpp
-        src/compressor_frontend/finite_automata/RegexNFA.inc
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.inc
-        src/compressor_frontend/LALR1Parser.cpp
-        src/compressor_frontend/LALR1Parser.hpp
-        src/compressor_frontend/LALR1Parser.inc
-        src/compressor_frontend/Lexer.hpp
-        src/compressor_frontend/Lexer.inc
-        src/compressor_frontend/LogParser.cpp
-        src/compressor_frontend/LogParser.hpp
-        src/compressor_frontend/SchemaParser.cpp
-        src/compressor_frontend/SchemaParser.hpp
-        src/compressor_frontend/Token.cpp
-        src/compressor_frontend/Token.hpp
-        src/compressor_frontend/utils.cpp
-        src/compressor_frontend/utils.hpp
         src/database_utils.cpp
         src/database_utils.hpp
         src/Defs.h
@@ -262,6 +243,8 @@ set(SOURCE_FILES_clp
         src/LibarchiveFileReader.hpp
         src/LibarchiveReader.cpp
         src/LibarchiveReader.hpp
+        src/LogSurgeonReader.cpp
+        src/LogSurgeonReader.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
@@ -360,6 +343,7 @@ target_link_libraries(clp
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
+        log_surgeon::log_surgeon
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
         LibArchive::LibArchive
@@ -384,26 +368,6 @@ set(SOURCE_FILES_clg
         src/clg/clg.cpp
         src/clg/CommandLineArguments.cpp
         src/clg/CommandLineArguments.hpp
-        src/compressor_frontend/Constants.hpp
-        src/compressor_frontend/finite_automata/RegexAST.hpp
-        src/compressor_frontend/finite_automata/RegexAST.inc
-        src/compressor_frontend/finite_automata/RegexDFA.hpp
-        src/compressor_frontend/finite_automata/RegexDFA.inc
-        src/compressor_frontend/finite_automata/RegexNFA.hpp
-        src/compressor_frontend/finite_automata/RegexNFA.inc
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.inc
-        src/compressor_frontend/LALR1Parser.cpp
-        src/compressor_frontend/LALR1Parser.hpp
-        src/compressor_frontend/LALR1Parser.inc
-        src/compressor_frontend/Lexer.hpp
-        src/compressor_frontend/Lexer.inc
-        src/compressor_frontend/SchemaParser.cpp
-        src/compressor_frontend/SchemaParser.hpp
-        src/compressor_frontend/Token.cpp
-        src/compressor_frontend/Token.hpp
-        src/compressor_frontend/utils.cpp
-        src/compressor_frontend/utils.hpp
         src/database_utils.cpp
         src/database_utils.hpp
         src/Defs.h
@@ -439,6 +403,8 @@ set(SOURCE_FILES_clg
         src/ir/LogEvent.hpp
         src/ir/parsing.cpp
         src/ir/parsing.hpp
+        src/LogSurgeonReader.cpp
+        src/LogSurgeonReader.hpp
         src/ir/parsing.inc
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
@@ -532,6 +498,7 @@ target_link_libraries(clg
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
         KQL
+        log_surgeon::log_surgeon
         MariaDBClient::MariaDBClient
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
@@ -551,26 +518,6 @@ set(SOURCE_FILES_clo
         src/clo/CommandLineArguments.hpp
         src/clo/ControllerMonitoringThread.cpp
         src/clo/ControllerMonitoringThread.hpp
-        src/compressor_frontend/Constants.hpp
-        src/compressor_frontend/finite_automata/RegexAST.hpp
-        src/compressor_frontend/finite_automata/RegexAST.inc
-        src/compressor_frontend/finite_automata/RegexDFA.hpp
-        src/compressor_frontend/finite_automata/RegexDFA.inc
-        src/compressor_frontend/finite_automata/RegexNFA.hpp
-        src/compressor_frontend/finite_automata/RegexNFA.inc
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.inc
-        src/compressor_frontend/LALR1Parser.cpp
-        src/compressor_frontend/LALR1Parser.hpp
-        src/compressor_frontend/LALR1Parser.inc
-        src/compressor_frontend/Lexer.hpp
-        src/compressor_frontend/Lexer.inc
-        src/compressor_frontend/SchemaParser.cpp
-        src/compressor_frontend/SchemaParser.hpp
-        src/compressor_frontend/Token.cpp
-        src/compressor_frontend/Token.hpp
-        src/compressor_frontend/utils.cpp
-        src/compressor_frontend/utils.hpp
         src/database_utils.cpp
         src/database_utils.hpp
         src/Defs.h
@@ -598,6 +545,8 @@ set(SOURCE_FILES_clo
         src/ir/LogEvent.hpp
         src/ir/parsing.cpp
         src/ir/parsing.hpp
+        src/LogSurgeonReader.cpp
+        src/LogSurgeonReader.hpp
         src/ir/parsing.inc
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
@@ -690,6 +639,7 @@ target_link_libraries(clo
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
+        log_surgeon::log_surgeon
         msgpack-cxx
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
@@ -723,28 +673,6 @@ set(SOURCE_FILES_unitTest
         src/clp/StructuredFileToCompress.hpp
         src/clp/utils.cpp
         src/clp/utils.hpp
-        src/compressor_frontend/Constants.hpp
-        src/compressor_frontend/finite_automata/RegexAST.hpp
-        src/compressor_frontend/finite_automata/RegexAST.inc
-        src/compressor_frontend/finite_automata/RegexDFA.hpp
-        src/compressor_frontend/finite_automata/RegexDFA.inc
-        src/compressor_frontend/finite_automata/RegexNFA.hpp
-        src/compressor_frontend/finite_automata/RegexNFA.inc
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.inc
-        src/compressor_frontend/LALR1Parser.cpp
-        src/compressor_frontend/LALR1Parser.hpp
-        src/compressor_frontend/LALR1Parser.inc
-        src/compressor_frontend/Lexer.hpp
-        src/compressor_frontend/Lexer.inc
-        src/compressor_frontend/LogParser.cpp
-        src/compressor_frontend/LogParser.hpp
-        src/compressor_frontend/SchemaParser.cpp
-        src/compressor_frontend/SchemaParser.hpp
-        src/compressor_frontend/Token.cpp
-        src/compressor_frontend/Token.hpp
-        src/compressor_frontend/utils.cpp
-        src/compressor_frontend/utils.hpp
         src/database_utils.cpp
         src/database_utils.hpp
         src/Defs.h
@@ -809,6 +737,8 @@ set(SOURCE_FILES_unitTest
         src/LibarchiveFileReader.hpp
         src/LibarchiveReader.cpp
         src/LibarchiveReader.hpp
+        src/LogSurgeonReader.cpp
+        src/LogSurgeonReader.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.cpp
@@ -925,6 +855,7 @@ target_link_libraries(unitTest
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
+        log_surgeon::log_surgeon
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
         spdlog::spdlog

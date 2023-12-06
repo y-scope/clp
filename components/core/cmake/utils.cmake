@@ -41,9 +41,14 @@ set(SOURCE_FILES_make-dictionaries-readable
         ${CMAKE_CURRENT_SOURCE_DIR}/submodules/date/include/date/date.h
         )
 add_executable(make-dictionaries-readable ${SOURCE_FILES_make-dictionaries-readable})
+target_include_directories(make-dictionaries-readable
+                           PRIVATE
+                           ${CMAKE_SOURCE_DIR}/submodules
+                           )
 target_link_libraries(make-dictionaries-readable
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
+        log_surgeon::log_surgeon
         spdlog::spdlog
         ZStd::ZStd
         )
