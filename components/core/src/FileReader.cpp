@@ -87,7 +87,7 @@ void FileReader::open (const string& path) {
     ErrorCode error_code = try_open(path);
     if (ErrorCode_Success != error_code) {
         if (ErrorCode_FileNotFound == error_code) {
-            throw "File not found: " + boost::filesystem::weakly_canonical(path).string() + "\n";
+            throw "File not found: " + boost::filesystem::weakly_canonical(path).string() + "\n"; 
         } else {
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
