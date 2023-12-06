@@ -2,12 +2,15 @@ name: "clp-execution-image-build"
 
 on:
   pull_request:
-    paths: &watched_paths
+    paths:
       - ".github/workflows/clp-execution-image-build.yaml"
       - "components/core/tools/scripts/lib_install/*"
       - "tools/docker-images/clp-execution-base-focal/**"
   push:
-    paths: *watched_paths
+    paths:
+      - ".github/workflows/clp-execution-image-build.yaml"
+      - "components/core/tools/scripts/lib_install/*"
+      - "tools/docker-images/clp-execution-base-focal/**"
   workflow_dispatch:
 
 env:

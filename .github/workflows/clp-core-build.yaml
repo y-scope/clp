@@ -2,13 +2,17 @@ name: clp-core-build
 
 on:
   pull_request:
-    paths: &watched_paths
+    paths:
       - ".github/actions/**"
       - ".github/workflows/clp-core-build.yaml"
       - "components/core/**"
       - "!components/core/tools/scripts/lib_install/macos-12/**"
   push:
-    paths: *watched_paths
+    paths:
+      - ".github/actions/**"
+      - ".github/workflows/clp-core-build.yaml"
+      - "components/core/**"
+      - "!components/core/tools/scripts/lib_install/macos-12/**"
   workflow_dispatch:
 
 env:
