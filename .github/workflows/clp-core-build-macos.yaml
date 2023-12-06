@@ -1,6 +1,16 @@
 name: "clp-core-build-macos"
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/clp-core-build-macos.yaml"
+      - "components/core/cmake/**"
+      - "components/core/CMakeLists.txt"
+      - "components/core/src/**"
+      - "components/core/tests/**"
+      - "components/core/tools/scripts/lib_install/macos-12/**"
+      - "components/core/tools/scripts/deps-download/**"
+      - "components/core/tools/scripts/utils/build-and-run-unit-tests.sh"
   push:
     paths:
       - ".github/workflows/clp-core-build-macos.yaml"
