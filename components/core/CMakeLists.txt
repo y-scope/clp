@@ -554,7 +554,6 @@ set(SOURCE_FILES_clo
         src/LogTypeDictionaryReader.hpp
         src/networking/socket_utils.cpp
         src/networking/socket_utils.hpp
-        src/networking/SocketOperationFailed.cpp
         src/networking/SocketOperationFailed.hpp
         src/PageAllocatedVector.cpp
         src/PageAllocatedVector.hpp
