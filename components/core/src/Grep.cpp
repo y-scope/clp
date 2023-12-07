@@ -322,114 +322,43 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                     StringReader string_reader;
                     log_surgeon::ParserInputBuffer parser_input_buffer;
                     ReaderInterfaceWrapper reader_wrapper(string_reader);
-                    // TODO: probably a smarter way to combing *__, __*, *__*
-                    if(true) { //has_middle_wildcard) {
-                        std::string regex_search_string;
-                        // Replace all * with .*
-                        for (char const& c : current_string) {
-                            if (c == '*') {
-                                regex_search_string.push_back('.');
-                            }
-                            regex_search_string.push_back(c);
+                    std::string regex_search_string;
+                    // Replace all * with .*
+                    for (char const& c : current_string) {
+                        if (c == '*') {
+                            regex_search_string.push_back('.');
                         }
-                        log_surgeon::Schema schema2;
-                        schema2.add_variable("search", regex_search_string, -1);
-                        RegexNFA<RegexNFAByteState> nfa;
-                        for (std::unique_ptr<ParserAST> const& parser_ast : schema2.get_schema_ast_ptr()->m_schema_vars) {
-                            auto* schema_var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
-                            ByteLexer::Rule rule(0, std::move(schema_var_ast->m_regex_ptr));
-                            rule.add_ast(&nfa);
+                        regex_search_string.push_back(c);
+                    }
+                    log_surgeon::Schema schema2;
+                    schema2.add_variable("search", regex_search_string, -1);
+                    RegexNFA<RegexNFAByteState> nfa;
+                    for (std::unique_ptr<ParserAST> const& parser_ast : schema2.get_schema_ast_ptr()->m_schema_vars) {
+                        auto* schema_var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
+                        ByteLexer::Rule rule(0, std::move(schema_var_ast->m_regex_ptr));
+                        rule.add_ast(&nfa);
+                    }
+                    // TODO: this is obviously bad, but the code needs to be reorganized a lot
+                    // to fix the fact that DFAs and NFAs can't be used without a lexer
+                    std::unique_ptr<RegexDFA<RegexDFAByteState>> dfa2 = forward_lexer.nfa_to_dfa(nfa);
+                    std::unique_ptr<RegexDFA<RegexDFAByteState>> const& dfa1 = forward_lexer.get_dfa();
+                    std::set<uint32_t> schema_types = dfa1->get_intersect(dfa2);
+                    for (int id : schema_types) {
+                        if (current_string[0] == '*' && current_string.back() == '*') {
+                            prefixes.push_back({'*', id, '*'});
+                        } else if (current_string[0] == '*') {
+                            prefixes.push_back({'*', id});
+                        } else if (current_string.back() == '*') {
+                            prefixes.push_back({id, '*'});
+                        } else {
+                            prefixes.push_back({id});
                         }
-                        // TODO: this is obviously bad, but the code needs to be reorganized a lot
-                        // to fix the fact that DFAs and NFAs can't be used without a lexer
-                        std::unique_ptr<RegexDFA<RegexDFAByteState>> dfa2 = forward_lexer.nfa_to_dfa(nfa);
-                        std::unique_ptr<RegexDFA<RegexDFAByteState>> const& dfa1 = forward_lexer.get_dfa();
-                        std::set<uint32_t> schema_types = dfa1->get_intersect(dfa2);
-                        for (int id : schema_types) {
-                            if (current_string[0] == '*' && current_string.back() == '*') {
-                                prefixes.push_back({'*', id, '*'});
-                            } else if (current_string[0] == '*') {
-                                prefixes.push_back({'*', id});
-                            } else if (current_string.back() == '*') {
-                                prefixes.push_back({id, '*'});
-                            } else {
-                                prefixes.push_back({id});
-                            }
-                        }
-                        if (schema_types.empty()) {
-                            prefixes.push_back({});
-                            auto& prefix = prefixes.back();
-                            prefix.insert(prefix.end(), current_string.begin(),
-                                          current_string.end());
-                        }
-                    } else if (current_string[0] == '*' && current_string.back() == '*') {
-                        std::string current_string_forward = current_string.substr(1, i - j - 1);
-                        std::string current_string_reverse = current_string.substr(1, i - j - 1);
-                        std::reverse(current_string_reverse.begin(), current_string_reverse.end());
-                        string_reader.open(current_string_reverse);
-                        parser_input_buffer.read_if_safe(reader_wrapper);
-                        reverse_lexer.reset();
-                        reverse_lexer.scan_with_wildcard(parser_input_buffer,
-                                                         '*',
-                                                         search_token);
-                        // TODO: test correct check here, currently has_a_# means its never nullptr
-                        if (nullptr != search_token.m_type_ids_ptr) {
-                            for (int id : *(search_token.m_type_ids_ptr)) {
-                                prefixes.push_back({'*', id, '*'});
-                            }
-                        }
-                        string_reader.close();
-                        string_reader.open(current_string_forward);
-                        parser_input_buffer.reset();
-                        parser_input_buffer.read_if_safe(reader_wrapper);
-                        forward_lexer.reset();
-                        forward_lexer.scan_with_wildcard(parser_input_buffer,
-                                                         '*',
-                                                         search_token);
-                        // TODO: test correct check here, currently has_a_# means its never nullptr
-                        if (nullptr != search_token.m_type_ids_ptr) {
-                            for (int id : *(search_token.m_type_ids_ptr)) {
-                                prefixes.push_back({'*', id, '*'});
-                            }
-                        }
-                    } else if (current_string[0] == '*') {
-                        std::string current_string_reverse = current_string.substr(1, i - j);
-                        std::reverse(current_string_reverse.begin(), current_string_reverse.end());
-                        string_reader.open(current_string_reverse);
-                        parser_input_buffer.read_if_safe(reader_wrapper);
-                        reverse_lexer.reset();
-                        reverse_lexer.scan_with_wildcard(parser_input_buffer,
-                                                         '*',
-                                                         search_token);
-                        // TODO: test correct check here, currently has_a_# means its never nullptr
-                        if (nullptr != search_token.m_type_ids_ptr) {
-                            for (int id : *(search_token.m_type_ids_ptr)) {
-                                prefixes.push_back({'*', id});
-                            }
-                        }
-                    } else if (current_string.back() == '*') {
-                        std::string current_string_forward = current_string.substr(0, i - j);
-                        string_reader.open(current_string_forward);
-                        parser_input_buffer.read_if_safe(reader_wrapper);
-                        forward_lexer.reset();
-                        forward_lexer.scan_with_wildcard(parser_input_buffer,
-                                                         '*',
-                                                         search_token);
-                        if (nullptr != search_token.m_type_ids_ptr) {
-                            for (int id : *(search_token.m_type_ids_ptr)) {
-                                prefixes.push_back({id, '*'});
-                            }
-                        }
-                    } else {
-                        string_reader.open(current_string);
-                        parser_input_buffer.read_if_safe(reader_wrapper);
-                        forward_lexer.reset();
-                        forward_lexer.scan(parser_input_buffer, search_token);
-                        if (nullptr != search_token.m_type_ids_ptr) {
-                            for (int id : *(search_token.m_type_ids_ptr)) {
-                                prefixes.push_back({id});
-                            }
-                        }
+                    }
+                    if (schema_types.empty()) {
+                        prefixes.push_back({});
+                        auto& prefix = prefixes.back();
+                        prefix.insert(prefix.end(), current_string.begin(),
+                                      current_string.end());
                     }
                 }
                 auto& new_logtypes = logtype_matrix[i][j];
