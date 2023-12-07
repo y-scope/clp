@@ -312,12 +312,12 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                         has_middle_wildcard = true;
                     }
                 }
-                std::vector<std::vector<std::variant<char, int>>> prefixes;
+                std::vector<std::vector<std::variant<char, int>>> suffixes;
                 SearchToken search_token;
                 if (current_string == "*") {
-                    prefixes.push_back({});
-                    auto& prefix = prefixes.back();
-                    prefix.insert(prefix.end(), current_string.begin(), current_string.end());
+                    suffixes.push_back({});
+                    auto& suffix = suffixes.back();
+                    suffix.insert(suffix.end(), current_string.begin(), current_string.end());
                 } else {
                     StringReader string_reader;
                     log_surgeon::ParserInputBuffer parser_input_buffer;
@@ -345,19 +345,19 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                     std::set<uint32_t> schema_types = dfa1->get_intersect(dfa2);
                     for (int id : schema_types) {
                         if (current_string[0] == '*' && current_string.back() == '*') {
-                            prefixes.push_back({'*', id, '*'});
+                            suffixes.push_back({'*', id, '*'});
                         } else if (current_string[0] == '*') {
-                            prefixes.push_back({'*', id});
+                            suffixes.push_back({'*', id});
                         } else if (current_string.back() == '*') {
-                            prefixes.push_back({id, '*'});
+                            suffixes.push_back({id, '*'});
                         } else {
-                            prefixes.push_back({id});
+                            suffixes.push_back({id});
                         }
                     }
                     if (schema_types.empty()) {
-                        prefixes.push_back({});
-                        auto& prefix = prefixes.back();
-                        prefix.insert(prefix.end(), current_string.begin(),
+                        suffixes.push_back({});
+                        auto& suffix = suffixes.back();
+                        suffix.insert(suffix.end(), current_string.begin(),
                                       current_string.end());
                     }
                 }
@@ -367,19 +367,19 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                     for(int l = 0; l < parent_logtypes.size(); l++) {
                         auto& parent_logtype = parent_logtypes[l];
                         // handles case where  current_string is static-text
-                        for (auto& prefix : prefixes) {
+                        for (auto& suffix : suffixes) {
                             new_logtypes.push_back(parent_logtype);
                             auto& new_logtype = new_logtypes.back();
-                            new_logtype.insert(new_logtype.end(), prefix.begin(), prefix.end());
+                            new_logtype.insert(new_logtype.end(), suffix.begin(), suffix.end());
                         }
                     }
                 }
                 // handles case (e.g. first row) where the previous row in logtype_matrix is empty
                 if(new_logtypes.empty()) {
-                    for (auto& prefix : prefixes) {
+                    for (auto& suffix : suffixes) {
                         new_logtypes.push_back({});
                         auto& new_logtype = new_logtypes.back();
-                        new_logtype.insert(new_logtype.end(), prefix.begin(), prefix.end());
+                        new_logtype.insert(new_logtype.end(), suffix.begin(), suffix.end());
                     }
                 }
             }
