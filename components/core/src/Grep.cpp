@@ -6,6 +6,8 @@
 
 // Log surgeon
 #include <log_surgeon/Constants.hpp>
+#include <log_surgeon/Lexer.hpp>
+#include <log_surgeon/Schema.hpp>
 
 // Project headers
 #include "EncodedVariableInterpreter.hpp"
@@ -15,6 +17,13 @@
 #include "Utils.hpp"
 
 using ir::is_delim;
+using log_surgeon::finite_automata::RegexDFA;
+using log_surgeon::finite_automata::RegexDFAByteState;
+using log_surgeon::finite_automata::RegexNFA;
+using log_surgeon::finite_automata::RegexNFAByteState;
+using log_surgeon::lexers::ByteLexer;
+using log_surgeon::ParserAST;
+using log_surgeon::SchemaVarAST;
 using std::string;
 using std::vector;
 using streaming_archive::reader::Archive;
@@ -297,6 +306,12 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
         for (uint32_t i = 0; i < processed_search_string.size(); i++) {
             for (uint32_t j = 0; j <= i; j++) {
                 std::string current_string = processed_search_string.substr(j, i - j + 1);
+                bool has_middle_wildcard = false;
+                for(int k = 1; k < current_string.size() - 1; k++) {
+                    if(current_string[k] == '*') {
+                        has_middle_wildcard = true;
+                    }
+                }
                 std::vector<std::vector<std::variant<char, int>>> prefixes;
                 SearchToken search_token;
                 if (current_string == "*") {
@@ -308,7 +323,46 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                     log_surgeon::ParserInputBuffer parser_input_buffer;
                     ReaderInterfaceWrapper reader_wrapper(string_reader);
                     // TODO: probably a smarter way to combing *__, __*, *__*
-                    if (current_string[0] == '*' && current_string.back() == '*') {
+                    if(true) { //has_middle_wildcard) {
+                        std::string regex_search_string;
+                        // Replace all * with .*
+                        for (char const& c : current_string) {
+                            if (c == '*') {
+                                regex_search_string.push_back('.');
+                            }
+                            regex_search_string.push_back(c);
+                        }
+                        log_surgeon::Schema schema2;
+                        schema2.add_variable("search", regex_search_string, -1);
+                        RegexNFA<RegexNFAByteState> nfa;
+                        for (std::unique_ptr<ParserAST> const& parser_ast : schema2.get_schema_ast_ptr()->m_schema_vars) {
+                            auto* schema_var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
+                            ByteLexer::Rule rule(0, std::move(schema_var_ast->m_regex_ptr));
+                            rule.add_ast(&nfa);
+                        }
+                        // TODO: this is obviously bad, but the code needs to be reorganized a lot
+                        // to fix the fact that DFAs and NFAs can't be used without a lexer
+                        std::unique_ptr<RegexDFA<RegexDFAByteState>> dfa2 = forward_lexer.nfa_to_dfa(nfa);
+                        std::unique_ptr<RegexDFA<RegexDFAByteState>> const& dfa1 = forward_lexer.get_dfa();
+                        std::set<uint32_t> schema_types = dfa1->get_intersect(dfa2);
+                        for (int id : schema_types) {
+                            if (current_string[0] == '*' && current_string.back() == '*') {
+                                prefixes.push_back({'*', id, '*'});
+                            } else if (current_string[0] == '*') {
+                                prefixes.push_back({'*', id});
+                            } else if (current_string.back() == '*') {
+                                prefixes.push_back({id, '*'});
+                            } else {
+                                prefixes.push_back({id});
+                            }
+                        }
+                        if (schema_types.empty()) {
+                            prefixes.push_back({});
+                            auto& prefix = prefixes.back();
+                            prefix.insert(prefix.end(), current_string.begin(),
+                                          current_string.end());
+                        }
+                    } else if (current_string[0] == '*' && current_string.back() == '*') {
                         std::string current_string_forward = current_string.substr(1, i - j - 1);
                         std::string current_string_reverse = current_string.substr(1, i - j - 1);
                         std::reverse(current_string_reverse.begin(), current_string_reverse.end());
@@ -400,6 +454,23 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                     }
                 }
             }
+        }
+        for(int i = 0; i < logtype_matrix.size(); i++) {
+            for(int j = 0; j < logtype_matrix[i].size(); j++) {
+                for(int k = 0; k < logtype_matrix[i][j].size(); k++) {
+                    for(int l = 0; l < logtype_matrix[i][j][k].size(); l++) {
+                        auto& val = logtype_matrix[i][j][k][l];
+                        if (std::holds_alternative<char>(val)) {
+                            std::cout << std::get<char>(val);
+                        } else {
+                            std::cout << forward_lexer.m_id_symbol[std::get<int>(val)];
+                        }
+                    }
+                    std::cout << " ";
+                }
+                std::cout << " | ";
+            }
+            std::cout << std::endl;
         }
         SPDLOG_INFO("done");
         uint32_t last_row = logtype_matrix.size() - 1;
