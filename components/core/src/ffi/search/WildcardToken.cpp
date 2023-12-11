@@ -35,7 +35,7 @@ static bool could_be_int_var(string_view token);
 static bool could_be_static_text(string_view query, size_t begin_pos, size_t end_pos);
 
 template <typename encoded_variable_t>
-static bool could_be_float_var(const string_view token) {
+static bool could_be_float_var(string_view token) {
     size_t num_decimals = 0;
     size_t num_negative_signs = 0;
     size_t num_digits = 0;
@@ -71,7 +71,7 @@ static bool could_be_float_var(const string_view token) {
 }
 
 template <typename encoded_variable_t>
-static bool could_be_int_var(const string_view token) {
+static bool could_be_int_var(string_view token) {
     size_t num_negative_signs = 0;
     size_t num_digits = 0;
     for (auto c : token) {

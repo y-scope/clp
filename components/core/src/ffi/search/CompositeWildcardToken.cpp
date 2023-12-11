@@ -74,7 +74,8 @@ void CompositeWildcardToken<encoded_variable_t>::add_to_query(
                             if (wildcard_var.add_to_logtype_query(logtype_query)) {
                                 variable_tokens.emplace_back(wildcard_var);
                             }
-                        }},
+                        }
+                },
                 var
         );
         constant_begin_pos = std::visit(TokenGetEndPos, var);

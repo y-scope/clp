@@ -122,7 +122,8 @@ void generate_subqueries(
                                     CompositeWildcardToken<encoded_variable_t> const& token
                             ) {  // clang-format on
                                 token.add_to_query(logtype_query, query_vars);
-                            }},
+                            }
+                    },
                     token
             );
 
