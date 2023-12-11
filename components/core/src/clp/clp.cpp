@@ -1,10 +1,9 @@
 #include <string>
 
-// Project headers
 #include "../spdlog_with_specializations.hpp"
 #include "run.hpp"
 
-int main (int argc, const char* argv[]) {
+int main(int argc, char const* argv[]) {
     std::string archive_path;
     try {
         return clp::run(argc, argv);

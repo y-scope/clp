@@ -188,11 +188,9 @@ set(SOURCE_FILES_clp
         src/clp/FileCompressor.hpp
         src/clp/FileDecompressor.cpp
         src/clp/FileDecompressor.hpp
-        src/clp/FileToCompress.cpp
         src/clp/FileToCompress.hpp
         src/clp/run.cpp
         src/clp/run.hpp
-        src/clp/StructuredFileToCompress.cpp
         src/clp/StructuredFileToCompress.hpp
         src/clp/utils.cpp
         src/clp/utils.hpp
@@ -664,11 +662,9 @@ set(SOURCE_FILES_unitTest
         src/clp/FileCompressor.hpp
         src/clp/FileDecompressor.cpp
         src/clp/FileDecompressor.hpp
-        src/clp/FileToCompress.cpp
         src/clp/FileToCompress.hpp
         src/clp/run.cpp
         src/clp/run.hpp
-        src/clp/StructuredFileToCompress.cpp
         src/clp/StructuredFileToCompress.hpp
         src/clp/utils.cpp
         src/clp/utils.hpp
