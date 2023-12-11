@@ -1,26 +1,18 @@
 #include "Utils.hpp"
 
-// C libraries
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 
-// C++ libraries
 #include <algorithm>
 #include <iostream>
 #include <set>
 
-// Boost libraries
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
-
-// spdlog
+#include <log_surgeon/SchemaParser.hpp>
 #include <spdlog/spdlog.h>
 
-// Log surgeon
-#include <log_surgeon/SchemaParser.hpp>
-
-// Project headers
 #include "spdlog_with_specializations.hpp"
 #include "string_utils.hpp"
 
@@ -28,9 +20,9 @@ using std::list;
 using std::string;
 using std::vector;
 
-ErrorCode create_directory (const string& path, mode_t mode, bool exist_ok) {
+ErrorCode create_directory(string const& path, mode_t mode, bool exist_ok) {
     int retval = mkdir(path.c_str(), mode);
-    if (0 != retval ) {
+    if (0 != retval) {
         if (EEXIST != errno) {
             return ErrorCode_errno;
         } else if (false == exist_ok) {
@@ -41,7 +33,7 @@ ErrorCode create_directory (const string& path, mode_t mode, bool exist_ok) {
     return ErrorCode_Success;
 }
 
-ErrorCode create_directory_structure (const string& path, mode_t mode) {
+ErrorCode create_directory_structure(string const& path, mode_t mode) {
     assert(!path.empty());
 
     // Check if entire path already exists
@@ -74,14 +66,15 @@ ErrorCode create_directory_structure (const string& path, mode_t mode) {
     }
 
     if (string::npos == path_end_pos) {
-        // NOTE: Since the first path we create below contains more than one character, this assumes the path "/"
-        // already exists
+        // NOTE: Since the first path we create below contains more than one character, this assumes
+        // the path "/" already exists
         path_end_pos = 0;
     }
     while (string::npos != path_end_pos) {
         path_end_pos = path.find_first_of('/', path_end_pos + 1);
         dir_path.assign(path, 0, path_end_pos);
-        // Technically the directory shouldn't exist at this point in the code, but it may have been created concurrently.
+        // Technically the directory shouldn't exist at this point in the code, but it may have been
+        // created concurrently.
         auto error_code = create_directory(dir_path, mode, true);
         if (ErrorCode_Success != error_code) {
             return error_code;
@@ -91,7 +84,7 @@ ErrorCode create_directory_structure (const string& path, mode_t mode) {
     return ErrorCode_Success;
 }
 
-string get_parent_directory_path (const string& path) {
+string get_parent_directory_path(string const& path) {
     string dirname = get_unambiguous_path(path);
 
     size_t last_slash_pos = dirname.find_last_of('/');
@@ -106,7 +99,7 @@ string get_parent_directory_path (const string& path) {
     return dirname;
 }
 
-string get_unambiguous_path (const string& path) {
+string get_unambiguous_path(string const& path) {
     string unambiguous_path;
     if (path.empty()) {
         return unambiguous_path;
@@ -119,7 +112,7 @@ string get_unambiguous_path (const string& path) {
     // Remove ambiguous components
     list<string> unambiguous_components;
     size_t num_components_to_ignore = 0;
-    for (size_t i = path_components.size(); i-- > 0; ) {
+    for (size_t i = path_components.size(); i-- > 0;) {
         if (".." == path_components[i]) {
             ++num_components_to_ignore;
         } else if ("." == path_components[i] || path_components[i].empty()) {
@@ -142,7 +135,7 @@ string get_unambiguous_path (const string& path) {
     return unambiguous_path;
 }
 
-ErrorCode read_list_of_paths (const string& list_path, vector<string>& paths) {
+ErrorCode read_list_of_paths(string const& list_path, vector<string>& paths) {
     FileReader file_reader;
     ErrorCode error_code = file_reader.try_open(list_path);
     if (ErrorCode_Success != error_code) {
@@ -172,9 +165,8 @@ ErrorCode read_list_of_paths (const string& list_path, vector<string>& paths) {
 }
 
 // TODO: duplicates code in log_surgeon/parser.tpp, should implement a
-// SearchParser in log_surgeon instead and use it here. Specifically,
-// initialization of lexer.m_symbol_id, contains_delimiter error, and add_rule
-// logic.
+// SearchParser in log_surgeon instead and use it here. Specifically, initialization of
+// lexer.m_symbol_id, contains_delimiter error, and add_rule logic.
 void load_lexer_from_file(
         std::string const& schema_file_path,
         bool reverse,
@@ -187,14 +179,14 @@ void load_lexer_from_file(
         throw std::runtime_error("Error: symbol_ids initialized before setting enum symbol_ids");
     }
 
-    // cTokenEnd and cTokenUncaughtString never need to be added as a rule to
-    // the lexer as they are not parsed
+    // cTokenEnd and cTokenUncaughtString never need to be added as a rule to the lexer as they are
+    // not parsed
     lexer.m_symbol_id[log_surgeon::cTokenEnd] = static_cast<int>(log_surgeon::SymbolID::TokenEndID);
     lexer.m_symbol_id[log_surgeon::cTokenUncaughtString]
             = static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID);
-    // cTokenInt, cTokenFloat, cTokenFirstTimestamp, and cTokenNewlineTimestamp
-    // each have unknown rule(s) until specified by the user so can't be
-    // explicitly added and are done by looping over schema_vars (user schema)
+    // cTokenInt, cTokenFloat, cTokenFirstTimestamp, and cTokenNewlineTimestamp each have unknown
+    // rule(s) until specified by the user so can't be explicitly added and are done by looping over
+    // schema_vars (user schema)
     lexer.m_symbol_id[log_surgeon::cTokenInt] = static_cast<int>(log_surgeon::SymbolID::TokenIntId);
     lexer.m_symbol_id[log_surgeon::cTokenFloat]
             = static_cast<int>(log_surgeon::SymbolID::TokenFloatId);
@@ -202,8 +194,8 @@ void load_lexer_from_file(
             = static_cast<int>(log_surgeon::SymbolID::TokenFirstTimestampId);
     lexer.m_symbol_id[log_surgeon::cTokenNewlineTimestamp]
             = static_cast<int>(log_surgeon::SymbolID::TokenNewlineTimestampId);
-    // cTokenNewline is not added in schema_vars and can be explicitly added
-    // as '\n' to catch the end of non-timestamped log messages
+    // cTokenNewline is not added in schema_vars and can be explicitly added as '\n' to catch the
+    // end of non-timestamped log messages
     lexer.m_symbol_id[log_surgeon::cTokenNewline]
             = static_cast<int>(log_surgeon::SymbolID::TokenNewlineId);
 

@@ -1,9 +1,14 @@
 #include "dictionary_utils.hpp"
 
-void open_dictionary_for_reading (const std::string& dictionary_path, const std::string& segment_index_path, size_t decompressor_file_read_buffer_capacity,
-                                  FileReader& dictionary_file_reader, streaming_compression::Decompressor& dictionary_decompressor,
-                                  FileReader& segment_index_file_reader, streaming_compression::Decompressor& segment_index_decompressor)
-{
+void open_dictionary_for_reading(
+        std::string const& dictionary_path,
+        std::string const& segment_index_path,
+        size_t decompressor_file_read_buffer_capacity,
+        FileReader& dictionary_file_reader,
+        streaming_compression::Decompressor& dictionary_decompressor,
+        FileReader& segment_index_file_reader,
+        streaming_compression::Decompressor& segment_index_decompressor
+) {
     dictionary_file_reader.open(dictionary_path);
     // Skip header
     dictionary_file_reader.seek_from_begin(sizeof(uint64_t));
@@ -14,10 +19,13 @@ void open_dictionary_for_reading (const std::string& dictionary_path, const std:
     // Skip header
     segment_index_file_reader.seek_from_begin(sizeof(uint64_t));
     // Open decompressor
-    segment_index_decompressor.open(segment_index_file_reader, decompressor_file_read_buffer_capacity);
+    segment_index_decompressor.open(
+            segment_index_file_reader,
+            decompressor_file_read_buffer_capacity
+    );
 }
 
-uint64_t read_dictionary_header (FileReader& file_reader) {
+uint64_t read_dictionary_header(FileReader& file_reader) {
     auto dictionary_file_reader_pos = file_reader.get_pos();
     file_reader.seek_from_begin(0);
     uint64_t num_dictionary_entries;
@@ -26,7 +34,7 @@ uint64_t read_dictionary_header (FileReader& file_reader) {
     return num_dictionary_entries;
 }
 
-uint64_t read_segment_index_header (FileReader& file_reader) {
+uint64_t read_segment_index_header(FileReader& file_reader) {
     // Read segment index header
     auto segment_index_file_reader_pos = file_reader.get_pos();
     file_reader.seek_from_begin(0);

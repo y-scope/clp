@@ -1,11 +1,9 @@
 #ifndef FILEREADER_HPP
 #define FILEREADER_HPP
 
-// C++ libraries
 #include <cstdio>
 #include <string>
 
-// Project headers
 #include "Defs.h"
 #include "ErrorCode.hpp"
 #include "ReaderInterface.hpp"
@@ -17,16 +15,16 @@ public:
     class OperationFailed : public TraceableException {
     public:
         // Constructors
-        OperationFailed (ErrorCode error_code, const char* const filename, int line_number) : TraceableException (error_code, filename, line_number) {}
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        const char* what () const noexcept override {
-            return "FileReader operation failed";
-        }
+        char const* what() const noexcept override { return "FileReader operation failed"; }
     };
 
-    FileReader () : m_file(nullptr), m_getdelim_buf_len(0), m_getdelim_buf(nullptr) {}
-    ~FileReader ();
+    FileReader() : m_file(nullptr), m_getdelim_buf_len(0), m_getdelim_buf(nullptr) {}
+
+    ~FileReader();
 
     // Methods implementing the ReaderInterface
     /**
@@ -36,7 +34,7 @@ public:
      * @return ErrorCode_errno on error
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_get_pos (size_t& pos) override;
+    ErrorCode try_get_pos(size_t& pos) override;
     /**
      * Tries to seek from the beginning of the file to the given position
      * @param pos
@@ -44,7 +42,7 @@ public:
      * @return ErrorCode_errno on error
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_seek_from_begin (size_t pos) override;
+    ErrorCode try_seek_from_begin(size_t pos) override;
 
     /**
      * Tries to read up to a given number of bytes from the file
@@ -57,7 +55,7 @@ public:
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) override;
+    ErrorCode try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) override;
 
     /**
      * Tries to read a string from the file until it reaches the specified delimiter
@@ -69,10 +67,11 @@ public:
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_errno otherwise
      */
-    ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter, bool append, std::string& str) override;
+    ErrorCode
+    try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str) override;
 
     // Methods
-    bool is_open () const { return m_file != nullptr; }
+    bool is_open() const { return m_file != nullptr; }
 
     /**
      * Tries to open a file
@@ -81,19 +80,19 @@ public:
      * @return ErrorCode_FileNotFound if the file was not found
      * @return ErrorCode_errno otherwise
      */
-    ErrorCode try_open (const std::string& path);
+    ErrorCode try_open(std::string const& path);
     /**
      * Opens a file
      * @param path
      * @throw FileReader::OperationFailed on failure
      */
-    void open (const std::string& path);
+    void open(std::string const& path);
     /**
      * Closes the file if it's open
      */
-    void close ();
+    void close();
 
-    [[nodiscard]] const std::string& get_path () const { return m_path; }
+    [[nodiscard]] std::string const& get_path() const { return m_path; }
 
     /**
      * Tries to stat the current file
@@ -101,7 +100,7 @@ public:
      * @return ErrorCode_errno on error
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_fstat (struct stat& stat_buffer);
+    ErrorCode try_fstat(struct stat& stat_buffer);
 
 private:
     FILE* m_file;
@@ -110,4 +109,4 @@ private:
     std::string m_path;
 };
 
-#endif // FILEREADER_HPP
+#endif  // FILEREADER_HPP

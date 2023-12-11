@@ -171,7 +171,6 @@ include(cmake/Modules/FindLibraryDependencies.cmake)
 FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 
 set(SOURCE_FILES_clp
-        src/ArrayBackedPosIntSet.cpp
         src/ArrayBackedPosIntSet.hpp
         src/BufferedFileReader.cpp
         src/BufferedFileReader.hpp
@@ -199,11 +198,8 @@ set(SOURCE_FILES_clp
         src/Defs.h
         src/dictionary_utils.cpp
         src/dictionary_utils.hpp
-        src/DictionaryEntry.cpp
         src/DictionaryEntry.hpp
-        src/DictionaryReader.cpp
         src/DictionaryReader.hpp
-        src/DictionaryWriter.cpp
         src/DictionaryWriter.hpp
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
@@ -221,7 +217,6 @@ set(SOURCE_FILES_clp
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
-        src/GlobalMetadataDB.cpp
         src/GlobalMetadataDB.hpp
         src/GlobalMetadataDBConfig.cpp
         src/GlobalMetadataDBConfig.hpp
@@ -245,7 +240,6 @@ set(SOURCE_FILES_clp
         src/LogSurgeonReader.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
-        src/LogTypeDictionaryReader.cpp
         src/LogTypeDictionaryReader.hpp
         src/LogTypeDictionaryWriter.cpp
         src/LogTypeDictionaryWriter.hpp
@@ -258,7 +252,6 @@ set(SOURCE_FILES_clp
         src/MySQLParamBindings.hpp
         src/MySQLPreparedStatement.cpp
         src/MySQLPreparedStatement.hpp
-        src/PageAllocatedVector.cpp
         src/PageAllocatedVector.hpp
         src/ParsedMessage.cpp
         src/ParsedMessage.hpp
@@ -315,14 +308,12 @@ set(SOURCE_FILES_clp
         src/StringReader.hpp
         src/TimestampPattern.cpp
         src/TimestampPattern.hpp
-        src/TraceableException.cpp
         src/TraceableException.hpp
         src/type_utils.hpp
         src/Utils.cpp
         src/Utils.hpp
         src/VariableDictionaryEntry.cpp
         src/VariableDictionaryEntry.hpp
-        src/VariableDictionaryReader.cpp
         src/VariableDictionaryReader.hpp
         src/VariableDictionaryWriter.cpp
         src/VariableDictionaryWriter.hpp
@@ -371,9 +362,7 @@ set(SOURCE_FILES_clg
         src/Defs.h
         src/dictionary_utils.cpp
         src/dictionary_utils.hpp
-        src/DictionaryEntry.cpp
         src/DictionaryEntry.hpp
-        src/DictionaryReader.cpp
         src/DictionaryReader.hpp
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
@@ -388,7 +377,6 @@ set(SOURCE_FILES_clg
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
-        src/GlobalMetadataDB.cpp
         src/GlobalMetadataDB.hpp
         src/GlobalMetadataDBConfig.cpp
         src/GlobalMetadataDBConfig.hpp
@@ -406,7 +394,6 @@ set(SOURCE_FILES_clg
         src/ir/parsing.inc
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
-        src/LogTypeDictionaryReader.cpp
         src/LogTypeDictionaryReader.hpp
         src/MySQLDB.cpp
         src/MySQLDB.hpp
@@ -414,7 +401,6 @@ set(SOURCE_FILES_clg
         src/MySQLParamBindings.hpp
         src/MySQLPreparedStatement.cpp
         src/MySQLPreparedStatement.hpp
-        src/PageAllocatedVector.cpp
         src/PageAllocatedVector.hpp
         src/ParsedMessage.cpp
         src/ParsedMessage.hpp
@@ -468,14 +454,12 @@ set(SOURCE_FILES_clg
         src/StringReader.hpp
         src/TimestampPattern.cpp
         src/TimestampPattern.hpp
-        src/TraceableException.cpp
         src/TraceableException.hpp
         src/type_utils.hpp
         src/Utils.cpp
         src/Utils.hpp
         src/VariableDictionaryEntry.cpp
         src/VariableDictionaryEntry.hpp
-        src/VariableDictionaryReader.cpp
         src/VariableDictionaryReader.hpp
         src/VariableDictionaryWriter.cpp
         src/VariableDictionaryWriter.hpp
@@ -521,9 +505,7 @@ set(SOURCE_FILES_clo
         src/Defs.h
         src/dictionary_utils.cpp
         src/dictionary_utils.hpp
-        src/DictionaryEntry.cpp
         src/DictionaryEntry.hpp
-        src/DictionaryReader.cpp
         src/DictionaryReader.hpp
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
@@ -548,12 +530,10 @@ set(SOURCE_FILES_clo
         src/ir/parsing.inc
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
-        src/LogTypeDictionaryReader.cpp
         src/LogTypeDictionaryReader.hpp
         src/networking/socket_utils.cpp
         src/networking/socket_utils.hpp
         src/networking/SocketOperationFailed.hpp
-        src/PageAllocatedVector.cpp
         src/PageAllocatedVector.hpp
         src/ParsedMessage.cpp
         src/ParsedMessage.hpp
@@ -609,14 +589,12 @@ set(SOURCE_FILES_clo
         src/Thread.hpp
         src/TimestampPattern.cpp
         src/TimestampPattern.hpp
-        src/TraceableException.cpp
         src/TraceableException.hpp
         src/type_utils.hpp
         src/Utils.cpp
         src/Utils.hpp
         src/VariableDictionaryEntry.cpp
         src/VariableDictionaryEntry.hpp
-        src/VariableDictionaryReader.cpp
         src/VariableDictionaryReader.hpp
         src/VariableDictionaryWriter.cpp
         src/VariableDictionaryWriter.hpp
@@ -673,11 +651,8 @@ set(SOURCE_FILES_unitTest
         src/Defs.h
         src/dictionary_utils.cpp
         src/dictionary_utils.hpp
-        src/DictionaryEntry.cpp
         src/DictionaryEntry.hpp
-        src/DictionaryReader.cpp
         src/DictionaryReader.hpp
-        src/DictionaryWriter.cpp
         src/DictionaryWriter.hpp
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
@@ -710,7 +685,6 @@ set(SOURCE_FILES_unitTest
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
-        src/GlobalMetadataDB.cpp
         src/GlobalMetadataDB.hpp
         src/GlobalMetadataDBConfig.cpp
         src/GlobalMetadataDBConfig.hpp
@@ -736,7 +710,6 @@ set(SOURCE_FILES_unitTest
         src/LogSurgeonReader.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
-        src/LogTypeDictionaryReader.cpp
         src/LogTypeDictionaryReader.hpp
         src/LogTypeDictionaryWriter.cpp
         src/LogTypeDictionaryWriter.hpp
@@ -749,7 +722,6 @@ set(SOURCE_FILES_unitTest
         src/MySQLParamBindings.hpp
         src/MySQLPreparedStatement.cpp
         src/MySQLPreparedStatement.hpp
-        src/PageAllocatedVector.cpp
         src/PageAllocatedVector.hpp
         src/ParsedMessage.cpp
         src/ParsedMessage.hpp
@@ -807,14 +779,12 @@ set(SOURCE_FILES_unitTest
         src/StringReader.hpp
         src/TimestampPattern.cpp
         src/TimestampPattern.hpp
-        src/TraceableException.cpp
         src/TraceableException.hpp
         src/type_utils.hpp
         src/Utils.cpp
         src/Utils.hpp
         src/VariableDictionaryEntry.cpp
         src/VariableDictionaryEntry.hpp
-        src/VariableDictionaryReader.cpp
         src/VariableDictionaryReader.hpp
         src/VariableDictionaryWriter.cpp
         src/VariableDictionaryWriter.hpp

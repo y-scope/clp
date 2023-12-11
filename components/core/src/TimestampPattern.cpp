@@ -1,14 +1,11 @@
 #include "TimestampPattern.hpp"
 
-// C++ standard libraries
 #include <chrono>
 #include <cstring>
 #include <vector>
 
-// Date library
 #include <date/include/date/date.h>
 
-// Project headers
 #include "spdlog_with_specializations.hpp"
 
 using std::string;
@@ -29,22 +26,34 @@ enum class ParserState {
 
 // File-scope constants
 static constexpr int cNumDaysInWeek = 7;
-static const char* cAbbrevDaysOfWeek[cNumDaysInWeek] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+static char const* cAbbrevDaysOfWeek[cNumDaysInWeek]
+        = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 static constexpr int cNumMonths = 12;
-static const char* cAbbrevMonthNames[cNumMonths] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-static const char* cMonthNames[cNumMonths] = {
-    "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"
-};
+static char const* cAbbrevMonthNames[cNumMonths]
+        = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+static char const* cMonthNames[cNumMonths]
+        = {"January",
+           "February",
+           "March",
+           "April",
+           "May",
+           "June",
+           "July",
+           "August",
+           "September",
+           "October",
+           "November",
+           "December"};
 
 // File-scope functions
 /**
-* Converts a value to a padded string with the given length and appends it to the given string
-* @param value
-* @param padding_character
-* @param length
-* @param str
-*/
-static void append_padded_value (int value, char padding_character, size_t length, string& str);
+ * Converts a value to a padded string with the given length and appends it to the given string
+ * @param value
+ * @param padding_character
+ * @param length
+ * @param str
+ */
+static void append_padded_value(int value, char padding_character, size_t length, string& str);
 /**
  * Converts a padded decimal integer string (from a larger string) to an integer
  * @param str String containing the numeric string
@@ -54,15 +63,32 @@ static void append_padded_value (int value, char padding_character, size_t lengt
  * @param value String as a number
  * @return true if conversion succeeds, false otherwise
  */
-static bool convert_string_to_number (const string& str, size_t begin_ix, size_t end_ix, char padding_character, int& value);
+static bool convert_string_to_number(
+        string const& str,
+        size_t begin_ix,
+        size_t end_ix,
+        char padding_character,
+        int& value
+);
 
-static void append_padded_value (const int value, const char padding_character, const size_t length, string& str) {
+static void append_padded_value(
+        int const value,
+        char const padding_character,
+        size_t const length,
+        string& str
+) {
     string value_str = to_string(value);
     str.append(length - value_str.length(), padding_character);
     str += value_str;
 }
 
-static bool convert_string_to_number (const string& str, const size_t begin_ix, const size_t end_ix, const char padding_character, int& value) {
+static bool convert_string_to_number(
+        string const& str,
+        size_t const begin_ix,
+        size_t const end_ix,
+        char const padding_character,
+        int& value
+) {
     // Consume padding characters
     size_t ix = begin_ix;
     while (ix < end_ix && padding_character == str[ix]) {
@@ -86,10 +112,11 @@ static bool convert_string_to_number (const string& str, const size_t begin_ix, 
 }
 
 /*
- * To initialize m_known_ts_patterns, we first create a vector of patterns then copy it to a dynamic array. This eases
- * maintenance of the list and the cost doesn't matter since it is only done once when the program starts.
+ * To initialize m_known_ts_patterns, we first create a vector of patterns then copy it to a dynamic
+ * array. This eases maintenance of the list and the cost doesn't matter since it is only done once
+ * when the program starts.
  */
-void TimestampPattern::init () {
+void TimestampPattern::init() {
     // First create vector of observed patterns so that it's easy to maintain
     vector<TimestampPattern> patterns;
     // E.g. 2015-01-31T15:50:45.392
@@ -142,8 +169,8 @@ void TimestampPattern::init () {
     // E.g. Sun Jan  1 15:50:45 2015
     patterns.emplace_back(0, "%a %b %e %H:%M:%S %Y");
 
-    // TODO These patterns are imprecise and will prevent searching by timestamp; but for now, it's no worse than not parsing a timestamp
-    // E.g. Jan 21 11:56:42
+    // TODO These patterns are imprecise and will prevent searching by timestamp; but for now, it's
+    // no worse than not parsing a timestamp E.g. Jan 21 11:56:42
     patterns.emplace_back(0, "%b %d %H:%M:%S");
     // E.g. 01-21 11:56:42.392
     patterns.emplace_back(0, "%m-%d %H:%M:%S.%3");
@@ -158,11 +185,16 @@ void TimestampPattern::init () {
     }
 }
 
-const TimestampPattern* TimestampPattern::search_known_ts_patterns (const string& line, epochtime_t& timestamp, size_t& timestamp_begin_pos,
-                                                                    size_t& timestamp_end_pos)
-{
+TimestampPattern const* TimestampPattern::search_known_ts_patterns(
+        string const& line,
+        epochtime_t& timestamp,
+        size_t& timestamp_begin_pos,
+        size_t& timestamp_end_pos
+) {
     for (size_t i = 0; i < m_known_ts_patterns_len; ++i) {
-        if (m_known_ts_patterns[i].parse_timestamp(line, timestamp, timestamp_begin_pos, timestamp_end_pos)) {
+        if (m_known_ts_patterns[i]
+                    .parse_timestamp(line, timestamp, timestamp_begin_pos, timestamp_end_pos))
+        {
             return &m_known_ts_patterns[i];
         }
     }
@@ -172,30 +204,37 @@ const TimestampPattern* TimestampPattern::search_known_ts_patterns (const string
     return nullptr;
 }
 
-const string& TimestampPattern::get_format () const {
+string const& TimestampPattern::get_format() const {
     return m_format;
 }
 
-uint8_t TimestampPattern::get_num_spaces_before_ts () const {
+uint8_t TimestampPattern::get_num_spaces_before_ts() const {
     return m_num_spaces_before_ts;
 }
 
-bool TimestampPattern::is_empty () const {
+bool TimestampPattern::is_empty() const {
     return m_format.empty();
 }
 
-void TimestampPattern::clear () {
+void TimestampPattern::clear() {
     m_num_spaces_before_ts = 0;
     m_format.clear();
 }
 
-bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timestamp, size_t& timestamp_begin_pos, size_t& timestamp_end_pos) const {
+bool TimestampPattern::parse_timestamp(
+        string const& line,
+        epochtime_t& timestamp,
+        size_t& timestamp_begin_pos,
+        size_t& timestamp_end_pos
+) const {
     size_t line_ix = 0;
-    const size_t line_length = line.length();
+    size_t const line_length = line.length();
 
     // Find beginning of timestamp
     int num_spaces_found;
-    for (num_spaces_found = 0; num_spaces_found < m_num_spaces_before_ts && line_ix < line_length; ++line_ix) {
+    for (num_spaces_found = 0; num_spaces_found < m_num_spaces_before_ts && line_ix < line_length;
+         ++line_ix)
+    {
         if (' ' == line[line_ix]) {
             ++num_spaces_found;
         }
@@ -217,7 +256,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
     long nanosecond = 0;
     bool is_pm = false;
 
-    const size_t format_length = m_format.length();
+    size_t const format_length = m_format.length();
     size_t format_ix = 0;
     ParserState state = ParserState::Literal;
     for (; format_ix < format_length && line_ix < line_length; ++format_ix) {
@@ -234,10 +273,9 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                 }
                 break;
             case (ParserState::FormatSpecifier): {
-                // NOTE: We set the next state here so that we don't have to set
-                // it before breaking out of every case below. Any cases which
-                // don't transition to this next state should set their next
-                // state before breaking.
+                // NOTE: We set the next state here so that we don't have to set it before breaking
+                // out of every case below. Any cases which don't transition to this next state
+                // should set their next state before breaking.
                 state = ParserState::Literal;
                 // Parse fields
                 switch (m_format[format_ix]) {
@@ -254,8 +292,15 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                             return false;
                         }
                         int value;
-                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                             '0', value) || value < 0 || value > 99)
+                        if (false
+                                    == convert_string_to_number(
+                                            line,
+                                            line_ix,
+                                            line_ix + cFieldLength,
+                                            '0',
+                                            value
+                                    )
+                            || value < 0 || value > 99)
                         {
                             return false;
                         }
@@ -276,8 +321,15 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                             return false;
                         }
                         int value;
-                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                           '0', value) || value < 0 || value > 9999)
+                        if (false
+                                    == convert_string_to_number(
+                                            line,
+                                            line_ix,
+                                            line_ix + cFieldLength,
+                                            '0',
+                                            value
+                                    )
+                            || value < 0 || value > 9999)
                         {
                             return false;
                         }
@@ -288,7 +340,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     case 'B': {  // Month name
                         bool match_found = false;
                         for (int month_ix = 0; !match_found && month_ix < cNumMonths; ++month_ix) {
-                            const size_t length = strlen(cMonthNames[month_ix]);
+                            size_t const length = strlen(cMonthNames[month_ix]);
                             if (0 == line.compare(line_ix, length, cMonthNames[month_ix])) {
                                 month = month_ix + 1;
                                 match_found = true;
@@ -303,7 +355,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     case 'b': {  // Abbreviated month name
                         bool match_found = false;
                         for (int month_ix = 0; !match_found && month_ix < cNumMonths; ++month_ix) {
-                            const size_t length = strlen(cAbbrevMonthNames[month_ix]);
+                            size_t const length = strlen(cAbbrevMonthNames[month_ix]);
                             if (0 == line.compare(line_ix, length, cAbbrevMonthNames[month_ix])) {
                                 month = month_ix + 1;
                                 match_found = true;
@@ -322,8 +374,15 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                             return false;
                         }
                         int value;
-                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                             '0', value) || value < 1 || value > 12)
+                        if (false
+                                    == convert_string_to_number(
+                                            line,
+                                            line_ix,
+                                            line_ix + cFieldLength,
+                                            '0',
+                                            value
+                                    )
+                            || value < 1 || value > 12)
                         {
                             return false;
                         }
@@ -338,8 +397,15 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                             return false;
                         }
                         int value;
-                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                             '0', value) || value < 1 || value > 31)
+                        if (false
+                                    == convert_string_to_number(
+                                            line,
+                                            line_ix,
+                                            line_ix + cFieldLength,
+                                            '0',
+                                            value
+                                    )
+                            || value < 1 || value > 31)
                         {
                             return false;
                         }
@@ -354,8 +420,15 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                             return false;
                         }
                         int value;
-                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                             ' ', value) || value < 1 || value > 31)
+                        if (false
+                                    == convert_string_to_number(
+                                            line,
+                                            line_ix,
+                                            line_ix + cFieldLength,
+                                            ' ',
+                                            value
+                                    )
+                            || value < 1 || value > 31)
                         {
                             return false;
                         }
@@ -366,9 +439,10 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     case 'a': {  // Abbreviated day of week
                         bool match_found = false;
                         for (int day_ix = 0; !match_found && day_ix < cNumDaysInWeek; ++day_ix) {
-                            const size_t abbrev_length = strlen(cAbbrevDaysOfWeek[day_ix]);
-                            if (0 ==
-                                line.compare(line_ix, abbrev_length, cAbbrevDaysOfWeek[day_ix])) {
+                            size_t const abbrev_length = strlen(cAbbrevDaysOfWeek[day_ix]);
+                            if (0
+                                == line.compare(line_ix, abbrev_length, cAbbrevDaysOfWeek[day_ix]))
+                            {
                                 match_found = true;
                                 line_ix += abbrev_length;
                             }
@@ -376,8 +450,8 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                         if (!match_found) {
                             return false;
                         }
-                        // Weekday is not useful in determining absolute
-                        // timestamp, so we don't do anything with it
+                        // Weekday is not useful in determining absolute timestamp, so we don't do
+                        // anything with it
                         break;
                     }
                     case 'p':  // Part of day
@@ -397,8 +471,15 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                             return false;
                         }
                         int value;
-                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                             '0', value) || value < 0 || value > 23)
+                        if (false
+                                    == convert_string_to_number(
+                                            line,
+                                            line_ix,
+                                            line_ix + cFieldLength,
+                                            '0',
+                                            value
+                                    )
+                            || value < 0 || value > 23)
                         {
                             return false;
                         }
@@ -413,8 +494,15 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                             return false;
                         }
                         int value;
-                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                             ' ', value) || value < 0 || value > 23)
+                        if (false
+                                    == convert_string_to_number(
+                                            line,
+                                            line_ix,
+                                            line_ix + cFieldLength,
+                                            ' ',
+                                            value
+                                    )
+                            || value < 0 || value > 23)
                         {
                             return false;
                         }
@@ -429,8 +517,15 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                             return false;
                         }
                         int value;
-                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                             '0', value) || value < 1 || value > 12)
+                        if (false
+                                    == convert_string_to_number(
+                                            line,
+                                            line_ix,
+                                            line_ix + cFieldLength,
+                                            '0',
+                                            value
+                                    )
+                            || value < 1 || value > 12)
                         {
                             return false;
                         }
@@ -446,8 +541,15 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                             return false;
                         }
                         int value;
-                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                             ' ', value) || value < 1 || value > 12)
+                        if (false
+                                    == convert_string_to_number(
+                                            line,
+                                            line_ix,
+                                            line_ix + cFieldLength,
+                                            ' ',
+                                            value
+                                    )
+                            || value < 1 || value > 12)
                         {
                             return false;
                         }
@@ -463,8 +565,15 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                             return false;
                         }
                         int value;
-                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                             '0', value) || value < 0 || value > 59)
+                        if (false
+                                    == convert_string_to_number(
+                                            line,
+                                            line_ix,
+                                            line_ix + cFieldLength,
+                                            '0',
+                                            value
+                                    )
+                            || value < 0 || value > 59)
                         {
                             return false;
                         }
@@ -479,8 +588,15 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                             return false;
                         }
                         int value;
-                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                             '0', value) || value < 0 || value > 60)
+                        if (false
+                                    == convert_string_to_number(
+                                            line,
+                                            line_ix,
+                                            line_ix + cFieldLength,
+                                            '0',
+                                            value
+                                    )
+                            || value < 0 || value > 60)
                         {
                             return false;
                         }
@@ -495,8 +611,15 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                             return false;
                         }
                         int value;
-                        if (false == convert_string_to_number(line, line_ix, line_ix + cFieldLength,
-                                                            '0', value) || value < 0 || value > 999)
+                        if (false
+                                    == convert_string_to_number(
+                                            line,
+                                            line_ix,
+                                            line_ix + cFieldLength,
+                                            '0',
+                                            value
+                                    )
+                            || value < 0 || value > 999)
                         {
                             return false;
                         }
@@ -514,8 +637,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
             }
             case (ParserState::RelativeTimestampUnit): {
                 int field_length = 0;
-                // Leading zeroes are not currently supported for relative
-                // timestamps
+                // Leading zeroes are not currently supported for relative timestamps
                 if (line[line_ix] == '0') {
                     return false;
                 }
@@ -530,8 +652,15 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                     return false;
                 }
                 int value;
-                if (false == convert_string_to_number(line, line_ix, line_ix + field_length, '0',
-                                                      value) || 0 > value)
+                if (false
+                            == convert_string_to_number(
+                                    line,
+                                    line_ix,
+                                    line_ix + field_length,
+                                    '0',
+                                    value
+                            )
+                    || 0 > value)
                 {
                     return false;
                 }
@@ -582,7 +711,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
     }
 
     // Create complete date
-    auto year_month_date = date::year(year)/month/date;
+    auto year_month_date = date::year(year) / month / date;
     if (!year_month_date.ok()) {
         return false;
     }
@@ -593,7 +722,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
                            + std::chrono::microseconds{microsecond}
                            + std::chrono::nanoseconds{nanosecond};
     // Get time point since epoch
-    auto unix_epoch_point = date::sys_days(date::year(1970)/1/1);
+    auto unix_epoch_point = date::sys_days(date::year(1970) / 1 / 1);
     // Get timestamp since epoch
     auto duration_since_epoch = timestamp_point - unix_epoch_point;
     // Convert to raw milliseconds
@@ -605,7 +734,7 @@ bool TimestampPattern::parse_timestamp (const string& line, epochtime_t& timesta
     return true;
 }
 
-void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, string& msg) const {
+void TimestampPattern::insert_formatted_timestamp(epochtime_t const timestamp, string& msg) const {
     size_t msg_length = msg.length();
 
     string new_msg;
@@ -615,13 +744,21 @@ void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, 
     // Find where timestamp should go
     size_t ts_begin_ix = 0;
     int num_spaces_found;
-    for (num_spaces_found = 0; num_spaces_found < m_num_spaces_before_ts && ts_begin_ix < msg_length; ++ts_begin_ix) {
+    for (num_spaces_found = 0;
+         num_spaces_found < m_num_spaces_before_ts && ts_begin_ix < msg_length;
+         ++ts_begin_ix)
+    {
         if (' ' == msg[ts_begin_ix]) {
             ++num_spaces_found;
         }
     }
     if (num_spaces_found < m_num_spaces_before_ts) {
-        SPDLOG_ERROR("{} has {} spaces, but pattern has {}", msg.c_str(), num_spaces_found, m_num_spaces_before_ts);
+        SPDLOG_ERROR(
+                "{} has {} spaces, but pattern has {}",
+                msg.c_str(),
+                num_spaces_found,
+                m_num_spaces_before_ts
+        );
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
 
@@ -629,9 +766,12 @@ void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, 
     new_msg.assign(msg, 0, ts_begin_ix);
 
     // Separate parts of timestamp
-    auto timestamp_point = date::sys_days(date::year(1970)/1/1) + std::chrono::milliseconds(timestamp);
+    auto timestamp_point
+            = date::sys_days(date::year(1970) / 1 / 1) + std::chrono::milliseconds(timestamp);
     auto timestamp_date = date::floor<date::days>(timestamp_point);
-    int day_of_week_ix = (date::year_month_weekday(timestamp_date).weekday_indexed().weekday() - date::Sunday).count();
+    int day_of_week_ix
+            = (date::year_month_weekday(timestamp_date).weekday_indexed().weekday() - date::Sunday)
+                      .count();
     auto year_month_date = date::year_month_day(timestamp_date);
     unsigned date = (unsigned)year_month_date.day();
     unsigned month = (unsigned)year_month_date.month();
@@ -644,7 +784,7 @@ void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, 
     long second = time_of_day.seconds().count();
     long millisecond = time_of_day.subseconds().count();
 
-    const size_t format_length = m_format.length();
+    size_t const format_length = m_format.length();
     ParserState state = ParserState::Literal;
     for (size_t format_ix = 0; format_ix < format_length; ++format_ix) {
         switch (state) {
@@ -782,10 +922,11 @@ void TimestampPattern::insert_formatted_timestamp (const epochtime_t timestamp, 
     msg = new_msg;
 }
 
-bool operator== (const TimestampPattern& lhs, const TimestampPattern& rhs) {
-    return (lhs.m_num_spaces_before_ts == rhs.m_num_spaces_before_ts && lhs.m_format == rhs.m_format);
+bool operator==(TimestampPattern const& lhs, TimestampPattern const& rhs) {
+    return (lhs.m_num_spaces_before_ts == rhs.m_num_spaces_before_ts && lhs.m_format == rhs.m_format
+    );
 }
 
-bool operator!= (const TimestampPattern& lhs, const TimestampPattern& rhs) {
+bool operator!=(TimestampPattern const& lhs, TimestampPattern const& rhs) {
     return !(lhs == rhs);
 }
