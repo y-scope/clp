@@ -84,7 +84,7 @@ bool get_bounds_of_next_var(std::string_view str, size_t& begin_pos, size_t& end
  * Appends a constant to the logtype, escaping any variable placeholders.
  * @param constant
  * @param logtype
-*/
+ */
 void escape_and_append_const_to_logtype(std::string_view constant, std::string& logtype);
 
 /**

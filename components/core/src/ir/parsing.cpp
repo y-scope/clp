@@ -3,8 +3,8 @@
 #include "../string_utils.hpp"
 #include "../type_utils.hpp"
 
-using std::string_view;
 using std::string;
+using std::string_view;
 
 namespace ir {
 /*
