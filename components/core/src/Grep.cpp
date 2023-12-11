@@ -24,7 +24,10 @@ using log_surgeon::finite_automata::RegexNFAByteState;
 using log_surgeon::lexers::ByteLexer;
 using log_surgeon::ParserAST;
 using log_surgeon::SchemaVarAST;
+using std::set;
 using std::string;
+using std::unique_ptr;
+using std::variant;
 using std::vector;
 using streaming_archive::reader::Archive;
 using streaming_archive::reader::File;
@@ -300,9 +303,8 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
         }
     } else {
         // Generate all possible search types for a query
-        vector<vector<vector<vector<std::variant<char, int>>>>> logtype_matrix(
-                processed_search_string.size(),
-                vector<vector<vector<std::variant<char, int>>>>(processed_search_string.size()));
+        vector<set<vector<variant<char, int>>>> logtype_matrix(
+                processed_search_string.size());
         for (uint32_t i = 0; i < processed_search_string.size(); i++) {
             for (uint32_t j = 0; j <= i; j++) {
                 std::string current_string = processed_search_string.substr(j, i - j + 1);
@@ -312,7 +314,7 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                         has_middle_wildcard = true;
                     }
                 }
-                std::vector<std::vector<std::variant<char, int>>> suffixes;
+                std::vector<std::vector<variant<char, int>>> suffixes;
                 SearchToken search_token;
                 if (current_string == "*") {
                     suffixes.push_back({});
@@ -340,9 +342,9 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                     }
                     // TODO: this is obviously bad, but the code needs to be reorganized a lot
                     // to fix the fact that DFAs and NFAs can't be used without a lexer
-                    std::unique_ptr<RegexDFA<RegexDFAByteState>> dfa2 = forward_lexer.nfa_to_dfa(nfa);
-                    std::unique_ptr<RegexDFA<RegexDFAByteState>> const& dfa1 = forward_lexer.get_dfa();
-                    std::set<uint32_t> schema_types = dfa1->get_intersect(dfa2);
+                    unique_ptr<RegexDFA<RegexDFAByteState>> dfa2 = forward_lexer.nfa_to_dfa(nfa);
+                    unique_ptr<RegexDFA<RegexDFAByteState>> const& dfa1 = forward_lexer.get_dfa();
+                    set<uint32_t> schema_types = dfa1->get_intersect(dfa2);
                     for (int id : schema_types) {
                         if (current_string[0] == '*' && current_string.back() == '*') {
                             suffixes.push_back({'*', id, '*'});
@@ -361,60 +363,60 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                                       current_string.end());
                     }
                 }
-                auto& new_logtypes = logtype_matrix[i][j];
-                for(int k = 0; k < j; k++) {
-                    auto& parent_logtypes = logtype_matrix[j - 1][k];
-                    for(int l = 0; l < parent_logtypes.size(); l++) {
-                        auto& parent_logtype = parent_logtypes[l];
-                        // handles case where  current_string is static-text
+                auto& new_logtypes = logtype_matrix[i];
+                if(j > 0) {
+                    for(auto& parent_logtype : logtype_matrix[j - 1]) {
                         for (auto& suffix : suffixes) {
-                            new_logtypes.push_back(parent_logtype);
-                            auto& new_logtype = new_logtypes.back();
-                            new_logtype.insert(new_logtype.end(), suffix.begin(), suffix.end());
+                            vector<variant<char,int>> v(parent_logtype.begin(), parent_logtype.end());
+                            v.insert(v.end(), suffix.begin(), suffix.end());
+                            new_logtypes.insert(v);
                         }
                     }
-                }
-                // handles case (e.g. first row) where the previous row in logtype_matrix is empty
-                if(new_logtypes.empty()) {
+                } else {
+                    // handles first column
                     for (auto& suffix : suffixes) {
-                        new_logtypes.push_back({});
-                        auto& new_logtype = new_logtypes.back();
-                        new_logtype.insert(new_logtype.end(), suffix.begin(), suffix.end());
+                        new_logtypes.insert(suffix);
                     }
                 }
             }
         }
-        for(int i = 0; i < logtype_matrix.size(); i++) {
-            for(int j = 0; j < logtype_matrix[i].size(); j++) {
-                for(int k = 0; k < logtype_matrix[i][j].size(); k++) {
-                    for(int l = 0; l < logtype_matrix[i][j][k].size(); l++) {
-                        auto& val = logtype_matrix[i][j][k][l];
-                        if (std::holds_alternative<char>(val)) {
-                            std::cout << std::get<char>(val);
-                        } else {
-                            std::cout << forward_lexer.m_id_symbol[std::get<int>(val)];
-                        }
+        for(auto& logtypes : logtype_matrix) {
+            for(auto& logtype: logtypes) {
+                for(auto& val : logtype) {
+                    if (std::holds_alternative<char>(val)) {
+                        std::cout << std::get<char>(val);
+                    } else {
+                        std::cout << forward_lexer.m_id_symbol[std::get<int>(val)];
                     }
-                    std::cout << " ";
                 }
-                std::cout << " | ";
+                std::cout << " ";
             }
             std::cout << std::endl;
         }
-        SPDLOG_INFO("done");
         uint32_t last_row = logtype_matrix.size() - 1;
-        for (int j = 0; j < logtype_matrix[last_row].size(); j++) {
-            //LogTypeDictionaryEntry::add_float_var(logtype);
-            //LogTypeDictionaryEntry::add_int_var(logtype);
-            //LogTypeDictionaryEntry::add_dict_var(logtype);
-            //sub_query.add_dict_var(encoded_var, entry);
-            //sub_query.add_non_dict_var(encoded_var, entry);
-            std::string logtype;
+        for (auto const& logtype: logtype_matrix[last_row]) {
+            std::string logtype_string;
+            for(const auto& value : logtype) {
+                if (std::holds_alternative<char>(value)) {
+                    logtype_string.push_back(std::get<char>(value));
+                } else {
+                    auto& schema_type = forward_lexer.m_id_symbol[std::get<int>(value)];
+                    if( schema_type == "int") {
+                        LogTypeDictionaryEntry::add_int_var(logtype_string);
+                    } else if  (schema_type == "float") {
+                        LogTypeDictionaryEntry::add_float_var(logtype_string);
+                    } else {
+                        LogTypeDictionaryEntry::add_dict_var(logtype_string);
+                    }
+                }
+            }
+
             std::unordered_set<const LogTypeDictionaryEntry*> possible_logtype_entries;
-            archive.get_logtype_dictionary().get_entries_matching_wildcard_string(logtype, ignore_case,
+            archive.get_logtype_dictionary().get_entries_matching_wildcard_string(logtype_string, ignore_case,
                                                                                   possible_logtype_entries);
             if (false == possible_logtype_entries.empty()) {
                 SubQuery sub_query;
+                sub_query.mark_wildcard_match_required();
                 sub_query.set_possible_logtypes(possible_logtype_entries);
 
                 // Calculate the IDs of the segments that may contain results for the sub-query now that we've calculated the matching logtypes and variables
