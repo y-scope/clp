@@ -1,19 +1,15 @@
-// C libaries
 #include <sys/stat.h>
 #include <unistd.h>
 
-// C++ libraries
-#include <boost/foreach.hpp>
-#include <boost/range/combine.hpp>
 #include <chrono>
 #include <ctime>
 #include <iostream>
 #include <ratio>
 
-// Catch2
+#include <boost/foreach.hpp>
+#include <boost/range/combine.hpp>
 #include <Catch2/single_include/catch2/catch.hpp>
 
-// Project headers
 #include "../src/Utils.hpp"
 
 using namespace std;

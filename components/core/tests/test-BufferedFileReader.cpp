@@ -275,8 +275,8 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
     ref_file_reader.open(test_file_path);
     std::string ref_string;
 
-    // Validate that a FileReader and a BufferedFileReader return the same
-    // strings (split by delimiters)
+    // Validate that a FileReader and a BufferedFileReader return the same strings (split by
+    // delimiters)
     ErrorCode error_code{ErrorCode_Success};
     auto delimiter = (char)('a' + (std::rand() % (cNumAlphabets)));
     while (ErrorCode_EndOfFile != error_code) {
