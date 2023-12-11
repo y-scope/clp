@@ -410,8 +410,7 @@ int main(int argc, char const* argv[]) {
             );
         } else {
             SPDLOG_ERROR(
-                    "Failed to join with controller monitoring thread: {}:{} {}, "
-                    "error_code={}",
+                    "Failed to join with controller monitoring thread: {}:{} {}, error_code={}",
                     e.get_filename(),
                     e.get_line_number(),
                     e.what(),

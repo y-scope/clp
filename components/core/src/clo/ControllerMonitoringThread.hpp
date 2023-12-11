@@ -4,8 +4,8 @@
 #include "../Thread.hpp"
 
 /**
- * A thread that waits for the controller to close the connection at which time
- * it will indicate the query has been cancelled.
+ * A thread that waits for the controller to close the connection at which time it will indicate the
+ * query has been cancelled.
  */
 class ControllerMonitoringThread : public Thread {
 public:
