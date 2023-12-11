@@ -2,12 +2,11 @@
 #define IR_PARSING_HPP
 
 /**
- * TODO Technically, the methods in this file are more general than for their
- * use in generating CLP's IR. However, introducing a parsing namespace in the
- * root source directory would be confusing since we also have the
- * compressor_frontend namespace. Once most of compressor_frontend is moved into
- * https://github.com/y-scope/log-surgeon, we should reconsider the placement of
- * the methods in this file.
+ * TODO Technically, the methods in this file are more general than for their use in generating
+ * CLP's IR. However, introducing a parsing namespace in the root source directory would be
+ * confusing since we also have the compressor_frontend namespace. Once most of
+ * compressor_frontend is moved into https://github.com/y-scope/log-surgeon, we should reconsider
+ * the placement of the methods in this file.
  */
 
 #include <string_view>
@@ -23,8 +22,7 @@ enum class VariablePlaceholder : char {
 
 /**
  * Checks if the given character is a delimiter
- * We treat everything *except* the following quoted characters as a
- * delimiter: "+-.0-9A-Z\_a-z"
+ * We treat everything *except* the following quoted characters as a delimiter: "+-.0-9A-Z\_a-z"
  * @param c
  * @return Whether c is a delimiter
  */
@@ -46,8 +44,7 @@ inline bool could_be_multi_digit_hex_value(std::string_view str) {
         return false;
     }
 
-    // NOTE: This is 1-2% faster than using std::all_of with the opposite
-    // condition
+    // NOTE: This is 1-2% faster than using std::all_of with the opposite condition
     for (auto c : str) {
         if (false == (('a' <= c && c <= 'f') || ('A' <= c && c <= 'F') || ('0' <= c && c <= '9'))) {
             return false;
@@ -59,23 +56,20 @@ inline bool could_be_multi_digit_hex_value(std::string_view str) {
 
 /**
  * @param value
- * @return Whether the given value is a variable according to the schemas
- * specified in ffi::get_bounds_of_next_var
+ * @return Whether the given value is a variable according to the schemas specified in
+ * ffi::get_bounds_of_next_var
  */
 bool is_var(std::string_view value);
 
 /**
  * Gets the bounds of the next variable in the given string
- * A variable is a token (word between two delimiters) that matches one of
- * these schemas:
+ * A variable is a token (word between two delimiters) that matches one of these schemas:
  * - ".*[0-9].*"
  * - "=(.*[a-zA-Z].*)" (the variable is within the capturing group)
  * - "[a-fA-F0-9]{2,}"
  * @param str String to search within
- * @param begin_pos Begin position of last variable, changes to begin
- * position of next variable
- * @param end_pos End position of last variable, changes to end position of
- * next variable
+ * @param begin_pos Begin position of last variable, changes to begin position of next variable
+ * @param end_pos End position of last variable, changes to end position of next variable
  * @return true if a variable was found, false otherwise
  */
 bool get_bounds_of_next_var(std::string_view str, size_t& begin_pos, size_t& end_pos);
@@ -88,10 +82,10 @@ bool get_bounds_of_next_var(std::string_view str, size_t& begin_pos, size_t& end
 void escape_and_append_const_to_logtype(std::string_view constant, std::string& logtype);
 
 /**
- * Appends the given constant to the logtype, optionally escaping any variable
- * placeholders found within the constant using the given handler.
- * @tparam EscapeHandler Method to optionally escape any variable placeholders
- * found within the constant. Signature: (
+ * Appends the given constant to the logtype, optionally escaping any variable placeholders found
+ * within the constant using the given handler.
+ * @tparam EscapeHandler Method to optionally escape any variable placeholders found within the
+ * constant. Signature: (
  *         [[maybe_unused]] std::string_view constant,
  *         [[maybe_unused]] size_t char_to_escape_pos,
  *         std::string& logtype

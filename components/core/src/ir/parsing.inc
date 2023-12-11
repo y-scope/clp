@@ -22,8 +22,8 @@ void append_constant_to_logtype(
             continue;
         }
         logtype.append(constant, begin_pos, i - begin_pos);
-        // NOTE: We don't need to append the character of interest
-        // immediately since the next constant copy operation will get it
+        // NOTE: We don't need to append the character of interest immediately since the next
+        // constant copy operation will get it
         begin_pos = i;
         escape_handler(constant, i, logtype);
     }
