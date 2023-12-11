@@ -24,8 +24,8 @@ ExactVariableToken<encoded_variable_t>::ExactVariableToken(
     }
 }
 
-// Explicitly declare specializations to avoid having to validate that the
-// template parameters are supported
+// Explicitly declare specializations to avoid having to validate that the template parameters are
+// supported
 template class ExactVariableToken<ffi::eight_byte_encoded_variable_t>;
 template class ExactVariableToken<ffi::four_byte_encoded_variable_t>;
 }  // namespace ffi::search

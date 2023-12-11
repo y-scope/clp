@@ -12,19 +12,16 @@
 
 namespace ffi::search {
 /**
- * A token delimited by delimiters and non-wildcards. Note that the original
- * query string is stored by reference, so it must remain valid while the token
- * exists.
+ * A token delimited by delimiters and non-wildcards. Note that the original query string is stored
+ * by reference, so it must remain valid while the token exists.
  * <br>
- * For instance, in the query "var:*abc?def*", "*abc?def*" would be a
- * CompositeWildcardToken. This is different from a WildcardToken which can be
- * delimited by wildcards. For instance, "*abc" could be a WildcardToken, where
- * it's delimited by '?' (on the right).
+ * For instance, in the query "var:*abc?def*", "*abc?def*" would be a CompositeWildcardToken. This
+ * is different from a WildcardToken which can be delimited by wildcards. For instance, "*abc" could
+ * be a WildcardToken, where it's delimited by '?' (on the right).
  * <br>
- * By interpreting wildcards (as matching delimiters/non-delimiters) within a
- * CompositeWildcardToken and then tokenizing the CompositeWildcardToken's
- * value, we can generate ExactVariableTokens and WildcardTokens. That's why
- * this is called a CompositeWildcardToken.
+ * By interpreting wildcards (as matching delimiters/non-delimiters) within a CompositeWildcardToken
+ * and then tokenizing the CompositeWildcardToken's value, we can generate ExactVariableTokens and
+ * WildcardTokens. That's why this is called a CompositeWildcardToken.
  * @tparam encoded_variable_t Type for encoded variable values
  */
 template <typename encoded_variable_t>
@@ -48,8 +45,8 @@ public:
 
     // Methods
     /**
-     * Populates the logtype query and @p variable_tokens based on the current
-     * interpretation of wildcards and WildcardTokens
+     * Populates the logtype query and @p variable_tokens based on the current interpretation of
+     * wildcards and WildcardTokens
      * @param logtype_query
      * @param variable_tokens
      */
@@ -70,14 +67,13 @@ public:
 private:
     // Methods
     /**
-     * Tokenizes this CompositeWildcardToken into ExactVariableTokens and
-     * WildcardTokens based on the current interpretation of wildcards
+     * Tokenizes this CompositeWildcardToken into ExactVariableTokens and WildcardTokens based on
+     * the current interpretation of wildcards
      */
     void tokenize_into_wildcard_variable_tokens();
     /**
-     * Adds the token given by the string bounds to the vector of variables, iff
-     * the token contains a wildcard (and so could be a variable) or the token
-     * is indeed a variable.
+     * Adds the token given by the string bounds to the vector of variables, iff the token contains
+     * a wildcard (and so could be a variable) or the token is indeed a variable.
      * @param begin_pos
      * @param end_pos
      * @param wildcard_in_token

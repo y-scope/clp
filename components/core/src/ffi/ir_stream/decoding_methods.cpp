@@ -13,8 +13,8 @@ namespace ffi::ir_stream {
 /**
  * @tparam encoded_variable_t Type of the encoded variable
  * @param tag
- * @param is_encoded_var Returns true if tag is for an encoded variable (as
- * opposed to a dictionary variable)
+ * @param is_encoded_var Returns true if tag is for an encoded variable (as opposed to a dictionary
+ * variable)
  * @return Whether the tag is a variable tag
  */
 template <typename encoded_variable_t>
@@ -25,8 +25,7 @@ static bool is_variable_tag(encoded_tag_t tag, bool& is_encoded_var);
  * @tparam integer_t Type of the integer to decode
  * @param reader
  * @param value Returns the decoded integer
- * @return true on success, false if the reader doesn't contain enough data to
- * decode
+ * @return true on success, false if the reader doesn't contain enough data to decode
  */
 template <typename integer_t>
 static bool decode_int(ReaderInterface& reader, integer_t& value);
@@ -38,8 +37,7 @@ static bool decode_int(ReaderInterface& reader, integer_t& value);
  * @param logtype Returns the logtype string
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to
- * decode
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
  */
 static IRErrorCode
 parse_logtype(ReaderInterface& reader, encoded_tag_t encoded_tag, string& logtype);
@@ -51,8 +49,7 @@ parse_logtype(ReaderInterface& reader, encoded_tag_t encoded_tag, string& logtyp
  * @param dict_var Returns the dictionary variable
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if input buffer doesn't contain enough data
- * to decode
+ * @return IRErrorCode_Incomplete_IR if input buffer doesn't contain enough data to decode
  */
 static IRErrorCode
 parse_dictionary_var(ReaderInterface& reader, encoded_tag_t encoded_tag, string& dict_var);
@@ -62,13 +59,11 @@ parse_dictionary_var(ReaderInterface& reader, encoded_tag_t encoded_tag, string&
  * @tparam encoded_variable_t Type of the encoded variable
  * @param reader
  * @param encoded_tag
- * @param ts Returns the timestamp delta if
- * encoded_variable_t == four_byte_encoded_variable_t or the actual timestamp if
- * encoded_variable_t == eight_byte_encoded_variable_t
+ * @param ts Returns the timestamp delta if encoded_variable_t == four_byte_encoded_variable_t or
+ * the actual timestamp if encoded_variable_t == eight_byte_encoded_variable_t
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to
- * decode
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
  */
 template <typename encoded_variable_t>
 static IRErrorCode
@@ -83,8 +78,7 @@ parse_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_m
  * encoded_variable_t == four_byte_encoded_variable_t or the actual timestamp if
  * encoded_variable_t == eight_byte_encoded_variable_t
  * @return IRErrorCode_Success on success
- * @return IRErrorCode_Decode_Error if the encoded message cannot be properly
- * decoded
+ * @return IRErrorCode_Decode_Error if the encoded message cannot be properly decoded
  * @return Same as ffi::ir_stream::deserialize_ir_message
  */
 template <typename encoded_variable_t>
@@ -99,8 +93,7 @@ generic_decode_next_message(ReaderInterface& reader, string& message, epoch_time
  * @param metadata_size Returns the size of the metadata written in the IR
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to
- * decode
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
  */
 static IRErrorCode
 read_metadata_info(ReaderInterface& reader, encoded_tag_t& metadata_type, uint16_t& metadata_size);
@@ -388,8 +381,8 @@ auto deserialize_ir_message(
         return error_code;
     }
 
-    // NOTE: for the eight-byte encoding, the timestamp is the actual timestamp;
-    // for the four-byte encoding, the timestamp is a timestamp delta
+    // NOTE: for the eight-byte encoding, the timestamp is the actual timestamp; for the four-byte
+    // encoding, the timestamp is a timestamp delta
     if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
         return IRErrorCode_Incomplete_IR;
     }
@@ -467,9 +460,8 @@ IRErrorCode decode_preamble(
 
 IRProtocolErrorCode validate_protocol_version(std::string_view protocol_version) {
     if ("v0.0.0" == protocol_version) {
-        // This version is hardcoded to support the oldest IR protocol version.
-        // When this version is no longer supported, this branch should be
-        // removed.
+        // This version is hardcoded to support the oldest IR protocol version. When this version is
+        // no longer supported, this branch should be removed.
         return IRProtocolErrorCode_Supported;
     }
     std::regex const protocol_version_regex{cProtocol::Metadata::VersionRegex};

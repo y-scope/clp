@@ -44,19 +44,18 @@ void CompositeWildcardToken<encoded_variable_t>::add_to_query(
         vector<variant<ExactVariableToken<encoded_variable_t>, WildcardToken<encoded_variable_t>>>&
                 variable_tokens
 ) const {
-    // We need to handle '*' carefully when building the logtype query since we
-    // may have a token like "a1*b2" with interpretation ["a1*", "*b2"]. In this
-    // case, we want to make sure the logtype query only ends up with one '*'
-    // rather than one for the suffix of "a1*" and one for the prefix of "*b2".
-    // So the algorithm below only adds a '*' to the logtype query if the
-    // current variable has a prefix '*' (i.e., we ignore suffix '*'). Then
-    // after the loop, if the last variable had a suffix '*', we add a '*' to
-    // the logtype query before adding any remaining query content.
+    // We need to handle '*' carefully when building the logtype query since we may have a token
+    // like "a1*b2" with interpretation ["a1*", "*b2"]. In this case, we want to make sure the
+    // logtype query only ends up with one '*' rather than one for the suffix of "a1*" and one for
+    // the prefix of "*b2". So the algorithm below only adds a '*' to the logtype query if the
+    // current variable has a prefix '*' (i.e., we ignore suffix '*'). Then after the loop, if the
+    // last variable had a suffix '*', we add a '*' to the logtype query before adding any remaining
+    // query content.
     auto constant_begin_pos = m_begin_pos;
     for (auto const& var : m_variables) {
         auto begin_pos = std::visit(TokenGetBeginPos, var);
-        // Copy from the end of the last variable to the beginning of this one
-        // (if this wildcard variable doesn't overlap with the previous one)
+        // Copy from the end of the last variable to the beginning of this one (if this wildcard
+        // variable doesn't overlap with the previous one)
         if (begin_pos > constant_begin_pos) {
             logtype_query.append(m_query, constant_begin_pos, begin_pos - constant_begin_pos);
         }
@@ -115,13 +114,12 @@ bool CompositeWildcardToken<encoded_variable_t>::generate_next_interpretation() 
 }
 
 /**
- * To turn a CompositeWildcardToken into ExactVariableTokens and WildcardTokens,
- * we use the following algorithm.
+ * To turn a CompositeWildcardToken into ExactVariableTokens and WildcardTokens, we use the
+ * following algorithm.
  *
  * Glossary:
  * - "token" - either an ExactVariableToken or a WildcardToken.
- * - "delimiter-wildcard" - a wildcard that is interpreted as matching
- *   delimiters.
+ * - "delimiter-wildcard" - a wildcard that is interpreted as matching delimiters.
  *
  * Overview:
  * - Each '*' at the edge of a token has one interpretation:
@@ -132,36 +130,30 @@ bool CompositeWildcardToken<encoded_variable_t>::generate_next_interpretation() 
  * - Each '?' has two interpretations:
  *   1. matching a non-delimiter, or
  *   2. matching a delimiter.
- * - When tokenizing a CompositeWildcardToken, if none of its wildcards can
- *   match a delimiter, then the interpretation is simply the entire
- *   CompositeWildcardToken.
- * - However, if one of the wildcards can match a delimiter, then the
- *   CompositeWildcardToken splits into two tokens at the delimiter.
- * - Finally, if a WildcardToken is delimited by a '*'-delimiter-wildcard,
- *   then the '*' should be included in the WildcardToken (see the
- *   generalization in README.md).
+ * - When tokenizing a CompositeWildcardToken, if none of its wildcards can match a delimiter, then
+ *   the interpretation is simply the entire CompositeWildcardToken.
+ * - However, if one of the wildcards can match a delimiter, then the CompositeWildcardToken splits
+ *   into two tokens at the delimiter.
+ * - Finally, if a WildcardToken is delimited by a '*'-delimiter-wildcard, then the '*' should be
+ *   included in the WildcardToken (see the generalization in README.md).
  *
  * Algorithm:
- * - To implement this algorithm, we need to search the
- *   CompositeWildcardToken for every substring bounded by
- *   wildcard-delimiters.
- * - For example, consider the CompositeWildcardToken "abc*def?ghi?123" and
- *   assume all wildcards are delimiter-wildcards:
- *   - The first token will be a WildcardToken, "abc*" (note that the '*' is
- *     included).
- *   - The second token will be a WildcardToken, "*def" (note that the '*' is
- *     included again).
- *   - The third substring will be static text, "ghi". Since this is neither
- *     a WildcardText nor an ExactVariableToken, it will be ignored.
+ * - To implement this algorithm, we need to search the CompositeWildcardToken for every substring
+ *   bounded by wildcard-delimiters.
+ * - For example, consider the CompositeWildcardToken "abc*def?ghi?123" and assume all wildcards are
+ *   delimiter-wildcards:
+ *   - The first token will be a WildcardToken, "abc*" (note that the '*' is included).
+ *   - The second token will be a WildcardToken, "*def" (note that the '*' is included again).
+ *   - The third substring will be static text, "ghi". Since this is neither a WildcardText nor an
+ *     ExactVariableToken, it will be ignored.
  *   - The fourth token will be an ExactVariableToken, "123".
- * - If instead only the first '?' is interpreted as matching a delimiter,
- *   then the tokens will be ["*abc*def", "ghi?123"].
+ * - If instead only the first '?' is interpreted as matching a delimiter, then the tokens will be
+ *   ["*abc*def", "ghi?123"].
  *
- * NOTE: We could cache wildcard variables that we generate (using their bounds
- * in the query as the cache key) so that we don't end up regenerating them in
- * other tokenizations. This isn't a performance problem now, but could be an
- * issue if we need to search the variable dictionary for each generated
- * WildcardToken.
+ * NOTE: We could cache wildcard variables that we generate (using their bounds in the query as the
+ * cache key) so that we don't end up regenerating them in other tokenizations. This isn't a
+ * performance problem now, but could be an issue if we need to search the variable dictionary for
+ * each generated WildcardToken.
  */
 template <typename encoded_variable_t>
 void CompositeWildcardToken<encoded_variable_t>::tokenize_into_wildcard_variable_tokens() {
@@ -179,8 +171,7 @@ void CompositeWildcardToken<encoded_variable_t>::tokenize_into_wildcard_variable
                 auto wildcard_pos = w.get_pos_in_query();
                 if (wildcard_pos == m_begin_pos) {
                     last_wildcard = &w;
-                    // Nothing to do yet since wildcard is at the beginning of
-                    // the token
+                    // Nothing to do yet since wildcard is at the beginning of the token
                     continue;
                 }
 
@@ -220,9 +211,8 @@ void CompositeWildcardToken<encoded_variable_t>::tokenize_into_wildcard_variable
     }
 
     if (nullptr == last_wildcard) {
-        // NOTE: Since the token contains a wildcard (this is the
-        // CompositeWildcardToken class), there's no way this could be an
-        // ExactVariableToken
+        // NOTE: Since the token contains a wildcard (this is the CompositeWildcardToken class),
+        // there's no way this could be an ExactVariableToken
         m_variables.emplace_back(
                 std::in_place_type<WildcardToken<encoded_variable_t>>,
                 m_query,
@@ -270,8 +260,8 @@ void CompositeWildcardToken<encoded_variable_t>::try_add_wildcard_variable(
     }
 }
 
-// Explicitly declare specializations to avoid having to validate that the
-// template parameters are supported
+// Explicitly declare specializations to avoid having to validate that the template parameters are
+// supported
 template class ffi::search::CompositeWildcardToken<ffi::eight_byte_encoded_variable_t>;
 template class ffi::search::CompositeWildcardToken<ffi::four_byte_encoded_variable_t>;
 }  // namespace ffi::search
