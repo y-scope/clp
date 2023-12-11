@@ -412,8 +412,8 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
             = [](std::string_view constant, size_t char_to_escape_pos, string& logtype) -> void {
         auto const escape_char{enum_to_underlying_type(ir::VariablePlaceholder::Escape)};
         auto const next_char_pos{char_to_escape_pos + 1};
-        // NOTE: We don't want to add additional escapes for wildcards that have
-        // been escaped. E.g., the query "\\*" should remain unchanged.
+        // NOTE: We don't want to add additional escapes for wildcards that have been escaped. E.g.,
+        // the query "\\*" should remain unchanged.
         if (next_char_pos < constant.length() && false == is_wildcard(constant[next_char_pos])) {
             logtype += escape_char;
         } else if (ir::is_variable_placeholder(constant[char_to_escape_pos])) {
@@ -518,9 +518,8 @@ bool Grep::process_raw_query(
     size_t end_pos = 0;
     bool is_var;
     if (use_heuristic) {
-        // Replace non-greedy wildcards with greedy wildcards since we currently
-        // have no support for searching compressed files with non-greedy
-        // wildcards
+        // Replace non-greedy wildcards with greedy wildcards since we currently have no support for
+        // searching compressed files with non-greedy wildcards
         std::replace(processed_search_string.begin(), processed_search_string.end(), '?', '*');
         // Clean-up in case any instances of "?*" or "*?" were changed into "**"
         processed_search_string = clean_up_wildcard_search_string(processed_search_string);
@@ -815,11 +814,9 @@ bool Grep::get_bounds_of_next_potential_var(
                 LogSurgeonReader reader_wrapper(string_reader);
                 log_surgeon::ParserInputBuffer parser_input_buffer;
                 if (has_suffix_wildcard) {  // text*
-                    // TODO: creating a string reader, setting it equal to a
-                    //  string, to read it into the ParserInputBuffer, seems
-                    //  like a convoluted way to set a string equal to a string,
-                    //  should be improved when adding a SearchParser to
-                    //  log_surgeon
+                    // TODO: creating a string reader, setting it equal to a string, to read it into
+                    // the ParserInputBuffer, seems like a convoluted way to set a string equal to a
+                    // string, should be improved when adding a SearchParser to log_surgeon
                     string_reader.open(value.substr(begin_pos, end_pos - begin_pos - 1));
                     parser_input_buffer.read_if_safe(reader_wrapper);
                     forward_lexer.reset();
