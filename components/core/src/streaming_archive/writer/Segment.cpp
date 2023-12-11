@@ -76,8 +76,8 @@ namespace streaming_archive { namespace writer {
 
     size_t Segment::get_compressed_size() {
         if (is_open()) {
-            // NOTE: We update the compressed size only on request to avoid
-            // any potential overhead from getting the file writer's position
+            // NOTE: We update the compressed size only on request to avoid any potential overhead
+            // from getting the file writer's position
             m_compressed_size = m_file_writer.get_pos();
         }
         return m_compressed_size;

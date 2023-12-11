@@ -648,8 +648,8 @@ void Archive::update_metadata() {
     }
 }
 
-// Explicitly declare template specializations so that we can define the
-// template methods in this file
+// Explicitly declare template specializations so that we can define the template methods in this
+// file
 template void Archive::write_log_event_ir<ffi::eight_byte_encoded_variable_t>(
         ir::LogEvent<ffi::eight_byte_encoded_variable_t> const& log_event
 );

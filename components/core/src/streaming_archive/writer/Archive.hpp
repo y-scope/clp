@@ -152,8 +152,7 @@ namespace streaming_archive { namespace writer {
 
         /**
          * Writes an IR log event to the current encoded file
-         * @tparam encoded_variable_t The type of the encoded variables in the
-         * log event
+         * @tparam encoded_variable_t The type of the encoded variables in the log event
          * @param log_event
          */
         template <typename encoded_variable_t>
@@ -269,8 +268,8 @@ namespace streaming_archive { namespace writer {
         );
 
         /**
-         * @return The size (in bytes) of compressed data whose size may change
-         * before the archive is closed
+         * @return The size (in bytes) of compressed data whose size may change before the archive
+         * is closed
          */
         uint64_t get_dynamic_compressed_size();
         /**

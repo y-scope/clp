@@ -41,8 +41,7 @@ public:
     );
 
     /**
-     * Constructs a metadata object and initializes it from the given file
-     * reader
+     * Constructs a metadata object and initializes it from the given file reader
      * @param file_reader
      */
     explicit ArchiveMetadata(FileReader& file_reader);

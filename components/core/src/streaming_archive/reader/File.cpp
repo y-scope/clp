@@ -206,10 +206,9 @@ bool File::find_message_in_time_range(
     bool found_msg = false;
     while (m_msgs_ix < m_num_messages && !found_msg) {
         // Get logtype
-        // NOTE: We get the logtype before the timestamp since we need to
-        // use it to get the number of variables, and then advance the
-        // variable index, regardless of whether the timestamp falls in the
-        // time range or not
+        // NOTE: We get the logtype before the timestamp since we need to use it to get the number
+        // of variables, and then advance the variable index, regardless of whether the timestamp
+        // falls in the time range or not
         auto logtype_id = m_logtypes[m_msgs_ix];
 
         // Get number of variables in logtype

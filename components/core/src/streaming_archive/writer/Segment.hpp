@@ -67,15 +67,13 @@ namespace streaming_archive { namespace writer {
 
         bool is_open() const;
         /**
-         * @return The amount of data (in bytes) appended (input) to the
-         * segment. Calling this after the segment has been closed will return
-         * the final uncompressed size of the segment.
+         * @return The amount of data (in bytes) appended (input) to the segment. Calling this after
+         * the segment has been closed will return the final uncompressed size of the segment.
          */
         uint64_t get_uncompressed_size();
         /**
-         * @return The on-disk size (in bytes) of the segment. Calling this
-         * after the segment has been closed will return the final compressed
-         * size of the segment.
+         * @return The on-disk size (in bytes) of the segment. Calling this after the segment has
+         * been closed will return the final compressed size of the segment.
          */
         size_t get_compressed_size();
 
