@@ -60,8 +60,7 @@ namespace streaming_compression { namespace zstd {
         }
 
         if (0 == data_length) {
-            // Nothing needs to be done because we do not need to compress
-            // anything
+            // Nothing needs to be done because we do not need to compress anything
             return;
         }
         if (nullptr == data) {
@@ -105,9 +104,8 @@ namespace streaming_compression { namespace zstd {
         m_compressed_stream_block.pos = 0;
         auto end_stream_result = ZSTD_endStream(m_compression_stream, &m_compressed_stream_block);
         if (end_stream_result) {
-            // Note: Output buffer is large enough that it is guaranteed to have
-            // enough room to be able to flush the entire buffer, so this can
-            // only be an error
+            // Note: Output buffer is large enough that it is guaranteed to have enough room to be
+            // able to flush the entire buffer, so this can only be an error
             SPDLOG_ERROR(
                     "streaming_compression::zstd::Compressor: ZSTD_endStream() error: {}",
                     ZSTD_getErrorName(end_stream_result)

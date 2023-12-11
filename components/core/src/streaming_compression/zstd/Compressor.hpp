@@ -46,8 +46,7 @@ namespace streaming_compression { namespace zstd {
          */
         void write(char const* data, size_t data_length) override;
         /**
-         * Writes any internally buffered data to file and ends the current
-         * frame
+         * Writes any internally buffered data to file and ends the current frame
          */
         void flush() override;
 
