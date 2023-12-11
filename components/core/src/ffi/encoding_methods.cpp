@@ -14,7 +14,12 @@ eight_byte_encoded_variable_t encode_four_byte_float_as_eight_byte(
     uint32_t digits{};
     bool is_negative{};
     decode_float_properties(
-            four_byte_encoded_var, is_negative, digits, num_digits, decimal_point_pos);
+            four_byte_encoded_var,
+            is_negative,
+            digits,
+            num_digits,
+            decimal_point_pos
+    );
 
     return encode_float_properties<eight_byte_encoded_variable_t>(
             is_negative,

@@ -391,7 +391,8 @@ bool encode_message_generically(
     if (constant_begin_pos < message.length()) {
         std::string_view constant{
                 &message[constant_begin_pos],
-                message.length() - constant_begin_pos};
+                message.length() - constant_begin_pos
+        };
         constant_handler(constant, logtype);
     }
 
