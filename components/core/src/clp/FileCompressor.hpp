@@ -122,8 +122,8 @@ private:
     );
 
     /**
-     * Compresses an IR stream using the eight-byte or four-byte encoding
-     * based on the given template parameter.
+     * Compresses an IR stream using the eight-byte or four-byte encoding based on the given
+     * template parameter.
      * @tparam encoded_variable_t
      * @param target_data_size_of_dicts
      * @param archive_user_config

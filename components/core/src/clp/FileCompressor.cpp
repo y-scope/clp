@@ -545,8 +545,8 @@ std::error_code FileCompressor::compress_ir_stream_by_encoding(
     return error_code;
 }
 
-// Explicitly declare template specializations so that we can define the
-// template methods in this file
+// Explicitly declare template specializations so that we can define the template methods in this
+// file
 template std::error_code
 FileCompressor::compress_ir_stream_by_encoding<ffi::eight_byte_encoded_variable_t>(
         size_t target_data_size_of_dicts,
