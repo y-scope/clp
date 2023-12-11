@@ -856,14 +856,16 @@ TEMPLATE_TEST_CASE(
         std::string const inner_static_text{
                 std::string(" ") + enum_to_underlying_type(VariablePlaceholder::Integer)
                 + " placeholders " + enum_to_underlying_type(VariablePlaceholder::Dictionary)
-                + " in \\? \\* "};
+                + " in \\? \\* "
+        };
         std::string const escaped_inner_static_text{
                 std::string(" ") + enum_to_underlying_type(VariablePlaceholder::Escape)
                 + enum_to_underlying_type(VariablePlaceholder::Escape)
                 + enum_to_underlying_type(VariablePlaceholder::Integer) + " placeholders "
                 + enum_to_underlying_type(VariablePlaceholder::Escape)
                 + enum_to_underlying_type(VariablePlaceholder::Escape)
-                + enum_to_underlying_type(VariablePlaceholder::Dictionary) + " in \\? \\* "};
+                + enum_to_underlying_type(VariablePlaceholder::Dictionary) + " in \\? \\* "
+        };
 
         std::string const postfix{"subqueries*"};
 

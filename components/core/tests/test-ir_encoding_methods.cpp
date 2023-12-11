@@ -248,11 +248,13 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
     // Test eight-byte encoding
     vector<int8_t> eight_byte_encoding_vec{
             EightByteEncodingMagicNumber,
-            EightByteEncodingMagicNumber + MagicNumberLength};
+            EightByteEncodingMagicNumber + MagicNumberLength
+    };
 
     BufferReader eight_byte_ir_buffer{
             size_checked_pointer_cast<char const>(eight_byte_encoding_vec.data()),
-            eight_byte_encoding_vec.size()};
+            eight_byte_encoding_vec.size()
+    };
     REQUIRE(get_encoding_type(eight_byte_ir_buffer, is_four_bytes_encoding)
             == IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<eight_byte_encoded_variable_t>(is_four_bytes_encoding));
@@ -260,11 +262,13 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
     // Test four-byte encoding
     vector<int8_t> four_byte_encoding_vec{
             FourByteEncodingMagicNumber,
-            FourByteEncodingMagicNumber + MagicNumberLength};
+            FourByteEncodingMagicNumber + MagicNumberLength
+    };
 
     BufferReader four_byte_ir_buffer{
             size_checked_pointer_cast<char const>(four_byte_encoding_vec.data()),
-            four_byte_encoding_vec.size()};
+            four_byte_encoding_vec.size()
+    };
     REQUIRE(get_encoding_type(four_byte_ir_buffer, is_four_bytes_encoding)
             == IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<four_byte_encoded_variable_t>(is_four_bytes_encoding));
@@ -279,7 +283,8 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
 
     BufferReader incomplete_buffer{
             size_checked_pointer_cast<char const>(four_byte_encoding_vec.data()),
-            four_byte_encoding_vec.size() - 1};
+            four_byte_encoding_vec.size() - 1
+    };
     REQUIRE(get_encoding_type(incomplete_buffer, is_four_bytes_encoding)
             == IRErrorCode::IRErrorCode_Incomplete_IR);
 
@@ -287,7 +292,8 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
     vector<int8_t> const invalid_ir_vec{0x02, 0x43, 0x24, 0x34};
     BufferReader invalid_ir_buffer{
             size_checked_pointer_cast<char const>(invalid_ir_vec.data()),
-            invalid_ir_vec.size()};
+            invalid_ir_vec.size()
+    };
     REQUIRE(get_encoding_type(invalid_ir_buffer, is_four_bytes_encoding)
             == IRErrorCode::IRErrorCode_Corrupted_IR);
 }
@@ -357,7 +363,8 @@ TEMPLATE_TEST_CASE(
             == IRErrorCode::IRErrorCode_Success);
     string_view json_metadata_copied{
             size_checked_pointer_cast<char const>(json_metadata_vec.data()),
-            json_metadata_vec.size()};
+            json_metadata_vec.size()
+    };
     // Crosscheck with the json_metadata decoded previously
     REQUIRE(json_metadata_copied == json_metadata);
 
@@ -365,7 +372,8 @@ TEMPLATE_TEST_CASE(
     ir_buf.resize(encoded_preamble_end_pos - 1);
     BufferReader incomplete_preamble_buffer{
             size_checked_pointer_cast<char const>(ir_buf.data()),
-            ir_buf.size()};
+            ir_buf.size()
+    };
     incomplete_preamble_buffer.seek_from_begin(MagicNumberLength);
     REQUIRE(decode_preamble(incomplete_preamble_buffer, metadata_type, metadata_pos, metadata_size)
             == IRErrorCode::IRErrorCode_Incomplete_IR);
@@ -374,7 +382,8 @@ TEMPLATE_TEST_CASE(
     ir_buf[MagicNumberLength] = 0x23;
     BufferReader corrupted_preamble_buffer{
             size_checked_pointer_cast<char const>(ir_buf.data()),
-            ir_buf.size()};
+            ir_buf.size()
+    };
     REQUIRE(decode_preamble(corrupted_preamble_buffer, metadata_type, metadata_pos, metadata_size)
             == IRErrorCode::IRErrorCode_Corrupted_IR);
 }
@@ -416,7 +425,8 @@ TEMPLATE_TEST_CASE(
     ir_buf.resize(encoded_message_end_pos - 4);
     BufferReader incomplete_preamble_buffer{
             size_checked_pointer_cast<char const>(ir_buf.data()),
-            ir_buf.size()};
+            ir_buf.size()
+    };
     REQUIRE(IRErrorCode::IRErrorCode_Incomplete_IR
             == decode_next_message<TestType>(incomplete_preamble_buffer, message, timestamp));
 }
@@ -451,7 +461,8 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]") {
             = enum_to_underlying_type(VariablePlaceholder::Escape);
     BufferReader ir_with_extra_escape_buffer{
             size_checked_pointer_cast<char const>(ir_with_extra_escape.data()),
-            ir_with_extra_escape.size()};
+            ir_with_extra_escape.size()
+    };
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error
             == decode_next_message<eight_byte_encoded_variable_t>(
                     ir_with_extra_escape_buffer,
@@ -465,7 +476,8 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]") {
             = enum_to_underlying_type(VariablePlaceholder::Dictionary);
     BufferReader ir_with_extra_placeholder_buffer{
             size_checked_pointer_cast<char const>(ir_with_extra_placeholder.data()),
-            ir_with_extra_placeholder.size()};
+            ir_with_extra_placeholder.size()
+    };
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error
             == decode_next_message<eight_byte_encoded_variable_t>(
                     ir_with_extra_placeholder_buffer,
@@ -566,7 +578,8 @@ TEMPLATE_TEST_CASE(
 
     BufferReader complete_ir_buffer{
             size_checked_pointer_cast<char const>(ir_buf.data()),
-            ir_buf.size()};
+            ir_buf.size()
+    };
 
     bool is_four_bytes_encoding;
     REQUIRE(get_encoding_type(complete_ir_buffer, is_four_bytes_encoding)
