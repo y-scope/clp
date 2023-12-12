@@ -126,7 +126,7 @@ def start_db(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
         cmd.append('mariadb:10.6.4-focal')
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
-    if not wait_for_database_to_init(container_name, clp_config, 60):
+    if not wait_for_database_to_init(container_name, clp_config, 30):
         raise EnvironmentError("Database did not initialize in time")
 
     logger.info("Started database.")
