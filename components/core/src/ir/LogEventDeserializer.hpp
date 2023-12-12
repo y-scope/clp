@@ -15,9 +15,8 @@ namespace ir {
 /**
  * Class for deserializing IR log events from an IR stream.
  *
- * TODO: We're currently returning std::errc error codes, but we should replace
- * these with our own custom error codes (derived from std::error_code), ideally
- * replacing IRErrorCode.
+ * TODO: We're currently returning std::errc error codes, but we should replace these with our own
+ * custom error codes (derived from std::error_code), ideally replacing IRErrorCode.
  * @tparam encoded_variable_t Type of encoded variables in the stream
  */
 template <typename encoded_variable_t>
@@ -27,12 +26,11 @@ public:
     /**
      * Creates a log event deserializer for the given stream
      * @param reader A reader for the IR stream
-     * @return A result containing the serializer or an error code indicating
-     * the failure:
+     * @return A result containing the serializer or an error code indicating the failure:
      * - std::errc::result_out_of_range if the IR stream is truncated
      * - std::errc::protocol_error if the IR stream is corrupted
-     * - std::errc::protocol_not_supported if the IR stream contains an
-     *   unsupported metadata format or uses an unsupported version
+     * - std::errc::protocol_not_supported if the IR stream contains an unsupported metadata format
+     *   or uses an unsupported version
      */
     static auto create(ReaderInterface& reader)
             -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>>;
@@ -54,8 +52,7 @@ public:
 
     /**
      * Deserializes a log event from the stream
-     * @return A result containing the log event or an error code indicating
-     * the failure:
+     * @return A result containing the log event or an error code indicating the failure:
      * - std::errc::no_message_available on reaching the end of the IR stream
      * - std::errc::result_out_of_range if the IR stream is truncated
      * - std::errc::result_out_of_range if the IR stream is corrupted

@@ -13,8 +13,8 @@ Subquery<encoded_variable_t>::Subquery(string logtype_query, Subquery::QueryVari
         : m_logtype_query{std::move(logtype_query)},
           m_logtype_query_contains_wildcards{false},
           m_query_vars{std::move(variables)} {
-    // Determine if the query contains wildcards and record the positions of the
-    // variable placeholders.
+    // Determine if the query contains wildcards and record the positions of the variable
+    // placeholders.
     bool is_escaped{false};
     auto const logtype_query_length{m_logtype_query.size()};
     std::vector<size_t> escaped_placeholder_positions;
@@ -39,8 +39,8 @@ Subquery<encoded_variable_t>::Subquery(string logtype_query, Subquery::QueryVari
         return;
     }
 
-    // Query contains wildcards and variable placeholders, so we need to add an
-    // additional escape for each variable placeholder.
+    // Query contains wildcards and variable placeholders, so we need to add an additional escape
+    // for each variable placeholder.
     std::string double_escaped_logtype_query;
     size_t pos{0};
     for (auto const placeholder_pos : escaped_placeholder_positions) {
@@ -54,8 +54,8 @@ Subquery<encoded_variable_t>::Subquery(string logtype_query, Subquery::QueryVari
     m_logtype_query = std::move(double_escaped_logtype_query);
 }
 
-// Explicitly declare specializations to avoid having to validate that the
-// template parameters are supported
+// Explicitly declare specializations to avoid having to validate that the template parameters are
+// supported
 template class Subquery<eight_byte_encoded_variable_t>;
 template class Subquery<four_byte_encoded_variable_t>;
 }  // namespace ffi::search

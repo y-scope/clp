@@ -12,8 +12,8 @@ enum class TokenType {
 };
 
 /**
- * Class representing a token in a query. Note that the original query string is
- * stored by reference, so it must remain valid while the token exists.
+ * Class representing a token in a query. Note that the original query string is stored by
+ * reference, so it must remain valid while the token exists.
  */
 class QueryToken {
 public:

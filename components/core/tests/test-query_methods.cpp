@@ -1,10 +1,7 @@
-// C++ standard libraries
 #include <unordered_map>
 
-// Catch2
 #include <Catch2/single_include/catch2/catch.hpp>
 
-// Project headers
 #include "../src/ffi/encoding_methods.hpp"
 #include "../src/ffi/search/ExactVariableToken.hpp"
 #include "../src/ffi/search/query_methods.hpp"
@@ -29,9 +26,11 @@ using std::vector;
  */
 struct QueryVariableType {
 public:
-    QueryVariableType () = default;
-    QueryVariableType (bool is_exact, VariablePlaceholder interpretation) :
-            is_exact(is_exact), interpretation(interpretation) {}
+    QueryVariableType() = default;
+
+    QueryVariableType(bool is_exact, VariablePlaceholder interpretation)
+            : is_exact(is_exact),
+              interpretation(interpretation) {}
 
     bool is_exact;
     VariablePlaceholder interpretation;
@@ -43,7 +42,7 @@ public:
 struct ExpectedSubquery {
 public:
     // Methods
-    void clear () {
+    void clear() {
         logtype_query.clear();
         logtype_query_contains_wildcards = false;
         query_var_types.clear();
@@ -56,12 +55,12 @@ public:
 
 namespace {
 /**
- * Generates subqueries from a given wildcard query and validates that they
- * match the expected subqueries.
+ * Generates subqueries from a given wildcard query and validates that they match the expected
+ * subqueries.
  * @tparam encoded_var_t
  * @param wildcard_query
- * @param logtype_query_to_expected_subquery A map from expected logtype queries
- * to expected subqueries.
+ * @param logtype_query_to_expected_subquery A map from expected logtype queries to expected
+ * subqueries.
  */
 template <typename encoded_var_t>
 void test_generating_subqueries(
@@ -116,24 +115,29 @@ void test_generating_subqueries(
 }
 }  // namespace
 
-TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
-                   eight_byte_encoded_variable_t, four_byte_encoded_variable_t)
-{
+TEMPLATE_TEST_CASE(
+        "ffi::search::query_methods",
+        "[ffi][search][query_methods]",
+        eight_byte_encoded_variable_t,
+        four_byte_encoded_variable_t
+) {
     using TestTypeExactVariableToken = ExactVariableToken<TestType>;
 
     string wildcard_query;
     vector<Subquery<TestType>> subqueries;
 
     SECTION("Empty query") {
-        REQUIRE_THROWS_AS(generate_subqueries(wildcard_query, subqueries),
-                          ffi::search::QueryMethodFailed);
+        REQUIRE_THROWS_AS(
+                generate_subqueries(wildcard_query, subqueries),
+                ffi::search::QueryMethodFailed
+        );
     }
 
     SECTION("\"*\"") {
         wildcard_query = "*";
         generate_subqueries(wildcard_query, subqueries);
         REQUIRE(subqueries.size() == 1);
-        const auto& subquery = subqueries.front();
+        auto const& subquery = subqueries.front();
         REQUIRE(subquery.get_logtype_query() == wildcard_query);
         REQUIRE(subquery.logtype_query_contains_wildcards());
     }
@@ -144,9 +148,16 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         string logtype;
         vector<TestType> encoded_vars;
         vector<int32_t> dictionary_var_bounds;
-        vector<string> var_strs = {"4938", std::to_string(INT32_MAX), std::to_string(INT64_MAX),
-                                   "0.1", "-25.519686", "-25.5196868642755", "-00.00",
-                                   "bin/python2.7.3", "abc123"};
+        vector<string> var_strs
+                = {"4938",
+                   std::to_string(INT32_MAX),
+                   std::to_string(INT64_MAX),
+                   "0.1",
+                   "-25.519686",
+                   "-25.5196868642755",
+                   "-00.00",
+                   "bin/python2.7.3",
+                   "abc123"};
         size_t var_ix = 0;
         message = "here is a string with a small int " + var_strs[var_ix++];
         message += " and a medium int " + var_strs[var_ix++];
@@ -169,16 +180,16 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         wildcard_query = message;
         generate_subqueries(wildcard_query, subqueries);
         REQUIRE(subqueries.size() == 1);
-        const auto& subquery = subqueries.front();
+        auto const& subquery = subqueries.front();
 
         // Validate that the subquery matches the encoded message
         REQUIRE(logtype == subquery.get_logtype_query());
         REQUIRE(false == subquery.logtype_query_contains_wildcards());
         size_t dict_var_idx = 0;
         size_t encoded_var_idx = 0;
-        for (const auto& query_var : subquery.get_query_vars()) {
+        for (auto const& query_var : subquery.get_query_vars()) {
             REQUIRE(std::holds_alternative<TestTypeExactVariableToken>(query_var));
-            const auto& exact_var = std::get<TestTypeExactVariableToken>(query_var);
+            auto const& exact_var = std::get<TestTypeExactVariableToken>(query_var);
             if (VariablePlaceholder::Dictionary == exact_var.get_placeholder()) {
                 auto begin_pos = dictionary_var_bounds[dict_var_idx];
                 auto end_pos = dictionary_var_bounds[dict_var_idx + 1];
@@ -191,9 +202,9 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         }
     }
 
-    // This test is meant to encompass most cases without being impossible to
-    // write by hand. The cases are organized below in the order that they
-    // would be generated by following the process described in the README.
+    // This test is meant to encompass most cases without being impossible to write by hand. The
+    // cases are organized below in the order that they would be generated by following the process
+    // described in the README.
     SECTION("\"*abc*123?456?\"") {
         std::unordered_map<string, ExpectedSubquery> logtype_query_to_expected_subquery;
         ExpectedSubquery expected_subquery;
@@ -213,8 +224,10 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
         expected_subquery.query_var_types.emplace_back(true, VariablePlaceholder::Integer);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*abc*\f?\i?"
@@ -226,29 +239,31 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
         expected_subquery.query_var_types.emplace_back(true, VariablePlaceholder::Integer);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*abc*\d?\i?"
         expected_subquery.logtype_query = "*abc*";
-        expected_subquery.logtype_query += enum_to_underlying_type(
-                VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '?';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_subquery.logtype_query += '?';
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(true, VariablePlaceholder::Integer);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // All wildcards treated as delimiters, "*abc*" as a dictionary variable
         // Expected logtype: "*\d*\i?\i?"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query += enum_to_underlying_type(
-                VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '*';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_subquery.logtype_query += '?';
@@ -258,14 +273,15 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
         expected_subquery.query_var_types.emplace_back(true, VariablePlaceholder::Integer);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*\d*\f?\i?"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query += enum_to_underlying_type(
-                VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '*';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         expected_subquery.logtype_query += '?';
@@ -275,17 +291,17 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
         expected_subquery.query_var_types.emplace_back(true, VariablePlaceholder::Integer);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*\d*\d?\i?"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query += enum_to_underlying_type(
-                VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '*';
-        expected_subquery.logtype_query += enum_to_underlying_type(
-                VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '?';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_subquery.logtype_query += '?';
@@ -293,35 +309,39 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(true, VariablePlaceholder::Integer);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Second '*' treated as a non-delimiter
         // Expected logtype: "*\d?\i?"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '?';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_subquery.logtype_query += '?';
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(true, VariablePlaceholder::Integer);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
-        // Second '*' treated as delim, first '?' as non-delim, "*abc*" as
-        // static text
+        // Second '*' treated as delim, first '?' as non-delim, "*abc*" as static text
         // Expected logtype: "*abc*\i?"
         expected_subquery.logtype_query = "*abc*";
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_subquery.logtype_query += '?';
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*abc*\f?"
@@ -330,80 +350,84 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         expected_subquery.logtype_query += '?';
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*abc*\d?"
         expected_subquery.logtype_query = "*abc*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '?';
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
-        // Second '*' treated as delim, first '?' as non-delim, "*abc*" as a
-        // dictionary variable
+        // Second '*' treated as delim, first '?' as non-delim, "*abc*" as a dictionary variable
         // Expected logtype: "*\d*\i?"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '*';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_subquery.logtype_query += '?';
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*\d*\f?"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '*';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         expected_subquery.logtype_query += '?';
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*\d*\d?"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '*';
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '?';
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Second '*' as non-delim, first '?' as non-delim
         // Expected logtype: "*\d?"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '?';
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
-        // Second '*' as delim, first '?' as delim, second '?' as non-delim,
-        // "*abc*" as static text
+        // Second '*' as delim, first '?' as delim, second '?' as non-delim, "*abc*" as static text
         // Expected logtype: "*abc*\i?\i"
         expected_subquery.logtype_query = "*abc*";
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
@@ -412,8 +436,10 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*abc*\f?\i"
@@ -424,21 +450,24 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*abc*\d?\i"
         expected_subquery.logtype_query = "*abc*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '?';
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*abc*\i?\f"
@@ -449,8 +478,10 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*abc*\f?\f"
@@ -461,69 +492,73 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*abc*\d?\f"
         expected_subquery.logtype_query = "*abc*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '?';
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*abc*\i?\d"
         expected_subquery.logtype_query = "*abc*";
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_subquery.logtype_query += '?';
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*abc*\f?\d"
         expected_subquery.logtype_query = "*abc*";
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         expected_subquery.logtype_query += '?';
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*abc*\d?\d"
         expected_subquery.logtype_query = "*abc*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '?';
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
-        // Second '*' as delim, first '?' as delim, second '?' as non-delim,
-        // "*abc*" as a dictionary variable
+        // Second '*' as delim, first '?' as delim, second '?' as non-delim, "*abc*" as a dictionary
+        // variable
         // Expected logtype: "*\d*\i?\i"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '*';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_subquery.logtype_query += '?';
@@ -532,14 +567,15 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*\d*\f?\i"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '*';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         expected_subquery.logtype_query += '?';
@@ -548,31 +584,32 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*\d*\d?\i"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '*';
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '?';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*\d*\i?\f"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '*';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_subquery.logtype_query += '?';
@@ -581,14 +618,15 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*\d*\f?\f"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '*';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         expected_subquery.logtype_query += '?';
@@ -597,129 +635,134 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*\d*\d?\f"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '*';
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '?';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*\d*\i?\d"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '*';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_subquery.logtype_query += '?';
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*\d*\f?\d"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '*';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         expected_subquery.logtype_query += '?';
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*\d*\d?\d"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '*';
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '?';
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Second '*' as non-delim, first '?' as delim, second '?' as non-delim
         // Expected logtype: "*\d?\i"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '?';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*\d?\f"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '?';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*\d?\d"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '?';
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
-        // Second '*' as delim, first '?' as non-delim, second '?' as non-delim,
-        // "*abc*" as static text
+        // Second '*' as delim, first '?' as non-delim, second '?' as non-delim, "*abc*" as static
+        // text
         // Expected logtype: "*abc*\i"
         expected_subquery.logtype_query = "*abc*";
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*abc*\f"
@@ -727,72 +770,78 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*abc*\d"
         expected_subquery.logtype_query = "*abc*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
-        // Second '*' as delim, first '?' as non-delim, second '?' as non-delim,
-        // "*abc*" as a dictionary variable
+        // Second '*' as delim, first '?' as non-delim, second '?' as non-delim, "*abc*" as a
+        // dictionary variable
         // Expected logtype: "*\d*\i"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '*';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Integer);
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Integer);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*\d*\f"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '*';
         expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Float);
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Float);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         // Expected logtype: "*\d*\d"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query += '*';
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
-        // Second '*' as non-delim, first '?' as non-delim, second '?' as
-        // non-delim"*abc*" as a dictionary variable
+        // Second '*' as non-delim, first '?' as non-delim, second '?' as non-delim "*abc*" as a
+        // dictionary variable
         // Expected logtype: "*\d"
         expected_subquery.logtype_query = "*";
-        expected_subquery.logtype_query +=
-                enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        expected_subquery.logtype_query += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         expected_subquery.logtype_query_contains_wildcards = true;
         expected_subquery.query_var_types.emplace_back(false, VariablePlaceholder::Dictionary);
-        logtype_query_to_expected_subquery.emplace(expected_subquery.logtype_query,
-                                                   expected_subquery);
+        logtype_query_to_expected_subquery.emplace(
+                expected_subquery.logtype_query,
+                expected_subquery
+        );
         expected_subquery.clear();
 
         test_generating_subqueries<TestType>("*abc*123?456?", logtype_query_to_expected_subquery);
@@ -807,14 +856,16 @@ TEMPLATE_TEST_CASE("ffi::search::query_methods", "[ffi][search][query_methods]",
         std::string const inner_static_text{
                 std::string(" ") + enum_to_underlying_type(VariablePlaceholder::Integer)
                 + " placeholders " + enum_to_underlying_type(VariablePlaceholder::Dictionary)
-                + " in \\? \\* "};
+                + " in \\? \\* "
+        };
         std::string const escaped_inner_static_text{
                 std::string(" ") + enum_to_underlying_type(VariablePlaceholder::Escape)
                 + enum_to_underlying_type(VariablePlaceholder::Escape)
                 + enum_to_underlying_type(VariablePlaceholder::Integer) + " placeholders "
                 + enum_to_underlying_type(VariablePlaceholder::Escape)
                 + enum_to_underlying_type(VariablePlaceholder::Escape)
-                + enum_to_underlying_type(VariablePlaceholder::Dictionary) + " in \\? \\* "};
+                + enum_to_underlying_type(VariablePlaceholder::Dictionary) + " in \\? \\* "
+        };
 
         std::string const postfix{"subqueries*"};
 

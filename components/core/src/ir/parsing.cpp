@@ -3,13 +3,13 @@
 #include "../string_utils.hpp"
 #include "../type_utils.hpp"
 
-using std::string_view;
 using std::string;
+using std::string_view;
 
 namespace ir {
 /*
- * For performance, we rely on the ASCII ordering of characters to compare
- * ranges of characters at a time instead of comparing individual characters
+ * For performance, we rely on the ASCII ordering of characters to compare ranges of characters at a
+ * time instead of comparing individual characters
  */
 bool is_delim(signed char c) {
     return false

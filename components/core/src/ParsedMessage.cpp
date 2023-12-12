@@ -2,12 +2,12 @@
 
 using std::string;
 
-void ParsedMessage::clear () {
+void ParsedMessage::clear() {
     m_ts_patt = nullptr;
     clear_except_ts_patt();
 }
 
-void ParsedMessage::clear_except_ts_patt () {
+void ParsedMessage::clear_except_ts_patt() {
     m_ts_patt_changed = false;
     m_ts = 0;
     m_content.clear();
@@ -15,9 +15,13 @@ void ParsedMessage::clear_except_ts_patt () {
     m_is_set = false;
 }
 
-void ParsedMessage::set (const TimestampPattern* timestamp_pattern, const epochtime_t timestamp, const string& line, size_t timestamp_begin_pos,
-                         size_t timestamp_end_pos)
-{
+void ParsedMessage::set(
+        TimestampPattern const* timestamp_pattern,
+        epochtime_t const timestamp,
+        string const& line,
+        size_t timestamp_begin_pos,
+        size_t timestamp_end_pos
+) {
     if (timestamp_pattern != m_ts_patt) {
         m_ts_patt = timestamp_pattern;
         m_ts_patt_changed = true;
@@ -33,12 +37,12 @@ void ParsedMessage::set (const TimestampPattern* timestamp_pattern, const epocht
     m_is_set = true;
 }
 
-void ParsedMessage::append_line (const string& line) {
+void ParsedMessage::append_line(string const& line) {
     m_content += line;
     m_orig_num_bytes += line.length();
 }
 
-void ParsedMessage::consume (ParsedMessage& message) {
+void ParsedMessage::consume(ParsedMessage& message) {
     if (message.m_ts_patt != m_ts_patt) {
         m_ts_patt = message.m_ts_patt;
         m_ts_patt_changed = true;

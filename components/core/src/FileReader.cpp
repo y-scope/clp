@@ -1,25 +1,22 @@
 #include "FileReader.hpp"
 
-// Boost libraries
-#include <boost/filesystem.hpp>
-
-// C standard libraries
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
-// C++ libraries
 #include <cassert>
 #include <cerrno>
 
+#include <boost/filesystem.hpp>
+
 using std::string;
 
-FileReader::~FileReader () {
+FileReader::~FileReader() {
     close();
     free(m_getdelim_buf);
 }
 
-ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
+ErrorCode FileReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
     if (nullptr == m_file) {
         return ErrorCode_NotInit;
     }
@@ -41,7 +38,7 @@ ErrorCode FileReader::try_read (char* buf, size_t num_bytes_to_read, size_t& num
     return ErrorCode_Success;
 }
 
-ErrorCode FileReader::try_seek_from_begin (size_t pos) {
+ErrorCode FileReader::try_seek_from_begin(size_t pos) {
     if (nullptr == m_file) {
         return ErrorCode_NotInit;
     }
@@ -54,7 +51,7 @@ ErrorCode FileReader::try_seek_from_begin (size_t pos) {
     return ErrorCode_Success;
 }
 
-ErrorCode FileReader::try_get_pos (size_t& pos) {
+ErrorCode FileReader::try_get_pos(size_t& pos) {
     if (nullptr == m_file) {
         return ErrorCode_NotInit;
     }
@@ -67,7 +64,7 @@ ErrorCode FileReader::try_get_pos (size_t& pos) {
     return ErrorCode_Success;
 }
 
-ErrorCode FileReader::try_open (const string& path) {
+ErrorCode FileReader::try_open(string const& path) {
     // Cleanup in case caller forgot to call close before calling this function
     close();
 
@@ -83,27 +80,28 @@ ErrorCode FileReader::try_open (const string& path) {
     return ErrorCode_Success;
 }
 
-void FileReader::open (const string& path) {
+void FileReader::open(string const& path) {
     ErrorCode error_code = try_open(path);
     if (ErrorCode_Success != error_code) {
         if (ErrorCode_FileNotFound == error_code) {
-            throw "File not found: " + boost::filesystem::weakly_canonical(path).string() + "\n"; 
+            throw "File not found: " + boost::filesystem::weakly_canonical(path).string() + "\n";
         } else {
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
     }
 }
 
-void FileReader::close () {
+void FileReader::close() {
     if (m_file != nullptr) {
-        // NOTE: We don't check errors for fclose since it seems the only reason it could fail is if it was interrupted
-        // by a signal
+        // NOTE: We don't check errors for fclose since it seems the only reason it could fail is if
+        // it was interrupted by a signal
         fclose(m_file);
         m_file = nullptr;
     }
 }
 
-ErrorCode FileReader::try_read_to_delimiter (char delim, bool keep_delimiter, bool append, string& str) {
+ErrorCode
+FileReader::try_read_to_delimiter(char delim, bool keep_delimiter, bool append, string& str) {
     assert(nullptr != m_file);
 
     if (false == append) {
@@ -125,7 +123,7 @@ ErrorCode FileReader::try_read_to_delimiter (char delim, bool keep_delimiter, bo
     return ErrorCode_Success;
 }
 
-ErrorCode FileReader::try_fstat (struct stat& stat_buffer) {
+ErrorCode FileReader::try_fstat(struct stat& stat_buffer) {
     if (nullptr == m_file) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }

@@ -1,7 +1,6 @@
 #ifndef DEFS_H
 #define DEFS_H
 
-// C++ libraries
 #include <atomic>
 #include <cstdint>
 #include <limits>
@@ -10,16 +9,16 @@
 typedef int64_t epochtime_t;
 constexpr epochtime_t cEpochTimeMin = std::numeric_limits<epochtime_t>::min();
 constexpr epochtime_t cEpochTimeMax = std::numeric_limits<epochtime_t>::max();
-#define SECONDS_TO_EPOCHTIME(x) x*1000
+#define SECONDS_TO_EPOCHTIME(x) x * 1000
 #define MICROSECONDS_TO_EPOCHTIME(x) 0
 
 typedef uint64_t variable_dictionary_id_t;
-constexpr variable_dictionary_id_t cVariableDictionaryIdMax =
-        std::numeric_limits<variable_dictionary_id_t>::max();
+constexpr variable_dictionary_id_t cVariableDictionaryIdMax
+        = std::numeric_limits<variable_dictionary_id_t>::max();
 
 typedef int64_t logtype_dictionary_id_t;
-constexpr logtype_dictionary_id_t cLogtypeDictionaryIdMax =
-        std::numeric_limits<logtype_dictionary_id_t>::max();
+constexpr logtype_dictionary_id_t cLogtypeDictionaryIdMax
+        = std::numeric_limits<logtype_dictionary_id_t>::max();
 
 typedef uint16_t archive_format_version_t;
 // This flag is used to maintain two separate streams of archive format
@@ -48,6 +47,6 @@ typedef std::atomic_uint64_t atomic_pipeline_id_t;
 
 // Constants
 constexpr char cDefaultConfigFilename[] = ".clp.rc";
-constexpr int cMongoDbDuplicateKeyErrorCode = 11000;
+constexpr int cMongoDbDuplicateKeyErrorCode = 11'000;
 
-#endif // DEFS_H
+#endif  // DEFS_H

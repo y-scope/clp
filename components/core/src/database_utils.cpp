@@ -1,6 +1,5 @@
 #include "database_utils.hpp"
 
-// fmt
 #include <fmt/core.h>
 #include <fmt/format.h>
 
@@ -8,22 +7,27 @@ using std::pair;
 using std::string;
 using std::vector;
 
-string get_field_names_and_types_sql (const vector<pair<string, string>>& field_names_and_types) {
+string get_field_names_and_types_sql(vector<pair<string, string>> const& field_names_and_types) {
     fmt::memory_buffer buffer;
     auto buffer_ix = std::back_inserter(buffer);
 
     size_t i = 0;
-    fmt::format_to(buffer_ix, "{} {}", field_names_and_types[i].first, field_names_and_types[i].second);
+    fmt::format_to(
+            buffer_ix,
+            "{} {}",
+            field_names_and_types[i].first,
+            field_names_and_types[i].second
+    );
     ++i;
     for (; i < field_names_and_types.size(); ++i) {
-        const auto& field_name_and_type = field_names_and_types[i];
+        auto const& field_name_and_type = field_names_and_types[i];
         fmt::format_to(buffer_ix, ",{} {}", field_name_and_type.first, field_name_and_type.second);
     }
 
     return {buffer.data(), buffer.size()};
 }
 
-string get_field_names_sql (const vector<pair<string, string>>& field_names_and_types) {
+string get_field_names_sql(vector<pair<string, string>> const& field_names_and_types) {
     fmt::memory_buffer buffer;
     auto buffer_ix = std::back_inserter(buffer);
 
@@ -37,7 +41,7 @@ string get_field_names_sql (const vector<pair<string, string>>& field_names_and_
     return {buffer.data(), buffer.size()};
 }
 
-string get_field_names_sql (const vector<string>& field_names) {
+string get_field_names_sql(vector<string> const& field_names) {
     fmt::memory_buffer buffer;
     auto buffer_ix = std::back_inserter(buffer);
 
@@ -51,7 +55,7 @@ string get_field_names_sql (const vector<string>& field_names) {
     return {buffer.data(), buffer.size()};
 }
 
-string get_placeholders_sql (size_t num_placeholders) {
+string get_placeholders_sql(size_t num_placeholders) {
     fmt::memory_buffer buffer;
     auto buffer_ix = std::back_inserter(buffer);
 
@@ -65,7 +69,7 @@ string get_placeholders_sql (size_t num_placeholders) {
     return {buffer.data(), buffer.size()};
 }
 
-string get_numbered_placeholders_sql (size_t num_placeholders) {
+string get_numbered_placeholders_sql(size_t num_placeholders) {
     fmt::memory_buffer buffer;
     auto buffer_ix = std::back_inserter(buffer);
 
@@ -79,7 +83,7 @@ string get_numbered_placeholders_sql (size_t num_placeholders) {
     return {buffer.data(), buffer.size()};
 }
 
-string get_set_field_sql (const vector<string>& field_names, size_t begin_ix, size_t end_ix) {
+string get_set_field_sql(vector<string> const& field_names, size_t begin_ix, size_t end_ix) {
     fmt::memory_buffer buffer;
     auto buffer_ix = std::back_inserter(buffer);
 
@@ -93,7 +97,10 @@ string get_set_field_sql (const vector<string>& field_names, size_t begin_ix, si
     return {buffer.data(), buffer.size()};
 }
 
-string get_numbered_set_field_sql (const vector<pair<string, string>>& field_names_and_types, size_t begin_ix) {
+string get_numbered_set_field_sql(
+        vector<pair<string, string>> const& field_names_and_types,
+        size_t begin_ix
+) {
     fmt::memory_buffer buffer;
     auto buffer_ix = std::back_inserter(buffer);
 
@@ -107,7 +114,7 @@ string get_numbered_set_field_sql (const vector<pair<string, string>>& field_nam
     return {buffer.data(), buffer.size()};
 }
 
-string get_numbered_set_field_sql (const vector<string>& field_names, size_t begin_ix) {
+string get_numbered_set_field_sql(vector<string> const& field_names, size_t begin_ix) {
     fmt::memory_buffer buffer;
     auto buffer_ix = std::back_inserter(buffer);
 

@@ -50,8 +50,7 @@ private:
  * @param is_four_bytes_encoding Returns the encoding type
  * @return ErrorCode_Success on success
  * @return ErrorCode_Corrupted_IR if reader contains invalid IR
- * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to
- * decode
+ * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
  */
 IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding);
 
@@ -62,8 +61,8 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
  * @param logtype Returns the logtype
  * @param encoded_vars Returns the encoded variables
  * @param dict_vars Returns the dictionary variables
- * @param timestamp_or_timestamp_delta Returns the timestamp (in the eight-byte
- * encoding case) or the timestamp delta (in the four-byte encoding case)
+ * @param timestamp_or_timestamp_delta Returns the timestamp (in the eight-byte encoding case) or
+ * the timestamp delta (in the four-byte encoding case)
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
@@ -79,10 +78,9 @@ auto deserialize_ir_message(
 ) -> IRErrorCode;
 
 /**
- * Decodes the IR message calls the given methods to handle each component of
- * the message
- * @tparam unescape_logtype Whether to remove the escape characters from the
- * logtype before calling \p ConstantHandler
+ * Decodes the IR message calls the given methods to handle each component of the message
+ * @tparam unescape_logtype Whether to remove the escape characters from the logtype before calling
+ * \p ConstantHandler
  * @tparam encoded_variable_t Type of the encoded variable
  * @tparam ConstantHandler Method to handle constants in the logtype.
  * Signature: (const std::string&, size_t, size_t) -> void
@@ -126,8 +124,7 @@ void generic_decode_message(
  * @param metadata_size Returns the size of the metadata written in the IR
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to
- * decode
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
  */
 IRErrorCode decode_preamble(
         ReaderInterface& reader,
@@ -143,8 +140,7 @@ IRErrorCode decode_preamble(
  * @param metadata Returns the metadata in the given vector
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough
- * data to decode
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
  */
 IRErrorCode decode_preamble(
         ReaderInterface& reader,
@@ -153,16 +149,15 @@ IRErrorCode decode_preamble(
 );
 
 /**
- * Validates whether the given protocol version can be supported by the current
- * build.
+ * Validates whether the given protocol version can be supported by the current build.
  * @param protocol_version
  * @return IRProtocolErrorCode_Supported if the protocol version is supported.
- * @return IRProtocolErrorCode_Too_Old if the protocol version is no longer
- * supported by this build's protocol version.
- * @return IRProtocolErrorCode_Too_New if the protocol version is newer than this
+ * @return IRProtocolErrorCode_Too_Old if the protocol version is no longer supported by this
  * build's protocol version.
- * @return IRProtocolErrorCode_Invalid if the protocol version does not follow
- * the SemVer specification.
+ * @return IRProtocolErrorCode_Too_New if the protocol version is newer than this build's protocol
+ * version.
+ * @return IRProtocolErrorCode_Invalid if the protocol version does not follow the SemVer
+ * specification.
  */
 IRProtocolErrorCode validate_protocol_version(std::string_view protocol_version);
 
@@ -174,10 +169,8 @@ namespace eight_byte_encoding {
      * @param timestamp Returns the decoded timestamp
      * @return ErrorCode_Success on success
      * @return ErrorCode_Corrupted_IR if reader contains invalid IR
-     * @return ErrorCode_Decode_Error if the encoded message cannot be properly
-     * decoded
-     * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to
-     * decode
+     * @return ErrorCode_Decode_Error if the encoded message cannot be properly decoded
+     * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
      * @return ErrorCode_End_of_IR if the IR ends
      */
     IRErrorCode
@@ -192,10 +185,8 @@ namespace four_byte_encoding {
      * @param timestamp_delta Returns the decoded timestamp delta
      * @return ErrorCode_Success on success
      * @return ErrorCode_Corrupted_IR if reader contains invalid IR
-     * @return ErrorCode_Decode_Error if the encoded message cannot be properly
-     * decoded
-     * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to
-     * decode
+     * @return ErrorCode_Decode_Error if the encoded message cannot be properly decoded
+     * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
      * @return ErrorCode_End_of_IR if the IR ends
      */
     IRErrorCode decode_next_message(

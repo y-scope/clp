@@ -1,10 +1,6 @@
-// Catch2
 #include <Catch2/single_include/catch2/catch.hpp>
-
-// json
 #include <json/single_include/nlohmann/json.hpp>
 
-// Project headers
 #include "../src/BufferReader.hpp"
 #include "../src/ffi/encoding_methods.hpp"
 #include "../src/ffi/ir_stream/decoding_methods.hpp"
@@ -44,8 +40,7 @@ static epoch_time_ms_t get_current_ts();
 /**
  * @tparam encoded_variable_t Type of the encoded variable
  * @param is_four_bytes_encoding
- * @return True if input encoding type matches the type of encoded_variable_t
- * false otherwise
+ * @return True if input encoding type matches the type of encoded_variable_t false otherwise
  */
 template <typename encoded_variable_t>
 bool match_encoding_type(bool is_four_bytes_encoding);
@@ -54,14 +49,13 @@ template <typename encoded_variable_t>
 epoch_time_ms_t get_next_timestamp_for_test();
 
 /**
- * Helper function that encodes a preamble of encoding type = encoded_variable_t
- * and writes into ir_buf
+ * Helper function that encodes a preamble of encoding type = encoded_variable_t and writes into
+ * ir_buf
  * @tparam encoded_variable_t Type of the encoded variable
  * @param timestamp_pattern
  * @param timestamp_pattern_syntax
  * @param time_zone_id
- * @param reference_timestamp Only used
- * when encoded_variable_t == four_byte_encoded_variable_t
+ * @param reference_timestamp Only used when encoded_variable_t == four_byte_encoded_variable_t
  * @param ir_buf
  * @return True if preamble is encoded without error, otherwise false
  */
@@ -75,8 +69,8 @@ bool encode_preamble(
 );
 
 /**
- * Helper function that encodes a message of encoding type = encoded_variable_t
- * and writes into ir_buf
+ * Helper function that encodes a message of encoding type = encoded_variable_t and writes into
+ * ir_buf
  * @tparam encoded_variable_t Type of the encoded variable
  * @param timestamp
  * @param message
@@ -93,16 +87,15 @@ bool encode_message(
 );
 
 /**
- * Helper function that decodes a message of encoding type = encoded_variable_t
- * from the ir_buf
+ * Helper function that decodes a message of encoding type = encoded_variable_t from the ir_buf
  * @tparam encoded_variable_t Type of the encoded variable
  * @param reader
  * @param message
  * @param decoded_ts Returns the decoded timestamp
- * @return IRErrorCode_Success on success, otherwise
- * Same as the ffi::ir_stream::eight_byte_encoding::decode_next_message when
+ * @return IRErrorCode_Success on success
+ * @return Same as the ffi::ir_stream::eight_byte_encoding::decode_next_message when
  * encoded_variable_t == eight_byte_encoded_variable_t
- * Same as the ffi::ir_stream::four_byte_encoding::decode_next_message when
+ * @return Same as the ffi::ir_stream::four_byte_encoding::decode_next_message when
  * encoded_variable_t == four_byte_encoded_variable_t
  */
 template <typename encoded_variable_t>
@@ -149,8 +142,8 @@ epoch_time_ms_t get_next_timestamp_for_test() {
             || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
     );
 
-    // We return an absolute timestamp for the eight-byte encoding and a mocked
-    // timestamp delta for the four-byte encoding
+    // We return an absolute timestamp for the eight-byte encoding and a mocked timestamp delta for
+    // the four-byte encoding
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
         return get_current_ts();
     } else {
@@ -439,8 +432,8 @@ TEMPLATE_TEST_CASE(
 }
 
 // NOTE: This test only tests eight_byte_encoded_variable_t because we trigger
-// IRErrorCode_Decode_Error by manually modifying the logtype within the IR, and
-// this is easier for the eight_byte_encoded_variable_t case.
+// IRErrorCode_Decode_Error by manually modifying the logtype within the IR, and this is easier for
+// the eight_byte_encoded_variable_t case.
 TEST_CASE("message_decode_error", "[ffi][decode_next_message]") {
     vector<int8_t> ir_buf;
     string logtype;

@@ -1,10 +1,9 @@
 #include "EncodedVariableInterpreter.hpp"
 
-// C++ standard libraries
-#include <cassert>
 #include <cmath>
 
-// Project headers
+#include <cassert>
+
 #include "Defs.h"
 #include "ffi/encoding_methods.hpp"
 #include "ffi/ir_stream/decoding_methods.hpp"
@@ -18,11 +17,16 @@ using std::string;
 using std::unordered_set;
 using std::vector;
 
-variable_dictionary_id_t EncodedVariableInterpreter::decode_var_dict_id (encoded_variable_t encoded_var) {
+variable_dictionary_id_t EncodedVariableInterpreter::decode_var_dict_id(
+        encoded_variable_t encoded_var
+) {
     return bit_cast<variable_dictionary_id_t>(encoded_var);
 }
 
-bool EncodedVariableInterpreter::convert_string_to_representable_integer_var (const string& value, encoded_variable_t& encoded_var) {
+bool EncodedVariableInterpreter::convert_string_to_representable_integer_var(
+        string const& value,
+        encoded_variable_t& encoded_var
+) {
     size_t length = value.length();
     if (0 == length) {
         // Empty string cannot be converted
@@ -58,9 +62,10 @@ bool EncodedVariableInterpreter::convert_string_to_representable_integer_var (co
     return true;
 }
 
-bool EncodedVariableInterpreter::convert_string_to_representable_float_var (
-        const string& value, encoded_variable_t& encoded_var)
-{
+bool EncodedVariableInterpreter::convert_string_to_representable_float_var(
+        string const& value,
+        encoded_variable_t& encoded_var
+) {
     if (value.empty()) {
         // Can't convert an empty string
         return false;
@@ -109,25 +114,19 @@ bool EncodedVariableInterpreter::convert_string_to_representable_float_var (
     // Encode into 64 bits with the following format (from MSB to LSB):
     // -  1 bit : is negative
     // -  1 bit : unused
-    // - 54 bits: The digits of the float without the decimal, as an
-    //            integer
+    // - 54 bits: The digits of the float without the decimal, as an integer
     // -  4 bits: # of decimal digits minus 1
-    //     - This format can represent floats with between 1 and 16 decimal
-    //       digits, so we use 4 bits and map the range [1, 16] to
-    //       [0x0, 0xF]
+    //     - This format can represent floats with between 1 and 16 decimal digits, so we use 4 bits
+    //       and map the range [1, 16] to [0x0, 0xF]
     // -  4 bits: position of the decimal from the right minus 1
     //     - To see why the position is taken from the right, consider
     //       (1) "-123456789012345.6", (2) "-.1234567890123456", and
     //       (3) ".1234567890123456"
-    //         - For (1), the decimal point is at index 16 from the left and
-    //           index 1 from the right.
-    //         - For (2), the decimal point is at index 1 from the left and
-    //           index 16 from the right.
-    //         - For (3), the decimal point is at index 0 from the left and
-    //           index 16 from the right.
-    //         - So if we take the decimal position from the left, it can
-    //           range from 0 to 16 because of the negative sign. Whereas
-    //           from the right, the negative sign is inconsequential.
+    //         - For (1), the decimal point is at index 16 from the left and index 1 from the right.
+    //         - For (2), the decimal point is at index 1 from the left and index 16 from the right.
+    //         - For (3), the decimal point is at index 0 from the left and index 16 from the right.
+    //         - So if we take the decimal position from the left, it can range from 0 to 16 because
+    //           of the negative sign. Whereas from the right, the negative sign is inconsequential.
     //     - Thus, we use 4 bits and map the range [1, 16] to [0x0, 0xF].
     uint64_t encoded_float = 0;
     if (is_negative) {
@@ -144,8 +143,10 @@ bool EncodedVariableInterpreter::convert_string_to_representable_float_var (
     return true;
 }
 
-void EncodedVariableInterpreter::convert_encoded_float_to_string (encoded_variable_t encoded_var,
-                                                                  string& value) {
+void EncodedVariableInterpreter::convert_encoded_float_to_string(
+        encoded_variable_t encoded_var,
+        string& value
+) {
     auto encoded_float = bit_cast<uint64_t>(encoded_var);
 
     // Decode according to the format described in
@@ -197,16 +198,20 @@ void EncodedVariableInterpreter::convert_encoded_float_to_string (encoded_variab
     value[value_length - 1 - decimal_pos] = '.';
 }
 
-void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& message, LogTypeDictionaryEntry& logtype_dict_entry,
-                                                               VariableDictionaryWriter& var_dict, vector<encoded_variable_t>& encoded_vars,
-                                                               vector<variable_dictionary_id_t>& var_ids)
-{
+void EncodedVariableInterpreter::encode_and_add_to_dictionary(
+        string const& message,
+        LogTypeDictionaryEntry& logtype_dict_entry,
+        VariableDictionaryWriter& var_dict,
+        vector<encoded_variable_t>& encoded_vars,
+        vector<variable_dictionary_id_t>& var_ids
+) {
     // Extract all variables and add to dictionary while building logtype
     size_t var_begin_pos = 0;
     size_t var_end_pos = 0;
     string var_str;
     logtype_dict_entry.clear();
-    // To avoid reallocating the logtype as we append to it, reserve enough space to hold the entire message
+    // To avoid reallocating the logtype as we append to it, reserve enough space to hold the entire
+    // message
     logtype_dict_entry.reserve_constant_length(message.length());
     while (logtype_dict_entry.parse_next_var(message, var_begin_pos, var_end_pos, var_str)) {
         auto encoded_var = encode_var(var_str, logtype_dict_entry, var_dict, var_ids);
@@ -214,7 +219,7 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary (const string& mes
     }
 }
 
-template<typename encoded_variable_t>
+template <typename encoded_variable_t>
 void EncodedVariableInterpreter::encode_and_add_to_dictionary(
         ir::LogEvent<encoded_variable_t> const& log_event,
         LogTypeDictionaryEntry& logtype_dict_entry,
@@ -284,15 +289,23 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary(
     );
 }
 
-bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDictionaryEntry& logtype_dict_entry, const VariableDictionaryReader& var_dict,
-                                                                const vector<encoded_variable_t>& encoded_vars, string& decompressed_msg)
-{
+bool EncodedVariableInterpreter::decode_variables_into_message(
+        LogTypeDictionaryEntry const& logtype_dict_entry,
+        VariableDictionaryReader const& var_dict,
+        vector<encoded_variable_t> const& encoded_vars,
+        string& decompressed_msg
+) {
     // Ensure the number of variables in the logtype matches the number of encoded variables given
-    const auto& logtype_value = logtype_dict_entry.get_value();
+    auto const& logtype_value = logtype_dict_entry.get_value();
     size_t const num_vars = logtype_dict_entry.get_num_variables();
     if (num_vars != encoded_vars.size()) {
-        SPDLOG_ERROR("EncodedVariableInterpreter: Logtype '{}' contains {} variables, but {} were given for decoding.", logtype_value.c_str(),
-                     num_vars, encoded_vars.size());
+        SPDLOG_ERROR(
+                "EncodedVariableInterpreter: Logtype '{}' contains {} variables, but {} were given "
+                "for decoding.",
+                logtype_value.c_str(),
+                num_vars,
+                encoded_vars.size()
+        );
         return false;
     }
 
@@ -301,12 +314,18 @@ bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDic
     string float_str;
     variable_dictionary_id_t var_dict_id;
     size_t const num_placeholders_in_logtype = logtype_dict_entry.get_num_placeholders();
-    for (size_t placeholder_ix = 0, var_ix = 0; placeholder_ix < num_placeholders_in_logtype; ++placeholder_ix) {
-        size_t placeholder_position = logtype_dict_entry.get_placeholder_info(placeholder_ix, var_placeholder);
+    for (size_t placeholder_ix = 0, var_ix = 0; placeholder_ix < num_placeholders_in_logtype;
+         ++placeholder_ix)
+    {
+        size_t placeholder_position
+                = logtype_dict_entry.get_placeholder_info(placeholder_ix, var_placeholder);
 
         // Add the constant that's between the last placeholder and this one
-        decompressed_msg.append(logtype_value, constant_begin_pos,
-                                placeholder_position - constant_begin_pos);
+        decompressed_msg.append(
+                logtype_value,
+                constant_begin_pos,
+                placeholder_position - constant_begin_pos
+        );
         switch (var_placeholder) {
             case ir::VariablePlaceholder::Integer:
                 decompressed_msg += std::to_string(encoded_vars[var_ix++]);
@@ -323,10 +342,11 @@ bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDic
                 break;
             default:
                 SPDLOG_ERROR(
-                    "EncodedVariableInterpreter: Logtype '{}' contains "
-                    "unexpected variable placeholder 0x{:x}",
-                    logtype_value,
-                    enum_to_underlying_type(var_placeholder));
+                        "EncodedVariableInterpreter: Logtype '{}' contains unexpected variable "
+                        "placeholder 0x{:x}",
+                        logtype_value,
+                        enum_to_underlying_type(var_placeholder)
+                );
                 return false;
         }
         // Move past the variable placeholder
@@ -340,9 +360,13 @@ bool EncodedVariableInterpreter::decode_variables_into_message (const LogTypeDic
     return true;
 }
 
-bool EncodedVariableInterpreter::encode_and_search_dictionary (const string& var_str, const VariableDictionaryReader& var_dict, bool ignore_case,
-                                                               string& logtype, SubQuery& sub_query)
-{
+bool EncodedVariableInterpreter::encode_and_search_dictionary(
+        string const& var_str,
+        VariableDictionaryReader const& var_dict,
+        bool ignore_case,
+        string& logtype,
+        SubQuery& sub_query
+) {
     size_t length = var_str.length();
     if (0 == length) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
@@ -370,12 +394,14 @@ bool EncodedVariableInterpreter::encode_and_search_dictionary (const string& var
     return true;
 }
 
-bool EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matches (const std::string& var_wildcard_str,
-                                                                                     const VariableDictionaryReader& var_dict,
-                                                                                     bool ignore_case, SubQuery& sub_query)
-{
+bool EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matches(
+        std::string const& var_wildcard_str,
+        VariableDictionaryReader const& var_dict,
+        bool ignore_case,
+        SubQuery& sub_query
+) {
     // Find matches
-    unordered_set<const VariableDictionaryEntry*> var_dict_entries;
+    unordered_set<VariableDictionaryEntry const*> var_dict_entries;
     var_dict.get_entries_matching_wildcard_string(var_wildcard_str, ignore_case, var_dict_entries);
     if (var_dict_entries.empty()) {
         // Not in dictionary
@@ -393,7 +419,7 @@ bool EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matc
     return true;
 }
 
-encoded_variable_t EncodedVariableInterpreter::encode_var_dict_id (variable_dictionary_id_t id) {
+encoded_variable_t EncodedVariableInterpreter::encode_var_dict_id(variable_dictionary_id_t id) {
     return bit_cast<encoded_variable_t>(id);
 }
 
@@ -430,10 +456,10 @@ variable_dictionary_id_t EncodedVariableInterpreter::add_dict_var(
     return id;
 }
 
-// Explicitly declare template specializations so that we can define the
-// template methods in this file
-template
-void EncodedVariableInterpreter::encode_and_add_to_dictionary<ffi::eight_byte_encoded_variable_t>(
+// Explicitly declare template specializations so that we can define the template methods in this
+// file
+template void
+EncodedVariableInterpreter::encode_and_add_to_dictionary<ffi::eight_byte_encoded_variable_t>(
         ir::LogEvent<ffi::eight_byte_encoded_variable_t> const& log_event,
         LogTypeDictionaryEntry& logtype_dict_entry,
         VariableDictionaryWriter& var_dict,
@@ -442,8 +468,8 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary<ffi::eight_byte_en
         size_t& raw_num_bytes
 );
 
-template
-void EncodedVariableInterpreter::encode_and_add_to_dictionary<ffi::four_byte_encoded_variable_t >(
+template void
+EncodedVariableInterpreter::encode_and_add_to_dictionary<ffi::four_byte_encoded_variable_t>(
         ir::LogEvent<ffi::four_byte_encoded_variable_t> const& log_event,
         LogTypeDictionaryEntry& logtype_dict_entry,
         VariableDictionaryWriter& var_dict,

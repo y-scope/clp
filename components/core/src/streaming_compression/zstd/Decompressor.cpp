@@ -117,13 +117,12 @@ namespace streaming_compression { namespace zstd {
 
         // Check if we've already decompressed passed the desired position
         if (m_decompressed_stream_pos > pos) {
-            // ZStd has no way for us to seek back to the desired position, so
-            // just reset the stream to the beginning
+            // ZStd has no way for us to seek back to the desired position, so just reset the stream
+            // to the beginning
             reset_stream();
         }
 
-        // We need to fast forward the decompression stream to
-        // decompressed_stream_pos
+        // We need to fast forward the decompression stream to decompressed_stream_pos
         ErrorCode error;
         while (m_decompressed_stream_pos < pos) {
             size_t num_bytes_to_decompress = std::min(

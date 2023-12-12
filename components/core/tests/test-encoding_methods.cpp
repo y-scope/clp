@@ -1,17 +1,15 @@
-// Catch2
 #include <Catch2/single_include/catch2/catch.hpp>
 
-// Project headers
 #include "../src/ffi/encoding_methods.hpp"
 
 using ffi::decode_float_var;
 using ffi::decode_integer_var;
 using ffi::decode_message;
 using ffi::eight_byte_encoded_variable_t;
-using ffi::four_byte_encoded_variable_t;
 using ffi::encode_float_string;
 using ffi::encode_integer_string;
 using ffi::encode_message;
+using ffi::four_byte_encoded_variable_t;
 using ffi::wildcard_match_encoded_vars;
 using ffi::wildcard_query_matches_any_encoded_var;
 using ir::get_bounds_of_next_var;
@@ -26,15 +24,20 @@ using std::vector;
  * @param strings
  * @param string_views
  */
-static void string_views_from_strings (const vector<string>& strings,
-                                       vector<string_view>& string_views);
+static void
+string_views_from_strings(vector<string> const& strings, vector<string_view>& string_views);
 
-TEMPLATE_TEST_CASE("Encoding integers", "[ffi][encode-integer]", eight_byte_encoded_variable_t,
-                   four_byte_encoded_variable_t)
-{
+TEMPLATE_TEST_CASE(
+        "Encoding integers",
+        "[ffi][encode-integer]",
+        eight_byte_encoded_variable_t,
+        four_byte_encoded_variable_t
+) {
     // Code below only supports these two types right now
-    static_assert(std::is_same_v<TestType, eight_byte_encoded_variable_t> ||
-                  std::is_same_v<TestType, four_byte_encoded_variable_t>);
+    static_assert(
+            (std::is_same_v<TestType, eight_byte_encoded_variable_t>
+             || std::is_same_v<TestType, four_byte_encoded_variable_t>)
+    );
 
     string value;
     string decoded_value;
@@ -156,9 +159,12 @@ TEMPLATE_TEST_CASE("Encoding integers", "[ffi][encode-integer]", eight_byte_enco
     REQUIRE(!encode_integer_string(value, encoded_var));
 }
 
-TEMPLATE_TEST_CASE("Encoding floats", "[ffi][encode-float]", eight_byte_encoded_variable_t,
-                   four_byte_encoded_variable_t)
-{
+TEMPLATE_TEST_CASE(
+        "Encoding floats",
+        "[ffi][encode-float]",
+        eight_byte_encoded_variable_t,
+        four_byte_encoded_variable_t
+) {
     string value;
     string decoded_value;
     TestType encoded_var;
@@ -266,63 +272,76 @@ TEMPLATE_TEST_CASE("Encoding floats", "[ffi][encode-float]", eight_byte_encoded_
     }
 }
 
-TEMPLATE_TEST_CASE("encode_float_properties", "[ffi][encode-float]", eight_byte_encoded_variable_t,
-                   four_byte_encoded_variable_t)
-{
-    // Test all possible combinations of the properties of the encoded float,
-    // except for individual values of the 'digits' field, since that takes too
-    // long.
-    constexpr size_t cMaxDigitsInRepresentableFloatVar =
-            std::is_same_v<TestType, four_byte_encoded_variable_t>
-                    ? ffi::cMaxDigitsInRepresentableFourByteFloatVar
-                    : ffi::cMaxDigitsInRepresentableEightByteFloatVar;
+TEMPLATE_TEST_CASE(
+        "encode_float_properties",
+        "[ffi][encode-float]",
+        eight_byte_encoded_variable_t,
+        four_byte_encoded_variable_t
+) {
+    // Test all possible combinations of the properties of the encoded float, except for individual
+    // values of the 'digits' field, since that takes too long.
+    constexpr size_t cMaxDigitsInRepresentableFloatVar
+            = std::is_same_v<TestType, four_byte_encoded_variable_t>
+                      ? ffi::cMaxDigitsInRepresentableFourByteFloatVar
+                      : ffi::cMaxDigitsInRepresentableEightByteFloatVar;
     for (size_t num_digits_in_digits_property = 0;
          num_digits_in_digits_property <= cMaxDigitsInRepresentableFloatVar + 1;
          ++num_digits_in_digits_property)
     {
         // Iterate over the possible values of the `num_digits` property
-        for (uint8_t num_digits = 1; num_digits <= cMaxDigitsInRepresentableFloatVar;
-             ++num_digits)
+        for (uint8_t num_digits = 1; num_digits <= cMaxDigitsInRepresentableFloatVar; ++num_digits)
         {
-            // Iterate over the possible values of the `decimal_point_pos`
-            // property
+            // Iterate over the possible values of the `decimal_point_pos` property
             for (uint8_t decimal_point_pos = 1;
-                 decimal_point_pos <= cMaxDigitsInRepresentableFloatVar; ++decimal_point_pos)
+                 decimal_point_pos <= cMaxDigitsInRepresentableFloatVar;
+                 ++decimal_point_pos)
             {
-                // Create a value for the `digits` property that has a certain
-                // number of digits
-                std::conditional_t<std::is_same_v<TestType, four_byte_encoded_variable_t>,
-                        uint32_t, uint64_t> digits = 0;
+                // Create a value for the `digits` property that has a certain number of digits
+                std::conditional_t<
+                        std::is_same_v<TestType, four_byte_encoded_variable_t>,
+                        uint32_t,
+                        uint64_t>
+                        digits = 0;
                 for (size_t i = 0; i < num_digits_in_digits_property; ++i) {
                     digits = digits * 10 + 9;
                 }
-                std::conditional_t<std::is_same_v<TestType, four_byte_encoded_variable_t>,
-                        uint32_t, uint64_t> cEncodedFloatDigitsBitMask =
-                                std::is_same_v<TestType, four_byte_encoded_variable_t>
-                                        ? ffi::cFourByteEncodedFloatDigitsBitMask
-                                        : ffi::cEightByteEncodedFloatDigitsBitMask;
-                // Due to the bitmask, the number of digits encoded may be
-                // less than num_digits_in_digits_property
+                std::conditional_t<
+                        std::is_same_v<TestType, four_byte_encoded_variable_t>,
+                        uint32_t,
+                        uint64_t>
+                        cEncodedFloatDigitsBitMask
+                        = std::is_same_v<TestType, four_byte_encoded_variable_t>
+                                  ? ffi::cFourByteEncodedFloatDigitsBitMask
+                                  : ffi::cEightByteEncodedFloatDigitsBitMask;
+                // Due to the bitmask, the number of digits encoded may be less than
+                // num_digits_in_digits_property
                 digits = std::min(cEncodedFloatDigitsBitMask, digits);
-                auto num_digits_in_value = std::min(num_digits_in_digits_property,
-                                                    std::to_string(digits).length());
+                auto num_digits_in_value
+                        = std::min(num_digits_in_digits_property, std::to_string(digits).length());
 
-                // Iterate over the possible values for the encoded float's high
-                // bits
-                uint8_t num_high_bits =
-                        std::is_same_v<TestType, four_byte_encoded_variable_t> ? 1 : 2;
+                // Iterate over the possible values for the encoded float's high bits
+                uint8_t num_high_bits
+                        = std::is_same_v<TestType, four_byte_encoded_variable_t> ? 1 : 2;
                 for (size_t high_bits = 0; high_bits < num_high_bits; ++high_bits) {
                     TestType test_encoded_var;
                     if (std::is_same_v<TestType, eight_byte_encoded_variable_t>) {
                         test_encoded_var = ffi::encode_float_properties<TestType>(
-                                high_bits & 0x2, digits, num_digits, decimal_point_pos);
-                        // Since encode_float_properties erases the low bit of
-                        // high_bits, we need to add it again manually
-                        test_encoded_var =
-                                (high_bits << 62) | (((1ULL << 62) - 1) & test_encoded_var);
+                                high_bits & 0x2,
+                                digits,
+                                num_digits,
+                                decimal_point_pos
+                        );
+                        // Since encode_float_properties erases the low bit of high_bits, we need to
+                        // add it again manually
+                        test_encoded_var
+                                = (high_bits << 62) | (((1ULL << 62) - 1) & test_encoded_var);
                     } else {
                         test_encoded_var = ffi::encode_float_properties<TestType>(
-                                high_bits, digits, num_digits, decimal_point_pos);
+                                high_bits,
+                                digits,
+                                num_digits,
+                                decimal_point_pos
+                        );
                     }
 
                     INFO("high_bits: " << high_bits);
@@ -330,13 +349,15 @@ TEMPLATE_TEST_CASE("encode_float_properties", "[ffi][encode-float]", eight_byte_
                     INFO("num_digits: " << num_digits);
                     INFO("num_digits_in_value: " << num_digits_in_value);
                     INFO("digits: " << digits);
-                    if (decimal_point_pos <= num_digits
-                        && num_digits >= num_digits_in_value
-                        && num_digits_in_value <= cMaxDigitsInRepresentableFloatVar) {
+                    if (decimal_point_pos <= num_digits && num_digits >= num_digits_in_value
+                        && num_digits_in_value <= cMaxDigitsInRepresentableFloatVar)
+                    {
                         REQUIRE_NOTHROW(decode_float_var(test_encoded_var));
                     } else {
-                        REQUIRE_THROWS_AS(decode_float_var(test_encoded_var),
-                                          ffi::EncodingException);
+                        REQUIRE_THROWS_AS(
+                                decode_float_var(test_encoded_var),
+                                ffi::EncodingException
+                        );
                     }
                 }
             }
@@ -344,18 +365,28 @@ TEMPLATE_TEST_CASE("encode_float_properties", "[ffi][encode-float]", eight_byte_
     }
 }
 
-TEMPLATE_TEST_CASE("Encoding messages", "[ffi][encode-message]", eight_byte_encoded_variable_t,
-                   four_byte_encoded_variable_t)
-{
+TEMPLATE_TEST_CASE(
+        "Encoding messages",
+        "[ffi][encode-message]",
+        eight_byte_encoded_variable_t,
+        four_byte_encoded_variable_t
+) {
     string message;
 
     // Test encoding
     string logtype;
     vector<TestType> encoded_vars;
     vector<int32_t> dictionary_var_bounds;
-    vector<string> var_strs = {"4938", std::to_string(INT32_MAX), std::to_string(INT64_MAX),
-                               "0.1", "-25.519686", "-25.5196868642755", "-00.00",
-                               "bin/python2.7.3", "abc123"};
+    vector<string> var_strs
+            = {"4938",
+               std::to_string(INT32_MAX),
+               std::to_string(INT64_MAX),
+               "0.1",
+               "-25.519686",
+               "-25.5196868642755",
+               "-00.00",
+               "bin/python2.7.3",
+               "abc123"};
     size_t var_ix = 0;
     message = "here is a string with a small int " + var_strs[var_ix++];
     message += " and a medium int " + var_strs[var_ix++];
@@ -392,11 +423,15 @@ TEMPLATE_TEST_CASE("Encoding messages", "[ffi][encode-message]", eight_byte_enco
     }
 
     // Test decoding
-    auto decoded_message = decode_message(logtype, encoded_vars.data(), encoded_vars.size(),
-                                          all_dictionary_vars, dictionary_var_end_offsets.data(),
-                                          dictionary_var_end_offsets.size());
+    auto decoded_message = decode_message(
+            logtype,
+            encoded_vars.data(),
+            encoded_vars.size(),
+            all_dictionary_vars,
+            dictionary_var_end_offsets.data(),
+            dictionary_var_end_offsets.size()
+    );
     REQUIRE(decoded_message == message);
-
 
     // Test encoding a message with a variable placeholder after the variables
     message = " test var123 ";
@@ -408,10 +443,12 @@ TEMPLATE_TEST_CASE("Encoding messages", "[ffi][encode-message]", eight_byte_enco
     REQUIRE(encode_message(message, logtype, encoded_vars, dictionary_var_bounds));
 }
 
-TEMPLATE_TEST_CASE("wildcard_query_matches_any_encoded_var",
-          "[ffi][wildcard_query_matches_any_encoded_var]", eight_byte_encoded_variable_t,
-          four_byte_encoded_variable_t)
-{
+TEMPLATE_TEST_CASE(
+        "wildcard_query_matches_any_encoded_var",
+        "[ffi][wildcard_query_matches_any_encoded_var]",
+        eight_byte_encoded_variable_t,
+        four_byte_encoded_variable_t
+) {
     string message = "Static text, dictVar1, 123, 456.7, dictVar2, 987, 654.3";
 
     // Encode
@@ -422,18 +459,39 @@ TEMPLATE_TEST_CASE("wildcard_query_matches_any_encoded_var",
 
     // Test wildcard matches
     REQUIRE(wildcard_query_matches_any_encoded_var<VariablePlaceholder::Integer>(
-            "1*3", logtype, encoded_vars.data(), encoded_vars.size()));
-    REQUIRE(false == wildcard_query_matches_any_encoded_var<VariablePlaceholder::Integer>(
-            "4*7", logtype, encoded_vars.data(), encoded_vars.size()));
+            "1*3",
+            logtype,
+            encoded_vars.data(),
+            encoded_vars.size()
+    ));
+    REQUIRE(false
+            == wildcard_query_matches_any_encoded_var<VariablePlaceholder::Integer>(
+                    "4*7",
+                    logtype,
+                    encoded_vars.data(),
+                    encoded_vars.size()
+            ));
     REQUIRE(wildcard_query_matches_any_encoded_var<VariablePlaceholder::Float>(
-            "4*7", logtype, encoded_vars.data(), encoded_vars.size()));
-    REQUIRE(false == wildcard_query_matches_any_encoded_var<VariablePlaceholder::Float>(
-            "1*3", logtype, encoded_vars.data(), encoded_vars.size()));
+            "4*7",
+            logtype,
+            encoded_vars.data(),
+            encoded_vars.size()
+    ));
+    REQUIRE(false
+            == wildcard_query_matches_any_encoded_var<VariablePlaceholder::Float>(
+                    "1*3",
+                    logtype,
+                    encoded_vars.data(),
+                    encoded_vars.size()
+            ));
 }
 
-TEMPLATE_TEST_CASE("wildcard_match_encoded_vars", "[ffi][wildcard_match_encoded_vars]",
-                   eight_byte_encoded_variable_t, four_byte_encoded_variable_t)
-{
+TEMPLATE_TEST_CASE(
+        "wildcard_match_encoded_vars",
+        "[ffi][wildcard_match_encoded_vars]",
+        eight_byte_encoded_variable_t,
+        four_byte_encoded_variable_t
+) {
     string message = "Static text, dictVar1, 123, 456.7, dictVar2, 987, 654.3";
 
     // Encode a message
@@ -454,8 +512,13 @@ TEMPLATE_TEST_CASE("wildcard_match_encoded_vars", "[ffi][wildcard_match_encoded_
 
         string_views_from_strings(wildcard_var_queries, wildcard_var_query_views);
 
-        REQUIRE(wildcard_match_encoded_vars(logtype, encoded_vars.data(), encoded_vars.size(),
-                                            wildcard_var_types, wildcard_var_query_views));
+        REQUIRE(wildcard_match_encoded_vars(
+                logtype,
+                encoded_vars.data(),
+                encoded_vars.size(),
+                wildcard_var_types,
+                wildcard_var_query_views
+        ));
     }
 
     SECTION("Same number of wildcard variables and encoded variables") {
@@ -470,8 +533,13 @@ TEMPLATE_TEST_CASE("wildcard_match_encoded_vars", "[ffi][wildcard_match_encoded_
 
         string_views_from_strings(wildcard_var_queries, wildcard_var_query_views);
 
-        REQUIRE(wildcard_match_encoded_vars(logtype, encoded_vars.data(), encoded_vars.size(),
-                                            wildcard_var_types, wildcard_var_query_views));
+        REQUIRE(wildcard_match_encoded_vars(
+                logtype,
+                encoded_vars.data(),
+                encoded_vars.size(),
+                wildcard_var_types,
+                wildcard_var_query_views
+        ));
     }
 
     SECTION("More wildcard variables than encoded variables") {
@@ -488,17 +556,21 @@ TEMPLATE_TEST_CASE("wildcard_match_encoded_vars", "[ffi][wildcard_match_encoded_
 
         string_views_from_strings(wildcard_var_queries, wildcard_var_query_views);
 
-        REQUIRE(false == wildcard_match_encoded_vars(logtype, encoded_vars.data(),
-                                                     encoded_vars.size(), wildcard_var_types,
-                                                     wildcard_var_query_views));
+        REQUIRE(false
+                == wildcard_match_encoded_vars(
+                        logtype,
+                        encoded_vars.data(),
+                        encoded_vars.size(),
+                        wildcard_var_types,
+                        wildcard_var_query_views
+                ));
     }
 }
 
-static void string_views_from_strings (const vector<string>& strings,
-                                       vector<string_view>& string_views)
-{
+static void
+string_views_from_strings(vector<string> const& strings, vector<string_view>& string_views) {
     string_views.reserve(strings.size());
-    for (const auto& s : strings) {
+    for (auto const& s : strings) {
         string_views.emplace_back(s);
     }
 }

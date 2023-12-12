@@ -7,8 +7,8 @@
 #include "../ir/parsing.hpp"
 #include "../TraceableException.hpp"
 
-// TODO Some of the methods in this file are mostly duplicated from code that
-// exists elsewhere in the repo. They should be consolidated in a future commit.
+// TODO Some of the methods in this file are mostly duplicated from code that exists elsewhere in
+//  the repo. They should be consolidated in a future commit.
 namespace ffi {
 // Types
 using epoch_time_ms_t = int64_t;
@@ -37,14 +37,13 @@ private:
 
 // Constants
 /*
- * These constants can be used by callers to store the version of the schemas
- * and encoding methods they're using. At some point, we may update and/or add
- * built-in schemas/encoding methods. So callers must store the versions they
- * used for encoding to ensure that they can choose the same versions for
- * decoding.
+ * These constants can be used by callers to store the version of the schemas and encoding methods
+ * they're using. At some point, we may update and/or add built-in schemas/encoding methods. So
+ * callers must store the versions they used for encoding to ensure that they can choose the same
+ * versions for decoding.
  *
- * We use versions which look like package names in anticipation of users
- * writing their own custom schemas and encoding methods.
+ * We use versions which look like package names in anticipation of users writing their own custom
+ * schemas and encoding methods.
  */
 static constexpr char cVariableEncodingMethodsVersion[]
         = "com.yscope.clp.VariableEncodingMethodsV1";
@@ -84,15 +83,12 @@ eight_byte_encoded_variable_t encode_four_byte_float_as_eight_byte(
 
 /**
  * Encodes a float value with the given properties into an encoded variable.
- * NOTE: It's the caller's responsibility to validate that the input is a
- * representable float.
+ * NOTE: It's the caller's responsibility to validate that the input is a representable float.
  * @tparam encoded_variable_t Type of the encoded variable
  * @param is_negative
- * @param digits The digits of the float, ignoring the decimal, as an
- * integer
+ * @param digits The digits of the float, ignoring the decimal, as an integer
  * @param num_digits The number of digits in \p digits
- * @param decimal_point_pos The position of the decimal point from the right
- * of the value
+ * @param decimal_point_pos The position of the decimal point from the right of the value
  * @return The encoded variable
  */
 template <typename encoded_variable_t>
@@ -111,11 +107,9 @@ encoded_variable_t encode_float_properties(
  * @tparam encoded_variable_t Type of the encoded variable
  * @param encoded_var
  * @param is_negative Returns whether the float is negative
- * @param digits Returns the digits of the float, ignoring the decimal, as an
- * integer
+ * @param digits Returns the digits of the float, ignoring the decimal, as an integer
  * @param num_digits Returns the number of digits in \p digits
- * @param decimal_point_pos Returns the position of the decimal point from the
- * right of the value
+ * @param decimal_point_pos Returns the position of the decimal point from the right of the value
  */
 template <typename encoded_variable_t>
 void decode_float_properties(
@@ -167,15 +161,14 @@ template <typename encoded_variable_t>
 std::string decode_integer_var(encoded_variable_t encoded_var);
 
 /**
- * Encodes the given message and calls the given methods to handle specific
- * components of the message.
+ * Encodes the given message and calls the given methods to handle specific components of the
+ * message.
  * @tparam encoded_variable_t Type of the encoded variable
  * @tparam ConstantHandler Method to handle constants. Signature:
  * (std::string_view constant, std::string& logtype) -> void
- * @tparam EncodedVariableHandler Method to handle encoded variables.
- * Signature: (encoded_variable_t) -> void
- * @tparam DictionaryVariableHandler Method to handle dictionary variables.
- * Signature:
+ * @tparam EncodedVariableHandler Method to handle encoded variables. Signature:
+ * (encoded_variable_t) -> void
+ * @tparam DictionaryVariableHandler Method to handle dictionary variables. Signature:
  * (std::string_view message, size_t begin_pos, size_t end_pos) -> bool
  * @param message
  * @param logtype
@@ -198,17 +191,15 @@ bool encode_message_generically(
 );
 
 /**
- * Encodes the given message. The simplistic interface is to make it efficient
- * to transfer data between the caller language and this native code.
+ * Encodes the given message. The simplistic interface is to make it efficient to transfer data
+ * between the caller language and this native code.
  * @tparam encoded_variable_t Type of the encoded variable
  * @param message
  * @param logtype
  * @param encoded_vars
- * @param dictionary_var_bounds A one-dimensional array containing the
- * bounds (begin_pos followed by end_pos) of each dictionary variable in the
- * message
- * @return false if the message contains variable placeholders, true
- * otherwise
+ * @param dictionary_var_bounds A one-dimensional array containing the bounds (begin_pos followed by
+ * end_pos) of each dictionary variable in the message
+ * @return false if the message contains variable placeholders, true otherwise
  */
 template <typename encoded_variable_t>
 bool encode_message(
@@ -219,17 +210,17 @@ bool encode_message(
 );
 
 /**
- * Decodes the message from the given logtype, encoded variables, and dictionary
- * variables. The simplistic interface is to make it efficient to transfer data
- * between the caller language and this native code.
+ * Decodes the message from the given logtype, encoded variables, and dictionary variables. The
+ * simplistic interface is to make it efficient to transfer data between the caller language and
+ * this native code.
  * @tparam encoded_variable_t Type of the encoded variable
  * @param logtype
  * @param encoded_vars
  * @param encoded_vars_length
- * @param all_dictionary_vars The message's dictionary variables, stored
- * back-to-back in a single byte-array
- * @param dictionary_var_end_offsets The end-offset of each dictionary
- * variable in ``all_dictionary_vars``
+ * @param all_dictionary_vars The message's dictionary variables, stored back-to-back in a single
+ * byte-array
+ * @param dictionary_var_end_offsets The end-offset of each dictionary variable in
+ * ``all_dictionary_vars``
  * @param dictionary_var_end_offsets_length
  * @return The decoded message
  */
@@ -245,11 +236,10 @@ std::string decode_message(
 
 /**
  * Checks if any encoded variable matches the given wildcard query
- * NOTE: This method checks for *either* matching integer encoded variables or
- * matching float encoded variables, based on the variable placeholder template
- * parameter.
- * @tparam var_placeholder Placeholder for the type of encoded variables
- * that should be checked for matches
+ * NOTE: This method checks for *either* matching integer encoded variables or matching float
+ * encoded variables, based on the variable placeholder template parameter.
+ * @tparam var_placeholder Placeholder for the type of encoded variables that should be checked for
+ * matches
  * @tparam encoded_variable_t Type of the encoded variable
  * @param wildcard_query
  * @param logtype
@@ -266,27 +256,23 @@ bool wildcard_query_matches_any_encoded_var(
 );
 
 /**
- * Checks whether the given wildcard strings match the given encoded variables
- * (from a message). Specifically, let {w in W} be the set of wildcard strings
- * and {e in E} be the set of encoded variables. This method will return true
- * only if:
+ * Checks whether the given wildcard strings match the given encoded variables (from a message).
+ * Specifically, let {w in W} be the set of wildcard strings and {e in E} be the set of encoded
+ * variables. This method will return true only if:
  * (1) Each unique `w` matches a unique `e`.
  * (2) When (1) is true, the order of elements in both W and E is unchanged.
- * NOTE: Instead of taking an array of objects, this method takes arrays of
- * object-members (the result of serializing the objects) so that it can be
- * called without unnecessarily reconstructing the objects.
+ * NOTE: Instead of taking an array of objects, this method takes arrays of object-members (the
+ * result of serializing the objects) so that it can be called without unnecessarily reconstructing
+ * the objects.
  * @tparam encoded_variable_t Type of the encoded variable
  * @param logtype The message's logtype
  * @param encoded_vars The message's encoded variables
- * @param encoded_vars_length The number of encoded variables in \p
- * encoded_vars
- * @param wildcard_var_placeholders String of variable placeholders, where
- * each one indicates how the corresponding wildcard string should be
- * interpreted.
- * @param wildcard_var_queries The wildcard strings to compare with the
- * encoded variables. Callers must ensure each wildcard string contains
- * no redundant wildcards (e.g. "**") nor unnecessary escape characters
- * (e.g. "\").
+ * @param encoded_vars_length The number of encoded variables in \p encoded_vars
+ * @param wildcard_var_placeholders String of variable placeholders, where each one indicates how
+ * the corresponding wildcard string should be interpreted.
+ * @param wildcard_var_queries The wildcard strings to compare with the encoded variables. Callers
+ * must ensure each wildcard string contains no redundant wildcards (e.g. "**") nor unnecessary
+ * escape characters (e.g. "\").
  * @return Whether the wildcard strings match the encoded variables
  */
 template <typename encoded_variable_t>

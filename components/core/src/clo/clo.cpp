@@ -1,24 +1,16 @@
-// C standard libraries
 #include <sys/socket.h>
 
-// C++ libraries
 #include <iostream>
 #include <memory>
-
-// Boost libraries
-#include <boost/filesystem.hpp>
-
-// msgpack
 #include <msgpack.hpp>
 
-// spdlog
+#include <boost/filesystem.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
-// Project headers
 #include "../Defs.h"
 #include "../Grep.hpp"
-#include "../Profiler.hpp"
 #include "../networking/socket_utils.hpp"
+#include "../Profiler.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/Constants.hpp"
 #include "../Utils.hpp"
@@ -26,8 +18,8 @@
 #include "ControllerMonitoringThread.hpp"
 
 using clo::CommandLineArguments;
-using std::cout;
 using std::cerr;
+using std::cout;
 using std::endl;
 using std::string;
 using std::to_string;
@@ -52,7 +44,8 @@ enum class SearchFilesResult {
  * @return -1 on failure
  * @return Search controller socket file descriptor otherwise
  */
-static int connect_to_search_controller (const string& controller_host, const string& controller_port);
+static int
+connect_to_search_controller(string const& controller_host, string const& controller_port);
 /**
  * Sends the search result to the search controller
  * @param orig_file_path
@@ -61,8 +54,12 @@ static int connect_to_search_controller (const string& controller_host, const st
  * @param controller_socket_fd
  * @return Same as networking::try_send
  */
-static ErrorCode send_result (const string& orig_file_path, const Message& compressed_msg,
-                              const string& decompressed_msg, int controller_socket_fd);
+static ErrorCode send_result(
+        string const& orig_file_path,
+        Message const& compressed_msg,
+        string const& decompressed_msg,
+        int controller_socket_fd
+);
 /**
  * Searches all files referenced by a given database cursor
  * @param query
@@ -74,8 +71,13 @@ static ErrorCode send_result (const string& orig_file_path, const Message& compr
  * @return SearchFilesResult::ResultSendFailure on failure to send a result
  * @return SearchFilesResult::Success otherwise
  */
-static SearchFilesResult search_files (Query& query, Archive& archive, MetadataDB::FileIterator& file_metadata_ix,
-                                       const std::atomic_bool& query_cancelled, int controller_socket_fd);
+static SearchFilesResult search_files(
+        Query& query,
+        Archive& archive,
+        MetadataDB::FileIterator& file_metadata_ix,
+        std::atomic_bool const& query_cancelled,
+        int controller_socket_fd
+);
 /**
  * Searches an archive with the given path
  * @param command_line_args
@@ -84,10 +86,15 @@ static SearchFilesResult search_files (Query& query, Archive& archive, MetadataD
  * @param controller_socket_fd
  * @return true on success, false otherwise
  */
-static bool search_archive (const CommandLineArguments& command_line_args, const boost::filesystem::path& archive_path,
-                            const std::atomic_bool& query_cancelled, int controller_socket_fd);
+static bool search_archive(
+        CommandLineArguments const& command_line_args,
+        boost::filesystem::path const& archive_path,
+        std::atomic_bool const& query_cancelled,
+        int controller_socket_fd
+);
 
-static int connect_to_search_controller (const string& controller_host, const string& controller_port) {
+static int
+connect_to_search_controller(string const& controller_host, string const& controller_port) {
     // Get address info for controller
     struct addrinfo hints = {};
     // Address can be IPv4 or IPV6
@@ -97,7 +104,12 @@ static int connect_to_search_controller (const string& controller_host, const st
     hints.ai_flags = 0;
     hints.ai_protocol = 0;
     struct addrinfo* addresses_head = nullptr;
-    int error = getaddrinfo(controller_host.c_str(), controller_port.c_str(), &hints, &addresses_head);
+    int error = getaddrinfo(
+            controller_host.c_str(),
+            controller_port.c_str(),
+            &hints,
+            &addresses_head
+    );
     if (0 != error) {
         SPDLOG_ERROR("Failed to get address information for search controller, error={}", error);
         return -1;
@@ -130,19 +142,29 @@ static int connect_to_search_controller (const string& controller_host, const st
     return controller_socket_fd;
 }
 
-static ErrorCode send_result (const string& orig_file_path, const Message& compressed_msg,
-                              const string& decompressed_msg, int controller_socket_fd)
-{
-    msgpack::type::tuple<std::string, epochtime_t, std::string> src(orig_file_path, compressed_msg.get_ts_in_milli(),
-                                                                    decompressed_msg);
+static ErrorCode send_result(
+        string const& orig_file_path,
+        Message const& compressed_msg,
+        string const& decompressed_msg,
+        int controller_socket_fd
+) {
+    msgpack::type::tuple<std::string, epochtime_t, std::string> src(
+            orig_file_path,
+            compressed_msg.get_ts_in_milli(),
+            decompressed_msg
+    );
     msgpack::sbuffer m;
     msgpack::pack(m, src);
     return networking::try_send(controller_socket_fd, m.data(), m.size());
 }
 
-static SearchFilesResult search_files (Query& query, Archive& archive, MetadataDB::FileIterator& file_metadata_ix,
-                                       const std::atomic_bool& query_cancelled, int controller_socket_fd)
-{
+static SearchFilesResult search_files(
+        Query& query,
+        Archive& archive,
+        MetadataDB::FileIterator& file_metadata_ix,
+        std::atomic_bool const& query_cancelled,
+        int controller_socket_fd
+) {
     SearchFilesResult result = SearchFilesResult::Success;
 
     File compressed_file;
@@ -165,11 +187,21 @@ static SearchFilesResult search_files (Query& query, Archive& archive, MetadataD
         }
 
         query.make_sub_queries_relevant_to_segment(compressed_file.get_segment_id());
-        while (false == query_cancelled &&
-               Grep::search_and_decompress(query, archive, compressed_file, compressed_message, decompressed_message))
+        while (false == query_cancelled
+               && Grep::search_and_decompress(
+                       query,
+                       archive,
+                       compressed_file,
+                       compressed_message,
+                       decompressed_message
+               ))
         {
-            error_code = send_result(compressed_file.get_orig_path(), compressed_message, decompressed_message,
-                                     controller_socket_fd);
+            error_code = send_result(
+                    compressed_file.get_orig_path(),
+                    compressed_message,
+                    decompressed_message,
+                    controller_socket_fd
+            );
             if (ErrorCode_Success != error_code) {
                 result = SearchFilesResult::ResultSendFailure;
                 break;
@@ -186,17 +218,23 @@ static SearchFilesResult search_files (Query& query, Archive& archive, MetadataD
     return result;
 }
 
-static bool search_archive (const CommandLineArguments& command_line_args, const boost::filesystem::path& archive_path,
-                            const std::atomic_bool& query_cancelled, int controller_socket_fd)
-{
+static bool search_archive(
+        CommandLineArguments const& command_line_args,
+        boost::filesystem::path const& archive_path,
+        std::atomic_bool const& query_cancelled,
+        int controller_socket_fd
+) {
     if (false == boost::filesystem::exists(archive_path)) {
         SPDLOG_ERROR("Archive '{}' does not exist.", archive_path.c_str());
         return false;
     }
     auto archive_metadata_file = archive_path / streaming_archive::cMetadataFileName;
     if (false == boost::filesystem::exists(archive_metadata_file)) {
-        SPDLOG_ERROR("Archive metadata file '{}' does not exist. '{}' may not be an archive.",
-                     archive_metadata_file.c_str(), archive_path.c_str());
+        SPDLOG_ERROR(
+                "Archive metadata file '{}' does not exist. '{}' may not be an archive.",
+                archive_metadata_file.c_str(),
+                archive_path.c_str()
+        );
         return false;
     }
 
@@ -223,9 +261,18 @@ static bool search_archive (const CommandLineArguments& command_line_args, const
     auto search_end_ts = command_line_args.get_search_end_ts();
 
     Query query;
-    if (false == Grep::process_raw_query(archive_reader, command_line_args.get_search_string(), search_begin_ts,
-                                         search_end_ts, command_line_args.ignore_case(), query, *forward_lexer,
-                                         *reverse_lexer, use_heuristic))
+    if (false
+        == Grep::process_raw_query(
+                archive_reader,
+                command_line_args.get_search_string(),
+                search_begin_ts,
+                search_end_ts,
+                command_line_args.ignore_case(),
+                query,
+                *forward_lexer,
+                *reverse_lexer,
+                use_heuristic
+        ))
     {
         return true;
     }
@@ -234,16 +281,29 @@ static bool search_archive (const CommandLineArguments& command_line_args, const
     std::set<segment_id_t> ids_of_segments_to_search;
     for (auto& sub_query : query.get_sub_queries()) {
         auto& ids_of_matching_segments = sub_query.get_ids_of_matching_segments();
-        ids_of_segments_to_search.insert(ids_of_matching_segments.cbegin(), ids_of_matching_segments.cend());
+        ids_of_segments_to_search.insert(
+                ids_of_matching_segments.cbegin(),
+                ids_of_matching_segments.cend()
+        );
     }
 
     // Search segments
-    auto file_metadata_ix_ptr = archive_reader.get_file_iterator(search_begin_ts, search_end_ts,
-                                                                 command_line_args.get_file_path(), cInvalidSegmentId);
+    auto file_metadata_ix_ptr = archive_reader.get_file_iterator(
+            search_begin_ts,
+            search_end_ts,
+            command_line_args.get_file_path(),
+            cInvalidSegmentId
+    );
     auto& file_metadata_ix = *file_metadata_ix_ptr;
     for (auto segment_id : ids_of_segments_to_search) {
         file_metadata_ix.set_segment_id(segment_id);
-        auto result = search_files(query, archive_reader, file_metadata_ix, query_cancelled, controller_socket_fd);
+        auto result = search_files(
+                query,
+                archive_reader,
+                file_metadata_ix,
+                query_cancelled,
+                controller_socket_fd
+        );
         if (SearchFilesResult::ResultSendFailure == result) {
             // Stop search now since results aren't reaching the controller
             break;
@@ -256,7 +316,7 @@ static bool search_archive (const CommandLineArguments& command_line_args, const
     return true;
 }
 
-int main (int argc, const char* argv[]) {
+int main(int argc, char const* argv[]) {
     // Program-wide initialization
     try {
         auto stderr_logger = spdlog::stderr_logger_st("stderr");
@@ -281,31 +341,49 @@ int main (int argc, const char* argv[]) {
             break;
     }
 
-    int controller_socket_fd = connect_to_search_controller(command_line_args.get_search_controller_host(),
-                                                            command_line_args.get_search_controller_port());
+    int controller_socket_fd = connect_to_search_controller(
+            command_line_args.get_search_controller_host(),
+            command_line_args.get_search_controller_port()
+    );
     if (-1 == controller_socket_fd) {
         return -1;
     }
 
-    const auto archive_path = boost::filesystem::path(command_line_args.get_archive_path());
+    auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());
 
     ControllerMonitoringThread controller_monitoring_thread(controller_socket_fd);
     controller_monitoring_thread.start();
 
     int return_value = 0;
     try {
-        if (false == search_archive(command_line_args, archive_path, controller_monitoring_thread.get_query_cancelled(),
-                                    controller_socket_fd))
+        if (false
+            == search_archive(
+                    command_line_args,
+                    archive_path,
+                    controller_monitoring_thread.get_query_cancelled(),
+                    controller_socket_fd
+            ))
         {
             return_value = -1;
         }
     } catch (TraceableException& e) {
         auto error_code = e.get_error_code();
         if (ErrorCode_errno == error_code) {
-            SPDLOG_ERROR("Search failed: {}:{} {}, errno={}", e.get_filename(), e.get_line_number(), e.what(), errno);
+            SPDLOG_ERROR(
+                    "Search failed: {}:{} {}, errno={}",
+                    e.get_filename(),
+                    e.get_line_number(),
+                    e.what(),
+                    errno
+            );
         } else {
-            SPDLOG_ERROR("Search failed: {}:{} {}, error_code={}", e.get_filename(), e.get_line_number(), e.what(),
-                         error_code);
+            SPDLOG_ERROR(
+                    "Search failed: {}:{} {}, error_code={}",
+                    e.get_filename(),
+                    e.get_line_number(),
+                    e.what(),
+                    error_code
+            );
         }
         return_value = -1;
     }
@@ -315,7 +393,7 @@ int main (int argc, const char* argv[]) {
     if (0 != shutdown_result) {
         if (ENOTCONN != shutdown_result) {
             SPDLOG_ERROR("Failed to shutdown socket, error={}", shutdown_result);
-        } // else connection already disconnected, so nothing to do
+        }  // else connection already disconnected, so nothing to do
     }
 
     try {
@@ -323,12 +401,21 @@ int main (int argc, const char* argv[]) {
     } catch (TraceableException& e) {
         auto error_code = e.get_error_code();
         if (ErrorCode_errno == error_code) {
-            SPDLOG_ERROR("Failed to join with controller monitoring thread: {}:{} {}, errno={}",
-                         e.get_filename(), e.get_line_number(), e.what(), errno);
+            SPDLOG_ERROR(
+                    "Failed to join with controller monitoring thread: {}:{} {}, errno={}",
+                    e.get_filename(),
+                    e.get_line_number(),
+                    e.what(),
+                    errno
+            );
         } else {
-            SPDLOG_ERROR("Failed to join with controller monitoring thread: {}:{} {}, "
-                         "error_code={}", e.get_filename(), e.get_line_number(), e.what(),
-                         error_code);
+            SPDLOG_ERROR(
+                    "Failed to join with controller monitoring thread: {}:{} {}, error_code={}",
+                    e.get_filename(),
+                    e.get_line_number(),
+                    e.what(),
+                    error_code
+            );
         }
         return_value = -1;
     }

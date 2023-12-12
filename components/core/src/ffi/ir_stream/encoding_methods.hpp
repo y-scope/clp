@@ -73,8 +73,8 @@ namespace four_byte_encoding {
     );
 
     /**
-     * Encodes the given message into the four-byte encoding IR stream without
-     * encoding timestamp delta
+     * Encodes the given message into the four-byte encoding IR stream without encoding timestamp
+     * delta
      * @param message
      * @param logtype
      * @param ir_buf

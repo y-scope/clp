@@ -101,8 +101,8 @@ auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event()
     return LogEvent<encoded_variable_t>{timestamp, logtype, dict_vars, encoded_vars};
 }
 
-// Explicitly declare template specializations so that we can define the
-// template methods in this file
+// Explicitly declare template specializations so that we can define the template methods in this
+// file
 template auto
 LogEventDeserializer<ffi::eight_byte_encoded_variable_t>::create(ReaderInterface& reader)
         -> BOOST_OUTCOME_V2_NAMESPACE::std_result<

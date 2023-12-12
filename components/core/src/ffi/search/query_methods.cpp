@@ -18,11 +18,10 @@ static auto TokenGetEndPos = [](auto const& token) { return token.get_end_pos();
 /**
  * Finds the next delimiter that's not also a wildcard
  * @param value
- * @param pos Position to the start the search from, returns the position of the
- * delimiter (if found)
+ * @param pos Position to the start the search from, returns the position of the delimiter (if
+ * found)
  * @param contains_alphabet Returns whether the string contains an alphabet
- * @param contains_decimal_digit Returns whether the string contains a decimal
- * digit
+ * @param contains_decimal_digit Returns whether the string contains a decimal digit
  * @param contains_wildcard Returns whether the string contains a wildcard
  */
 static void find_delimiter(
@@ -33,11 +32,10 @@ static void find_delimiter(
         bool& contains_wildcard
 );
 /**
- * Finds the next wildcard or non-delimiter in the given string, starting from
- * the given position
+ * Finds the next wildcard or non-delimiter in the given string, starting from the given position
  * @param value
- * @param pos Position to the start the search from, returns the position of the
- * wildcard or non-delimiter (if found)
+ * @param pos Position to the start the search from, returns the position of the wildcard or
+ * non-delimiter (if found)
  * @param contains_wildcard Returns whether the string contains a wildcard
  * @return Whether a wildcard/non-delimiter was found
  */
@@ -45,13 +43,12 @@ static bool find_wildcard_or_non_delimiter(string_view value, size_t& pos, bool&
 
 /**
  * Tokenizes the given wildcard query into exact variables (as would be found by
- * ffi::get_bounds_of_next_var) and potential variables, i.e., any token with a
- * wildcard.
+ * ffi::get_bounds_of_next_var) and potential variables, i.e., any token with a wildcard.
  * @tparam encoded_variable_t Type for encoded variable values
  * @param wildcard_query
  * @param tokens
- * @param composite_wildcard_token_indexes Indexes of the tokens in \p tokens
- * which contain wildcards
+ * @param composite_wildcard_token_indexes Indexes of the tokens in \p tokens which contain
+ * wildcards
  */
 template <typename encoded_variable_t>
 static void tokenize_query(
@@ -87,8 +84,8 @@ void generate_subqueries(
     auto escape_handler
             = [](string_view constant, size_t char_to_escape_pos, string& logtype) -> void {
         auto const next_char_pos{char_to_escape_pos + 1};
-        // NOTE: We don't want to add additional escapes for wildcards that have
-        // been escaped. E.g., the query "\\*" should remain unchanged.
+        // NOTE: We don't want to add additional escapes for wildcards that have been escaped. E.g.,
+        // the query "\\*" should remain unchanged.
         if (ir::is_variable_placeholder(constant[char_to_escape_pos])
             || (next_char_pos < constant.length() && false == is_wildcard(constant[next_char_pos])))
         {
@@ -122,7 +119,8 @@ void generate_subqueries(
                                     CompositeWildcardToken<encoded_variable_t> const& token
                             ) {  // clang-format on
                                 token.add_to_query(logtype_query, query_vars);
-                            }},
+                            }
+                    },
                     token
             );
 
@@ -166,8 +164,8 @@ void tokenize_query(
                         CompositeWildcardToken<encoded_variable_t>>>& tokens,
         vector<size_t>& composite_wildcard_token_indexes
 ) {
-    // Tokenize query using delimiters to get definite variables and tokens
-    // containing wildcards (potential variables)
+    // Tokenize query using delimiters to get definite variables and tokens containing wildcards
+    // (potential variables)
     size_t end_pos = 0;
     while (true) {
         auto begin_pos = end_pos;
@@ -203,8 +201,7 @@ void tokenize_query(
             string_view variable(wildcard_query.cbegin() + begin_pos, end_pos - begin_pos);
             // Treat token as variable if:
             // - it contains a decimal digit, or
-            // - it's directly preceded by an equals sign and contains an
-            //   alphabet, or
+            // - it's directly preceded by an equals sign and contains an alphabet, or
             // - it could be a multi-digit hex value
             if (contains_decimal_digit
                 || (begin_pos > 0 && '=' == wildcard_query[begin_pos - 1] && contains_alphabet)
@@ -236,8 +233,7 @@ static void find_delimiter(
             is_escaped = false;
 
             if (is_delim(c)) {
-                // Found escaped delimiter, so reverse the index to exclude the
-                // escape character
+                // Found escaped delimiter, so reverse the index to exclude the escape character
                 --pos;
                 return;
             }
@@ -271,8 +267,7 @@ find_wildcard_or_non_delimiter(string_view value, size_t& pos, bool& contains_wi
             is_escaped = false;
 
             if (false == is_delim(c)) {
-                // Found escaped non-delimiter, so reverse the index to retain
-                // the escape character
+                // Found escaped non-delimiter, so reverse the index to retain the escape character
                 --pos;
                 return true;
             }
@@ -291,8 +286,8 @@ find_wildcard_or_non_delimiter(string_view value, size_t& pos, bool& contains_wi
     return false;
 }
 
-// Explicitly declare specializations to avoid having to validate that the
-// template parameters are supported
+// Explicitly declare specializations to avoid having to validate that the template parameters are
+// supported
 template void generate_subqueries<eight_byte_encoded_variable_t>(
         string_view wildcard_query,
         vector<Subquery<eight_byte_encoded_variable_t>>& sub_queries

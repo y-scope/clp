@@ -36,8 +36,7 @@ public:
 
     // Methods
     /**
-     * Initialize streaming decompressor to decompress from the specified
-     * compressed data buffer
+     * Initialize streaming decompressor to decompress from the specified compressed data buffer
      * @param compressed_data_buffer
      * @param compressed_data_buffer_size
      */
@@ -45,8 +44,7 @@ public:
     /**
      * Initializes the decompressor to decompress from an open file
      * @param file_reader
-     * @param file_read_buffer_capacity The maximum amount of data to read from
-     * a file at a time
+     * @param file_read_buffer_capacity The maximum amount of data to read from a file at a time
      */
     virtual void open(FileReader& file_reader, size_t file_read_buffer_capacity) = 0;
     /**

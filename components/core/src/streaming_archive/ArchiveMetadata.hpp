@@ -41,8 +41,7 @@ public:
     );
 
     /**
-     * Constructs a metadata object and initializes it from the given file
-     * reader
+     * Constructs a metadata object and initializes it from the given file reader
      * @param file_reader
      */
     explicit ArchiveMetadata(FileReader& file_reader);
@@ -70,8 +69,7 @@ public:
         return m_compressed_size + m_dynamic_compressed_size;
     }
 
-    void increment_static_compressed_size(uint64_t size_bytes) { m_compressed_size += size_bytes;
-    }
+    void increment_static_compressed_size(uint64_t size_bytes) { m_compressed_size += size_bytes; }
 
     void set_dynamic_compressed_size(uint64_t size_bytes) {
         m_dynamic_compressed_size = size_bytes;

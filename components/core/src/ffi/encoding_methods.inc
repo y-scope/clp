@@ -61,8 +61,7 @@ bool encode_float_string(std::string_view str, encoded_variable_t& encoded_var) 
         }
     }
     if (std::string::npos == decimal_point_pos || 0 == decimal_point_pos || 0 == num_digits) {
-        // No decimal point found, decimal point is after all digits, or no
-        // digits found
+        // No decimal point found, decimal point is after all digits, or no digits found
         return false;
     }
     if constexpr (std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>) {
@@ -100,25 +99,23 @@ encoded_variable_t encode_float_properties(
         // Encode into 64 bits with the following format (from MSB to LSB):
         // -  1 bit : is negative
         // -  1 bit : unused
-        // - 54 bits: The digits of the float without the decimal, as an
-        //            integer
+        // - 54 bits: The digits of the float without the decimal, as an integer
         // -  4 bits: # of decimal digits minus 1
-        //     - This format can represent floats with between 1 and 16 decimal
-        //       digits, so we use 4 bits and map the range [1, 16] to
-        //       [0x0, 0xF]
+        //     - This format can represent floats with between 1 and 16 decimal digits, so we use 4
+        //       bits and map the range [1, 16] to [0x0, 0xF]
         // -  4 bits: position of the decimal from the right minus 1
         //     - To see why the position is taken from the right, consider
         //       (1) "-123456789012345.6", (2) "-.1234567890123456", and
         //       (3) ".1234567890123456"
-        //         - For (1), the decimal point is at index 16 from the left and
-        //         index 1 from the right.
-        //         - For (2), the decimal point is at index 1 from the left and
-        //           index 16 from the right.
-        //         - For (3), the decimal point is at index 0 from the left and
-        //           index 16 from the right.
-        //         - So if we take the decimal position from the left, it can
-        //           range from 0 to 16 because of the negative sign. Whereas
-        //           from the right, the negative sign is inconsequential.
+        //         - For (1), the decimal point is at index 16 from the left and index 1 from the
+        //           right.
+        //         - For (2), the decimal point is at index 1 from the left and index 16 from the
+        //           right.
+        //         - For (3), the decimal point is at index 0 from the left and index 16 from the
+        //           right.
+        //         - So if we take the decimal position from the left, it can range from 0 to 16
+        //           because of the negative sign. Whereas from the right, the negative sign is
+        //           inconsequential.
         //     - Thus, we use 4 bits and map the range [1, 16] to [0x0, 0xF].
         uint64_t encoded_float = 0;
         if (is_negative) {
@@ -136,24 +133,22 @@ encoded_variable_t encode_float_properties(
 
         // Encode into 32 bits with the following format (from MSB to LSB):
         // -  1 bit : is negative
-        // - 25 bits: The digits of the float without the decimal, as an
-        //            integer
+        // - 25 bits: The digits of the float without the decimal, as an integer
         // -  3 bits: # of decimal digits minus 1
-        //     - This format can represent floats with between 1 and 8 decimal
-        //       digits, so we use 3 bits and map the range [1, 8] to
-        //       [0x0, 0x7]
+        //     - This format can represent floats with between 1 and 8 decimal digits, so we use 3
+        //       bits and map the range [1, 8] to [0x0, 0x7]
         // -  3 bits: position of the decimal from the right minus 1
         //     - To see why the position is taken from the right, consider
         //       (1) "-1234567.8", (2) "-.12345678", and (3) ".12345678"
-        //         - For (1), the decimal point is at index 8 from the left and
-        //           index 1 from the right.
-        //         - For (2), the decimal point is at index 1 from the left and
-        //           index 8 from the right.
-        //         - For (3), the decimal point is at index 0 from the left and
-        //           index 8 from the right.
-        //         - So if we take the decimal position from the left, it can
-        //           range from 0 to 8 because of the negative sign. Whereas
-        //           from the right, the negative sign is inconsequential.
+        //         - For (1), the decimal point is at index 8 from the left and index 1 from the
+        //           right.
+        //         - For (2), the decimal point is at index 1 from the left and index 8 from the
+        //           right.
+        //         - For (3), the decimal point is at index 0 from the left and index 8 from the
+        //           right.
+        //         - So if we take the decimal position from the left, it can range from 0 to 8
+        //           because of the negative sign. Whereas from the right, the negative sign is
+        //           inconsequential.
         //     - Thus, we use 3 bits and map the range [1, 8] to [0x0, 0x7].
         uint32_t encoded_float = 0;
         if (is_negative) {
@@ -193,8 +188,7 @@ void decode_float_properties(
         num_digits = (encoded_float & 0x0F) + 1;
         encoded_float >>= 4;
         digits = encoded_float & cEightByteEncodedFloatDigitsBitMask;
-        // This is the maximum base-10 number with
-        // cMaxDigitsInRepresentableEightByteFloatVar
+        // This is the maximum base-10 number with cMaxDigitsInRepresentableEightByteFloatVar
         constexpr uint64_t cMaxRepresentableDigitsValue = 9'999'999'999'999'999;
         if (digits > cMaxRepresentableDigitsValue) {
             throw EncodingException(
@@ -314,8 +308,7 @@ bool encode_integer_string(std::string_view str, encoded_variable_t& encoded_var
         return false;
     }
 
-    // Ensure start of value is an integer with no zero-padding or positive
-    // sign
+    // Ensure start of value is an integer with no zero-padding or positive sign
     if ('-' == str[0]) {
         // Ensure first character after sign is a non-zero integer
         if (length < 2 || str[1] < '1' || '9' < str[1]) {
@@ -391,7 +384,8 @@ bool encode_message_generically(
     if (constant_begin_pos < message.length()) {
         std::string_view constant{
                 &message[constant_begin_pos],
-                message.length() - constant_begin_pos};
+                message.length() - constant_begin_pos
+        };
         constant_handler(constant, logtype);
     }
 

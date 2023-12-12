@@ -38,8 +38,7 @@ public:
     /**
      * Tries to read up to an occurrence of the given delimiter
      * @param delim
-     * @param keep_delimiter Whether to include the delimiter in the output
-     * string
+     * @param keep_delimiter Whether to include the delimiter in the output string
      * @param str Returns the content read from the buffer
      * @param found_delim Whether a delimiter was found
      * @param num_bytes_read How many bytes were read from the buffer
@@ -67,8 +66,7 @@ public:
             -> ErrorCode override;
 
     /**
-     * Tries to seek to the given position, relative to the beginning of the
-     * buffer
+     * Tries to seek to the given position, relative to the beginning of the buffer
      * @param pos
      * @return ErrorCode_Truncated if \p pos > the buffer's size
      * @return ErrorCode_Success on success
@@ -84,13 +82,10 @@ public:
     /**
      * Tries to read up to an occurrence of the given delimiter
      * @param delim
-     * @param keep_delimiter Whether to include the delimiter in the output
-     * string
-     * @param append Whether to append to the given string or replace its
-     * contents
+     * @param keep_delimiter Whether to include the delimiter in the output string
+     * @param append Whether to append to the given string or replace its contents
      * @param str Returns the content read from the buffer
-     * @return Same as BufferReader::try_read_to_delimiter(char, bool,
-     * std::string&, bool&, size_t&)
+     * @return Same as BufferReader::try_read_to_delimiter(char, bool, std::string&, bool&, size_t&)
      */
     [[nodiscard]] auto
     try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str)

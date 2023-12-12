@@ -14,12 +14,12 @@ ArchiveMetadata::ArchiveMetadata(
     }
     m_creator_id_len = m_creator_id.length();
 
-    // NOTE: We set this to the size of this metadata on disk; when adding new
-    // members that will be written to disk, you must update this
+    // NOTE: We set this to the size of this metadata on disk; when adding new members that will be
+    // written to disk, you must update this
     m_compressed_size += sizeof(m_archive_format_version) + sizeof(m_creator_id_len)
-                               + m_creator_id.length() + sizeof(m_creation_idx)
-                               + sizeof(m_uncompressed_size) + sizeof(m_begin_timestamp)
-                               + sizeof(m_end_timestamp) + sizeof(m_compressed_size);
+                         + m_creator_id.length() + sizeof(m_creation_idx)
+                         + sizeof(m_uncompressed_size) + sizeof(m_begin_timestamp)
+                         + sizeof(m_end_timestamp) + sizeof(m_compressed_size);
 }
 
 ArchiveMetadata::ArchiveMetadata(FileReader& file_reader) {

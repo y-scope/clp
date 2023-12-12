@@ -35,7 +35,7 @@ static bool could_be_int_var(string_view token);
 static bool could_be_static_text(string_view query, size_t begin_pos, size_t end_pos);
 
 template <typename encoded_variable_t>
-static bool could_be_float_var(const string_view token) {
+static bool could_be_float_var(string_view token) {
     size_t num_decimals = 0;
     size_t num_negative_signs = 0;
     size_t num_digits = 0;
@@ -71,7 +71,7 @@ static bool could_be_float_var(const string_view token) {
 }
 
 template <typename encoded_variable_t>
-static bool could_be_int_var(const string_view token) {
+static bool could_be_int_var(string_view token) {
     size_t num_negative_signs = 0;
     size_t num_digits = 0;
     for (auto c : token) {
@@ -104,11 +104,10 @@ static bool could_be_int_var(const string_view token) {
 }
 
 /**
- * To check if the token could be static text, formally, we need to check if the
- * token matches the complement of all variable schemas ORed together
- * (~((schema1)|(schema2)|...). Another way of looking at this is if the token
- * contains anything which indicates it's definitely a variable, then it can't
- * be static text.
+ * To check if the token could be static text, formally, we need to check if the token matches the
+ * complement of all variable schemas ORed together (~((schema1)|(schema2)|...). Another way of
+ * looking at this is if the token contains anything which indicates it's definitely a variable,
+ * then it can't be static text.
  */
 static bool could_be_static_text(string_view query, size_t begin_pos, size_t end_pos) {
     bool is_escaped = false;
@@ -129,10 +128,9 @@ static bool could_be_static_text(string_view query, size_t begin_pos, size_t end
     if (begin_pos > 0 && '=' == query[begin_pos - 1]) {
         if ('?' == query[begin_pos] && contains_alphabet) {
             // "=?...<alphabet>..." must be a variable since
-            // 1. '?' would only be included in the variable token if it was
-            //    treated as a non-delimiter, and
-            // 2. an '=' followed by non-delimiters and an alphabet is
-            //    definitely a variable.
+            // 1. '?' would only be included in the variable token if it was treated as a
+            //    non-delimiter, and
+            // 2. an '=' followed by non-delimiters and an alphabet is definitely a variable.
             return false;
         }
     }
@@ -168,12 +166,11 @@ WildcardToken<encoded_variable_t>::WildcardToken(
 
 template <typename encoded_variable_t>
 bool WildcardToken<encoded_variable_t>::add_to_logtype_query(string& logtype_query) const {
-    // Recall from CompositeWildcardToken::add_to_query: We need to handle '*'
-    // carefully when adding to the logtype query since we may have a token like
-    // "a1*b2" with interpretation ["a1*", "*b2"], i.e., the first token's
-    // suffix '*' is the second token's prefix '*'. So we only add the current
-    // token's prefix '*' below and ignore any suffix '*' since they will be
-    // captured by the next token.
+    // Recall from CompositeWildcardToken::add_to_query: We need to handle '*' carefully when adding
+    // to the logtype query since we may have a token like "a1*b2" with interpretation ["a1*",
+    // "*b2"], i.e., the first token's suffix '*' is the second token's prefix '*'. So we only add
+    // the current token's prefix '*' below and ignore any suffix '*' since they will be captured by
+    // the next token.
     auto current_interpretation = m_possible_variable_types[m_current_interpretation_idx];
     if (TokenType::StaticText == current_interpretation) {
         if (m_has_suffix_star_wildcard) {
@@ -215,8 +212,8 @@ bool WildcardToken<encoded_variable_t>::next_interpretation() {
     }
 }
 
-// Explicitly declare specializations to avoid having to validate that the
-// template parameters are supported
+// Explicitly declare specializations to avoid having to validate that the template parameters are
+// supported
 template class WildcardToken<ffi::eight_byte_encoded_variable_t>;
 template class WildcardToken<ffi::four_byte_encoded_variable_t>;
 }  // namespace ffi::search

@@ -106,8 +106,8 @@ auto BufferedFileReader::close() -> void {
         m_checkpoint_pos.reset();
     }
 
-    // NOTE: We don't check errors for close since, in the read case, it seems
-    // the only reason it could fail is if it was interrupted by a signal
+    // NOTE: We don't check errors for close since, in the read case, it seems the only reason it
+    // could fail is if it was interrupted by a signal
     ::close(m_fd);
     m_fd = -1;
 }
@@ -332,8 +332,7 @@ auto BufferedFileReader::refill_reader_buffer(size_t num_bytes_to_refill) -> Err
     } else {
         num_bytes_to_read = m_base_buffer_size - (buffer_end_pos % m_base_buffer_size);
         if (num_bytes_to_read > available_buffer_space) {
-            // Advance the entire buffer since we don't grow the buffer if
-            // there's no checkpoint
+            // Advance the entire buffer since we don't grow the buffer if there's no checkpoint
             next_buffer_pos = 0;
             next_buffer_begin_pos = buffer_end_pos;
         } else {

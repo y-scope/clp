@@ -100,8 +100,7 @@ void generic_decode_message(
             }
 
             case enum_to_underlying_type(ir::VariablePlaceholder::Escape): {
-                // Ensure the escape character is followed by a
-                // character that's being escaped
+                // Ensure the escape character is followed by a character that's being escaped
                 if (cur_pos == logtype_length - 1) {
                     throw DecodingException(
                             ErrorCode_Corrupt,
@@ -121,11 +120,10 @@ void generic_decode_message(
                     // Skip the escape character
                     next_static_text_begin_pos = cur_pos + 1;
                 }
-                // The character after the escape character is static text
-                // (regardless of whether it is a variable placeholder), so
-                // increment cur_pos by 1 to ensure we don't process the
-                // next character in any of the other cases (instead it will
-                // be added to the message).
+                // The character after the escape character is static text (regardless of whether it
+                // is a variable placeholder), so increment cur_pos by 1 to ensure we don't process
+                // the next character in any of the other cases (instead it will be added to the
+                // message).
                 ++cur_pos;
 
                 break;
