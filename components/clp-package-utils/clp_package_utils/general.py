@@ -1,3 +1,4 @@
+import os
 import enum
 import errno
 import pathlib
@@ -58,6 +59,23 @@ class CLPDockerMounts:
         self.logs_dir: typing.Optional[DockerMount] = None
         self.archives_output_dir: typing.Optional[DockerMount] = None
 
+def get_clp_home():
+    # Determine CLP_HOME from an environment variable or this script's path
+    clp_home = None
+    if 'CLP_HOME' in os.environ:
+        clp_home = pathlib.Path(os.environ['CLP_HOME'])
+    else:
+        for path in pathlib.Path(__file__).resolve().parents:
+            if 'lib' == path.name:
+                clp_home = path.parent
+                break
+
+    if clp_home is None:
+        raise ValueError("CLP_HOME is not set and could not be determined automatically.")
+    elif not clp_home.exists():
+        raise ValueError("CLP_HOME set to nonexistent path.")
+
+    return clp_home.resolve()
 
 def check_dependencies():
     try:
