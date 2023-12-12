@@ -55,7 +55,7 @@ clp_home = get_clp_home()
 if clp_home is None or not load_bundled_python_lib_path(clp_home):
     sys.exit(-1)
 
-from clp.package_utils import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, validate_and_load_config_file
+from clp_package_utils.general import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, validate_and_load_config_file
 from clp_py_utils.sql_adapter import SQL_Adapter
 from compression_job_handler.compression_job_handler import handle_jobs
 from job_orchestration.job_config import ClpIoConfig, InputConfig, OutputConfig

@@ -54,7 +54,7 @@ clp_home = get_clp_home()
 if clp_home is None or not load_bundled_python_lib_path(clp_home):
     sys.exit(-1)
 
-from clp.package_utils import \
+from clp_package_utils.general import \
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
     DB_COMPONENT_NAME, \
     QUEUE_COMPONENT_NAME, \

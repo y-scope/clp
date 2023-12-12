@@ -56,9 +56,10 @@ if clp_home is None or not load_bundled_python_lib_path(clp_home):
     sys.exit(-1)
 
 import yaml
-from clp.package_utils import \
+from clp_package_utils.general import \
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
     CONTAINER_CLP_HOME, \
+    CONTAINER_INPUT_LOGS_ROOT_DIR, \
     generate_container_config, \
     validate_and_load_config_file, \
     validate_and_load_db_credentials_file
@@ -67,11 +68,12 @@ from clp.package_utils import \
 def main(argv):
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
-    args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")
+    args_parser = argparse.ArgumentParser(description="Compresses files/directories")
     args_parser.add_argument('--config', '-c', default=str(default_config_file_path),
                              help="CLP package configuration file.")
-    args_parser.add_argument('wildcard_query', help="Wildcard query.")
-    args_parser.add_argument('--file-path', help="File to search.")
+    args_parser.add_argument('paths', metavar='PATH', nargs='*', help="Paths to compress.")
+    args_parser.add_argument('-f', '--input-list', dest='input_list', help="A file listing all paths to compress.")
+
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate and load config file
@@ -80,13 +82,12 @@ def main(argv):
         clp_config = validate_and_load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_logs_dir()
 
-        # Validate and load necessary credentials
-        validate_and_load_db_credentials_file(clp_config, clp_home, True)
+        validate_and_load_db_credentials_file(clp_config, clp_home, False)
     except:
         logger.exception("Failed to load config.")
         return -1
 
-    container_name = f'clp-search-{str(uuid.uuid4())[-4:]}'
+    container_name = f'clp-compressor-{str(uuid.uuid4())[-4:]}'
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     container_config_filename = f'.{container_name}-config.yml'
@@ -105,8 +106,10 @@ def main(argv):
         '--mount', str(mounts.clp_home),
     ]
     necessary_mounts = [
+        mounts.input_logs_dir,
+        mounts.data_dir,
         mounts.logs_dir,
-        mounts.archives_output_dir,
+        mounts.archives_output_dir
     ]
     for mount in necessary_mounts:
         if mount:
@@ -114,15 +117,45 @@ def main(argv):
             container_start_cmd.append(str(mount))
     container_start_cmd.append(clp_config.execution_container)
 
-    search_cmd = [
-        str(CONTAINER_CLP_HOME / 'sbin' / 'native' / 'search'),
+    compress_cmd = [
+        str(CONTAINER_CLP_HOME / 'sbin' / 'native' / 'compress'),
         '--config', str(container_clp_config.logs_directory / container_config_filename),
-        parsed_args.wildcard_query,
+        '--remove-path-prefix', str(CONTAINER_INPUT_LOGS_ROOT_DIR)
     ]
-    if parsed_args.file_path:
-        search_cmd.append('--file-path')
-        search_cmd.append(parsed_args.file_path)
-    cmd = container_start_cmd + search_cmd
+    for path in parsed_args.paths:
+        # Resolve path and prefix it with CONTAINER_INPUT_LOGS_ROOT_DIR
+        resolved_path = pathlib.Path(path).resolve()
+        path = str(CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(resolved_path.anchor))
+        compress_cmd.append(path)
+    if parsed_args.input_list is not None:
+        # Get unused output path
+        while True:
+            output_list_filename = f'{uuid.uuid4()}.txt'
+            output_list_path = clp_config.logs_directory / output_list_filename
+            if not output_list_path.exists():
+                break
+
+        try:
+            with open(output_list_path, 'w') as output_list:
+                # Validate all paths in input list
+                all_paths_valid = True
+                with open(parsed_args.input_list, 'r') as f:
+                    for line in f:
+                        resolved_path = pathlib.Path(line.rstrip()).resolve()
+                        if not resolved_path.is_absolute():
+                            logger.error(f"Invalid relative path in input list: {resolved_path}")
+                            all_paths_valid = False
+                        path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(resolved_path.anchor)
+                        output_list.write(f'{path}\n')
+                if not all_paths_valid:
+                    raise ValueError("--input-list must only contain absolute paths")
+        finally:
+            output_list_path.unlink()
+
+        compress_cmd.append('--input-list')
+        compress_cmd.append(container_clp_config.logs_directory / output_list_filename)
+
+    cmd = container_start_cmd + compress_cmd
     subprocess.run(cmd, check=True)
 
     # Remove generated files

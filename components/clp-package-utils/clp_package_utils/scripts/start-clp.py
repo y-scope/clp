@@ -59,7 +59,7 @@ if clp_home is None or not load_bundled_python_lib_path(clp_home):
     sys.exit(-1)
 
 import yaml
-from clp.package_utils import \
+from clp_package_utils.general import \
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
     CONTAINER_CLP_HOME, \
     DB_COMPONENT_NAME, \

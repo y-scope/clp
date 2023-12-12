@@ -12,5 +12,7 @@ components:
     type: local
   - name: clp-py-utils
     type: local
+  - name: clp-package-utils
+    type: local
   - name: core
     type: local

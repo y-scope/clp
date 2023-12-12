@@ -199,7 +199,7 @@ def validate_credentials_file_path(clp_config: CLPConfig, clp_home: pathlib.Path
     if not credentials_file_path.exists():
         if make_config_path_absolute(clp_home, CLP_DEFAULT_CREDENTIALS_FILE_PATH) == credentials_file_path \
                 and generate_default_file:
-           generate_credentials_file(credentials_file_path)
+            generate_credentials_file(credentials_file_path)
         else:
             raise ValueError(f"Credentials file path '{credentials_file_path}' does not exist.")
     elif not credentials_file_path.is_file():
