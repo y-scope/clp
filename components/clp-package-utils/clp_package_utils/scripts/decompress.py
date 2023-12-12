@@ -113,7 +113,6 @@ def main(argv):
         '--config', str(container_clp_config.logs_directory / container_config_filename),
         '-d', str(container_extraction_dir)
     ]
-
     for path in parsed_args.paths:
         decompress_cmd.append(path)
     if container_paths_to_decompress_file_path:

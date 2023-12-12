@@ -86,7 +86,6 @@ def main(argv):
         '--config', str(container_clp_config.logs_directory / container_config_filename),
         parsed_args.wildcard_query,
     ]
-
     if parsed_args.file_path:
         search_cmd.append('--file-path')
         search_cmd.append(parsed_args.file_path)
