@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import argparse
 import logging
 import os
@@ -6,6 +5,19 @@ import pathlib
 import subprocess
 import sys
 import uuid
+
+import yaml
+from clp_package_utils.general import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    CONTAINER_CLP_HOME,
+    DockerMount,
+    DockerMountType,
+    generate_container_config,
+    get_clp_home,
+    validate_and_load_config_file,
+    validate_and_load_db_credentials_file,
+    validate_path_could_be_dir
+)
 
 # Setup logging
 # Create logger
@@ -16,19 +28,6 @@ logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
-
-import yaml
-from clp_package_utils.general import \
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
-    CONTAINER_CLP_HOME, \
-    DockerMount, \
-    DockerMountType, \
-    generate_container_config, \
-    get_clp_home, \
-    validate_and_load_config_file, \
-    validate_and_load_db_credentials_file, \
-    validate_path_could_be_dir
-
 
 def main(argv):
     clp_home = get_clp_home()

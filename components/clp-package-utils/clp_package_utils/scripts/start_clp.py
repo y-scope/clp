@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import argparse
 import logging
 import multiprocessing
@@ -10,6 +9,31 @@ import sys
 import time
 import uuid
 
+import yaml
+from clp_package_utils.general import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    CONTAINER_CLP_HOME,
+    DB_COMPONENT_NAME,
+    QUEUE_COMPONENT_NAME,
+    SCHEDULER_COMPONENT_NAME,
+    WORKER_COMPONENT_NAME,
+    check_dependencies,
+    container_exists,
+    CLPDockerMounts,
+    DockerMount,
+    DockerMountType,
+    generate_container_config,
+    get_clp_home,
+    validate_and_load_config_file,
+    validate_and_load_db_credentials_file,
+    validate_and_load_queue_credentials_file,
+    validate_db_config,
+    validate_queue_config,
+    validate_worker_config
+)
+from clp_py_utils.clp_config import CLPConfig
+from job_orchestration.scheduler.constants import QueueName
+
 # Setup logging
 # Create logger
 logger = logging.getLogger('clp')
@@ -19,30 +43,6 @@ logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
-
-import yaml
-from clp_package_utils.general import \
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
-    CONTAINER_CLP_HOME, \
-    DB_COMPONENT_NAME, \
-    QUEUE_COMPONENT_NAME, \
-    SCHEDULER_COMPONENT_NAME, \
-    WORKER_COMPONENT_NAME, \
-    check_dependencies, \
-    container_exists, \
-    CLPDockerMounts, \
-    DockerMount, \
-    DockerMountType, \
-    generate_container_config, \
-    get_clp_home, \
-    validate_and_load_config_file, \
-    validate_and_load_db_credentials_file, \
-    validate_and_load_queue_credentials_file, \
-    validate_db_config, \
-    validate_queue_config, \
-    validate_worker_config
-from clp_py_utils.clp_config import CLPConfig
-from job_orchestration.scheduler.constants import QueueName
 
 
 def append_docker_port_settings_for_host_ips(hostname: str, host_port: int, container_port: int, cmd: [str]):

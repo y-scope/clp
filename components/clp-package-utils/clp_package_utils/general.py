@@ -10,11 +10,12 @@ import typing
 import yaml
 
 from clp_py_utils.clp_config import CLPConfig, CLP_DEFAULT_CREDENTIALS_FILE_PATH
-from clp_py_utils.core import \
-    get_config_value, \
-    make_config_path_absolute, \
-    read_yaml_config_file, \
+from clp_py_utils.core import (
+    get_config_value,
+    make_config_path_absolute,
+    read_yaml_config_file,
     validate_path_could_be_dir
+)
 
 # CONSTANTS
 # Component names

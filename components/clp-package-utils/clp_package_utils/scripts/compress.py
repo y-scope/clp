@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import argparse
 import logging
 import os
@@ -6,6 +5,16 @@ import pathlib
 import subprocess
 import sys
 import uuid
+
+import yaml
+from clp_package_utils.general import \
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
+    CONTAINER_CLP_HOME, \
+    CONTAINER_INPUT_LOGS_ROOT_DIR, \
+    generate_container_config, \
+    get_clp_home, \
+    validate_and_load_config_file, \
+    validate_and_load_db_credentials_file
 
 # Setup logging
 # Create logger
@@ -17,15 +26,6 @@ logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
-import yaml
-from clp_package_utils.general import \
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
-    CONTAINER_CLP_HOME, \
-    CONTAINER_INPUT_LOGS_ROOT_DIR, \
-    generate_container_config, \
-    get_clp_home, \
-    validate_and_load_config_file, \
-    validate_and_load_db_credentials_file
 
 
 def main(argv):

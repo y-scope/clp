@@ -1,10 +1,21 @@
-#!/usr/bin/env python3
 import argparse
 import logging
-import os
 import pathlib
 import subprocess
 import sys
+
+from clp_package_utils.general import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    DB_COMPONENT_NAME,
+    QUEUE_COMPONENT_NAME,
+    SCHEDULER_COMPONENT_NAME,
+    WORKER_COMPONENT_NAME,
+    container_exists,
+    get_clp_home,
+    validate_and_load_config_file,
+    validate_and_load_db_credentials_file,
+    validate_and_load_queue_credentials_file
+)
 
 # Setup logging
 # Create logger
@@ -15,18 +26,6 @@ logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s')
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
-
-from clp_package_utils.general import \
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
-    DB_COMPONENT_NAME, \
-    QUEUE_COMPONENT_NAME, \
-    SCHEDULER_COMPONENT_NAME, \
-    WORKER_COMPONENT_NAME, \
-    container_exists, \
-    get_clp_home, \
-    validate_and_load_config_file, \
-    validate_and_load_db_credentials_file, \
-    validate_and_load_queue_credentials_file
 
 
 def stop_container(container_name: str):

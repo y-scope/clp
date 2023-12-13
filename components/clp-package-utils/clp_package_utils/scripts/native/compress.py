@@ -1,11 +1,22 @@
-#!/usr/bin/env python3
 import argparse
 import logging
-import os
 import pathlib
 import shutil
 import sys
 import uuid
+
+from clp_package_utils.general import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    validate_and_load_config_file,
+    get_clp_home
+)
+from clp_py_utils.sql_adapter import SQL_Adapter
+from compression_job_handler.compression_job_handler import handle_jobs
+from job_orchestration.job_config import (
+    ClpIoConfig,
+    InputConfig,
+    OutputConfig
+)
 
 # Setup logging
 # Create logger
@@ -16,11 +27,6 @@ logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
-
-from clp_package_utils.general import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, validate_and_load_config_file, get_clp_home
-from clp_py_utils.sql_adapter import SQL_Adapter
-from compression_job_handler.compression_job_handler import handle_jobs
-from job_orchestration.job_config import ClpIoConfig, InputConfig, OutputConfig
 
 
 def main(argv):

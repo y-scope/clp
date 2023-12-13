@@ -1,16 +1,26 @@
-#!/usr/bin/env python3
 import argparse
 import asyncio
 import datetime
 import logging
 import multiprocessing
-import os
 import pathlib
 import socket
 import sys
 import time
 from asyncio import StreamReader, StreamWriter
 from contextlib import closing
+
+import msgpack
+import zstandard
+from clp_package_utils.general import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    validate_and_load_config_file,
+    get_clp_home
+)
+from clp_py_utils.clp_config import CLP_METADATA_TABLE_PREFIX, Database
+from clp_py_utils.sql_adapter import SQL_Adapter
+from job_orchestration.job_config import SearchConfig
+from job_orchestration.scheduler.constants import JobStatus
 
 # Setup logging
 # Create logger
@@ -21,15 +31,6 @@ logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
-
-import msgpack
-import zstandard
-
-from clp_package_utils.general import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, validate_and_load_config_file, get_clp_home
-from clp_py_utils.clp_config import CLP_METADATA_TABLE_PREFIX, Database
-from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.job_config import SearchConfig
-from job_orchestration.scheduler.constants import JobStatus
 
 
 async def run_function_in_process(function, *args, initializer=None, init_args=None):

@@ -1,11 +1,17 @@
-#!/usr/bin/env python3
 import argparse
 import logging
-import os
 import pathlib
 import subprocess
 import sys
 import uuid
+
+import yaml
+from clp_package_utils.general import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    validate_and_load_config_file,
+    get_clp_home
+)
+from clp_py_utils.clp_config import CLPConfig
 
 # Setup logging
 # Create logger
@@ -17,13 +23,10 @@ logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
-import yaml
-from clp_package_utils.general import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, validate_and_load_config_file, get_clp_home
-from clp_py_utils.clp_config import CLPConfig
 
-def decompress_paths(paths, list_path: pathlib.Path, clp_config: CLPConfig,
-                     archives_dir: pathlib.Path, logs_dir: pathlib.Path,
-                     extraction_dir: pathlib.Path, clp_home: pathlib.Path):
+def decompress_paths(clp_home: pathlib.Path, paths, list_path: pathlib.Path,
+                     clp_config: CLPConfig, archives_dir: pathlib.Path,
+                     logs_dir: pathlib.Path, extraction_dir: pathlib.Path):
     # Generate database config file for clp
     db_config_file_path = logs_dir / f'.decompress-db-config-{uuid.uuid4()}.yml'
     with open(db_config_file_path, 'w') as f:
@@ -94,8 +97,8 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    return decompress_paths(parsed_args.paths, parsed_args.files_from, clp_config, clp_config.archive_output.directory,
-                            clp_config.logs_directory, extraction_dir, clp_home)
+    return decompress_paths(clp_home, parsed_args.paths, parsed_args.files_from, clp_config,
+                            clp_config.archive_output.directory, clp_config.logs_directory, extraction_dir)
 
 
 if '__main__' == __name__:
