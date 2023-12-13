@@ -25,5 +25,6 @@ else
   python3 "${script_dir}/download-dep.py" "${script_dir}/Catch2.json"
   python3 "${script_dir}/download-dep.py" "${script_dir}/date.json"
   python3 "${script_dir}/download-dep.py" "${script_dir}/json.json"
+  python3 "${script_dir}/download-dep.py" "${script_dir}/log-surgeon.json"
   python3 "${script_dir}/download-dep.py" "${script_dir}/yaml-cpp.json"
 fi
