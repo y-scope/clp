@@ -1,0 +1,10 @@
+{
+  "url": "https://github.com/y-scope/log-surgeon/archive/895f464.zip",
+  "unzip": true,
+  "targets": [
+    {
+      "source": "log-surgeon-895f46489b1911ab3b3aac3202afd56c96e8cd98",
+      "destination": "submodules/log-surgeon"
+    }
+  ]
+}
