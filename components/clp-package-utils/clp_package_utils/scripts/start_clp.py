@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import argparse
 import logging
 import multiprocessing
@@ -10,6 +9,32 @@ import sys
 import time
 import uuid
 
+import yaml
+
+from clp_package_utils.general import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    CONTAINER_CLP_HOME,
+    DB_COMPONENT_NAME,
+    QUEUE_COMPONENT_NAME,
+    SCHEDULER_COMPONENT_NAME,
+    WORKER_COMPONENT_NAME,
+    check_dependencies,
+    container_exists,
+    CLPDockerMounts,
+    DockerMount,
+    DockerMountType,
+    generate_container_config,
+    get_clp_home,
+    validate_and_load_config_file,
+    validate_and_load_db_credentials_file,
+    validate_and_load_queue_credentials_file,
+    validate_db_config,
+    validate_queue_config,
+    validate_worker_config
+)
+from clp_py_utils.clp_config import CLPConfig
+from job_orchestration.scheduler.constants import QueueName
+
 # Setup logging
 # Create logger
 logger = logging.getLogger('clp')
@@ -19,67 +44,6 @@ logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
-
-
-def get_clp_home():
-    # Determine CLP_HOME from an environment variable or this script's path
-    _clp_home = None
-    if 'CLP_HOME' in os.environ:
-        _clp_home = pathlib.Path(os.environ['CLP_HOME'])
-    else:
-        for path in pathlib.Path(__file__).resolve().parents:
-            if 'sbin' == path.name:
-                _clp_home = path.parent
-                break
-
-    if _clp_home is None:
-        logger.error("CLP_HOME is not set and could not be determined automatically.")
-        return None
-    elif not _clp_home.exists():
-        logger.error("CLP_HOME set to nonexistent path.")
-        return None
-
-    return _clp_home.resolve()
-
-
-def load_bundled_python_lib_path(_clp_home):
-    python_site_packages_path = _clp_home / 'lib' / 'python3' / 'site-packages'
-    if not python_site_packages_path.is_dir():
-        logger.error("Failed to load python3 packages bundled with CLP.")
-        return False
-
-    # Add packages to the front of the path
-    sys.path.insert(0, str(python_site_packages_path))
-
-    return True
-
-
-clp_home = get_clp_home()
-if clp_home is None or not load_bundled_python_lib_path(clp_home):
-    sys.exit(-1)
-
-import yaml
-from clp.package_utils import \
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
-    CONTAINER_CLP_HOME, \
-    DB_COMPONENT_NAME, \
-    QUEUE_COMPONENT_NAME, \
-    SCHEDULER_COMPONENT_NAME, \
-    WORKER_COMPONENT_NAME, \
-    check_dependencies, \
-    container_exists, \
-    CLPDockerMounts, \
-    DockerMount, \
-    DockerMountType, \
-    generate_container_config, \
-    validate_and_load_config_file, \
-    validate_and_load_db_credentials_file, \
-    validate_and_load_queue_credentials_file, \
-    validate_db_config, \
-    validate_queue_config, \
-    validate_worker_config
-from clp_py_utils.clp_config import CLPConfig
-from job_orchestration.scheduler.constants import QueueName
 
 
 def append_docker_port_settings_for_host_ips(hostname: str, host_port: int, container_port: int, cmd: [str]):
@@ -385,6 +349,7 @@ def start_worker(instance_id: str, clp_config: CLPConfig, container_clp_config: 
 
 
 def main(argv):
+    clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     args_parser = argparse.ArgumentParser(description="Starts CLP")

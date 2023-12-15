@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import argparse
 import logging
 import os
@@ -6,6 +5,17 @@ import pathlib
 import subprocess
 import sys
 import uuid
+
+import yaml
+
+from clp_package_utils.general import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    CONTAINER_CLP_HOME,
+    generate_container_config,
+    get_clp_home,
+    validate_and_load_config_file,
+    validate_and_load_db_credentials_file
+)
 
 # Setup logging
 # Create logger
@@ -18,53 +28,8 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def get_clp_home():
-    # Determine CLP_HOME from an environment variable or this script's path
-    _clp_home = None
-    if 'CLP_HOME' in os.environ:
-        _clp_home = pathlib.Path(os.environ['CLP_HOME'])
-    else:
-        for path in pathlib.Path(__file__).resolve().parents:
-            if 'sbin' == path.name:
-                _clp_home = path.parent
-                break
-
-    if _clp_home is None:
-        logger.error("CLP_HOME is not set and could not be determined automatically.")
-        return None
-    elif not _clp_home.exists():
-        logger.error("CLP_HOME set to nonexistent path.")
-        return None
-
-    return _clp_home.resolve()
-
-
-def load_bundled_python_lib_path(_clp_home):
-    python_site_packages_path = _clp_home / 'lib' / 'python3' / 'site-packages'
-    if not python_site_packages_path.is_dir():
-        logger.error("Failed to load python3 packages bundled with CLP.")
-        return False
-
-    # Add packages to the front of the path
-    sys.path.insert(0, str(python_site_packages_path))
-
-    return True
-
-
-clp_home = get_clp_home()
-if clp_home is None or not load_bundled_python_lib_path(clp_home):
-    sys.exit(-1)
-
-import yaml
-from clp.package_utils import \
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, \
-    CONTAINER_CLP_HOME, \
-    generate_container_config, \
-    validate_and_load_config_file, \
-    validate_and_load_db_credentials_file
-
-
 def main(argv):
+    clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")
@@ -94,12 +59,14 @@ def main(argv):
     with open(container_config_file_path_on_host, 'w') as f:
         yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
 
+    clp_site_packages_dir = CONTAINER_CLP_HOME / 'lib' / 'python3' / 'site-packages'
     container_start_cmd = [
         'docker', 'run',
         '-i',
         '--rm',
         '--network', 'host',
         '-w', str(CONTAINER_CLP_HOME),
+        '-e', f'PYTHONPATH={clp_site_packages_dir}',
         '-u', f'{os.getuid()}:{os.getgid()}',
         '--name', container_name,
         '--mount', str(mounts.clp_home),
@@ -115,7 +82,8 @@ def main(argv):
     container_start_cmd.append(clp_config.execution_container)
 
     search_cmd = [
-        str(CONTAINER_CLP_HOME / 'sbin' / 'native' / 'search'),
+        'python3',
+        '-m', 'clp_package_utils.scripts.native.search',
         '--config', str(container_clp_config.logs_directory / container_config_filename),
         parsed_args.wildcard_query,
     ]

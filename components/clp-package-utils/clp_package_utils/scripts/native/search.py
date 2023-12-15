@@ -1,16 +1,27 @@
-#!/usr/bin/env python3
 import argparse
 import asyncio
 import datetime
 import logging
 import multiprocessing
-import os
 import pathlib
 import socket
 import sys
 import time
 from asyncio import StreamReader, StreamWriter
 from contextlib import closing
+
+import msgpack
+import zstandard
+
+from clp_package_utils.general import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    validate_and_load_config_file,
+    get_clp_home
+)
+from clp_py_utils.clp_config import CLP_METADATA_TABLE_PREFIX, Database
+from clp_py_utils.sql_adapter import SQL_Adapter
+from job_orchestration.job_config import SearchConfig
+from job_orchestration.scheduler.constants import JobStatus
 
 # Setup logging
 # Create logger
@@ -21,53 +32,6 @@ logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
-
-
-def get_clp_home():
-    # Determine CLP_HOME from an environment variable or this script's path
-    _clp_home = None
-    if 'CLP_HOME' in os.environ:
-        _clp_home = pathlib.Path(os.environ['CLP_HOME'])
-    else:
-        for path in pathlib.Path(__file__).resolve().parents:
-            if 'sbin' == path.name:
-                _clp_home = path.parent
-                break
-
-    if _clp_home is None:
-        logger.error("CLP_HOME is not set and could not be determined automatically.")
-        return None
-    elif not _clp_home.exists():
-        logger.error("CLP_HOME set to nonexistent path.")
-        return None
-
-    return _clp_home.resolve()
-
-
-def load_bundled_python_lib_path(_clp_home):
-    python_site_packages_path = _clp_home / 'lib' / 'python3' / 'site-packages'
-    if not python_site_packages_path.is_dir():
-        logger.error("Failed to load python3 packages bundled with CLP.")
-        return False
-
-    # Add packages to the front of the path
-    sys.path.insert(0, str(python_site_packages_path))
-
-    return True
-
-
-clp_home = get_clp_home()
-if clp_home is None or not load_bundled_python_lib_path(clp_home):
-    sys.exit(-1)
-
-import msgpack
-import zstandard
-
-from clp.package_utils import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, validate_and_load_config_file
-from clp_py_utils.clp_config import CLP_METADATA_TABLE_PREFIX, Database
-from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.job_config import SearchConfig
-from job_orchestration.scheduler.constants import JobStatus
 
 
 async def run_function_in_process(function, *args, initializer=None, init_args=None):
@@ -226,6 +190,7 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
 
 
 def main(argv):
+    clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")

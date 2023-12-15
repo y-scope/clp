@@ -1,5 +1,6 @@
 import enum
 import errno
+import os
 import pathlib
 import secrets
 import socket
@@ -9,11 +10,12 @@ import typing
 import yaml
 
 from clp_py_utils.clp_config import CLPConfig, CLP_DEFAULT_CREDENTIALS_FILE_PATH
-from clp_py_utils.core import \
-    get_config_value, \
-    make_config_path_absolute, \
-    read_yaml_config_file, \
+from clp_py_utils.core import (
+    get_config_value,
+    make_config_path_absolute,
+    read_yaml_config_file,
     validate_path_could_be_dir
+)
 
 # CONSTANTS
 # Component names
@@ -58,6 +60,23 @@ class CLPDockerMounts:
         self.logs_dir: typing.Optional[DockerMount] = None
         self.archives_output_dir: typing.Optional[DockerMount] = None
 
+def get_clp_home():
+    # Determine CLP_HOME from an environment variable or this script's path
+    clp_home = None
+    if 'CLP_HOME' in os.environ:
+        clp_home = pathlib.Path(os.environ['CLP_HOME'])
+    else:
+        for path in pathlib.Path(__file__).resolve().parents:
+            if 'lib' == path.name:
+                clp_home = path.parent
+                break
+
+    if clp_home is None:
+        raise ValueError("CLP_HOME is not set and could not be determined automatically.")
+    elif not clp_home.exists():
+        raise ValueError("CLP_HOME set to nonexistent path.")
+
+    return clp_home.resolve()
 
 def check_dependencies():
     try:
@@ -199,7 +218,7 @@ def validate_credentials_file_path(clp_config: CLPConfig, clp_home: pathlib.Path
     if not credentials_file_path.exists():
         if make_config_path_absolute(clp_home, CLP_DEFAULT_CREDENTIALS_FILE_PATH) == credentials_file_path \
                 and generate_default_file:
-           generate_credentials_file(credentials_file_path)
+            generate_credentials_file(credentials_file_path)
         else:
             raise ValueError(f"Credentials file path '{credentials_file_path}' does not exist.")
     elif not credentials_file_path.is_file():

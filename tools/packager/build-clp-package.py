@@ -39,6 +39,7 @@ class ClpComponent(BaseModel):
             'compression-job-handler',
             'job-orchestration',
             'clp-py-utils',
+            'clp-package-utils',
             'core',
         ]
         if v not in currently_supported_component_names:
@@ -223,6 +224,7 @@ def main(argv):
         install_cmds = [
             [str(container_install_scripts_dir / 'install-python-component.sh'), 'job-orchestration'],
             [str(container_install_scripts_dir / 'install-python-component.sh'), 'clp-py-utils'],
+            [str(container_install_scripts_dir / 'install-python-component.sh'), 'clp-package-utils'],
             [str(container_install_scripts_dir / 'install-python-component.sh'), 'compression-job-handler'],
             [str(container_install_scripts_dir / 'install-core.sh')]
         ]
