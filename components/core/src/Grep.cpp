@@ -302,16 +302,11 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
             }
         }
     } else {
+        // DFA search
         vector<set<QueryLogtype>> query_matrix(processed_search_string.size());
         for (uint32_t i = 0; i < processed_search_string.size(); i++) {
             for (uint32_t j = 0; j <= i; j++) {
                 std::string current_string = processed_search_string.substr(j, i - j + 1);
-                bool has_middle_wildcard = false;
-                for(int k = 1; k < current_string.size() - 1; k++) {
-                    if(current_string[k] == '*') {
-                        has_middle_wildcard = true;
-                    }
-                }
                 std::vector<QueryLogtype> suffixes;
                 SearchToken search_token;
                 if (current_string == "*") {
@@ -404,23 +399,37 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
             SubQuery sub_query;
             std::string logtype_string;
             bool has_vars = true;
+            bool has_special = false;
             for(uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
-                const auto& value = query_logtype.m_logtype[i];
+                auto const& value = query_logtype.m_logtype[i];
+                auto const& var_str = query_logtype.m_search_query[i];
+                auto const& is_special = query_logtype.m_is_special[i];
                 if (std::holds_alternative<char>(value)) {
                     logtype_string.push_back(std::get<char>(value));
-                    if(std::get<char>(value) == '*') {
-                        sub_query.mark_wildcard_match_required();
-                    }
                 } else {
                     auto& schema_type = forward_lexer.m_id_symbol[std::get<int>(value)];
-                    std::string const& var_str = query_logtype.m_search_query[i];
                     encoded_variable_t encoded_var;
-                    // TODO: "*5" should also create an <int> logtype for the
-                    // possibility
-                    if( schema_type == "int" && EncodedVariableInterpreter::convert_string_to_representable_integer_var(var_str, encoded_var)) {
+                    // Create a duplicate query that will treat a wildcard
+                    // int/float as an int/float
+                    if(false == is_special && query_logtype.m_has_wildcard && (schema_type == "int" ||schema_type == "float")) {
+                        QueryLogtype new_query_logtype = query_logtype;
+                        new_query_logtype.m_is_special[i] = true;
+                        // TODO: this is kinda sketchy, but it'll work because 
+                        // of how the < operator is defined
+                        query_matrix[last_row].insert(new_query_logtype);
+                    }
+                    if (is_special) {
+                        sub_query.mark_wildcard_match_required();
+                        if (schema_type == "int") {
+                            LogTypeDictionaryEntry::add_int_var(logtype_string);
+                        } else if (schema_type == "float") {
+                            LogTypeDictionaryEntry::add_float_var(logtype_string);
+                        }
+                        continue;
+                    } else if( schema_type == "int" && EncodedVariableInterpreter::convert_string_to_representable_integer_var(var_str, encoded_var)) {
                         LogTypeDictionaryEntry::add_int_var(logtype_string);
                         sub_query.add_non_dict_var(encoded_var);
-                    } else if  (schema_type == "float" && EncodedVariableInterpreter::convert_string_to_representable_float_var(var_str, encoded_var)) {
+                    } else if (schema_type == "float" && EncodedVariableInterpreter::convert_string_to_representable_float_var(var_str, encoded_var)) {
                         LogTypeDictionaryEntry::add_float_var(logtype_string);
                         sub_query.add_non_dict_var(encoded_var);
                     } else {

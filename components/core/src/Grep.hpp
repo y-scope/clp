@@ -18,11 +18,13 @@ class QueryLogtype {
 public:
     std::vector<std::variant<char, int>> m_logtype;
     std::vector<std::string> m_search_query;
+    std::vector<bool> m_is_special;
     bool m_has_wildcard = false;
 
     auto insert (QueryLogtype& query_logtype) -> void {
         m_logtype.insert(m_logtype.end(), query_logtype.m_logtype.begin(), query_logtype.m_logtype.end());
         m_search_query.insert(m_search_query.end(), query_logtype.m_search_query.begin(), query_logtype.m_search_query.end());
+        m_is_special.insert(m_is_special.end(), query_logtype.m_is_special.begin(), query_logtype.m_is_special.end());
         m_has_wildcard = m_has_wildcard||query_logtype.m_has_wildcard;
     }
 
@@ -32,6 +34,7 @@ public:
         }
         m_logtype.push_back(val);
         m_search_query.push_back(string);
+        m_is_special.push_back(false);
     }
     
     QueryLogtype(std::variant<char, int> const& val, std::string const& string) {
@@ -55,6 +58,13 @@ public:
             if(m_search_query[i] < rhs.m_search_query[i]) {
                 return true;
             } else if(m_search_query[i] > rhs.m_search_query[i]) {
+                return false;
+            }
+        }
+        for(uint32_t i = 0; i < m_is_special.size(); i++) {
+            if(m_is_special[i] < rhs.m_is_special[i]) {
+                return true;
+            } else if(m_is_special[i] > rhs.m_is_special[i]) {
                 return false;
             }
         }
