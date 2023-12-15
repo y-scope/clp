@@ -6,6 +6,7 @@ import sys
 import uuid
 
 import yaml
+
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     validate_and_load_config_file,

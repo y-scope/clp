@@ -1,6 +1,6 @@
-import os
 import enum
 import errno
+import os
 import pathlib
 import secrets
 import socket
