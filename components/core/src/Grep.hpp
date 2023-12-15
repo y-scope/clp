@@ -3,6 +3,7 @@
 
 // C++ libraries
 #include <string>
+#include <variant>
 
 // Log surgeon
 #include <log_surgeon/Lexer.hpp>
@@ -13,8 +14,57 @@
 #include "streaming_archive/reader/Archive.hpp"
 #include "streaming_archive/reader/File.hpp"
 
-class Grep {
+class QueryLogtype {
+public:
+    std::vector<std::variant<char, int>> m_logtype;
+    std::vector<std::string> m_search_query;
+    bool m_has_wildcard = false;
 
+    auto insert (QueryLogtype& query_logtype) -> void {
+        m_logtype.insert(m_logtype.end(), query_logtype.m_logtype.begin(), query_logtype.m_logtype.end());
+        m_search_query.insert(m_search_query.end(), query_logtype.m_search_query.begin(), query_logtype.m_search_query.end());
+        m_has_wildcard = m_has_wildcard||query_logtype.m_has_wildcard;
+    }
+
+    auto insert (std::variant<char, int> const& val, std::string const& string) -> void {
+        if(std::holds_alternative<char>(val) && std::get<char>(val) == '*') {
+            m_has_wildcard = true;
+        }
+        m_logtype.push_back(val);
+        m_search_query.push_back(string);
+    }
+    
+    QueryLogtype(std::variant<char, int> const& val, std::string const& string) {
+        insert(val, string);
+    }
+    
+    bool operator<(const QueryLogtype &rhs) const{
+        if(m_logtype.size() < rhs.m_logtype.size()) {
+            return true;
+        } else if (m_logtype.size() > rhs.m_logtype.size()) {
+            return false;
+        }
+        for(uint32_t i = 0; i < m_logtype.size(); i++) {
+            if(m_logtype[i] < rhs.m_logtype[i]) {
+                return true;
+            } else if(m_logtype[i] > rhs.m_logtype[i]) {
+                return false;
+            }
+        }
+        for(uint32_t i = 0; i < m_search_query.size(); i++) {
+            if(m_search_query[i] < rhs.m_search_query[i]) {
+                return true;
+            } else if(m_search_query[i] > rhs.m_search_query[i]) {
+                return false;
+            }
+        }
+        return false;
+    }
+    
+};
+
+class Grep {
+    
 public:
     // Types
     /**

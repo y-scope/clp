@@ -302,9 +302,7 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
             }
         }
     } else {
-        // Generate all possible search types for a query
-        vector<set<vector<variant<char, int>>>> logtype_matrix(
-                processed_search_string.size());
+        vector<set<QueryLogtype>> query_matrix(processed_search_string.size());
         for (uint32_t i = 0; i < processed_search_string.size(); i++) {
             for (uint32_t j = 0; j <= i; j++) {
                 std::string current_string = processed_search_string.substr(j, i - j + 1);
@@ -314,12 +312,10 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                         has_middle_wildcard = true;
                     }
                 }
-                std::vector<std::vector<variant<char, int>>> suffixes;
+                std::vector<QueryLogtype> suffixes;
                 SearchToken search_token;
                 if (current_string == "*") {
-                    suffixes.push_back({});
-                    auto& suffix = suffixes.back();
-                    suffix.insert(suffix.end(), current_string.begin(), current_string.end());
+                    suffixes.emplace_back('*', current_string);
                 } else {
                     StringReader string_reader;
                     log_surgeon::ParserInputBuffer parser_input_buffer;
@@ -347,76 +343,129 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                     set<uint32_t> schema_types = dfa1->get_intersect(dfa2);
                     for (int id : schema_types) {
                         if (current_string[0] == '*' && current_string.back() == '*') {
-                            suffixes.push_back({'*', id, '*'});
+                            suffixes.emplace_back('*', "*");
+                            QueryLogtype& suffix = suffixes.back();
+                            suffix.insert(id, current_string);
+                            suffix.insert('*', "*");
                         } else if (current_string[0] == '*') {
-                            suffixes.push_back({'*', id});
+                            suffixes.emplace_back('*', "*");
+                            QueryLogtype& suffix = suffixes.back();
+                            suffix.insert(id, current_string);
                         } else if (current_string.back() == '*') {
-                            suffixes.push_back({id, '*'});
+                            suffixes.emplace_back(id, current_string);
+                            QueryLogtype& suffix = suffixes.back();
+                            suffix.insert('*', "*");
                         } else {
-                            suffixes.push_back({id});
+                            suffixes.emplace_back(id, current_string);
                         }
                     }
                     if (schema_types.empty()) {
-                        suffixes.push_back({});
-                        auto& suffix = suffixes.back();
-                        suffix.insert(suffix.end(), current_string.begin(),
-                                      current_string.end());
+                        for(char const& c : current_string) {
+                            std::string char_string({c});
+                            suffixes.emplace_back(c, char_string);
+                        }
                     }
                 }
-                auto& new_logtypes = logtype_matrix[i];
+                set<QueryLogtype>& new_queries = query_matrix[i];
                 if(j > 0) {
-                    for(auto& parent_logtype : logtype_matrix[j - 1]) {
-                        for (auto& suffix : suffixes) {
-                            vector<variant<char,int>> v(parent_logtype.begin(), parent_logtype.end());
-                            v.insert(v.end(), suffix.begin(), suffix.end());
-                            new_logtypes.insert(v);
+                    for(QueryLogtype const& prefix : query_matrix[j - 1]) {
+                        for (QueryLogtype& suffix : suffixes) {
+                            QueryLogtype new_query = prefix;
+                            new_query.insert(suffix);
+                            new_queries.insert(new_query);
                         }
                     }
                 } else {
                     // handles first column
-                    for (auto& suffix : suffixes) {
-                        new_logtypes.insert(suffix);
+                    for (QueryLogtype& suffix : suffixes) {
+                        new_queries.insert(suffix);
                     }
                 }
             }
         }
-        for(auto& logtypes : logtype_matrix) {
-            for(auto& logtype: logtypes) {
-                for(auto& val : logtype) {
+        for(set<QueryLogtype>& query_logtypes : query_matrix) {
+            for(QueryLogtype const& query_logtype : query_logtypes) {
+                for(uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
+                    auto& val = query_logtype.m_logtype[i];
+                    auto& str = query_logtype.m_search_query[i];
                     if (std::holds_alternative<char>(val)) {
                         std::cout << std::get<char>(val);
                     } else {
                         std::cout << forward_lexer.m_id_symbol[std::get<int>(val)];
+                        std::cout << "(" << str << ")";
                     }
                 }
                 std::cout << " ";
             }
             std::cout << std::endl;
         }
-        uint32_t last_row = logtype_matrix.size() - 1;
-        for (auto const& logtype: logtype_matrix[last_row]) {
+        uint32_t last_row = query_matrix.size() - 1;
+        for (QueryLogtype const& query_logtype: query_matrix[last_row]) {
+            SubQuery sub_query;
             std::string logtype_string;
-            for(const auto& value : logtype) {
+            bool has_vars = true;
+            for(uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
+                const auto& value = query_logtype.m_logtype[i];
                 if (std::holds_alternative<char>(value)) {
                     logtype_string.push_back(std::get<char>(value));
+                    if(std::get<char>(value) == '*') {
+                        sub_query.mark_wildcard_match_required();
+                    }
                 } else {
                     auto& schema_type = forward_lexer.m_id_symbol[std::get<int>(value)];
-                    if( schema_type == "int") {
+                    std::string const& var_str = query_logtype.m_search_query[i];
+                    encoded_variable_t encoded_var;
+                    // TODO: "*5" should also create an <int> logtype for the
+                    // possibility
+                    if( schema_type == "int" && EncodedVariableInterpreter::convert_string_to_representable_integer_var(var_str, encoded_var)) {
                         LogTypeDictionaryEntry::add_int_var(logtype_string);
-                    } else if  (schema_type == "float") {
+                        sub_query.add_non_dict_var(encoded_var);
+                    } else if  (schema_type == "float" && EncodedVariableInterpreter::convert_string_to_representable_float_var(var_str, encoded_var)) {
                         LogTypeDictionaryEntry::add_float_var(logtype_string);
+                        sub_query.add_non_dict_var(encoded_var);
                     } else {
                         LogTypeDictionaryEntry::add_dict_var(logtype_string);
+                        auto& var_dict = archive.get_var_dictionary();
+                        if(query_logtype.m_has_wildcard) {
+                            // Find matches
+                            std::unordered_set<const VariableDictionaryEntry*> var_dict_entries;
+                            var_dict.get_entries_matching_wildcard_string(var_str, ignore_case, var_dict_entries);
+                            if (var_dict_entries.empty()) {
+                                // Not in dictionary
+                                has_vars = false;
+                                continue;
+                            }
+
+                            // Encode matches
+                            std::unordered_set<encoded_variable_t> encoded_vars;
+                            for (auto entry : var_dict_entries) {
+                                encoded_vars.insert(EncodedVariableInterpreter::encode_var_dict_id(entry->get_id()));
+                            }
+                            sub_query.add_imprecise_dict_var(encoded_vars, var_dict_entries);
+
+                            return true;
+                        } else {
+                            auto entry = var_dict.get_entry_matching_value(
+                                    var_str, ignore_case);
+                            if (nullptr == entry) {
+                                // Not in dictionary
+                                has_vars = false;
+                                continue;
+                            }
+                            encoded_variable_t encoded_var = EncodedVariableInterpreter::encode_var_dict_id(
+                                    entry->get_id());
+                            sub_query.add_dict_var(encoded_var, entry);
+                        }
                     }
                 }
             }
-
+            if(false == has_vars) {
+                continue;
+            }
             std::unordered_set<const LogTypeDictionaryEntry*> possible_logtype_entries;
             archive.get_logtype_dictionary().get_entries_matching_wildcard_string(logtype_string, ignore_case,
                                                                                   possible_logtype_entries);
             if (false == possible_logtype_entries.empty()) {
-                SubQuery sub_query;
-                sub_query.mark_wildcard_match_required();
                 sub_query.set_possible_logtypes(possible_logtype_entries);
 
                 // Calculate the IDs of the segments that may contain results for the sub-query now that we've calculated the matching logtypes and variables
