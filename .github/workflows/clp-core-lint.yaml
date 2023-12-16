@@ -26,15 +26,22 @@ jobs:
         with:
           submodules: "recursive"
 
-      - name: "Install and run clang-format on all of core's source files"
+      - uses: "actions/setup-python@v5"
+        with:
+          python-version: "3.11"
+
+      - name: "Install clang-format"
+        shell: "bash"
+        run: |
+          pip3 install --upgrade pip
+          pip3 install --upgrade clang-format
+
+      - name: "Run clang-format on all of core's source files"
         shell: "bash"
         working-directory: "./components/core"
         run: |
-          python3 -m venv venv
-          . venv/bin/activate
-          pip3 install -U clang-format
           find src tests \
             -type f \
-            \( -iname "*.cpp" -o -iname "*.hpp" -o -iname "*.h" -o -iname "*.inc" \) \
+            \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.inc" \) \
             -print0 | \
               xargs -0 clang-format --dry-run -Werror
