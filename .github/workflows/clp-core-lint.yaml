@@ -33,6 +33,8 @@ jobs:
           python3 -m venv venv
           . venv/bin/activate
           pip3 install -U clang-format
-          find src tests -type f \
+          find src tests \
+            -type f \
             \( -iname "*.cpp" -o -iname "*.hpp" -o -iname "*.h" -o -iname "*.inc" \) \
-            -exec clang-format --dry-run -Werror {} \;
+            -print0 | \
+              xargs -0 clang-format --dry-run -Werror
