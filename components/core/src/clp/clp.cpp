@@ -10,5 +10,5 @@ int main(int argc, char const* argv[]) {
     } catch (std::string const err) {
         SPDLOG_ERROR(err.c_str());
         return 1;
-     }
+    }
 }
