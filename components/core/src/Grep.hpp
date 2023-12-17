@@ -40,6 +40,9 @@ public:
     QueryLogtype(std::variant<char, int> const& val, std::string const& string) {
         insert(val, string);
     }
+
+    QueryLogtype() {
+    }
     
     bool operator<(const QueryLogtype &rhs) const{
         if(m_logtype.size() < rhs.m_logtype.size()) {

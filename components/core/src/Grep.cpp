@@ -320,7 +320,10 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                     for (char const& c : current_string) {
                         if (c == '*') {
                             regex_search_string.push_back('.');
+                        } else if (c == '.') {
+                            regex_search_string.push_back('\\');
                         }
+                        // TODO: we need to sanitize more regex
                         regex_search_string.push_back(c);
                     }
                     log_surgeon::Schema schema2;
@@ -355,9 +358,11 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                         }
                     }
                     if (schema_types.empty()) {
+                        suffixes.emplace_back();
+                        auto& suffix = suffixes.back();
                         for(char const& c : current_string) {
                             std::string char_string({c});
-                            suffixes.emplace_back(c, char_string);
+                            suffix.insert(c, char_string);
                         }
                     }
                 }
@@ -378,6 +383,7 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                 }
             }
         }
+        std::cout << "query_matrix" << std::endl;
         for(set<QueryLogtype>& query_logtypes : query_matrix) {
             for(QueryLogtype const& query_logtype : query_logtypes) {
                 for(uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
@@ -390,11 +396,12 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                         std::cout << "(" << str << ")";
                     }
                 }
-                std::cout << " ";
+                std::cout << " | ";
             }
             std::cout << std::endl;
         }
         uint32_t last_row = query_matrix.size() - 1;
+        std::cout << query_matrix[last_row].size() << std::endl;
         for (QueryLogtype const& query_logtype: query_matrix[last_row]) {
             SubQuery sub_query;
             std::string logtype_string;
