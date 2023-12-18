@@ -46,11 +46,16 @@ runs:
           echo "BRANCH=latest" >> "$GITHUB_OUTPUT"
         fi
 
+    - id: "generate_id"
+      shell: "bash"
+      run: |
+        echo "ID=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
     - id: "deps_image_meta"
       uses: "docker/metadata-action@v5"
       with:
         images: "${{steps.get_deps_image_props.outputs.REGISTRY}}\
-          /${{github.repository}}\
+          /${{steps.generate_id.outputs.ID}}\
           /clp-core-dependencies-x86-${{inputs.os_name}}"
         tags: |
           type=raw,value=${{steps.get_deps_image_props.outputs.BRANCH}}
@@ -73,7 +78,7 @@ runs:
       uses: "docker/metadata-action@v5"
       with:
         images: "${{steps.get_deps_image_props.outputs.REGISTRY}}\
-          /${{github.repository}}\
+          /${{steps.generate_id.outputs.ID}}\
           /clp-core-x86-${{inputs.os_name}}"
         tags: |
           type=raw,value=${{steps.get_deps_image_props.outputs.BRANCH}}
