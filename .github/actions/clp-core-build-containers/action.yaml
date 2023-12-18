@@ -45,12 +45,16 @@ runs:
           echo "REGISTRY=localhost:${{inputs.local_registry_port}}" >> "$GITHUB_OUTPUT"
           echo "BRANCH=latest" >> "$GITHUB_OUTPUT"
         fi
+        # Docker doesn't support repository names with uppercase characters, so we convert to
+        # lowercase here.
+        echo "REPOSITORY=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')" \
+          >> "$GITHUB_OUTPUT"
 
     - id: "deps_image_meta"
       uses: "docker/metadata-action@v5"
       with:
         images: "${{steps.get_deps_image_props.outputs.REGISTRY}}\
-          /${{github.repository}}\
+          /${{steps.get_deps_image_props.outputs.REPOSITORY}}\
           /clp-core-dependencies-x86-${{inputs.os_name}}"
         tags: |
           type=raw,value=${{steps.get_deps_image_props.outputs.BRANCH}}
@@ -73,7 +77,7 @@ runs:
       uses: "docker/metadata-action@v5"
       with:
         images: "${{steps.get_deps_image_props.outputs.REGISTRY}}\
-          /${{github.repository}}\
+          /${{steps.get_deps_image_props.outputs.REPOSITORY}}\
           /clp-core-x86-${{inputs.os_name}}"
         tags: |
           type=raw,value=${{steps.get_deps_image_props.outputs.BRANCH}}
