@@ -172,7 +172,7 @@ public:
     void set_ignore_case(bool ignore_case) { m_ignore_case = ignore_case; }
 
     void set_search_string(std::string const& search_string);
-    void add_sub_query(SubQuery const& sub_query);
+    void add_sub_queries(std::vector<SubQuery>& sub_query);
     void clear_sub_queries();
     /**
      * Populates the set of relevant sub-queries with only those that match the given segment

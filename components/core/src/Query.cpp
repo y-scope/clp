@@ -176,12 +176,14 @@ void Query::set_search_string(string const& search_string) {
     m_search_string_matches_all = (m_search_string.empty() || "*" == m_search_string);
 }
 
-void Query::add_sub_query(SubQuery const& sub_query) {
-    m_sub_queries.push_back(sub_query);
+void Query::add_sub_queries(std::vector<SubQuery>& sub_queries) {
+    m_sub_queries = std::move(sub_queries);
 
-    // Add to relevant sub-queries if necessary
-    if (sub_query.get_ids_of_matching_segments().count(m_prev_segment_id)) {
-        m_relevant_sub_queries.push_back(&m_sub_queries.back());
+    for (auto& sub_query : m_sub_queries) {
+        // Add to relevant sub-queries if necessary
+        if (sub_query.get_ids_of_matching_segments().count(m_prev_segment_id)) {
+            m_relevant_sub_queries.push_back(&m_sub_queries.back());
+        }
     }
 }
 

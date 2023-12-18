@@ -41,13 +41,12 @@ public:
      * @param use_heuristic
      * @return true if query may match messages, false otherwise
      */
-    static bool process_raw_query(
+    static std::optional<Query> process_raw_query(
             streaming_archive::reader::Archive const& archive,
             std::string const& search_string,
             epochtime_t search_begin_ts,
             epochtime_t search_end_ts,
             bool ignore_case,
-            Query& query,
             log_surgeon::lexers::ByteLexer& forward_lexer,
             log_surgeon::lexers::ByteLexer& reverse_lexer,
             bool use_heuristic

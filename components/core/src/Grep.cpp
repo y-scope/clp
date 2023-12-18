@@ -487,17 +487,17 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
     return SubQueryMatchabilityResult::MayMatch;
 }
 
-bool Grep::process_raw_query(
+std::optional<Query> Grep::process_raw_query(
         Archive const& archive,
         string const& search_string,
         epochtime_t search_begin_ts,
         epochtime_t search_end_ts,
         bool ignore_case,
-        Query& query,
         log_surgeon::lexers::ByteLexer& forward_lexer,
         log_surgeon::lexers::ByteLexer& reverse_lexer,
         bool use_heuristic
 ) {
+    Query query;
     // Set properties which require no processing
     query.set_search_begin_timestamp(search_begin_ts);
     query.set_search_end_timestamp(search_end_ts);
@@ -558,11 +558,11 @@ bool Grep::process_raw_query(
     // - (token1 as logtype) (token2 as var)
     // - (token1 as var) (token2 as logtype)
     // - (token1 as var) (token2 as var)
-    SubQuery sub_query;
+    std::vector<SubQuery> sub_queries;
     string logtype;
     bool type_of_one_token_changed = true;
     while (type_of_one_token_changed) {
-        sub_query.clear();
+        SubQuery sub_query;
 
         // Compute logtypes and variables for query
         auto matchability = generate_logtypes_and_vars_for_subquery(
@@ -579,9 +579,9 @@ bool Grep::process_raw_query(
 
                 // Since other sub-queries will be superceded by this one, we can stop processing
                 // now
-                return true;
+                return query;
             case SubQueryMatchabilityResult::MayMatch:
-                query.add_sub_query(sub_query);
+                sub_queries.push_back(std::move(sub_query));
                 break;
             case SubQueryMatchabilityResult::WontMatch:
             default:
@@ -599,7 +599,12 @@ bool Grep::process_raw_query(
         }
     }
 
-    return query.contains_sub_queries();
+    if (sub_queries.empty()) {
+        return std::nullopt;
+    }
+
+    query.add_sub_queries(sub_queries);
+    return query;
 }
 
 bool Grep::get_bounds_of_next_potential_var(
