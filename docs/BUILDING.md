@@ -7,12 +7,8 @@
 
 # Building a package
 
-* Run `task` from the root of the project
+* Run `task` from the root of the project. Upon failure, fix the error and run `task` again.
 * The package will be available at `out/clp-package`
-
-NOTE: The taskfile is not set up perfectly so it's possible it may generate an
-imperfect build. When this happens, you can delete the `out` directory and build
-a fresh package.
 
 # Cleaning up
 

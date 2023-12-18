@@ -17,10 +17,12 @@ tasks:
     cmds:
       - rm -rf {{.CLP_BUILD_DIR}}/clp-package
 
-  # TODO Clean-up
   package:
     deps:
       - core
+      - task: python_component
+        vars:
+          COMPONENT: clp-package-utils
       - task: python_component
         vars:
           COMPONENT: clp-py-utils
@@ -36,10 +38,11 @@ tasks:
       - mkdir -p {{.PACKAGE_BUILD_DIR}}
       - rsync -a components/package-template/src/ {{.PACKAGE_BUILD_DIR}}
       - mkdir -p {{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages
-      - pip3 install -U components/clp-py-utils/dist/*.whl components/compression-job-handler/dist/*.whl components/job-orchestration/dist/*.whl -t {{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages
+      - pip3 install -U components/clp-package-utils/dist/*.whl components/clp-py-utils/dist/*.whl components/compression-job-handler/dist/*.whl components/job-orchestration/dist/*.whl -t {{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages
       - mkdir -p {{.PACKAGE_BUILD_DIR}}/bin
       - rsync -a {{.CLP_BUILD_DIR}}/core/clg {{.CLP_BUILD_DIR}}/core/clo {{.CLP_BUILD_DIR}}/core/clp {{.PACKAGE_BUILD_DIR}}/bin/.
     sources:
+      - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
       - "components/compression-job-handler/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
