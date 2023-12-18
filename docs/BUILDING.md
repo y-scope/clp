@@ -1,7 +1,5 @@
 # Requirements
 
-* [Meteor](https://docs.meteor.com/install.html#installation)
-* [NodeJS 14](https://nodejs.org/download/release/v14.21.3/)
 * python3-venv
 * [Task](https://taskfile.dev/)
 
