@@ -1,6 +1,7 @@
 #ifndef GREP_HPP
 #define GREP_HPP
 
+#include <optional>
 #include <string>
 
 #include <log_surgeon/Lexer.hpp>
