@@ -20,7 +20,7 @@ using ffi::four_byte_encoded_variable_t;
 using ffi::ir_stream::cProtocol::EightByteEncodingMagicNumber;
 using ffi::ir_stream::cProtocol::FourByteEncodingMagicNumber;
 using ffi::ir_stream::cProtocol::MagicNumberLength;
-using ffi::ir_stream::decode_preamble;
+using ffi::ir_stream::deserialize_preamble;
 using ffi::ir_stream::encoded_tag_t;
 using ffi::ir_stream::get_encoding_type;
 using ffi::ir_stream::IRErrorCode;
@@ -49,7 +49,7 @@ template <typename encoded_variable_t>
 epoch_time_ms_t get_next_timestamp_for_test();
 
 /**
- * Helper function that encodes a preamble of encoding type = encoded_variable_t and writes into
+ * Helper function that serializes a preamble of encoding type = encoded_variable_t and writes into
  * ir_buf
  * @tparam encoded_variable_t Type of the encoded variable
  * @param timestamp_pattern
@@ -57,10 +57,10 @@ epoch_time_ms_t get_next_timestamp_for_test();
  * @param time_zone_id
  * @param reference_timestamp Only used when encoded_variable_t == four_byte_encoded_variable_t
  * @param ir_buf
- * @return True if preamble is encoded without error, otherwise false
+ * @return True if the preamble is serialized without error, otherwise false
  */
 template <typename encoded_variable_t>
-bool encode_preamble(
+bool serialize_preamble(
         string_view timestamp_pattern,
         string_view timestamp_pattern_syntax,
         string_view time_zone_id,
@@ -69,17 +69,17 @@ bool encode_preamble(
 );
 
 /**
- * Helper function that encodes a message of encoding type = encoded_variable_t and writes into
+ * Helper function that serializes a log event of encoding type = encoded_variable_t and writes into
  * ir_buf
  * @tparam encoded_variable_t Type of the encoded variable
  * @param timestamp
  * @param message
  * @param logtype
  * @param ir_buf
- * @return True if message is encoded without error, otherwise false
+ * @return True if the log event is serialized without error, otherwise false
  */
 template <typename encoded_variable_t>
-bool encode_message(
+bool serialize_message(
         epoch_time_ms_t timestamp,
         string_view message,
         string& logtype,
@@ -87,19 +87,21 @@ bool encode_message(
 );
 
 /**
- * Helper function that decodes a message of encoding type = encoded_variable_t from the ir_buf
+ * Helper function that deserializes a log event of encoding type = encoded_variable_t from the
+ * ir_buf
  * @tparam encoded_variable_t Type of the encoded variable
  * @param reader
  * @param message
  * @param decoded_ts Returns the decoded timestamp
  * @return IRErrorCode_Success on success
- * @return Same as the ffi::ir_stream::eight_byte_encoding::decode_next_message when
+ * @return Same as the ffi::ir_stream::eight_byte_encoding::deserialize_log_event when
  * encoded_variable_t == eight_byte_encoded_variable_t
- * @return Same as the ffi::ir_stream::four_byte_encoding::decode_next_message when
+ * @return Same as the ffi::ir_stream::four_byte_encoding::deserialize_log_event when
  * encoded_variable_t == four_byte_encoded_variable_t
  */
 template <typename encoded_variable_t>
-IRErrorCode decode_next_message(BufferReader& reader, string& message, epoch_time_ms_t& decoded_ts);
+IRErrorCode
+deserialize_log_event(BufferReader& reader, string& message, epoch_time_ms_t& decoded_ts);
 
 /**
  * Struct to hold the timestamp info from the IR stream's metadata
@@ -156,7 +158,7 @@ epoch_time_ms_t get_next_timestamp_for_test() {
 // A helper function to generalize the testing caller interface.
 // The reference_timestamp is only used by four bytes encoding
 template <typename encoded_variable_t>
-bool encode_preamble(
+bool serialize_preamble(
         string_view timestamp_pattern,
         string_view timestamp_pattern_syntax,
         string_view time_zone_id,
@@ -169,14 +171,14 @@ bool encode_preamble(
     );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
-        return ffi::ir_stream::eight_byte_encoding::encode_preamble(
+        return ffi::ir_stream::eight_byte_encoding::serialize_preamble(
                 timestamp_pattern,
                 timestamp_pattern_syntax,
                 time_zone_id,
                 ir_buf
         );
     } else {
-        return ffi::ir_stream::four_byte_encoding::encode_preamble(
+        return ffi::ir_stream::four_byte_encoding::serialize_preamble(
                 timestamp_pattern,
                 timestamp_pattern_syntax,
                 time_zone_id,
@@ -199,14 +201,14 @@ bool encode_message(
     );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
-        return ffi::ir_stream::eight_byte_encoding::encode_message(
+        return ffi::ir_stream::eight_byte_encoding::serialize_log_event(
                 timestamp,
                 message,
                 logtype,
                 ir_buf
         );
     } else {
-        return ffi::ir_stream::four_byte_encoding::encode_message(
+        return ffi::ir_stream::four_byte_encoding::serialize_log_event(
                 timestamp,
                 message,
                 logtype,
@@ -217,20 +219,24 @@ bool encode_message(
 
 template <typename encoded_variable_t>
 IRErrorCode
-decode_next_message(BufferReader& reader, string& message, epoch_time_ms_t& decoded_ts) {
+deserialize_log_event(BufferReader& reader, string& message, epoch_time_ms_t& decoded_ts) {
     static_assert(
             (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
             || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
     );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
-        return ffi::ir_stream::eight_byte_encoding::decode_next_message(
+        return ffi::ir_stream::eight_byte_encoding::deserialize_log_event(
                 reader,
                 message,
                 decoded_ts
         );
     } else {
-        return ffi::ir_stream::four_byte_encoding::decode_next_message(reader, message, decoded_ts);
+        return ffi::ir_stream::four_byte_encoding::deserialize_log_event(
+                reader,
+                message,
+                decoded_ts
+        );
     }
 }
 
@@ -299,8 +305,8 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
 }
 
 TEMPLATE_TEST_CASE(
-        "decode_preamble",
-        "[ffi][decode_preamble]",
+        "deserialize_preamble",
+        "[ffi][deserialize_preamble]",
         four_byte_encoded_variable_t,
         eight_byte_encoded_variable_t
 ) {
@@ -309,7 +315,7 @@ TEMPLATE_TEST_CASE(
     constexpr char timestamp_pattern_syntax[] = "yyyy-MM-dd HH:mm:ss";
     constexpr char time_zone_id[] = "Asia/Tokyo";
     epoch_time_ms_t const reference_ts = get_current_ts();
-    REQUIRE(encode_preamble<TestType>(
+    REQUIRE(serialize_preamble<TestType>(
             timestamp_pattern,
             timestamp_pattern_syntax,
             time_zone_id,
@@ -331,7 +337,7 @@ TEMPLATE_TEST_CASE(
     encoded_tag_t metadata_type{0};
     size_t metadata_pos{0};
     uint16_t metadata_size{0};
-    REQUIRE(decode_preamble(ir_buffer, metadata_type, metadata_pos, metadata_size)
+    REQUIRE(deserialize_preamble(ir_buffer, metadata_type, metadata_pos, metadata_size)
             == IRErrorCode::IRErrorCode_Success);
     REQUIRE(encoded_preamble_end_pos == ir_buffer.get_pos());
 
@@ -359,7 +365,7 @@ TEMPLATE_TEST_CASE(
     // Test if preamble can be decoded by the string copy method
     std::vector<int8_t> json_metadata_vec;
     ir_buffer.seek_from_begin(MagicNumberLength);
-    REQUIRE(decode_preamble(ir_buffer, metadata_type, json_metadata_vec)
+    REQUIRE(deserialize_preamble(ir_buffer, metadata_type, json_metadata_vec)
             == IRErrorCode::IRErrorCode_Success);
     string_view json_metadata_copied{
             size_checked_pointer_cast<char const>(json_metadata_vec.data()),
@@ -375,7 +381,12 @@ TEMPLATE_TEST_CASE(
             ir_buf.size()
     };
     incomplete_preamble_buffer.seek_from_begin(MagicNumberLength);
-    REQUIRE(decode_preamble(incomplete_preamble_buffer, metadata_type, metadata_pos, metadata_size)
+    REQUIRE(deserialize_preamble(
+                    incomplete_preamble_buffer,
+                    metadata_type,
+                    metadata_pos,
+                    metadata_size
+            )
             == IRErrorCode::IRErrorCode_Incomplete_IR);
 
     // Test if corrupted IR can be detected
@@ -384,13 +395,18 @@ TEMPLATE_TEST_CASE(
             size_checked_pointer_cast<char const>(ir_buf.data()),
             ir_buf.size()
     };
-    REQUIRE(decode_preamble(corrupted_preamble_buffer, metadata_type, metadata_pos, metadata_size)
+    REQUIRE(deserialize_preamble(
+                    corrupted_preamble_buffer,
+                    metadata_type,
+                    metadata_pos,
+                    metadata_size
+            )
             == IRErrorCode::IRErrorCode_Corrupted_IR);
 }
 
 TEMPLATE_TEST_CASE(
         "decode_next_message_general",
-        "[ffi][decode_next_message]",
+        "[ffi][deserialize_log_event]",
         four_byte_encoded_variable_t,
         eight_byte_encoded_variable_t
 ) {
@@ -411,7 +427,7 @@ TEMPLATE_TEST_CASE(
 
     // Test if message can be decoded properly
     REQUIRE(IRErrorCode::IRErrorCode_Success
-            == decode_next_message<TestType>(ir_buffer, decoded_message, timestamp));
+            == deserialize_log_event<TestType>(ir_buffer, decoded_message, timestamp));
     REQUIRE(message == decoded_message);
     REQUIRE(timestamp == reference_timestamp);
     REQUIRE(ir_buffer.get_pos() == encoded_message_end_pos);
@@ -419,7 +435,7 @@ TEMPLATE_TEST_CASE(
     // Test corrupted IR
     ir_buffer.seek_from_begin(encoded_message_start_pos + 1);
     REQUIRE(IRErrorCode::IRErrorCode_Corrupted_IR
-            == decode_next_message<TestType>(ir_buffer, message, timestamp));
+            == deserialize_log_event<TestType>(ir_buffer, message, timestamp));
 
     // Test incomplete IR
     ir_buf.resize(encoded_message_end_pos - 4);
@@ -428,13 +444,13 @@ TEMPLATE_TEST_CASE(
             ir_buf.size()
     };
     REQUIRE(IRErrorCode::IRErrorCode_Incomplete_IR
-            == decode_next_message<TestType>(incomplete_preamble_buffer, message, timestamp));
+            == deserialize_log_event<TestType>(incomplete_preamble_buffer, message, timestamp));
 }
 
 // NOTE: This test only tests eight_byte_encoded_variable_t because we trigger
 // IRErrorCode_Decode_Error by manually modifying the logtype within the IR, and this is easier for
 // the eight_byte_encoded_variable_t case.
-TEST_CASE("message_decode_error", "[ffi][decode_next_message]") {
+TEST_CASE("message_decode_error", "[ffi][deserialize_log_event]") {
     vector<int8_t> ir_buf;
     string logtype;
 
@@ -464,7 +480,7 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]") {
             ir_with_extra_escape.size()
     };
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error
-            == decode_next_message<eight_byte_encoded_variable_t>(
+            == deserialize_log_event<eight_byte_encoded_variable_t>(
                     ir_with_extra_escape_buffer,
                     decoded_message,
                     timestamp
@@ -479,14 +495,14 @@ TEST_CASE("message_decode_error", "[ffi][decode_next_message]") {
             ir_with_extra_placeholder.size()
     };
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error
-            == decode_next_message<eight_byte_encoded_variable_t>(
+            == deserialize_log_event<eight_byte_encoded_variable_t>(
                     ir_with_extra_placeholder_buffer,
                     decoded_message,
                     timestamp
             ));
 }
 
-TEST_CASE("decode_next_message_four_byte_timestamp_delta", "[ffi][decode_next_message]") {
+TEST_CASE("decode_next_message_four_byte_timestamp_delta", "[ffi][deserialize_log_event]") {
     string const message = "Static <\text>, dictVar1, 123, 456345232.7234223, "
                            "dictVar2, 987, 654.3, end of static text";
     auto ts_delta = GENERATE(
@@ -514,7 +530,7 @@ TEST_CASE("decode_next_message_four_byte_timestamp_delta", "[ffi][decode_next_me
     string decoded_message;
     epoch_time_ms_t decoded_delta_ts{};
     REQUIRE(IRErrorCode::IRErrorCode_Success
-            == decode_next_message<four_byte_encoded_variable_t>(
+            == deserialize_log_event<four_byte_encoded_variable_t>(
                     ir_buffer,
                     decoded_message,
                     decoded_delta_ts
@@ -536,7 +552,7 @@ TEST_CASE("validate_protocol_version", "[ffi][validate_version_protocol]") {
 
 TEMPLATE_TEST_CASE(
         "decode_ir_complete",
-        "[ffi][decode_next_message]",
+        "[ffi][deserialize_log_event]",
         four_byte_encoded_variable_t,
         eight_byte_encoded_variable_t
 ) {
@@ -547,7 +563,7 @@ TEMPLATE_TEST_CASE(
     constexpr char timestamp_pattern[] = "%Y-%m-%d %H:%M:%S,%3";
     constexpr char timestamp_pattern_syntax[] = "yyyy-MM-dd HH:mm:ss";
     constexpr char time_zone_id[] = "Asia/Tokyo";
-    REQUIRE(encode_preamble<TestType>(
+    REQUIRE(serialize_preamble<TestType>(
             timestamp_pattern,
             timestamp_pattern_syntax,
             time_zone_id,
@@ -591,7 +607,7 @@ TEMPLATE_TEST_CASE(
     encoded_tag_t metadata_type;
     size_t metadata_pos;
     uint16_t metadata_size;
-    REQUIRE(decode_preamble(complete_ir_buffer, metadata_type, metadata_pos, metadata_size)
+    REQUIRE(deserialize_preamble(complete_ir_buffer, metadata_type, metadata_pos, metadata_size)
             == IRErrorCode::IRErrorCode_Success);
     REQUIRE(encoded_preamble_end_pos == complete_ir_buffer.get_pos());
 
@@ -610,7 +626,7 @@ TEMPLATE_TEST_CASE(
     epoch_time_ms_t timestamp;
     for (size_t ix = 0; ix < reference_messages.size(); ix++) {
         REQUIRE(IRErrorCode::IRErrorCode_Success
-                == decode_next_message<TestType>(complete_ir_buffer, decoded_message, timestamp));
+                == deserialize_log_event<TestType>(complete_ir_buffer, decoded_message, timestamp));
         REQUIRE(decoded_message == reference_messages[ix]);
         REQUIRE(timestamp == reference_timestamps[ix]);
     }
