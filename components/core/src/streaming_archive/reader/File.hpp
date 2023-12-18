@@ -79,7 +79,7 @@ private:
      */
     ErrorCode open_me(
             LogTypeDictionaryReader const& archive_logtype_dict,
-            MetadataDB::FileIterator& file_metadata_ix,
+            MetadataDB::FileIterator const& file_metadata_ix,
             SegmentManager& segment_manager
     );
     /**

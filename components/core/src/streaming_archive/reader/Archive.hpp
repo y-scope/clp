@@ -58,7 +58,7 @@ namespace streaming_archive { namespace reader {
          * @param file_metadata_ix
          * @return Same as streaming_archive::reader::File::open_me
          */
-        ErrorCode open_file(File& file, MetadataDB::FileIterator& file_metadata_ix);
+        ErrorCode open_file(File& file, MetadataDB::FileIterator const& file_metadata_ix);
         /**
          * Wrapper for streaming_archive::reader::File::close_me
          * @param file

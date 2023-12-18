@@ -21,7 +21,7 @@ epochtime_t File::get_end_ts() const {
 
 ErrorCode File::open_me(
         LogTypeDictionaryReader const& archive_logtype_dict,
-        MetadataDB::FileIterator& file_metadata_ix,
+        MetadataDB::FileIterator const& file_metadata_ix,
         SegmentManager& segment_manager
 ) {
     m_archive_logtype_dict = &archive_logtype_dict;

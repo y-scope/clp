@@ -9,7 +9,7 @@ using std::string;
 
 namespace clp {
 bool FileDecompressor::decompress_file(
-        streaming_archive::MetadataDB::FileIterator& file_metadata_ix,
+        streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
         string const& output_dir,
         streaming_archive::reader::Archive& archive_reader,
         std::unordered_map<string, string>& temp_path_to_final_path
