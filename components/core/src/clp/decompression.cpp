@@ -102,8 +102,6 @@ bool decompress(
                 for (auto& file_metadata_ix = *file_metadata_ix_ptr; file_metadata_ix.has_next();
                      file_metadata_ix.next())
                 {
-                    file_metadata_ix.get_path(orig_path);
-
                     // Decompress file
                     if (false
                         == file_decompressor.decompress_file(
@@ -140,8 +138,6 @@ bool decompress(
                 for (auto& file_metadata_ix = *file_metadata_ix_ptr; file_metadata_ix.has_next();
                      file_metadata_ix.next())
                 {
-                    file_metadata_ix.get_path(orig_path);
-
                     // Decompress file
                     if (false
                         == file_decompressor.decompress_file(
@@ -193,7 +189,6 @@ bool decompress(
                     {
                         return false;
                     }
-                    file_metadata_ix.get_path(orig_path);
                     decompressed_files.insert(orig_path);
                 }
                 file_metadata_ix_ptr.reset(nullptr);
