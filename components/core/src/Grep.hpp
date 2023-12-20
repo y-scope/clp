@@ -36,11 +36,10 @@ public:
      * @param search_begin_ts
      * @param search_end_ts
      * @param ignore_case
-     * @param query
      * @param forward_lexer DFA for determining if input is in the schema
      * @param reverse_lexer DFA for determining if reverse of input is in the schema
      * @param use_heuristic
-     * @return true if query may match messages, false otherwise
+     * @return Query if it may match a message, std::nullopt otherwise
      */
     static std::optional<Query> process_raw_query(
             streaming_archive::reader::Archive const& archive,

@@ -558,7 +558,7 @@ std::optional<Query> Grep::process_raw_query(
     // - (token1 as logtype) (token2 as var)
     // - (token1 as var) (token2 as logtype)
     // - (token1 as var) (token2 as var)
-    std::vector<SubQuery> sub_queries;
+    vector<SubQuery> sub_queries;
     string logtype;
     bool type_of_one_token_changed = true;
     while (type_of_one_token_changed) {
@@ -603,7 +603,7 @@ std::optional<Query> Grep::process_raw_query(
         return std::nullopt;
     }
 
-    query.add_sub_queries(sub_queries);
+    query.set_sub_queries(std::move(sub_queries));
     return query;
 }
 
