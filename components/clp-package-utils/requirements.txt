@@ -1,0 +1,6 @@
+mariadb~=1.0.7
+msgpack==1.0.6
+mysql-connector-python~=8.0.26
+pydantic==1.8.2
+pymongo==4.5.0
+PyYAML==6.0.1

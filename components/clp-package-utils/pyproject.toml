@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "clp-package-utils"
+version = "0.1.0"
+description = "Utilities for the CLP package."
+authors = ["YScope Inc. <dev@yscope.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8 || ^3.10"
+mariadb = "~1.0.7"
+msgpack = "^1.0.6"
+mysql-connector-python = "~8.0.26"
+pydantic = "^1.8.2"
+pymongo = "^4.5.0"
+PyYAML = "^6.0.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
