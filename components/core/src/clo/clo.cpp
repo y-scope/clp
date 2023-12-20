@@ -274,7 +274,7 @@ static bool search_archive(
         return true;
     }
 
-    Query& query = query_processing_result.value();
+    auto& query = query_processing_result.value();
     // Get all segments potentially containing query results
     std::set<segment_id_t> ids_of_segments_to_search;
     for (auto& sub_query : query.get_sub_queries()) {
