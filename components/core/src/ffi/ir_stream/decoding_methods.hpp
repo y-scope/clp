@@ -45,7 +45,7 @@ private:
 };
 
 /**
- * Decodes the encoding type for the encoded IR stream
+ * Deserializes the IR stream's encoding type
  * @param reader
  * @param is_four_bytes_encoding Returns the encoding type
  * @return ErrorCode_Success on success
@@ -55,7 +55,7 @@ private:
 IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding);
 
 /**
- * Deserializes an IR message from the given stream
+ * Deserializes a log event from the given stream
  * @tparam encoded_variable_t
  * @param reader
  * @param logtype Returns the logtype
@@ -69,7 +69,7 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
  * @return IRErrorCode_Eof on reaching the end of the stream
  */
 template <typename encoded_variable_t>
-auto deserialize_ir_message(
+auto deserialize_log_event(
         ReaderInterface& reader,
         std::string& logtype,
         std::vector<encoded_variable_t>& encoded_vars,
@@ -117,16 +117,16 @@ void generic_decode_message(
 );
 
 /**
- * Decodes the preamble for an IR stream.
+ * Deserializes the preamble for an IR stream.
  * @param reader
- * @param metadata_type Returns the type of the metadata found in the IR
+ * @param metadata_type Returns the type of the metadata deserialized from the IR
  * @param metadata_pos Returns the starting position of the metadata in reader
- * @param metadata_size Returns the size of the metadata written in the IR
+ * @param metadata_size Returns the size of the metadata deserialized from the IR
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
  */
-IRErrorCode decode_preamble(
+IRErrorCode deserialize_preamble(
         ReaderInterface& reader,
         encoded_tag_t& metadata_type,
         size_t& metadata_pos,
@@ -134,15 +134,15 @@ IRErrorCode decode_preamble(
 );
 
 /**
- * Decodes the preamble for an IR stream.
+ * Deserializes the preamble for an IR stream.
  * @param reader
- * @param metadata_type Returns the type of the metadata found in the IR
+ * @param metadata_type Returns the type of the metadata deserialized from the IR
  * @param metadata Returns the metadata in the given vector
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
  */
-IRErrorCode decode_preamble(
+IRErrorCode deserialize_preamble(
         ReaderInterface& reader,
         encoded_tag_t& metadata_type,
         std::vector<int8_t>& metadata
@@ -163,33 +163,36 @@ IRProtocolErrorCode validate_protocol_version(std::string_view protocol_version)
 
 namespace eight_byte_encoding {
     /**
-     * Decodes the next message for the eight-byte encoding IR stream.
+     * Deserializes the next log event from an eight-byte encoding IR stream.
      * @param reader
-     * @param message Returns the decoded message
-     * @param timestamp Returns the decoded timestamp
+     * @param message Returns the deserialized message
+     * @param timestamp Returns the deserialized timestamp
      * @return ErrorCode_Success on success
      * @return ErrorCode_Corrupted_IR if reader contains invalid IR
-     * @return ErrorCode_Decode_Error if the encoded message cannot be properly decoded
-     * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
+     * @return ErrorCode_Decode_Error if the log event cannot be properly deserialized
+     * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
      * @return ErrorCode_End_of_IR if the IR ends
      */
-    IRErrorCode
-    decode_next_message(ReaderInterface& reader, std::string& message, epoch_time_ms_t& timestamp);
+    IRErrorCode deserialize_log_event(
+            ReaderInterface& reader,
+            std::string& message,
+            epoch_time_ms_t& timestamp
+    );
 }  // namespace eight_byte_encoding
 
 namespace four_byte_encoding {
     /**
-     * Decodes the next message for the four-byte encoding IR stream.
+     * Deserializes the next log event from a four-byte encoding IR stream.
      * @param reader
-     * @param message Returns the decoded message
-     * @param timestamp_delta Returns the decoded timestamp delta
+     * @param message Returns the deserialized message
+     * @param timestamp_delta Returns the deserialized timestamp delta
      * @return ErrorCode_Success on success
      * @return ErrorCode_Corrupted_IR if reader contains invalid IR
-     * @return ErrorCode_Decode_Error if the encoded message cannot be properly decoded
-     * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
+     * @return ErrorCode_Decode_Error if the log event cannot be properly deserialized
+     * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
      * @return ErrorCode_End_of_IR if the IR ends
      */
-    IRErrorCode decode_next_message(
+    IRErrorCode deserialize_log_event(
             ReaderInterface& reader,
             std::string& message,
             epoch_time_ms_t& timestamp_delta

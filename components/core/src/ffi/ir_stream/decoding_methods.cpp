@@ -21,41 +21,41 @@ template <typename encoded_variable_t>
 static bool is_variable_tag(encoded_tag_t tag, bool& is_encoded_var);
 
 /**
- * Decodes an integer from the given reader
- * @tparam integer_t Type of the integer to decode
+ * Deserializes an integer from the given reader
+ * @tparam integer_t Type of the integer to deserialize
  * @param reader
- * @param value Returns the decoded integer
- * @return true on success, false if the reader doesn't contain enough data to decode
+ * @param value Returns the deserialized integer
+ * @return true on success, false if the reader doesn't contain enough data to deserialize
  */
 template <typename integer_t>
-static bool decode_int(ReaderInterface& reader, integer_t& value);
+static bool deserialize_int(ReaderInterface& reader, integer_t& value);
 
 /**
- * Decodes the next logtype string from the given reader
+ * Deserializes a logtype from the given reader
  * @param reader
  * @param encoded_tag
- * @param logtype Returns the logtype string
+ * @param logtype Returns the logtype
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
  */
 static IRErrorCode
-parse_logtype(ReaderInterface& reader, encoded_tag_t encoded_tag, string& logtype);
+deserialize_logtype(ReaderInterface& reader, encoded_tag_t encoded_tag, string& logtype);
 
 /**
- * Decodes the next dictionary-type variable string from the given reader
+ * Deserializes a dictionary-type variable from the given reader
  * @param reader
  * @param encoded_tag
  * @param dict_var Returns the dictionary variable
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if input buffer doesn't contain enough data to decode
+ * @return IRErrorCode_Incomplete_IR if input buffer doesn't contain enough data to deserialize
  */
 static IRErrorCode
-parse_dictionary_var(ReaderInterface& reader, encoded_tag_t encoded_tag, string& dict_var);
+deserialize_dict_var(ReaderInterface& reader, encoded_tag_t encoded_tag, string& dict_var);
 
 /**
- * Parses the next timestamp from the given reader
+ * Deserializes a timestamp from the given reader
  * @tparam encoded_variable_t Type of the encoded variable
  * @param reader
  * @param encoded_tag
@@ -63,40 +63,43 @@ parse_dictionary_var(ReaderInterface& reader, encoded_tag_t encoded_tag, string&
  * the actual timestamp if encoded_variable_t == eight_byte_encoded_variable_t
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
  */
 template <typename encoded_variable_t>
 static IRErrorCode
-parse_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_ms_t& ts);
+deserialize_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_ms_t& ts);
 
 /**
- * Decodes the next encoded message from the given reader
+ * Deserializes the next log event from the given reader
  * @tparam encoded_variable_t Type of the encoded variable
  * @param reader
- * @param message Returns the decoded message
+ * @param message Returns the deserialized message
  * @param timestamp Returns the timestamp delta if
  * encoded_variable_t == four_byte_encoded_variable_t or the actual timestamp if
  * encoded_variable_t == eight_byte_encoded_variable_t
  * @return IRErrorCode_Success on success
- * @return IRErrorCode_Decode_Error if the encoded message cannot be properly decoded
- * @return Same as ffi::ir_stream::deserialize_ir_message
+ * @return IRErrorCode_Decode_Error if the log event cannot be properly deserialized
+ * @return Same as ffi::ir_stream::deserialize_log_event
  */
 template <typename encoded_variable_t>
 static IRErrorCode
-generic_decode_next_message(ReaderInterface& reader, string& message, epoch_time_ms_t& timestamp);
+generic_deserialize_log_event(ReaderInterface& reader, string& message, epoch_time_ms_t& timestamp);
 
 /**
- * Reads metadata information from the given reader
+ * Deserializes metadata from the given reader
  * @param reader
  * @param metadata_type Returns the type of the metadata found in the IR
  * @param metadata_pos Returns the starting position of the metadata in reader
  * @param metadata_size Returns the size of the metadata written in the IR
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
  */
-static IRErrorCode
-read_metadata_info(ReaderInterface& reader, encoded_tag_t& metadata_type, uint16_t& metadata_size);
+static IRErrorCode deserialize_metadata(
+        ReaderInterface& reader,
+        encoded_tag_t& metadata_type,
+        uint16_t& metadata_size
+);
 
 template <typename encoded_variable_t>
 static bool is_variable_tag(encoded_tag_t tag, bool& is_encoded_var) {
@@ -127,7 +130,7 @@ static bool is_variable_tag(encoded_tag_t tag, bool& is_encoded_var) {
 }
 
 template <typename integer_t>
-static bool decode_int(ReaderInterface& reader, integer_t& value) {
+static bool deserialize_int(ReaderInterface& reader, integer_t& value) {
     integer_t value_little_endian;
     if (reader.try_read_numeric_value(value_little_endian) != ErrorCode_Success) {
         return false;
@@ -148,23 +151,23 @@ static bool decode_int(ReaderInterface& reader, integer_t& value) {
 }
 
 static IRErrorCode
-parse_logtype(ReaderInterface& reader, encoded_tag_t encoded_tag, string& logtype) {
+deserialize_logtype(ReaderInterface& reader, encoded_tag_t encoded_tag, string& logtype) {
     size_t logtype_length;
     if (encoded_tag == cProtocol::Payload::LogtypeStrLenUByte) {
         uint8_t length;
-        if (false == decode_int(reader, length)) {
+        if (false == deserialize_int(reader, length)) {
             return IRErrorCode_Incomplete_IR;
         }
         logtype_length = length;
     } else if (encoded_tag == cProtocol::Payload::LogtypeStrLenUShort) {
         uint16_t length;
-        if (false == decode_int(reader, length)) {
+        if (false == deserialize_int(reader, length)) {
             return IRErrorCode_Incomplete_IR;
         }
         logtype_length = length;
     } else if (encoded_tag == cProtocol::Payload::LogtypeStrLenInt) {
         int32_t length;
-        if (false == decode_int(reader, length)) {
+        if (false == deserialize_int(reader, length)) {
             return IRErrorCode_Incomplete_IR;
         }
         logtype_length = length;
@@ -179,24 +182,24 @@ parse_logtype(ReaderInterface& reader, encoded_tag_t encoded_tag, string& logtyp
 }
 
 static IRErrorCode
-parse_dictionary_var(ReaderInterface& reader, encoded_tag_t encoded_tag, string& dict_var) {
-    // Decode variable's length
+deserialize_dict_var(ReaderInterface& reader, encoded_tag_t encoded_tag, string& dict_var) {
+    // Deserialize variable's length
     size_t var_length;
     if (cProtocol::Payload::VarStrLenUByte == encoded_tag) {
         uint8_t length;
-        if (false == decode_int(reader, length)) {
+        if (false == deserialize_int(reader, length)) {
             return IRErrorCode_Incomplete_IR;
         }
         var_length = length;
     } else if (cProtocol::Payload::VarStrLenUShort == encoded_tag) {
         uint16_t length;
-        if (false == decode_int(reader, length)) {
+        if (false == deserialize_int(reader, length)) {
             return IRErrorCode_Incomplete_IR;
         }
         var_length = length;
     } else if (cProtocol::Payload::VarStrLenInt == encoded_tag) {
         int32_t length;
-        if (false == decode_int(reader, length)) {
+        if (false == deserialize_int(reader, length)) {
             return IRErrorCode_Incomplete_IR;
         }
         var_length = length;
@@ -214,7 +217,7 @@ parse_dictionary_var(ReaderInterface& reader, encoded_tag_t encoded_tag, string&
 
 template <typename encoded_variable_t>
 static IRErrorCode
-parse_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_ms_t& ts) {
+deserialize_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_ms_t& ts) {
     static_assert(
             (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
              || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
@@ -224,31 +227,31 @@ parse_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_m
         if (cProtocol::Payload::TimestampVal != encoded_tag) {
             return IRErrorCode_Corrupted_IR;
         }
-        if (false == decode_int(reader, ts)) {
+        if (false == deserialize_int(reader, ts)) {
             return IRErrorCode_Incomplete_IR;
         }
     } else {
         if (cProtocol::Payload::TimestampDeltaByte == encoded_tag) {
             int8_t ts_delta;
-            if (false == decode_int(reader, ts_delta)) {
+            if (false == deserialize_int(reader, ts_delta)) {
                 return IRErrorCode_Incomplete_IR;
             }
             ts = ts_delta;
         } else if (cProtocol::Payload::TimestampDeltaShort == encoded_tag) {
             int16_t ts_delta;
-            if (false == decode_int(reader, ts_delta)) {
+            if (false == deserialize_int(reader, ts_delta)) {
                 return IRErrorCode_Incomplete_IR;
             }
             ts = ts_delta;
         } else if (cProtocol::Payload::TimestampDeltaInt == encoded_tag) {
             int32_t ts_delta;
-            if (false == decode_int(reader, ts_delta)) {
+            if (false == deserialize_int(reader, ts_delta)) {
                 return IRErrorCode_Incomplete_IR;
             }
             ts = ts_delta;
         } else if (cProtocol::Payload::TimestampDeltaLong == encoded_tag) {
             int64_t ts_delta;
-            if (false == decode_int(reader, ts_delta)) {
+            if (false == deserialize_int(reader, ts_delta)) {
                 return IRErrorCode_Incomplete_IR;
             }
             ts = ts_delta;
@@ -260,15 +263,18 @@ parse_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_m
 }
 
 template <typename encoded_variable_t>
-static IRErrorCode
-generic_decode_next_message(ReaderInterface& reader, string& message, epoch_time_ms_t& timestamp) {
+static IRErrorCode generic_deserialize_log_event(
+        ReaderInterface& reader,
+        string& message,
+        epoch_time_ms_t& timestamp
+) {
     message.clear();
 
     vector<encoded_variable_t> encoded_vars;
     vector<string> dict_vars;
     string logtype;
     if (auto error_code
-        = deserialize_ir_message(reader, logtype, encoded_vars, dict_vars, timestamp);
+        = deserialize_log_event(reader, logtype, encoded_vars, dict_vars, timestamp);
         IRErrorCode_Success != error_code)
     {
         return error_code;
@@ -303,8 +309,11 @@ generic_decode_next_message(ReaderInterface& reader, string& message, epoch_time
     return IRErrorCode_Success;
 }
 
-static IRErrorCode
-read_metadata_info(ReaderInterface& reader, encoded_tag_t& metadata_type, uint16_t& metadata_size) {
+static IRErrorCode deserialize_metadata(
+        ReaderInterface& reader,
+        encoded_tag_t& metadata_type,
+        uint16_t& metadata_size
+) {
     if (ErrorCode_Success != reader.try_read_numeric_value(metadata_type)) {
         return IRErrorCode_Incomplete_IR;
     }
@@ -317,14 +326,14 @@ read_metadata_info(ReaderInterface& reader, encoded_tag_t& metadata_type, uint16
     switch (encoded_tag) {
         case cProtocol::Metadata::LengthUByte:
             uint8_t ubyte_res;
-            if (false == decode_int(reader, ubyte_res)) {
+            if (false == deserialize_int(reader, ubyte_res)) {
                 return IRErrorCode_Incomplete_IR;
             }
             metadata_size = ubyte_res;
             break;
         case cProtocol::Metadata::LengthUShort:
             uint16_t ushort_res;
-            if (false == decode_int(reader, ushort_res)) {
+            if (false == deserialize_int(reader, ushort_res)) {
                 return IRErrorCode_Incomplete_IR;
             }
             metadata_size = ushort_res;
@@ -336,7 +345,7 @@ read_metadata_info(ReaderInterface& reader, encoded_tag_t& metadata_type, uint16
 }
 
 template <typename encoded_variable_t>
-auto deserialize_ir_message(
+auto deserialize_log_event(
         ReaderInterface& reader,
         string& logtype,
         vector<encoded_variable_t>& encoded_vars,
@@ -357,12 +366,12 @@ auto deserialize_ir_message(
     while (is_variable_tag<encoded_variable_t>(encoded_tag, is_encoded_var)) {
         if (is_encoded_var) {
             encoded_variable_t encoded_variable;
-            if (false == decode_int(reader, encoded_variable)) {
+            if (false == deserialize_int(reader, encoded_variable)) {
                 return IRErrorCode_Incomplete_IR;
             }
             encoded_vars.push_back(encoded_variable);
         } else {
-            if (auto error_code = parse_dictionary_var(reader, encoded_tag, var_str);
+            if (auto error_code = deserialize_dict_var(reader, encoded_tag, var_str);
                 IRErrorCode_Success != error_code)
             {
                 return error_code;
@@ -375,7 +384,7 @@ auto deserialize_ir_message(
     }
 
     // Handle logtype
-    if (auto error_code = parse_logtype(reader, encoded_tag, logtype);
+    if (auto error_code = deserialize_logtype(reader, encoded_tag, logtype);
         IRErrorCode_Success != error_code)
     {
         return error_code;
@@ -386,8 +395,11 @@ auto deserialize_ir_message(
     if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
         return IRErrorCode_Incomplete_IR;
     }
-    if (auto error_code
-        = parse_timestamp<encoded_variable_t>(reader, encoded_tag, timestamp_or_timestamp_delta);
+    if (auto error_code = deserialize_timestamp<encoded_variable_t>(
+                reader,
+                encoded_tag,
+                timestamp_or_timestamp_delta
+        );
         IRErrorCode_Success != error_code)
     {
         return error_code;
@@ -417,13 +429,13 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
     return IRErrorCode_Success;
 }
 
-IRErrorCode decode_preamble(
+IRErrorCode deserialize_preamble(
         ReaderInterface& reader,
         encoded_tag_t& metadata_type,
         size_t& metadata_pos,
         uint16_t& metadata_size
 ) {
-    if (auto error_code = read_metadata_info(reader, metadata_type, metadata_size);
+    if (auto error_code = deserialize_metadata(reader, metadata_type, metadata_size);
         error_code != IRErrorCode_Success)
     {
         return error_code;
@@ -435,13 +447,13 @@ IRErrorCode decode_preamble(
     return IRErrorCode_Success;
 }
 
-IRErrorCode decode_preamble(
+IRErrorCode deserialize_preamble(
         ReaderInterface& reader,
         encoded_tag_t& metadata_type,
         std::vector<int8_t>& metadata
 ) {
     uint16_t metadata_size{0};
-    if (auto error_code = read_metadata_info(reader, metadata_type, metadata_size);
+    if (auto error_code = deserialize_metadata(reader, metadata_type, metadata_size);
         error_code != IRErrorCode_Success)
     {
         return error_code;
@@ -488,12 +500,12 @@ IRProtocolErrorCode validate_protocol_version(std::string_view protocol_version)
 }
 
 namespace four_byte_encoding {
-    IRErrorCode decode_next_message(
+    IRErrorCode deserialize_log_event(
             ReaderInterface& reader,
             string& message,
             epoch_time_ms_t& timestamp_delta
     ) {
-        return generic_decode_next_message<four_byte_encoded_variable_t>(
+        return generic_deserialize_log_event<four_byte_encoded_variable_t>(
                 reader,
                 message,
                 timestamp_delta
@@ -503,8 +515,8 @@ namespace four_byte_encoding {
 
 namespace eight_byte_encoding {
     IRErrorCode
-    decode_next_message(ReaderInterface& reader, string& message, epoch_time_ms_t& timestamp) {
-        return generic_decode_next_message<eight_byte_encoded_variable_t>(
+    deserialize_log_event(ReaderInterface& reader, string& message, epoch_time_ms_t& timestamp) {
+        return generic_deserialize_log_event<eight_byte_encoded_variable_t>(
                 reader,
                 message,
                 timestamp
@@ -513,7 +525,7 @@ namespace eight_byte_encoding {
 }  // namespace eight_byte_encoding
 
 // Explicitly declare specializations
-template auto deserialize_ir_message<four_byte_encoded_variable_t>(
+template auto deserialize_log_event<four_byte_encoded_variable_t>(
         ReaderInterface& reader,
         string& logtype,
         vector<four_byte_encoded_variable_t>& encoded_vars,
@@ -521,7 +533,7 @@ template auto deserialize_ir_message<four_byte_encoded_variable_t>(
         epoch_time_ms_t& timestamp_or_timestamp_delta
 ) -> IRErrorCode;
 
-template auto deserialize_ir_message<eight_byte_encoded_variable_t>(
+template auto deserialize_log_event<eight_byte_encoded_variable_t>(
         ReaderInterface& reader,
         string& logtype,
         vector<eight_byte_encoded_variable_t>& encoded_vars,

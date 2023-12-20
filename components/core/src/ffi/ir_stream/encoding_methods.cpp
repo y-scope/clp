@@ -13,29 +13,29 @@ using std::vector;
 namespace ffi::ir_stream {
 // Local function prototypes
 /**
- * Encodes an integer into the IR stream
+ * Serializes the given integer into the IR stream
  * @tparam integer_t
  * @param value
  * @param ir_buf
  */
 template <typename integer_t>
-static void encode_int(integer_t value, vector<int8_t>& ir_buf);
+static void serialize_int(integer_t value, vector<int8_t>& ir_buf);
 
 /**
- * Encodes the given logtype into the IR stream
+ * Serializes the given logtype into the IR stream
  * @param logtype
  * @param ir_buf
  * @return true on success, false otherwise
  */
-static bool encode_logtype(string_view logtype, vector<int8_t>& ir_buf);
+static bool serialize_logtype(string_view logtype, vector<int8_t>& ir_buf);
 
 /**
- * Encodes the given metadata into the IR stream
+ * Serializes the given metadata into the IR stream
  * @param metadata
  * @param ir_buf
  * @return true on success, false otherwise
  */
-static bool encode_metadata(nlohmann::json& metadata, vector<int8_t>& ir_buf);
+static bool serialize_metadata(nlohmann::json& metadata, vector<int8_t>& ir_buf);
 
 /**
  * Adds the basic metadata fields to the given JSON object
@@ -69,10 +69,10 @@ public:
             m_ir_buf.push_back(bit_cast<int8_t>(static_cast<uint8_t>(length)));
         } else if (length <= UINT16_MAX) {
             m_ir_buf.push_back(cProtocol::Payload::VarStrLenUShort);
-            encode_int(static_cast<uint16_t>(length), m_ir_buf);
+            serialize_int(static_cast<uint16_t>(length), m_ir_buf);
         } else if (length <= INT32_MAX) {
             m_ir_buf.push_back(cProtocol::Payload::VarStrLenInt);
-            encode_int(static_cast<int32_t>(length), m_ir_buf);
+            serialize_int(static_cast<int32_t>(length), m_ir_buf);
         } else {
             return false;
         }
@@ -86,7 +86,7 @@ private:
 };
 
 template <typename integer_t>
-static void encode_int(integer_t value, vector<int8_t>& ir_buf) {
+static void serialize_int(integer_t value, vector<int8_t>& ir_buf) {
     integer_t value_big_endian;
     static_assert(sizeof(integer_t) == 2 || sizeof(integer_t) == 4 || sizeof(integer_t) == 8);
     if constexpr (sizeof(value) == 2) {
@@ -100,17 +100,17 @@ static void encode_int(integer_t value, vector<int8_t>& ir_buf) {
     ir_buf.insert(ir_buf.end(), data, data + sizeof(value));
 }
 
-static bool encode_logtype(string_view logtype, vector<int8_t>& ir_buf) {
+static bool serialize_logtype(string_view logtype, vector<int8_t>& ir_buf) {
     auto length = logtype.length();
     if (length <= UINT8_MAX) {
         ir_buf.push_back(cProtocol::Payload::LogtypeStrLenUByte);
         ir_buf.push_back(bit_cast<int8_t>(static_cast<uint8_t>(length)));
     } else if (length <= UINT16_MAX) {
         ir_buf.push_back(cProtocol::Payload::LogtypeStrLenUShort);
-        encode_int(static_cast<uint16_t>(length), ir_buf);
+        serialize_int(static_cast<uint16_t>(length), ir_buf);
     } else if (length <= INT32_MAX) {
         ir_buf.push_back(cProtocol::Payload::LogtypeStrLenInt);
-        encode_int(static_cast<int32_t>(length), ir_buf);
+        serialize_int(static_cast<int32_t>(length), ir_buf);
     } else {
         // Logtype is too long for encoding
         return false;
@@ -119,7 +119,7 @@ static bool encode_logtype(string_view logtype, vector<int8_t>& ir_buf) {
     return true;
 }
 
-static bool encode_metadata(nlohmann::json& metadata, vector<int8_t>& ir_buf) {
+static bool serialize_metadata(nlohmann::json& metadata, vector<int8_t>& ir_buf) {
     ir_buf.push_back(cProtocol::Metadata::EncodingJson);
 
     auto metadata_serialized
@@ -130,7 +130,7 @@ static bool encode_metadata(nlohmann::json& metadata, vector<int8_t>& ir_buf) {
         ir_buf.push_back(bit_cast<int8_t>(static_cast<uint8_t>(metadata_serialized_length)));
     } else if (metadata_serialized_length <= UINT16_MAX) {
         ir_buf.push_back(cProtocol::Metadata::LengthUShort);
-        encode_int(static_cast<uint16_t>(metadata_serialized_length), ir_buf);
+        serialize_int(static_cast<uint16_t>(metadata_serialized_length), ir_buf);
     } else {
         // Can't encode metadata longer than 64 KiB
         return false;
@@ -155,7 +155,7 @@ static void add_base_metadata_fields(
 }
 
 namespace eight_byte_encoding {
-    bool encode_preamble(
+    bool serialize_preamble(
             string_view timestamp_pattern,
             string_view timestamp_pattern_syntax,
             string_view time_zone_id,
@@ -175,10 +175,10 @@ namespace eight_byte_encoding {
                 metadata_json
         );
 
-        return encode_metadata(metadata_json, ir_buf);
+        return serialize_metadata(metadata_json, ir_buf);
     }
 
-    bool encode_message(
+    bool serialize_log_event(
             epoch_time_ms_t timestamp,
             string_view message,
             string& logtype,
@@ -186,7 +186,7 @@ namespace eight_byte_encoding {
     ) {
         auto encoded_var_handler = [&ir_buf](eight_byte_encoded_variable_t encoded_var) {
             ir_buf.push_back(cProtocol::Payload::VarEightByteEncoding);
-            encode_int(encoded_var, ir_buf);
+            serialize_int(encoded_var, ir_buf);
         };
 
         if (false
@@ -201,20 +201,20 @@ namespace eight_byte_encoding {
             return false;
         }
 
-        if (false == encode_logtype(logtype, ir_buf)) {
+        if (false == serialize_logtype(logtype, ir_buf)) {
             return false;
         }
 
         // Encode timestamp
         ir_buf.push_back(cProtocol::Payload::TimestampVal);
-        encode_int(timestamp, ir_buf);
+        serialize_int(timestamp, ir_buf);
 
         return true;
     }
 }  // namespace eight_byte_encoding
 
 namespace four_byte_encoding {
-    bool encode_preamble(
+    bool serialize_preamble(
             string_view timestamp_pattern,
             string_view timestamp_pattern_syntax,
             string_view time_zone_id,
@@ -237,30 +237,30 @@ namespace four_byte_encoding {
         metadata_json[cProtocol::Metadata::ReferenceTimestampKey]
                 = std::to_string(reference_timestamp);
 
-        return encode_metadata(metadata_json, ir_buf);
+        return serialize_metadata(metadata_json, ir_buf);
     }
 
-    bool encode_message(
+    bool serialize_log_event(
             epoch_time_ms_t timestamp_delta,
             string_view message,
             string& logtype,
             vector<int8_t>& ir_buf
     ) {
-        if (false == encode_message(message, logtype, ir_buf)) {
+        if (false == serialize_message(message, logtype, ir_buf)) {
             return false;
         }
 
-        if (false == encode_timestamp(timestamp_delta, ir_buf)) {
+        if (false == serialize_timestamp(timestamp_delta, ir_buf)) {
             return false;
         }
 
         return true;
     }
 
-    bool encode_message(string_view message, string& logtype, vector<int8_t>& ir_buf) {
+    bool serialize_message(string_view message, string& logtype, vector<int8_t>& ir_buf) {
         auto encoded_var_handler = [&ir_buf](four_byte_encoded_variable_t encoded_var) {
             ir_buf.push_back(cProtocol::Payload::VarFourByteEncoding);
-            encode_int(encoded_var, ir_buf);
+            serialize_int(encoded_var, ir_buf);
         };
 
         if (false
@@ -275,26 +275,26 @@ namespace four_byte_encoding {
             return false;
         }
 
-        if (false == encode_logtype(logtype, ir_buf)) {
+        if (false == serialize_logtype(logtype, ir_buf)) {
             return false;
         }
 
         return true;
     }
 
-    bool encode_timestamp(epoch_time_ms_t timestamp_delta, std::vector<int8_t>& ir_buf) {
+    bool serialize_timestamp(epoch_time_ms_t timestamp_delta, std::vector<int8_t>& ir_buf) {
         if (INT8_MIN <= timestamp_delta && timestamp_delta <= INT8_MAX) {
             ir_buf.push_back(cProtocol::Payload::TimestampDeltaByte);
             ir_buf.push_back(static_cast<int8_t>(timestamp_delta));
         } else if (INT16_MIN <= timestamp_delta && timestamp_delta <= INT16_MAX) {
             ir_buf.push_back(cProtocol::Payload::TimestampDeltaShort);
-            encode_int(static_cast<int16_t>(timestamp_delta), ir_buf);
+            serialize_int(static_cast<int16_t>(timestamp_delta), ir_buf);
         } else if (INT32_MIN <= timestamp_delta && timestamp_delta <= INT32_MAX) {
             ir_buf.push_back(cProtocol::Payload::TimestampDeltaInt);
-            encode_int(static_cast<int32_t>(timestamp_delta), ir_buf);
+            serialize_int(static_cast<int32_t>(timestamp_delta), ir_buf);
         } else if (INT64_MIN <= timestamp_delta && timestamp_delta <= INT64_MAX) {
             ir_buf.push_back(cProtocol::Payload::TimestampDeltaLong);
-            encode_int(static_cast<int64_t>(timestamp_delta), ir_buf);
+            serialize_int(static_cast<int64_t>(timestamp_delta), ir_buf);
         } else {
             // Delta exceeds maximum representable by a 64-bit int
             return false;
