@@ -1,0 +1,47 @@
+name: clp-core-lint
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/clp-core-lint.yaml"
+      - "components/core/src/**"
+      - "components/core/tests/**"
+  push:
+    paths:
+      - ".github/workflows/clp-core-lint.yaml"
+      - "components/core/src/**"
+      - "components/core/tests/**"
+  workflow_dispatch:
+
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+  # Cancel in-progress jobs for efficiency
+  cancel-in-progress: true
+
+jobs:
+  clang-format:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+        with:
+          submodules: "recursive"
+
+      - uses: "actions/setup-python@v5"
+        with:
+          python-version: "3.11"
+
+      - name: "Install clang-format"
+        shell: "bash"
+        run: |
+          pip3 install --upgrade pip
+          pip3 install --upgrade clang-format
+
+      - name: "Run clang-format on all of core's source files"
+        shell: "bash"
+        working-directory: "./components/core"
+        run: |
+          find src tests \
+            -type f \
+            \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.inc" \) \
+            -print0 | \
+              xargs -0 clang-format --dry-run -Werror

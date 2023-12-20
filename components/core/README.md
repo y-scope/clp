@@ -22,7 +22,7 @@ CLP core is the low-level component that performs compression, decompression, an
 * We have built and tested CLP on the OSes listed 
   [below](https://github.com/y-scope/clp/tree/main/components/core#native-environment).
   * If you have trouble building for another OS, file an issue, and we may be able to help.
-* A compiler that supports C++17 (e.g., gcc-8)
+* A compiler that supports C++17 and std::span (e.g., gcc-10)
 
 ## Building
 
@@ -36,9 +36,10 @@ tools/scripts/deps-download/download-all.sh
 ```
 
 This will download:
-* [Catch2](https://github.com/catchorg/Catch2.git) (v2.13.6)
+* [ANTLR v4](https://www.antlr.org/download.html) (v4.11.1)
+* [Catch2](https://github.com/catchorg/Catch2.git) (v2.13.7)
 * [date](https://github.com/HowardHinnant/date.git) (v3.0.1)
-* [json](https://github.com/nlohmann/json.git) (v3.10.2)
+* [json](https://github.com/nlohmann/json.git) (v3.10.4)
 * [SQLite3](https://www.sqlite.org/download.html) (v3.36.0)
 * [yaml-cpp](https://github.com/jbeder/yaml-cpp.git) (v0.7.0)
 
@@ -56,8 +57,8 @@ See the relevant README for your OS:
 
 * [CentOS 7.4](./tools/scripts/lib_install/centos7.4/README.md)
 * [macOS 12](./tools/scripts/lib_install/macos-12/README.md)
-* [Ubuntu 18.04](./tools/scripts/lib_install/ubuntu-bionic/README.md)
 * [Ubuntu 20.04](./tools/scripts/lib_install/ubuntu-focal/README.md)
+* [Ubuntu 22.04](./tools/scripts/lib_install/ubuntu-jammy/README.md)
 
 Want to build natively on an OS not listed here? You can file a [feature request](https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml).
 
@@ -73,7 +74,7 @@ docker run --rm -it \
   -v$(readlink -f /path/to/clp/components/core):/mnt/clp \
   -v$(readlink -f /path/to/my/logs):/mnt/logs \
   ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main \
-  /bin/bash
+  /bin/bash -l
 
 cd /mnt/clp
 ```

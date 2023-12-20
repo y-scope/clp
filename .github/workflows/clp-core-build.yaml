@@ -1,125 +1,158 @@
-name: build-clp-core
+name: clp-core-build
 
 on:
-  push:
-    paths:
-      - 'components/core/**'
-      - '.github/workflows/clp-core-build.yaml'
   pull_request:
     paths:
-      - 'components/core/**'
-      - '.github/workflows/clp-core-build.yaml'
+      - ".github/actions/**"
+      - ".github/workflows/clp-core-build.yaml"
+      - "components/core/**"
+      - "!components/core/tools/scripts/lib_install/macos-12/**"
+  push:
+    paths:
+      - ".github/actions/**"
+      - ".github/workflows/clp-core-build.yaml"
+      - "components/core/**"
+      - "!components/core/tools/scripts/lib_install/macos-12/**"
   workflow_dispatch:
-  workflow_run:
-    workflows: ["generate-build-dependency-image"]
-    branches: [main]
-    types:
-      - completed
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME_BASE: ${{github.repository}}/clp-core-x86
+  # Consider changes between the current commit and `main`
+  # NOTE: If a pull request changes the image, then we need to build the image and then build
+  # CLP using the changed image; otherwise we can build CLP using the published image. So when
+  # determining what files have changed, we use `main` rather than the previous commit to ensure
+  # that on every push to the PR, we can detect if the image was changed and use it to build
+  # and test CLP.
+  PATHS_FILTER_BASE: "main"
+  PATHS_FILTER_LIB_INSTALL_GLOB: "components/core/tools/scripts/lib_install/*.sh"
+  PATHS_FILTER_CLP_FILTER: |
+    clp:
+      - ".github/actions/**"
+      - ".github/workflows/clp-core-build.yaml"
+      - ".gitmodules"
+      - "components/core/cmake/**"
+      - "components/core/CMakeLists.txt"
+      - "components/core/src/**"
+      - "components/core/tests/**"
+      - "components/core/tools/scripts/deps-download/**"
+      - "components/core/tools/scripts/utils/build-and-run-unit-tests.sh"
 
-concurrency: build-${{github.ref}}
+# Currency group to prevent multiple workflow instances from trying to publish container images
+concurrency: "${{github.workflow}}-${{github.ref}}"
 
 jobs:
-  build-focal:
-    runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main
-      volumes:
-        - ${{github.workspace}}/build:/output
+  centos74:
+    runs-on: "ubuntu-latest"
+    services:
+      registry:
+        image: "registry:2"
+        ports: [ "5000:5000" ]
+    env:
+      OS_NAME: "centos7.4"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: "actions/checkout@v3"
         with:
-            submodules: recursive
+          submodules: "recursive"
 
-      - name: Workaround actions/runner-images/issues/6775
-        run: chown $(id -u):$(id -g) -R .
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
 
-      - name: Build CLP Core
-        id: build
-        uses: ./.github/actions/clp-core-build
-      
-      - name: Upload CLP Binary artifact
-        uses: actions/upload-artifact@main
+      - name: "Filter relevant changes"
+        uses: "dorny/paths-filter@v2"
+        id: "filter"
         with:
-            name: clp-binaries-focal
-            path: ${{github.workspace}}/clp-binaries-focal.tar
-            if-no-files-found: error
-  
-  build-clp-core-image:
-    needs: build-focal
-    runs-on: ubuntu-latest
+          base: "${{env.PATHS_FILTER_BASE}}"
+          filters: |
+            image:
+              - ".github/actions/**"
+              - ".github/workflows/clp-core-build.yaml"
+              - ${{env.PATHS_FILTER_LIB_INSTALL_GLOB}}
+              - "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}/**"
+              - "components/core/tools/scripts/lib_install/${{env.OS_NAME}}/**"
+            ${{inputs.PATHS_FILTER_CLP_FILTER}}
+
+      - uses: "./.github/actions/clp-core-build-deps-and-binaries"
+        with:
+          os_name: "${{env.OS_NAME}}"
+          deps_image_changed: "${{steps.filter.outputs.image}}"
+          push_binaries_image: false
+          local_registry_port: "5000"
+          token: "${{secrets.GITHUB_TOKEN}}"
+
+  ubuntu-focal:
+    runs-on: "ubuntu-latest"
+    services:
+      registry:
+        image: "registry:2"
+        ports: [ "5000:5000" ]
+    env:
+      OS_NAME: "ubuntu-focal"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: "actions/checkout@v3"
         with:
-            submodules: recursive
+          submodules: "recursive"
 
-      - name: Workaround actions/runner-images/issues/6775
-        run: chown $(id -u):$(id -g) -R .
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
 
-      - name: Download built CLP Binaries
-        uses: actions/download-artifact@v2
+      - name: "Filter relevant changes"
+        uses: "dorny/paths-filter@v2"
+        id: "filter"
         with:
-          name: clp-binaries-focal
-          path: ${{github.workspace}}/binaries
-      
-      - name: Extract Binaries Bundle
-        run: tar -xvf clp-binaries-focal.tar
-        working-directory: ${{github.workspace}}/binaries
-          
-      - name: Build and Push Ubuntu Focal Docker Image
-        uses: ./.github/actions/clp-docker-build-push-action
-        with:
-          image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-focal
-          context: ${{github.workspace}}/binaries
-          file: components/core/tools/docker-images/clp-core-focal/Dockerfile
-          token: ${{secrets.GITHUB_TOKEN}}
-          push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
+          base: "${{env.PATHS_FILTER_BASE}}"
+          filters: |
+            image:
+              - ".github/actions/**"
+              - ".github/workflows/clp-core-build.yaml"
+              - ${{env.PATHS_FILTER_LIB_INSTALL_GLOB}}
+              - "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}/**"
+              - "components/core/tools/scripts/lib_install/${{env.OS_NAME}}/**"
+            ${{inputs.PATHS_FILTER_CLP_FILTER}}
 
-  build-bionic:
-    runs-on: ubuntu-latest
-    container: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-bionic:main
+      - uses: "./.github/actions/clp-core-build-deps-and-binaries"
+        with:
+          os_name: "${{env.OS_NAME}}"
+          deps_image_changed: "${{steps.filter.outputs.image}}"
+          push_binaries_image: true
+          local_registry_port: "5000"
+          token: "${{secrets.GITHUB_TOKEN}}"
+
+  ubuntu-jammy:
+    runs-on: "ubuntu-latest"
+    services:
+      registry:
+        image: "registry:2"
+        ports: [ "5000:5000" ]
+    env:
+      OS_NAME: "ubuntu-jammy"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: "actions/checkout@v3"
         with:
-            submodules: recursive
+          submodules: "recursive"
 
-      - name: Workaround actions/runner-images/issues/6775
-        run: chown $(id -u):$(id -g) -R .
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
 
-      - name: Build CLP Core
-        uses: ./.github/actions/clp-core-build
-
-  build-centos:
-    runs-on: ubuntu-latest
-    container: ghcr.io/y-scope/clp/clp-core-dependencies-x86-centos7.4:main
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: "Filter relevant changes"
+        uses: "dorny/paths-filter@v2"
+        id: "filter"
         with:
-            submodules: recursive
+          base: "${{env.PATHS_FILTER_BASE}}"
+          filters: |
+            image:
+              - ".github/actions/**"
+              - ".github/workflows/clp-core-build.yaml"
+              - ${{env.PATHS_FILTER_LIB_INSTALL_GLOB}}
+              - "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}/**"
+              - "components/core/tools/scripts/lib_install/${{env.OS_NAME}}/**"
+            ${{inputs.PATHS_FILTER_CLP_FILTER}}
 
-      - name: Workaround actions/runner-images/issues/6775
-        run: chown $(id -u):$(id -g) -R .
-
-      - name: Build CLP Core
-        uses: ./.github/actions/clp-core-build
-
-  build-macos:
-    runs-on: macos-12
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: "./.github/actions/clp-core-build-deps-and-binaries"
         with:
-            submodules: recursive
-
-      - name: Install dependencies
-        run: ./components/core/tools/scripts/lib_install/macos-12/install-all.sh
-
-      - name: Build CLP Core
-        uses: ./.github/actions/clp-core-build
+          os_name: "${{env.OS_NAME}}"
+          deps_image_changed: "${{steps.filter.outputs.image}}"
+          push_binaries_image: false
+          local_registry_port: "5000"
+          token: "${{secrets.GITHUB_TOKEN}}"

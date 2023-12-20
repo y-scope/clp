@@ -1,24 +1,24 @@
 #include "GlobalMetadataDBConfig.hpp"
 
-// fmt
 #include <fmt/core.h>
-
-// yaml-cpp
-#include "../submodules/yaml-cpp/include/yaml-cpp/yaml.h"
+#include <yaml-cpp/include/yaml-cpp/yaml.h>
 
 using std::exception;
 using std::invalid_argument;
 using std::string;
 
-static exception get_yaml_missing_key_exception (const string& key_name) {
+static exception get_yaml_missing_key_exception(string const& key_name) {
     throw invalid_argument(fmt::format("Missing key '{}'", key_name));
 }
 
-static exception get_yaml_unconvertable_value_exception (const string& key_name, const string& destination_type) {
-    throw invalid_argument(fmt::format("'{}' could not be converted to type '{}'", key_name, destination_type));
+static exception
+get_yaml_unconvertable_value_exception(string const& key_name, string const& destination_type) {
+    throw invalid_argument(
+            fmt::format("'{}' could not be converted to type '{}'", key_name, destination_type)
+    );
 }
 
-void GlobalMetadataDBConfig::parse_config_file (const string& config_file_path) {
+void GlobalMetadataDBConfig::parse_config_file(string const& config_file_path) {
     YAML::Node config = YAML::LoadFile(config_file_path);
 
     if (!config["type"]) {

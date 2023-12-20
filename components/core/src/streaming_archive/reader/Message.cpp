@@ -1,39 +1,39 @@
 #include "Message.hpp"
 
 namespace streaming_archive { namespace reader {
-    size_t Message::get_message_number () const {
+    size_t Message::get_message_number() const {
         return m_message_number;
     }
 
-    logtype_dictionary_id_t Message::get_logtype_id () const {
+    logtype_dictionary_id_t Message::get_logtype_id() const {
         return m_logtype_id;
     }
 
-    const std::vector<encoded_variable_t>& Message::get_vars () const {
+    std::vector<encoded_variable_t> const& Message::get_vars() const {
         return m_vars;
     }
 
-    epochtime_t Message::get_ts_in_milli () const {
+    epochtime_t Message::get_ts_in_milli() const {
         return m_timestamp;
     }
 
-    void Message::set_message_number (uint64_t message_number) {
+    void Message::set_message_number(uint64_t message_number) {
         m_message_number = message_number;
     }
 
-    void Message::set_logtype_id (logtype_dictionary_id_t logtype_id) {
+    void Message::set_logtype_id(logtype_dictionary_id_t logtype_id) {
         m_logtype_id = logtype_id;
     }
 
-    void Message::add_var (encoded_variable_t var) {
+    void Message::add_var(encoded_variable_t var) {
         m_vars.push_back(var);
     }
 
-    void Message::set_timestamp (epochtime_t timestamp) {
+    void Message::set_timestamp(epochtime_t timestamp) {
         m_timestamp = timestamp;
     }
 
-    void Message::clear_vars () {
+    void Message::clear_vars() {
         m_vars.clear();
     }
-} }
+}}  // namespace streaming_archive::reader

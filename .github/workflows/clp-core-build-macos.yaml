@@ -1,0 +1,59 @@
+name: "clp-core-build-macos"
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/clp-core-build-macos.yaml"
+      - "components/core/cmake/**"
+      - "components/core/CMakeLists.txt"
+      - "components/core/src/**"
+      - "components/core/tests/**"
+      - "components/core/tools/scripts/lib_install/macos-12/**"
+      - "components/core/tools/scripts/deps-download/**"
+      - "components/core/tools/scripts/utils/build-and-run-unit-tests.sh"
+  push:
+    paths:
+      - ".github/workflows/clp-core-build-macos.yaml"
+      - "components/core/cmake/**"
+      - "components/core/CMakeLists.txt"
+      - "components/core/src/**"
+      - "components/core/tests/**"
+      - "components/core/tools/scripts/lib_install/macos-12/**"
+      - "components/core/tools/scripts/deps-download/**"
+      - "components/core/tools/scripts/utils/build-and-run-unit-tests.sh"
+  workflow_dispatch:
+
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+  # Cancel in-progress jobs for efficiency
+  cancel-in-progress: true
+
+jobs:
+  build-macos:
+    runs-on: "macos-12"
+    steps:
+      - uses: "actions/checkout@v3"
+        with:
+            submodules: "recursive"
+      
+      # See https://github.com/actions/setup-python/issues/577
+      - name: "Remove preinstalled binaries which conflict with brew's installs"
+        run: |
+          rm -f /usr/local/bin/2to3*
+          rm -f /usr/local/bin/idle3*
+          rm -f /usr/local/bin/pydoc3*
+          rm -f /usr/local/bin/python3*
+
+      - name: "Install dependencies"
+        run: ./components/core/tools/scripts/lib_install/macos-12/install-all.sh
+
+      - name: "Download source dependencies"
+        shell: "bash"
+        working-directory: "./components/core"
+        run: "./tools/scripts/deps-download/download-all.sh"
+
+      - name: "Build CLP-core and run unit tests"
+        shell: "bash"
+        working-directory: "./components/core"
+        # NOTE: We omit the Stopwatch tests since GH's macOS runner is too slow
+        run: "./tools/scripts/utils/build-and-run-unit-tests.sh . build ~[Stopwatch]"

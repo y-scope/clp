@@ -1,13 +1,8 @@
-// C libraries
 #include <unistd.h>
 
-// Boost libraries
 #include <boost/filesystem.hpp>
+#include <Catch2/single_include/catch2/catch.hpp>
 
-// Catch2
-#include "../submodules/Catch2/single_include/catch2/catch.hpp"
-
-// Project headers
 #include "../src/streaming_archive/reader/Segment.hpp"
 #include "../src/streaming_archive/writer/Segment.hpp"
 #include "../src/Utils.hpp"
@@ -19,7 +14,7 @@ TEST_CASE("Test writing and reading a segment", "[Segment]") {
     ErrorCode error_code;
 
     // Initialize data to test compression and decompression
-    size_t uncompressed_data_size = 128L * 1024 * 1024;     // 128MB
+    size_t uncompressed_data_size = 128L * 1024 * 1024;  // 128MB
     char* uncompressed_data = new char[uncompressed_data_size];
     for (char i = 0; i < uncompressed_data_size; ++i) {
         uncompressed_data[i] = (char)('a' + (i % 26));

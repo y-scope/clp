@@ -14,11 +14,17 @@ mkdir -p submodules
 # sqlite amalgamation
 python3 "${script_dir}/download-dep.py" "${script_dir}/sqlite3.json"
 
+# We pull the antlr jar to a known location inside the project hierarchy
+# here so that it is in a known location for code generation
+python3 "${script_dir}/download-dep.py" "${script_dir}/antlr4.json"
+
 if [ -e "$project_root_dir/.git" ] ; then
   git submodule update --init --recursive
 else
+  python3 "${script_dir}/download-dep.py" "${script_dir}/boost-outcome.json"
   python3 "${script_dir}/download-dep.py" "${script_dir}/Catch2.json"
   python3 "${script_dir}/download-dep.py" "${script_dir}/date.json"
   python3 "${script_dir}/download-dep.py" "${script_dir}/json.json"
+  python3 "${script_dir}/download-dep.py" "${script_dir}/log-surgeon.json"
   python3 "${script_dir}/download-dep.py" "${script_dir}/yaml-cpp.json"
 fi

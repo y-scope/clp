@@ -1,10 +1,9 @@
 #include "Decompressor.hpp"
 
-// C++ standard libraries
 #include <cstring>
 
 namespace streaming_compression { namespace passthrough {
-    ErrorCode Decompressor::try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
+    ErrorCode Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
         if (InputType::NotInitialized == m_input_type) {
             throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
         }
@@ -18,7 +17,10 @@ namespace streaming_compression { namespace passthrough {
                     return ErrorCode_EndOfFile;
                 }
 
-                num_bytes_read = std::min(num_bytes_to_read, m_compressed_data_buf_len - m_decompressed_stream_pos);
+                num_bytes_read = std::min(
+                        num_bytes_to_read,
+                        m_compressed_data_buf_len - m_decompressed_stream_pos
+                );
                 memcpy(buf, &m_compressed_data_buf[m_decompressed_stream_pos], num_bytes_read);
                 break;
             case InputType::File: {
@@ -36,7 +38,7 @@ namespace streaming_compression { namespace passthrough {
         return ErrorCode_Success;
     }
 
-    ErrorCode Decompressor::try_seek_from_begin (size_t pos) {
+    ErrorCode Decompressor::try_seek_from_begin(size_t pos) {
         if (InputType::NotInitialized == m_input_type) {
             throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
         }
@@ -62,7 +64,7 @@ namespace streaming_compression { namespace passthrough {
         return ErrorCode_Success;
     }
 
-    ErrorCode Decompressor::try_get_pos (size_t& pos) {
+    ErrorCode Decompressor::try_get_pos(size_t& pos) {
         if (InputType::NotInitialized == m_input_type) {
             throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
         }
@@ -72,7 +74,7 @@ namespace streaming_compression { namespace passthrough {
         return ErrorCode_Success;
     }
 
-    void Decompressor::open (const char* compressed_data_buf, size_t compressed_data_buf_size) {
+    void Decompressor::open(char const* compressed_data_buf, size_t compressed_data_buf_size) {
         if (InputType::NotInitialized != m_input_type) {
             throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
         }
@@ -83,7 +85,7 @@ namespace streaming_compression { namespace passthrough {
         m_input_type = InputType::CompressedDataBuf;
     }
 
-    void Decompressor::open (FileReader& file_reader, size_t file_read_buffer_capacity) {
+    void Decompressor::open(FileReader& file_reader, size_t file_read_buffer_capacity) {
         if (InputType::NotInitialized != m_input_type) {
             throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
         }
@@ -93,7 +95,7 @@ namespace streaming_compression { namespace passthrough {
         m_input_type = InputType::File;
     }
 
-    void Decompressor::close () {
+    void Decompressor::close() {
         switch (m_input_type) {
             case InputType::CompressedDataBuf:
                 m_compressed_data_buf = nullptr;
@@ -111,7 +113,11 @@ namespace streaming_compression { namespace passthrough {
         m_input_type = InputType::NotInitialized;
     }
 
-    ErrorCode Decompressor::get_decompressed_stream_region (size_t decompressed_stream_pos, char* extraction_buf, size_t extraction_len) {
+    ErrorCode Decompressor::get_decompressed_stream_region(
+            size_t decompressed_stream_pos,
+            char* extraction_buf,
+            size_t extraction_len
+    ) {
         auto error_code = try_seek_from_begin(decompressed_stream_pos);
         if (ErrorCode_Success != error_code) {
             return error_code;
@@ -120,4 +126,4 @@ namespace streaming_compression { namespace passthrough {
         error_code = try_read_exact_length(extraction_buf, extraction_len);
         return error_code;
     }
-} }
+}}  // namespace streaming_compression::passthrough

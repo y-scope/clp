@@ -1,16 +1,9 @@
-// C++ libraries
 #include <string>
 
-// Boost libraries
 #include <boost/filesystem.hpp>
-
-// Catch2
-#include "../submodules/Catch2/single_include/catch2/catch.hpp"
-
-// Zstd library
+#include <Catch2/single_include/catch2/catch.hpp>
 #include <zstd.h>
 
-// Project headers
 #include "../src/streaming_compression/passthrough/Compressor.hpp"
 #include "../src/streaming_compression/passthrough/Decompressor.hpp"
 #include "../src/streaming_compression/zstd/Compressor.hpp"
@@ -18,7 +11,7 @@
 
 TEST_CASE("StreamingCompression", "[StreamingCompression]") {
     // Initialize data to test compression and decompression
-    size_t uncompressed_data_size = 128L * 1024 * 1024;     // 128MB
+    size_t uncompressed_data_size = 128L * 1024 * 1024;  // 128MB
     char* uncompressed_data = new char[uncompressed_data_size];
     for (size_t i = 0; i < uncompressed_data_size; ++i) {
         uncompressed_data[i] = (char)('a' + (i % 26));
@@ -52,36 +45,76 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
         streaming_compression::zstd::Decompressor decompressor;
         REQUIRE(ErrorCode_Success == decompressor.open(compressed_file_path));
         size_t uncompressed_bytes = 0;
-        REQUIRE(ErrorCode_Success == decompressor.get_decompressed_stream_region(uncompressed_bytes, decompressed_data, ZSTD_CStreamInSize()));
+        REQUIRE(ErrorCode_Success
+                == decompressor.get_decompressed_stream_region(
+                        uncompressed_bytes,
+                        decompressed_data,
+                        ZSTD_CStreamInSize()
+                ));
         REQUIRE(memcmp(uncompressed_data, decompressed_data, ZSTD_CStreamInSize()) == 0);
         memset(decompressed_data, 0, uncompressed_data_size);
         uncompressed_bytes += ZSTD_CStreamInSize();
 
-        REQUIRE(ErrorCode_Success == decompressor.get_decompressed_stream_region(uncompressed_bytes, decompressed_data, uncompressed_data_size/100));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size/100) == 0);
+        REQUIRE(ErrorCode_Success
+                == decompressor.get_decompressed_stream_region(
+                        uncompressed_bytes,
+                        decompressed_data,
+                        uncompressed_data_size / 100
+                ));
+        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 100) == 0);
         memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size/100;
-        REQUIRE(ErrorCode_Success == decompressor.get_decompressed_stream_region(uncompressed_bytes, decompressed_data, uncompressed_data_size/50));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size/50) == 0);
+        uncompressed_bytes += uncompressed_data_size / 100;
+        REQUIRE(ErrorCode_Success
+                == decompressor.get_decompressed_stream_region(
+                        uncompressed_bytes,
+                        decompressed_data,
+                        uncompressed_data_size / 50
+                ));
+        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 50) == 0);
         memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size/50;
-        REQUIRE(ErrorCode_Success == decompressor.get_decompressed_stream_region(uncompressed_bytes, decompressed_data, uncompressed_data_size/25));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size/25) == 0);
+        uncompressed_bytes += uncompressed_data_size / 50;
+        REQUIRE(ErrorCode_Success
+                == decompressor.get_decompressed_stream_region(
+                        uncompressed_bytes,
+                        decompressed_data,
+                        uncompressed_data_size / 25
+                ));
+        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 25) == 0);
         memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size/25;
-        REQUIRE(ErrorCode_Success == decompressor.get_decompressed_stream_region(uncompressed_bytes, decompressed_data, uncompressed_data_size/10));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size/10) == 0);
+        uncompressed_bytes += uncompressed_data_size / 25;
+        REQUIRE(ErrorCode_Success
+                == decompressor.get_decompressed_stream_region(
+                        uncompressed_bytes,
+                        decompressed_data,
+                        uncompressed_data_size / 10
+                ));
+        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 10) == 0);
         memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size/10;
-        REQUIRE(ErrorCode_Success == decompressor.get_decompressed_stream_region(uncompressed_bytes, decompressed_data, uncompressed_data_size/5));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size/5) == 0);
+        uncompressed_bytes += uncompressed_data_size / 10;
+        REQUIRE(ErrorCode_Success
+                == decompressor.get_decompressed_stream_region(
+                        uncompressed_bytes,
+                        decompressed_data,
+                        uncompressed_data_size / 5
+                ));
+        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 5) == 0);
         memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size/5;
-        REQUIRE(ErrorCode_Success == decompressor.get_decompressed_stream_region(uncompressed_bytes, decompressed_data, uncompressed_data_size/2));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size/2) == 0);
+        uncompressed_bytes += uncompressed_data_size / 5;
+        REQUIRE(ErrorCode_Success
+                == decompressor.get_decompressed_stream_region(
+                        uncompressed_bytes,
+                        decompressed_data,
+                        uncompressed_data_size / 2
+                ));
+        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 2) == 0);
         memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size/2;
-        REQUIRE(ErrorCode_Success == decompressor.get_decompressed_stream_region(uncompressed_bytes, decompressed_data, uncompressed_data_size));
+        uncompressed_bytes += uncompressed_data_size / 2;
+        REQUIRE(ErrorCode_Success
+                == decompressor.get_decompressed_stream_region(
+                        uncompressed_bytes,
+                        decompressed_data,
+                        uncompressed_data_size
+                ));
         REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size) == 0);
         memset(decompressed_data, 0, uncompressed_data_size);
         uncompressed_bytes += uncompressed_data_size;
@@ -114,7 +147,8 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
         // Memory map compressed file
         // Create memory mapping for compressed_file_path, use boost read only memory mapped file
         boost::system::error_code boost_error_code;
-        size_t compressed_file_size = boost::filesystem::file_size(compressed_file_path, boost_error_code);
+        size_t compressed_file_size
+                = boost::filesystem::file_size(compressed_file_path, boost_error_code);
         REQUIRE(!boost_error_code);
 
         boost::iostreams::mapped_file_params memory_map_params;
@@ -129,31 +163,66 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
         decompressor.open(memory_mapped_compressed_file.data(), compressed_file_size);
 
         size_t uncompressed_bytes = 0;
-        REQUIRE(ErrorCode_Success == decompressor.get_decompressed_stream_region(uncompressed_bytes, decompressed_data, uncompressed_data_size/100));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size/100) == 0);
+        REQUIRE(ErrorCode_Success
+                == decompressor.get_decompressed_stream_region(
+                        uncompressed_bytes,
+                        decompressed_data,
+                        uncompressed_data_size / 100
+                ));
+        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 100) == 0);
         memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size/100;
-        REQUIRE(ErrorCode_Success == decompressor.get_decompressed_stream_region(uncompressed_bytes, decompressed_data, uncompressed_data_size/50));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size/50) == 0);
+        uncompressed_bytes += uncompressed_data_size / 100;
+        REQUIRE(ErrorCode_Success
+                == decompressor.get_decompressed_stream_region(
+                        uncompressed_bytes,
+                        decompressed_data,
+                        uncompressed_data_size / 50
+                ));
+        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 50) == 0);
         memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size/50;
-        REQUIRE(ErrorCode_Success == decompressor.get_decompressed_stream_region(uncompressed_bytes, decompressed_data, uncompressed_data_size/25));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size/25) == 0);
+        uncompressed_bytes += uncompressed_data_size / 50;
+        REQUIRE(ErrorCode_Success
+                == decompressor.get_decompressed_stream_region(
+                        uncompressed_bytes,
+                        decompressed_data,
+                        uncompressed_data_size / 25
+                ));
+        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 25) == 0);
         memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size/25;
-        REQUIRE(ErrorCode_Success == decompressor.get_decompressed_stream_region(uncompressed_bytes, decompressed_data, uncompressed_data_size/10));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size/10) == 0);
+        uncompressed_bytes += uncompressed_data_size / 25;
+        REQUIRE(ErrorCode_Success
+                == decompressor.get_decompressed_stream_region(
+                        uncompressed_bytes,
+                        decompressed_data,
+                        uncompressed_data_size / 10
+                ));
+        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 10) == 0);
         memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size/10;
-        REQUIRE(ErrorCode_Success == decompressor.get_decompressed_stream_region(uncompressed_bytes, decompressed_data, uncompressed_data_size/5));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size/5) == 0);
+        uncompressed_bytes += uncompressed_data_size / 10;
+        REQUIRE(ErrorCode_Success
+                == decompressor.get_decompressed_stream_region(
+                        uncompressed_bytes,
+                        decompressed_data,
+                        uncompressed_data_size / 5
+                ));
+        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 5) == 0);
         memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size/5;
-        REQUIRE(ErrorCode_Success == decompressor.get_decompressed_stream_region(uncompressed_bytes, decompressed_data, uncompressed_data_size/2));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size/2) == 0);
+        uncompressed_bytes += uncompressed_data_size / 5;
+        REQUIRE(ErrorCode_Success
+                == decompressor.get_decompressed_stream_region(
+                        uncompressed_bytes,
+                        decompressed_data,
+                        uncompressed_data_size / 2
+                ));
+        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 2) == 0);
         memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size/2;
-        REQUIRE(ErrorCode_Success == decompressor.get_decompressed_stream_region(uncompressed_bytes, decompressed_data, uncompressed_data_size));
+        uncompressed_bytes += uncompressed_data_size / 2;
+        REQUIRE(ErrorCode_Success
+                == decompressor.get_decompressed_stream_region(
+                        uncompressed_bytes,
+                        decompressed_data,
+                        uncompressed_data_size
+                ));
         REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size) == 0);
         memset(decompressed_data, 0, uncompressed_data_size);
         uncompressed_bytes += uncompressed_data_size;

@@ -1,7 +1,6 @@
 #ifndef VARIABLEDICTIONARYWRITER_HPP
 #define VARIABLEDICTIONARYWRITER_HPP
 
-// Project headers
 #include "Defs.h"
 #include "DictionaryWriter.hpp"
 #include "VariableDictionaryEntry.hpp"
@@ -9,16 +8,18 @@
 /**
  * Class for performing operations on variable dictionaries and writing them to disk
  */
-class VariableDictionaryWriter : public DictionaryWriter<variable_dictionary_id_t, VariableDictionaryEntry> {
+class VariableDictionaryWriter
+        : public DictionaryWriter<variable_dictionary_id_t, VariableDictionaryEntry> {
 public:
     // Types
     class OperationFailed : public TraceableException {
     public:
         // Constructors
-        OperationFailed (ErrorCode error_code, const char* const filename, int line_number) : TraceableException (error_code, filename, line_number) {}
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        const char* what () const noexcept override {
+        char const* what() const noexcept override {
             return "VariableDictionaryWriter operation failed";
         }
     };
@@ -28,7 +29,7 @@ public:
      * @param value
      * @param id ID of the variable matching the given entry
      */
-    bool add_entry (const std::string& value, variable_dictionary_id_t& id);
+    bool add_entry(std::string const& value, variable_dictionary_id_t& id);
 };
 
-#endif // VARIABLEDICTIONARYWRITER_HPP
+#endif  // VARIABLEDICTIONARYWRITER_HPP

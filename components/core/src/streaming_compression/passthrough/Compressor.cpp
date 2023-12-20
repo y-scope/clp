@@ -1,10 +1,9 @@
 #include "Compressor.hpp"
 
-// Project headers
 #include "../../Defs.h"
 
 namespace streaming_compression { namespace passthrough {
-    void Compressor::write (const char* data, const size_t data_length) {
+    void Compressor::write(char const* data, size_t const data_length) {
         if (nullptr == m_compressed_stream_file_writer) {
             throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
         }
@@ -20,7 +19,7 @@ namespace streaming_compression { namespace passthrough {
         m_compressed_stream_file_writer->write(data, data_length);
     }
 
-    void Compressor::flush () {
+    void Compressor::flush() {
         if (nullptr == m_compressed_stream_file_writer) {
             throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
         }
@@ -28,7 +27,7 @@ namespace streaming_compression { namespace passthrough {
         m_compressed_stream_file_writer->flush();
     }
 
-    ErrorCode Compressor::try_get_pos (size_t& pos) const {
+    ErrorCode Compressor::try_get_pos(size_t& pos) const {
         if (nullptr == m_compressed_stream_file_writer) {
             return ErrorCode_NotInit;
         }
@@ -36,11 +35,11 @@ namespace streaming_compression { namespace passthrough {
         return m_compressed_stream_file_writer->try_get_pos(pos);
     }
 
-    void Compressor::close () {
+    void Compressor::close() {
         m_compressed_stream_file_writer = nullptr;
     }
 
-    void Compressor::open (FileWriter& file_writer) {
+    void Compressor::open(FileWriter& file_writer) {
         m_compressed_stream_file_writer = &file_writer;
     }
-}}
+}}  // namespace streaming_compression::passthrough

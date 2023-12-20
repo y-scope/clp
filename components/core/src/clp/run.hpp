@@ -2,7 +2,7 @@
 #define CLP_RUN_HPP
 
 namespace clp {
-    int run (int argc, const char* argv[]);
-}
+int run(int argc, char const* argv[]);
+}  // namespace clp
 
-#endif // CLP_RUN_HPP
+#endif  // CLP_RUN_HPP

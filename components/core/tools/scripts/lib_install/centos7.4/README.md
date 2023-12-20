@@ -17,10 +17,10 @@ will not install any dependencies you don't expect.
 
 # Setup dependencies
 
-* Enable gcc 8
+* Enable gcc 10
 
   ```bash
-  ln -s /opt/rh/devtoolset-8/enable /etc/profile.d/devtoolset.sh
+  ln -s /opt/rh/devtoolset-10/enable /etc/profile.d/devtoolset.sh
   ```
 
 * Set PKG_CONFIG_PATH since CentOS doesn't look in `/usr/local` by default.

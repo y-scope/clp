@@ -1,20 +1,21 @@
 #include "Grep.hpp"
 
-// C++ libraries
 #include <algorithm>
 
-// Project headers
-#include "compressor_frontend/Constants.hpp"
-#include "EncodedVariableInterpreter.hpp"
-#include "StringReader.hpp"
-#include "Utils.hpp"
+#include <log_surgeon/Constants.hpp>
+
 #include "./networking/socket_utils.hpp"
 #include "./streaming_archive/Constants.hpp"
-
+#include "EncodedVariableInterpreter.hpp"
+#include "ir/parsing.hpp"
+#include "LogSurgeonReader.hpp"
+#include "StringReader.hpp"
+#include "Utils.hpp"
 
 // msgpack
 #include <msgpack.hpp>
 
+using ir::is_delim;
 using std::string;
 using std::vector;
 using streaming_archive::reader::Archive;
@@ -29,45 +30,47 @@ enum class SearchFilesResult {
 
 // Local types
 enum class SubQueryMatchabilityResult {
-    MayMatch, // The subquery might match a message
-    WontMatch, // The subquery has no chance of matching a message
-    SupercedesAllSubQueries // The subquery will cause all messages to be matched
+    MayMatch,  // The subquery might match a message
+    WontMatch,  // The subquery has no chance of matching a message
+    SupercedesAllSubQueries  // The subquery will cause all messages to be matched
 };
 
 // Class representing a token in a query. It is used to interpret a token in user's search string.
 class QueryToken {
 public:
     // Constructors
-    QueryToken (const string& query_string, size_t begin_pos, size_t end_pos, bool is_var);
+    QueryToken(string const& query_string, size_t begin_pos, size_t end_pos, bool is_var);
 
     // Methods
-    bool cannot_convert_to_non_dict_var () const;
-    bool contains_wildcards () const;
-    bool has_greedy_wildcard_in_middle () const;
-    bool has_prefix_greedy_wildcard () const;
-    bool has_suffix_greedy_wildcard () const;
-    bool is_ambiguous_token () const;
-    bool is_double_var () const;
-    bool is_var () const;
-    bool is_wildcard () const;
+    bool cannot_convert_to_non_dict_var() const;
+    bool contains_wildcards() const;
+    bool has_greedy_wildcard_in_middle() const;
+    bool has_prefix_greedy_wildcard() const;
+    bool has_suffix_greedy_wildcard() const;
+    bool is_ambiguous_token() const;
+    bool is_float_var() const;
+    bool is_int_var() const;
+    bool is_var() const;
+    bool is_wildcard() const;
 
-    size_t get_begin_pos () const;
-    size_t get_end_pos () const;
-    const string& get_value () const;
+    size_t get_begin_pos() const;
+    size_t get_end_pos() const;
+    string const& get_value() const;
 
-    bool change_to_next_possible_type ();
+    bool change_to_next_possible_type();
 
 private:
     // Types
-    // Type for the purpose of generating different subqueries. E.g., if a token is of type DictOrIntVar, it would generate a different subquery than
-    // if it was of type Logtype.
+    // Type for the purpose of generating different subqueries. E.g., if a token is of type
+    // DictOrIntVar, it would generate a different subquery than if it was of type Logtype.
     enum class Type {
         Wildcard,
         // Ambiguous indicates the token can be more than one of the types listed below
         Ambiguous,
         Logtype,
-        DictOrIntVar,
-        DoubleVar
+        DictionaryVar,
+        FloatVar,
+        IntVar
     };
 
     // Variables
@@ -97,10 +100,20 @@ private:
  * @param controller_socket_fd
  * @return Same as networking::try_send
  */
-static ErrorCode send_result (const string& orig_file_path, const Message& compressed_msg,
-                              const string& decompressed_msg, int controller_socket_fd);
+static ErrorCode send_result(
+        string const& orig_file_path,
+        Message const& compressed_msg,
+        string const& decompressed_msg,
+        int controller_socket_fd
+);
 
-QueryToken::QueryToken (const string& query_string, const size_t begin_pos, const size_t end_pos, const bool is_var) : m_current_possible_type_ix(0) {
+QueryToken::QueryToken(
+        string const& query_string,
+        size_t const begin_pos,
+        size_t const end_pos,
+        bool const is_var
+)
+        : m_current_possible_type_ix(0) {
     m_begin_pos = begin_pos;
     m_end_pos = end_pos;
     m_value.assign(query_string, m_begin_pos, m_end_pos - m_begin_pos);
@@ -124,7 +137,9 @@ QueryToken::QueryToken (const string& query_string, const size_t begin_pos, cons
             }
         }
 
-        m_contains_wildcards = (m_has_prefix_greedy_wildcard || m_has_suffix_greedy_wildcard || m_has_greedy_wildcard_in_middle);
+        m_contains_wildcards
+                = (m_has_prefix_greedy_wildcard || m_has_suffix_greedy_wildcard
+                   || m_has_greedy_wildcard_in_middle);
 
         if (!is_var) {
             if (!m_contains_wildcards) {
@@ -132,8 +147,9 @@ QueryToken::QueryToken (const string& query_string, const size_t begin_pos, cons
             } else {
                 m_type = Type::Ambiguous;
                 m_possible_types.push_back(Type::Logtype);
-                m_possible_types.push_back(Type::DictOrIntVar);
-                m_possible_types.push_back(Type::DoubleVar);
+                m_possible_types.push_back(Type::IntVar);
+                m_possible_types.push_back(Type::FloatVar);
+                m_possible_types.push_back(Type::DictionaryVar);
             }
         } else {
             string value_without_wildcards = m_value;
@@ -146,87 +162,104 @@ QueryToken::QueryToken (const string& query_string, const size_t begin_pos, cons
 
             encoded_variable_t encoded_var;
             bool converts_to_non_dict_var = false;
-            if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(value_without_wildcards, encoded_var) ||
-                EncodedVariableInterpreter::convert_string_to_representable_double_var(value_without_wildcards, encoded_var))
+            if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(
+                        value_without_wildcards,
+                        encoded_var
+                )
+                || EncodedVariableInterpreter::convert_string_to_representable_float_var(
+                        value_without_wildcards,
+                        encoded_var
+                ))
             {
                 converts_to_non_dict_var = true;
             }
 
             if (!converts_to_non_dict_var) {
                 // Dictionary variable
-                m_type = Type::DictOrIntVar;
+                m_type = Type::DictionaryVar;
                 m_cannot_convert_to_non_dict_var = true;
             } else {
                 m_type = Type::Ambiguous;
-                m_possible_types.push_back(Type::DictOrIntVar);
-                m_possible_types.push_back(Type::DoubleVar);
+                m_possible_types.push_back(Type::IntVar);
+                m_possible_types.push_back(Type::FloatVar);
+                m_possible_types.push_back(Type::DictionaryVar);
                 m_cannot_convert_to_non_dict_var = false;
             }
         }
     }
 }
 
-bool QueryToken::cannot_convert_to_non_dict_var () const {
+bool QueryToken::cannot_convert_to_non_dict_var() const {
     return m_cannot_convert_to_non_dict_var;
 }
 
-bool QueryToken::contains_wildcards () const {
+bool QueryToken::contains_wildcards() const {
     return m_contains_wildcards;
 }
 
-bool QueryToken::has_greedy_wildcard_in_middle () const {
+bool QueryToken::has_greedy_wildcard_in_middle() const {
     return m_has_greedy_wildcard_in_middle;
 }
 
-bool QueryToken::has_prefix_greedy_wildcard () const {
+bool QueryToken::has_prefix_greedy_wildcard() const {
     return m_has_prefix_greedy_wildcard;
 }
 
-bool QueryToken::has_suffix_greedy_wildcard () const {
+bool QueryToken::has_suffix_greedy_wildcard() const {
     return m_has_suffix_greedy_wildcard;
 }
 
-bool QueryToken::is_ambiguous_token () const {
+bool QueryToken::is_ambiguous_token() const {
     return Type::Ambiguous == m_type;
 }
 
-bool QueryToken::is_double_var () const {
+bool QueryToken::is_float_var() const {
     Type type;
     if (Type::Ambiguous == m_type) {
         type = m_possible_types[m_current_possible_type_ix];
     } else {
         type = m_type;
     }
-    return Type::DoubleVar == type;
+    return Type::FloatVar == type;
 }
 
-bool QueryToken::is_var () const {
+bool QueryToken::is_int_var() const {
     Type type;
     if (Type::Ambiguous == m_type) {
         type = m_possible_types[m_current_possible_type_ix];
     } else {
         type = m_type;
     }
-    return (Type::DictOrIntVar == type || Type::DoubleVar == type);
+    return Type::IntVar == type;
 }
 
-bool QueryToken::is_wildcard () const {
+bool QueryToken::is_var() const {
+    Type type;
+    if (Type::Ambiguous == m_type) {
+        type = m_possible_types[m_current_possible_type_ix];
+    } else {
+        type = m_type;
+    }
+    return (Type::IntVar == type || Type::FloatVar == type || Type::DictionaryVar == type);
+}
+
+bool QueryToken::is_wildcard() const {
     return Type::Wildcard == m_type;
 }
 
-size_t QueryToken::get_begin_pos () const {
+size_t QueryToken::get_begin_pos() const {
     return m_begin_pos;
 }
 
-size_t QueryToken::get_end_pos () const {
+size_t QueryToken::get_end_pos() const {
     return m_end_pos;
 }
 
-const string& QueryToken::get_value () const {
+string const& QueryToken::get_value() const {
     return m_value;
 }
 
-bool QueryToken::change_to_next_possible_type () {
+bool QueryToken::change_to_next_possible_type() {
     if (m_current_possible_type_ix < m_possible_types.size() - 1) {
         ++m_current_possible_type_ix;
         return true;
@@ -235,6 +268,15 @@ bool QueryToken::change_to_next_possible_type () {
         return false;
     }
 }
+
+/**
+ * Wraps the tokens returned from the log_surgeon lexer, and stores the variable ids of the tokens
+ * in a search query in a set. This allows for optimized search performance.
+ */
+class SearchToken : public log_surgeon::Token {
+public:
+    std::set<int> m_type_ids_set;
+};
 
 // Local prototypes
 /**
@@ -246,7 +288,13 @@ bool QueryToken::change_to_next_possible_type () {
  * @param logtype
  * @return true if this token might match a message, false otherwise
  */
-static bool process_var_token (const QueryToken& query_token, const Archive& archive, bool ignore_case, SubQuery& sub_query, string& logtype);
+static bool process_var_token(
+        QueryToken const& query_token,
+        Archive const& archive,
+        bool ignore_case,
+        SubQuery& sub_query,
+        string& logtype
+);
 /**
  * Finds a message matching the given query
  * @param query
@@ -256,7 +304,13 @@ static bool process_var_token (const QueryToken& query_token, const Archive& arc
  * @param compressed_msg
  * @return true on success, false otherwise
  */
-static bool find_matching_message (const Query& query, Archive& archive, const SubQuery*& matching_sub_query, File& compressed_file, Message& compressed_msg);
+static bool find_matching_message(
+        Query const& query,
+        Archive& archive,
+        SubQuery const*& matching_sub_query,
+        File& compressed_file,
+        Message& compressed_msg
+);
 /**
  * Generates logtypes and variables for subquery
  * @param archive
@@ -268,17 +322,35 @@ static bool find_matching_message (const Query& query, Archive& archive, const S
  * @return SubQueryMatchabilityResult::WontMatch
  * @return SubQueryMatchabilityResult::MayMatch
  */
-static SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archive& archive, string& processed_search_string,
-                                                                           vector<QueryToken>& query_tokens, bool ignore_case, SubQuery& sub_query);
+static SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
+        Archive const& archive,
+        string& processed_search_string,
+        vector<QueryToken>& query_tokens,
+        bool ignore_case,
+        SubQuery& sub_query
+);
 
-static bool process_var_token (const QueryToken& query_token, const Archive& archive, bool ignore_case, SubQuery& sub_query, string& logtype) {
-    // Even though we may have a precise variable, we still fallback to decompressing to ensure that it is in the right place in the message
+static bool process_var_token(
+        QueryToken const& query_token,
+        Archive const& archive,
+        bool ignore_case,
+        SubQuery& sub_query,
+        string& logtype
+) {
+    // Even though we may have a precise variable, we still fallback to decompressing to ensure that
+    // it is in the right place in the message
     sub_query.mark_wildcard_match_required();
 
     // Create QueryVar corresponding to token
     if (!query_token.contains_wildcards()) {
-        if (EncodedVariableInterpreter::encode_and_search_dictionary(query_token.get_value(), archive.get_var_dictionary(), ignore_case, logtype,
-                                                                     sub_query) == false)
+        if (EncodedVariableInterpreter::encode_and_search_dictionary(
+                    query_token.get_value(),
+                    archive.get_var_dictionary(),
+                    ignore_case,
+                    logtype,
+                    sub_query
+            )
+            == false)
         {
             // Variable doesn't exist in dictionary
             return false;
@@ -288,15 +360,21 @@ static bool process_var_token (const QueryToken& query_token, const Archive& arc
             logtype += '*';
         }
 
-        if (query_token.is_double_var()) {
-            LogTypeDictionaryEntry::add_double_var(logtype);
+        if (query_token.is_float_var()) {
+            LogTypeDictionaryEntry::add_float_var(logtype);
+        } else if (query_token.is_int_var()) {
+            LogTypeDictionaryEntry::add_int_var(logtype);
         } else {
-            LogTypeDictionaryEntry::add_non_double_var(logtype);
+            LogTypeDictionaryEntry::add_dict_var(logtype);
 
             if (query_token.cannot_convert_to_non_dict_var()) {
                 // Must be a dictionary variable, so search variable dictionary
-                if (!EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matches(query_token.get_value(), archive.get_var_dictionary(),
-                                                                                                    ignore_case, sub_query))
+                if (!EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matches(
+                            query_token.get_value(),
+                            archive.get_var_dictionary(),
+                            ignore_case,
+                            sub_query
+                    ))
                 {
                     // Variable doesn't exist in dictionary
                     return false;
@@ -312,15 +390,28 @@ static bool process_var_token (const QueryToken& query_token, const Archive& arc
     return true;
 }
 
-static bool find_matching_message (const Query& query, Archive& archive, const SubQuery*& matching_sub_query, File& compressed_file, Message& compressed_msg) {
+static bool find_matching_message(
+        Query const& query,
+        Archive& archive,
+        SubQuery const*& matching_sub_query,
+        File& compressed_file,
+        Message& compressed_msg
+) {
     if (query.contains_sub_queries()) {
-        matching_sub_query = archive.find_message_matching_query(compressed_file, query, compressed_msg);
+        matching_sub_query
+                = archive.find_message_matching_query(compressed_file, query, compressed_msg);
         if (nullptr == matching_sub_query) {
             return false;
         }
-    } else if (query.get_search_begin_timestamp() > cEpochTimeMin || query.get_search_end_timestamp() < cEpochTimeMax) {
-        bool found_msg = archive.find_message_in_time_range(compressed_file, query.get_search_begin_timestamp(), query.get_search_end_timestamp(),
-                                                            compressed_msg);
+    } else if ((query.get_search_begin_timestamp() > cEpochTimeMin
+                || query.get_search_end_timestamp() < cEpochTimeMax))
+    {
+        bool found_msg = archive.find_message_in_time_range(
+                compressed_file,
+                query.get_search_begin_timestamp(),
+                query.get_search_end_timestamp(),
+                compressed_msg
+        );
         if (!found_msg) {
             return false;
         }
@@ -334,32 +425,56 @@ static bool find_matching_message (const Query& query, Archive& archive, const S
     return true;
 }
 
-SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archive& archive, string& processed_search_string, vector<QueryToken>& query_tokens,
-                                                                    bool ignore_case, SubQuery& sub_query)
-{
+SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
+        Archive const& archive,
+        string& processed_search_string,
+        vector<QueryToken>& query_tokens,
+        bool ignore_case,
+        SubQuery& sub_query
+) {
     size_t last_token_end_pos = 0;
     string logtype;
-    for (const auto& query_token : query_tokens) {
+    auto escape_handler
+            = [](std::string_view constant, size_t char_to_escape_pos, string& logtype) -> void {
+        auto const escape_char{enum_to_underlying_type(ir::VariablePlaceholder::Escape)};
+        auto const next_char_pos{char_to_escape_pos + 1};
+        // NOTE: We don't want to add additional escapes for wildcards that have been escaped. E.g.,
+        // the query "\\*" should remain unchanged.
+        if (next_char_pos < constant.length() && false == is_wildcard(constant[next_char_pos])) {
+            logtype += escape_char;
+        } else if (ir::is_variable_placeholder(constant[char_to_escape_pos])) {
+            logtype += escape_char;
+            logtype += escape_char;
+        }
+    };
+    for (auto const& query_token : query_tokens) {
         // Append from end of last token to beginning of this token, to logtype
-        logtype.append(processed_search_string, last_token_end_pos, query_token.get_begin_pos() - last_token_end_pos);
+        ir::append_constant_to_logtype(
+                static_cast<std::string_view>(processed_search_string)
+                        .substr(last_token_end_pos,
+                                query_token.get_begin_pos() - last_token_end_pos),
+                escape_handler,
+                logtype
+        );
         last_token_end_pos = query_token.get_end_pos();
 
         if (query_token.is_wildcard()) {
             logtype += '*';
         } else if (query_token.has_greedy_wildcard_in_middle()) {
-            // Fallback to decompression + wildcard matching for now to avoid handling queries where the pieces of the token on either side of each wildcard
-            // need to be processed as ambiguous tokens
+            // Fallback to decompression + wildcard matching for now to avoid handling queries where
+            // the pieces of the token on either side of each wildcard need to be processed as
+            // ambiguous tokens
             sub_query.mark_wildcard_match_required();
             if (!query_token.is_var()) {
                 logtype += '*';
             } else {
                 logtype += '*';
-                LogTypeDictionaryEntry::add_non_double_var(logtype);
+                LogTypeDictionaryEntry::add_dict_var(logtype);
                 logtype += '*';
             }
         } else {
             if (!query_token.is_var()) {
-                logtype += query_token.get_value();
+                ir::append_constant_to_logtype(query_token.get_value(), escape_handler, logtype);
             } else if (!process_var_token(query_token, archive, ignore_case, sub_query, logtype)) {
                 return SubQueryMatchabilityResult::WontMatch;
             }
@@ -368,7 +483,12 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
 
     if (last_token_end_pos < processed_search_string.length()) {
         // Append from end of last token to end
-        logtype.append(processed_search_string, last_token_end_pos, string::npos);
+        ir::append_constant_to_logtype(
+                static_cast<std::string_view>(processed_search_string)
+                        .substr(last_token_end_pos, string::npos),
+                escape_handler,
+                logtype
+        );
         last_token_end_pos = processed_search_string.length();
     }
 
@@ -378,23 +498,32 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery (const Archiv
     }
 
     // Find matching logtypes
-    std::unordered_set<const LogTypeDictionaryEntry*> possible_logtype_entries;
-    archive.get_logtype_dictionary().get_entries_matching_wildcard_string(logtype, ignore_case, possible_logtype_entries);
+    std::unordered_set<LogTypeDictionaryEntry const*> possible_logtype_entries;
+    archive.get_logtype_dictionary()
+            .get_entries_matching_wildcard_string(logtype, ignore_case, possible_logtype_entries);
     if (possible_logtype_entries.empty()) {
         return SubQueryMatchabilityResult::WontMatch;
     }
     sub_query.set_possible_logtypes(possible_logtype_entries);
 
-    // Calculate the IDs of the segments that may contain results for the sub-query now that we've calculated the matching logtypes and variables
+    // Calculate the IDs of the segments that may contain results for the sub-query now that we've
+    // calculated the matching logtypes and variables
     sub_query.calculate_ids_of_matching_segments();
 
     return SubQueryMatchabilityResult::MayMatch;
 }
 
-bool Grep::process_raw_query (const Archive& archive, const string& search_string, epochtime_t search_begin_ts, epochtime_t search_end_ts, bool ignore_case,
-                              Query& query, compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer,
-                              bool use_heuristic)
-{
+bool Grep::process_raw_query(
+        Archive const& archive,
+        string const& search_string,
+        epochtime_t search_begin_ts,
+        epochtime_t search_end_ts,
+        bool ignore_case,
+        Query& query,
+        log_surgeon::lexers::ByteLexer& forward_lexer,
+        log_surgeon::lexers::ByteLexer& reverse_lexer,
+        bool use_heuristic
+) {
     // Set properties which require no processing
     query.set_search_begin_timestamp(search_begin_ts);
     query.set_search_end_timestamp(search_end_ts);
@@ -409,27 +538,38 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     processed_search_string = clean_up_wildcard_search_string(processed_search_string);
     query.set_search_string(processed_search_string);
 
-    // Replace non-greedy wildcards with greedy wildcards since we currently have no support for searching compressed files with non-greedy wildcards
-    std::replace(processed_search_string.begin(), processed_search_string.end(), '?', '*');
-    // Clean-up in case any instances of "?*" or "*?" were changed into "**"
-    processed_search_string = clean_up_wildcard_search_string(processed_search_string);
-
     // Split search_string into tokens with wildcards
     vector<QueryToken> query_tokens;
     size_t begin_pos = 0;
     size_t end_pos = 0;
     bool is_var;
     if (use_heuristic) {
-        while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos, is_var)) {
+        // Replace non-greedy wildcards with greedy wildcards since we currently have no support for
+        // searching compressed files with non-greedy wildcards
+        std::replace(processed_search_string.begin(), processed_search_string.end(), '?', '*');
+        // Clean-up in case any instances of "?*" or "*?" were changed into "**"
+        processed_search_string = clean_up_wildcard_search_string(processed_search_string);
+        while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos, is_var)
+        )
+        {
             query_tokens.emplace_back(processed_search_string, begin_pos, end_pos, is_var);
         }
     } else {
-        while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos, is_var, forward_lexer, reverse_lexer)) {
+        while (get_bounds_of_next_potential_var(
+                processed_search_string,
+                begin_pos,
+                end_pos,
+                is_var,
+                forward_lexer,
+                reverse_lexer
+        ))
+        {
             query_tokens.emplace_back(processed_search_string, begin_pos, end_pos, is_var);
         }
     }
 
-    // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in the middle since we fall-back to decompression + wildcard matching for those.
+    // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in the middle since we
+    // fall-back to decompression + wildcard matching for those.
     vector<QueryToken*> ambiguous_tokens;
     for (auto& query_token : query_tokens) {
         if (!query_token.has_greedy_wildcard_in_middle() && query_token.is_ambiguous_token()) {
@@ -438,7 +578,8 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     }
 
     // Generate a sub-query for each combination of ambiguous tokens
-    // E.g., if there are two ambiguous tokens each of which could be a logtype or variable, we need to create:
+    // E.g., if there are two ambiguous tokens each of which could be a logtype or variable, we need
+    // to create:
     // - (token1 as logtype) (token2 as logtype)
     // - (token1 as logtype) (token2 as var)
     // - (token1 as var) (token2 as logtype)
@@ -450,13 +591,20 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
         sub_query.clear();
 
         // Compute logtypes and variables for query
-        auto matchability = generate_logtypes_and_vars_for_subquery(archive, processed_search_string, query_tokens, query.get_ignore_case(), sub_query);
+        auto matchability = generate_logtypes_and_vars_for_subquery(
+                archive,
+                processed_search_string,
+                query_tokens,
+                query.get_ignore_case(),
+                sub_query
+        );
         switch (matchability) {
             case SubQueryMatchabilityResult::SupercedesAllSubQueries:
                 // Clear all sub-queries since they will be superceded by this sub-query
                 query.clear_sub_queries();
 
-                // Since other sub-queries will be superceded by this one, we can stop processing now
+                // Since other sub-queries will be superceded by this one, we can stop processing
+                // now
                 return true;
             case SubQueryMatchabilityResult::MayMatch:
                 query.add_sub_query(sub_query);
@@ -480,8 +628,13 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     return query.contains_sub_queries();
 }
 
-bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, size_t& end_pos, bool& is_var) {
-    const auto value_length = value.length();
+bool Grep::get_bounds_of_next_potential_var(
+        string const& value,
+        size_t& begin_pos,
+        size_t& end_pos,
+        bool& is_var
+) {
+    auto const value_length = value.length();
     if (end_pos >= value_length) {
         return false;
     }
@@ -501,7 +654,8 @@ bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_
                 is_escaped = false;
 
                 if (false == is_delim(c)) {
-                    // Found escaped non-delimiter, so reverse the index to retain the escape character
+                    // Found escaped non-delimiter, so reverse the index to retain the escape
+                    // character
                     --begin_pos;
                     break;
                 }
@@ -558,8 +712,10 @@ bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_
         // Treat token as a definite variable if:
         // - it contains a decimal digit, or
         // - it could be a multi-digit hex value, or
-        // - it's directly preceded by an equals sign and contains an alphabet without a wildcard between the equals sign and the first alphabet of the token
-        if (contains_decimal_digit || could_be_multi_digit_hex_value(value, begin_pos, end_pos)) {
+        // - it's directly preceded by an equals sign and contains an alphabet without a wildcard
+        //   between the equals sign and the first alphabet of the token
+        auto variable = static_cast<std::string_view>(value).substr(begin_pos, end_pos - begin_pos);
+        if (contains_decimal_digit || ir::could_be_multi_digit_hex_value(variable)) {
             is_var = true;
         } else if (begin_pos > 0 && '=' == value[begin_pos - 1] && contains_alphabet) {
             // Find first alphabet or wildcard in token
@@ -592,10 +748,15 @@ bool Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_
     return (value_length != begin_pos);
 }
 
-bool
-Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, size_t& end_pos, bool& is_var,
-                                        compressor_frontend::lexers::ByteLexer& forward_lexer, compressor_frontend::lexers::ByteLexer& reverse_lexer) {
-    const size_t value_length = value.length();
+bool Grep::get_bounds_of_next_potential_var(
+        string const& value,
+        size_t& begin_pos,
+        size_t& end_pos,
+        bool& is_var,
+        log_surgeon::lexers::ByteLexer& forward_lexer,
+        log_surgeon::lexers::ByteLexer& reverse_lexer
+) {
+    size_t const value_length = value.length();
     if (end_pos >= value_length) {
         return false;
     }
@@ -614,8 +775,9 @@ Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, 
             if (is_escaped) {
                 is_escaped = false;
 
-                if(false == forward_lexer.is_delimiter(c)) {
-                    // Found escaped non-delimiter, so reverse the index to retain the escape character
+                if (false == forward_lexer.is_delimiter(c)) {
+                    // Found escaped non-delimiter, so reverse the index to retain the escape
+                    // character
                     --begin_pos;
                     break;
                 }
@@ -662,7 +824,7 @@ Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, 
 
         if (end_pos > begin_pos) {
             bool has_prefix_wildcard = ('*' == value[begin_pos]) || ('?' == value[begin_pos]);
-            bool has_suffix_wildcard = ('*' == value[end_pos - 1]) || ('?' == value[begin_pos]);;
+            bool has_suffix_wildcard = ('*' == value[end_pos - 1]) || ('?' == value[begin_pos]);
             bool has_wildcard_in_middle = false;
             for (size_t i = begin_pos + 1; i < end_pos - 1; ++i) {
                 if (('*' == value[i] || '?' == value[i]) && value[i - 1] != '\\') {
@@ -670,35 +832,57 @@ Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, 
                     break;
                 }
             }
+            SearchToken search_token;
             if (has_wildcard_in_middle || (has_prefix_wildcard && has_suffix_wildcard)) {
                 // DO NOTHING
-            } else if (has_suffix_wildcard) { //asdsas*
-                StringReader stringReader;
-                stringReader.open(value.substr(begin_pos, end_pos - begin_pos - 1));
-                forward_lexer.reset(stringReader);
-                compressor_frontend::Token token = forward_lexer.scan_with_wildcard(value[end_pos - 1]);
-                if (token.m_type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenUncaughtStringID &&
-                    token.m_type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenEndID) {
-                    is_var = true;
+            } else {
+                StringReader string_reader;
+                LogSurgeonReader reader_wrapper(string_reader);
+                log_surgeon::ParserInputBuffer parser_input_buffer;
+                if (has_suffix_wildcard) {  // text*
+                    // TODO: creating a string reader, setting it equal to a string, to read it into
+                    // the ParserInputBuffer, seems like a convoluted way to set a string equal to a
+                    // string, should be improved when adding a SearchParser to log_surgeon
+                    string_reader.open(value.substr(begin_pos, end_pos - begin_pos - 1));
+                    parser_input_buffer.read_if_safe(reader_wrapper);
+                    forward_lexer.reset();
+                    forward_lexer.scan_with_wildcard(
+                            parser_input_buffer,
+                            value[end_pos - 1],
+                            search_token
+                    );
+                } else if (has_prefix_wildcard) {  // *text
+                    std::string value_reverse
+                            = value.substr(begin_pos + 1, end_pos - begin_pos - 1);
+                    std::reverse(value_reverse.begin(), value_reverse.end());
+                    string_reader.open(value_reverse);
+                    parser_input_buffer.read_if_safe(reader_wrapper);
+                    reverse_lexer.reset();
+                    reverse_lexer.scan_with_wildcard(
+                            parser_input_buffer,
+                            value[begin_pos],
+                            search_token
+                    );
+                } else {  // no wildcards
+                    string_reader.open(value.substr(begin_pos, end_pos - begin_pos));
+                    parser_input_buffer.read_if_safe(reader_wrapper);
+                    forward_lexer.reset();
+                    forward_lexer.scan(parser_input_buffer, search_token);
+                    search_token.m_type_ids_set.insert(search_token.m_type_ids_ptr->at(0));
                 }
-            } else if (has_prefix_wildcard) { // *asdas
-                std::string value_reverse = value.substr(begin_pos + 1, end_pos - begin_pos - 1);
-                std::reverse(value_reverse.begin(), value_reverse.end());
-                StringReader stringReader;
-                stringReader.open(value_reverse);
-                reverse_lexer.reset(stringReader);
-                compressor_frontend::Token token = reverse_lexer.scan_with_wildcard(value[begin_pos]);
-                if (token.m_type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenUncaughtStringID &&
-                    token.m_type_ids->at(0) != (int)compressor_frontend::SymbolID::TokenEndID) {
-                    is_var = true;
-                }
-            } else { // no wildcards
-                StringReader stringReader;
-                stringReader.open(value.substr(begin_pos, end_pos - begin_pos));
-                forward_lexer.reset(stringReader);
-                compressor_frontend::Token token = forward_lexer.scan();
-                if (token.m_type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenUncaughtStringID &&
-                    token.m_type_ids->at(0) != (int) compressor_frontend::SymbolID::TokenEndID) {
+                // TODO: use a set so its faster
+                // auto const& set = search_token.m_type_ids_set;
+                // if (set.find(static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID))
+                //            == set.end()
+                //     && set.find(static_cast<int>(log_surgeon::SymbolID::TokenEndID))
+                //            == set.end())
+                // {
+                //     is_var = true;
+                // }
+                auto const& type = search_token.m_type_ids_ptr->at(0);
+                if (type != static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID)
+                    && type != static_cast<int>(log_surgeon::SymbolID::TokenEndID))
+                {
                     is_var = true;
                 }
             }
@@ -707,28 +891,48 @@ Grep::get_bounds_of_next_potential_var (const string& value, size_t& begin_pos, 
     return (value_length != begin_pos);
 }
 
-void Grep::calculate_sub_queries_relevant_to_file (const File& compressed_file, vector<Query>& queries) {
+void Grep::calculate_sub_queries_relevant_to_file(
+        File const& compressed_file,
+        vector<Query>& queries
+) {
     for (auto& query : queries) {
         query.make_sub_queries_relevant_to_segment(compressed_file.get_segment_id());
     }
 }
 
-size_t Grep::search_and_output (const Query& query, size_t limit, Archive& archive, File& compressed_file, OutputFunc output_func, void* output_func_arg, 
-            const std::atomic_bool& query_cancelled, int controller_socket_fd) {
+size_t Grep::search_and_output(
+        Query const& query,
+        size_t limit,
+        Archive& archive,
+        File& compressed_file,
+        OutputFunc output_func,
+        void* output_func_arg,
+        std::atomic_bool const& query_cancelled,
+        int controller_socket_fd
+) {
     size_t num_matches = 0;
 
     Message compressed_msg;
     string decompressed_msg;
-    const string& orig_file_path = compressed_file.get_orig_path();
+    string const& orig_file_path = compressed_file.get_orig_path();
     while (num_matches < limit) {
         // Find matching message
-        const SubQuery* matching_sub_query = nullptr;
-        if (find_matching_message(query, archive, matching_sub_query, compressed_file, compressed_msg) == false) {
+        SubQuery const* matching_sub_query = nullptr;
+        if (find_matching_message(
+                    query,
+                    archive,
+                    matching_sub_query,
+                    compressed_file,
+                    compressed_msg
+            )
+            == false)
+        {
             break;
         }
 
         // Decompress match
-        bool decompress_successful = archive.decompress_message(compressed_file, compressed_msg, decompressed_msg);
+        bool decompress_successful
+                = archive.decompress_message(compressed_file, compressed_msg, decompressed_msg);
         if (!decompress_successful) {
             break;
         }
@@ -737,11 +941,15 @@ size_t Grep::search_and_output (const Query& query, size_t limit, Archive& archi
         // Check if:
         // - Sub-query requires wildcard match, or
         // - no subqueries exist and the search string is not a match-all
-        if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required()) ||
-            (query.contains_sub_queries() == false && query.search_string_matches_all() == false))
+        if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required())
+            || (query.contains_sub_queries() == false && query.search_string_matches_all() == false
+            ))
         {
-            bool matched = wildcard_match_unsafe(decompressed_msg, query.get_search_string(),
-                                                 query.get_ignore_case() == false);
+            bool matched = wildcard_match_unsafe(
+                    decompressed_msg,
+                    query.get_search_string(),
+                    query.get_ignore_case() == false
+            );
             if (!matched) {
                 continue;
             }
@@ -751,9 +959,13 @@ size_t Grep::search_and_output (const Query& query, size_t limit, Archive& archi
         // output_func(orig_file_path, compressed_msg, decompressed_msg, output_func_arg);
         ErrorCode error_code;
         SearchFilesResult result = SearchFilesResult::Success;
-        if (false == query_cancelled){
-            error_code = send_result(orig_file_path, compressed_msg, decompressed_msg,
-                                     controller_socket_fd);
+        if (false == query_cancelled) {
+            error_code = send_result(
+                    orig_file_path,
+                    compressed_msg,
+                    decompressed_msg,
+                    controller_socket_fd
+            );
             if (ErrorCode_Success != error_code) {
                 result = SearchFilesResult::ResultSendFailure;
                 break;
@@ -766,29 +978,45 @@ size_t Grep::search_and_output (const Query& query, size_t limit, Archive& archi
     return num_matches;
 }
 
-static ErrorCode send_result (const string& orig_file_path, const Message& compressed_msg,
-                              const string& decompressed_msg, int controller_socket_fd)
-{
+static ErrorCode send_result(
+        string const& orig_file_path,
+        Message const& compressed_msg,
+        string const& decompressed_msg,
+        int controller_socket_fd
+) {
     msgpack::sbuffer m;
     size_t spacePos = decompressed_msg.find(" ");
     msgpack::pack(m, decompressed_msg.substr(spacePos + 1));
     return networking::try_send(controller_socket_fd, m.data(), m.size());
 }
 
-bool Grep::search_and_decompress (const Query& query, Archive& archive, File& compressed_file, Message& compressed_msg, string& decompressed_msg) {
-    const string& orig_file_path = compressed_file.get_orig_path();
+bool Grep::search_and_decompress(
+        Query const& query,
+        Archive& archive,
+        File& compressed_file,
+        Message& compressed_msg,
+        string& decompressed_msg
+) {
+    string const& orig_file_path = compressed_file.get_orig_path();
 
     bool matched = false;
     while (false == matched) {
         // Find matching message
-        const SubQuery* matching_sub_query = nullptr;
-        bool message_found = find_matching_message(query, archive, matching_sub_query, compressed_file, compressed_msg);
+        SubQuery const* matching_sub_query = nullptr;
+        bool message_found = find_matching_message(
+                query,
+                archive,
+                matching_sub_query,
+                compressed_file,
+                compressed_msg
+        );
         if (false == message_found) {
             return false;
         }
 
         // Decompress match
-        bool decompress_successful = archive.decompress_message(compressed_file, compressed_msg, decompressed_msg);
+        bool decompress_successful
+                = archive.decompress_message(compressed_file, compressed_msg, decompressed_msg);
         if (false == decompress_successful) {
             return false;
         }
@@ -797,11 +1025,15 @@ bool Grep::search_and_decompress (const Query& query, Archive& archive, File& co
         // Check if:
         // - Sub-query requires wildcard match, or
         // - no subqueries exist and the search string is not a match-all
-        if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required()) ||
-            (query.contains_sub_queries() == false && query.search_string_matches_all() == false))
+        if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required())
+            || (query.contains_sub_queries() == false && query.search_string_matches_all() == false
+            ))
         {
-            matched = wildcard_match_unsafe(decompressed_msg, query.get_search_string(),
-                                            query.get_ignore_case() == false);
+            matched = wildcard_match_unsafe(
+                    decompressed_msg,
+                    query.get_search_string(),
+                    query.get_ignore_case() == false
+            );
         } else {
             matched = true;
         }
@@ -810,16 +1042,24 @@ bool Grep::search_and_decompress (const Query& query, Archive& archive, File& co
     return true;
 }
 
-size_t Grep::search (const Query& query, size_t limit, Archive& archive, File& compressed_file) {
+size_t Grep::search(Query const& query, size_t limit, Archive& archive, File& compressed_file) {
     size_t num_matches = 0;
 
     Message compressed_msg;
     string decompressed_msg;
-    const string& orig_file_path = compressed_file.get_orig_path();
+    string const& orig_file_path = compressed_file.get_orig_path();
     while (num_matches < limit) {
         // Find matching message
-        const SubQuery* matching_sub_query = nullptr;
-        if (find_matching_message(query, archive, matching_sub_query, compressed_file, compressed_msg) == false) {
+        SubQuery const* matching_sub_query = nullptr;
+        if (find_matching_message(
+                    query,
+                    archive,
+                    matching_sub_query,
+                    compressed_file,
+                    compressed_msg
+            )
+            == false)
+        {
             break;
         }
 
@@ -827,17 +1067,22 @@ size_t Grep::search (const Query& query, size_t limit, Archive& archive, File& c
         // Check if:
         // - Sub-query requires wildcard match, or
         // - no subqueries exist and the search string is not a match-all
-        if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required()) ||
-            (query.contains_sub_queries() == false && query.search_string_matches_all() == false))
+        if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required())
+            || (query.contains_sub_queries() == false && query.search_string_matches_all() == false
+            ))
         {
             // Decompress match
-            bool decompress_successful = archive.decompress_message(compressed_file, compressed_msg, decompressed_msg);
+            bool decompress_successful
+                    = archive.decompress_message(compressed_file, compressed_msg, decompressed_msg);
             if (!decompress_successful) {
                 break;
             }
 
-            bool matched = wildcard_match_unsafe(decompressed_msg, query.get_search_string(),
-                                                 query.get_ignore_case() == false);
+            bool matched = wildcard_match_unsafe(
+                    decompressed_msg,
+                    query.get_search_string(),
+                    query.get_ignore_case() == false
+            );
             if (!matched) {
                 continue;
             }

@@ -29,6 +29,8 @@ and other community members.
 CLP is currently split across a few different components in the [components](components) 
 directory:
 
+* [clp-package-utils](components/clp-package-utils) contains Python utilities
+  for operating the CLP package.
 * [clp-py-utils](components/clp-py-utils) contains Python utilities common to several of the 
   other components.
 * [compression-job-handler](components/compression-job-handler) contains code to submit
@@ -43,10 +45,10 @@ directory:
 # Packages
 The packages held by this [repository](https://github.com/orgs/y-scope/packages?repo_name=clp) are: 
 
-1. Docker Image `clp/clp-core-dependencies-x86-ubuntu-focal`
+1. Docker Image `clp/clp-core-dependencies-x86-ubuntu-jammy`
+    - A docker image containing all the necessary dependencies to build CLP core in an Ubuntu Jammy x86 environment
+2. Docker Image `clp/clp-core-dependencies-x86-ubuntu-focal`
     - A docker image containing all the necessary dependencies to build CLP core in an Ubuntu Focal x86 environment
-2. Docker Image `clp/clp-core-dependencies-x86-ubuntu-bionic`
-    - A docker image containing all the necessary dependencies to build CLP core in an Ubuntu Bionic x86 environment
 3. Docker Image `clp/clp-core-dependencies-x86-centos7.4`
     - A docker image containing all the necessary dependencies to build CLP core in a Centos 7.4 x86 environment
 4. Docker Image `clp/clp-execution-x86-ubuntu-focal`

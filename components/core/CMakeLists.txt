@@ -7,6 +7,8 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
 endif()
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Set general compressor
 set(GENERAL_COMPRESSOR "zstd" CACHE STRING "The general-purpose compressor used as the 2nd-stage compressor")
 set_property(CACHE GENERAL_COMPRESSOR PROPERTY STRINGS passthrough zstd)
@@ -73,6 +75,15 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif ()
 endif ()
 
+# Find and setup ANTLR Library
+# We build and link to the static library
+find_package(ANTLR REQUIRED)
+if (ANTLR_FOUND)
+	message(STATUS "Found ANTLR ${ANTLR_VERSION}")
+else()
+	message(FATAL_ERROR "Could not find libraries for ANTLR ${ANTLR4_TAG}")
+endif()
+
 # Find and setup Boost Library
 if(CLP_USE_STATIC_LIBS)
     set(Boost_USE_STATIC_LIBS ON)
@@ -117,6 +128,9 @@ else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for LibArchive")
 endif()
 
+# Add log surgeon
+add_subdirectory(submodules/log-surgeon EXCLUDE_FROM_ALL)
+
 # Find and setup MariaDBClient library
 if(CLP_USE_STATIC_LIBS)
     # NOTE: We can't statically link to MariaDBClient since it's GPL
@@ -157,8 +171,11 @@ include(cmake/Modules/FindLibraryDependencies.cmake)
 FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 
 set(SOURCE_FILES_clp
-        src/ArrayBackedPosIntSet.cpp
         src/ArrayBackedPosIntSet.hpp
+        src/BufferedFileReader.cpp
+        src/BufferedFileReader.hpp
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clp/clp.cpp
         src/clp/CommandLineArguments.cpp
         src/clp/CommandLineArguments.hpp
@@ -170,55 +187,36 @@ set(SOURCE_FILES_clp
         src/clp/FileCompressor.hpp
         src/clp/FileDecompressor.cpp
         src/clp/FileDecompressor.hpp
-        src/clp/FileToCompress.cpp
         src/clp/FileToCompress.hpp
         src/clp/run.cpp
         src/clp/run.hpp
-        src/clp/StructuredFileToCompress.cpp
         src/clp/StructuredFileToCompress.hpp
         src/clp/utils.cpp
         src/clp/utils.hpp
-        src/compressor_frontend/Constants.hpp
-        src/compressor_frontend/finite_automata/RegexAST.hpp
-        src/compressor_frontend/finite_automata/RegexAST.tpp
-        src/compressor_frontend/finite_automata/RegexDFA.hpp
-        src/compressor_frontend/finite_automata/RegexDFA.tpp
-        src/compressor_frontend/finite_automata/RegexNFA.hpp
-        src/compressor_frontend/finite_automata/RegexNFA.tpp
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
-        src/compressor_frontend/LALR1Parser.cpp
-        src/compressor_frontend/LALR1Parser.hpp
-        src/compressor_frontend/LALR1Parser.tpp
-        src/compressor_frontend/Lexer.hpp
-        src/compressor_frontend/Lexer.tpp
-        src/compressor_frontend/LogParser.cpp
-        src/compressor_frontend/LogParser.hpp
-        src/compressor_frontend/SchemaParser.cpp
-        src/compressor_frontend/SchemaParser.hpp
-        src/compressor_frontend/Token.cpp
-        src/compressor_frontend/Token.hpp
-        src/compressor_frontend/utils.cpp
-        src/compressor_frontend/utils.hpp
         src/database_utils.cpp
         src/database_utils.hpp
         src/Defs.h
         src/dictionary_utils.cpp
         src/dictionary_utils.hpp
-        src/DictionaryEntry.cpp
         src/DictionaryEntry.hpp
-        src/DictionaryReader.cpp
         src/DictionaryReader.hpp
-        src/DictionaryWriter.cpp
         src/DictionaryWriter.hpp
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
         src/ErrorCode.hpp
+        src/ffi/encoding_methods.cpp
+        src/ffi/encoding_methods.hpp
+        src/ffi/encoding_methods.inc
+        src/ffi/ir_stream/byteswap.hpp
+        src/ffi/ir_stream/decoding_methods.cpp
+        src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.inc
+        src/ffi/ir_stream/encoding_methods.cpp
+        src/ffi/ir_stream/encoding_methods.hpp
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
-        src/GlobalMetadataDB.cpp
         src/GlobalMetadataDB.hpp
         src/GlobalMetadataDBConfig.cpp
         src/GlobalMetadataDBConfig.hpp
@@ -226,16 +224,26 @@ set(SOURCE_FILES_clp
         src/GlobalMySQLMetadataDB.hpp
         src/GlobalSQLiteMetadataDB.cpp
         src/GlobalSQLiteMetadataDB.hpp
+        src/ir/LogEvent.hpp
+        src/ir/LogEventDeserializer.cpp
+        src/ir/LogEventDeserializer.hpp
+        src/ir/parsing.cpp
+        src/ir/parsing.hpp
+        src/ir/parsing.inc
+        src/ir/utils.cpp
+        src/ir/utils.hpp
         src/LibarchiveFileReader.cpp
         src/LibarchiveFileReader.hpp
         src/LibarchiveReader.cpp
         src/LibarchiveReader.hpp
+        src/LogSurgeonReader.cpp
+        src/LogSurgeonReader.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
-        src/LogTypeDictionaryReader.cpp
         src/LogTypeDictionaryReader.hpp
         src/LogTypeDictionaryWriter.cpp
         src/LogTypeDictionaryWriter.hpp
+        src/math_utils.hpp
         src/MessageParser.cpp
         src/MessageParser.hpp
         src/MySQLDB.cpp
@@ -244,7 +252,6 @@ set(SOURCE_FILES_clp
         src/MySQLParamBindings.hpp
         src/MySQLPreparedStatement.cpp
         src/MySQLPreparedStatement.hpp
-        src/PageAllocatedVector.cpp
         src/PageAllocatedVector.hpp
         src/ParsedMessage.cpp
         src/ParsedMessage.hpp
@@ -255,12 +262,15 @@ set(SOURCE_FILES_clp
         src/Query.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
+        src/spdlog_with_specializations.hpp
         src/SQLiteDB.cpp
         src/SQLiteDB.hpp
         src/SQLitePreparedStatement.cpp
         src/SQLitePreparedStatement.hpp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
+        src/streaming_archive/ArchiveMetadata.cpp
+        src/streaming_archive/ArchiveMetadata.hpp
         src/streaming_archive/Constants.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
@@ -280,10 +290,8 @@ set(SOURCE_FILES_clp
         src/streaming_archive/writer/File.hpp
         src/streaming_archive/writer/Segment.cpp
         src/streaming_archive/writer/Segment.hpp
-        src/streaming_compression/Compressor.cpp
         src/streaming_compression/Compressor.hpp
         src/streaming_compression/Constants.hpp
-        src/streaming_compression/Decompressor.cpp
         src/streaming_compression/Decompressor.hpp
         src/streaming_compression/passthrough/Compressor.cpp
         src/streaming_compression/passthrough/Compressor.hpp
@@ -300,30 +308,31 @@ set(SOURCE_FILES_clp
         src/StringReader.hpp
         src/TimestampPattern.cpp
         src/TimestampPattern.hpp
-        src/TraceableException.cpp
         src/TraceableException.hpp
         src/type_utils.hpp
         src/Utils.cpp
         src/Utils.hpp
         src/VariableDictionaryEntry.cpp
         src/VariableDictionaryEntry.hpp
-        src/VariableDictionaryReader.cpp
         src/VariableDictionaryReader.hpp
         src/VariableDictionaryWriter.cpp
         src/VariableDictionaryWriter.hpp
         src/version.hpp
         src/WriterInterface.cpp
         src/WriterInterface.hpp
-        submodules/date/include/date/date.h
-        submodules/json/single_include/nlohmann/json.hpp
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         )
 add_executable(clp ${SOURCE_FILES_clp})
+target_include_directories(clp
+        PRIVATE
+        ${CMAKE_SOURCE_DIR}/submodules
+        )
 target_link_libraries(clp
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
+        log_surgeon::log_surgeon
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
         LibArchive::LibArchive
@@ -336,7 +345,15 @@ target_compile_features(clp
         PRIVATE cxx_std_17
         )
 
+# Generate C++ KQL Parser
+# This needs to be done using add_subdirectory because ANTLR's C++ build
+# system can't handle having the grammar (.g4) in a different directory than the
+# CMakeLists.txt file.
+add_subdirectory(src/grammar/kql)
+
 set(SOURCE_FILES_clg
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clg/clg.cpp
         src/clg/CommandLineArguments.cpp
         src/clg/CommandLineArguments.hpp
@@ -373,18 +390,21 @@ set(SOURCE_FILES_clg
         src/Defs.h
         src/dictionary_utils.cpp
         src/dictionary_utils.hpp
-        src/DictionaryEntry.cpp
         src/DictionaryEntry.hpp
-        src/DictionaryReader.cpp
         src/DictionaryReader.hpp
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
         src/ErrorCode.hpp
+        src/ffi/encoding_methods.cpp
+        src/ffi/encoding_methods.hpp
+        src/ffi/encoding_methods.inc
+        src/ffi/ir_stream/decoding_methods.cpp
+        src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.inc
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
-        src/GlobalMetadataDB.cpp
         src/GlobalMetadataDB.hpp
         src/GlobalMetadataDBConfig.cpp
         src/GlobalMetadataDBConfig.hpp
@@ -394,9 +414,14 @@ set(SOURCE_FILES_clg
         src/GlobalSQLiteMetadataDB.hpp
         src/Grep.cpp
         src/Grep.hpp
+        src/ir/LogEvent.hpp
+        src/ir/parsing.cpp
+        src/ir/parsing.hpp
+        src/LogSurgeonReader.cpp
+        src/LogSurgeonReader.hpp
+        src/ir/parsing.inc
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
-        src/LogTypeDictionaryReader.cpp
         src/LogTypeDictionaryReader.hpp
         src/MySQLDB.cpp
         src/MySQLDB.hpp
@@ -404,7 +429,6 @@ set(SOURCE_FILES_clg
         src/MySQLParamBindings.hpp
         src/MySQLPreparedStatement.cpp
         src/MySQLPreparedStatement.hpp
-        src/PageAllocatedVector.cpp
         src/PageAllocatedVector.hpp
         src/ParsedMessage.cpp
         src/ParsedMessage.hpp
@@ -415,12 +439,15 @@ set(SOURCE_FILES_clg
         src/Query.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
+        src/spdlog_with_specializations.hpp
         src/SQLiteDB.cpp
         src/SQLiteDB.hpp
         src/SQLitePreparedStatement.cpp
         src/SQLitePreparedStatement.hpp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
+        src/streaming_archive/ArchiveMetadata.cpp
+        src/streaming_archive/ArchiveMetadata.hpp
         src/streaming_archive/Constants.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
@@ -439,7 +466,6 @@ set(SOURCE_FILES_clg
         src/streaming_archive/writer/Segment.cpp
         src/streaming_archive/writer/Segment.hpp
         src/streaming_compression/Constants.hpp
-        src/streaming_compression/Decompressor.cpp
         src/streaming_compression/Decompressor.hpp
         src/streaming_compression/passthrough/Compressor.cpp
         src/streaming_compression/passthrough/Compressor.hpp
@@ -456,30 +482,33 @@ set(SOURCE_FILES_clg
         src/StringReader.hpp
         src/TimestampPattern.cpp
         src/TimestampPattern.hpp
-        src/TraceableException.cpp
         src/TraceableException.hpp
         src/type_utils.hpp
         src/Utils.cpp
         src/Utils.hpp
         src/VariableDictionaryEntry.cpp
         src/VariableDictionaryEntry.hpp
-        src/VariableDictionaryReader.cpp
         src/VariableDictionaryReader.hpp
         src/VariableDictionaryWriter.cpp
         src/VariableDictionaryWriter.hpp
         src/version.hpp
         src/WriterInterface.cpp
         src/WriterInterface.hpp
-        submodules/date/include/date/date.h
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
         )
 add_executable(clg ${SOURCE_FILES_clg})
+target_include_directories(clg
+        PRIVATE
+        ${CMAKE_SOURCE_DIR}/submodules
+        )
 target_link_libraries(clg
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
+        KQL
+        log_surgeon::log_surgeon
         MariaDBClient::MariaDBClient
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
@@ -492,58 +521,47 @@ target_compile_features(clg
         )
 
 set(SOURCE_FILES_clo
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clo/clo.cpp
         src/clo/CommandLineArguments.cpp
         src/clo/CommandLineArguments.hpp
         src/clo/ControllerMonitoringThread.cpp
         src/clo/ControllerMonitoringThread.hpp
-        src/compressor_frontend/Constants.hpp
-        src/compressor_frontend/finite_automata/RegexAST.hpp
-        src/compressor_frontend/finite_automata/RegexAST.tpp
-        src/compressor_frontend/finite_automata/RegexDFA.hpp
-        src/compressor_frontend/finite_automata/RegexDFA.tpp
-        src/compressor_frontend/finite_automata/RegexNFA.hpp
-        src/compressor_frontend/finite_automata/RegexNFA.tpp
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
-        src/compressor_frontend/LALR1Parser.cpp
-        src/compressor_frontend/LALR1Parser.hpp
-        src/compressor_frontend/LALR1Parser.tpp
-        src/compressor_frontend/Lexer.hpp
-        src/compressor_frontend/Lexer.tpp
-        src/compressor_frontend/SchemaParser.cpp
-        src/compressor_frontend/SchemaParser.hpp
-        src/compressor_frontend/Token.cpp
-        src/compressor_frontend/Token.hpp
-        src/compressor_frontend/utils.cpp
-        src/compressor_frontend/utils.hpp
         src/database_utils.cpp
         src/database_utils.hpp
         src/Defs.h
         src/dictionary_utils.cpp
         src/dictionary_utils.hpp
-        src/DictionaryEntry.cpp
         src/DictionaryEntry.hpp
-        src/DictionaryReader.cpp
         src/DictionaryReader.hpp
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
         src/ErrorCode.hpp
+        src/ffi/encoding_methods.cpp
+        src/ffi/encoding_methods.hpp
+        src/ffi/encoding_methods.inc
+        src/ffi/ir_stream/decoding_methods.cpp
+        src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.inc
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
         src/Grep.cpp
         src/Grep.hpp
+        src/ir/LogEvent.hpp
+        src/ir/parsing.cpp
+        src/ir/parsing.hpp
+        src/LogSurgeonReader.cpp
+        src/LogSurgeonReader.hpp
+        src/ir/parsing.inc
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
-        src/LogTypeDictionaryReader.cpp
         src/LogTypeDictionaryReader.hpp
         src/networking/socket_utils.cpp
         src/networking/socket_utils.hpp
-        src/networking/SocketOperationFailed.cpp
         src/networking/SocketOperationFailed.hpp
-        src/PageAllocatedVector.cpp
         src/PageAllocatedVector.hpp
         src/ParsedMessage.cpp
         src/ParsedMessage.hpp
@@ -554,12 +572,15 @@ set(SOURCE_FILES_clo
         src/Query.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
+        src/spdlog_with_specializations.hpp
         src/SQLiteDB.cpp
         src/SQLiteDB.hpp
         src/SQLitePreparedStatement.cpp
         src/SQLitePreparedStatement.hpp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
+        src/streaming_archive/ArchiveMetadata.cpp
+        src/streaming_archive/ArchiveMetadata.hpp
         src/streaming_archive/Constants.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
@@ -578,7 +599,6 @@ set(SOURCE_FILES_clo
         src/streaming_archive/writer/Segment.cpp
         src/streaming_archive/writer/Segment.hpp
         src/streaming_compression/Constants.hpp
-        src/streaming_compression/Decompressor.cpp
         src/streaming_compression/Decompressor.hpp
         src/streaming_compression/passthrough/Compressor.cpp
         src/streaming_compression/passthrough/Compressor.hpp
@@ -597,30 +617,32 @@ set(SOURCE_FILES_clo
         src/Thread.hpp
         src/TimestampPattern.cpp
         src/TimestampPattern.hpp
-        src/TraceableException.cpp
         src/TraceableException.hpp
         src/type_utils.hpp
         src/Utils.cpp
         src/Utils.hpp
         src/VariableDictionaryEntry.cpp
         src/VariableDictionaryEntry.hpp
-        src/VariableDictionaryReader.cpp
         src/VariableDictionaryReader.hpp
         src/VariableDictionaryWriter.cpp
         src/VariableDictionaryWriter.hpp
         src/version.hpp
         src/WriterInterface.cpp
         src/WriterInterface.hpp
-        submodules/date/include/date/date.h
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
         )
 add_executable(clo ${SOURCE_FILES_clo})
+target_include_directories(clo
+        PRIVATE
+        ${CMAKE_SOURCE_DIR}/submodules
+        )
 target_link_libraries(clo
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
+        log_surgeon::log_surgeon
         msgpack-cxx
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
@@ -632,6 +654,10 @@ target_compile_features(clo
         )
 
 set(SOURCE_FILES_unitTest
+        src/BufferedFileReader.cpp
+        src/BufferedFileReader.hpp
+        src/BufferReader.cpp
+        src/BufferReader.hpp
         src/clp/CommandLineArguments.cpp
         src/clp/CommandLineArguments.hpp
         src/clp/compression.cpp
@@ -642,7 +668,6 @@ set(SOURCE_FILES_unitTest
         src/clp/FileCompressor.hpp
         src/clp/FileDecompressor.cpp
         src/clp/FileDecompressor.hpp
-        src/clp/FileToCompress.cpp
         src/clp/FileToCompress.hpp
         src/clp/run.cpp
         src/clp/run.hpp
@@ -654,46 +679,24 @@ set(SOURCE_FILES_unitTest
         src/clp/StructuredFileToCompress.hpp
         src/clp/utils.cpp
         src/clp/utils.hpp
-        src/compressor_frontend/Constants.hpp
-        src/compressor_frontend/finite_automata/RegexAST.hpp
-        src/compressor_frontend/finite_automata/RegexAST.tpp
-        src/compressor_frontend/finite_automata/RegexDFA.hpp
-        src/compressor_frontend/finite_automata/RegexDFA.tpp
-        src/compressor_frontend/finite_automata/RegexNFA.hpp
-        src/compressor_frontend/finite_automata/RegexNFA.tpp
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.hpp
-        src/compressor_frontend/finite_automata/UnicodeIntervalTree.tpp
-        src/compressor_frontend/LALR1Parser.cpp
-        src/compressor_frontend/LALR1Parser.hpp
-        src/compressor_frontend/LALR1Parser.tpp
-        src/compressor_frontend/Lexer.hpp
-        src/compressor_frontend/Lexer.tpp
-        src/compressor_frontend/LogParser.cpp
-        src/compressor_frontend/LogParser.hpp
-        src/compressor_frontend/SchemaParser.cpp
-        src/compressor_frontend/SchemaParser.hpp
-        src/compressor_frontend/Token.cpp
-        src/compressor_frontend/Token.hpp
-        src/compressor_frontend/utils.cpp
-        src/compressor_frontend/utils.hpp
         src/database_utils.cpp
         src/database_utils.hpp
         src/Defs.h
         src/dictionary_utils.cpp
         src/dictionary_utils.hpp
-        src/DictionaryEntry.cpp
         src/DictionaryEntry.hpp
-        src/DictionaryReader.cpp
         src/DictionaryReader.hpp
-        src/DictionaryWriter.cpp
         src/DictionaryWriter.hpp
         src/EncodedVariableInterpreter.cpp
         src/EncodedVariableInterpreter.hpp
         src/ErrorCode.hpp
         src/ffi/encoding_methods.cpp
         src/ffi/encoding_methods.hpp
-        src/ffi/encoding_methods.tpp
+        src/ffi/encoding_methods.inc
         src/ffi/ir_stream/byteswap.hpp
+        src/ffi/ir_stream/decoding_methods.cpp
+        src/ffi/ir_stream/decoding_methods.hpp
+        src/ffi/ir_stream/decoding_methods.inc
         src/ffi/ir_stream/encoding_methods.cpp
         src/ffi/ir_stream/encoding_methods.hpp
         src/ffi/ir_stream/protocol_constants.hpp
@@ -707,13 +710,14 @@ set(SOURCE_FILES_unitTest
         src/ffi/search/QueryToken.hpp
         src/ffi/search/QueryWildcard.cpp
         src/ffi/search/QueryWildcard.hpp
+        src/ffi/search/Subquery.cpp
+        src/ffi/search/Subquery.hpp
         src/ffi/search/WildcardToken.cpp
         src/ffi/search/WildcardToken.hpp
         src/FileReader.cpp
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
-        src/GlobalMetadataDB.cpp
         src/GlobalMetadataDB.hpp
         src/GlobalMetadataDBConfig.cpp
         src/GlobalMetadataDBConfig.hpp
@@ -723,16 +727,26 @@ set(SOURCE_FILES_unitTest
         src/GlobalSQLiteMetadataDB.hpp
         src/Grep.cpp
         src/Grep.hpp
+        src/ir/LogEvent.hpp
+        src/ir/LogEventDeserializer.cpp
+        src/ir/LogEventDeserializer.hpp
+        src/ir/parsing.cpp
+        src/ir/parsing.hpp
+        src/ir/parsing.inc
+        src/ir/utils.cpp
+        src/ir/utils.hpp
         src/LibarchiveFileReader.cpp
         src/LibarchiveFileReader.hpp
         src/LibarchiveReader.cpp
         src/LibarchiveReader.hpp
+        src/LogSurgeonReader.cpp
+        src/LogSurgeonReader.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
-        src/LogTypeDictionaryReader.cpp
         src/LogTypeDictionaryReader.hpp
         src/LogTypeDictionaryWriter.cpp
         src/LogTypeDictionaryWriter.hpp
+        src/math_utils.hpp
         src/MessageParser.cpp
         src/MessageParser.hpp
         src/MySQLDB.cpp
@@ -741,7 +755,6 @@ set(SOURCE_FILES_unitTest
         src/MySQLParamBindings.hpp
         src/MySQLPreparedStatement.cpp
         src/MySQLPreparedStatement.hpp
-        src/PageAllocatedVector.cpp
         src/PageAllocatedVector.hpp
         src/ParsedMessage.cpp
         src/ParsedMessage.hpp
@@ -752,12 +765,15 @@ set(SOURCE_FILES_unitTest
         src/Query.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
+        src/spdlog_with_specializations.hpp
         src/SQLiteDB.cpp
         src/SQLiteDB.hpp
         src/SQLitePreparedStatement.cpp
         src/SQLitePreparedStatement.hpp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
+        src/streaming_archive/ArchiveMetadata.cpp
+        src/streaming_archive/ArchiveMetadata.hpp
         src/streaming_archive/Constants.hpp
         src/streaming_archive/MetadataDB.cpp
         src/streaming_archive/MetadataDB.hpp
@@ -777,10 +793,8 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/writer/File.hpp
         src/streaming_archive/writer/Segment.cpp
         src/streaming_archive/writer/Segment.hpp
-        src/streaming_compression/Compressor.cpp
         src/streaming_compression/Compressor.hpp
         src/streaming_compression/Constants.hpp
-        src/streaming_compression/Decompressor.cpp
         src/streaming_compression/Decompressor.hpp
         src/streaming_compression/passthrough/Compressor.cpp
         src/streaming_compression/passthrough/Compressor.hpp
@@ -793,35 +807,34 @@ set(SOURCE_FILES_unitTest
         src/streaming_compression/zstd/Decompressor.hpp
         src/string_utils.cpp
         src/string_utils.hpp
-        src/string_utils.tpp
+        src/string_utils.inc
         src/StringReader.cpp
         src/StringReader.hpp
         src/TimestampPattern.cpp
         src/TimestampPattern.hpp
-        src/TraceableException.cpp
         src/TraceableException.hpp
         src/type_utils.hpp
         src/Utils.cpp
         src/Utils.hpp
         src/VariableDictionaryEntry.cpp
         src/VariableDictionaryEntry.hpp
-        src/VariableDictionaryReader.cpp
         src/VariableDictionaryReader.hpp
         src/VariableDictionaryWriter.cpp
         src/VariableDictionaryWriter.hpp
         src/version.hpp
         src/WriterInterface.cpp
         src/WriterInterface.hpp
-        submodules/Catch2/single_include/catch2/catch.hpp
-        submodules/date/include/date/date.h
-        submodules/json/single_include/nlohmann/json.hpp
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
+        tests/test-BufferedFileReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
         tests/test-Grep.cpp
+        tests/test-ir_encoding_methods.cpp
+        tests/test-ir_parsing.cpp
         tests/test-main.cpp
+        tests/test-math_utils.cpp
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
         tests/test-Segment.cpp
@@ -832,10 +845,15 @@ set(SOURCE_FILES_unitTest
         tests/test-Utils.cpp
         )
 add_executable(unitTest ${SOURCE_FILES_unitTest})
+target_include_directories(unitTest
+        PRIVATE
+        ${CMAKE_SOURCE_DIR}/submodules
+        )
 target_link_libraries(unitTest
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
+        log_surgeon::log_surgeon
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
         spdlog::spdlog

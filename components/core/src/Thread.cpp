@@ -1,29 +1,26 @@
 #include "Thread.hpp"
 
-// spdlog
-#include <spdlog/spdlog.h>
-
 // Project headers
 #include "Defs.h"
+#include "spdlog_with_specializations.hpp"
 
 using std::system_error;
 
-Thread::~Thread () {
+Thread::~Thread() {
     if (m_thread_running) {
         SPDLOG_WARN("Thread did not exit before being destroyed.");
     }
     if (nullptr != m_thread && m_thread->joinable()) {
         // NOTE: There are two reasons to join rather than detach.
-        // (1) Since the std::thread doesn't take ownership of this object
-        //     during creation, then it's possible that this object goes out
-        //     of scope while the thread is still running.
-        // (2) Similarly, derived classes may use references to objects that
-        //     are not owned by the std::thread.
+        // (1) Since the std::thread doesn't take ownership of this object during creation, then
+        //     it's possible that this object goes out of scope while the thread is still running.
+        // (2) Similarly, derived classes may use references to objects that are not owned by the
+        //     std::thread.
         m_thread->join();
     }
 }
 
-void Thread::start () {
+void Thread::start() {
     try {
         m_thread = std::make_unique<std::thread>(&Thread::thread_entry_point, this);
     } catch (system_error& e) {
@@ -32,7 +29,7 @@ void Thread::start () {
     }
 }
 
-void Thread::join () {
+void Thread::join() {
     if (nullptr == m_thread) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
@@ -45,7 +42,7 @@ void Thread::join () {
     }
 }
 
-void Thread::thread_entry_point () {
+void Thread::thread_entry_point() {
     m_thread_running = true;
     thread_method();
     m_thread_running = false;

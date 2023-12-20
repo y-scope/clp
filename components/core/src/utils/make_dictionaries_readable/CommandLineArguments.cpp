@@ -1,13 +1,10 @@
 #include "CommandLineArguments.hpp"
 
-// C++ standard libraries
 #include <iostream>
 
-// Boost libraries
 #include <boost/program_options.hpp>
 
-// spdlog
-#include <spdlog/spdlog.h>
+#include "../../spdlog_with_specializations.hpp"
 
 namespace po = boost::program_options;
 using std::cerr;
@@ -17,7 +14,8 @@ using std::invalid_argument;
 using std::string;
 
 namespace utils { namespace make_dictionaries_readable {
-    CommandLineArgumentsBase::ParsingResult CommandLineArguments::parse_arguments (int argc, const char* argv[]) {
+    CommandLineArgumentsBase::ParsingResult
+    CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         // Print out basic usage if user doesn't specify any options
         if (1 == argc) {
             print_basic_usage();
@@ -26,9 +24,7 @@ namespace utils { namespace make_dictionaries_readable {
 
         // Define general options
         po::options_description options_general("General Options");
-        options_general.add_options()
-                ("help,h", "Print help")
-                ;
+        options_general.add_options()("help,h", "Print help");
 
         // Define visible options
         po::options_description visible_options;
@@ -36,10 +32,11 @@ namespace utils { namespace make_dictionaries_readable {
 
         // Define hidden positional options (not shown in Boost's program options help message)
         po::options_description hidden_positional_options;
+        // clang-format off
         hidden_positional_options.add_options()
                 ("archive-path", po::value<string>(&m_archive_path))
-                ("output-dir", po::value<string>(&m_output_dir))
-                ;
+                ("output-dir", po::value<string>(&m_output_dir));
+        // clang-format on
         po::positional_options_description positional_options_description;
         positional_options_description.add("archive-path", 1);
         positional_options_description.add("output-dir", 1);
@@ -52,7 +49,10 @@ namespace utils { namespace make_dictionaries_readable {
         // Parse options
         try {
             // Parse options specified on the command line
-            po::parsed_options parsed = po::command_line_parser(argc, argv).options(all_options).positional(positional_options_description).run();
+            po::parsed_options parsed = po::command_line_parser(argc, argv)
+                                                .options(all_options)
+                                                .positional(positional_options_description)
+                                                .run();
             po::variables_map parsed_command_line_options;
             store(parsed, parsed_command_line_options);
 
@@ -86,7 +86,7 @@ namespace utils { namespace make_dictionaries_readable {
         return ParsingResult::Success;
     }
 
-    void CommandLineArguments::print_basic_usage () const {
+    void CommandLineArguments::print_basic_usage() const {
         cerr << "Usage: " << get_program_name() << " [OPTIONS] ARCHIVE_PATH OUTPUT_DIR" << endl;
     }
-} }
+}}  // namespace utils::make_dictionaries_readable

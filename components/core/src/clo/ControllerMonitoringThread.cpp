@@ -1,21 +1,18 @@
 #include "ControllerMonitoringThread.hpp"
 
-// C standard libraries
 #include <unistd.h>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
-// Project headers
 #include "../networking/socket_utils.hpp"
+#include "../spdlog_with_specializations.hpp"
 
-void ControllerMonitoringThread::thread_method () {
+void ControllerMonitoringThread::thread_method() {
     // Wait for the controller socket to close
     constexpr size_t cBufLen = 4096;
     char buf[cBufLen];
     size_t num_bytes_received;
     for (bool exit = false; false == exit;) {
-        auto error_code = networking::try_receive(m_controller_socket_fd, buf, cBufLen, num_bytes_received);
+        auto error_code
+                = networking::try_receive(m_controller_socket_fd, buf, cBufLen, num_bytes_received);
         switch (error_code) {
             case ErrorCode_EndOfFile:
                 // Controller closed the connection
@@ -24,7 +21,10 @@ void ControllerMonitoringThread::thread_method () {
                 break;
             case ErrorCode_Success:
                 // Unexpectedly received data
-                SPDLOG_ERROR("Unexpected received {} bytes of data from controller.", num_bytes_received);
+                SPDLOG_ERROR(
+                        "Unexpected received {} bytes of data from controller.",
+                        num_bytes_received
+                );
                 break;
             case ErrorCode_BadParam:
                 SPDLOG_ERROR("Bad parameter sent to try_receive.", num_bytes_received);

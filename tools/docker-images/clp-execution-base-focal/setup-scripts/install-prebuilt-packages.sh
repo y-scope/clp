@@ -5,4 +5,5 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   checkinstall \
   curl \
   python3 \
-  rsync
+  rsync \
+  zstd

@@ -2,7 +2,12 @@
 
 using std::string;
 
-ErrorCode ReaderInterface::try_read_to_delimiter (char delim, bool keep_delimiter, bool append, std::string& str) {
+ErrorCode ReaderInterface::try_read_to_delimiter(
+        char delim,
+        bool keep_delimiter,
+        bool append,
+        std::string& str
+) {
     if (false == append) {
         str.clear();
     }
@@ -36,7 +41,7 @@ ErrorCode ReaderInterface::try_read_to_delimiter (char delim, bool keep_delimite
     return ErrorCode_Success;
 }
 
-bool ReaderInterface::read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
+bool ReaderInterface::read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
     ErrorCode error_code = try_read(buf, num_bytes_to_read, num_bytes_read);
     if (ErrorCode_EndOfFile == error_code) {
         return false;
@@ -47,7 +52,7 @@ bool ReaderInterface::read (char* buf, size_t num_bytes_to_read, size_t& num_byt
     return true;
 }
 
-bool ReaderInterface::read_to_delimiter (char delim, bool keep_delimiter, bool append, string& str) {
+bool ReaderInterface::read_to_delimiter(char delim, bool keep_delimiter, bool append, string& str) {
     ErrorCode error_code = try_read_to_delimiter(delim, keep_delimiter, append, str);
     if (ErrorCode_EndOfFile == error_code) {
         return false;
@@ -59,7 +64,7 @@ bool ReaderInterface::read_to_delimiter (char delim, bool keep_delimiter, bool a
     return true;
 }
 
-ErrorCode ReaderInterface::try_read_exact_length (char* buf, size_t num_bytes) {
+ErrorCode ReaderInterface::try_read_exact_length(char* buf, size_t num_bytes) {
     size_t num_bytes_read;
     auto error_code = try_read(buf, num_bytes, num_bytes_read);
     if (ErrorCode_Success != error_code) {
@@ -72,7 +77,7 @@ ErrorCode ReaderInterface::try_read_exact_length (char* buf, size_t num_bytes) {
     return ErrorCode_Success;
 }
 
-bool ReaderInterface::read_exact_length (char* buf, size_t num_bytes, bool eof_possible) {
+bool ReaderInterface::read_exact_length(char* buf, size_t num_bytes, bool eof_possible) {
     ErrorCode error_code = try_read_exact_length(buf, num_bytes);
     if (eof_possible && ErrorCode_EndOfFile == error_code) {
         return false;
@@ -83,14 +88,14 @@ bool ReaderInterface::read_exact_length (char* buf, size_t num_bytes, bool eof_p
     return true;
 }
 
-ErrorCode ReaderInterface::try_read_string (const size_t str_length, string& str) {
+ErrorCode ReaderInterface::try_read_string(size_t const str_length, string& str) {
     // Resize string to fit str_length
     str.resize(str_length);
 
     return try_read_exact_length(&str[0], str_length);
 }
 
-bool ReaderInterface::read_string (const size_t str_length, string& str, bool eof_possible) {
+bool ReaderInterface::read_string(size_t const str_length, string& str, bool eof_possible) {
     ErrorCode error_code = try_read_string(str_length, str);
     if (eof_possible && ErrorCode_EndOfFile == error_code) {
         return false;
@@ -101,14 +106,14 @@ bool ReaderInterface::read_string (const size_t str_length, string& str, bool eo
     return true;
 }
 
-void ReaderInterface::seek_from_begin (size_t pos) {
+void ReaderInterface::seek_from_begin(size_t pos) {
     ErrorCode error_code = try_seek_from_begin(pos);
     if (ErrorCode_Success != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 }
 
-size_t ReaderInterface::get_pos () {
+size_t ReaderInterface::get_pos() {
     size_t pos;
     ErrorCode error_code = try_get_pos(pos);
     if (ErrorCode_Success != error_code) {

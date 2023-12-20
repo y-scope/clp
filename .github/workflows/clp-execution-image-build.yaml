@@ -1,34 +1,49 @@
-name: generate-execution-dependency-image
+name: "clp-execution-image-build"
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/clp-execution-image-build.yaml"
+      - "components/core/tools/scripts/lib_install/*"
+      - "tools/docker-images/clp-execution-base-focal/**"
   push:
     paths:
-      - 'tools/docker-images/clp-execution-base-focal/**'
-      - 'components/core/tools/scripts/lib_install/**'
-      - '.github/workflows/clp-execution-image-build.yaml'
+      - ".github/workflows/clp-execution-image-build.yaml"
+      - "components/core/tools/scripts/lib_install/*"
+      - "tools/docker-images/clp-execution-base-focal/**"
   workflow_dispatch:
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{github.repository}}/clp-execution-x86-ubuntu-focal
+  CONTAINER_IMAGE_REGISTRY: ghcr.io
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
-    name: Build Image
+    runs-on: "ubuntu-latest"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: "actions/checkout@v3"
         with:
-            submodules: recursive
+          submodules: "recursive"
 
-      - name: Workaround actions/runner-images/issues/6775
-        run: chown $(id -u):$(id -g) -R .
+      - name: "Workaround actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
 
-      - name: Build and push Docker image
-        uses: ./.github/actions/clp-docker-build-push-action
+      - uses: "docker/login-action@v3"
         with:
-          image_name: ${{env.IMAGE_NAME}}
-          file: ./tools/docker-images/clp-execution-base-focal/Dockerfile
-          token: ${{secrets.GITHUB_TOKEN}}
-          push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
+          registry: "${{env.CONTAINER_IMAGE_REGISTRY}}"
+          username: "${{github.actor}}"
+          password: "${{secrets.GITHUB_TOKEN}}"
+
+      - id: "meta"
+        uses: "docker/metadata-action@v5"
+        with:
+          images: >-
+            ${{env.CONTAINER_IMAGE_REGISTRY}}/${{github.repository}}/clp-execution-x86-ubuntu-focal
+
+      - if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
+        uses: "docker/build-push-action@v5"
+        with:
+          context: "./"
+          file: "./tools/docker-images/clp-execution-base-focal/Dockerfile"
+          push: true
+          tags: "${{steps.meta.outputs.tags}}"
+          labels: "${{steps.meta.outputs.labels}}"

@@ -1,15 +1,12 @@
 #include "VariableDictionaryWriter.hpp"
 
-// spdlog
-#include <spdlog/spdlog.h>
-
-// Project headers
 #include "dictionary_utils.hpp"
+#include "spdlog_with_specializations.hpp"
 
-bool VariableDictionaryWriter::add_entry (const std::string& value, variable_dictionary_id_t& id) {
+bool VariableDictionaryWriter::add_entry(std::string const& value, variable_dictionary_id_t& id) {
     bool new_entry = false;
 
-    const auto ix = m_value_to_id.find(value);
+    auto const ix = m_value_to_id.find(value);
     if (m_value_to_id.end() != ix) {
         id = ix->second;
     } else {

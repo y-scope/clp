@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# Enable gcc 7
-source /opt/rh/devtoolset-7/enable
+# Enable gcc 10
+source /opt/rh/devtoolset-10/enable
 
 # NOTE: cmake and boost must be installed first since the remaining packages depend on them
 ./tools/scripts/lib_install/install-cmake.sh 3.21.2

@@ -1,0 +1,92 @@
+name: "clp-core-build-containers"
+description: "Builds and publishes container images for CLP-core's dependencies and binaries"
+
+inputs:
+  os_name:
+    description: "Name of container OS"
+    required: true
+  clp_core_dir:
+    description: "CLP-core's component directory"
+    required: true
+  push_deps_image:
+    description: "Whether to publish a container image containing CLP's dependencies"
+    required: true
+  push_binaries_image:
+    description: "Whether to publish a container image containing CLP's binaries"
+    required: true
+  local_registry_port:
+    description: "Port number for the local registry"
+    required: true
+  token:
+    description: "Registry token"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: "docker/setup-buildx-action@v3"
+      with:
+        driver-opts: "network=host"
+
+    - if: "inputs.push_deps_image == 'true'"
+      uses: "docker/login-action@v3"
+      with:
+        registry: "ghcr.io"
+        username: "${{github.actor}}"
+        password: "${{inputs.token}}"
+
+    - id: "get_deps_image_props"
+      shell: "bash"
+      run: |
+        if [[ "${{inputs.push_deps_image}}" == "true" ]] ; then
+          echo "REGISTRY=ghcr.io" >> "$GITHUB_OUTPUT"
+          echo "BRANCH=${{github.ref_name}}" >> "$GITHUB_OUTPUT"
+        else
+          echo "REGISTRY=localhost:${{inputs.local_registry_port}}" >> "$GITHUB_OUTPUT"
+          echo "BRANCH=latest" >> "$GITHUB_OUTPUT"
+        fi
+        # Docker doesn't support repository names with uppercase characters, so we convert to
+        # lowercase here.
+        echo "REPOSITORY=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')" \
+          >> "$GITHUB_OUTPUT"
+
+    - id: "deps_image_meta"
+      uses: "docker/metadata-action@v5"
+      with:
+        images: "${{steps.get_deps_image_props.outputs.REGISTRY}}\
+          /${{steps.get_deps_image_props.outputs.REPOSITORY}}\
+          /clp-core-dependencies-x86-${{inputs.os_name}}"
+        tags: |
+          type=raw,value=${{steps.get_deps_image_props.outputs.BRANCH}}
+
+    - uses: "docker/build-push-action@v5"
+      with:
+        context: "${{inputs.clp_core_dir}}"
+        file: "${{inputs.clp_core_dir}}/tools/docker-images/clp-env-base-${{inputs.os_name}}\
+          /Dockerfile"
+        push: true
+        tags: "${{steps.deps_image_meta.outputs.tags}}"
+        labels: "${{steps.deps_image_meta.outputs.labels}}"
+
+    - uses: "./.github/actions/clp-core-build"
+      with:
+        image_name: "${{steps.deps_image_meta.outputs.tags}}"
+
+    - if: "inputs.push_binaries_image == 'true'"
+      id: "core_image_meta"
+      uses: "docker/metadata-action@v5"
+      with:
+        images: "${{steps.get_deps_image_props.outputs.REGISTRY}}\
+          /${{steps.get_deps_image_props.outputs.REPOSITORY}}\
+          /clp-core-x86-${{inputs.os_name}}"
+        tags: |
+          type=raw,value=${{steps.get_deps_image_props.outputs.BRANCH}}
+
+    - if: "inputs.push_binaries_image == 'true'"
+      uses: "docker/build-push-action@v5"
+      with:
+        context: "${{inputs.clp_core_dir}}/build"
+        file: "${{inputs.clp_core_dir}}/tools/docker-images/clp-core-${{inputs.os_name}}/Dockerfile"
+        push: true
+        tags: "${{steps.core_image_meta.outputs.tags}}"
+        labels: "${{steps.core_image_meta.outputs.labels}}"

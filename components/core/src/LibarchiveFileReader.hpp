@@ -1,13 +1,11 @@
 #ifndef LIBARCHIVEFILEREADER_HPP
 #define LIBARCHIVEFILEREADER_HPP
 
-// C++ standard libraries
+#include <array>
 #include <string>
 
-// libarchive
 #include <archive.h>
 
-// Project headers
 #include "ErrorCode.hpp"
 #include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
@@ -21,16 +19,22 @@ public:
     class OperationFailed : public TraceableException {
     public:
         // Constructors
-        OperationFailed (ErrorCode error_code, const char* const filename, int line_number) : TraceableException (error_code, filename, line_number) {}
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        const char* what () const noexcept override {
+        char const* what() const noexcept override {
             return "LibarchiveFileReader operation failed";
         }
     };
 
     // Constructors
-    LibarchiveFileReader () : m_archive(nullptr), m_archive_entry(nullptr), m_data_block(nullptr), m_reached_eof(false), m_pos_in_file(0) {}
+    LibarchiveFileReader()
+            : m_archive(nullptr),
+              m_archive_entry(nullptr),
+              m_data_block(nullptr),
+              m_reached_eof(false),
+              m_pos_in_file(0) {}
 
     // Methods implementing the ReaderInterface
     /**
@@ -38,13 +42,13 @@ public:
      * @param pos Position of the read head in the file
      * @return ErrorCode_Success
      */
-    ErrorCode try_get_pos (size_t &pos) override;
+    ErrorCode try_get_pos(size_t& pos) override;
     /**
      * Unsupported method
      * @param pos
      * @return N/A
      */
-    ErrorCode try_seek_from_begin (size_t pos) override;
+    ErrorCode try_seek_from_begin(size_t pos) override;
     /**
      * Tries to read up to a given number of bytes from the file
      * @param buf
@@ -54,7 +58,7 @@ public:
      * @return ErrorCode_Failure on failure
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_read (char *buf, size_t num_bytes_to_read, size_t &num_bytes_read) override;
+    ErrorCode try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) override;
 
     // Methods overriding the ReaderInterface
     /**
@@ -67,7 +71,8 @@ public:
      * @return ErrorCode_Failure on failure
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_read_to_delimiter (char delim, bool keep_delimiter, bool append, std::string& str) override;
+    ErrorCode
+    try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str) override;
 
     // Methods
     /**
@@ -75,11 +80,28 @@ public:
      * @param archive
      * @param archive_entry
      */
-    void open (struct archive* archive, struct archive_entry* archive_entry);
+    void open(struct archive* archive, struct archive_entry* archive_entry);
     /**
      * Closes the file reader
      */
-    void close ();
+    void close();
+
+    /**
+     * Tries to the load a data block from the file if none is loaded
+     * @return ErrorCode_EndOfFile on EOF
+     * @return ErrorCode_Failure on failure
+     * @return ErrorCode_Success on success
+     */
+    [[nodiscard]] ErrorCode try_load_data_block();
+
+    /**
+     * Peeks the remaining buffered content without advancing the read head.
+     *
+     * NOTE: Any subsequent read or seek operations may invalidate the returned buffer.
+     * @param buf Returns a pointer to any buffered data
+     * @param buf_size Returns the number of bytes in the buffer
+     */
+    void peek_buffered_data(char const*& buf, size_t& buf_size) const;
 
 private:
     // Methods
@@ -89,19 +111,22 @@ private:
      * @return ErrorCode_Failure on failure
      * @return ErrorCode_Success on success
      */
-    ErrorCode read_next_data_block ();
+    ErrorCode read_next_data_block();
 
     // Variables
     struct archive* m_archive;
 
     struct archive_entry* m_archive_entry;
     la_int64_t m_data_block_pos_in_file;
-    const void* m_data_block;
+    void const* m_data_block;
     size_t m_data_block_length;
     la_int64_t m_pos_in_data_block;
     bool m_reached_eof;
 
     size_t m_pos_in_file;
+
+    // Nulls for peek
+    std::array<char, 4096> m_nulls_for_peek{0};
 };
 
-#endif // LIBARCHIVEFILEREADER_HPP
+#endif  // LIBARCHIVEFILEREADER_HPP

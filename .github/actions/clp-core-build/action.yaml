@@ -1,41 +1,23 @@
-name: "Build CLP Core"
-description: "Configures CMake and uses CMake to build CLP Core"
+name: "clp-core-build"
+description: "Builds CLP-core in the given container"
 
 inputs:
-  build_type:
-    description: "CLP CMake Build Type: Debug, Release, RelWithDebInfo and MinSizeRel"
-    required: false
-    default: Release
-  cmake_config_extra_args:
-    description: "Extra args to pass to CMake during configuration"
-    required: false
-    default: ""
-  
+  image_name:
+    description: "Container image to use"
+    required: true
+
 runs:
   using: "composite"
   steps:
+    - shell: "bash"
+      working-directory: "./components/core"
+      run: "./tools/scripts/deps-download/download-all.sh"
 
-    - name: Download submodules
-      run: ./tools/scripts/deps-download/download-all.sh
-      working-directory: ./components/core
-      shell: bash
-
-    - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory
-      run: cmake -B $GITHUB_WORKSPACE/build
-                 -DCMAKE_BUILD_TYPE=${{inputs.build_type}} 
-                 ${{inputs.cmake_config_extra_args}}
-      working-directory: ./components/core
-      shell: bash
-
-    - name: Build
-      # Build your program with the given configuration
-      run: cmake --build $GITHUB_WORKSPACE/build --config ${{inputs.build_type}}
-      working-directory: ./components/core
-      shell: bash
-      
-    - name: Bundle Built Binaries
-      run: |
-        cd $GITHUB_WORKSPACE/build 
-        tar -cf $GITHUB_WORKSPACE/clp-binaries-focal.tar ./clp ./clg ./clo ./make-dictionaries-readable
-      shell: bash
+    - shell: "bash"
+      run: >-
+        docker run
+        --user $(id -u):$(id -g)
+        --volume "$GITHUB_WORKSPACE/components/core":/mnt/clp
+        --workdir /mnt/clp
+        ${{inputs.image_name}}
+        /mnt/clp/tools/scripts/utils/build-and-run-unit-tests.sh . build 

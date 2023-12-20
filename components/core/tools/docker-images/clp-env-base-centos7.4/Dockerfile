@@ -13,8 +13,8 @@ RUN ./tools/scripts/lib_install/centos7.4/install-all.sh
 # Set PKG_CONFIG_PATH since CentOS doesn't look in /usr/local by default
 ENV PKG_CONFIG_PATH /usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig
 
-# Enable gcc 8
-RUN ln -s /opt/rh/devtoolset-8/enable /etc/profile.d/devtoolset.sh
+# Enable gcc 10 in login shells and non-interactive non-login shells
+RUN ln -s /opt/rh/devtoolset-10/enable /etc/profile.d/devtoolset.sh
 
 # Enable git 2.27
 # NOTE: We use a script to enable the SCL git package on each git call because some Github actions

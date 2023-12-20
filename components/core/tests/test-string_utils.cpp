@@ -1,14 +1,9 @@
-// C++ standard libraries
 #include <iostream>
 
-// Boost libraries
 #include <boost/foreach.hpp>
 #include <boost/range/combine.hpp>
+#include <Catch2/single_include/catch2/catch.hpp>
 
-// Catch2
-#include "../submodules/Catch2/single_include/catch2/catch.hpp"
-
-// Project headers
 #include "../src/string_utils.hpp"
 
 using std::cout;
@@ -104,7 +99,6 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
             tameString = "abcd", wildString = "abc?";
             REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == true);
         }
-
 
         GIVEN("Multiple wild in the middle") {
             tameString = "abcd", wildString = "a??d";
@@ -210,8 +204,8 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
             REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == false);
         }
 
-        GIVEN("MISSING matching literals in the beginning with both \"*\" and \"?\" in the middle")
-        {
+        GIVEN("MISSING matching literals in the beginning with both \"*\" and \"?\" in the middle"
+        ) {
             tameString = "abcd", wildString = "b*?d";
             REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == false);
         }
@@ -286,8 +280,9 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
 
     WHEN("Case wild card match is case insensitive") {
         // This test is meant to supplement the case sensitive wild card implementation
-        // The case insensitive implementation is exactly the same as case sensitive except it automatically adjust
-        // the inputs to lower case when needed before doing comparison. It is rarely used due to lower performance
+        // The case insensitive implementation is exactly the same as case sensitive except it
+        // automatically adjust the inputs to lower case when needed before doing comparison. It is
+        // rarely used due to lower performance
         bool isCaseSensitive = false;
         GIVEN("All lower case tame and all upper case wild") {
             tameString = "abcde", wildString = "A?C*";
@@ -309,8 +304,8 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
         GIVEN("Case with repeating character sequences") {
             allPassed &= wildcard_match_unsafe_case_sensitive("abcccd", "*ccd");
             allPassed &= wildcard_match_unsafe_case_sensitive("mississipissippi", "*issip*ss*");
-            allPassed &= !wildcard_match_unsafe_case_sensitive("xxxx*zzzzzzzzy*f",
-                                                               "xxxx*zzy*fffff");
+            allPassed
+                    &= !wildcard_match_unsafe_case_sensitive("xxxx*zzzzzzzzy*f", "xxxx*zzy*fffff");
             allPassed &= wildcard_match_unsafe_case_sensitive("xxxx*zzzzzzzzy*f", "xxx*zzy*f");
             allPassed &= !wildcard_match_unsafe_case_sensitive("xxxxzzzzzzzzyf", "xxxx*zzy*fffff");
             allPassed &= wildcard_match_unsafe_case_sensitive("xxxxzzzzzzzzyf", "xxxx*zzy*f");
@@ -385,38 +380,61 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
 
         GIVEN("Many-wildcard scenarios") {
             allPassed &= wildcard_match_unsafe_case_sensitive(
-                    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab",
-                    "a*a*a*a*a*a*aa*aaa*a*a*b");
+                    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                    "aaaaaaaaaaaab",
+                    "a*a*a*a*a*a*aa*aaa*a*a*b"
+            );
             allPassed &= wildcard_match_unsafe_case_sensitive(
-                    "abababababababababababababababababababaacacacacacacacadaeafagahaiajakalaaaaaaaaaaaaaaaaaffafagaagggagaaaaaaaab",
-                    "*a*b*ba*ca*a*aa*aaa*fa*ga*b*");
+                    "abababababababababababababababababababaacacacacacacacadaeafagahaiajakalaaaaaaa"
+                    "aaaaaaaaaaffafagaagggagaaaaaaaab",
+                    "*a*b*ba*ca*a*aa*aaa*fa*ga*b*"
+            );
             allPassed &= !wildcard_match_unsafe_case_sensitive(
-                    "abababababababababababababababababababaacacacacacacacadaeafagahaiajakalaaaaaaaaaaaaaaaaaffafagaagggagaaaaaaaab",
-                    "*a*b*ba*ca*a*x*aaa*fa*ga*b*");
+                    "abababababababababababababababababababaacacacacacacacadaeafagahaiajakalaaaaaaa"
+                    "aaaaaaaaaaffafagaagggagaaaaaaaab",
+                    "*a*b*ba*ca*a*x*aaa*fa*ga*b*"
+            );
             allPassed &= !wildcard_match_unsafe_case_sensitive(
-                    "abababababababababababababababababababaacacacacacacacadaeafagahaiajakalaaaaaaaaaaaaaaaaaffafagaagggagaaaaaaaab",
-                    "*a*b*ba*ca*aaaa*fa*ga*gggg*b*");
+                    "abababababababababababababababababababaacacacacacacacadaeafagahaiajakalaaaaaaa"
+                    "aaaaaaaaaaffafagaagggagaaaaaaaab",
+                    "*a*b*ba*ca*aaaa*fa*ga*gggg*b*"
+            );
             allPassed &= wildcard_match_unsafe_case_sensitive(
-                    "abababababababababababababababababababaacacacacacacacadaeafagahaiajakalaaaaaaaaaaaaaaaaaffafagaagggagaaaaaaaab",
-                    "*a*b*ba*ca*aaaa*fa*ga*ggg*b*");
+                    "abababababababababababababababababababaacacacacacacacadaeafagahaiajakalaaaaaaa"
+                    "aaaaaaaaaaffafagaagggagaaaaaaaab",
+                    "*a*b*ba*ca*aaaa*fa*ga*ggg*b*"
+            );
             allPassed &= wildcard_match_unsafe_case_sensitive("aaabbaabbaab", "*aabbaa*a*");
             allPassed &= wildcard_match_unsafe_case_sensitive(
-                    "a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*", "a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*");
+                    "a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*",
+                    "a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*"
+            );
             allPassed &= wildcard_match_unsafe_case_sensitive(
-                    "aaaaaaaaaaaaaaaaa", "*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*");
+                    "aaaaaaaaaaaaaaaaa",
+                    "*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*"
+            );
             allPassed &= !wildcard_match_unsafe_case_sensitive(
-                    "aaaaaaaaaaaaaaaa", "*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*");
+                    "aaaaaaaaaaaaaaaa",
+                    "*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*"
+            );
             allPassed &= !wildcard_match_unsafe_case_sensitive(
-                    "abc*abcd*abcde*abcdef*abcdefg*abcdefgh*abcdefghi*abcdefghij*abcdefghijk*abcdefghijkl*abcdefghijklm*abcdefghijklmn",
-                    "abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*");
+                    "abc*abcd*abcde*abcdef*abcdefg*abcdefgh*abcdefghi*abcdefghij*abcdefghijk*"
+                    "abcdefghijkl*abcdefghijklm*abcdefghijklmn",
+                    "abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*"
+            );
             allPassed &= wildcard_match_unsafe_case_sensitive(
-                    "abc*abcd*abcde*abcdef*abcdefg*abcdefgh*abcdefghi*abcdefghij*abcdefghijk*abcdefghijkl*abcdefghijklm*abcdefghijklmn",
-                    "abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*");
-            allPassed &= !wildcard_match_unsafe_case_sensitive("abc*abcd*abcd*abc*abcd",
-                                                               "abc*abc*abc*abc*abc");
+                    "abc*abcd*abcde*abcdef*abcdefg*abcdefgh*abcdefghi*abcdefghij*abcdefghijk*"
+                    "abcdefghijkl*abcdefghijklm*abcdefghijklmn",
+                    "abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*"
+            );
+            allPassed &= !wildcard_match_unsafe_case_sensitive(
+                    "abc*abcd*abcd*abc*abcd",
+                    "abc*abc*abc*abc*abc"
+            );
             allPassed &= wildcard_match_unsafe_case_sensitive(
                     "abc*abcd*abcd*abc*abcd*abcd*abc*abcd*abc*abc*abcd",
-                    "abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abcd");
+                    "abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abcd"
+            );
             REQUIRE(allPassed == true);
         }
 
@@ -437,14 +455,14 @@ SCENARIO("Test wild card performance", "[wildcard performance]") {
     high_resolution_clock::time_point t1, t2;
     string tameStr, wildStr;
 
-    const int nReps = 1000000;
+    int const nReps = 1'000'000;
     int testReps;
     bool allPassed_currentImplementation = true;
     bool allPassed_nextBestImplementation = true;
 
-    /*******************************************************************************************************************
+    /***********************************************************************************************
      * Inputs Begin
-     ******************************************************************************************************************/
+     **********************************************************************************************/
     vector<string> tameVec, wildVec;
 
     // Typical apache log
@@ -453,38 +471,35 @@ SCENARIO("Test wild card performance", "[wildcard performance]") {
                       ".3&rev2=1.2 HTTP/1.1\" 200 4523");
     wildVec.push_back("*64.242.88.10*Mar/2004*GET*200*");
 
-    /*******************************************************************************************************************
+    /***********************************************************************************************
      * Inputs End
-     ******************************************************************************************************************/
+     **********************************************************************************************/
 
     // Profile current implementation
     testReps = nReps;
     t1 = high_resolution_clock::now();
     while (testReps--) {
-        BOOST_FOREACH(boost::tie(tameStr, wildStr), boost::combine(tameVec, wildVec)) {
-                        allPassed_currentImplementation &=
-                                wildcard_match_unsafe_case_sensitive(tameStr, wildStr);
-                    }
+        BOOST_FOREACH (boost::tie(tameStr, wildStr), boost::combine(tameVec, wildVec)) {
+            allPassed_currentImplementation
+                    &= wildcard_match_unsafe_case_sensitive(tameStr, wildStr);
+        }
     }
     t2 = high_resolution_clock::now();
     duration<double> timeSpan_currentImplementation = t2 - t1;
-
-
 
     // Profile next best implementation
     testReps = nReps;
     t1 = high_resolution_clock::now();
     while (testReps--) {
         // Replace this part with slow implementation
-        BOOST_FOREACH(boost::tie(tameStr, wildStr), boost::combine(tameVec, wildVec)) {
-                        allPassed_currentImplementation &=
-                                wildcard_match_unsafe_case_sensitive(tameStr, wildStr);
-                    }
+        BOOST_FOREACH (boost::tie(tameStr, wildStr), boost::combine(tameVec, wildVec)) {
+            allPassed_currentImplementation
+                    &= wildcard_match_unsafe_case_sensitive(tameStr, wildStr);
+        }
     }
     t2 = high_resolution_clock::now();
     duration<double> timeSpan_nextBestImplementation = t2 - t1;
     REQUIRE(allPassed_currentImplementation == true);
-
 
     if (allPassed_currentImplementation) {
         cout << "Passed performance test in " << (timeSpan_currentImplementation.count() * 1000)
@@ -539,5 +554,5 @@ TEST_CASE("convert_string_to_int", "[convert_string_to_int]") {
     // Integers
     raw = "98340";
     REQUIRE(convert_string_to_int(raw, converted));
-    REQUIRE(98340 == converted);
+    REQUIRE(98'340 == converted);
 }

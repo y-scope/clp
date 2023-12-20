@@ -1,34 +1,29 @@
 #include "FileWriter.hpp"
 
-// C libraries
-#include <unistd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
-// C++ libraries
 #include <cassert>
 #include <cerrno>
 
-// spdlog
-#include <spdlog/spdlog.h>
-
-// Project headers
 #include "Defs.h"
 #include "Platform.hpp"
+#include "spdlog_with_specializations.hpp"
 
 // Define a fdatasync shim for compilation (just compilation) on macOS
 #if defined(__APPLE__) || defined(__MACH__)
-int fdatasync (int fd);
+int fdatasync(int fd);
 #endif
 
 using std::string;
 
-FileWriter::~FileWriter () {
+FileWriter::~FileWriter() {
     if (nullptr != m_file) {
         SPDLOG_ERROR("FileWriter not closed before being destroyed - may cause data loss");
     }
 }
 
-void FileWriter::write (const char* data, size_t data_length) {
+void FileWriter::write(char const* data, size_t data_length) {
     ErrorCode error_code = ErrorCode_Success;
     if (nullptr == m_file) {
         error_code = ErrorCode_NotInit;
@@ -45,7 +40,7 @@ void FileWriter::write (const char* data, size_t data_length) {
     }
 }
 
-void FileWriter::flush () {
+void FileWriter::flush() {
 #if !FLUSH_TO_DISK_ENABLED
     return;
 #endif
@@ -71,7 +66,7 @@ void FileWriter::flush () {
     }
 }
 
-ErrorCode FileWriter::try_get_pos (size_t& pos) const {
+ErrorCode FileWriter::try_get_pos(size_t& pos) const {
     if (nullptr == m_file) {
         return ErrorCode_NotInit;
     }
@@ -84,7 +79,7 @@ ErrorCode FileWriter::try_get_pos (size_t& pos) const {
     return ErrorCode_Success;
 }
 
-ErrorCode FileWriter::try_seek_from_begin (size_t pos) {
+ErrorCode FileWriter::try_seek_from_begin(size_t pos) {
     if (nullptr == m_file) {
         return ErrorCode_NotInit;
     }
@@ -97,7 +92,7 @@ ErrorCode FileWriter::try_seek_from_begin (size_t pos) {
     return ErrorCode_Success;
 }
 
-ErrorCode FileWriter::try_seek_from_current (off_t offset) {
+ErrorCode FileWriter::try_seek_from_current(off_t offset) {
     if (nullptr == m_file) {
         return ErrorCode_NotInit;
     }
@@ -110,7 +105,7 @@ ErrorCode FileWriter::try_seek_from_current (off_t offset) {
     return ErrorCode_Success;
 }
 
-void FileWriter::open (const string& path, OpenMode open_mode) {
+void FileWriter::open(string const& path, OpenMode open_mode) {
     if (nullptr != m_file) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
@@ -132,7 +127,8 @@ void FileWriter::open (const string& path, OpenMode open_mode) {
                     throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
                 }
                 // File doesn't exist, so create and open it for seekable writing
-                // NOTE: We can't use the "w+" mode if the file exists since that will truncate the file
+                // NOTE: We can't use the "w+" mode if the file exists since that will truncate the
+                // file
                 m_file = fopen(path.c_str(), "w+b");
             }
 
@@ -154,7 +150,7 @@ void FileWriter::open (const string& path, OpenMode open_mode) {
     }
 }
 
-void FileWriter::close () {
+void FileWriter::close() {
     if (nullptr != m_file) {
         if (0 != fclose(m_file)) {
             throw OperationFailed(ErrorCode_errno, __FILENAME__, __LINE__);
@@ -163,4 +159,3 @@ void FileWriter::close () {
         m_fd = -1;
     }
 }
-

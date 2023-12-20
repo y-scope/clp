@@ -1,11 +1,9 @@
 #ifndef STRINGREADER_HPP
 #define STRINGREADER_HPP
 
-// C++ libraries
 #include <cstdio>
 #include <string>
 
-// Project headers
 #include "Defs.h"
 #include "ErrorCode.hpp"
 #include "ReaderInterface.hpp"
@@ -17,16 +15,16 @@ public:
     class OperationFailed : public TraceableException {
     public:
         // Constructors
-        OperationFailed (ErrorCode error_code, const char* const filename, int line_number) : TraceableException (error_code, filename, line_number) {}
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        const char* what () const noexcept override {
-            return "StringReader operation failed";
-        }
+        char const* what() const noexcept override { return "StringReader operation failed"; }
     };
 
-    StringReader () : pos(0), m_getdelim_buf_len(0), m_getdelim_buf(nullptr), string_is_set(false) {}
-    ~StringReader ();
+    StringReader() : pos(0), m_getdelim_buf_len(0), m_getdelim_buf(nullptr), string_is_set(false) {}
+
+    ~StringReader();
 
     // Methods implementing the ReaderInterface
     /**
@@ -36,7 +34,7 @@ public:
      * @return ErrorCode_errno on error
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_get_pos (size_t& pos) override;
+    ErrorCode try_get_pos(size_t& pos) override;
     /**
      * Tries to seek from the beginning of the file to the given position
      * @param pos
@@ -44,7 +42,7 @@ public:
      * @return ErrorCode_errno on error
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_seek_from_begin (size_t pos) override;
+    ErrorCode try_seek_from_begin(size_t pos) override;
 
     /**
      * Tries to read up to a given number of bytes from the file
@@ -57,10 +55,11 @@ public:
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_read (char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) override;
+    ErrorCode try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) override;
 
     // Methods
-    bool is_open () const { return string_is_set; }
+    bool is_open() const { return string_is_set; }
+
     /**
      * Tries to open a file
      * @param path
@@ -68,17 +67,17 @@ public:
      * @return ErrorCode_FileNotFound if the file was not found
      * @return ErrorCode_errno otherwise
      */
-    ErrorCode try_open (const std::string& input_string);
+    ErrorCode try_open(std::string const& input_string);
     /**
      * Opens a file
      * @param path
      * @throw StringReader::OperationFailed on failure
      */
-    void open (const std::string& input_string);
+    void open(std::string const& input_string);
     /**
      * Closes the file if it's open
      */
-    void close ();
+    void close();
     /**
      * Tries to stat the current file
      * @param stat_buffer
@@ -93,4 +92,4 @@ private:
     bool string_is_set;
 };
 
-#endif // STRINGREADER_HPP
+#endif  // STRINGREADER_HPP
