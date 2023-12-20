@@ -1,0 +1,4 @@
+.task/
+out/
+**/poetry.lock
+**/dist/
