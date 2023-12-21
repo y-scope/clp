@@ -216,7 +216,7 @@ static bool search(
                     reverse_lexer,
                     use_heuristic
             );
-            if (false == query_processing_result.has_value()) {
+            if (query_processing_result.has_value()) {
                 auto& query = query_processing_result.value();
                 no_queries_match = false;
 
