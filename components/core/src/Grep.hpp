@@ -1,6 +1,7 @@
 #ifndef GREP_HPP
 #define GREP_HPP
 
+#include <optional>
 #include <string>
 
 #include <log_surgeon/Lexer.hpp>
@@ -35,19 +36,17 @@ public:
      * @param search_begin_ts
      * @param search_end_ts
      * @param ignore_case
-     * @param query
      * @param forward_lexer DFA for determining if input is in the schema
      * @param reverse_lexer DFA for determining if reverse of input is in the schema
      * @param use_heuristic
-     * @return true if query may match messages, false otherwise
+     * @return Query if it may match a message, std::nullopt otherwise
      */
-    static bool process_raw_query(
+    static std::optional<Query> process_raw_query(
             streaming_archive::reader::Archive const& archive,
             std::string const& search_string,
             epochtime_t search_begin_ts,
             epochtime_t search_end_ts,
             bool ignore_case,
-            Query& query,
             log_surgeon::lexers::ByteLexer& forward_lexer,
             log_surgeon::lexers::ByteLexer& reverse_lexer,
             bool use_heuristic

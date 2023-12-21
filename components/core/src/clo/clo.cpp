@@ -260,23 +260,21 @@ static bool search_archive(
     auto search_begin_ts = command_line_args.get_search_begin_ts();
     auto search_end_ts = command_line_args.get_search_end_ts();
 
-    Query query;
-    if (false
-        == Grep::process_raw_query(
-                archive_reader,
-                command_line_args.get_search_string(),
-                search_begin_ts,
-                search_end_ts,
-                command_line_args.ignore_case(),
-                query,
-                *forward_lexer,
-                *reverse_lexer,
-                use_heuristic
-        ))
-    {
+    auto query_processing_result = Grep::process_raw_query(
+            archive_reader,
+            command_line_args.get_search_string(),
+            search_begin_ts,
+            search_end_ts,
+            command_line_args.ignore_case(),
+            *forward_lexer,
+            *reverse_lexer,
+            use_heuristic
+    );
+    if (false == query_processing_result.has_value()) {
         return true;
     }
 
+    auto& query = query_processing_result.value();
     // Get all segments potentially containing query results
     std::set<segment_id_t> ids_of_segments_to_search;
     for (auto& sub_query : query.get_sub_queries()) {

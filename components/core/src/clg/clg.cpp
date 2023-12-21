@@ -206,22 +206,21 @@ static bool search(
         std::set<segment_id_t> ids_of_segments_to_search;
         bool is_superseding_query = false;
         for (auto const& search_string : search_strings) {
-            Query query;
-            if (Grep::process_raw_query(
-                        archive,
-                        search_string,
-                        search_begin_ts,
-                        search_end_ts,
-                        command_line_args.ignore_case(),
-                        query,
-                        forward_lexer,
-                        reverse_lexer,
-                        use_heuristic
-                ))
-            {
+            auto query_processing_result = Grep::process_raw_query(
+                    archive,
+                    search_string,
+                    search_begin_ts,
+                    search_end_ts,
+                    command_line_args.ignore_case(),
+                    forward_lexer,
+                    reverse_lexer,
+                    use_heuristic
+            );
+            if (query_processing_result.has_value()) {
+                auto& query = query_processing_result.value();
                 no_queries_match = false;
 
-                if (query.contains_sub_queries() == false) {
+                if (false == query.contains_sub_queries()) {
                     // Search string supersedes all other possible search strings
                     is_superseding_query = true;
                     // Remove existing queries since they are superseded by this one
