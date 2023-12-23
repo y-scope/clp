@@ -510,9 +510,9 @@ std::optional<Query> Grep::process_raw_query(
     bool is_var;
     string search_string_for_sub_queries{processed_search_string};
     if (use_heuristic) {
-        // Replace non-greedy wildcards with greedy wildcards since we currently have no support for
-        // generating subqueries with '?' wildcards. The wildcard match on the decompressed message
-        // mitigates this limitation.
+        // Replace '?' wildcards with '*' wildcards since we currently have no support for
+        // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
+        // message makes this a non-issue.
         std::replace(
                 search_string_for_sub_queries.begin(),
                 search_string_for_sub_queries.end(),
