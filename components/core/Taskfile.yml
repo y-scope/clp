@@ -30,7 +30,8 @@ tasks:
     cmds:
       - "python3 -m venv '{{.LINT_VENV_DIR}}'"
       - |
-        echo $0
+        python3 --version
+        python3 -m pip --version
         bash -c " \
           . {{.LINT_VENV_DIR}}/bin/activate \
           pip3 install --upgrade pip \
