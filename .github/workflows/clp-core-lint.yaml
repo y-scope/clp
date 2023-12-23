@@ -30,6 +30,10 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: "Setup Homebrew"
+        shell: "bash"
+        run: "eval \"$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\""
+
       - name: "Install task"
         shell: "bash"
         run: "brew install go-task/tap/go-task"
