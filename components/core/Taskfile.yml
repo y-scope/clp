@@ -28,8 +28,9 @@ tasks:
 
   lint_venv:
     cmds:
-      - "python3 -m venv '{{.LINT_VENV_DIR}}'"
-      - "cat {{.LINT_VENV_DIR}}/bin/activate"
+      - |
+        python3 -m venv '{{.LINT_VENV_DIR}}'
+        . {{.LINT_VENV_DIR}}/bin/activate
       - |
         . {{.LINT_VENV_DIR}}/bin/activate
         pip3 list
