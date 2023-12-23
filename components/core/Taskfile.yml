@@ -29,12 +29,12 @@ tasks:
   lint_venv:
     cmds:
       - "python3 -m venv '{{.LINT_VENV_DIR}}'"
-      - "hash -r 2> /dev/null"
       - |
-        set -x
-        . {{.LINT_VENV_DIR}}/bin/activate
-        pip3 install --upgrade pip
-        pip3 install --upgrade clang-format
+        echo $0
+        bash -c " \
+          . {{.LINT_VENV_DIR}}/bin/activate \
+          pip3 install --upgrade pip \
+          pip3 install --upgrade clang-format"
     sources:
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
     generates:
