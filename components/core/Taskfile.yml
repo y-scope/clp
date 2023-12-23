@@ -28,12 +28,11 @@ tasks:
 
   lint_venv:
     cmds:
+      - "python3 -m venv '{{.LINT_VENV_DIR}}'"
       - |
-        python3 -m venv '{{.LINT_VENV_DIR}}'
+        hash -r 2> /dev/null
+        set -x
         . {{.LINT_VENV_DIR}}/bin/activate
-      - |
-        . {{.LINT_VENV_DIR}}/bin/activate
-        pip3 list
         pip3 install --upgrade pip
         pip3 install --upgrade clang-format
     sources:
