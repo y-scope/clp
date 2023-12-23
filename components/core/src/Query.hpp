@@ -206,12 +206,12 @@ public:
 private:
     // Variables
     // Start of search time range (inclusive)
-    epochtime_t m_search_begin_timestamp;
+    epochtime_t m_search_begin_timestamp{cEpochTimeMin};
     // End of search time range (inclusive)
-    epochtime_t m_search_end_timestamp;
-    bool m_ignore_case;
+    epochtime_t m_search_end_timestamp{cEpochTimeMax};
+    bool m_ignore_case{false};
     std::string m_search_string;
-    bool m_search_string_matches_all;
+    bool m_search_string_matches_all{true};
     std::vector<SubQuery> m_sub_queries;
     std::vector<SubQuery const*> m_relevant_sub_queries;
     segment_id_t m_prev_segment_id{cInvalidSegmentId};
