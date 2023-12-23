@@ -5,11 +5,13 @@ on:
     paths:
       - ".github/workflows/clp-core-lint.yaml"
       - "components/core/src/**"
+      - "components/core/Taskfile.yml"
       - "components/core/tests/**"
   push:
     paths:
       - ".github/workflows/clp-core-lint.yaml"
       - "components/core/src/**"
+      - "components/core/Taskfile.yml"
       - "components/core/tests/**"
   workflow_dispatch:
 
