@@ -171,25 +171,19 @@ bool SubQuery::matches_vars(std::vector<encoded_variable_t> const& vars) const {
     return (num_possible_vars == possible_vars_ix);
 }
 
-void Query::set_search_string(string const& search_string) {
-    m_search_string = search_string;
+Query::Query(
+        epochtime_t search_begin_timestamp,
+        epochtime_t search_end_timestamp,
+        bool ignore_case,
+        std::string search_string,
+        std::vector<SubQuery> sub_queries
+)
+        : m_search_begin_timestamp{search_begin_timestamp},
+          m_search_end_timestamp{search_end_timestamp},
+          m_ignore_case{ignore_case},
+          m_search_string{std::move(search_string)},
+          m_sub_queries{std::move(sub_queries)} {
     m_search_string_matches_all = (m_search_string.empty() || "*" == m_search_string);
-}
-
-void Query::set_sub_queries(std::vector<SubQuery> sub_queries) {
-    m_sub_queries = std::move(sub_queries);
-
-    for (auto& sub_query : m_sub_queries) {
-        // Add to relevant sub-queries if necessary
-        if (sub_query.get_ids_of_matching_segments().count(m_prev_segment_id)) {
-            m_relevant_sub_queries.push_back(&sub_query);
-        }
-    }
-}
-
-void Query::clear_sub_queries() {
-    m_sub_queries.clear();
-    m_relevant_sub_queries.clear();
 }
 
 void Query::make_sub_queries_relevant_to_segment(segment_id_t segment_id) {
