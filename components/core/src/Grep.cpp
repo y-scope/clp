@@ -512,7 +512,7 @@ std::optional<Query> Grep::process_raw_query(
     if (use_heuristic) {
         // Replace '?' wildcards with '*' wildcards since we currently have no support for
         // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
-        // message makes this a non-issue.
+        // message uses the original wildcards, so correctness will be maintained.
         std::replace(
                 search_string_for_sub_queries.begin(),
                 search_string_for_sub_queries.end(),
