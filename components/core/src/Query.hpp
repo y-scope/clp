@@ -157,23 +157,13 @@ private:
 class Query {
 public:
     // Constructors
-    Query()
-            : m_search_begin_timestamp(cEpochTimeMin),
-              m_search_end_timestamp(cEpochTimeMax),
-              m_ignore_case(false),
-              m_search_string_matches_all(true),
-              m_prev_segment_id(cInvalidSegmentId) {}
+    Query(epochtime_t search_begin_timestamp,
+          epochtime_t search_end_timestamp,
+          bool ignore_case,
+          std::string search_string,
+          std::vector<SubQuery> sub_queries);
 
     // Methods
-    void set_search_begin_timestamp(epochtime_t timestamp) { m_search_begin_timestamp = timestamp; }
-
-    void set_search_end_timestamp(epochtime_t timestamp) { m_search_end_timestamp = timestamp; }
-
-    void set_ignore_case(bool ignore_case) { m_ignore_case = ignore_case; }
-
-    void set_search_string(std::string const& search_string);
-    void set_sub_queries(std::vector<SubQuery> sub_queries);
-    void clear_sub_queries();
     /**
      * Populates the set of relevant sub-queries with only those that match the given segment
      * @param segment_id
@@ -216,15 +206,15 @@ public:
 private:
     // Variables
     // Start of search time range (inclusive)
-    epochtime_t m_search_begin_timestamp;
+    epochtime_t m_search_begin_timestamp{cEpochTimeMin};
     // End of search time range (inclusive)
-    epochtime_t m_search_end_timestamp;
-    bool m_ignore_case;
+    epochtime_t m_search_end_timestamp{cEpochTimeMax};
+    bool m_ignore_case{false};
     std::string m_search_string;
-    bool m_search_string_matches_all;
+    bool m_search_string_matches_all{true};
     std::vector<SubQuery> m_sub_queries;
     std::vector<SubQuery const*> m_relevant_sub_queries;
-    segment_id_t m_prev_segment_id;
+    segment_id_t m_prev_segment_id{cInvalidSegmentId};
 };
 
 #endif  // QUERY_HPP
