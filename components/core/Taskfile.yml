@@ -1,0 +1,40 @@
+version: "3"
+
+vars:
+  BUILD_DIR: "{{.TASKFILE_DIR}}/build"
+  LINT_VENV_DIR: "{{.BUILD_DIR}}/venv"
+  PYTHON_VERSION:
+    sh: "python3 -c \"import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')\""
+
+tasks:
+  clean:
+    cmds:
+      - "rm -rf {{.BUILD_DIR}}"
+
+  lint:
+    deps: [ "lint_venv" ]
+    dir: "{{.TASKFILE_DIR}}"
+    cmds:
+      - |
+        . {{.LINT_VENV_DIR}}/bin/activate
+        find src tests \
+          -type f \
+          \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.inc" \) \
+          -print0 | \
+            xargs -0 clang-format --dry-run -Werror
+    sources:
+      - "src/{**/*.cpp,**/*.h,**/*.hpp,**/*.inc}"
+      - "tests/{**/*.cpp,**/*.h,**/*.hpp,**/*.inc}"
+
+  lint_venv:
+    cmds:
+      - "python3 -m venv '{{.LINT_VENV_DIR}}'"
+      - |
+        . {{.LINT_VENV_DIR}}/bin/activate
+        pip3 install --upgrade pip
+        pip3 install --upgrade clang-format
+    sources:
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+    generates:
+      # For performance, we only mark a subset of all files in the venv as generated
+      - "{{.LINT_VENV_DIR}}/lib/python{{.PYTHON_VERSION}}/site-packages/*.dist-info/*"

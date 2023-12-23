@@ -30,18 +30,11 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: "Install clang-format"
+      - name: "Install task"
         shell: "bash"
-        run: |
-          pip3 install --upgrade pip
-          pip3 install --upgrade clang-format
+        run: "brew install go-task/tap/go-task"
 
-      - name: "Run clang-format on all of core's source files"
+      - name: "Run lint task"
         shell: "bash"
         working-directory: "./components/core"
-        run: |
-          find src tests \
-            -type f \
-            \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.inc" \) \
-            -print0 | \
-              xargs -0 clang-format --dry-run -Werror
+        run: "task lint"
