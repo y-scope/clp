@@ -31,8 +31,8 @@ tasks:
       - "python3 -m venv '{{.LINT_VENV_DIR}}'"
       - |
         . {{.LINT_VENV_DIR}}/bin/activate
-        pip3 install --upgrade pip
-        pip3 install --upgrade clang-format
+        pip install --upgrade pip
+        pip install --upgrade clang-format
     sources:
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
     generates:
