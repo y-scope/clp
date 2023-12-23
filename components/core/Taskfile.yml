@@ -29,8 +29,12 @@ tasks:
   lint_venv:
     cmds:
       - "python3 -m venv '{{.LINT_VENV_DIR}}'"
+      - "ls -l {{.LINT_VENV_DIR}}"
       - |
         . {{.LINT_VENV_DIR}}/bin/activate
+        pip3 list
+        pip3 install --upgrade pip
+        pip3 install --upgrade clang-format
     sources:
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
     generates:
