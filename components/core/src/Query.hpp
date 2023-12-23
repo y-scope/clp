@@ -220,7 +220,7 @@ private:
     // End of search time range (inclusive)
     epochtime_t m_search_end_timestamp;
     bool m_ignore_case;
-    std::string m_search_string;
+     std::string m_search_string;
     bool m_search_string_matches_all;
     std::vector<SubQuery> m_sub_queries;
     std::vector<SubQuery const*> m_relevant_sub_queries;
