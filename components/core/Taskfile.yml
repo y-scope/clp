@@ -28,7 +28,7 @@ tasks:
 
   lint_venv:
     cmds:
-      - "python3.11 -m venv '{{.LINT_VENV_DIR}}'"
+      - "python3 -m venv '{{.LINT_VENV_DIR}}'"
       # Remove calls to `hash` since Task uses `gosh` rather than `bash`.
       # NOTE: Older versions of Python's venv would only call `hash` if they detected the running
       # shell was one that had the command, but that's not the case in newer versions.
