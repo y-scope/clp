@@ -30,7 +30,7 @@ tasks:
     cmds:
       - "python3 -m venv '{{.LINT_VENV_DIR}}'"
       - |
-        . {{.LINT_VENV_DIR}}/bin/activate
+        source {{.LINT_VENV_DIR}}/bin/activate
         pip3 list
         pip3 install --upgrade pip
         pip3 install --upgrade clang-format
