@@ -1,11 +1,11 @@
 extends: "default"
 
 ignore: |
-  components/core/build/**
-  components/core/cmake-build-debug/**
-  components/core/cmake-build-release/**
-  components/core/submodules/**
-  components/core/third-party/**
+  components/core/build/
+  components/core/cmake-build-debug/
+  components/core/cmake-build-release/
+  components/core/submodules/
+  components/core/third-party/
 
 rules:
   anchors:
