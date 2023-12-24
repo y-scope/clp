@@ -1,5 +1,5 @@
 # Database type [sqlite | mysql]
-type: sqlite
+type: "sqlite"
 
 # MySQL configuration
 #host: localhost

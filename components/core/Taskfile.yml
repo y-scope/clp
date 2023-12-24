@@ -12,7 +12,7 @@ tasks:
       - "rm -rf {{.BUILD_DIR}}"
 
   lint:
-    deps: [ "lint_venv" ]
+    deps: ["lint_venv"]
     dir: "{{.TASKFILE_DIR}}"
     cmds:
       - |
@@ -32,7 +32,7 @@ tasks:
       # Remove calls to `hash` since Task uses `gosh` rather than `bash`.
       # NOTE: Older versions of Python's venv would only call `hash` if they detected the running
       # shell was one that had the command, but that's not the case in newer versions.
-      - sed -i 's/^\s*hash\s\+.*//g' "{{.LINT_VENV_DIR}}/bin/activate"
+      - "sed -i 's/^\\s*hash\\s\\+.*//g' \"{{.LINT_VENV_DIR}}/bin/activate\""
       - |
         . "{{.LINT_VENV_DIR}}/bin/activate"
         pip3 install --upgrade pip

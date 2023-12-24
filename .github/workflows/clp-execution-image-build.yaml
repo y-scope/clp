@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 env:
-  CONTAINER_IMAGE_REGISTRY: ghcr.io
+  CONTAINER_IMAGE_REGISTRY: "ghcr.io"
 
 jobs:
   build:

@@ -1,4 +1,4 @@
-name: clp-core-build
+name: "clp-core-build"
 
 on:
   pull_request:
@@ -45,7 +45,7 @@ jobs:
     services:
       registry:
         image: "registry:2"
-        ports: [ "5000:5000" ]
+        ports: ["5000:5000"]
     env:
       OS_NAME: "centos7.4"
     steps:
@@ -84,7 +84,7 @@ jobs:
     services:
       registry:
         image: "registry:2"
-        ports: [ "5000:5000" ]
+        ports: ["5000:5000"]
     env:
       OS_NAME: "ubuntu-focal"
     steps:
@@ -123,7 +123,7 @@ jobs:
     services:
       registry:
         image: "registry:2"
-        ports: [ "5000:5000" ]
+        ports: ["5000:5000"]
     env:
       OS_NAME: "ubuntu-jammy"
     steps:
