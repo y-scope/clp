@@ -1,4 +1,4 @@
-name: clp-core-lint
+name: "clp-core-lint"
 
 on:
   pull_request:

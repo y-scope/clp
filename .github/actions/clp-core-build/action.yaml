@@ -20,4 +20,4 @@ runs:
         --volume "$GITHUB_WORKSPACE/components/core":/mnt/clp
         --workdir /mnt/clp
         ${{inputs.image_name}}
-        /mnt/clp/tools/scripts/utils/build-and-run-unit-tests.sh . build 
+        /mnt/clp/tools/scripts/utils/build-and-run-unit-tests.sh . build
