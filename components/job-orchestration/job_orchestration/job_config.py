@@ -31,4 +31,6 @@ class SearchConfig(BaseModel):
     search_controller_host: str
     search_controller_port: int
     wildcard_query: str
+    begin_timestamp: int = None
+    end_timestamp: int = None
     path_filter: str = None

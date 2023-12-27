@@ -36,6 +36,12 @@ def main(argv):
     args_parser.add_argument('--config', '-c', default=str(default_config_file_path),
                              help="CLP package configuration file.")
     args_parser.add_argument('wildcard_query', help="Wildcard query.")
+    args_parser.add_argument('--begin-time', type=int,
+                             help="Time range filter lower-bound (inclusive) as milliseconds"
+                                  " from the UNIX epoch.")
+    args_parser.add_argument('--end-time', type=int,
+                             help="Time range filter upper-bound (inclusive) as milliseconds"
+                                  " from the UNIX epoch.")
     args_parser.add_argument('--file-path', help="File to search.")
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -87,6 +93,12 @@ def main(argv):
         '--config', str(container_clp_config.logs_directory / container_config_filename),
         parsed_args.wildcard_query,
     ]
+    if parsed_args.begin_time is not None:
+        search_cmd.append('--begin-time')
+        search_cmd.append(str(parsed_args.begin_time))
+    if parsed_args.end_time is not None:
+        search_cmd.append('--end-time')
+        search_cmd.append(str(parsed_args.end_time))
     if parsed_args.file_path:
         search_cmd.append('--file-path')
         search_cmd.append(parsed_args.file_path)
