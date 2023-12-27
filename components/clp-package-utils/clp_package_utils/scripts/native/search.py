@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import asyncio
 import datetime
@@ -67,12 +69,16 @@ async def run_function_in_process(function, *args, initializer=None, init_args=N
         pool.close()
 
 
-def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_filter: str,
-                                 search_controller_host: str, search_controller_port: int):
+def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str,
+                                 begin_timestamp: int | None, end_timestamp: int | None,
+                                 path_filter: str, search_controller_host: str,
+                                 search_controller_port: int):
     search_config = SearchConfig(
         search_controller_host=search_controller_host,
         search_controller_port=search_controller_port,
         wildcard_query=wildcard_query,
+        begin_timestamp=begin_timestamp,
+        end_timestamp=end_timestamp,
         path_filter=path_filter
     )
 
@@ -89,16 +95,23 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str, path_
         next_pagination_id = 0
         pagination_limit = 64
         num_tasks_added = 0
+        query_base_conditions = []
+        if begin_timestamp is not None:
+            query_base_conditions.append(f"`end_timestamp` >= {begin_timestamp}")
+        if end_timestamp is not None:
+            query_base_conditions.append(f"`begin_timestamp` <= {end_timestamp}")
         while True:
             # Get next `limit` rows
-            db_cursor.execute(
-                f"""
+            query_conditions = query_base_conditions + [f"`pagination_id` >= {next_pagination_id}"]
+            query = f"""
                 SELECT `id` FROM {CLP_METADATA_TABLE_PREFIX}archives 
-                WHERE `pagination_id` >= {next_pagination_id} 
+                WHERE {" AND ".join(query_conditions)} 
                 LIMIT {pagination_limit}
                 """
-            )
+            db_cursor.execute(query)
             rows = db_cursor.fetchall()
+            if len(rows) == 0:
+                break
 
             # Insert tasks
             db_cursor.execute(f"""
@@ -157,7 +170,8 @@ async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
         writer.close()
 
 
-async def do_search(db_config: Database, wildcard_query: str, path_filter: str, host: str):
+async def do_search(db_config: Database, wildcard_query: str, begin_timestamp: int | None,
+                    end_timestamp: int | None, path_filter: str, host: str):
     # Start server to receive and print results
     try:
         server = await asyncio.start_server(client_connected_cb=worker_connection_handler, host=host, port=0,
@@ -170,7 +184,8 @@ async def do_search(db_config: Database, wildcard_query: str, path_filter: str, 
     server_task = asyncio.ensure_future(server.serve_forever())
 
     db_monitor_task = asyncio.ensure_future(
-        run_function_in_process(create_and_monitor_job_in_db, db_config, wildcard_query, path_filter, host, port))
+        run_function_in_process(create_and_monitor_job_in_db, db_config, wildcard_query,
+                                begin_timestamp, end_timestamp, path_filter, host, port))
 
     # Wait for the job to complete or an error to occur
     pending = [server_task, db_monitor_task]
@@ -196,8 +211,21 @@ def main(argv):
     args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")
     args_parser.add_argument('--config', '-c', required=True, help="CLP configuration file.")
     args_parser.add_argument('wildcard_query', help="Wildcard query.")
+    args_parser.add_argument('--begin-time', type=int,
+                             help="Time range filter lower-bound (inclusive) as milliseconds"
+                                  " from the UNIX epoch.")
+    args_parser.add_argument('--end-time', type=int,
+                             help="Time range filter upper-bound (inclusive) as milliseconds"
+                                  " from the UNIX epoch.")
     args_parser.add_argument('--file-path', help="File to search.")
     parsed_args = args_parser.parse_args(argv[1:])
+
+    if (
+            parsed_args.begin_time is not None
+            and parsed_args.end_time is not None
+            and parsed_args.begin_time > parsed_args.end_time
+    ):
+        raise ValueError("begin_time > end_time")
 
     # Validate and load config file
     try:
@@ -217,7 +245,8 @@ def main(argv):
         logger.error("Could not determine IP of local machine.")
         return -1
 
-    asyncio.run(do_search(clp_config.database, parsed_args.wildcard_query, parsed_args.file_path, host_ip))
+    asyncio.run(do_search(clp_config.database, parsed_args.wildcard_query, parsed_args.begin_time,
+                          parsed_args.end_time, parsed_args.file_path, host_ip))
 
     return 0
 

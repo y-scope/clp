@@ -14,9 +14,8 @@ from job_orchestration.scheduler.scheduler_data import TaskUpdate, TaskFailureUp
 logger = get_task_logger(__name__)
 
 
-def run_clo(job_id: int, task_id: int, clp_home: pathlib.Path, archive_output_dir: pathlib.Path, logs_dir: pathlib.Path,
-            search_controller_host: str, search_controller_port: int, archive_id: str, wildcard_query: str,
-            path_filter: str):
+def run_clo(job_id: int, task_id: int, clp_home: pathlib.Path, archive_output_dir: pathlib.Path,
+            logs_dir: pathlib.Path, search_config: SearchConfig, archive_id: str):
     """
     Searches the given archive for the given wildcard query
 
@@ -25,23 +24,26 @@ def run_clo(job_id: int, task_id: int, clp_home: pathlib.Path, archive_output_di
     :param clp_home:
     :param archive_output_dir:
     :param logs_dir:
-    :param search_controller_host:
-    :param search_controller_port:
+    :param search_config:
     :param archive_id:
-    :param wildcard_query:
-    :param path_filter:
     :return: tuple -- (whether the search was successful, output messages)
     """
     # Assemble search command
     cmd = [
         str(clp_home / 'bin' / 'clo'),
-        search_controller_host,
-        str(search_controller_port),
+        search_config.search_controller_host,
+        str(search_config.search_controller_port),
         str(archive_output_dir / archive_id),
-        wildcard_query
+        search_config.wildcard_query
     ]
-    if path_filter is not None:
-        cmd.append(path_filter)
+    if search_config.begin_timestamp is not None:
+        cmd.append('--tge')
+        cmd.append(str(search_config.begin_timestamp))
+    if search_config.end_timestamp is not None:
+        cmd.append('--tle')
+        cmd.append(str(search_config.end_timestamp))
+    if search_config.path_filter is not None:
+        cmd.append(search_config.path_filter)
 
     # Open stderr log file
     stderr_filename = f'search-job-{job_id}-task-{task_id}-stderr.log'
@@ -89,10 +91,8 @@ def search(job_id: int, task_id: int, search_config_json: str, archive_id: str):
     logger.info(f"[job_id={job_id} task_id={task_id}] Search started.")
 
     search_successful, worker_output = run_clo(job_id, task_id, pathlib.Path(clp_home),
-                                               pathlib.Path(archive_output_dir), pathlib.Path(logs_dir),
-                                               search_config.search_controller_host,
-                                               search_config.search_controller_port, archive_id,
-                                               search_config.wildcard_query, search_config.path_filter)
+                                               pathlib.Path(archive_output_dir),
+                                               pathlib.Path(logs_dir), search_config, archive_id)
 
     if search_successful:
         task_update.status = TaskStatus.SUCCEEDED
