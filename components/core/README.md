@@ -40,6 +40,7 @@ This will download:
 * [Catch2](https://github.com/catchorg/Catch2.git) (v2.13.7)
 * [date](https://github.com/HowardHinnant/date.git) (v3.0.1)
 * [json](https://github.com/nlohmann/json.git) (v3.10.4)
+* [log-surgeon](https://github.com/y-scope/log-surgeon) (895f464)
 * [SQLite3](https://www.sqlite.org/download.html) (v3.36.0)
 * [yaml-cpp](https://github.com/jbeder/yaml-cpp.git) (v0.7.0)
 
