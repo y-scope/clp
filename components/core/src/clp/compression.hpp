@@ -10,7 +10,6 @@
 
 #include "CommandLineArguments.hpp"
 #include "FileToCompress.hpp"
-#include "StructuredFileToCompress.hpp"
 
 namespace clp {
 /**

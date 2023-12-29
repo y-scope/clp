@@ -190,7 +190,6 @@ set(SOURCE_FILES_clp
         src/clp/FileToCompress.hpp
         src/clp/run.cpp
         src/clp/run.hpp
-        src/clp/StructuredFileToCompress.hpp
         src/clp/utils.cpp
         src/clp/utils.hpp
         src/database_utils.cpp
@@ -643,7 +642,6 @@ set(SOURCE_FILES_unitTest
         src/clp/FileToCompress.hpp
         src/clp/run.cpp
         src/clp/run.hpp
-        src/clp/StructuredFileToCompress.hpp
         src/clp/utils.cpp
         src/clp/utils.hpp
         src/database_utils.cpp
