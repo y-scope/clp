@@ -2,6 +2,7 @@
 
 #include "../string_utils.hpp"
 #include "../type_utils.hpp"
+#include "types.hpp"
 
 using std::string;
 using std::string_view;
@@ -94,7 +95,7 @@ void escape_and_append_const_to_logtype(string_view constant, string& logtype) {
             [[maybe_unused]] size_t char_to_escape_pos,
             string& logtype
     ) -> void {
-        logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+        logtype += enum_to_underlying_type(VariablePlaceholder::Escape);
     };
     // clang-format on
     append_constant_to_logtype(constant, escape_handler, logtype);

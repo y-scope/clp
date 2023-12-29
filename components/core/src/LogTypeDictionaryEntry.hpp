@@ -7,7 +7,7 @@
 #include "DictionaryEntry.hpp"
 #include "ErrorCode.hpp"
 #include "FileReader.hpp"
-#include "ir/parsing.hpp"
+#include "ir/types.hpp"
 #include "streaming_compression/zstd/Compressor.hpp"
 #include "streaming_compression/zstd/Decompressor.hpp"
 #include "TraceableException.hpp"

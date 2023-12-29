@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "../../ir/parsing.hpp"
+#include "../../ir/types.hpp"
 #include "../encoding_methods.hpp"
 #include "decoding_methods.hpp"
 #include "protocol_constants.hpp"
@@ -36,7 +36,7 @@ void generic_decode_message(
     for (size_t cur_pos = 0; cur_pos < logtype_length; ++cur_pos) {
         auto c = logtype[cur_pos];
         switch (c) {
-            case enum_to_underlying_type(VariablePlaceholder::Float): {
+            case enum_to_underlying_type(ir::VariablePlaceholder::Float): {
                 constant_handler(
                         logtype,
                         next_static_text_begin_pos,
@@ -57,7 +57,7 @@ void generic_decode_message(
                 break;
             }
 
-            case enum_to_underlying_type(VariablePlaceholder::Integer): {
+            case enum_to_underlying_type(ir::VariablePlaceholder::Integer): {
                 constant_handler(
                         logtype,
                         next_static_text_begin_pos,
@@ -78,7 +78,7 @@ void generic_decode_message(
                 break;
             }
 
-            case enum_to_underlying_type(VariablePlaceholder::Dictionary): {
+            case enum_to_underlying_type(ir::VariablePlaceholder::Dictionary): {
                 constant_handler(
                         logtype,
                         next_static_text_begin_pos,

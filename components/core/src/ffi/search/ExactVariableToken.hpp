@@ -2,6 +2,7 @@
 #define FFI_SEARCH_EXACTVARIABLETOKEN_HPP
 
 #include "../../Defs.h"
+#include "../../ir/types.hpp"
 #include "../encoding_methods.hpp"
 #include "QueryToken.hpp"
 
@@ -39,11 +40,11 @@ public:
 
     [[nodiscard]] encoded_variable_t get_encoded_value() const { return m_encoded_value; }
 
-    [[nodiscard]] VariablePlaceholder get_placeholder() const { return m_placeholder; }
+    [[nodiscard]] ir::VariablePlaceholder get_placeholder() const { return m_placeholder; }
 
 private:
     encoded_variable_t m_encoded_value;
-    VariablePlaceholder m_placeholder;
+    ir::VariablePlaceholder m_placeholder;
 };
 }  // namespace ffi::search
 

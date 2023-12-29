@@ -1,6 +1,7 @@
 #include "CompositeWildcardToken.hpp"
 
 #include "../../ir/parsing.hpp"
+#include "../../ir/types.hpp"
 
 using std::string;
 using std::string_view;
@@ -262,6 +263,6 @@ void CompositeWildcardToken<encoded_variable_t>::try_add_wildcard_variable(
 
 // Explicitly declare specializations to avoid having to validate that the template parameters are
 // supported
-template class ffi::search::CompositeWildcardToken<ffi::eight_byte_encoded_variable_t>;
-template class ffi::search::CompositeWildcardToken<ffi::four_byte_encoded_variable_t>;
+template class ffi::search::CompositeWildcardToken<ir::eight_byte_encoded_variable_t>;
+template class ffi::search::CompositeWildcardToken<ir::four_byte_encoded_variable_t>;
 }  // namespace ffi::search

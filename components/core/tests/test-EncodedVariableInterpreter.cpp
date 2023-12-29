@@ -3,9 +3,10 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 
 #include "../src/EncodedVariableInterpreter.hpp"
-#include "../src/ir/parsing.hpp"
+#include "../src/ir/types.hpp"
 #include "../src/streaming_archive/Constants.hpp"
 
+using ir::VariablePlaceholder;
 using std::string;
 using std::to_string;
 using std::vector;
@@ -395,13 +396,13 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
               + " and a weird double " + var_strs[3]
               + " and a str with numbers "
               + var_strs[4] + " and an escape "
-              + enum_to_underlying_type(ir::VariablePlaceholder::Escape)
+              + enum_to_underlying_type(VariablePlaceholder::Escape)
               + " and an int placeholder "
-              + enum_to_underlying_type(ir::VariablePlaceholder::Integer)
+              + enum_to_underlying_type(VariablePlaceholder::Integer)
               + " and a float placeholder "
-              + enum_to_underlying_type(ir::VariablePlaceholder::Float)
+              + enum_to_underlying_type(VariablePlaceholder::Float)
               + " and a dictionary placeholder "
-              + enum_to_underlying_type(ir::VariablePlaceholder::Dictionary);
+              + enum_to_underlying_type(VariablePlaceholder::Dictionary);
         // clang-format on
 
         LogTypeDictionaryEntry logtype_dict_entry;
@@ -416,12 +417,12 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
 
         // Test var_ids is correctly populated
         size_t encoded_var_id_ix = 0;
-        ir::VariablePlaceholder var_placeholder;
+        VariablePlaceholder var_placeholder;
         for (auto placeholder_ix = 0; placeholder_ix < logtype_dict_entry.get_num_placeholders();
              placeholder_ix++)
         {
             std::ignore = logtype_dict_entry.get_placeholder_info(placeholder_ix, var_placeholder);
-            if (ir::VariablePlaceholder::Dictionary == var_placeholder) {
+            if (VariablePlaceholder::Dictionary == var_placeholder) {
                 auto var = encoded_vars[placeholder_ix];
                 REQUIRE(var_ids.size() > encoded_var_id_ix);
                 REQUIRE(EncodedVariableInterpreter::decode_var_dict_id(var)
@@ -479,17 +480,17 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
                 sub_query
         ));
         search_logtype += " and an escape ";
-        search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
-        search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+        search_logtype += enum_to_underlying_type(VariablePlaceholder::Escape);
+        search_logtype += enum_to_underlying_type(VariablePlaceholder::Escape);
         search_logtype += " and an int placeholder ";
-        search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
-        search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Integer);
+        search_logtype += enum_to_underlying_type(VariablePlaceholder::Escape);
+        search_logtype += enum_to_underlying_type(VariablePlaceholder::Integer);
         search_logtype += " and a float placeholder ";
-        search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
-        search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Float);
+        search_logtype += enum_to_underlying_type(VariablePlaceholder::Escape);
+        search_logtype += enum_to_underlying_type(VariablePlaceholder::Float);
         search_logtype += " and a dictionary placeholder ";
-        search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
-        search_logtype += enum_to_underlying_type(ir::VariablePlaceholder::Dictionary);
+        search_logtype += enum_to_underlying_type(VariablePlaceholder::Escape);
+        search_logtype += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         auto& vars = sub_query.get_vars();
         REQUIRE(vars.size() == encoded_vars.size());
         for (size_t i = 0; i < vars.size(); ++i) {

@@ -2,11 +2,15 @@
 
 #include <string_view>
 
+#include "../../ir/types.hpp"
 #include "../../string_utils.hpp"
 #include "../../type_utils.hpp"
 #include "../encoding_methods.hpp"
 #include "QueryWildcard.hpp"
 
+using ir::eight_byte_encoded_variable_t;
+using ir::four_byte_encoded_variable_t;
+using ir::VariablePlaceholder;
 using std::string;
 using std::string_view;
 
@@ -214,6 +218,6 @@ bool WildcardToken<encoded_variable_t>::next_interpretation() {
 
 // Explicitly declare specializations to avoid having to validate that the template parameters are
 // supported
-template class WildcardToken<ffi::eight_byte_encoded_variable_t>;
-template class WildcardToken<ffi::four_byte_encoded_variable_t>;
+template class WildcardToken<eight_byte_encoded_variable_t>;
+template class WildcardToken<four_byte_encoded_variable_t>;
 }  // namespace ffi::search

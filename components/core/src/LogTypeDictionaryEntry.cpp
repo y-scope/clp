@@ -1,22 +1,24 @@
 #include "LogTypeDictionaryEntry.hpp"
 
 #include "ir/parsing.hpp"
+#include "ir/types.hpp"
 #include "type_utils.hpp"
 #include "Utils.hpp"
 
+using ir::VariablePlaceholder;
 using std::string;
 using std::string_view;
 
 size_t LogTypeDictionaryEntry::get_placeholder_info(
         size_t placeholder_ix,
-        ir::VariablePlaceholder& placeholder
+        VariablePlaceholder& placeholder
 ) const {
     if (placeholder_ix >= m_placeholder_positions.size()) {
         return SIZE_MAX;
     }
 
     auto var_position = m_placeholder_positions[placeholder_ix];
-    placeholder = static_cast<ir::VariablePlaceholder>(m_value[var_position]);
+    placeholder = static_cast<VariablePlaceholder>(m_value[var_position]);
 
     return m_placeholder_positions[placeholder_ix];
 }
@@ -73,7 +75,7 @@ bool LogTypeDictionaryEntry::parse_next_var(
     ) -> void {
         m_placeholder_positions.push_back(logtype.size());
         ++m_num_escaped_placeholders;
-        logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+        logtype += enum_to_underlying_type(VariablePlaceholder::Escape);
     };
     // clang-format on
     if (ir::get_bounds_of_next_var(msg, var_begin_pos, var_end_pos)) {
@@ -144,21 +146,21 @@ ErrorCode LogTypeDictionaryEntry::try_read_from_file(
         if (is_escaped) {
             constant += c;
             is_escaped = false;
-        } else if (enum_to_underlying_type(ir::VariablePlaceholder::Escape) == c) {
+        } else if (enum_to_underlying_type(VariablePlaceholder::Escape) == c) {
             is_escaped = true;
             add_constant(constant, 0, constant.length());
             constant.clear();
             add_escape();
         } else {
-            if (enum_to_underlying_type(ir::VariablePlaceholder::Integer) == c) {
+            if (enum_to_underlying_type(VariablePlaceholder::Integer) == c) {
                 add_constant(constant, 0, constant.length());
                 constant.clear();
                 add_int_var();
-            } else if (enum_to_underlying_type(ir::VariablePlaceholder::Float) == c) {
+            } else if (enum_to_underlying_type(VariablePlaceholder::Float) == c) {
                 add_constant(constant, 0, constant.length());
                 constant.clear();
                 add_float_var();
-            } else if (enum_to_underlying_type(ir::VariablePlaceholder::Dictionary) == c) {
+            } else if (enum_to_underlying_type(VariablePlaceholder::Dictionary) == c) {
                 add_constant(constant, 0, constant.length());
                 constant.clear();
                 add_dictionary_var();

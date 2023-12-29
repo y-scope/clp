@@ -16,10 +16,13 @@
 
 #include "../../clp/utils.hpp"
 #include "../../EncodedVariableInterpreter.hpp"
+#include "../../ir/types.hpp"
 #include "../../spdlog_with_specializations.hpp"
 #include "../../Utils.hpp"
 #include "../Constants.hpp"
 
+using ir::eight_byte_encoded_variable_t;
+using ir::four_byte_encoded_variable_t;
 using log_surgeon::LogEventView;
 using std::list;
 using std::make_unique;
@@ -440,7 +443,7 @@ void Archive::write_msg_using_schema(LogEventView const& log_view) {
 
 template <typename encoded_variable_t>
 void Archive::write_log_event_ir(ir::LogEvent<encoded_variable_t> const& log_event) {
-    vector<ffi::eight_byte_encoded_variable_t> encoded_vars;
+    vector<eight_byte_encoded_variable_t> encoded_vars;
     vector<variable_dictionary_id_t> var_ids;
     size_t original_num_bytes{0};
     EncodedVariableInterpreter::encode_and_add_to_dictionary(
@@ -650,10 +653,10 @@ void Archive::update_metadata() {
 
 // Explicitly declare template specializations so that we can define the template methods in this
 // file
-template void Archive::write_log_event_ir<ffi::eight_byte_encoded_variable_t>(
-        ir::LogEvent<ffi::eight_byte_encoded_variable_t> const& log_event
+template void Archive::write_log_event_ir<eight_byte_encoded_variable_t>(
+        ir::LogEvent<eight_byte_encoded_variable_t> const& log_event
 );
-template void Archive::write_log_event_ir<ffi::four_byte_encoded_variable_t>(
-        ir::LogEvent<ffi::four_byte_encoded_variable_t> const& log_event
+template void Archive::write_log_event_ir<four_byte_encoded_variable_t>(
+        ir::LogEvent<four_byte_encoded_variable_t> const& log_event
 );
 }  // namespace streaming_archive::writer

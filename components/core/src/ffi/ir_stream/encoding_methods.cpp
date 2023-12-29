@@ -3,9 +3,13 @@
 #include <json/single_include/nlohmann/json.hpp>
 
 #include "../../ir/parsing.hpp"
+#include "../../ir/types.hpp"
 #include "byteswap.hpp"
 #include "protocol_constants.hpp"
 
+using ir::eight_byte_encoded_variable_t;
+using ir::epoch_time_ms_t;
+using ir::four_byte_encoded_variable_t;
 using std::string;
 using std::string_view;
 using std::vector;
