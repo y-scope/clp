@@ -7,15 +7,15 @@
 #include "../src/ffi/search/query_methods.hpp"
 #include "../src/ffi/search/QueryMethodFailed.hpp"
 #include "../src/ffi/search/WildcardToken.hpp"
-#include "../src/ir/parsing.hpp"
+#include "../src/ir/types.hpp"
 
-using ffi::eight_byte_encoded_variable_t;
-using ffi::four_byte_encoded_variable_t;
 using ffi::search::ExactVariableToken;
 using ffi::search::generate_subqueries;
 using ffi::search::Subquery;
 using ffi::search::TokenType;
 using ffi::search::WildcardToken;
+using ir::eight_byte_encoded_variable_t;
+using ir::four_byte_encoded_variable_t;
 using ir::VariablePlaceholder;
 using std::string;
 using std::variant;
@@ -168,13 +168,13 @@ TEMPLATE_TEST_CASE(
         message += " and a string with numbers " + var_strs[var_ix++];
         message += " and another string with numbers " + var_strs[var_ix++];
         message += " and an escape ";
-        message += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+        message += enum_to_underlying_type(VariablePlaceholder::Escape);
         message += " and an int placeholder ";
-        message += enum_to_underlying_type(ir::VariablePlaceholder::Integer);
+        message += enum_to_underlying_type(VariablePlaceholder::Integer);
         message += " and a float placeholder ";
-        message += enum_to_underlying_type(ir::VariablePlaceholder::Float);
+        message += enum_to_underlying_type(VariablePlaceholder::Float);
         message += " and a dictionary placeholder ";
-        message += enum_to_underlying_type(ir::VariablePlaceholder::Dictionary);
+        message += enum_to_underlying_type(VariablePlaceholder::Dictionary);
         REQUIRE(ffi::encode_message(message, logtype, encoded_vars, dictionary_var_bounds));
 
         wildcard_query = message;

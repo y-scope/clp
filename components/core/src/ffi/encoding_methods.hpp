@@ -5,17 +5,12 @@
 #include <vector>
 
 #include "../ir/parsing.hpp"
+#include "../ir/types.hpp"
 #include "../TraceableException.hpp"
 
 // TODO Some of the methods in this file are mostly duplicated from code that exists elsewhere in
 //  the repo. They should be consolidated in a future commit.
 namespace ffi {
-// Types
-using epoch_time_ms_t = int64_t;
-
-using eight_byte_encoded_variable_t = int64_t;
-using four_byte_encoded_variable_t = int32_t;
-
 class EncodingException : public TraceableException {
 public:
     // Constructors
@@ -77,8 +72,8 @@ bool encode_float_string(std::string_view str, encoded_variable_t& encoded_var);
  * @param four_byte_encoded_var
  * @return The float using the eight-byte encoding
  */
-eight_byte_encoded_variable_t encode_four_byte_float_as_eight_byte(
-        four_byte_encoded_variable_t four_byte_encoded_var
+ir::eight_byte_encoded_variable_t encode_four_byte_float_as_eight_byte(
+        ir::four_byte_encoded_variable_t four_byte_encoded_var
 );
 
 /**
@@ -95,7 +90,7 @@ template <typename encoded_variable_t>
 encoded_variable_t encode_float_properties(
         bool is_negative,
         std::conditional_t<
-                std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
+                std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>,
                 uint32_t,
                 uint64_t> digits,
         size_t num_digits,
@@ -116,7 +111,7 @@ void decode_float_properties(
         encoded_variable_t encoded_var,
         bool& is_negative,
         std::conditional_t<
-                std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
+                std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>,
                 uint32_t,
                 uint64_t>& digits,
         uint8_t& num_digits,
@@ -147,8 +142,8 @@ bool encode_integer_string(std::string_view str, encoded_variable_t& encoded_var
  * @param four_byte_encoded_var
  * @return The integer using the eight-byte encoding
  */
-eight_byte_encoded_variable_t encode_four_byte_integer_as_eight_byte(
-        four_byte_encoded_variable_t four_byte_encoded_var
+ir::eight_byte_encoded_variable_t encode_four_byte_integer_as_eight_byte(
+        ir::four_byte_encoded_variable_t four_byte_encoded_var
 );
 
 /**

@@ -5,7 +5,7 @@
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include "../../FileWriter.hpp"
-#include "../../ir/parsing.hpp"
+#include "../../ir/types.hpp"
 #include "../../LogTypeDictionaryReader.hpp"
 #include "../../spdlog_with_specializations.hpp"
 #include "../../streaming_archive/Constants.hpp"
@@ -13,6 +13,7 @@
 #include "../../VariableDictionaryReader.hpp"
 #include "CommandLineArguments.hpp"
 
+using ir::VariablePlaceholder;
 using std::string;
 
 int main(int argc, char const* argv[]) {
@@ -74,7 +75,7 @@ int main(int argc, char const* argv[]) {
         for (size_t placeholder_ix = 0; placeholder_ix < entry.get_num_placeholders();
              ++placeholder_ix)
         {
-            ir::VariablePlaceholder var_placeholder;
+            VariablePlaceholder var_placeholder;
             size_t const placeholder_pos
                     = entry.get_placeholder_info(placeholder_ix, var_placeholder);
 
@@ -83,16 +84,16 @@ int main(int argc, char const* argv[]) {
                     .append(value, constant_begin_pos, placeholder_pos - constant_begin_pos);
 
             switch (var_placeholder) {
-                case ir::VariablePlaceholder::Integer:
+                case VariablePlaceholder::Integer:
                     human_readable_value += "\\i";
                     break;
-                case ir::VariablePlaceholder::Float:
+                case VariablePlaceholder::Float:
                     human_readable_value += "\\f";
                     break;
-                case ir::VariablePlaceholder::Dictionary:
+                case VariablePlaceholder::Dictionary:
                     human_readable_value += "\\d";
                     break;
-                case ir::VariablePlaceholder::Escape:
+                case VariablePlaceholder::Escape:
                     break;
                 default:
                     SPDLOG_ERROR(

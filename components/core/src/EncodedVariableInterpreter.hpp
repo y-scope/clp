@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "ir/LogEvent.hpp"
+#include "ir/types.hpp"
 #include "Query.hpp"
 #include "TraceableException.hpp"
 #include "VariableDictionaryReader.hpp"
@@ -107,7 +108,7 @@ public:
             ir::LogEvent<encoded_variable_t> const& log_event,
             LogTypeDictionaryEntry& logtype_dict_entry,
             VariableDictionaryWriter& var_dict,
-            std::vector<ffi::eight_byte_encoded_variable_t>& encoded_vars,
+            std::vector<ir::eight_byte_encoded_variable_t>& encoded_vars,
             std::vector<variable_dictionary_id_t>& var_ids,
             size_t& raw_num_bytes
     );

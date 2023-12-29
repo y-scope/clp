@@ -1,17 +1,18 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 
 #include "../src/ffi/encoding_methods.hpp"
+#include "../src/ir/types.hpp"
 
 using ffi::decode_float_var;
 using ffi::decode_integer_var;
 using ffi::decode_message;
-using ffi::eight_byte_encoded_variable_t;
 using ffi::encode_float_string;
 using ffi::encode_integer_string;
 using ffi::encode_message;
-using ffi::four_byte_encoded_variable_t;
 using ffi::wildcard_match_encoded_vars;
 using ffi::wildcard_query_matches_any_encoded_var;
+using ir::eight_byte_encoded_variable_t;
+using ir::four_byte_encoded_variable_t;
 using ir::get_bounds_of_next_var;
 using ir::VariablePlaceholder;
 using std::string;

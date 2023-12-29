@@ -11,11 +11,14 @@
 #include <log_surgeon/ReaderParser.hpp>
 
 #include "../ffi/ir_stream/decoding_methods.hpp"
+#include "../ir/types.hpp"
 #include "../ir/utils.hpp"
 #include "../LogSurgeonReader.hpp"
 #include "../Profiler.hpp"
 #include "utils.hpp"
 
+using ir::eight_byte_encoded_variable_t;
+using ir::four_byte_encoded_variable_t;
 using ir::has_ir_stream_magic_number;
 using ir::LogEventDeserializer;
 using log_surgeon::LogEventView;
@@ -432,7 +435,7 @@ bool FileCompressor::compress_ir_stream(
     try {
         std::error_code error_code{};
         if (uses_four_byte_encoding) {
-            auto result = LogEventDeserializer<ffi::four_byte_encoded_variable_t>::create(reader);
+            auto result = LogEventDeserializer<four_byte_encoded_variable_t>::create(reader);
             if (result.has_error()) {
                 error_code = result.error();
             } else {
@@ -447,7 +450,7 @@ bool FileCompressor::compress_ir_stream(
                 );
             }
         } else {
-            auto result = LogEventDeserializer<ffi::eight_byte_encoded_variable_t>::create(reader);
+            auto result = LogEventDeserializer<eight_byte_encoded_variable_t>::create(reader);
             if (result.has_error()) {
                 error_code = result.error();
             } else {
@@ -548,23 +551,23 @@ std::error_code FileCompressor::compress_ir_stream_by_encoding(
 // Explicitly declare template specializations so that we can define the template methods in this
 // file
 template std::error_code
-FileCompressor::compress_ir_stream_by_encoding<ffi::eight_byte_encoded_variable_t>(
+FileCompressor::compress_ir_stream_by_encoding<eight_byte_encoded_variable_t>(
         size_t target_data_size_of_dicts,
         streaming_archive::writer::Archive::UserConfig& archive_user_config,
         size_t target_encoded_file_size,
         string const& path,
         group_id_t group_id,
         streaming_archive::writer::Archive& archive,
-        LogEventDeserializer<ffi::eight_byte_encoded_variable_t>& log_event_deserializer
+        LogEventDeserializer<eight_byte_encoded_variable_t>& log_event_deserializer
 );
 template std::error_code
-FileCompressor::compress_ir_stream_by_encoding<ffi::four_byte_encoded_variable_t>(
+FileCompressor::compress_ir_stream_by_encoding<four_byte_encoded_variable_t>(
         size_t target_data_size_of_dicts,
         streaming_archive::writer::Archive::UserConfig& archive_user_config,
         size_t target_encoded_file_size,
         string const& path,
         group_id_t group_id,
         streaming_archive::writer::Archive& archive,
-        LogEventDeserializer<ffi::four_byte_encoded_variable_t>& log_event_deserializer
+        LogEventDeserializer<four_byte_encoded_variable_t>& log_event_deserializer
 );
 }  // namespace clp

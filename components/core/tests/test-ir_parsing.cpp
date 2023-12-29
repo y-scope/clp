@@ -1,6 +1,7 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 
 #include "../src/ir/parsing.hpp"
+#include "../src/ir/types.hpp"
 #include "../src/type_utils.hpp"
 
 using ir::get_bounds_of_next_var;

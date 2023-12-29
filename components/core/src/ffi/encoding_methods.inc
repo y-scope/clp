@@ -4,10 +4,9 @@
 #include <algorithm>
 
 #include "../ir/parsing.hpp"
+#include "../ir/types.hpp"
 #include "../string_utils.hpp"
 #include "../type_utils.hpp"
-
-using ir::VariablePlaceholder;
 
 namespace ffi {
 template <typename encoded_variable_t>
@@ -20,7 +19,7 @@ bool encode_float_string(std::string_view str, encoded_variable_t& encoded_var) 
 
     size_t pos = 0;
     constexpr size_t cMaxDigitsInRepresentableFloatVar
-            = std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
+            = std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>
                       ? cMaxDigitsInRepresentableFourByteFloatVar
                       : cMaxDigitsInRepresentableEightByteFloatVar;
     // +1 for decimal point
@@ -43,7 +42,7 @@ bool encode_float_string(std::string_view str, encoded_variable_t& encoded_var) 
     size_t num_digits = 0;
     size_t decimal_point_pos = std::string::npos;
     std::conditional_t<
-            std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
+            std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>,
             uint32_t,
             uint64_t>
             digits = 0;
@@ -64,7 +63,7 @@ bool encode_float_string(std::string_view str, encoded_variable_t& encoded_var) 
         // No decimal point found, decimal point is after all digits, or no digits found
         return false;
     }
-    if constexpr (std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>) {
+    if constexpr (std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>) {
         if (cFourByteEncodedFloatDigitsBitMask < digits) {
             // digits is larger than maximum representable
             return false;
@@ -85,17 +84,17 @@ template <typename encoded_variable_t>
 encoded_variable_t encode_float_properties(
         bool is_negative,
         std::conditional_t<
-                std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
+                std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>,
                 uint32_t,
                 uint64_t> digits,
         size_t num_digits,
         size_t decimal_point_pos
 ) {
     static_assert(
-            (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
-             || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            (std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>
+             || std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>)
     );
-    if constexpr (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
+    if constexpr (std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>) {
         // Encode into 64 bits with the following format (from MSB to LSB):
         // -  1 bit : is negative
         // -  1 bit : unused
@@ -169,17 +168,17 @@ void decode_float_properties(
         encoded_variable_t encoded_var,
         bool& is_negative,
         std::conditional_t<
-                std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
+                std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>,
                 uint32_t,
                 uint64_t>& digits,
         uint8_t& num_digits,
         uint8_t& decimal_point_pos
 ) {
     static_assert(
-            (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
-             || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            (std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>
+             || std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>)
     );
-    if constexpr (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
+    if constexpr (std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>) {
         auto encoded_float = bit_cast<uint64_t>(encoded_var);
 
         // Decode according to the format described in encode_float_string
@@ -223,7 +222,7 @@ std::string decode_float_var(encoded_variable_t encoded_var) {
     uint8_t decimal_point_pos;
     uint8_t num_digits;
     std::conditional_t<
-            std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
+            std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>,
             uint32_t,
             uint64_t>
             digits;
@@ -368,13 +367,13 @@ bool encode_message_generically(
         std::string_view var_string{&message[var_begin_pos], var_end_pos - var_begin_pos};
         encoded_variable_t encoded_variable;
         if (encode_float_string(var_string, encoded_variable)) {
-            logtype += enum_to_underlying_type(VariablePlaceholder::Float);
+            logtype += enum_to_underlying_type(ir::VariablePlaceholder::Float);
             encoded_variable_handler(encoded_variable);
         } else if (encode_integer_string(var_string, encoded_variable)) {
-            logtype += enum_to_underlying_type(VariablePlaceholder::Integer);
+            logtype += enum_to_underlying_type(ir::VariablePlaceholder::Integer);
             encoded_variable_handler(encoded_variable);
         } else {
-            logtype += enum_to_underlying_type(VariablePlaceholder::Dictionary);
+            logtype += enum_to_underlying_type(ir::VariablePlaceholder::Dictionary);
             if (false == dictionary_variable_handler(message, var_begin_pos, var_end_pos)) {
                 return false;
             }
@@ -444,7 +443,7 @@ std::string decode_message(
     size_t encoded_vars_ix = 0;
     for (size_t i = 0; i < logtype.length(); ++i) {
         auto c = logtype[i];
-        if (enum_to_underlying_type(VariablePlaceholder::Float) == c) {
+        if (enum_to_underlying_type(ir::VariablePlaceholder::Float) == c) {
             message.append(logtype, last_variable_end_pos, i - last_variable_end_pos);
             last_variable_end_pos = i + 1;
             if (encoded_vars_ix >= encoded_vars_length) {
@@ -457,7 +456,7 @@ std::string decode_message(
             }
             message.append(decode_float_var(encoded_vars[encoded_vars_ix]));
             ++encoded_vars_ix;
-        } else if (enum_to_underlying_type(VariablePlaceholder::Integer) == c) {
+        } else if (enum_to_underlying_type(ir::VariablePlaceholder::Integer) == c) {
             message.append(logtype, last_variable_end_pos, i - last_variable_end_pos);
             last_variable_end_pos = i + 1;
             if (encoded_vars_ix >= encoded_vars_length) {
@@ -470,7 +469,7 @@ std::string decode_message(
             }
             message.append(decode_integer_var(encoded_vars[encoded_vars_ix]));
             ++encoded_vars_ix;
-        } else if (enum_to_underlying_type(VariablePlaceholder::Dictionary) == c) {
+        } else if (enum_to_underlying_type(ir::VariablePlaceholder::Dictionary) == c) {
             message.append(logtype, last_variable_end_pos, i - last_variable_end_pos);
             last_variable_end_pos = i + 1;
             if (dictionary_var_bounds_ix >= dictionary_var_end_offsets_length) {
@@ -499,7 +498,7 @@ std::string decode_message(
     return message;
 }
 
-template <VariablePlaceholder var_placeholder, typename encoded_variable_t>
+template <ir::VariablePlaceholder var_placeholder, typename encoded_variable_t>
 bool wildcard_query_matches_any_encoded_var(
         std::string_view wildcard_query,
         std::string_view logtype,
@@ -508,7 +507,7 @@ bool wildcard_query_matches_any_encoded_var(
 ) {
     size_t encoded_vars_ix = 0;
     for (auto c : logtype) {
-        if (enum_to_underlying_type(VariablePlaceholder::Float) == c) {
+        if (enum_to_underlying_type(ir::VariablePlaceholder::Float) == c) {
             if (encoded_vars_ix >= encoded_vars_length) {
                 throw EncodingException(
                         ErrorCode_Corrupt,
@@ -518,7 +517,7 @@ bool wildcard_query_matches_any_encoded_var(
                 );
             }
 
-            if constexpr (VariablePlaceholder::Float == var_placeholder) {
+            if constexpr (ir::VariablePlaceholder::Float == var_placeholder) {
                 auto decoded_var = decode_float_var(encoded_vars[encoded_vars_ix]);
                 if (wildcard_match_unsafe(decoded_var, wildcard_query)) {
                     return true;
@@ -526,7 +525,7 @@ bool wildcard_query_matches_any_encoded_var(
             }
 
             ++encoded_vars_ix;
-        } else if (enum_to_underlying_type(VariablePlaceholder::Integer) == c) {
+        } else if (enum_to_underlying_type(ir::VariablePlaceholder::Integer) == c) {
             if (encoded_vars_ix >= encoded_vars_length) {
                 throw EncodingException(
                         ErrorCode_Corrupt,
@@ -536,7 +535,7 @@ bool wildcard_query_matches_any_encoded_var(
                 );
             }
 
-            if constexpr (VariablePlaceholder::Integer == var_placeholder) {
+            if constexpr (ir::VariablePlaceholder::Integer == var_placeholder) {
                 auto decoded_var = decode_integer_var(encoded_vars[encoded_vars_ix]);
                 if (wildcard_match_unsafe(decoded_var, wildcard_query)) {
                     return true;
@@ -580,7 +579,7 @@ bool wildcard_match_encoded_vars(
     size_t var_ix = 0;
     size_t wildcard_var_ix = 0;
     for (auto c : logtype) {
-        if (enum_to_underlying_type(VariablePlaceholder::Float) == c) {
+        if (enum_to_underlying_type(ir::VariablePlaceholder::Float) == c) {
             if (var_ix >= encoded_vars_length) {
                 throw EncodingException(
                         ErrorCode_Corrupt,
@@ -601,7 +600,7 @@ bool wildcard_match_encoded_vars(
             }
 
             ++var_ix;
-        } else if (enum_to_underlying_type(VariablePlaceholder::Integer) == c) {
+        } else if (enum_to_underlying_type(ir::VariablePlaceholder::Integer) == c) {
             if (var_ix >= encoded_vars_length) {
                 throw EncodingException(
                         ErrorCode_Corrupt,

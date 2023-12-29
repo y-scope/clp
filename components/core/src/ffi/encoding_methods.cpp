@@ -3,6 +3,10 @@
 #include <algorithm>
 #include <string_view>
 
+#include "../ir/types.hpp"
+
+using ir::eight_byte_encoded_variable_t;
+using ir::four_byte_encoded_variable_t;
 using std::string_view;
 
 namespace ffi {

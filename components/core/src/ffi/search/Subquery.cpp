@@ -1,6 +1,7 @@
 #include "Subquery.hpp"
 
 #include "../../ir/parsing.hpp"
+#include "../../ir/types.hpp"
 #include "QueryWildcard.hpp"
 
 using std::string;
@@ -56,6 +57,6 @@ Subquery<encoded_variable_t>::Subquery(string logtype_query, Subquery::QueryVari
 
 // Explicitly declare specializations to avoid having to validate that the template parameters are
 // supported
-template class Subquery<eight_byte_encoded_variable_t>;
-template class Subquery<four_byte_encoded_variable_t>;
+template class Subquery<ir::eight_byte_encoded_variable_t>;
+template class Subquery<ir::four_byte_encoded_variable_t>;
 }  // namespace ffi::search

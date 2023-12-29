@@ -229,6 +229,7 @@ set(SOURCE_FILES_clp
         src/ir/parsing.cpp
         src/ir/parsing.hpp
         src/ir/parsing.inc
+        src/ir/types.hpp
         src/ir/utils.cpp
         src/ir/utils.hpp
         src/LibarchiveFileReader.cpp
@@ -388,9 +389,10 @@ set(SOURCE_FILES_clg
         src/ir/LogEvent.hpp
         src/ir/parsing.cpp
         src/ir/parsing.hpp
+        src/ir/parsing.inc
+        src/ir/types.hpp
         src/LogSurgeonReader.cpp
         src/LogSurgeonReader.hpp
-        src/ir/parsing.inc
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.hpp
@@ -524,9 +526,10 @@ set(SOURCE_FILES_clo
         src/ir/LogEvent.hpp
         src/ir/parsing.cpp
         src/ir/parsing.hpp
+        src/ir/parsing.inc
+        src/ir/types.hpp
         src/LogSurgeonReader.cpp
         src/LogSurgeonReader.hpp
-        src/ir/parsing.inc
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.hpp
@@ -698,6 +701,7 @@ set(SOURCE_FILES_unitTest
         src/ir/parsing.cpp
         src/ir/parsing.hpp
         src/ir/parsing.inc
+        src/ir/types.hpp
         src/ir/utils.cpp
         src/ir/utils.hpp
         src/LibarchiveFileReader.cpp

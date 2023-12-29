@@ -6,17 +6,14 @@
 #include "../src/ffi/ir_stream/decoding_methods.hpp"
 #include "../src/ffi/ir_stream/encoding_methods.hpp"
 #include "../src/ffi/ir_stream/protocol_constants.hpp"
-#include "../src/ir/parsing.hpp"
+#include "../src/ir/types.hpp"
 
 using ffi::decode_float_var;
 using ffi::decode_integer_var;
 using ffi::decode_message;
-using ffi::eight_byte_encoded_variable_t;
 using ffi::encode_float_string;
 using ffi::encode_integer_string;
 using ffi::encode_message;
-using ffi::epoch_time_ms_t;
-using ffi::four_byte_encoded_variable_t;
 using ffi::ir_stream::cProtocol::EightByteEncodingMagicNumber;
 using ffi::ir_stream::cProtocol::FourByteEncodingMagicNumber;
 using ffi::ir_stream::cProtocol::MagicNumberLength;
@@ -26,6 +23,9 @@ using ffi::ir_stream::get_encoding_type;
 using ffi::ir_stream::IRErrorCode;
 using ffi::ir_stream::validate_protocol_version;
 using ffi::wildcard_query_matches_any_encoded_var;
+using ir::eight_byte_encoded_variable_t;
+using ir::epoch_time_ms_t;
+using ir::four_byte_encoded_variable_t;
 using ir::VariablePlaceholder;
 using std::chrono::duration_cast;
 using std::chrono::milliseconds;
@@ -506,21 +506,21 @@ TEST_CASE("decode_next_message_four_byte_timestamp_delta", "[ffi][deserialize_lo
     string const message = "Static <\text>, dictVar1, 123, 456345232.7234223, "
                            "dictVar2, 987, 654.3, end of static text";
     auto ts_delta = GENERATE(
-            static_cast<ffi::epoch_time_ms_t>(0),
-            static_cast<ffi::epoch_time_ms_t>(INT8_MIN),
-            static_cast<ffi::epoch_time_ms_t>(INT8_MIN + 1),
-            static_cast<ffi::epoch_time_ms_t>(INT8_MAX - 1),
-            static_cast<ffi::epoch_time_ms_t>(INT8_MAX),
-            static_cast<ffi::epoch_time_ms_t>(INT16_MIN),
-            static_cast<ffi::epoch_time_ms_t>(INT16_MIN + 1),
-            static_cast<ffi::epoch_time_ms_t>(INT16_MAX - 1),
-            static_cast<ffi::epoch_time_ms_t>(INT16_MAX),
-            static_cast<ffi::epoch_time_ms_t>(INT32_MIN),
-            static_cast<ffi::epoch_time_ms_t>(INT32_MIN + 1),
-            static_cast<ffi::epoch_time_ms_t>(INT32_MAX - 1),
-            static_cast<ffi::epoch_time_ms_t>(INT32_MAX),
-            static_cast<ffi::epoch_time_ms_t>(INT64_MIN),
-            static_cast<ffi::epoch_time_ms_t>(INT64_MAX)
+            static_cast<epoch_time_ms_t>(0),
+            static_cast<epoch_time_ms_t>(INT8_MIN),
+            static_cast<epoch_time_ms_t>(INT8_MIN + 1),
+            static_cast<epoch_time_ms_t>(INT8_MAX - 1),
+            static_cast<epoch_time_ms_t>(INT8_MAX),
+            static_cast<epoch_time_ms_t>(INT16_MIN),
+            static_cast<epoch_time_ms_t>(INT16_MIN + 1),
+            static_cast<epoch_time_ms_t>(INT16_MAX - 1),
+            static_cast<epoch_time_ms_t>(INT16_MAX),
+            static_cast<epoch_time_ms_t>(INT32_MIN),
+            static_cast<epoch_time_ms_t>(INT32_MIN + 1),
+            static_cast<epoch_time_ms_t>(INT32_MAX - 1),
+            static_cast<epoch_time_ms_t>(INT32_MAX),
+            static_cast<epoch_time_ms_t>(INT64_MIN),
+            static_cast<epoch_time_ms_t>(INT64_MAX)
     );
     vector<int8_t> ir_buf;
     string logtype;

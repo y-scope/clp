@@ -13,13 +13,6 @@
 #include <vector>
 
 namespace ir {
-enum class VariablePlaceholder : char {
-    Integer = 0x11,
-    Dictionary = 0x12,
-    Float = 0x13,
-    Escape = '\\',
-};
-
 /**
  * Checks if the given character is a delimiter
  * We treat everything *except* the following quoted characters as a delimiter: "+-.0-9A-Z\_a-z"

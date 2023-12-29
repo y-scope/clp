@@ -1,9 +1,12 @@
 #include "query_methods.hpp"
 
 #include "../../ir/parsing.hpp"
+#include "../../ir/types.hpp"
 #include "CompositeWildcardToken.hpp"
 #include "QueryMethodFailed.hpp"
 
+using ir::eight_byte_encoded_variable_t;
+using ir::four_byte_encoded_variable_t;
 using ir::is_delim;
 using std::pair;
 using std::string;
@@ -296,14 +299,14 @@ template void generate_subqueries<four_byte_encoded_variable_t>(
         string_view wildcard_query,
         vector<Subquery<four_byte_encoded_variable_t>>& sub_queries
 );
-template void tokenize_query<ffi::eight_byte_encoded_variable_t>(
+template void tokenize_query<eight_byte_encoded_variable_t>(
         string_view wildcard_query,
         vector<
                 variant<ExactVariableToken<eight_byte_encoded_variable_t>,
                         CompositeWildcardToken<eight_byte_encoded_variable_t>>>& tokens,
         vector<size_t>& composite_wildcard_token_indexes
 );
-template void tokenize_query<ffi::four_byte_encoded_variable_t>(
+template void tokenize_query<four_byte_encoded_variable_t>(
         string_view wildcard_query,
         vector<
                 variant<ExactVariableToken<four_byte_encoded_variable_t>,

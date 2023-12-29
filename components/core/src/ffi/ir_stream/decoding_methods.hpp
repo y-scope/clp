@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "../../ir/types.hpp"
 #include "../../ReaderInterface.hpp"
 #include "../encoding_methods.hpp"
 
@@ -74,7 +75,7 @@ auto deserialize_log_event(
         std::string& logtype,
         std::vector<encoded_variable_t>& encoded_vars,
         std::vector<std::string>& dict_vars,
-        epoch_time_ms_t& timestamp_or_timestamp_delta
+        ir::epoch_time_ms_t& timestamp_or_timestamp_delta
 ) -> IRErrorCode;
 
 /**
@@ -176,7 +177,7 @@ namespace eight_byte_encoding {
     IRErrorCode deserialize_log_event(
             ReaderInterface& reader,
             std::string& message,
-            epoch_time_ms_t& timestamp
+            ir::epoch_time_ms_t& timestamp
     );
 }  // namespace eight_byte_encoding
 
@@ -195,7 +196,7 @@ namespace four_byte_encoding {
     IRErrorCode deserialize_log_event(
             ReaderInterface& reader,
             std::string& message,
-            epoch_time_ms_t& timestamp_delta
+            ir::epoch_time_ms_t& timestamp_delta
     );
 }  // namespace four_byte_encoding
 }  // namespace ffi::ir_stream

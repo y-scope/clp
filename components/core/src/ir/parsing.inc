@@ -5,6 +5,7 @@
 #include <string_view>
 
 #include "../type_utils.hpp"
+#include "types.hpp"
 
 namespace ir {
 template <typename EscapeHandler>

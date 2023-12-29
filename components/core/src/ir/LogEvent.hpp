@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "../Defs.h"
-#include "../ffi/encoding_methods.hpp"
+#include "types.hpp"
 
 namespace ir {
 /**
@@ -17,7 +17,7 @@ class LogEvent {
 public:
     // Constructors
     LogEvent(
-            ffi::epoch_time_ms_t timestamp,
+            epoch_time_ms_t timestamp,
             std::string logtype,
             std::vector<std::string> dict_vars,
             std::vector<encoded_variable_t> encoded_vars
@@ -28,7 +28,7 @@ public:
               m_encoded_vars{std::move(encoded_vars)} {}
 
     // Methods
-    [[nodiscard]] auto get_timestamp() const -> ffi::epoch_time_ms_t { return m_timestamp; }
+    [[nodiscard]] auto get_timestamp() const -> epoch_time_ms_t { return m_timestamp; }
 
     [[nodiscard]] auto get_logtype() const -> std::string const& { return m_logtype; }
 
@@ -42,7 +42,7 @@ public:
 
 private:
     // Variables
-    ffi::epoch_time_ms_t m_timestamp;
+    epoch_time_ms_t m_timestamp;
     std::string m_logtype;
     std::vector<std::string> m_dict_vars;
     std::vector<encoded_variable_t> m_encoded_vars;
