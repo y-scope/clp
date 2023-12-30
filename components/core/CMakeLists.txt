@@ -832,4 +832,4 @@ target_compile_features(unitTest
 
 include(cmake/utils.cmake)
 
-add_subdirectory(src EXCLUDE_FROM_ALL)
+add_subdirectory(src)
