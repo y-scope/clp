@@ -3,6 +3,7 @@
 
 #include <charconv>
 
+namespace string_utils {
 template <typename integer_t>
 bool convert_string_to_int(std::string_view raw, integer_t& converted) {
     auto raw_end = raw.cend();
@@ -13,5 +14,6 @@ bool convert_string_to_int(std::string_view raw, integer_t& converted) {
         return result.ec == std::errc();
     }
 }
+}  // namespace string_utils
 
 #endif  // STRING_UTILS_TPP

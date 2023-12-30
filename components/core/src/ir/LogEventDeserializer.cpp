@@ -5,6 +5,7 @@
 #include <json/single_include/nlohmann/json.hpp>
 
 #include "../ffi/ir_stream/decoding_methods.hpp"
+#include "string_utils.inc"
 #include "types.hpp"
 
 namespace ir {
@@ -56,7 +57,7 @@ auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader)
         }
         auto ref_timestamp_str = ref_timestamp_iter->get_ref<nlohmann::json::string_t&>();
         epoch_time_ms_t ref_timestamp{};
-        if (false == convert_string_to_int(ref_timestamp_str, ref_timestamp)) {
+        if (false == string_utils::convert_string_to_int(ref_timestamp_str, ref_timestamp)) {
             return std::errc::protocol_error;
         }
 

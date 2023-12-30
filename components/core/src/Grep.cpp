@@ -8,6 +8,7 @@
 #include "ir/parsing.hpp"
 #include "ir/types.hpp"
 #include "LogSurgeonReader.hpp"
+#include "string_utils.hpp"
 #include "StringReader.hpp"
 #include "Utils.hpp"
 
@@ -17,6 +18,10 @@ using std::vector;
 using streaming_archive::reader::Archive;
 using streaming_archive::reader::File;
 using streaming_archive::reader::Message;
+using string_utils::clean_up_wildcard_search_string;
+using string_utils::is_alphabet;
+using string_utils::is_wildcard;
+using string_utils::wildcard_match_unsafe;
 
 // Local types
 enum class SubQueryMatchabilityResult {
@@ -693,7 +698,7 @@ bool Grep::get_bounds_of_next_potential_var(
                 }
             }
 
-            if (is_decimal_digit(c)) {
+            if (string_utils::is_decimal_digit(c)) {
                 contains_decimal_digit = true;
             } else if (is_alphabet(c)) {
                 contains_alphabet = true;

@@ -12,6 +12,7 @@
 #include "../../type_utils.hpp"
 #include "../../VariableDictionaryReader.hpp"
 #include "CommandLineArguments.hpp"
+#include "string_utils.hpp"
 
 using ir::VariablePlaceholder;
 using std::string;
@@ -111,7 +112,9 @@ int main(int argc, char const* argv[]) {
             human_readable_value.append(value, constant_begin_pos, string::npos);
         }
 
-        file_writer.write_string(replace_characters("\n", "n", human_readable_value, true));
+        file_writer.write_string(
+                string_utils::replace_characters("\n", "n", human_readable_value, true)
+        );
         file_writer.write_char('\n');
 
         std::set<segment_id_t> const& segment_ids = entry.get_ids_of_segments_containing_entry();

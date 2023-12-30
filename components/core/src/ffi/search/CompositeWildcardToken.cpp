@@ -2,6 +2,7 @@
 
 #include "../../ir/parsing.hpp"
 #include "../../ir/types.hpp"
+#include "string_utils.hpp"
 
 using std::string;
 using std::string_view;
@@ -28,7 +29,7 @@ CompositeWildcardToken<encoded_variable_t>::CompositeWildcardToken(
             is_escaped = false;
         } else if ('\\' == c) {
             is_escaped = true;
-        } else if (is_wildcard(c)) {
+        } else if (string_utils::is_wildcard(c)) {
             m_wildcards.emplace_back(c, i, begin_pos == i || end_pos - 1 == i);
         }
     }

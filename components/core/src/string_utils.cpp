@@ -7,6 +7,7 @@
 using std::string;
 using std::string_view;
 
+namespace {
 /**
  * Helper for ``wildcard_match_unsafe_case_sensitive`` to advance the pointer in
  * tame to the next character which matches wild. This method should be inlined
@@ -25,6 +26,47 @@ static inline bool advance_tame_to_next_match(
         char const*& wild_current
 );
 
+static inline bool advance_tame_to_next_match(
+        char const*& tame_current,
+        char const*& tame_bookmark,
+        char const* tame_end,
+        char const*& wild_current
+) {
+    auto w = *wild_current;
+    if ('?' != w) {
+        // No need to check for '*' since the caller ensures wild doesn't
+        // contain consecutive '*'
+
+        // Handle escaped characters
+        if ('\\' == w) {
+            ++wild_current;
+            // This is safe without a bounds check since this the caller ensures
+            // there are no dangling escape characters
+            w = *wild_current;
+        }
+
+        // Advance tame_current until it matches wild_current
+        while (true) {
+            if (tame_end == tame_current) {
+                // Wild group is longer than last group in tame, so can't match
+                // e.g. "*abc" doesn't match "zab"
+                return false;
+            }
+            auto t = *tame_current;
+            if (t == w) {
+                break;
+            }
+            ++tame_current;
+        }
+    }
+
+    tame_bookmark = tame_current;
+
+    return true;
+}
+}  // namespace
+
+namespace string_utils {
 size_t find_first_of(
         string const& haystack,
         char const* needles,
@@ -122,45 +164,6 @@ string clean_up_wildcard_search_string(string_view str) {
     }
 
     return cleaned_str;
-}
-
-static inline bool advance_tame_to_next_match(
-        char const*& tame_current,
-        char const*& tame_bookmark,
-        char const* tame_end,
-        char const*& wild_current
-) {
-    auto w = *wild_current;
-    if ('?' != w) {
-        // No need to check for '*' since the caller ensures wild doesn't
-        // contain consecutive '*'
-
-        // Handle escaped characters
-        if ('\\' == w) {
-            ++wild_current;
-            // This is safe without a bounds check since this the caller ensures
-            // there are no dangling escape characters
-            w = *wild_current;
-        }
-
-        // Advance tame_current until it matches wild_current
-        while (true) {
-            if (tame_end == tame_current) {
-                // Wild group is longer than last group in tame, so can't match
-                // e.g. "*abc" doesn't match "zab"
-                return false;
-            }
-            auto t = *tame_current;
-            if (t == w) {
-                break;
-            }
-            ++tame_current;
-        }
-    }
-
-    tame_bookmark = tame_current;
-
-    return true;
 }
 
 bool wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensitive_match) {
@@ -291,3 +294,4 @@ bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
         }
     }
 }
+}  // namespace string_utils

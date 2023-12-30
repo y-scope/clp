@@ -256,7 +256,12 @@ void DictionaryReader<DictionaryIdType, EntryType>::get_entries_matching_wildcar
         std::unordered_set<EntryType const*>& entries
 ) const {
     for (auto const& entry : m_entries) {
-        if (wildcard_match_unsafe(entry.get_value(), wildcard_string, false == ignore_case)) {
+        if (string_utils::wildcard_match_unsafe(
+                    entry.get_value(),
+                    wildcard_string,
+                    false == ignore_case
+            ))
+        {
             entries.insert(&entry);
         }
     }

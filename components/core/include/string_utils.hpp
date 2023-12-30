@@ -3,6 +3,7 @@
 
 #include <string>
 
+namespace string_utils {
 /**
  * Checks if the given character is an alphabet
  * @param c
@@ -121,6 +122,7 @@ bool wildcard_match_unsafe_case_sensitive(std::string_view tame, std::string_vie
  */
 template <typename integer_t>
 bool convert_string_to_int(std::string_view raw, integer_t& converted);
+}  // namespace string_utils
 
 #include "string_utils.inc"
 

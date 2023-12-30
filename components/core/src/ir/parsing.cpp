@@ -1,7 +1,7 @@
 #include "parsing.hpp"
 
-#include "../string_utils.hpp"
 #include "../type_utils.hpp"
+#include "string_utils.hpp"
 #include "types.hpp"
 
 using std::string;
@@ -63,9 +63,9 @@ bool get_bounds_of_next_var(string_view const str, size_t& begin_pos, size_t& en
         end_pos = begin_pos;
         for (; end_pos < msg_length; ++end_pos) {
             auto c = str[end_pos];
-            if (is_decimal_digit(c)) {
+            if (string_utils::is_decimal_digit(c)) {
                 contains_decimal_digit = true;
-            } else if (is_alphabet(c)) {
+            } else if (string_utils::is_alphabet(c)) {
                 contains_alphabet = true;
             } else if (is_delim(c)) {
                 break;

@@ -56,7 +56,7 @@ bool EncodedVariableInterpreter::convert_string_to_representable_integer_var(
     }
 
     int64_t result;
-    if (false == convert_string_to_int(value, result)) {
+    if (false == string_utils::convert_string_to_int(value, result)) {
         // Conversion failed
         return false;
     } else {

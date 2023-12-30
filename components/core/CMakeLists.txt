@@ -302,8 +302,6 @@ set(SOURCE_FILES_clp
         src/streaming_compression/zstd/Constants.hpp
         src/streaming_compression/zstd/Decompressor.cpp
         src/streaming_compression/zstd/Decompressor.hpp
-        src/string_utils.cpp
-        src/string_utils.hpp
         src/StringReader.cpp
         src/StringReader.hpp
         src/TimestampPattern.cpp
@@ -338,6 +336,7 @@ target_link_libraries(clp
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
         ${STD_FS_LIBS}
+        string_utils::string_utils
         yaml-cpp::yaml-cpp
         ZStd::ZStd
         )
@@ -449,8 +448,6 @@ set(SOURCE_FILES_clg
         src/streaming_compression/zstd/Constants.hpp
         src/streaming_compression/zstd/Decompressor.cpp
         src/streaming_compression/zstd/Decompressor.hpp
-        src/string_utils.cpp
-        src/string_utils.hpp
         src/StringReader.cpp
         src/StringReader.hpp
         src/TimestampPattern.cpp
@@ -486,6 +483,7 @@ target_link_libraries(clg
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
+        string_utils::string_utils
         yaml-cpp::yaml-cpp
         ZStd::ZStd
         )
@@ -583,8 +581,6 @@ set(SOURCE_FILES_clo
         src/streaming_compression/zstd/Constants.hpp
         src/streaming_compression/zstd/Decompressor.cpp
         src/streaming_compression/zstd/Decompressor.hpp
-        src/string_utils.cpp
-        src/string_utils.hpp
         src/StringReader.cpp
         src/StringReader.hpp
         src/Thread.cpp
@@ -621,6 +617,7 @@ target_link_libraries(clo
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
+        string_utils::string_utils
         ZStd::ZStd
         )
 target_compile_features(clo
@@ -774,9 +771,6 @@ set(SOURCE_FILES_unitTest
         src/streaming_compression/zstd/Constants.hpp
         src/streaming_compression/zstd/Decompressor.cpp
         src/streaming_compression/zstd/Decompressor.hpp
-        src/string_utils.cpp
-        src/string_utils.hpp
-        src/string_utils.inc
         src/StringReader.cpp
         src/StringReader.hpp
         src/TimestampPattern.cpp
@@ -828,6 +822,7 @@ target_link_libraries(unitTest
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
+        string_utils::string_utils
         yaml-cpp::yaml-cpp
         ZStd::ZStd
         )
@@ -836,3 +831,5 @@ target_compile_features(unitTest
         )
 
 include(cmake/utils.cmake)
+
+add_subdirectory(src EXCLUDE_FROM_ALL)

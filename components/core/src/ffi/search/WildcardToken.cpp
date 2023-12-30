@@ -3,10 +3,10 @@
 #include <string_view>
 
 #include "../../ir/types.hpp"
-#include "../../string_utils.hpp"
 #include "../../type_utils.hpp"
 #include "../encoding_methods.hpp"
 #include "QueryWildcard.hpp"
+#include "string_utils.hpp"
 
 using ir::eight_byte_encoded_variable_t;
 using ir::four_byte_encoded_variable_t;
@@ -122,9 +122,9 @@ static bool could_be_static_text(string_view query, size_t begin_pos, size_t end
             is_escaped = false;
         } else if ('\\' == c) {
             is_escaped = true;
-        } else if (is_decimal_digit(c)) {
+        } else if (string_utils::is_decimal_digit(c)) {
             return false;
-        } else if (is_alphabet(c)) {
+        } else if (string_utils::is_alphabet(c)) {
             contains_alphabet = true;
         }
     }
