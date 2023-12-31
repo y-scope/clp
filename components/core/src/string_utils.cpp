@@ -19,14 +19,14 @@ namespace {
  * @param wild_bookmark
  * @return true on success, false if wild cannot match tame
  */
-static inline bool advance_tame_to_next_match(
+inline bool advance_tame_to_next_match(
         char const*& tame_current,
         char const*& tame_bookmark,
         char const* tame_end,
         char const*& wild_current
 );
 
-static inline bool advance_tame_to_next_match(
+inline bool advance_tame_to_next_match(
         char const*& tame_current,
         char const*& tame_bookmark,
         char const* tame_end,
