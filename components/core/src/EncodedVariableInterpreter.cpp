@@ -1,8 +1,7 @@
 #include "EncodedVariableInterpreter.hpp"
 
-#include <cmath>
-
 #include <cassert>
+#include <cmath>
 
 #include <string_utils/string_utils.hpp>
 
