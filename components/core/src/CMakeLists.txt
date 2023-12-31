@@ -4,7 +4,7 @@ set(
 )
 add_library(
         string_utils
-        string_utils.cpp
+        string_utils/string_utils.cpp
         ${STRING_UTILS_HEADER_LIST}
 )
 add_library(string_utils::string_utils ALIAS string_utils)
