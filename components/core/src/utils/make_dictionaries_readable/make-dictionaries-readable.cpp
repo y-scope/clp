@@ -3,6 +3,7 @@
 
 #include <boost/filesystem.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
+#include <string_utils/string_utils.hpp>
 
 #include "../../FileWriter.hpp"
 #include "../../ir/types.hpp"
@@ -111,7 +112,9 @@ int main(int argc, char const* argv[]) {
             human_readable_value.append(value, constant_begin_pos, string::npos);
         }
 
-        file_writer.write_string(replace_characters("\n", "n", human_readable_value, true));
+        file_writer.write_string(
+                string_utils::replace_characters("\n", "n", human_readable_value, true)
+        );
         file_writer.write_char('\n');
 
         std::set<segment_id_t> const& segment_ids = entry.get_ids_of_segments_containing_entry();

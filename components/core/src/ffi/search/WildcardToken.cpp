@@ -2,8 +2,9 @@
 
 #include <string_view>
 
+#include <string_utils/string_utils.hpp>
+
 #include "../../ir/types.hpp"
-#include "../../string_utils.hpp"
 #include "../../type_utils.hpp"
 #include "../encoding_methods.hpp"
 #include "QueryWildcard.hpp"
@@ -122,9 +123,9 @@ static bool could_be_static_text(string_view query, size_t begin_pos, size_t end
             is_escaped = false;
         } else if ('\\' == c) {
             is_escaped = true;
-        } else if (is_decimal_digit(c)) {
+        } else if (string_utils::is_decimal_digit(c)) {
             return false;
-        } else if (is_alphabet(c)) {
+        } else if (string_utils::is_alphabet(c)) {
             contains_alphabet = true;
         }
     }

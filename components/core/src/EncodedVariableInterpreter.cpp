@@ -3,12 +3,13 @@
 #include <cassert>
 #include <cmath>
 
+#include <string_utils/string_utils.hpp>
+
 #include "Defs.h"
 #include "ffi/ir_stream/decoding_methods.hpp"
 #include "ir/LogEvent.hpp"
 #include "ir/types.hpp"
 #include "spdlog_with_specializations.hpp"
-#include "string_utils.hpp"
 #include "type_utils.hpp"
 
 using ffi::cEightByteEncodedFloatDigitsBitMask;
@@ -55,7 +56,7 @@ bool EncodedVariableInterpreter::convert_string_to_representable_integer_var(
     }
 
     int64_t result;
-    if (false == convert_string_to_int(value, result)) {
+    if (false == string_utils::convert_string_to_int(value, result)) {
         // Conversion failed
         return false;
     } else {

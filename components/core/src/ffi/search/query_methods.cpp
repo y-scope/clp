@@ -1,5 +1,7 @@
 #include "query_methods.hpp"
 
+#include <string_utils/string_utils.hpp>
+
 #include "../../ir/parsing.hpp"
 #include "../../ir/types.hpp"
 #include "CompositeWildcardToken.hpp"
@@ -13,6 +15,7 @@ using std::string;
 using std::string_view;
 using std::variant;
 using std::vector;
+using string_utils::is_wildcard;
 
 namespace ffi::search {
 static auto TokenGetBeginPos = [](auto const& token) { return token.get_begin_pos(); };
@@ -251,9 +254,9 @@ static void find_delimiter(
             }
         }
 
-        if (is_decimal_digit(c)) {
+        if (string_utils::is_decimal_digit(c)) {
             contains_decimal_digit = true;
-        } else if (is_alphabet(c)) {
+        } else if (string_utils::is_alphabet(c)) {
             contains_alphabet = true;
         }
     }

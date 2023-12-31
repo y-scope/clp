@@ -1,8 +1,10 @@
 #ifndef STRING_UTILS_HPP
 #define STRING_UTILS_HPP
 
+#include <charconv>
 #include <string>
 
+namespace string_utils {
 /**
  * Checks if the given character is an alphabet
  * @param c
@@ -122,6 +124,16 @@ bool wildcard_match_unsafe_case_sensitive(std::string_view tame, std::string_vie
 template <typename integer_t>
 bool convert_string_to_int(std::string_view raw, integer_t& converted);
 
-#include "string_utils.inc"
+template <typename integer_t>
+bool convert_string_to_int(std::string_view raw, integer_t& converted) {
+    auto raw_end = raw.cend();
+    auto result = std::from_chars(raw.cbegin(), raw_end, converted);
+    if (raw_end != result.ptr) {
+        return false;
+    } else {
+        return result.ec == std::errc();
+    }
+}
+}  // namespace string_utils
 
 #endif  // STRING_UTILS_HPP

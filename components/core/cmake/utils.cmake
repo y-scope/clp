@@ -22,8 +22,6 @@ set(SOURCE_FILES_make-dictionaries-readable
         ${CMAKE_CURRENT_SOURCE_DIR}/src/streaming_compression/passthrough/Decompressor.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/streaming_compression/zstd/Decompressor.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/streaming_compression/zstd/Decompressor.hpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/string_utils.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/string_utils.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/Utils.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/Utils.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/make_dictionaries_readable/CommandLineArguments.cpp
@@ -46,6 +44,7 @@ target_link_libraries(make-dictionaries-readable
         Boost::filesystem Boost::iostreams Boost::program_options
         log_surgeon::log_surgeon
         spdlog::spdlog
+        string_utils::string_utils
         ZStd::ZStd
         )
 target_compile_features(make-dictionaries-readable

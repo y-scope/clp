@@ -3,9 +3,10 @@
 
 #include <algorithm>
 
+#include <string_utils/string_utils.hpp>
+
 #include "../ir/parsing.hpp"
 #include "../ir/types.hpp"
-#include "../string_utils.hpp"
 #include "../type_utils.hpp"
 
 namespace ffi {
@@ -326,7 +327,7 @@ bool encode_integer_string(std::string_view str, encoded_variable_t& encoded_var
     }
 
     encoded_variable_t result;
-    if (false == convert_string_to_int(str, result)) {
+    if (false == string_utils::convert_string_to_int(str, result)) {
         // Conversion failed
         return false;
     } else {
@@ -519,7 +520,7 @@ bool wildcard_query_matches_any_encoded_var(
 
             if constexpr (ir::VariablePlaceholder::Float == var_placeholder) {
                 auto decoded_var = decode_float_var(encoded_vars[encoded_vars_ix]);
-                if (wildcard_match_unsafe(decoded_var, wildcard_query)) {
+                if (string_utils::wildcard_match_unsafe(decoded_var, wildcard_query)) {
                     return true;
                 }
             }
@@ -537,7 +538,7 @@ bool wildcard_query_matches_any_encoded_var(
 
             if constexpr (ir::VariablePlaceholder::Integer == var_placeholder) {
                 auto decoded_var = decode_integer_var(encoded_vars[encoded_vars_ix]);
-                if (wildcard_match_unsafe(decoded_var, wildcard_query)) {
+                if (string_utils::wildcard_match_unsafe(decoded_var, wildcard_query)) {
                     return true;
                 }
             }
@@ -591,7 +592,11 @@ bool wildcard_match_encoded_vars(
 
             if (wildcard_var_placeholders[wildcard_var_ix] == c) {
                 auto decoded_var = decode_float_var(encoded_vars[var_ix]);
-                if (wildcard_match_unsafe(decoded_var, wildcard_var_queries[wildcard_var_ix])) {
+                if (string_utils::wildcard_match_unsafe(
+                            decoded_var,
+                            wildcard_var_queries[wildcard_var_ix]
+                    ))
+                {
                     ++wildcard_var_ix;
                     if (wildcard_var_ix == wildcard_var_queries_len) {
                         break;
@@ -612,7 +617,11 @@ bool wildcard_match_encoded_vars(
 
             if (wildcard_var_placeholders[wildcard_var_ix] == c) {
                 auto decoded_var = decode_integer_var(encoded_vars[var_ix]);
-                if (wildcard_match_unsafe(decoded_var, wildcard_var_queries[wildcard_var_ix])) {
+                if (string_utils::wildcard_match_unsafe(
+                            decoded_var,
+                            wildcard_var_queries[wildcard_var_ix]
+                    ))
+                {
                     ++wildcard_var_ix;
                     if (wildcard_var_ix == wildcard_var_queries_len) {
                         break;

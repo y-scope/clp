@@ -5,13 +5,13 @@
 #include <vector>
 
 #include <boost/algorithm/string.hpp>
+#include <string_utils/string_utils.hpp>
 
 #include "dictionary_utils.hpp"
 #include "DictionaryEntry.hpp"
 #include "FileReader.hpp"
 #include "streaming_compression/passthrough/Decompressor.hpp"
 #include "streaming_compression/zstd/Decompressor.hpp"
-#include "string_utils.hpp"
 #include "Utils.hpp"
 
 /**
@@ -256,7 +256,12 @@ void DictionaryReader<DictionaryIdType, EntryType>::get_entries_matching_wildcar
         std::unordered_set<EntryType const*>& entries
 ) const {
     for (auto const& entry : m_entries) {
-        if (wildcard_match_unsafe(entry.get_value(), wildcard_string, false == ignore_case)) {
+        if (string_utils::wildcard_match_unsafe(
+                    entry.get_value(),
+                    wildcard_string,
+                    false == ignore_case
+            ))
+        {
             entries.insert(&entry);
         }
     }
