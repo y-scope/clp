@@ -1,7 +1,7 @@
 #include "parsing.hpp"
 
 #include "../type_utils.hpp"
-#include "string_utils.hpp"
+#include "string_utils/string_utils.hpp"
 #include "types.hpp"
 
 using std::string;

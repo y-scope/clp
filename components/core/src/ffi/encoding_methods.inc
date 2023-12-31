@@ -6,7 +6,7 @@
 #include "../ir/parsing.hpp"
 #include "../ir/types.hpp"
 #include "../type_utils.hpp"
-#include "string_utils.hpp"
+#include "string_utils/string_utils.hpp"
 
 namespace ffi {
 template <typename encoded_variable_t>

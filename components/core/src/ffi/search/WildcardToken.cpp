@@ -6,7 +6,7 @@
 #include "../../type_utils.hpp"
 #include "../encoding_methods.hpp"
 #include "QueryWildcard.hpp"
-#include "string_utils.hpp"
+#include "string_utils/string_utils.hpp"
 
 using ir::eight_byte_encoded_variable_t;
 using ir::four_byte_encoded_variable_t;

@@ -14,7 +14,7 @@
 #include <spdlog/spdlog.h>
 
 #include "spdlog_with_specializations.hpp"
-#include "string_utils.hpp"
+#include "string_utils/string_utils.hpp"
 
 using std::list;
 using std::string;

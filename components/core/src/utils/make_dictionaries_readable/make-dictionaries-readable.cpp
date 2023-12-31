@@ -12,7 +12,7 @@
 #include "../../type_utils.hpp"
 #include "../../VariableDictionaryReader.hpp"
 #include "CommandLineArguments.hpp"
-#include "string_utils.hpp"
+#include "string_utils/string_utils.hpp"
 
 using ir::VariablePlaceholder;
 using std::string;

@@ -9,7 +9,7 @@
 #include "ir/LogEvent.hpp"
 #include "ir/types.hpp"
 #include "spdlog_with_specializations.hpp"
-#include "string_utils.hpp"
+#include "string_utils/string_utils.hpp"
 #include "type_utils.hpp"
 
 using ffi::cEightByteEncodedFloatDigitsBitMask;

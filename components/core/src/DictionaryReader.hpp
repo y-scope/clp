@@ -11,7 +11,7 @@
 #include "FileReader.hpp"
 #include "streaming_compression/passthrough/Decompressor.hpp"
 #include "streaming_compression/zstd/Decompressor.hpp"
-#include "string_utils.hpp"
+#include "string_utils/string_utils.hpp"
 #include "Utils.hpp"
 
 /**

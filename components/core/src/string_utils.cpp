@@ -1,4 +1,4 @@
-#include "string_utils.hpp"
+#include "string_utils/string_utils.hpp"
 
 #include <algorithm>
 #include <charconv>

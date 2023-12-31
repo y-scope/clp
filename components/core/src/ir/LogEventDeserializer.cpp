@@ -5,7 +5,7 @@
 #include <json/single_include/nlohmann/json.hpp>
 
 #include "../ffi/ir_stream/decoding_methods.hpp"
-#include "string_utils.hpp"
+#include "string_utils/string_utils.hpp"
 #include "types.hpp"
 
 namespace ir {

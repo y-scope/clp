@@ -1,7 +1,7 @@
 set(
         STRING_UTILS_HEADER_LIST
-        "${PROJECT_SOURCE_DIR}/include/string_utils.hpp"
-        "${PROJECT_SOURCE_DIR}/include/string_utils.inc"
+        "${PROJECT_SOURCE_DIR}/include/string_utils/string_utils.hpp"
+        "${PROJECT_SOURCE_DIR}/include/string_utils/string_utils.inc"
 )
 add_library(
         string_utils
