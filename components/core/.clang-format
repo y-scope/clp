@@ -74,7 +74,7 @@ IncludeCategories:
   - Regex: "^<(archive|boost|catch2|date|fmt|json|log_surgeon|mariadb|spdlog|sqlite3|yaml-cpp|zstd)"
     Priority: 3
   # C system headers
-  - Regex: "^<.+.h>"
+  - Regex: "^<.+\\.h>"
     Priority: 1
   # C++ standard libraries
   - Regex: "^<.+>"
