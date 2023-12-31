@@ -1,8 +1,7 @@
 #include "EncodedVariableInterpreter.hpp"
 
-#include <cmath>
-
 #include <cassert>
+#include <cmath>
 
 #include "Defs.h"
 #include "ffi/ir_stream/decoding_methods.hpp"

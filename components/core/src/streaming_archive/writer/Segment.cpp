@@ -1,9 +1,9 @@
 #include "Segment.hpp"
 
-#include <cmath>
 #include <sys/stat.h>
 
 #include <climits>
+#include <cmath>
 #include <cstring>
 
 #include "../../ErrorCode.hpp"
