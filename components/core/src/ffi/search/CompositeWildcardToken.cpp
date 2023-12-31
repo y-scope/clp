@@ -1,8 +1,9 @@
 #include "CompositeWildcardToken.hpp"
 
+#include <string_utils/string_utils.hpp>
+
 #include "../../ir/parsing.hpp"
 #include "../../ir/types.hpp"
-#include "string_utils/string_utils.hpp"
 
 using std::string;
 using std::string_view;

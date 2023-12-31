@@ -1,10 +1,11 @@
 #include "query_methods.hpp"
 
+#include <string_utils/string_utils.hpp>
+
 #include "../../ir/parsing.hpp"
 #include "../../ir/types.hpp"
 #include "CompositeWildcardToken.hpp"
 #include "QueryMethodFailed.hpp"
-#include "string_utils/string_utils.hpp"
 
 using ir::eight_byte_encoded_variable_t;
 using ir::four_byte_encoded_variable_t;

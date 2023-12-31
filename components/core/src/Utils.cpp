@@ -12,9 +12,9 @@
 #include <boost/lexical_cast.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 #include <spdlog/spdlog.h>
+#include <string_utils/string_utils.hpp>
 
 #include "spdlog_with_specializations.hpp"
-#include "string_utils/string_utils.hpp"
 
 using std::list;
 using std::string;

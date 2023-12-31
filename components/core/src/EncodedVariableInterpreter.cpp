@@ -4,12 +4,13 @@
 
 #include <cassert>
 
+#include <string_utils/string_utils.hpp>
+
 #include "Defs.h"
 #include "ffi/ir_stream/decoding_methods.hpp"
 #include "ir/LogEvent.hpp"
 #include "ir/types.hpp"
 #include "spdlog_with_specializations.hpp"
-#include "string_utils/string_utils.hpp"
 #include "type_utils.hpp"
 
 using ffi::cEightByteEncodedFloatDigitsBitMask;

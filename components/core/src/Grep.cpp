@@ -3,12 +3,12 @@
 #include <algorithm>
 
 #include <log_surgeon/Constants.hpp>
+#include <string_utils/string_utils.hpp>
 
 #include "EncodedVariableInterpreter.hpp"
 #include "ir/parsing.hpp"
 #include "ir/types.hpp"
 #include "LogSurgeonReader.hpp"
-#include "string_utils/string_utils.hpp"
 #include "StringReader.hpp"
 #include "Utils.hpp"
 

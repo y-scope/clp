@@ -3,8 +3,7 @@
 #include <boost/foreach.hpp>
 #include <boost/range/combine.hpp>
 #include <Catch2/single_include/catch2/catch.hpp>
-
-#include "string_utils/string_utils.hpp"
+#include <string_utils/string_utils.hpp>
 
 using std::cout;
 using std::endl;

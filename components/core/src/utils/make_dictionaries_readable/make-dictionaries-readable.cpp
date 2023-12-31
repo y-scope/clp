@@ -3,6 +3,7 @@
 
 #include <boost/filesystem.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
+#include <string_utils/string_utils.hpp>
 
 #include "../../FileWriter.hpp"
 #include "../../ir/types.hpp"
@@ -12,7 +13,6 @@
 #include "../../type_utils.hpp"
 #include "../../VariableDictionaryReader.hpp"
 #include "CommandLineArguments.hpp"
-#include "string_utils/string_utils.hpp"
 
 using ir::VariablePlaceholder;
 using std::string;
