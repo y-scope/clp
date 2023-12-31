@@ -39,4 +39,4 @@ jobs:
       - name: "Run lint task"
         shell: "bash"
         working-directory: "./components/core"
-        run: "task lint"
+        run: "task lint_check"
