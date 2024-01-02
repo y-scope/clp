@@ -12,7 +12,7 @@
 
 #include "../src/Utils.hpp"
 
-using namespace std;
+using std::string;
 
 TEST_CASE("create_directory_structure", "[create_directory_structure]") {
     struct stat s = {};
