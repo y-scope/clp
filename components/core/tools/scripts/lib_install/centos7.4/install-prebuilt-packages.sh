@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 
 yum install -y \
-  boost-filesystem \
-  boost-iostreams \
-  boost-program-options \
   bzip2 \
   centos-release-scl \
   make \
