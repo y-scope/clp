@@ -14,12 +14,12 @@
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/LogParser.hpp>
 
-#include "../../clp/utils.hpp"
 #include "../../EncodedVariableInterpreter.hpp"
 #include "../../ir/types.hpp"
 #include "../../spdlog_with_specializations.hpp"
 #include "../../Utils.hpp"
 #include "../Constants.hpp"
+#include "utils.hpp"
 
 using ir::eight_byte_encoded_variable_t;
 using ir::four_byte_encoded_variable_t;
@@ -332,7 +332,7 @@ void Archive::write_msg_using_schema(LogEventView const& log_view) {
         }
     }
     if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts) {
-        clp::split_file_and_archive(
+        split_file_and_archive(
                 m_archive_user_config,
                 m_path_for_compression,
                 m_group_id,
@@ -340,7 +340,7 @@ void Archive::write_msg_using_schema(LogEventView const& log_view) {
                 *this
         );
     } else if (m_file->get_encoded_size_in_bytes() >= m_target_encoded_file_size) {
-        clp::split_file(m_path_for_compression, m_group_id, timestamp_pattern, *this);
+        split_file(m_path_for_compression, m_group_id, timestamp_pattern, *this);
     }
     m_encoded_vars.clear();
     m_var_ids.clear();

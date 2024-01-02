@@ -10,7 +10,7 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <log_surgeon/LogParser.hpp>
 
-#include "../src/clp/run.hpp"
+#include "../src/clp/clp/run.hpp"
 #include "../src/GlobalMySQLMetadataDB.hpp"
 #include "../src/LogSurgeonReader.hpp"
 #include "../src/Utils.hpp"
@@ -57,24 +57,23 @@ void compress(
                    "--schema-path",
                    std::move(schema_file)};
     }
-    std::vector<char*> argv;
+    std::vector<char const*> argv;
     for (auto const& arg : arguments) {
-        argv.push_back((char*)arg.data());
+        argv.push_back(arg.data());
     }
     argv.push_back(nullptr);
-    clp::run(argv.size() - 1, (char const**)argv.data());
+    clp::clp::run(argv.size() - 1, argv.data());
 }
 
 void decompress(std::string archive_dir, std::string output_dir) {
     std::vector<std::string> arguments
             = {"main.cpp", "x", std::move(archive_dir), std::move(output_dir)};
-    std::vector<char*> argv;
+    std::vector<char const*> argv;
     for (auto const& arg : arguments) {
-        argv.push_back((char*)arg.data());
+        argv.push_back(arg.data());
     }
     argv.push_back(nullptr);
-    std::string archive_path;
-    clp::run(argv.size() - 1, (char const**)argv.data());
+    clp::clp::run(argv.size() - 1, argv.data());
 }
 
 TEST_CASE("Test error for missing schema file", "[LALR1Parser][SchemaParser]") {

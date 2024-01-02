@@ -1,15 +1,15 @@
-#ifndef CLP_COMMANDLINEARGUMENTS_HPP
-#define CLP_COMMANDLINEARGUMENTS_HPP
+#ifndef CLP_CLP_COMMANDLINEARGUMENTS_HPP
+#define CLP_CLP_COMMANDLINEARGUMENTS_HPP
 
 #include <string>
 #include <vector>
 
 #include <boost/asio.hpp>
 
-#include "../CommandLineArgumentsBase.hpp"
-#include "../GlobalMetadataDBConfig.hpp"
+#include "../../CommandLineArgumentsBase.hpp"
+#include "../../GlobalMetadataDBConfig.hpp"
 
-namespace clp {
+namespace clp::clp {
 class CommandLineArguments : public CommandLineArgumentsBase {
 public:
     // Types
@@ -87,6 +87,6 @@ private:
     std::vector<std::string> m_input_paths;
     GlobalMetadataDBConfig m_metadata_db_config;
 };
-}  // namespace clp
+}  // namespace clp::clp
 
-#endif  // CLP_COMMANDLINEARGUMENTS_HPP
+#endif  // CLP_CLP_COMMANDLINEARGUMENTS_HPP

@@ -5,20 +5,19 @@
 #include <log_surgeon/LogParser.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
-#include "../Profiler.hpp"
-#include "../spdlog_with_specializations.hpp"
-#include "../Utils.hpp"
+#include "../../Profiler.hpp"
+#include "../../spdlog_with_specializations.hpp"
+#include "../../Utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "compression.hpp"
 #include "decompression.hpp"
 #include "utils.hpp"
 
-using clp::CommandLineArguments;
 using std::string;
 using std::unordered_set;
 using std::vector;
 
-namespace clp {
+namespace clp::clp {
 int run(int argc, char const* argv[]) {
     // Program-wide initialization
     try {
@@ -32,7 +31,7 @@ int run(int argc, char const* argv[]) {
     Profiler::init();
     TimestampPattern::init();
 
-    clp::CommandLineArguments command_line_args("clp");
+    CommandLineArguments command_line_args("clp");
     auto parsing_result = command_line_args.parse_arguments(argc, argv);
     switch (parsing_result) {
         case CommandLineArgumentsBase::ParsingResult::Failure:
@@ -50,7 +49,7 @@ int run(int argc, char const* argv[]) {
 
     // Read input paths from file if necessary
     if (false == command_line_args.get_path_list_path().empty()) {
-        if (false == clp::read_input_paths(command_line_args.get_path_list_path(), input_paths)) {
+        if (false == read_input_paths(command_line_args.get_path_list_path(), input_paths)) {
             return -1;
         }
     }
@@ -67,12 +66,12 @@ int run(int argc, char const* argv[]) {
         );
 
         // Validate input paths exist
-        if (false == clp::validate_paths_exist(input_paths)) {
+        if (false == validate_paths_exist(input_paths)) {
             return -1;
         }
 
         // Get paths of all files we need to compress
-        vector<clp::FileToCompress> files_to_compress;
+        vector<FileToCompress> files_to_compress;
         vector<string> empty_directory_paths;
         for (auto const& input_path : input_paths) {
             if (false
@@ -87,7 +86,7 @@ int run(int argc, char const* argv[]) {
             }
         }
 
-        vector<clp::FileToCompress> grouped_files_to_compress;
+        vector<FileToCompress> grouped_files_to_compress;
 
         if (files_to_compress.empty() && empty_directory_paths.empty()
             && grouped_files_to_compress.empty())
@@ -147,4 +146,4 @@ int run(int argc, char const* argv[]) {
 
     return 0;
 }
-}  // namespace clp
+}  // namespace clp::clp

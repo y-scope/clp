@@ -1,11 +1,11 @@
-#ifndef CLP_FILETOCOMPRESS_HPP
-#define CLP_FILETOCOMPRESS_HPP
+#ifndef CLP_CLP_FILETOCOMPRESS_HPP
+#define CLP_CLP_FILETOCOMPRESS_HPP
 
 #include <string>
 
-#include "../Defs.h"
+#include "../../Defs.h"
 
-namespace clp {
+namespace clp::clp {
 /**
  * Class to store data about a file to compress
  */
@@ -34,6 +34,6 @@ private:
     std::string m_path_for_compression;
     group_id_t m_group_id;
 };
-}  // namespace clp
+}  // namespace clp::clp
 
-#endif  // CLP_FILETOCOMPRESS_HPP
+#endif  // CLP_CLP_FILETOCOMPRESS_HPP
