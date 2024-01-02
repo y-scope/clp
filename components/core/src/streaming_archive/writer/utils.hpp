@@ -13,7 +13,7 @@ namespace streaming_archive::writer {
  * @param archive_user_config
  * @param archive_writer
  */
-void split_archive(Archive::UserConfig& archive_user_config, Archive& archive_writer);
+auto split_archive(Archive::UserConfig& archive_user_config, Archive& archive_writer) -> void;
 
 /**
  * Closes the current encoded file in the archive and starts a new one
@@ -22,12 +22,12 @@ void split_archive(Archive::UserConfig& archive_user_config, Archive& archive_wr
  * @param last_timestamp_pattern
  * @param archive_writer
  */
-void split_file(
+auto split_file(
         std::string const& path_for_compression,
         group_id_t group_id,
         TimestampPattern const* last_timestamp_pattern,
         Archive& archive_writer
-);
+) -> void;
 
 /**
  * Closes the archive and its current encoded file, then starts a new archive and encoded file
@@ -37,19 +37,19 @@ void split_file(
  * @param last_timestamp_pattern
  * @param archive_writer
  */
-void split_file_and_archive(
+auto split_file_and_archive(
         Archive::UserConfig& archive_user_config,
         std::string const& path_for_compression,
         group_id_t group_id,
         TimestampPattern const* last_timestamp_pattern,
         Archive& archive_writer
-);
+) -> void;
 
 /**
  * Closes the encoded file in the given archive and appends it to the segment
  * @param archive
  */
-void close_file_and_append_to_segment(Archive& archive);
+auto close_file_and_append_to_segment(Archive& archive) -> void;
 }  // namespace streaming_archive::writer
 
 #endif  // STREAMING_ARCHIVE_WRITER_UTILS_HPP

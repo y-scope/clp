@@ -11,19 +11,19 @@
 using std::string;
 
 namespace streaming_archive::writer {
-void split_archive(Archive::UserConfig& archive_user_config, Archive& archive_writer) {
+auto split_archive(Archive::UserConfig& archive_user_config, Archive& archive_writer) -> void {
     archive_writer.close();
     archive_user_config.id = boost::uuids::random_generator()();
     ++archive_user_config.creation_num;
     archive_writer.open(archive_user_config);
 }
 
-void split_file(
+auto split_file(
         string const& path_for_compression,
         group_id_t group_id,
         TimestampPattern const* last_timestamp_pattern,
         Archive& archive_writer
-) {
+) -> void {
     auto const& encoded_file = archive_writer.get_file();
     auto orig_file_id = encoded_file.get_orig_file_id();
     auto split_ix = encoded_file.get_split_ix();
@@ -35,13 +35,13 @@ void split_file(
     archive_writer.change_ts_pattern(last_timestamp_pattern);
 }
 
-void split_file_and_archive(
+auto split_file_and_archive(
         Archive::UserConfig& archive_user_config,
         string const& path_for_compression,
         group_id_t group_id,
         TimestampPattern const* last_timestamp_pattern,
         Archive& archive_writer
-) {
+) -> void {
     auto const& encoded_file = archive_writer.get_file();
     auto orig_file_id = encoded_file.get_orig_file_id();
     auto split_ix = encoded_file.get_split_ix();
@@ -55,7 +55,7 @@ void split_file_and_archive(
     archive_writer.change_ts_pattern(last_timestamp_pattern);
 }
 
-void close_file_and_append_to_segment(Archive& archive_writer) {
+auto close_file_and_append_to_segment(Archive& archive_writer) -> void {
     archive_writer.close_file();
     archive_writer.append_file_to_segment();
 }
