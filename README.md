@@ -4,8 +4,8 @@
 [![Open feature requests](https://img.shields.io/github/issues/y-scope/clp/enhancement?label=feature-requests)](https://github.com/y-scope/clp/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement)
 [![CLP on Zulip](https://img.shields.io/badge/zulip-yscope--clp%20chat-1888FA?logo=zulip)](https://yscope-clp.zulipchat.com/) 
 
-Compressed Log Processor (CLP) is a tool capable of losslessly compressing text logs and searching 
-the compressed logs without decompression. To learn more about it, you can read our 
+YScope's Compressed Log Processor (CLP) is a tool capable of losslessly compressing text logs and
+searching the compressed logs without decompression. To learn more about it, you can read our 
 [paper](https://www.usenix.org/system/files/osdi21-rodrigues.pdf).
 
 # Getting Started
