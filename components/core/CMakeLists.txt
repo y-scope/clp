@@ -75,15 +75,6 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif ()
 endif ()
 
-# Find and setup ANTLR Library
-# We build and link to the static library
-find_package(ANTLR REQUIRED)
-if (ANTLR_FOUND)
-	message(STATUS "Found ANTLR ${ANTLR_VERSION}")
-else()
-	message(FATAL_ERROR "Could not find libraries for ANTLR ${ANTLR4_TAG}")
-endif()
-
 # Find and setup Boost Library
 if(CLP_USE_STATIC_LIBS)
     set(Boost_USE_STATIC_LIBS ON)
@@ -344,12 +335,6 @@ target_compile_features(clp
         PRIVATE cxx_std_17
         )
 
-# Generate C++ KQL Parser
-# This needs to be done using add_subdirectory because ANTLR's C++ build
-# system can't handle having the grammar (.g4) in a different directory than the
-# CMakeLists.txt file.
-add_subdirectory(src/grammar/kql)
-
 set(SOURCE_FILES_clg
         src/BufferReader.cpp
         src/BufferReader.hpp
@@ -477,7 +462,6 @@ target_link_libraries(clg
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
-        KQL
         log_surgeon::log_surgeon
         MariaDBClient::MariaDBClient
         spdlog::spdlog
