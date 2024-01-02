@@ -10,11 +10,12 @@
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/ReaderParser.hpp>
 
-#include "../ffi/ir_stream/decoding_methods.hpp"
-#include "../ir/types.hpp"
-#include "../ir/utils.hpp"
-#include "../LogSurgeonReader.hpp"
-#include "../Profiler.hpp"
+#include "../../ffi/ir_stream/decoding_methods.hpp"
+#include "../../ir/types.hpp"
+#include "../../ir/utils.hpp"
+#include "../../LogSurgeonReader.hpp"
+#include "../../Profiler.hpp"
+#include "../../streaming_archive/writer/utils.hpp"
 #include "utils.hpp"
 
 using ir::eight_byte_encoded_variable_t;
@@ -29,6 +30,9 @@ using std::endl;
 using std::set;
 using std::string;
 using std::vector;
+using streaming_archive::writer::split_archive;
+using streaming_archive::writer::split_file;
+using streaming_archive::writer::split_file_and_archive;
 
 // Local prototypes
 /**
@@ -101,7 +105,7 @@ static void write_message_to_encoded_file(
     archive.write_msg(msg.get_ts(), msg.get_content(), msg.get_orig_num_bytes());
 }
 
-namespace clp {
+namespace clp::clp {
 bool FileCompressor::compress_file(
         size_t target_data_size_of_dicts,
         streaming_archive::writer::Archive::UserConfig& archive_user_config,
@@ -570,4 +574,4 @@ FileCompressor::compress_ir_stream_by_encoding<four_byte_encoded_variable_t>(
         streaming_archive::writer::Archive& archive,
         LogEventDeserializer<four_byte_encoded_variable_t>& log_event_deserializer
 );
-}  // namespace clp
+}  // namespace clp::clp

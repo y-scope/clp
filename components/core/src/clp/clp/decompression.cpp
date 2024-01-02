@@ -5,14 +5,14 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 
-#include "../ErrorCode.hpp"
-#include "../FileWriter.hpp"
-#include "../GlobalMySQLMetadataDB.hpp"
-#include "../GlobalSQLiteMetadataDB.hpp"
-#include "../spdlog_with_specializations.hpp"
-#include "../streaming_archive/reader/Archive.hpp"
-#include "../TraceableException.hpp"
-#include "../Utils.hpp"
+#include "../../ErrorCode.hpp"
+#include "../../FileWriter.hpp"
+#include "../../GlobalMySQLMetadataDB.hpp"
+#include "../../GlobalSQLiteMetadataDB.hpp"
+#include "../../spdlog_with_specializations.hpp"
+#include "../../streaming_archive/reader/Archive.hpp"
+#include "../../TraceableException.hpp"
+#include "../../Utils.hpp"
 #include "FileDecompressor.hpp"
 
 using std::cerr;
@@ -21,7 +21,7 @@ using std::string;
 using std::unique_ptr;
 using std::unordered_set;
 
-namespace clp {
+namespace clp::clp {
 bool decompress(
         CommandLineArguments& command_line_args,
         unordered_set<string> const& files_to_decompress
@@ -251,4 +251,4 @@ bool decompress(
 
     return true;
 }
-}  // namespace clp
+}  // namespace clp::clp

@@ -1,15 +1,15 @@
-#ifndef CLP_FILEDECOMPRESSOR_HPP
-#define CLP_FILEDECOMPRESSOR_HPP
+#ifndef CLP_CLP_FILEDECOMPRESSOR_HPP
+#define CLP_CLP_FILEDECOMPRESSOR_HPP
 
 #include <string>
 
-#include "../FileWriter.hpp"
-#include "../streaming_archive/MetadataDB.hpp"
-#include "../streaming_archive/reader/Archive.hpp"
-#include "../streaming_archive/reader/File.hpp"
-#include "../streaming_archive/reader/Message.hpp"
+#include "../../FileWriter.hpp"
+#include "../../streaming_archive/MetadataDB.hpp"
+#include "../../streaming_archive/reader/Archive.hpp"
+#include "../../streaming_archive/reader/File.hpp"
+#include "../../streaming_archive/reader/Message.hpp"
 
-namespace clp {
+namespace clp::clp {
 /**
  * Class to hold the data structures that are used to decompress files rather than recreating them
  * within the decompression function or passing them as parameters.
@@ -31,6 +31,6 @@ private:
     streaming_archive::reader::Message m_encoded_message;
     std::string m_decompressed_message;
 };
-};  // namespace clp
+};  // namespace clp::clp
 
-#endif  // CLP_FILEDECOMPRESSOR_HPP
+#endif  // CLP_CLP_FILEDECOMPRESSOR_HPP

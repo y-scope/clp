@@ -161,179 +161,7 @@ set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
 include(cmake/Modules/FindLibraryDependencies.cmake)
 FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 
-set(SOURCE_FILES_clp
-        src/ArrayBackedPosIntSet.hpp
-        src/BufferedFileReader.cpp
-        src/BufferedFileReader.hpp
-        src/BufferReader.cpp
-        src/BufferReader.hpp
-        src/clp/clp.cpp
-        src/clp/CommandLineArguments.cpp
-        src/clp/CommandLineArguments.hpp
-        src/clp/compression.cpp
-        src/clp/compression.hpp
-        src/clp/decompression.cpp
-        src/clp/decompression.hpp
-        src/clp/FileCompressor.cpp
-        src/clp/FileCompressor.hpp
-        src/clp/FileDecompressor.cpp
-        src/clp/FileDecompressor.hpp
-        src/clp/FileToCompress.hpp
-        src/clp/run.cpp
-        src/clp/run.hpp
-        src/clp/utils.cpp
-        src/clp/utils.hpp
-        src/database_utils.cpp
-        src/database_utils.hpp
-        src/Defs.h
-        src/dictionary_utils.cpp
-        src/dictionary_utils.hpp
-        src/DictionaryEntry.hpp
-        src/DictionaryReader.hpp
-        src/DictionaryWriter.hpp
-        src/EncodedVariableInterpreter.cpp
-        src/EncodedVariableInterpreter.hpp
-        src/ErrorCode.hpp
-        src/ffi/encoding_methods.cpp
-        src/ffi/encoding_methods.hpp
-        src/ffi/encoding_methods.inc
-        src/ffi/ir_stream/byteswap.hpp
-        src/ffi/ir_stream/decoding_methods.cpp
-        src/ffi/ir_stream/decoding_methods.hpp
-        src/ffi/ir_stream/decoding_methods.inc
-        src/ffi/ir_stream/encoding_methods.cpp
-        src/ffi/ir_stream/encoding_methods.hpp
-        src/FileReader.cpp
-        src/FileReader.hpp
-        src/FileWriter.cpp
-        src/FileWriter.hpp
-        src/GlobalMetadataDB.hpp
-        src/GlobalMetadataDBConfig.cpp
-        src/GlobalMetadataDBConfig.hpp
-        src/GlobalMySQLMetadataDB.cpp
-        src/GlobalMySQLMetadataDB.hpp
-        src/GlobalSQLiteMetadataDB.cpp
-        src/GlobalSQLiteMetadataDB.hpp
-        src/ir/LogEvent.hpp
-        src/ir/LogEventDeserializer.cpp
-        src/ir/LogEventDeserializer.hpp
-        src/ir/parsing.cpp
-        src/ir/parsing.hpp
-        src/ir/parsing.inc
-        src/ir/types.hpp
-        src/ir/utils.cpp
-        src/ir/utils.hpp
-        src/LibarchiveFileReader.cpp
-        src/LibarchiveFileReader.hpp
-        src/LibarchiveReader.cpp
-        src/LibarchiveReader.hpp
-        src/LogSurgeonReader.cpp
-        src/LogSurgeonReader.hpp
-        src/LogTypeDictionaryEntry.cpp
-        src/LogTypeDictionaryEntry.hpp
-        src/LogTypeDictionaryReader.hpp
-        src/LogTypeDictionaryWriter.cpp
-        src/LogTypeDictionaryWriter.hpp
-        src/math_utils.hpp
-        src/MessageParser.cpp
-        src/MessageParser.hpp
-        src/MySQLDB.cpp
-        src/MySQLDB.hpp
-        src/MySQLParamBindings.cpp
-        src/MySQLParamBindings.hpp
-        src/MySQLPreparedStatement.cpp
-        src/MySQLPreparedStatement.hpp
-        src/PageAllocatedVector.hpp
-        src/ParsedMessage.cpp
-        src/ParsedMessage.hpp
-        src/Platform.hpp
-        src/Profiler.cpp
-        src/Profiler.hpp
-        src/Query.cpp
-        src/Query.hpp
-        src/ReaderInterface.cpp
-        src/ReaderInterface.hpp
-        src/spdlog_with_specializations.hpp
-        src/SQLiteDB.cpp
-        src/SQLiteDB.hpp
-        src/SQLitePreparedStatement.cpp
-        src/SQLitePreparedStatement.hpp
-        src/Stopwatch.cpp
-        src/Stopwatch.hpp
-        src/streaming_archive/ArchiveMetadata.cpp
-        src/streaming_archive/ArchiveMetadata.hpp
-        src/streaming_archive/Constants.hpp
-        src/streaming_archive/MetadataDB.cpp
-        src/streaming_archive/MetadataDB.hpp
-        src/streaming_archive/reader/Archive.cpp
-        src/streaming_archive/reader/Archive.hpp
-        src/streaming_archive/reader/File.cpp
-        src/streaming_archive/reader/File.hpp
-        src/streaming_archive/reader/Message.cpp
-        src/streaming_archive/reader/Message.hpp
-        src/streaming_archive/reader/Segment.cpp
-        src/streaming_archive/reader/Segment.hpp
-        src/streaming_archive/reader/SegmentManager.cpp
-        src/streaming_archive/reader/SegmentManager.hpp
-        src/streaming_archive/writer/Archive.cpp
-        src/streaming_archive/writer/Archive.hpp
-        src/streaming_archive/writer/File.cpp
-        src/streaming_archive/writer/File.hpp
-        src/streaming_archive/writer/Segment.cpp
-        src/streaming_archive/writer/Segment.hpp
-        src/streaming_compression/Compressor.hpp
-        src/streaming_compression/Constants.hpp
-        src/streaming_compression/Decompressor.hpp
-        src/streaming_compression/passthrough/Compressor.cpp
-        src/streaming_compression/passthrough/Compressor.hpp
-        src/streaming_compression/passthrough/Decompressor.cpp
-        src/streaming_compression/passthrough/Decompressor.hpp
-        src/streaming_compression/zstd/Compressor.cpp
-        src/streaming_compression/zstd/Compressor.hpp
-        src/streaming_compression/zstd/Constants.hpp
-        src/streaming_compression/zstd/Decompressor.cpp
-        src/streaming_compression/zstd/Decompressor.hpp
-        src/StringReader.cpp
-        src/StringReader.hpp
-        src/TimestampPattern.cpp
-        src/TimestampPattern.hpp
-        src/TraceableException.hpp
-        src/type_utils.hpp
-        src/Utils.cpp
-        src/Utils.hpp
-        src/VariableDictionaryEntry.cpp
-        src/VariableDictionaryEntry.hpp
-        src/VariableDictionaryReader.hpp
-        src/VariableDictionaryWriter.cpp
-        src/VariableDictionaryWriter.hpp
-        src/version.hpp
-        src/WriterInterface.cpp
-        src/WriterInterface.hpp
-        submodules/sqlite3/sqlite3.c
-        submodules/sqlite3/sqlite3.h
-        )
-add_executable(clp ${SOURCE_FILES_clp})
-target_include_directories(clp
-        PRIVATE
-        ${CMAKE_SOURCE_DIR}/submodules
-        )
-target_link_libraries(clp
-        PRIVATE
-        Boost::filesystem Boost::iostreams Boost::program_options
-        fmt::fmt
-        log_surgeon::log_surgeon
-        spdlog::spdlog
-        ${sqlite_LIBRARY_DEPENDENCIES}
-        LibArchive::LibArchive
-        MariaDBClient::MariaDBClient
-        ${STD_FS_LIBS}
-        string_utils::string_utils
-        yaml-cpp::yaml-cpp
-        ZStd::ZStd
-        )
-target_compile_features(clp
-        PRIVATE cxx_std_17
-        )
+add_subdirectory(src/clp/clp)
 
 set(SOURCE_FILES_clg
         src/BufferReader.cpp
@@ -613,21 +441,21 @@ set(SOURCE_FILES_unitTest
         src/BufferedFileReader.hpp
         src/BufferReader.cpp
         src/BufferReader.hpp
-        src/clp/CommandLineArguments.cpp
-        src/clp/CommandLineArguments.hpp
-        src/clp/compression.cpp
-        src/clp/compression.hpp
-        src/clp/decompression.cpp
-        src/clp/decompression.hpp
-        src/clp/FileCompressor.cpp
-        src/clp/FileCompressor.hpp
-        src/clp/FileDecompressor.cpp
-        src/clp/FileDecompressor.hpp
-        src/clp/FileToCompress.hpp
-        src/clp/run.cpp
-        src/clp/run.hpp
-        src/clp/utils.cpp
-        src/clp/utils.hpp
+        src/clp/clp/CommandLineArguments.cpp
+        src/clp/clp/CommandLineArguments.hpp
+        src/clp/clp/compression.cpp
+        src/clp/clp/compression.hpp
+        src/clp/clp/decompression.cpp
+        src/clp/clp/decompression.hpp
+        src/clp/clp/FileCompressor.cpp
+        src/clp/clp/FileCompressor.hpp
+        src/clp/clp/FileDecompressor.cpp
+        src/clp/clp/FileDecompressor.hpp
+        src/clp/clp/FileToCompress.hpp
+        src/clp/clp/run.cpp
+        src/clp/clp/run.hpp
+        src/clp/clp/utils.cpp
+        src/clp/clp/utils.hpp
         src/database_utils.cpp
         src/database_utils.hpp
         src/Defs.h
@@ -743,6 +571,8 @@ set(SOURCE_FILES_unitTest
         src/streaming_archive/writer/File.hpp
         src/streaming_archive/writer/Segment.cpp
         src/streaming_archive/writer/Segment.hpp
+        src/streaming_archive/writer/utils.cpp
+        src/streaming_archive/writer/utils.hpp
         src/streaming_compression/Compressor.hpp
         src/streaming_compression/Constants.hpp
         src/streaming_compression/Decompressor.hpp

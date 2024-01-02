@@ -3,11 +3,11 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 
-#include "../spdlog_with_specializations.hpp"
+#include "../../spdlog_with_specializations.hpp"
 
 using std::string;
 
-namespace clp {
+namespace clp::clp {
 bool FileDecompressor::decompress_file(
         streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
         string const& output_dir,
@@ -76,4 +76,4 @@ bool FileDecompressor::decompress_file(
 
     return true;
 }
-}  // namespace clp
+}  // namespace clp::clp

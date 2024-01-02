@@ -6,11 +6,12 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/uuid/random_generator.hpp>
 
-#include "../GlobalMySQLMetadataDB.hpp"
-#include "../GlobalSQLiteMetadataDB.hpp"
-#include "../spdlog_with_specializations.hpp"
-#include "../streaming_archive/writer/Archive.hpp"
-#include "../Utils.hpp"
+#include "../../GlobalMySQLMetadataDB.hpp"
+#include "../../GlobalSQLiteMetadataDB.hpp"
+#include "../../spdlog_with_specializations.hpp"
+#include "../../streaming_archive/writer/Archive.hpp"
+#include "../../streaming_archive/writer/utils.hpp"
+#include "../../Utils.hpp"
 #include "FileCompressor.hpp"
 #include "utils.hpp"
 
@@ -20,8 +21,9 @@ using std::endl;
 using std::out_of_range;
 using std::string;
 using std::vector;
+using streaming_archive::writer::split_archive;
 
-namespace clp {
+namespace clp::clp {
 // Local prototypes
 /**
  * Comparator to sort files based on their group ID
@@ -300,4 +302,4 @@ bool read_and_validate_grouped_file_list(
 
     return all_paths_valid;
 }
-}  // namespace clp
+}  // namespace clp::clp

@@ -10,7 +10,7 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <log_surgeon/LogParser.hpp>
 
-#include "../src/clp/run.hpp"
+#include "../src/clp/clp/run.hpp"
 #include "../src/GlobalMySQLMetadataDB.hpp"
 #include "../src/LogSurgeonReader.hpp"
 #include "../src/Utils.hpp"
@@ -62,7 +62,7 @@ void compress(
         argv.push_back((char*)arg.data());
     }
     argv.push_back(nullptr);
-    clp::run(argv.size() - 1, (char const**)argv.data());
+    clp::clp::run(argv.size() - 1, (char const**)argv.data());
 }
 
 void decompress(std::string archive_dir, std::string output_dir) {
@@ -74,7 +74,7 @@ void decompress(std::string archive_dir, std::string output_dir) {
     }
     argv.push_back(nullptr);
     std::string archive_path;
-    clp::run(argv.size() - 1, (char const**)argv.data());
+    clp::clp::run(argv.size() - 1, (char const**)argv.data());
 }
 
 TEST_CASE("Test error for missing schema file", "[LALR1Parser][SchemaParser]") {

@@ -1,5 +1,5 @@
-#ifndef CLP_FILECOMPRESSOR_HPP
-#define CLP_FILECOMPRESSOR_HPP
+#ifndef CLP_CLP_FILECOMPRESSOR_HPP
+#define CLP_CLP_FILECOMPRESSOR_HPP
 
 #include <system_error>
 
@@ -7,16 +7,16 @@
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/ReaderParser.hpp>
 
-#include "../BufferedFileReader.hpp"
-#include "../ir/LogEventDeserializer.hpp"
-#include "../LibarchiveFileReader.hpp"
-#include "../LibarchiveReader.hpp"
-#include "../MessageParser.hpp"
-#include "../ParsedMessage.hpp"
-#include "../streaming_archive/writer/Archive.hpp"
+#include "../../BufferedFileReader.hpp"
+#include "../../ir/LogEventDeserializer.hpp"
+#include "../../LibarchiveFileReader.hpp"
+#include "../../LibarchiveReader.hpp"
+#include "../../MessageParser.hpp"
+#include "../../ParsedMessage.hpp"
+#include "../../streaming_archive/writer/Archive.hpp"
 #include "FileToCompress.hpp"
 
-namespace clp {
+namespace clp::clp {
 /**
  * Class to parse and compress a file into a streaming archive
  */
@@ -154,6 +154,6 @@ private:
     ParsedMessage m_parsed_message;
     std::unique_ptr<log_surgeon::ReaderParser> m_reader_parser;
 };
-}  // namespace clp
+}  // namespace clp::clp
 
-#endif  // CLP_FILECOMPRESSOR_HPP
+#endif  // CLP_CLP_FILECOMPRESSOR_HPP

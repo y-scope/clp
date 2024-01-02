@@ -1,15 +1,13 @@
-#ifndef CLP_UTILS_HPP
-#define CLP_UTILS_HPP
+#ifndef CLP_CLP_UTILS_HPP
+#define CLP_CLP_UTILS_HPP
 
 #include <string>
 
 #include <boost/filesystem/path.hpp>
 
-#include "../streaming_archive/writer/Archive.hpp"
-#include "../streaming_archive/writer/File.hpp"
 #include "FileToCompress.hpp"
 
-namespace clp {
+namespace clp::clp {
 /**
  * Recursively finds all files and empty directories at the given path
  * @param path_prefix_to_remove
@@ -63,52 +61,6 @@ bool remove_prefix_and_clean_up_path(
  * @return true if they all exist, false otherwise
  */
 bool validate_paths_exist(std::vector<std::string> const& paths);
+}  // namespace clp::clp
 
-/**
- * Closes the encoded file in the given archive and appends it to the segment
- * @param archive
- */
-void close_file_and_append_to_segment(streaming_archive::writer::Archive& archive);
-
-/**
- * Closes the current archive and starts a new one
- * @param archive_user_config
- * @param archive_writer
- */
-void split_archive(
-        streaming_archive::writer::Archive::UserConfig& archive_user_config,
-        streaming_archive::writer::Archive& archive_writer
-);
-
-/**
- * Closes the current encoded file in the archive and starts a new one
- * @param path_for_compression
- * @param group_id
- * @param last_timestamp_pattern
- * @param archive_writer
- */
-void split_file(
-        std::string const& path_for_compression,
-        group_id_t group_id,
-        TimestampPattern const* last_timestamp_pattern,
-        streaming_archive::writer::Archive& archive_writer
-);
-
-/**
- * Closes the archive and its current encoded file, then starts a new archive and encoded file
- * @param archive_user_config
- * @param path_for_compression
- * @param group_id
- * @param last_timestamp_pattern
- * @param archive_writer
- */
-void split_file_and_archive(
-        streaming_archive::writer::Archive::UserConfig& archive_user_config,
-        std::string const& path_for_compression,
-        group_id_t group_id,
-        TimestampPattern const* last_timestamp_pattern,
-        streaming_archive::writer::Archive& archive_writer
-);
-}  // namespace clp
-
-#endif  // CLP_UTILS_HPP
+#endif  // CLP_CLP_UTILS_HPP
