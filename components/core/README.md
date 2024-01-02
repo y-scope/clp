@@ -36,7 +36,6 @@ tools/scripts/deps-download/download-all.sh
 ```
 
 This will download:
-* [ANTLR v4](https://www.antlr.org/download.html) (v4.11.1)
 * [Catch2](https://github.com/catchorg/Catch2.git) (v2.13.7)
 * [date](https://github.com/HowardHinnant/date.git) (v3.0.1)
 * [json](https://github.com/nlohmann/json.git) (v3.10.4)

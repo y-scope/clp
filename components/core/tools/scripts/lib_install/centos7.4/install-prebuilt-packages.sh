@@ -3,7 +3,6 @@
 yum install -y \
   bzip2 \
   centos-release-scl \
-  java-11-openjdk \
   make \
   openssl-devel \
   openssl-static \
