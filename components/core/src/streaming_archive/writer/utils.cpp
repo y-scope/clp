@@ -1,8 +1,8 @@
 #include "utils.hpp"
 
-#include <boost/uuid/random_generator.hpp>
-
 #include <string>
+
+#include <boost/uuid/random_generator.hpp>
 
 #include "../../Defs.h"
 #include "../../TimestampPattern.hpp"
