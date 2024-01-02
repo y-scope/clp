@@ -7,8 +7,7 @@
 #include "../src/streaming_archive/writer/Segment.hpp"
 #include "../src/Utils.hpp"
 
-using namespace std;
-using namespace streaming_archive;
+using std::string;
 
 TEST_CASE("Test writing and reading a segment", "[Segment]") {
     ErrorCode error_code;
@@ -29,7 +28,7 @@ TEST_CASE("Test writing and reading a segment", "[Segment]") {
     REQUIRE(ErrorCode_Success == error_code);
 
     // Test segment writing
-    writer::Segment writer_segment;
+    streaming_archive::writer::Segment writer_segment;
 
     writer_segment.open(segments_dir_path, 0, 0);
     auto segment_id = writer_segment.get_id();
@@ -40,7 +39,7 @@ TEST_CASE("Test writing and reading a segment", "[Segment]") {
     writer_segment.close();
 
     // Test reading
-    reader::Segment reader_segment;
+    streaming_archive::reader::Segment reader_segment;
 
     error_code = reader_segment.try_open(segments_dir_path, segment_id);
     REQUIRE(ErrorCode_Success == error_code);

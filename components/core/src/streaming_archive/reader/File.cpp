@@ -8,7 +8,7 @@
 #include "../Constants.hpp"
 #include "SegmentManager.hpp"
 
-using namespace std;
+using std::string;
 
 namespace streaming_archive::reader {
 epochtime_t File::get_begin_ts() const {
@@ -87,8 +87,8 @@ ErrorCode File::open_me(
     if (m_num_messages > 0) {
         if (m_num_messages > m_num_segment_msgs) {
             // Buffers too small, so increase size to required amount
-            m_segment_timestamps = make_unique<epochtime_t[]>(m_num_messages);
-            m_segment_logtypes = make_unique<logtype_dictionary_id_t[]>(m_num_messages);
+            m_segment_timestamps = std::make_unique<epochtime_t[]>(m_num_messages);
+            m_segment_logtypes = std::make_unique<logtype_dictionary_id_t[]>(m_num_messages);
             m_num_segment_msgs = m_num_messages;
         }
 
@@ -122,7 +122,7 @@ ErrorCode File::open_me(
     if (m_num_variables > 0) {
         if (m_num_variables > m_num_segment_vars) {
             // Buffer too small, so increase size to required amount
-            m_segment_variables = make_unique<encoded_variable_t[]>(m_num_variables);
+            m_segment_variables = std::make_unique<encoded_variable_t[]>(m_num_variables);
             m_num_segment_vars = m_num_variables;
         }
         num_bytes_to_read = m_num_variables * sizeof(encoded_variable_t);
@@ -182,7 +182,7 @@ string const& File::get_orig_path() const {
     return m_orig_path;
 }
 
-vector<pair<uint64_t, TimestampPattern>> const& File::get_timestamp_patterns() const {
+std::vector<std::pair<uint64_t, TimestampPattern>> const& File::get_timestamp_patterns() const {
     return m_timestamp_patterns;
 }
 

@@ -5,6 +5,8 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <string_utils/string_utils.hpp>
 
+using std::chrono::duration;
+using std::chrono::high_resolution_clock;
 using std::cout;
 using std::endl;
 using std::string;
@@ -453,7 +455,6 @@ SCENARIO("Test wild card performance", "[wildcard performance]") {
     // This test is to ensure there is no performance regression
     // We use our current implementation vs the next best implementation as a reference
     // If performance becomes slower than our next best implementation, then it is considered a fail
-    using namespace std::chrono;
 
     high_resolution_clock::time_point t1, t2;
     string tameStr, wildStr;
