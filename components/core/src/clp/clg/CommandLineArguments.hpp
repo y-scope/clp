@@ -1,16 +1,16 @@
-#ifndef CLG_COMMANDLINEARGUMENTS_HPP
-#define CLG_COMMANDLINEARGUMENTS_HPP
+#ifndef CLP_CLG_COMMANDLINEARGUMENTS_HPP
+#define CLP_CLG_COMMANDLINEARGUMENTS_HPP
 
 #include <string>
 #include <vector>
 
 #include <boost/asio.hpp>
 
-#include "../CommandLineArgumentsBase.hpp"
-#include "../Defs.h"
-#include "../GlobalMetadataDBConfig.hpp"
+#include "../../CommandLineArgumentsBase.hpp"
+#include "../../Defs.h"
+#include "../../GlobalMetadataDBConfig.hpp"
 
-namespace clg {
+namespace clp::clg {
 class CommandLineArguments : public CommandLineArgumentsBase {
 public:
     // Types
@@ -62,6 +62,6 @@ private:
     epochtime_t m_search_begin_ts, m_search_end_ts;
     GlobalMetadataDBConfig m_metadata_db_config;
 };
-}  // namespace clg
+}  // namespace clp::clg
 
-#endif  // CLG_COMMANDLINEARGUMENTS_HPP
+#endif  // CLP_CLG_COMMANDLINEARGUMENTS_HPP
