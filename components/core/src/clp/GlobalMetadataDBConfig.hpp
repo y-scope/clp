@@ -1,8 +1,9 @@
-#ifndef GLOBALMETADATADBCONFIG_HPP
-#define GLOBALMETADATADBCONFIG_HPP
+#ifndef CLP_GLOBALMETADATADBCONFIG_HPP
+#define CLP_GLOBALMETADATADBCONFIG_HPP
 
 #include <string>
 
+namespace clp {
 /**
  * Class encapsulating the global metadata database's configuration details
  */
@@ -50,5 +51,6 @@ private:
 
     std::string m_metadata_table_prefix;
 };
+}  // namespace clp
 
-#endif  // GLOBALMETADATADBCONFIG_HPP
+#endif  // CLP_GLOBALMETADATADBCONFIG_HPP

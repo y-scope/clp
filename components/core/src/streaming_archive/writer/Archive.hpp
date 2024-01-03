@@ -15,8 +15,8 @@
 #include <log_surgeon/ReaderParser.hpp>
 
 #include "../../ArrayBackedPosIntSet.hpp"
+#include "../../clp/GlobalMetadataDB.hpp"
 #include "../../ErrorCode.hpp"
-#include "../../GlobalMetadataDB.hpp"
 #include "../../ir/LogEvent.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
@@ -46,7 +46,7 @@ namespace streaming_archive { namespace writer {
             size_t target_segment_uncompressed_size;
             int compression_level;
             std::string output_dir;
-            GlobalMetadataDB* global_metadata_db;
+            clp::GlobalMetadataDB* global_metadata_db;
             bool print_archive_stats_progress;
         };
 
@@ -338,7 +338,7 @@ namespace streaming_archive { namespace writer {
         std::optional<ArchiveMetadata> m_local_metadata;
         FileWriter m_metadata_file_writer;
 
-        GlobalMetadataDB* m_global_metadata_db;
+        clp::GlobalMetadataDB* m_global_metadata_db;
 
         bool m_print_archive_stats_progress;
     };

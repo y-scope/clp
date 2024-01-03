@@ -2,9 +2,9 @@
 
 #include <fmt/core.h>
 
-#include "database_utils.hpp"
-#include "streaming_archive/Constants.hpp"
-#include "type_utils.hpp"
+#include "../database_utils.hpp"
+#include "../streaming_archive/Constants.hpp"
+#include "../type_utils.hpp"
 
 using std::pair;
 using std::string;
@@ -40,6 +40,7 @@ enum class FilesTableFieldIndexes : uint16_t {
     Length,
 };
 
+namespace clp {
 void GlobalMySQLMetadataDB::ArchiveIterator::get_id(string& id) const {
     m_db_iterator->get_field_as_string(enum_to_underlying_type(ArchivesTableFieldIndexes::Id), id);
 }
@@ -439,3 +440,4 @@ GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator_f
 
     return new ArchiveIterator(m_db.get_iterator());
 }
+}  // namespace clp

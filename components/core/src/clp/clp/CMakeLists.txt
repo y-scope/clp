@@ -1,5 +1,12 @@
 set(
         CLP_SOURCES
+        ../GlobalMetadataDB.hpp
+        ../GlobalMetadataDBConfig.cpp
+        ../GlobalMetadataDBConfig.hpp
+        ../GlobalMySQLMetadataDB.cpp
+        ../GlobalMySQLMetadataDB.hpp
+        ../GlobalSQLiteMetadataDB.cpp
+        ../GlobalSQLiteMetadataDB.hpp
         "${PROJECT_SOURCE_DIR}/src/ArrayBackedPosIntSet.hpp"
         "${PROJECT_SOURCE_DIR}/src/BufferedFileReader.cpp"
         "${PROJECT_SOURCE_DIR}/src/BufferedFileReader.hpp"
@@ -29,13 +36,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/FileReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/FileWriter.cpp"
         "${PROJECT_SOURCE_DIR}/src/FileWriter.hpp"
-        "${PROJECT_SOURCE_DIR}/src/GlobalMetadataDB.hpp"
-        "${PROJECT_SOURCE_DIR}/src/GlobalMetadataDBConfig.cpp"
-        "${PROJECT_SOURCE_DIR}/src/GlobalMetadataDBConfig.hpp"
-        "${PROJECT_SOURCE_DIR}/src/GlobalMySQLMetadataDB.cpp"
-        "${PROJECT_SOURCE_DIR}/src/GlobalMySQLMetadataDB.hpp"
-        "${PROJECT_SOURCE_DIR}/src/GlobalSQLiteMetadataDB.cpp"
-        "${PROJECT_SOURCE_DIR}/src/GlobalSQLiteMetadataDB.hpp"
         "${PROJECT_SOURCE_DIR}/src/ir/LogEvent.hpp"
         "${PROJECT_SOURCE_DIR}/src/ir/LogEventDeserializer.cpp"
         "${PROJECT_SOURCE_DIR}/src/ir/LogEventDeserializer.hpp"

@@ -5,10 +5,10 @@
 
 #include <fmt/core.h>
 
-#include "database_utils.hpp"
-#include "spdlog_with_specializations.hpp"
-#include "streaming_archive/Constants.hpp"
-#include "type_utils.hpp"
+#include "../database_utils.hpp"
+#include "../spdlog_with_specializations.hpp"
+#include "../streaming_archive/Constants.hpp"
+#include "../type_utils.hpp"
 
 // Types
 enum class ArchivesTableFieldIndexes : uint16_t {
@@ -174,6 +174,7 @@ get_archives_for_file_select_statement(SQLiteDB& db, string const& file_path) {
     return statement;
 }
 
+namespace clp {
 GlobalSQLiteMetadataDB::ArchiveIterator::ArchiveIterator(SQLiteDB& db)
         : m_statement(get_archives_select_statement(db)) {
     m_statement.step();
@@ -529,3 +530,4 @@ void GlobalSQLiteMetadataDB::update_metadata_for_files(
     m_upsert_files_transaction_begin_statement->reset();
     m_upsert_files_transaction_end_statement->reset();
 }
+}  // namespace clp

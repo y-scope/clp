@@ -186,6 +186,13 @@ set(SOURCE_FILES_unitTest
         src/clp/clp/run.hpp
         src/clp/clp/utils.cpp
         src/clp/clp/utils.hpp
+        src/clp/GlobalMetadataDB.hpp
+        src/clp/GlobalMetadataDBConfig.cpp
+        src/clp/GlobalMetadataDBConfig.hpp
+        src/clp/GlobalMySQLMetadataDB.cpp
+        src/clp/GlobalMySQLMetadataDB.hpp
+        src/clp/GlobalSQLiteMetadataDB.cpp
+        src/clp/GlobalSQLiteMetadataDB.hpp
         src/database_utils.cpp
         src/database_utils.hpp
         src/Defs.h
@@ -225,13 +232,6 @@ set(SOURCE_FILES_unitTest
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
-        src/GlobalMetadataDB.hpp
-        src/GlobalMetadataDBConfig.cpp
-        src/GlobalMetadataDBConfig.hpp
-        src/GlobalMySQLMetadataDB.cpp
-        src/GlobalMySQLMetadataDB.hpp
-        src/GlobalSQLiteMetadataDB.cpp
-        src/GlobalSQLiteMetadataDB.hpp
         src/Grep.cpp
         src/Grep.hpp
         src/ir/LogEvent.hpp

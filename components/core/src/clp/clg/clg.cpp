@@ -7,16 +7,18 @@
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include "../../Defs.h"
-#include "../../GlobalMySQLMetadataDB.hpp"
-#include "../../GlobalSQLiteMetadataDB.hpp"
 #include "../../Grep.hpp"
 #include "../../Profiler.hpp"
 #include "../../spdlog_with_specializations.hpp"
 #include "../../streaming_archive/Constants.hpp"
 #include "../../Utils.hpp"
+#include "../GlobalMySQLMetadataDB.hpp"
+#include "../GlobalSQLiteMetadataDB.hpp"
 #include "CommandLineArguments.hpp"
 
 using clp::clg::CommandLineArguments;
+using clp::GlobalMetadataDB;
+using clp::GlobalMetadataDBConfig;
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -511,11 +513,12 @@ int main(int argc, char const* argv[]) {
         case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
             auto global_metadata_db_path = archives_dir / streaming_archive::cMetadataDBFileName;
             global_metadata_db
-                    = std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
+                    = std::make_unique<clp::GlobalSQLiteMetadataDB>(global_metadata_db_path.string()
+                    );
             break;
         }
         case GlobalMetadataDBConfig::MetadataDBType::MySQL:
-            global_metadata_db = std::make_unique<GlobalMySQLMetadataDB>(
+            global_metadata_db = std::make_unique<clp::GlobalMySQLMetadataDB>(
                     global_metadata_db_config.get_metadata_db_host(),
                     global_metadata_db_config.get_metadata_db_port(),
                     global_metadata_db_config.get_metadata_db_username(),
