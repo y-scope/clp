@@ -1,10 +1,10 @@
-#ifndef NETWORKING_SOCKETOPERATIONFAILED_HPP
-#define NETWORKING_SOCKETOPERATIONFAILED_HPP
+#ifndef CLP_NETWORKING_SOCKETOPERATIONFAILED_HPP
+#define CLP_NETWORKING_SOCKETOPERATIONFAILED_HPP
 
-#include "../ErrorCode.hpp"
-#include "../TraceableException.hpp"
+#include "../../ErrorCode.hpp"
+#include "../../TraceableException.hpp"
 
-namespace networking {
+namespace clp::networking {
 class SocketOperationFailed : public TraceableException {
 public:
     // Constructors
@@ -14,6 +14,6 @@ public:
     // Methods
     [[nodiscard]] char const* what() const noexcept override { return "Socket operation failed"; }
 };
-}  // namespace networking
+}  // namespace clp::networking
 
-#endif  // NETWORKING_SOCKETOPERATIONFAILED_HPP
+#endif  // CLP_NETWORKING_SOCKETOPERATIONFAILED_HPP
