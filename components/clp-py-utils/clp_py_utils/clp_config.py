@@ -93,6 +93,17 @@ class Scheduler(BaseModel):
     jobs_poll_delay: int = 1  # seconds
 
 
+class ResultsCache(BaseModel):
+    host: str = 'localhost'
+    port: int = 27017
+
+    @validator('host')
+    def validate_host(cls, field):
+        if '' == field:
+            raise ValueError(f'{RESULTS_CACHE_COMPONENT_NAME}.host cannot be empty.')
+        return field
+
+
 class Queue(BaseModel):
     host: str = 'localhost'
     port: int = 5672
@@ -148,8 +159,9 @@ class CLPConfig(BaseModel):
     input_logs_directory: pathlib.Path = pathlib.Path('/')
 
     database: Database = Database()
-    scheduler: Scheduler = Scheduler()
     queue: Queue = Queue()
+    results_cache: ResultsCache = ResultsCache()
+    scheduler: Scheduler = Scheduler()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()

@@ -16,6 +16,7 @@ from clp_package_utils.general import (
     CONTAINER_CLP_HOME,
     DB_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
+    RESULTS_CACHE_COMPONENT_NAME,
     SCHEDULER_COMPONENT_NAME,
     WORKER_COMPONENT_NAME,
     check_dependencies,
@@ -30,6 +31,7 @@ from clp_package_utils.general import (
     validate_and_load_queue_credentials_file,
     validate_db_config,
     validate_queue_config,
+    validate_results_cache_config,
     validate_worker_config
 )
 from clp_py_utils.clp_config import CLPConfig
@@ -78,16 +80,16 @@ def wait_for_database_to_init(container_name: str, clp_config: CLPConfig, timeou
                 break
             time.sleep(1)
 
-    logger.error("Timeout while waiting for database to initialize.")
+    logger.error(f"Timeout while waiting for {DB_COMPONENT_NAME} to initialize.")
     return False
 
 
 def start_db(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
-    logger.info("Starting database...")
+    logger.info(f"Starting {DB_COMPONENT_NAME}...")
 
     container_name = f'clp-{DB_COMPONENT_NAME}-{instance_id}'
     if container_exists(container_name):
-        logger.info("Database already running.")
+        logger.info(f"{DB_COMPONENT_NAME} already running.")
         return
 
     db_data_dir = clp_config.data_directory / DB_COMPONENT_NAME
@@ -128,15 +130,15 @@ def start_db(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     if not wait_for_database_to_init(container_name, clp_config, 30):
-        raise EnvironmentError("Database did not initialize in time")
+        raise EnvironmentError(f"{DB_COMPONENT_NAME} did not initialize in time")
 
-    logger.info("Started database.")
+    logger.info(f"Started {DB_COMPONENT_NAME}.")
 
 
 def create_db_tables(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig, mounts: CLPDockerMounts):
-    logger.info("Creating database tables...")
+    logger.info(f"Creating {DB_COMPONENT_NAME} tables...")
 
-    container_name = f'clp-db-table-creator-{instance_id}'
+    container_name = f'clp-{DB_COMPONENT_NAME}-table-creator-{instance_id}'
 
     # Create database config file
     db_config_filename = f'{container_name}.yml'
@@ -175,15 +177,15 @@ def create_db_tables(instance_id: str, clp_config: CLPConfig, container_clp_conf
 
     db_config_file_path.unlink()
 
-    logger.info("Created database tables.")
+    logger.info(f"Created {DB_COMPONENT_NAME} tables.")
 
 
 def start_queue(instance_id: str, clp_config: CLPConfig):
-    logger.info("Starting queue...")
+    logger.info(f"Starting {QUEUE_COMPONENT_NAME}...")
 
     container_name = f'clp-{QUEUE_COMPONENT_NAME}-{instance_id}'
     if container_exists(container_name):
-        logger.info("Queue already running.")
+        logger.info(f"{QUEUE_COMPONENT_NAME} already running.")
         return
 
     queue_logs_dir = clp_config.logs_directory / QUEUE_COMPONENT_NAME
@@ -234,15 +236,56 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
     ]
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
-    logger.info("Started queue.")
+    logger.info(f"Started {QUEUE_COMPONENT_NAME}.")
+
+
+def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
+    logger.info(f"Starting {RESULTS_CACHE_COMPONENT_NAME}...")
+
+    container_name = f'clp-{RESULTS_CACHE_COMPONENT_NAME}-{instance_id}'
+    if container_exists(container_name):
+        logger.info(f"{RESULTS_CACHE_COMPONENT_NAME} already running.")
+        return
+
+    data_dir = clp_config.data_directory / component_name
+    logs_dir = clp_config.logs_directory / component_name
+
+    validate_results_cache_config(clp_config, data_dir, logs_dir)
+
+    data_dir.mkdir(exist_ok=True, parents=True)
+    logs_dir.mkdir(exist_ok=True, parents=True)
+
+    mounts = [
+        DockerMount(DockerMountType.BIND, conf_dir / 'mongo', pathlib.Path('/') / 'etc' / 'mongo',
+                    True),
+        DockerMount(DockerMountType.BIND, data_dir, pathlib.Path('/') / 'data' / 'db'),
+        DockerMount(DockerMountType.BIND, logs_dir, pathlib.Path('/') / 'var' / 'log' / 'mongodb'),
+    ]
+    cmd = [
+        'docker', 'run',
+        '-d',
+        '--rm',
+        '--name', container_name,
+        '-u', f'{os.getuid()}:{os.getgid()}',
+    ]
+    for mount in mounts:
+        cmd.append('--mount')
+        cmd.append(str(mount))
+    append_docker_port_settings_for_host_ips(clp_config.results_cache.host, clp_config.results_cache.port, 27017, cmd)
+    cmd.append('mongo:7.0.1')
+    cmd.append('--config')
+    cmd.append(pathlib.Path('/') / 'etc' / 'mongo' / 'mongod.conf')
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+
+    logger.info(f"Started {RESULTS_CACHE_COMPONENT_NAME}.")
 
 
 def start_scheduler(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig, mounts: CLPDockerMounts):
-    logger.info("Starting scheduler...")
+    logger.info(f"Starting {SCHEDULER_COMPONENT_NAME}...")
 
     container_name = f'clp-{SCHEDULER_COMPONENT_NAME}-{instance_id}'
     if container_exists(container_name):
-        logger.info("Scheduler already running.")
+        logger.info(f"{SCHEDULER_COMPONENT_NAME} already running.")
         return
 
     container_config_filename = f'{container_name}.yml'
@@ -282,16 +325,16 @@ def start_scheduler(instance_id: str, clp_config: CLPConfig, container_clp_confi
     cmd = container_start_cmd + scheduler_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
-    logger.info("Started scheduler.")
+    logger.info(f"Started {SCHEDULER_COMPONENT_NAME}.")
 
 
 def start_worker(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig, num_cpus: int,
                  mounts: CLPDockerMounts):
-    logger.info("Starting worker...")
+    logger.info(f"Starting {WORKER_COMPONENT_NAME}...")
 
     container_name = f'clp-{WORKER_COMPONENT_NAME}-{instance_id}'
     if container_exists(container_name):
-        logger.info("Worker already running.")
+        logger.info(f"{WORKER_COMPONENT_NAME} already running.")
         return
 
     validate_worker_config(clp_config)
@@ -345,7 +388,7 @@ def start_worker(instance_id: str, clp_config: CLPConfig, container_clp_config: 
     cmd = container_start_cmd + worker_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
-    logger.info("Started worker.")
+    logger.info(f"Started {WORKER_COMPONENT_NAME}.")
 
 
 def main(argv):
@@ -359,6 +402,7 @@ def main(argv):
     component_args_parser = args_parser.add_subparsers(dest='component_name')
     component_args_parser.add_parser(DB_COMPONENT_NAME)
     component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
+    component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
     component_args_parser.add_parser(SCHEDULER_COMPONENT_NAME)
     worker_args_parser = component_args_parser.add_parser(WORKER_COMPONENT_NAME)
     worker_args_parser.add_argument('--num-cpus', type=int, default=0,
@@ -425,6 +469,8 @@ def main(argv):
             create_db_tables(instance_id, clp_config, container_clp_config, mounts)
         if '' == component_name or QUEUE_COMPONENT_NAME == component_name:
             start_queue(instance_id, clp_config)
+        if '' == component_name or RESULTS_CACHE_COMPONENT_NAME == component_name:
+            start_results_cache(instance_id, clp_config, conf_dir)
         if '' == component_name or SCHEDULER_COMPONENT_NAME == component_name:
             start_scheduler(instance_id, clp_config, container_clp_config, mounts)
         if '' == component_name or WORKER_COMPONENT_NAME == component_name:

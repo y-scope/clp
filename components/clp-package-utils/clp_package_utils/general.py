@@ -21,6 +21,7 @@ from clp_py_utils.core import (
 # Component names
 DB_COMPONENT_NAME = 'db'
 QUEUE_COMPONENT_NAME = 'queue'
+RESULTS_CACHE_COMPONENT_NAME = 'results-cache'
 SCHEDULER_COMPONENT_NAME = 'scheduler'
 WORKER_COMPONENT_NAME = 'worker'
 
@@ -257,6 +258,21 @@ def validate_queue_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
         raise ValueError(f"queue logs directory is invalid: {ex}")
 
     validate_port("queue.port", clp_config.queue.host, clp_config.queue.port)
+
+
+def validate_results_cache_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path):
+    try:
+        validate_path_could_be_dir(data_dir)
+    except ValueError as ex:
+        raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME} data directory is invalid: {ex}")
+
+    try:
+        validate_path_could_be_dir(logs_dir)
+    except ValueError as ex:
+        raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME} logs directory is invalid: {ex}")
+
+    validate_port(f"{RESULTS_CACHE_COMPONENT_NAME}.port", clp_config.results_cache.host,
+                  clp_config.results_cache.port)
 
 
 def validate_worker_config(clp_config: CLPConfig):

@@ -8,6 +8,7 @@ from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     DB_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
+    RESULTS_CACHE_COMPONENT_NAME,
     SCHEDULER_COMPONENT_NAME,
     WORKER_COMPONENT_NAME,
     container_exists,
@@ -92,6 +93,9 @@ def main(argv):
             container_config_file_path = logs_dir / f'{container_name}.yml'
             if container_config_file_path.exists():
                 container_config_file_path.unlink()
+        if '' == component_name or RESULTS_CACHE_COMPONENT_NAME == component_name:
+            container_name = f'clp-{RESULTS_CACHE_COMPONENT_NAME}-{instance_id}'
+            stop_container(container_name)
         if '' == component_name or QUEUE_COMPONENT_NAME == component_name:
             container_name = f'clp-{QUEUE_COMPONENT_NAME}-{instance_id}'
             stop_container(container_name)
