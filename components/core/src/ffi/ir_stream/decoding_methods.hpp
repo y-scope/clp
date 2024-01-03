@@ -163,41 +163,41 @@ IRErrorCode deserialize_preamble(
 IRProtocolErrorCode validate_protocol_version(std::string_view protocol_version);
 
 namespace eight_byte_encoding {
-    /**
-     * Deserializes the next log event from an eight-byte encoding IR stream.
-     * @param reader
-     * @param message Returns the deserialized message
-     * @param timestamp Returns the deserialized timestamp
-     * @return ErrorCode_Success on success
-     * @return ErrorCode_Corrupted_IR if reader contains invalid IR
-     * @return ErrorCode_Decode_Error if the log event cannot be properly deserialized
-     * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
-     * @return ErrorCode_End_of_IR if the IR ends
-     */
-    IRErrorCode deserialize_log_event(
-            ReaderInterface& reader,
-            std::string& message,
-            ir::epoch_time_ms_t& timestamp
-    );
+/**
+ * Deserializes the next log event from an eight-byte encoding IR stream.
+ * @param reader
+ * @param message Returns the deserialized message
+ * @param timestamp Returns the deserialized timestamp
+ * @return ErrorCode_Success on success
+ * @return ErrorCode_Corrupted_IR if reader contains invalid IR
+ * @return ErrorCode_Decode_Error if the log event cannot be properly deserialized
+ * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
+ * @return ErrorCode_End_of_IR if the IR ends
+ */
+IRErrorCode deserialize_log_event(
+        ReaderInterface& reader,
+        std::string& message,
+        ir::epoch_time_ms_t& timestamp
+);
 }  // namespace eight_byte_encoding
 
 namespace four_byte_encoding {
-    /**
-     * Deserializes the next log event from a four-byte encoding IR stream.
-     * @param reader
-     * @param message Returns the deserialized message
-     * @param timestamp_delta Returns the deserialized timestamp delta
-     * @return ErrorCode_Success on success
-     * @return ErrorCode_Corrupted_IR if reader contains invalid IR
-     * @return ErrorCode_Decode_Error if the log event cannot be properly deserialized
-     * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
-     * @return ErrorCode_End_of_IR if the IR ends
-     */
-    IRErrorCode deserialize_log_event(
-            ReaderInterface& reader,
-            std::string& message,
-            ir::epoch_time_ms_t& timestamp_delta
-    );
+/**
+ * Deserializes the next log event from a four-byte encoding IR stream.
+ * @param reader
+ * @param message Returns the deserialized message
+ * @param timestamp_delta Returns the deserialized timestamp delta
+ * @return ErrorCode_Success on success
+ * @return ErrorCode_Corrupted_IR if reader contains invalid IR
+ * @return ErrorCode_Decode_Error if the log event cannot be properly deserialized
+ * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
+ * @return ErrorCode_End_of_IR if the IR ends
+ */
+IRErrorCode deserialize_log_event(
+        ReaderInterface& reader,
+        std::string& message,
+        ir::epoch_time_ms_t& timestamp_delta
+);
 }  // namespace four_byte_encoding
 }  // namespace ffi::ir_stream
 
