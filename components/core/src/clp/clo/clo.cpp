@@ -9,11 +9,11 @@
 
 #include "../../Defs.h"
 #include "../../Grep.hpp"
-#include "../../networking/socket_utils.hpp"
 #include "../../Profiler.hpp"
 #include "../../spdlog_with_specializations.hpp"
 #include "../../streaming_archive/Constants.hpp"
 #include "../../Utils.hpp"
+#include "../networking/socket_utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "ControllerMonitoringThread.hpp"
 
@@ -155,7 +155,7 @@ static ErrorCode send_result(
     );
     msgpack::sbuffer m;
     msgpack::pack(m, src);
-    return networking::try_send(controller_socket_fd, m.data(), m.size());
+    return clp::networking::try_send(controller_socket_fd, m.data(), m.size());
 }
 
 static SearchFilesResult search_files(

@@ -2,8 +2,8 @@
 
 #include <unistd.h>
 
-#include "../../networking/socket_utils.hpp"
 #include "../../spdlog_with_specializations.hpp"
+#include "../networking/socket_utils.hpp"
 
 namespace clp::clo {
 void ControllerMonitoringThread::thread_method() {
