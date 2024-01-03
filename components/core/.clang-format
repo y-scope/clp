@@ -105,7 +105,7 @@ KeepEmptyLinesAtTheStartOfBlocks: false
 LambdaBodyIndentation: "Signature"
 LineEnding: "LF"
 MaxEmptyLinesToKeep: 1
-NamespaceIndentation: "Inner"
+NamespaceIndentation: "None"
 PPIndentWidth: -1
 PackConstructorInitializers: "CurrentLine"
 PenaltyBreakOpenParenthesis: 25

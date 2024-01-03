@@ -159,152 +159,151 @@ static void add_base_metadata_fields(
 }
 
 namespace eight_byte_encoding {
-    bool serialize_preamble(
-            string_view timestamp_pattern,
-            string_view timestamp_pattern_syntax,
-            string_view time_zone_id,
-            vector<int8_t>& ir_buf
-    ) {
-        // Write magic number
-        for (auto b : cProtocol::EightByteEncodingMagicNumber) {
-            ir_buf.push_back(b);
-        }
-
-        // Assemble metadata
-        nlohmann::json metadata_json;
-        add_base_metadata_fields(
-                timestamp_pattern,
-                timestamp_pattern_syntax,
-                time_zone_id,
-                metadata_json
-        );
-
-        return serialize_metadata(metadata_json, ir_buf);
+bool serialize_preamble(
+        string_view timestamp_pattern,
+        string_view timestamp_pattern_syntax,
+        string_view time_zone_id,
+        vector<int8_t>& ir_buf
+) {
+    // Write magic number
+    for (auto b : cProtocol::EightByteEncodingMagicNumber) {
+        ir_buf.push_back(b);
     }
 
-    bool serialize_log_event(
-            epoch_time_ms_t timestamp,
-            string_view message,
-            string& logtype,
-            vector<int8_t>& ir_buf
-    ) {
-        auto encoded_var_handler = [&ir_buf](eight_byte_encoded_variable_t encoded_var) {
-            ir_buf.push_back(cProtocol::Payload::VarEightByteEncoding);
-            serialize_int(encoded_var, ir_buf);
-        };
+    // Assemble metadata
+    nlohmann::json metadata_json;
+    add_base_metadata_fields(
+            timestamp_pattern,
+            timestamp_pattern_syntax,
+            time_zone_id,
+            metadata_json
+    );
 
-        if (false
-            == encode_message_generically<eight_byte_encoded_variable_t>(
-                    message,
-                    logtype,
-                    ir::escape_and_append_const_to_logtype,
-                    encoded_var_handler,
-                    DictionaryVariableHandler(ir_buf)
-            ))
-        {
-            return false;
-        }
+    return serialize_metadata(metadata_json, ir_buf);
+}
 
-        if (false == serialize_logtype(logtype, ir_buf)) {
-            return false;
-        }
+bool serialize_log_event(
+        epoch_time_ms_t timestamp,
+        string_view message,
+        string& logtype,
+        vector<int8_t>& ir_buf
+) {
+    auto encoded_var_handler = [&ir_buf](eight_byte_encoded_variable_t encoded_var) {
+        ir_buf.push_back(cProtocol::Payload::VarEightByteEncoding);
+        serialize_int(encoded_var, ir_buf);
+    };
 
-        // Encode timestamp
-        ir_buf.push_back(cProtocol::Payload::TimestampVal);
-        serialize_int(timestamp, ir_buf);
-
-        return true;
+    if (false
+        == encode_message_generically<eight_byte_encoded_variable_t>(
+                message,
+                logtype,
+                ir::escape_and_append_const_to_logtype,
+                encoded_var_handler,
+                DictionaryVariableHandler(ir_buf)
+        ))
+    {
+        return false;
     }
+
+    if (false == serialize_logtype(logtype, ir_buf)) {
+        return false;
+    }
+
+    // Encode timestamp
+    ir_buf.push_back(cProtocol::Payload::TimestampVal);
+    serialize_int(timestamp, ir_buf);
+
+    return true;
+}
 }  // namespace eight_byte_encoding
 
 namespace four_byte_encoding {
-    bool serialize_preamble(
-            string_view timestamp_pattern,
-            string_view timestamp_pattern_syntax,
-            string_view time_zone_id,
-            epoch_time_ms_t reference_timestamp,
-            vector<int8_t>& ir_buf
-    ) {
-        // Write magic number
-        for (auto b : cProtocol::FourByteEncodingMagicNumber) {
-            ir_buf.push_back(b);
-        }
-
-        // Assemble metadata
-        nlohmann::json metadata_json;
-        add_base_metadata_fields(
-                timestamp_pattern,
-                timestamp_pattern_syntax,
-                time_zone_id,
-                metadata_json
-        );
-        metadata_json[cProtocol::Metadata::ReferenceTimestampKey]
-                = std::to_string(reference_timestamp);
-
-        return serialize_metadata(metadata_json, ir_buf);
+bool serialize_preamble(
+        string_view timestamp_pattern,
+        string_view timestamp_pattern_syntax,
+        string_view time_zone_id,
+        epoch_time_ms_t reference_timestamp,
+        vector<int8_t>& ir_buf
+) {
+    // Write magic number
+    for (auto b : cProtocol::FourByteEncodingMagicNumber) {
+        ir_buf.push_back(b);
     }
 
-    bool serialize_log_event(
-            epoch_time_ms_t timestamp_delta,
-            string_view message,
-            string& logtype,
-            vector<int8_t>& ir_buf
-    ) {
-        if (false == serialize_message(message, logtype, ir_buf)) {
-            return false;
-        }
+    // Assemble metadata
+    nlohmann::json metadata_json;
+    add_base_metadata_fields(
+            timestamp_pattern,
+            timestamp_pattern_syntax,
+            time_zone_id,
+            metadata_json
+    );
+    metadata_json[cProtocol::Metadata::ReferenceTimestampKey] = std::to_string(reference_timestamp);
 
-        if (false == serialize_timestamp(timestamp_delta, ir_buf)) {
-            return false;
-        }
+    return serialize_metadata(metadata_json, ir_buf);
+}
 
-        return true;
+bool serialize_log_event(
+        epoch_time_ms_t timestamp_delta,
+        string_view message,
+        string& logtype,
+        vector<int8_t>& ir_buf
+) {
+    if (false == serialize_message(message, logtype, ir_buf)) {
+        return false;
     }
 
-    bool serialize_message(string_view message, string& logtype, vector<int8_t>& ir_buf) {
-        auto encoded_var_handler = [&ir_buf](four_byte_encoded_variable_t encoded_var) {
-            ir_buf.push_back(cProtocol::Payload::VarFourByteEncoding);
-            serialize_int(encoded_var, ir_buf);
-        };
-
-        if (false
-            == encode_message_generically<four_byte_encoded_variable_t>(
-                    message,
-                    logtype,
-                    ir::escape_and_append_const_to_logtype,
-                    encoded_var_handler,
-                    DictionaryVariableHandler(ir_buf)
-            ))
-        {
-            return false;
-        }
-
-        if (false == serialize_logtype(logtype, ir_buf)) {
-            return false;
-        }
-
-        return true;
+    if (false == serialize_timestamp(timestamp_delta, ir_buf)) {
+        return false;
     }
 
-    bool serialize_timestamp(epoch_time_ms_t timestamp_delta, std::vector<int8_t>& ir_buf) {
-        if (INT8_MIN <= timestamp_delta && timestamp_delta <= INT8_MAX) {
-            ir_buf.push_back(cProtocol::Payload::TimestampDeltaByte);
-            ir_buf.push_back(static_cast<int8_t>(timestamp_delta));
-        } else if (INT16_MIN <= timestamp_delta && timestamp_delta <= INT16_MAX) {
-            ir_buf.push_back(cProtocol::Payload::TimestampDeltaShort);
-            serialize_int(static_cast<int16_t>(timestamp_delta), ir_buf);
-        } else if (INT32_MIN <= timestamp_delta && timestamp_delta <= INT32_MAX) {
-            ir_buf.push_back(cProtocol::Payload::TimestampDeltaInt);
-            serialize_int(static_cast<int32_t>(timestamp_delta), ir_buf);
-        } else if (INT64_MIN <= timestamp_delta && timestamp_delta <= INT64_MAX) {
-            ir_buf.push_back(cProtocol::Payload::TimestampDeltaLong);
-            serialize_int(static_cast<int64_t>(timestamp_delta), ir_buf);
-        } else {
-            // Delta exceeds maximum representable by a 64-bit int
-            return false;
-        }
+    return true;
+}
 
-        return true;
+bool serialize_message(string_view message, string& logtype, vector<int8_t>& ir_buf) {
+    auto encoded_var_handler = [&ir_buf](four_byte_encoded_variable_t encoded_var) {
+        ir_buf.push_back(cProtocol::Payload::VarFourByteEncoding);
+        serialize_int(encoded_var, ir_buf);
+    };
+
+    if (false
+        == encode_message_generically<four_byte_encoded_variable_t>(
+                message,
+                logtype,
+                ir::escape_and_append_const_to_logtype,
+                encoded_var_handler,
+                DictionaryVariableHandler(ir_buf)
+        ))
+    {
+        return false;
     }
+
+    if (false == serialize_logtype(logtype, ir_buf)) {
+        return false;
+    }
+
+    return true;
+}
+
+bool serialize_timestamp(epoch_time_ms_t timestamp_delta, std::vector<int8_t>& ir_buf) {
+    if (INT8_MIN <= timestamp_delta && timestamp_delta <= INT8_MAX) {
+        ir_buf.push_back(cProtocol::Payload::TimestampDeltaByte);
+        ir_buf.push_back(static_cast<int8_t>(timestamp_delta));
+    } else if (INT16_MIN <= timestamp_delta && timestamp_delta <= INT16_MAX) {
+        ir_buf.push_back(cProtocol::Payload::TimestampDeltaShort);
+        serialize_int(static_cast<int16_t>(timestamp_delta), ir_buf);
+    } else if (INT32_MIN <= timestamp_delta && timestamp_delta <= INT32_MAX) {
+        ir_buf.push_back(cProtocol::Payload::TimestampDeltaInt);
+        serialize_int(static_cast<int32_t>(timestamp_delta), ir_buf);
+    } else if (INT64_MIN <= timestamp_delta && timestamp_delta <= INT64_MAX) {
+        ir_buf.push_back(cProtocol::Payload::TimestampDeltaLong);
+        serialize_int(static_cast<int64_t>(timestamp_delta), ir_buf);
+    } else {
+        // Delta exceeds maximum representable by a 64-bit int
+        return false;
+    }
+
+    return true;
+}
 }  // namespace four_byte_encoding
 }  // namespace ffi::ir_stream

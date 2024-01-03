@@ -504,28 +504,21 @@ IRProtocolErrorCode validate_protocol_version(std::string_view protocol_version)
 }
 
 namespace four_byte_encoding {
-    IRErrorCode deserialize_log_event(
-            ReaderInterface& reader,
-            string& message,
-            epoch_time_ms_t& timestamp_delta
-    ) {
-        return generic_deserialize_log_event<four_byte_encoded_variable_t>(
-                reader,
-                message,
-                timestamp_delta
-        );
-    }
+IRErrorCode
+deserialize_log_event(ReaderInterface& reader, string& message, epoch_time_ms_t& timestamp_delta) {
+    return generic_deserialize_log_event<four_byte_encoded_variable_t>(
+            reader,
+            message,
+            timestamp_delta
+    );
+}
 }  // namespace four_byte_encoding
 
 namespace eight_byte_encoding {
-    IRErrorCode
-    deserialize_log_event(ReaderInterface& reader, string& message, epoch_time_ms_t& timestamp) {
-        return generic_deserialize_log_event<eight_byte_encoded_variable_t>(
-                reader,
-                message,
-                timestamp
-        );
-    }
+IRErrorCode
+deserialize_log_event(ReaderInterface& reader, string& message, epoch_time_ms_t& timestamp) {
+    return generic_deserialize_log_event<eight_byte_encoded_variable_t>(reader, message, timestamp);
+}
 }  // namespace eight_byte_encoding
 
 // Explicitly declare specializations
