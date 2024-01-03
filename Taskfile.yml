@@ -3,44 +3,53 @@ version: "3"
 vars:
   CLP_BUILD_DIR: "{{.USER_WORKING_DIR}}/out"
   PYTHON_VERSION:
-    sh: python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
+    sh: "python3 -c \"import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')\""
 
 tasks:
   default:
-    deps: [ package ]
+    deps: ["package"]
 
   clean:
     cmds:
-      - rm -rf {{.CLP_BUILD_DIR}}
+      - "rm -rf '{{.CLP_BUILD_DIR}}'"
 
   clean_package:
     cmds:
-      - rm -rf {{.CLP_BUILD_DIR}}/clp-package
+      - "rm -rf '{{.CLP_BUILD_DIR}}/clp-package'"
 
   package:
     deps:
-      - core
-      - task: python_component
+      - "core"
+      - task: "python_component"
         vars:
-          COMPONENT: clp-package-utils
-      - task: python_component
+          COMPONENT: "clp-package-utils"
+      - task: "python_component"
         vars:
-          COMPONENT: clp-py-utils
-      - task: python_component
+          COMPONENT: "clp-py-utils"
+      - task: "python_component"
         vars:
-          COMPONENT: compression-job-handler
-      - task: python_component
+          COMPONENT: "compression-job-handler"
+      - task: "python_component"
         vars:
-          COMPONENT: job-orchestration
+          COMPONENT: "job-orchestration"
     vars:
       PACKAGE_BUILD_DIR: "{{.CLP_BUILD_DIR}}/clp-package"
     cmds:
-      - mkdir -p {{.PACKAGE_BUILD_DIR}}
-      - rsync -a components/package-template/src/ {{.PACKAGE_BUILD_DIR}}
-      - mkdir -p {{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages
-      - pip3 install -U components/clp-package-utils/dist/*.whl components/clp-py-utils/dist/*.whl components/compression-job-handler/dist/*.whl components/job-orchestration/dist/*.whl -t {{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages
-      - mkdir -p {{.PACKAGE_BUILD_DIR}}/bin
-      - rsync -a {{.CLP_BUILD_DIR}}/core/clg {{.CLP_BUILD_DIR}}/core/clo {{.CLP_BUILD_DIR}}/core/clp {{.PACKAGE_BUILD_DIR}}/bin/.
+      - "mkdir -p '{{.PACKAGE_BUILD_DIR}}'"
+      - "rsync -a components/package-template/src/ '{{.PACKAGE_BUILD_DIR}}'"
+      - "mkdir -p '{{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages'"
+      - >-
+        pip3 install -U
+        components/clp-package-utils/dist/*.whl
+        components/clp-py-utils/dist/*.whl
+        components/compression-job-handler/dist/*.whl
+        components/job-orchestration/dist/*.whl
+        -t "{{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages"
+      - "mkdir -p '{{.PACKAGE_BUILD_DIR}}/bin'"
+      - >-
+        rsync -a
+        "{{.CLP_BUILD_DIR}}/core/clg" "{{.CLP_BUILD_DIR}}/core/clo" "{{.CLP_BUILD_DIR}}/core/clp"
+        "{{.PACKAGE_BUILD_DIR}}/bin/"
     sources:
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
@@ -56,14 +65,14 @@ tasks:
       - "{{.CLP_BUILD_DIR}}/clp-package/bin/clp"
 
   core:
-    deps: [ core_submodules ]
+    deps: ["core_submodules"]
     vars:
       SRC_DIR: "components/core"
       BUILD_DIR: "{{.CLP_BUILD_DIR}}/core"
     cmds:
-      - mkdir -p {{.BUILD_DIR}}
-      - cmake -S {{.SRC_DIR}} -B {{.BUILD_DIR}}
-      - cmake --build {{.BUILD_DIR}} --parallel --target clg clo clp
+      - "mkdir -p '{{.BUILD_DIR}}'"
+      - "cmake -S '{{.SRC_DIR}}' -B '{{.BUILD_DIR}}'"
+      - "cmake --build '{{.BUILD_DIR}}' --parallel --target clg clo clp"
     sources:
       - "{{.SRC_DIR}}/cmake/**/*"
       - "{{.SRC_DIR}}/src/**/*"
@@ -87,21 +96,21 @@ tasks:
   python_component:
     label: "{{.COMPONENT}}"
     deps:
-      - task: component_venv
+      - task: "component_venv"
         vars:
           COMPONENT: "{{.COMPONENT}}"
     vars:
       PACKAGE:
-        sh: echo {{.COMPONENT}} | tr - _
+        sh: "echo {{.COMPONENT}} | tr - _"
       VENV_DIR: "{{.CLP_BUILD_DIR}}/{{.COMPONENT}}/venv"
     dir: "components/{{.COMPONENT}}"
     cmds:
       - |-
-        . {{.VENV_DIR}}/bin/activate
+        . "{{.VENV_DIR}}/bin/activate"
         poetry build --format wheel
     sources:
       - "{{.PACKAGE}}/**/*"
-      - pyproject.toml
+      - "pyproject.toml"
     generates:
       - "dist/*.whl"
 
@@ -111,14 +120,14 @@ tasks:
     vars:
       VENV_DIR: "{{.CLP_BUILD_DIR}}/{{.COMPONENT}}/venv"
     cmds:
-      - python3 -m venv {{.VENV_DIR}}
+      - "python3 -m venv {{.VENV_DIR}}"
       - |-
-        . {{.VENV_DIR}}/bin/activate
-        pip3 install -U -r {{.USER_WORKING_DIR}}/requirements.txt
+        . "{{.VENV_DIR}}/bin/activate"
+        pip3 install -U -r "{{.USER_WORKING_DIR}}/requirements.txt"
         poetry update
     sources:
       - "{{.USER_WORKING_DIR}}/requirements.txt"
-      - pyproject.toml
+      - "pyproject.toml"
     generates:
       # For performance, we only mark a subset of all files in the venv as
       # generated
