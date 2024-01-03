@@ -4,9 +4,9 @@
 #include <cstddef>
 #include <vector>
 
-#include "../../Defs.h"
+#include "../../../Defs.h"
 
-namespace streaming_archive::reader {
+namespace clp::streaming_archive::reader {
 class Message {
 public:
     // Methods
@@ -31,6 +31,6 @@ private:
     std::vector<encoded_variable_t> m_vars;
     epochtime_t m_timestamp;
 };
-}  // namespace streaming_archive::reader
+}  // namespace clp::streaming_archive::reader
 
 #endif  // STREAMING_ARCHIVE_READER_MESSAGE_HPP

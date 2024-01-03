@@ -7,8 +7,8 @@
 
 #include "../database_utils.hpp"
 #include "../spdlog_with_specializations.hpp"
-#include "../streaming_archive/Constants.hpp"
 #include "../type_utils.hpp"
+#include "streaming_archive/Constants.hpp"
 
 // Types
 enum class ArchivesTableFieldIndexes : uint16_t {
@@ -46,8 +46,10 @@ using std::to_string;
 using std::unordered_set;
 using std::vector;
 
-static void create_tables(
-        vector<std::pair<string, string>> const& archive_field_names_and_types,
+namespace clp {
+namespace {
+void create_tables(
+        vector<pair<string, string>> const& archive_field_names_and_types,
         vector<pair<string, string>> const& file_field_names_and_types,
         SQLiteDB& db
 ) {
@@ -115,7 +117,7 @@ static void create_tables(
     create_files_archive_id_index.step();
 }
 
-static SQLitePreparedStatement get_archives_select_statement(SQLiteDB& db) {
+SQLitePreparedStatement get_archives_select_statement(SQLiteDB& db) {
     auto statement_string = fmt::format(
             "SELECT {} FROM {} ORDER BY {} ASC, {} ASC",
             streaming_archive::cMetadataDB::Archive::Id,
@@ -127,7 +129,7 @@ static SQLitePreparedStatement get_archives_select_statement(SQLiteDB& db) {
     return db.prepare_statement(statement_string.c_str(), statement_string.length());
 }
 
-static SQLitePreparedStatement get_archives_for_time_window_select_statement(
+SQLitePreparedStatement get_archives_for_time_window_select_statement(
         SQLiteDB& db,
         epochtime_t begin_ts,
         epochtime_t end_ts
@@ -149,7 +151,7 @@ static SQLitePreparedStatement get_archives_for_time_window_select_statement(
     return statement;
 }
 
-static SQLitePreparedStatement
+SQLitePreparedStatement
 get_archives_for_file_select_statement(SQLiteDB& db, string const& file_path) {
     auto statement_string = fmt::format(
             "SELECT DISTINCT {}.{} FROM {} JOIN {} ON {}.{} = {}.{} WHERE {}.{} = ? ORDER BY {} "
@@ -173,8 +175,8 @@ get_archives_for_file_select_statement(SQLiteDB& db, string const& file_path) {
 
     return statement;
 }
+}  // namespace
 
-namespace clp {
 GlobalSQLiteMetadataDB::ArchiveIterator::ArchiveIterator(SQLiteDB& db)
         : m_statement(get_archives_select_statement(db)) {
     m_statement.step();

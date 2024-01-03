@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "../streaming_archive/ArchiveMetadata.hpp"
-#include "../streaming_archive/writer/File.hpp"
+#include "streaming_archive/ArchiveMetadata.hpp"
+#include "streaming_archive/writer/File.hpp"
 
 namespace clp {
 /**

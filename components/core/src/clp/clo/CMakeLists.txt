@@ -3,6 +3,25 @@ set(
         ../networking/socket_utils.cpp
         ../networking/socket_utils.hpp
         ../networking/SocketOperationFailed.hpp
+        ../streaming_archive/ArchiveMetadata.cpp
+        ../streaming_archive/ArchiveMetadata.hpp
+        ../streaming_archive/Constants.hpp
+        ../streaming_archive/MetadataDB.cpp
+        ../streaming_archive/MetadataDB.hpp
+        ../streaming_archive/reader/Archive.cpp
+        ../streaming_archive/reader/Archive.hpp
+        ../streaming_archive/reader/File.cpp
+        ../streaming_archive/reader/File.hpp
+        ../streaming_archive/reader/Message.cpp
+        ../streaming_archive/reader/Message.hpp
+        ../streaming_archive/reader/Segment.cpp
+        ../streaming_archive/reader/Segment.hpp
+        ../streaming_archive/reader/SegmentManager.cpp
+        ../streaming_archive/reader/SegmentManager.hpp
+        ../streaming_archive/writer/File.cpp
+        ../streaming_archive/writer/File.hpp
+        ../streaming_archive/writer/Segment.cpp
+        ../streaming_archive/writer/Segment.hpp
         "${PROJECT_SOURCE_DIR}/src/BufferReader.cpp"
         "${PROJECT_SOURCE_DIR}/src/BufferReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/database_utils.cpp"
@@ -54,25 +73,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/SQLitePreparedStatement.hpp"
         "${PROJECT_SOURCE_DIR}/src/Stopwatch.cpp"
         "${PROJECT_SOURCE_DIR}/src/Stopwatch.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/ArchiveMetadata.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/ArchiveMetadata.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/Constants.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/MetadataDB.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/MetadataDB.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/Archive.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/Archive.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/File.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/File.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/Message.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/Message.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/Segment.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/Segment.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/SegmentManager.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/SegmentManager.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/writer/File.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/writer/File.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/writer/Segment.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_archive/writer/Segment.hpp"
         "${PROJECT_SOURCE_DIR}/src/streaming_compression/Constants.hpp"
         "${PROJECT_SOURCE_DIR}/src/streaming_compression/Decompressor.hpp"
         "${PROJECT_SOURCE_DIR}/src/streaming_compression/passthrough/Compressor.cpp"

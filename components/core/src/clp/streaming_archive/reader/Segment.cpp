@@ -7,15 +7,15 @@
 
 #include <boost/filesystem.hpp>
 
-#include "../../FileReader.hpp"
-#include "../../spdlog_with_specializations.hpp"
+#include "../../../FileReader.hpp"
+#include "../../../spdlog_with_specializations.hpp"
 
 using std::make_unique;
 using std::string;
 using std::to_string;
 using std::unique_ptr;
 
-namespace streaming_archive::reader {
+namespace clp::streaming_archive::reader {
 Segment::~Segment() {
     // If user forgot to explicitly close the file for some reason, close it again (doesn't
     // hurt)
@@ -102,4 +102,4 @@ Segment::try_read(uint64_t decompressed_stream_pos, char* extraction_buf, uint64
             extraction_len
     );
 }
-}  // namespace streaming_archive::reader
+}  // namespace clp::streaming_archive::reader

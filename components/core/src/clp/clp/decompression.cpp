@@ -8,11 +8,11 @@
 #include "../../ErrorCode.hpp"
 #include "../../FileWriter.hpp"
 #include "../../spdlog_with_specializations.hpp"
-#include "../../streaming_archive/reader/Archive.hpp"
 #include "../../TraceableException.hpp"
 #include "../../Utils.hpp"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
+#include "../streaming_archive/reader/Archive.hpp"
 #include "FileDecompressor.hpp"
 
 using std::cerr;

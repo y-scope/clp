@@ -2,9 +2,9 @@
 
 #include <Catch2/single_include/catch2/catch.hpp>
 
+#include "../src/clp/streaming_archive/Constants.hpp"
 #include "../src/EncodedVariableInterpreter.hpp"
 #include "../src/ir/types.hpp"
-#include "../src/streaming_archive/Constants.hpp"
 
 using ir::VariablePlaceholder;
 using std::string;

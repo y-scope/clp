@@ -6,16 +6,16 @@
 #include <cmath>
 #include <cstring>
 
-#include "../../ErrorCode.hpp"
-#include "../../FileWriter.hpp"
-#include "../../spdlog_with_specializations.hpp"
+#include "../../../ErrorCode.hpp"
+#include "../../../FileWriter.hpp"
+#include "../../../spdlog_with_specializations.hpp"
 
 using std::make_unique;
 using std::string;
 using std::to_string;
 using std::unique_ptr;
 
-namespace streaming_archive::writer {
+namespace clp::streaming_archive::writer {
 Segment::~Segment() {
     if (!m_segment_path.empty()) {
         SPDLOG_ERROR(
@@ -86,4 +86,4 @@ size_t Segment::get_compressed_size() {
 bool Segment::is_open() const {
     return !m_segment_path.empty();
 }
-}  // namespace streaming_archive::writer
+}  // namespace clp::streaming_archive::writer

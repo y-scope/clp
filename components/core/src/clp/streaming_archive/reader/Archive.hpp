@@ -8,16 +8,16 @@
 #include <string>
 #include <utility>
 
-#include "../../ErrorCode.hpp"
-#include "../../LogTypeDictionaryReader.hpp"
-#include "../../Query.hpp"
-#include "../../SQLiteDB.hpp"
-#include "../../VariableDictionaryReader.hpp"
+#include "../../../ErrorCode.hpp"
+#include "../../../LogTypeDictionaryReader.hpp"
+#include "../../../Query.hpp"
+#include "../../../SQLiteDB.hpp"
+#include "../../../VariableDictionaryReader.hpp"
 #include "../MetadataDB.hpp"
 #include "File.hpp"
 #include "Message.hpp"
 
-namespace streaming_archive::reader {
+namespace clp::streaming_archive::reader {
 class Archive {
 public:
     // Types
@@ -143,6 +143,6 @@ private:
 
     MetadataDB m_metadata_db;
 };
-}  // namespace streaming_archive::reader
+}  // namespace clp::streaming_archive::reader
 
 #endif  // STREAMING_ARCHIVE_READER_ARCHIVE_HPP

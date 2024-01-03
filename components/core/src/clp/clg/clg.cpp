@@ -10,25 +10,25 @@
 #include "../../Grep.hpp"
 #include "../../Profiler.hpp"
 #include "../../spdlog_with_specializations.hpp"
-#include "../../streaming_archive/Constants.hpp"
 #include "../../Utils.hpp"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
+#include "../streaming_archive/Constants.hpp"
 #include "CommandLineArguments.hpp"
 
 using clp::clg::CommandLineArguments;
 using clp::GlobalMetadataDB;
 using clp::GlobalMetadataDBConfig;
+using clp::streaming_archive::MetadataDB;
+using clp::streaming_archive::reader::Archive;
+using clp::streaming_archive::reader::File;
+using clp::streaming_archive::reader::Message;
 using std::cerr;
 using std::cout;
 using std::endl;
 using std::string;
 using std::to_string;
 using std::vector;
-using streaming_archive::MetadataDB;
-using streaming_archive::reader::Archive;
-using streaming_archive::reader::File;
-using streaming_archive::reader::Message;
 
 /**
  * Opens the archive and reads the dictionaries
@@ -511,7 +511,8 @@ int main(int argc, char const* argv[]) {
     std::unique_ptr<GlobalMetadataDB> global_metadata_db;
     switch (global_metadata_db_config.get_metadata_db_type()) {
         case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
-            auto global_metadata_db_path = archives_dir / streaming_archive::cMetadataDBFileName;
+            auto global_metadata_db_path
+                    = archives_dir / clp::streaming_archive::cMetadataDBFileName;
             global_metadata_db
                     = std::make_unique<clp::GlobalSQLiteMetadataDB>(global_metadata_db_path.string()
                     );
@@ -569,7 +570,7 @@ int main(int argc, char const* argv[]) {
         }
 
         // Generate lexer if schema file exists
-        auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
+        auto schema_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
         bool use_heuristic = true;
         if (std::filesystem::exists(schema_file_path)) {
             use_heuristic = false;

@@ -5,16 +5,16 @@
 #include <set>
 #include <vector>
 
-#include "../../Defs.h"
-#include "../../ErrorCode.hpp"
-#include "../../LogTypeDictionaryReader.hpp"
-#include "../../Query.hpp"
-#include "../../TimestampPattern.hpp"
+#include "../../../Defs.h"
+#include "../../../ErrorCode.hpp"
+#include "../../../LogTypeDictionaryReader.hpp"
+#include "../../../Query.hpp"
+#include "../../../TimestampPattern.hpp"
 #include "../MetadataDB.hpp"
 #include "Message.hpp"
 #include "SegmentManager.hpp"
 
-namespace streaming_archive::reader {
+namespace clp::streaming_archive::reader {
 class File {
 public:
     // Types
@@ -159,6 +159,6 @@ private:
     size_t m_split_ix;
     bool m_is_split;
 };
-}  // namespace streaming_archive::reader
+}  // namespace clp::streaming_archive::reader
 
 #endif  // STREAMING_ARCHIVE_READER_FILE_HPP

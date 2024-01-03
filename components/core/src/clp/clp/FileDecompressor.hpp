@@ -4,10 +4,10 @@
 #include <string>
 
 #include "../../FileWriter.hpp"
-#include "../../streaming_archive/MetadataDB.hpp"
-#include "../../streaming_archive/reader/Archive.hpp"
-#include "../../streaming_archive/reader/File.hpp"
-#include "../../streaming_archive/reader/Message.hpp"
+#include "../streaming_archive/MetadataDB.hpp"
+#include "../streaming_archive/reader/Archive.hpp"
+#include "../streaming_archive/reader/File.hpp"
+#include "../streaming_archive/reader/Message.hpp"
 
 namespace clp::clp {
 /**

@@ -193,6 +193,29 @@ set(SOURCE_FILES_unitTest
         src/clp/GlobalMySQLMetadataDB.hpp
         src/clp/GlobalSQLiteMetadataDB.cpp
         src/clp/GlobalSQLiteMetadataDB.hpp
+        src/clp/streaming_archive/ArchiveMetadata.cpp
+        src/clp/streaming_archive/ArchiveMetadata.hpp
+        src/clp/streaming_archive/Constants.hpp
+        src/clp/streaming_archive/MetadataDB.cpp
+        src/clp/streaming_archive/MetadataDB.hpp
+        src/clp/streaming_archive/reader/Archive.cpp
+        src/clp/streaming_archive/reader/Archive.hpp
+        src/clp/streaming_archive/reader/File.cpp
+        src/clp/streaming_archive/reader/File.hpp
+        src/clp/streaming_archive/reader/Message.cpp
+        src/clp/streaming_archive/reader/Message.hpp
+        src/clp/streaming_archive/reader/Segment.cpp
+        src/clp/streaming_archive/reader/Segment.hpp
+        src/clp/streaming_archive/reader/SegmentManager.cpp
+        src/clp/streaming_archive/reader/SegmentManager.hpp
+        src/clp/streaming_archive/writer/Archive.cpp
+        src/clp/streaming_archive/writer/Archive.hpp
+        src/clp/streaming_archive/writer/File.cpp
+        src/clp/streaming_archive/writer/File.hpp
+        src/clp/streaming_archive/writer/Segment.cpp
+        src/clp/streaming_archive/writer/Segment.hpp
+        src/clp/streaming_archive/writer/utils.cpp
+        src/clp/streaming_archive/writer/utils.hpp
         src/database_utils.cpp
         src/database_utils.hpp
         src/Defs.h
@@ -280,29 +303,6 @@ set(SOURCE_FILES_unitTest
         src/SQLitePreparedStatement.hpp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
-        src/streaming_archive/ArchiveMetadata.cpp
-        src/streaming_archive/ArchiveMetadata.hpp
-        src/streaming_archive/Constants.hpp
-        src/streaming_archive/MetadataDB.cpp
-        src/streaming_archive/MetadataDB.hpp
-        src/streaming_archive/reader/Archive.cpp
-        src/streaming_archive/reader/Archive.hpp
-        src/streaming_archive/reader/File.cpp
-        src/streaming_archive/reader/File.hpp
-        src/streaming_archive/reader/Message.cpp
-        src/streaming_archive/reader/Message.hpp
-        src/streaming_archive/reader/Segment.cpp
-        src/streaming_archive/reader/Segment.hpp
-        src/streaming_archive/reader/SegmentManager.cpp
-        src/streaming_archive/reader/SegmentManager.hpp
-        src/streaming_archive/writer/Archive.cpp
-        src/streaming_archive/writer/Archive.hpp
-        src/streaming_archive/writer/File.cpp
-        src/streaming_archive/writer/File.hpp
-        src/streaming_archive/writer/Segment.cpp
-        src/streaming_archive/writer/Segment.hpp
-        src/streaming_archive/writer/utils.cpp
-        src/streaming_archive/writer/utils.hpp
         src/streaming_compression/Compressor.hpp
         src/streaming_compression/Constants.hpp
         src/streaming_compression/Decompressor.hpp

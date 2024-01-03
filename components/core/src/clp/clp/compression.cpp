@@ -7,21 +7,21 @@
 #include <boost/uuid/random_generator.hpp>
 
 #include "../../spdlog_with_specializations.hpp"
-#include "../../streaming_archive/writer/Archive.hpp"
-#include "../../streaming_archive/writer/utils.hpp"
 #include "../../Utils.hpp"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
+#include "../streaming_archive/writer/Archive.hpp"
+#include "../streaming_archive/writer/utils.hpp"
 #include "FileCompressor.hpp"
 #include "utils.hpp"
 
+using clp::streaming_archive::writer::split_archive;
 using std::cerr;
 using std::cout;
 using std::endl;
 using std::out_of_range;
 using std::string;
 using std::vector;
-using streaming_archive::writer::split_archive;
 
 namespace clp::clp {
 // Local prototypes
