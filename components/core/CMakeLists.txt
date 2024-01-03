@@ -164,6 +164,7 @@ FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 add_subdirectory(src/clp/clg)
 add_subdirectory(src/clp/clo)
 add_subdirectory(src/clp/clp)
+add_subdirectory(src/clp/make_dictionaries_readable)
 
 set(SOURCE_FILES_unitTest
         src/BufferedFileReader.cpp
@@ -372,7 +373,5 @@ target_link_libraries(unitTest
 target_compile_features(unitTest
         PRIVATE cxx_std_17
         )
-
-include(cmake/utils.cmake)
 
 add_subdirectory(src)

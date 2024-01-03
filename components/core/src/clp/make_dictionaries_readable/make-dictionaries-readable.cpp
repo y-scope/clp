@@ -28,7 +28,7 @@ int main(int argc, char const* argv[]) {
         return -1;
     }
 
-    utils::make_dictionaries_readable::CommandLineArguments command_line_args(
+    clp::make_dictionaries_readable::CommandLineArguments command_line_args(
             "make-dictionaries-readable"
     );
     auto parsing_result = command_line_args.parse_arguments(argc, argv);

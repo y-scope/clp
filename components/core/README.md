@@ -176,7 +176,7 @@ can use `make-dictionaries-readable`.
 ```
 * `archive-path` is a path to a specific archive (inside `archives-dir`)
 
-See the `make-dictionaries-readable` [README](src/utils/make_dictionaries_readable/README.md) for 
+See the `make-dictionaries-readable` [README](src/clp/make_dictionaries_readable/README.md) for 
 details on the output format. 
 
 ## Parallel Compression
