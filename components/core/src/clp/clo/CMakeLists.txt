@@ -1,5 +1,8 @@
 set(
         CLO_SOURCES
+        ../networking/socket_utils.cpp
+        ../networking/socket_utils.hpp
+        ../networking/SocketOperationFailed.hpp
         "${PROJECT_SOURCE_DIR}/src/BufferReader.cpp"
         "${PROJECT_SOURCE_DIR}/src/BufferReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/database_utils.cpp"
@@ -34,9 +37,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/LogTypeDictionaryEntry.cpp"
         "${PROJECT_SOURCE_DIR}/src/LogTypeDictionaryEntry.hpp"
         "${PROJECT_SOURCE_DIR}/src/LogTypeDictionaryReader.hpp"
-        "${PROJECT_SOURCE_DIR}/src/networking/socket_utils.cpp"
-        "${PROJECT_SOURCE_DIR}/src/networking/socket_utils.hpp"
-        "${PROJECT_SOURCE_DIR}/src/networking/SocketOperationFailed.hpp"
         "${PROJECT_SOURCE_DIR}/src/PageAllocatedVector.hpp"
         "${PROJECT_SOURCE_DIR}/src/ParsedMessage.cpp"
         "${PROJECT_SOURCE_DIR}/src/ParsedMessage.hpp"
