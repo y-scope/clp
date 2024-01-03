@@ -4,9 +4,9 @@
 
 #include <fmt/core.h>
 
-#include "../database_utils.hpp"
-#include "../Defs.h"
-#include "../type_utils.hpp"
+#include "../../database_utils.hpp"
+#include "../../Defs.h"
+#include "../../type_utils.hpp"
 #include "Constants.hpp"
 
 // Types
@@ -34,7 +34,7 @@ using std::string;
 using std::to_string;
 using std::vector;
 
-namespace streaming_archive {
+namespace clp::streaming_archive {
 static void
 create_tables(vector<std::pair<string, string>> const& file_field_names_and_types, SQLiteDB& db) {
     fmt::memory_buffer statement_buffer;
@@ -633,4 +633,4 @@ void MetadataDB::add_empty_directories(vector<string> const& empty_directory_pat
         m_insert_empty_directories_statement->reset();
     }
 }
-}  // namespace streaming_archive
+}  // namespace clp::streaming_archive

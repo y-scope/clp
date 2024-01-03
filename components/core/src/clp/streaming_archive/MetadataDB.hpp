@@ -5,10 +5,10 @@
 #include <string>
 #include <vector>
 
-#include "../SQLiteDB.hpp"
+#include "../../SQLiteDB.hpp"
 #include "writer/File.hpp"
 
-namespace streaming_archive {
+namespace clp::streaming_archive {
 class MetadataDB {
 public:
     // Types
@@ -162,6 +162,6 @@ private:
     std::unique_ptr<SQLitePreparedStatement> m_upsert_file_statement;
     std::unique_ptr<SQLitePreparedStatement> m_insert_empty_directories_statement;
 };
-}  // namespace streaming_archive
+}  // namespace clp::streaming_archive
 
 #endif  // STREAMING_ARCHIVE_METADATADB_HPP

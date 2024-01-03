@@ -14,16 +14,16 @@
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/ReaderParser.hpp>
 
-#include "../../ArrayBackedPosIntSet.hpp"
-#include "../../clp/GlobalMetadataDB.hpp"
-#include "../../ErrorCode.hpp"
-#include "../../ir/LogEvent.hpp"
-#include "../../LogTypeDictionaryWriter.hpp"
-#include "../../VariableDictionaryWriter.hpp"
+#include "../../../ArrayBackedPosIntSet.hpp"
+#include "../../../ErrorCode.hpp"
+#include "../../../ir/LogEvent.hpp"
+#include "../../../LogTypeDictionaryWriter.hpp"
+#include "../../../VariableDictionaryWriter.hpp"
+#include "../../GlobalMetadataDB.hpp"
 #include "../ArchiveMetadata.hpp"
 #include "../MetadataDB.hpp"
 
-namespace streaming_archive::writer {
+namespace clp::streaming_archive::writer {
 class Archive {
 public:
     // Types
@@ -46,7 +46,7 @@ public:
         size_t target_segment_uncompressed_size;
         int compression_level;
         std::string output_dir;
-        clp::GlobalMetadataDB* global_metadata_db;
+        GlobalMetadataDB* global_metadata_db;
         bool print_archive_stats_progress;
     };
 
@@ -337,10 +337,10 @@ private:
     std::optional<ArchiveMetadata> m_local_metadata;
     FileWriter m_metadata_file_writer;
 
-    clp::GlobalMetadataDB* m_global_metadata_db;
+    GlobalMetadataDB* m_global_metadata_db;
 
     bool m_print_archive_stats_progress;
 };
-}  // namespace streaming_archive::writer
+}  // namespace clp::streaming_archive::writer
 
 #endif  // STREAMING_ARCHIVE_WRITER_ARCHIVE_HPP

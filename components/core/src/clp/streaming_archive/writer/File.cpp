@@ -1,13 +1,13 @@
 #include "File.hpp"
 
-#include "../../EncodedVariableInterpreter.hpp"
+#include "../../../EncodedVariableInterpreter.hpp"
 
 using std::string;
 using std::to_string;
 using std::unordered_set;
 using std::vector;
 
-namespace streaming_archive::writer {
+namespace clp::streaming_archive::writer {
 void File::open() {
     if (m_is_written_out) {
         throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
@@ -140,4 +140,4 @@ void File::set_segment_metadata(
     m_segment_variables_pos = segment_variables_uncompressed_pos;
     m_is_metadata_clean = false;
 }
-}  // namespace streaming_archive::writer
+}  // namespace clp::streaming_archive::writer

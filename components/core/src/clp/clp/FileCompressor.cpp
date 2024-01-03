@@ -15,9 +15,12 @@
 #include "../../ir/utils.hpp"
 #include "../../LogSurgeonReader.hpp"
 #include "../../Profiler.hpp"
-#include "../../streaming_archive/writer/utils.hpp"
+#include "../streaming_archive/writer/utils.hpp"
 #include "utils.hpp"
 
+using clp::streaming_archive::writer::split_archive;
+using clp::streaming_archive::writer::split_file;
+using clp::streaming_archive::writer::split_file_and_archive;
 using ir::eight_byte_encoded_variable_t;
 using ir::four_byte_encoded_variable_t;
 using ir::has_ir_stream_magic_number;
@@ -30,9 +33,6 @@ using std::endl;
 using std::set;
 using std::string;
 using std::vector;
-using streaming_archive::writer::split_archive;
-using streaming_archive::writer::split_file;
-using streaming_archive::writer::split_file_and_archive;
 
 // Local prototypes
 /**
@@ -46,7 +46,7 @@ static void compute_and_add_empty_directories(
         set<string> const& directories,
         set<string> const& parent_directories,
         boost::filesystem::path const& parent_path,
-        streaming_archive::writer::Archive& archive
+        clp::streaming_archive::writer::Archive& archive
 );
 
 /**
@@ -57,14 +57,14 @@ static void compute_and_add_empty_directories(
  */
 static void write_message_to_encoded_file(
         ParsedMessage const& msg,
-        streaming_archive::writer::Archive& archive
+        clp::streaming_archive::writer::Archive& archive
 );
 
 static void compute_and_add_empty_directories(
         set<string> const& directories,
         set<string> const& parent_directories,
         boost::filesystem::path const& parent_path,
-        streaming_archive::writer::Archive& archive
+        clp::streaming_archive::writer::Archive& archive
 ) {
     // Determine empty directories by subtracting parent directories
     vector<string> empty_directories;
@@ -96,7 +96,7 @@ static void compute_and_add_empty_directories(
 
 static void write_message_to_encoded_file(
         ParsedMessage const& msg,
-        streaming_archive::writer::Archive& archive
+        clp::streaming_archive::writer::Archive& archive
 ) {
     if (msg.has_ts_patt_changed()) {
         archive.change_ts_pattern(msg.get_ts_patt());

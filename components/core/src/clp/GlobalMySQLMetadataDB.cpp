@@ -3,8 +3,8 @@
 #include <fmt/core.h>
 
 #include "../database_utils.hpp"
-#include "../streaming_archive/Constants.hpp"
 #include "../type_utils.hpp"
+#include "streaming_archive/Constants.hpp"
 
 using std::pair;
 using std::string;

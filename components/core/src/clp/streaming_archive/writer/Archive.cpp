@@ -14,10 +14,10 @@
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/LogParser.hpp>
 
-#include "../../EncodedVariableInterpreter.hpp"
-#include "../../ir/types.hpp"
-#include "../../spdlog_with_specializations.hpp"
-#include "../../Utils.hpp"
+#include "../../../EncodedVariableInterpreter.hpp"
+#include "../../../ir/types.hpp"
+#include "../../../spdlog_with_specializations.hpp"
+#include "../../../Utils.hpp"
 #include "../Constants.hpp"
 #include "utils.hpp"
 
@@ -30,7 +30,7 @@ using std::string;
 using std::unordered_set;
 using std::vector;
 
-namespace streaming_archive::writer {
+namespace clp::streaming_archive::writer {
 Archive::~Archive() {
     if (m_path.empty() == false || m_file != nullptr
         || m_files_with_timestamps_in_segment.empty() == false
@@ -659,4 +659,4 @@ template void Archive::write_log_event_ir<eight_byte_encoded_variable_t>(
 template void Archive::write_log_event_ir<four_byte_encoded_variable_t>(
         ir::LogEvent<four_byte_encoded_variable_t> const& log_event
 );
-}  // namespace streaming_archive::writer
+}  // namespace clp::streaming_archive::writer

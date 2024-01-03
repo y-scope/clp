@@ -6,10 +6,10 @@
 
 #include <log_surgeon/Lexer.hpp>
 
+#include "clp/streaming_archive/reader/Archive.hpp"
+#include "clp/streaming_archive/reader/File.hpp"
 #include "Defs.h"
 #include "Query.hpp"
-#include "streaming_archive/reader/Archive.hpp"
-#include "streaming_archive/reader/File.hpp"
 
 class Grep {
 public:
@@ -23,7 +23,7 @@ public:
      */
     typedef void (*OutputFunc)(
             std::string const& orig_file_path,
-            streaming_archive::reader::Message const& compressed_msg,
+            clp::streaming_archive::reader::Message const& compressed_msg,
             std::string const& decompressed_msg,
             void* custom_arg
     );
@@ -42,7 +42,7 @@ public:
      * @return Query if it may match a message, std::nullopt otherwise
      */
     static std::optional<Query> process_raw_query(
-            streaming_archive::reader::Archive const& archive,
+            clp::streaming_archive::reader::Archive const& archive,
             std::string const& search_string,
             epochtime_t search_begin_ts,
             epochtime_t search_end_ts,
@@ -93,7 +93,7 @@ public:
      * @param queries
      */
     static void calculate_sub_queries_relevant_to_file(
-            streaming_archive::reader::File const& compressed_file,
+            clp::streaming_archive::reader::File const& compressed_file,
             std::vector<Query>& queries
     );
 
@@ -106,23 +106,23 @@ public:
      * @param output_func
      * @param output_func_arg
      * @return Number of matches found
-     * @throw streaming_archive::reader::Archive::OperationFailed if decompression unexpectedly
+     * @throw clp::streaming_archive::reader::Archive::OperationFailed if decompression unexpectedly
      * fails
      * @throw TimestampPattern::OperationFailed if failed to insert timestamp into message
      */
     static size_t search_and_output(
             Query const& query,
             size_t limit,
-            streaming_archive::reader::Archive& archive,
-            streaming_archive::reader::File& compressed_file,
+            clp::streaming_archive::reader::Archive& archive,
+            clp::streaming_archive::reader::File& compressed_file,
             OutputFunc output_func,
             void* output_func_arg
     );
     static bool search_and_decompress(
             Query const& query,
-            streaming_archive::reader::Archive& archive,
-            streaming_archive::reader::File& compressed_file,
-            streaming_archive::reader::Message& compressed_msg,
+            clp::streaming_archive::reader::Archive& archive,
+            clp::streaming_archive::reader::File& compressed_file,
+            clp::streaming_archive::reader::Message& compressed_msg,
             std::string& decompressed_msg
     );
     /**
@@ -132,15 +132,15 @@ public:
      * @param archive
      * @param compressed_file
      * @return Number of matches found
-     * @throw streaming_archive::reader::Archive::OperationFailed if decompression unexpectedly
+     * @throw clp::streaming_archive::reader::Archive::OperationFailed if decompression unexpectedly
      * fails
      * @throw TimestampPattern::OperationFailed if failed to insert timestamp into message
      */
     static size_t search(
             Query const& query,
             size_t limit,
-            streaming_archive::reader::Archive& archive,
-            streaming_archive::reader::File& compressed_file
+            clp::streaming_archive::reader::Archive& archive,
+            clp::streaming_archive::reader::File& compressed_file
     );
 };
 

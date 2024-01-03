@@ -2,7 +2,7 @@
 
 using std::string;
 
-namespace streaming_archive::reader {
+namespace clp::streaming_archive::reader {
 void SegmentManager::open(string const& segment_dir_path) {
     // Cleanup in case caller forgot to call close before calling this function
     close();
@@ -49,4 +49,4 @@ ErrorCode SegmentManager::try_read(
     auto& segment = m_id_to_open_segment.at(segment_id);
     return segment.try_read(decompressed_stream_pos, extraction_buf, extraction_len);
 }
-}  // namespace streaming_archive::reader
+}  // namespace clp::streaming_archive::reader

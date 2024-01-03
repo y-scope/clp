@@ -1,9 +1,9 @@
 #ifndef STREAMING_ARCHIVE_CONSTANTS_HPP
 #define STREAMING_ARCHIVE_CONSTANTS_HPP
 
-#include "../Defs.h"
+#include "../../Defs.h"
 
-namespace streaming_archive {
+namespace clp::streaming_archive {
 constexpr archive_format_version_t cArchiveFormatVersion = cArchiveFormatDevVersionFlag | 8;
 constexpr char cSegmentsDirname[] = "s";
 constexpr char cSegmentListFilename[] = "segment_list.txt";
@@ -53,6 +53,6 @@ namespace EmptyDirectory {
 constexpr char Path[] = "path";
 }  // namespace EmptyDirectory
 }  // namespace cMetadataDB
-}  // namespace streaming_archive
+}  // namespace clp::streaming_archive
 
 #endif  // STREAMING_ARCHIVE_CONSTANTS_HPP

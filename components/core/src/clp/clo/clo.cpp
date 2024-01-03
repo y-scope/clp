@@ -11,13 +11,17 @@
 #include "../../Grep.hpp"
 #include "../../Profiler.hpp"
 #include "../../spdlog_with_specializations.hpp"
-#include "../../streaming_archive/Constants.hpp"
 #include "../../Utils.hpp"
 #include "../networking/socket_utils.hpp"
+#include "../streaming_archive/Constants.hpp"
 #include "CommandLineArguments.hpp"
 #include "ControllerMonitoringThread.hpp"
 
 using clp::clo::CommandLineArguments;
+using clp::streaming_archive::MetadataDB;
+using clp::streaming_archive::reader::Archive;
+using clp::streaming_archive::reader::File;
+using clp::streaming_archive::reader::Message;
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -25,10 +29,6 @@ using std::string;
 using std::to_string;
 using std::unique_ptr;
 using std::vector;
-using streaming_archive::MetadataDB;
-using streaming_archive::reader::Archive;
-using streaming_archive::reader::File;
-using streaming_archive::reader::Message;
 
 // Local types
 enum class SearchFilesResult {
@@ -228,7 +228,7 @@ static bool search_archive(
         SPDLOG_ERROR("Archive '{}' does not exist.", archive_path.c_str());
         return false;
     }
-    auto archive_metadata_file = archive_path / streaming_archive::cMetadataFileName;
+    auto archive_metadata_file = archive_path / clp::streaming_archive::cMetadataFileName;
     if (false == boost::filesystem::exists(archive_metadata_file)) {
         SPDLOG_ERROR(
                 "Archive metadata file '{}' does not exist. '{}' may not be an archive.",
@@ -239,7 +239,7 @@ static bool search_archive(
     }
 
     // Load lexers from schema file if it exists
-    auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
+    auto schema_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
     unique_ptr<log_surgeon::lexers::ByteLexer> forward_lexer, reverse_lexer;
     bool use_heuristic = true;
     if (boost::filesystem::exists(schema_file_path)) {

@@ -7,14 +7,14 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-#include "../../Defs.h"
-#include "../../ErrorCode.hpp"
-#include "../../LogTypeDictionaryWriter.hpp"
-#include "../../PageAllocatedVector.hpp"
-#include "../../TimestampPattern.hpp"
+#include "../../../Defs.h"
+#include "../../../ErrorCode.hpp"
+#include "../../../LogTypeDictionaryWriter.hpp"
+#include "../../../PageAllocatedVector.hpp"
+#include "../../../TimestampPattern.hpp"
 #include "Segment.hpp"
 
-namespace streaming_archive::writer {
+namespace clp::streaming_archive::writer {
 /**
  * Class representing a log file encoded in three columns - timestamps, logtype IDs, and
  * variables.
@@ -251,6 +251,6 @@ private:
     bool m_is_written_out;
     bool m_is_open;
 };
-}  // namespace streaming_archive::writer
+}  // namespace clp::streaming_archive::writer
 
 #endif  // STREAMING_ARCHIVE_WRITER_FILE_HPP

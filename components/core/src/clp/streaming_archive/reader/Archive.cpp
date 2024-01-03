@@ -8,9 +8,9 @@
 
 #include <boost/filesystem.hpp>
 
-#include "../../EncodedVariableInterpreter.hpp"
-#include "../../spdlog_with_specializations.hpp"
-#include "../../Utils.hpp"
+#include "../../../EncodedVariableInterpreter.hpp"
+#include "../../../spdlog_with_specializations.hpp"
+#include "../../../Utils.hpp"
 #include "../ArchiveMetadata.hpp"
 #include "../Constants.hpp"
 
@@ -18,7 +18,7 @@ using std::string;
 using std::unordered_set;
 using std::vector;
 
-namespace streaming_archive::reader {
+namespace clp::streaming_archive::reader {
 void Archive::open(string const& path) {
     // Determine whether path is file or directory
     struct stat path_stat = {};
@@ -235,4 +235,4 @@ void Archive::decompress_empty_directories(string const& output_dir) {
         }
     }
 }
-}  // namespace streaming_archive::reader
+}  // namespace clp::streaming_archive::reader

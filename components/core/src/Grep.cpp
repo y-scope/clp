@@ -12,12 +12,12 @@
 #include "StringReader.hpp"
 #include "Utils.hpp"
 
+using clp::streaming_archive::reader::Archive;
+using clp::streaming_archive::reader::File;
+using clp::streaming_archive::reader::Message;
 using ir::is_delim;
 using std::string;
 using std::vector;
-using streaming_archive::reader::Archive;
-using streaming_archive::reader::File;
-using streaming_archive::reader::Message;
 using string_utils::clean_up_wildcard_search_string;
 using string_utils::is_alphabet;
 using string_utils::is_wildcard;

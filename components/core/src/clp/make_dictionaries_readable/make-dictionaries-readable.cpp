@@ -9,9 +9,9 @@
 #include "../../ir/types.hpp"
 #include "../../LogTypeDictionaryReader.hpp"
 #include "../../spdlog_with_specializations.hpp"
-#include "../../streaming_archive/Constants.hpp"
 #include "../../type_utils.hpp"
 #include "../../VariableDictionaryReader.hpp"
+#include "../streaming_archive/Constants.hpp"
 #include "CommandLineArguments.hpp"
 
 using ir::VariablePlaceholder;
@@ -47,19 +47,19 @@ int main(int argc, char const* argv[]) {
 
     // Open log-type dictionary
     auto logtype_dict_path = boost::filesystem::path(command_line_args.get_archive_path())
-                             / streaming_archive::cLogTypeDictFilename;
+                             / clp::streaming_archive::cLogTypeDictFilename;
     auto logtype_segment_index_path = boost::filesystem::path(command_line_args.get_archive_path())
-                                      / streaming_archive::cLogTypeSegmentIndexFilename;
+                                      / clp::streaming_archive::cLogTypeSegmentIndexFilename;
     LogTypeDictionaryReader logtype_dict;
     logtype_dict.open(logtype_dict_path.string(), logtype_segment_index_path.string());
     logtype_dict.read_new_entries();
 
     // Write readable dictionary
     auto readable_logtype_dict_path = boost::filesystem::path(command_line_args.get_output_dir())
-                                      / streaming_archive::cLogTypeDictFilename;
+                                      / clp::streaming_archive::cLogTypeDictFilename;
     auto readable_logtype_segment_index_path
             = boost::filesystem::path(command_line_args.get_output_dir())
-              / streaming_archive::cLogTypeSegmentIndexFilename;
+              / clp::streaming_archive::cLogTypeSegmentIndexFilename;
     readable_logtype_dict_path += ".hr";
     readable_logtype_segment_index_path += ".hr";
     file_writer.open(readable_logtype_dict_path.string(), FileWriter::OpenMode::CREATE_FOR_WRITING);
@@ -131,19 +131,19 @@ int main(int argc, char const* argv[]) {
 
     // Open variables dictionary
     auto var_dict_path = boost::filesystem::path(command_line_args.get_archive_path())
-                         / streaming_archive::cVarDictFilename;
+                         / clp::streaming_archive::cVarDictFilename;
     auto var_segment_index_path = boost::filesystem::path(command_line_args.get_archive_path())
-                                  / streaming_archive::cVarSegmentIndexFilename;
+                                  / clp::streaming_archive::cVarSegmentIndexFilename;
     VariableDictionaryReader var_dict;
     var_dict.open(var_dict_path.string(), var_segment_index_path.string());
     var_dict.read_new_entries();
 
     // Write readable dictionary
     auto readable_var_dict_path = boost::filesystem::path(command_line_args.get_output_dir())
-                                  / streaming_archive::cVarDictFilename;
+                                  / clp::streaming_archive::cVarDictFilename;
     auto readable_var_segment_index_path
             = boost::filesystem::path(command_line_args.get_output_dir())
-              / streaming_archive::cVarSegmentIndexFilename;
+              / clp::streaming_archive::cVarSegmentIndexFilename;
     readable_var_dict_path += ".hr";
     readable_var_segment_index_path += ".hr";
     file_writer.open(readable_var_dict_path.string(), FileWriter::OpenMode::CREATE_FOR_WRITING);

@@ -3,14 +3,14 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "../../EncodedVariableInterpreter.hpp"
-#include "../../spdlog_with_specializations.hpp"
+#include "../../../EncodedVariableInterpreter.hpp"
+#include "../../../spdlog_with_specializations.hpp"
 #include "../Constants.hpp"
 #include "SegmentManager.hpp"
 
 using std::string;
 
-namespace streaming_archive::reader {
+namespace clp::streaming_archive::reader {
 epochtime_t File::get_begin_ts() const {
     return m_begin_ts;
 }
@@ -330,4 +330,4 @@ bool File::get_next_message(Message& msg) {
 
     return true;
 }
-}  // namespace streaming_archive::reader
+}  // namespace clp::streaming_archive::reader

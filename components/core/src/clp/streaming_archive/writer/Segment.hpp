@@ -4,14 +4,14 @@
 #include <memory>
 #include <string>
 
-#include "../../Defs.h"
-#include "../../ErrorCode.hpp"
-#include "../../streaming_compression/passthrough/Compressor.hpp"
-#include "../../streaming_compression/zstd/Compressor.hpp"
-#include "../../TraceableException.hpp"
+#include "../../../Defs.h"
+#include "../../../ErrorCode.hpp"
+#include "../../../streaming_compression/passthrough/Compressor.hpp"
+#include "../../../streaming_compression/zstd/Compressor.hpp"
+#include "../../../TraceableException.hpp"
 #include "../Constants.hpp"
 
-namespace streaming_archive::writer {
+namespace clp::streaming_archive::writer {
 /**
  * Class for writing segments. A segment is a container for multiple compressed buffers that
  * itself may be further compressed and then stored on disk.
@@ -94,6 +94,6 @@ private:
     static_assert(false, "Unsupported compression mode.");
 #endif
 };
-}  // namespace streaming_archive::writer
+}  // namespace clp::streaming_archive::writer
 
 #endif  // STREAMING_ARCHIVE_WRITER_SEGMENT_HPP

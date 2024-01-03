@@ -4,13 +4,13 @@
 
 #include <boost/uuid/random_generator.hpp>
 
-#include "../../Defs.h"
-#include "../../TimestampPattern.hpp"
+#include "../../../Defs.h"
+#include "../../../TimestampPattern.hpp"
 #include "Archive.hpp"
 
 using std::string;
 
-namespace streaming_archive::writer {
+namespace clp::streaming_archive::writer {
 auto split_archive(Archive::UserConfig& archive_user_config, Archive& archive_writer) -> void {
     archive_writer.close();
     archive_user_config.id = boost::uuids::random_generator()();
@@ -59,4 +59,4 @@ auto close_file_and_append_to_segment(Archive& archive_writer) -> void {
     archive_writer.close_file();
     archive_writer.append_file_to_segment();
 }
-}  // namespace streaming_archive::writer
+}  // namespace clp::streaming_archive::writer

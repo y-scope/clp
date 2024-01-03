@@ -13,7 +13,7 @@
 #include "../../LibarchiveReader.hpp"
 #include "../../MessageParser.hpp"
 #include "../../ParsedMessage.hpp"
-#include "../../streaming_archive/writer/Archive.hpp"
+#include "../streaming_archive/writer/Archive.hpp"
 #include "FileToCompress.hpp"
 
 namespace clp::clp {
