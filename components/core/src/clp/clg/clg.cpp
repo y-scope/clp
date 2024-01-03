@@ -6,17 +6,17 @@
 #include <log_surgeon/Lexer.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
-#include "../Defs.h"
-#include "../GlobalMySQLMetadataDB.hpp"
-#include "../GlobalSQLiteMetadataDB.hpp"
-#include "../Grep.hpp"
-#include "../Profiler.hpp"
-#include "../spdlog_with_specializations.hpp"
-#include "../streaming_archive/Constants.hpp"
-#include "../Utils.hpp"
+#include "../../Defs.h"
+#include "../../GlobalMySQLMetadataDB.hpp"
+#include "../../GlobalSQLiteMetadataDB.hpp"
+#include "../../Grep.hpp"
+#include "../../Profiler.hpp"
+#include "../../spdlog_with_specializations.hpp"
+#include "../../streaming_archive/Constants.hpp"
+#include "../../Utils.hpp"
 #include "CommandLineArguments.hpp"
 
-using clg::CommandLineArguments;
+using clp::clg::CommandLineArguments;
 using std::cerr;
 using std::cout;
 using std::endl;

@@ -7,17 +7,17 @@
 #include <boost/filesystem.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
-#include "../Defs.h"
-#include "../Grep.hpp"
-#include "../networking/socket_utils.hpp"
-#include "../Profiler.hpp"
-#include "../spdlog_with_specializations.hpp"
-#include "../streaming_archive/Constants.hpp"
-#include "../Utils.hpp"
+#include "../../Defs.h"
+#include "../../Grep.hpp"
+#include "../../networking/socket_utils.hpp"
+#include "../../Profiler.hpp"
+#include "../../spdlog_with_specializations.hpp"
+#include "../../streaming_archive/Constants.hpp"
+#include "../../Utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "ControllerMonitoringThread.hpp"
 
-using clo::CommandLineArguments;
+using clp::clo::CommandLineArguments;
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -349,7 +349,7 @@ int main(int argc, char const* argv[]) {
 
     auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());
 
-    ControllerMonitoringThread controller_monitoring_thread(controller_socket_fd);
+    clp::clo::ControllerMonitoringThread controller_monitoring_thread(controller_socket_fd);
     controller_monitoring_thread.start();
 
     int return_value = 0;

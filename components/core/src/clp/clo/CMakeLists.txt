@@ -1,0 +1,135 @@
+set(
+        CLO_SOURCES
+        "${PROJECT_SOURCE_DIR}/src/BufferReader.cpp"
+        "${PROJECT_SOURCE_DIR}/src/BufferReader.hpp"
+        "${PROJECT_SOURCE_DIR}/src/database_utils.cpp"
+        "${PROJECT_SOURCE_DIR}/src/database_utils.hpp"
+        "${PROJECT_SOURCE_DIR}/src/Defs.h"
+        "${PROJECT_SOURCE_DIR}/src/dictionary_utils.cpp"
+        "${PROJECT_SOURCE_DIR}/src/dictionary_utils.hpp"
+        "${PROJECT_SOURCE_DIR}/src/DictionaryEntry.hpp"
+        "${PROJECT_SOURCE_DIR}/src/DictionaryReader.hpp"
+        "${PROJECT_SOURCE_DIR}/src/EncodedVariableInterpreter.cpp"
+        "${PROJECT_SOURCE_DIR}/src/EncodedVariableInterpreter.hpp"
+        "${PROJECT_SOURCE_DIR}/src/ErrorCode.hpp"
+        "${PROJECT_SOURCE_DIR}/src/ffi/encoding_methods.cpp"
+        "${PROJECT_SOURCE_DIR}/src/ffi/encoding_methods.hpp"
+        "${PROJECT_SOURCE_DIR}/src/ffi/encoding_methods.inc"
+        "${PROJECT_SOURCE_DIR}/src/ffi/ir_stream/decoding_methods.cpp"
+        "${PROJECT_SOURCE_DIR}/src/ffi/ir_stream/decoding_methods.hpp"
+        "${PROJECT_SOURCE_DIR}/src/ffi/ir_stream/decoding_methods.inc"
+        "${PROJECT_SOURCE_DIR}/src/FileReader.cpp"
+        "${PROJECT_SOURCE_DIR}/src/FileReader.hpp"
+        "${PROJECT_SOURCE_DIR}/src/FileWriter.cpp"
+        "${PROJECT_SOURCE_DIR}/src/FileWriter.hpp"
+        "${PROJECT_SOURCE_DIR}/src/Grep.cpp"
+        "${PROJECT_SOURCE_DIR}/src/Grep.hpp"
+        "${PROJECT_SOURCE_DIR}/src/ir/LogEvent.hpp"
+        "${PROJECT_SOURCE_DIR}/src/ir/parsing.cpp"
+        "${PROJECT_SOURCE_DIR}/src/ir/parsing.hpp"
+        "${PROJECT_SOURCE_DIR}/src/ir/parsing.inc"
+        "${PROJECT_SOURCE_DIR}/src/ir/types.hpp"
+        "${PROJECT_SOURCE_DIR}/src/LogSurgeonReader.cpp"
+        "${PROJECT_SOURCE_DIR}/src/LogSurgeonReader.hpp"
+        "${PROJECT_SOURCE_DIR}/src/LogTypeDictionaryEntry.cpp"
+        "${PROJECT_SOURCE_DIR}/src/LogTypeDictionaryEntry.hpp"
+        "${PROJECT_SOURCE_DIR}/src/LogTypeDictionaryReader.hpp"
+        "${PROJECT_SOURCE_DIR}/src/networking/socket_utils.cpp"
+        "${PROJECT_SOURCE_DIR}/src/networking/socket_utils.hpp"
+        "${PROJECT_SOURCE_DIR}/src/networking/SocketOperationFailed.hpp"
+        "${PROJECT_SOURCE_DIR}/src/PageAllocatedVector.hpp"
+        "${PROJECT_SOURCE_DIR}/src/ParsedMessage.cpp"
+        "${PROJECT_SOURCE_DIR}/src/ParsedMessage.hpp"
+        "${PROJECT_SOURCE_DIR}/src/Platform.hpp"
+        "${PROJECT_SOURCE_DIR}/src/Profiler.cpp"
+        "${PROJECT_SOURCE_DIR}/src/Profiler.hpp"
+        "${PROJECT_SOURCE_DIR}/src/Query.cpp"
+        "${PROJECT_SOURCE_DIR}/src/Query.hpp"
+        "${PROJECT_SOURCE_DIR}/src/ReaderInterface.cpp"
+        "${PROJECT_SOURCE_DIR}/src/ReaderInterface.hpp"
+        "${PROJECT_SOURCE_DIR}/src/spdlog_with_specializations.hpp"
+        "${PROJECT_SOURCE_DIR}/src/SQLiteDB.cpp"
+        "${PROJECT_SOURCE_DIR}/src/SQLiteDB.hpp"
+        "${PROJECT_SOURCE_DIR}/src/SQLitePreparedStatement.cpp"
+        "${PROJECT_SOURCE_DIR}/src/SQLitePreparedStatement.hpp"
+        "${PROJECT_SOURCE_DIR}/src/Stopwatch.cpp"
+        "${PROJECT_SOURCE_DIR}/src/Stopwatch.hpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/ArchiveMetadata.cpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/ArchiveMetadata.hpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/Constants.hpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/MetadataDB.cpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/MetadataDB.hpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/Archive.cpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/Archive.hpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/File.cpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/File.hpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/Message.cpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/Message.hpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/Segment.cpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/Segment.hpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/SegmentManager.cpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/reader/SegmentManager.hpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/writer/File.cpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/writer/File.hpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/writer/Segment.cpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_archive/writer/Segment.hpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_compression/Constants.hpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_compression/Decompressor.hpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_compression/passthrough/Compressor.cpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_compression/passthrough/Compressor.hpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_compression/passthrough/Decompressor.cpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_compression/passthrough/Decompressor.hpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Compressor.cpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Compressor.hpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Constants.hpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Decompressor.cpp"
+        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Decompressor.hpp"
+        "${PROJECT_SOURCE_DIR}/src/StringReader.cpp"
+        "${PROJECT_SOURCE_DIR}/src/StringReader.hpp"
+        "${PROJECT_SOURCE_DIR}/src/Thread.cpp"
+        "${PROJECT_SOURCE_DIR}/src/Thread.hpp"
+        "${PROJECT_SOURCE_DIR}/src/TimestampPattern.cpp"
+        "${PROJECT_SOURCE_DIR}/src/TimestampPattern.hpp"
+        "${PROJECT_SOURCE_DIR}/src/TraceableException.hpp"
+        "${PROJECT_SOURCE_DIR}/src/type_utils.hpp"
+        "${PROJECT_SOURCE_DIR}/src/Utils.cpp"
+        "${PROJECT_SOURCE_DIR}/src/Utils.hpp"
+        "${PROJECT_SOURCE_DIR}/src/VariableDictionaryEntry.cpp"
+        "${PROJECT_SOURCE_DIR}/src/VariableDictionaryEntry.hpp"
+        "${PROJECT_SOURCE_DIR}/src/VariableDictionaryReader.hpp"
+        "${PROJECT_SOURCE_DIR}/src/VariableDictionaryWriter.cpp"
+        "${PROJECT_SOURCE_DIR}/src/VariableDictionaryWriter.hpp"
+        "${PROJECT_SOURCE_DIR}/src/version.hpp"
+        "${PROJECT_SOURCE_DIR}/src/WriterInterface.cpp"
+        "${PROJECT_SOURCE_DIR}/src/WriterInterface.hpp"
+        "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.c"
+        "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.h"
+        "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3ext.h"
+        clo.cpp
+        CommandLineArguments.cpp
+        CommandLineArguments.hpp
+        ControllerMonitoringThread.cpp
+        ControllerMonitoringThread.hpp
+)
+
+add_executable(clo ${CLO_SOURCES})
+target_compile_features(clo PRIVATE cxx_std_17)
+target_include_directories(clo PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
+target_link_libraries(clo
+        PRIVATE
+        Boost::filesystem Boost::iostreams Boost::program_options
+        fmt::fmt
+        log_surgeon::log_surgeon
+        msgpack-cxx
+        spdlog::spdlog
+        ${sqlite_LIBRARY_DEPENDENCIES}
+        ${STD_FS_LIBS}
+        string_utils::string_utils
+        ZStd::ZStd
+)
+# Put the built executable at the root of the build directory
+set_target_properties(
+        clo
+        PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+)
