@@ -8,7 +8,7 @@
 
 #include "../../CommandLineArgumentsBase.hpp"
 #include "../../Defs.h"
-#include "../../GlobalMetadataDBConfig.hpp"
+#include "../GlobalMetadataDBConfig.hpp"
 
 namespace clp::clg {
 class CommandLineArguments : public CommandLineArgumentsBase {

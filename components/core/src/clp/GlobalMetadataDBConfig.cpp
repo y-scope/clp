@@ -18,6 +18,7 @@ get_yaml_unconvertable_value_exception(string const& key_name, string const& des
     );
 }
 
+namespace clp {
 void GlobalMetadataDBConfig::parse_config_file(string const& config_file_path) {
     YAML::Node config = YAML::LoadFile(config_file_path);
 
@@ -106,3 +107,4 @@ void GlobalMetadataDBConfig::parse_config_file(string const& config_file_path) {
         throw invalid_argument("Unknown type");
     }
 }
+}  // namespace clp

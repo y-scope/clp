@@ -11,7 +11,7 @@
 #include <log_surgeon/LogParser.hpp>
 
 #include "../src/clp/clp/run.hpp"
-#include "../src/GlobalMySQLMetadataDB.hpp"
+#include "../src/clp/GlobalMySQLMetadataDB.hpp"
 #include "../src/LogSurgeonReader.hpp"
 #include "../src/Utils.hpp"
 

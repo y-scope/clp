@@ -7,7 +7,7 @@
 #include <boost/asio.hpp>
 
 #include "../../CommandLineArgumentsBase.hpp"
-#include "../../GlobalMetadataDBConfig.hpp"
+#include "../GlobalMetadataDBConfig.hpp"
 
 namespace clp::clp {
 class CommandLineArguments : public CommandLineArgumentsBase {
