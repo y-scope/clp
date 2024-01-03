@@ -1,7 +1,0 @@
-python-Levenshtein
-PyYAML==5.4
-
-msgpack~=1.0.2
-zstandard~=0.15.2
-mysql-connector-python==8.0.26
-pydantic==1.8.2

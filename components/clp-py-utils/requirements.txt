@@ -1,5 +1,0 @@
-python-Levenshtein
-PyYAML==5.4
-pydantic==1.8.2
-mysql-connector-python==8.0.26
-mariadb~=1.0.7
