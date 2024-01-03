@@ -1,15 +1,15 @@
-#ifndef CLO_COMMANDLINEARGUMENTS_HPP
-#define CLO_COMMANDLINEARGUMENTS_HPP
+#ifndef CLP_CLO_COMMANDLINEARGUMENTS_HPP
+#define CLP_CLO_COMMANDLINEARGUMENTS_HPP
 
 #include <string>
 #include <vector>
 
 #include <boost/asio.hpp>
 
-#include "../CommandLineArgumentsBase.hpp"
-#include "../Defs.h"
+#include "../../CommandLineArgumentsBase.hpp"
+#include "../../Defs.h"
 
-namespace clo {
+namespace clp::clo {
 class CommandLineArguments : public CommandLineArgumentsBase {
 public:
     // Constructors
@@ -51,6 +51,6 @@ private:
     std::string m_file_path;
     epochtime_t m_search_begin_ts, m_search_end_ts;
 };
-}  // namespace clo
+}  // namespace clp::clo
 
-#endif  // CLO_COMMANDLINEARGUMENTS_HPP
+#endif  // CLP_CLO_COMMANDLINEARGUMENTS_HPP

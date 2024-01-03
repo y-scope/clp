@@ -2,9 +2,10 @@
 
 #include <unistd.h>
 
-#include "../networking/socket_utils.hpp"
-#include "../spdlog_with_specializations.hpp"
+#include "../../networking/socket_utils.hpp"
+#include "../../spdlog_with_specializations.hpp"
 
+namespace clp::clo {
 void ControllerMonitoringThread::thread_method() {
     // Wait for the controller socket to close
     constexpr size_t cBufLen = 4096;
@@ -43,3 +44,4 @@ void ControllerMonitoringThread::thread_method() {
 
     close(m_controller_socket_fd);
 }
+}  // namespace clp::clo

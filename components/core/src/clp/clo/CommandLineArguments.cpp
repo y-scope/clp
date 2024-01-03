@@ -5,8 +5,8 @@
 
 #include <boost/program_options.hpp>
 
-#include "../spdlog_with_specializations.hpp"
-#include "../version.hpp"
+#include "../../spdlog_with_specializations.hpp"
+#include "../../version.hpp"
 
 namespace po = boost::program_options;
 using std::cerr;
@@ -16,7 +16,7 @@ using std::invalid_argument;
 using std::string;
 using std::vector;
 
-namespace clo {
+namespace clp::clo {
 CommandLineArgumentsBase::ParsingResult
 CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     // Print out basic usage if user doesn't specify any options
@@ -260,4 +260,4 @@ void CommandLineArguments::print_basic_usage() const {
          << " [OPTIONS] SEARCH_CONTROLLER_HOST SEARCH_CONTROLLER_PORT "
          << R"(ARCHIVE_PATH "WILDCARD STRING" [FILE])" << endl;
 }
-}  // namespace clo
+}  // namespace clp::clo

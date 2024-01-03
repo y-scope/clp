@@ -1,8 +1,9 @@
-#ifndef CONTROLLERMONITORINGTHREAD_HPP
-#define CONTROLLERMONITORINGTHREAD_HPP
+#ifndef CLP_CLO_CONTROLLERMONITORINGTHREAD_HPP
+#define CLP_CLO_CONTROLLERMONITORINGTHREAD_HPP
 
-#include "../Thread.hpp"
+#include "../../Thread.hpp"
 
+namespace clp::clo {
 /**
  * A thread that waits for the controller to close the connection at which time it will indicate the
  * query has been cancelled.
@@ -25,5 +26,6 @@ private:
     int m_controller_socket_fd;
     std::atomic_bool m_query_cancelled;
 };
+}  // namespace clp::clo
 
-#endif  // CONTROLLERMONITORINGTHREAD_HPP
+#endif  // CLP_CLO_CONTROLLERMONITORINGTHREAD_HPP
