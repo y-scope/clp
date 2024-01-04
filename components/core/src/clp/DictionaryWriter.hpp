@@ -1,22 +1,23 @@
-#ifndef DICTIONARYWRITER_HPP
-#define DICTIONARYWRITER_HPP
+#ifndef CLP_DICTIONARYWRITER_HPP
+#define CLP_DICTIONARYWRITER_HPP
 
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
-#include "ArrayBackedPosIntSet.hpp"
-#include "Defs.h"
+#include "../ArrayBackedPosIntSet.hpp"
+#include "../Defs.h"
+#include "../FileWriter.hpp"
+#include "../spdlog_with_specializations.hpp"
+#include "../streaming_compression/passthrough/Compressor.hpp"
+#include "../streaming_compression/passthrough/Decompressor.hpp"
+#include "../streaming_compression/zstd/Compressor.hpp"
+#include "../streaming_compression/zstd/Decompressor.hpp"
+#include "../TraceableException.hpp"
 #include "dictionary_utils.hpp"
-#include "FileWriter.hpp"
-#include "spdlog_with_specializations.hpp"
-#include "streaming_compression/passthrough/Compressor.hpp"
-#include "streaming_compression/passthrough/Decompressor.hpp"
-#include "streaming_compression/zstd/Compressor.hpp"
-#include "streaming_compression/zstd/Decompressor.hpp"
-#include "TraceableException.hpp"
 
+namespace clp {
 /**
  * Template class for performing operations on dictionaries and writing them to disk
  * @tparam DictionaryIdType
@@ -293,5 +294,6 @@ void DictionaryWriter<DictionaryIdType, EntryType>::index_segment(
     m_segment_index_file_writer.write_numeric_value<uint64_t>(m_num_segments_in_index);
     m_segment_index_file_writer.seek_from_begin(segment_index_file_writer_pos);
 }
+}  // namespace clp
 
-#endif  // DICTIONARYWRITER_HPP
+#endif  // CLP_DICTIONARYWRITER_HPP

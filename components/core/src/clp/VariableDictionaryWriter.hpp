@@ -1,10 +1,11 @@
-#ifndef VARIABLEDICTIONARYWRITER_HPP
-#define VARIABLEDICTIONARYWRITER_HPP
+#ifndef CLP_VARIABLEDICTIONARYWRITER_HPP
+#define CLP_VARIABLEDICTIONARYWRITER_HPP
 
-#include "Defs.h"
+#include "../Defs.h"
 #include "DictionaryWriter.hpp"
 #include "VariableDictionaryEntry.hpp"
 
+namespace clp {
 /**
  * Class for performing operations on variable dictionaries and writing them to disk
  */
@@ -31,5 +32,6 @@ public:
      */
     bool add_entry(std::string const& value, variable_dictionary_id_t& id);
 };
+}  // namespace clp
 
-#endif  // VARIABLEDICTIONARYWRITER_HPP
+#endif  // CLP_VARIABLEDICTIONARYWRITER_HPP

@@ -1,11 +1,12 @@
-#ifndef DICTIONARYENTRY_HPP
-#define DICTIONARYENTRY_HPP
+#ifndef CLP_DICTIONARYENTRY_HPP
+#define CLP_DICTIONARYENTRY_HPP
 
 #include <set>
 #include <string>
 
-#include "Defs.h"
+#include "../Defs.h"
 
+namespace clp {
 /**
  * Template class representing a dictionary entry
  * @tparam DictionaryIdType
@@ -38,5 +39,6 @@ protected:
 
     std::set<segment_id_t> m_ids_of_segments_containing_entry;
 };
+}  // namespace clp
 
-#endif  // DICTIONARYENTRY_HPP
+#endif  // CLP_DICTIONARYENTRY_HPP

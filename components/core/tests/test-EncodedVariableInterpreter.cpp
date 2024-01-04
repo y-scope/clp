@@ -380,7 +380,7 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
         char const cVarSegmentIndexPath[] = "var.segindex";
 
         // Open writer
-        VariableDictionaryWriter var_dict_writer;
+        clp::VariableDictionaryWriter var_dict_writer;
         var_dict_writer.open(cVarDictPath, cVarSegmentIndexPath, cVariableDictionaryIdMax);
 
         // Test encoding
@@ -406,7 +406,7 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
               + enum_to_underlying_type(VariablePlaceholder::Dictionary);
         // clang-format on
 
-        LogTypeDictionaryEntry logtype_dict_entry;
+        clp::LogTypeDictionaryEntry logtype_dict_entry;
         EncodedVariableInterpreter::encode_and_add_to_dictionary(
                 msg,
                 logtype_dict_entry,
@@ -434,13 +434,13 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
         REQUIRE(var_ids.size() == encoded_var_id_ix);
 
         // Open reader
-        VariableDictionaryReader var_dict_reader;
+        clp::VariableDictionaryReader var_dict_reader;
         var_dict_reader.open(cVarDictPath, cVarSegmentIndexPath);
         var_dict_reader.read_new_entries();
 
         // Test searching
         string search_logtype = "here is a string with a small int ";
-        SubQuery sub_query;
+        clp::SubQuery sub_query;
         REQUIRE(EncodedVariableInterpreter::encode_and_search_dictionary(
                 var_strs[0],
                 var_dict_reader,

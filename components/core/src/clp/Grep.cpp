@@ -8,9 +8,9 @@
 #include "../ir/parsing.hpp"
 #include "../ir/types.hpp"
 #include "../StringReader.hpp"
-#include "../Utils.hpp"
 #include "EncodedVariableInterpreter.hpp"
 #include "LogSurgeonReader.hpp"
+#include "Utils.hpp"
 
 using clp::streaming_archive::reader::Archive;
 using clp::streaming_archive::reader::File;

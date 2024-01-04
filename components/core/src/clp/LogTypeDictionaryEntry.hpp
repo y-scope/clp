@@ -1,18 +1,19 @@
-#ifndef LOGTYPEDICTIONARYENTRY_HPP
-#define LOGTYPEDICTIONARYENTRY_HPP
+#ifndef CLP_LOGTYPEDICTIONARYENTRY_HPP
+#define CLP_LOGTYPEDICTIONARYENTRY_HPP
 
 #include <vector>
 
-#include "Defs.h"
+#include "../Defs.h"
+#include "../ErrorCode.hpp"
+#include "../FileReader.hpp"
+#include "../ir/types.hpp"
+#include "../streaming_compression/zstd/Compressor.hpp"
+#include "../streaming_compression/zstd/Decompressor.hpp"
+#include "../TraceableException.hpp"
+#include "../type_utils.hpp"
 #include "DictionaryEntry.hpp"
-#include "ErrorCode.hpp"
-#include "FileReader.hpp"
-#include "ir/types.hpp"
-#include "streaming_compression/zstd/Compressor.hpp"
-#include "streaming_compression/zstd/Decompressor.hpp"
-#include "TraceableException.hpp"
-#include "type_utils.hpp"
 
+namespace clp {
 /**
  * Class representing a logtype dictionary entry
  */
@@ -175,5 +176,6 @@ private:
     std::vector<size_t> m_placeholder_positions;
     size_t m_num_escaped_placeholders{0};
 };
+}  // namespace clp
 
-#endif  // LOGTYPEDICTIONARYENTRY_HPP
+#endif  // CLP_LOGTYPEDICTIONARYENTRY_HPP

@@ -1,5 +1,5 @@
-#ifndef DICTIONARYREADER_HPP
-#define DICTIONARYREADER_HPP
+#ifndef CLP_DICTIONARYREADER_HPP
+#define CLP_DICTIONARYREADER_HPP
 
 #include <string>
 #include <vector>
@@ -7,13 +7,14 @@
 #include <boost/algorithm/string.hpp>
 #include <string_utils/string_utils.hpp>
 
+#include "../FileReader.hpp"
+#include "../streaming_compression/passthrough/Decompressor.hpp"
+#include "../streaming_compression/zstd/Decompressor.hpp"
 #include "dictionary_utils.hpp"
 #include "DictionaryEntry.hpp"
-#include "FileReader.hpp"
-#include "streaming_compression/passthrough/Decompressor.hpp"
-#include "streaming_compression/zstd/Decompressor.hpp"
 #include "Utils.hpp"
 
+namespace clp {
 /**
  * Template class for reading dictionaries from disk and performing operations on them
  * @tparam DictionaryIdType
@@ -284,5 +285,6 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_segment_ids() {
         m_entries[id].add_segment_containing_entry(segment_id);
     }
 }
+}  // namespace clp
 
-#endif  // DICTIONARYREADER_HPP
+#endif  // CLP_DICTIONARYREADER_HPP

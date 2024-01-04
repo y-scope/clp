@@ -10,15 +10,17 @@
 #include "../../Defs.h"
 #include "../../Profiler.hpp"
 #include "../../spdlog_with_specializations.hpp"
-#include "../../Utils.hpp"
 #include "../Grep.hpp"
 #include "../networking/socket_utils.hpp"
 #include "../streaming_archive/Constants.hpp"
+#include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "ControllerMonitoringThread.hpp"
 
 using clp::clo::CommandLineArguments;
 using clp::Grep;
+using clp::load_lexer_from_file;
+using clp::Query;
 using clp::streaming_archive::MetadataDB;
 using clp::streaming_archive::reader::Archive;
 using clp::streaming_archive::reader::File;

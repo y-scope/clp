@@ -186,6 +186,11 @@ set(SOURCE_FILES_unitTest
         src/clp/clp/run.hpp
         src/clp/clp/utils.cpp
         src/clp/clp/utils.hpp
+        src/clp/dictionary_utils.cpp
+        src/clp/dictionary_utils.hpp
+        src/clp/DictionaryEntry.hpp
+        src/clp/DictionaryReader.hpp
+        src/clp/DictionaryWriter.hpp
         src/clp/EncodedVariableInterpreter.cpp
         src/clp/EncodedVariableInterpreter.hpp
         src/clp/GlobalMetadataDB.hpp
@@ -199,6 +204,13 @@ set(SOURCE_FILES_unitTest
         src/clp/Grep.hpp
         src/clp/LogSurgeonReader.cpp
         src/clp/LogSurgeonReader.hpp
+        src/clp/LogTypeDictionaryEntry.cpp
+        src/clp/LogTypeDictionaryEntry.hpp
+        src/clp/LogTypeDictionaryReader.hpp
+        src/clp/LogTypeDictionaryWriter.cpp
+        src/clp/LogTypeDictionaryWriter.hpp
+        src/clp/Query.cpp
+        src/clp/Query.hpp
         src/clp/streaming_archive/ArchiveMetadata.cpp
         src/clp/streaming_archive/ArchiveMetadata.hpp
         src/clp/streaming_archive/Constants.hpp
@@ -222,14 +234,16 @@ set(SOURCE_FILES_unitTest
         src/clp/streaming_archive/writer/Segment.hpp
         src/clp/streaming_archive/writer/utils.cpp
         src/clp/streaming_archive/writer/utils.hpp
+        src/clp/Utils.cpp
+        src/clp/Utils.hpp
+        src/clp/VariableDictionaryEntry.cpp
+        src/clp/VariableDictionaryEntry.hpp
+        src/clp/VariableDictionaryReader.hpp
+        src/clp/VariableDictionaryWriter.cpp
+        src/clp/VariableDictionaryWriter.hpp
         src/database_utils.cpp
         src/database_utils.hpp
         src/Defs.h
-        src/dictionary_utils.cpp
-        src/dictionary_utils.hpp
-        src/DictionaryEntry.hpp
-        src/DictionaryReader.hpp
-        src/DictionaryWriter.hpp
         src/ErrorCode.hpp
         src/ffi/encoding_methods.cpp
         src/ffi/encoding_methods.hpp
@@ -272,11 +286,6 @@ set(SOURCE_FILES_unitTest
         src/LibarchiveFileReader.hpp
         src/LibarchiveReader.cpp
         src/LibarchiveReader.hpp
-        src/LogTypeDictionaryEntry.cpp
-        src/LogTypeDictionaryEntry.hpp
-        src/LogTypeDictionaryReader.hpp
-        src/LogTypeDictionaryWriter.cpp
-        src/LogTypeDictionaryWriter.hpp
         src/math_utils.hpp
         src/MessageParser.cpp
         src/MessageParser.hpp
@@ -292,8 +301,6 @@ set(SOURCE_FILES_unitTest
         src/Platform.hpp
         src/Profiler.cpp
         src/Profiler.hpp
-        src/Query.cpp
-        src/Query.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
         src/spdlog_with_specializations.hpp
@@ -321,13 +328,6 @@ set(SOURCE_FILES_unitTest
         src/TimestampPattern.hpp
         src/TraceableException.hpp
         src/type_utils.hpp
-        src/Utils.cpp
-        src/Utils.hpp
-        src/VariableDictionaryEntry.cpp
-        src/VariableDictionaryEntry.hpp
-        src/VariableDictionaryReader.hpp
-        src/VariableDictionaryWriter.cpp
-        src/VariableDictionaryWriter.hpp
         src/version.hpp
         src/WriterInterface.cpp
         src/WriterInterface.hpp

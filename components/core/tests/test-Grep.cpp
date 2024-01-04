@@ -7,6 +7,7 @@
 #include "../src/clp/Grep.hpp"
 
 using clp::Grep;
+using clp::load_lexer_from_file;
 using log_surgeon::DelimiterStringAST;
 using log_surgeon::lexers::ByteLexer;
 using log_surgeon::ParserAST;

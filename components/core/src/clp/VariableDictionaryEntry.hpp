@@ -1,13 +1,14 @@
-#ifndef VARIABLEDICTIONARYENTRY_HPP
-#define VARIABLEDICTIONARYENTRY_HPP
+#ifndef CLP_VARIABLEDICTIONARYENTRY_HPP
+#define CLP_VARIABLEDICTIONARYENTRY_HPP
 
-#include "Defs.h"
+#include "../Defs.h"
+#include "../ErrorCode.hpp"
+#include "../FileReader.hpp"
+#include "../streaming_compression/zstd/Compressor.hpp"
+#include "../streaming_compression/zstd/Decompressor.hpp"
 #include "DictionaryEntry.hpp"
-#include "ErrorCode.hpp"
-#include "FileReader.hpp"
-#include "streaming_compression/zstd/Compressor.hpp"
-#include "streaming_compression/zstd/Decompressor.hpp"
 
+namespace clp {
 /**
  * Class representing a variable dictionary entry
  */
@@ -66,5 +67,6 @@ public:
      */
     void read_from_file(streaming_compression::Decompressor& decompressor);
 };
+}  // namespace clp
 
-#endif  // VARIABLEDICTIONARYENTRY_HPP
+#endif  // CLP_VARIABLEDICTIONARYENTRY_HPP

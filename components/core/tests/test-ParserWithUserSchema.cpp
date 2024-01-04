@@ -13,8 +13,9 @@
 #include "../src/clp/clp/run.hpp"
 #include "../src/clp/GlobalMySQLMetadataDB.hpp"
 #include "../src/clp/LogSurgeonReader.hpp"
-#include "../src/Utils.hpp"
+#include "../src/clp/Utils.hpp"
 
+using clp::load_lexer_from_file;
 using clp::LogSurgeonReader;
 using log_surgeon::DelimiterStringAST;
 using log_surgeon::LALR1Parser;

@@ -1,14 +1,15 @@
 #include "LogTypeDictionaryEntry.hpp"
 
-#include "ir/parsing.hpp"
-#include "ir/types.hpp"
-#include "type_utils.hpp"
+#include "../ir/parsing.hpp"
+#include "../ir/types.hpp"
+#include "../type_utils.hpp"
 #include "Utils.hpp"
 
 using ir::VariablePlaceholder;
 using std::string;
 using std::string_view;
 
+namespace clp {
 size_t LogTypeDictionaryEntry::get_placeholder_info(
         size_t placeholder_ix,
         VariablePlaceholder& placeholder
@@ -182,3 +183,4 @@ void LogTypeDictionaryEntry::read_from_file(streaming_compression::Decompressor&
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 }
+}  // namespace clp

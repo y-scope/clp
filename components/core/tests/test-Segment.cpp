@@ -5,7 +5,7 @@
 
 #include "../src/clp/streaming_archive/reader/Segment.hpp"
 #include "../src/clp/streaming_archive/writer/Segment.hpp"
-#include "../src/Utils.hpp"
+#include "../src/clp/Utils.hpp"
 
 using std::string;
 
@@ -24,7 +24,7 @@ TEST_CASE("Test writing and reading a segment", "[Segment]") {
 
     // Create directory for segments
     string segments_dir_path = "unit-test-segment/";
-    error_code = create_directory_structure(segments_dir_path, 0700);
+    error_code = clp::create_directory_structure(segments_dir_path, 0700);
     REQUIRE(ErrorCode_Success == error_code);
 
     // Test segment writing

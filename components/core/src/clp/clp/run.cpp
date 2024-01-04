@@ -7,7 +7,7 @@
 
 #include "../../Profiler.hpp"
 #include "../../spdlog_with_specializations.hpp"
-#include "../../Utils.hpp"
+#include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "compression.hpp"
 #include "decompression.hpp"

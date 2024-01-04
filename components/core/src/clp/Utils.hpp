@@ -1,5 +1,5 @@
-#ifndef UTILS_HPP
-#define UTILS_HPP
+#ifndef CLP_UTILS_HPP
+#define CLP_UTILS_HPP
 
 #include <list>
 #include <set>
@@ -9,11 +9,12 @@
 
 #include <log_surgeon/Lexer.hpp>
 
-#include "Defs.h"
-#include "ErrorCode.hpp"
-#include "FileReader.hpp"
-#include "ParsedMessage.hpp"
+#include "../Defs.h"
+#include "../ErrorCode.hpp"
+#include "../FileReader.hpp"
+#include "../ParsedMessage.hpp"
 
+namespace clp {
 /**
  * Creates a directory with the given path
  * @param path
@@ -76,4 +77,6 @@ void load_lexer_from_file(
         bool done,
         log_surgeon::lexers::ByteLexer& forward_lexer_ptr
 );
-#endif  // UTILS_HPP
+}  // namespace clp
+
+#endif  // CLP_UTILS_HPP

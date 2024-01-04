@@ -17,9 +17,9 @@
 #include "../../../ArrayBackedPosIntSet.hpp"
 #include "../../../ErrorCode.hpp"
 #include "../../../ir/LogEvent.hpp"
-#include "../../../LogTypeDictionaryWriter.hpp"
-#include "../../../VariableDictionaryWriter.hpp"
 #include "../../GlobalMetadataDB.hpp"
+#include "../../LogTypeDictionaryWriter.hpp"
+#include "../../VariableDictionaryWriter.hpp"
 #include "../ArchiveMetadata.hpp"
 #include "../MetadataDB.hpp"
 
