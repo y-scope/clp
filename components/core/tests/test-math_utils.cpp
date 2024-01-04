@@ -1,6 +1,6 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 
-#include "../src/math_utils.hpp"
+#include "../src/clp/math_utils.hpp"
 
 TEST_CASE("int_round_up_to_multiple", "[math_utils]") {
     // Factor of 1

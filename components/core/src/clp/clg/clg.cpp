@@ -7,20 +7,22 @@
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include "../../Defs.h"
-#include "../../Profiler.hpp"
 #include "../../spdlog_with_specializations.hpp"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
 #include "../Grep.hpp"
+#include "../Profiler.hpp"
 #include "../streaming_archive/Constants.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 
 using clp::clg::CommandLineArguments;
+using clp::FileReader;
 using clp::GlobalMetadataDB;
 using clp::GlobalMetadataDBConfig;
 using clp::Grep;
 using clp::load_lexer_from_file;
+using clp::Profiler;
 using clp::Query;
 using clp::streaming_archive::MetadataDB;
 using clp::streaming_archive::reader::Archive;

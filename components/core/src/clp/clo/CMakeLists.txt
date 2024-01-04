@@ -1,11 +1,15 @@
 set(
         CLO_SOURCES
+        ../database_utils.cpp
+        ../database_utils.hpp
         ../dictionary_utils.cpp
         ../dictionary_utils.hpp
         ../DictionaryEntry.hpp
         ../DictionaryReader.hpp
         ../EncodedVariableInterpreter.cpp
         ../EncodedVariableInterpreter.hpp
+        ../FileReader.cpp
+        ../FileReader.hpp
         ../Grep.cpp
         ../Grep.hpp
         ../LogSurgeonReader.cpp
@@ -16,8 +20,19 @@ set(
         ../networking/socket_utils.cpp
         ../networking/socket_utils.hpp
         ../networking/SocketOperationFailed.hpp
+        ../PageAllocatedVector.hpp
+        ../ParsedMessage.cpp
+        ../ParsedMessage.hpp
+        ../Profiler.cpp
+        ../Profiler.hpp
         ../Query.cpp
         ../Query.hpp
+        ../SQLiteDB.cpp
+        ../SQLiteDB.hpp
+        ../SQLitePreparedStatement.cpp
+        ../SQLitePreparedStatement.hpp
+        ../Stopwatch.cpp
+        ../Stopwatch.hpp
         ../streaming_archive/ArchiveMetadata.cpp
         ../streaming_archive/ArchiveMetadata.hpp
         ../streaming_archive/Constants.hpp
@@ -37,6 +52,21 @@ set(
         ../streaming_archive/writer/File.hpp
         ../streaming_archive/writer/Segment.cpp
         ../streaming_archive/writer/Segment.hpp
+        ../streaming_compression/Constants.hpp
+        ../streaming_compression/Decompressor.hpp
+        ../streaming_compression/passthrough/Compressor.cpp
+        ../streaming_compression/passthrough/Compressor.hpp
+        ../streaming_compression/passthrough/Decompressor.cpp
+        ../streaming_compression/passthrough/Decompressor.hpp
+        ../streaming_compression/zstd/Compressor.cpp
+        ../streaming_compression/zstd/Compressor.hpp
+        ../streaming_compression/zstd/Constants.hpp
+        ../streaming_compression/zstd/Decompressor.cpp
+        ../streaming_compression/zstd/Decompressor.hpp
+        ../StringReader.cpp
+        ../StringReader.hpp
+        ../Thread.cpp
+        ../Thread.hpp
         ../Utils.cpp
         ../Utils.hpp
         ../VariableDictionaryEntry.cpp
@@ -46,8 +76,6 @@ set(
         ../VariableDictionaryWriter.hpp
         "${PROJECT_SOURCE_DIR}/src/BufferReader.cpp"
         "${PROJECT_SOURCE_DIR}/src/BufferReader.hpp"
-        "${PROJECT_SOURCE_DIR}/src/database_utils.cpp"
-        "${PROJECT_SOURCE_DIR}/src/database_utils.hpp"
         "${PROJECT_SOURCE_DIR}/src/Defs.h"
         "${PROJECT_SOURCE_DIR}/src/ErrorCode.hpp"
         "${PROJECT_SOURCE_DIR}/src/ffi/encoding_methods.cpp"
@@ -56,8 +84,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/ffi/ir_stream/decoding_methods.cpp"
         "${PROJECT_SOURCE_DIR}/src/ffi/ir_stream/decoding_methods.hpp"
         "${PROJECT_SOURCE_DIR}/src/ffi/ir_stream/decoding_methods.inc"
-        "${PROJECT_SOURCE_DIR}/src/FileReader.cpp"
-        "${PROJECT_SOURCE_DIR}/src/FileReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/FileWriter.cpp"
         "${PROJECT_SOURCE_DIR}/src/FileWriter.hpp"
         "${PROJECT_SOURCE_DIR}/src/ir/LogEvent.hpp"
@@ -65,36 +91,10 @@ set(
         "${PROJECT_SOURCE_DIR}/src/ir/parsing.hpp"
         "${PROJECT_SOURCE_DIR}/src/ir/parsing.inc"
         "${PROJECT_SOURCE_DIR}/src/ir/types.hpp"
-        "${PROJECT_SOURCE_DIR}/src/PageAllocatedVector.hpp"
-        "${PROJECT_SOURCE_DIR}/src/ParsedMessage.cpp"
-        "${PROJECT_SOURCE_DIR}/src/ParsedMessage.hpp"
         "${PROJECT_SOURCE_DIR}/src/Platform.hpp"
-        "${PROJECT_SOURCE_DIR}/src/Profiler.cpp"
-        "${PROJECT_SOURCE_DIR}/src/Profiler.hpp"
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.cpp"
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.hpp"
         "${PROJECT_SOURCE_DIR}/src/spdlog_with_specializations.hpp"
-        "${PROJECT_SOURCE_DIR}/src/SQLiteDB.cpp"
-        "${PROJECT_SOURCE_DIR}/src/SQLiteDB.hpp"
-        "${PROJECT_SOURCE_DIR}/src/SQLitePreparedStatement.cpp"
-        "${PROJECT_SOURCE_DIR}/src/SQLitePreparedStatement.hpp"
-        "${PROJECT_SOURCE_DIR}/src/Stopwatch.cpp"
-        "${PROJECT_SOURCE_DIR}/src/Stopwatch.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/Constants.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/Decompressor.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/passthrough/Compressor.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/passthrough/Compressor.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/passthrough/Decompressor.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/passthrough/Decompressor.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Compressor.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Compressor.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Constants.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Decompressor.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Decompressor.hpp"
-        "${PROJECT_SOURCE_DIR}/src/StringReader.cpp"
-        "${PROJECT_SOURCE_DIR}/src/StringReader.hpp"
-        "${PROJECT_SOURCE_DIR}/src/Thread.cpp"
-        "${PROJECT_SOURCE_DIR}/src/Thread.hpp"
         "${PROJECT_SOURCE_DIR}/src/TimestampPattern.cpp"
         "${PROJECT_SOURCE_DIR}/src/TimestampPattern.hpp"
         "${PROJECT_SOURCE_DIR}/src/TraceableException.hpp"

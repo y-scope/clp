@@ -8,8 +8,8 @@
 
 #include "../../../Defs.h"
 #include "../../../ErrorCode.hpp"
-#include "../../../streaming_compression/passthrough/Decompressor.hpp"
-#include "../../../streaming_compression/zstd/Decompressor.hpp"
+#include "../../streaming_compression/passthrough/Decompressor.hpp"
+#include "../../streaming_compression/zstd/Decompressor.hpp"
 #include "../Constants.hpp"
 
 namespace clp::streaming_archive::reader {

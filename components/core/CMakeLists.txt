@@ -167,10 +167,10 @@ add_subdirectory(src/clp/clp)
 add_subdirectory(src/clp/make_dictionaries_readable)
 
 set(SOURCE_FILES_unitTest
-        src/BufferedFileReader.cpp
-        src/BufferedFileReader.hpp
         src/BufferReader.cpp
         src/BufferReader.hpp
+        src/clp/BufferedFileReader.cpp
+        src/clp/BufferedFileReader.hpp
         src/clp/clp/CommandLineArguments.cpp
         src/clp/clp/CommandLineArguments.hpp
         src/clp/clp/compression.cpp
@@ -186,6 +186,8 @@ set(SOURCE_FILES_unitTest
         src/clp/clp/run.hpp
         src/clp/clp/utils.cpp
         src/clp/clp/utils.hpp
+        src/clp/database_utils.cpp
+        src/clp/database_utils.hpp
         src/clp/dictionary_utils.cpp
         src/clp/dictionary_utils.hpp
         src/clp/DictionaryEntry.hpp
@@ -193,6 +195,8 @@ set(SOURCE_FILES_unitTest
         src/clp/DictionaryWriter.hpp
         src/clp/EncodedVariableInterpreter.cpp
         src/clp/EncodedVariableInterpreter.hpp
+        src/clp/FileReader.cpp
+        src/clp/FileReader.hpp
         src/clp/GlobalMetadataDB.hpp
         src/clp/GlobalMetadataDBConfig.cpp
         src/clp/GlobalMetadataDBConfig.hpp
@@ -202,6 +206,10 @@ set(SOURCE_FILES_unitTest
         src/clp/GlobalSQLiteMetadataDB.hpp
         src/clp/Grep.cpp
         src/clp/Grep.hpp
+        src/clp/LibarchiveFileReader.cpp
+        src/clp/LibarchiveFileReader.hpp
+        src/clp/LibarchiveReader.cpp
+        src/clp/LibarchiveReader.hpp
         src/clp/LogSurgeonReader.cpp
         src/clp/LogSurgeonReader.hpp
         src/clp/LogTypeDictionaryEntry.cpp
@@ -209,8 +217,28 @@ set(SOURCE_FILES_unitTest
         src/clp/LogTypeDictionaryReader.hpp
         src/clp/LogTypeDictionaryWriter.cpp
         src/clp/LogTypeDictionaryWriter.hpp
+        src/clp/math_utils.hpp
+        src/clp/MessageParser.cpp
+        src/clp/MessageParser.hpp
+        src/clp/MySQLDB.cpp
+        src/clp/MySQLDB.hpp
+        src/clp/MySQLParamBindings.cpp
+        src/clp/MySQLParamBindings.hpp
+        src/clp/MySQLPreparedStatement.cpp
+        src/clp/MySQLPreparedStatement.hpp
+        src/clp/PageAllocatedVector.hpp
+        src/clp/ParsedMessage.cpp
+        src/clp/ParsedMessage.hpp
+        src/clp/Profiler.cpp
+        src/clp/Profiler.hpp
         src/clp/Query.cpp
         src/clp/Query.hpp
+        src/clp/SQLiteDB.cpp
+        src/clp/SQLiteDB.hpp
+        src/clp/SQLitePreparedStatement.cpp
+        src/clp/SQLitePreparedStatement.hpp
+        src/clp/Stopwatch.cpp
+        src/clp/Stopwatch.hpp
         src/clp/streaming_archive/ArchiveMetadata.cpp
         src/clp/streaming_archive/ArchiveMetadata.hpp
         src/clp/streaming_archive/Constants.hpp
@@ -234,6 +262,20 @@ set(SOURCE_FILES_unitTest
         src/clp/streaming_archive/writer/Segment.hpp
         src/clp/streaming_archive/writer/utils.cpp
         src/clp/streaming_archive/writer/utils.hpp
+        src/clp/streaming_compression/Compressor.hpp
+        src/clp/streaming_compression/Constants.hpp
+        src/clp/streaming_compression/Decompressor.hpp
+        src/clp/streaming_compression/passthrough/Compressor.cpp
+        src/clp/streaming_compression/passthrough/Compressor.hpp
+        src/clp/streaming_compression/passthrough/Decompressor.cpp
+        src/clp/streaming_compression/passthrough/Decompressor.hpp
+        src/clp/streaming_compression/zstd/Compressor.cpp
+        src/clp/streaming_compression/zstd/Compressor.hpp
+        src/clp/streaming_compression/zstd/Constants.hpp
+        src/clp/streaming_compression/zstd/Decompressor.cpp
+        src/clp/streaming_compression/zstd/Decompressor.hpp
+        src/clp/StringReader.cpp
+        src/clp/StringReader.hpp
         src/clp/Utils.cpp
         src/clp/Utils.hpp
         src/clp/VariableDictionaryEntry.cpp
@@ -241,8 +283,6 @@ set(SOURCE_FILES_unitTest
         src/clp/VariableDictionaryReader.hpp
         src/clp/VariableDictionaryWriter.cpp
         src/clp/VariableDictionaryWriter.hpp
-        src/database_utils.cpp
-        src/database_utils.hpp
         src/Defs.h
         src/ErrorCode.hpp
         src/ffi/encoding_methods.cpp
@@ -269,8 +309,6 @@ set(SOURCE_FILES_unitTest
         src/ffi/search/Subquery.hpp
         src/ffi/search/WildcardToken.cpp
         src/ffi/search/WildcardToken.hpp
-        src/FileReader.cpp
-        src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
         src/ir/LogEvent.hpp
@@ -282,48 +320,10 @@ set(SOURCE_FILES_unitTest
         src/ir/types.hpp
         src/ir/utils.cpp
         src/ir/utils.hpp
-        src/LibarchiveFileReader.cpp
-        src/LibarchiveFileReader.hpp
-        src/LibarchiveReader.cpp
-        src/LibarchiveReader.hpp
-        src/math_utils.hpp
-        src/MessageParser.cpp
-        src/MessageParser.hpp
-        src/MySQLDB.cpp
-        src/MySQLDB.hpp
-        src/MySQLParamBindings.cpp
-        src/MySQLParamBindings.hpp
-        src/MySQLPreparedStatement.cpp
-        src/MySQLPreparedStatement.hpp
-        src/PageAllocatedVector.hpp
-        src/ParsedMessage.cpp
-        src/ParsedMessage.hpp
         src/Platform.hpp
-        src/Profiler.cpp
-        src/Profiler.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
         src/spdlog_with_specializations.hpp
-        src/SQLiteDB.cpp
-        src/SQLiteDB.hpp
-        src/SQLitePreparedStatement.cpp
-        src/SQLitePreparedStatement.hpp
-        src/Stopwatch.cpp
-        src/Stopwatch.hpp
-        src/streaming_compression/Compressor.hpp
-        src/streaming_compression/Constants.hpp
-        src/streaming_compression/Decompressor.hpp
-        src/streaming_compression/passthrough/Compressor.cpp
-        src/streaming_compression/passthrough/Compressor.hpp
-        src/streaming_compression/passthrough/Decompressor.cpp
-        src/streaming_compression/passthrough/Decompressor.hpp
-        src/streaming_compression/zstd/Compressor.cpp
-        src/streaming_compression/zstd/Compressor.hpp
-        src/streaming_compression/zstd/Constants.hpp
-        src/streaming_compression/zstd/Decompressor.cpp
-        src/streaming_compression/zstd/Decompressor.hpp
-        src/StringReader.cpp
-        src/StringReader.hpp
         src/TimestampPattern.cpp
         src/TimestampPattern.hpp
         src/TraceableException.hpp

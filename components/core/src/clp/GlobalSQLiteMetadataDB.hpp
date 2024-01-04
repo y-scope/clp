@@ -7,9 +7,9 @@
 #include <vector>
 
 #include "../ErrorCode.hpp"
-#include "../SQLiteDB.hpp"
 #include "../TraceableException.hpp"
 #include "GlobalMetadataDB.hpp"
+#include "SQLiteDB.hpp"
 
 namespace clp {
 /**

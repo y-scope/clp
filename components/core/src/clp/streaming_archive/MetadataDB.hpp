@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "../../SQLiteDB.hpp"
+#include "../SQLiteDB.hpp"
 #include "writer/File.hpp"
 
 namespace clp::streaming_archive {

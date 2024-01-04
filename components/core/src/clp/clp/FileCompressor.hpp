@@ -7,12 +7,12 @@
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/ReaderParser.hpp>
 
-#include "../../BufferedFileReader.hpp"
 #include "../../ir/LogEventDeserializer.hpp"
-#include "../../LibarchiveFileReader.hpp"
-#include "../../LibarchiveReader.hpp"
-#include "../../MessageParser.hpp"
-#include "../../ParsedMessage.hpp"
+#include "../BufferedFileReader.hpp"
+#include "../LibarchiveFileReader.hpp"
+#include "../LibarchiveReader.hpp"
+#include "../MessageParser.hpp"
+#include "../ParsedMessage.hpp"
 #include "../streaming_archive/writer/Archive.hpp"
 #include "FileToCompress.hpp"
 

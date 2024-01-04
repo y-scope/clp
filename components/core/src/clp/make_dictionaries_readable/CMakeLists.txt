@@ -4,30 +4,30 @@ set(
         ../dictionary_utils.hpp
         ../DictionaryEntry.hpp
         ../DictionaryReader.hpp
+        ../FileReader.cpp
+        ../FileReader.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
         ../LogTypeDictionaryReader.hpp
+        ../ParsedMessage.cpp
+        ../ParsedMessage.hpp
+        ../streaming_compression/Decompressor.hpp
+        ../streaming_compression/passthrough/Decompressor.cpp
+        ../streaming_compression/passthrough/Decompressor.hpp
+        ../streaming_compression/zstd/Decompressor.cpp
+        ../streaming_compression/zstd/Decompressor.hpp
         ../Utils.cpp
         ../Utils.hpp
         ../VariableDictionaryEntry.cpp
         ../VariableDictionaryEntry.hpp
         ../VariableDictionaryReader.hpp
-        "${PROJECT_SOURCE_DIR}/src/FileReader.cpp"
-        "${PROJECT_SOURCE_DIR}/src/FileReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/FileWriter.cpp"
         "${PROJECT_SOURCE_DIR}/src/FileWriter.hpp"
         "${PROJECT_SOURCE_DIR}/src/ir/parsing.cpp"
         "${PROJECT_SOURCE_DIR}/src/ir/parsing.hpp"
-        "${PROJECT_SOURCE_DIR}/src/ParsedMessage.cpp"
-        "${PROJECT_SOURCE_DIR}/src/ParsedMessage.hpp"
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.cpp"
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.hpp"
         "${PROJECT_SOURCE_DIR}/src/spdlog_with_specializations.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/Decompressor.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/passthrough/Decompressor.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/passthrough/Decompressor.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Decompressor.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Decompressor.hpp"
         "${PROJECT_SOURCE_DIR}/src/WriterInterface.cpp"
         "${PROJECT_SOURCE_DIR}/src/WriterInterface.hpp"
         "${PROJECT_SOURCE_DIR}/submodules/date/include/date/date.h"

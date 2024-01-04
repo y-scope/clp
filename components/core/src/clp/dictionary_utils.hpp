@@ -3,8 +3,8 @@
 
 #include <string>
 
-#include "../FileReader.hpp"
-#include "../streaming_compression/Decompressor.hpp"
+#include "FileReader.hpp"
+#include "streaming_compression/Decompressor.hpp"
 
 namespace clp {
 void open_dictionary_for_reading(

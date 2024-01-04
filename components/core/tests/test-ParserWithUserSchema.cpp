@@ -15,6 +15,7 @@
 #include "../src/clp/LogSurgeonReader.hpp"
 #include "../src/clp/Utils.hpp"
 
+using clp::FileReader;
 using clp::load_lexer_from_file;
 using clp::LogSurgeonReader;
 using log_surgeon::DelimiterStringAST;

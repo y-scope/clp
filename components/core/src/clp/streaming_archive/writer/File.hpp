@@ -9,9 +9,9 @@
 
 #include "../../../Defs.h"
 #include "../../../ErrorCode.hpp"
-#include "../../../PageAllocatedVector.hpp"
 #include "../../../TimestampPattern.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
+#include "../../PageAllocatedVector.hpp"
 #include "Segment.hpp"
 
 namespace clp::streaming_archive::writer {

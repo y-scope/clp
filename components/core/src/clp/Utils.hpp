@@ -11,8 +11,8 @@
 
 #include "../Defs.h"
 #include "../ErrorCode.hpp"
-#include "../FileReader.hpp"
-#include "../ParsedMessage.hpp"
+#include "FileReader.hpp"
+#include "ParsedMessage.hpp"
 
 namespace clp {
 /**
