@@ -35,6 +35,7 @@ tasks:
         vars:
           COMPONENT: "job-orchestration"
     cmds:
+      - task: "clean_package"
       - "mkdir -p '{{.PACKAGE_BUILD_DIR}}'"
       - "rsync -a components/package-template/src/ '{{.PACKAGE_BUILD_DIR}}'"
       - "mkdir -p '{{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages'"
