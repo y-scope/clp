@@ -1,17 +1,18 @@
-#ifndef LIBARCHIVEREADER_HPP
-#define LIBARCHIVEREADER_HPP
+#ifndef CLP_LIBARCHIVEREADER_HPP
+#define CLP_LIBARCHIVEREADER_HPP
 
 #include <string>
 #include <vector>
 
 #include <archive.h>
 
-#include "ErrorCode.hpp"
-#include "FileReader.hpp"
+#include "../ErrorCode.hpp"
+#include "../FileReader.hpp"
+#include "../ReaderInterface.hpp"
+#include "../TraceableException.hpp"
 #include "LibarchiveFileReader.hpp"
-#include "ReaderInterface.hpp"
-#include "TraceableException.hpp"
 
+namespace clp {
 /**
  * Class for reading archives through libarchive
  */
@@ -150,5 +151,6 @@ private:
 
     bool m_is_opened_by_libarchive;
 };
+}  // namespace clp
 
-#endif  // LIBARCHIVEREADER_HPP
+#endif  // CLP_LIBARCHIVEREADER_HPP

@@ -9,8 +9,8 @@
 
 #include "../../BufferedFileReader.hpp"
 #include "../../ir/LogEventDeserializer.hpp"
-#include "../../LibarchiveFileReader.hpp"
-#include "../../LibarchiveReader.hpp"
+#include "../LibarchiveFileReader.hpp"
+#include "../LibarchiveReader.hpp"
 #include "../MessageParser.hpp"
 #include "../ParsedMessage.hpp"
 #include "../streaming_archive/writer/Archive.hpp"

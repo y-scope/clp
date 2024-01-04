@@ -204,6 +204,10 @@ set(SOURCE_FILES_unitTest
         src/clp/GlobalSQLiteMetadataDB.hpp
         src/clp/Grep.cpp
         src/clp/Grep.hpp
+        src/clp/LibarchiveFileReader.cpp
+        src/clp/LibarchiveFileReader.hpp
+        src/clp/LibarchiveReader.cpp
+        src/clp/LibarchiveReader.hpp
         src/clp/LogSurgeonReader.cpp
         src/clp/LogSurgeonReader.hpp
         src/clp/LogTypeDictionaryEntry.cpp
@@ -313,10 +317,6 @@ set(SOURCE_FILES_unitTest
         src/ir/types.hpp
         src/ir/utils.cpp
         src/ir/utils.hpp
-        src/LibarchiveFileReader.cpp
-        src/LibarchiveFileReader.hpp
-        src/LibarchiveReader.cpp
-        src/LibarchiveReader.hpp
         src/math_utils.hpp
         src/Platform.hpp
         src/ReaderInterface.cpp

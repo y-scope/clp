@@ -1,15 +1,16 @@
-#ifndef LIBARCHIVEFILEREADER_HPP
-#define LIBARCHIVEFILEREADER_HPP
+#ifndef CLP_LIBARCHIVEFILEREADER_HPP
+#define CLP_LIBARCHIVEFILEREADER_HPP
 
 #include <array>
 #include <string>
 
 #include <archive.h>
 
-#include "ErrorCode.hpp"
-#include "ReaderInterface.hpp"
-#include "TraceableException.hpp"
+#include "../ErrorCode.hpp"
+#include "../ReaderInterface.hpp"
+#include "../TraceableException.hpp"
 
+namespace clp {
 /**
  * Class for reading a file from an archive through libarchive
  */
@@ -128,5 +129,6 @@ private:
     // Nulls for peek
     std::array<char, 4096> m_nulls_for_peek{0};
 };
+}  // namespace clp
 
-#endif  // LIBARCHIVEFILEREADER_HPP
+#endif  // CLP_LIBARCHIVEFILEREADER_HPP

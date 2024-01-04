@@ -17,6 +17,10 @@ set(
         ../GlobalMySQLMetadataDB.hpp
         ../GlobalSQLiteMetadataDB.cpp
         ../GlobalSQLiteMetadataDB.hpp
+        ../LibarchiveFileReader.cpp
+        ../LibarchiveFileReader.hpp
+        ../LibarchiveReader.cpp
+        ../LibarchiveReader.hpp
         ../LogSurgeonReader.cpp
         ../LogSurgeonReader.hpp
         ../LogTypeDictionaryEntry.cpp
@@ -115,10 +119,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/ir/types.hpp"
         "${PROJECT_SOURCE_DIR}/src/ir/utils.cpp"
         "${PROJECT_SOURCE_DIR}/src/ir/utils.hpp"
-        "${PROJECT_SOURCE_DIR}/src/LibarchiveFileReader.cpp"
-        "${PROJECT_SOURCE_DIR}/src/LibarchiveFileReader.hpp"
-        "${PROJECT_SOURCE_DIR}/src/LibarchiveReader.cpp"
-        "${PROJECT_SOURCE_DIR}/src/LibarchiveReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/math_utils.hpp"
         "${PROJECT_SOURCE_DIR}/src/Platform.hpp"
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.cpp"
