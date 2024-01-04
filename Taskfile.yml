@@ -54,14 +54,14 @@ tasks:
         "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
         "{{.PACKAGE_BUILD_DIR}}/bin/"
     sources:
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
       - "components/compression-job-handler/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
       - "components/package-template/src/**"
-      - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
-      - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
-      - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
 
   core:
     internal: true
