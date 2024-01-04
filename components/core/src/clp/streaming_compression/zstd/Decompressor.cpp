@@ -4,8 +4,8 @@
 
 #include <boost/filesystem.hpp>
 
-#include "../../../Defs.h"
-#include "../../../spdlog_with_specializations.hpp"
+#include "../../Defs.h"
+#include "../../spdlog_with_specializations.hpp"
 
 namespace clp::streaming_compression::zstd {
 Decompressor::Decompressor()

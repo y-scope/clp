@@ -4,11 +4,11 @@
 #include <memory>
 #include <string>
 
-#include "../../../Defs.h"
-#include "../../../ErrorCode.hpp"
-#include "../../../TraceableException.hpp"
+#include "../../Defs.h"
+#include "../../ErrorCode.hpp"
 #include "../../streaming_compression/passthrough/Compressor.hpp"
 #include "../../streaming_compression/zstd/Compressor.hpp"
+#include "../../TraceableException.hpp"
 #include "../Constants.hpp"
 
 namespace clp::streaming_archive::writer {

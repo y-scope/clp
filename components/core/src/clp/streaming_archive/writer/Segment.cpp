@@ -6,9 +6,9 @@
 #include <cmath>
 #include <cstring>
 
-#include "../../../ErrorCode.hpp"
-#include "../../../FileWriter.hpp"
-#include "../../../spdlog_with_specializations.hpp"
+#include "../../ErrorCode.hpp"
+#include "../../FileWriter.hpp"
+#include "../../spdlog_with_specializations.hpp"
 
 using std::make_unique;
 using std::string;

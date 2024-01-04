@@ -3,10 +3,10 @@
 
 #include <string>
 
-#include "../ErrorCode.hpp"
-#include "../TraceableException.hpp"
+#include "ErrorCode.hpp"
 #include "sqlite3/sqlite3.h"
 #include "SQLitePreparedStatement.hpp"
+#include "TraceableException.hpp"
 
 namespace clp {
 class SQLiteDB {

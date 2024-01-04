@@ -7,8 +7,8 @@
 
 #include <boost/filesystem.hpp>
 
-#include "../../../spdlog_with_specializations.hpp"
 #include "../../FileReader.hpp"
+#include "../../spdlog_with_specializations.hpp"
 
 using std::make_unique;
 using std::string;

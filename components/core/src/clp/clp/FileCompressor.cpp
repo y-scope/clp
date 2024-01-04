@@ -10,22 +10,22 @@
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/ReaderParser.hpp>
 
-#include "../../ffi/ir_stream/decoding_methods.hpp"
-#include "../../ir/types.hpp"
-#include "../../ir/utils.hpp"
+#include "../ffi/ir_stream/decoding_methods.hpp"
+#include "../ir/types.hpp"
+#include "../ir/utils.hpp"
 #include "../LogSurgeonReader.hpp"
 #include "../Profiler.hpp"
 #include "../streaming_archive/writer/utils.hpp"
 #include "utils.hpp"
 
+using clp::ir::eight_byte_encoded_variable_t;
+using clp::ir::four_byte_encoded_variable_t;
+using clp::ir::has_ir_stream_magic_number;
+using clp::ir::LogEventDeserializer;
 using clp::ParsedMessage;
 using clp::streaming_archive::writer::split_archive;
 using clp::streaming_archive::writer::split_file;
 using clp::streaming_archive::writer::split_file_and_archive;
-using ir::eight_byte_encoded_variable_t;
-using ir::four_byte_encoded_variable_t;
-using ir::has_ir_stream_magic_number;
-using ir::LogEventDeserializer;
 using log_surgeon::LogEventView;
 using log_surgeon::Reader;
 using log_surgeon::ReaderParser;

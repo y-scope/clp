@@ -4,10 +4,10 @@
 #include <unordered_set>
 #include <vector>
 
-#include "../Defs.h"
-#include "../spdlog_with_specializations.hpp"
-#include "../TraceableException.hpp"
+#include "Defs.h"
+#include "spdlog_with_specializations.hpp"
 #include "streaming_compression/zstd/Compressor.hpp"
+#include "TraceableException.hpp"
 
 namespace clp {
 /**

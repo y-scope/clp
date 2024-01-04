@@ -4,10 +4,10 @@
 #include <cstdio>
 #include <string>
 
-#include "../Defs.h"
-#include "../ErrorCode.hpp"
-#include "../ReaderInterface.hpp"
-#include "../TraceableException.hpp"
+#include "Defs.h"
+#include "ErrorCode.hpp"
+#include "ReaderInterface.hpp"
+#include "TraceableException.hpp"
 
 namespace clp {
 class StringReader : public ReaderInterface {

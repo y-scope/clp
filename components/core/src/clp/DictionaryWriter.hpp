@@ -6,16 +6,16 @@
 #include <unordered_set>
 #include <vector>
 
-#include "../Defs.h"
-#include "../FileWriter.hpp"
-#include "../spdlog_with_specializations.hpp"
-#include "../TraceableException.hpp"
 #include "ArrayBackedPosIntSet.hpp"
+#include "Defs.h"
 #include "dictionary_utils.hpp"
+#include "FileWriter.hpp"
+#include "spdlog_with_specializations.hpp"
 #include "streaming_compression/passthrough/Compressor.hpp"
 #include "streaming_compression/passthrough/Decompressor.hpp"
 #include "streaming_compression/zstd/Compressor.hpp"
 #include "streaming_compression/zstd/Decompressor.hpp"
+#include "TraceableException.hpp"
 
 namespace clp {
 /**

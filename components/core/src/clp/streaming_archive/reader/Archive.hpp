@@ -8,7 +8,7 @@
 #include <string>
 #include <utility>
 
-#include "../../../ErrorCode.hpp"
+#include "../../ErrorCode.hpp"
 #include "../../LogTypeDictionaryReader.hpp"
 #include "../../Query.hpp"
 #include "../../SQLiteDB.hpp"

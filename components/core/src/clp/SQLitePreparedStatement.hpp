@@ -5,8 +5,8 @@
 
 #include <sqlite3/sqlite3.h>
 
-#include "../ErrorCode.hpp"
-#include "../TraceableException.hpp"
+#include "ErrorCode.hpp"
+#include "TraceableException.hpp"
 
 namespace clp {
 class SQLitePreparedStatement {

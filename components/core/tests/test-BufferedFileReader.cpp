@@ -5,9 +5,13 @@
 
 #include "../src/clp/BufferedFileReader.hpp"
 #include "../src/clp/FileReader.hpp"
-#include "../src/FileWriter.hpp"
+#include "../src/clp/FileWriter.hpp"
 
 using clp::BufferedFileReader;
+using clp::ErrorCode_EndOfFile;
+using clp::ErrorCode_Success;
+using clp::ErrorCode_Unsupported;
+using clp::FileWriter;
 
 static constexpr size_t cNumAlphabets = 'z' - 'a';
 
@@ -279,7 +283,7 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
 
     // Validate that a FileReader and a BufferedFileReader return the same strings (split by
     // delimiters)
-    ErrorCode error_code{ErrorCode_Success};
+    clp::ErrorCode error_code{ErrorCode_Success};
     auto delimiter = (char)('a' + (std::rand() % (cNumAlphabets)));
     while (ErrorCode_EndOfFile != error_code) {
         error_code = ref_file_reader.try_read_to_delimiter(delimiter, true, false, ref_string);

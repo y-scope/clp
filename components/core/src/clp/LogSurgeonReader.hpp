@@ -3,7 +3,7 @@
 
 #include <log_surgeon/Reader.hpp>
 
-#include "../ReaderInterface.hpp"
+#include "ReaderInterface.hpp"
 
 namespace clp {
 /*

@@ -5,18 +5,18 @@
 
 #include <string_utils/string_utils.hpp>
 
-#include "../Defs.h"
-#include "../ffi/ir_stream/decoding_methods.hpp"
-#include "../ir/LogEvent.hpp"
-#include "../ir/types.hpp"
-#include "../spdlog_with_specializations.hpp"
-#include "../type_utils.hpp"
+#include "Defs.h"
+#include "ffi/ir_stream/decoding_methods.hpp"
+#include "ir/LogEvent.hpp"
+#include "ir/types.hpp"
+#include "spdlog_with_specializations.hpp"
+#include "type_utils.hpp"
 
-using ffi::cEightByteEncodedFloatDigitsBitMask;
-using ir::eight_byte_encoded_variable_t;
-using ir::four_byte_encoded_variable_t;
-using ir::LogEvent;
-using ir::VariablePlaceholder;
+using clp::ffi::cEightByteEncodedFloatDigitsBitMask;
+using clp::ir::eight_byte_encoded_variable_t;
+using clp::ir::four_byte_encoded_variable_t;
+using clp::ir::LogEvent;
+using clp::ir::VariablePlaceholder;
 using std::string;
 using std::unordered_set;
 using std::vector;

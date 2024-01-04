@@ -1,11 +1,11 @@
 #include "LogTypeDictionaryEntry.hpp"
 
-#include "../ir/parsing.hpp"
-#include "../ir/types.hpp"
-#include "../type_utils.hpp"
+#include "ir/parsing.hpp"
+#include "ir/types.hpp"
+#include "type_utils.hpp"
 #include "Utils.hpp"
 
-using ir::VariablePlaceholder;
+using clp::ir::VariablePlaceholder;
 using std::string;
 using std::string_view;
 

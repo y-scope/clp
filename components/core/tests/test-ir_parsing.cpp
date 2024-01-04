@@ -1,10 +1,10 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 
-#include "../src/ir/parsing.hpp"
-#include "../src/ir/types.hpp"
-#include "../src/type_utils.hpp"
+#include "../src/clp/ir/parsing.hpp"
+#include "../src/clp/ir/types.hpp"
+#include "../src/clp/type_utils.hpp"
 
-using ir::get_bounds_of_next_var;
+using clp::ir::get_bounds_of_next_var;
 using std::string;
 using std::string_view;
 using std::vector;
@@ -92,7 +92,7 @@ TEST_CASE("ir::get_bounds_of_next_var", "[ir][get_bounds_of_next_var]") {
 
     // String containing variable placeholder
     str = " text ";
-    str += enum_to_underlying_type(ir::VariablePlaceholder::Integer);
+    str += clp::enum_to_underlying_type(clp::ir::VariablePlaceholder::Integer);
     str += " var123 ";
     begin_pos = 0;
     end_pos = 0;

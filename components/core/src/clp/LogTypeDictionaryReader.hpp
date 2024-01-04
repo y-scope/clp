@@ -1,7 +1,7 @@
 #ifndef CLP_LOGTYPEDICTIONARYREADER_HPP
 #define CLP_LOGTYPEDICTIONARYREADER_HPP
 
-#include "../Defs.h"
+#include "Defs.h"
 #include "DictionaryReader.hpp"
 #include "LogTypeDictionaryEntry.hpp"
 

@@ -1,9 +1,9 @@
 #ifndef CLP_VARIABLEDICTIONARYENTRY_HPP
 #define CLP_VARIABLEDICTIONARYENTRY_HPP
 
-#include "../Defs.h"
-#include "../ErrorCode.hpp"
+#include "Defs.h"
 #include "DictionaryEntry.hpp"
+#include "ErrorCode.hpp"
 #include "FileReader.hpp"
 #include "streaming_compression/zstd/Compressor.hpp"
 #include "streaming_compression/zstd/Decompressor.hpp"

@@ -7,11 +7,11 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-#include "../../../Defs.h"
-#include "../../../ErrorCode.hpp"
-#include "../../../TimestampPattern.hpp"
+#include "../../Defs.h"
+#include "../../ErrorCode.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../PageAllocatedVector.hpp"
+#include "../../TimestampPattern.hpp"
 #include "Segment.hpp"
 
 namespace clp::streaming_archive::writer {

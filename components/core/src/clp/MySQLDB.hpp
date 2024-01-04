@@ -5,11 +5,11 @@
 
 #include <mariadb/mysql.h>
 
-#include "../Defs.h"
-#include "../ErrorCode.hpp"
-#include "../TraceableException.hpp"
+#include "Defs.h"
+#include "ErrorCode.hpp"
 #include "MySQLParamBindings.hpp"
 #include "MySQLPreparedStatement.hpp"
+#include "TraceableException.hpp"
 
 namespace clp {
 /**

@@ -7,10 +7,11 @@
 #include "../src/clp/streaming_archive/writer/Segment.hpp"
 #include "../src/clp/Utils.hpp"
 
+using clp::ErrorCode_Success;
 using std::string;
 
 TEST_CASE("Test writing and reading a segment", "[Segment]") {
-    ErrorCode error_code;
+    clp::ErrorCode error_code;
 
     // Initialize data to test compression and decompression
     size_t uncompressed_data_size = 128L * 1024 * 1024;  // 128MB

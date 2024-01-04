@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include "../Defs.h"
+#include "Defs.h"
 
 namespace clp {
 void MySQLParamBindings::clear() {

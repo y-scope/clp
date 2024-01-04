@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "../../FileWriter.hpp"
+#include "../FileWriter.hpp"
 #include "../streaming_archive/MetadataDB.hpp"
 #include "../streaming_archive/reader/Archive.hpp"
 #include "../streaming_archive/reader/File.hpp"

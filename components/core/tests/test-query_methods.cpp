@@ -2,21 +2,22 @@
 
 #include <Catch2/single_include/catch2/catch.hpp>
 
-#include "../src/ffi/encoding_methods.hpp"
-#include "../src/ffi/search/ExactVariableToken.hpp"
-#include "../src/ffi/search/query_methods.hpp"
-#include "../src/ffi/search/QueryMethodFailed.hpp"
-#include "../src/ffi/search/WildcardToken.hpp"
-#include "../src/ir/types.hpp"
+#include "../src/clp/ffi/encoding_methods.hpp"
+#include "../src/clp/ffi/search/ExactVariableToken.hpp"
+#include "../src/clp/ffi/search/query_methods.hpp"
+#include "../src/clp/ffi/search/QueryMethodFailed.hpp"
+#include "../src/clp/ffi/search/WildcardToken.hpp"
+#include "../src/clp/ir/types.hpp"
 
-using ffi::search::ExactVariableToken;
-using ffi::search::generate_subqueries;
-using ffi::search::Subquery;
-using ffi::search::TokenType;
-using ffi::search::WildcardToken;
-using ir::eight_byte_encoded_variable_t;
-using ir::four_byte_encoded_variable_t;
-using ir::VariablePlaceholder;
+using clp::enum_to_underlying_type;
+using clp::ffi::search::ExactVariableToken;
+using clp::ffi::search::generate_subqueries;
+using clp::ffi::search::Subquery;
+using clp::ffi::search::TokenType;
+using clp::ffi::search::WildcardToken;
+using clp::ir::eight_byte_encoded_variable_t;
+using clp::ir::four_byte_encoded_variable_t;
+using clp::ir::VariablePlaceholder;
 using std::string;
 using std::variant;
 using std::vector;
@@ -116,7 +117,7 @@ void test_generating_subqueries(
 }  // namespace
 
 TEMPLATE_TEST_CASE(
-        "ffi::search::query_methods",
+        "clp::ffi::search::query_methods",
         "[ffi][search][query_methods]",
         eight_byte_encoded_variable_t,
         four_byte_encoded_variable_t
@@ -129,7 +130,7 @@ TEMPLATE_TEST_CASE(
     SECTION("Empty query") {
         REQUIRE_THROWS_AS(
                 generate_subqueries(wildcard_query, subqueries),
-                ffi::search::QueryMethodFailed
+                clp::ffi::search::QueryMethodFailed
         );
     }
 
@@ -175,7 +176,7 @@ TEMPLATE_TEST_CASE(
         message += enum_to_underlying_type(VariablePlaceholder::Float);
         message += " and a dictionary placeholder ";
         message += enum_to_underlying_type(VariablePlaceholder::Dictionary);
-        REQUIRE(ffi::encode_message(message, logtype, encoded_vars, dictionary_var_bounds));
+        REQUIRE(clp::ffi::encode_message(message, logtype, encoded_vars, dictionary_var_bounds));
 
         wildcard_query = message;
         generate_subqueries(wildcard_query, subqueries);

@@ -7,8 +7,8 @@
 #include <zstd.h>
 #include <zstd_errors.h>
 
-#include "../../../FileWriter.hpp"
-#include "../../../TraceableException.hpp"
+#include "../../FileWriter.hpp"
+#include "../../TraceableException.hpp"
 #include "../Compressor.hpp"
 #include "Constants.hpp"
 

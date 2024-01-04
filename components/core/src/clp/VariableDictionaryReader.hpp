@@ -1,7 +1,7 @@
 #ifndef CLP_VARIABLEDICTIONARYREADER_HPP
 #define CLP_VARIABLEDICTIONARYREADER_HPP
 
-#include "../Defs.h"
+#include "Defs.h"
 #include "DictionaryReader.hpp"
 #include "VariableDictionaryEntry.hpp"
 

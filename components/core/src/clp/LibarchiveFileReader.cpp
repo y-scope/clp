@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include "../spdlog_with_specializations.hpp"
+#include "spdlog_with_specializations.hpp"
 
 namespace clp {
 ErrorCode LibarchiveFileReader::try_get_pos(size_t& pos) {

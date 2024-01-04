@@ -3,9 +3,9 @@
 
 #include <cstdint>
 
-#include "../../Defs.h"
-#include "../../FileWriter.hpp"
+#include "../Defs.h"
 #include "../FileReader.hpp"
+#include "../FileWriter.hpp"
 #include "Constants.hpp"
 
 namespace clp::streaming_archive {

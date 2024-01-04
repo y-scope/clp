@@ -1,7 +1,7 @@
 #include "SQLiteDB.hpp"
 
-#include "../Defs.h"
-#include "../spdlog_with_specializations.hpp"
+#include "Defs.h"
+#include "spdlog_with_specializations.hpp"
 
 using std::string;
 

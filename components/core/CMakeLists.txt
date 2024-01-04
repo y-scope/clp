@@ -161,7 +161,7 @@ set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
 include(cmake/Modules/FindLibraryDependencies.cmake)
 FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 
-add_subdirectory(src/string_utils)
+add_subdirectory(src/clp/string_utils)
 
 add_subdirectory(src/clp/clg)
 add_subdirectory(src/clp/clo)
@@ -169,10 +169,10 @@ add_subdirectory(src/clp/clp)
 add_subdirectory(src/clp/make_dictionaries_readable)
 
 set(SOURCE_FILES_unitTest
-        src/BufferReader.cpp
-        src/BufferReader.hpp
         src/clp/BufferedFileReader.cpp
         src/clp/BufferedFileReader.hpp
+        src/clp/BufferReader.cpp
+        src/clp/BufferReader.hpp
         src/clp/clp/CommandLineArguments.cpp
         src/clp/clp/CommandLineArguments.hpp
         src/clp/clp/compression.cpp
@@ -190,6 +190,7 @@ set(SOURCE_FILES_unitTest
         src/clp/clp/utils.hpp
         src/clp/database_utils.cpp
         src/clp/database_utils.hpp
+        src/clp/Defs.h
         src/clp/dictionary_utils.cpp
         src/clp/dictionary_utils.hpp
         src/clp/DictionaryEntry.hpp
@@ -197,8 +198,35 @@ set(SOURCE_FILES_unitTest
         src/clp/DictionaryWriter.hpp
         src/clp/EncodedVariableInterpreter.cpp
         src/clp/EncodedVariableInterpreter.hpp
+        src/clp/ErrorCode.hpp
+        src/clp/ffi/encoding_methods.cpp
+        src/clp/ffi/encoding_methods.hpp
+        src/clp/ffi/encoding_methods.inc
+        src/clp/ffi/ir_stream/byteswap.hpp
+        src/clp/ffi/ir_stream/decoding_methods.cpp
+        src/clp/ffi/ir_stream/decoding_methods.hpp
+        src/clp/ffi/ir_stream/decoding_methods.inc
+        src/clp/ffi/ir_stream/encoding_methods.cpp
+        src/clp/ffi/ir_stream/encoding_methods.hpp
+        src/clp/ffi/ir_stream/protocol_constants.hpp
+        src/clp/ffi/search/CompositeWildcardToken.cpp
+        src/clp/ffi/search/CompositeWildcardToken.hpp
+        src/clp/ffi/search/ExactVariableToken.cpp
+        src/clp/ffi/search/ExactVariableToken.hpp
+        src/clp/ffi/search/query_methods.cpp
+        src/clp/ffi/search/query_methods.hpp
+        src/clp/ffi/search/QueryMethodFailed.hpp
+        src/clp/ffi/search/QueryToken.hpp
+        src/clp/ffi/search/QueryWildcard.cpp
+        src/clp/ffi/search/QueryWildcard.hpp
+        src/clp/ffi/search/Subquery.cpp
+        src/clp/ffi/search/Subquery.hpp
+        src/clp/ffi/search/WildcardToken.cpp
+        src/clp/ffi/search/WildcardToken.hpp
         src/clp/FileReader.cpp
         src/clp/FileReader.hpp
+        src/clp/FileWriter.cpp
+        src/clp/FileWriter.hpp
         src/clp/GlobalMetadataDB.hpp
         src/clp/GlobalMetadataDBConfig.cpp
         src/clp/GlobalMetadataDBConfig.hpp
@@ -208,6 +236,15 @@ set(SOURCE_FILES_unitTest
         src/clp/GlobalSQLiteMetadataDB.hpp
         src/clp/Grep.cpp
         src/clp/Grep.hpp
+        src/clp/ir/LogEvent.hpp
+        src/clp/ir/LogEventDeserializer.cpp
+        src/clp/ir/LogEventDeserializer.hpp
+        src/clp/ir/parsing.cpp
+        src/clp/ir/parsing.hpp
+        src/clp/ir/parsing.inc
+        src/clp/ir/types.hpp
+        src/clp/ir/utils.cpp
+        src/clp/ir/utils.hpp
         src/clp/LibarchiveFileReader.cpp
         src/clp/LibarchiveFileReader.hpp
         src/clp/LibarchiveReader.cpp
@@ -231,10 +268,14 @@ set(SOURCE_FILES_unitTest
         src/clp/PageAllocatedVector.hpp
         src/clp/ParsedMessage.cpp
         src/clp/ParsedMessage.hpp
+        src/clp/Platform.hpp
         src/clp/Profiler.cpp
         src/clp/Profiler.hpp
         src/clp/Query.cpp
         src/clp/Query.hpp
+        src/clp/ReaderInterface.cpp
+        src/clp/ReaderInterface.hpp
+        src/clp/spdlog_with_specializations.hpp
         src/clp/SQLiteDB.cpp
         src/clp/SQLiteDB.hpp
         src/clp/SQLitePreparedStatement.cpp
@@ -278,6 +319,10 @@ set(SOURCE_FILES_unitTest
         src/clp/streaming_compression/zstd/Decompressor.hpp
         src/clp/StringReader.cpp
         src/clp/StringReader.hpp
+        src/clp/TimestampPattern.cpp
+        src/clp/TimestampPattern.hpp
+        src/clp/TraceableException.hpp
+        src/clp/type_utils.hpp
         src/clp/Utils.cpp
         src/clp/Utils.hpp
         src/clp/VariableDictionaryEntry.cpp
@@ -285,54 +330,9 @@ set(SOURCE_FILES_unitTest
         src/clp/VariableDictionaryReader.hpp
         src/clp/VariableDictionaryWriter.cpp
         src/clp/VariableDictionaryWriter.hpp
-        src/Defs.h
-        src/ErrorCode.hpp
-        src/ffi/encoding_methods.cpp
-        src/ffi/encoding_methods.hpp
-        src/ffi/encoding_methods.inc
-        src/ffi/ir_stream/byteswap.hpp
-        src/ffi/ir_stream/decoding_methods.cpp
-        src/ffi/ir_stream/decoding_methods.hpp
-        src/ffi/ir_stream/decoding_methods.inc
-        src/ffi/ir_stream/encoding_methods.cpp
-        src/ffi/ir_stream/encoding_methods.hpp
-        src/ffi/ir_stream/protocol_constants.hpp
-        src/ffi/search/CompositeWildcardToken.cpp
-        src/ffi/search/CompositeWildcardToken.hpp
-        src/ffi/search/ExactVariableToken.cpp
-        src/ffi/search/ExactVariableToken.hpp
-        src/ffi/search/query_methods.cpp
-        src/ffi/search/query_methods.hpp
-        src/ffi/search/QueryMethodFailed.hpp
-        src/ffi/search/QueryToken.hpp
-        src/ffi/search/QueryWildcard.cpp
-        src/ffi/search/QueryWildcard.hpp
-        src/ffi/search/Subquery.cpp
-        src/ffi/search/Subquery.hpp
-        src/ffi/search/WildcardToken.cpp
-        src/ffi/search/WildcardToken.hpp
-        src/FileWriter.cpp
-        src/FileWriter.hpp
-        src/ir/LogEvent.hpp
-        src/ir/LogEventDeserializer.cpp
-        src/ir/LogEventDeserializer.hpp
-        src/ir/parsing.cpp
-        src/ir/parsing.hpp
-        src/ir/parsing.inc
-        src/ir/types.hpp
-        src/ir/utils.cpp
-        src/ir/utils.hpp
-        src/Platform.hpp
-        src/ReaderInterface.cpp
-        src/ReaderInterface.hpp
-        src/spdlog_with_specializations.hpp
-        src/TimestampPattern.cpp
-        src/TimestampPattern.hpp
-        src/TraceableException.hpp
-        src/type_utils.hpp
-        src/version.hpp
-        src/WriterInterface.cpp
-        src/WriterInterface.hpp
+        src/clp/version.hpp
+        src/clp/WriterInterface.cpp
+        src/clp/WriterInterface.hpp
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
@@ -368,7 +368,7 @@ target_link_libraries(unitTest
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
-        string_utils::string_utils
+        clp::string_utils
         yaml-cpp::yaml-cpp
         ZStd::ZStd
         )

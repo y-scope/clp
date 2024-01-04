@@ -3,7 +3,7 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 
-#include "../../spdlog_with_specializations.hpp"
+#include "../spdlog_with_specializations.hpp"
 
 using std::string;
 

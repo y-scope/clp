@@ -13,6 +13,7 @@
 #include "../src/clp/Utils.hpp"
 
 using clp::create_directory_structure;
+using clp::ErrorCode_Success;
 using clp::get_parent_directory_path;
 using clp::get_unambiguous_path;
 using std::string;

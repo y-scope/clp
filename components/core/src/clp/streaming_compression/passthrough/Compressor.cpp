@@ -1,6 +1,6 @@
 #include "Compressor.hpp"
 
-#include "../../../Defs.h"
+#include "../../Defs.h"
 
 namespace clp::streaming_compression::passthrough {
 void Compressor::write(char const* data, size_t const data_length) {

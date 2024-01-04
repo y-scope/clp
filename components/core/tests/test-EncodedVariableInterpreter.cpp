@@ -3,11 +3,14 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 
 #include "../src/clp/EncodedVariableInterpreter.hpp"
+#include "../src/clp/ir/types.hpp"
 #include "../src/clp/streaming_archive/Constants.hpp"
-#include "../src/ir/types.hpp"
 
+using clp::cVariableDictionaryIdMax;
+using clp::encoded_variable_t;
 using clp::EncodedVariableInterpreter;
-using ir::VariablePlaceholder;
+using clp::enum_to_underlying_type;
+using clp::ir::VariablePlaceholder;
 using std::string;
 using std::to_string;
 using std::vector;
@@ -385,7 +388,7 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
 
         // Test encoding
         vector<encoded_variable_t> encoded_vars;
-        vector<variable_dictionary_id_t> var_ids;
+        vector<clp::variable_dictionary_id_t> var_ids;
 
         string large_val_str = to_string(cVariableDictionaryIdMax) + "0";
         vector<string> var_strs

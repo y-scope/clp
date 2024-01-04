@@ -14,10 +14,10 @@
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/ReaderParser.hpp>
 
-#include "../../../ErrorCode.hpp"
-#include "../../../ir/LogEvent.hpp"
 #include "../../ArrayBackedPosIntSet.hpp"
+#include "../../ErrorCode.hpp"
 #include "../../GlobalMetadataDB.hpp"
+#include "../../ir/LogEvent.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../VariableDictionaryWriter.hpp"
 #include "../ArchiveMetadata.hpp"

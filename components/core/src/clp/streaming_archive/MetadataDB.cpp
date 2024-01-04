@@ -4,9 +4,9 @@
 
 #include <fmt/core.h>
 
-#include "../../Defs.h"
-#include "../../type_utils.hpp"
 #include "../database_utils.hpp"
+#include "../Defs.h"
+#include "../type_utils.hpp"
 #include "Constants.hpp"
 
 // Types

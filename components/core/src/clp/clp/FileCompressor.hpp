@@ -7,8 +7,8 @@
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/ReaderParser.hpp>
 
-#include "../../ir/LogEventDeserializer.hpp"
 #include "../BufferedFileReader.hpp"
+#include "../ir/LogEventDeserializer.hpp"
 #include "../LibarchiveFileReader.hpp"
 #include "../LibarchiveReader.hpp"
 #include "../MessageParser.hpp"

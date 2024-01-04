@@ -6,8 +6,8 @@
 
 #include <boost/asio.hpp>
 
-#include "../../CommandLineArgumentsBase.hpp"
-#include "../../Defs.h"
+#include "../CommandLineArgumentsBase.hpp"
+#include "../Defs.h"
 #include "../GlobalMetadataDBConfig.hpp"
 
 namespace clp::clg {

@@ -1,17 +1,34 @@
 set(
         CLO_SOURCES
+        ../BufferReader.cpp
+        ../BufferReader.hpp
         ../database_utils.cpp
         ../database_utils.hpp
+        ../Defs.h
         ../dictionary_utils.cpp
         ../dictionary_utils.hpp
         ../DictionaryEntry.hpp
         ../DictionaryReader.hpp
         ../EncodedVariableInterpreter.cpp
         ../EncodedVariableInterpreter.hpp
+        ../ErrorCode.hpp
+        ../ffi/encoding_methods.cpp
+        ../ffi/encoding_methods.hpp
+        ../ffi/encoding_methods.inc
+        ../ffi/ir_stream/decoding_methods.cpp
+        ../ffi/ir_stream/decoding_methods.hpp
+        ../ffi/ir_stream/decoding_methods.inc
         ../FileReader.cpp
         ../FileReader.hpp
+        ../FileWriter.cpp
+        ../FileWriter.hpp
         ../Grep.cpp
         ../Grep.hpp
+        ../ir/LogEvent.hpp
+        ../ir/parsing.cpp
+        ../ir/parsing.hpp
+        ../ir/parsing.inc
+        ../ir/types.hpp
         ../LogSurgeonReader.cpp
         ../LogSurgeonReader.hpp
         ../LogTypeDictionaryEntry.cpp
@@ -23,10 +40,14 @@ set(
         ../PageAllocatedVector.hpp
         ../ParsedMessage.cpp
         ../ParsedMessage.hpp
+        ../Platform.hpp
         ../Profiler.cpp
         ../Profiler.hpp
         ../Query.cpp
         ../Query.hpp
+        ../ReaderInterface.cpp
+        ../ReaderInterface.hpp
+        ../spdlog_with_specializations.hpp
         ../SQLiteDB.cpp
         ../SQLiteDB.hpp
         ../SQLitePreparedStatement.cpp
@@ -67,6 +88,10 @@ set(
         ../StringReader.hpp
         ../Thread.cpp
         ../Thread.hpp
+        ../TimestampPattern.cpp
+        ../TimestampPattern.hpp
+        ../TraceableException.hpp
+        ../type_utils.hpp
         ../Utils.cpp
         ../Utils.hpp
         ../VariableDictionaryEntry.cpp
@@ -74,34 +99,9 @@ set(
         ../VariableDictionaryReader.hpp
         ../VariableDictionaryWriter.cpp
         ../VariableDictionaryWriter.hpp
-        "${PROJECT_SOURCE_DIR}/src/BufferReader.cpp"
-        "${PROJECT_SOURCE_DIR}/src/BufferReader.hpp"
-        "${PROJECT_SOURCE_DIR}/src/Defs.h"
-        "${PROJECT_SOURCE_DIR}/src/ErrorCode.hpp"
-        "${PROJECT_SOURCE_DIR}/src/ffi/encoding_methods.cpp"
-        "${PROJECT_SOURCE_DIR}/src/ffi/encoding_methods.hpp"
-        "${PROJECT_SOURCE_DIR}/src/ffi/encoding_methods.inc"
-        "${PROJECT_SOURCE_DIR}/src/ffi/ir_stream/decoding_methods.cpp"
-        "${PROJECT_SOURCE_DIR}/src/ffi/ir_stream/decoding_methods.hpp"
-        "${PROJECT_SOURCE_DIR}/src/ffi/ir_stream/decoding_methods.inc"
-        "${PROJECT_SOURCE_DIR}/src/FileWriter.cpp"
-        "${PROJECT_SOURCE_DIR}/src/FileWriter.hpp"
-        "${PROJECT_SOURCE_DIR}/src/ir/LogEvent.hpp"
-        "${PROJECT_SOURCE_DIR}/src/ir/parsing.cpp"
-        "${PROJECT_SOURCE_DIR}/src/ir/parsing.hpp"
-        "${PROJECT_SOURCE_DIR}/src/ir/parsing.inc"
-        "${PROJECT_SOURCE_DIR}/src/ir/types.hpp"
-        "${PROJECT_SOURCE_DIR}/src/Platform.hpp"
-        "${PROJECT_SOURCE_DIR}/src/ReaderInterface.cpp"
-        "${PROJECT_SOURCE_DIR}/src/ReaderInterface.hpp"
-        "${PROJECT_SOURCE_DIR}/src/spdlog_with_specializations.hpp"
-        "${PROJECT_SOURCE_DIR}/src/TimestampPattern.cpp"
-        "${PROJECT_SOURCE_DIR}/src/TimestampPattern.hpp"
-        "${PROJECT_SOURCE_DIR}/src/TraceableException.hpp"
-        "${PROJECT_SOURCE_DIR}/src/type_utils.hpp"
-        "${PROJECT_SOURCE_DIR}/src/version.hpp"
-        "${PROJECT_SOURCE_DIR}/src/WriterInterface.cpp"
-        "${PROJECT_SOURCE_DIR}/src/WriterInterface.hpp"
+        ../version.hpp
+        ../WriterInterface.cpp
+        ../WriterInterface.hpp
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.c"
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.h"
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3ext.h"
@@ -124,7 +124,7 @@ target_link_libraries(clo
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
-        string_utils::string_utils
+        clp::string_utils
         ZStd::ZStd
 )
 # Put the built executable at the root of the build directory

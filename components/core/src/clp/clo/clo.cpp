@@ -7,17 +7,22 @@
 #include <boost/filesystem.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
-#include "../../Defs.h"
-#include "../../spdlog_with_specializations.hpp"
+#include "../Defs.h"
 #include "../Grep.hpp"
 #include "../networking/socket_utils.hpp"
 #include "../Profiler.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/Constants.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "ControllerMonitoringThread.hpp"
 
 using clp::clo::CommandLineArguments;
+using clp::CommandLineArgumentsBase;
+using clp::epochtime_t;
+using clp::ErrorCode;
+using clp::ErrorCode_errno;
+using clp::ErrorCode_Success;
 using clp::Grep;
 using clp::load_lexer_from_file;
 using clp::Query;
@@ -25,6 +30,7 @@ using clp::streaming_archive::MetadataDB;
 using clp::streaming_archive::reader::Archive;
 using clp::streaming_archive::reader::File;
 using clp::streaming_archive::reader::Message;
+using clp::TraceableException;
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -279,7 +285,7 @@ static bool search_archive(
 
     auto& query = query_processing_result.value();
     // Get all segments potentially containing query results
-    std::set<segment_id_t> ids_of_segments_to_search;
+    std::set<clp::segment_id_t> ids_of_segments_to_search;
     for (auto& sub_query : query.get_sub_queries()) {
         auto& ids_of_matching_segments = sub_query.get_ids_of_matching_segments();
         ids_of_segments_to_search.insert(
@@ -293,7 +299,7 @@ static bool search_archive(
             search_begin_ts,
             search_end_ts,
             command_line_args.get_file_path(),
-            cInvalidSegmentId
+            clp::cInvalidSegmentId
     );
     auto& file_metadata_ix = *file_metadata_ix_ptr;
     for (auto segment_id : ids_of_segments_to_search) {
@@ -328,7 +334,7 @@ int main(int argc, char const* argv[]) {
         return -1;
     }
     clp::Profiler::init();
-    TimestampPattern::init();
+    clp::TimestampPattern::init();
 
     CommandLineArguments command_line_args("clo");
     auto parsing_result = command_line_args.parse_arguments(argc, argv);

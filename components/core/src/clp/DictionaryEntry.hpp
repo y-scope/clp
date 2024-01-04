@@ -4,7 +4,7 @@
 #include <set>
 #include <string>
 
-#include "../Defs.h"
+#include "Defs.h"
 
 namespace clp {
 /**

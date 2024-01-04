@@ -6,9 +6,9 @@
 
 #include <mariadb/mysql.h>
 
-#include "../ErrorCode.hpp"
-#include "../TraceableException.hpp"
+#include "ErrorCode.hpp"
 #include "MySQLParamBindings.hpp"
+#include "TraceableException.hpp"
 
 namespace clp {
 class MySQLPreparedStatement {

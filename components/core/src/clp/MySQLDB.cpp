@@ -1,6 +1,6 @@
 #include "MySQLDB.hpp"
 
-#include "../spdlog_with_specializations.hpp"
+#include "spdlog_with_specializations.hpp"
 
 using std::string;
 

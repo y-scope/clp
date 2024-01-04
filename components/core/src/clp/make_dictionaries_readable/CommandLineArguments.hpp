@@ -1,7 +1,7 @@
 #ifndef CLP_MAKE_DICTIONARIES_READABLE_COMMANDLINEARGUMENTS_HPP
 #define CLP_MAKE_DICTIONARIES_READABLE_COMMANDLINEARGUMENTS_HPP
 
-#include "../../CommandLineArgumentsBase.hpp"
+#include "../CommandLineArgumentsBase.hpp"
 
 namespace clp::make_dictionaries_readable {
 class CommandLineArguments : public CommandLineArgumentsBase {

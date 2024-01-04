@@ -1,8 +1,8 @@
 #ifndef CLP_NETWORKING_SOCKETOPERATIONFAILED_HPP
 #define CLP_NETWORKING_SOCKETOPERATIONFAILED_HPP
 
-#include "../../ErrorCode.hpp"
-#include "../../TraceableException.hpp"
+#include "../ErrorCode.hpp"
+#include "../TraceableException.hpp"
 
 namespace clp::networking {
 class SocketOperationFailed : public TraceableException {

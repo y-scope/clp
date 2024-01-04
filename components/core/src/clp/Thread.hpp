@@ -5,8 +5,8 @@
 #include <memory>
 #include <thread>
 
-#include "../ErrorCode.hpp"
-#include "../TraceableException.hpp"
+#include "ErrorCode.hpp"
+#include "TraceableException.hpp"
 
 namespace clp {
 /**

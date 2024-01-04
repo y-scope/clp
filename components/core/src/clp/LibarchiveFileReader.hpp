@@ -6,9 +6,9 @@
 
 #include <archive.h>
 
-#include "../ErrorCode.hpp"
-#include "../ReaderInterface.hpp"
-#include "../TraceableException.hpp"
+#include "ErrorCode.hpp"
+#include "ReaderInterface.hpp"
+#include "TraceableException.hpp"
 
 namespace clp {
 /**
