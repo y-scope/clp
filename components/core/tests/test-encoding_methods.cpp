@@ -1,20 +1,22 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 
-#include "../src/ffi/encoding_methods.hpp"
-#include "../src/ir/types.hpp"
+#include "../src/clp/ffi/encoding_methods.hpp"
+#include "../src/clp/ir/types.hpp"
 
-using ffi::decode_float_var;
-using ffi::decode_integer_var;
-using ffi::decode_message;
-using ffi::encode_float_string;
-using ffi::encode_integer_string;
-using ffi::encode_message;
-using ffi::wildcard_match_encoded_vars;
-using ffi::wildcard_query_matches_any_encoded_var;
-using ir::eight_byte_encoded_variable_t;
-using ir::four_byte_encoded_variable_t;
-using ir::get_bounds_of_next_var;
-using ir::VariablePlaceholder;
+using clp::enum_to_underlying_type;
+using clp::ffi::decode_float_var;
+using clp::ffi::decode_integer_var;
+using clp::ffi::decode_message;
+using clp::ffi::encode_float_properties;
+using clp::ffi::encode_float_string;
+using clp::ffi::encode_integer_string;
+using clp::ffi::encode_message;
+using clp::ffi::wildcard_match_encoded_vars;
+using clp::ffi::wildcard_query_matches_any_encoded_var;
+using clp::ir::eight_byte_encoded_variable_t;
+using clp::ir::four_byte_encoded_variable_t;
+using clp::ir::get_bounds_of_next_var;
+using clp::ir::VariablePlaceholder;
 using std::string;
 using std::string_view;
 using std::vector;
@@ -243,7 +245,7 @@ TEMPLATE_TEST_CASE(
                     "60.000004",
                     "-60.000004"
             );
-            REQUIRE(false == ffi::encode_float_string(unrepresentable_values, encoded_var));
+            REQUIRE(false == encode_float_string(unrepresentable_values, encoded_var));
         }
     }
 
@@ -283,8 +285,8 @@ TEMPLATE_TEST_CASE(
     // values of the 'digits' field, since that takes too long.
     constexpr size_t cMaxDigitsInRepresentableFloatVar
             = std::is_same_v<TestType, four_byte_encoded_variable_t>
-                      ? ffi::cMaxDigitsInRepresentableFourByteFloatVar
-                      : ffi::cMaxDigitsInRepresentableEightByteFloatVar;
+                      ? clp::ffi::cMaxDigitsInRepresentableFourByteFloatVar
+                      : clp::ffi::cMaxDigitsInRepresentableEightByteFloatVar;
     for (size_t num_digits_in_digits_property = 0;
          num_digits_in_digits_property <= cMaxDigitsInRepresentableFloatVar + 1;
          ++num_digits_in_digits_property)
@@ -312,8 +314,8 @@ TEMPLATE_TEST_CASE(
                         uint64_t>
                         cEncodedFloatDigitsBitMask
                         = std::is_same_v<TestType, four_byte_encoded_variable_t>
-                                  ? ffi::cFourByteEncodedFloatDigitsBitMask
-                                  : ffi::cEightByteEncodedFloatDigitsBitMask;
+                                  ? clp::ffi::cFourByteEncodedFloatDigitsBitMask
+                                  : clp::ffi::cEightByteEncodedFloatDigitsBitMask;
                 // Due to the bitmask, the number of digits encoded may be less than
                 // num_digits_in_digits_property
                 digits = std::min(cEncodedFloatDigitsBitMask, digits);
@@ -326,7 +328,7 @@ TEMPLATE_TEST_CASE(
                 for (size_t high_bits = 0; high_bits < num_high_bits; ++high_bits) {
                     TestType test_encoded_var;
                     if (std::is_same_v<TestType, eight_byte_encoded_variable_t>) {
-                        test_encoded_var = ffi::encode_float_properties<TestType>(
+                        test_encoded_var = encode_float_properties<TestType>(
                                 high_bits & 0x2,
                                 digits,
                                 num_digits,
@@ -337,7 +339,7 @@ TEMPLATE_TEST_CASE(
                         test_encoded_var
                                 = (high_bits << 62) | (((1ULL << 62) - 1) & test_encoded_var);
                     } else {
-                        test_encoded_var = ffi::encode_float_properties<TestType>(
+                        test_encoded_var = encode_float_properties<TestType>(
                                 high_bits,
                                 digits,
                                 num_digits,
@@ -357,7 +359,7 @@ TEMPLATE_TEST_CASE(
                     } else {
                         REQUIRE_THROWS_AS(
                                 decode_float_var(test_encoded_var),
-                                ffi::EncodingException
+                                clp::ffi::EncodingException
                         );
                     }
                 }

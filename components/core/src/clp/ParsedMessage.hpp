@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "../TimestampPattern.hpp"
+#include "TimestampPattern.hpp"
 
 namespace clp {
 /**

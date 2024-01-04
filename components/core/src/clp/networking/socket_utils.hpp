@@ -3,7 +3,7 @@
 
 #include <cstddef>
 
-#include "../../ErrorCode.hpp"
+#include "../ErrorCode.hpp"
 
 namespace clp::networking {
 // Methods

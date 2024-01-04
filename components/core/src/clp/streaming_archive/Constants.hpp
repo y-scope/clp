@@ -1,7 +1,7 @@
 #ifndef STREAMING_ARCHIVE_CONSTANTS_HPP
 #define STREAMING_ARCHIVE_CONSTANTS_HPP
 
-#include "../../Defs.h"
+#include "../Defs.h"
 
 namespace clp::streaming_archive {
 constexpr archive_format_version_t cArchiveFormatVersion = cArchiveFormatDevVersionFlag | 8;

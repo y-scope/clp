@@ -5,20 +5,20 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <string_utils/string_utils.hpp>
 
+using clp::string_utils::clean_up_wildcard_search_string;
+using clp::string_utils::convert_string_to_int;
+using clp::string_utils::wildcard_match_unsafe;
+using clp::string_utils::wildcard_match_unsafe_case_sensitive;
 using std::chrono::duration;
 using std::chrono::high_resolution_clock;
 using std::cout;
 using std::endl;
 using std::string;
 using std::vector;
-using string_utils::clean_up_wildcard_search_string;
-using string_utils::convert_string_to_int;
-using string_utils::wildcard_match_unsafe;
-using string_utils::wildcard_match_unsafe_case_sensitive;
 
 TEST_CASE("to_lower", "[to_lower]") {
     string str = "test123TEST";
-    string_utils::to_lower(str);
+    clp::string_utils::to_lower(str);
     REQUIRE(str == "test123test");
 }
 

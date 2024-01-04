@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <vector>
 
-#include "../../../Defs.h"
+#include "../../Defs.h"
 
 namespace clp::streaming_archive::reader {
 class Message {

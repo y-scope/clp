@@ -5,16 +5,19 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include <string_utils/string_utils.hpp>
 
-#include "../../FileWriter.hpp"
-#include "../../ir/types.hpp"
-#include "../../spdlog_with_specializations.hpp"
-#include "../../type_utils.hpp"
+#include "../FileWriter.hpp"
+#include "../ir/types.hpp"
 #include "../LogTypeDictionaryReader.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/Constants.hpp"
+#include "../type_utils.hpp"
 #include "../VariableDictionaryReader.hpp"
 #include "CommandLineArguments.hpp"
 
-using ir::VariablePlaceholder;
+using clp::CommandLineArgumentsBase;
+using clp::FileWriter;
+using clp::ir::VariablePlaceholder;
+using clp::segment_id_t;
 using std::string;
 
 int main(int argc, char const* argv[]) {
@@ -100,7 +103,7 @@ int main(int argc, char const* argv[]) {
                     SPDLOG_ERROR(
                             "Logtype '{}' contains unexpected variable placeholder 0x{:x}",
                             value,
-                            enum_to_underlying_type(var_placeholder)
+                            clp::enum_to_underlying_type(var_placeholder)
                     );
                     return -1;
             }
@@ -113,7 +116,7 @@ int main(int argc, char const* argv[]) {
         }
 
         file_writer.write_string(
-                string_utils::replace_characters("\n", "n", human_readable_value, true)
+                clp::string_utils::replace_characters("\n", "n", human_readable_value, true)
         );
         file_writer.write_char('\n');
 

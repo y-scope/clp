@@ -4,8 +4,8 @@
 
 #include <boost/uuid/random_generator.hpp>
 
-#include "../../../Defs.h"
-#include "../../../TimestampPattern.hpp"
+#include "../../Defs.h"
+#include "../../TimestampPattern.hpp"
 #include "Archive.hpp"
 
 using std::string;

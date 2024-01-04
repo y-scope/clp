@@ -1,10 +1,10 @@
 #ifndef CLP_GLOBALMYSQLMETADATADB_HPP
 #define CLP_GLOBALMYSQLMETADATADB_HPP
 
-#include "../ErrorCode.hpp"
-#include "../TraceableException.hpp"
+#include "ErrorCode.hpp"
 #include "GlobalMetadataDB.hpp"
 #include "MySQLDB.hpp"
+#include "TraceableException.hpp"
 
 namespace clp {
 /**

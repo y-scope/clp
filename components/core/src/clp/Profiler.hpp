@@ -4,8 +4,8 @@
 #include <array>
 #include <vector>
 
-#include "../type_utils.hpp"
 #include "Stopwatch.hpp"
+#include "type_utils.hpp"
 
 namespace clp {
 /**

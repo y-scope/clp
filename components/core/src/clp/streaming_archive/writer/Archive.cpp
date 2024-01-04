@@ -14,15 +14,15 @@
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/LogParser.hpp>
 
-#include "../../../ir/types.hpp"
-#include "../../../spdlog_with_specializations.hpp"
 #include "../../EncodedVariableInterpreter.hpp"
+#include "../../ir/types.hpp"
+#include "../../spdlog_with_specializations.hpp"
 #include "../../Utils.hpp"
 #include "../Constants.hpp"
 #include "utils.hpp"
 
-using ir::eight_byte_encoded_variable_t;
-using ir::four_byte_encoded_variable_t;
+using clp::ir::eight_byte_encoded_variable_t;
+using clp::ir::four_byte_encoded_variable_t;
 using log_surgeon::LogEventView;
 using std::list;
 using std::make_unique;

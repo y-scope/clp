@@ -6,7 +6,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "../../../Defs.h"
+#include "../../Defs.h"
 #include "Segment.hpp"
 
 namespace clp::streaming_archive::reader {

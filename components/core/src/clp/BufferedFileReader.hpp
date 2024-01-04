@@ -7,11 +7,11 @@
 #include <string>
 #include <vector>
 
-#include "../BufferReader.hpp"
-#include "../Defs.h"
-#include "../ErrorCode.hpp"
-#include "../ReaderInterface.hpp"
-#include "../TraceableException.hpp"
+#include "BufferReader.hpp"
+#include "Defs.h"
+#include "ErrorCode.hpp"
+#include "ReaderInterface.hpp"
+#include "TraceableException.hpp"
 
 namespace clp {
 /**

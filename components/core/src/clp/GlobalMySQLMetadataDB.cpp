@@ -2,9 +2,9 @@
 
 #include <fmt/core.h>
 
-#include "../type_utils.hpp"
 #include "database_utils.hpp"
 #include "streaming_archive/Constants.hpp"
+#include "type_utils.hpp"
 
 using std::pair;
 using std::string;

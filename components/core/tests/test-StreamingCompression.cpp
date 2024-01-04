@@ -9,6 +9,9 @@
 #include "../src/clp/streaming_compression/zstd/Compressor.hpp"
 #include "../src/clp/streaming_compression/zstd/Decompressor.hpp"
 
+using clp::ErrorCode_Success;
+using clp::FileWriter;
+
 TEST_CASE("StreamingCompression", "[StreamingCompression]") {
     // Initialize data to test compression and decompression
     size_t uncompressed_data_size = 128L * 1024 * 1024;  // 128MB

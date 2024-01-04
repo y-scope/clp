@@ -1,7 +1,7 @@
 #include "MessageParser.hpp"
 
-#include "../Defs.h"
-#include "../TimestampPattern.hpp"
+#include "Defs.h"
+#include "TimestampPattern.hpp"
 
 constexpr char cLineDelimiter = '\n';
 

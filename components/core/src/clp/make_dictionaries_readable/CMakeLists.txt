@@ -6,11 +6,18 @@ set(
         ../DictionaryReader.hpp
         ../FileReader.cpp
         ../FileReader.hpp
+        ../FileWriter.cpp
+        ../FileWriter.hpp
+        ../ir/parsing.cpp
+        ../ir/parsing.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
         ../LogTypeDictionaryReader.hpp
         ../ParsedMessage.cpp
         ../ParsedMessage.hpp
+        ../ReaderInterface.cpp
+        ../ReaderInterface.hpp
+        ../spdlog_with_specializations.hpp
         ../streaming_compression/Decompressor.hpp
         ../streaming_compression/passthrough/Decompressor.cpp
         ../streaming_compression/passthrough/Decompressor.hpp
@@ -21,15 +28,8 @@ set(
         ../VariableDictionaryEntry.cpp
         ../VariableDictionaryEntry.hpp
         ../VariableDictionaryReader.hpp
-        "${PROJECT_SOURCE_DIR}/src/FileWriter.cpp"
-        "${PROJECT_SOURCE_DIR}/src/FileWriter.hpp"
-        "${PROJECT_SOURCE_DIR}/src/ir/parsing.cpp"
-        "${PROJECT_SOURCE_DIR}/src/ir/parsing.hpp"
-        "${PROJECT_SOURCE_DIR}/src/ReaderInterface.cpp"
-        "${PROJECT_SOURCE_DIR}/src/ReaderInterface.hpp"
-        "${PROJECT_SOURCE_DIR}/src/spdlog_with_specializations.hpp"
-        "${PROJECT_SOURCE_DIR}/src/WriterInterface.cpp"
-        "${PROJECT_SOURCE_DIR}/src/WriterInterface.hpp"
+        ../WriterInterface.cpp
+        ../WriterInterface.hpp
         "${PROJECT_SOURCE_DIR}/submodules/date/include/date/date.h"
         CommandLineArguments.cpp
         CommandLineArguments.hpp
@@ -44,7 +44,7 @@ target_link_libraries(make-dictionaries-readable
         Boost::filesystem Boost::iostreams Boost::program_options
         log_surgeon::log_surgeon
         spdlog::spdlog
-        string_utils::string_utils
+        clp::string_utils
         ZStd::ZStd
 )
 # Put the built executable at the root of the build directory

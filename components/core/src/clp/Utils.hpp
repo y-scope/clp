@@ -9,8 +9,8 @@
 
 #include <log_surgeon/Lexer.hpp>
 
-#include "../Defs.h"
-#include "../ErrorCode.hpp"
+#include "Defs.h"
+#include "ErrorCode.hpp"
 #include "FileReader.hpp"
 #include "ParsedMessage.hpp"
 

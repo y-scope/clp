@@ -5,23 +5,23 @@
 #include <log_surgeon/Constants.hpp>
 #include <string_utils/string_utils.hpp>
 
-#include "../ir/parsing.hpp"
-#include "../ir/types.hpp"
 #include "EncodedVariableInterpreter.hpp"
+#include "ir/parsing.hpp"
+#include "ir/types.hpp"
 #include "LogSurgeonReader.hpp"
 #include "StringReader.hpp"
 #include "Utils.hpp"
 
+using clp::ir::is_delim;
 using clp::streaming_archive::reader::Archive;
 using clp::streaming_archive::reader::File;
 using clp::streaming_archive::reader::Message;
-using ir::is_delim;
+using clp::string_utils::clean_up_wildcard_search_string;
+using clp::string_utils::is_alphabet;
+using clp::string_utils::is_wildcard;
+using clp::string_utils::wildcard_match_unsafe;
 using std::string;
 using std::vector;
-using string_utils::clean_up_wildcard_search_string;
-using string_utils::is_alphabet;
-using string_utils::is_wildcard;
-using string_utils::wildcard_match_unsafe;
 
 namespace clp {
 namespace {

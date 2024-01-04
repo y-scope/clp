@@ -6,9 +6,8 @@
 
 #include <mariadb/mysql.h>
 
-// Project headers
-#include "../ErrorCode.hpp"
-#include "../TraceableException.hpp"
+#include "ErrorCode.hpp"
+#include "TraceableException.hpp"
 
 namespace clp {
 /**

@@ -1,32 +1,35 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <json/single_include/nlohmann/json.hpp>
 
-#include "../src/BufferReader.hpp"
-#include "../src/ffi/encoding_methods.hpp"
-#include "../src/ffi/ir_stream/decoding_methods.hpp"
-#include "../src/ffi/ir_stream/encoding_methods.hpp"
-#include "../src/ffi/ir_stream/protocol_constants.hpp"
-#include "../src/ir/types.hpp"
+#include "../src/clp/BufferReader.hpp"
+#include "../src/clp/ffi/encoding_methods.hpp"
+#include "../src/clp/ffi/ir_stream/decoding_methods.hpp"
+#include "../src/clp/ffi/ir_stream/encoding_methods.hpp"
+#include "../src/clp/ffi/ir_stream/protocol_constants.hpp"
+#include "../src/clp/ir/types.hpp"
 
-using ffi::decode_float_var;
-using ffi::decode_integer_var;
-using ffi::decode_message;
-using ffi::encode_float_string;
-using ffi::encode_integer_string;
-using ffi::encode_message;
-using ffi::ir_stream::cProtocol::EightByteEncodingMagicNumber;
-using ffi::ir_stream::cProtocol::FourByteEncodingMagicNumber;
-using ffi::ir_stream::cProtocol::MagicNumberLength;
-using ffi::ir_stream::deserialize_preamble;
-using ffi::ir_stream::encoded_tag_t;
-using ffi::ir_stream::get_encoding_type;
-using ffi::ir_stream::IRErrorCode;
-using ffi::ir_stream::validate_protocol_version;
-using ffi::wildcard_query_matches_any_encoded_var;
-using ir::eight_byte_encoded_variable_t;
-using ir::epoch_time_ms_t;
-using ir::four_byte_encoded_variable_t;
-using ir::VariablePlaceholder;
+using clp::BufferReader;
+using clp::enum_to_underlying_type;
+using clp::ffi::decode_float_var;
+using clp::ffi::decode_integer_var;
+using clp::ffi::decode_message;
+using clp::ffi::encode_float_string;
+using clp::ffi::encode_integer_string;
+using clp::ffi::encode_message;
+using clp::ffi::ir_stream::cProtocol::EightByteEncodingMagicNumber;
+using clp::ffi::ir_stream::cProtocol::FourByteEncodingMagicNumber;
+using clp::ffi::ir_stream::cProtocol::MagicNumberLength;
+using clp::ffi::ir_stream::deserialize_preamble;
+using clp::ffi::ir_stream::encoded_tag_t;
+using clp::ffi::ir_stream::get_encoding_type;
+using clp::ffi::ir_stream::IRErrorCode;
+using clp::ffi::ir_stream::validate_protocol_version;
+using clp::ffi::wildcard_query_matches_any_encoded_var;
+using clp::ir::eight_byte_encoded_variable_t;
+using clp::ir::epoch_time_ms_t;
+using clp::ir::four_byte_encoded_variable_t;
+using clp::ir::VariablePlaceholder;
+using clp::size_checked_pointer_cast;
 using std::chrono::duration_cast;
 using std::chrono::milliseconds;
 using std::chrono::system_clock;
@@ -94,9 +97,9 @@ bool serialize_message(
  * @param message
  * @param decoded_ts Returns the decoded timestamp
  * @return IRErrorCode_Success on success
- * @return Same as the ffi::ir_stream::eight_byte_encoding::deserialize_log_event when
+ * @return Same as the clp::ffi::ir_stream::eight_byte_encoding::deserialize_log_event when
  * encoded_variable_t == eight_byte_encoded_variable_t
- * @return Same as the ffi::ir_stream::four_byte_encoding::deserialize_log_event when
+ * @return Same as the clp::ffi::ir_stream::four_byte_encoding::deserialize_log_event when
  * encoded_variable_t == four_byte_encoded_variable_t
  */
 template <typename encoded_variable_t>
@@ -171,14 +174,14 @@ bool serialize_preamble(
     );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
-        return ffi::ir_stream::eight_byte_encoding::serialize_preamble(
+        return clp::ffi::ir_stream::eight_byte_encoding::serialize_preamble(
                 timestamp_pattern,
                 timestamp_pattern_syntax,
                 time_zone_id,
                 ir_buf
         );
     } else {
-        return ffi::ir_stream::four_byte_encoding::serialize_preamble(
+        return clp::ffi::ir_stream::four_byte_encoding::serialize_preamble(
                 timestamp_pattern,
                 timestamp_pattern_syntax,
                 time_zone_id,
@@ -201,14 +204,14 @@ bool encode_message(
     );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
-        return ffi::ir_stream::eight_byte_encoding::serialize_log_event(
+        return clp::ffi::ir_stream::eight_byte_encoding::serialize_log_event(
                 timestamp,
                 message,
                 logtype,
                 ir_buf
         );
     } else {
-        return ffi::ir_stream::four_byte_encoding::serialize_log_event(
+        return clp::ffi::ir_stream::four_byte_encoding::serialize_log_event(
                 timestamp,
                 message,
                 logtype,
@@ -226,13 +229,13 @@ deserialize_log_event(BufferReader& reader, string& message, epoch_time_ms_t& de
     );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
-        return ffi::ir_stream::eight_byte_encoding::deserialize_log_event(
+        return clp::ffi::ir_stream::eight_byte_encoding::deserialize_log_event(
                 reader,
                 message,
                 decoded_ts
         );
     } else {
-        return ffi::ir_stream::four_byte_encoding::deserialize_log_event(
+        return clp::ffi::ir_stream::four_byte_encoding::deserialize_log_event(
                 reader,
                 message,
                 decoded_ts
@@ -241,11 +244,12 @@ deserialize_log_event(BufferReader& reader, string& message, epoch_time_ms_t& de
 }
 
 static void set_timestamp_info(nlohmann::json const& metadata_json, TimestampInfo& ts_info) {
-    ts_info.time_zone_id = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::TimeZoneIdKey);
+    ts_info.time_zone_id
+            = metadata_json.at(clp::ffi::ir_stream::cProtocol::Metadata::TimeZoneIdKey);
     ts_info.timestamp_pattern
-            = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::TimestampPatternKey);
+            = metadata_json.at(clp::ffi::ir_stream::cProtocol::Metadata::TimestampPatternKey);
     ts_info.timestamp_pattern_syntax
-            = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::TimestampPatternSyntaxKey);
+            = metadata_json.at(clp::ffi::ir_stream::cProtocol::Metadata::TimestampPatternSyntaxKey);
 }
 
 TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
@@ -345,9 +349,11 @@ TEMPLATE_TEST_CASE(
     string_view json_metadata{metadata_ptr, metadata_size};
 
     auto metadata_json = nlohmann::json::parse(json_metadata);
-    std::string const version = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey);
-    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Supported == validate_protocol_version(version));
-    REQUIRE(ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
+    std::string const version
+            = metadata_json.at(clp::ffi::ir_stream::cProtocol::Metadata::VersionKey);
+    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Supported == validate_protocol_version(version)
+    );
+    REQUIRE(clp::ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
     set_timestamp_info(metadata_json, ts_info);
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);
     REQUIRE(time_zone_id == ts_info.time_zone_id);
@@ -357,7 +363,8 @@ TEMPLATE_TEST_CASE(
     if constexpr (is_same_v<TestType, four_byte_encoded_variable_t>) {
         REQUIRE(reference_ts
                 == std::stoll(
-                        metadata_json.at(ffi::ir_stream::cProtocol::Metadata::ReferenceTimestampKey)
+                        metadata_json
+                                .at(clp::ffi::ir_stream::cProtocol::Metadata::ReferenceTimestampKey)
                                 .get<string>()
                 ));
     }
@@ -464,7 +471,7 @@ TEST_CASE("message_decode_error", "[ffi][deserialize_log_event]") {
 
     // Find the end of the encoded logtype which is before the encoded timestamp
     // The timestamp is encoded as tagbyte + eight_byte_encoded_variable_t
-    size_t timestamp_encoding_size = sizeof(ffi::ir_stream::cProtocol::Payload::TimestampVal)
+    size_t timestamp_encoding_size = sizeof(clp::ffi::ir_stream::cProtocol::Payload::TimestampVal)
                                      + sizeof(eight_byte_encoded_variable_t);
     size_t const logtype_end_pos = ir_buf.size() - timestamp_encoding_size;
 
@@ -540,14 +547,17 @@ TEST_CASE("decode_next_message_four_byte_timestamp_delta", "[ffi][deserialize_lo
 }
 
 TEST_CASE("validate_protocol_version", "[ffi][validate_version_protocol]") {
-    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Invalid == validate_protocol_version("v0.0.1"));
-    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Invalid == validate_protocol_version("0.1"));
-    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Invalid == validate_protocol_version("0.a.1"));
+    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Invalid == validate_protocol_version("v0.0.1")
+    );
+    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Invalid == validate_protocol_version("0.1"));
+    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Invalid == validate_protocol_version("0.a.1"));
 
-    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Too_New == validate_protocol_version("1000.0.0"));
-    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Supported
-            == validate_protocol_version(ffi::ir_stream::cProtocol::Metadata::VersionValue));
-    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Supported == validate_protocol_version("v0.0.0"));
+    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Too_New
+            == validate_protocol_version("1000.0.0"));
+    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Supported
+            == validate_protocol_version(clp::ffi::ir_stream::cProtocol::Metadata::VersionValue));
+    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Supported
+            == validate_protocol_version("v0.0.0"));
 }
 
 TEMPLATE_TEST_CASE(
@@ -614,9 +624,10 @@ TEMPLATE_TEST_CASE(
     auto* json_metadata_ptr{size_checked_pointer_cast<char>(ir_buf.data() + metadata_pos)};
     string_view json_metadata{json_metadata_ptr, metadata_size};
     auto metadata_json = nlohmann::json::parse(json_metadata);
-    string const version = metadata_json.at(ffi::ir_stream::cProtocol::Metadata::VersionKey);
-    REQUIRE(ffi::ir_stream::IRProtocolErrorCode_Supported == validate_protocol_version(version));
-    REQUIRE(ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
+    string const version = metadata_json.at(clp::ffi::ir_stream::cProtocol::Metadata::VersionKey);
+    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Supported == validate_protocol_version(version)
+    );
+    REQUIRE(clp::ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
     set_timestamp_info(metadata_json, ts_info);
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);
     REQUIRE(time_zone_id == ts_info.time_zone_id);

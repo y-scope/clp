@@ -3,15 +3,15 @@
 
 #include <vector>
 
-#include "../Defs.h"
-#include "../ErrorCode.hpp"
-#include "../ir/types.hpp"
-#include "../TraceableException.hpp"
-#include "../type_utils.hpp"
+#include "Defs.h"
 #include "DictionaryEntry.hpp"
+#include "ErrorCode.hpp"
 #include "FileReader.hpp"
+#include "ir/types.hpp"
 #include "streaming_compression/zstd/Compressor.hpp"
 #include "streaming_compression/zstd/Decompressor.hpp"
+#include "TraceableException.hpp"
+#include "type_utils.hpp"
 
 namespace clp {
 /**

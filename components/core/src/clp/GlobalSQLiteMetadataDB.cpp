@@ -5,10 +5,10 @@
 
 #include <fmt/core.h>
 
-#include "../spdlog_with_specializations.hpp"
-#include "../type_utils.hpp"
 #include "database_utils.hpp"
+#include "spdlog_with_specializations.hpp"
 #include "streaming_archive/Constants.hpp"
+#include "type_utils.hpp"
 
 // Types
 enum class ArchivesTableFieldIndexes : uint16_t {

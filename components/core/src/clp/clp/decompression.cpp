@@ -5,13 +5,13 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 
-#include "../../ErrorCode.hpp"
-#include "../../FileWriter.hpp"
-#include "../../spdlog_with_specializations.hpp"
-#include "../../TraceableException.hpp"
+#include "../ErrorCode.hpp"
+#include "../FileWriter.hpp"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/reader/Archive.hpp"
+#include "../TraceableException.hpp"
 #include "../Utils.hpp"
 #include "FileDecompressor.hpp"
 

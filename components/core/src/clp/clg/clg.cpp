@@ -6,17 +6,21 @@
 #include <log_surgeon/Lexer.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
-#include "../../Defs.h"
-#include "../../spdlog_with_specializations.hpp"
+#include "../Defs.h"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
 #include "../Grep.hpp"
 #include "../Profiler.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/Constants.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 
 using clp::clg::CommandLineArguments;
+using clp::CommandLineArgumentsBase;
+using clp::epochtime_t;
+using clp::ErrorCode;
+using clp::ErrorCode_errno;
 using clp::FileReader;
 using clp::GlobalMetadataDB;
 using clp::GlobalMetadataDBConfig;
@@ -24,10 +28,12 @@ using clp::Grep;
 using clp::load_lexer_from_file;
 using clp::Profiler;
 using clp::Query;
+using clp::segment_id_t;
 using clp::streaming_archive::MetadataDB;
 using clp::streaming_archive::reader::Archive;
 using clp::streaming_archive::reader::File;
 using clp::streaming_archive::reader::Message;
+using clp::TraceableException;
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -131,7 +137,7 @@ static GlobalMetadataDB::ArchiveIterator* get_archive_iterator(
 ) {
     if (!file_path.empty()) {
         return global_metadata_db.get_archive_iterator_for_file_path(file_path);
-    } else if (begin_ts == cEpochTimeMin && end_ts == cEpochTimeMax) {
+    } else if (begin_ts == clp::cEpochTimeMin && end_ts == clp::cEpochTimeMax) {
         return global_metadata_db.get_archive_iterator();
     } else {
         return global_metadata_db.get_archive_iterator_for_time_window(begin_ts, end_ts);
@@ -270,7 +276,7 @@ static bool search(
                         search_begin_ts,
                         search_end_ts,
                         command_line_args.get_file_path(),
-                        cInvalidSegmentId
+                        clp::cInvalidSegmentId
                 );
                 auto& file_metadata_ix = *file_metadata_ix_ptr;
                 num_matches = search_files(
@@ -323,12 +329,12 @@ static bool open_compressed_file(
         File& compressed_file
 ) {
     ErrorCode error_code = archive.open_file(compressed_file, file_metadata_ix);
-    if (ErrorCode_Success == error_code) {
+    if (clp::ErrorCode_Success == error_code) {
         return true;
     }
     string orig_path;
     file_metadata_ix.get_path(orig_path);
-    if (ErrorCode_FileNotFound == error_code) {
+    if (clp::ErrorCode_FileNotFound == error_code) {
         SPDLOG_WARN("{} not found in archive", orig_path.c_str());
     } else if (ErrorCode_errno == error_code) {
         SPDLOG_ERROR("Failed to open {}, errno={}", orig_path.c_str(), errno);
@@ -465,7 +471,7 @@ int main(int argc, char const* argv[]) {
         return -1;
     }
     Profiler::init();
-    TimestampPattern::init();
+    clp::TimestampPattern::init();
 
     CommandLineArguments command_line_args("clg");
     auto parsing_result = command_line_args.parse_arguments(argc, argv);

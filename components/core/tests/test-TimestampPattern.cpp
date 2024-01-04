@@ -1,7 +1,9 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 
-#include "../src/TimestampPattern.hpp"
+#include "../src/clp/TimestampPattern.hpp"
 
+using clp::epochtime_t;
+using clp::TimestampPattern;
 using std::string;
 
 TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {

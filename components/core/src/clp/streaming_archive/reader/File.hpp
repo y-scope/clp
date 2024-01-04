@@ -5,11 +5,11 @@
 #include <set>
 #include <vector>
 
-#include "../../../Defs.h"
-#include "../../../ErrorCode.hpp"
-#include "../../../TimestampPattern.hpp"
+#include "../../Defs.h"
+#include "../../ErrorCode.hpp"
 #include "../../LogTypeDictionaryReader.hpp"
 #include "../../Query.hpp"
+#include "../../TimestampPattern.hpp"
 #include "../MetadataDB.hpp"
 #include "Message.hpp"
 #include "SegmentManager.hpp"

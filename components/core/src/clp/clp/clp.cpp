@@ -1,6 +1,6 @@
 #include <string>
 
-#include "../../spdlog_with_specializations.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "run.hpp"
 
 int main(int argc, char const* argv[]) {

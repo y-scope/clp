@@ -1,7 +1,7 @@
 #ifndef CLP_VARIABLEDICTIONARYWRITER_HPP
 #define CLP_VARIABLEDICTIONARYWRITER_HPP
 
-#include "../Defs.h"
+#include "Defs.h"
 #include "DictionaryWriter.hpp"
 #include "VariableDictionaryEntry.hpp"
 

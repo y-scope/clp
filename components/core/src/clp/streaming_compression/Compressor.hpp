@@ -4,8 +4,8 @@
 #include <cstdint>
 #include <string>
 
-#include "../../TraceableException.hpp"
-#include "../../WriterInterface.hpp"
+#include "../TraceableException.hpp"
+#include "../WriterInterface.hpp"
 #include "Constants.hpp"
 
 namespace clp::streaming_compression {

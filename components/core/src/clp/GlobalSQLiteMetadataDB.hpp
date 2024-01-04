@@ -6,10 +6,10 @@
 #include <utility>
 #include <vector>
 
-#include "../ErrorCode.hpp"
-#include "../TraceableException.hpp"
+#include "ErrorCode.hpp"
 #include "GlobalMetadataDB.hpp"
 #include "SQLiteDB.hpp"
+#include "TraceableException.hpp"
 
 namespace clp {
 /**

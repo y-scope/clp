@@ -5,8 +5,8 @@
 
 #include <boost/program_options.hpp>
 
-#include "../../spdlog_with_specializations.hpp"
-#include "../../version.hpp"
+#include "../spdlog_with_specializations.hpp"
+#include "../version.hpp"
 
 namespace po = boost::program_options;
 using std::cerr;

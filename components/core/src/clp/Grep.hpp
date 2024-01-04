@@ -6,7 +6,7 @@
 
 #include <log_surgeon/Lexer.hpp>
 
-#include "../Defs.h"
+#include "Defs.h"
 #include "Query.hpp"
 #include "streaming_archive/reader/Archive.hpp"
 #include "streaming_archive/reader/File.hpp"

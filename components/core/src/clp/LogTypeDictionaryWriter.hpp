@@ -3,9 +3,9 @@
 
 #include <memory>
 
-#include "../Defs.h"
-#include "../FileWriter.hpp"
+#include "Defs.h"
 #include "DictionaryWriter.hpp"
+#include "FileWriter.hpp"
 #include "LogTypeDictionaryEntry.hpp"
 
 namespace clp {

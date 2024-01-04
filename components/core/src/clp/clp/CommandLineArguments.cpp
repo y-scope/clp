@@ -6,10 +6,10 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
 
-#include "../../Defs.h"
-#include "../../spdlog_with_specializations.hpp"
-#include "../../version.hpp"
+#include "../Defs.h"
+#include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
+#include "../version.hpp"
 
 namespace po = boost::program_options;
 using std::cerr;

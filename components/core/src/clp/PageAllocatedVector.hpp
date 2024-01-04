@@ -8,11 +8,11 @@
 #include <cstring>
 #include <vector>
 
-#include "../Defs.h"
-#include "../ErrorCode.hpp"
-#include "../Platform.hpp"
-#include "../spdlog_with_specializations.hpp"
-#include "../TraceableException.hpp"
+#include "Defs.h"
+#include "ErrorCode.hpp"
+#include "Platform.hpp"
+#include "spdlog_with_specializations.hpp"
+#include "TraceableException.hpp"
 
 // Define a MREMAP_MAYMOVE shim for compilation (just compilation) on macOS
 #if defined(__APPLE__) || defined(__MACH__)

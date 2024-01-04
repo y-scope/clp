@@ -3,8 +3,8 @@
 
 #include <string>
 
-#include "../../../Defs.h"
-#include "../../../TimestampPattern.hpp"
+#include "../../Defs.h"
+#include "../../TimestampPattern.hpp"
 #include "Archive.hpp"
 
 namespace clp::streaming_archive::writer {

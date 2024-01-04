@@ -4,8 +4,8 @@
 
 #include <boost/filesystem/operations.hpp>
 
-#include "../../ErrorCode.hpp"
-#include "../../spdlog_with_specializations.hpp"
+#include "../ErrorCode.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
 
 using std::string;
