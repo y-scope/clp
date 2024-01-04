@@ -7,6 +7,11 @@ set(
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
         ../LogTypeDictionaryReader.hpp
+        ../streaming_compression/Decompressor.hpp
+        ../streaming_compression/passthrough/Decompressor.cpp
+        ../streaming_compression/passthrough/Decompressor.hpp
+        ../streaming_compression/zstd/Decompressor.cpp
+        ../streaming_compression/zstd/Decompressor.hpp
         ../Utils.cpp
         ../Utils.hpp
         ../VariableDictionaryEntry.cpp
@@ -23,11 +28,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.cpp"
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.hpp"
         "${PROJECT_SOURCE_DIR}/src/spdlog_with_specializations.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/Decompressor.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/passthrough/Decompressor.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/passthrough/Decompressor.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Decompressor.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Decompressor.hpp"
         "${PROJECT_SOURCE_DIR}/src/WriterInterface.cpp"
         "${PROJECT_SOURCE_DIR}/src/WriterInterface.hpp"
         "${PROJECT_SOURCE_DIR}/submodules/date/include/date/date.h"

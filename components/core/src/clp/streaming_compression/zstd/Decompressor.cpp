@@ -4,12 +4,12 @@
 
 #include <boost/filesystem.hpp>
 
-#include "../../Defs.h"
-#include "../../spdlog_with_specializations.hpp"
+#include "../../../Defs.h"
+#include "../../../spdlog_with_specializations.hpp"
 
-namespace streaming_compression::zstd {
+namespace clp::streaming_compression::zstd {
 Decompressor::Decompressor()
-        : ::streaming_compression::Decompressor(CompressorType::ZSTD),
+        : ::clp::streaming_compression::Decompressor(CompressorType::ZSTD),
           m_input_type(InputType::NotInitialized),
           m_decompression_stream(nullptr),
           m_file_reader(nullptr),
@@ -275,4 +275,4 @@ void Decompressor::reset_stream() {
 
     m_compressed_stream_block.pos = 0;
 }
-}  // namespace streaming_compression::zstd
+}  // namespace clp::streaming_compression::zstd

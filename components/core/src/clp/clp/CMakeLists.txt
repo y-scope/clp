@@ -1,5 +1,6 @@
 set(
         CLP_SOURCES
+        ../ArrayBackedPosIntSet.hpp
         ../dictionary_utils.cpp
         ../dictionary_utils.hpp
         ../DictionaryEntry.hpp
@@ -46,6 +47,18 @@ set(
         ../streaming_archive/writer/Segment.hpp
         ../streaming_archive/writer/utils.cpp
         ../streaming_archive/writer/utils.hpp
+        ../streaming_compression/Compressor.hpp
+        ../streaming_compression/Constants.hpp
+        ../streaming_compression/Decompressor.hpp
+        ../streaming_compression/passthrough/Compressor.cpp
+        ../streaming_compression/passthrough/Compressor.hpp
+        ../streaming_compression/passthrough/Decompressor.cpp
+        ../streaming_compression/passthrough/Decompressor.hpp
+        ../streaming_compression/zstd/Compressor.cpp
+        ../streaming_compression/zstd/Compressor.hpp
+        ../streaming_compression/zstd/Constants.hpp
+        ../streaming_compression/zstd/Decompressor.cpp
+        ../streaming_compression/zstd/Decompressor.hpp
         ../Utils.cpp
         ../Utils.hpp
         ../VariableDictionaryEntry.cpp
@@ -53,7 +66,6 @@ set(
         ../VariableDictionaryReader.hpp
         ../VariableDictionaryWriter.cpp
         ../VariableDictionaryWriter.hpp
-        "${PROJECT_SOURCE_DIR}/src/ArrayBackedPosIntSet.hpp"
         "${PROJECT_SOURCE_DIR}/src/BufferedFileReader.cpp"
         "${PROJECT_SOURCE_DIR}/src/BufferedFileReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/BufferReader.cpp"
@@ -112,18 +124,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/SQLitePreparedStatement.hpp"
         "${PROJECT_SOURCE_DIR}/src/Stopwatch.cpp"
         "${PROJECT_SOURCE_DIR}/src/Stopwatch.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/Compressor.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/Constants.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/Decompressor.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/passthrough/Compressor.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/passthrough/Compressor.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/passthrough/Decompressor.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/passthrough/Decompressor.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Compressor.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Compressor.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Constants.hpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Decompressor.cpp"
-        "${PROJECT_SOURCE_DIR}/src/streaming_compression/zstd/Decompressor.hpp"
         "${PROJECT_SOURCE_DIR}/src/StringReader.cpp"
         "${PROJECT_SOURCE_DIR}/src/StringReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/TimestampPattern.cpp"

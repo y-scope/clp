@@ -1,14 +1,14 @@
-#ifndef STREAMING_COMPRESSION_DECOMPRESSOR_HPP
-#define STREAMING_COMPRESSION_DECOMPRESSOR_HPP
+#ifndef CLP_STREAMING_COMPRESSION_DECOMPRESSOR_HPP
+#define CLP_STREAMING_COMPRESSION_DECOMPRESSOR_HPP
 
 #include <string>
 
-#include "../FileReader.hpp"
-#include "../ReaderInterface.hpp"
-#include "../TraceableException.hpp"
+#include "../../FileReader.hpp"
+#include "../../ReaderInterface.hpp"
+#include "../../TraceableException.hpp"
 #include "Constants.hpp"
 
-namespace streaming_compression {
+namespace clp::streaming_compression {
 class Decompressor : public ReaderInterface {
 public:
     // Types
@@ -62,6 +62,6 @@ protected:
     // Variables
     CompressorType m_compression_type;
 };
-}  // namespace streaming_compression
+}  // namespace clp::streaming_compression
 
-#endif  // STREAMING_COMPRESSION_DECOMPRESSOR_HPP
+#endif  // CLP_STREAMING_COMPRESSION_DECOMPRESSOR_HPP

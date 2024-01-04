@@ -1,14 +1,14 @@
-#ifndef STREAMING_COMPRESSION_COMPRESSOR_HPP
-#define STREAMING_COMPRESSION_COMPRESSOR_HPP
+#ifndef CLP_STREAMING_COMPRESSION_COMPRESSOR_HPP
+#define CLP_STREAMING_COMPRESSION_COMPRESSOR_HPP
 
 #include <cstdint>
 #include <string>
 
-#include "../TraceableException.hpp"
-#include "../WriterInterface.hpp"
+#include "../../TraceableException.hpp"
+#include "../../WriterInterface.hpp"
 #include "Constants.hpp"
 
-namespace streaming_compression {
+namespace clp::streaming_compression {
 class Compressor : public WriterInterface {
 public:
     // Types
@@ -59,6 +59,6 @@ protected:
     // Variables
     CompressorType m_type;
 };
-}  // namespace streaming_compression
+}  // namespace clp::streaming_compression
 
-#endif  // STREAMING_COMPRESSION_COMPRESSOR_HPP
+#endif  // CLP_STREAMING_COMPRESSION_COMPRESSOR_HPP

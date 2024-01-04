@@ -1,5 +1,5 @@
-#ifndef STREAMING_COMPRESSION_ZSTD_COMPRESSOR_HPP
-#define STREAMING_COMPRESSION_ZSTD_COMPRESSOR_HPP
+#ifndef CLP_STREAMING_COMPRESSION_ZSTD_COMPRESSOR_HPP
+#define CLP_STREAMING_COMPRESSION_ZSTD_COMPRESSOR_HPP
 
 #include <memory>
 #include <string>
@@ -7,13 +7,13 @@
 #include <zstd.h>
 #include <zstd_errors.h>
 
-#include "../../FileWriter.hpp"
-#include "../../TraceableException.hpp"
+#include "../../../FileWriter.hpp"
+#include "../../../TraceableException.hpp"
 #include "../Compressor.hpp"
 #include "Constants.hpp"
 
-namespace streaming_compression::zstd {
-class Compressor : public ::streaming_compression::Compressor {
+namespace clp::streaming_compression::zstd {
+class Compressor : public ::clp::streaming_compression::Compressor {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -90,6 +90,6 @@ private:
 
     size_t m_uncompressed_stream_pos;
 };
-}  // namespace streaming_compression::zstd
+}  // namespace clp::streaming_compression::zstd
 
-#endif  // STREAMING_COMPRESSION_ZSTD_COMPRESSOR_HPP
+#endif  // CLP_STREAMING_COMPRESSION_ZSTD_COMPRESSOR_HPP

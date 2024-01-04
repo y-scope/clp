@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-namespace streaming_compression::passthrough {
+namespace clp::streaming_compression::passthrough {
 ErrorCode Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
     if (InputType::NotInitialized == m_input_type) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
@@ -126,4 +126,4 @@ ErrorCode Decompressor::get_decompressed_stream_region(
     error_code = try_read_exact_length(extraction_buf, extraction_len);
     return error_code;
 }
-}  // namespace streaming_compression::passthrough
+}  // namespace clp::streaming_compression::passthrough

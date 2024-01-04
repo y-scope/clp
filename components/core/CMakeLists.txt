@@ -234,6 +234,18 @@ set(SOURCE_FILES_unitTest
         src/clp/streaming_archive/writer/Segment.hpp
         src/clp/streaming_archive/writer/utils.cpp
         src/clp/streaming_archive/writer/utils.hpp
+        src/clp/streaming_compression/Compressor.hpp
+        src/clp/streaming_compression/Constants.hpp
+        src/clp/streaming_compression/Decompressor.hpp
+        src/clp/streaming_compression/passthrough/Compressor.cpp
+        src/clp/streaming_compression/passthrough/Compressor.hpp
+        src/clp/streaming_compression/passthrough/Decompressor.cpp
+        src/clp/streaming_compression/passthrough/Decompressor.hpp
+        src/clp/streaming_compression/zstd/Compressor.cpp
+        src/clp/streaming_compression/zstd/Compressor.hpp
+        src/clp/streaming_compression/zstd/Constants.hpp
+        src/clp/streaming_compression/zstd/Decompressor.cpp
+        src/clp/streaming_compression/zstd/Decompressor.hpp
         src/clp/Utils.cpp
         src/clp/Utils.hpp
         src/clp/VariableDictionaryEntry.cpp
@@ -310,18 +322,6 @@ set(SOURCE_FILES_unitTest
         src/SQLitePreparedStatement.hpp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
-        src/streaming_compression/Compressor.hpp
-        src/streaming_compression/Constants.hpp
-        src/streaming_compression/Decompressor.hpp
-        src/streaming_compression/passthrough/Compressor.cpp
-        src/streaming_compression/passthrough/Compressor.hpp
-        src/streaming_compression/passthrough/Decompressor.cpp
-        src/streaming_compression/passthrough/Decompressor.hpp
-        src/streaming_compression/zstd/Compressor.cpp
-        src/streaming_compression/zstd/Compressor.hpp
-        src/streaming_compression/zstd/Constants.hpp
-        src/streaming_compression/zstd/Decompressor.cpp
-        src/streaming_compression/zstd/Decompressor.hpp
         src/StringReader.cpp
         src/StringReader.hpp
         src/TimestampPattern.cpp

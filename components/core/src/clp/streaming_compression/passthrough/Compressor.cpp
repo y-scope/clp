@@ -1,8 +1,8 @@
 #include "Compressor.hpp"
 
-#include "../../Defs.h"
+#include "../../../Defs.h"
 
-namespace streaming_compression::passthrough {
+namespace clp::streaming_compression::passthrough {
 void Compressor::write(char const* data, size_t const data_length) {
     if (nullptr == m_compressed_stream_file_writer) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
@@ -42,4 +42,4 @@ void Compressor::close() {
 void Compressor::open(FileWriter& file_writer) {
     m_compressed_stream_file_writer = &file_writer;
 }
-}  // namespace streaming_compression::passthrough
+}  // namespace clp::streaming_compression::passthrough

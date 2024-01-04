@@ -4,9 +4,9 @@
 #include "../Defs.h"
 #include "../ErrorCode.hpp"
 #include "../FileReader.hpp"
-#include "../streaming_compression/zstd/Compressor.hpp"
-#include "../streaming_compression/zstd/Decompressor.hpp"
 #include "DictionaryEntry.hpp"
+#include "streaming_compression/zstd/Compressor.hpp"
+#include "streaming_compression/zstd/Decompressor.hpp"
 
 namespace clp {
 /**

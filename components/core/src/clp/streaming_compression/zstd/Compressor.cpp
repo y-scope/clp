@@ -1,11 +1,11 @@
 #include "Compressor.hpp"
 
-#include "../../Defs.h"
-#include "../../spdlog_with_specializations.hpp"
+#include "../../../Defs.h"
+#include "../../../spdlog_with_specializations.hpp"
 
-namespace streaming_compression::zstd {
+namespace clp::streaming_compression::zstd {
 Compressor::Compressor()
-        : ::streaming_compression::Compressor(CompressorType::ZSTD),
+        : ::clp::streaming_compression::Compressor(CompressorType::ZSTD),
           m_compression_stream_contains_data(false),
           m_compressed_stream_file_writer(nullptr) {
     m_compression_stream = ZSTD_createCStream();
@@ -155,4 +155,4 @@ void Compressor::flush_without_ending_frame() {
         }
     }
 }
-}  // namespace streaming_compression::zstd
+}  // namespace clp::streaming_compression::zstd
