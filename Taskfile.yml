@@ -1,7 +1,7 @@
 version: "3"
 
 vars:
-  CLP_BUILD_DIR: "{{.USER_WORKING_DIR}}/build"
+  CLP_BUILD_DIR: "{{.TASKFILE_DIR}}/build"
   PYTHON_VERSION:
     sh: "python3 -c \"import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')\""
 
@@ -123,10 +123,10 @@ tasks:
       - "python3 -m venv '{{.VENV_DIR}}'"
       - |-
         . "{{.VENV_DIR}}/bin/activate"
-        pip3 install --upgrade -r "{{.USER_WORKING_DIR}}/requirements.txt"
+        pip3 install --upgrade -r "{{.TASKFILE_DIR}}/requirements.txt"
         poetry update
     sources:
-      - "{{.USER_WORKING_DIR}}/requirements.txt"
+      - "{{.TASKFILE_DIR}}/requirements.txt"
       - "pyproject.toml"
     generates:
       # For performance, we only mark a subset of all files in the venv as
