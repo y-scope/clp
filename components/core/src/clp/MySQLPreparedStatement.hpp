@@ -1,15 +1,16 @@
-#ifndef MYSQLPREPAREDSTATEMENT_HPP
-#define MYSQLPREPAREDSTATEMENT_HPP
+#ifndef CLP_MYSQLPREPAREDSTATEMENT_HPP
+#define CLP_MYSQLPREPAREDSTATEMENT_HPP
 
 #include <string>
 #include <vector>
 
 #include <mariadb/mysql.h>
 
-#include "ErrorCode.hpp"
+#include "../ErrorCode.hpp"
+#include "../TraceableException.hpp"
 #include "MySQLParamBindings.hpp"
-#include "TraceableException.hpp"
 
+namespace clp {
 class MySQLPreparedStatement {
 public:
     // Types
@@ -57,5 +58,6 @@ private:
 
     bool m_is_set;
 };
+}  // namespace clp
 
-#endif  // MYSQLPREPAREDSTATEMENT_HPP
+#endif  // CLP_MYSQLPREPAREDSTATEMENT_HPP

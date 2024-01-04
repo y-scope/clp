@@ -1,14 +1,14 @@
-#ifndef SQLITEDB_HPP
-#define SQLITEDB_HPP
+#ifndef CLP_SQLITEDB_HPP
+#define CLP_SQLITEDB_HPP
 
 #include <string>
 
-#include <sqlite3/sqlite3.h>
-
-#include "ErrorCode.hpp"
+#include "../ErrorCode.hpp"
+#include "../TraceableException.hpp"
+#include "sqlite3/sqlite3.h"
 #include "SQLitePreparedStatement.hpp"
-#include "TraceableException.hpp"
 
+namespace clp {
 class SQLiteDB {
 public:
     // Types
@@ -41,5 +41,6 @@ private:
     // Variables
     sqlite3* m_db_handle;
 };
+}  // namespace clp
 
-#endif  // SQLITEDB_HPP
+#endif  // CLP_SQLITEDB_HPP

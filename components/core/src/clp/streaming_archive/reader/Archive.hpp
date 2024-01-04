@@ -9,9 +9,9 @@
 #include <utility>
 
 #include "../../../ErrorCode.hpp"
-#include "../../../SQLiteDB.hpp"
 #include "../../LogTypeDictionaryReader.hpp"
 #include "../../Query.hpp"
+#include "../../SQLiteDB.hpp"
 #include "../../VariableDictionaryReader.hpp"
 #include "../MetadataDB.hpp"
 #include "File.hpp"

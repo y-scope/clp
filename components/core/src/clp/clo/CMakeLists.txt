@@ -20,6 +20,10 @@ set(
         ../networking/SocketOperationFailed.hpp
         ../Query.cpp
         ../Query.hpp
+        ../SQLiteDB.cpp
+        ../SQLiteDB.hpp
+        ../SQLitePreparedStatement.cpp
+        ../SQLitePreparedStatement.hpp
         ../streaming_archive/ArchiveMetadata.cpp
         ../streaming_archive/ArchiveMetadata.hpp
         ../streaming_archive/Constants.hpp
@@ -87,10 +91,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.cpp"
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.hpp"
         "${PROJECT_SOURCE_DIR}/src/spdlog_with_specializations.hpp"
-        "${PROJECT_SOURCE_DIR}/src/SQLiteDB.cpp"
-        "${PROJECT_SOURCE_DIR}/src/SQLiteDB.hpp"
-        "${PROJECT_SOURCE_DIR}/src/SQLitePreparedStatement.cpp"
-        "${PROJECT_SOURCE_DIR}/src/SQLitePreparedStatement.hpp"
         "${PROJECT_SOURCE_DIR}/src/Stopwatch.cpp"
         "${PROJECT_SOURCE_DIR}/src/Stopwatch.hpp"
         "${PROJECT_SOURCE_DIR}/src/StringReader.cpp"

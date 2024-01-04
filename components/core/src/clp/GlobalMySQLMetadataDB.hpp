@@ -2,9 +2,9 @@
 #define CLP_GLOBALMYSQLMETADATADB_HPP
 
 #include "../ErrorCode.hpp"
-#include "../MySQLDB.hpp"
 #include "../TraceableException.hpp"
 #include "GlobalMetadataDB.hpp"
+#include "MySQLDB.hpp"
 
 namespace clp {
 /**

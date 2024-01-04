@@ -1,10 +1,11 @@
 #include "MySQLPreparedStatement.hpp"
 
-#include "Defs.h"
-#include "spdlog_with_specializations.hpp"
+#include "../Defs.h"
+#include "../spdlog_with_specializations.hpp"
 
 using std::string;
 
+namespace clp {
 MySQLPreparedStatement::MySQLPreparedStatement(MYSQL* db_handle)
         : m_db_handle(db_handle),
           m_is_set(false) {
@@ -103,3 +104,4 @@ void MySQLPreparedStatement::close() {
         m_statement_bindings.clear();
     }
 }
+}  // namespace clp

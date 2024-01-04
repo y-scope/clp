@@ -1,13 +1,14 @@
-#ifndef SQLITEPREPAREDSTATEMENT_HPP
-#define SQLITEPREPAREDSTATEMENT_HPP
+#ifndef CLP_SQLITEPREPAREDSTATEMENT_HPP
+#define CLP_SQLITEPREPAREDSTATEMENT_HPP
 
 #include <string>
 
 #include <sqlite3/sqlite3.h>
 
-#include "ErrorCode.hpp"
-#include "TraceableException.hpp"
+#include "../ErrorCode.hpp"
+#include "../TraceableException.hpp"
 
+namespace clp {
 class SQLitePreparedStatement {
 public:
     // Types
@@ -61,5 +62,6 @@ private:
     sqlite3_stmt* m_statement_handle;
     bool m_row_ready;
 };
+}  // namespace clp
 
-#endif  // SQLITEPREPAREDSTATEMENT_HPP
+#endif  // CLP_SQLITEPREPAREDSTATEMENT_HPP

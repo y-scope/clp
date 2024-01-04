@@ -1,10 +1,11 @@
 #include "SQLitePreparedStatement.hpp"
 
-#include "Defs.h"
-#include "spdlog_with_specializations.hpp"
+#include "../Defs.h"
+#include "../spdlog_with_specializations.hpp"
 
 using std::string;
 
+namespace clp {
 SQLitePreparedStatement::SQLitePreparedStatement(
         char const* statement,
         size_t statement_length,
@@ -225,3 +226,4 @@ void SQLitePreparedStatement::column_string(
 
     column_string(parameter_index, value);
 }
+}  // namespace clp

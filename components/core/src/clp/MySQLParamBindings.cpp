@@ -2,8 +2,9 @@
 
 #include <cstring>
 
-#include "Defs.h"
+#include "../Defs.h"
 
+namespace clp {
 void MySQLParamBindings::clear() {
     m_statement_bindings.clear();
     m_statement_binding_lengths.clear();
@@ -55,3 +56,4 @@ void MySQLParamBindings::bind_varchar(size_t field_index, char const* value, siz
     binding.buffer_length = value_length;
     m_statement_binding_lengths[field_index] = value_length;
 }
+}  // namespace clp

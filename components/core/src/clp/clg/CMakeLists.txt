@@ -22,8 +22,18 @@ set(
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
         ../LogTypeDictionaryReader.hpp
+        ../MySQLDB.cpp
+        ../MySQLDB.hpp
+        ../MySQLParamBindings.cpp
+        ../MySQLParamBindings.hpp
+        ../MySQLPreparedStatement.cpp
+        ../MySQLPreparedStatement.hpp
         ../Query.cpp
         ../Query.hpp
+        ../SQLiteDB.cpp
+        ../SQLiteDB.hpp
+        ../SQLitePreparedStatement.cpp
+        ../SQLitePreparedStatement.hpp
         ../streaming_archive/ArchiveMetadata.cpp
         ../streaming_archive/ArchiveMetadata.hpp
         ../streaming_archive/Constants.hpp
@@ -80,12 +90,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/ir/parsing.hpp"
         "${PROJECT_SOURCE_DIR}/src/ir/parsing.inc"
         "${PROJECT_SOURCE_DIR}/src/ir/types.hpp"
-        "${PROJECT_SOURCE_DIR}/src/MySQLDB.cpp"
-        "${PROJECT_SOURCE_DIR}/src/MySQLDB.hpp"
-        "${PROJECT_SOURCE_DIR}/src/MySQLParamBindings.cpp"
-        "${PROJECT_SOURCE_DIR}/src/MySQLParamBindings.hpp"
-        "${PROJECT_SOURCE_DIR}/src/MySQLPreparedStatement.cpp"
-        "${PROJECT_SOURCE_DIR}/src/MySQLPreparedStatement.hpp"
         "${PROJECT_SOURCE_DIR}/src/PageAllocatedVector.hpp"
         "${PROJECT_SOURCE_DIR}/src/ParsedMessage.cpp"
         "${PROJECT_SOURCE_DIR}/src/ParsedMessage.hpp"
@@ -95,10 +99,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.cpp"
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.hpp"
         "${PROJECT_SOURCE_DIR}/src/spdlog_with_specializations.hpp"
-        "${PROJECT_SOURCE_DIR}/src/SQLiteDB.cpp"
-        "${PROJECT_SOURCE_DIR}/src/SQLiteDB.hpp"
-        "${PROJECT_SOURCE_DIR}/src/SQLitePreparedStatement.cpp"
-        "${PROJECT_SOURCE_DIR}/src/SQLitePreparedStatement.hpp"
         "${PROJECT_SOURCE_DIR}/src/Stopwatch.cpp"
         "${PROJECT_SOURCE_DIR}/src/Stopwatch.hpp"
         "${PROJECT_SOURCE_DIR}/src/StringReader.cpp"

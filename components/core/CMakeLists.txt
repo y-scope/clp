@@ -211,8 +211,18 @@ set(SOURCE_FILES_unitTest
         src/clp/LogTypeDictionaryReader.hpp
         src/clp/LogTypeDictionaryWriter.cpp
         src/clp/LogTypeDictionaryWriter.hpp
+        src/clp/MySQLDB.cpp
+        src/clp/MySQLDB.hpp
+        src/clp/MySQLParamBindings.cpp
+        src/clp/MySQLParamBindings.hpp
+        src/clp/MySQLPreparedStatement.cpp
+        src/clp/MySQLPreparedStatement.hpp
         src/clp/Query.cpp
         src/clp/Query.hpp
+        src/clp/SQLiteDB.cpp
+        src/clp/SQLiteDB.hpp
+        src/clp/SQLitePreparedStatement.cpp
+        src/clp/SQLitePreparedStatement.hpp
         src/clp/streaming_archive/ArchiveMetadata.cpp
         src/clp/streaming_archive/ArchiveMetadata.hpp
         src/clp/streaming_archive/Constants.hpp
@@ -301,12 +311,6 @@ set(SOURCE_FILES_unitTest
         src/math_utils.hpp
         src/MessageParser.cpp
         src/MessageParser.hpp
-        src/MySQLDB.cpp
-        src/MySQLDB.hpp
-        src/MySQLParamBindings.cpp
-        src/MySQLParamBindings.hpp
-        src/MySQLPreparedStatement.cpp
-        src/MySQLPreparedStatement.hpp
         src/PageAllocatedVector.hpp
         src/ParsedMessage.cpp
         src/ParsedMessage.hpp
@@ -316,10 +320,6 @@ set(SOURCE_FILES_unitTest
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
         src/spdlog_with_specializations.hpp
-        src/SQLiteDB.cpp
-        src/SQLiteDB.hpp
-        src/SQLitePreparedStatement.cpp
-        src/SQLitePreparedStatement.hpp
         src/Stopwatch.cpp
         src/Stopwatch.hpp
         src/StringReader.cpp

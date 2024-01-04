@@ -1,5 +1,5 @@
-#ifndef MYSQLPARAMBINDINGS_HPP
-#define MYSQLPARAMBINDINGS_HPP
+#ifndef CLP_MYSQLPARAMBINDINGS_HPP
+#define CLP_MYSQLPARAMBINDINGS_HPP
 
 #include <cstdint>
 #include <vector>
@@ -7,9 +7,10 @@
 #include <mariadb/mysql.h>
 
 // Project headers
-#include "ErrorCode.hpp"
-#include "TraceableException.hpp"
+#include "../ErrorCode.hpp"
+#include "../TraceableException.hpp"
 
+namespace clp {
 /**
  * Class representing parameter bindings for a prepared SQL statement
  */
@@ -48,5 +49,6 @@ private:
     std::vector<MYSQL_BIND> m_statement_bindings;
     std::vector<unsigned long> m_statement_binding_lengths;
 };
+}  // namespace clp
 
-#endif  // MYSQLPARAMBINDINGS_HPP
+#endif  // CLP_MYSQLPARAMBINDINGS_HPP

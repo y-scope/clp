@@ -1,16 +1,17 @@
-#ifndef MYSQLDB_HPP
-#define MYSQLDB_HPP
+#ifndef CLP_MYSQLDB_HPP
+#define CLP_MYSQLDB_HPP
 
 #include <string>
 
 #include <mariadb/mysql.h>
 
-#include "Defs.h"
-#include "ErrorCode.hpp"
+#include "../Defs.h"
+#include "../ErrorCode.hpp"
+#include "../TraceableException.hpp"
 #include "MySQLParamBindings.hpp"
 #include "MySQLPreparedStatement.hpp"
-#include "TraceableException.hpp"
 
+namespace clp {
 /**
  * Class representing a MySQL-style database
  */
@@ -122,5 +123,6 @@ private:
     // Variables
     MYSQL* m_db_handle;
 };
+}  // namespace clp
 
-#endif  // MYSQLDB_HPP
+#endif  // CLP_MYSQLDB_HPP

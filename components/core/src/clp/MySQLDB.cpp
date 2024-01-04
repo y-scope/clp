@@ -1,9 +1,10 @@
 #include "MySQLDB.hpp"
 
-#include "spdlog_with_specializations.hpp"
+#include "../spdlog_with_specializations.hpp"
 
 using std::string;
 
+namespace clp {
 MySQLDB::Iterator::Iterator(MYSQL* m_db_handle)
         : m_row(nullptr),
           m_field_lengths(nullptr),
@@ -158,3 +159,4 @@ MySQLPreparedStatement MySQLDB::prepare_statement(char const* statement, size_t 
     prepared_statement.set(statement, statement_length);
     return prepared_statement;
 }
+}  // namespace clp
