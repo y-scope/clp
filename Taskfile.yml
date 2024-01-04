@@ -55,7 +55,7 @@ tasks:
       - "components/clp-py-utils/dist/*.whl"
       - "components/compression-job-handler/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
-      - "components/package-template/src/**/*"
+      - "components/package-template/src/**"
       - "{{.CLP_BUILD_DIR}}/core/clg"
       - "{{.CLP_BUILD_DIR}}/core/clo"
       - "{{.CLP_BUILD_DIR}}/core/clp"
@@ -74,9 +74,9 @@ tasks:
       - "cmake -S '{{.SRC_DIR}}' -B '{{.BUILD_DIR}}'"
       - "cmake --build '{{.BUILD_DIR}}' --parallel --target clg clo clp"
     sources:
-      - "{{.SRC_DIR}}/cmake/**/*"
-      - "{{.SRC_DIR}}/src/**/*"
-      - "{{.SRC_DIR}}/submodules/**/*"
+      - "{{.SRC_DIR}}/cmake/**"
+      - "{{.SRC_DIR}}/src/**"
+      - "{{.SRC_DIR}}/submodules/**"
       - "{{.SRC_DIR}}/CMakeLists.txt"
     generates:
       - "{{.BUILD_DIR}}/clg"
@@ -89,9 +89,9 @@ tasks:
     cmds:
       - "{{.SRC_DIR}}/tools/scripts/deps-download/download-all.sh"
     sources:
-      - "{{.SRC_DIR}}/tools/script/deps-download/**/*"
+      - "{{.SRC_DIR}}/tools/script/deps-download/**"
     generates:
-      - "{{.SRC_DIR}}/submodules/**/*"
+      - "{{.SRC_DIR}}/submodules/**"
 
   python_component:
     label: "{{.COMPONENT}}"
@@ -109,7 +109,7 @@ tasks:
         . "{{.VENV_DIR}}/bin/activate"
         poetry build --format wheel
     sources:
-      - "{{.PACKAGE}}/**/*"
+      - "{{.PACKAGE}}/**"
       - "pyproject.toml"
     generates:
       - "dist/*.whl"
