@@ -5,8 +5,8 @@
 #include <log_surgeon/LogParser.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
-#include "../../Profiler.hpp"
 #include "../../spdlog_with_specializations.hpp"
+#include "../Profiler.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "compression.hpp"

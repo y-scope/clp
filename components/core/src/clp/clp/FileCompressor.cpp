@@ -13,8 +13,8 @@
 #include "../../ffi/ir_stream/decoding_methods.hpp"
 #include "../../ir/types.hpp"
 #include "../../ir/utils.hpp"
-#include "../../Profiler.hpp"
 #include "../LogSurgeonReader.hpp"
+#include "../Profiler.hpp"
 #include "../streaming_archive/writer/utils.hpp"
 #include "utils.hpp"
 

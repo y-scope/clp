@@ -222,12 +222,16 @@ set(SOURCE_FILES_unitTest
         src/clp/PageAllocatedVector.hpp
         src/clp/ParsedMessage.cpp
         src/clp/ParsedMessage.hpp
+        src/clp/Profiler.cpp
+        src/clp/Profiler.hpp
         src/clp/Query.cpp
         src/clp/Query.hpp
         src/clp/SQLiteDB.cpp
         src/clp/SQLiteDB.hpp
         src/clp/SQLitePreparedStatement.cpp
         src/clp/SQLitePreparedStatement.hpp
+        src/clp/Stopwatch.cpp
+        src/clp/Stopwatch.hpp
         src/clp/streaming_archive/ArchiveMetadata.cpp
         src/clp/streaming_archive/ArchiveMetadata.hpp
         src/clp/streaming_archive/Constants.hpp
@@ -315,13 +319,9 @@ set(SOURCE_FILES_unitTest
         src/LibarchiveReader.hpp
         src/math_utils.hpp
         src/Platform.hpp
-        src/Profiler.cpp
-        src/Profiler.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
         src/spdlog_with_specializations.hpp
-        src/Stopwatch.cpp
-        src/Stopwatch.hpp
         src/StringReader.cpp
         src/StringReader.hpp
         src/TimestampPattern.cpp

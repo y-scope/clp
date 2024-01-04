@@ -35,12 +35,16 @@ set(
         ../PageAllocatedVector.hpp
         ../ParsedMessage.cpp
         ../ParsedMessage.hpp
+        ../Profiler.cpp
+        ../Profiler.hpp
         ../Query.cpp
         ../Query.hpp
         ../SQLiteDB.cpp
         ../SQLiteDB.hpp
         ../SQLitePreparedStatement.cpp
         ../SQLitePreparedStatement.hpp
+        ../Stopwatch.cpp
+        ../Stopwatch.hpp
         ../streaming_archive/ArchiveMetadata.cpp
         ../streaming_archive/ArchiveMetadata.hpp
         ../streaming_archive/Constants.hpp
@@ -117,13 +121,9 @@ set(
         "${PROJECT_SOURCE_DIR}/src/LibarchiveReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/math_utils.hpp"
         "${PROJECT_SOURCE_DIR}/src/Platform.hpp"
-        "${PROJECT_SOURCE_DIR}/src/Profiler.cpp"
-        "${PROJECT_SOURCE_DIR}/src/Profiler.hpp"
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.cpp"
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.hpp"
         "${PROJECT_SOURCE_DIR}/src/spdlog_with_specializations.hpp"
-        "${PROJECT_SOURCE_DIR}/src/Stopwatch.cpp"
-        "${PROJECT_SOURCE_DIR}/src/Stopwatch.hpp"
         "${PROJECT_SOURCE_DIR}/src/StringReader.cpp"
         "${PROJECT_SOURCE_DIR}/src/StringReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/TimestampPattern.cpp"

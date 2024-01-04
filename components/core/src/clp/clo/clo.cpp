@@ -8,10 +8,10 @@
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include "../../Defs.h"
-#include "../../Profiler.hpp"
 #include "../../spdlog_with_specializations.hpp"
 #include "../Grep.hpp"
 #include "../networking/socket_utils.hpp"
+#include "../Profiler.hpp"
 #include "../streaming_archive/Constants.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
@@ -327,7 +327,7 @@ int main(int argc, char const* argv[]) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
-    Profiler::init();
+    clp::Profiler::init();
     TimestampPattern::init();
 
     CommandLineArguments command_line_args("clo");

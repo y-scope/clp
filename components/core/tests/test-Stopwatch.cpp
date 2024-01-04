@@ -2,10 +2,10 @@
 
 #include <Catch2/single_include/catch2/catch.hpp>
 
-#include "../src/Stopwatch.hpp"
+#include "../src/clp/Stopwatch.hpp"
 
 TEST_CASE("Stopwatch", "[Stopwatch]") {
-    Stopwatch stopwatch;
+    clp::Stopwatch stopwatch;
 
     SECTION("Test if initialized with 0.0") {
         double time_taken = stopwatch.get_time_taken_in_seconds();
