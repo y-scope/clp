@@ -50,6 +50,8 @@ set(
         ../streaming_compression/zstd/Constants.hpp
         ../streaming_compression/zstd/Decompressor.cpp
         ../streaming_compression/zstd/Decompressor.hpp
+        ../Thread.cpp
+        ../Thread.hpp
         ../Utils.cpp
         ../Utils.hpp
         ../VariableDictionaryEntry.cpp
@@ -93,8 +95,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/Stopwatch.hpp"
         "${PROJECT_SOURCE_DIR}/src/StringReader.cpp"
         "${PROJECT_SOURCE_DIR}/src/StringReader.hpp"
-        "${PROJECT_SOURCE_DIR}/src/Thread.cpp"
-        "${PROJECT_SOURCE_DIR}/src/Thread.hpp"
         "${PROJECT_SOURCE_DIR}/src/TimestampPattern.cpp"
         "${PROJECT_SOURCE_DIR}/src/TimestampPattern.hpp"
         "${PROJECT_SOURCE_DIR}/src/TraceableException.hpp"

@@ -1,11 +1,11 @@
 #include "Thread.hpp"
 
-// Project headers
-#include "Defs.h"
-#include "spdlog_with_specializations.hpp"
+#include "../Defs.h"
+#include "../spdlog_with_specializations.hpp"
 
 using std::system_error;
 
+namespace clp {
 Thread::~Thread() {
     if (m_thread_running) {
         SPDLOG_WARN("Thread did not exit before being destroyed.");
@@ -47,3 +47,4 @@ void Thread::thread_entry_point() {
     thread_method();
     m_thread_running = false;
 }
+}  // namespace clp

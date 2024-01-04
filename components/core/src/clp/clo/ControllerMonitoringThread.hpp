@@ -1,7 +1,7 @@
 #ifndef CLP_CLO_CONTROLLERMONITORINGTHREAD_HPP
 #define CLP_CLO_CONTROLLERMONITORINGTHREAD_HPP
 
-#include "../../Thread.hpp"
+#include "../Thread.hpp"
 
 namespace clp::clo {
 /**
