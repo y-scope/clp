@@ -1,7 +1,9 @@
 version: "3"
 
 vars:
-  CLP_BUILD_DIR: "{{.TASKFILE_DIR}}/build"
+  BUILD_DIR: "{{.TASKFILE_DIR}}/build"
+  CORE_COMPONENT_BUILD_DIR: "{{.BUILD_DIR}}/core"
+  PACKAGE_BUILD_DIR: "{{.BUILD_DIR}}/clp-package"
   PYTHON_VERSION:
     sh: "python3 -c \"import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')\""
 
@@ -11,11 +13,11 @@ tasks:
 
   clean:
     cmds:
-      - "rm -rf '{{.CLP_BUILD_DIR}}'"
+      - "rm -rf '{{.BUILD_DIR}}'"
 
   clean_package:
     cmds:
-      - "rm -rf '{{.CLP_BUILD_DIR}}/clp-package'"
+      - "rm -rf '{{.PACKAGE_BUILD_DIR}}'"
 
   package:
     deps:
@@ -32,8 +34,6 @@ tasks:
       - task: "python_component"
         vars:
           COMPONENT: "job-orchestration"
-    vars:
-      PACKAGE_BUILD_DIR: "{{.CLP_BUILD_DIR}}/clp-package"
     cmds:
       - "mkdir -p '{{.PACKAGE_BUILD_DIR}}'"
       - "rsync -a components/package-template/src/ '{{.PACKAGE_BUILD_DIR}}'"
@@ -48,7 +48,9 @@ tasks:
       - "mkdir -p '{{.PACKAGE_BUILD_DIR}}/bin'"
       - >-
         rsync -a
-        "{{.CLP_BUILD_DIR}}/core/clg" "{{.CLP_BUILD_DIR}}/core/clo" "{{.CLP_BUILD_DIR}}/core/clp"
+        "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
+        "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
+        "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
         "{{.PACKAGE_BUILD_DIR}}/bin/"
     sources:
       - "components/clp-package-utils/dist/*.whl"
@@ -56,32 +58,31 @@ tasks:
       - "components/compression-job-handler/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
       - "components/package-template/src/**"
-      - "{{.CLP_BUILD_DIR}}/core/clg"
-      - "{{.CLP_BUILD_DIR}}/core/clo"
-      - "{{.CLP_BUILD_DIR}}/core/clp"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
     generates:
-      - "{{.CLP_BUILD_DIR}}/clp-package/bin/clg"
-      - "{{.CLP_BUILD_DIR}}/clp-package/bin/clo"
-      - "{{.CLP_BUILD_DIR}}/clp-package/bin/clp"
+      - "{{.PACKAGE_BUILD_DIR}}/bin/clg"
+      - "{{.PACKAGE_BUILD_DIR}}/bin/clo"
+      - "{{.PACKAGE_BUILD_DIR}}/bin/clp"
 
   core:
     deps: ["core_submodules"]
     vars:
       SRC_DIR: "components/core"
-      BUILD_DIR: "{{.CLP_BUILD_DIR}}/core"
     cmds:
-      - "mkdir -p '{{.BUILD_DIR}}'"
-      - "cmake -S '{{.SRC_DIR}}' -B '{{.BUILD_DIR}}'"
-      - "cmake --build '{{.BUILD_DIR}}' --parallel --target clg clo clp"
+      - "mkdir -p '{{.CORE_COMPONENT_BUILD_DIR}}'"
+      - "cmake -S '{{.SRC_DIR}}' -B '{{.CORE_COMPONENT_BUILD_DIR}}'"
+      - "cmake --build '{{.CORE_COMPONENT_BUILD_DIR}}' --parallel --target clg clo clp"
     sources:
       - "{{.SRC_DIR}}/cmake/**"
       - "{{.SRC_DIR}}/CMakeLists.txt"
       - "{{.SRC_DIR}}/src/**"
       - "{{.SRC_DIR}}/submodules/**"
     generates:
-      - "{{.BUILD_DIR}}/clg"
-      - "{{.BUILD_DIR}}/clo"
-      - "{{.BUILD_DIR}}/clp"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
 
   core_submodules:
     vars:
@@ -102,7 +103,7 @@ tasks:
     vars:
       PACKAGE:
         sh: "echo {{.COMPONENT}} | tr - _"
-      VENV_DIR: "{{.CLP_BUILD_DIR}}/{{.COMPONENT}}/venv"
+      VENV_DIR: "{{.BUILD_DIR}}/{{.COMPONENT}}/venv"
     dir: "components/{{.COMPONENT}}"
     cmds:
       - |-
@@ -118,7 +119,7 @@ tasks:
     label: "{{.COMPONENT}}_venv"
     dir: "components/{{.COMPONENT}}"
     vars:
-      VENV_DIR: "{{.CLP_BUILD_DIR}}/{{.COMPONENT}}/venv"
+      VENV_DIR: "{{.BUILD_DIR}}/{{.COMPONENT}}/venv"
     cmds:
       - "python3 -m venv '{{.VENV_DIR}}'"
       - |-
