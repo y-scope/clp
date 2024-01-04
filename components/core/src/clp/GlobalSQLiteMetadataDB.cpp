@@ -5,9 +5,9 @@
 
 #include <fmt/core.h>
 
-#include "../database_utils.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../type_utils.hpp"
+#include "database_utils.hpp"
 #include "streaming_archive/Constants.hpp"
 
 // Types

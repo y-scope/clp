@@ -1,5 +1,7 @@
 set(
         CLO_SOURCES
+        ../database_utils.cpp
+        ../database_utils.hpp
         ../dictionary_utils.cpp
         ../dictionary_utils.hpp
         ../DictionaryEntry.hpp
@@ -57,8 +59,6 @@ set(
         ../VariableDictionaryWriter.hpp
         "${PROJECT_SOURCE_DIR}/src/BufferReader.cpp"
         "${PROJECT_SOURCE_DIR}/src/BufferReader.hpp"
-        "${PROJECT_SOURCE_DIR}/src/database_utils.cpp"
-        "${PROJECT_SOURCE_DIR}/src/database_utils.hpp"
         "${PROJECT_SOURCE_DIR}/src/Defs.h"
         "${PROJECT_SOURCE_DIR}/src/ErrorCode.hpp"
         "${PROJECT_SOURCE_DIR}/src/ffi/encoding_methods.cpp"

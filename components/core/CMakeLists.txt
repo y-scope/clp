@@ -186,6 +186,8 @@ set(SOURCE_FILES_unitTest
         src/clp/clp/run.hpp
         src/clp/clp/utils.cpp
         src/clp/clp/utils.hpp
+        src/clp/database_utils.cpp
+        src/clp/database_utils.hpp
         src/clp/dictionary_utils.cpp
         src/clp/dictionary_utils.hpp
         src/clp/DictionaryEntry.hpp
@@ -253,8 +255,6 @@ set(SOURCE_FILES_unitTest
         src/clp/VariableDictionaryReader.hpp
         src/clp/VariableDictionaryWriter.cpp
         src/clp/VariableDictionaryWriter.hpp
-        src/database_utils.cpp
-        src/database_utils.hpp
         src/Defs.h
         src/ErrorCode.hpp
         src/ffi/encoding_methods.cpp

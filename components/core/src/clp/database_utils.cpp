@@ -7,6 +7,7 @@ using std::pair;
 using std::string;
 using std::vector;
 
+namespace clp {
 string get_field_names_and_types_sql(vector<pair<string, string>> const& field_names_and_types) {
     fmt::memory_buffer buffer;
     auto buffer_ix = std::back_inserter(buffer);
@@ -127,3 +128,4 @@ string get_numbered_set_field_sql(vector<string> const& field_names, size_t begi
 
     return {buffer.data(), buffer.size()};
 }
+}  // namespace clp

@@ -1,9 +1,10 @@
-#ifndef DATABASE_UTILS_HPP
-#define DATABASE_UTILS_HPP
+#ifndef CLP_DATABASE_UTILS_HPP
+#define CLP_DATABASE_UTILS_HPP
 
 #include <string>
 #include <vector>
 
+namespace clp {
 /**
  * Gets the SQL for a list of field names and types in the form
  * "field_name1 TYPE1,field_name2 TYPE2,..."
@@ -70,5 +71,6 @@ std::string get_numbered_set_field_sql(
  */
 std::string
 get_numbered_set_field_sql(std::vector<std::string> const& field_names, size_t begin_ix);
+}  // namespace clp
 
-#endif  // DATABASE_UTILS_HPP
+#endif  // CLP_DATABASE_UTILS_HPP
