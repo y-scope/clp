@@ -150,6 +150,14 @@ bool MySQLDB::execute_query(string const& sql_query) {
     return true;
 }
 
+int MySQLDB::get_affected_rows() {
+    if (nullptr == m_db_handle) {
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+    }
+
+    return mysql_affected_rows(m_db_handle);
+}
+
 MySQLPreparedStatement MySQLDB::prepare_statement(char const* statement, size_t statement_length) {
     if (nullptr == m_db_handle) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);

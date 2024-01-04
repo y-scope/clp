@@ -92,6 +92,15 @@ bool MySQLPreparedStatement::execute() {
     return true;
 }
 
+int MySQLPreparedStatement::get_affected_rows() {
+    if (m_statement_handle == nullptr) {
+        SPDLOG_ERROR("MySQLPreparedStatement: get_affected_rows called on uninitialized statement");
+        return 0;
+    }
+
+    return mysql_stmt_affected_rows(m_statement_handle);
+}
+
 void MySQLPreparedStatement::close() {
     if (nullptr != m_statement_handle) {
         if (0 != mysql_stmt_close(m_statement_handle)) {
