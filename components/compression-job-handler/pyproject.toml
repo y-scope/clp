@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "compression-job-handler"
-version = "0.1.0"
+version = "0.0.3-dev"
 description = "Component for submitting compression jobs to CLP."
 authors = ["YScope Inc. <dev@yscope.com>"]
 readme = "README.md"

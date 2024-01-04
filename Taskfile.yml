@@ -4,6 +4,7 @@ vars:
   BUILD_DIR: "{{.TASKFILE_DIR}}/build"
   CORE_COMPONENT_BUILD_DIR: "{{.TASKFILE_DIR}}/build/core"
   PACKAGE_BUILD_DIR: "{{.TASKFILE_DIR}}/build/clp-package"
+  PACKAGE_VERSION: "0.0.3-dev"
   PYTHON_VERSION:
     sh: "python3 -c \"import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')\""
 
@@ -30,6 +31,20 @@ tasks:
   clean_package:
     cmds:
       - "rm -rf '{{.PACKAGE_BUILD_DIR}}'"
+
+  package_tar:
+    deps:
+      - "package"
+    vars:
+      VERSIONED_PACKAGE_NAME:
+        sh: |
+          source /etc/os-release
+          echo "clp-package-${ID}-${VERSION_CODENAME}-$(arch)-v{{.PACKAGE_VERSION}}"
+    dir: "{{.BUILD_DIR}}"
+    cmds:
+      - "rm -rf '{{.VERSIONED_PACKAGE_NAME}}' '{{.VERSIONED_PACKAGE_NAME}}.tar.gz'"
+      - "ln -s '{{.PACKAGE_BUILD_DIR}}' '{{.VERSIONED_PACKAGE_NAME}}'"
+      - "tar czf '{{.VERSIONED_PACKAGE_NAME}}.tar.gz' --dereference '{{.VERSIONED_PACKAGE_NAME}}'"
 
   package:
     deps:

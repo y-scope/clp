@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "clp-py-utils"
-version = "0.1.0"
+version = "0.0.3-dev"
 description = "Utilities for other Python packages in CLP."
 authors = ["YScope Inc. <dev@yscope.com>"]
 readme = "README.md"

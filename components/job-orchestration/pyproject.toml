@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "job-orchestration"
-version = "0.1.0"
+version = "0.0.3-dev"
 description = "Scheduler and worker cluster for CLP's distributed architecture."
 authors = ["YScope Inc. <dev@yscope.com>"]
 readme = "README.md"
