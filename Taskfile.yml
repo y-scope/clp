@@ -2,8 +2,8 @@ version: "3"
 
 vars:
   BUILD_DIR: "{{.TASKFILE_DIR}}/build"
-  CORE_COMPONENT_BUILD_DIR: "{{.BUILD_DIR}}/core"
-  PACKAGE_BUILD_DIR: "{{.BUILD_DIR}}/clp-package"
+  CORE_COMPONENT_BUILD_DIR: "{{.TASKFILE_DIR}}/build/core"
+  PACKAGE_BUILD_DIR: "{{.TASKFILE_DIR}}/build/clp-package"
   PYTHON_VERSION:
     sh: "python3 -c \"import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')\""
 
@@ -14,6 +14,18 @@ tasks:
   clean:
     cmds:
       - "rm -rf '{{.BUILD_DIR}}'"
+      - task: "clean_python_component"
+        vars:
+          COMPONENT: "clp-package-utils"
+      - task: "clean_python_component"
+        vars:
+          COMPONENT: "clp-py-utils"
+      - task: "clean_python_component"
+        vars:
+          COMPONENT: "compression-job-handler"
+      - task: "clean_python_component"
+        vars:
+          COMPONENT: "job-orchestration"
 
   clean_package:
     cmds:
@@ -105,6 +117,9 @@ tasks:
       VENV_DIR: "{{.BUILD_DIR}}/{{.COMPONENT}}/venv"
     dir: "components/{{.COMPONENT}}"
     cmds:
+      - task: "clean_python_component"
+        vars:
+          COMPONENT: "{{.COMPONENT}}"
       - |-
         . "{{.VENV_DIR}}/bin/activate"
         poetry build --format wheel
@@ -123,7 +138,7 @@ tasks:
     vars:
       VENV_DIR: "{{.BUILD_DIR}}/{{.COMPONENT}}/venv"
     cmds:
-      - "rm -r '{{.VENV_DIR}}'"
+      - "rm -rf '{{.VENV_DIR}}'"
       - "python3 -m venv '{{.VENV_DIR}}'"
       - |-
         . "{{.VENV_DIR}}/bin/activate"
@@ -133,3 +148,12 @@ tasks:
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "pyproject.toml"
+
+  clean_python_component:
+    internal: true
+    requires:
+      vars: ["COMPONENT"]
+    label: "clean_{{.COMPONENT}}"
+    dir: "components/{{.COMPONENT}}"
+    cmds:
+      - "rm -rf dist"
