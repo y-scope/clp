@@ -62,10 +62,6 @@ tasks:
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
-    generates:
-      - "{{.PACKAGE_BUILD_DIR}}/bin/clg"
-      - "{{.PACKAGE_BUILD_DIR}}/bin/clo"
-      - "{{.PACKAGE_BUILD_DIR}}/bin/clp"
 
   core:
     internal: true
@@ -81,10 +77,6 @@ tasks:
       - "{{.SRC_DIR}}/CMakeLists.txt"
       - "{{.SRC_DIR}}/src/**"
       - "{{.SRC_DIR}}/submodules/**"
-    generates:
-      - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
-      - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
-      - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
 
   core_submodules:
     internal: true
@@ -94,8 +86,6 @@ tasks:
       - "{{.SRC_DIR}}/tools/scripts/deps-download/download-all.sh"
     sources:
       - "{{.SRC_DIR}}/tools/script/deps-download/**"
-    generates:
-      - "{{.SRC_DIR}}/submodules/**"
 
   python_component:
     internal: true
@@ -117,9 +107,8 @@ tasks:
         poetry build --format wheel
     sources:
       - "{{.PACKAGE}}/**"
+      - "{{.TASKFILE_DIR}}/requirements.txt"
       - "pyproject.toml"
-    generates:
-      - "dist/*.whl"
 
   component_venv:
     internal: true
@@ -130,6 +119,7 @@ tasks:
     vars:
       VENV_DIR: "{{.BUILD_DIR}}/{{.COMPONENT}}/venv"
     cmds:
+      - "rm -r '{{.VENV_DIR}}'"
       - "python3 -m venv '{{.VENV_DIR}}'"
       - |-
         . "{{.VENV_DIR}}/bin/activate"
@@ -138,7 +128,3 @@ tasks:
     sources:
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "pyproject.toml"
-    generates:
-      # For performance, we only mark a subset of all files in the venv as
-      # generated
-      - "{{.VENV_DIR}}/lib/python{{.PYTHON_VERSION}}/site-packages/*.dist-info/*"
