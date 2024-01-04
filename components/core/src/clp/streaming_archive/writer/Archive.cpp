@@ -14,10 +14,10 @@
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/LogParser.hpp>
 
-#include "../../../EncodedVariableInterpreter.hpp"
 #include "../../../ir/types.hpp"
 #include "../../../spdlog_with_specializations.hpp"
 #include "../../../Utils.hpp"
+#include "../../EncodedVariableInterpreter.hpp"
 #include "../Constants.hpp"
 #include "utils.hpp"
 

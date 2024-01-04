@@ -8,16 +8,17 @@
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include "../../Defs.h"
-#include "../../Grep.hpp"
 #include "../../Profiler.hpp"
 #include "../../spdlog_with_specializations.hpp"
 #include "../../Utils.hpp"
+#include "../Grep.hpp"
 #include "../networking/socket_utils.hpp"
 #include "../streaming_archive/Constants.hpp"
 #include "CommandLineArguments.hpp"
 #include "ControllerMonitoringThread.hpp"
 
 using clp::clo::CommandLineArguments;
+using clp::Grep;
 using clp::streaming_archive::MetadataDB;
 using clp::streaming_archive::reader::Archive;
 using clp::streaming_archive::reader::File;

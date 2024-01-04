@@ -1,5 +1,6 @@
 #include "LogSurgeonReader.hpp"
 
+namespace clp {
 LogSurgeonReader::LogSurgeonReader(ReaderInterface& reader_interface)
         : m_reader_interface(reader_interface) {
     read = [this](char* buf, size_t count, size_t& read_to) -> log_surgeon::ErrorCode {
@@ -10,3 +11,4 @@ LogSurgeonReader::LogSurgeonReader(ReaderInterface& reader_interface)
         return log_surgeon::ErrorCode::Success;
     };
 }
+}  // namespace clp

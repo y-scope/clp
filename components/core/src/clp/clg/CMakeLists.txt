@@ -1,5 +1,7 @@
 set(
         CLG_SOURCES
+        ../EncodedVariableInterpreter.cpp
+        ../EncodedVariableInterpreter.hpp
         ../GlobalMetadataDB.hpp
         ../GlobalMetadataDBConfig.cpp
         ../GlobalMetadataDBConfig.hpp
@@ -7,6 +9,10 @@ set(
         ../GlobalMySQLMetadataDB.hpp
         ../GlobalSQLiteMetadataDB.cpp
         ../GlobalSQLiteMetadataDB.hpp
+        ../Grep.cpp
+        ../Grep.hpp
+        ../LogSurgeonReader.cpp
+        ../LogSurgeonReader.hpp
         ../streaming_archive/ArchiveMetadata.cpp
         ../streaming_archive/ArchiveMetadata.hpp
         ../streaming_archive/Constants.hpp
@@ -35,8 +41,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/dictionary_utils.hpp"
         "${PROJECT_SOURCE_DIR}/src/DictionaryEntry.hpp"
         "${PROJECT_SOURCE_DIR}/src/DictionaryReader.hpp"
-        "${PROJECT_SOURCE_DIR}/src/EncodedVariableInterpreter.cpp"
-        "${PROJECT_SOURCE_DIR}/src/EncodedVariableInterpreter.hpp"
         "${PROJECT_SOURCE_DIR}/src/ErrorCode.hpp"
         "${PROJECT_SOURCE_DIR}/src/ffi/encoding_methods.cpp"
         "${PROJECT_SOURCE_DIR}/src/ffi/encoding_methods.hpp"
@@ -48,15 +52,11 @@ set(
         "${PROJECT_SOURCE_DIR}/src/FileReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/FileWriter.cpp"
         "${PROJECT_SOURCE_DIR}/src/FileWriter.hpp"
-        "${PROJECT_SOURCE_DIR}/src/Grep.cpp"
-        "${PROJECT_SOURCE_DIR}/src/Grep.hpp"
         "${PROJECT_SOURCE_DIR}/src/ir/LogEvent.hpp"
         "${PROJECT_SOURCE_DIR}/src/ir/parsing.cpp"
         "${PROJECT_SOURCE_DIR}/src/ir/parsing.hpp"
         "${PROJECT_SOURCE_DIR}/src/ir/parsing.inc"
         "${PROJECT_SOURCE_DIR}/src/ir/types.hpp"
-        "${PROJECT_SOURCE_DIR}/src/LogSurgeonReader.cpp"
-        "${PROJECT_SOURCE_DIR}/src/LogSurgeonReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/LogTypeDictionaryEntry.cpp"
         "${PROJECT_SOURCE_DIR}/src/LogTypeDictionaryEntry.hpp"
         "${PROJECT_SOURCE_DIR}/src/LogTypeDictionaryReader.hpp"

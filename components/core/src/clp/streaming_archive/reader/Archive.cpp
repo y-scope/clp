@@ -8,9 +8,9 @@
 
 #include <boost/filesystem.hpp>
 
-#include "../../../EncodedVariableInterpreter.hpp"
 #include "../../../spdlog_with_specializations.hpp"
 #include "../../../Utils.hpp"
+#include "../../EncodedVariableInterpreter.hpp"
 #include "../ArchiveMetadata.hpp"
 #include "../Constants.hpp"
 

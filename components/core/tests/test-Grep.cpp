@@ -4,8 +4,9 @@
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
-#include "../src/Grep.hpp"
+#include "../src/clp/Grep.hpp"
 
+using clp::Grep;
 using log_surgeon::DelimiterStringAST;
 using log_surgeon::lexers::ByteLexer;
 using log_surgeon::ParserAST;

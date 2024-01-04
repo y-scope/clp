@@ -5,12 +5,12 @@
 #include <log_surgeon/Constants.hpp>
 #include <string_utils/string_utils.hpp>
 
+#include "../ir/parsing.hpp"
+#include "../ir/types.hpp"
+#include "../StringReader.hpp"
+#include "../Utils.hpp"
 #include "EncodedVariableInterpreter.hpp"
-#include "ir/parsing.hpp"
-#include "ir/types.hpp"
 #include "LogSurgeonReader.hpp"
-#include "StringReader.hpp"
-#include "Utils.hpp"
 
 using clp::streaming_archive::reader::Archive;
 using clp::streaming_archive::reader::File;
@@ -23,6 +23,8 @@ using string_utils::is_alphabet;
 using string_utils::is_wildcard;
 using string_utils::wildcard_match_unsafe;
 
+namespace clp {
+namespace {
 // Local types
 enum class SubQueryMatchabilityResult {
     MayMatch,  // The subquery might match a message
@@ -268,7 +270,7 @@ public:
  * @param logtype
  * @return true if this token might match a message, false otherwise
  */
-static bool process_var_token(
+bool process_var_token(
         QueryToken const& query_token,
         Archive const& archive,
         bool ignore_case,
@@ -284,7 +286,7 @@ static bool process_var_token(
  * @param compressed_msg
  * @return true on success, false otherwise
  */
-static bool find_matching_message(
+bool find_matching_message(
         Query const& query,
         Archive& archive,
         SubQuery const*& matching_sub_query,
@@ -302,7 +304,7 @@ static bool find_matching_message(
  * @return SubQueryMatchabilityResult::WontMatch
  * @return SubQueryMatchabilityResult::MayMatch
  */
-static SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
+SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
         Archive const& archive,
         string& processed_search_string,
         vector<QueryToken>& query_tokens,
@@ -310,7 +312,7 @@ static SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
         SubQuery& sub_query
 );
 
-static bool process_var_token(
+bool process_var_token(
         QueryToken const& query_token,
         Archive const& archive,
         bool ignore_case,
@@ -370,7 +372,7 @@ static bool process_var_token(
     return true;
 }
 
-static bool find_matching_message(
+bool find_matching_message(
         Query const& query,
         Archive& archive,
         SubQuery const*& matching_sub_query,
@@ -492,6 +494,7 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
 
     return SubQueryMatchabilityResult::MayMatch;
 }
+}  // namespace
 
 std::optional<Query> Grep::process_raw_query(
         Archive const& archive,
@@ -1060,3 +1063,4 @@ size_t Grep::search(Query const& query, size_t limit, Archive& archive, File& co
 
     return num_matches;
 }
+}  // namespace clp

@@ -12,9 +12,10 @@
 
 #include "../src/clp/clp/run.hpp"
 #include "../src/clp/GlobalMySQLMetadataDB.hpp"
-#include "../src/LogSurgeonReader.hpp"
+#include "../src/clp/LogSurgeonReader.hpp"
 #include "../src/Utils.hpp"
 
+using clp::LogSurgeonReader;
 using log_surgeon::DelimiterStringAST;
 using log_surgeon::LALR1Parser;
 using log_surgeon::lexers::ByteLexer;

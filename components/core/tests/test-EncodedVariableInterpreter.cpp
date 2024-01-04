@@ -2,10 +2,11 @@
 
 #include <Catch2/single_include/catch2/catch.hpp>
 
+#include "../src/clp/EncodedVariableInterpreter.hpp"
 #include "../src/clp/streaming_archive/Constants.hpp"
-#include "../src/EncodedVariableInterpreter.hpp"
 #include "../src/ir/types.hpp"
 
+using clp::EncodedVariableInterpreter;
 using ir::VariablePlaceholder;
 using std::string;
 using std::to_string;
