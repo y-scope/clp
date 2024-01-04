@@ -11,6 +11,7 @@
 
 using std::string;
 
+namespace clp {
 StringReader::~StringReader() {
     close();
     free(m_getdelim_buf);
@@ -60,3 +61,4 @@ void StringReader::open(string const& input_string) {
 }
 
 void StringReader::close() {}
+}  // namespace clp

@@ -11,6 +11,7 @@
 
 using std::string;
 
+namespace clp {
 FileReader::~FileReader() {
     close();
     free(m_getdelim_buf);
@@ -134,3 +135,4 @@ ErrorCode FileReader::try_fstat(struct stat& stat_buffer) {
     }
     return ErrorCode_Success;
 }
+}  // namespace clp

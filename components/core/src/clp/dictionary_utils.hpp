@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "../FileReader.hpp"
+#include "FileReader.hpp"
 #include "streaming_compression/Decompressor.hpp"
 
 namespace clp {

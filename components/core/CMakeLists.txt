@@ -167,10 +167,10 @@ add_subdirectory(src/clp/clp)
 add_subdirectory(src/clp/make_dictionaries_readable)
 
 set(SOURCE_FILES_unitTest
-        src/BufferedFileReader.cpp
-        src/BufferedFileReader.hpp
         src/BufferReader.cpp
         src/BufferReader.hpp
+        src/clp/BufferedFileReader.cpp
+        src/clp/BufferedFileReader.hpp
         src/clp/clp/CommandLineArguments.cpp
         src/clp/clp/CommandLineArguments.hpp
         src/clp/clp/compression.cpp
@@ -195,6 +195,8 @@ set(SOURCE_FILES_unitTest
         src/clp/DictionaryWriter.hpp
         src/clp/EncodedVariableInterpreter.cpp
         src/clp/EncodedVariableInterpreter.hpp
+        src/clp/FileReader.cpp
+        src/clp/FileReader.hpp
         src/clp/GlobalMetadataDB.hpp
         src/clp/GlobalMetadataDBConfig.cpp
         src/clp/GlobalMetadataDBConfig.hpp
@@ -215,6 +217,7 @@ set(SOURCE_FILES_unitTest
         src/clp/LogTypeDictionaryReader.hpp
         src/clp/LogTypeDictionaryWriter.cpp
         src/clp/LogTypeDictionaryWriter.hpp
+        src/clp/math_utils.hpp
         src/clp/MessageParser.cpp
         src/clp/MessageParser.hpp
         src/clp/MySQLDB.cpp
@@ -271,6 +274,8 @@ set(SOURCE_FILES_unitTest
         src/clp/streaming_compression/zstd/Constants.hpp
         src/clp/streaming_compression/zstd/Decompressor.cpp
         src/clp/streaming_compression/zstd/Decompressor.hpp
+        src/clp/StringReader.cpp
+        src/clp/StringReader.hpp
         src/clp/Utils.cpp
         src/clp/Utils.hpp
         src/clp/VariableDictionaryEntry.cpp
@@ -304,8 +309,6 @@ set(SOURCE_FILES_unitTest
         src/ffi/search/Subquery.hpp
         src/ffi/search/WildcardToken.cpp
         src/ffi/search/WildcardToken.hpp
-        src/FileReader.cpp
-        src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
         src/ir/LogEvent.hpp
@@ -317,13 +320,10 @@ set(SOURCE_FILES_unitTest
         src/ir/types.hpp
         src/ir/utils.cpp
         src/ir/utils.hpp
-        src/math_utils.hpp
         src/Platform.hpp
         src/ReaderInterface.cpp
         src/ReaderInterface.hpp
         src/spdlog_with_specializations.hpp
-        src/StringReader.cpp
-        src/StringReader.hpp
         src/TimestampPattern.cpp
         src/TimestampPattern.hpp
         src/TraceableException.hpp

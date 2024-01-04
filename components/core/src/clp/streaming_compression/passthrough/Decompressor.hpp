@@ -1,8 +1,8 @@
 #ifndef CLP_STREAMING_COMPRESSION_PASSTHROUGH_DECOMPRESSOR_HPP
 #define CLP_STREAMING_COMPRESSION_PASSTHROUGH_DECOMPRESSOR_HPP
 
-#include "../../../FileReader.hpp"
 #include "../../../TraceableException.hpp"
+#include "../../FileReader.hpp"
 #include "../Decompressor.hpp"
 
 namespace clp::streaming_compression::passthrough {

@@ -3,9 +3,11 @@
 #include <boost/filesystem.hpp>
 #include <Catch2/single_include/catch2/catch.hpp>
 
-#include "../src/BufferedFileReader.hpp"
-#include "../src/FileReader.hpp"
+#include "../src/clp/BufferedFileReader.hpp"
+#include "../src/clp/FileReader.hpp"
 #include "../src/FileWriter.hpp"
+
+using clp::BufferedFileReader;
 
 static constexpr size_t cNumAlphabets = 'z' - 'a';
 
@@ -271,7 +273,7 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
     file_reader.open(test_file_path);
     std::string test_string;
 
-    FileReader ref_file_reader;
+    clp::FileReader ref_file_reader;
     ref_file_reader.open(test_file_path);
     std::string ref_string;
 

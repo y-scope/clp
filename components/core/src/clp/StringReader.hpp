@@ -1,15 +1,16 @@
-#ifndef FILEREADER_HPP
-#define FILEREADER_HPP
+#ifndef CLP_STRINGREADER_HPP
+#define CLP_STRINGREADER_HPP
 
 #include <cstdio>
 #include <string>
 
-#include "Defs.h"
-#include "ErrorCode.hpp"
-#include "ReaderInterface.hpp"
-#include "TraceableException.hpp"
+#include "../Defs.h"
+#include "../ErrorCode.hpp"
+#include "../ReaderInterface.hpp"
+#include "../TraceableException.hpp"
 
-class FileReader : public ReaderInterface {
+namespace clp {
+class StringReader : public ReaderInterface {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -19,12 +20,12 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        char const* what() const noexcept override { return "FileReader operation failed"; }
+        char const* what() const noexcept override { return "StringReader operation failed"; }
     };
 
-    FileReader() : m_file(nullptr), m_getdelim_buf_len(0), m_getdelim_buf(nullptr) {}
+    StringReader() : pos(0), m_getdelim_buf_len(0), m_getdelim_buf(nullptr), string_is_set(false) {}
 
-    ~FileReader();
+    ~StringReader();
 
     // Methods implementing the ReaderInterface
     /**
@@ -57,21 +58,8 @@ public:
      */
     ErrorCode try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) override;
 
-    /**
-     * Tries to read a string from the file until it reaches the specified delimiter
-     * @param delim The delimiter to stop at
-     * @param keep_delimiter Whether to include the delimiter in the output string or not
-     * @param append Whether to append to the given string or replace its contents
-     * @param str The string read
-     * @return ErrorCode_Success on success
-     * @return ErrorCode_EndOfFile on EOF
-     * @return ErrorCode_errno otherwise
-     */
-    ErrorCode
-    try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str) override;
-
     // Methods
-    bool is_open() const { return m_file != nullptr; }
+    bool is_open() const { return string_is_set; }
 
     /**
      * Tries to open a file
@@ -80,33 +68,30 @@ public:
      * @return ErrorCode_FileNotFound if the file was not found
      * @return ErrorCode_errno otherwise
      */
-    ErrorCode try_open(std::string const& path);
+    ErrorCode try_open(std::string const& input_string);
     /**
      * Opens a file
      * @param path
-     * @throw FileReader::OperationFailed on failure
+     * @throw StringReader::OperationFailed on failure
      */
-    void open(std::string const& path);
+    void open(std::string const& input_string);
     /**
      * Closes the file if it's open
      */
     void close();
-
-    [[nodiscard]] std::string const& get_path() const { return m_path; }
-
     /**
      * Tries to stat the current file
      * @param stat_buffer
      * @return ErrorCode_errno on error
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_fstat(struct stat& stat_buffer);
-
 private:
-    FILE* m_file;
     size_t m_getdelim_buf_len;
     char* m_getdelim_buf;
-    std::string m_path;
+    std::string input_string;
+    uint32_t pos;
+    bool string_is_set;
 };
+}  // namespace clp
 
-#endif  // FILEREADER_HPP
+#endif  // CLP_STRINGREADER_HPP

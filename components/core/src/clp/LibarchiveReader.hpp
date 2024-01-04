@@ -7,9 +7,9 @@
 #include <archive.h>
 
 #include "../ErrorCode.hpp"
-#include "../FileReader.hpp"
 #include "../ReaderInterface.hpp"
 #include "../TraceableException.hpp"
+#include "FileReader.hpp"
 #include "LibarchiveFileReader.hpp"
 
 namespace clp {

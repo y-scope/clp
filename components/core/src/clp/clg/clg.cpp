@@ -17,6 +17,7 @@
 #include "CommandLineArguments.hpp"
 
 using clp::clg::CommandLineArguments;
+using clp::FileReader;
 using clp::GlobalMetadataDB;
 using clp::GlobalMetadataDBConfig;
 using clp::Grep;

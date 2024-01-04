@@ -1,5 +1,5 @@
-#ifndef BUFFEREDFILEREADER_HPP
-#define BUFFEREDFILEREADER_HPP
+#ifndef CLP_BUFFEREDFILEREADER_HPP
+#define CLP_BUFFEREDFILEREADER_HPP
 
 #include <cstdio>
 #include <memory>
@@ -7,12 +7,13 @@
 #include <string>
 #include <vector>
 
-#include "BufferReader.hpp"
-#include "Defs.h"
-#include "ErrorCode.hpp"
-#include "ReaderInterface.hpp"
-#include "TraceableException.hpp"
+#include "../BufferReader.hpp"
+#include "../Defs.h"
+#include "../ErrorCode.hpp"
+#include "../ReaderInterface.hpp"
+#include "../TraceableException.hpp"
 
+namespace clp {
 /**
  * Class for performing buffered (in memory) reads from an on-disk file with control over when and
  * how much data is buffered. This allows us to support use cases where we want to perform unordered
@@ -258,5 +259,6 @@ private:
     std::optional<size_t> m_checkpoint_pos;
     size_t m_highest_read_pos{0};
 };
+}  // namespace clp
 
-#endif  // BUFFEREDFILEREADER_HPP
+#endif  // CLP_BUFFEREDFILEREADER_HPP

@@ -1,6 +1,8 @@
 set(
         CLP_SOURCES
         ../ArrayBackedPosIntSet.hpp
+        ../BufferedFileReader.cpp
+        ../BufferedFileReader.hpp
         ../database_utils.cpp
         ../database_utils.hpp
         ../dictionary_utils.cpp
@@ -10,6 +12,8 @@ set(
         ../DictionaryWriter.hpp
         ../EncodedVariableInterpreter.cpp
         ../EncodedVariableInterpreter.hpp
+        ../FileReader.cpp
+        ../FileReader.hpp
         ../GlobalMetadataDB.hpp
         ../GlobalMetadataDBConfig.cpp
         ../GlobalMetadataDBConfig.hpp
@@ -28,6 +32,7 @@ set(
         ../LogTypeDictionaryReader.hpp
         ../LogTypeDictionaryWriter.cpp
         ../LogTypeDictionaryWriter.hpp
+        ../math_utils.hpp
         ../MessageParser.cpp
         ../MessageParser.hpp
         ../MySQLDB.cpp
@@ -84,6 +89,8 @@ set(
         ../streaming_compression/zstd/Constants.hpp
         ../streaming_compression/zstd/Decompressor.cpp
         ../streaming_compression/zstd/Decompressor.hpp
+        ../StringReader.cpp
+        ../StringReader.hpp
         ../Utils.cpp
         ../Utils.hpp
         ../VariableDictionaryEntry.cpp
@@ -91,8 +98,6 @@ set(
         ../VariableDictionaryReader.hpp
         ../VariableDictionaryWriter.cpp
         ../VariableDictionaryWriter.hpp
-        "${PROJECT_SOURCE_DIR}/src/BufferedFileReader.cpp"
-        "${PROJECT_SOURCE_DIR}/src/BufferedFileReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/BufferReader.cpp"
         "${PROJECT_SOURCE_DIR}/src/BufferReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/Defs.h"
@@ -106,8 +111,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/ffi/ir_stream/decoding_methods.inc"
         "${PROJECT_SOURCE_DIR}/src/ffi/ir_stream/encoding_methods.cpp"
         "${PROJECT_SOURCE_DIR}/src/ffi/ir_stream/encoding_methods.hpp"
-        "${PROJECT_SOURCE_DIR}/src/FileReader.cpp"
-        "${PROJECT_SOURCE_DIR}/src/FileReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/FileWriter.cpp"
         "${PROJECT_SOURCE_DIR}/src/FileWriter.hpp"
         "${PROJECT_SOURCE_DIR}/src/ir/LogEvent.hpp"
@@ -119,13 +122,10 @@ set(
         "${PROJECT_SOURCE_DIR}/src/ir/types.hpp"
         "${PROJECT_SOURCE_DIR}/src/ir/utils.cpp"
         "${PROJECT_SOURCE_DIR}/src/ir/utils.hpp"
-        "${PROJECT_SOURCE_DIR}/src/math_utils.hpp"
         "${PROJECT_SOURCE_DIR}/src/Platform.hpp"
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.cpp"
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.hpp"
         "${PROJECT_SOURCE_DIR}/src/spdlog_with_specializations.hpp"
-        "${PROJECT_SOURCE_DIR}/src/StringReader.cpp"
-        "${PROJECT_SOURCE_DIR}/src/StringReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/TimestampPattern.cpp"
         "${PROJECT_SOURCE_DIR}/src/TimestampPattern.hpp"
         "${PROJECT_SOURCE_DIR}/src/TraceableException.hpp"

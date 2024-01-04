@@ -4,6 +4,8 @@ set(
         ../dictionary_utils.hpp
         ../DictionaryEntry.hpp
         ../DictionaryReader.hpp
+        ../FileReader.cpp
+        ../FileReader.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
         ../LogTypeDictionaryReader.hpp
@@ -19,8 +21,6 @@ set(
         ../VariableDictionaryEntry.cpp
         ../VariableDictionaryEntry.hpp
         ../VariableDictionaryReader.hpp
-        "${PROJECT_SOURCE_DIR}/src/FileReader.cpp"
-        "${PROJECT_SOURCE_DIR}/src/FileReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/FileWriter.cpp"
         "${PROJECT_SOURCE_DIR}/src/FileWriter.hpp"
         "${PROJECT_SOURCE_DIR}/src/ir/parsing.cpp"

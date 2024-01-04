@@ -8,6 +8,8 @@ set(
         ../DictionaryReader.hpp
         ../EncodedVariableInterpreter.cpp
         ../EncodedVariableInterpreter.hpp
+        ../FileReader.cpp
+        ../FileReader.hpp
         ../Grep.cpp
         ../Grep.hpp
         ../LogSurgeonReader.cpp
@@ -61,6 +63,8 @@ set(
         ../streaming_compression/zstd/Constants.hpp
         ../streaming_compression/zstd/Decompressor.cpp
         ../streaming_compression/zstd/Decompressor.hpp
+        ../StringReader.cpp
+        ../StringReader.hpp
         ../Thread.cpp
         ../Thread.hpp
         ../Utils.cpp
@@ -80,8 +84,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/ffi/ir_stream/decoding_methods.cpp"
         "${PROJECT_SOURCE_DIR}/src/ffi/ir_stream/decoding_methods.hpp"
         "${PROJECT_SOURCE_DIR}/src/ffi/ir_stream/decoding_methods.inc"
-        "${PROJECT_SOURCE_DIR}/src/FileReader.cpp"
-        "${PROJECT_SOURCE_DIR}/src/FileReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/FileWriter.cpp"
         "${PROJECT_SOURCE_DIR}/src/FileWriter.hpp"
         "${PROJECT_SOURCE_DIR}/src/ir/LogEvent.hpp"
@@ -93,8 +95,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.cpp"
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.hpp"
         "${PROJECT_SOURCE_DIR}/src/spdlog_with_specializations.hpp"
-        "${PROJECT_SOURCE_DIR}/src/StringReader.cpp"
-        "${PROJECT_SOURCE_DIR}/src/StringReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/TimestampPattern.cpp"
         "${PROJECT_SOURCE_DIR}/src/TimestampPattern.hpp"
         "${PROJECT_SOURCE_DIR}/src/TraceableException.hpp"

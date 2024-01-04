@@ -5,11 +5,11 @@
 
 #include "../Defs.h"
 #include "../ErrorCode.hpp"
-#include "../FileReader.hpp"
 #include "../ir/types.hpp"
 #include "../TraceableException.hpp"
 #include "../type_utils.hpp"
 #include "DictionaryEntry.hpp"
+#include "FileReader.hpp"
 #include "streaming_compression/zstd/Compressor.hpp"
 #include "streaming_compression/zstd/Decompressor.hpp"
 

@@ -7,9 +7,9 @@
 #include <boost/algorithm/string.hpp>
 #include <string_utils/string_utils.hpp>
 
-#include "../FileReader.hpp"
 #include "dictionary_utils.hpp"
 #include "DictionaryEntry.hpp"
+#include "FileReader.hpp"
 #include "streaming_compression/passthrough/Decompressor.hpp"
 #include "streaming_compression/zstd/Decompressor.hpp"
 #include "Utils.hpp"

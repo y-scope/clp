@@ -3,9 +3,9 @@
 
 #include <string>
 
-#include "../../FileReader.hpp"
 #include "../../ReaderInterface.hpp"
 #include "../../TraceableException.hpp"
+#include "../FileReader.hpp"
 #include "Constants.hpp"
 
 namespace clp::streaming_compression {
