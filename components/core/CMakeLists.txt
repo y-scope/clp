@@ -211,6 +211,8 @@ set(SOURCE_FILES_unitTest
         src/clp/LogTypeDictionaryReader.hpp
         src/clp/LogTypeDictionaryWriter.cpp
         src/clp/LogTypeDictionaryWriter.hpp
+        src/clp/MessageParser.cpp
+        src/clp/MessageParser.hpp
         src/clp/MySQLDB.cpp
         src/clp/MySQLDB.hpp
         src/clp/MySQLParamBindings.cpp
@@ -309,8 +311,6 @@ set(SOURCE_FILES_unitTest
         src/LibarchiveReader.cpp
         src/LibarchiveReader.hpp
         src/math_utils.hpp
-        src/MessageParser.cpp
-        src/MessageParser.hpp
         src/PageAllocatedVector.hpp
         src/ParsedMessage.cpp
         src/ParsedMessage.hpp

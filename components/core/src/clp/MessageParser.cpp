@@ -1,10 +1,11 @@
 #include "MessageParser.hpp"
 
-#include "Defs.h"
-#include "TimestampPattern.hpp"
+#include "../Defs.h"
+#include "../TimestampPattern.hpp"
 
 constexpr char cLineDelimiter = '\n';
 
+namespace clp {
 bool MessageParser::parse_next_message(
         bool drain_source,
         size_t buffer_length,
@@ -162,3 +163,4 @@ bool MessageParser::parse_line(ParsedMessage& message) {
     m_line.clear();
     return message_completed;
 }
+}  // namespace clp

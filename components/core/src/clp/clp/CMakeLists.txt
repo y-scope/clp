@@ -24,6 +24,8 @@ set(
         ../LogTypeDictionaryReader.hpp
         ../LogTypeDictionaryWriter.cpp
         ../LogTypeDictionaryWriter.hpp
+        ../MessageParser.cpp
+        ../MessageParser.hpp
         ../MySQLDB.cpp
         ../MySQLDB.hpp
         ../MySQLParamBindings.cpp
@@ -111,8 +113,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/LibarchiveReader.cpp"
         "${PROJECT_SOURCE_DIR}/src/LibarchiveReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/math_utils.hpp"
-        "${PROJECT_SOURCE_DIR}/src/MessageParser.cpp"
-        "${PROJECT_SOURCE_DIR}/src/MessageParser.hpp"
         "${PROJECT_SOURCE_DIR}/src/PageAllocatedVector.hpp"
         "${PROJECT_SOURCE_DIR}/src/ParsedMessage.cpp"
         "${PROJECT_SOURCE_DIR}/src/ParsedMessage.hpp"

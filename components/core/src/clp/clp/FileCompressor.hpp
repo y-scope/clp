@@ -11,8 +11,8 @@
 #include "../../ir/LogEventDeserializer.hpp"
 #include "../../LibarchiveFileReader.hpp"
 #include "../../LibarchiveReader.hpp"
-#include "../../MessageParser.hpp"
 #include "../../ParsedMessage.hpp"
+#include "../MessageParser.hpp"
 #include "../streaming_archive/writer/Archive.hpp"
 #include "FileToCompress.hpp"
 
