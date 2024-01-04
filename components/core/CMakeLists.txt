@@ -161,6 +161,8 @@ set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
 include(cmake/Modules/FindLibraryDependencies.cmake)
 FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 
+add_subdirectory(src/string_utils)
+
 add_subdirectory(src/clp/clg)
 add_subdirectory(src/clp/clo)
 add_subdirectory(src/clp/clp)
@@ -373,5 +375,3 @@ target_link_libraries(unitTest
 target_compile_features(unitTest
         PRIVATE cxx_std_17
         )
-
-add_subdirectory(src)
