@@ -68,6 +68,7 @@ tasks:
       - "{{.PACKAGE_BUILD_DIR}}/bin/clp"
 
   core:
+    internal: true
     deps: ["core_submodules"]
     vars:
       SRC_DIR: "components/core"
@@ -86,6 +87,7 @@ tasks:
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
 
   core_submodules:
+    internal: true
     vars:
       SRC_DIR: "components/core"
     cmds:
@@ -96,6 +98,9 @@ tasks:
       - "{{.SRC_DIR}}/submodules/**"
 
   python_component:
+    internal: true
+    requires:
+      vars: ["COMPONENT"]
     label: "{{.COMPONENT}}"
     deps:
       - task: "component_venv"
@@ -117,6 +122,9 @@ tasks:
       - "dist/*.whl"
 
   component_venv:
+    internal: true
+    requires:
+      vars: ["COMPONENT"]
     label: "{{.COMPONENT}}_venv"
     dir: "components/{{.COMPONENT}}"
     vars:
