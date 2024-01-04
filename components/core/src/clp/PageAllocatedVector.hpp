@@ -8,17 +8,18 @@
 #include <cstring>
 #include <vector>
 
-#include "Defs.h"
-#include "ErrorCode.hpp"
-#include "Platform.hpp"
-#include "spdlog_with_specializations.hpp"
-#include "TraceableException.hpp"
+#include "../Defs.h"
+#include "../ErrorCode.hpp"
+#include "../Platform.hpp"
+#include "../spdlog_with_specializations.hpp"
+#include "../TraceableException.hpp"
 
 // Define a MREMAP_MAYMOVE shim for compilation (just compilation) on macOS
 #if defined(__APPLE__) || defined(__MACH__)
     #define MREMAP_MAYMOVE 0
 #endif
 
+namespace clp {
 /**
  * A minimal vector that is allocated in increments of pages rather than individual elements
  * @tparam ValueType The type of value contained in the vector
@@ -282,5 +283,6 @@ void PageAllocatedVector<ValueType>::increase_capacity(size_t required_capacity)
     m_capacity_in_bytes = new_size;
     m_capacity = m_capacity_in_bytes / sizeof(ValueType);
 }
+}  // namespace clp
 
 #endif  // PAGEALLOCATEDVECTOR_HPP

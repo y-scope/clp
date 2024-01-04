@@ -32,6 +32,7 @@ set(
         ../MySQLParamBindings.hpp
         ../MySQLPreparedStatement.cpp
         ../MySQLPreparedStatement.hpp
+        ../PageAllocatedVector.hpp
         ../ParsedMessage.cpp
         ../ParsedMessage.hpp
         ../Query.cpp
@@ -115,7 +116,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/LibarchiveReader.cpp"
         "${PROJECT_SOURCE_DIR}/src/LibarchiveReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/math_utils.hpp"
-        "${PROJECT_SOURCE_DIR}/src/PageAllocatedVector.hpp"
         "${PROJECT_SOURCE_DIR}/src/Platform.hpp"
         "${PROJECT_SOURCE_DIR}/src/Profiler.cpp"
         "${PROJECT_SOURCE_DIR}/src/Profiler.hpp"
