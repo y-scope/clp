@@ -7,11 +7,11 @@
 
 #include "../../FileWriter.hpp"
 #include "../../ir/types.hpp"
-#include "../../LogTypeDictionaryReader.hpp"
 #include "../../spdlog_with_specializations.hpp"
 #include "../../type_utils.hpp"
-#include "../../VariableDictionaryReader.hpp"
+#include "../LogTypeDictionaryReader.hpp"
 #include "../streaming_archive/Constants.hpp"
+#include "../VariableDictionaryReader.hpp"
 #include "CommandLineArguments.hpp"
 
 using ir::VariablePlaceholder;
@@ -50,7 +50,7 @@ int main(int argc, char const* argv[]) {
                              / clp::streaming_archive::cLogTypeDictFilename;
     auto logtype_segment_index_path = boost::filesystem::path(command_line_args.get_archive_path())
                                       / clp::streaming_archive::cLogTypeSegmentIndexFilename;
-    LogTypeDictionaryReader logtype_dict;
+    clp::LogTypeDictionaryReader logtype_dict;
     logtype_dict.open(logtype_dict_path.string(), logtype_segment_index_path.string());
     logtype_dict.read_new_entries();
 
@@ -134,7 +134,7 @@ int main(int argc, char const* argv[]) {
                          / clp::streaming_archive::cVarDictFilename;
     auto var_segment_index_path = boost::filesystem::path(command_line_args.get_archive_path())
                                   / clp::streaming_archive::cVarSegmentIndexFilename;
-    VariableDictionaryReader var_dict;
+    clp::VariableDictionaryReader var_dict;
     var_dict.open(var_dict_path.string(), var_segment_index_path.string());
     var_dict.read_new_entries();
 

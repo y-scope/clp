@@ -1,5 +1,10 @@
 set(
         CLP_SOURCES
+        ../dictionary_utils.cpp
+        ../dictionary_utils.hpp
+        ../DictionaryEntry.hpp
+        ../DictionaryReader.hpp
+        ../DictionaryWriter.hpp
         ../EncodedVariableInterpreter.cpp
         ../EncodedVariableInterpreter.hpp
         ../GlobalMetadataDB.hpp
@@ -11,6 +16,13 @@ set(
         ../GlobalSQLiteMetadataDB.hpp
         ../LogSurgeonReader.cpp
         ../LogSurgeonReader.hpp
+        ../LogTypeDictionaryEntry.cpp
+        ../LogTypeDictionaryEntry.hpp
+        ../LogTypeDictionaryReader.hpp
+        ../LogTypeDictionaryWriter.cpp
+        ../LogTypeDictionaryWriter.hpp
+        ../Query.cpp
+        ../Query.hpp
         ../streaming_archive/ArchiveMetadata.cpp
         ../streaming_archive/ArchiveMetadata.hpp
         ../streaming_archive/Constants.hpp
@@ -34,6 +46,13 @@ set(
         ../streaming_archive/writer/Segment.hpp
         ../streaming_archive/writer/utils.cpp
         ../streaming_archive/writer/utils.hpp
+        ../Utils.cpp
+        ../Utils.hpp
+        ../VariableDictionaryEntry.cpp
+        ../VariableDictionaryEntry.hpp
+        ../VariableDictionaryReader.hpp
+        ../VariableDictionaryWriter.cpp
+        ../VariableDictionaryWriter.hpp
         "${PROJECT_SOURCE_DIR}/src/ArrayBackedPosIntSet.hpp"
         "${PROJECT_SOURCE_DIR}/src/BufferedFileReader.cpp"
         "${PROJECT_SOURCE_DIR}/src/BufferedFileReader.hpp"
@@ -42,11 +61,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/database_utils.cpp"
         "${PROJECT_SOURCE_DIR}/src/database_utils.hpp"
         "${PROJECT_SOURCE_DIR}/src/Defs.h"
-        "${PROJECT_SOURCE_DIR}/src/dictionary_utils.cpp"
-        "${PROJECT_SOURCE_DIR}/src/dictionary_utils.hpp"
-        "${PROJECT_SOURCE_DIR}/src/DictionaryEntry.hpp"
-        "${PROJECT_SOURCE_DIR}/src/DictionaryReader.hpp"
-        "${PROJECT_SOURCE_DIR}/src/DictionaryWriter.hpp"
         "${PROJECT_SOURCE_DIR}/src/ErrorCode.hpp"
         "${PROJECT_SOURCE_DIR}/src/ffi/encoding_methods.cpp"
         "${PROJECT_SOURCE_DIR}/src/ffi/encoding_methods.hpp"
@@ -74,11 +88,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/LibarchiveFileReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/LibarchiveReader.cpp"
         "${PROJECT_SOURCE_DIR}/src/LibarchiveReader.hpp"
-        "${PROJECT_SOURCE_DIR}/src/LogTypeDictionaryEntry.cpp"
-        "${PROJECT_SOURCE_DIR}/src/LogTypeDictionaryEntry.hpp"
-        "${PROJECT_SOURCE_DIR}/src/LogTypeDictionaryReader.hpp"
-        "${PROJECT_SOURCE_DIR}/src/LogTypeDictionaryWriter.cpp"
-        "${PROJECT_SOURCE_DIR}/src/LogTypeDictionaryWriter.hpp"
         "${PROJECT_SOURCE_DIR}/src/math_utils.hpp"
         "${PROJECT_SOURCE_DIR}/src/MessageParser.cpp"
         "${PROJECT_SOURCE_DIR}/src/MessageParser.hpp"
@@ -94,8 +103,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/Platform.hpp"
         "${PROJECT_SOURCE_DIR}/src/Profiler.cpp"
         "${PROJECT_SOURCE_DIR}/src/Profiler.hpp"
-        "${PROJECT_SOURCE_DIR}/src/Query.cpp"
-        "${PROJECT_SOURCE_DIR}/src/Query.hpp"
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.cpp"
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.hpp"
         "${PROJECT_SOURCE_DIR}/src/spdlog_with_specializations.hpp"
@@ -123,13 +130,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/TimestampPattern.hpp"
         "${PROJECT_SOURCE_DIR}/src/TraceableException.hpp"
         "${PROJECT_SOURCE_DIR}/src/type_utils.hpp"
-        "${PROJECT_SOURCE_DIR}/src/Utils.cpp"
-        "${PROJECT_SOURCE_DIR}/src/Utils.hpp"
-        "${PROJECT_SOURCE_DIR}/src/VariableDictionaryEntry.cpp"
-        "${PROJECT_SOURCE_DIR}/src/VariableDictionaryEntry.hpp"
-        "${PROJECT_SOURCE_DIR}/src/VariableDictionaryReader.hpp"
-        "${PROJECT_SOURCE_DIR}/src/VariableDictionaryWriter.cpp"
-        "${PROJECT_SOURCE_DIR}/src/VariableDictionaryWriter.hpp"
         "${PROJECT_SOURCE_DIR}/src/version.hpp"
         "${PROJECT_SOURCE_DIR}/src/WriterInterface.cpp"
         "${PROJECT_SOURCE_DIR}/src/WriterInterface.hpp"

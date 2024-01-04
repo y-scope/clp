@@ -6,7 +6,7 @@
 
 #include "../../ErrorCode.hpp"
 #include "../../spdlog_with_specializations.hpp"
-#include "../../Utils.hpp"
+#include "../Utils.hpp"
 
 using std::string;
 using std::vector;

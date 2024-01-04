@@ -1,5 +1,6 @@
 #include "VariableDictionaryEntry.hpp"
 
+namespace clp {
 size_t VariableDictionaryEntry::get_data_size() const {
     return sizeof(m_id) + m_value.length()
            + m_ids_of_segments_containing_entry.size() * sizeof(segment_id_t);
@@ -40,3 +41,4 @@ void VariableDictionaryEntry::read_from_file(streaming_compression::Decompressor
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 }
+}  // namespace clp

@@ -1,5 +1,6 @@
 #include "dictionary_utils.hpp"
 
+namespace clp {
 void open_dictionary_for_reading(
         std::string const& dictionary_path,
         std::string const& segment_index_path,
@@ -43,3 +44,4 @@ uint64_t read_segment_index_header(FileReader& file_reader) {
     file_reader.seek_from_begin(segment_index_file_reader_pos);
     return num_segments;
 }
+}  // namespace clp

@@ -1,13 +1,14 @@
-#ifndef LOGTYPEDICTIONARYWRITER_HPP
-#define LOGTYPEDICTIONARYWRITER_HPP
+#ifndef CLP_LOGTYPEDICTIONARYWRITER_HPP
+#define CLP_LOGTYPEDICTIONARYWRITER_HPP
 
 #include <memory>
 
-#include "Defs.h"
+#include "../Defs.h"
+#include "../FileWriter.hpp"
 #include "DictionaryWriter.hpp"
-#include "FileWriter.hpp"
 #include "LogTypeDictionaryEntry.hpp"
 
+namespace clp {
 /**
  * Class for performing operations on logtype dictionaries and writing them to disk
  */
@@ -35,5 +36,6 @@ public:
      */
     bool add_entry(LogTypeDictionaryEntry& logtype_entry, logtype_dictionary_id_t& logtype_id);
 };
+}  // namespace clp
 
-#endif  // LOGTYPEDICTIONARYWRITER_HPP
+#endif  // CLP_LOGTYPEDICTIONARYWRITER_HPP

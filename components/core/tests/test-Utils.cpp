@@ -10,8 +10,11 @@
 #include <boost/range/combine.hpp>
 #include <Catch2/single_include/catch2/catch.hpp>
 
-#include "../src/Utils.hpp"
+#include "../src/clp/Utils.hpp"
 
+using clp::create_directory_structure;
+using clp::get_parent_directory_path;
+using clp::get_unambiguous_path;
 using std::string;
 
 TEST_CASE("create_directory_structure", "[create_directory_structure]") {

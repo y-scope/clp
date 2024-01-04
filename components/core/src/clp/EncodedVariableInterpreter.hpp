@@ -6,10 +6,10 @@
 
 #include "../ir/LogEvent.hpp"
 #include "../ir/types.hpp"
-#include "../Query.hpp"
 #include "../TraceableException.hpp"
-#include "../VariableDictionaryReader.hpp"
-#include "../VariableDictionaryWriter.hpp"
+#include "Query.hpp"
+#include "VariableDictionaryReader.hpp"
+#include "VariableDictionaryWriter.hpp"
 
 namespace clp {
 /**

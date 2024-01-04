@@ -1,15 +1,16 @@
-#ifndef QUERY_HPP
-#define QUERY_HPP
+#ifndef CLP_QUERY_HPP
+#define CLP_QUERY_HPP
 
 #include <set>
 #include <string>
 #include <unordered_set>
 #include <vector>
 
-#include "Defs.h"
+#include "../Defs.h"
 #include "LogTypeDictionaryEntry.hpp"
 #include "VariableDictionaryEntry.hpp"
 
+namespace clp {
 /**
  * Class representing a variable in a subquery. It can represent a precise encoded variable or an
  * imprecise dictionary variable (i.e., a set of possible encoded dictionary variable IDs)
@@ -216,5 +217,6 @@ private:
     std::vector<SubQuery const*> m_relevant_sub_queries;
     segment_id_t m_prev_segment_id{cInvalidSegmentId};
 };
+}  // namespace clp
 
-#endif  // QUERY_HPP
+#endif  // CLP_QUERY_HPP

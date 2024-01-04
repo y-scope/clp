@@ -1,8 +1,9 @@
 #include "VariableDictionaryWriter.hpp"
 
+#include "../spdlog_with_specializations.hpp"
 #include "dictionary_utils.hpp"
-#include "spdlog_with_specializations.hpp"
 
+namespace clp {
 bool VariableDictionaryWriter::add_entry(std::string const& value, variable_dictionary_id_t& id) {
     bool new_entry = false;
 
@@ -34,3 +35,4 @@ bool VariableDictionaryWriter::add_entry(std::string const& value, variable_dict
     }
     return new_entry;
 }
+}  // namespace clp

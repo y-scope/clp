@@ -14,12 +14,13 @@
 #include <spdlog/spdlog.h>
 #include <string_utils/string_utils.hpp>
 
-#include "spdlog_with_specializations.hpp"
+#include "../spdlog_with_specializations.hpp"
 
 using std::list;
 using std::string;
 using std::vector;
 
+namespace clp {
 ErrorCode create_directory(string const& path, mode_t mode, bool exist_ok) {
     int retval = mkdir(path.c_str(), mode);
     if (0 != retval) {
@@ -302,3 +303,4 @@ void load_lexer_from_file(
         lexer.generate();
     }
 }
+}  // namespace clp

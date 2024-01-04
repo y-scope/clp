@@ -7,9 +7,9 @@
 
 #include "../../../Defs.h"
 #include "../../../ErrorCode.hpp"
-#include "../../../LogTypeDictionaryReader.hpp"
-#include "../../../Query.hpp"
 #include "../../../TimestampPattern.hpp"
+#include "../../LogTypeDictionaryReader.hpp"
+#include "../../Query.hpp"
 #include "../MetadataDB.hpp"
 #include "Message.hpp"
 #include "SegmentManager.hpp"
