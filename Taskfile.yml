@@ -57,6 +57,7 @@ tasks:
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
       - "components/compression-job-handler/dist/*.whl"
@@ -77,6 +78,7 @@ tasks:
       - "{{.SRC_DIR}}/CMakeLists.txt"
       - "{{.SRC_DIR}}/src/**"
       - "{{.SRC_DIR}}/submodules/**"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
 
   core_submodules:
     internal: true
@@ -86,6 +88,7 @@ tasks:
       - "{{.SRC_DIR}}/tools/scripts/deps-download/download-all.sh"
     sources:
       - "{{.SRC_DIR}}/tools/script/deps-download/**"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
 
   python_component:
     internal: true
@@ -108,6 +111,7 @@ tasks:
     sources:
       - "{{.PACKAGE}}/**"
       - "{{.TASKFILE_DIR}}/requirements.txt"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "pyproject.toml"
 
   component_venv:
@@ -127,4 +131,5 @@ tasks:
         poetry update
     sources:
       - "{{.TASKFILE_DIR}}/requirements.txt"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "pyproject.toml"
