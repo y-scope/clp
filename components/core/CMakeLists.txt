@@ -219,6 +219,8 @@ set(SOURCE_FILES_unitTest
         src/clp/MySQLParamBindings.hpp
         src/clp/MySQLPreparedStatement.cpp
         src/clp/MySQLPreparedStatement.hpp
+        src/clp/ParsedMessage.cpp
+        src/clp/ParsedMessage.hpp
         src/clp/Query.cpp
         src/clp/Query.hpp
         src/clp/SQLiteDB.cpp
@@ -312,8 +314,6 @@ set(SOURCE_FILES_unitTest
         src/LibarchiveReader.hpp
         src/math_utils.hpp
         src/PageAllocatedVector.hpp
-        src/ParsedMessage.cpp
-        src/ParsedMessage.hpp
         src/Platform.hpp
         src/Profiler.cpp
         src/Profiler.hpp

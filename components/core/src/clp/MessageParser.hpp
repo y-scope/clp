@@ -4,9 +4,9 @@
 #include <string>
 
 #include "../ErrorCode.hpp"
-#include "../ParsedMessage.hpp"
 #include "../ReaderInterface.hpp"
 #include "../TraceableException.hpp"
+#include "ParsedMessage.hpp"
 
 namespace clp {
 /**

@@ -18,6 +18,8 @@ set(
         ../networking/socket_utils.cpp
         ../networking/socket_utils.hpp
         ../networking/SocketOperationFailed.hpp
+        ../ParsedMessage.cpp
+        ../ParsedMessage.hpp
         ../Query.cpp
         ../Query.hpp
         ../SQLiteDB.cpp
@@ -83,8 +85,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/ir/parsing.inc"
         "${PROJECT_SOURCE_DIR}/src/ir/types.hpp"
         "${PROJECT_SOURCE_DIR}/src/PageAllocatedVector.hpp"
-        "${PROJECT_SOURCE_DIR}/src/ParsedMessage.cpp"
-        "${PROJECT_SOURCE_DIR}/src/ParsedMessage.hpp"
         "${PROJECT_SOURCE_DIR}/src/Platform.hpp"
         "${PROJECT_SOURCE_DIR}/src/Profiler.cpp"
         "${PROJECT_SOURCE_DIR}/src/Profiler.hpp"

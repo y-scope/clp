@@ -2,6 +2,7 @@
 
 using std::string;
 
+namespace clp {
 void ParsedMessage::clear() {
     m_ts_patt = nullptr;
     clear_except_ts_patt();
@@ -54,3 +55,4 @@ void ParsedMessage::consume(ParsedMessage& message) {
 
     message.clear();
 }
+}  // namespace clp

@@ -32,6 +32,8 @@ set(
         ../MySQLParamBindings.hpp
         ../MySQLPreparedStatement.cpp
         ../MySQLPreparedStatement.hpp
+        ../ParsedMessage.cpp
+        ../ParsedMessage.hpp
         ../Query.cpp
         ../Query.hpp
         ../SQLiteDB.cpp
@@ -114,8 +116,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/LibarchiveReader.hpp"
         "${PROJECT_SOURCE_DIR}/src/math_utils.hpp"
         "${PROJECT_SOURCE_DIR}/src/PageAllocatedVector.hpp"
-        "${PROJECT_SOURCE_DIR}/src/ParsedMessage.cpp"
-        "${PROJECT_SOURCE_DIR}/src/ParsedMessage.hpp"
         "${PROJECT_SOURCE_DIR}/src/Platform.hpp"
         "${PROJECT_SOURCE_DIR}/src/Profiler.cpp"
         "${PROJECT_SOURCE_DIR}/src/Profiler.hpp"

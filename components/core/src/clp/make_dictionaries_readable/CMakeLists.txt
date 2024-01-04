@@ -7,6 +7,8 @@ set(
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
         ../LogTypeDictionaryReader.hpp
+        ../ParsedMessage.cpp
+        ../ParsedMessage.hpp
         ../streaming_compression/Decompressor.hpp
         ../streaming_compression/passthrough/Decompressor.cpp
         ../streaming_compression/passthrough/Decompressor.hpp
@@ -23,8 +25,6 @@ set(
         "${PROJECT_SOURCE_DIR}/src/FileWriter.hpp"
         "${PROJECT_SOURCE_DIR}/src/ir/parsing.cpp"
         "${PROJECT_SOURCE_DIR}/src/ir/parsing.hpp"
-        "${PROJECT_SOURCE_DIR}/src/ParsedMessage.cpp"
-        "${PROJECT_SOURCE_DIR}/src/ParsedMessage.hpp"
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.cpp"
         "${PROJECT_SOURCE_DIR}/src/ReaderInterface.hpp"
         "${PROJECT_SOURCE_DIR}/src/spdlog_with_specializations.hpp"

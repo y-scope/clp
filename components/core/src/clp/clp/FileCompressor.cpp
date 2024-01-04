@@ -18,6 +18,7 @@
 #include "../streaming_archive/writer/utils.hpp"
 #include "utils.hpp"
 
+using clp::ParsedMessage;
 using clp::streaming_archive::writer::split_archive;
 using clp::streaming_archive::writer::split_file;
 using clp::streaming_archive::writer::split_file_and_archive;
