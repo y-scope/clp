@@ -1,7 +1,7 @@
 version: "3"
 
 vars:
-  CLP_BUILD_DIR: "{{.USER_WORKING_DIR}}/out"
+  CLP_BUILD_DIR: "{{.USER_WORKING_DIR}}/build"
   PYTHON_VERSION:
     sh: "python3 -c \"import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')\""
 

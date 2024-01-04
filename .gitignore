@@ -1,4 +1,4 @@
 .task/
-out/
+build/
 **/poetry.lock
 **/dist/
