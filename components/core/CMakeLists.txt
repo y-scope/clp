@@ -186,6 +186,8 @@ set(SOURCE_FILES_unitTest
         src/clp/clp/run.hpp
         src/clp/clp/utils.cpp
         src/clp/clp/utils.hpp
+        src/clp/EncodedVariableInterpreter.cpp
+        src/clp/EncodedVariableInterpreter.hpp
         src/clp/GlobalMetadataDB.hpp
         src/clp/GlobalMetadataDBConfig.cpp
         src/clp/GlobalMetadataDBConfig.hpp
@@ -193,6 +195,10 @@ set(SOURCE_FILES_unitTest
         src/clp/GlobalMySQLMetadataDB.hpp
         src/clp/GlobalSQLiteMetadataDB.cpp
         src/clp/GlobalSQLiteMetadataDB.hpp
+        src/clp/Grep.cpp
+        src/clp/Grep.hpp
+        src/clp/LogSurgeonReader.cpp
+        src/clp/LogSurgeonReader.hpp
         src/clp/streaming_archive/ArchiveMetadata.cpp
         src/clp/streaming_archive/ArchiveMetadata.hpp
         src/clp/streaming_archive/Constants.hpp
@@ -224,8 +230,6 @@ set(SOURCE_FILES_unitTest
         src/DictionaryEntry.hpp
         src/DictionaryReader.hpp
         src/DictionaryWriter.hpp
-        src/EncodedVariableInterpreter.cpp
-        src/EncodedVariableInterpreter.hpp
         src/ErrorCode.hpp
         src/ffi/encoding_methods.cpp
         src/ffi/encoding_methods.hpp
@@ -255,8 +259,6 @@ set(SOURCE_FILES_unitTest
         src/FileReader.hpp
         src/FileWriter.cpp
         src/FileWriter.hpp
-        src/Grep.cpp
-        src/Grep.hpp
         src/ir/LogEvent.hpp
         src/ir/LogEventDeserializer.cpp
         src/ir/LogEventDeserializer.hpp
@@ -270,8 +272,6 @@ set(SOURCE_FILES_unitTest
         src/LibarchiveFileReader.hpp
         src/LibarchiveReader.cpp
         src/LibarchiveReader.hpp
-        src/LogSurgeonReader.cpp
-        src/LogSurgeonReader.hpp
         src/LogTypeDictionaryEntry.cpp
         src/LogTypeDictionaryEntry.hpp
         src/LogTypeDictionaryReader.hpp

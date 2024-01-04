@@ -1,16 +1,17 @@
-#ifndef ENCODEDVARIABLEINTERPRETER_HPP
-#define ENCODEDVARIABLEINTERPRETER_HPP
+#ifndef CLP_ENCODEDVARIABLEINTERPRETER_HPP
+#define CLP_ENCODEDVARIABLEINTERPRETER_HPP
 
 #include <string>
 #include <vector>
 
-#include "ir/LogEvent.hpp"
-#include "ir/types.hpp"
-#include "Query.hpp"
-#include "TraceableException.hpp"
-#include "VariableDictionaryReader.hpp"
-#include "VariableDictionaryWriter.hpp"
+#include "../ir/LogEvent.hpp"
+#include "../ir/types.hpp"
+#include "../Query.hpp"
+#include "../TraceableException.hpp"
+#include "../VariableDictionaryReader.hpp"
+#include "../VariableDictionaryWriter.hpp"
 
+namespace clp {
 /**
  * Class to parse and encode strings into encoded variables and to interpret encoded variables back
  * into strings. An encoded variable is one of:
@@ -197,5 +198,6 @@ private:
             std::vector<variable_dictionary_id_t>& var_ids
     );
 };
+}  // namespace clp
 
-#endif  // ENCODEDVARIABLEINTERPRETER_HPP
+#endif  // CLP_ENCODEDVARIABLEINTERPRETER_HPP

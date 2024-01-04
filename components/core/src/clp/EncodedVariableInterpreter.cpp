@@ -5,12 +5,12 @@
 
 #include <string_utils/string_utils.hpp>
 
-#include "Defs.h"
-#include "ffi/ir_stream/decoding_methods.hpp"
-#include "ir/LogEvent.hpp"
-#include "ir/types.hpp"
-#include "spdlog_with_specializations.hpp"
-#include "type_utils.hpp"
+#include "../Defs.h"
+#include "../ffi/ir_stream/decoding_methods.hpp"
+#include "../ir/LogEvent.hpp"
+#include "../ir/types.hpp"
+#include "../spdlog_with_specializations.hpp"
+#include "../type_utils.hpp"
 
 using ffi::cEightByteEncodedFloatDigitsBitMask;
 using ir::eight_byte_encoded_variable_t;
@@ -21,6 +21,7 @@ using std::string;
 using std::unordered_set;
 using std::vector;
 
+namespace clp {
 variable_dictionary_id_t EncodedVariableInterpreter::decode_var_dict_id(
         encoded_variable_t encoded_var
 ) {
@@ -481,3 +482,4 @@ EncodedVariableInterpreter::encode_and_add_to_dictionary<four_byte_encoded_varia
         std::vector<variable_dictionary_id_t>& var_ids,
         size_t& raw_num_bytes
 );
+}  // namespace clp

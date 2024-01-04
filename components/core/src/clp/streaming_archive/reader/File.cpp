@@ -3,8 +3,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "../../../EncodedVariableInterpreter.hpp"
 #include "../../../spdlog_with_specializations.hpp"
+#include "../../EncodedVariableInterpreter.hpp"
 #include "../Constants.hpp"
 #include "SegmentManager.hpp"
 
