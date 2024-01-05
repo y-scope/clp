@@ -1,0 +1,11 @@
+{
+  "url": "https://github.com/simdjson/simdjson/archive/refs/tags/v3.1.7.zip",
+  "unzip": true,
+  "targets": [
+    {
+      "source": "simdjson-3.1.7",
+      "destination": "submodules/simdjson"
+    }
+  ]
+}
+

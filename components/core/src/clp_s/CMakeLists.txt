@@ -1,0 +1,141 @@
+add_subdirectory(search/Kibana)
+
+set(CLP_S_SOURCES
+        ArchiveReader.cpp
+        ArchiveReader.hpp
+        ArchiveWriter.cpp
+        ArchiveWriter.hpp
+        ColumnReader.cpp
+        ColumnReader.hpp
+        ColumnWriter.cpp
+        ColumnWriter.hpp
+        CommandLineArguments.cpp
+        CommandLineArguments.hpp
+        Compressor.cpp
+        Compressor.hpp
+        Decompressor.cpp
+        Decompressor.hpp
+        Defs.hpp
+        DictionaryEntry.cpp
+        DictionaryEntry.hpp
+        DictionaryReader.cpp
+        DictionaryReader.hpp
+        DictionaryWriter.cpp
+        DictionaryWriter.hpp
+        ErrorCode.hpp
+        FileReader.cpp
+        FileReader.hpp
+        FileWriter.cpp
+        FileWriter.hpp
+        JsonConstructor.cpp
+        JsonConstructor.hpp
+        JsonFileIterator.cpp
+        JsonFileIterator.hpp
+        JsonParser.cpp
+        JsonParser.hpp
+        JsonSerializer.cpp
+        JsonSerializer.hpp
+        ParsedMessage.cpp
+        ParsedMessage.hpp
+        ReaderUtils.cpp
+        ReaderUtils.hpp
+        SchemaMap.cpp
+        SchemaMap.hpp
+        SchemaTree.cpp
+        SchemaTree.hpp
+        SchemaReader.cpp
+        SchemaReader.hpp
+        SchemaWriter.cpp
+        SchemaWriter.hpp
+        TimestampDictionaryReader.cpp
+        TimestampDictionaryReader.hpp
+        TimestampDictionaryWriter.cpp
+        TimestampDictionaryWriter.hpp
+        TimestampEntry.cpp
+        TimestampEntry.hpp
+        TimestampPattern.cpp
+        TimestampPattern.hpp
+        TraceableException.cpp
+        TraceableException.hpp
+        Utils.cpp
+        Utils.hpp
+        VariableDecoder.cpp
+        VariableDecoder.hpp
+        VariableEncoder.cpp
+        VariableEncoder.hpp
+        ZstdCompressor.cpp
+        ZstdCompressor.hpp
+        ZstdDecompressor.cpp
+        ZstdDecompressor.hpp
+        "${PROJECT_SOURCE_DIR}/submodules/date/include/date/date.h"
+)
+
+set(CLP_S_SEARCH_SOURCES
+        search/AndExpr.cpp
+        search/AndExpr.hpp
+        search/BooleanLiteral.cpp
+        search/BooleanLiteral.hpp
+        search/ColumnDescriptor.cpp
+        search/ColumnDescriptor.hpp
+        search/ConstantProp.cpp
+        search/ConstantProp.hpp
+        search/ConvertToExists.cpp
+        search/ConvertToExists.hpp
+        search/DateLiteral.hpp
+        search/DateLiteral.cpp
+        search/EmptyExpr.cpp
+        search/EmptyExpr.hpp
+        search/EvaluateTimestampIndex.cpp
+        search/EvaluateTimestampIndex.hpp
+        search/Expression.cpp
+        search/Expression.hpp
+        search/FilterExpr.cpp
+        search/FilterExpr.hpp
+        search/FilterOperation.hpp
+        search/Integral.cpp
+        search/Integral.hpp
+        search/Literal.hpp
+        search/NarrowTypes.cpp
+        search/NarrowTypes.hpp
+        search/NullLiteral.cpp
+        search/NullLiteral.hpp
+        search/OrExpr.cpp
+        search/OrExpr.hpp
+        search/OrOfAndForm.cpp
+        search/OrOfAndForm.hpp
+        search/Output.cpp
+        search/Output.hpp
+        search/SchemaMatch.cpp
+        search/SchemaMatch.hpp
+        search/SearchUtils.cpp
+        search/SearchUtils.hpp
+        search/StringLiteral.cpp
+        search/StringLiteral.hpp
+        search/Transformation.hpp
+        search/Value.hpp
+        search/clp_search/EncodedVariableInterpreter.cpp
+        search/clp_search/EncodedVariableInterpreter.hpp
+        search/clp_search/Grep.cpp
+        search/clp_search/Grep.hpp
+        search/clp_search/Query.cpp
+        search/clp_search/Query.hpp
+)
+
+add_executable(clp_s clp_s.cpp ${CLP_S_SOURCES} ${CLP_S_SEARCH_SOURCES})
+target_compile_features(clp_s PRIVATE cxx_std_17)
+target_link_libraries(clp_s
+        PRIVATE
+        absl::flat_hash_map
+        Boost::filesystem Boost::iostreams Boost::program_options
+        simdjson
+        spdlog::spdlog
+        ZStd::ZStd
+        Kibana
+)
+target_include_directories(clp_s PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
+
+set_target_properties(
+        clp_s
+        PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+)
