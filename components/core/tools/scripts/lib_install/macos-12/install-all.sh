@@ -9,7 +9,7 @@ brew install \
   libarchive \
   lz4 \
   mariadb-connector-c \
-  mongocxx-driver \
+  mongo-cxx-driver \
   msgpack-cxx \
   spdlog \
   pkg-config \
