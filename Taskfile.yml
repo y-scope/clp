@@ -41,10 +41,16 @@ tasks:
           source /etc/os-release
           echo "clp-package-${ID}-${VERSION_CODENAME}-$(arch)-v{{.PACKAGE_VERSION}}"
     dir: "{{.BUILD_DIR}}"
+    method: "timestamp"
     cmds:
       - "rm -rf '{{.VERSIONED_PACKAGE_NAME}}' '{{.VERSIONED_PACKAGE_NAME}}.tar.gz'"
       - "ln -s '{{.PACKAGE_BUILD_DIR}}' '{{.VERSIONED_PACKAGE_NAME}}'"
       - "tar czf '{{.VERSIONED_PACKAGE_NAME}}.tar.gz' --dereference '{{.VERSIONED_PACKAGE_NAME}}'"
+    sources:
+      - "{{.PACKAGE_BUILD_DIR}}/**"
+    status:
+      - "test -e {{.VERSIONED_PACKAGE_NAME}}.tar.gz"
+      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y {{.VERSIONED_PACKAGE_NAME}}.tar.gz)"
 
   package:
     deps:
@@ -72,6 +78,7 @@ tasks:
         "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
         "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
         "{{.PACKAGE_BUILD_DIR}}/bin/"
+    method: "timestamp"
     sources:
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
@@ -82,6 +89,9 @@ tasks:
       - "components/compression-job-handler/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
       - "components/package-template/src/**"
+    status:
+      - "test -d {{.PACKAGE_BUILD_DIR}}"
+      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.PACKAGE_BUILD_DIR}}')"
 
   core:
     deps: ["core-submodules"]
@@ -91,12 +101,24 @@ tasks:
       - "mkdir -p '{{.CORE_COMPONENT_BUILD_DIR}}'"
       - "cmake -S '{{.SRC_DIR}}' -B '{{.CORE_COMPONENT_BUILD_DIR}}'"
       - "cmake --build '{{.CORE_COMPONENT_BUILD_DIR}}' --parallel --target clg clo clp"
+    method: "timestamp"
     sources:
       - "{{.SRC_DIR}}/cmake/**"
       - "{{.SRC_DIR}}/CMakeLists.txt"
       - "{{.SRC_DIR}}/src/**"
       - "{{.SRC_DIR}}/submodules/**"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
+    status:
+      - >-
+        test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clg'
+        && test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clo'
+        && test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clp'
+      - >-
+        test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clg')
+        && test {{.TIMESTAMP | unixEpoch}} -lt 
+        $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clo')
+        && test {{.TIMESTAMP | unixEpoch}} -lt 
+        $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clp')
 
   clp-package-utils:
     - task: "python-component"
@@ -124,9 +146,6 @@ tasks:
       SRC_DIR: "components/core"
     cmds:
       - "{{.SRC_DIR}}/tools/scripts/deps-download/download-all.sh"
-    sources:
-      - "{{.SRC_DIR}}/tools/script/deps-download/**"
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
 
   python-component:
     internal: true
@@ -149,11 +168,15 @@ tasks:
       - |-
         . "{{.VENV_DIR}}/bin/activate"
         poetry build --format wheel
+    method: "timestamp"
     sources:
       - "{{.PACKAGE}}/**"
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "pyproject.toml"
+    status:
+      - "ls dist/*.whl"
+      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y dist/*.whl)"
 
   component-venv:
     internal: true
@@ -170,10 +193,14 @@ tasks:
         . "{{.VENV_DIR}}/bin/activate"
         pip3 install --upgrade -r "{{.TASKFILE_DIR}}/requirements.txt"
         poetry update
+    method: "timestamp"
     sources:
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "pyproject.toml"
+    status:
+      - "test -d '{{.VENV_DIR}}'"
+      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.VENV_DIR}}')"
 
   clean-python-component:
     internal: true
