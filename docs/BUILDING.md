@@ -1,14 +1,52 @@
+# Building
+
+This package describes the requirements and steps to build the CLP package. If you're looking for a
+prebuilt version instead, check out the [releases](https://github.com/y-scope/clp/releases) page.
+
 # Requirements
 
-* python3-venv
+* An x86_64 Ubuntu 20.04 (Focal) machine or container
+  * At runtime, the CLP package uses an Ubuntu Focal container, so we need to build in a matching
+    environment.
+  * It should be possible to build a package for a different environment, it just requires a some
+    extra configuration.
+* Python 3.8 or newer
 * [Task](https://taskfile.dev/)
 
-# Building a package
+# Setup
 
-* Run `task` from the root of the project. Upon failure, fix the error and run `task` again.
-* The package will be available at `out/clp-package`
+* Download CLP core's source dependencies:
 
-# Cleaning up
+  ```shell
+  components/core/tools/scripts/deps-download/download-all.sh
+  ```
 
-* Run `task clean` to clean the build of all components
-* Run `task clean_package` to clean just the output package
+* Install CLP core's dependencies
+
+  ```shell
+  components/core/tools/ubuntu-focal/install-all.sh
+  ```
+
+# Build
+
+To build the package as a tar ball, run;
+
+```shell
+task package-tar
+```
+
+The built package will be output as a tar file in the `build` directory.
+
+# Cleanup
+
+* To clean up the package, run:
+
+  ```shell
+  task clean-package
+  ```
+  
+* To clean up all build artifacts, run:
+
+  ```shell
+  task clean
+  ```
