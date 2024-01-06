@@ -172,3 +172,4 @@ tasks:
     dir: "components/{{.COMPONENT}}"
     cmds:
       - "rm -rf dist"
+      - "rm -rf poetry.lock"
