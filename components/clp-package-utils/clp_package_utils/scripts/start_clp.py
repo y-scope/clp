@@ -431,7 +431,7 @@ def main(argv):
             start_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
     except Exception as ex:
         # Stop CLP
-        subprocess.run(['python3', str(clp_home / 'sbin' / 'stop-clp')], check=True)
+        subprocess.run(['python3', str(clp_home / 'sbin' / 'stop-clp.sh')], check=True)
 
         if type(ex) == ValueError:
             logger.error(f"Failed to start CLP: {ex}")
