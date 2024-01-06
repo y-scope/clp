@@ -49,18 +49,10 @@ tasks:
   package:
     deps:
       - "core"
-      - task: "python-component"
-        vars:
-          COMPONENT: "clp-package-utils"
-      - task: "python-component"
-        vars:
-          COMPONENT: "clp-py-utils"
-      - task: "python-component"
-        vars:
-          COMPONENT: "compression-job-handler"
-      - task: "python-component"
-        vars:
-          COMPONENT: "job-orchestration"
+      - "clp-package-utils"
+      - "clp-py-utils"
+      - "compression-job-handler"
+      - "job-orchestration"
     cmds:
       - task: "clean-package"
       - "mkdir -p '{{.PACKAGE_BUILD_DIR}}'"
@@ -92,7 +84,6 @@ tasks:
       - "components/package-template/src/**"
 
   core:
-    internal: true
     deps: ["core-submodules"]
     vars:
       SRC_DIR: "components/core"
@@ -106,6 +97,26 @@ tasks:
       - "{{.SRC_DIR}}/src/**"
       - "{{.SRC_DIR}}/submodules/**"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
+
+  clp-package-utils:
+    - task: "python-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
+
+  clp-py-utils:
+    - task: "python-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
+
+  compression-job-handler:
+    - task: "python-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
+
+  job-orchestration:
+    - task: "python-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
 
   core-submodules:
     internal: true
