@@ -1,0 +1,213 @@
+version: "3"
+
+vars:
+  BUILD_DIR: "{{.TASKFILE_DIR}}/build"
+  CORE_COMPONENT_BUILD_DIR: "{{.TASKFILE_DIR}}/build/core"
+  PACKAGE_BUILD_DIR: "{{.TASKFILE_DIR}}/build/clp-package"
+  PACKAGE_VERSION: "0.0.3-dev"
+  PYTHON_VERSION:
+    sh: "python3 -c \"import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')\""
+
+tasks:
+  default:
+    deps: ["package"]
+
+  clean:
+    cmds:
+      - "rm -rf '{{.BUILD_DIR}}'"
+      - task: "clean-python-component"
+        vars:
+          COMPONENT: "clp-package-utils"
+      - task: "clean-python-component"
+        vars:
+          COMPONENT: "clp-py-utils"
+      - task: "clean-python-component"
+        vars:
+          COMPONENT: "compression-job-handler"
+      - task: "clean-python-component"
+        vars:
+          COMPONENT: "job-orchestration"
+
+  clean-package:
+    cmds:
+      - "rm -rf '{{.PACKAGE_BUILD_DIR}}'"
+
+  package-tar:
+    deps:
+      - "package"
+    vars:
+      VERSIONED_PACKAGE_NAME:
+        sh: |
+          source /etc/os-release
+          echo "clp-package-${ID}-${VERSION_CODENAME}-$(arch)-v{{.PACKAGE_VERSION}}"
+    dir: "{{.BUILD_DIR}}"
+    method: "timestamp"
+    cmds:
+      - "rm -rf '{{.VERSIONED_PACKAGE_NAME}}' '{{.VERSIONED_PACKAGE_NAME}}.tar.gz'"
+      - "ln -s '{{.PACKAGE_BUILD_DIR}}' '{{.VERSIONED_PACKAGE_NAME}}'"
+      - "tar czf '{{.VERSIONED_PACKAGE_NAME}}.tar.gz' --dereference '{{.VERSIONED_PACKAGE_NAME}}'"
+    sources:
+      - "{{.PACKAGE_BUILD_DIR}}/**"
+    status:
+      - "test -e {{.VERSIONED_PACKAGE_NAME}}.tar.gz"
+      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y {{.VERSIONED_PACKAGE_NAME}}.tar.gz)"
+
+  package:
+    deps:
+      - "core"
+      - "clp-package-utils"
+      - "clp-py-utils"
+      - "compression-job-handler"
+      - "job-orchestration"
+    cmds:
+      - task: "clean-package"
+      - "mkdir -p '{{.PACKAGE_BUILD_DIR}}'"
+      - "rsync -a components/package-template/src/ '{{.PACKAGE_BUILD_DIR}}'"
+      - "mkdir -p '{{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages'"
+      - >-
+        pip3 install --upgrade
+        components/clp-package-utils/dist/*.whl
+        components/clp-py-utils/dist/*.whl
+        components/compression-job-handler/dist/*.whl
+        components/job-orchestration/dist/*.whl
+        -t "{{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages"
+      - "mkdir -p '{{.PACKAGE_BUILD_DIR}}/bin'"
+      - >-
+        rsync -a
+        "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
+        "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
+        "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
+        "{{.PACKAGE_BUILD_DIR}}/bin/"
+    method: "timestamp"
+    sources:
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "components/clp-package-utils/dist/*.whl"
+      - "components/clp-py-utils/dist/*.whl"
+      - "components/compression-job-handler/dist/*.whl"
+      - "components/job-orchestration/dist/*.whl"
+      - "components/package-template/src/**"
+    status:
+      - "test -d {{.PACKAGE_BUILD_DIR}}"
+      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.PACKAGE_BUILD_DIR}}')"
+
+  core:
+    deps: ["core-submodules"]
+    vars:
+      SRC_DIR: "components/core"
+    cmds:
+      - "mkdir -p '{{.CORE_COMPONENT_BUILD_DIR}}'"
+      - "cmake -S '{{.SRC_DIR}}' -B '{{.CORE_COMPONENT_BUILD_DIR}}'"
+      - "cmake --build '{{.CORE_COMPONENT_BUILD_DIR}}' --parallel --target clg clo clp"
+    method: "timestamp"
+    sources:
+      - "{{.SRC_DIR}}/cmake/**"
+      - "{{.SRC_DIR}}/CMakeLists.txt"
+      - "{{.SRC_DIR}}/src/**"
+      - "{{.SRC_DIR}}/submodules/**"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+    status:
+      - >-
+        test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clg'
+        && test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clo'
+        && test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clp'
+      - >-
+        test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clg')
+        && test {{.TIMESTAMP | unixEpoch}} -lt
+        $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clo')
+        && test {{.TIMESTAMP | unixEpoch}} -lt
+        $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clp')
+
+  clp-package-utils:
+    - task: "python-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
+
+  clp-py-utils:
+    - task: "python-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
+
+  compression-job-handler:
+    - task: "python-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
+
+  job-orchestration:
+    - task: "python-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
+
+  core-submodules:
+    internal: true
+    vars:
+      SRC_DIR: "components/core"
+    cmds:
+      - "{{.SRC_DIR}}/tools/scripts/deps-download/download-all.sh"
+
+  python-component:
+    internal: true
+    requires:
+      vars: ["COMPONENT"]
+    label: "{{.COMPONENT}}"
+    deps:
+      - task: "component-venv"
+        vars:
+          COMPONENT: "{{.COMPONENT}}"
+    vars:
+      PACKAGE:
+        sh: "echo {{.COMPONENT}} | tr - _"
+      VENV_DIR: "{{.BUILD_DIR}}/{{.COMPONENT}}/venv"
+    dir: "components/{{.COMPONENT}}"
+    cmds:
+      - task: "clean-python-component"
+        vars:
+          COMPONENT: "{{.COMPONENT}}"
+      - |-
+        . "{{.VENV_DIR}}/bin/activate"
+        poetry build --format wheel
+    method: "timestamp"
+    sources:
+      - "{{.PACKAGE}}/**"
+      - "{{.TASKFILE_DIR}}/requirements.txt"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "pyproject.toml"
+    status:
+      - "ls dist/*.whl"
+      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y dist/*.whl)"
+
+  component-venv:
+    internal: true
+    requires:
+      vars: ["COMPONENT"]
+    label: "{{.COMPONENT}}_venv"
+    dir: "components/{{.COMPONENT}}"
+    vars:
+      VENV_DIR: "{{.BUILD_DIR}}/{{.COMPONENT}}/venv"
+    cmds:
+      - "rm -rf '{{.VENV_DIR}}'"
+      - "python3 -m venv '{{.VENV_DIR}}'"
+      - |-
+        . "{{.VENV_DIR}}/bin/activate"
+        pip3 install --upgrade -r "{{.TASKFILE_DIR}}/requirements.txt"
+        poetry update
+    method: "timestamp"
+    sources:
+      - "{{.TASKFILE_DIR}}/requirements.txt"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "pyproject.toml"
+    status:
+      - "test -d '{{.VENV_DIR}}'"
+      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.VENV_DIR}}')"
+
+  clean-python-component:
+    internal: true
+    requires:
+      vars: ["COMPONENT"]
+    label: "clean-{{.COMPONENT}}"
+    dir: "components/{{.COMPONENT}}"
+    cmds:
+      - "rm -rf dist"
+      - "rm -rf poetry.lock"

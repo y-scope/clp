@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "clp-py-utils"
+version = "0.0.3-dev"
+description = "Utilities for other Python packages in CLP."
+authors = ["YScope Inc. <dev@yscope.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8 || ^3.10"
+# mariadb version must be compatible with libmariadev installed in runtime env.
+# See https://mariadb.com/docs/server/connect/programming-languages/python/install/#Dependencies
+mariadb = "~1.0.11"
+mysql-connector-python = "^8.2.0"
+pydantic = "^1.10.13"
+python-Levenshtein = "~0.22"
+PyYAML = "^6.0.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
