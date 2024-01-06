@@ -7,7 +7,9 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.8 || ^3.10"
-mariadb = "^1.1.9"
+# mariadb version must be compatible with libmariadev installed in runtime env.
+# See https://mariadb.com/docs/server/connect/programming-languages/python/install/#Dependencies
+mariadb = "~1.0.11"
 mysql-connector-python = "^8.2.0"
 pydantic = "^1.10.13"
 python-Levenshtein = "~0.22"
