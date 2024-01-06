@@ -11,7 +11,7 @@ searching the compressed logs without decompression. To learn more about it, you
 # Getting Started
 
 You can download a release from the [releases](https://github.com/y-scope/clp/releases) page, or
-you can build the [latest](docs/BUILDING.md).
+you can build the [latest](docs/Building.md).
 
 For some logs you can use to test CLP, check out our open-source 
 [datasets](docs/Datasets.md).
