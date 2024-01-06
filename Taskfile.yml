@@ -15,24 +15,24 @@ tasks:
   clean:
     cmds:
       - "rm -rf '{{.BUILD_DIR}}'"
-      - task: "clean_python_component"
+      - task: "clean-python-component"
         vars:
           COMPONENT: "clp-package-utils"
-      - task: "clean_python_component"
+      - task: "clean-python-component"
         vars:
           COMPONENT: "clp-py-utils"
-      - task: "clean_python_component"
+      - task: "clean-python-component"
         vars:
           COMPONENT: "compression-job-handler"
-      - task: "clean_python_component"
+      - task: "clean-python-component"
         vars:
           COMPONENT: "job-orchestration"
 
-  clean_package:
+  clean-package:
     cmds:
       - "rm -rf '{{.PACKAGE_BUILD_DIR}}'"
 
-  package_tar:
+  package-tar:
     deps:
       - "package"
     vars:
@@ -49,20 +49,20 @@ tasks:
   package:
     deps:
       - "core"
-      - task: "python_component"
+      - task: "python-component"
         vars:
           COMPONENT: "clp-package-utils"
-      - task: "python_component"
+      - task: "python-component"
         vars:
           COMPONENT: "clp-py-utils"
-      - task: "python_component"
+      - task: "python-component"
         vars:
           COMPONENT: "compression-job-handler"
-      - task: "python_component"
+      - task: "python-component"
         vars:
           COMPONENT: "job-orchestration"
     cmds:
-      - task: "clean_package"
+      - task: "clean-package"
       - "mkdir -p '{{.PACKAGE_BUILD_DIR}}'"
       - "rsync -a components/package-template/src/ '{{.PACKAGE_BUILD_DIR}}'"
       - "mkdir -p '{{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages'"
@@ -93,7 +93,7 @@ tasks:
 
   core:
     internal: true
-    deps: ["core_submodules"]
+    deps: ["core-submodules"]
     vars:
       SRC_DIR: "components/core"
     cmds:
@@ -107,7 +107,7 @@ tasks:
       - "{{.SRC_DIR}}/submodules/**"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
 
-  core_submodules:
+  core-submodules:
     internal: true
     vars:
       SRC_DIR: "components/core"
@@ -117,13 +117,13 @@ tasks:
       - "{{.SRC_DIR}}/tools/script/deps-download/**"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
 
-  python_component:
+  python-component:
     internal: true
     requires:
       vars: ["COMPONENT"]
     label: "{{.COMPONENT}}"
     deps:
-      - task: "component_venv"
+      - task: "component-venv"
         vars:
           COMPONENT: "{{.COMPONENT}}"
     vars:
@@ -132,7 +132,7 @@ tasks:
       VENV_DIR: "{{.BUILD_DIR}}/{{.COMPONENT}}/venv"
     dir: "components/{{.COMPONENT}}"
     cmds:
-      - task: "clean_python_component"
+      - task: "clean-python-component"
         vars:
           COMPONENT: "{{.COMPONENT}}"
       - |-
@@ -144,7 +144,7 @@ tasks:
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "pyproject.toml"
 
-  component_venv:
+  component-venv:
     internal: true
     requires:
       vars: ["COMPONENT"]
@@ -164,11 +164,11 @@ tasks:
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "pyproject.toml"
 
-  clean_python_component:
+  clean-python-component:
     internal: true
     requires:
       vars: ["COMPONENT"]
-    label: "clean_{{.COMPONENT}}"
+    label: "clean-{{.COMPONENT}}"
     dir: "components/{{.COMPONENT}}"
     cmds:
       - "rm -rf dist"
