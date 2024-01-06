@@ -115,9 +115,9 @@ tasks:
         && test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clp'
       - >-
         test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clg')
-        && test {{.TIMESTAMP | unixEpoch}} -lt 
+        && test {{.TIMESTAMP | unixEpoch}} -lt
         $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clo')
-        && test {{.TIMESTAMP | unixEpoch}} -lt 
+        && test {{.TIMESTAMP | unixEpoch}} -lt
         $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clp')
 
   clp-package-utils:
