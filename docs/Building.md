@@ -1,6 +1,6 @@
 # Building
 
-This package describes the requirements and steps to build the CLP package. If you're looking for a
+This page describes the requirements and steps to build the CLP package. If you're looking for a
 prebuilt version instead, check out the [releases](https://github.com/y-scope/clp/releases) page.
 
 # Requirements
