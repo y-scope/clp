@@ -7,12 +7,9 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.8 || ^3.10"
-mariadb = "~1.0.7"
-msgpack = "^1.0.6"
-mysql-connector-python = "~8.0.26"
-pydantic = "^1.8.2"
-pymongo = "^4.5.0"
+msgpack = "^1.0.7"
 PyYAML = "^6.0.1"
+zstandard = "~0.22"
 
 [build-system]
 requires = ["poetry-core"]
