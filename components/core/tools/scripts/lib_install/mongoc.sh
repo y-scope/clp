@@ -43,10 +43,10 @@ if [ $installed -eq 0 ] ; then
 fi
 
 echo "Checking for elevated privileges..."
-privileged_command_prefix=""
+install_command_prefix_args=()
 if [ ${EUID:-$(id -u)} -ne 0 ] ; then
   sudo echo "Script can elevate privileges."
-  privileged_command_prefix="sudo"
+  install_command_prefix_args=("sudo")
 fi
 
 # Download
@@ -83,10 +83,6 @@ checkinstall_installed=$?
 set -e
 
 # Install
-install_command_prefix_args=()
-if ! [ -z "${privileged_command_prefix}" ]; then
-  install_command_prefix_args=(${privileged_command_prefix})
-fi
 if [ $checkinstall_installed -eq 0 ] ; then
   install_command_prefix_args+=( \
     checkinstall \
