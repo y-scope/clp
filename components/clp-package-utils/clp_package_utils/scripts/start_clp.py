@@ -249,8 +249,8 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
         logger.info(f"{RESULTS_CACHE_COMPONENT_NAME} already running.")
         return
 
-    data_dir = clp_config.data_directory / component_name
-    logs_dir = clp_config.logs_directory / component_name
+    data_dir = clp_config.data_directory / RESULTS_CACHE_COMPONENT_NAME
+    logs_dir = clp_config.logs_directory / RESULTS_CACHE_COMPONENT_NAME
 
     validate_results_cache_config(clp_config, data_dir, logs_dir)
 
