@@ -1,28 +1,32 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Dependencies:
 # - cmake
 # - curl
 # - git
 # - g++
-# NOTE: Dependencies should be installed outside the script to allow the script to be largely distro-agnostic
+# NOTE: Dependencies should be installed outside the script to allow the script to be
+# largely distro-agnostic
 
 # Exit on any error
 set -e
 
+# Error on undefined variable
+set -u
+
 cUsage="Usage: ${BASH_SOURCE[0]} <version>[ <.deb output directory>]"
 if [ "$#" -lt 1 ] ; then
-    echo $cUsage
+    echo "$cUsage"
     exit
 fi
 version=$1
 
 package_name=libmongocxx-dev
-temp_dir=/tmp/${package_name}-installation
-deb_output_dir=${temp_dir}
+temp_dir="/tmp/${package_name}-installation"
+deb_output_dir="${temp_dir}"
 if [[ "$#" -gt 1 ]] ; then
   deb_output_dir="$(readlink -f "$2")"
-  if [ ! -d ${deb_output_dir} ] ; then
+  if [ ! -d "${deb_output_dir}" ] ; then
     echo "${deb_output_dir} does not exist or is not a directory"
     exit
   fi
@@ -30,7 +34,7 @@ fi
 
 # Check if already installed
 set +e
-dpkg -l ${package_name} | grep ${version}
+dpkg -l "${package_name}" | grep "${version}"
 installed=$?
 set -e
 if [ $installed -eq 0 ] ; then
@@ -42,24 +46,28 @@ echo "Checking for elevated privileges..."
 privileged_command_prefix=""
 if [ ${EUID:-$(id -u)} -ne 0 ] ; then
   sudo echo "Script can elevate privileges."
-  privileged_command_prefix="${privileged_command_prefix} sudo"
+  privileged_command_prefix="sudo"
 fi
 
 # Download
-mkdir -p $temp_dir
-cd $temp_dir
-extracted_dir=${temp_dir}/mongo-cxx-driver-r${version}
-if [ ! -e ${extracted_dir} ] ; then
-  tar_filename=mongo-cxx-driver-r${version}.tar.gz
-  if [ ! -e ${tar_filename} ] ; then
-    curl -fsSL https://github.com/mongodb/mongo-cxx-driver/releases/download/r${version}/${tar_filename} -o ${tar_filename}
+mkdir -p "$temp_dir"
+cd "$temp_dir"
+extracted_dir="${temp_dir}/mongo-cxx-driver-r${version}"
+if [ ! -e "${extracted_dir}" ] ; then
+  tar_filename="mongo-cxx-driver-r${version}.tar.gz"
+  if [ ! -e "${tar_filename}" ] ; then
+    curl \
+      -fsSL \
+      "https://github.com/mongodb/mongo-cxx-driver/releases/download/r${version}/${tar_filename}" \
+      -o \
+      "${tar_filename}"
   fi
 
-  tar -xf ${tar_filename}
+  tar -xf "${tar_filename}"
 fi
 
 # Set up
-cd ${extracted_dir}/build
+cd "${extracted_dir}/build"
 # NOTE: Although the mongocxx docs indicate we should use
 # '-DMONGOCXX_OVERRIDE_DEFAULT_INSTALL_PREFIX=OFF' to install to the default
 # location (/usr/local) but this doesn't seem to work, so we specify
@@ -78,11 +86,22 @@ checkinstall_installed=$?
 set -e
 
 # Install
-install_command_prefix="${privileged_command_prefix}"
-if [ $checkinstall_installed -eq 0 ] ; then
-  install_command_prefix="${install_command_prefix} checkinstall --pkgname '${package_name}' --pkgversion '${version}' --provides '${package_name}' --nodoc -y --pakdir \"${deb_output_dir}\""
+install_command_prefix_args=()
+if ! [ -z "${privileged_command_prefix}" ]; then
+  install_command_prefix_args=(${privileged_command_prefix})
 fi
-${install_command_prefix} cmake --build . --target install
+if [ $checkinstall_installed -eq 0 ] ; then
+  install_command_prefix_args+=( \
+    checkinstall \
+    --pkgname "${package_name}" \
+    --pkgversion "${version}" \
+    --provides "${package_name}" \
+    --nodoc \
+    -y \
+    --pakdir "${deb_output_dir}" \
+  )
+fi
+"${install_command_prefix_args[@]}" cmake --build . --target install
 
 # Clean up
-rm -rf $temp_dir
+rm -rf "$temp_dir"
