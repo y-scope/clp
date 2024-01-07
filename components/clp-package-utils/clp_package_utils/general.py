@@ -9,7 +9,13 @@ import typing
 
 import yaml
 
-from clp_py_utils.clp_config import CLPConfig, CLP_DEFAULT_CREDENTIALS_FILE_PATH
+from clp_py_utils.clp_config import (
+    CLPConfig,
+    CLP_DEFAULT_CREDENTIALS_FILE_PATH,
+    DB_COMPONENT_NAME,
+    QUEUE_COMPONENT_NAME,
+    RESULTS_CACHE_COMPONENT_NAME
+)
 from clp_py_utils.core import (
     get_config_value,
     make_config_path_absolute,
@@ -18,13 +24,6 @@ from clp_py_utils.core import (
 )
 
 # CONSTANTS
-# Component names
-DB_COMPONENT_NAME = 'db'
-QUEUE_COMPONENT_NAME = 'queue'
-RESULTS_CACHE_COMPONENT_NAME = 'results-cache'
-SCHEDULER_COMPONENT_NAME = 'scheduler'
-WORKER_COMPONENT_NAME = 'worker'
-
 # Paths
 CONTAINER_CLP_HOME = pathlib.Path('/') / 'opt' / 'clp'
 CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path('/') / 'mnt' / 'logs'

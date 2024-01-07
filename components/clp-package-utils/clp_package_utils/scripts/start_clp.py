@@ -14,11 +14,6 @@ import yaml
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CONTAINER_CLP_HOME,
-    DB_COMPONENT_NAME,
-    QUEUE_COMPONENT_NAME,
-    RESULTS_CACHE_COMPONENT_NAME,
-    SCHEDULER_COMPONENT_NAME,
-    WORKER_COMPONENT_NAME,
     check_dependencies,
     container_exists,
     CLPDockerMounts,
@@ -34,7 +29,14 @@ from clp_package_utils.general import (
     validate_results_cache_config,
     validate_worker_config
 )
-from clp_py_utils.clp_config import CLPConfig
+from clp_py_utils.clp_config import (
+    CLPConfig,
+    DB_COMPONENT_NAME,
+    QUEUE_COMPONENT_NAME,
+    RESULTS_CACHE_COMPONENT_NAME,
+    SCHEDULER_COMPONENT_NAME,
+    WORKER_COMPONENT_NAME,
+)
 from job_orchestration.scheduler.constants import QueueName
 
 # Setup logging

@@ -4,9 +4,15 @@ import typing
 from pydantic import BaseModel, validator
 
 from .core import get_config_value, make_config_path_absolute, read_yaml_config_file, validate_path_could_be_dir
-from clp_package_utils.general import RESULTS_CACHE_COMPONENT_NAME
 
 # Constants
+# Component names
+DB_COMPONENT_NAME = 'db'
+QUEUE_COMPONENT_NAME = 'queue'
+RESULTS_CACHE_COMPONENT_NAME = 'results-cache'
+SCHEDULER_COMPONENT_NAME = 'scheduler'
+WORKER_COMPONENT_NAME = 'worker'
+
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path('etc') / 'credentials.yml'
 CLP_METADATA_TABLE_PREFIX = 'clp_'
 
