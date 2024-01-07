@@ -94,7 +94,7 @@ if [ $checkinstall_installed -eq 0 ] ; then
     --pakdir "${deb_output_dir}" \
   )
 fi
-"${install_command_prefix_args[@]}" cmake --build . --target install
+"${install_command_prefix_args[@]}" cmake --build . --target install --parallel
 
 # Clean up
 rm -rf "$temp_dir"
