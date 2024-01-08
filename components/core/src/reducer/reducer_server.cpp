@@ -1,13 +1,5 @@
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
-
 #include <bsoncxx/builder/stream/document.hpp>
-#include <bsoncxx/types.hpp>
 #include <chrono>
-#include <cstdio>
-#include <ctime>
 #include <map>
 #include <mongocxx/bulk_write.hpp>
 #include <mongocxx/client.hpp>
