@@ -13,7 +13,7 @@
 #include "Expression.hpp"
 #include "Integral.hpp"
 #include "SchemaMatch.hpp"
-#include "simdjson/include/simdjson.h"
+#include "simdjson.h"
 #include "StringLiteral.hpp"
 
 using namespace simdjson;
