@@ -15,6 +15,7 @@
 #include "Utils.hpp"
 
 using namespace clp_s::search;
+using clp_s::CommandLineArguments;
 
 int main(int argc, char const* argv[]) {
     try {

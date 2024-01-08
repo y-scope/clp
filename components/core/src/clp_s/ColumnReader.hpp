@@ -260,29 +260,6 @@ public:
 private:
     std::unique_ptr<double[]> m_timestamps;
 };
-
-class TruncatedObjectColumnReader : public BaseColumnReader {
-public:
-    // Constructor
-    TruncatedObjectColumnReader(std::string const& name, int32_t id) : BaseColumnReader(name, id) {}
-
-    // Destructor
-    ~TruncatedObjectColumnReader() override = default;
-
-    // Methods inherited from BaseColumnReader
-    void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
-
-    std::string get_type() override { return "truncated"; }
-
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
-    ) override {
-        return (int64_t)0;
-    }
-
-private:
-    std::vector<uint8_t> m_data;
-};
-
 }  // namespace clp_s
 
 #endif  // CLP_S_COLUMNREADER_HPP

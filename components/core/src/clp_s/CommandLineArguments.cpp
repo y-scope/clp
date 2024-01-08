@@ -8,6 +8,7 @@
 
 namespace po = boost::program_options;
 
+namespace clp_s {
 CommandLineArguments::ParsingResult
 CommandLineArguments::parse_arguments(int argc, char const** argv) {
     if (1 == argc) {
@@ -263,3 +264,4 @@ void CommandLineArguments::print_decompression_usage() const {
 void CommandLineArguments::print_search_usage() const {
     std::cerr << "Usage: " << m_program_name << " s [OPTIONS] ARCHIVES_DIR QUERY" << std::endl;
 }
+}  // namespace clp_s

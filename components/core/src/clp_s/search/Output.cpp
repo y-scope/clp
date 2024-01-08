@@ -3,10 +3,10 @@
 #include <regex>
 #include <stack>
 
-#include "AndExpr.hpp"
 #include "../FileWriter.hpp"
 #include "../ReaderUtils.hpp"
 #include "../Utils.hpp"
+#include "AndExpr.hpp"
 #include "clp_search/EncodedVariableInterpreter.hpp"
 #include "clp_search/Grep.hpp"
 #include "EvaluateTimestampIndex.hpp"
@@ -70,6 +70,7 @@ void Output::filter() {
 
         m_string_query_map.clear();
         m_string_var_match_map.clear();
+        populate_string_queries(top_level_expr);
 
         std::string message;
         for (int32_t schema_id : matched_schemas) {
@@ -81,14 +82,7 @@ void Output::filter() {
             m_wildcard_to_searched_varstrings.clear();
             m_wildcard_to_searched_datestrings.clear();
             m_wildcard_to_searched_floatdatestrings.clear();
-            m_var_value_columns.clear();
             m_schema = schema_id;
-
-            for (int32_t node_id : (*m_schemas)[m_schema]) {
-                if (m_schema_tree->get_node(node_id)->get_type() == NodeType::VARVALUE) {
-                    m_var_value_columns.push_back(node_id);
-                }
-            }
 
             populate_searched_wildcard_columns(m_expr);
 
@@ -842,55 +836,76 @@ bool Output::evaluate_bool_filter(
     }
 }
 
-void Output::populate_string_queries(std::string const& query_string) {
-    if (m_string_query_map.count(query_string) || m_string_var_match_map.count(query_string)) {
+void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
+    if (expr->has_only_expression_operands()) {
+        for (auto const& op : expr->get_op_list()) {
+            populate_string_queries(std::static_pointer_cast<Expression>(op));
+        }
         return;
     }
 
-    bool has_space = query_string.find(" ") != std::string::npos;
-    bool has_wildcard = query_string.find("*") != std::string::npos;
+    auto filter = std::dynamic_pointer_cast<FilterExpr>(expr);
+    if (filter != nullptr
+        && !(filter->get_operation() == FilterOperation::EXISTS
+             || filter->get_operation() == FilterOperation::NEXISTS))
+    {
+        if (filter->get_column()->matches_type(LiteralType::ClpStringT)) {
+            std::string query_string;
+            filter->get_operand()->as_clp_string(query_string, filter->get_operation());
 
-    if (!has_space) {
-        // search on variable dictionary
-        SubQuery sub_query;
-        std::unordered_set<int64_t>& matching_vars = m_string_var_match_map[query_string];
-        if (!has_wildcard) {
-            auto entry = m_var_dict->get_entry_matching_value(query_string, false);
-
-            if (entry != nullptr) {
-                matching_vars.insert(entry->get_id());
+            if (m_string_query_map.count(query_string)) {
+                return;
             }
-        } else if (EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matches(
-                           query_string,
-                           *m_var_dict,
-                           false,
-                           sub_query
-                   ))
-        {
-            for (auto& var : sub_query.get_vars()) {
-                if (var.is_precise_var()) {
-                    auto entry = var.get_var_dict_entry();
-                    if (entry != nullptr) {
-                        matching_vars.insert(entry->get_id());
-                    }
-                } else {
-                    for (auto entry : var.get_possible_var_dict_entries()) {
-                        matching_vars.insert(entry->get_id());
+
+            // search on log type dictionary
+            Query& q = m_string_query_map[query_string];
+            if (query_string.find("*") != std::string::npos
+                || filter->get_column()->matches_type(LiteralType::VarStringT))
+            {
+                // if it matches VarStringT then it contains no space, so we
+                // don't't add more wildcards. Likewise if it already contains some wildcards
+                // we do not add more
+                Grep::process_raw_query(m_log_dict, m_var_dict, query_string, false, q, false);
+            } else {
+                Grep::process_raw_query(m_log_dict, m_var_dict, query_string, false, q);
+            }
+        }
+        SubQuery sub_query;
+        if (filter->get_column()->matches_type(LiteralType::VarStringT)) {
+            std::string query_string;
+            filter->get_operand()->as_var_string(query_string, filter->get_operation());
+            if (m_string_var_match_map.count(query_string)) {
+                return;
+            }
+
+            std::unordered_set<int64_t>& matching_vars = m_string_var_match_map[query_string];
+            if (query_string.find('*') == std::string::npos) {
+                auto entry = m_var_dict->get_entry_matching_value(query_string, false);
+
+                if (entry != nullptr) {
+                    matching_vars.insert(entry->get_id());
+                }
+            } else if (EncodedVariableInterpreter::
+                               wildcard_search_dictionary_and_get_encoded_matches(
+                                       query_string,
+                                       *m_var_dict,
+                                       false,
+                                       sub_query
+                               ))
+            {
+                for (auto& var : sub_query.get_vars()) {
+                    if (var.is_precise_var()) {
+                        auto entry = var.get_var_dict_entry();
+                        if (entry != nullptr) {
+                            matching_vars.insert(entry->get_id());
+                        }
+                    } else {
+                        for (auto entry : var.get_possible_var_dict_entries()) {
+                            matching_vars.insert(entry->get_id());
+                        }
                     }
                 }
             }
-        }
-    }
-
-    if (has_space || has_wildcard) {
-        // search on log type dictionary
-        Query& q = m_string_query_map[query_string];
-        if (has_wildcard || !has_space) {
-            // if it contains no space, or already contains some wildcards
-            // we do not add more wildcards
-            Grep::process_raw_query(m_log_dict, m_var_dict, query_string, false, q, false);
-        } else {
-            Grep::process_raw_query(m_log_dict, m_var_dict, query_string, false, q);
         }
     }
 }
@@ -1052,33 +1067,6 @@ Output::constant_propagate(std::shared_ptr<Expression> const& expr, int32_t sche
                 // FIXME: throw
                 return EvaluatedValue::False;
             }
-
-            if (filter->get_column()->matches_type(LiteralType::VarStringT)) {
-                for (int32_t node_id : m_var_value_columns) {
-                    bool matched = false;
-                    auto node = m_schema_tree->get_node(node_id);
-                    if (filter->get_column()->matches_type(LiteralType::ClpStringT)) {
-                        matched = StringUtils::wildcard_match_unsafe_case_sensitive(
-                                node->get_key_name(),
-                                filter_string
-                        );
-                    } else {
-                        matched = filter_string == node->get_key_name();
-                    }
-
-                    if (matched
-                        && ((!filter->is_inverted()
-                             && filter->get_operation() == FilterOperation::EQ)
-                            || (filter->is_inverted()
-                                && filter->get_operation() == FilterOperation::NEQ)))
-                    {
-                        return EvaluatedValue::True;
-                    }
-                }
-            }
-
-            populate_string_queries(filter_string);
-
             if (filter->get_column()->matches_type(LiteralType::ClpStringT)) {
                 m_expr_clp_query[expr.get()] = &m_string_query_map.at(filter_string);
                 has_clp_string = !m_wildcard_to_searched_clpstrings[wildcard].empty();
@@ -1127,8 +1115,6 @@ Output::constant_propagate(std::shared_ptr<Expression> const& expr, int32_t sche
             std::string filter_string;
             filter->get_operand()->as_clp_string(filter_string, filter->get_operation());
 
-            populate_string_queries(filter_string);
-
             // set up string query for this filter
             m_expr_clp_query[expr.get()] = &m_string_query_map.at(filter_string);
 
@@ -1151,29 +1137,6 @@ Output::constant_propagate(std::shared_ptr<Expression> const& expr, int32_t sche
         } else if (filter->get_column()->matches_type(LiteralType::VarStringT)) {
             std::string filter_string;
             filter->get_operand()->as_var_string(filter_string, filter->get_operation());
-
-            auto node = m_schema_tree->get_node(filter->get_column()->get_column_id());
-            if (node->get_type() == NodeType::VARVALUE) {
-                bool matched = false;
-                if (filter_string.find("*") == std::string::npos) {
-                    matched = filter_string == node->get_key_name();
-                } else {
-                    matched = StringUtils::wildcard_match_unsafe_case_sensitive(
-                            node->get_key_name(),
-                            filter_string
-                    );
-                }
-
-                if ((filter->is_inverted() && filter->get_operation() == FilterOperation::EQ)
-                    || (!filter->is_inverted() && filter->get_operation() == FilterOperation::NEQ))
-                {
-                    return matched ? EvaluatedValue::False : EvaluatedValue::True;
-                } else {
-                    return matched ? EvaluatedValue::True : EvaluatedValue::False;
-                }
-            }
-
-            populate_string_queries(filter_string);
 
             // set up string query for this filter
             m_expr_var_match_map[expr.get()] = &m_string_var_match_map.at(filter_string);

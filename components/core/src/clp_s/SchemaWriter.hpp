@@ -6,7 +6,6 @@
 #include "ColumnWriter.hpp"
 #include "FileWriter.hpp"
 #include "ParsedMessage.hpp"
-#include "SchemaTree.hpp"
 #include "ZstdCompressor.hpp"
 
 namespace clp_s {
@@ -25,8 +24,6 @@ public:
      */
     void open(std::string path, int compression_level);
 
-    void open(int compression_level);
-
     /**
      * Appends a column to the schema writer.
      * @param column_writer
@@ -41,31 +38,17 @@ public:
     size_t append_message(ParsedMessage& message);
 
     /**
-     * Combine with another SchemaWriter with an identical schema
-     */
-    void combine(SchemaWriter* writer);
-
-    /**
      * Stores the schema to disk.
      */
-    void store(FileWriter& file_writer);
+    void store();
 
     /**
      * Closes the schema writer.
      */
     void close();
 
-    /**
-     * Updates the schema writer, potentially deleting and merging
-     * some columns
-     */
-    void update_schema(
-            std::shared_ptr<SchemaTree> tree,
-            std::vector<std::pair<int32_t, int32_t>> const& udpates
-    );
-
 private:
-    //    FileWriter m_file_writer;
+    FileWriter m_file_writer;
     ZstdCompressor m_compressor;
     std::string m_path;
     int m_compression_level{};

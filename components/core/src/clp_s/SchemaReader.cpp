@@ -270,31 +270,16 @@ void SchemaReader::generate_json_template(int32_t id) {
                 break;
             }
             case NodeType::CLPSTRING:
+            case NodeType::VARSTRING:
             case NodeType::DATESTRING:
             case NodeType::FLOATDATESTRING: {
                 m_json_serializer->add_op(JsonSerializer::Op::AddStringField);
                 m_reordered_columns.push_back(m_column_map[child_global_id]);
                 break;
             }
-            case NodeType::VARSTRING: {
-                if (child_node->get_children_ids().empty()) {
-                    m_json_serializer->add_op(JsonSerializer::Op::AddStringField);
-                    m_reordered_columns.push_back(m_column_map[child_global_id]);
-                } else {
-                }
-                break;
-            }
             case NodeType::NULLVALUE: {
                 m_json_serializer->add_op(JsonSerializer::Op::AddNullField);
                 m_json_serializer->add_special_key(key);
-                break;
-            }
-            case NodeType::TRUNCATEDCHILDREN: {
-                //                object[key] = nullptr;
-                break;
-            }
-            case NodeType::TRUNCATEDOBJECT: {
-                //                object[key] = nullptr;
                 break;
             }
         }

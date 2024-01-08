@@ -13,8 +13,8 @@
 #include "Expression.hpp"
 #include "Integral.hpp"
 #include "SchemaMatch.hpp"
-#include "StringLiteral.hpp"
 #include "simdjson/include/simdjson.h"
+#include "StringLiteral.hpp"
 
 using namespace simdjson;
 using nlohmann::json;
@@ -78,7 +78,6 @@ private:
     std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_datestrings;
     std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_floatdatestrings;
     std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_columns;
-    std::vector<int32_t> m_var_value_columns;
 
     simdjson::ondemand::parser m_array_parser;
     std::string m_array_search_string;
@@ -302,16 +301,10 @@ private:
     evaluate_bool_filter(FilterOperation op, bool value, std::shared_ptr<Literal> const& operand);
 
     /**
-     * Populates the string queries for the given search string for the
-     * current segment. Each call will perform relevant dictionary searches
-     * a single time for each unique search string passed to this function.
-     *
-     * This allows us to dynamically perform necessary searches during constant
-     * propagation for each table, potentially skipping some dictionary searches.
-     *
-     * @param query_string
+     * Populates the string queries
+     * @param expr
      */
-    void populate_string_queries(std::string const& query_string);
+    void populate_string_queries(std::shared_ptr<Expression> const& expr);
 
     /**
      * Constant propagates an expression

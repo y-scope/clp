@@ -25,7 +25,6 @@ LiteralType node_to_literal_type(NodeType type) {
         case NodeType::CLPSTRING:
             return LiteralType::ClpStringT;
         case NodeType::VARSTRING:
-        case NodeType::VARVALUE:
             return LiteralType::VarStringT;
         case NodeType::BOOLEAN:
             return LiteralType::BooleanT;
@@ -37,9 +36,6 @@ LiteralType node_to_literal_type(NodeType type) {
             return LiteralType::EpochDateT;
         case NodeType::FLOATDATESTRING:
             return LiteralType::FloatDateT;
-        case NodeType::TRUNCATEDCHILDREN:  // force no match because unsearchable
-        case NodeType::TRUNCATEDOBJECT:
-            return LiteralType::UnknownT;
         default:
             return LiteralType::UnknownT;
     }

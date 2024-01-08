@@ -24,10 +24,6 @@ public:
      */
     int32_t add_schema(std::set<int32_t>& schema);
 
-    void mark_used(int32_t schema_id);
-
-    size_t get_num_used_schemas() { return m_used_schema_ids.size(); }
-
     /**
      * Write the contents of the SchemaMap to archive_dir/schema_ids
      */
@@ -46,7 +42,6 @@ private:
     int m_compression_level;
     int32_t m_current_schema_id;
     schema_map_t m_schema_map;
-    std::set<int32_t> m_used_schema_ids;
 };
 }  // namespace clp_s
 

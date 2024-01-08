@@ -96,7 +96,7 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column) {
     bool matched = false;
     if (column->is_pure_wildcard()) {
         for (auto& node : m_tree->get_nodes()) {
-            if (node != nullptr && column->matches_type(node_to_literal_type(node->get_type()))) {
+            if (column->matches_type(node_to_literal_type(node->get_type()))) {
                 // column_to_descriptor_[node->get_id()].insert(column);
                 //  At least some node matches; break
                 //  Don't use column_to_descriptor_ for pure wildcard columns anyway, so
@@ -124,14 +124,6 @@ bool SchemaMatch::populate_column_mapping(
         bool wildcard_special_flag
 ) {
     if (it == column->descriptor_end()) {
-        if (m_tree->get_node(node_id)->get_type() == NodeType::VARVALUE) {
-            if (false == column->is_unresolved_descriptor()) {
-                m_column_to_descriptor[node_id].insert(column);
-            } else {
-                m_unresolved_descriptor_to_descriptor[column].insert(node_id);
-            }
-            return true;
-        }
         return false;
     }
 

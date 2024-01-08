@@ -6,7 +6,6 @@
 
 #include "DictionaryWriter.hpp"
 #include "FileWriter.hpp"
-#include "SchemaTree.hpp"
 #include "simdjson.h"
 #include "TimestampDictionaryWriter.hpp"
 #include "VariableEncoder.hpp"
@@ -18,7 +17,7 @@ namespace clp_s {
 class BaseColumnWriter {
 public:
     // Constructor
-    explicit BaseColumnWriter(std::string name, int32_t id) : m_name(std::move(name)), m_id(id) {}
+    explicit BaseColumnWriter(std::string name) : m_name(std::move(name)) {}
 
     // Destructor
     virtual ~BaseColumnWriter() = default;
@@ -31,11 +30,6 @@ public:
     virtual void add_value(std::variant<int64_t, double, std::string, bool>& value, size_t& size)
             = 0;
 
-    virtual void write_local_value(std::vector<uint8_t>& dest, size_t index, size_t& total_size)
-            = 0;
-
-    virtual void combine(BaseColumnWriter* writer) = 0;
-
     /**
      * Stores the column to a compressed file
      * @param compressor
@@ -45,33 +39,22 @@ public:
     /**
      * @return Name of the column
      */
-    std::string const& get_name() const { return m_name; }
-
-    /**
-     * @return Node Id of the column
-     */
-    int32_t get_id() const { return m_id; }
+    std::string get_name() { return m_name; }
 
 protected:
     std::string m_name;
-    int32_t m_id;
 };
 
 class Int64ColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
-    explicit Int64ColumnWriter(std::string name, int32_t id)
-            : BaseColumnWriter(std::move(name), id) {}
+    explicit Int64ColumnWriter(std::string name) : BaseColumnWriter(std::move(name)) {}
 
     // Destructor
     ~Int64ColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
     void add_value(std::variant<int64_t, double, std::string, bool>& value, size_t& size) override;
-
-    void write_local_value(std::vector<uint8_t>& dest, size_t index, size_t& total_size) override;
-
-    void combine(BaseColumnWriter* writer) override;
 
     void store(ZstdCompressor& compressor) override;
 
@@ -82,18 +65,13 @@ private:
 class FloatColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
-    explicit FloatColumnWriter(std::string name, int32_t id)
-            : BaseColumnWriter(std::move(name), id) {}
+    explicit FloatColumnWriter(std::string name) : BaseColumnWriter(std::move(name)) {}
 
     // Destructor
     ~FloatColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
     void add_value(std::variant<int64_t, double, std::string, bool>& value, size_t& size) override;
-
-    void write_local_value(std::vector<uint8_t>& dest, size_t index, size_t& total_size) override;
-
-    void combine(BaseColumnWriter* writer) override;
 
     void store(ZstdCompressor& compressor) override;
 
@@ -104,18 +82,13 @@ private:
 class BooleanColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
-    explicit BooleanColumnWriter(std::string name, int32_t id)
-            : BaseColumnWriter(std::move(name), id) {}
+    explicit BooleanColumnWriter(std::string name) : BaseColumnWriter(std::move(name)) {}
 
     // Destructor
     ~BooleanColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
     void add_value(std::variant<int64_t, double, std::string, bool>& value, size_t& size) override;
-
-    void write_local_value(std::vector<uint8_t>& dest, size_t index, size_t& total_size) override;
-
-    void combine(BaseColumnWriter* writer) override;
 
     void store(ZstdCompressor& compressor) override;
 
@@ -128,11 +101,10 @@ public:
     // Constructor
     ClpStringColumnWriter(
             std::string const& name,
-            int32_t id,
             std::shared_ptr<VariableDictionaryWriter> var_dict,
             std::shared_ptr<LogTypeDictionaryWriter> log_dict
     )
-            : BaseColumnWriter(name, id),
+            : BaseColumnWriter(name),
               m_var_dict(std::move(var_dict)),
               m_log_dict(std::move(log_dict)) {}
 
@@ -141,10 +113,6 @@ public:
 
     // Methods inherited from BaseColumnWriter
     void add_value(std::variant<int64_t, double, std::string, bool>& value, size_t& size) override;
-
-    void write_local_value(std::vector<uint8_t>& dest, size_t index, size_t& total_size) override;
-
-    void combine(BaseColumnWriter* writer) override;
 
     void store(ZstdCompressor& compressor) override;
 
@@ -192,13 +160,10 @@ public:
     // Constructor
     VariableStringColumnWriter(
             std::string const& name,
-            int32_t id,
-            std::shared_ptr<VariableDictionaryWriter> var_dict,
-            std::shared_ptr<SchemaNode> schema_node
+            std::shared_ptr<VariableDictionaryWriter> var_dict
     )
-            : BaseColumnWriter(name, id),
-              m_var_dict(std::move(var_dict)),
-              m_schema_node(std::move(schema_node)) {}
+            : BaseColumnWriter(name),
+              m_var_dict(std::move(var_dict)) {}
 
     // Destructor
     ~VariableStringColumnWriter() override = default;
@@ -206,16 +171,11 @@ public:
     // Methods inherited from BaseColumnWriter
     void add_value(std::variant<int64_t, double, std::string, bool>& value, size_t& size) override;
 
-    void write_local_value(std::vector<uint8_t>& dest, size_t index, size_t& total_size) override;
-
-    void combine(BaseColumnWriter* writer) override;
-
     void store(ZstdCompressor& compressor) override;
 
 private:
     std::shared_ptr<VariableDictionaryWriter> m_var_dict;
     std::vector<int64_t> m_variables;
-    std::shared_ptr<SchemaNode> m_schema_node;
 };
 
 class DateStringColumnWriter : public BaseColumnWriter {
@@ -223,10 +183,9 @@ public:
     // Constructor
     DateStringColumnWriter(
             std::string const& name,
-            int32_t id,
             std::shared_ptr<TimestampDictionaryWriter> timestamp_dict
     )
-            : BaseColumnWriter(name, id),
+            : BaseColumnWriter(name),
               m_timestamp_dict(std::move(timestamp_dict)) {}
 
     // Destructor
@@ -234,10 +193,6 @@ public:
 
     // Methods inherited from BaseColumnWriter
     void add_value(std::variant<int64_t, double, std::string, bool>& value, size_t& size) override;
-
-    void write_local_value(std::vector<uint8_t>& dest, size_t index, size_t& total_size) override;
-
-    void combine(BaseColumnWriter* writer) override;
 
     void store(ZstdCompressor& compressor) override;
 
@@ -253,10 +208,9 @@ public:
     // Constructor
     FloatDateStringColumnWriter(
             std::string const& name,
-            int32_t id,
             std::shared_ptr<TimestampDictionaryWriter> timestamp_dict
     )
-            : BaseColumnWriter(name, id),
+            : BaseColumnWriter(name),
               m_timestamp_dict(std::move(timestamp_dict)) {}
 
     // Destructor
@@ -265,10 +219,6 @@ public:
     // Methods inherited from BaseColumnWriter
     void add_value(std::variant<int64_t, double, std::string, bool>& value, size_t& size) override;
 
-    void write_local_value(std::vector<uint8_t>& dest, size_t index, size_t& total_size) override;
-
-    void combine(BaseColumnWriter* writer) override;
-
     void store(ZstdCompressor& compressor) override;
 
 private:
@@ -276,54 +226,6 @@ private:
 
     std::vector<double> m_timestamps;
 };
-
-class TruncatedObjectColumnWriter : public BaseColumnWriter {
-public:
-    // Constructor
-    explicit TruncatedObjectColumnWriter(std::string name, int32_t id)
-            : BaseColumnWriter(std::move(name), id),
-              m_num_bytes(0),
-              m_num_nodes(0) {}
-
-    // Destructor
-    ~TruncatedObjectColumnWriter() override = default;
-
-    // Methods inherited from BaseColumnWriter
-    void add_value(std::variant<int64_t, double, std::string, bool>& value, size_t& size) override {
-    }
-
-    void write_local_value(std::vector<uint8_t>& dest, size_t index, size_t& total_size) override {}
-
-    void merge_column(BaseColumnWriter* writer, std::shared_ptr<SchemaTree> global_tree);
-
-    void merge_null_column(int32_t id, std::shared_ptr<SchemaTree> global_tree);
-
-    void merge_object_column(int32_t id, std::shared_ptr<SchemaTree> global_tree);
-
-    void local_merge_column_values(uint64_t num_messsages);
-
-    void combine(BaseColumnWriter* writer) override;
-
-    void store(ZstdCompressor& compressor) override;
-
-private:
-    void merge_column(int32_t global_id, std::shared_ptr<SchemaTree> global_tree);
-
-    void visit(
-            std::vector<uint8_t>& schema,
-            std::set<int32_t>& visited,
-            std::shared_ptr<SchemaNode> const& node
-    );
-
-    SchemaTree m_local_tree;
-    std::map<int32_t, BaseColumnWriter*> m_local_id_to_column;
-    std::map<int32_t, int32_t> m_global_id_to_local;
-    std::list<std::vector<uint8_t>> m_values;
-    std::list<std::vector<uint8_t>> m_schemas;
-    size_t m_num_bytes;
-    uint16_t m_num_nodes;
-};
-
 }  // namespace clp_s
 
 #endif  // CLP_S_COLUMNWRITER_HPP

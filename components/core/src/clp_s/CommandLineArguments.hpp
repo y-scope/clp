@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+namespace clp_s {
 class CommandLineArguments {
 public:
     // Types
@@ -68,5 +69,6 @@ private:
     // Search variables
     std::string m_query;
 };
+}  // namespace clp_s
 
 #endif  // CLP_S_COMMANDLINEARGUMENTS_HPP

@@ -9,6 +9,7 @@
 // If redlining may want to add ${workspaceFolder}/build/**
 // to include path for vscode C/C++ utils
 
+#include "../../Utils.hpp"
 #include "../AndExpr.hpp"
 #include "../BooleanLiteral.hpp"
 #include "../ColumnDescriptor.hpp"
@@ -19,12 +20,11 @@
 #include "../NullLiteral.hpp"
 #include "../OrExpr.hpp"
 #include "../StringLiteral.hpp"
-#include "../../Utils.hpp"
 
 using namespace antlr4;
 using namespace kibana;
 
-namespace clp_s::search { namespace Kibana {
+namespace clp_s::search::Kibana {
 class ErrorListener : public BaseErrorListener {
 private:
     bool m_error = false;
@@ -246,4 +246,4 @@ std::shared_ptr<Expression> parse_kibana_expression(std::istream& in) {
     expr = std::any_cast<std::shared_ptr<Expression>>(visitor.visitStart(tree));
     return expr;
 }
-}}  // namespace clp_s::search::Kibana
+}  // namespace clp_s::search::Kibana

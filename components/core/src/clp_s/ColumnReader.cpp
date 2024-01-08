@@ -174,17 +174,4 @@ std::variant<int64_t, double, std::string, uint8_t> FloatDateStringColumnReader:
 double FloatDateStringColumnReader::get_encoded_time(uint64_t cur_message) {
     return m_timestamps[cur_message];
 }
-
-void TruncatedObjectColumnReader::load(ZstdDecompressor& decompressor, uint64_t num_messages) {
-    size_t num_bytes;
-    auto error_code = decompressor.try_read_numeric_value(num_bytes);
-    if (ErrorCodeSuccess != error_code) {
-        throw OperationFailed(error_code, __FILENAME__, __LINE__);
-    }
-
-    m_data.resize(num_bytes);
-
-    error_code
-            = decompressor.try_read_exact_length(reinterpret_cast<char*>(m_data.data()), num_bytes);
-}
 }  // namespace clp_s

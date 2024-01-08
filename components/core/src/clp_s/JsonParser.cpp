@@ -38,8 +38,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
     archive_writer_option.id = m_generator();
     archive_writer_option.compression_level = option.compression_level;
 
-    m_archive_writer
-            = std::make_unique<ArchiveWriter>(m_schema_tree, m_timestamp_dictionary, m_schema_map);
+    m_archive_writer = std::make_unique<ArchiveWriter>(m_schema_tree, m_timestamp_dictionary);
     m_archive_writer->open(archive_writer_option);
 }
 
@@ -256,103 +255,22 @@ void JsonParser::parse() {
     }
 }
 
-std::string
-get_full_path(std::shared_ptr<SchemaTree> const& tree, std::shared_ptr<SchemaNode> const& node) {
-    if (node->get_id() == 0) {
-        return "";
-    }
-
-    return get_full_path(tree, tree->get_node(node->get_parent_id())) + "." + node->get_key_name();
-}
-
-std::string get_type_name(NodeType type) {
-    switch (type) {
-        case NodeType::OBJECT:
-            return "obj";
-        case NodeType::TRUNCATEDOBJECT:
-            return "tobj";
-        case NodeType::TRUNCATEDCHILDREN:
-            return "tchild";
-        case NodeType::INTEGER:
-            return "int";
-        case NodeType::FLOAT:
-            return "float";
-        case NodeType::CLPSTRING:
-            return "clpstring";
-        case NodeType::VARSTRING:
-            return "varstring";
-        case NodeType::VARVALUE:
-            return "varvalue";
-        case NodeType::BOOLEAN:
-            return "bool";
-        case NodeType::ARRAY:
-            return "array";
-        case NodeType::NULLVALUE:
-            return "null";
-        case NodeType::DATESTRING:
-            return "date";
-        case NodeType::FLOATDATESTRING:
-            return "float";
-        default:
-            return "unknown";
-    }
-}
-
 void JsonParser::store() {
     FileWriter schema_tree_writer;
     ZstdCompressor schema_tree_compressor;
-
-    // archive contents must be stored before anything else, because
-    // closing an archive can mute the MST and SchemaMap
-    // the mutation and storage steps can be easily separated if it becomes
-    // necessary for archive packing
-    m_archive_writer->close();
-
-    // double tot_records = m_archive_writer->get_num_records();
-    // size_t count_before_trunc = 0;
-    size_t count_after_trunc = 0;
-    for (auto node : m_schema_tree->get_nodes()) {
-        /*if (node->get_type() != NodeType::TRUNCATEDOBJECT
-            && node->get_type() != NodeType::TRUNCATEDCHILDREN)
-        {
-            count_before_trunc += 1;
-        } else {
-            std::cout << "TRUNCATED " << get_full_path(m_schema_tree, node) << " <"
-                      << get_type_name(node->get_type()) << ">" << std::endl;
-        }
-        if (node->get_type() == NodeType::VARVALUE) {
-            std::cout << "VARVALUE " << get_full_path(m_schema_tree, node) << " <"
-                      << get_type_name(node->get_type()) << ">" << std::endl;
-        }*/
-        if (node->get_state() != NodeValueState::TRUNCATED) {
-            count_after_trunc += 1;
-        }
-    }
-
-    // std::cout << "Nodes Before Trunc: " << count_before_trunc
-    //           << " -> Nodes After Trunc: " << count_after_trunc << std::endl;
-    /*for (auto node : m_schema_tree->get_nodes()) {
-        if (node->get_state() == NodeValueState::TRUNCATED) {
-            std::cout << (node->get_count() / tot_records) << " " << get_full_path(m_schema_tree,
-    node) << " <" << get_type_name(node->get_type()) << ">" << std::endl;
-        }
-    }*/
 
     schema_tree_writer.open(m_schema_tree_path, FileWriter::OpenMode::CreateForWriting);
     schema_tree_compressor.open(schema_tree_writer, m_compression_level);
 
     auto nodes = m_schema_tree->get_nodes();
-    schema_tree_compressor.write_numeric_value(count_after_trunc);
+    schema_tree_compressor.write_numeric_value(nodes.size());
     for (auto const& node : nodes) {
-        if (node->get_state() != NodeValueState::TRUNCATED) {
-            schema_tree_compressor.write_numeric_value(node->get_id());
-            schema_tree_compressor.write_numeric_value(node->get_parent_id());
+        schema_tree_compressor.write_numeric_value(node->get_parent_id());
 
-            std::string const& key = node->get_key_name();
-            schema_tree_compressor.write_numeric_value(key.size());
-            schema_tree_compressor.write_string(key);
-            schema_tree_compressor.write_numeric_value(node->get_type());
-        }
+        std::string const& key = node->get_key_name();
+        schema_tree_compressor.write_numeric_value(key.size());
+        schema_tree_compressor.write_string(key);
+        schema_tree_compressor.write_numeric_value(node->get_type());
     }
 
     schema_tree_compressor.close();
@@ -375,6 +293,6 @@ void JsonParser::split_archive() {
 }
 
 void JsonParser::close() {
-    return;
+    m_archive_writer->close();
 }
 }  // namespace clp_s

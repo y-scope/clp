@@ -47,18 +47,6 @@ public:
      */
     size_t get_data_size() const { return m_data_size; }
 
-    /**
-     * Get the value
-     */
-    std::string get_value_for_id(DictionaryIdType id) {
-        for (auto& entry : m_value_to_id) {
-            if (entry.second == id) {
-                return entry.first;
-            }
-        }
-        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
-    }
-
 protected:
     // Types
     typedef std::unordered_map<std::string, DictionaryIdType> value_to_id_t;

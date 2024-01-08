@@ -12,7 +12,7 @@
 using std::string;
 using std::vector;
 
-namespace clp_s::search { namespace clp_search {
+namespace clp_s::search::clp_search {
 // Local types
 enum class SubQueryMatchabilityResult {
     MayMatch,  // The subquery might match a message
@@ -638,4 +638,4 @@ bool Grep::get_bounds_of_next_potential_var(
 
     return (value_length != begin_pos);
 }
-}}  // namespace clp_s::search::clp_search
+}  // namespace clp_s::search::clp_search
