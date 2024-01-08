@@ -7,7 +7,7 @@ from .core import get_config_value, make_config_path_absolute, read_yaml_config_
 
 # Constants
 # Component names
-DB_COMPONENT_NAME = 'db'
+DB_COMPONENT_NAME = 'database'
 QUEUE_COMPONENT_NAME = 'queue'
 RESULTS_CACHE_COMPONENT_NAME = 'results-cache'
 SCHEDULER_COMPONENT_NAME = 'scheduler'
