@@ -57,6 +57,7 @@ static std::string server_status_to_string(ServerStatus status) {
 ServerContext::ServerContext(CommandLineArguments& args)
         : m_tcp_acceptor(m_ioctx, tcp::endpoint(tcp::v4(), args.get_reducer_port())),
           m_reducer_host(args.get_reducer_host()),
+          m_reducer_port(args.get_reducer_port()),
           m_mongodb_job_metrics_collection(args.get_mongodb_jobs_metric_collection()),
           m_polling_interval_ms(args.get_polling_interval()),
           m_pipeline(nullptr),
@@ -315,7 +316,7 @@ struct RecordReceiverContext {
     size_t bytes_occupied;
 
     RecordReceiverContext(std::shared_ptr<ServerContext> ctx)
-            : ctx(std::move(ctx)),
+            : ctx(ctx),
               socket(ctx->get_io_context()) {
         buf_size = 1024;
         bytes_occupied = 0;
@@ -529,12 +530,7 @@ void queue_accept_task(std::shared_ptr<ServerContext> ctx) {
 
     ctx->get_tcp_acceptor().async_accept(
             rctx->socket,
-            boost::bind(
-                    accept_task,
-                    boost::asio::placeholders::error,
-                    std::move(ctx),
-                    std::move(rctx)
-            )
+            boost::bind(accept_task, boost::asio::placeholders::error, ctx, rctx)
     );
 }
 
