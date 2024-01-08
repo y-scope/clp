@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_COLUMN_DESCRIPTOR_H
-#define CLP_S_SEARCH_COLUMN_DESCRIPTOR_H
+#ifndef CLP_S_SEARCH_COLUMN_DESCRIPTOR_HPP
+#define CLP_S_SEARCH_COLUMN_DESCRIPTOR_HPP
 
 #include <memory>
 #include <set>
@@ -211,4 +211,4 @@ private:
 };
 }  // namespace clp_s::search
 
-#endif  // CLP_S_SEARCH_COLUMN_DESCRIPTOR_H
+#endif  // CLP_S_SEARCH_COLUMN_DESCRIPTOR_HPP

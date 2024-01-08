@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_INTEGRAL_H
-#define CLP_S_SEARCH_INTEGRAL_H
+#ifndef CLP_S_SEARCH_INTEGRAL_HPP
+#define CLP_S_SEARCH_INTEGRAL_HPP
 
 #include <memory>
 #include <string>
@@ -81,4 +81,4 @@ protected:
 };
 }  // namespace clp_s::search
 
-#endif  // CLP_S_SEARCH_INTEGRAL_H
+#endif  // CLP_S_SEARCH_INTEGRAL_HPP

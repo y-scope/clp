@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_SCHEMA_MATCH_H
-#define CLP_S_SEARCH_SCHEMA_MATCH_H
+#ifndef CLP_S_SEARCH_SCHEMA_MATCH_HPP
+#define CLP_S_SEARCH_SCHEMA_MATCH_HPP
 
 #include <map>
 #include <set>
@@ -169,4 +169,4 @@ private:
 };
 }  // namespace clp_s::search
 
-#endif  // CLP_S_SEARCH_SCHEMA_MATCH_H
+#endif  // CLP_S_SEARCH_SCHEMA_MATCH_HPP

@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_EVALUATETIMESTAMPINDEX_H
-#define CLP_S_SEARCH_EVALUATETIMESTAMPINDEX_H
+#ifndef CLP_S_SEARCH_EVALUATETIMESTAMPINDEX_HPP
+#define CLP_S_SEARCH_EVALUATETIMESTAMPINDEX_HPP
 
 #include "../TimestampDictionaryReader.hpp"
 #include "../Utils.hpp"
@@ -28,4 +28,4 @@ private:
 };
 }  // namespace clp_s::search
 
-#endif  // CLP_S_SEARCH_EVALUATETIMESTAMPINDEX_H
+#endif  // CLP_S_SEARCH_EVALUATETIMESTAMPINDEX_HPP

@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_LITERAL_H
-#define CLP_S_SEARCH_LITERAL_H
+#ifndef CLP_S_SEARCH_LITERAL_HPP
+#define CLP_S_SEARCH_LITERAL_HPP
 
 #include <string>
 
@@ -112,4 +112,4 @@ public:
 };
 }  // namespace clp_s::search
 
-#endif  // CLP_S_SEARCH_LITERAL_H
+#endif  // CLP_S_SEARCH_LITERAL_HPP

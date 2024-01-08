@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_EXPRESSION_H
-#define CLP_S_SEARCH_EXPRESSION_H
+#ifndef CLP_S_SEARCH_EXPRESSION_HPP
+#define CLP_S_SEARCH_EXPRESSION_HPP
 
 #include <list>
 #include <memory>
@@ -115,4 +115,4 @@ protected:
 };
 }  // namespace clp_s::search
 
-#endif  // CLP_S_SEARCH_EXPRESSION_H
+#endif  // CLP_S_SEARCH_EXPRESSION_HPP

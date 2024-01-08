@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_BOOLEAN_H
-#define CLP_S_SEARCH_BOOLEAN_H
+#ifndef CLP_S_SEARCH_BOOLEAN_HPP
+#define CLP_S_SEARCH_BOOLEAN_HPP
 
 #include <memory>
 #include <string>
@@ -55,4 +55,4 @@ private:
 };
 }  // namespace clp_s::search
 
-#endif  // CLP_S_SEARCH_BOOLEAN_H
+#endif  // CLP_S_SEARCH_BOOLEAN_HPP

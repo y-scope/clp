@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_CONSTANT_PROP_H
-#define CLP_S_SEARCH_CONSTANT_PROP_H
+#ifndef CLP_S_SEARCH_CONSTANT_PROP_HPP
+#define CLP_S_SEARCH_CONSTANT_PROP_HPP
 
 #include "Transformation.hpp"
 
@@ -20,4 +20,4 @@ private:
 };
 }  // namespace clp_s::search
 
-#endif  // CLP_S_SEARCH_CONSTANT_PROP_H
+#endif  // CLP_S_SEARCH_CONSTANT_PROP_HPP

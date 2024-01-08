@@ -1,5 +1,5 @@
-#ifndef CLP_S_PARSE_KIBANA_H
-#define CLP_S_PARSE_KIBANA_H
+#ifndef CLP_S_PARSE_KIBANA_HPP
+#define CLP_S_PARSE_KIBANA_HPP
 
 #include <istream>
 
@@ -14,4 +14,4 @@ namespace clp_s::search::Kibana {
 std::shared_ptr<Expression> parse_kibana_expression(std::istream& in);
 }  // namespace clp_s::search::Kibana
 
-#endif  // CLP_S_PARSE_KIBANA_H
+#endif  // CLP_S_PARSE_KIBANA_HPP

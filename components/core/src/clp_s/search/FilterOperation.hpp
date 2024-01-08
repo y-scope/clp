@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_FILTER_OPERATION_H
-#define CLP_S_SEARCH_FILTER_OPERATION_H
+#ifndef CLP_S_SEARCH_FILTER_OPERATION_HPP
+#define CLP_S_SEARCH_FILTER_OPERATION_HPP
 
 namespace clp_s::search {
 /**
@@ -17,4 +17,4 @@ enum FilterOperation {
 };
 }  // namespace clp_s::search
 
-#endif  // CLP_S_SEARCH_FILTER_OPERATION_H
+#endif  // CLP_S_SEARCH_FILTER_OPERATION_HPP

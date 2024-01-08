@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_VALUE_H
-#define CLP_S_SEARCH_VALUE_H
+#ifndef CLP_S_SEARCH_VALUE_HPP
+#define CLP_S_SEARCH_VALUE_HPP
 
 #include <iostream>
 
