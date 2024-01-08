@@ -1,4 +1,4 @@
-add_subdirectory(search/Kibana)
+add_subdirectory(search/kql)
 
 set(CLP_S_SOURCES
         ArchiveReader.cpp
@@ -123,10 +123,10 @@ target_link_libraries(clp_s
         PRIVATE
         absl::flat_hash_map
         Boost::filesystem Boost::iostreams Boost::program_options
+        KQL
         simdjson
         spdlog::spdlog
         ZStd::ZStd
-        Kibana
 )
 target_include_directories(clp_s PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 

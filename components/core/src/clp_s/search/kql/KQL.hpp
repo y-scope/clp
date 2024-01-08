@@ -5,7 +5,7 @@
 
 #include "../Expression.hpp"
 
-namespace clp_s::search::Kibana {
+namespace clp_s::search::kql {
 /**
  * Generate a search AST from a Kibana expression in an input stream
  * @param in input stream containing a Kibana expression followed by EOF

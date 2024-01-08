@@ -7,7 +7,7 @@
 #include "search/ConvertToExists.hpp"
 #include "search/EmptyExpr.hpp"
 #include "search/EvaluateTimestampIndex.hpp"
-#include "search/Kibana/Kibana.hpp"
+#include "search/kql/KQL.hpp"
 #include "search/NarrowTypes.hpp"
 #include "search/OrOfAndForm.hpp"
 #include "search/Output.hpp"
@@ -72,7 +72,7 @@ int main(int argc, char const* argv[]) {
         clp_s::TimestampPattern::init();
 
         auto query_stream = std::istringstream(query);
-        auto expr = Kibana::parse_kibana_expression(query_stream);
+        auto expr = kql::parse_kibana_expression(query_stream);
 
         if (std::dynamic_pointer_cast<EmptyExpr>(expr)) {
             SPDLOG_ERROR("Query '{}' is logically false", query);

@@ -4,9 +4,9 @@
 
 #include <antlr4-runtime.h>
 
-#include "KibanaBaseVisitor.h"
-#include "KibanaLexer.h"
-#include "KibanaParser.h"
+#include "KQLBaseVisitor.h"
+#include "KQLLexer.h"
+#include "KQLParser.h"
 // If redlining may want to add ${workspaceFolder}/build/**
 // to include path for vscode C/C++ utils
 
@@ -23,9 +23,9 @@
 #include "../StringLiteral.hpp"
 
 using namespace antlr4;
-using namespace kibana;
+using namespace kql;
 
-namespace clp_s::search::Kibana {
+namespace clp_s::search::kql {
 class ErrorListener : public BaseErrorListener {
 private:
     bool m_error = false;
@@ -45,7 +45,7 @@ public:
     bool error() const { return m_error; }
 };
 
-class ParseTreeVisitor : public KibanaBaseVisitor {
+class ParseTreeVisitor : public KQLBaseVisitor {
 private:
     static void
     prepend_column(std::shared_ptr<ColumnDescriptor> const& desc, DescriptorList const& prefix) {
@@ -97,13 +97,13 @@ public:
         return DateLiteral::create_from_string(token);
     }
 
-    std::any visitStart(KibanaParser::StartContext* ctx) override {
+    std::any visitStart(KQLParser::StartContext* ctx) override {
         // only go through first child (query) and avoid default
         // behaviour of returning result from last child (EOF in this case)
         return ctx->children[0]->accept(this);
     }
 
-    std::any visitColumn(KibanaParser::ColumnContext* ctx) override {
+    std::any visitColumn(KQLParser::ColumnContext* ctx) override {
         std::string column = unquote_string(ctx->LITERAL()->getText());
 
         std::vector<std::string> descriptor_tokens;
@@ -112,7 +112,7 @@ public:
         return ColumnDescriptor::create(descriptor_tokens);
     }
 
-    std::any visitNestedQuery(KibanaParser::NestedQueryContext* ctx) override {
+    std::any visitNestedQuery(KQLParser::NestedQueryContext* ctx) override {
         auto descriptor = std::any_cast<std::shared_ptr<ColumnDescriptor>>(ctx->col->accept(this));
         DescriptorList prefix = descriptor->get_descriptor_list();
 
@@ -122,27 +122,27 @@ public:
         return nested_expr;
     }
 
-    std::any visitOrAndQuery(KibanaParser::OrAndQueryContext* ctx) override {
+    std::any visitOrAndQuery(KQLParser::OrAndQueryContext* ctx) override {
         auto lhs = std::any_cast<std::shared_ptr<Expression>>(ctx->lhs->accept(this));
         auto rhs = std::any_cast<std::shared_ptr<Expression>>(ctx->rhs->accept(this));
-        if (ctx->op->getType() == KibanaParser::AND) {
+        if (ctx->op->getType() == KQLParser::AND) {
             return AndExpr::create(lhs, rhs);
         } else {
             return OrExpr::create(lhs, rhs);
         }
     }
 
-    std::any visitNotQuery(KibanaParser::NotQueryContext* ctx) override {
+    std::any visitNotQuery(KQLParser::NotQueryContext* ctx) override {
         auto q = std::any_cast<std::shared_ptr<Expression>>(ctx->q->accept(this));
         q->invert();
         return q;
     }
 
-    std::any visitSubQuery(KibanaParser::SubQueryContext* ctx) override {
+    std::any visitSubQuery(KQLParser::SubQueryContext* ctx) override {
         return ctx->q->accept(this);
     }
 
-    std::any visitColumn_value_expression(KibanaParser::Column_value_expressionContext* ctx
+    std::any visitColumn_value_expression(KQLParser::Column_value_expressionContext* ctx
     ) override {
         auto descriptor = std::any_cast<std::shared_ptr<ColumnDescriptor>>(ctx->col->accept(this));
 
@@ -160,7 +160,7 @@ public:
         }
     }
 
-    std::any visitColumn_range_expression(KibanaParser::Column_range_expressionContext* ctx
+    std::any visitColumn_range_expression(KQLParser::Column_range_expressionContext* ctx
     ) override {
         auto descriptor = std::any_cast<std::shared_ptr<ColumnDescriptor>>(ctx->col->accept(this));
         std::shared_ptr<Literal> lit;
@@ -185,13 +185,13 @@ public:
         return FilterExpr::create(descriptor, op, lit);
     }
 
-    std::any visitValue_expression(KibanaParser::Value_expressionContext* ctx) override {
+    std::any visitValue_expression(KQLParser::Value_expressionContext* ctx) override {
         auto lit = unquote_literal(ctx->LITERAL()->getText());
         auto descriptor = ColumnDescriptor::create("*");
         return FilterExpr::create(descriptor, FilterOperation::EQ, lit);
     }
 
-    std::any visitList_of_values(KibanaParser::List_of_valuesContext* ctx) override {
+    std::any visitList_of_values(KQLParser::List_of_valuesContext* ctx) override {
         std::shared_ptr<Expression> base(nullptr);
         bool invert_each_filter = false;
         if (ctx->condition) {
@@ -228,12 +228,12 @@ std::shared_ptr<Expression> parse_kibana_expression(std::istream& in) {
     ErrorListener parser_error_listener;
 
     ANTLRInputStream input(in);
-    KibanaLexer lexer(&input);
+    KQLLexer lexer(&input);
     lexer.addErrorListener(&lexer_error_listener);
     CommonTokenStream tokens(&lexer);
-    KibanaParser parser(&tokens);
+    KQLParser parser(&tokens);
     parser.addErrorListener(&parser_error_listener);
-    KibanaParser::StartContext* tree = parser.start();
+    KQLParser::StartContext* tree = parser.start();
 
     if (lexer_error_listener.error()) {
         std::cout << "Lexer Error" << std::endl;
@@ -247,4 +247,4 @@ std::shared_ptr<Expression> parse_kibana_expression(std::istream& in) {
     expr = std::any_cast<std::shared_ptr<Expression>>(visitor.visitStart(tree));
     return expr;
 }
-}  // namespace clp_s::search::Kibana
+}  // namespace clp_s::search::KQL
