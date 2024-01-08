@@ -117,9 +117,9 @@ set(CLP_S_SEARCH_SOURCES
         search/clp_search/Query.hpp
 )
 
-add_executable(clp_s clp_s.cpp ${CLP_S_SOURCES} ${CLP_S_SEARCH_SOURCES})
-target_compile_features(clp_s PRIVATE cxx_std_17)
-target_link_libraries(clp_s
+add_executable(clp-s clp_s.cpp ${CLP_S_SOURCES} ${CLP_S_SEARCH_SOURCES})
+target_compile_features(clp-s PRIVATE cxx_std_17)
+target_link_libraries(clp-s
         PRIVATE
         absl::flat_hash_map
         Boost::filesystem Boost::iostreams Boost::program_options
@@ -128,10 +128,9 @@ target_link_libraries(clp_s
         spdlog::spdlog
         ZStd::ZStd
 )
-target_include_directories(clp_s PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
-
+target_include_directories(clp-s PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 set_target_properties(
-        clp_s
+        clp-s
         PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
 )
