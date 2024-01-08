@@ -142,8 +142,7 @@ public:
         return ctx->q->accept(this);
     }
 
-    std::any visitColumn_value_expression(KQLParser::Column_value_expressionContext* ctx
-    ) override {
+    std::any visitColumn_value_expression(KQLParser::Column_value_expressionContext* ctx) override {
         auto descriptor = std::any_cast<std::shared_ptr<ColumnDescriptor>>(ctx->col->accept(this));
 
         if (ctx->lit) {
@@ -160,8 +159,7 @@ public:
         }
     }
 
-    std::any visitColumn_range_expression(KQLParser::Column_range_expressionContext* ctx
-    ) override {
+    std::any visitColumn_range_expression(KQLParser::Column_range_expressionContext* ctx) override {
         auto descriptor = std::any_cast<std::shared_ptr<ColumnDescriptor>>(ctx->col->accept(this));
         std::shared_ptr<Literal> lit;
         if (ctx->lit) {
@@ -222,7 +220,7 @@ public:
     }
 };
 
-std::shared_ptr<Expression> parse_kibana_expression(std::istream& in) {
+std::shared_ptr<Expression> parse_kql_expression(std::istream& in) {
     std::shared_ptr<Expression> expr = EmptyExpr::create();
     ErrorListener lexer_error_listener;
     ErrorListener parser_error_listener;
@@ -247,4 +245,4 @@ std::shared_ptr<Expression> parse_kibana_expression(std::istream& in) {
     expr = std::any_cast<std::shared_ptr<Expression>>(visitor.visitStart(tree));
     return expr;
 }
-}  // namespace clp_s::search::KQL
+}  // namespace clp_s::search::kql

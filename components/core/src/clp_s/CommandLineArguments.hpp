@@ -32,7 +32,7 @@ public:
 
     std::vector<std::string> const& get_file_paths() const { return m_file_paths; }
 
-    std::string const& get_archive_dir() const { return m_archive_dir; }
+    std::string const& get_archive_dir() const { return m_archives_dir; }
 
     std::string const& get_output_dir() const { return m_output_dir; }
 
@@ -40,7 +40,7 @@ public:
 
     int get_compression_level() const { return m_compression_level; }
 
-    size_t get_max_encoding_size() const { return m_max_encoding_size; }
+    size_t get_max_encoding_size() const { return m_target_encoded_size; }
 
     std::string const& get_query() const { return m_query; }
 
@@ -60,11 +60,11 @@ private:
 
     // Compression and decompression variables
     std::vector<std::string> m_file_paths;
-    std::string m_archive_dir;
+    std::string m_archives_dir;
     std::string m_output_dir;
     std::string m_timestamp_key;
     int m_compression_level;
-    size_t m_max_encoding_size;
+    size_t m_target_encoded_size;
 
     // Search variables
     std::string m_query;

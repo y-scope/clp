@@ -72,7 +72,7 @@ int main(int argc, char const* argv[]) {
         clp_s::TimestampPattern::init();
 
         auto query_stream = std::istringstream(query);
-        auto expr = kql::parse_kibana_expression(query_stream);
+        auto expr = kql::parse_kql_expression(query_stream);
 
         if (std::dynamic_pointer_cast<EmptyExpr>(expr)) {
             SPDLOG_ERROR("Query '{}' is logically false", query);

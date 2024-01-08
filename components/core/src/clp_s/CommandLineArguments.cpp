@@ -56,9 +56,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 std::cerr << "  s - search" << std::endl;
                 std::cerr << std::endl;
                 std::cerr << "Try "
-                          << " c --help OR "
-                          << " x --help OR "
-                          << "q --help for command-specific details." << std::endl;
+                          << " c --help OR"
+                          << " x --help OR"
+                          << " s --help for command-specific details." << std::endl;
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
@@ -81,23 +81,38 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
         if (Command::Compress == m_command) {
             po::options_description compression_positional_options;
-            compression_positional_options
-                    .add_options()("archive-dir", po::value<std::string>(&m_archive_dir)->value_name("DIR"), "output directory")(
-                            "input-paths",
-                            po::value<std::vector<std::string>>(&m_file_paths)->value_name("PATHS"),
-                            "input paths"
-                    );
+            // clang-format off
+             compression_positional_options.add_options()(
+                     "archives-dir",
+                     po::value<std::string>(&m_archives_dir)->value_name("DIR"),
+                     "output directory"
+             )(
+                     "input-paths",
+                     po::value<std::vector<std::string>>(&m_file_paths)->value_name("PATHS"),
+                     "input paths"
+             );
 
+            // clang-format on
             po::options_description compression_options("Compression options");
-            compression_options.add_options()
-                    ("compression-level", po::value<int>(&m_compression_level)->
-                        value_name("LEVEL")->default_value(3), "set compression level")
-                    ("max-encoding-size", po::value<size_t>(&m_max_encoding_size)->
-                        value_name("MAX_DICT_SIZE")->default_value(8UL * 1024 * 1024 * 1024), /*8GB*/
-                        "maximum encoding size")
-                    ("timestamp-key", po::value<std::string>(&m_timestamp_key)->
-                        value_name("TIMESTAMP_COLUMN_KEY")->default_value(""), "timestamp column");
+            // clang-format off
+            compression_options.add_options()(
+                    "compression-level",
+                    po::value<int>(&m_compression_level)->value_name("LEVEL")->default_value(3),
+                    "1 (fast/low compression) to 9 (slow/high compression)."
+            )(
+                    "target-encoded-size",
+                    po::value<size_t>(&m_target_encoded_size)->value_name("TARGET_ENCODED_SIZE")->
+                        default_value(8UL * 1024 * 1024 * 1024),  // 8 GiB
+                    "Target size (B) for the dictionaries and encoded messages before a new "
+                    "archive is created."
+            )(
+                    "timestamp-key",
+                    po::value<std::string>(&m_timestamp_key)->value_name("TIMESTAMP_COLUMN_KEY")->
+                        default_value(""),
+                    "Path (e.g. x.y) for the field containing the log event's timestamp."
+            );
 
+            // clang-format on
             po::positional_options_description positional_options;
             positional_options.add("archive-dir", 1);
             positional_options.add("input-paths", -1);
@@ -122,8 +137,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 print_compression_usage();
 
                 std::cerr << "Examples:" << std::endl;
-                std::cerr << "  Compress file1.txt and dir1 into the archive dir" << std::endl;
-                std::cerr << "   " << m_program_name << " c archive-dir file1.txt dir1"
+                std::cerr << "  # Compress file1.json and dir1 into archives-dir" << std::endl;
+                std::cerr << "   " << m_program_name << " c archives-dir file1.json dir1"
                           << std::endl;
                 std::cerr << std::endl;
 
@@ -138,18 +153,25 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument("No input paths specified.");
             }
 
-            if (m_archive_dir.empty()) {
+            if (m_archives_dir.empty()) {
                 throw std::invalid_argument("No archive directory specified.");
             }
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;
-            extraction_options.add_options()("archive-dir", po::value<std::string>(&m_archive_dir))(
+            // clang-format off
+            extraction_options.add_options()(
+                    "archives-dir",
+                    po::value<std::string>(&m_archives_dir),
+                    "The directory containing the archives"
+            )(
                     "output-dir",
-                    po::value<std::string>(&m_output_dir)
+                    po::value<std::string>(&m_output_dir),
+                    "The output directory for the decompressed file"
             );
 
+            // clang-format on
             po::positional_options_description positional_options;
-            positional_options.add("archive-dir", 1);
+            positional_options.add("archives-dir", 1);
             positional_options.add("output-dir", 1);
 
             std::vector<std::string> unrecognized_options
@@ -169,17 +191,18 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 print_decompression_usage();
 
                 std::cerr << "Examples:" << std::endl;
-                std::cerr << "  Decompress all files from archive-dir into output-dir" << std::endl;
-                std::cerr << "   " << m_program_name << "x archive-dir output-dir" << std::endl;
+                std::cerr << "  # Decompress all files from archives-dir into output-dir"
+                          << std::endl;
+                std::cerr << "   " << m_program_name << "x archives-dir output-dir" << std::endl;
                 std::cerr << std::endl;
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
-                std::cerr << visible_options << '\n';
+                std::cerr << visible_options << std::endl;
                 return ParsingResult::InfoCommand;
             }
 
-            if (m_archive_dir.empty()) {
+            if (m_archives_dir.empty()) {
                 throw std::invalid_argument("No archive directory specified");
             }
 
@@ -191,13 +214,20 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             std::string query;
 
             po::options_description search_options;
-            search_options.add_options()("archive-dir", po::value<std::string>(&m_archive_dir))(
+            // clang-format off
+            search_options.add_options()(
+                    "archives-dir",
+                    po::value<std::string>(&m_archives_dir),
+                    "The directory containing the archives"
+            )(
                     "query,q",
-                    po::value<std::string>(&m_query)
+                    po::value<std::string>(&m_query),
+                    "Query to perform"
             );
 
+            // clang-format on
             po::positional_options_description positional_options;
-            positional_options.add("archive-dir", 1);
+            positional_options.add("archives-dir", 1);
             positional_options.add("query", 1);
 
             std::vector<std::string> unrecognized_options
@@ -217,8 +247,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 print_search_usage();
 
                 std::cerr << "Examples:" << std::endl;
-                std::cerr << "  Perform a query on archive-dir" << std::endl;
-                std::cerr << "   " << m_program_name << " s archive-dir query" << std::endl;
+                std::cerr << "  # Perform a query on archives-dir" << std::endl;
+                std::cerr << "   " << m_program_name << " s archives-dir query" << std::endl;
                 std::cerr << std::endl;
 
                 po::options_description visible_options;
@@ -226,7 +256,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 std::cerr << visible_options << '\n';
                 return ParsingResult::InfoCommand;
             }
-            if (m_archive_dir.empty()) {
+            if (m_archives_dir.empty()) {
                 throw std::invalid_argument("No archive directory specified");
             }
 

@@ -1,5 +1,5 @@
-#ifndef CLP_S_PARSE_KIBANA_HPP
-#define CLP_S_PARSE_KIBANA_HPP
+#ifndef CLP_S_PARSE_KQL_HPP
+#define CLP_S_PARSE_KQL_HPP
 
 #include <istream>
 
@@ -11,7 +11,7 @@ namespace clp_s::search::kql {
  * @param in input stream containing a Kibana expression followed by EOF
  * @return a search AST
  */
-std::shared_ptr<Expression> parse_kibana_expression(std::istream& in);
-}  // namespace clp_s::search::Kibana
+std::shared_ptr<Expression> parse_kql_expression(std::istream& in);
+}  // namespace clp_s::search::kql
 
-#endif  // CLP_S_PARSE_KIBANA_HPP
+#endif  // CLP_S_PARSE_KQL_HPP
