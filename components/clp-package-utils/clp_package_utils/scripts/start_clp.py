@@ -276,7 +276,7 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
     append_docker_port_settings_for_host_ips(clp_config.results_cache.host, clp_config.results_cache.port, 27017, cmd)
     cmd.append('mongo:7.0.1')
     cmd.append('--config')
-    cmd.append(pathlib.Path('/') / 'etc' / 'mongo' / 'mongod.conf')
+    cmd.append(str(pathlib.Path('/') / 'etc' / 'mongo' / 'mongod.conf'))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     logger.info(f"Started {RESULTS_CACHE_COMPONENT_NAME}.")

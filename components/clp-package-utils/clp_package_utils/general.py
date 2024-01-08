@@ -60,7 +60,6 @@ class CLPDockerMounts:
         self.logs_dir: typing.Optional[DockerMount] = None
         self.archives_output_dir: typing.Optional[DockerMount] = None
 
-
 def get_clp_home():
     # Determine CLP_HOME from an environment variable or this script's path
     clp_home = None
@@ -78,7 +77,6 @@ def get_clp_home():
         raise ValueError("CLP_HOME set to nonexistent path.")
 
     return clp_home.resolve()
-
 
 def check_dependencies():
     try:
@@ -242,23 +240,23 @@ def validate_db_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: 
     try:
         validate_path_could_be_dir(data_dir)
     except ValueError as ex:
-        raise ValueError(f"database data directory is invalid: {ex}")
+        raise ValueError(f"{DB_COMPONENT_NAME} data directory is invalid: {ex}")
 
     try:
         validate_path_could_be_dir(logs_dir)
     except ValueError as ex:
-        raise ValueError(f"database logs directory is invalid: {ex}")
+        raise ValueError(f"{DB_COMPONENT_NAME} logs directory is invalid: {ex}")
 
-    validate_port("database.port", clp_config.database.host, clp_config.database.port)
+    validate_port(f"{DB_COMPONENT_NAME}.port", clp_config.database.host, clp_config.database.port)
 
 
 def validate_queue_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
     try:
         validate_path_could_be_dir(logs_dir)
     except ValueError as ex:
-        raise ValueError(f"queue logs directory is invalid: {ex}")
+        raise ValueError(f"{QUEUE_COMPONENT_NAME} logs directory is invalid: {ex}")
 
-    validate_port("queue.port", clp_config.queue.host, clp_config.queue.port)
+    validate_port(f"{QUEUE_COMPONENT_NAME}.port", clp_config.queue.host, clp_config.queue.port)
 
 
 def validate_results_cache_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path):
