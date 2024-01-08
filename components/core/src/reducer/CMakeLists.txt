@@ -19,6 +19,7 @@ set(
         RecordIterator.hpp
         RecordValueIterator.hpp
         reducer_server.cpp
+        reducer_server.hpp
         ../clp/database_utils.cpp
         ../clp/database_utils.hpp
         ../clp/Defs.h

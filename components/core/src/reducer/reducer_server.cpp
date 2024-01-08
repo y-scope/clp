@@ -1,3 +1,5 @@
+#include "reducer_server.hpp"
+
 #include <bsoncxx/builder/stream/document.hpp>
 #include <chrono>
 #include <map>
@@ -31,15 +33,6 @@ using boost::asio::ip::tcp;
 
 namespace reducer {
 
-enum class ServerStatus {
-    IDLE,
-    RUNNING,
-    FINISHING_SUCCESS,
-    FINISHING_REDUCER_ERROR,
-    FINISHING_REMOTE_ERROR,
-    FINISHING_CANCELLED
-};
-
 std::string server_status_to_string(ServerStatus status) {
     switch (status) {
         case ServerStatus::IDLE:
@@ -60,195 +53,149 @@ std::string server_status_to_string(ServerStatus status) {
     return "";
 }
 
-// This enum is a hidden binding between the python
-// scheduler and this c++ reducer
-enum class JobStatus : int {
-    PENDING = 0,
-    RUNNING,
-    DONE,
-    SUCCESS,
-    SUCCESS_WITH_ERRORS,
-    FAILED,
-    CANCELLING,
-    CANCELLED,
-    PENDING_REDUCER,
-    REDUCER_READY,
-    PENDING_REDUCER_DONE,
-    NO_MATCHING_ARCHIVE,
-    WAITING_FOR_BATCH
-};
+// TODO: We should use tcp::v6 and set ip::v6_only to false. But this isn't
+// guaranteed to work, so for now, we use v4 to be safe.
+ServerContext::ServerContext(CommandLineArguments& args)
+        : acceptor(ioctx, tcp::endpoint(tcp::v4(), args.get_reducer_port())),
+          host(args.get_reducer_host()),
+          mongodb_jobs_metric_collection(args.get_mongodb_jobs_metric_collection()),
+          polling_interval_ms(args.get_polling_interval()),
+          pipeline(nullptr),
+          status(ServerStatus::IDLE),
+          job_id(-1),
+          timeline_aggregation(false) {
+    try {
+        db.open(args.get_db_host(),
+                args.get_db_port(),
+                args.get_db_user(),
+                args.get_db_password(),
+                args.get_db_database());
+    } catch (clp::MySQLDB::OperationFailed& e) {
+        SPDLOG_ERROR("Failed to connect to MySQL database error=", e.what());
+        throw OperationFailed(clp::ErrorCode_BadParam, __FILENAME__, __LINE__);
+    }
+    m_take_search_job = std::make_unique<clp::MySQLPreparedStatement>(
+            db.prepare_statement(cTakeSearchJobStatement, strlen(cTakeSearchJobStatement))
+    );
+    m_update_job_status = std::make_unique<clp::MySQLPreparedStatement>(
+            db.prepare_statement(cUpdateJobStatusStatement, strlen(cUpdateJobStatusStatement))
+    );
+    m_get_new_jobs
+            = (fmt::format(cGetNewJobs, clp::enum_to_underlying_type(JobStatus::PENDING_REDUCER)));
 
-class ServerContext {
-public:
-    boost::asio::io_context ioctx;
-    boost::asio::ip::tcp::acceptor acceptor;
-    std::unique_ptr<Pipeline> pipeline;
-    clp::MySQLDB db;  // TODO: consider switching to boost asio mysql connector
-    ServerStatus status;
-    int64_t job_id;
-    int64_t port;
-    mongocxx::client mongodb_client;
-    mongocxx::database results_database;
-    mongocxx::collection results_collection;
-    mongocxx::collection jobs_metric_collection;
-    std::string host;
-    std::string mongodb_jobs_metric_collection;
-    int polling_interval_ms;
-    bool timeline_aggregation;
-    std::set<GroupTags> updated_tags;
+    try {
+        mongodb_client = mongocxx::client(mongocxx::uri(args.get_mongodb_uri()));
+        results_database = mongocxx::database(mongodb_client[args.get_mongodb_database()]);
+    } catch (mongocxx::exception& e) {
+        SPDLOG_ERROR("Failed to connect to MongoDB database error=", e.what());
+        throw OperationFailed(clp::ErrorCode_BadParam, __FILENAME__, __LINE__);
+    }
+}
 
-    // TODO: We should use tcp::v6 and set ip::v6_only to false. But this isn't
-    // guaranteed to work, so for now, we use v4 to be safe.
-    ServerContext(
-            std::string const& host,
-            int port,
-            std::string const& mongodb_jobs_metric_collection,
-            int polling_interval_ms
-    )
-            : acceptor(ioctx, tcp::endpoint(tcp::v4(), port)),
-              pipeline(nullptr),
-              status(ServerStatus::IDLE),
-              job_id(-1),
-              port(port),
-              host(host),
-              mongodb_jobs_metric_collection(mongodb_jobs_metric_collection),
-              polling_interval_ms(polling_interval_ms),
-              timeline_aggregation(false) {}
-
-    void initialize_database_statements() {
-        m_take_search_job = std::make_unique<clp::MySQLPreparedStatement>(
-                db.prepare_statement(cTakeSearchJobStatement, strlen(cTakeSearchJobStatement))
-        );
-        m_update_job_status = std::make_unique<clp::MySQLPreparedStatement>(
-                db.prepare_statement(cUpdateJobStatusStatement, strlen(cUpdateJobStatusStatement))
-        );
-        m_get_new_jobs = (fmt::format(
-                cGetNewJobs,
-                clp::enum_to_underlying_type(JobStatus::PENDING_REDUCER)
-        ));
+ServerStatus ServerContext::execute_assign_new_job() {
+    if (false == db.execute_query(m_get_new_jobs)) {
+        return ServerStatus::FINISHING_REDUCER_ERROR;
     }
 
-    ServerStatus execute_assign_new_job() {
-        if (false == db.execute_query(m_get_new_jobs)) {
+    auto it = db.get_iterator();
+    std::string job_id_str, search_config;
+    std::vector<std::pair<int64_t, std::string>> available_jobs;
+    while (it.contains_element()) {
+        it.get_field_as_string(0, job_id_str);
+        it.get_field_as_string(1, search_config);
+        available_jobs.push_back({stoi(job_id_str), std::move(search_config)});
+        it.get_next();
+    }
+
+    for (auto& job : available_jobs) {
+        clp::MySQLParamBindings& bindings = m_take_search_job->get_statement_bindings();
+        int64_t reducer_ready = clp::enum_to_underlying_type(JobStatus::REDUCER_READY);
+        int64_t pending_reducer = clp::enum_to_underlying_type(JobStatus::PENDING_REDUCER);
+        bindings.bind_int64(0, reducer_ready);
+        bindings.bind_int64(1, port);
+        bindings.bind_varchar(2, host.c_str(), host.length());
+        bindings.bind_int64(3, pending_reducer);
+        bindings.bind_int64(4, job.first);
+        if (false == m_take_search_job->execute()) {
             return ServerStatus::FINISHING_REDUCER_ERROR;
         }
 
-        auto it = db.get_iterator();
-        std::string job_id_str, search_config;
-        std::vector<std::pair<int64_t, std::string>> available_jobs;
-        while (it.contains_element()) {
-            it.get_field_as_string(0, job_id_str);
-            it.get_field_as_string(1, search_config);
-            available_jobs.push_back({stoi(job_id_str), std::move(search_config)});
-            it.get_next();
-        }
+        if (m_take_search_job->get_affected_rows() > 0) {
+            SPDLOG_INFO("Taking job {}", job.first);
+            job_id = job.first;
 
-        for (auto& job : available_jobs) {
-            clp::MySQLParamBindings& bindings = m_take_search_job->get_statement_bindings();
-            int64_t reducer_ready = clp::enum_to_underlying_type(JobStatus::REDUCER_READY);
-            int64_t pending_reducer = clp::enum_to_underlying_type(JobStatus::PENDING_REDUCER);
-            bindings.bind_int64(0, reducer_ready);
-            bindings.bind_int64(1, port);
-            bindings.bind_varchar(2, host.c_str(), host.length());
-            bindings.bind_int64(3, pending_reducer);
-            bindings.bind_int64(4, job.first);
-            if (false == m_take_search_job->execute()) {
-                return ServerStatus::FINISHING_REDUCER_ERROR;
+            msgpack::object_handle handle = msgpack::unpack(job.second.data(), job.second.length());
+
+            // TODO: create a more robust method to specify reducer jobs
+            // and create pipelines
+            std::map<std::string, msgpack::type::variant> query_config = handle.get().convert();
+            if (query_config.count("bucket_size")) {
+                timeline_aggregation = true;
+            } else {
+                timeline_aggregation = false;
             }
 
-            if (m_take_search_job->get_affected_rows() > 0) {
-                SPDLOG_INFO("Taking job {}", job.first);
-                job_id = job.first;
+            // For now all pipelines only perform count
+            pipeline = std::make_unique<Pipeline>(PipelineInputMode::INTRA_STAGE);
+            pipeline->add_pipeline_stage(std::shared_ptr<Operator>(new CountOperator()));
 
-                msgpack::object_handle handle
-                        = msgpack::unpack(job.second.data(), job.second.length());
+            // TODO: Inefficient to convert job_id back to a string since it was
+            // a string in the first place. Might be negligible compared to
+            // storing it as a string in addition to as an int.
+            std::string collection_name = std::to_string(job.first);
+            results_collection = mongocxx::collection(results_database[collection_name]);
 
-                // TODO: create a more robust method to specify reducer jobs
-                // and create pipelines
-                std::map<std::string, msgpack::type::variant> query_config = handle.get().convert();
-                if (query_config.count("bucket_size")) {
-                    timeline_aggregation = true;
-                } else {
-                    timeline_aggregation = false;
-                }
-
-                // For now all pipelines only perform count
-                pipeline = std::make_unique<Pipeline>(PipelineInputMode::INTRA_STAGE);
-                pipeline->add_pipeline_stage(std::shared_ptr<Operator>(new CountOperator()));
-
-                // TODO: Inefficient to convert job_id back to a string since it was
-                // a string in the first place. Might be negligible compared to
-                // storing it as a string in addition to as an int.
-                std::string collection_name = std::to_string(job.first);
-                results_collection = mongocxx::collection(results_database[collection_name]);
-
-                return ServerStatus::RUNNING;
-            }
+            return ServerStatus::RUNNING;
         }
-        return ServerStatus::IDLE;
+    }
+    return ServerStatus::IDLE;
+}
+
+bool ServerContext::execute_update_job_status(JobStatus new_status) {
+    clp::MySQLParamBindings& bindings = m_update_job_status->get_statement_bindings();
+    int64_t new_status_int64 = clp::enum_to_underlying_type(new_status);
+    bindings.bind_int64(0, new_status_int64);
+    bindings.bind_int64(1, job_id);
+
+    return m_update_job_status->execute();
+}
+
+ServerStatus ServerContext::execute_poll_job_done() {
+    if (false == db.execute_query(fmt::format(cPollJobDone, job_id))) {
+        return ServerStatus::FINISHING_REDUCER_ERROR;
     }
 
-    bool execute_update_job_status(JobStatus new_status) {
-        clp::MySQLParamBindings& bindings = m_update_job_status->get_statement_bindings();
-        int64_t new_status_int64 = clp::enum_to_underlying_type(new_status);
-        bindings.bind_int64(0, new_status_int64);
-        bindings.bind_int64(1, job_id);
-
-        return m_update_job_status->execute();
+    auto it = db.get_iterator();
+    std::string job_status_str;
+    JobStatus job_status;
+    while (it.contains_element()) {
+        it.get_field_as_string(0, job_status_str);
+        job_status = static_cast<JobStatus>(stoi(job_status_str));
+        it.get_next();
     }
 
-    ServerStatus execute_poll_job_done() {
-        if (false == db.execute_query(fmt::format(cPollJobDone, job_id))) {
-            return ServerStatus::FINISHING_REDUCER_ERROR;
-        }
-
-        auto it = db.get_iterator();
-        std::string job_status_str;
-        JobStatus job_status;
-        while (it.contains_element()) {
-            it.get_field_as_string(0, job_status_str);
-            job_status = static_cast<JobStatus>(stoi(job_status_str));
-            it.get_next();
-        }
-
-        if (JobStatus::PENDING_REDUCER_DONE == job_status) {
-            return ServerStatus::FINISHING_SUCCESS;
-        }
-
-        if (false
-            == (JobStatus::RUNNING == job_status || JobStatus::REDUCER_READY == job_status
-                || JobStatus::CANCELLING == job_status
-                || JobStatus::WAITING_FOR_BATCH == job_status))
-        {
-            return ServerStatus::FINISHING_REMOTE_ERROR;
-        }
-
-        return ServerStatus::RUNNING;
+    if (JobStatus::PENDING_REDUCER_DONE == job_status) {
+        return ServerStatus::FINISHING_SUCCESS;
     }
 
-    void reset() {
-        ioctx.reset();
-        pipeline.reset(nullptr);
-        status = ServerStatus::IDLE;
-        job_id = -1;
-        timeline_aggregation = false;
-        updated_tags.clear();
+    if (false
+        == (JobStatus::RUNNING == job_status || JobStatus::REDUCER_READY == job_status
+            || JobStatus::CANCELLING == job_status || JobStatus::WAITING_FOR_BATCH == job_status))
+    {
+        return ServerStatus::FINISHING_REMOTE_ERROR;
     }
 
-private:
-    static constexpr char const cGetNewJobs[]
-            = "SELECT id, search_config FROM distributed_search_jobs WHERE status={}";
-    static constexpr char const cTakeSearchJobStatement[]
-            = "UPDATE distributed_search_jobs SET status=?, reducer_port=?, reducer_host=? WHERE "
-              "status=? and id=?";
-    static constexpr char const cUpdateJobStatusStatement[]
-            = "UPDATE distributed_search_jobs SET status=? WHERE id=?";
-    static constexpr char const cPollJobDone[]
-            = "SELECT status FROM distributed_search_jobs WHERE id={}";
-    std::string m_get_new_jobs;
-    std::unique_ptr<clp::MySQLPreparedStatement> m_take_search_job;
-    std::unique_ptr<clp::MySQLPreparedStatement> m_update_job_status;
-};
+    return ServerStatus::RUNNING;
+}
+
+void ServerContext::reset() {
+    ioctx.reset();
+    pipeline.reset(nullptr);
+    status = ServerStatus::IDLE;
+    job_id = -1;
+    timeline_aggregation = false;
+    updated_tags.clear();
+}
 
 struct RecordReceiverContext {
     std::shared_ptr<ServerContext> ctx;
@@ -595,48 +542,6 @@ void poll_db(
         ctx->acceptor.cancel();
     }
 }
-
-std::shared_ptr<ServerContext> initialize_server_context(int argc, char const* argv[]) {
-    CommandLineArguments args("reducer_server");
-
-    auto parsing_result = args.parse_arguments(argc, argv);
-    if (parsing_result != clp::CommandLineArgumentsBase::ParsingResult::Success) {
-        return nullptr;
-    }
-
-    auto ctx = std::make_shared<ServerContext>(
-            args.get_reducer_host(),
-            args.get_reducer_port(),
-            args.get_mongodb_jobs_metric_collection(),
-            args.get_polling_interval()
-    );
-
-    try {
-        ctx->db.open(
-                args.get_db_host(),
-                args.get_db_port(),
-                args.get_db_user(),
-                args.get_db_password(),
-                args.get_db_database()
-        );
-    } catch (clp::MySQLDB::OperationFailed& e) {
-        SPDLOG_ERROR("Failed to connect to MySQL database error=", e.what());
-        return nullptr;
-    }
-    ctx->initialize_database_statements();
-
-    try {
-        ctx->mongodb_client = mongocxx::client(mongocxx::uri(args.get_mongodb_uri()));
-        ctx->results_database
-                = mongocxx::database(ctx->mongodb_client[args.get_mongodb_database()]);
-    } catch (mongocxx::exception& e) {
-        SPDLOG_ERROR("Failed to connect to MongoDB database error=", e.what());
-        return nullptr;
-    }
-
-    return ctx;
-}
-
 }  // namespace reducer
 
 int main(int argc, char const* argv[]) {
@@ -654,10 +559,19 @@ int main(int argc, char const* argv[]) {
     // all other mongocxx classes
     mongocxx::instance inst;
 
-    std::shared_ptr<reducer::ServerContext> ctx = reducer::initialize_server_context(argc, argv);
+    reducer::CommandLineArguments args("reducer_server");
+    auto parsing_result = args.parse_arguments(argc, argv);
+    if (parsing_result != clp::CommandLineArgumentsBase::ParsingResult::Success) {
+        SPDLOG_ERROR("Failed to parse arguments for reducer... exiting");
+        return -1;
+    }
 
-    if (nullptr == ctx) {
-        SPDLOG_ERROR("Failed to initialize reducer... exiting");
+    std::shared_ptr<reducer::ServerContext> ctx = nullptr;
+
+    try {
+        ctx = std::make_shared<reducer::ServerContext>(args);
+    } catch (reducer::ServerContext::OperationFailed& exception) {
+        SPDLOG_ERROR("Failed to initialize reducer on error {}... exiting", exception.what());
         return -1;
     }
 
