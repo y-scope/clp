@@ -36,10 +36,13 @@ tools/scripts/deps-download/download-all.sh
 ```
 
 This will download:
+* [abseil-cpp](https://github.com/abseil/abseil-cpp) (20230802.1)
+* [antlr4](https://www.antlr.org) (v4.13.1)
 * [Catch2](https://github.com/catchorg/Catch2.git) (v2.13.7)
 * [date](https://github.com/HowardHinnant/date.git) (v3.0.1)
 * [json](https://github.com/nlohmann/json.git) (v3.10.4)
 * [log-surgeon](https://github.com/y-scope/log-surgeon) (895f464)
+* [simdjson](https://github.com/simdjson/simdjson) (v3.6.3)
 * [SQLite3](https://www.sqlite.org/download.html) (v3.36.0)
 * [yaml-cpp](https://github.com/jbeder/yaml-cpp.git) (v0.7.0)
 
