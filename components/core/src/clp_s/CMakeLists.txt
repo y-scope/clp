@@ -11,9 +11,7 @@ set(CLP_S_SOURCES
         ColumnWriter.hpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
-        Compressor.cpp
         Compressor.hpp
-        Decompressor.cpp
         Decompressor.hpp
         Defs.hpp
         DictionaryEntry.cpp
@@ -35,7 +33,6 @@ set(CLP_S_SOURCES
         JsonParser.hpp
         JsonSerializer.cpp
         JsonSerializer.hpp
-        ParsedMessage.cpp
         ParsedMessage.hpp
         ReaderUtils.cpp
         ReaderUtils.hpp
@@ -55,7 +52,6 @@ set(CLP_S_SOURCES
         TimestampEntry.hpp
         TimestampPattern.cpp
         TimestampPattern.hpp
-        TraceableException.cpp
         TraceableException.hpp
         Utils.cpp
         Utils.hpp
