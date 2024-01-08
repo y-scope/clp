@@ -215,8 +215,8 @@ class CLPConfig(BaseModel):
         if config is None:
             raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
         try:
-            self.database.username = get_config_value(config, 'db.user')
-            self.database.password = get_config_value(config, 'db.password')
+            self.database.username = get_config_value(config, f'{DB_COMPONENT_NAME}.user')
+            self.database.password = get_config_value(config, f'{DB_COMPONENT_NAME}.password')
         except KeyError as ex:
             raise ValueError(f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'.")
 
@@ -225,8 +225,8 @@ class CLPConfig(BaseModel):
         if config is None:
             raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
         try:
-            self.queue.username = get_config_value(config, "queue.user")
-            self.queue.password = get_config_value(config, "queue.password")
+            self.queue.username = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.user")
+            self.queue.password = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.password")
         except KeyError as ex:
             raise ValueError(f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'.")
 
