@@ -23,7 +23,7 @@ namespace clp_s::search {
 void Output::filter() {
     auto top_level_expr = m_expr;
 
-    for (auto const& archive : ReaderUtils::get_archives(m_archive_dir)) {
+    for (auto const& archive : ReaderUtils::get_archives(m_archives_dir)) {
         std::vector<int32_t> matched_schemas;
         bool has_array = false;
         bool has_array_search = false;

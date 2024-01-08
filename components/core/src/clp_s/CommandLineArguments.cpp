@@ -20,11 +20,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
     char command_input;
     po::options_description general_positional_options("General positional options");
-    general_positional_options.add_options()("command", po::value<char>(&command_input))(
-            "command-args",
-            po::value<std::vector<std::string>>()
+    // clang-format off
+    general_positional_options.add_options()(
+            "command", po::value<char>(&command_input)
+    )(
+            "command-args", po::value<std::vector<std::string>>()
     );
 
+    // clang-format on
     po::positional_options_description general_positional_options_description;
     general_positional_options_description.add("command", 1);
     general_positional_options_description.add("command-args", -1);
@@ -138,7 +141,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
                 std::cerr << "Examples:" << std::endl;
                 std::cerr << "  # Compress file1.json and dir1 into archives-dir" << std::endl;
-                std::cerr << "   " << m_program_name << " c archives-dir file1.json dir1"
+                std::cerr << "  " << m_program_name << " c archives-dir file1.json dir1"
                           << std::endl;
                 std::cerr << std::endl;
 
@@ -154,7 +157,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
 
             if (m_archives_dir.empty()) {
-                throw std::invalid_argument("No archive directory specified.");
+                throw std::invalid_argument("No archives directory specified.");
             }
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;
@@ -193,7 +196,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 std::cerr << "Examples:" << std::endl;
                 std::cerr << "  # Decompress all files from archives-dir into output-dir"
                           << std::endl;
-                std::cerr << "   " << m_program_name << "x archives-dir output-dir" << std::endl;
+                std::cerr << "  " << m_program_name << "x archives-dir output-dir" << std::endl;
                 std::cerr << std::endl;
 
                 po::options_description visible_options;
@@ -203,14 +206,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
 
             if (m_archives_dir.empty()) {
-                throw std::invalid_argument("No archive directory specified");
+                throw std::invalid_argument("No archives directory specified");
             }
 
             if (m_output_dir.empty()) {
                 throw std::invalid_argument("No output directory specified");
             }
         } else if ((char)Command::Search == command_input) {
-            std::string archive_dir;
+            std::string archives_dir;
             std::string query;
 
             po::options_description search_options;
@@ -247,8 +250,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 print_search_usage();
 
                 std::cerr << "Examples:" << std::endl;
-                std::cerr << "  # Perform a query on archives-dir" << std::endl;
-                std::cerr << "   " << m_program_name << " s archives-dir query" << std::endl;
+                std::cerr << "  # Search archives-dir" << std::endl;
+                std::cerr << "  " << m_program_name << " s archives-dir query" << std::endl;
                 std::cerr << std::endl;
 
                 po::options_description visible_options;
@@ -257,7 +260,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 return ParsingResult::InfoCommand;
             }
             if (m_archives_dir.empty()) {
-                throw std::invalid_argument("No archive directory specified");
+                throw std::invalid_argument("No archives directory specified");
             }
 
             if (m_query.empty()) {
@@ -277,17 +280,17 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 }
 
 void CommandLineArguments::print_basic_usage() const {
-    std::cerr << "Usage: " << m_program_name << "[OPTIONS] COMMAND [COMMAND ARGUMENTS]"
+    std::cerr << "Usage: " << m_program_name << " [OPTIONS] COMMAND [COMMAND ARGUMENTS]"
               << std::endl;
 }
 
 void CommandLineArguments::print_compression_usage() const {
-    std::cerr << "Usage: " << m_program_name << " c [OPTIONS] ARCHIVE_DIR [FILE/DIR ...]"
+    std::cerr << "Usage: " << m_program_name << " c [OPTIONS] ARCHIVES_DIR [FILE/DIR ...]"
               << std::endl;
 }
 
 void CommandLineArguments::print_decompression_usage() const {
-    std::cerr << "Usage: " << m_program_name << " x [OPTIONS] ARCHIVE_DIR OUTPUT_DIR" << std::endl;
+    std::cerr << "Usage: " << m_program_name << " x [OPTIONS] ARCHIVES_DIR OUTPUT_DIR" << std::endl;
 }
 
 void CommandLineArguments::print_search_usage() const {

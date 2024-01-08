@@ -8,7 +8,7 @@
 namespace clp_s {
 JsonConstructor::JsonConstructor(JsonConstructorOption const& option)
         : m_output_dir(option.output_dir),
-          m_archive_dir(option.archive_dir),
+          m_archives_dir(option.archives_dir),
           m_current_archive_index(0),
           m_max_archive_index(0) {
     if (false == boost::filesystem::create_directory(m_output_dir)) {
@@ -16,12 +16,12 @@ JsonConstructor::JsonConstructor(JsonConstructorOption const& option)
         exit(1);
     }
 
-    if (false == boost::filesystem::is_directory(m_archive_dir)) {
-        SPDLOG_ERROR("'{}' is not a directory", m_archive_dir);
+    if (false == boost::filesystem::is_directory(m_archives_dir)) {
+        SPDLOG_ERROR("'{}' is not a directory", m_archives_dir);
         exit(1);
     }
 
-    boost::filesystem::directory_iterator iter(m_archive_dir);
+    boost::filesystem::directory_iterator iter(m_archives_dir);
     boost::filesystem::directory_iterator end;
 
     for (; iter != end; ++iter) {
@@ -31,7 +31,7 @@ JsonConstructor::JsonConstructor(JsonConstructorOption const& option)
     }
 
     if (m_archive_paths.empty()) {
-        SPDLOG_ERROR("No archive in '{}'", m_archive_dir);
+        SPDLOG_ERROR("No archives in '{}'", m_archives_dir);
         exit(1);
     }
 
@@ -41,10 +41,10 @@ JsonConstructor::JsonConstructor(JsonConstructorOption const& option)
 void JsonConstructor::construct() {
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 
-    m_schema_tree = ReaderUtils::read_schema_tree(m_archive_dir);
-    auto id_to_schema = ReaderUtils::read_schemas(m_archive_dir);
+    m_schema_tree = ReaderUtils::read_schema_tree(m_archives_dir);
+    auto id_to_schema = ReaderUtils::read_schemas(m_archives_dir);
 
-    auto timestamp_dict = ReaderUtils::read_timestamp_dictionary(m_archive_dir);
+    auto timestamp_dict = ReaderUtils::read_timestamp_dictionary(m_archives_dir);
 
     m_archive_reader
             = std::make_unique<ArchiveReader>(m_schema_tree, *id_to_schema, timestamp_dict);

@@ -7,13 +7,13 @@
 
 namespace clp_s {
 JsonParser::JsonParser(JsonParserOption const& option)
-        : m_archive_dir(option.archive_dir),
+        : m_archives_dir(option.archives_dir),
           m_num_messages(0),
           m_compression_level(option.compression_level),
-          m_max_encoding_size(option.max_encoding_size),
+          m_target_encoded_size(option.target_encoded_size),
           m_timestamp_column(option.timestamp_column) {
-    if (false == boost::filesystem::create_directory(m_archive_dir)) {
-        SPDLOG_ERROR("The output directory '{}' already exists", m_archive_dir);
+    if (false == boost::filesystem::create_directory(m_archives_dir)) {
+        SPDLOG_ERROR("The output directory '{}' already exists", m_archives_dir);
         exit(1);
     }
 
@@ -26,15 +26,15 @@ JsonParser::JsonParser(JsonParserOption const& option)
     }
 
     m_schema_tree = std::make_shared<SchemaTree>();
-    m_schema_tree_path = m_archive_dir + "/schema_tree";
+    m_schema_tree_path = m_archives_dir + "/schema_tree";
 
-    m_schema_map = std::make_shared<SchemaMap>(m_archive_dir, m_compression_level);
+    m_schema_map = std::make_shared<SchemaMap>(m_archives_dir, m_compression_level);
 
     m_timestamp_dictionary = std::make_shared<TimestampDictionaryWriter>();
-    m_timestamp_dictionary->open(m_archive_dir + "/timestamp.dict", option.compression_level);
+    m_timestamp_dictionary->open(m_archives_dir + "/timestamp.dict", option.compression_level);
 
     ArchiveWriterOption archive_writer_option;
-    archive_writer_option.archive_dir = m_archive_dir;
+    archive_writer_option.archives_dir = m_archives_dir;
     archive_writer_option.id = m_generator();
     archive_writer_option.compression_level = option.compression_level;
 
@@ -236,7 +236,7 @@ void JsonParser::parse() {
             int32_t current_schema_id = m_schema_map->add_schema(m_current_schema);
             m_current_parsed_message.set_id(current_schema_id);
 
-            if (m_archive_writer->get_data_size() >= m_max_encoding_size) {
+            if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
                 split_archive();
             }
 
@@ -285,7 +285,7 @@ void JsonParser::split_archive() {
     m_archive_writer->close();
 
     ArchiveWriterOption archive_writer_option;
-    archive_writer_option.archive_dir = m_archive_dir;
+    archive_writer_option.archives_dir = m_archives_dir;
     archive_writer_option.id = m_generator();
     archive_writer_option.compression_level = m_compression_level;
 

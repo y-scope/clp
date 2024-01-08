@@ -1,13 +1,13 @@
 #include "ReaderUtils.hpp"
 
 namespace clp_s {
-std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(std::string const& archive_dir) {
+std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(std::string const& archives_dir) {
     FileReader schema_tree_reader;
     ZstdDecompressor schema_tree_decompressor;
 
     std::shared_ptr<SchemaTree> tree = std::make_shared<SchemaTree>();
 
-    schema_tree_reader.open(archive_dir + "/schema_tree");
+    schema_tree_reader.open(archives_dir + "/schema_tree");
     schema_tree_decompressor.open(schema_tree_reader, cDecompressorFileReadBufferCapacity);
 
     size_t num_nodes;
@@ -75,13 +75,13 @@ std::shared_ptr<LogTypeDictionaryReader> ReaderUtils::get_array_dictionary_reade
     return reader;
 }
 
-std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(std::string const& archive_dir) {
+std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(std::string const& archives_dir) {
     auto schemas_pointer = std::make_shared<SchemaMap>();
     SchemaMap& schemas = *schemas_pointer;
     FileReader schema_id_reader;
     ZstdDecompressor schema_id_decompressor;
 
-    schema_id_reader.open(archive_dir + "/schema_ids");
+    schema_id_reader.open(archives_dir + "/schema_ids");
     schema_id_decompressor.open(schema_id_reader, cDecompressorFileReadBufferCapacity);
 
     size_t schema_size;
@@ -122,10 +122,10 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(std::string co
 }
 
 std::shared_ptr<TimestampDictionaryReader> ReaderUtils::read_timestamp_dictionary(
-        std::string const& archive_dir
+        std::string const& archives_dir
 ) {
     auto reader = std::make_shared<TimestampDictionaryReader>();
-    reader->open(archive_dir + "/timestamp.dict");
+    reader->open(archives_dir + "/timestamp.dict");
     reader->read_new_entries();
     reader->close();
 
@@ -143,14 +143,14 @@ std::shared_ptr<TimestampDictionaryReader> ReaderUtils::read_local_timestamp_dic
     return reader;
 }
 
-std::vector<std::string> ReaderUtils::get_archives(std::string const& archive_dir) {
+std::vector<std::string> ReaderUtils::get_archives(std::string const& archives_dir) {
     std::vector<std::string> archive_paths;
 
-    if (false == boost::filesystem::is_directory(archive_dir)) {
+    if (false == boost::filesystem::is_directory(archives_dir)) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
 
-    boost::filesystem::directory_iterator iter(archive_dir);
+    boost::filesystem::directory_iterator iter(archives_dir);
     boost::filesystem::directory_iterator end;
     for (; iter != end; ++iter) {
         if (boost::filesystem::is_directory(iter->path())) {

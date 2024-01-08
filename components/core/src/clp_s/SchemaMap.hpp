@@ -11,8 +11,8 @@ public:
     typedef std::map<std::set<int32_t>, int32_t> schema_map_t;
 
     // Constructor
-    explicit SchemaMap(std::string const& archive_dir, int compression_level)
-            : m_archive_dir(archive_dir),
+    explicit SchemaMap(std::string const& archives_dir, int compression_level)
+            : m_archives_dir(archives_dir),
               m_compression_level(compression_level),
               m_current_schema_id(0) {}
 
@@ -25,7 +25,7 @@ public:
     int32_t add_schema(std::set<int32_t>& schema);
 
     /**
-     * Write the contents of the SchemaMap to archive_dir/schema_ids
+     * Write the contents of the SchemaMap to archives_dir/schema_ids
      */
     void store();
 
@@ -38,7 +38,7 @@ public:
     schema_map_t::const_iterator schema_map_end() const { return m_schema_map.cend(); }
 
 private:
-    std::string m_archive_dir;
+    std::string m_archives_dir;
     int m_compression_level;
     int32_t m_current_schema_id;
     schema_map_t m_schema_map;

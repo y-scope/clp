@@ -45,8 +45,8 @@ int main(int argc, char const* argv[]) {
 
         clp_s::JsonParserOption option;
         option.file_paths = command_line_arguments.get_file_paths();
-        option.archive_dir = command_line_arguments.get_archive_dir();
-        option.max_encoding_size = command_line_arguments.get_max_encoding_size();
+        option.archives_dir = command_line_arguments.get_archives_dir();
+        option.target_encoded_size = command_line_arguments.get_target_encoded_size();
         option.compression_level = command_line_arguments.get_compression_level();
         auto const& timestamp_key = command_line_arguments.get_timestamp_key();
         if (false == timestamp_key.empty()) {
@@ -59,7 +59,7 @@ int main(int argc, char const* argv[]) {
         parser.close();
     } else if (CommandLineArguments::Command::Extract == command_line_arguments.get_command()) {
         clp_s::JsonConstructorOption option;
-        option.archive_dir = command_line_arguments.get_archive_dir();
+        option.archives_dir = command_line_arguments.get_archives_dir();
         option.output_dir = command_line_arguments.get_output_dir();
 
         clp_s::JsonConstructor constructor(option);
@@ -67,12 +67,12 @@ int main(int argc, char const* argv[]) {
         constructor.store();
         constructor.close();
     } else {
-        auto const& archive_dir = command_line_arguments.get_archive_dir();
+        auto const& archives_dir = command_line_arguments.get_archives_dir();
         auto const& query = command_line_arguments.get_query();
         clp_s::TimestampPattern::init();
 
         auto query_stream = std::istringstream(query);
-        auto expr = kql::parse_kql_expression(query_stream);
+        auto expr = kql::ParseKqlExpression(query_stream);
 
         if (std::dynamic_pointer_cast<EmptyExpr>(expr)) {
             SPDLOG_ERROR("Query '{}' is logically false", query);
@@ -99,15 +99,15 @@ int main(int argc, char const* argv[]) {
 
         // skip decompressing the archive if we won't match based on
         // the timestamp index
-        auto timestamp_dict = clp_s::ReaderUtils::read_timestamp_dictionary(archive_dir);
+        auto timestamp_dict = clp_s::ReaderUtils::read_timestamp_dictionary(archives_dir);
         EvaluateTimestampIndex timestamp_index(timestamp_dict);
         if (clp_s::EvaluatedValue::False == timestamp_index.run(expr)) {
             SPDLOG_ERROR("No matching timestamp ranges for query '{}'", query);
             return 1;
         }
 
-        auto schema_tree = clp_s::ReaderUtils::read_schema_tree(archive_dir);
-        auto schemas = clp_s::ReaderUtils::read_schemas(archive_dir);
+        auto schema_tree = clp_s::ReaderUtils::read_schema_tree(archives_dir);
+        auto schemas = clp_s::ReaderUtils::read_schemas(archives_dir);
 
         // Narrow against schemas
         SchemaMatch match_pass(schema_tree, schemas);
@@ -117,7 +117,7 @@ int main(int argc, char const* argv[]) {
         }
 
         // output result
-        Output output(schema_tree, schemas, match_pass, expr, archive_dir, timestamp_dict);
+        Output output(schema_tree, schemas, match_pass, expr, archives_dir, timestamp_dict);
         output.filter();
     }
 

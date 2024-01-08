@@ -28,13 +28,13 @@ public:
            std::shared_ptr<ReaderUtils::SchemaMap> schemas,
            SchemaMatch& match,
            std::shared_ptr<Expression> expr,
-           std::string archive_dir,
+           std::string archives_dir,
            std::shared_ptr<TimestampDictionaryReader> timestamp_dict)
             : m_schema_tree(std::move(tree)),
               m_schemas(std::move(schemas)),
               m_match(match),
               m_expr(std::move(expr)),
-              m_archive_dir(std::move(archive_dir)),
+              m_archives_dir(std::move(archives_dir)),
               m_timestamp_dict(std::move(timestamp_dict)) {}
 
     /**
@@ -45,7 +45,7 @@ public:
 private:
     SchemaMatch& m_match;
     std::shared_ptr<Expression> m_expr;
-    std::string m_archive_dir;
+    std::string m_archives_dir;
 
     // variables for the current schema being filtered
     std::vector<BaseColumnReader*> m_searched_columns;

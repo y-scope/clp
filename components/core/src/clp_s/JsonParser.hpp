@@ -28,8 +28,8 @@ namespace clp_s {
 struct JsonParserOption {
     std::vector<std::string> file_paths;
     std::vector<std::string> timestamp_column;
-    std::string archive_dir;
-    size_t max_encoding_size;
+    std::string archives_dir;
+    size_t target_encoded_size;
     int compression_level;
 };
 
@@ -80,7 +80,7 @@ private:
     int m_num_messages;
     int m_compression_level;
     std::vector<std::string> m_file_paths;
-    std::string m_archive_dir;
+    std::string m_archives_dir;
     std::string m_schema_tree_path;
 
     std::set<int32_t> m_current_schema;
@@ -94,7 +94,7 @@ private:
 
     boost::uuids::random_generator m_generator;
     std::unique_ptr<ArchiveWriter> m_archive_writer;
-    size_t m_max_encoding_size;
+    size_t m_target_encoded_size;
 };
 }  // namespace clp_s
 
