@@ -5,8 +5,8 @@
 # - curl
 # - git
 # - g++
-# NOTE: Dependencies should be installed outside the script to allow the script to be
-# largely distro-agnostic
+# NOTE: Dependencies should be installed outside the script to allow the script to be largely
+# distro-agnostic
 
 # Exit on any error
 set -e
@@ -46,7 +46,7 @@ echo "Checking for elevated privileges..."
 install_command_prefix_args=()
 if [ ${EUID:-$(id -u)} -ne 0 ] ; then
   sudo echo "Script can elevate privileges."
-  install_command_prefix_args=("sudo")
+  install_command_prefix_args+=("sudo")
 fi
 
 # Download
@@ -59,8 +59,7 @@ if [ ! -e "${extracted_dir}" ] ; then
     curl \
       -fsSL \
       "https://github.com/mongodb/mongo-cxx-driver/releases/download/r${version}/${tar_filename}" \
-      -o \
-      "${tar_filename}"
+      -o "${tar_filename}"
   fi
 
   tar -xf "${tar_filename}"
@@ -69,9 +68,8 @@ fi
 # Set up
 cd "${extracted_dir}/build"
 # NOTE: Although the mongocxx docs indicate we should use
-# '-DMONGOCXX_OVERRIDE_DEFAULT_INSTALL_PREFIX=OFF' to install to the default
-# location (/usr/local) but this doesn't seem to work, so we specify
-# CMAKE_INSTALL_PREFIX here
+# '-DMONGOCXX_OVERRIDE_DEFAULT_INSTALL_PREFIX=OFF' to install to the default location (/usr/local),
+# this doesn't seem to work, so we specify CMAKE_INSTALL_PREFIX here
 cmake \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX=/usr/local \
@@ -87,14 +85,14 @@ set -e
 
 # Install
 if [ $checkinstall_installed -eq 0 ] ; then
-  install_command_prefix_args+=( \
-    checkinstall \
-    --pkgname "${package_name}" \
-    --pkgversion "${version}" \
-    --provides "${package_name}" \
-    --nodoc \
-    -y \
-    --pakdir "${deb_output_dir}" \
+  install_command_prefix_args+=(
+    checkinstall
+    --pkgname "${package_name}"
+    --pkgversion "${version}"
+    --provides "${package_name}"
+    --nodoc
+    -y
+    --pakdir "${deb_output_dir}"
   )
 fi
 "${install_command_prefix_args[@]}" cmake --build . --target install --parallel

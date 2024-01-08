@@ -5,8 +5,8 @@
 # - curl
 # - git
 # - g++
-# NOTE: Dependencies should be installed outside the script to allow the script to be
-# largely distro-agnostic
+# NOTE: Dependencies should be installed outside the script to allow the script to be largely
+# distro-agnostic
 
 # Exit on any error
 set -e
@@ -26,7 +26,7 @@ temp_dir="/tmp/${package_name}-installation"
 deb_output_dir="${temp_dir}"
 if [[ "$#" -gt 1 ]] ; then
   deb_output_dir="$(readlink -f "$2")"
-  if [ ! -d ${deb_output_dir} ] ; then
+  if [ ! -d "${deb_output_dir}" ] ; then
     echo "${deb_output_dir} does not exist or is not a directory"
     exit
   fi
@@ -34,7 +34,7 @@ fi
 
 # Check if already installed
 set +e
-dpkg -l ${package_name} | grep ${version}
+dpkg -l "${package_name}" | grep "${version}"
 installed=$?
 set -e
 if [ $installed -eq 0 ] ; then
@@ -46,7 +46,7 @@ echo "Checking for elevated privileges..."
 install_command_prefix_args=()
 if [ ${EUID:-$(id -u)} -ne 0 ] ; then
   sudo echo "Script can elevate privileges."
-  install_command_prefix_args=("sudo")
+  install_command_prefix_args+=("sudo")
 fi
 
 # Download
@@ -59,8 +59,7 @@ if [ ! -e "${extracted_dir}" ] ; then
     curl \
       -fsSL \
       "https://github.com/mongodb/mongo-c-driver/releases/download/${version}/${tar_filename}" \
-      -o \
-      "${tar_filename}"
+      -o "${tar_filename}"
   fi
 
   tar -xf "${tar_filename}"
@@ -84,14 +83,14 @@ set -e
 
 # Install
 if [ $checkinstall_installed -eq 0 ] ; then
-  install_command_prefix_args+=( \
-    checkinstall \
-    --pkgname "${package_name}" \
-    --pkgversion "${version}" \
-    --provides "${package_name}" \
-    --nodoc \
-    -y \
-    --pakdir "${deb_output_dir}" \
+  install_command_prefix_args+=(
+    checkinstall
+    --pkgname "${package_name}"
+    --pkgversion "${version}"
+    --provides "${package_name}"
+    --nodoc
+    -y
+    --pakdir "${deb_output_dir}"
   )
 fi
 "${install_command_prefix_args[@]}" cmake --build . --target install --parallel
