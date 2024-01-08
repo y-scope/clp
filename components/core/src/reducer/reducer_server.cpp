@@ -33,7 +33,7 @@ using boost::asio::ip::tcp;
 
 namespace reducer {
 
-std::string server_status_to_string(ServerStatus status) {
+static std::string server_status_to_string(ServerStatus status) {
     switch (status) {
         case ServerStatus::IDLE:
             return "IDLE";
@@ -56,36 +56,39 @@ std::string server_status_to_string(ServerStatus status) {
 // TODO: We should use tcp::v6 and set ip::v6_only to false. But this isn't
 // guaranteed to work, so for now, we use v4 to be safe.
 ServerContext::ServerContext(CommandLineArguments& args)
-        : acceptor(ioctx, tcp::endpoint(tcp::v4(), args.get_reducer_port())),
-          host(args.get_reducer_host()),
-          mongodb_jobs_metric_collection(args.get_mongodb_jobs_metric_collection()),
-          polling_interval_ms(args.get_polling_interval()),
-          pipeline(nullptr),
-          status(ServerStatus::IDLE),
-          job_id(-1),
-          timeline_aggregation(false) {
+        : m_tcp_acceptor(m_ioctx, tcp::endpoint(tcp::v4(), args.get_reducer_port())),
+          m_reducer_host(args.get_reducer_host()),
+          m_mongodb_job_metrics_collection(args.get_mongodb_jobs_metric_collection()),
+          m_polling_interval_ms(args.get_polling_interval()),
+          m_pipeline(nullptr),
+          m_status(ServerStatus::IDLE),
+          m_job_id(-1),
+          m_timeline_aggregation(false) {
     try {
-        db.open(args.get_db_host(),
+        m_db.open(
+                args.get_db_host(),
                 args.get_db_port(),
                 args.get_db_user(),
                 args.get_db_password(),
-                args.get_db_database());
+                args.get_db_database()
+        );
     } catch (clp::MySQLDB::OperationFailed& e) {
         SPDLOG_ERROR("Failed to connect to MySQL database error=", e.what());
         throw OperationFailed(clp::ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
     m_take_search_job = std::make_unique<clp::MySQLPreparedStatement>(
-            db.prepare_statement(cTakeSearchJobStatement, strlen(cTakeSearchJobStatement))
+            m_db.prepare_statement(cTakeSearchJobStatement, strlen(cTakeSearchJobStatement))
     );
     m_update_job_status = std::make_unique<clp::MySQLPreparedStatement>(
-            db.prepare_statement(cUpdateJobStatusStatement, strlen(cUpdateJobStatusStatement))
+            m_db.prepare_statement(cUpdateJobStatusStatement, strlen(cUpdateJobStatusStatement))
     );
     m_get_new_jobs
             = (fmt::format(cGetNewJobs, clp::enum_to_underlying_type(JobStatus::PENDING_REDUCER)));
 
     try {
-        mongodb_client = mongocxx::client(mongocxx::uri(args.get_mongodb_uri()));
-        results_database = mongocxx::database(mongodb_client[args.get_mongodb_database()]);
+        m_mongodb_client = mongocxx::client(mongocxx::uri(args.get_mongodb_uri()));
+        m_mongodb_results_database
+                = mongocxx::database(m_mongodb_client[args.get_mongodb_database()]);
     } catch (mongocxx::exception& e) {
         SPDLOG_ERROR("Failed to connect to MongoDB database error=", e.what());
         throw OperationFailed(clp::ErrorCode_BadParam, __FILENAME__, __LINE__);
@@ -93,11 +96,11 @@ ServerContext::ServerContext(CommandLineArguments& args)
 }
 
 ServerStatus ServerContext::execute_assign_new_job() {
-    if (false == db.execute_query(m_get_new_jobs)) {
+    if (false == m_db.execute_query(m_get_new_jobs)) {
         return ServerStatus::FINISHING_REDUCER_ERROR;
     }
 
-    auto it = db.get_iterator();
+    auto it = m_db.get_iterator();
     std::string job_id_str, search_config;
     std::vector<std::pair<int64_t, std::string>> available_jobs;
     while (it.contains_element()) {
@@ -112,8 +115,8 @@ ServerStatus ServerContext::execute_assign_new_job() {
         int64_t reducer_ready = clp::enum_to_underlying_type(JobStatus::REDUCER_READY);
         int64_t pending_reducer = clp::enum_to_underlying_type(JobStatus::PENDING_REDUCER);
         bindings.bind_int64(0, reducer_ready);
-        bindings.bind_int64(1, port);
-        bindings.bind_varchar(2, host.c_str(), host.length());
+        bindings.bind_int64(1, m_reducer_port);
+        bindings.bind_varchar(2, m_reducer_host.c_str(), m_reducer_host.length());
         bindings.bind_int64(3, pending_reducer);
         bindings.bind_int64(4, job.first);
         if (false == m_take_search_job->execute()) {
@@ -122,7 +125,7 @@ ServerStatus ServerContext::execute_assign_new_job() {
 
         if (m_take_search_job->get_affected_rows() > 0) {
             SPDLOG_INFO("Taking job {}", job.first);
-            job_id = job.first;
+            m_job_id = job.first;
 
             msgpack::object_handle handle = msgpack::unpack(job.second.data(), job.second.length());
 
@@ -130,20 +133,21 @@ ServerStatus ServerContext::execute_assign_new_job() {
             // and create pipelines
             std::map<std::string, msgpack::type::variant> query_config = handle.get().convert();
             if (query_config.count("bucket_size")) {
-                timeline_aggregation = true;
+                m_timeline_aggregation = true;
             } else {
-                timeline_aggregation = false;
+                m_timeline_aggregation = false;
             }
 
             // For now all pipelines only perform count
-            pipeline = std::make_unique<Pipeline>(PipelineInputMode::INTRA_STAGE);
-            pipeline->add_pipeline_stage(std::shared_ptr<Operator>(new CountOperator()));
+            m_pipeline = std::make_unique<Pipeline>(PipelineInputMode::INTRA_STAGE);
+            m_pipeline->add_pipeline_stage(std::shared_ptr<Operator>(new CountOperator()));
 
             // TODO: Inefficient to convert job_id back to a string since it was
             // a string in the first place. Might be negligible compared to
             // storing it as a string in addition to as an int.
             std::string collection_name = std::to_string(job.first);
-            results_collection = mongocxx::collection(results_database[collection_name]);
+            m_mongodb_results_collection
+                    = mongocxx::collection(m_mongodb_results_database[collection_name]);
 
             return ServerStatus::RUNNING;
         }
@@ -155,17 +159,17 @@ bool ServerContext::execute_update_job_status(JobStatus new_status) {
     clp::MySQLParamBindings& bindings = m_update_job_status->get_statement_bindings();
     int64_t new_status_int64 = clp::enum_to_underlying_type(new_status);
     bindings.bind_int64(0, new_status_int64);
-    bindings.bind_int64(1, job_id);
+    bindings.bind_int64(1, m_job_id);
 
     return m_update_job_status->execute();
 }
 
 ServerStatus ServerContext::execute_poll_job_done() {
-    if (false == db.execute_query(fmt::format(cPollJobDone, job_id))) {
+    if (false == m_db.execute_query(fmt::format(cPollJobDone, m_job_id))) {
         return ServerStatus::FINISHING_REDUCER_ERROR;
     }
 
-    auto it = db.get_iterator();
+    auto it = m_db.get_iterator();
     std::string job_status_str;
     JobStatus job_status;
     while (it.contains_element()) {
@@ -189,12 +193,12 @@ ServerStatus ServerContext::execute_poll_job_done() {
 }
 
 void ServerContext::reset() {
-    ioctx.reset();
-    pipeline.reset(nullptr);
-    status = ServerStatus::IDLE;
-    job_id = -1;
-    timeline_aggregation = false;
-    updated_tags.clear();
+    m_ioctx.reset();
+    m_pipeline.reset(nullptr);
+    m_status = ServerStatus::IDLE;
+    m_job_id = -1;
+    m_timeline_aggregation = false;
+    m_updated_tags.clear();
 }
 
 struct RecordReceiverContext {
@@ -206,7 +210,7 @@ struct RecordReceiverContext {
 
     RecordReceiverContext(std::shared_ptr<ServerContext> ctx)
             : ctx(std::move(ctx)),
-              socket(ctx->ioctx) {
+              socket(ctx->get_io_context()) {
         buf_size = 1024;
         bytes_occupied = 0;
         buf = new char[buf_size];
@@ -260,7 +264,7 @@ void receive_task(
     char* buf_ptr = rctx->buf;
 
     // if no new bytes terminate
-    if (0 == bytes_remaining || ServerStatus::RUNNING != rctx->ctx->status) {
+    if (0 == bytes_remaining || ServerStatus::RUNNING != rctx->ctx->get_status()) {
         return;
     }
 
@@ -283,10 +287,7 @@ void receive_task(
         if (bytes_remaining >= (record_size + sizeof(record_size))) {
             buf_ptr += sizeof(record_size);
             auto record_group = deserialize(buf_ptr, record_size);
-            if (rctx->ctx->timeline_aggregation) {
-                rctx->ctx->updated_tags.insert(record_group.get_tags());
-            }
-            rctx->ctx->pipeline->push_record_group(record_group);
+            rctx->ctx->push_record_group(record_group);
             bytes_remaining -= (record_size + sizeof(record_size));
             buf_ptr += record_size;
         } else {
@@ -335,7 +336,8 @@ void validate_sender_task(
         std::shared_ptr<RecordReceiverContext> rctx
 ) {
     // if no new bytes terminate
-    if (0 == bytes_remaining || error.failed() || ServerStatus::RUNNING != rctx->ctx->status) {
+    if (0 == bytes_remaining || error.failed() || ServerStatus::RUNNING != rctx->ctx->get_status())
+    {
         SPDLOG_ERROR("Rejecting connection because of connection error");
         return;
     }
@@ -349,12 +351,12 @@ void validate_sender_task(
         return;
     } else if (bytes_remaining == sizeof(int32_t)) {
         memcpy(&job_id, rctx->buf, sizeof(int32_t));
-        if (job_id != rctx->ctx->job_id) {
+        if (job_id != rctx->ctx->get_job_id()) {
             SPDLOG_ERROR(
                     "Rejecting connection from worker with job_id={} during processing of "
                     "job_id={}",
                     job_id,
-                    rctx->ctx->job_id
+                    rctx->ctx->get_job_id()
             );
             return;
         }
@@ -396,7 +398,7 @@ void accept_task(
         std::shared_ptr<ServerContext> ctx,
         std::shared_ptr<RecordReceiverContext> rctx
 ) {
-    if (false == error.failed() && ServerStatus::RUNNING == ctx->status) {
+    if (false == error.failed() && ServerStatus::RUNNING == ctx->get_status()) {
         queue_validate_sender_task(std::move(rctx));
         queue_accept_task(std::move(ctx));
     } else if (error.failed() && boost::system::errc::operation_canceled == error.value()) {
@@ -404,13 +406,13 @@ void accept_task(
     } else if (error.failed()) {
         // tcp acceptor socket was closed -- don't re-queue accept task
         SPDLOG_ERROR("TCP acceptor socket closed");
-        if (ctx->acceptor.is_open()) {
-            ctx->acceptor.close();
+        if (ctx->get_tcp_acceptor().is_open()) {
+            ctx->get_tcp_acceptor().close();
         }
     } else {
         SPDLOG_WARN(
                 "Rejecting connection while not in RUNNING state, state={}",
-                server_status_to_string(ctx->status)
+                server_status_to_string(ctx->get_status())
         );
         queue_accept_task(std::move(ctx));
     }
@@ -419,7 +421,7 @@ void accept_task(
 void queue_accept_task(std::shared_ptr<ServerContext> ctx) {
     auto rctx = RecordReceiverContext::NewReceiver(ctx);
 
-    ctx->acceptor.async_accept(
+    ctx->get_tcp_acceptor().async_accept(
             rctx->socket,
             boost::bind(
                     accept_task,
@@ -430,13 +432,13 @@ void queue_accept_task(std::shared_ptr<ServerContext> ctx) {
     );
 }
 
-bool set_reducer_done_metrics(std::shared_ptr<ServerContext> ctx, JobStatus finish_status) {
+bool ServerContext::publish_reducer_job_metrics(JobStatus finish_status) {
     std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
     std::chrono::duration<double> seconds = now.time_since_epoch();
     double timestamp_seconds = seconds.count();
 
-    ctx->jobs_metric_collection
-            = mongocxx::collection(ctx->results_database[ctx->mongodb_jobs_metric_collection]);
+    auto metrics_collection
+            = mongocxx::collection(m_mongodb_results_database[m_mongodb_job_metrics_collection]);
     std::string status_string;
     switch (finish_status) {
         case JobStatus::SUCCESS:
@@ -454,7 +456,7 @@ bool set_reducer_done_metrics(std::shared_ptr<ServerContext> ctx, JobStatus fini
     }
 
     bsoncxx::builder::stream::document filter_builder;
-    filter_builder << "job_id" << ctx->job_id;
+    filter_builder << "job_id" << m_job_id;
     bsoncxx::document::value filter = filter_builder << bsoncxx::builder::stream::finalize;
     bsoncxx::builder::stream::document update_builder;
     update_builder << "$set" << bsoncxx::builder::stream::open_document << "status" << status_string
@@ -462,30 +464,33 @@ bool set_reducer_done_metrics(std::shared_ptr<ServerContext> ctx, JobStatus fini
                    << bsoncxx::builder::stream::close_document;
     bsoncxx::document::value update = update_builder << bsoncxx::builder::stream::finalize;
 
-    auto result = ctx->jobs_metric_collection.update_one(filter.view(), update.view());
-    if (result) {
-        if (result->modified_count() == 0) {
-            SPDLOG_ERROR("No matching metrics document found for the given filter.");
+    try {
+        auto result = metrics_collection.update_one(filter.view(), update.view());
+        if (result) {
+            if (result->modified_count() == 0) {
+                SPDLOG_ERROR("No matching metrics document found for the given filter.");
+            }
+        } else {
+            SPDLOG_ERROR("Failed to update metrics document.");
         }
-    } else {
-        SPDLOG_ERROR("Failed to update metrics document.");
+    } catch (mongocxx::bulk_write_exception const& e) {
+        SPDLOG_ERROR("MongoDB bulk write exception during metrics update: {}", e.what());
+        return false;
     }
 
     return true;
 }
 
-ServerStatus upsert_timeline_results(std::shared_ptr<ServerContext> ctx) {
-    if (ctx->updated_tags.empty()) {
+ServerStatus ServerContext::upsert_timeline_results() {
+    if (m_updated_tags.empty()) {
         return ServerStatus::RUNNING;
     }
 
-    auto bulk_write = ctx->results_collection.create_bulk_write();
+    auto bulk_write = m_mongodb_results_collection.create_bulk_write();
 
     bool any_updates = false;
     std::vector<std::vector<uint8_t>> results;
-    for (auto group_it = ctx->pipeline->finish(ctx->updated_tags); !group_it->done();
-         group_it->next())
-    {
+    for (auto group_it = m_pipeline->finish(m_updated_tags); !group_it->done(); group_it->next()) {
         int64_t timestamp = std::stoll(group_it->get()->get_tags()[0]);
         results.push_back(serialize_timeline(*group_it->get()));
         std::vector<uint8_t>& encoded_result = results.back();
@@ -503,7 +508,7 @@ ServerStatus upsert_timeline_results(std::shared_ptr<ServerContext> ctx) {
     try {
         if (any_updates) {
             bulk_write.execute();
-            ctx->updated_tags.clear();
+            m_updated_tags.clear();
         }
     } catch (mongocxx::bulk_write_exception const& e) {
         SPDLOG_ERROR("MongoDB bulk write exception during upsert: {}", e.what());
@@ -512,24 +517,47 @@ ServerStatus upsert_timeline_results(std::shared_ptr<ServerContext> ctx) {
     return ServerStatus::RUNNING;
 }
 
+bool ServerContext::publish_pipeline_results() {
+    std::vector<std::vector<uint8_t>> results;
+    std::vector<bsoncxx::document::view> result_documents;
+    for (auto group_it = m_pipeline->finish(); !group_it->done(); group_it->next()) {
+        results.push_back(serialize(*group_it->get(), nlohmann::json::to_bson));
+        std::vector<uint8_t>& encoded_result = results.back();
+        result_documents.push_back(
+                bsoncxx::document::view(encoded_result.data(), encoded_result.size())
+        );
+    }
+
+    try {
+        if (result_documents.size() > 0) {
+            m_mongodb_results_collection.insert_many(result_documents);
+        }
+    } catch (mongocxx::bulk_write_exception const& e) {
+        SPDLOG_ERROR("MongoDB bulk write exception during while dumping results: {}", e.what());
+        return false;
+    }
+    return true;
+}
+
 void poll_db(
         boost::system::error_code const& e,
         std::shared_ptr<ServerContext> ctx,
         boost::asio::steady_timer* poll_timer
 ) {
-    if (ServerStatus::IDLE == ctx->status) {
-        ctx->status = ctx->execute_assign_new_job();
-    } else if (ServerStatus::RUNNING == ctx->status) {
-        ctx->status = ctx->execute_poll_job_done();
+    if (ServerStatus::IDLE == ctx->get_status()) {
+        ctx->set_status(ctx->execute_assign_new_job());
+    } else if (ServerStatus::RUNNING == ctx->get_status()) {
+        ctx->set_status(ctx->execute_poll_job_done());
     }
 
-    if (ServerStatus::RUNNING == ctx->status && ctx->timeline_aggregation) {
-        ctx->status = upsert_timeline_results(ctx);
+    if (ServerStatus::RUNNING == ctx->get_status() && ctx->is_timeline_aggregation()) {
+        ctx->set_status(ctx->upsert_timeline_results());
     }
 
-    if (ServerStatus::IDLE == ctx->status || ServerStatus::RUNNING == ctx->status) {
+    if (ServerStatus::IDLE == ctx->get_status() || ServerStatus::RUNNING == ctx->get_status()) {
         poll_timer->expires_at(
-                poll_timer->expiry() + boost::asio::chrono::milliseconds(ctx->polling_interval_ms)
+                poll_timer->expiry()
+                + boost::asio::chrono::milliseconds(ctx->get_polling_interval())
         );
         poll_timer->async_wait(
                 boost::bind(poll_db, boost::asio::placeholders::error, ctx, poll_timer)
@@ -537,9 +565,9 @@ void poll_db(
     } else {
         SPDLOG_INFO(
                 "Cancelling operations on acceptor socket in state {}",
-                server_status_to_string(ctx->status)
+                server_status_to_string(ctx->get_status())
         );
-        ctx->acceptor.cancel();
+        ctx->get_tcp_acceptor().cancel();
     }
 }
 }  // namespace reducer
@@ -576,16 +604,16 @@ int main(int argc, char const* argv[]) {
     }
 
     // Polling interval
-    boost::asio::steady_timer poll_timer(
-            ctx->ioctx,
-            boost::asio::chrono::milliseconds(ctx->polling_interval_ms)
+    boost::asio::steady_timer polling_timer(
+            ctx->get_io_context(),
+            boost::asio::chrono::milliseconds(ctx->get_polling_interval())
     );
 
-    SPDLOG_INFO("Starting on host {} port {}", ctx->host, ctx->port);
+    SPDLOG_INFO("Starting on host {} port {}", ctx->get_reducer_host(), ctx->get_reducer_port());
 
     // Job acquisition loop
     while (true) {
-        if (ctx->acceptor.is_open()) {
+        if (ctx->get_tcp_acceptor().is_open()) {
             SPDLOG_INFO("Acceptor socket listening successfully");
         } else {
             SPDLOG_ERROR("Failed to bind acceptor socket... exiting");
@@ -593,57 +621,46 @@ int main(int argc, char const* argv[]) {
         }
 
         // Queue up polling and tcp accepting
-        poll_timer.async_wait(
-                boost::bind(reducer::poll_db, boost::asio::placeholders::error, ctx, &poll_timer)
+        polling_timer.async_wait(
+                boost::bind(reducer::poll_db, boost::asio::placeholders::error, ctx, &polling_timer)
         );
         reducer::queue_accept_task(ctx);
 
         SPDLOG_INFO("Waiting for job...");
 
         // Start running the event processing loop
-        ctx->ioctx.run();
+        ctx->run();
 
-        if (reducer::ServerStatus::FINISHING_SUCCESS == ctx->status) {
-            SPDLOG_INFO("Job {} finished successfully", ctx->job_id);
+        if (reducer::ServerStatus::FINISHING_SUCCESS == ctx->get_status()) {
+            SPDLOG_INFO("Job {} finished successfully", ctx->get_job_id());
 
-            if (ctx->timeline_aggregation) {
-                reducer::upsert_timeline_results(ctx);
+            bool results_success = false;
+            if (ctx->is_timeline_aggregation()) {
+                results_success = ctx->upsert_timeline_results()
+                                  != reducer::ServerStatus::FINISHING_REDUCER_ERROR;
             } else {
-                std::vector<std::vector<uint8_t>> results;
-                std::vector<bsoncxx::document::view> result_documents;
-                for (auto group_it = ctx->pipeline->finish(); !group_it->done(); group_it->next()) {
-                    if (ctx->timeline_aggregation) {
-                        results.push_back(serialize_timeline(*group_it->get()));
-                    } else {
-                        results.push_back(serialize(*group_it->get(), nlohmann::json::to_bson));
-                    }
-                    std::vector<uint8_t>& encoded_result = results.back();
-                    result_documents.push_back(
-                            bsoncxx::document::view(encoded_result.data(), encoded_result.size())
-                    );
-                }
-
-                if (result_documents.size() > 0) {
-                    ctx->results_collection.insert_many(result_documents);
-                }
+                results_success = ctx->publish_pipeline_results();
             }
 
             bool done_success = ctx->execute_update_job_status(reducer::JobStatus::SUCCESS);
-            bool metrics_done_success = set_reducer_done_metrics(ctx, reducer::JobStatus::SUCCESS);
-            if (false == done_success || false == metrics_done_success) {
+            bool metrics_done_success
+                    = ctx->publish_reducer_job_metrics(reducer::JobStatus::SUCCESS);
+            if (false == results_success || false == done_success || false == metrics_done_success)
+            {
                 SPDLOG_ERROR("Database operation failed... exiting");
                 return -1;
             }
         } else {
-            SPDLOG_INFO("Job {} finished unsuccesfully", ctx->job_id);
+            SPDLOG_INFO("Job {} finished unsuccesfully", ctx->get_job_id());
             bool done_success = true, metrics_done_success = true;
-            if (reducer::ServerStatus::FINISHING_REDUCER_ERROR == ctx->status) {
+            if (reducer::ServerStatus::FINISHING_REDUCER_ERROR == ctx->get_status()) {
                 done_success = ctx->execute_update_job_status(reducer::JobStatus::FAILED);
-                metrics_done_success = set_reducer_done_metrics(ctx, reducer::JobStatus::FAILED);
-            } else if (reducer::ServerStatus::FINISHING_CANCELLED == ctx->status) {
-                metrics_done_success = set_reducer_done_metrics(ctx, reducer::JobStatus::CANCELLED);
-            } else if (reducer::ServerStatus::FINISHING_REMOTE_ERROR == ctx->status) {
-                metrics_done_success = set_reducer_done_metrics(ctx, reducer::JobStatus::FAILED);
+                metrics_done_success = ctx->publish_reducer_job_metrics(reducer::JobStatus::FAILED);
+            } else if (reducer::ServerStatus::FINISHING_CANCELLED == ctx->get_status()) {
+                metrics_done_success
+                        = ctx->publish_reducer_job_metrics(reducer::JobStatus::CANCELLED);
+            } else if (reducer::ServerStatus::FINISHING_REMOTE_ERROR == ctx->get_status()) {
+                metrics_done_success = ctx->publish_reducer_job_metrics(reducer::JobStatus::FAILED);
             }
 
             if (false == done_success || false == metrics_done_success) {

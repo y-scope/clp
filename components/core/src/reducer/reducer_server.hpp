@@ -54,30 +54,48 @@ public:
         char const* what() const noexcept override { return "ServerContext operation failed"; }
     };
 
-    boost::asio::io_context ioctx;
-    boost::asio::ip::tcp::acceptor acceptor;
-    std::unique_ptr<Pipeline> pipeline;
-    clp::MySQLDB db;  // TODO: consider switching to boost asio mysql connector
-    ServerStatus status;
-    int64_t job_id;
-    int64_t port;
-    mongocxx::client mongodb_client;
-    mongocxx::database results_database;
-    mongocxx::collection results_collection;
-    mongocxx::collection jobs_metric_collection;
-    std::string host;
-    std::string mongodb_jobs_metric_collection;
-    int polling_interval_ms;
-    bool timeline_aggregation;
-    std::set<GroupTags> updated_tags;
-
+    // Constructors
     explicit ServerContext(CommandLineArguments& args);
+
+    // Methods
+    void run() { m_ioctx.run(); }
+
+    boost::asio::io_context& get_io_context() { return m_ioctx; }
+
+    boost::asio::ip::tcp::acceptor& get_tcp_acceptor() { return m_tcp_acceptor; }
+
+    int get_polling_interval() const { return m_polling_interval_ms; }
+
+    bool is_timeline_aggregation() const { return m_timeline_aggregation; }
+
+    std::string const& get_reducer_host() const { return m_reducer_host; }
+
+    int64_t get_reducer_port() const { return m_reducer_port; }
+
+    int64_t get_job_id() const { return m_job_id; }
+
+    ServerStatus get_status() const { return m_status; }
+
+    void set_status(ServerStatus new_status) { m_status = new_status; }
 
     ServerStatus execute_assign_new_job();
 
     bool execute_update_job_status(JobStatus new_status);
 
     ServerStatus execute_poll_job_done();
+
+    ServerStatus upsert_timeline_results();
+
+    bool publish_pipeline_results();
+
+    bool publish_reducer_job_metrics(JobStatus finish_status);
+
+    void push_record_group(RecordGroup const& record_group) {
+        if (m_timeline_aggregation) {
+            m_updated_tags.insert(record_group.get_tags());
+        }
+        m_pipeline->push_record_group(record_group);
+    }
 
     void reset();
 
@@ -94,6 +112,22 @@ private:
     std::string m_get_new_jobs;
     std::unique_ptr<clp::MySQLPreparedStatement> m_take_search_job;
     std::unique_ptr<clp::MySQLPreparedStatement> m_update_job_status;
+
+    boost::asio::io_context m_ioctx;
+    boost::asio::ip::tcp::acceptor m_tcp_acceptor;
+    std::unique_ptr<Pipeline> m_pipeline;
+    clp::MySQLDB m_db;  // TODO: consider switching to boost asio mysql connector
+    ServerStatus m_status;
+    int64_t m_job_id;
+    int64_t m_reducer_port;
+    mongocxx::client m_mongodb_client;
+    mongocxx::database m_mongodb_results_database;
+    mongocxx::collection m_mongodb_results_collection;
+    std::string m_reducer_host;
+    std::string m_mongodb_job_metrics_collection;
+    bool m_timeline_aggregation;
+    std::set<GroupTags> m_updated_tags;
+    int m_polling_interval_ms;
 };
 
 }  // namespace reducer
