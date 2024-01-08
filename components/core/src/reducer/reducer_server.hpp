@@ -58,6 +58,10 @@ public:
     explicit ServerContext(CommandLineArguments& args);
 
     // Methods
+    /**
+     * Execute the server event loop until no tasks remain.
+     * @return
+     */
     void run() { m_ioctx.run(); }
 
     boost::asio::io_context& get_io_context() { return m_ioctx; }
@@ -78,18 +82,54 @@ public:
 
     void set_status(ServerStatus new_status) { m_status = new_status; }
 
+    /**
+     * Poll jobs table to and try to assign this server to run an available job.
+     * Executed repeatedly in the main polling loop while the server is idle.
+     * @return the new status of the ServerContext
+     */
     ServerStatus execute_assign_new_job();
 
+    /**
+     * Write a new job status to the jobs table.
+     * @return true on update success, false on failure
+     */
     bool execute_update_job_status(JobStatus new_status);
 
+    /**
+     * Poll the jobs table and check for an updated job status.
+     * Executed repeatedly in the main polling loop when running a reduction operation.
+     * @return the new status of the ServerContext
+     */
     ServerStatus execute_poll_job_done();
 
+    /**
+     * Upsert the current set of results from the reducer pipeline to MongoDB and clear the tags
+     * updated in the last period.
+     * Executed repeatedly in the main polling loop while running a reduction pipeline that is set
+     * to periodically upsert results.
+     * @return the new status of the ServerContext
+     */
     ServerStatus upsert_timeline_results();
 
+    /**
+     * Publish final reducer pipeline results to MongoDB.
+     * @return true if the insert succeeds, false on failure
+     */
     bool publish_pipeline_results();
 
+    /**
+     * Publish metrics about job completion time and status to MongoDB.
+     * @return true if the insert succeeds, false on failure
+     */
     bool publish_reducer_job_metrics(JobStatus finish_status);
 
+    /**
+     * Pushes a group of records into the current local reducer pipeline. If this reducer
+     * pipeline is periodically upserting results this function will also keep track of which
+     * tags have been updated in the last period.
+     * @param record_group RecordGroup being pushed
+     * @return
+     */
     void push_record_group(RecordGroup const& record_group) {
         if (m_timeline_aggregation) {
             m_updated_tags.insert(record_group.get_tags());
@@ -97,6 +137,11 @@ public:
         m_pipeline->push_record_group(record_group);
     }
 
+    /**
+     * Reset all state in the ServerContext. Must be called between invocations
+     * of run().
+     * @return
+     */
     void reset();
 
 private:
