@@ -1,5 +1,7 @@
 set(
         REDUCER_SOURCES
+        CommandLineArguments.cpp
+        CommandLineArguments.hpp
         CountOperator.cpp
         CountOperator.hpp
         GroupByTime.cpp

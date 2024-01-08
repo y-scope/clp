@@ -14,7 +14,6 @@
 
 #include <boost/asio.hpp>
 #include <boost/bind/bind.hpp>
-#include <boost/program_options.hpp>
 #include <fmt/core.h>
 #include <json/single_include/nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
@@ -23,13 +22,12 @@
 #include "../clp/MySQLPreparedStatement.hpp"
 #include "../clp/spdlog_with_specializations.hpp"
 #include "../clp/type_utils.hpp"
+#include "CommandLineArguments.hpp"
 #include "CountOperator.hpp"
 #include "Pipeline.hpp"
 #include "RecordGroupSerdes.hpp"
 
 using boost::asio::ip::tcp;
-
-namespace po = boost::program_options;
 
 namespace reducer {
 
@@ -94,7 +92,6 @@ public:
     mongocxx::collection results_collection;
     mongocxx::collection jobs_metric_collection;
     std::string host;
-    std::string mongodb_collection;
     std::string mongodb_jobs_metric_collection;
     int polling_interval_ms;
     bool timeline_aggregation;
@@ -103,10 +100,9 @@ public:
     // TODO: We should use tcp::v6 and set ip::v6_only to false. But this isn't
     // guaranteed to work, so for now, we use v4 to be safe.
     ServerContext(
-            std::string& host,
+            std::string const& host,
             int port,
-            std::string& mongodb_collection,
-            std::string& mongodb_jobs_metric_collection,
+            std::string const& mongodb_jobs_metric_collection,
             int polling_interval_ms
     )
             : acceptor(ioctx, tcp::endpoint(tcp::v4(), port)),
@@ -114,9 +110,8 @@ public:
               status(ServerStatus::IDLE),
               job_id(-1),
               port(port),
-              host(std::move(host)),
-              mongodb_collection(std::move(mongodb_collection)),
-              mongodb_jobs_metric_collection(std::move(mongodb_jobs_metric_collection)),
+              host(host),
+              mongodb_jobs_metric_collection(mongodb_jobs_metric_collection),
               polling_interval_ms(polling_interval_ms),
               timeline_aggregation(false) {}
 
@@ -602,47 +597,28 @@ void poll_db(
 }
 
 std::shared_ptr<ServerContext> initialize_server_context(int argc, char const* argv[]) {
-    std::string reducer_host, db_host, db_user, db_pass, database, mongodb_database, mongodb_uri,
-            mongodb_collection, mongodb_jobs_metric_collection;
-    int reducer_port, db_port;
-    int polling_interval_ms;
+    CommandLineArguments args("reducer_server");
 
-    po::options_description arguments("Arguments");
-    arguments.add_options()
-        ("host", po::value<std::string>(&reducer_host)->default_value("127.0.0.1"))
-        ("port", po::value<int>(&reducer_port)->default_value(14'009))
-        ("db-host", po::value<std::string>(&db_host)->default_value("127.0.0.1"))
-        ("db-port", po::value<int>(&db_port)->default_value(3306))
-        ("db-user", po::value<std::string>(&db_user)->default_value("clp-user"))
-        ("db-pass", po::value<std::string>(&db_pass)->default_value("password"))
-        ("database", po::value<std::string>(&database)->default_value("clp-db"))
-        ("mongodb-database", po::value<std::string>(&mongodb_database)->default_value("clp-search"))
-        ("mongodb-uri", po::value<std::string>(&mongodb_uri)->default_value("mongodb://localhost:27017/"))
-        ("mongodb-collection", po::value<std::string>(&mongodb_collection)->default_value("results"))
-        ("mongodb-jobs-metric-collection", po::value<std::string>(&mongodb_jobs_metric_collection)->default_value("search_jobs_metrics"))
-        ("polling-interval-ms", po::value<int>(&polling_interval_ms)->default_value(100))
-        ;
-
-    po::variables_map opts;
-    po::store(po::parse_command_line(argc, argv, arguments), opts);
-
-    try {
-        po::notify(opts);
-    } catch (std::exception& e) {
-        SPDLOG_ERROR("Failed to parse command line options error={}", e.what());
+    auto parsing_result = args.parse_arguments(argc, argv);
+    if (parsing_result != clp::CommandLineArgumentsBase::ParsingResult::Success) {
         return nullptr;
     }
 
     auto ctx = std::make_shared<ServerContext>(
-            reducer_host,
-            reducer_port,
-            mongodb_collection,
-            mongodb_jobs_metric_collection,
-            polling_interval_ms
+            args.get_reducer_host(),
+            args.get_reducer_port(),
+            args.get_mongodb_jobs_metric_collection(),
+            args.get_polling_interval()
     );
 
     try {
-        ctx->db.open(db_host, db_port, db_user, db_pass, database);
+        ctx->db.open(
+                args.get_db_host(),
+                args.get_db_port(),
+                args.get_db_user(),
+                args.get_db_password(),
+                args.get_db_database()
+        );
     } catch (clp::MySQLDB::OperationFailed& e) {
         SPDLOG_ERROR("Failed to connect to MySQL database error=", e.what());
         return nullptr;
@@ -650,8 +626,9 @@ std::shared_ptr<ServerContext> initialize_server_context(int argc, char const* a
     ctx->initialize_database_statements();
 
     try {
-        ctx->mongodb_client = mongocxx::client(mongocxx::uri(mongodb_uri));
-        ctx->results_database = mongocxx::database(ctx->mongodb_client[mongodb_database]);
+        ctx->mongodb_client = mongocxx::client(mongocxx::uri(args.get_mongodb_uri()));
+        ctx->results_database
+                = mongocxx::database(ctx->mongodb_client[args.get_mongodb_database()]);
     } catch (mongocxx::exception& e) {
         SPDLOG_ERROR("Failed to connect to MongoDB database error=", e.what());
         return nullptr;
