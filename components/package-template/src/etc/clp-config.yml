@@ -20,6 +20,10 @@
 #  host: "localhost"
 #  port: 5672
 #
+#results_cache:
+#  host: "localhost"
+#  port: 27017
+#
 ## Where archives should be output to
 #archive_output:
 #  directory: "var/data/archives"
