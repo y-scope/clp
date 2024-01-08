@@ -75,6 +75,15 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif ()
 endif ()
 
+# Find and setup ANTLR Library
+# We build and link to the static library
+find_package(ANTLR REQUIRED)
+if (ANTLR_FOUND)
+    message(STATUS "Found ANTLR ${ANTLR_VERSION}")
+else()
+    message(FATAL_ERROR "Could not find libraries for ANTLR ${ANTLR4_TAG}")
+endif()
+
 # Find and setup Boost Library
 if(CLP_USE_STATIC_LIBS)
     set(Boost_USE_STATIC_LIBS ON)

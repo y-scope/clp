@@ -1,3 +1,12 @@
+if (APPLE)
+    set(ENV{JAVA_HOME} "/usr/local/opt/openjdk@11/")
+endif ()
+
+set(ANTLR4_TAG 4.11.1)
+add_definitions(-DANTLR4CPP_STATIC)
+set(ANTLR_EXECUTABLE ${PROJECT_SOURCE_DIR}/third-party/antlr/antlr-${ANTLR4_TAG}-complete.jar)
+include(ExternalAntlr4Cpp)
+
 find_package(Java REQUIRED COMPONENTS Runtime)
 
 if(NOT ANTLR_EXECUTABLE)
