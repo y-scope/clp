@@ -3,8 +3,7 @@
 #include <iostream>
 
 #include <boost/program_options.hpp>
-
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 
 namespace po = boost::program_options;
 

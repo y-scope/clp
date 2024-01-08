@@ -7,7 +7,7 @@
 #include <memory>
 #include <string>
 
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 
 // Zstd library
 #include <zstd.h>

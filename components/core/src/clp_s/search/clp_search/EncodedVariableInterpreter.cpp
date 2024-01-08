@@ -6,8 +6,9 @@
 #include <cassert>
 #include <cmath>
 
+#include <spdlog/spdlog.h>
+
 #include "../../VariableEncoder.hpp"
-#include "spdlog/spdlog.h"
 
 using std::string;
 using std::unordered_set;

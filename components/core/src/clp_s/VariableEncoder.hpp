@@ -5,9 +5,10 @@
 
 #include <string>
 
+#include <simdjson.h>
+
 #include "DictionaryEntry.hpp"
 #include "DictionaryWriter.hpp"
-#include "simdjson.h"
 
 using namespace simdjson;
 

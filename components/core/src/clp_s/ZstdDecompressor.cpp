@@ -5,8 +5,7 @@
 #include <algorithm>
 
 #include <boost/filesystem.hpp>
-
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 
 namespace clp_s {
 ZstdDecompressor::ZstdDecompressor()

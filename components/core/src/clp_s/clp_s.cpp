@@ -1,3 +1,5 @@
+#include <spdlog/sinks/stdout_sinks.h>
+
 #include "CommandLineArguments.hpp"
 #include "JsonConstructor.hpp"
 #include "JsonParser.hpp"
@@ -10,7 +12,6 @@
 #include "search/OrOfAndForm.hpp"
 #include "search/Output.hpp"
 #include "search/SchemaMatch.hpp"
-#include "spdlog/sinks/stdout_sinks.h"
 #include "TimestampPattern.hpp"
 #include "Utils.hpp"
 

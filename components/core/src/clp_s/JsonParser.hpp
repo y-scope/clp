@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <boost/uuid/random_generator.hpp>
+#include <simdjson.h>
 
 #include "ArchiveWriter.hpp"
 #include "DictionaryWriter.hpp"
@@ -17,7 +18,6 @@
 #include "SchemaMap.hpp"
 #include "SchemaTree.hpp"
 #include "SchemaWriter.hpp"
-#include "simdjson.h"
 #include "TimestampDictionaryWriter.hpp"
 #include "Utils.hpp"
 #include "ZstdCompressor.hpp"

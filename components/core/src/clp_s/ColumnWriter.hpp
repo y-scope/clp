@@ -4,9 +4,10 @@
 #include <utility>
 #include <variant>
 
+#include <simdjson.h>
+
 #include "DictionaryWriter.hpp"
 #include "FileWriter.hpp"
-#include "simdjson.h"
 #include "TimestampDictionaryWriter.hpp"
 #include "VariableEncoder.hpp"
 #include "ZstdCompressor.hpp"

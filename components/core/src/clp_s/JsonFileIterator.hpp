@@ -1,8 +1,9 @@
 #ifndef CLP_S_JSONFILEITERATOR_HPP
 #define CLP_S_JSONFILEITERATOR_HPP
 
+#include <simdjson.h>
+
 #include "FileReader.hpp"
-#include "simdjson.h"
 
 namespace clp_s {
 class JsonFileIterator {

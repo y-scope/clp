@@ -7,13 +7,14 @@
 #include <unordered_set>
 #include <utility>
 
+#include <simdjson.h>
+
 #include "../SchemaReader.hpp"
 #include "../Utils.hpp"
 #include "clp_search/Query.hpp"
 #include "Expression.hpp"
 #include "Integral.hpp"
 #include "SchemaMatch.hpp"
-#include "simdjson.h"
 #include "StringLiteral.hpp"
 
 using namespace simdjson;

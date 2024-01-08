@@ -1,6 +1,6 @@
 #include "Utils.hpp"
 
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 
 using std::string;
 using std::string_view;

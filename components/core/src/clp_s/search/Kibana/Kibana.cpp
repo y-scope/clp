@@ -2,7 +2,8 @@
 #include <string>
 #include <vector>
 
-#include "antlr4-runtime.h"
+#include <antlr4-runtime.h>
+
 #include "KibanaBaseVisitor.h"
 #include "KibanaLexer.h"
 #include "KibanaParser.h"

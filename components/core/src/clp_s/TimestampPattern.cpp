@@ -11,7 +11,7 @@
 #include "../../submodules/date/include/date/date.h"
 
 // spdlog
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
 
 using std::string;
 using std::to_string;
