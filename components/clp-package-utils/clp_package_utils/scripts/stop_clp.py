@@ -106,7 +106,7 @@ def main(argv):
             if queue_config_file_path.exists():
                 queue_config_file_path.unlink()
         if '' == component_name or DB_COMPONENT_NAME == component_name:
-            stop_container(f'clp-db-{instance_id}')
+            stop_container(f'clp-{DB_COMPONENT_NAME}-{instance_id}')
 
         if '' == component_name:
             # NOTE: We can only remove the instance ID file if all containers have been stopped.
