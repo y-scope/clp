@@ -6,6 +6,7 @@ brew install \
   cmake \
   fmt \
   gcc \
+  java11 \
   libarchive \
   lz4 \
   mariadb-connector-c \

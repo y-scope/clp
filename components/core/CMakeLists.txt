@@ -75,6 +75,15 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif ()
 endif ()
 
+# Find and setup ANTLR Library
+# We build and link to the static library
+find_package(ANTLR REQUIRED)
+if (ANTLR_FOUND)
+    message(STATUS "Found ANTLR ${ANTLR_VERSION}")
+else()
+    message(FATAL_ERROR "Could not find libraries for ANTLR ${ANTLR4_TAG}")
+endif()
+
 # Find and setup Boost Library
 if(CLP_USE_STATIC_LIBS)
     set(Boost_USE_STATIC_LIBS ON)
@@ -142,6 +151,13 @@ else()
     message(FATAL_ERROR "Could not find msgpack-cxx")
 endif()
 
+# Add abseil-cpp
+set(ABSL_PROPAGATE_CXX_STD ON)
+add_subdirectory(submodules/abseil-cpp EXCLUDE_FROM_ALL)
+
+# Add simdjson
+add_subdirectory(submodules/simdjson EXCLUDE_FROM_ALL)
+
 # Add yaml-cpp
 add_subdirectory(submodules/yaml-cpp EXCLUDE_FROM_ALL)
 
@@ -167,6 +183,7 @@ add_subdirectory(src/clp/clg)
 add_subdirectory(src/clp/clo)
 add_subdirectory(src/clp/clp)
 add_subdirectory(src/clp/make_dictionaries_readable)
+add_subdirectory(src/clp_s)
 
 set(SOURCE_FILES_unitTest
         src/clp/BufferedFileReader.cpp

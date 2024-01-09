@@ -17,3 +17,9 @@
 [submodule "components/core/submodules/boost-outcome"]
 	path = components/core/submodules/boost-outcome
 	url = https://github.com/boostorg/outcome.git
+[submodule "components/core/submodules/simdjson"]
+	path = components/core/submodules/simdjson
+	url = https://github.com/simdjson/simdjson.git
+[submodule "components/core/submodules/abseil-cpp"]
+	path = components/core/submodules/abseil-cpp
+	url = https://github.com/abseil/abseil-cpp.git
