@@ -20,8 +20,8 @@ add_library(
         ../OrExpr.hpp
         ../StringLiteral.hpp
         ${ANTLR_KqlParser_CXX_OUTPUTS}
-        Kql.cpp
-        Kql.hpp
+        kql.cpp
+        kql.hpp
 )
 target_compile_features(kql PRIVATE cxx_std_17)
 target_include_directories(kql PRIVATE ${ANTLR_KqlParser_OUTPUT_DIR})
