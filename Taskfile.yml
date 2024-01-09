@@ -3,6 +3,7 @@ version: "3"
 vars:
   BUILD_DIR: "{{.TASKFILE_DIR}}/build"
   CORE_COMPONENT_BUILD_DIR: "{{.TASKFILE_DIR}}/build/core"
+  LINT_VENV_DIR: "{{.TASKFILE_DIR}}/.lint-venv"
   PACKAGE_BUILD_DIR: "{{.TASKFILE_DIR}}/build/clp-package"
   PACKAGE_VERSION: "0.0.3-dev"
   PYTHON_VERSION:
@@ -140,6 +141,66 @@ tasks:
       vars:
         COMPONENT: "{{.TASK}}"
 
+  lint-check:
+    deps: ["lint-venv"]
+    cmds:
+      - task: "core-lint-check"
+      - task: "yamllint"
+
+  lint-fix:
+    deps: ["lint-venv"]
+    cmds:
+      - task: "core-lint-fix"
+      - task: "yamllint"
+
+  core-lint-check:
+    dir: "{{.TASKFILE_DIR}}/components/core"
+    cmds:
+      - task: "core-lint"
+        vars:
+          FLAGS: "--dry-run"
+    sources: &core_lint_source_files
+      - ".clang-format"
+      - "src/**/*.cpp"
+      - "src/**/*.h"
+      - "src/**/*.hpp"
+      - "src/**/*.inc"
+      - "Taskfile.yml"
+      - "tests/**/*.cpp"
+      - "tests/**/*.h"
+      - "tests/**/*.hpp"
+      - "tests/**/*.inc"
+
+  core-lint-fix:
+    dir: "{{.TASKFILE_DIR}}/components/core"
+    cmds:
+      - task: "core-lint"
+        vars:
+          FLAGS: "-i"
+    sources: *core_lint_source_files
+
+  yamllint:
+    deps: ["lint-venv"]
+    cmds:
+      - |-
+        . "{{.LINT_VENV_DIR}}/bin/activate"
+        yamllint .
+
+  core-lint:
+    internal: true
+    requires:
+      vars: ["FLAGS"]
+    deps: ["lint-venv"]
+    dir: "{{.TASKFILE_DIR}}/components/core"
+    cmds:
+      - |-
+        . "{{.LINT_VENV_DIR}}/bin/activate"
+        find src tests \
+          -type f \
+          \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.inc" \) \
+          -print0 | \
+            xargs -0 clang-format {{.FLAGS}} -Werror
+
   core-submodules:
     internal: true
     vars:
@@ -211,3 +272,25 @@ tasks:
     cmds:
       - "rm -rf dist"
       - "rm -rf poetry.lock"
+
+  lint-venv:
+    internal: true
+    dir: "{{.TASKFILE_DIR}}"
+    cmds:
+      - "rm -rf '{{.LINT_VENV_DIR}}'"
+      - "python3 -m venv '{{.LINT_VENV_DIR}}'"
+      # Remove calls to `hash` since Task uses `gosh` rather than `bash`.
+      # NOTE: Older versions of Python's venv would only call `hash` if they detected the running
+      # shell was one that had the command, but that's not the case in newer versions.
+      - "sed -i 's/^\\s*hash\\s\\+.*/true/g' \"{{.LINT_VENV_DIR}}/bin/activate\""
+      - |-
+        . "{{.LINT_VENV_DIR}}/bin/activate"
+        pip3 install --upgrade pip
+        pip3 install --upgrade -r lint-requirements.txt
+    method: "timestamp"
+    sources:
+      - "lint-requirements.txt"
+      - "Taskfile.yml"
+    status:
+      - "test -d {{.LINT_VENV_DIR}}"
+      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y {{.LINT_VENV_DIR}})"

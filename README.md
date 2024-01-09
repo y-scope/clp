@@ -59,7 +59,28 @@ useful for building and running CLP:
 
 This is our open-source release which we will be constantly updating with bug fixes, features, etc.
 If you would like a feature or want to report a bug, please file an issue and we'll be happy to engage.
-We also welcome any contributions!
+
+# Contributing
+
+Have an issue you want to fix or a feature you'd like to implement? We'd love to see it!
+
+## Linting
+
+Before submitting a PR, ensure you've run our linting tools and either fixed any violations or
+suppressed the warning. To run our linting workflows locally, you'll need [Task][7]. Alternatively,
+you can run the [clp-lint](.github/workflows/clp-lint.yaml) workflow in your fork.
+
+To perform the linting checks:
+
+```shell
+task lint-check
+```
+
+To also apply any automatic fixes:
+
+```shell
+task lint-fix
+```
 
 [1]: https://github.com/orgs/y-scope/packages?repo_name=clp
 [2]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-centos7.4
@@ -67,3 +88,4 @@ We also welcome any contributions!
 [4]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-ubuntu-jammy
 [5]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-x86-ubuntu-focal
 [6]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-execution-x86-ubuntu-focal
+[7]: https://taskfile.dev/
