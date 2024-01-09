@@ -1,3 +1,9 @@
+# NOTE: FindANTLR.cmake taken from
+# https://github.com/antlr/antlr4/blob/4.13.1/runtime/Cpp/cmake/FindANTLR.cmake
+
+# TODO: Clean up ANTLR cmake files
+# On macOS, the way Java is installed with brew doesn't also make it the default version of Java on
+# the system. So we set JAVA_HOME to the install location here.
 if (APPLE)
     set(ENV{JAVA_HOME} "/usr/local/opt/openjdk@11/")
 endif ()
@@ -7,7 +13,7 @@ add_definitions(-DANTLR4CPP_STATIC)
 set(ANTLR_EXECUTABLE ${PROJECT_SOURCE_DIR}/third-party/antlr/antlr-${ANTLR4_TAG}-complete.jar)
 include(ExternalAntlr4Cpp)
 
-find_package(Java REQUIRED COMPONENTS Runtime)
+find_package(Java 11 REQUIRED COMPONENTS Runtime)
 
 if(NOT ANTLR_EXECUTABLE)
     find_program(ANTLR_EXECUTABLE

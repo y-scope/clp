@@ -1,3 +1,6 @@
+# NOTE: ExternalAntlr4Cpp.cmake taken from
+# https://github.com/antlr/antlr4/blob/4.13.1/runtime/Cpp/cmake/ExternalAntlr4Cpp.cmake
+
 cmake_minimum_required(VERSION 3.7)
 
 if(POLICY CMP0114)
@@ -46,7 +49,7 @@ else()
         set(ANTLR4_SHARED_LIBRARIES
                 ${ANTLR4_OUTPUT_DIR}/libantlr4-runtime.dll.a)
         set(ANTLR4_RUNTIME_LIBRARIES
-                ${ANTLR4_OUTPUT_DIR}/cygantlr4-runtime-4.13.1.dll)
+                ${ANTLR4_OUTPUT_DIR}/cygantlr4-runtime-${ANTLR4_TAG}.dll)
     elseif(APPLE)
         set(ANTLR4_RUNTIME_LIBRARIES
                 ${ANTLR4_OUTPUT_DIR}/libantlr4-runtime.dylib)
