@@ -211,7 +211,7 @@ bool ServerContext::publish_reducer_job_metrics(JobStatus finish_status) {
             status_string = "cancelled";
             break;
         default:
-            SPDLOG_ERROR("Unexpected done status: {}", finish_status);
+            SPDLOG_ERROR("Unexpected done status: {}", static_cast<int>(finish_status));
             return false;
     }
 
