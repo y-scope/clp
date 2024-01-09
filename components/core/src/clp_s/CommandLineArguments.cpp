@@ -143,7 +143,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 std::cerr << "  # Compress file1.json and dir1 into archives-dir" << std::endl;
                 std::cerr << "  " << m_program_name << " c archives-dir file1.json dir1"
                           << std::endl;
-                std::cerr << std::endl;
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
@@ -196,7 +195,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 std::cerr << "Examples:" << std::endl;
                 std::cerr << "  # Decompress all files from archives-dir into output-dir"
                           << std::endl;
-                std::cerr << "  " << m_program_name << "x archives-dir output-dir" << std::endl;
+                std::cerr << "  " << m_program_name << " x archives-dir output-dir" << std::endl;
                 std::cerr << std::endl;
 
                 po::options_description visible_options;
@@ -250,8 +249,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 print_search_usage();
 
                 std::cerr << "Examples:" << std::endl;
-                std::cerr << "  # Search archives-dir" << std::endl;
-                std::cerr << "  " << m_program_name << " s archives-dir query" << std::endl;
+                std::cerr << "  # Search archives-dir for logs matching a KQL query" << std::endl;
+                std::cerr << "  " << m_program_name << " s archives-dir kql-query" << std::endl;
                 std::cerr << std::endl;
 
                 po::options_description visible_options;
@@ -294,6 +293,6 @@ void CommandLineArguments::print_decompression_usage() const {
 }
 
 void CommandLineArguments::print_search_usage() const {
-    std::cerr << "Usage: " << m_program_name << " s [OPTIONS] ARCHIVES_DIR QUERY" << std::endl;
+    std::cerr << "Usage: " << m_program_name << " s [OPTIONS] ARCHIVES_DIR KQL_QUERY" << std::endl;
 }
 }  // namespace clp_s
