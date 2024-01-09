@@ -38,7 +38,7 @@ Usage:
 ./clp-s c --timestamp-key 'd.@timestamp' /mnt/data/archives1 /mnt/logs/log1.json
 ```
 
-> [!NOTE]
+> [!TIP]
 > Specifying the timestamp-key will create a range-index for the timestamp column which can increase
 > compression ratio and search performance.
 

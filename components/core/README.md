@@ -104,5 +104,5 @@ the relevant paths on your machine.
   * `clp-s` is used for compressing and searching semi-structured logs (e.g., JSON) with support for
     handling highly dynamic schemas.
 
-See [clp-unstructured](../../docs/core/clp-unstructured.md) and
-[clp-structured](../../docs/core/clp-structured.md) for usage instructions.
+See [Using CLP for unstructured logs](../../docs/core/clp-unstructured.md) and
+[Using CLP for semi-structured logs](../../docs/core/clp-structured.md) for usage instructions.
