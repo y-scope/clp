@@ -117,7 +117,7 @@ set(
         search/Value.hpp
 )
 
-add_executable(clp-s clp_s.cpp ${CLP_S_SOURCES} ${CLP_S_SEARCH_SOURCES})
+add_executable(clp-s clp-s.cpp ${CLP_S_SOURCES} ${CLP_S_SEARCH_SOURCES})
 target_compile_features(clp-s PRIVATE cxx_std_17)
 target_link_libraries(
         clp-s
