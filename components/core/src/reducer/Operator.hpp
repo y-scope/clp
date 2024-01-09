@@ -24,7 +24,7 @@ class Operator {
 public:
     Operator() : m_next_stage(nullptr) {}
 
-    virtual ~Operator() {}
+    virtual ~Operator() = default;
 
     virtual OperatorType get_type() const = 0;
     virtual OperatorResultCardinality get_cardinality() const = 0;

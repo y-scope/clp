@@ -15,8 +15,7 @@ class RecordGroup {
 public:
     virtual std::unique_ptr<RecordIterator> record_it() const = 0;
     virtual GroupTags const& get_tags() const = 0;
-
-    virtual ~RecordGroup() {}
+    virtual ~RecordGroup() = default;
 };
 
 // TODO: change these to pointer-based so we can have nullptr/default init

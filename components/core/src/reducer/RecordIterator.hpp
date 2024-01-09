@@ -13,8 +13,7 @@ public:
     virtual Record const* get() = 0;
     virtual void next() = 0;
     virtual bool done() = 0;
-
-    virtual ~RecordIterator() {}
+    virtual ~RecordIterator() = default;
 };
 
 class SingleRecordIterator : public RecordIterator {

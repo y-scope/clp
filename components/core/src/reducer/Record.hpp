@@ -21,7 +21,7 @@ public:
 
     virtual std::unique_ptr<RecordValueIterator> value_it() const = 0;
 
-    virtual ~Record() {}
+    virtual ~Record() = default;
 };
 
 class StringRecordAdapter : public Record {
