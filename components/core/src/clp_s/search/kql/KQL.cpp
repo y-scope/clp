@@ -220,7 +220,7 @@ public:
     }
 };
 
-std::shared_ptr<Expression> ParseKqlExpression(std::istream& in) {
+std::shared_ptr<Expression> parse_kql_expression(std::istream& in) {
     std::shared_ptr<Expression> expr = EmptyExpr::create();
     ErrorListener lexer_error_listener;
     ErrorListener parser_error_listener;
