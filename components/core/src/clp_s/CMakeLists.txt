@@ -18,7 +18,6 @@ set(
         Defs.hpp
         DictionaryEntry.cpp
         DictionaryEntry.hpp
-        DictionaryReader.cpp
         DictionaryReader.hpp
         DictionaryWriter.cpp
         DictionaryWriter.hpp
@@ -33,7 +32,6 @@ set(
         JsonFileIterator.hpp
         JsonParser.cpp
         JsonParser.hpp
-        JsonSerializer.cpp
         JsonSerializer.hpp
         ParsedMessage.hpp
         ReaderUtils.cpp
