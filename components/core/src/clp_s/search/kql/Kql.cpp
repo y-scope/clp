@@ -4,9 +4,9 @@
 
 #include <antlr4-runtime.h>
 
-#include "KQLBaseVisitor.h"
-#include "KQLLexer.h"
-#include "KQLParser.h"
+#include "KqlBaseVisitor.h"
+#include "KqlLexer.h"
+#include "KqlParser.h"
 // If redlining may want to add ${workspaceFolder}/build/**
 // to include path for vscode C/C++ utils
 
@@ -45,7 +45,7 @@ public:
     bool error() const { return m_error; }
 };
 
-class ParseTreeVisitor : public KQLBaseVisitor {
+class ParseTreeVisitor : public KqlBaseVisitor {
 private:
     static void
     prepend_column(std::shared_ptr<ColumnDescriptor> const& desc, DescriptorList const& prefix) {
@@ -97,13 +97,13 @@ public:
         return DateLiteral::create_from_string(token);
     }
 
-    std::any visitStart(KQLParser::StartContext* ctx) override {
+    std::any visitStart(KqlParser::StartContext* ctx) override {
         // only go through first child (query) and avoid default
         // behaviour of returning result from last child (EOF in this case)
         return ctx->children[0]->accept(this);
     }
 
-    std::any visitColumn(KQLParser::ColumnContext* ctx) override {
+    std::any visitColumn(KqlParser::ColumnContext* ctx) override {
         std::string column = unquote_string(ctx->LITERAL()->getText());
 
         std::vector<std::string> descriptor_tokens;
@@ -112,7 +112,7 @@ public:
         return ColumnDescriptor::create(descriptor_tokens);
     }
 
-    std::any visitNestedQuery(KQLParser::NestedQueryContext* ctx) override {
+    std::any visitNestedQuery(KqlParser::NestedQueryContext* ctx) override {
         auto descriptor = std::any_cast<std::shared_ptr<ColumnDescriptor>>(ctx->col->accept(this));
         DescriptorList prefix = descriptor->get_descriptor_list();
 
@@ -122,27 +122,27 @@ public:
         return nested_expr;
     }
 
-    std::any visitOrAndQuery(KQLParser::OrAndQueryContext* ctx) override {
+    std::any visitOrAndQuery(KqlParser::OrAndQueryContext* ctx) override {
         auto lhs = std::any_cast<std::shared_ptr<Expression>>(ctx->lhs->accept(this));
         auto rhs = std::any_cast<std::shared_ptr<Expression>>(ctx->rhs->accept(this));
-        if (ctx->op->getType() == KQLParser::AND) {
+        if (ctx->op->getType() == KqlParser::AND) {
             return AndExpr::create(lhs, rhs);
         } else {
             return OrExpr::create(lhs, rhs);
         }
     }
 
-    std::any visitNotQuery(KQLParser::NotQueryContext* ctx) override {
+    std::any visitNotQuery(KqlParser::NotQueryContext* ctx) override {
         auto q = std::any_cast<std::shared_ptr<Expression>>(ctx->q->accept(this));
         q->invert();
         return q;
     }
 
-    std::any visitSubQuery(KQLParser::SubQueryContext* ctx) override {
+    std::any visitSubQuery(KqlParser::SubQueryContext* ctx) override {
         return ctx->q->accept(this);
     }
 
-    std::any visitColumn_value_expression(KQLParser::Column_value_expressionContext* ctx) override {
+    std::any visitColumn_value_expression(KqlParser::Column_value_expressionContext* ctx) override {
         auto descriptor = std::any_cast<std::shared_ptr<ColumnDescriptor>>(ctx->col->accept(this));
 
         if (ctx->lit) {
@@ -159,7 +159,7 @@ public:
         }
     }
 
-    std::any visitColumn_range_expression(KQLParser::Column_range_expressionContext* ctx) override {
+    std::any visitColumn_range_expression(KqlParser::Column_range_expressionContext* ctx) override {
         auto descriptor = std::any_cast<std::shared_ptr<ColumnDescriptor>>(ctx->col->accept(this));
         std::shared_ptr<Literal> lit;
         if (ctx->lit) {
@@ -183,13 +183,13 @@ public:
         return FilterExpr::create(descriptor, op, lit);
     }
 
-    std::any visitValue_expression(KQLParser::Value_expressionContext* ctx) override {
+    std::any visitValue_expression(KqlParser::Value_expressionContext* ctx) override {
         auto lit = unquote_literal(ctx->LITERAL()->getText());
         auto descriptor = ColumnDescriptor::create("*");
         return FilterExpr::create(descriptor, FilterOperation::EQ, lit);
     }
 
-    std::any visitList_of_values(KQLParser::List_of_valuesContext* ctx) override {
+    std::any visitList_of_values(KqlParser::List_of_valuesContext* ctx) override {
         std::shared_ptr<Expression> base(nullptr);
         bool invert_each_filter = false;
         if (ctx->condition) {
@@ -226,12 +226,12 @@ std::shared_ptr<Expression> parse_kql_expression(std::istream& in) {
     ErrorListener parser_error_listener;
 
     ANTLRInputStream input(in);
-    KQLLexer lexer(&input);
+    KqlLexer lexer(&input);
     lexer.addErrorListener(&lexer_error_listener);
     CommonTokenStream tokens(&lexer);
-    KQLParser parser(&tokens);
+    KqlParser parser(&tokens);
     parser.addErrorListener(&parser_error_listener);
-    KQLParser::StartContext* tree = parser.start();
+    KqlParser::StartContext* tree = parser.start();
 
     if (lexer_error_listener.error()) {
         std::cout << "Lexer Error" << std::endl;

@@ -7,7 +7,7 @@
 #include "search/ConvertToExists.hpp"
 #include "search/EmptyExpr.hpp"
 #include "search/EvaluateTimestampIndex.hpp"
-#include "search/kql/KQL.hpp"
+#include "search/kql/Kql.hpp"
 #include "search/NarrowTypes.hpp"
 #include "search/OrOfAndForm.hpp"
 #include "search/Output.hpp"

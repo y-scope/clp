@@ -1,4 +1,4 @@
-grammar KQL;
+grammar Kql;
 
 start: query EOF ;
 

@@ -1,12 +1,12 @@
 ANTLR_TARGET(
-        KQLParser
-        KQL.g4
+        KqlParser
+        Kql.g4
         LEXER PARSER VISITOR
         PACKAGE kql
 )
 
 add_library(
-        KQL
+        kql
         ../../Utils.hpp
         ../AndExpr.hpp
         ../BooleanLiteral.hpp
@@ -19,10 +19,10 @@ add_library(
         ../NullLiteral.hpp
         ../OrExpr.hpp
         ../StringLiteral.hpp
-        ${ANTLR_KQLParser_CXX_OUTPUTS}
-        KQL.cpp
-        KQL.hpp
+        ${ANTLR_KqlParser_CXX_OUTPUTS}
+        Kql.cpp
+        Kql.hpp
 )
-target_compile_features(KQL PRIVATE cxx_std_17)
-target_include_directories(KQL PRIVATE ${ANTLR_KQLParser_OUTPUT_DIR})
-target_link_libraries(KQL PRIVATE antlr4_static Boost::filesystem)
+target_compile_features(kql PRIVATE cxx_std_17)
+target_include_directories(kql PRIVATE ${ANTLR_KqlParser_OUTPUT_DIR})
+target_link_libraries(kql PRIVATE antlr4_static Boost::filesystem)

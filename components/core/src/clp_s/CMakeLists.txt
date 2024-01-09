@@ -124,7 +124,7 @@ target_link_libraries(
         PRIVATE
         absl::flat_hash_map
         Boost::filesystem Boost::iostreams Boost::program_options
-        KQL
+        kql
         simdjson
         spdlog::spdlog
         ZStd::ZStd
