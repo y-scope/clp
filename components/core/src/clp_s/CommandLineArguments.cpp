@@ -26,8 +26,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
     )(
             "command-args", po::value<std::vector<std::string>>()
     );
-
     // clang-format on
+
     po::positional_options_description general_positional_options_description;
     general_positional_options_description.add("command", 1);
     general_positional_options_description.add("command-args", -1);
@@ -94,8 +94,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                      po::value<std::vector<std::string>>(&m_file_paths)->value_name("PATHS"),
                      "input paths"
              );
-
             // clang-format on
+
             po::options_description compression_options("Compression options");
             // clang-format off
             compression_options.add_options()(
@@ -114,8 +114,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                         default_value(""),
                     "Path (e.g. x.y) for the field containing the log event's timestamp."
             );
-
             // clang-format on
+
             po::positional_options_description positional_options;
             positional_options.add("archive-dir", 1);
             positional_options.add("input-paths", -1);
@@ -171,8 +171,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<std::string>(&m_output_dir),
                     "The output directory for the decompressed file"
             );
-
             // clang-format on
+
             po::positional_options_description positional_options;
             positional_options.add("archives-dir", 1);
             positional_options.add("output-dir", 1);
@@ -227,8 +227,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<std::string>(&m_query),
                     "Query to perform"
             );
-
             // clang-format on
+
             po::positional_options_description positional_options;
             positional_options.add("archives-dir", 1);
             positional_options.add("query", 1);
