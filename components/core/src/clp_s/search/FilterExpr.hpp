@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_FILTER_EXPRESSION_HPP
-#define CLP_S_SEARCH_FILTER_EXPRESSION_HPP
+#ifndef CLP_S_SEARCH_FILTEREXPR_HPP
+#define CLP_S_SEARCH_FILTEREXPR_HPP
 
 #include <string>
 
@@ -97,4 +97,4 @@ private:
 };
 }  // namespace clp_s::search
 
-#endif  // CLP_S_SEARCH_FILTER_EXPRESSION_HPP
+#endif  // CLP_S_SEARCH_FILTEREXPR_HPP

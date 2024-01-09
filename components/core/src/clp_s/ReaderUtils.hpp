@@ -1,5 +1,5 @@
-#ifndef CLP_S__READERUTILS_HPP
-#define CLP_S__READERUTILS_HPP
+#ifndef CLP_S_READERUTILS_HPP
+#define CLP_S_READERUTILS_HPP
 
 #include "DictionaryReader.hpp"
 #include "SchemaReader.hpp"
@@ -115,4 +115,4 @@ public:
 };
 }  // namespace clp_s
 
-#endif  // CLP_S__READERUTILS_HPP
+#endif  // CLP_S_READERUTILS_HPP

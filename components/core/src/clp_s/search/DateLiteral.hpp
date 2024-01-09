@@ -62,4 +62,4 @@ private:
 };
 }  // namespace clp_s::search
 
-#endif
+#endif  // CLP_S_SEARCH_DATELITERAL_HPP

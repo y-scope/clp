@@ -1,7 +1,7 @@
 // Code from CLP
 
-#ifndef CLP_S_SEARCH_CLP_SEARCH_DEFS_HPP
-#define CLP_S_SEARCH_CLP_SEARCH_DEFS_HPP
+#ifndef CLP_S_DEFS_HPP
+#define CLP_S_DEFS_HPP
 
 // C++ libraries
 #include <atomic>
@@ -41,4 +41,4 @@ typedef int64_t encoded_variable_t;
 // Rounds up VALUE to be a multiple of MULTIPLE
 #define ROUND_UP_TO_MULTIPLE(VALUE, MULTIPLE) ((VALUE + MULTIPLE - 1) / MULTIPLE) * MULTIPLE
 
-#endif  // CLP_S_SEARCH_CLP_SEARCH_DEFS_HPP
+#endif  // CLP_S_DEFS_HPP

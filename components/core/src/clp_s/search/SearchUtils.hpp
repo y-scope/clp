@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_SEARCH_UTILS_HPP
-#define CLP_S_SEARCH_SEARCH_UTILS_HPP
+#ifndef CLP_S_SEARCH_SEARCHUTILS_HPP
+#define CLP_S_SEARCH_SEARCHUTILS_HPP
 
 #include "../SchemaTree.hpp"
 #include "Expression.hpp"
@@ -45,4 +45,4 @@ bool double_as_int(double in, FilterOperation op, int64_t& out);
 bool wildcard_match(std::string_view s, std::string_view p);
 }  // namespace clp_s::search
 
-#endif  // CLP_S_SEARCH_SEARCH_UTILS_HPP
+#endif  // CLP_S_SEARCH_SEARCHUTILS_HPP

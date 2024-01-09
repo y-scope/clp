@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_OR_OF_AND_FORM_HPP
-#define CLP_S_SEARCH_OR_OF_AND_FORM_HPP
+#ifndef CLP_S_SEARCH_OROFANDFORM_HPP
+#define CLP_S_SEARCH_OROFANDFORM_HPP
 
 #include <vector>
 
@@ -63,4 +63,4 @@ private:
 };
 }  // namespace clp_s::search
 
-#endif  // CLP_S_SEARCH_OR_OF_AND_FORM_HPP
+#endif  // CLP_S_SEARCH_OROFANDFORM_HPP

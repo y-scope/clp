@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_AND_EXPRESSION_HPP
-#define CLP_S_SEARCH_AND_EXPRESSION_HPP
+#ifndef CLP_S_SEARCH_ANDEXPR_HPP
+#define CLP_S_SEARCH_ANDEXPR_HPP
 
 #include "Expression.hpp"
 
@@ -55,4 +55,4 @@ private:
 };
 }  // namespace clp_s::search
 
-#endif  // CLP_S_SEARCH_AND_EXPRESSION_HPP
+#endif  // CLP_S_SEARCH_ANDEXPR_HPP

@@ -1,7 +1,7 @@
 // Code from CLP
 
-#ifndef CLP_S__DICTIONARYENTRY_HPP
-#define CLP_S__DICTIONARYENTRY_HPP
+#ifndef CLP_S_DICTIONARYENTRY_HPP
+#define CLP_S_DICTIONARYENTRY_HPP
 
 #include <string>
 #include <utility>
@@ -287,4 +287,4 @@ public:
 };
 }  // namespace clp_s
 
-#endif  // CLP_S__DICTIONARYENTRY_HPP
+#endif  // CLP_S_DICTIONARYENTRY_HPP

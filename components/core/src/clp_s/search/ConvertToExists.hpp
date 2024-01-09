@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_CONVERT_TO_EXISTS_HPP
-#define CLP_S_SEARCH_CONVERT_TO_EXISTS_HPP
+#ifndef CLP_S_SEARCH_CONVERTTOEXISTS_HPP
+#define CLP_S_SEARCH_CONVERTTOEXISTS_HPP
 
 #include "Transformation.hpp"
 
@@ -26,4 +26,4 @@ private:
 };
 }  // namespace clp_s::search
 
-#endif  // CLP_S_SEARCH_CONVERT_TO_EXISTS_HPP
+#endif  // CLP_S_SEARCH_CONVERTTOEXISTS_HPP

@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_NARROW_TYPES_HPP
-#define CLP_S_SEARCH_NARROW_TYPES_HPP
+#ifndef CLP_S_SEARCH_NARROWTYPES_HPP
+#define CLP_S_SEARCH_NARROWTYPES_HPP
 
 #include "Transformation.hpp"
 
@@ -19,4 +19,4 @@ private:
 };
 }  // namespace clp_s::search
 
-#endif  // CLP_S_SEARCH_NARROW_TYPES_HPP
+#endif  // CLP_S_SEARCH_NARROWTYPES_HPP

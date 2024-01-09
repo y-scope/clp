@@ -18,4 +18,4 @@ public:
 };
 }  // namespace clp_s::search
 
-#endif
+#endif  // CLP_S_SEARCH_TRANSFORMATION_HPP

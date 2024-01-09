@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_NULL_HPP
-#define CLP_S_SEARCH_NULL_HPP
+#ifndef CLP_S_SEARCH_NULLLITERAL_HPP
+#define CLP_S_SEARCH_NULLLITERAL_HPP
 
 #include <memory>
 #include <string>
@@ -51,4 +51,4 @@ private:
 };
 }  // namespace clp_s::search
 
-#endif  // CLP_S_SEARCH_NULL_HPP
+#endif  // CLP_S_SEARCH_NULLLITERAL_HPP

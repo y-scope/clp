@@ -1,5 +1,5 @@
-#ifndef CLP_S_PARSE_KQL_HPP
-#define CLP_S_PARSE_KQL_HPP
+#ifndef CLP_S_SEARCH_KQL_KQL_HPP
+#define CLP_S_SEARCH_KQL_KQL_HPP
 
 #include <istream>
 
@@ -14,4 +14,4 @@ namespace clp_s::search::kql {
 std::shared_ptr<Expression> parse_kql_expression(std::istream& in);
 }  // namespace clp_s::search::kql
 
-#endif  // CLP_S_PARSE_KQL_HPP
+#endif  // CLP_S_SEARCH_KQL_KQL_HPP
