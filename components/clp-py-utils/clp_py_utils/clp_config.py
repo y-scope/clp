@@ -6,8 +6,16 @@ from pydantic import BaseModel, validator
 from .core import get_config_value, make_config_path_absolute, read_yaml_config_file, validate_path_could_be_dir
 
 # Constants
+# Component names
+DB_COMPONENT_NAME = 'database'
+QUEUE_COMPONENT_NAME = 'queue'
+RESULTS_CACHE_COMPONENT_NAME = 'results_cache'
+SCHEDULER_COMPONENT_NAME = 'scheduler'
+WORKER_COMPONENT_NAME = 'worker'
+
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path('etc') / 'credentials.yml'
 CLP_METADATA_TABLE_PREFIX = 'clp_'
+
 
 class Database(BaseModel):
     type: str = 'mariadb'
@@ -93,6 +101,17 @@ class Scheduler(BaseModel):
     jobs_poll_delay: int = 1  # seconds
 
 
+class ResultsCache(BaseModel):
+    host: str = 'localhost'
+    port: int = 27017
+
+    @validator('host')
+    def validate_host(cls, field):
+        if '' == field:
+            raise ValueError(f'{RESULTS_CACHE_COMPONENT_NAME}.host cannot be empty.')
+        return field
+
+
 class Queue(BaseModel):
     host: str = 'localhost'
     port: int = 5672
@@ -148,8 +167,9 @@ class CLPConfig(BaseModel):
     input_logs_directory: pathlib.Path = pathlib.Path('/')
 
     database: Database = Database()
-    scheduler: Scheduler = Scheduler()
     queue: Queue = Queue()
+    results_cache: ResultsCache = ResultsCache()
+    scheduler: Scheduler = Scheduler()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()
@@ -195,8 +215,8 @@ class CLPConfig(BaseModel):
         if config is None:
             raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
         try:
-            self.database.username = get_config_value(config, 'db.user')
-            self.database.password = get_config_value(config, 'db.password')
+            self.database.username = get_config_value(config, f'{DB_COMPONENT_NAME}.user')
+            self.database.password = get_config_value(config, f'{DB_COMPONENT_NAME}.password')
         except KeyError as ex:
             raise ValueError(f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'.")
 
@@ -205,8 +225,8 @@ class CLPConfig(BaseModel):
         if config is None:
             raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
         try:
-            self.queue.username = get_config_value(config, "queue.user")
-            self.queue.password = get_config_value(config, "queue.password")
+            self.queue.username = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.user")
+            self.queue.password = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.password")
         except KeyError as ex:
             raise ValueError(f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'.")
 

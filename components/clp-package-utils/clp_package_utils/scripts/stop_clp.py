@@ -6,15 +6,18 @@ import sys
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
-    DB_COMPONENT_NAME,
-    QUEUE_COMPONENT_NAME,
-    SCHEDULER_COMPONENT_NAME,
-    WORKER_COMPONENT_NAME,
     container_exists,
     get_clp_home,
     validate_and_load_config_file,
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file
+)
+from clp_py_utils.clp_config import (
+    DB_COMPONENT_NAME,
+    QUEUE_COMPONENT_NAME,
+    RESULTS_CACHE_COMPONENT_NAME,
+    SCHEDULER_COMPONENT_NAME,
+    WORKER_COMPONENT_NAME
 )
 
 # Setup logging
@@ -49,6 +52,7 @@ def main(argv):
     component_args_parser = args_parser.add_subparsers(dest='component_name')
     component_args_parser.add_parser(DB_COMPONENT_NAME)
     component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
+    component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
     component_args_parser.add_parser(SCHEDULER_COMPONENT_NAME)
     component_args_parser.add_parser(WORKER_COMPONENT_NAME)
 
@@ -92,6 +96,9 @@ def main(argv):
             container_config_file_path = logs_dir / f'{container_name}.yml'
             if container_config_file_path.exists():
                 container_config_file_path.unlink()
+        if '' == component_name or RESULTS_CACHE_COMPONENT_NAME == component_name:
+            container_name = f'clp-{RESULTS_CACHE_COMPONENT_NAME}-{instance_id}'
+            stop_container(container_name)
         if '' == component_name or QUEUE_COMPONENT_NAME == component_name:
             container_name = f'clp-{QUEUE_COMPONENT_NAME}-{instance_id}'
             stop_container(container_name)
@@ -100,7 +107,7 @@ def main(argv):
             if queue_config_file_path.exists():
                 queue_config_file_path.unlink()
         if '' == component_name or DB_COMPONENT_NAME == component_name:
-            stop_container(f'clp-db-{instance_id}')
+            stop_container(f'clp-{DB_COMPONENT_NAME}-{instance_id}')
 
         if '' == component_name:
             # NOTE: We can only remove the instance ID file if all containers have been stopped.

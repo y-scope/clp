@@ -9,7 +9,13 @@ import typing
 
 import yaml
 
-from clp_py_utils.clp_config import CLPConfig, CLP_DEFAULT_CREDENTIALS_FILE_PATH
+from clp_py_utils.clp_config import (
+    CLPConfig,
+    CLP_DEFAULT_CREDENTIALS_FILE_PATH,
+    DB_COMPONENT_NAME,
+    QUEUE_COMPONENT_NAME,
+    RESULTS_CACHE_COMPONENT_NAME
+)
 from clp_py_utils.core import (
     get_config_value,
     make_config_path_absolute,
@@ -18,12 +24,6 @@ from clp_py_utils.core import (
 )
 
 # CONSTANTS
-# Component names
-DB_COMPONENT_NAME = 'db'
-QUEUE_COMPONENT_NAME = 'queue'
-SCHEDULER_COMPONENT_NAME = 'scheduler'
-WORKER_COMPONENT_NAME = 'worker'
-
 # Paths
 CONTAINER_CLP_HOME = pathlib.Path('/') / 'opt' / 'clp'
 CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path('/') / 'mnt' / 'logs'
@@ -240,23 +240,38 @@ def validate_db_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: 
     try:
         validate_path_could_be_dir(data_dir)
     except ValueError as ex:
-        raise ValueError(f"database data directory is invalid: {ex}")
+        raise ValueError(f"{DB_COMPONENT_NAME} data directory is invalid: {ex}")
 
     try:
         validate_path_could_be_dir(logs_dir)
     except ValueError as ex:
-        raise ValueError(f"database logs directory is invalid: {ex}")
+        raise ValueError(f"{DB_COMPONENT_NAME} logs directory is invalid: {ex}")
 
-    validate_port("database.port", clp_config.database.host, clp_config.database.port)
+    validate_port(f"{DB_COMPONENT_NAME}.port", clp_config.database.host, clp_config.database.port)
 
 
 def validate_queue_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
     try:
         validate_path_could_be_dir(logs_dir)
     except ValueError as ex:
-        raise ValueError(f"queue logs directory is invalid: {ex}")
+        raise ValueError(f"{QUEUE_COMPONENT_NAME} logs directory is invalid: {ex}")
 
-    validate_port("queue.port", clp_config.queue.host, clp_config.queue.port)
+    validate_port(f"{QUEUE_COMPONENT_NAME}.port", clp_config.queue.host, clp_config.queue.port)
+
+
+def validate_results_cache_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path):
+    try:
+        validate_path_could_be_dir(data_dir)
+    except ValueError as ex:
+        raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME} data directory is invalid: {ex}")
+
+    try:
+        validate_path_could_be_dir(logs_dir)
+    except ValueError as ex:
+        raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME} logs directory is invalid: {ex}")
+
+    validate_port(f"{RESULTS_CACHE_COMPONENT_NAME}.port", clp_config.results_cache.host,
+                  clp_config.results_cache.port)
 
 
 def validate_worker_config(clp_config: CLPConfig):
