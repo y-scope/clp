@@ -117,7 +117,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format on
 
             po::positional_options_description positional_options;
-            positional_options.add("archive-dir", 1);
+            positional_options.add("archives-dir", 1);
             positional_options.add("input-paths", -1);
 
             po::options_description all_compression_options;
