@@ -1,6 +1,8 @@
 add_subdirectory(search/kql)
 
-set(CLP_S_SOURCES
+set(
+        CLP_S_SOURCES
+        "${PROJECT_SOURCE_DIR}/submodules/date/include/date/date.h"
         ArchiveReader.cpp
         ArchiveReader.hpp
         ArchiveWriter.cpp
@@ -38,10 +40,10 @@ set(CLP_S_SOURCES
         ReaderUtils.hpp
         SchemaMap.cpp
         SchemaMap.hpp
-        SchemaTree.cpp
-        SchemaTree.hpp
         SchemaReader.cpp
         SchemaReader.hpp
+        SchemaTree.cpp
+        SchemaTree.hpp
         SchemaWriter.cpp
         SchemaWriter.hpp
         TimestampDictionaryReader.cpp
@@ -63,22 +65,28 @@ set(CLP_S_SOURCES
         ZstdCompressor.hpp
         ZstdDecompressor.cpp
         ZstdDecompressor.hpp
-        "${PROJECT_SOURCE_DIR}/submodules/date/include/date/date.h"
 )
 
-set(CLP_S_SEARCH_SOURCES
+set(
+        CLP_S_SEARCH_SOURCES
         search/AndExpr.cpp
         search/AndExpr.hpp
         search/BooleanLiteral.cpp
         search/BooleanLiteral.hpp
+        search/clp_search/EncodedVariableInterpreter.cpp
+        search/clp_search/EncodedVariableInterpreter.hpp
+        search/clp_search/Grep.cpp
+        search/clp_search/Grep.hpp
+        search/clp_search/Query.cpp
+        search/clp_search/Query.hpp
         search/ColumnDescriptor.cpp
         search/ColumnDescriptor.hpp
         search/ConstantProp.cpp
         search/ConstantProp.hpp
         search/ConvertToExists.cpp
         search/ConvertToExists.hpp
-        search/DateLiteral.hpp
         search/DateLiteral.cpp
+        search/DateLiteral.hpp
         search/EmptyExpr.cpp
         search/EmptyExpr.hpp
         search/EvaluateTimestampIndex.cpp
@@ -109,17 +117,12 @@ set(CLP_S_SEARCH_SOURCES
         search/StringLiteral.hpp
         search/Transformation.hpp
         search/Value.hpp
-        search/clp_search/EncodedVariableInterpreter.cpp
-        search/clp_search/EncodedVariableInterpreter.hpp
-        search/clp_search/Grep.cpp
-        search/clp_search/Grep.hpp
-        search/clp_search/Query.cpp
-        search/clp_search/Query.hpp
 )
 
 add_executable(clp-s clp_s.cpp ${CLP_S_SOURCES} ${CLP_S_SEARCH_SOURCES})
 target_compile_features(clp-s PRIVATE cxx_std_17)
-target_link_libraries(clp-s
+target_link_libraries(
+        clp-s
         PRIVATE
         absl::flat_hash_map
         Boost::filesystem Boost::iostreams Boost::program_options

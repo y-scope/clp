@@ -1,11 +1,13 @@
-ANTLR_TARGET(KQLParser
+ANTLR_TARGET(
+        KQLParser
         KQL.g4
-        PARSER LEXER VISITOR
-        PACKAGE kql)
+        LEXER PARSER VISITOR
+        PACKAGE kql
+)
 
-add_library(KQL
-        KQL.hpp
-        KQL.cpp
+add_library(
+        KQL
+        ../../Utils.hpp
         ../AndExpr.hpp
         ../BooleanLiteral.hpp
         ../ColumnDescriptor.hpp
@@ -17,8 +19,9 @@ add_library(KQL
         ../NullLiteral.hpp
         ../OrExpr.hpp
         ../StringLiteral.hpp
-        ../../Utils.hpp
         ${ANTLR_KQLParser_CXX_OUTPUTS}
+        KQL.cpp
+        KQL.hpp
 )
 target_compile_features(KQL PRIVATE cxx_std_17)
 target_include_directories(KQL PRIVATE ${ANTLR_KQLParser_OUTPUT_DIR})
