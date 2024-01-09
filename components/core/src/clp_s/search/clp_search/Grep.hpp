@@ -6,9 +6,8 @@
 #include <string>
 
 #include "../../Defs.hpp"
-#include "Query.hpp"
-// FIXME: refactor includes here?
 #include "../../DictionaryReader.hpp"
+#include "Query.hpp"
 
 namespace clp_s::search::clp_search {
 class Grep {

@@ -3,13 +3,11 @@
 #ifndef CLP_S_TIMESTAMPPATTERN_HPP
 #define CLP_S_TIMESTAMPPATTERN_HPP
 
-// C++ standard libraries
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <utility>
 
-// Project headers
 #include "Defs.hpp"
 #include "FileWriter.hpp"
 #include "TraceableException.hpp"

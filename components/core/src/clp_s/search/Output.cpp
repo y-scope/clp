@@ -3,6 +3,8 @@
 #include <regex>
 #include <stack>
 
+#include <json/single_include/nlohmann/json.hpp>
+
 #include "../FileWriter.hpp"
 #include "../ReaderUtils.hpp"
 #include "../Utils.hpp"
@@ -11,7 +13,6 @@
 #include "clp_search/Grep.hpp"
 #include "EvaluateTimestampIndex.hpp"
 #include "FilterExpr.hpp"
-#include "json/single_include/nlohmann/json.hpp"
 #include "OrExpr.hpp"
 #include "SearchUtils.hpp"
 

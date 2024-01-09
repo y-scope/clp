@@ -3,11 +3,9 @@
 #ifndef CLP_S_FILEWRITER_HPP
 #define CLP_S_FILEWRITER_HPP
 
-// C++ libraries
 #include <cstdio>
 #include <string>
 
-// Project headers
 #include "ErrorCode.hpp"
 #include "TraceableException.hpp"
 

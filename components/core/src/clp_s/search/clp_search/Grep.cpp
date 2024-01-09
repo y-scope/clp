@@ -2,10 +2,8 @@
 
 #include "Grep.hpp"
 
-// C++ libraries
 #include <algorithm>
 
-// Project headers
 #include "../../VariableEncoder.hpp"
 #include "EncodedVariableInterpreter.hpp"
 

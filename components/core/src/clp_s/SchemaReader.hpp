@@ -6,9 +6,10 @@
 #include <unordered_map>
 #include <utility>
 
+#include <json/single_include/nlohmann/json.hpp>
+
 #include "ColumnReader.hpp"
 #include "FileReader.hpp"
-#include "json/single_include/nlohmann/json.hpp"
 #include "JsonSerializer.hpp"
 #include "SchemaTree.hpp"
 #include "ZstdDecompressor.hpp"

@@ -3,13 +3,10 @@
 #ifndef CLP_S_ZSTDCOMPRESSOR_HPP
 #define CLP_S_ZSTDCOMPRESSOR_HPP
 
-// C++ standard libraries
 #include <memory>
 #include <string>
 
 #include <spdlog/spdlog.h>
-
-// Zstd library
 #include <zstd.h>
 #include <zstd_errors.h>
 

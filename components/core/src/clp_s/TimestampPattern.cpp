@@ -2,15 +2,11 @@
 
 #include "TimestampPattern.hpp"
 
-// C++ standard libraries
 #include <chrono>
 #include <cstring>
 #include <vector>
 
-// Date library
-#include "../../submodules/date/include/date/date.h"
-
-// spdlog
+#include <date/include/date/date.h>
 #include <spdlog/spdlog.h>
 
 using std::string;

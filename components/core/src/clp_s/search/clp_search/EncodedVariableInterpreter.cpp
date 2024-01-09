@@ -2,7 +2,6 @@
 
 #include "EncodedVariableInterpreter.hpp"
 
-// C++ standard libraries
 #include <cassert>
 #include <cmath>
 
