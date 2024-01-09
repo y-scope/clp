@@ -20,6 +20,8 @@ public:
     virtual double get_double_value(std::string const& key) const { return 0; }
 
     virtual std::unique_ptr<RecordValueIterator> value_it() const = 0;
+
+    virtual ~Record() {}
 };
 
 class StringRecordAdapter : public Record {

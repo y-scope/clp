@@ -21,6 +21,8 @@ public:
     virtual TypedRecordKey get() = 0;
     virtual void next() = 0;
     virtual bool done() = 0;
+
+    virtual ~RecordValueIterator() {}
 };
 
 class EmptyRecordValueIterator : public RecordValueIterator {
