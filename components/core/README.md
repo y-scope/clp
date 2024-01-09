@@ -34,7 +34,7 @@ tools/scripts/deps-download/download-all.sh
 
 This will download:
 * [abseil-cpp](https://github.com/abseil/abseil-cpp) (20230802.1)
-* [antlr4](https://www.antlr.org) (v4.13.1)
+* [ANTLR](https://www.antlr.org) (v4.13.1)
 * [Catch2](https://github.com/catchorg/Catch2.git) (v2.13.7)
 * [date](https://github.com/HowardHinnant/date.git) (v3.0.1)
 * [json](https://github.com/nlohmann/json.git) (v3.10.4)
@@ -97,11 +97,12 @@ the relevant paths on your machine.
   ```
 
 ## Running
-* CLP contains three core executables: `clp` and `clg` and `clp-s`
-  * `clp` is used for compressing and extracting unstructured logs
-  * `clg` is used for performing wildcard searches on the compressed unstructured logs
-  * `clp-s` is used for compressing and searching semi-structured logs (e.g.,
-    JSON) with support for handling highly dynamic schemas.
+
+* CLP contains three core executables: `clp`, `clg`, and `clp-s`.
+  * `clp` is used for compressing and extracting unstructured (plain text) logs.
+  * `clg` is used for performing wildcard searches on the compressed unstructured logs.
+  * `clp-s` is used for compressing and searching semi-structured logs (e.g., JSON) with support for
+    handling highly dynamic schemas.
 
 See [clp-unstructured](../../docs/core/clp-unstructured.md) and
-[clp-structured](../../docs/core/clp-structured.md) for more running instructions.
+[clp-structured](../../docs/core/clp-structured.md) for usage instructions.
