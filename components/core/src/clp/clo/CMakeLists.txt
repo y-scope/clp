@@ -108,8 +108,6 @@ set(
         clo.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
-        ControllerMonitoringThread.cpp
-        ControllerMonitoringThread.hpp
 )
 
 add_executable(clo ${CLO_SOURCES})

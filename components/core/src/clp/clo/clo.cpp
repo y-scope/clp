@@ -15,7 +15,6 @@
 #include "../streaming_archive/Constants.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
-#include "ControllerMonitoringThread.hpp"
 
 using clp::clo::CommandLineArguments;
 using clp::CommandLineArgumentsBase;
@@ -46,15 +45,6 @@ enum class SearchFilesResult {
     Success
 };
 
-/**
- * Connects to the search controller
- * @param controller_host
- * @param controller_port
- * @return -1 on failure
- * @return Search controller socket file descriptor otherwise
- */
-static int
-connect_to_search_controller(string const& controller_host, string const& controller_port);
 /**
  * Sends the search result to the search controller
  * @param orig_file_path
@@ -101,55 +91,6 @@ static bool search_archive(
         std::atomic_bool const& query_cancelled,
         int controller_socket_fd
 );
-
-static int
-connect_to_search_controller(string const& controller_host, string const& controller_port) {
-    // Get address info for controller
-    struct addrinfo hints = {};
-    // Address can be IPv4 or IPV6
-    hints.ai_family = AF_UNSPEC;
-    // TCP socket
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = 0;
-    hints.ai_protocol = 0;
-    struct addrinfo* addresses_head = nullptr;
-    int error = getaddrinfo(
-            controller_host.c_str(),
-            controller_port.c_str(),
-            &hints,
-            &addresses_head
-    );
-    if (0 != error) {
-        SPDLOG_ERROR("Failed to get address information for search controller, error={}", error);
-        return -1;
-    }
-
-    // Try each address until a socket can be created and connected to
-    int controller_socket_fd = -1;
-    for (auto curr = addresses_head; nullptr != curr; curr = curr->ai_next) {
-        // Create socket
-        controller_socket_fd = socket(curr->ai_family, curr->ai_socktype, curr->ai_protocol);
-        if (-1 == controller_socket_fd) {
-            continue;
-        }
-
-        // Connect to address
-        if (connect(controller_socket_fd, curr->ai_addr, curr->ai_addrlen) != -1) {
-            break;
-        }
-
-        // Failed to connect, so close socket
-        close(controller_socket_fd);
-        controller_socket_fd = -1;
-    }
-    freeaddrinfo(addresses_head);
-    if (-1 == controller_socket_fd) {
-        SPDLOG_ERROR("Failed to connect to search controller, errno={}", errno);
-        return -1;
-    }
-
-    return controller_socket_fd;
-}
 
 static ErrorCode send_result(
         string const& orig_file_path,
