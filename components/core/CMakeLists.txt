@@ -149,6 +149,7 @@ if(CLP_USE_STATIC_LIBS)
 else()
     set(MONGOCXX_TARGET mongo::mongocxx_shared)
 endif()
+
 find_package(mongocxx REQUIRED)
 if(mongocxx_FOUND)
     message(STATUS "Found mongocxx ${mongocxx_VERSION}")

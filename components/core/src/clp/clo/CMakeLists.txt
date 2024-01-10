@@ -108,6 +108,8 @@ set(
         clo.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
+        MongoDBClient.cpp
+        MongoDBClient.hpp
 )
 
 add_executable(clo ${CLO_SOURCES})
@@ -118,7 +120,8 @@ target_link_libraries(clo
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
         log_surgeon::log_surgeon
-        msgpack-cxx
+        mongo::mongocxx_shared
+        ${MONGOCXX_TARGET}
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
