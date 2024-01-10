@@ -16,7 +16,7 @@ logger = get_task_logger(__name__)
 
 def run_clo(job_id: int, task_id: int, clp_home: pathlib.Path, archive_output_dir: pathlib.Path,
             logs_dir: pathlib.Path, search_config: SearchConfig, archive_id: str,
-            results_cache_url: str, results_cache_db_name: str):
+            results_cache_uri: str, results_cache_db_name: str):
     """
     Searches the given archive for the given wildcard query
 
@@ -27,14 +27,14 @@ def run_clo(job_id: int, task_id: int, clp_home: pathlib.Path, archive_output_di
     :param logs_dir:
     :param search_config:
     :param archive_id:
-    :param results_cache_url:
+    :param results_cache_uri:
     :param results_cache_db_name:
     :return: tuple -- (whether the search was successful, output messages)
     """
     # Assemble search command
     cmd = [
         str(clp_home / 'bin' / 'clo'),
-        results_cache_url,
+        results_cache_uri,
         results_cache_db_name,
         str(job_id),
         str(archive_output_dir / archive_id),
