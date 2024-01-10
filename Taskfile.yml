@@ -142,13 +142,11 @@ tasks:
         COMPONENT: "{{.TASK}}"
 
   lint-check:
-    deps: ["lint-venv"]
     cmds:
       - task: "core-lint-check"
       - task: "yamllint"
 
   lint-fix:
-    deps: ["lint-venv"]
     cmds:
       - task: "core-lint-fix"
       - task: "yamllint"
