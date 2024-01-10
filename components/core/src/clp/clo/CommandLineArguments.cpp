@@ -89,11 +89,14 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     po::options_description hidden_positional_options;
     // clang-format off
     hidden_positional_options.add_options()(
-            "search-controller-host",
-            po::value<string>(&m_search_controller_host)
+            "mongodb-uri",
+            po::value<string>(&m_mongodb_uri)
     )(
-            "search-controller-port",
-            po::value<string>(&m_search_controller_port)
+            "mongodb-database",
+            po::value<string>(&m_mongodb_database)
+    )(
+            "mongodb-collection",
+            po::value<string>(&m_mongodb_collection)
     )(
             "archive-path",
             po::value<string>(&m_archive_path)
@@ -106,8 +109,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     );
     // clang-format on
     po::positional_options_description positional_options_description;
-    positional_options_description.add("search-controller-host", 1);
-    positional_options_description.add("search-controller-port", 1);
+    positional_options_description.add("mongodb-uri", 1);
+    positional_options_description.add("mongodb-database", 1);
+    positional_options_description.add("mongodb-collection", 1);
     positional_options_description.add("archive-path", 1);
     positional_options_description.add("wildcard-string", 1);
     positional_options_description.add("file-path", 1);
@@ -178,14 +182,19 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             return ParsingResult::InfoCommand;
         }
 
-        // Validate search controller host was specified
-        if (m_search_controller_host.empty()) {
-            throw invalid_argument("SEARCH_CONTROLLER_HOST not specified or empty.");
+        // Validate mongodb uri was specified
+        if (m_mongodb_uri.empty()) {
+            throw invalid_argument("MONGODB_URI not specified or empty.");
         }
 
-        // Validate search controller port was specified
-        if (m_search_controller_port.empty()) {
-            throw invalid_argument("SEARCH_CONTROLLER_PORT not specified or empty.");
+        // Validate mongodb database was specified
+        if (m_mongodb_database.empty()) {
+            throw invalid_argument("MONGODB_DATABASE not specified or empty.");
+        }
+
+        // Validate mongodb collection was specified
+        if (m_mongodb_collection.empty()) {
+            throw invalid_argument("MONGODB_COLLECTION not specified or empty.");
         }
 
         // Validate archive path was specified
