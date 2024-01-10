@@ -120,7 +120,6 @@ target_link_libraries(clo
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
         log_surgeon::log_surgeon
-        mongo::mongocxx_shared
         ${MONGOCXX_TARGET}
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
