@@ -4,7 +4,6 @@ import argparse
 import asyncio
 import datetime
 import logging
-import multiprocessing
 import pathlib
 import socket
 import sys
@@ -34,39 +33,6 @@ logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
-
-
-async def run_function_in_process(function, *args, initializer=None, init_args=None):
-    """
-    Runs the given function in a separate process wrapped in a *cancellable*
-    asyncio task. This is necessary because asyncio's multiprocessing process
-    cannot be cancelled once it's started.
-    :param function: Method to run
-    :param args: Arguments for the method
-    :param initializer: Initializer for each process in the pool
-    :param init_args: Arguments for the initializer
-    :return: Return value of the method
-    """
-    pool = multiprocessing.Pool(1, initializer, init_args)
-
-    loop = asyncio.get_event_loop()
-    fut = loop.create_future()
-
-    def process_done_callback(obj):
-        loop.call_soon_threadsafe(fut.set_result, obj)
-
-    def process_error_callback(err):
-        loop.call_soon_threadsafe(fut.set_exception, err)
-
-    pool.apply_async(function, args, callback=process_done_callback, error_callback=process_error_callback)
-
-    try:
-        return await fut
-    except asyncio.CancelledError:
-        pass
-    finally:
-        pool.terminate()
-        pool.close()
 
 
 def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str,
@@ -150,58 +116,35 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str,
             time.sleep(1)
 
 
-async def worker_connection_handler(reader: StreamReader, writer: StreamWriter):
-    try:
-        unpacker = msgpack.Unpacker()
-        while True:
-            # Read some data from the worker and feed it to msgpack
-            buf = await reader.read(1024)
-            if b'' == buf:
-                # Worker closed
-                return
-            unpacker.feed(buf)
-
-            # Print out any messages we can decode
-            for unpacked in unpacker:
-                print(f"{unpacked[0]}: {unpacked[2]}", end='')
-    except asyncio.CancelledError:
-        return
-    finally:
-        writer.close()
-
-
 async def do_search(db_config: Database, wildcard_query: str, begin_timestamp: int | None,
-                    end_timestamp: int | None, path_filter: str, host: str):
-    # Start server to receive and print results
-    try:
-        server = await asyncio.start_server(client_connected_cb=worker_connection_handler, host=host, port=0,
-                                            family=socket.AF_INET)
-    except asyncio.CancelledError:
-        # Search cancelled
-        return
-    port = server.sockets[0].getsockname()[1]
+                    end_timestamp: int | None, path_filter: str):
+    search_config = SearchConfig(
+        wildcard_query=wildcard_query,
+        begin_timestamp=begin_timestamp,
+        end_timestamp=end_timestamp,
+        path_filter=path_filter
+    )
 
-    server_task = asyncio.ensure_future(server.serve_forever())
+    sql_adapter = SQL_Adapter(db_config)
+    with closing(sql_adapter.create_connection(True)) as db_conn, closing(db_conn.cursor(dictionary=True)) as db_cursor:
+        # Create job
+        db_cursor.execute(f"INSERT INTO `search_jobs` (`search_config`) VALUES (%s)",
+                          ((msgpack.packb(search_config.dict())),))
+        db_conn.commit()
+        job_id = db_cursor.lastrowid
 
-    db_monitor_task = asyncio.ensure_future(
-        run_function_in_process(create_and_monitor_job_in_db, db_config, wildcard_query,
-                                begin_timestamp, end_timestamp, path_filter, host, port))
+        while True:
+            db_cursor.execute(f"SELECT `status`, `status_msg` FROM `search_jobs` WHERE `id` = {job_id}")
+            # There will only ever be one row since it's impossible to have more than one job with the same ID
+            row = db_cursor.fetchall()[0]
+            if JobStatus.SUCCEEDED == row['status']:
+                break
+            elif JobStatus.FAILED == row['status']:
+                logger.error(row['status_msg'])
+                break
+            db_conn.commit()
 
-    # Wait for the job to complete or an error to occur
-    pending = [server_task, db_monitor_task]
-    try:
-        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
-        if db_monitor_task in done:
-            server.close()
-            await server.wait_closed()
-        else:
-            logger.error("server task unexpectedly returned")
-            db_monitor_task.cancel()
-            await db_monitor_task
-    except asyncio.CancelledError:
-        server.close()
-        await server.wait_closed()
-        await db_monitor_task
+            time.sleep(0.5)
 
 
 def main(argv):
@@ -236,17 +179,8 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    # Get IP of local machine
-    host_ip = None
-    for ip in set(socket.gethostbyname_ex(socket.gethostname())[2]):
-        host_ip = ip
-        break
-    if host_ip is None:
-        logger.error("Could not determine IP of local machine.")
-        return -1
-
-    asyncio.run(do_search(clp_config.database, parsed_args.wildcard_query, parsed_args.begin_time,
-                          parsed_args.end_time, parsed_args.file_path, host_ip))
+    do_search(clp_config.database, parsed_args.wildcard_query, parsed_args.begin_time,
+              parsed_args.end_time, parsed_args.file_path)
 
     return 0
 

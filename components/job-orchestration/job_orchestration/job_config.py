@@ -30,8 +30,6 @@ class ClpIoConfig(BaseModel):
 
 
 class SearchConfig(BaseModel):
-    search_controller_host: str
-    search_controller_port: int
     wildcard_query: str
     begin_timestamp: typing.Optional[int] = None
     end_timestamp: typing.Optional[int] = None
