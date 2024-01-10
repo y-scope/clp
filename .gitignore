@@ -1,3 +1,4 @@
+.lint-venv/
 .task/
 build/
 **/dist/

@@ -7,6 +7,7 @@ yaml-files:
   - "*.yml"
 
 ignore: |
+  .lint-venv/
   components/core/build/
   components/core/cmake-build-debug/
   components/core/cmake-build-release/

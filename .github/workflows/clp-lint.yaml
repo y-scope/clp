@@ -1,19 +1,6 @@
-name: "clp-core-lint"
+name: "clp-lint"
 
-on:
-  pull_request:
-    paths:
-      - ".github/workflows/clp-core-lint.yaml"
-      - "components/core/src/**"
-      - "components/core/Taskfile.yml"
-      - "components/core/tests/**"
-  push:
-    paths:
-      - ".github/workflows/clp-core-lint.yaml"
-      - "components/core/src/**"
-      - "components/core/Taskfile.yml"
-      - "components/core/tests/**"
-  workflow_dispatch:
+on: ["pull_request", "push", "workflow_dispatch"]
 
 concurrency:
   group: "${{github.workflow}}-${{github.ref}}"
@@ -21,7 +8,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  clang-format:
+  lint-check:
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v3"
@@ -38,5 +25,4 @@ jobs:
 
       - name: "Run lint task"
         shell: "bash"
-        working-directory: "./components/core"
-        run: "task lint_check"
+        run: "task lint-check"
