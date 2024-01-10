@@ -10,9 +10,8 @@ use the [clp-core-x86-ubuntu-focal][1] container as follows.
     ```
 
 2. Start the container with mounts for your logs and output directories:
-
-    > [!NOTE]
-    > Be sure to change the paths in the command below before running it.
+   > [!NOTE]
+   > Be sure to change the paths in the command below before running it.
 
     ```shell
     docker run \
