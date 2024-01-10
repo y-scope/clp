@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import argparse
-import asyncio
 import datetime
 import logging
 import pathlib
-import socket
+import pymongo
 import sys
 import time
-from asyncio import StreamReader, StreamWriter
 from contextlib import closing
 
 import msgpack
@@ -19,7 +17,11 @@ from clp_package_utils.general import (
     validate_and_load_config_file,
     get_clp_home
 )
-from clp_py_utils.clp_config import CLP_METADATA_TABLE_PREFIX, Database
+from clp_py_utils.clp_config import (
+    CLP_METADATA_TABLE_PREFIX,
+    Database,
+    ResultsCache
+)
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.job_config import SearchConfig
 from job_orchestration.scheduler.constants import JobStatus
@@ -35,13 +37,9 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str,
-                                 begin_timestamp: int | None, end_timestamp: int | None,
-                                 path_filter: str, search_controller_host: str,
-                                 search_controller_port: int):
+def do_search(db_config: Database, results_cache: ResultsCache, wildcard_query: str,
+                    begin_timestamp: int | None, end_timestamp: int | None, path_filter: str):
     search_config = SearchConfig(
-        search_controller_host=search_controller_host,
-        search_controller_port=search_controller_port,
         wildcard_query=wildcard_query,
         begin_timestamp=begin_timestamp,
         end_timestamp=end_timestamp,
@@ -50,14 +48,14 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str,
 
     sql_adapter = SQL_Adapter(db_config)
     zstd_cctx = zstandard.ZstdCompressor(level=3)
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(db_conn.cursor(dictionary=True)) as db_cursor:
+    with closing(sql_adapter.create_connection(True)) as \
+            db_conn, closing(db_conn.cursor(dictionary=True)) as db_cursor:
         # Create job
         db_cursor.execute(f"INSERT INTO `search_jobs` (`search_config`) VALUES (%s)",
                           (zstd_cctx.compress(msgpack.packb(search_config.dict())),))
         db_conn.commit()
         job_id = db_cursor.lastrowid
 
-        # Create a task for each archive, in batches
         next_pagination_id = 0
         pagination_limit = 64
         num_tasks_added = 0
@@ -102,7 +100,7 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str,
 
         # Wait for the job to be marked complete
         job_complete = False
-        while not job_complete:
+        while job_complete:
             db_cursor.execute(f"SELECT `status`, `status_msg` FROM `search_jobs` WHERE `id` = {job_id}")
             # There will only ever be one row since it's impossible to have more than one job with the same ID
             row = db_cursor.fetchall()[0]
@@ -111,40 +109,14 @@ def create_and_monitor_job_in_db(db_config: Database, wildcard_query: str,
             elif JobStatus.FAILED == row['status']:
                 logger.error(row['status_msg'])
                 job_complete = True
-            db_conn.commit()
-
-            time.sleep(1)
-
-
-async def do_search(db_config: Database, wildcard_query: str, begin_timestamp: int | None,
-                    end_timestamp: int | None, path_filter: str):
-    search_config = SearchConfig(
-        wildcard_query=wildcard_query,
-        begin_timestamp=begin_timestamp,
-        end_timestamp=end_timestamp,
-        path_filter=path_filter
-    )
-
-    sql_adapter = SQL_Adapter(db_config)
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(db_conn.cursor(dictionary=True)) as db_cursor:
-        # Create job
-        db_cursor.execute(f"INSERT INTO `search_jobs` (`search_config`) VALUES (%s)",
-                          ((msgpack.packb(search_config.dict())),))
-        db_conn.commit()
-        job_id = db_cursor.lastrowid
-
-        while True:
-            db_cursor.execute(f"SELECT `status`, `status_msg` FROM `search_jobs` WHERE `id` = {job_id}")
-            # There will only ever be one row since it's impossible to have more than one job with the same ID
-            row = db_cursor.fetchall()[0]
-            if JobStatus.SUCCEEDED == row['status']:
-                break
-            elif JobStatus.FAILED == row['status']:
-                logger.error(row['status_msg'])
-                break
             db_conn.commit()
 
             time.sleep(0.5)
+
+        client = pymongo.MongoClient(results_cache.get_uri())
+        search_results_collection = client[results_cache.db_name][str(job_id)]
+        for document in search_results_collection.find():
+            print(document)
 
 
 def main(argv):
@@ -179,8 +151,8 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    do_search(clp_config.database, parsed_args.wildcard_query, parsed_args.begin_time,
-              parsed_args.end_time, parsed_args.file_path)
+    do_search(clp_config.database, clp_config.results_cache, parsed_args.wildcard_query,
+              parsed_args.begin_time, parsed_args.end_time, parsed_args.file_path)
 
     return 0
 

@@ -104,12 +104,16 @@ class Scheduler(BaseModel):
 class ResultsCache(BaseModel):
     host: str = 'localhost'
     port: int = 27017
+    db_name: str = 'clp-search'
 
     @validator('host')
     def validate_host(cls, field):
         if '' == field:
             raise ValueError(f'{RESULTS_CACHE_COMPONENT_NAME}.host cannot be empty.')
         return field
+
+    def get_uri(self):
+        return f"mongodb://{self.host}:{self.port}/{self.db_name}"
 
 
 class Queue(BaseModel):

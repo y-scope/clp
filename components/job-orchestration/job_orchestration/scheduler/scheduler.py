@@ -12,7 +12,11 @@ from contextlib import closing
 import zstandard
 from pydantic import ValidationError
 
-from clp_py_utils.clp_config import CLPConfig, Database
+from clp_py_utils.clp_config import (
+    CLPConfig,
+    Database,
+    ResultsCache,
+)
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compression_task import compress
@@ -141,12 +145,15 @@ def schedule_compression_task(job: CompressionJob, task: CompressionTask, databa
     return compress.apply_async(args, task_id=str(task.id), queue=QueueName.COMPRESSION, priority=task.priority)
 
 
-def schedule_search_task(job: SearchJob, task: SearchTask, dctx: zstandard.ZstdDecompressor):
-    args = (job.id, task.id, job.get_search_config_json_str(dctx), task.archive_id)
+def schedule_search_task(job: SearchJob, task: SearchTask, results_cache: ResultsCache,
+                         dctx: zstandard.ZstdDecompressor):
+    args = (job.id, task.id, job.get_search_config_json_str(dctx), task.archive_id,
+            results_cache.get_uri(), results_cache.db_name)
     return search.apply_async(args, task_id=str(task.id), queue=QueueName.SEARCH, priority=task.priority)
 
 
-def search_and_schedule_new_tasks(db_conn, db_cursor, database_config: Database):
+def search_and_schedule_new_tasks(db_conn, db_cursor, database_config: Database,
+                                  results_cache: ResultsCache):
     """
     For all task with SUBMITTED status, push them to task queue to be processed, if finished, update them
     """
@@ -183,10 +190,11 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_config: Database)
                     num_tasks_completed=task_row['num_tasks_completed'],
                     search_config=task_row['search_config'],
                 )
-                update_search_job_metadata(db_cursor, job_id, dict(start_time=now.strftime('%Y-%m-%d %H:%M:%S')))
+                update_search_job_metadata(db_cursor, job_id,
+                                           dict(start_time=now.strftime('%Y-%m-%d %H:%M:%S')))
                 id_to_search_job[search_job.id] = search_job
 
-            celery_task = schedule_search_task(search_job, search_task, dctx)
+            celery_task = schedule_search_task(search_job, search_task, results_cache, dctx)
 
             update_search_task_metadata(db_cursor, search_task.id, dict(
                 status=TaskStatus.SCHEDULED,
@@ -419,7 +427,7 @@ def task_results_consumer(sql_adapter: SQL_Adapter, celery_broker_url):
             task_update = TaskUpdate.parse_raw(body)
             if TaskStatus.FAILED == task_update.status:
                 task_update = TaskFailureUpdate.parse_raw(body)
-            elif TaskUpdateType.COMPRESSION == task_update.type and\
+            elif TaskUpdateType.COMPRESSION == task_update.type and \
                     TaskStatus.SUCCEEDED == task_update.status:
                 task_update = CompressionTaskSuccessUpdate.parse_raw(body)
         except ValidationError as err:
@@ -483,7 +491,8 @@ def main(argv):
                 # Start Job Processing Loop
                 with closing(sql_adapter.create_connection(True)) as db_conn, \
                         closing(db_conn.cursor(dictionary=True)) as db_cursor:
-                    search_and_schedule_new_tasks(db_conn, db_cursor, sql_adapter.database_config)
+                    search_and_schedule_new_tasks(db_conn, db_cursor, sql_adapter.database_config,
+                                                  clp_config.results_cache)
                     update_completed_jobs(db_cursor, 'compression')
                     update_completed_jobs(db_cursor, 'search')
                     db_conn.commit()
