@@ -100,7 +100,7 @@ def do_search(db_config: Database, results_cache: ResultsCache, wildcard_query: 
 
         # Wait for the job to be marked complete
         job_complete = False
-        while job_complete:
+        while not job_complete:
             db_cursor.execute(f"SELECT `status`, `status_msg` FROM `search_jobs` WHERE `id` = {job_id}")
             # There will only ever be one row since it's impossible to have more than one job with the same ID
             row = db_cursor.fetchall()[0]
