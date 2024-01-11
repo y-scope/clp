@@ -10,6 +10,7 @@ from .clp_logging import is_valid_logging_level, get_valid_logging_level
 # Component names
 DB_COMPONENT_NAME = 'database'
 QUEUE_COMPONENT_NAME = 'queue'
+REDIS_COMPONENT_NAME = 'redis'
 RESULTS_CACHE_COMPONENT_NAME = 'results_cache'
 SCHEDULER_COMPONENT_NAME = 'scheduler'
 SEARCH_SCHEDULER_COMPONENT_NAME = 'search_scheduler'
@@ -131,6 +132,13 @@ class SearchWorker(BaseModel):
         return field
 
 
+class Redis(BaseModel):
+    host: str = 'localhost'
+    port: int = 6379
+    username: typing.Optional[str]
+    password: typing.Optional[str]
+
+
 class ResultsCache(BaseModel):
     host: str = 'localhost'
     port: int = 27017
@@ -202,6 +210,7 @@ class CLPConfig(BaseModel):
 
     database: Database = Database()
     queue: Queue = Queue()
+    redis: Redis = Redis()
     results_cache: ResultsCache = ResultsCache()
     scheduler: Scheduler = Scheduler()
     search_scheduler: SearchScheduler = SearchScheduler()

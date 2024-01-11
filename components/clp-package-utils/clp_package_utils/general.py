@@ -13,6 +13,7 @@ from clp_py_utils.clp_config import (
     CLPConfig,
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     DB_COMPONENT_NAME,
+    REDIS_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME
 )
@@ -257,6 +258,20 @@ def validate_queue_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
         raise ValueError(f"{QUEUE_COMPONENT_NAME} logs directory is invalid: {ex}")
 
     validate_port(f"{QUEUE_COMPONENT_NAME}.port", clp_config.queue.host, clp_config.queue.port)
+
+
+def validate_redis_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path):
+    try:
+        validate_path_could_be_dir(data_dir)
+    except ValueError as ex:
+        raise ValueError(f"{REDIS_COMPONENT_NAME} data directory is invalid {ex}")
+
+    try:
+        validate_path_could_be_dir(logs_dir)
+    except ValueError as ex:
+        raise ValueError(f"{REDIS_COMPONENT_NAME} logs directory is invalid: {ex}")
+
+    validate_port(f"{REDIS_COMPONENT_NAME}.port", clp_config.redis.host, clp_config.redis.port)
 
 
 def validate_results_cache_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path):

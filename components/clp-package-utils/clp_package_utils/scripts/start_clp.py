@@ -28,6 +28,7 @@ from clp_package_utils.general import (
     validate_and_load_queue_credentials_file,
     validate_db_config,
     validate_queue_config,
+    validate_redis_config,
     validate_results_cache_config,
     validate_worker_config
 )
@@ -35,6 +36,7 @@ from clp_py_utils.clp_config import (
     CLPConfig,
     DB_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
+    REDIS_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
     SCHEDULER_COMPONENT_NAME,
     SEARCH_SCHEDULER_COMPONENT_NAME,
@@ -243,6 +245,48 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     logger.info(f"Started {QUEUE_COMPONENT_NAME}.")
+
+
+def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
+    logger.info(f"Starting {REDIS_COMPONENT_NAME}...")
+
+    container_name = f'clp-{REDIS_COMPONENT_NAME}-{instance_id}'
+    if container_exists(container_name):
+        logger.info(f"{REDIS_COMPONENT_NAME} already running.")
+        return
+
+    redis_logs_dir = clp_config.logs_directory / REDIS_COMPONENT_NAME
+    redis_data_dir = clp_config.data_directory / REDIS_COMPONENT_NAME
+
+    validate_redis_config(clp_config, redis_data_dir, redis_logs_dir)
+
+    redis_data_dir.mkdir(exist_ok=True, parents=True)
+    redis_logs_dir.mkdir(exist_ok=True, parents=True)
+
+    # Start container
+    mounts = [
+        DockerMount(DockerMountType.BIND, conf_dir / 'redis', pathlib.Path('/') / 'usr' / 'local' / 'etc' / 'redis', True),
+        DockerMount(DockerMountType.BIND, redis_logs_dir, pathlib.Path('/') / 'var' / 'log' / 'redis'),
+        DockerMount(DockerMountType.BIND, redis_data_dir, pathlib.Path('/') / 'data'),
+    ]
+
+    cmd = [
+        'docker', 'run',
+        '-d',
+        '--rm',
+        '--name', container_name,
+        '-u', f'{os.getuid()}:{os.getgid()}',
+    ]
+    for mount in mounts:
+        cmd.append('--mount')
+        cmd.append(str(mount))
+    append_docker_port_settings_for_host_ips(clp_config.redis.host, clp_config.redis.port, 6379, cmd)
+    cmd.append('redis:7.2.3')
+    cmd.append('redis-server')
+    cmd.append(str(pathlib.Path('/') / 'usr' / 'local' / 'etc' / 'redis' / 'redis.conf'))
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+
+    logger.info(f"Started {REDIS_COMPONENT_NAME}.")
 
 
 def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
@@ -555,6 +599,7 @@ def main(argv):
     component_args_parser = args_parser.add_subparsers(dest='component_name')
     component_args_parser.add_parser(DB_COMPONENT_NAME)
     component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
+    component_args_parser.add_parser(REDIS_COMPONENT_NAME)
     component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
     component_args_parser.add_parser(SCHEDULER_COMPONENT_NAME)
     worker_args_parser = component_args_parser.add_parser(WORKER_COMPONENT_NAME)
@@ -625,6 +670,8 @@ def main(argv):
             create_db_tables(instance_id, clp_config, container_clp_config, mounts)
         if '' == component_name or QUEUE_COMPONENT_NAME == component_name:
             start_queue(instance_id, clp_config)
+        if '' == component_name or REDIS_COMPONENT_NAME == component_name:
+            start_redis(instance_id, clp_config, conf_dir)
         if '' == component_name or RESULTS_CACHE_COMPONENT_NAME == component_name:
             start_results_cache(instance_id, clp_config, conf_dir)
         if '' == component_name or SCHEDULER_COMPONENT_NAME == component_name:
