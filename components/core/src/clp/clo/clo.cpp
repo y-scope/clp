@@ -208,6 +208,7 @@ static bool search_archive(
             break;
         }
     }
+    mongo_client.flush();
     file_metadata_ix_ptr.reset(nullptr);
 
     archive_reader.close();
