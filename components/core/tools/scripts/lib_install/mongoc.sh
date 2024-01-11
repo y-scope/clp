@@ -72,6 +72,7 @@ cd build
 cmake \
   -DCMAKE_BUILD_TYPE=Release \
   -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF \
+  -DENABLE_ICU=OFF \
   -DENABLE_TESTS=OFF \
   ..
 
