@@ -106,6 +106,7 @@ jobs:
               - ".github/actions/**"
               - ".github/workflows/clp-core-build.yaml"
               - ${{env.PATHS_FILTER_LIB_INSTALL_GLOB}}
+              - "components/core/tools/docker-images/clp-core-${{env.OS_NAME}}/**"
               - "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}/**"
               - "components/core/tools/scripts/lib_install/${{env.OS_NAME}}/**"
             ${{inputs.PATHS_FILTER_CLP_FILTER}}
