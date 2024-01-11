@@ -20,6 +20,10 @@
 #  host: "localhost"
 #  port: 5672
 #
+#redis:
+#  host: "localhost"
+#  port: 6379
+#
 #results_cache:
 #  host: "localhost"
 #  port: 27017
