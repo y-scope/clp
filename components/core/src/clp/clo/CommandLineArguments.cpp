@@ -163,10 +163,11 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             cerr << endl;
 
             cerr << "Examples:" << endl;
-            cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to the controller)"
-                    R"( at localhost:5555)"
+            cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to )"
+                    R"(mongodb://127.0.0.1:27017 "test" database and "result" collection)"
                  << endl;
-            cerr << "  " << get_program_name() << R"( localhost 5555 ARCHIVE_PATH " ERROR ")"
+            cerr << "  " << get_program_name() << R"( mongodb://127.0.0.1:27017 )"
+                    R"(test result ARCHIVE_PATH " ERROR ")"
                  << endl;
             cerr << endl;
 
