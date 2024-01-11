@@ -166,7 +166,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to )"
                     R"(mongodb://127.0.0.1:27017 "test" database and "result" collection)"
                  << endl;
-            cerr << "  " << get_program_name() << R"( mongodb://127.0.0.1:27017 )"
+            cerr << "  " << get_program_name()
+                 << R"( mongodb://127.0.0.1:27017 )"
                     R"(test result ARCHIVE_PATH " ERROR ")"
                  << endl;
             cerr << endl;
