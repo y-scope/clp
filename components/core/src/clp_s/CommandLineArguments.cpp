@@ -266,8 +266,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
 
             if (parsed_command_line_options.count("mongodb-config")) {
-                auto const& mongodb_config
-                        = parsed_command_line_options["mongodb-config"].as<std::vector<std::string>>();
+                auto const& mongodb_config = parsed_command_line_options["mongodb-config"]
+                                                     .as<std::vector<std::string>>();
                 if (mongodb_config.size() != 5) {
                     throw std::invalid_argument(
                             "mongodb-config must be a list of 3 strings: uri, database, collection"

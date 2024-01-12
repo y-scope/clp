@@ -48,9 +48,7 @@ public:
 
     void Flush() override {}
 
-    void Write(std::string const& message) override {
-        printf("%s", message.c_str());
-    }
+    void Write(std::string const& message) override { printf("%s", message.c_str()); }
 };
 
 class MongoOutputHandler : public OutputHandler {

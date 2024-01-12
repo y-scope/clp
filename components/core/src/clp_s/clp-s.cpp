@@ -129,7 +129,15 @@ int main(int argc, char const* argv[]) {
         }
 
         // output result
-        Output output(schema_tree, schemas, match_pass, expr, archives_dir, timestamp_dict, output_handler);
+        Output output(
+                schema_tree,
+                schemas,
+                match_pass,
+                expr,
+                archives_dir,
+                timestamp_dict,
+                output_handler
+        );
         output.filter();
     }
 
