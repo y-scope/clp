@@ -218,6 +218,12 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             po::options_description search_options;
             // clang-format off
             search_options.add_options()(
+                    "mongodb-config",
+                    po::value<std::vector<std::string>>()->value_name("MONGODB_CONFIG")->
+                        multitoken(),
+                    "The uri, database, and collection for the MongoDB instance that the "
+                    "search results should be sent to."
+            )(
                     "archives-dir",
                     po::value<std::string>(&m_archives_dir),
                     "The directory containing the archives"
@@ -258,6 +264,25 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 std::cerr << visible_options << '\n';
                 return ParsingResult::InfoCommand;
             }
+
+            if (parsed_command_line_options.count("mongodb-config")) {
+                auto const& mongodb_config
+                        = parsed_command_line_options["mongodb-config"].as<std::vector<std::string>>();
+                if (mongodb_config.size() != 5) {
+                    throw std::invalid_argument(
+                            "mongodb-config must be a list of 3 strings: uri, database, collection"
+                    );
+                }
+                m_mongodb_enabled = true;
+                m_mongodb_uri = mongodb_config[0];
+                m_mongodb_database = mongodb_config[1];
+                m_mongodb_collection = mongodb_config[2];
+                m_archives_dir = mongodb_config[3];
+                m_query = mongodb_config[4];
+            } else {
+                m_mongodb_enabled = false;
+            }
+
             if (m_archives_dir.empty()) {
                 throw std::invalid_argument("No archives directory specified");
             }

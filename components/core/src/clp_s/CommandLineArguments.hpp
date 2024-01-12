@@ -42,6 +42,14 @@ public:
 
     size_t get_target_encoded_size() const { return m_target_encoded_size; }
 
+    bool get_mongodb_enabled() const { return m_mongodb_enabled; }
+
+    std::string const& get_mongodb_uri() const { return m_mongodb_uri; }
+
+    std::string const& get_mongodb_database() const { return m_mongodb_database; }
+
+    std::string const& get_mongodb_collection() const { return m_mongodb_collection; }
+
     std::string const& get_query() const { return m_query; }
 
 private:
@@ -65,6 +73,12 @@ private:
     std::string m_timestamp_key;
     int m_compression_level;
     size_t m_target_encoded_size;
+
+    // MongoDB configuration variables
+    bool m_mongodb_enabled;
+    std::string m_mongodb_uri;
+    std::string m_mongodb_database;
+    std::string m_mongodb_collection;
 
     // Search variables
     std::string m_query;

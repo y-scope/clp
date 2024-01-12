@@ -107,6 +107,7 @@ set(
         search/OrOfAndForm.hpp
         search/Output.cpp
         search/Output.hpp
+        search/OutputHandler.hpp
         search/SchemaMatch.cpp
         search/SchemaMatch.hpp
         search/SearchUtils.cpp
@@ -125,6 +126,7 @@ target_link_libraries(
         absl::flat_hash_map
         Boost::filesystem Boost::iostreams Boost::program_options
         kql
+        ${MONGOCXX_TARGET}
         simdjson
         spdlog::spdlog
         ZStd::ZStd

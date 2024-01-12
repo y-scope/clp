@@ -11,6 +11,7 @@
 #include "search/NarrowTypes.hpp"
 #include "search/OrOfAndForm.hpp"
 #include "search/Output.hpp"
+#include "search/OutputHandler.hpp"
 #include "search/SchemaMatch.hpp"
 #include "TimestampPattern.hpp"
 #include "Utils.hpp"
@@ -116,8 +117,19 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
 
+        std::shared_ptr<OutputHandler> output_handler;
+        if (command_line_arguments.get_mongodb_enabled()) {
+            output_handler = std::make_shared<MongoOutputHandler>(
+                    command_line_arguments.get_mongodb_uri(),
+                    command_line_arguments.get_mongodb_database(),
+                    command_line_arguments.get_mongodb_collection()
+            );
+        } else {
+            output_handler = std::make_shared<StandardOutputHandler>();
+        }
+
         // output result
-        Output output(schema_tree, schemas, match_pass, expr, archives_dir, timestamp_dict);
+        Output output(schema_tree, schemas, match_pass, expr, archives_dir, timestamp_dict, output_handler);
         output.filter();
     }
 
