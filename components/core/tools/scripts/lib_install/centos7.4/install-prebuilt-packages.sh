@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# Exit on any error
+set -e
+
+# Error on undefined variable
+set -u
+
 yum install -y \
   bzip2 \
   centos-release-scl \
