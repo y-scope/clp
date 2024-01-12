@@ -330,6 +330,7 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                         // TODO: we need to sanitize more regex
                         regex_search_string.push_back(c);
                     }
+                    log_surgeon::NonTerminal::m_next_children_start = 0;
                     log_surgeon::Schema schema2;
                     schema2.add_variable("search", regex_search_string, -1);
                     RegexNFA<RegexNFAByteState> nfa;
