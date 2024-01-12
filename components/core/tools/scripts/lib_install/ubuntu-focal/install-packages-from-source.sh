@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# Exit on any error
+set -e
+
+# Error on undefined variable
+set -u
+
 ./tools/scripts/lib_install/fmtlib.sh 8.0.1
 ./tools/scripts/lib_install/libarchive.sh 3.5.1
 ./tools/scripts/lib_install/lz4.sh 1.8.2

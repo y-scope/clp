@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# Exit on any error
+set -e
+
+# Error on undefined variable
+set -u
+
 # Enable gcc 10
 source /opt/rh/devtoolset-10/enable
 
