@@ -5,6 +5,7 @@ vars:
   CORE_COMPONENT_BUILD_DIR: "{{.TASKFILE_DIR}}/build/core"
   LINT_VENV_DIR: "{{.TASKFILE_DIR}}/.lint-venv"
   PACKAGE_BUILD_DIR: "{{.TASKFILE_DIR}}/build/clp-package"
+  PACKAGE_VENV_DIR: "{{.TASKFILE_DIR}}/build/package-venv"
   PACKAGE_VERSION: "0.0.3-dev"
   PYTHON_VERSION:
     sh: "python3 -c \"import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')\""
@@ -54,24 +55,28 @@ tasks:
       - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y {{.VERSIONED_PACKAGE_NAME}}.tar.gz)"
 
   package:
+    vars:
+      PACKAGE_VERSION_FILE: "{{.PACKAGE_BUILD_DIR}}/VERSION"
     deps:
       - "core"
       - "clp-package-utils"
       - "clp-py-utils"
       - "compression-job-handler"
       - "job-orchestration"
+      - "package-venv"
     cmds:
       - task: "clean-package"
       - "mkdir -p '{{.PACKAGE_BUILD_DIR}}'"
       - "rsync -a components/package-template/src/ '{{.PACKAGE_BUILD_DIR}}'"
       - "mkdir -p '{{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages'"
-      - >-
-        pip3 install --upgrade
-        components/clp-package-utils/dist/*.whl
-        components/clp-py-utils/dist/*.whl
-        components/compression-job-handler/dist/*.whl
-        components/job-orchestration/dist/*.whl
-        -t "{{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages"
+      - |-
+        . "{{.PACKAGE_VENV_DIR}}/bin/activate"
+        pip3 install --upgrade \
+          components/clp-package-utils/dist/*.whl \
+          components/clp-py-utils/dist/*.whl \
+          components/compression-job-handler/dist/*.whl \
+          components/job-orchestration/dist/*.whl \
+          -t "{{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages"
       - "mkdir -p '{{.PACKAGE_BUILD_DIR}}/bin'"
       - >-
         rsync -a
@@ -79,6 +84,9 @@ tasks:
         "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
         "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
         "{{.PACKAGE_BUILD_DIR}}/bin/"
+      # This step must be last since we use this file to detect whether the package was built
+      # successfully
+      - "echo {{.PACKAGE_VERSION}} > '{{.PACKAGE_VERSION_FILE}}'"
     method: "timestamp"
     sources:
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
@@ -91,8 +99,8 @@ tasks:
       - "components/job-orchestration/dist/*.whl"
       - "components/package-template/src/**"
     status:
-      - "test -d {{.PACKAGE_BUILD_DIR}}"
-      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.PACKAGE_BUILD_DIR}}')"
+      - "test -e '{{.PACKAGE_VERSION_FILE}}'"
+      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.PACKAGE_VERSION_FILE}}')"
 
   core:
     deps: ["core-submodules"]
@@ -206,6 +214,27 @@ tasks:
     cmds:
       - "{{.SRC_DIR}}/tools/scripts/deps-download/download-all.sh"
 
+  package-venv:
+    internal: true
+    vars:
+      CREATION_TIMESTAMP_FILE: "{{.PACKAGE_VENV_DIR}}/creation_time.txt"
+    cmds:
+      - "rm -rf '{{.PACKAGE_VENV_DIR}}'"
+      - "python3 -m venv '{{.PACKAGE_VENV_DIR}}'"
+      - |-
+        . "{{.PACKAGE_VENV_DIR}}/bin/activate"
+        pip3 install --upgrade -r "{{.TASKFILE_DIR}}/requirements.txt"
+      # This step must be last since we use this file to detect whether the venv was created
+      # successfully
+      - "date +%s > '{{.CREATION_TIMESTAMP_FILE}}'"
+    method: "timestamp"
+    sources:
+      - "{{.TASKFILE_DIR}}/requirements.txt"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+    status:
+      - "test -e '{{.CREATION_TIMESTAMP_FILE}}'"
+      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.CREATION_TIMESTAMP_FILE}}')"
+
   python-component:
     internal: true
     requires:
@@ -244,6 +273,7 @@ tasks:
     label: "{{.COMPONENT}}_venv"
     dir: "components/{{.COMPONENT}}"
     vars:
+      CREATION_TIMESTAMP_FILE: "{{.BUILD_DIR}}/{{.COMPONENT}}/venv/creation_time.txt"
       VENV_DIR: "{{.BUILD_DIR}}/{{.COMPONENT}}/venv"
     cmds:
       - "rm -rf '{{.VENV_DIR}}'"
@@ -252,14 +282,17 @@ tasks:
         . "{{.VENV_DIR}}/bin/activate"
         pip3 install --upgrade -r "{{.TASKFILE_DIR}}/requirements.txt"
         poetry update
+      # This step must be last since we use this file to detect whether the venv was created
+      # successfully
+      - "date +%s > '{{.CREATION_TIMESTAMP_FILE}}'"
     method: "timestamp"
     sources:
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "pyproject.toml"
     status:
-      - "test -d '{{.VENV_DIR}}'"
-      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.VENV_DIR}}')"
+      - "test -e '{{.CREATION_TIMESTAMP_FILE}}'"
+      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.CREATION_TIMESTAMP_FILE}}')"
 
   clean-python-component:
     internal: true
@@ -273,6 +306,8 @@ tasks:
 
   lint-venv:
     internal: true
+    vars:
+      CREATION_TIMESTAMP_FILE: "{{.LINT_VENV_DIR}}/creation_time.txt"
     dir: "{{.TASKFILE_DIR}}"
     cmds:
       - "rm -rf '{{.LINT_VENV_DIR}}'"
@@ -285,10 +320,13 @@ tasks:
         . "{{.LINT_VENV_DIR}}/bin/activate"
         pip3 install --upgrade pip
         pip3 install --upgrade -r lint-requirements.txt
+      # This step must be last since we use this file to detect whether the venv was created
+      # successfully
+      - "date +%s > '{{.CREATION_TIMESTAMP_FILE}}'"
     method: "timestamp"
     sources:
       - "lint-requirements.txt"
       - "Taskfile.yml"
     status:
-      - "test -d {{.LINT_VENV_DIR}}"
-      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y {{.LINT_VENV_DIR}})"
+      - "test -e '{{.CREATION_TIMESTAMP_FILE}}'"
+      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.CREATION_TIMESTAMP_FILE}}')"
