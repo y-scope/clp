@@ -317,8 +317,12 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                     ReaderInterfaceWrapper reader_wrapper(string_reader);
                     std::string regex_search_string;
                     // Replace all * with .*
+                    bool contains_wildcard = false;
+                    // TODO: should log-surgeon handle this sanitization, also
+                    // this sanitization is incomplete
                     for (char const& c : current_string) {
                         if (c == '*') {
+                            contains_wildcard = true;
                             regex_search_string.push_back('.');
                         } else if (c == '.') {
                             regex_search_string.push_back('\\');
@@ -356,6 +360,10 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                         } else {
                             suffixes.emplace_back(id, current_string);
                         }
+                        if (false == contains_wildcard) {
+                            // we only want the highest prio type if no wildcard
+                            break;
+                        }
                     }
                     if (schema_types.empty()) {
                         suffixes.emplace_back();
@@ -367,8 +375,8 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                     }
                 }
                 set<QueryLogtype>& new_queries = query_matrix[i];
-                if(j > 0) {
-                    for(QueryLogtype const& prefix : query_matrix[j - 1]) {
+                if (j > 0) {
+                    for (QueryLogtype const& prefix : query_matrix[j - 1]) {
                         for (QueryLogtype& suffix : suffixes) {
                             QueryLogtype new_query = prefix;
                             new_query.insert(suffix);
