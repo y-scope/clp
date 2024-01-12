@@ -3,14 +3,16 @@
 # Exit on any error
 set -e
 
-# Error on undefined variable
-set -u
-
 # Enable gcc 10
 source /opt/rh/devtoolset-10/enable
 
 # Enable git
 source /opt/rh/rh-git227/enable
+
+# Error on undefined variable
+# NOTE: We enable this *after* sourcing the scripts above since we can't guarantee they won't have
+# unbound variables in them.
+set -u
 
 # NOTE: cmake and boost must be installed first since the remaining packages depend on them
 ./tools/scripts/lib_install/install-cmake.sh 3.21.2
