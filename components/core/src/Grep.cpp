@@ -343,29 +343,42 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                     unique_ptr<RegexDFA<RegexDFAByteState>> dfa2 = forward_lexer.nfa_to_dfa(nfa);
                     unique_ptr<RegexDFA<RegexDFAByteState>> const& dfa1 = forward_lexer.get_dfa();
                     set<uint32_t> schema_types = dfa1->get_intersect(dfa2);
-                    for (int id : schema_types) {
-                        if (current_string[0] == '*' && current_string.back() == '*') {
-                            suffixes.emplace_back('*', "*");
-                            QueryLogtype& suffix = suffixes.back();
-                            suffix.insert(id, current_string);
-                            suffix.insert('*', "*");
-                        } else if (current_string[0] == '*') {
-                            suffixes.emplace_back('*', "*");
-                            QueryLogtype& suffix = suffixes.back();
-                            suffix.insert(id, current_string);
-                        } else if (current_string.back() == '*') {
-                            suffixes.emplace_back(id, current_string);
-                            QueryLogtype& suffix = suffixes.back();
-                            suffix.insert('*', "*");
-                        } else {
-                            suffixes.emplace_back(id, current_string);
-                        }
-                        if (false == contains_wildcard) {
-                            // we only want the highest prio type if no wildcard
-                            break;
+                    bool is_sorrounded_by_delims = false;
+                    if ((j == 0 || processed_search_string[j] == '*' ||
+                         forward_lexer.is_delimiter(processed_search_string[j - 1]) ||
+                         processed_search_string[j - 1] == '*') &&
+                        (i == processed_search_string.size() - 1 ||
+                         processed_search_string[i] == '*' ||
+                         forward_lexer.is_delimiter(processed_search_string[i + 1]) ||
+                         processed_search_string[i + 1] == '*')) {
+                        is_sorrounded_by_delims = true;
+                    }
+                    if (is_sorrounded_by_delims) {
+                        for (int id : schema_types) {
+                            if (current_string[0] == '*' && current_string.back() == '*') {
+                                suffixes.emplace_back('*', "*");
+                                QueryLogtype& suffix = suffixes.back();
+                                suffix.insert(id, current_string);
+                                suffix.insert('*', "*");
+                            } else if (current_string[0] == '*') {
+                                suffixes.emplace_back('*', "*");
+                                QueryLogtype& suffix = suffixes.back();
+                                suffix.insert(id, current_string);
+                            } else if (current_string.back() == '*') {
+                                suffixes.emplace_back(id, current_string);
+                                QueryLogtype& suffix = suffixes.back();
+                                suffix.insert('*', "*");
+                            } else {
+                                suffixes.emplace_back(id, current_string);
+                            }
+                            if (false == contains_wildcard) {
+                                // we only want the highest prio type if no wildcard
+                                break;
+                            }
                         }
                     }
-                    if (schema_types.empty()) {
+                    if (schema_types.empty() || contains_wildcard ||
+                        is_sorrounded_by_delims == false) {
                         suffixes.emplace_back();
                         auto& suffix = suffixes.back();
                         for(char const& c : current_string) {
@@ -400,7 +413,7 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                     if (std::holds_alternative<char>(val)) {
                         std::cout << std::get<char>(val);
                     } else {
-                        std::cout << forward_lexer.m_id_symbol[std::get<int>(val)];
+                        std::cout << "<" << forward_lexer.m_id_symbol[std::get<int>(val)] << ">";
                         std::cout << "(" << str << ")";
                     }
                 }
