@@ -15,6 +15,7 @@
 #include "../streaming_archive/Constants.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
+#include "ControllerMonitoringThread.hpp"
 #include "MongoDBClient.hpp"
 
 using clp::clo::CommandLineArguments;
@@ -48,10 +49,20 @@ enum class SearchFilesResult {
 };
 
 /**
+ * Connects to the search controller
+ * @param controller_host
+ * @param controller_port
+ * @return -1 on failure
+ * @return Search controller socket file descriptor otherwise
+ */
+static int
+connect_to_search_controller(string const& controller_host, string const& controller_port);
+/**
  * Searches all files referenced by a given database cursor
  * @param query
  * @param archive
  * @param file_metadata_ix
+ * @param query_cancelled
  * @param mongo_client
  * @return SearchFilesResult::OpenFailure on failure to open a compressed file
  * @return SearchFilesResult::ResultSendFailure on failure to send a result
@@ -68,19 +79,71 @@ static SearchFilesResult search_files(
  * Searches an archive with the given path
  * @param command_line_args
  * @param archive_path
+ * @param query_cancelled
  * @param mongo_client
  * @return true on success, false otherwise
  */
 static bool search_archive(
         CommandLineArguments const& command_line_args,
         boost::filesystem::path const& archive_path,
+        std::atomic_bool const& query_cancelled,
         MongoDBClient& mongo_client
 );
+
+static int
+connect_to_search_controller(string const& controller_host, string const& controller_port) {
+    // Get address info for controller
+    struct addrinfo hints = {};
+    // Address can be IPv4 or IPV6
+    hints.ai_family = AF_UNSPEC;
+    // TCP socket
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = 0;
+    hints.ai_protocol = 0;
+    struct addrinfo* addresses_head = nullptr;
+    int error = getaddrinfo(
+            controller_host.c_str(),
+            controller_port.c_str(),
+            &hints,
+            &addresses_head
+    );
+    if (0 != error) {
+        SPDLOG_ERROR("Failed to get address information for search controller, error={}", error);
+        return -1;
+    }
+
+    // Try each address until a socket can be created and connected to
+    int controller_socket_fd = -1;
+    for (auto curr = addresses_head; nullptr != curr; curr = curr->ai_next) {
+        // Create socket
+        controller_socket_fd = socket(curr->ai_family, curr->ai_socktype, curr->ai_protocol);
+        if (-1 == controller_socket_fd) {
+            continue;
+        }
+
+        // Connect to address
+        if (connect(controller_socket_fd, curr->ai_addr, curr->ai_addrlen) != -1) {
+            break;
+        }
+
+        // Failed to connect, so close socket
+        close(controller_socket_fd);
+        controller_socket_fd = -1;
+    }
+    freeaddrinfo(addresses_head);
+    if (-1 == controller_socket_fd) {
+        SPDLOG_ERROR("Failed to connect to search controller, errno={}", errno);
+        return -1;
+    }
+
+    return controller_socket_fd;
+}
 
 static SearchFilesResult search_files(
         Query& query,
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
+        std::atomic_bool const& query_cancelled,
         MongoDBClient& mongo_client
 ) {
     SearchFilesResult result = SearchFilesResult::Success;
@@ -105,13 +168,14 @@ static SearchFilesResult search_files(
         }
 
         query.make_sub_queries_relevant_to_segment(compressed_file.get_segment_id());
-        while (Grep::search_and_decompress(
-                query,
-                archive,
-                compressed_file,
-                compressed_message,
-                decompressed_message
-        ))
+        while (false == query_cancelled
+               && Grep::search_and_decompress(
+                       query,
+                       archive,
+                       compressed_file,
+                       compressed_message,
+                       decompressed_message
+               ))
         {
             mongo_client.add_result(
                     compressed_file.get_orig_path(),
@@ -129,6 +193,7 @@ static SearchFilesResult search_files(
 static bool search_archive(
         CommandLineArguments const& command_line_args,
         boost::filesystem::path const& archive_path,
+        std::atomic_bool const& query_cancelled,
         MongoDBClient& mongo_client
 ) {
     if (false == boost::filesystem::exists(archive_path)) {
@@ -202,7 +267,13 @@ static bool search_archive(
     auto& file_metadata_ix = *file_metadata_ix_ptr;
     for (auto segment_id : ids_of_segments_to_search) {
         file_metadata_ix.set_segment_id(segment_id);
-        auto result = search_files(query, archive_reader, file_metadata_ix, mongo_client);
+        auto result = search_files(
+                query,
+                archive_reader,
+                file_metadata_ix,
+                query_cancelled,
+                mongo_client
+        );
         if (SearchFilesResult::ResultSendFailure == result) {
             // Stop search now since results aren't reaching the controller
             break;
@@ -241,6 +312,14 @@ int main(int argc, char const* argv[]) {
             break;
     }
 
+    int controller_socket_fd = connect_to_search_controller(
+            command_line_args.get_search_controller_host(),
+            command_line_args.get_search_controller_port()
+    );
+    if (-1 == controller_socket_fd) {
+        return -1;
+    }
+
     MongoDBClient mongo_client(
             command_line_args.get_mongodb_uri(),
             command_line_args.get_mongodb_database(),
@@ -249,9 +328,19 @@ int main(int argc, char const* argv[]) {
 
     auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());
 
+    clp::clo::ControllerMonitoringThread controller_monitoring_thread(controller_socket_fd);
+    controller_monitoring_thread.start();
+
     int return_value = 0;
     try {
-        if (false == search_archive(command_line_args, archive_path, mongo_client)) {
+        if (false
+            == search_archive(
+                    command_line_args,
+                    archive_path,
+                    controller_monitoring_thread.get_query_cancelled(),
+                    mongo_client
+            ))
+        {
             return_value = -1;
         }
     } catch (TraceableException& e) {
@@ -267,6 +356,38 @@ int main(int argc, char const* argv[]) {
         } else {
             SPDLOG_ERROR(
                     "Search failed: {}:{} {}, error_code={}",
+                    e.get_filename(),
+                    e.get_line_number(),
+                    e.what(),
+                    error_code
+            );
+        }
+        return_value = -1;
+    }
+
+    // Unblock the controller monitoring thread if it's blocked
+    auto shutdown_result = shutdown(controller_socket_fd, SHUT_RDWR);
+    if (0 != shutdown_result) {
+        if (ENOTCONN != shutdown_result) {
+            SPDLOG_ERROR("Failed to shutdown socket, error={}", shutdown_result);
+        }  // else connection already disconnected, so nothing to do
+    }
+
+    try {
+        controller_monitoring_thread.join();
+    } catch (TraceableException& e) {
+        auto error_code = e.get_error_code();
+        if (ErrorCode_errno == error_code) {
+            SPDLOG_ERROR(
+                    "Failed to join with controller monitoring thread: {}:{} {}, errno={}",
+                    e.get_filename(),
+                    e.get_line_number(),
+                    e.what(),
+                    errno
+            );
+        } else {
+            SPDLOG_ERROR(
+                    "Failed to join with controller monitoring thread: {}:{} {}, error_code={}",
                     e.get_filename(),
                     e.get_line_number(),
                     e.what(),

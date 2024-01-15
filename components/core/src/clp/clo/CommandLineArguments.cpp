@@ -89,6 +89,12 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     po::options_description hidden_positional_options;
     // clang-format off
     hidden_positional_options.add_options()(
+            "search-controller-host",
+            po::value<string>(&m_search_controller_host)
+    )(
+            "search-controller-port",
+            po::value<string>(&m_search_controller_port)
+    )(
             "mongodb-uri",
             po::value<string>(&m_mongodb_uri)
     )(
@@ -109,6 +115,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     );
     // clang-format on
     po::positional_options_description positional_options_description;
+    positional_options_description.add("search-controller-host", 1);
+    positional_options_description.add("search-controller-port", 1);
     positional_options_description.add("mongodb-uri", 1);
     positional_options_description.add("mongodb-database", 1);
     positional_options_description.add("mongodb-collection", 1);
@@ -164,10 +172,11 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             cerr << "Examples:" << endl;
             cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to )"
-                    R"(mongodb://127.0.0.1:27017 "test" database and "result" collection)"
+                    R"(mongodb://127.0.0.1:27017 "test" database and "result" collection )"
+                    R"(and use localhost:5555 as the search controller)"
                  << endl;
             cerr << "  " << get_program_name()
-                 << R"( mongodb://127.0.0.1:27017 )"
+                 << R"(localhost 5555 mongodb://127.0.0.1:27017 )"
                     R"(test result ARCHIVE_PATH " ERROR ")"
                  << endl;
             cerr << endl;
@@ -182,6 +191,16 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         if (parsed_command_line_options.count("version")) {
             cerr << cVersion << endl;
             return ParsingResult::InfoCommand;
+        }
+
+        // Validate search controller host was specified
+        if (m_search_controller_host.empty()) {
+            throw invalid_argument("SEARCH_CONTROLLER_HOST not specified or empty.");
+        }
+
+        // Validate search controller port was specified
+        if (m_search_controller_port.empty()) {
+            throw invalid_argument("SEARCH_CONTROLLER_PORT not specified or empty.");
         }
 
         // Validate mongodb uri was specified
@@ -268,7 +287,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
 void CommandLineArguments::print_basic_usage() const {
     cerr << "Usage: " << get_program_name()
-         << " [OPTIONS] MONGODB_URI MONGODB_DATABASE MONGODB_COLLECTION "
+         << " [OPTIONS] SEARCH_CONTROLLER_HOST SEARCH_CONTROLLER_PORT "
+            "MONGODB_URI MONGODB_DATABASE MONGODB_COLLECTION "
          << R"(ARCHIVE_PATH "WILDCARD STRING" [FILE])" << endl;
 }
 }  // namespace clp::clo

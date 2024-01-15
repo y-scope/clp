@@ -22,6 +22,10 @@ public:
     // Methods
     ParsingResult parse_arguments(int argc, char const* argv[]) override;
 
+    std::string const& get_search_controller_host() const { return m_search_controller_host; }
+
+    std::string const& get_search_controller_port() const { return m_search_controller_port; }
+
     std::string const& get_mongodb_uri() const { return m_mongodb_uri; }
 
     std::string const& get_mongodb_database() const { return m_mongodb_database; }
@@ -45,6 +49,8 @@ private:
     void print_basic_usage() const override;
 
     // Variables
+    std::string m_search_controller_host;
+    std::string m_search_controller_port;
     std::string m_mongodb_uri;
     std::string m_mongodb_database;
     std::string m_mongodb_collection;
