@@ -85,12 +85,10 @@ void File::write_encoded_msg(
 }
 
 void File::change_ts_pattern(TimestampPattern const* pattern) {
-    if (nullptr == pattern) {
-        m_timestamp_patterns.emplace_back(m_num_messages, TimestampPattern());
-    } else {
+    if (nullptr != pattern) {
         m_timestamp_patterns.emplace_back(m_num_messages, *pattern);
+        m_is_metadata_clean = false;
     }
-    m_is_metadata_clean = false;
 }
 
 bool File::is_in_uncommitted_segment() const {
