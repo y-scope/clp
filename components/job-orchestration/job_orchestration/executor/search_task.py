@@ -34,6 +34,8 @@ def run_clo(job_id: int, task_id: int, clp_home: pathlib.Path, archive_output_di
     # Assemble search command
     cmd = [
         str(clp_home / 'bin' / 'clo'),
+        search_config.search_controller_host,
+        str(search_config.search_controller_port),
         results_cache_uri,
         results_cache_db_name,
         str(job_id),

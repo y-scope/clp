@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import datetime
 import logging
+import msgpack
+import multiprocessing
 import pathlib
 import pymongo
+import socket
 import sys
 import time
+import zstandard
 from contextlib import closing
 
-import msgpack
-import zstandard
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -37,9 +40,46 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def do_search(db_config: Database, results_cache: ResultsCache, wildcard_query: str,
-                    begin_timestamp: int | None, end_timestamp: int | None, path_filter: str):
+async def run_function_in_process(function, *args, initializer=None, init_args=None):
+    """
+    Runs the given function in a separate process wrapped in a *cancellable*
+    asyncio task. This is necessary because asyncio's multiprocessing process
+    cannot be cancelled once it's started.
+    :param function: Method to run
+    :param args: Arguments for the method
+    :param initializer: Initializer for each process in the pool
+    :param init_args: Arguments for the initializer
+    :return: Return value of the method
+    """
+    pool = multiprocessing.Pool(1, initializer, init_args)
+
+    loop = asyncio.get_event_loop()
+    fut = loop.create_future()
+
+    def process_done_callback(obj):
+        loop.call_soon_threadsafe(fut.set_result, obj)
+
+    def process_error_callback(err):
+        loop.call_soon_threadsafe(fut.set_exception, err)
+
+    pool.apply_async(function, args, callback=process_done_callback, error_callback=process_error_callback)
+
+    try:
+        return await fut
+    except asyncio.CancelledError:
+        pass
+    finally:
+        pool.terminate()
+        pool.close()
+
+
+def create_and_monitor_job_in_db(db_config: Database, results_cache: ResultsCache, wildcard_query: str,
+                                 begin_timestamp: int | None, end_timestamp: int | None,
+                                 path_filter: str, search_controller_host: str,
+                                 search_controller_port: int):
     search_config = SearchConfig(
+        search_controller_host=search_controller_host,
+        search_controller_port=search_controller_port,
         wildcard_query=wildcard_query,
         begin_timestamp=begin_timestamp,
         end_timestamp=end_timestamp,
@@ -119,6 +159,50 @@ def do_search(db_config: Database, results_cache: ResultsCache, wildcard_query: 
             print(document)
 
 
+async def worker_connection_handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+    try:
+        while True:
+            pass
+    except asyncio.CancelledError:
+        return
+    finally:
+        writer.close()
+
+
+async def do_search(db_config: Database, results_cache: ResultsCache, wildcard_query: str,
+                    begin_timestamp: int | None, end_timestamp: int | None, path_filter: str, host: str):
+    # Start a server
+    try:
+        server = await asyncio.start_server(client_connected_cb=worker_connection_handler, host=host, port=0,
+                                            family=socket.AF_INET)
+    except asyncio.CancelledError:
+        # Search cancelled
+        return
+    port = server.sockets[0].getsockname()[1]
+
+    server_task = asyncio.ensure_future(server.serve_forever())
+
+    db_monitor_task = asyncio.ensure_future(
+        run_function_in_process(create_and_monitor_job_in_db, db_config, results_cache, wildcard_query,
+                                begin_timestamp, end_timestamp, path_filter, host, port))
+
+    # Wait for the job to complete or an error to occur
+    pending = [server_task, db_monitor_task]
+    try:
+        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+        if db_monitor_task in done:
+            server.close()
+            await server.wait_closed()
+        else:
+            logger.error("server task unexpectedly returned")
+            db_monitor_task.cancel()
+            await db_monitor_task
+    except asyncio.CancelledError:
+        server.close()
+        await server.wait_closed()
+        await db_monitor_task
+
+
 def main(argv):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
@@ -151,8 +235,17 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    do_search(clp_config.database, clp_config.results_cache, parsed_args.wildcard_query,
-              parsed_args.begin_time, parsed_args.end_time, parsed_args.file_path)
+    # Get IP of local machine
+    host_ip = None
+    for ip in set(socket.gethostbyname_ex(socket.gethostname())[2]):
+        host_ip = ip
+        break
+    if host_ip is None:
+        logger.error("Could not determine IP of local machine.")
+        return -1
+
+    asyncio.run(do_search(clp_config.database, clp_config.results_cache, parsed_args.wildcard_query,
+                          parsed_args.begin_time, parsed_args.end_time, parsed_args.file_path))
 
     return 0
 
