@@ -1,5 +1,5 @@
-#ifndef CLP_FILEREADER_HPP
-#define CLP_FILEREADER_HPP
+#ifndef GLT_FILEREADER_HPP
+#define GLT_FILEREADER_HPP
 
 #include <sys/stat.h>
 
@@ -11,7 +11,7 @@
 #include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace glt {
 class FileReader : public ReaderInterface {
 public:
     // Types
@@ -111,6 +111,6 @@ private:
     char* m_getdelim_buf;
     std::string m_path;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_FILEREADER_HPP
+#endif  // GLT_FILEREADER_HPP

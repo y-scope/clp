@@ -1,12 +1,12 @@
-#ifndef CLP_GLOBALMYSQLMETADATADB_HPP
-#define CLP_GLOBALMYSQLMETADATADB_HPP
+#ifndef GLT_GLOBALMYSQLMETADATADB_HPP
+#define GLT_GLOBALMYSQLMETADATADB_HPP
 
 #include "ErrorCode.hpp"
 #include "GlobalMetadataDB.hpp"
 #include "MySQLDB.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Class representing a MySQL global metadata database
  */
@@ -109,6 +109,6 @@ private:
     std::unique_ptr<MySQLPreparedStatement> m_update_archive_size_statement;
     std::unique_ptr<MySQLPreparedStatement> m_upsert_file_statement;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_GLOBALMYSQLMETADATADB_HPP
+#endif  // GLT_GLOBALMYSQLMETADATADB_HPP

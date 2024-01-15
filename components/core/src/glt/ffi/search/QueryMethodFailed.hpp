@@ -1,11 +1,11 @@
-#ifndef CLP_FFI_SEARCH_QUERYMETHODFAILED_HPP
-#define CLP_FFI_SEARCH_QUERYMETHODFAILED_HPP
+#ifndef GLT_FFI_SEARCH_QUERYMETHODFAILED_HPP
+#define GLT_FFI_SEARCH_QUERYMETHODFAILED_HPP
 
 #include <string>
 
 #include "../../TraceableException.hpp"
 
-namespace clp::ffi::search {
+namespace glt::ffi::search {
 class QueryMethodFailed : public TraceableException {
 public:
     // Constructors
@@ -24,6 +24,6 @@ public:
 private:
     std::string m_message;
 };
-}  // namespace clp::ffi::search
+}  // namespace glt::ffi::search
 
-#endif  // CLP_FFI_SEARCH_QUERYMETHODFAILED_HPP
+#endif  // GLT_FFI_SEARCH_QUERYMETHODFAILED_HPP

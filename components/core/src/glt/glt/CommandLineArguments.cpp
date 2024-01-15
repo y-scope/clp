@@ -19,7 +19,7 @@ using std::invalid_argument;
 using std::string;
 using std::vector;
 
-namespace clp::clp {
+namespace glt::glt {
 CommandLineArgumentsBase::ParsingResult
 CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     // Print out basic usage if user doesn't specify any options
@@ -387,4 +387,4 @@ void CommandLineArguments::print_extraction_basic_usage() const {
     cerr << "Usage: " << get_program_name() << " [OPTIONS] x ARCHIVES_DIR OUTPUT_DIR [FILE ...]"
          << endl;
 }
-}  // namespace clp::clp
+}  // namespace glt::glt

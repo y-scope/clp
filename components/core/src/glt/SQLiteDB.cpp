@@ -5,7 +5,7 @@
 
 using std::string;
 
-namespace clp {
+namespace glt {
 void SQLiteDB::open(string const& path) {
     auto return_value = sqlite3_open(path.c_str(), &m_db_handle);
     if (SQLITE_OK != return_value) {
@@ -37,4 +37,4 @@ SQLiteDB::prepare_statement(char const* statement, size_t statement_length) {
 
     return {statement, statement_length, m_db_handle};
 }
-}  // namespace clp
+}  // namespace glt

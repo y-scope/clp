@@ -7,7 +7,7 @@
 #include "../Defs.h"
 #include "SocketOperationFailed.hpp"
 
-namespace clp::networking {
+namespace glt::networking {
 ErrorCode try_send(int fd, char const* buf, size_t buf_len) {
     if (fd < 0 || nullptr == buf) {
         return ErrorCode_BadParam;
@@ -51,4 +51,4 @@ void receive(int fd, char* buf, size_t buf_len, size_t& num_bytes_received) {
         throw SocketOperationFailed(error_code, __FILENAME__, __LINE__);
     }
 }
-}  // namespace clp::networking
+}  // namespace glt::networking

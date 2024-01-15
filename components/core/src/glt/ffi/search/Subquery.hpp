@@ -1,5 +1,5 @@
-#ifndef CLP_FFI_SEARCH_SUBQUERY_HPP
-#define CLP_FFI_SEARCH_SUBQUERY_HPP
+#ifndef GLT_FFI_SEARCH_SUBQUERY_HPP
+#define GLT_FFI_SEARCH_SUBQUERY_HPP
 
 #include <string>
 #include <variant>
@@ -8,7 +8,7 @@
 #include "ExactVariableToken.hpp"
 #include "WildcardToken.hpp"
 
-namespace clp::ffi::search {
+namespace glt::ffi::search {
 /**
  * A class representing a subquery. Each subquery encompasses a single logtype query and zero or
  * more variable queries. Both the logtype and variables may contain wildcards.
@@ -48,6 +48,6 @@ private:
     bool m_logtype_query_contains_wildcards;
     QueryVariables m_query_vars;
 };
-}  // namespace clp::ffi::search
+}  // namespace glt::ffi::search
 
-#endif  // CLP_FFI_SEARCH_SUBQUERY_HPP
+#endif  // GLT_FFI_SEARCH_SUBQUERY_HPP

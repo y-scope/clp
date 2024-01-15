@@ -1,5 +1,5 @@
-#ifndef CLP_FFI_SEARCH_COMPOSITEWILDCARDTOKEN_HPP
-#define CLP_FFI_SEARCH_COMPOSITEWILDCARDTOKEN_HPP
+#ifndef GLT_FFI_SEARCH_COMPOSITEWILDCARDTOKEN_HPP
+#define GLT_FFI_SEARCH_COMPOSITEWILDCARDTOKEN_HPP
 
 #include <string_view>
 #include <variant>
@@ -10,7 +10,7 @@
 #include "QueryWildcard.hpp"
 #include "WildcardToken.hpp"
 
-namespace clp::ffi::search {
+namespace glt::ffi::search {
 /**
  * A token delimited by delimiters and non-wildcards. Note that the original query string is stored
  * by reference, so it must remain valid while the token exists.
@@ -86,6 +86,6 @@ private:
             std::variant<ExactVariableToken<encoded_variable_t>, WildcardToken<encoded_variable_t>>>
             m_variables;
 };
-}  // namespace clp::ffi::search
+}  // namespace glt::ffi::search
 
-#endif  // CLP_FFI_SEARCH_COMPOSITEWILDCARDTOKEN_HPP
+#endif  // GLT_FFI_SEARCH_COMPOSITEWILDCARDTOKEN_HPP

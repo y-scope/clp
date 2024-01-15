@@ -1,5 +1,5 @@
-#ifndef CLP_DICTIONARYWRITER_HPP
-#define CLP_DICTIONARYWRITER_HPP
+#ifndef GLT_DICTIONARYWRITER_HPP
+#define GLT_DICTIONARYWRITER_HPP
 
 #include <string>
 #include <unordered_map>
@@ -17,7 +17,7 @@
 #include "streaming_compression/zstd/Decompressor.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Template class for performing operations on dictionaries and writing them to disk
  * @tparam DictionaryIdType
@@ -294,6 +294,6 @@ void DictionaryWriter<DictionaryIdType, EntryType>::index_segment(
     m_segment_index_file_writer.write_numeric_value<uint64_t>(m_num_segments_in_index);
     m_segment_index_file_writer.seek_from_begin(segment_index_file_writer_pos);
 }
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_DICTIONARYWRITER_HPP
+#endif  // GLT_DICTIONARYWRITER_HPP

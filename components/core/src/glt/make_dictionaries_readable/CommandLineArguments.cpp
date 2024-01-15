@@ -13,7 +13,7 @@ using std::exception;
 using std::invalid_argument;
 using std::string;
 
-namespace clp::make_dictionaries_readable {
+namespace glt::make_dictionaries_readable {
 CommandLineArgumentsBase::ParsingResult
 CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     // Print out basic usage if user doesn't specify any options
@@ -89,4 +89,4 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 void CommandLineArguments::print_basic_usage() const {
     cerr << "Usage: " << get_program_name() << " [OPTIONS] ARCHIVE_PATH OUTPUT_DIR" << endl;
 }
-}  // namespace clp::make_dictionaries_readable
+}  // namespace glt::make_dictionaries_readable

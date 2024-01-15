@@ -1,15 +1,15 @@
-#ifndef CLP_STREAMING_COMPRESSION_PASSTHROUGH_COMPRESSOR_HPP
-#define CLP_STREAMING_COMPRESSION_PASSTHROUGH_COMPRESSOR_HPP
+#ifndef GLT_STREAMING_COMPRESSION_PASSTHROUGH_COMPRESSOR_HPP
+#define GLT_STREAMING_COMPRESSION_PASSTHROUGH_COMPRESSOR_HPP
 
 #include "../../FileWriter.hpp"
 #include "../../TraceableException.hpp"
 #include "../Compressor.hpp"
 
-namespace clp::streaming_compression::passthrough {
+namespace glt::streaming_compression::passthrough {
 /**
  * Compressor that passes all data through without any compression.
  */
-class Compressor : public ::clp::streaming_compression::Compressor {
+class Compressor : public ::glt::streaming_compression::Compressor {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -26,7 +26,7 @@ public:
 
     // Constructors
     Compressor()
-            : ::clp::streaming_compression::Compressor(CompressorType::Passthrough),
+            : ::glt::streaming_compression::Compressor(CompressorType::Passthrough),
               m_compressed_stream_file_writer(nullptr) {}
 
     // Explicitly disable copy and move constructor/assignment
@@ -69,6 +69,6 @@ private:
     // Variables
     FileWriter* m_compressed_stream_file_writer;
 };
-}  // namespace clp::streaming_compression::passthrough
+}  // namespace glt::streaming_compression::passthrough
 
-#endif  // CLP_STREAMING_COMPRESSION_PASSTHROUGH_COMPRESSOR_HPP
+#endif  // GLT_STREAMING_COMPRESSION_PASSTHROUGH_COMPRESSOR_HPP

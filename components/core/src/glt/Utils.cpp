@@ -20,7 +20,7 @@ using std::list;
 using std::string;
 using std::vector;
 
-namespace clp {
+namespace glt {
 ErrorCode create_directory(string const& path, mode_t mode, bool exist_ok) {
     int retval = mkdir(path.c_str(), mode);
     if (0 != retval) {
@@ -303,4 +303,4 @@ void load_lexer_from_file(
         lexer.generate();
     }
 }
-}  // namespace clp
+}  // namespace glt

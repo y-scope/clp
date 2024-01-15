@@ -1,11 +1,11 @@
-#ifndef CLP_STOPWATCH_HPP
-#define CLP_STOPWATCH_HPP
+#ifndef GLT_STOPWATCH_HPP
+#define GLT_STOPWATCH_HPP
 
 #include <chrono>
 #include <ctime>
 #include <ostream>
 
-namespace clp {
+namespace glt {
 class Stopwatch {
 public:
     // Constructor
@@ -23,6 +23,6 @@ private:
     std::chrono::time_point<std::chrono::steady_clock> m_begin;
     std::chrono::duration<uint64_t, std::nano> m_time_taken;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_STOPWATCH_HPP
+#endif  // GLT_STOPWATCH_HPP

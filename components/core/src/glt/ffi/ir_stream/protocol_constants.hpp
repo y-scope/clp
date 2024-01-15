@@ -1,11 +1,11 @@
-#ifndef CLP_FFI_IR_STREAM_PROTOCOL_CONSTANTS_HPP
-#define CLP_FFI_IR_STREAM_PROTOCOL_CONSTANTS_HPP
+#ifndef GLT_FFI_IR_STREAM_PROTOCOL_CONSTANTS_HPP
+#define GLT_FFI_IR_STREAM_PROTOCOL_CONSTANTS_HPP
 
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
 
-namespace clp::ffi::ir_stream::cProtocol {
+namespace glt::ffi::ir_stream::cProtocol {
 namespace Metadata {
 constexpr int8_t EncodingJson = 0x1;
 constexpr int8_t LengthUByte = 0x11;
@@ -58,6 +58,6 @@ constexpr std::enable_if<
         size_t>::type MagicNumberLength
         = sizeof(EightByteEncodingMagicNumber);
 constexpr int8_t Eof = 0x0;
-}  // namespace clp::ffi::ir_stream::cProtocol
+}  // namespace glt::ffi::ir_stream::cProtocol
 
-#endif  // CLP_FFI_IR_STREAM_PROTOCOL_CONSTANTS_HPP
+#endif  // GLT_FFI_IR_STREAM_PROTOCOL_CONSTANTS_HPP

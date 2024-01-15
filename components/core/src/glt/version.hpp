@@ -1,8 +1,8 @@
-#ifndef CLP_VERSION_HPP
-#define CLP_VERSION_HPP
+#ifndef GLT_VERSION_HPP
+#define GLT_VERSION_HPP
 
-namespace clp {
+namespace glt {
 constexpr char cVersion[] = "0.0.3-dev";
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_VERSION_HPP
+#endif  // GLT_VERSION_HPP

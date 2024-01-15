@@ -6,14 +6,14 @@
 #include "byteswap.hpp"
 #include "protocol_constants.hpp"
 
-using clp::ir::eight_byte_encoded_variable_t;
-using clp::ir::epoch_time_ms_t;
-using clp::ir::four_byte_encoded_variable_t;
+using glt::ir::eight_byte_encoded_variable_t;
+using glt::ir::epoch_time_ms_t;
+using glt::ir::four_byte_encoded_variable_t;
 using std::is_same_v;
 using std::string;
 using std::vector;
 
-namespace clp::ffi::ir_stream {
+namespace glt::ffi::ir_stream {
 /**
  * @tparam encoded_variable_t Type of the encoded variable
  * @param tag
@@ -537,4 +537,4 @@ template auto deserialize_log_event<eight_byte_encoded_variable_t>(
         vector<string>& dict_vars,
         epoch_time_ms_t& timestamp_or_timestamp_delta
 ) -> IRErrorCode;
-}  // namespace clp::ffi::ir_stream
+}  // namespace glt::ffi::ir_stream

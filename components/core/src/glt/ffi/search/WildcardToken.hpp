@@ -1,12 +1,12 @@
-#ifndef CLP_FFI_WILDCARDTOKEN_HPP
-#define CLP_FFI_WILDCARDTOKEN_HPP
+#ifndef GLT_FFI_WILDCARDTOKEN_HPP
+#define GLT_FFI_WILDCARDTOKEN_HPP
 
 #include <vector>
 
 #include "../../TraceableException.hpp"
 #include "QueryToken.hpp"
 
-namespace clp::ffi::search {
+namespace glt::ffi::search {
 /**
  * A token containing one or more wildcards. Note that the original query string is stored by
  * reference, so it must remain valid while the token exists.
@@ -74,6 +74,6 @@ private:
     std::vector<TokenType> m_possible_variable_types;
     size_t m_current_interpretation_idx;
 };
-}  // namespace clp::ffi::search
+}  // namespace glt::ffi::search
 
-#endif  // CLP_FFI_WILDCARDTOKEN_HPP
+#endif  // GLT_FFI_WILDCARDTOKEN_HPP

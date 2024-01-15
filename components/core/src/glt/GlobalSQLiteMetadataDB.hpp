@@ -1,5 +1,5 @@
-#ifndef CLP_GLOBALSQLITEMETADATADB_HPP
-#define CLP_GLOBALSQLITEMETADATADB_HPP
+#ifndef GLT_GLOBALSQLITEMETADATADB_HPP
+#define GLT_GLOBALSQLITEMETADATADB_HPP
 
 #include <string>
 #include <unordered_set>
@@ -11,7 +11,7 @@
 #include "SQLiteDB.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Class representing a MySQL global metadata database
  */
@@ -106,6 +106,6 @@ private:
     std::unique_ptr<SQLitePreparedStatement> m_upsert_files_transaction_begin_statement;
     std::unique_ptr<SQLitePreparedStatement> m_upsert_files_transaction_end_statement;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_GLOBALSQLITEMETADATADB_HPP
+#endif  // GLT_GLOBALSQLITEMETADATADB_HPP

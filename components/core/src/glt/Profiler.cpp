@@ -5,7 +5,7 @@
 using std::unique_ptr;
 using std::vector;
 
-namespace clp {
+namespace glt {
 vector<Stopwatch>* Profiler::m_fragmented_measurements = nullptr;
 vector<Stopwatch>* Profiler::m_continuous_measurements = nullptr;
-}  // namespace clp
+}  // namespace glt

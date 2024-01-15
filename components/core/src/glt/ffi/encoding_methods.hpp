@@ -1,5 +1,5 @@
-#ifndef CLP_FFI_ENCODING_METHODS_HPP
-#define CLP_FFI_ENCODING_METHODS_HPP
+#ifndef GLT_FFI_ENCODING_METHODS_HPP
+#define GLT_FFI_ENCODING_METHODS_HPP
 
 #include <string>
 #include <vector>
@@ -10,7 +10,7 @@
 
 // TODO Some of the methods in this file are mostly duplicated from code that exists elsewhere in
 //  the repo. They should be consolidated in a future commit.
-namespace clp::ffi {
+namespace glt::ffi {
 class EncodingException : public TraceableException {
 public:
     // Constructors
@@ -278,8 +278,8 @@ bool wildcard_match_encoded_vars(
         std::string_view wildcard_var_placeholders,
         std::vector<std::string_view> const& wildcard_var_queries
 );
-}  // namespace clp::ffi
+}  // namespace glt::ffi
 
 #include "encoding_methods.inc"
 
-#endif  // CLP_FFI_ENCODING_METHODS_HPP
+#endif  // GLT_FFI_ENCODING_METHODS_HPP

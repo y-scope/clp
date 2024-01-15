@@ -1,9 +1,9 @@
-#ifndef CLP_PLATFORM_HPP
-#define CLP_PLATFORM_HPP
+#ifndef GLT_PLATFORM_HPP
+#define GLT_PLATFORM_HPP
 
 #include <cstdint>
 
-namespace clp {
+namespace glt {
 /**
  * Enum defining the supported platforms. This allows us to use C++ constants instead of macros when
  * defining code that's platform-dependent. Using constants is generally cleaner than using macros
@@ -45,6 +45,6 @@ constexpr Platform cCurrentPlatform = Platform::MacOs;
 #else
 constexpr Platform cCurrentPlatform = Platform::Linux;
 #endif
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_PLATFORM_HPP
+#endif  // GLT_PLATFORM_HPP

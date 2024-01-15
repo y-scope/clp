@@ -1,5 +1,5 @@
-#ifndef CLP_FFI_ENCODING_METHODS_INC
-#define CLP_FFI_ENCODING_METHODS_INC
+#ifndef GLT_FFI_ENCODING_METHODS_INC
+#define GLT_FFI_ENCODING_METHODS_INC
 
 #include <algorithm>
 
@@ -9,7 +9,7 @@
 #include "../ir/types.hpp"
 #include "../type_utils.hpp"
 
-namespace clp::ffi {
+namespace glt::ffi {
 template <typename encoded_variable_t>
 bool encode_float_string(std::string_view str, encoded_variable_t& encoded_var) {
     auto const value_length = str.length();
@@ -327,7 +327,7 @@ bool encode_integer_string(std::string_view str, encoded_variable_t& encoded_var
     }
 
     encoded_variable_t result;
-    if (false == string_utils::convert_string_to_int(str, result)) {
+    if (false == clp::string_utils::convert_string_to_int(str, result)) {
         // Conversion failed
         return false;
     } else {
@@ -520,7 +520,7 @@ bool wildcard_query_matches_any_encoded_var(
 
             if constexpr (ir::VariablePlaceholder::Float == var_placeholder) {
                 auto decoded_var = decode_float_var(encoded_vars[encoded_vars_ix]);
-                if (string_utils::wildcard_match_unsafe(decoded_var, wildcard_query)) {
+                if (clp::string_utils::wildcard_match_unsafe(decoded_var, wildcard_query)) {
                     return true;
                 }
             }
@@ -538,7 +538,7 @@ bool wildcard_query_matches_any_encoded_var(
 
             if constexpr (ir::VariablePlaceholder::Integer == var_placeholder) {
                 auto decoded_var = decode_integer_var(encoded_vars[encoded_vars_ix]);
-                if (string_utils::wildcard_match_unsafe(decoded_var, wildcard_query)) {
+                if (clp::string_utils::wildcard_match_unsafe(decoded_var, wildcard_query)) {
                     return true;
                 }
             }
@@ -592,7 +592,7 @@ bool wildcard_match_encoded_vars(
 
             if (wildcard_var_placeholders[wildcard_var_ix] == c) {
                 auto decoded_var = decode_float_var(encoded_vars[var_ix]);
-                if (string_utils::wildcard_match_unsafe(
+                if (clp::string_utils::wildcard_match_unsafe(
                             decoded_var,
                             wildcard_var_queries[wildcard_var_ix]
                     ))
@@ -617,7 +617,7 @@ bool wildcard_match_encoded_vars(
 
             if (wildcard_var_placeholders[wildcard_var_ix] == c) {
                 auto decoded_var = decode_integer_var(encoded_vars[var_ix]);
-                if (string_utils::wildcard_match_unsafe(
+                if (clp::string_utils::wildcard_match_unsafe(
                             decoded_var,
                             wildcard_var_queries[wildcard_var_ix]
                     ))
@@ -635,6 +635,6 @@ bool wildcard_match_encoded_vars(
 
     return (wildcard_var_queries_len == wildcard_var_ix);
 }
-}  // namespace clp::ffi
+}  // namespace glt::ffi
 
-#endif  // CLP_FFI_ENCODING_METHODS_INC
+#endif  // GLT_FFI_ENCODING_METHODS_INC

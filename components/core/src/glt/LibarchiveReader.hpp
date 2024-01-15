@@ -1,5 +1,5 @@
-#ifndef CLP_LIBARCHIVEREADER_HPP
-#define CLP_LIBARCHIVEREADER_HPP
+#ifndef GLT_LIBARCHIVEREADER_HPP
+#define GLT_LIBARCHIVEREADER_HPP
 
 #include <string>
 #include <vector>
@@ -12,7 +12,7 @@
 #include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Class for reading archives through libarchive
  */
@@ -151,6 +151,6 @@ private:
 
     bool m_is_opened_by_libarchive;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_LIBARCHIVEREADER_HPP
+#endif  // GLT_LIBARCHIVEREADER_HPP

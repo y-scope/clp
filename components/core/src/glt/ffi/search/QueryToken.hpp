@@ -1,9 +1,9 @@
-#ifndef CLP_FFI_SEARCH_QUERYTOKEN_HPP
-#define CLP_FFI_SEARCH_QUERYTOKEN_HPP
+#ifndef GLT_FFI_SEARCH_QUERYTOKEN_HPP
+#define GLT_FFI_SEARCH_QUERYTOKEN_HPP
 
 #include <string_view>
 
-namespace clp::ffi::search {
+namespace glt::ffi::search {
 enum class TokenType {
     StaticText = 0,
     IntegerVariable,
@@ -46,6 +46,6 @@ protected:
     size_t m_end_pos;
     TokenType m_type;
 };
-}  // namespace clp::ffi::search
+}  // namespace glt::ffi::search
 
-#endif  // CLP_FFI_SEARCH_QUERYTOKEN_HPP
+#endif  // GLT_FFI_SEARCH_QUERYTOKEN_HPP

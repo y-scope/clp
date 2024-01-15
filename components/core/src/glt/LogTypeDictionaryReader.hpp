@@ -1,16 +1,16 @@
-#ifndef CLP_LOGTYPEDICTIONARYREADER_HPP
-#define CLP_LOGTYPEDICTIONARYREADER_HPP
+#ifndef GLT_LOGTYPEDICTIONARYREADER_HPP
+#define GLT_LOGTYPEDICTIONARYREADER_HPP
 
 #include "Defs.h"
 #include "DictionaryReader.hpp"
 #include "LogTypeDictionaryEntry.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Class for reading logtype dictionaries from disk and performing operations on them
  */
 class LogTypeDictionaryReader
         : public DictionaryReader<logtype_dictionary_id_t, LogTypeDictionaryEntry> {};
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_LOGTYPEDICTIONARYREADER_HPP
+#endif  // GLT_LOGTYPEDICTIONARYREADER_HPP

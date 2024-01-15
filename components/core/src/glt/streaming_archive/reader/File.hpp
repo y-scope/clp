@@ -14,7 +14,7 @@
 #include "Message.hpp"
 #include "SegmentManager.hpp"
 
-namespace clp::streaming_archive::reader {
+namespace glt::streaming_archive::reader {
 class File {
 public:
     // Types
@@ -159,6 +159,6 @@ private:
     size_t m_split_ix;
     bool m_is_split;
 };
-}  // namespace clp::streaming_archive::reader
+}  // namespace glt::streaming_archive::reader
 
 #endif  // STREAMING_ARCHIVE_READER_FILE_HPP

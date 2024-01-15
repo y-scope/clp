@@ -1,6 +1,6 @@
 #include "ArchiveMetadata.hpp"
 
-namespace clp::streaming_archive {
+namespace glt::streaming_archive {
 ArchiveMetadata::ArchiveMetadata(
         archive_format_version_t archive_format_version,
         std::string creator_id,
@@ -51,4 +51,4 @@ void ArchiveMetadata::write_to_file(FileWriter& file_writer) const {
     file_writer.write_numeric_value(m_begin_timestamp);
     file_writer.write_numeric_value(m_end_timestamp);
 }
-}  // namespace clp::streaming_archive
+}  // namespace glt::streaming_archive

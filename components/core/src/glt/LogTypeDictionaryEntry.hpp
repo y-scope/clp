@@ -1,5 +1,5 @@
-#ifndef CLP_LOGTYPEDICTIONARYENTRY_HPP
-#define CLP_LOGTYPEDICTIONARYENTRY_HPP
+#ifndef GLT_LOGTYPEDICTIONARYENTRY_HPP
+#define GLT_LOGTYPEDICTIONARYENTRY_HPP
 
 #include <vector>
 
@@ -13,7 +13,7 @@
 #include "TraceableException.hpp"
 #include "type_utils.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Class representing a logtype dictionary entry
  */
@@ -176,6 +176,6 @@ private:
     std::vector<size_t> m_placeholder_positions;
     size_t m_num_escaped_placeholders{0};
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_LOGTYPEDICTIONARYENTRY_HPP
+#endif  // GLT_LOGTYPEDICTIONARYENTRY_HPP

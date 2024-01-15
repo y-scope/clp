@@ -19,7 +19,7 @@
     #define MREMAP_MAYMOVE 0
 #endif
 
-namespace clp {
+namespace glt {
 /**
  * A minimal vector that is allocated in increments of pages rather than individual elements
  * @tparam ValueType The type of value contained in the vector
@@ -283,6 +283,6 @@ void PageAllocatedVector<ValueType>::increase_capacity(size_t required_capacity)
     m_capacity_in_bytes = new_size;
     m_capacity = m_capacity_in_bytes / sizeof(ValueType);
 }
-}  // namespace clp
+}  // namespace glt
 
 #endif  // PAGEALLOCATEDVECTOR_HPP

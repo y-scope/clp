@@ -5,11 +5,11 @@
 
 #include "../ir/types.hpp"
 
-using clp::ir::eight_byte_encoded_variable_t;
-using clp::ir::four_byte_encoded_variable_t;
+using glt::ir::eight_byte_encoded_variable_t;
+using glt::ir::four_byte_encoded_variable_t;
 using std::string_view;
 
-namespace clp::ffi {
+namespace glt::ffi {
 eight_byte_encoded_variable_t encode_four_byte_float_as_eight_byte(
         four_byte_encoded_variable_t four_byte_encoded_var
 ) {
@@ -38,4 +38,4 @@ eight_byte_encoded_variable_t encode_four_byte_integer_as_eight_byte(
 ) {
     return static_cast<eight_byte_encoded_variable_t>(four_byte_encoded_var);
 }
-}  // namespace clp::ffi
+}  // namespace glt::ffi

@@ -1,15 +1,15 @@
-#ifndef CLP_STREAMING_COMPRESSION_PASSTHROUGH_DECOMPRESSOR_HPP
-#define CLP_STREAMING_COMPRESSION_PASSTHROUGH_DECOMPRESSOR_HPP
+#ifndef GLT_STREAMING_COMPRESSION_PASSTHROUGH_DECOMPRESSOR_HPP
+#define GLT_STREAMING_COMPRESSION_PASSTHROUGH_DECOMPRESSOR_HPP
 
 #include "../../FileReader.hpp"
 #include "../../TraceableException.hpp"
 #include "../Decompressor.hpp"
 
-namespace clp::streaming_compression::passthrough {
+namespace glt::streaming_compression::passthrough {
 /**
  * Decompressor that passes all data through without any decompression.
  */
-class Decompressor : public ::clp::streaming_compression::Decompressor {
+class Decompressor : public ::glt::streaming_compression::Decompressor {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -26,7 +26,7 @@ public:
 
     // Constructors
     Decompressor()
-            : ::clp::streaming_compression::Decompressor(CompressorType::Passthrough),
+            : ::glt::streaming_compression::Decompressor(CompressorType::Passthrough),
               m_input_type(InputType::NotInitialized),
               m_compressed_data_buf(nullptr),
               m_compressed_data_buf_len(0),
@@ -102,6 +102,6 @@ private:
 
     size_t m_decompressed_stream_pos;
 };
-}  // namespace clp::streaming_compression::passthrough
+}  // namespace glt::streaming_compression::passthrough
 
-#endif  // CLP_STREAMING_COMPRESSION_PASSTHROUGH_DECOMPRESSOR_HPP
+#endif  // GLT_STREAMING_COMPRESSION_PASSTHROUGH_DECOMPRESSOR_HPP

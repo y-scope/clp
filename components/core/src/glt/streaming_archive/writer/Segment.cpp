@@ -15,7 +15,7 @@ using std::string;
 using std::to_string;
 using std::unique_ptr;
 
-namespace clp::streaming_archive::writer {
+namespace glt::streaming_archive::writer {
 Segment::~Segment() {
     if (!m_segment_path.empty()) {
         SPDLOG_ERROR(
@@ -86,4 +86,4 @@ size_t Segment::get_compressed_size() {
 bool Segment::is_open() const {
     return !m_segment_path.empty();
 }
-}  // namespace clp::streaming_archive::writer
+}  // namespace glt::streaming_archive::writer

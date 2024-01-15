@@ -1,9 +1,9 @@
-#ifndef CLP_BUFFERREADER_HPP
-#define CLP_BUFFERREADER_HPP
+#ifndef GLT_BUFFERREADER_HPP
+#define GLT_BUFFERREADER_HPP
 
 #include "ReaderInterface.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Class for reading from a fixed-size in-memory buffer
  */
@@ -103,6 +103,6 @@ private:
     size_t m_internal_buf_size;
     size_t m_internal_buf_pos;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_BUFFERREADER_HPP
+#endif  // GLT_BUFFERREADER_HPP

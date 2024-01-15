@@ -5,7 +5,7 @@
 
 using std::string;
 
-namespace clp {
+namespace glt {
 SQLitePreparedStatement::SQLitePreparedStatement(
         char const* statement,
         size_t statement_length,
@@ -226,4 +226,4 @@ void SQLitePreparedStatement::column_string(
 
     column_string(parameter_index, value);
 }
-}  // namespace clp
+}  // namespace glt

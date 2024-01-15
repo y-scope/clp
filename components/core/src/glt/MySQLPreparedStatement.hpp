@@ -1,5 +1,5 @@
-#ifndef CLP_MYSQLPREPAREDSTATEMENT_HPP
-#define CLP_MYSQLPREPAREDSTATEMENT_HPP
+#ifndef GLT_MYSQLPREPAREDSTATEMENT_HPP
+#define GLT_MYSQLPREPAREDSTATEMENT_HPP
 
 #include <string>
 #include <vector>
@@ -10,7 +10,7 @@
 #include "MySQLParamBindings.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace glt {
 class MySQLPreparedStatement {
 public:
     // Types
@@ -58,6 +58,6 @@ private:
 
     bool m_is_set;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_MYSQLPREPAREDSTATEMENT_HPP
+#endif  // GLT_MYSQLPREPAREDSTATEMENT_HPP

@@ -16,24 +16,24 @@
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 
-using clp::clg::CommandLineArguments;
-using clp::CommandLineArgumentsBase;
-using clp::epochtime_t;
-using clp::ErrorCode;
-using clp::ErrorCode_errno;
-using clp::FileReader;
-using clp::GlobalMetadataDB;
-using clp::GlobalMetadataDBConfig;
-using clp::Grep;
-using clp::load_lexer_from_file;
-using clp::Profiler;
-using clp::Query;
-using clp::segment_id_t;
-using clp::streaming_archive::MetadataDB;
-using clp::streaming_archive::reader::Archive;
-using clp::streaming_archive::reader::File;
-using clp::streaming_archive::reader::Message;
-using clp::TraceableException;
+using glt::gltg::CommandLineArguments;
+using glt::CommandLineArgumentsBase;
+using glt::epochtime_t;
+using glt::ErrorCode;
+using glt::ErrorCode_errno;
+using glt::FileReader;
+using glt::GlobalMetadataDB;
+using glt::GlobalMetadataDBConfig;
+using glt::Grep;
+using glt::load_lexer_from_file;
+using glt::Profiler;
+using glt::Query;
+using glt::segment_id_t;
+using glt::streaming_archive::MetadataDB;
+using glt::streaming_archive::reader::Archive;
+using glt::streaming_archive::reader::File;
+using glt::streaming_archive::reader::Message;
+using glt::TraceableException;
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -137,7 +137,7 @@ static GlobalMetadataDB::ArchiveIterator* get_archive_iterator(
 ) {
     if (!file_path.empty()) {
         return global_metadata_db.get_archive_iterator_for_file_path(file_path);
-    } else if (begin_ts == clp::cEpochTimeMin && end_ts == clp::cEpochTimeMax) {
+    } else if (begin_ts == glt::cEpochTimeMin && end_ts == glt::cEpochTimeMax) {
         return global_metadata_db.get_archive_iterator();
     } else {
         return global_metadata_db.get_archive_iterator_for_time_window(begin_ts, end_ts);
@@ -276,7 +276,7 @@ static bool search(
                         search_begin_ts,
                         search_end_ts,
                         command_line_args.get_file_path(),
-                        clp::cInvalidSegmentId
+                        glt::cInvalidSegmentId
                 );
                 auto& file_metadata_ix = *file_metadata_ix_ptr;
                 num_matches = search_files(
@@ -329,12 +329,12 @@ static bool open_compressed_file(
         File& compressed_file
 ) {
     ErrorCode error_code = archive.open_file(compressed_file, file_metadata_ix);
-    if (clp::ErrorCode_Success == error_code) {
+    if (glt::ErrorCode_Success == error_code) {
         return true;
     }
     string orig_path;
     file_metadata_ix.get_path(orig_path);
-    if (clp::ErrorCode_FileNotFound == error_code) {
+    if (glt::ErrorCode_FileNotFound == error_code) {
         SPDLOG_WARN("{} not found in archive", orig_path.c_str());
     } else if (ErrorCode_errno == error_code) {
         SPDLOG_ERROR("Failed to open {}, errno={}", orig_path.c_str(), errno);
@@ -471,9 +471,9 @@ int main(int argc, char const* argv[]) {
         return -1;
     }
     Profiler::init();
-    clp::TimestampPattern::init();
+    glt::TimestampPattern::init();
 
-    CommandLineArguments command_line_args("clg");
+    CommandLineArguments command_line_args("gltg");
     auto parsing_result = command_line_args.parse_arguments(argc, argv);
     switch (parsing_result) {
         case CommandLineArgumentsBase::ParsingResult::Failure:
@@ -523,14 +523,14 @@ int main(int argc, char const* argv[]) {
     switch (global_metadata_db_config.get_metadata_db_type()) {
         case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
             auto global_metadata_db_path
-                    = archives_dir / clp::streaming_archive::cMetadataDBFileName;
+                    = archives_dir / glt::streaming_archive::cMetadataDBFileName;
             global_metadata_db
-                    = std::make_unique<clp::GlobalSQLiteMetadataDB>(global_metadata_db_path.string()
+                    = std::make_unique<glt::GlobalSQLiteMetadataDB>(global_metadata_db_path.string()
                     );
             break;
         }
         case GlobalMetadataDBConfig::MetadataDBType::MySQL:
-            global_metadata_db = std::make_unique<clp::GlobalMySQLMetadataDB>(
+            global_metadata_db = std::make_unique<glt::GlobalMySQLMetadataDB>(
                     global_metadata_db_config.get_metadata_db_host(),
                     global_metadata_db_config.get_metadata_db_port(),
                     global_metadata_db_config.get_metadata_db_username(),
@@ -581,7 +581,7 @@ int main(int argc, char const* argv[]) {
         }
 
         // Generate lexer if schema file exists
-        auto schema_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
+        auto schema_file_path = archive_path / glt::streaming_archive::cSchemaFileName;
         bool use_heuristic = true;
         if (std::filesystem::exists(schema_file_path)) {
             use_heuristic = false;

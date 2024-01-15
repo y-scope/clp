@@ -1,5 +1,5 @@
-#ifndef CLP_IR_PARSING_HPP
-#define CLP_IR_PARSING_HPP
+#ifndef GLT_IR_PARSING_HPP
+#define GLT_IR_PARSING_HPP
 
 /**
  * TODO Technically, the methods in this file are more general than for their use in generating
@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-namespace clp::ir {
+namespace glt::ir {
 /**
  * Checks if the given character is a delimiter
  * We treat everything *except* the following quoted characters as a delimiter: "+-.0-9A-Z\_a-z"
@@ -93,7 +93,7 @@ void append_constant_to_logtype(
         EscapeHandler escape_handler,
         std::string& logtype
 );
-}  // namespace clp::ir
+}  // namespace glt::ir
 
 #include "parsing.inc"
-#endif  // CLP_IR_PARSING_HPP
+#endif  // GLT_IR_PARSING_HPP

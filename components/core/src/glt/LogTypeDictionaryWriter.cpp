@@ -4,7 +4,7 @@
 
 using std::string;
 
-namespace clp {
+namespace glt {
 bool LogTypeDictionaryWriter::add_entry(
         LogTypeDictionaryEntry& logtype_entry,
         logtype_dictionary_id_t& logtype_id
@@ -36,4 +36,4 @@ bool LogTypeDictionaryWriter::add_entry(
     }
     return is_new_entry;
 }
-}  // namespace clp
+}  // namespace glt

@@ -8,7 +8,7 @@
 using std::string;
 using std::string_view;
 
-namespace clp::ir {
+namespace glt::ir {
 /*
  * For performance, we rely on the ASCII ordering of characters to compare ranges of characters at a
  * time instead of comparing individual characters
@@ -64,9 +64,9 @@ bool get_bounds_of_next_var(string_view const str, size_t& begin_pos, size_t& en
         end_pos = begin_pos;
         for (; end_pos < msg_length; ++end_pos) {
             auto c = str[end_pos];
-            if (string_utils::is_decimal_digit(c)) {
+            if (clp::string_utils::is_decimal_digit(c)) {
                 contains_decimal_digit = true;
-            } else if (string_utils::is_alphabet(c)) {
+            } else if (clp::string_utils::is_alphabet(c)) {
                 contains_alphabet = true;
             } else if (is_delim(c)) {
                 break;
@@ -101,4 +101,4 @@ void escape_and_append_const_to_logtype(string_view constant, string& logtype) {
     // clang-format on
     append_constant_to_logtype(constant, escape_handler, logtype);
 }
-}  // namespace clp::ir
+}  // namespace glt::ir

@@ -1,5 +1,5 @@
-#ifndef CLP_SPDLOG_WITH_SPECIALIZATIONS_HPP
-#define CLP_SPDLOG_WITH_SPECIALIZATIONS_HPP
+#ifndef GLT_SPDLOG_WITH_SPECIALIZATIONS_HPP
+#define GLT_SPDLOG_WITH_SPECIALIZATIONS_HPP
 
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
@@ -9,20 +9,20 @@
 #include "ffi/search/WildcardToken.hpp"
 
 template <>
-struct fmt::formatter<clp::ErrorCode> {
+struct fmt::formatter<glt::ErrorCode> {
     template <typename ParseContext>
     constexpr auto parse(ParseContext& ctx) {
         return ctx.begin();
     }
 
     template <typename FormatContext>
-    auto format(clp::ErrorCode const& error_code, FormatContext& ctx) {
+    auto format(glt::ErrorCode const& error_code, FormatContext& ctx) {
         return fmt::format_to(ctx.out(), "{}", static_cast<size_t>(error_code));
     }
 };
 
 template <typename encoded_variable_t>
-struct fmt::formatter<clp::ffi::search::ExactVariableToken<encoded_variable_t>> {
+struct fmt::formatter<glt::ffi::search::ExactVariableToken<encoded_variable_t>> {
     template <typename ParseContext>
     constexpr auto parse(ParseContext& ctx) {
         return ctx.begin();
@@ -30,7 +30,7 @@ struct fmt::formatter<clp::ffi::search::ExactVariableToken<encoded_variable_t>> 
 
     template <typename FormatContext>
     auto
-    format(clp::ffi::search::ExactVariableToken<encoded_variable_t> const& v, FormatContext& ctx) {
+    format(glt::ffi::search::ExactVariableToken<encoded_variable_t> const& v, FormatContext& ctx) {
         return fmt::format_to(
                 ctx.out(),
                 "ExactVariableToken(\"{}\") as {}",
@@ -41,14 +41,14 @@ struct fmt::formatter<clp::ffi::search::ExactVariableToken<encoded_variable_t>> 
 };
 
 template <typename encoded_variable_t>
-struct fmt::formatter<clp::ffi::search::WildcardToken<encoded_variable_t>> {
+struct fmt::formatter<glt::ffi::search::WildcardToken<encoded_variable_t>> {
     template <typename ParseContext>
     constexpr auto parse(ParseContext& ctx) {
         return ctx.begin();
     }
 
     template <typename FormatContext>
-    auto format(clp::ffi::search::WildcardToken<encoded_variable_t> const& v, FormatContext& ctx) {
+    auto format(glt::ffi::search::WildcardToken<encoded_variable_t> const& v, FormatContext& ctx) {
         return fmt::format_to(
                 ctx.out(),
                 "WildcardToken(\"{}\") as {}TokenType({}){}",
@@ -60,4 +60,4 @@ struct fmt::formatter<clp::ffi::search::WildcardToken<encoded_variable_t>> {
     }
 };
 
-#endif  // CLP_SPDLOG_WITH_SPECIALIZATIONS_HPP
+#endif  // GLT_SPDLOG_WITH_SPECIALIZATIONS_HPP

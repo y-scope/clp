@@ -25,7 +25,7 @@ static void inplace_set_intersection(SetType const& a, SetType& b) {
     }
 }
 
-namespace clp {
+namespace glt {
 QueryVar::QueryVar(encoded_variable_t precise_non_dict_var) {
     m_precise_var = precise_non_dict_var;
     m_is_precise_var = true;
@@ -202,4 +202,4 @@ void Query::make_sub_queries_relevant_to_segment(segment_id_t segment_id) {
     }
     m_prev_segment_id = segment_id;
 }
-}  // namespace clp
+}  // namespace glt

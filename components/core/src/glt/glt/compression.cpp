@@ -15,7 +15,7 @@
 #include "FileCompressor.hpp"
 #include "utils.hpp"
 
-using clp::streaming_archive::writer::split_archive;
+using glt::streaming_archive::writer::split_archive;
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -23,7 +23,7 @@ using std::out_of_range;
 using std::string;
 using std::vector;
 
-namespace clp::clp {
+namespace glt::glt {
 // Local prototypes
 /**
  * Comparator to sort files based on their group ID
@@ -302,4 +302,4 @@ bool read_and_validate_grouped_file_list(
 
     return all_paths_valid;
 }
-}  // namespace clp::clp
+}  // namespace glt::glt

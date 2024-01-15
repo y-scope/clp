@@ -6,7 +6,7 @@
 
 #include "../../Defs.h"
 
-namespace clp::streaming_archive::reader {
+namespace glt::streaming_archive::reader {
 class Message {
 public:
     // Methods
@@ -31,6 +31,6 @@ private:
     std::vector<encoded_variable_t> m_vars;
     epochtime_t m_timestamp;
 };
-}  // namespace clp::streaming_archive::reader
+}  // namespace glt::streaming_archive::reader
 
 #endif  // STREAMING_ARCHIVE_READER_MESSAGE_HPP

@@ -1,5 +1,5 @@
 set(
-        CLG_SOURCES
+        GLTG_SOURCES
         ../BufferReader.cpp
         ../BufferReader.hpp
         ../database_utils.cpp
@@ -113,15 +113,15 @@ set(
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.c"
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.h"
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3ext.h"
-        clg.cpp
+        gltg.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
 )
 
-add_executable(clg ${CLG_SOURCES})
-target_compile_features(clg PRIVATE cxx_std_17)
-target_include_directories(clg PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
-target_link_libraries(clg
+add_executable(gltg ${GLTG_SOURCES})
+target_compile_features(gltg PRIVATE cxx_std_17)
+target_include_directories(gltg PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
+target_link_libraries(gltg
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
@@ -136,7 +136,7 @@ target_link_libraries(clg
 )
 # Put the built executable at the root of the build directory
 set_target_properties(
-        clg
+        gltg
         PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
 )

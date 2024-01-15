@@ -1,11 +1,11 @@
-#ifndef CLP_LOG_SURGEON_READER_HPP
-#define CLP_LOG_SURGEON_READER_HPP
+#ifndef GLT_LOG_SURGEON_READER_HPP
+#define GLT_LOG_SURGEON_READER_HPP
 
 #include <log_surgeon/Reader.hpp>
 
 #include "ReaderInterface.hpp"
 
-namespace clp {
+namespace glt {
 /*
  * Wrapper providing a read function that works with the parsers in log_surgeon.
  */
@@ -16,6 +16,6 @@ public:
 private:
     ReaderInterface& m_reader_interface;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_LOG_SURGEON_READER_HPP
+#endif  // GLT_LOG_SURGEON_READER_HPP

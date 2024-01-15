@@ -1,12 +1,12 @@
-#ifndef CLP_FFI_SEARCH_EXACTVARIABLETOKEN_HPP
-#define CLP_FFI_SEARCH_EXACTVARIABLETOKEN_HPP
+#ifndef GLT_FFI_SEARCH_EXACTVARIABLETOKEN_HPP
+#define GLT_FFI_SEARCH_EXACTVARIABLETOKEN_HPP
 
 #include "../../Defs.h"
 #include "../../ir/types.hpp"
 #include "../encoding_methods.hpp"
 #include "QueryToken.hpp"
 
-namespace clp::ffi::search {
+namespace glt::ffi::search {
 /**
  * A token representing an exact variable (as opposed to a variable with wildcards). Note that the
  * original query string is stored by reference, so it must remain valid while the token exists.
@@ -46,6 +46,6 @@ private:
     encoded_variable_t m_encoded_value;
     ir::VariablePlaceholder m_placeholder;
 };
-}  // namespace clp::ffi::search
+}  // namespace glt::ffi::search
 
-#endif  // CLP_FFI_SEARCH_EXACTVARIABLETOKEN_HPP
+#endif  // GLT_FFI_SEARCH_EXACTVARIABLETOKEN_HPP

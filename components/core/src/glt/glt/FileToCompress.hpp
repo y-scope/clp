@@ -1,11 +1,11 @@
-#ifndef CLP_CLP_FILETOCOMPRESS_HPP
-#define CLP_CLP_FILETOCOMPRESS_HPP
+#ifndef GLT_GLT_FILETOCOMPRESS_HPP
+#define GLT_GLT_FILETOCOMPRESS_HPP
 
 #include <string>
 
 #include "../Defs.h"
 
-namespace clp::clp {
+namespace glt::glt {
 /**
  * Class to store data about a file to compress
  */
@@ -34,6 +34,6 @@ private:
     std::string m_path_for_compression;
     group_id_t m_group_id;
 };
-}  // namespace clp::clp
+}  // namespace glt::glt
 
-#endif  // CLP_CLP_FILETOCOMPRESS_HPP
+#endif  // GLT_GLT_FILETOCOMPRESS_HPP

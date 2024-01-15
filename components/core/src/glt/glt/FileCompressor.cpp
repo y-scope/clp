@@ -18,14 +18,14 @@
 #include "../streaming_archive/writer/utils.hpp"
 #include "utils.hpp"
 
-using clp::ir::eight_byte_encoded_variable_t;
-using clp::ir::four_byte_encoded_variable_t;
-using clp::ir::has_ir_stream_magic_number;
-using clp::ir::LogEventDeserializer;
-using clp::ParsedMessage;
-using clp::streaming_archive::writer::split_archive;
-using clp::streaming_archive::writer::split_file;
-using clp::streaming_archive::writer::split_file_and_archive;
+using glt::ir::eight_byte_encoded_variable_t;
+using glt::ir::four_byte_encoded_variable_t;
+using glt::ir::has_ir_stream_magic_number;
+using glt::ir::LogEventDeserializer;
+using glt::ParsedMessage;
+using glt::streaming_archive::writer::split_archive;
+using glt::streaming_archive::writer::split_file;
+using glt::streaming_archive::writer::split_file_and_archive;
 using log_surgeon::LogEventView;
 using log_surgeon::Reader;
 using log_surgeon::ReaderParser;
@@ -47,7 +47,7 @@ static void compute_and_add_empty_directories(
         set<string> const& directories,
         set<string> const& parent_directories,
         boost::filesystem::path const& parent_path,
-        clp::streaming_archive::writer::Archive& archive
+        glt::streaming_archive::writer::Archive& archive
 );
 
 /**
@@ -58,14 +58,14 @@ static void compute_and_add_empty_directories(
  */
 static void write_message_to_encoded_file(
         ParsedMessage const& msg,
-        clp::streaming_archive::writer::Archive& archive
+        glt::streaming_archive::writer::Archive& archive
 );
 
 static void compute_and_add_empty_directories(
         set<string> const& directories,
         set<string> const& parent_directories,
         boost::filesystem::path const& parent_path,
-        clp::streaming_archive::writer::Archive& archive
+        glt::streaming_archive::writer::Archive& archive
 ) {
     // Determine empty directories by subtracting parent directories
     vector<string> empty_directories;
@@ -97,7 +97,7 @@ static void compute_and_add_empty_directories(
 
 static void write_message_to_encoded_file(
         ParsedMessage const& msg,
-        clp::streaming_archive::writer::Archive& archive
+        glt::streaming_archive::writer::Archive& archive
 ) {
     if (msg.has_ts_patt_changed()) {
         archive.change_ts_pattern(msg.get_ts_patt());
@@ -106,7 +106,7 @@ static void write_message_to_encoded_file(
     archive.write_msg(msg.get_ts(), msg.get_content(), msg.get_orig_num_bytes());
 }
 
-namespace clp::clp {
+namespace glt::glt {
 bool FileCompressor::compress_file(
         size_t target_data_size_of_dicts,
         streaming_archive::writer::Archive::UserConfig& archive_user_config,
@@ -575,4 +575,4 @@ FileCompressor::compress_ir_stream_by_encoding<four_byte_encoded_variable_t>(
         streaming_archive::writer::Archive& archive,
         LogEventDeserializer<four_byte_encoded_variable_t>& log_event_deserializer
 );
-}  // namespace clp::clp
+}  // namespace glt::glt

@@ -1,5 +1,5 @@
-#ifndef CLP_VARIABLEDICTIONARYENTRY_HPP
-#define CLP_VARIABLEDICTIONARYENTRY_HPP
+#ifndef GLT_VARIABLEDICTIONARYENTRY_HPP
+#define GLT_VARIABLEDICTIONARYENTRY_HPP
 
 #include "Defs.h"
 #include "DictionaryEntry.hpp"
@@ -8,7 +8,7 @@
 #include "streaming_compression/zstd/Compressor.hpp"
 #include "streaming_compression/zstd/Decompressor.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Class representing a variable dictionary entry
  */
@@ -67,6 +67,6 @@ public:
      */
     void read_from_file(streaming_compression::Decompressor& decompressor);
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_VARIABLEDICTIONARYENTRY_HPP
+#endif  // GLT_VARIABLEDICTIONARYENTRY_HPP

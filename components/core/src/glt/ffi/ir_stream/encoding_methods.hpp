@@ -1,5 +1,5 @@
-#ifndef CLP_FFI_IR_STREAM_ENCODING_METHODS_HPP
-#define CLP_FFI_IR_STREAM_ENCODING_METHODS_HPP
+#ifndef GLT_FFI_IR_STREAM_ENCODING_METHODS_HPP
+#define GLT_FFI_IR_STREAM_ENCODING_METHODS_HPP
 
 #include <string_view>
 #include <vector>
@@ -7,7 +7,7 @@
 #include "../../ir/types.hpp"
 #include "../encoding_methods.hpp"
 
-namespace clp::ffi::ir_stream {
+namespace glt::ffi::ir_stream {
 namespace eight_byte_encoding {
 /**
  * Serializes the preamble for the eight-byte encoding IR stream
@@ -91,6 +91,6 @@ bool serialize_message(std::string_view message, std::string& logtype, std::vect
  */
 bool serialize_timestamp(ir::epoch_time_ms_t timestamp_delta, std::vector<int8_t>& ir_buf);
 }  // namespace four_byte_encoding
-}  // namespace clp::ffi::ir_stream
+}  // namespace glt::ffi::ir_stream
 
-#endif  // CLP_FFI_IR_STREAM_ENCODING_METHODS_HPP
+#endif  // GLT_FFI_IR_STREAM_ENCODING_METHODS_HPP

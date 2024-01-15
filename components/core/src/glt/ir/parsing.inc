@@ -1,5 +1,5 @@
-#ifndef CLP_IR_PARSING_INC
-#define CLP_IR_PARSING_INC
+#ifndef GLT_IR_PARSING_INC
+#define GLT_IR_PARSING_INC
 
 #include <string>
 #include <string_view>
@@ -7,7 +7,7 @@
 #include "../type_utils.hpp"
 #include "types.hpp"
 
-namespace clp::ir {
+namespace glt::ir {
 template <typename EscapeHandler>
 void append_constant_to_logtype(
         std::string_view constant,
@@ -30,5 +30,5 @@ void append_constant_to_logtype(
     }
     logtype.append(constant, begin_pos, constant_len - begin_pos);
 }
-}  // namespace clp::ir
-#endif  // CLP_IR_PARSING_INC
+}  // namespace glt::ir
+#endif  // GLT_IR_PARSING_INC

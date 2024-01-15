@@ -1,5 +1,5 @@
-#ifndef CLP_GREP_HPP
-#define CLP_GREP_HPP
+#ifndef GLT_GREP_HPP
+#define GLT_GREP_HPP
 
 #include <optional>
 #include <string>
@@ -11,7 +11,7 @@
 #include "streaming_archive/reader/Archive.hpp"
 #include "streaming_archive/reader/File.hpp"
 
-namespace clp {
+namespace glt {
 class Grep {
 public:
     // Types
@@ -144,6 +144,6 @@ public:
             streaming_archive::reader::File& compressed_file
     );
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_GREP_HPP
+#endif  // GLT_GREP_HPP

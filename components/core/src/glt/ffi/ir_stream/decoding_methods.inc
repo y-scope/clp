@@ -1,5 +1,5 @@
-#ifndef CLP_FFI_IR_STREAM_DECODING_METHODS_INC
-#define CLP_FFI_IR_STREAM_DECODING_METHODS_INC
+#ifndef GLT_FFI_IR_STREAM_DECODING_METHODS_INC
+#define GLT_FFI_IR_STREAM_DECODING_METHODS_INC
 
 #include <string>
 #include <vector>
@@ -9,7 +9,7 @@
 #include "decoding_methods.hpp"
 #include "protocol_constants.hpp"
 
-namespace clp::ffi::ir_stream {
+namespace glt::ffi::ir_stream {
 template <
         bool unescape_logtype,
         typename encoded_variable_t,
@@ -139,6 +139,6 @@ void generic_decode_message(
         );
     }
 }
-}  // namespace clp::ffi::ir_stream
+}  // namespace glt::ffi::ir_stream
 
-#endif  // CLP_FFI_IR_STREAM_DECODING_METHODS_INC
+#endif  // GLT_FFI_IR_STREAM_DECODING_METHODS_INC

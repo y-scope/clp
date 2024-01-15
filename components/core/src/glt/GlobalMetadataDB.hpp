@@ -1,5 +1,5 @@
-#ifndef CLP_GLOBALMETADATADB_HPP
-#define CLP_GLOBALMETADATADB_HPP
+#ifndef GLT_GLOBALMETADATADB_HPP
+#define GLT_GLOBALMETADATADB_HPP
 
 #include <string>
 #include <vector>
@@ -7,7 +7,7 @@
 #include "streaming_archive/ArchiveMetadata.hpp"
 #include "streaming_archive/writer/File.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Base class for a representation of the global metadata database
  */
@@ -94,6 +94,6 @@ protected:
     // Variables
     bool m_is_open;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_GLOBALMETADATADB_HPP
+#endif  // GLT_GLOBALMETADATADB_HPP

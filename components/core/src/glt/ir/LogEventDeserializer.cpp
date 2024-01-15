@@ -8,7 +8,7 @@
 #include "../ffi/ir_stream/decoding_methods.hpp"
 #include "types.hpp"
 
-namespace clp::ir {
+namespace glt::ir {
 template <typename encoded_variable_t>
 auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader)
         -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>> {
@@ -57,7 +57,7 @@ auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader)
         }
         auto ref_timestamp_str = ref_timestamp_iter->get_ref<nlohmann::json::string_t&>();
         epoch_time_ms_t ref_timestamp{};
-        if (false == string_utils::convert_string_to_int(ref_timestamp_str, ref_timestamp)) {
+        if (false == clp::string_utils::convert_string_to_int(ref_timestamp_str, ref_timestamp)) {
             return std::errc::protocol_error;
         }
 
@@ -113,4 +113,4 @@ template auto LogEventDeserializer<eight_byte_encoded_variable_t>::deserialize_l
         -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<eight_byte_encoded_variable_t>>;
 template auto LogEventDeserializer<four_byte_encoded_variable_t>::deserialize_log_event()
         -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<four_byte_encoded_variable_t>>;
-}  // namespace clp::ir
+}  // namespace glt::ir

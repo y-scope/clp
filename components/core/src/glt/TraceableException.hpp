@@ -1,11 +1,11 @@
-#ifndef CLP_TRACEABLEEXCEPTION_HPP
-#define CLP_TRACEABLEEXCEPTION_HPP
+#ifndef GLT_TRACEABLEEXCEPTION_HPP
+#define GLT_TRACEABLEEXCEPTION_HPP
 
 #include <exception>
 
 #include "ErrorCode.hpp"
 
-namespace clp {
+namespace glt {
 class TraceableException : public std::exception {
 public:
     // Constructors
@@ -34,7 +34,7 @@ private:
     char const* m_filename;
     int m_line_number;
 };
-}  // namespace clp
+}  // namespace glt
 
 // Macros
 // Define a version of __FILE__ that's relative to the source directory
@@ -45,4 +45,4 @@ private:
     #define __FILENAME__ __FILE__
 #endif
 
-#endif  // CLP_TRACEABLEEXCEPTION_HPP
+#endif  // GLT_TRACEABLEEXCEPTION_HPP

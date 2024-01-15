@@ -7,9 +7,9 @@
 #include "../../Defs.h"
 #include "../../spdlog_with_specializations.hpp"
 
-namespace clp::streaming_compression::zstd {
+namespace glt::streaming_compression::zstd {
 Decompressor::Decompressor()
-        : ::clp::streaming_compression::Decompressor(CompressorType::ZSTD),
+        : ::glt::streaming_compression::Decompressor(CompressorType::ZSTD),
           m_input_type(InputType::NotInitialized),
           m_decompression_stream(nullptr),
           m_file_reader(nullptr),
@@ -275,4 +275,4 @@ void Decompressor::reset_stream() {
 
     m_compressed_stream_block.pos = 0;
 }
-}  // namespace clp::streaming_compression::zstd
+}  // namespace glt::streaming_compression::zstd

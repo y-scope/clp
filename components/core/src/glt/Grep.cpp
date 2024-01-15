@@ -12,10 +12,10 @@
 #include "StringReader.hpp"
 #include "Utils.hpp"
 
-using clp::ir::is_delim;
-using clp::streaming_archive::reader::Archive;
-using clp::streaming_archive::reader::File;
-using clp::streaming_archive::reader::Message;
+using glt::ir::is_delim;
+using glt::streaming_archive::reader::Archive;
+using glt::streaming_archive::reader::File;
+using glt::streaming_archive::reader::Message;
 using clp::string_utils::clean_up_wildcard_search_string;
 using clp::string_utils::is_alphabet;
 using clp::string_utils::is_wildcard;
@@ -23,7 +23,7 @@ using clp::string_utils::wildcard_match_unsafe;
 using std::string;
 using std::vector;
 
-namespace clp {
+namespace glt {
 namespace {
 // Local types
 enum class SubQueryMatchabilityResult {
@@ -701,7 +701,7 @@ bool Grep::get_bounds_of_next_potential_var(
                 }
             }
 
-            if (string_utils::is_decimal_digit(c)) {
+            if (clp::string_utils::is_decimal_digit(c)) {
                 contains_decimal_digit = true;
             } else if (is_alphabet(c)) {
                 contains_alphabet = true;
@@ -1063,4 +1063,4 @@ size_t Grep::search(Query const& query, size_t limit, Archive& archive, File& co
 
     return num_matches;
 }
-}  // namespace clp
+}  // namespace glt

@@ -17,7 +17,7 @@ int fdatasync(int fd);
 
 using std::string;
 
-namespace clp {
+namespace glt {
 FileWriter::~FileWriter() {
     if (nullptr != m_file) {
         SPDLOG_ERROR("FileWriter not closed before being destroyed - may cause data loss");
@@ -160,4 +160,4 @@ void FileWriter::close() {
         m_fd = -1;
     }
 }
-}  // namespace clp
+}  // namespace glt

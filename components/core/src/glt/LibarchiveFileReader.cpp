@@ -4,7 +4,7 @@
 
 #include "spdlog_with_specializations.hpp"
 
-namespace clp {
+namespace glt {
 ErrorCode LibarchiveFileReader::try_get_pos(size_t& pos) {
     if (nullptr == m_archive) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
@@ -269,4 +269,4 @@ ErrorCode LibarchiveFileReader::read_next_data_block() {
 
     return ErrorCode_Success;
 }
-}  // namespace clp
+}  // namespace glt

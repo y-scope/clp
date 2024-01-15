@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cstring>
 
-namespace clp {
+namespace glt {
 BufferReader::BufferReader(char const* data, size_t data_size, size_t pos) {
     if (nullptr == data) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
@@ -99,4 +99,4 @@ auto BufferReader::try_read_to_delimiter(
     size_t num_bytes_read{0};
     return try_read_to_delimiter(delim, keep_delimiter, str, found_delim, num_bytes_read);
 }
-}  // namespace clp
+}  // namespace glt

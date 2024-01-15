@@ -1,5 +1,5 @@
-#ifndef CLP_CLG_COMMANDLINEARGUMENTS_HPP
-#define CLP_CLG_COMMANDLINEARGUMENTS_HPP
+#ifndef GLT_GLTG_COMMANDLINEARGUMENTS_HPP
+#define GLT_GLTG_COMMANDLINEARGUMENTS_HPP
 
 #include <string>
 #include <vector>
@@ -10,7 +10,7 @@
 #include "../Defs.h"
 #include "../GlobalMetadataDBConfig.hpp"
 
-namespace clp::clg {
+namespace glt::gltg {
 class CommandLineArguments : public CommandLineArgumentsBase {
 public:
     // Types
@@ -62,6 +62,6 @@ private:
     epochtime_t m_search_begin_ts, m_search_end_ts;
     GlobalMetadataDBConfig m_metadata_db_config;
 };
-}  // namespace clp::clg
+}  // namespace glt::clg
 
-#endif  // CLP_CLG_COMMANDLINEARGUMENTS_HPP
+#endif  // GLT_CLG_COMMANDLINEARGUMENTS_HPP
