@@ -7,7 +7,7 @@
 
 using std::string;
 
-namespace clp::clp {
+namespace glt::glt {
 bool FileDecompressor::decompress_file(
         streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
         string const& output_dir,
@@ -76,4 +76,4 @@ bool FileDecompressor::decompress_file(
 
     return true;
 }
-}  // namespace clp::clp
+}  // namespace glt::glt

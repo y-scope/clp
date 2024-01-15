@@ -1,5 +1,5 @@
-#ifndef CLP_CLP_COMPRESSION_HPP
-#define CLP_CLP_COMPRESSION_HPP
+#ifndef GLT_GLT_COMPRESSION_HPP
+#define GLT_GLT_COMPRESSION_HPP
 
 #include <string>
 #include <vector>
@@ -11,7 +11,7 @@
 #include "CommandLineArguments.hpp"
 #include "FileToCompress.hpp"
 
-namespace clp::clp {
+namespace glt::glt {
 /**
  * Compresses all given paths into an archive
  * @param command_line_args
@@ -45,6 +45,6 @@ bool read_and_validate_grouped_file_list(
         std::string const& list_path,
         std::vector<FileToCompress>& grouped_files
 );
-}  // namespace clp::clp
+}  // namespace glt::glt
 
-#endif  // CLP_CLP_COMPRESSION_HPP
+#endif  // GLT_GLT_COMPRESSION_HPP

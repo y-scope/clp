@@ -1,5 +1,5 @@
-#ifndef CLP_CLP_UTILS_HPP
-#define CLP_CLP_UTILS_HPP
+#ifndef GLT_GLT_UTILS_HPP
+#define GLT_GLT_UTILS_HPP
 
 #include <string>
 
@@ -7,7 +7,7 @@
 
 #include "FileToCompress.hpp"
 
-namespace clp::clp {
+namespace glt::glt {
 /**
  * Recursively finds all files and empty directories at the given path
  * @param path_prefix_to_remove
@@ -61,6 +61,6 @@ bool remove_prefix_and_clean_up_path(
  * @return true if they all exist, false otherwise
  */
 bool validate_paths_exist(std::vector<std::string> const& paths);
-}  // namespace clp::clp
+}  // namespace glt::glt
 
-#endif  // CLP_CLP_UTILS_HPP
+#endif  // GLT_GLT_UTILS_HPP

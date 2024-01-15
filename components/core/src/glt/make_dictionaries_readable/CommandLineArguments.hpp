@@ -1,9 +1,9 @@
-#ifndef CLP_MAKE_DICTIONARIES_READABLE_COMMANDLINEARGUMENTS_HPP
-#define CLP_MAKE_DICTIONARIES_READABLE_COMMANDLINEARGUMENTS_HPP
+#ifndef GLT_MAKE_DICTIONARIES_READABLE_COMMANDLINEARGUMENTS_HPP
+#define GLT_MAKE_DICTIONARIES_READABLE_COMMANDLINEARGUMENTS_HPP
 
 #include "../CommandLineArgumentsBase.hpp"
 
-namespace clp::make_dictionaries_readable {
+namespace glt::make_dictionaries_readable {
 class CommandLineArguments : public CommandLineArgumentsBase {
 public:
     // Constructors
@@ -25,6 +25,6 @@ private:
     std::string m_archive_path;
     std::string m_output_dir;
 };
-}  // namespace clp::make_dictionaries_readable
+}  // namespace glt::make_dictionaries_readable
 
-#endif  // CLP_MAKE_DICTIONARIES_READABLE_COMMANDLINEARGUMENTS_HPP
+#endif  // GLT_MAKE_DICTIONARIES_READABLE_COMMANDLINEARGUMENTS_HPP

@@ -1,5 +1,5 @@
-#ifndef CLP_DICTIONARYREADER_HPP
-#define CLP_DICTIONARYREADER_HPP
+#ifndef GLT_DICTIONARYREADER_HPP
+#define GLT_DICTIONARYREADER_HPP
 
 #include <string>
 #include <vector>
@@ -14,7 +14,7 @@
 #include "streaming_compression/zstd/Decompressor.hpp"
 #include "Utils.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Template class for reading dictionaries from disk and performing operations on them
  * @tparam DictionaryIdType
@@ -257,7 +257,7 @@ void DictionaryReader<DictionaryIdType, EntryType>::get_entries_matching_wildcar
         std::unordered_set<EntryType const*>& entries
 ) const {
     for (auto const& entry : m_entries) {
-        if (string_utils::wildcard_match_unsafe(
+        if (clp::string_utils::wildcard_match_unsafe(
                     entry.get_value(),
                     wildcard_string,
                     false == ignore_case
@@ -285,6 +285,6 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_segment_ids() {
         m_entries[id].add_segment_containing_entry(segment_id);
     }
 }
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_DICTIONARYREADER_HPP
+#endif  // GLT_DICTIONARYREADER_HPP

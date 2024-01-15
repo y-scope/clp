@@ -1,12 +1,12 @@
-#ifndef CLP_DICTIONARY_UTILS_HPP
-#define CLP_DICTIONARY_UTILS_HPP
+#ifndef GLT_DICTIONARY_UTILS_HPP
+#define GLT_DICTIONARY_UTILS_HPP
 
 #include <string>
 
 #include "FileReader.hpp"
 #include "streaming_compression/Decompressor.hpp"
 
-namespace clp {
+namespace glt {
 void open_dictionary_for_reading(
         std::string const& dictionary_path,
         std::string const& segment_index_path,
@@ -20,6 +20,6 @@ void open_dictionary_for_reading(
 uint64_t read_dictionary_header(FileReader& file_reader);
 
 uint64_t read_segment_index_header(FileReader& file_reader);
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_DICTIONARY_UTILS_HPP
+#endif  // GLT_DICTIONARY_UTILS_HPP

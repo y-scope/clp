@@ -11,7 +11,7 @@
 
 using std::string;
 
-namespace clp {
+namespace glt {
 StringReader::~StringReader() {
     close();
     free(m_getdelim_buf);
@@ -61,4 +61,4 @@ void StringReader::open(string const& input_string) {
 }
 
 void StringReader::close() {}
-}  // namespace clp
+}  // namespace glt

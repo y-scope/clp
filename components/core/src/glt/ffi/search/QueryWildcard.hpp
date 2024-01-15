@@ -1,11 +1,11 @@
-#ifndef CLP_FFI_SEARCH_QUERYWILDCARD_HPP
-#define CLP_FFI_SEARCH_QUERYWILDCARD_HPP
+#ifndef GLT_FFI_SEARCH_QUERYWILDCARD_HPP
+#define GLT_FFI_SEARCH_QUERYWILDCARD_HPP
 
 #include <vector>
 
 #include "../../TraceableException.hpp"
 
-namespace clp::ffi::search {
+namespace glt::ffi::search {
 enum class WildcardType : char {
     AnyChar = '?',
     ZeroOrMoreChars = '*',
@@ -75,6 +75,6 @@ private:
     std::vector<WildcardInterpretation> m_possible_interpretations;
     size_t m_current_interpretation_idx;
 };
-}  // namespace clp::ffi::search
+}  // namespace glt::ffi::search
 
-#endif  // CLP_FFI_SEARCH_QUERYWILDCARD_HPP
+#endif  // GLT_FFI_SEARCH_QUERYWILDCARD_HPP

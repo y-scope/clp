@@ -5,7 +5,7 @@
 
 using std::string;
 
-namespace clp {
+namespace glt {
 MySQLPreparedStatement::MySQLPreparedStatement(MYSQL* db_handle)
         : m_db_handle(db_handle),
           m_is_set(false) {
@@ -104,4 +104,4 @@ void MySQLPreparedStatement::close() {
         m_statement_bindings.clear();
     }
 }
-}  // namespace clp
+}  // namespace glt

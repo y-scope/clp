@@ -46,7 +46,7 @@ using std::to_string;
 using std::unordered_set;
 using std::vector;
 
-namespace clp {
+namespace glt {
 namespace {
 void create_tables(
         vector<pair<string, string>> const& archive_field_names_and_types,
@@ -532,4 +532,4 @@ void GlobalSQLiteMetadataDB::update_metadata_for_files(
     m_upsert_files_transaction_begin_statement->reset();
     m_upsert_files_transaction_end_statement->reset();
 }
-}  // namespace clp
+}  // namespace glt

@@ -1,5 +1,5 @@
-#ifndef CLP_MYSQLDB_HPP
-#define CLP_MYSQLDB_HPP
+#ifndef GLT_MYSQLDB_HPP
+#define GLT_MYSQLDB_HPP
 
 #include <string>
 
@@ -11,7 +11,7 @@
 #include "MySQLPreparedStatement.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Class representing a MySQL-style database
  */
@@ -123,6 +123,6 @@ private:
     // Variables
     MYSQL* m_db_handle;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_MYSQLDB_HPP
+#endif  // GLT_MYSQLDB_HPP

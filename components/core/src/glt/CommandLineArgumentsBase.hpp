@@ -1,9 +1,9 @@
-#ifndef CLP_COMMANDLINEARGUMENTSBASE_HPP
-#define CLP_COMMANDLINEARGUMENTSBASE_HPP
+#ifndef GLT_COMMANDLINEARGUMENTSBASE_HPP
+#define GLT_COMMANDLINEARGUMENTSBASE_HPP
 
 #include <string>
 
-namespace clp {
+namespace glt {
 /**
  * Base class for command line program arguments. This is meant to separate the parsing and
  * validation of command line arguments from the rest of the program's logic.
@@ -33,6 +33,6 @@ private:
     // Variables
     std::string m_program_name;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_COMMANDLINEARGUMENTSBASE_HPP
+#endif  // GLT_COMMANDLINEARGUMENTSBASE_HPP

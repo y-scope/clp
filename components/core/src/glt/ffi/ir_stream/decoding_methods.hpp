@@ -1,5 +1,5 @@
-#ifndef CLP_FFI_IR_STREAM_DECODING_METHODS_HPP
-#define CLP_FFI_IR_STREAM_DECODING_METHODS_HPP
+#ifndef GLT_FFI_IR_STREAM_DECODING_METHODS_HPP
+#define GLT_FFI_IR_STREAM_DECODING_METHODS_HPP
 
 #include <string>
 #include <vector>
@@ -8,7 +8,7 @@
 #include "../../ReaderInterface.hpp"
 #include "../encoding_methods.hpp"
 
-namespace clp::ffi::ir_stream {
+namespace glt::ffi::ir_stream {
 using encoded_tag_t = int8_t;
 
 typedef enum {
@@ -199,8 +199,8 @@ IRErrorCode deserialize_log_event(
         ir::epoch_time_ms_t& timestamp_delta
 );
 }  // namespace four_byte_encoding
-}  // namespace clp::ffi::ir_stream
+}  // namespace glt::ffi::ir_stream
 
 #include "decoding_methods.inc"
 
-#endif  // CLP_FFI_IR_STREAM_DECODING_METHODS_HPP
+#endif  // GLT_FFI_IR_STREAM_DECODING_METHODS_HPP

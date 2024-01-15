@@ -1,6 +1,6 @@
 #include "Message.hpp"
 
-namespace clp::streaming_archive::reader {
+namespace glt::streaming_archive::reader {
 size_t Message::get_message_number() const {
     return m_message_number;
 }
@@ -36,4 +36,4 @@ void Message::set_timestamp(epochtime_t timestamp) {
 void Message::clear_vars() {
     m_vars.clear();
 }
-}  // namespace clp::streaming_archive::reader
+}  // namespace glt::streaming_archive::reader

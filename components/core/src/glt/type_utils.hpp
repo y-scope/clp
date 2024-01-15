@@ -1,10 +1,10 @@
-#ifndef CLP_TYPE_UTILS_HPP
-#define CLP_TYPE_UTILS_HPP
+#ifndef GLT_TYPE_UTILS_HPP
+#define GLT_TYPE_UTILS_HPP
 
 #include <cstring>
 #include <type_traits>
 
-namespace clp {
+namespace glt {
 /**
  * An empty type which can be used to declare variables conditionally based on template parameters
  */
@@ -67,6 +67,6 @@ std::enable_if_t<sizeof(Destination) == sizeof(Source), Destination*>
 size_checked_pointer_cast(Source* src) {
     return reinterpret_cast<Destination*>(src);
 }
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_TYPE_UTILS_HPP
+#endif  // GLT_TYPE_UTILS_HPP

@@ -21,7 +21,7 @@ using std::string;
 using std::unique_ptr;
 using std::unordered_set;
 
-namespace clp::clp {
+namespace glt::glt {
 bool decompress(
         CommandLineArguments& command_line_args,
         unordered_set<string> const& files_to_decompress
@@ -251,4 +251,4 @@ bool decompress(
 
     return true;
 }
-}  // namespace clp::clp
+}  // namespace glt::glt

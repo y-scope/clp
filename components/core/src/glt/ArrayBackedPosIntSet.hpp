@@ -1,5 +1,5 @@
-#ifndef CLP_ARRAYBACKEDPOSINTSET_HPP
-#define CLP_ARRAYBACKEDPOSINTSET_HPP
+#ifndef GLT_ARRAYBACKEDPOSINTSET_HPP
+#define GLT_ARRAYBACKEDPOSINTSET_HPP
 
 #include <unordered_set>
 #include <vector>
@@ -9,7 +9,7 @@
 #include "streaming_compression/zstd/Compressor.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Template class of set implemented with vector<bool> for continuously increasing numeric value
  * @tparam PosIntType
@@ -196,6 +196,6 @@ void ArrayBackedPosIntSet<PosIntType>::increase_capacity(size_t value) {
 
     m_data.resize(capacity, false);
 }
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_ARRAYBACKEDPOSINTSET_HPP
+#endif  // GLT_ARRAYBACKEDPOSINTSET_HPP

@@ -40,7 +40,7 @@ enum class FilesTableFieldIndexes : uint16_t {
     Length,
 };
 
-namespace clp {
+namespace glt {
 void GlobalMySQLMetadataDB::ArchiveIterator::get_id(string& id) const {
     m_db_iterator->get_field_as_string(enum_to_underlying_type(ArchivesTableFieldIndexes::Id), id);
 }
@@ -440,4 +440,4 @@ GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator_f
 
     return new ArchiveIterator(m_db.get_iterator());
 }
-}  // namespace clp
+}  // namespace glt

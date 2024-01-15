@@ -1,14 +1,14 @@
-#ifndef CLP_STREAMING_COMPRESSION_CONSTANTS_HPP
-#define CLP_STREAMING_COMPRESSION_CONSTANTS_HPP
+#ifndef GLT_STREAMING_COMPRESSION_CONSTANTS_HPP
+#define GLT_STREAMING_COMPRESSION_CONSTANTS_HPP
 
 #include <cstddef>
 #include <cstdint>
 
-namespace clp::streaming_compression {
+namespace glt::streaming_compression {
 enum class CompressorType : uint8_t {
     ZSTD = 0x10,
     Passthrough = 0xFF,
 };
-}  // namespace clp::streaming_compression
+}  // namespace glt::streaming_compression
 
-#endif  // CLP_STREAMING_COMPRESSION_CONSTANTS_HPP
+#endif  // GLT_STREAMING_COMPRESSION_CONSTANTS_HPP

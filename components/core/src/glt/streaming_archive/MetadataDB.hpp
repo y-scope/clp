@@ -8,7 +8,7 @@
 #include "../SQLiteDB.hpp"
 #include "writer/File.hpp"
 
-namespace clp::streaming_archive {
+namespace glt::streaming_archive {
 class MetadataDB {
 public:
     // Types
@@ -162,6 +162,6 @@ private:
     std::unique_ptr<SQLitePreparedStatement> m_upsert_file_statement;
     std::unique_ptr<SQLitePreparedStatement> m_insert_empty_directories_statement;
 };
-}  // namespace clp::streaming_archive
+}  // namespace glt::streaming_archive
 
 #endif  // STREAMING_ARCHIVE_METADATADB_HPP

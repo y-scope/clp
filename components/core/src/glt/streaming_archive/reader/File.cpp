@@ -10,7 +10,7 @@
 
 using std::string;
 
-namespace clp::streaming_archive::reader {
+namespace glt::streaming_archive::reader {
 epochtime_t File::get_begin_ts() const {
     return m_begin_ts;
 }
@@ -330,4 +330,4 @@ bool File::get_next_message(Message& msg) {
 
     return true;
 }
-}  // namespace clp::streaming_archive::reader
+}  // namespace glt::streaming_archive::reader

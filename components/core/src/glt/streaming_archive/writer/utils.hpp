@@ -7,7 +7,7 @@
 #include "../../TimestampPattern.hpp"
 #include "Archive.hpp"
 
-namespace clp::streaming_archive::writer {
+namespace glt::streaming_archive::writer {
 /**
  * Closes the current archive and starts a new one
  * @param archive_user_config
@@ -50,6 +50,6 @@ auto split_file_and_archive(
  * @param archive
  */
 auto close_file_and_append_to_segment(Archive& archive) -> void;
-}  // namespace clp::streaming_archive::writer
+}  // namespace glt::streaming_archive::writer
 
 #endif  // STREAMING_ARCHIVE_WRITER_UTILS_HPP

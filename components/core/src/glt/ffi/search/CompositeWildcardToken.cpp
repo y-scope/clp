@@ -10,7 +10,7 @@ using std::string_view;
 using std::variant;
 using std::vector;
 
-namespace clp::ffi::search {
+namespace glt::ffi::search {
 static auto TokenGetBeginPos = [](auto const& token) { return token.get_begin_pos(); };
 static auto TokenGetEndPos = [](auto const& token) { return token.get_end_pos(); };
 
@@ -30,7 +30,7 @@ CompositeWildcardToken<encoded_variable_t>::CompositeWildcardToken(
             is_escaped = false;
         } else if ('\\' == c) {
             is_escaped = true;
-        } else if (string_utils::is_wildcard(c)) {
+        } else if (clp::string_utils::is_wildcard(c)) {
             m_wildcards.emplace_back(c, i, begin_pos == i || end_pos - 1 == i);
         }
     }
@@ -267,4 +267,4 @@ void CompositeWildcardToken<encoded_variable_t>::try_add_wildcard_variable(
 // supported
 template class ffi::search::CompositeWildcardToken<ir::eight_byte_encoded_variable_t>;
 template class ffi::search::CompositeWildcardToken<ir::four_byte_encoded_variable_t>;
-}  // namespace clp::ffi::search
+}  // namespace glt::ffi::search

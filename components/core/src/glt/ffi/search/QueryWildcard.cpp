@@ -2,7 +2,7 @@
 
 #include "../../type_utils.hpp"
 
-namespace clp::ffi::search {
+namespace glt::ffi::search {
 QueryWildcard::QueryWildcard(char wildcard, size_t pos_in_query, bool is_boundary_wildcard) {
     if (enum_to_underlying_type(WildcardType::AnyChar) != wildcard
         && enum_to_underlying_type(WildcardType::ZeroOrMoreChars) != wildcard)
@@ -32,4 +32,4 @@ bool QueryWildcard::next_interpretation() {
         return false;
     }
 }
-}  // namespace clp::ffi::search
+}  // namespace glt::ffi::search

@@ -18,7 +18,7 @@ using std::string;
 using std::unordered_set;
 using std::vector;
 
-namespace clp::streaming_archive::reader {
+namespace glt::streaming_archive::reader {
 void Archive::open(string const& path) {
     // Determine whether path is file or directory
     struct stat path_stat = {};
@@ -235,4 +235,4 @@ void Archive::decompress_empty_directories(string const& output_dir) {
         }
     }
 }
-}  // namespace clp::streaming_archive::reader
+}  // namespace glt::streaming_archive::reader

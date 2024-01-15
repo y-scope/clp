@@ -1,11 +1,11 @@
-#ifndef CLP_PARSEDMESSAGE_HPP
-#define CLP_PARSEDMESSAGE_HPP
+#ifndef GLT_PARSEDMESSAGE_HPP
+#define GLT_PARSEDMESSAGE_HPP
 
 #include <string>
 
 #include "TimestampPattern.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * ParsedMessage represents a (potentially multiline) log message parsed into 3 primary fields:
  * timestamp, timestamp pattern, and content.
@@ -69,6 +69,6 @@ private:
     size_t m_orig_num_bytes;
     bool m_is_set;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_PARSEDMESSAGE_HPP
+#endif  // GLT_PARSEDMESSAGE_HPP

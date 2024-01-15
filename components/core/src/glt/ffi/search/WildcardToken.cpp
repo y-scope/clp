@@ -9,13 +9,13 @@
 #include "../encoding_methods.hpp"
 #include "QueryWildcard.hpp"
 
-using clp::ir::eight_byte_encoded_variable_t;
-using clp::ir::four_byte_encoded_variable_t;
-using clp::ir::VariablePlaceholder;
+using glt::ir::eight_byte_encoded_variable_t;
+using glt::ir::four_byte_encoded_variable_t;
+using glt::ir::VariablePlaceholder;
 using std::string;
 using std::string_view;
 
-namespace clp::ffi::search {
+namespace glt::ffi::search {
 // Local function prototypes
 /**
  * @tparam encoded_variable_t Type of the encoded variable
@@ -123,9 +123,9 @@ static bool could_be_static_text(string_view query, size_t begin_pos, size_t end
             is_escaped = false;
         } else if ('\\' == c) {
             is_escaped = true;
-        } else if (string_utils::is_decimal_digit(c)) {
+        } else if (clp::string_utils::is_decimal_digit(c)) {
             return false;
-        } else if (string_utils::is_alphabet(c)) {
+        } else if (clp::string_utils::is_alphabet(c)) {
             contains_alphabet = true;
         }
     }
@@ -221,4 +221,4 @@ bool WildcardToken<encoded_variable_t>::next_interpretation() {
 // supported
 template class WildcardToken<eight_byte_encoded_variable_t>;
 template class WildcardToken<four_byte_encoded_variable_t>;
-}  // namespace clp::ffi::search
+}  // namespace glt::ffi::search

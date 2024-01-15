@@ -14,7 +14,7 @@
 #include "../../TimestampPattern.hpp"
 #include "Segment.hpp"
 
-namespace clp::streaming_archive::writer {
+namespace glt::streaming_archive::writer {
 /**
  * Class representing a log file encoded in three columns - timestamps, logtype IDs, and
  * variables.
@@ -251,6 +251,6 @@ private:
     bool m_is_written_out;
     bool m_is_open;
 };
-}  // namespace clp::streaming_archive::writer
+}  // namespace glt::streaming_archive::writer
 
 #endif  // STREAMING_ARCHIVE_WRITER_FILE_HPP

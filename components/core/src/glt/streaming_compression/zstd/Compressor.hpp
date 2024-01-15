@@ -1,5 +1,5 @@
-#ifndef CLP_STREAMING_COMPRESSION_ZSTD_COMPRESSOR_HPP
-#define CLP_STREAMING_COMPRESSION_ZSTD_COMPRESSOR_HPP
+#ifndef GLT_STREAMING_COMPRESSION_ZSTD_COMPRESSOR_HPP
+#define GLT_STREAMING_COMPRESSION_ZSTD_COMPRESSOR_HPP
 
 #include <memory>
 #include <string>
@@ -12,8 +12,8 @@
 #include "../Compressor.hpp"
 #include "Constants.hpp"
 
-namespace clp::streaming_compression::zstd {
-class Compressor : public ::clp::streaming_compression::Compressor {
+namespace glt::streaming_compression::zstd {
+class Compressor : public ::glt::streaming_compression::Compressor {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -90,6 +90,6 @@ private:
 
     size_t m_uncompressed_stream_pos;
 };
-}  // namespace clp::streaming_compression::zstd
+}  // namespace glt::streaming_compression::zstd
 
-#endif  // CLP_STREAMING_COMPRESSION_ZSTD_COMPRESSOR_HPP
+#endif  // GLT_STREAMING_COMPRESSION_ZSTD_COMPRESSOR_HPP

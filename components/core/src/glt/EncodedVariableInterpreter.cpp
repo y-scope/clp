@@ -12,16 +12,16 @@
 #include "spdlog_with_specializations.hpp"
 #include "type_utils.hpp"
 
-using clp::ffi::cEightByteEncodedFloatDigitsBitMask;
-using clp::ir::eight_byte_encoded_variable_t;
-using clp::ir::four_byte_encoded_variable_t;
-using clp::ir::LogEvent;
-using clp::ir::VariablePlaceholder;
+using glt::ffi::cEightByteEncodedFloatDigitsBitMask;
+using glt::ir::eight_byte_encoded_variable_t;
+using glt::ir::four_byte_encoded_variable_t;
+using glt::ir::LogEvent;
+using glt::ir::VariablePlaceholder;
 using std::string;
 using std::unordered_set;
 using std::vector;
 
-namespace clp {
+namespace glt {
 variable_dictionary_id_t EncodedVariableInterpreter::decode_var_dict_id(
         encoded_variable_t encoded_var
 ) {
@@ -57,7 +57,7 @@ bool EncodedVariableInterpreter::convert_string_to_representable_integer_var(
     }
 
     int64_t result;
-    if (false == string_utils::convert_string_to_int(value, result)) {
+    if (false == clp::string_utils::convert_string_to_int(value, result)) {
         // Conversion failed
         return false;
     } else {
@@ -482,4 +482,4 @@ EncodedVariableInterpreter::encode_and_add_to_dictionary<four_byte_encoded_varia
         std::vector<variable_dictionary_id_t>& var_ids,
         size_t& raw_num_bytes
 );
-}  // namespace clp
+}  // namespace glt

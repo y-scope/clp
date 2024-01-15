@@ -1,5 +1,5 @@
-#ifndef CLP_QUERY_HPP
-#define CLP_QUERY_HPP
+#ifndef GLT_QUERY_HPP
+#define GLT_QUERY_HPP
 
 #include <set>
 #include <string>
@@ -10,7 +10,7 @@
 #include "LogTypeDictionaryEntry.hpp"
 #include "VariableDictionaryEntry.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Class representing a variable in a subquery. It can represent a precise encoded variable or an
  * imprecise dictionary variable (i.e., a set of possible encoded dictionary variable IDs)
@@ -217,6 +217,6 @@ private:
     std::vector<SubQuery const*> m_relevant_sub_queries;
     segment_id_t m_prev_segment_id{cInvalidSegmentId};
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_QUERY_HPP
+#endif  // GLT_QUERY_HPP

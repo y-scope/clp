@@ -2,7 +2,7 @@
 
 #include "Defs.h"
 
-namespace clp {
+namespace glt {
 void WriterInterface::write_char(char c) {
     write(&c, 1);
 }
@@ -34,4 +34,4 @@ size_t WriterInterface::get_pos() const {
 
     return pos;
 }
-}  // namespace clp
+}  // namespace glt

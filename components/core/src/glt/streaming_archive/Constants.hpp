@@ -3,7 +3,7 @@
 
 #include "../Defs.h"
 
-namespace clp::streaming_archive {
+namespace glt::streaming_archive {
 constexpr archive_format_version_t cArchiveFormatVersion = cArchiveFormatDevVersionFlag | 8;
 constexpr char cSegmentsDirname[] = "s";
 constexpr char cSegmentListFilename[] = "segment_list.txt";
@@ -53,6 +53,6 @@ namespace EmptyDirectory {
 constexpr char Path[] = "path";
 }  // namespace EmptyDirectory
 }  // namespace cMetadataDB
-}  // namespace clp::streaming_archive
+}  // namespace glt::streaming_archive
 
 #endif  // STREAMING_ARCHIVE_CONSTANTS_HPP

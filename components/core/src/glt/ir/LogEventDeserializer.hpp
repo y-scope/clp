@@ -1,5 +1,5 @@
-#ifndef CLP_IR_LOGEVENTDESERIALIZER_HPP
-#define CLP_IR_LOGEVENTDESERIALIZER_HPP
+#ifndef GLT_IR_LOGEVENTDESERIALIZER_HPP
+#define GLT_IR_LOGEVENTDESERIALIZER_HPP
 
 #include <optional>
 
@@ -12,7 +12,7 @@
 #include "LogEvent.hpp"
 #include "types.hpp"
 
-namespace clp::ir {
+namespace glt::ir {
 /**
  * Class for deserializing IR log events from an IR stream.
  *
@@ -78,6 +78,6 @@ private:
             m_prev_msg_timestamp{};
     ReaderInterface& m_reader;
 };
-}  // namespace clp::ir
+}  // namespace glt::ir
 
-#endif  // CLP_IR_LOGEVENTDESERIALIZER_HPP
+#endif  // GLT_IR_LOGEVENTDESERIALIZER_HPP

@@ -1,5 +1,5 @@
-#ifndef CLP_FFI_IR_STREAM_BYTESWAP_HPP
-#define CLP_FFI_IR_STREAM_BYTESWAP_HPP
+#ifndef GLT_FFI_IR_STREAM_BYTESWAP_HPP
+#define GLT_FFI_IR_STREAM_BYTESWAP_HPP
 
 #ifdef __APPLE__
     #include <libkern/OSByteOrder.h>
@@ -10,4 +10,4 @@
     #include <byteswap.h>
 #endif
 
-#endif  // CLP_FFI_IR_STREAM_BYTESWAP_HPP
+#endif  // GLT_FFI_IR_STREAM_BYTESWAP_HPP

@@ -8,7 +8,7 @@ using std::string;
 using std::variant;
 using std::vector;
 
-namespace clp::ffi::search {
+namespace glt::ffi::search {
 template <typename encoded_variable_t>
 Subquery<encoded_variable_t>::Subquery(string logtype_query, Subquery::QueryVariables variables)
         : m_logtype_query{std::move(logtype_query)},
@@ -59,4 +59,4 @@ Subquery<encoded_variable_t>::Subquery(string logtype_query, Subquery::QueryVari
 // supported
 template class Subquery<ir::eight_byte_encoded_variable_t>;
 template class Subquery<ir::four_byte_encoded_variable_t>;
-}  // namespace clp::ffi::search
+}  // namespace glt::ffi::search

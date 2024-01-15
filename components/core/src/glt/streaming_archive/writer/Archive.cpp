@@ -21,8 +21,8 @@
 #include "../Constants.hpp"
 #include "utils.hpp"
 
-using clp::ir::eight_byte_encoded_variable_t;
-using clp::ir::four_byte_encoded_variable_t;
+using glt::ir::eight_byte_encoded_variable_t;
+using glt::ir::four_byte_encoded_variable_t;
 using log_surgeon::LogEventView;
 using std::list;
 using std::make_unique;
@@ -30,7 +30,7 @@ using std::string;
 using std::unordered_set;
 using std::vector;
 
-namespace clp::streaming_archive::writer {
+namespace glt::streaming_archive::writer {
 Archive::~Archive() {
     if (m_path.empty() == false || m_file != nullptr
         || m_files_with_timestamps_in_segment.empty() == false
@@ -659,4 +659,4 @@ template void Archive::write_log_event_ir<eight_byte_encoded_variable_t>(
 template void Archive::write_log_event_ir<four_byte_encoded_variable_t>(
         ir::LogEvent<four_byte_encoded_variable_t> const& log_event
 );
-}  // namespace clp::streaming_archive::writer
+}  // namespace glt::streaming_archive::writer

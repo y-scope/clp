@@ -1,5 +1,5 @@
-#ifndef CLP_BUFFEREDFILEREADER_HPP
-#define CLP_BUFFEREDFILEREADER_HPP
+#ifndef GLT_BUFFEREDFILEREADER_HPP
+#define GLT_BUFFEREDFILEREADER_HPP
 
 #include <cstdio>
 #include <memory>
@@ -13,7 +13,7 @@
 #include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Class for performing buffered (in memory) reads from an on-disk file with control over when and
  * how much data is buffered. This allows us to support use cases where we want to perform unordered
@@ -259,6 +259,6 @@ private:
     std::optional<size_t> m_checkpoint_pos;
     size_t m_highest_read_pos{0};
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_BUFFEREDFILEREADER_HPP
+#endif  // GLT_BUFFEREDFILEREADER_HPP

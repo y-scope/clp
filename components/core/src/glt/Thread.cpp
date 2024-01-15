@@ -5,7 +5,7 @@
 
 using std::system_error;
 
-namespace clp {
+namespace glt {
 Thread::~Thread() {
     if (m_thread_running) {
         SPDLOG_WARN("Thread did not exit before being destroyed.");
@@ -47,4 +47,4 @@ void Thread::thread_entry_point() {
     thread_method();
     m_thread_running = false;
 }
-}  // namespace clp
+}  // namespace glt

@@ -1,5 +1,5 @@
-#ifndef CLP_THREAD_HPP
-#define CLP_THREAD_HPP
+#ifndef GLT_THREAD_HPP
+#define GLT_THREAD_HPP
 
 #include <atomic>
 #include <memory>
@@ -8,7 +8,7 @@
 #include "ErrorCode.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Wrapper for C++ threads that has some extra features and provides a more encapsulated way to
  * define a thread. Note that detachment is explicitly not supported since that means this object
@@ -60,6 +60,6 @@ private:
     std::unique_ptr<std::thread> m_thread;
     std::atomic_bool m_thread_running;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_THREAD_HPP
+#endif  // GLT_THREAD_HPP

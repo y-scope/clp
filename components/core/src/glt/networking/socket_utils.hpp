@@ -1,11 +1,11 @@
-#ifndef CLP_NETWORKING_SOCKET_UTILS_HPP
-#define CLP_NETWORKING_SOCKET_UTILS_HPP
+#ifndef GLT_NETWORKING_SOCKET_UTILS_HPP
+#define GLT_NETWORKING_SOCKET_UTILS_HPP
 
 #include <cstddef>
 
 #include "../ErrorCode.hpp"
 
-namespace clp::networking {
+namespace glt::networking {
 // Methods
 /**
  * Tries to send a buffer of data over the socket
@@ -41,6 +41,6 @@ ErrorCode try_receive(int fd, char* buf, size_t buf_len, size_t& num_bytes_recei
  * @param buf_len Number of bytes to receive
  */
 void receive(int fd, char* buf, size_t buf_len, size_t& num_bytes_received);
-}  // namespace clp::networking
+}  // namespace glt::networking
 
-#endif  // CLP_NETWORKING_SOCKET_UTILS_HPP
+#endif  // GLT_NETWORKING_SOCKET_UTILS_HPP

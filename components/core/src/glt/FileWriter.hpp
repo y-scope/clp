@@ -1,5 +1,5 @@
-#ifndef CLP_FILEWRITER_HPP
-#define CLP_FILEWRITER_HPP
+#ifndef GLT_FILEWRITER_HPP
+#define GLT_FILEWRITER_HPP
 
 #include <cstdio>
 #include <string>
@@ -8,7 +8,7 @@
 #include "TraceableException.hpp"
 #include "WriterInterface.hpp"
 
-namespace clp {
+namespace glt {
 class FileWriter : public WriterInterface {
 public:
     // Types
@@ -90,6 +90,6 @@ private:
     FILE* m_file;
     int m_fd;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_FILEWRITER_HPP
+#endif  // GLT_FILEWRITER_HPP

@@ -12,7 +12,7 @@
 #include "../../streaming_compression/zstd/Decompressor.hpp"
 #include "../Constants.hpp"
 
-namespace clp::streaming_archive::reader {
+namespace glt::streaming_archive::reader {
 /**
  * Class for reading segments. A segment is a container for multiple compressed buffers that
  * itself may be further compressed and stored on disk.
@@ -63,6 +63,6 @@ private:
     static_assert(false, "Unsupported compression mode.");
 #endif
 };
-}  // namespace clp::streaming_archive::reader
+}  // namespace glt::streaming_archive::reader
 
 #endif  // STREAMING_ARCHIVE_READER_SEGMENT_HPP

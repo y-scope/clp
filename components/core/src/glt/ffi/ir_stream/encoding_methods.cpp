@@ -7,14 +7,14 @@
 #include "byteswap.hpp"
 #include "protocol_constants.hpp"
 
-using clp::ir::eight_byte_encoded_variable_t;
-using clp::ir::epoch_time_ms_t;
-using clp::ir::four_byte_encoded_variable_t;
+using glt::ir::eight_byte_encoded_variable_t;
+using glt::ir::epoch_time_ms_t;
+using glt::ir::four_byte_encoded_variable_t;
 using std::string;
 using std::string_view;
 using std::vector;
 
-namespace clp::ffi::ir_stream {
+namespace glt::ffi::ir_stream {
 // Local function prototypes
 /**
  * Serializes the given integer into the IR stream
@@ -306,4 +306,4 @@ bool serialize_timestamp(epoch_time_ms_t timestamp_delta, std::vector<int8_t>& i
     return true;
 }
 }  // namespace four_byte_encoding
-}  // namespace clp::ffi::ir_stream
+}  // namespace glt::ffi::ir_stream

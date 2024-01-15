@@ -1,5 +1,5 @@
-#ifndef CLP_CLP_FILECOMPRESSOR_HPP
-#define CLP_CLP_FILECOMPRESSOR_HPP
+#ifndef GLT_GLT_FILECOMPRESSOR_HPP
+#define GLT_GLT_FILECOMPRESSOR_HPP
 
 #include <system_error>
 
@@ -16,7 +16,7 @@
 #include "../streaming_archive/writer/Archive.hpp"
 #include "FileToCompress.hpp"
 
-namespace clp::clp {
+namespace glt::glt {
 /**
  * Class to parse and compress a file into a streaming archive
  */
@@ -154,6 +154,6 @@ private:
     ParsedMessage m_parsed_message;
     std::unique_ptr<log_surgeon::ReaderParser> m_reader_parser;
 };
-}  // namespace clp::clp
+}  // namespace glt::glt
 
-#endif  // CLP_CLP_FILECOMPRESSOR_HPP
+#endif  // GLT_GLT_FILECOMPRESSOR_HPP

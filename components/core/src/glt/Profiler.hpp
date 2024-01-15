@@ -1,5 +1,5 @@
-#ifndef CLP_PROFILER_HPP
-#define CLP_PROFILER_HPP
+#ifndef GLT_PROFILER_HPP
+#define GLT_PROFILER_HPP
 
 #include <array>
 #include <vector>
@@ -7,7 +7,7 @@
 #include "Stopwatch.hpp"
 #include "type_utils.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Class to time code.
  *
@@ -144,27 +144,27 @@ private:
     static std::vector<Stopwatch>* m_fragmented_measurements;
     static std::vector<Stopwatch>* m_continuous_measurements;
 };
-}  // namespace clp
+}  // namespace glt
 
 // Macros to log the measurements
 // NOTE: We use macros so that we can add the measurement index to the log (not easy to do with
 // templates).
 #define LOG_CONTINUOUS_MEASUREMENT(x) \
     if (PROF_ENABLED \
-        && ::clp::Profiler::cContinuousMeasurementEnabled[enum_to_underlying_type(x)]) { \
+        && ::glt::Profiler::cContinuousMeasurementEnabled[enum_to_underlying_type(x)]) { \
         SPDLOG_INFO( \
                 "{} took {} s", \
                 #x, \
-                ::clp::Profiler::get_continuous_measurement_in_seconds<x>() \
+                ::glt::Profiler::get_continuous_measurement_in_seconds<x>() \
         ); \
     }
 #define LOG_FRAGMENTED_MEASUREMENT(x) \
     if (PROF_ENABLED \
-        && ::clp::Profiler::cFragmentedMeasurementEnabled[enum_to_underlying_type(x)]) { \
+        && ::glt::Profiler::cFragmentedMeasurementEnabled[enum_to_underlying_type(x)]) { \
         SPDLOG_INFO( \
                 "{} took {} s", \
                 #x, \
-                ::clp::Profiler::get_fragmented_measurement_in_seconds<x>() \
+                ::glt::Profiler::get_fragmented_measurement_in_seconds<x>() \
         ); \
     }
 #define PROFILER_SPDLOG_INFO(...) \
@@ -172,4 +172,4 @@ private:
         SPDLOG_INFO(__VA_ARGS__); \
     }
 
-#endif  // CLP_PROFILER_HPP
+#endif  // GLT_PROFILER_HPP

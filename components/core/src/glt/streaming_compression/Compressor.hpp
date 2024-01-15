@@ -1,5 +1,5 @@
-#ifndef CLP_STREAMING_COMPRESSION_COMPRESSOR_HPP
-#define CLP_STREAMING_COMPRESSION_COMPRESSOR_HPP
+#ifndef GLT_STREAMING_COMPRESSION_COMPRESSOR_HPP
+#define GLT_STREAMING_COMPRESSION_COMPRESSOR_HPP
 
 #include <cstdint>
 #include <string>
@@ -8,7 +8,7 @@
 #include "../WriterInterface.hpp"
 #include "Constants.hpp"
 
-namespace clp::streaming_compression {
+namespace glt::streaming_compression {
 class Compressor : public WriterInterface {
 public:
     // Types
@@ -59,6 +59,6 @@ protected:
     // Variables
     CompressorType m_type;
 };
-}  // namespace clp::streaming_compression
+}  // namespace glt::streaming_compression
 
-#endif  // CLP_STREAMING_COMPRESSION_COMPRESSOR_HPP
+#endif  // GLT_STREAMING_COMPRESSION_COMPRESSOR_HPP

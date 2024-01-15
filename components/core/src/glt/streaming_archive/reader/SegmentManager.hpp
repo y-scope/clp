@@ -9,7 +9,7 @@
 #include "../../Defs.h"
 #include "Segment.hpp"
 
-namespace clp::streaming_archive::reader {
+namespace glt::streaming_archive::reader {
 /**
  * This class handles segments in a given directory. This primarily consists of reading from
  * segments in a given directory.
@@ -53,6 +53,6 @@ private:
     // List of open segment IDs in LRU order (LRU segment ID at front)
     std::list<segment_id_t> m_lru_ids_of_open_segments;
 };
-}  // namespace clp::streaming_archive::reader
+}  // namespace glt::streaming_archive::reader
 
 #endif  // STREAMING_ARCHIVE_READER_SEGMENTMANAGER_HPP

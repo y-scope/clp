@@ -1,5 +1,5 @@
-#ifndef CLP_STRINGREADER_HPP
-#define CLP_STRINGREADER_HPP
+#ifndef GLT_STRINGREADER_HPP
+#define GLT_STRINGREADER_HPP
 
 #include <cstdio>
 #include <string>
@@ -9,7 +9,7 @@
 #include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace glt {
 class StringReader : public ReaderInterface {
 public:
     // Types
@@ -92,6 +92,6 @@ private:
     uint32_t pos;
     bool string_is_set;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_STRINGREADER_HPP
+#endif  // GLT_STRINGREADER_HPP

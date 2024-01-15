@@ -1,5 +1,5 @@
-#ifndef CLP_TIMESTAMPPATTERN_HPP
-#define CLP_TIMESTAMPPATTERN_HPP
+#ifndef GLT_TIMESTAMPPATTERN_HPP
+#define GLT_TIMESTAMPPATTERN_HPP
 
 #include <cstddef>
 #include <cstdint>
@@ -9,7 +9,7 @@
 #include "FileWriter.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Class representing a timestamp pattern with methods for both parsing and formatting timestamps
  * using the pattern. A format string contains directives specifying how a string should be parsed
@@ -158,6 +158,6 @@ private:
     uint8_t m_num_spaces_before_ts;
     std::string m_format;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_TIMESTAMPPATTERN_HPP
+#endif  // GLT_TIMESTAMPPATTERN_HPP

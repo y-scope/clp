@@ -11,7 +11,7 @@
 #include "../../TraceableException.hpp"
 #include "../Constants.hpp"
 
-namespace clp::streaming_archive::writer {
+namespace glt::streaming_archive::writer {
 /**
  * Class for writing segments. A segment is a container for multiple compressed buffers that
  * itself may be further compressed and then stored on disk.
@@ -94,6 +94,6 @@ private:
     static_assert(false, "Unsupported compression mode.");
 #endif
 };
-}  // namespace clp::streaming_archive::writer
+}  // namespace glt::streaming_archive::writer
 
 #endif  // STREAMING_ARCHIVE_WRITER_SEGMENT_HPP

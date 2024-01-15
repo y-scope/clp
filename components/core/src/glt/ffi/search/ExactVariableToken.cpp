@@ -2,10 +2,10 @@
 
 #include "../../ir/types.hpp"
 
-using clp::ir::VariablePlaceholder;
+using glt::ir::VariablePlaceholder;
 using std::string_view;
 
-namespace clp::ffi::search {
+namespace glt::ffi::search {
 template <typename encoded_variable_t>
 ExactVariableToken<encoded_variable_t>::ExactVariableToken(
         string_view query,
@@ -31,4 +31,4 @@ ExactVariableToken<encoded_variable_t>::ExactVariableToken(
 // supported
 template class ExactVariableToken<ir::eight_byte_encoded_variable_t>;
 template class ExactVariableToken<ir::four_byte_encoded_variable_t>;
-}  // namespace clp::ffi::search
+}  // namespace glt::ffi::search

@@ -1,5 +1,5 @@
 set(
-        CLP_SOURCES
+        GLT_SOURCES
         ../ArrayBackedPosIntSet.hpp
         ../BufferedFileReader.cpp
         ../BufferedFileReader.hpp
@@ -135,7 +135,7 @@ set(
         ../WriterInterface.hpp
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.c"
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.h"
-        clp.cpp
+        glt.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
         compression.cpp
@@ -152,10 +152,10 @@ set(
         utils.hpp
 )
 
-add_executable(clp ${CLP_SOURCES})
-target_compile_features(clp PRIVATE cxx_std_17)
-target_include_directories(clp PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
-target_link_libraries(clp
+add_executable(glt ${GLT_SOURCES})
+target_compile_features(glt PRIVATE cxx_std_17)
+target_include_directories(glt PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
+target_link_libraries(glt
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
@@ -171,7 +171,7 @@ target_link_libraries(clp
 )
 # Put the built executable at the root of the build directory
 set_target_properties(
-        clp
+        glt
         PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
 )

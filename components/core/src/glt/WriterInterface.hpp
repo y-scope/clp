@@ -1,5 +1,5 @@
-#ifndef CLP_WRITERINTERFACE_HPP
-#define CLP_WRITERINTERFACE_HPP
+#ifndef GLT_WRITERINTERFACE_HPP
+#define GLT_WRITERINTERFACE_HPP
 
 #include <cstddef>
 #include <string>
@@ -7,7 +7,7 @@
 #include "ErrorCode.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace glt {
 class WriterInterface {
 public:
     // Types
@@ -74,6 +74,6 @@ template <typename ValueType>
 void WriterInterface::write_numeric_value(ValueType val) {
     write(reinterpret_cast<char*>(&val), sizeof(val));
 }
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_WRITERINTERFACE_HPP
+#endif  // GLT_WRITERINTERFACE_HPP

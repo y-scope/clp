@@ -17,7 +17,7 @@
 #include "File.hpp"
 #include "Message.hpp"
 
-namespace clp::streaming_archive::reader {
+namespace glt::streaming_archive::reader {
 class Archive {
 public:
     // Types
@@ -143,6 +143,6 @@ private:
 
     MetadataDB m_metadata_db;
 };
-}  // namespace clp::streaming_archive::reader
+}  // namespace glt::streaming_archive::reader
 
 #endif  // STREAMING_ARCHIVE_READER_ARCHIVE_HPP

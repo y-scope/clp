@@ -1,5 +1,5 @@
-#ifndef CLP_UTILS_HPP
-#define CLP_UTILS_HPP
+#ifndef GLT_UTILS_HPP
+#define GLT_UTILS_HPP
 
 #include <list>
 #include <set>
@@ -14,7 +14,7 @@
 #include "FileReader.hpp"
 #include "ParsedMessage.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Creates a directory with the given path
  * @param path
@@ -77,6 +77,6 @@ void load_lexer_from_file(
         bool done,
         log_surgeon::lexers::ByteLexer& forward_lexer_ptr
 );
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_UTILS_HPP
+#endif  // GLT_UTILS_HPP

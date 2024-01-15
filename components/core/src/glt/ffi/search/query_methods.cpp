@@ -7,9 +7,9 @@
 #include "CompositeWildcardToken.hpp"
 #include "QueryMethodFailed.hpp"
 
-using clp::ir::eight_byte_encoded_variable_t;
-using clp::ir::four_byte_encoded_variable_t;
-using clp::ir::is_delim;
+using glt::ir::eight_byte_encoded_variable_t;
+using glt::ir::four_byte_encoded_variable_t;
+using glt::ir::is_delim;
 using clp::string_utils::is_wildcard;
 using std::pair;
 using std::string;
@@ -17,7 +17,7 @@ using std::string_view;
 using std::variant;
 using std::vector;
 
-namespace clp::ffi::search {
+namespace glt::ffi::search {
 static auto TokenGetBeginPos = [](auto const& token) { return token.get_begin_pos(); };
 static auto TokenGetEndPos = [](auto const& token) { return token.get_end_pos(); };
 
@@ -254,9 +254,9 @@ static void find_delimiter(
             }
         }
 
-        if (string_utils::is_decimal_digit(c)) {
+        if (clp::string_utils::is_decimal_digit(c)) {
             contains_decimal_digit = true;
-        } else if (string_utils::is_alphabet(c)) {
+        } else if (clp::string_utils::is_alphabet(c)) {
             contains_alphabet = true;
         }
     }
@@ -316,4 +316,4 @@ template void tokenize_query<four_byte_encoded_variable_t>(
                         CompositeWildcardToken<four_byte_encoded_variable_t>>>& tokens,
         vector<size_t>& composite_wildcard_token_indexes
 );
-}  // namespace clp::ffi::search
+}  // namespace glt::ffi::search

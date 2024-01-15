@@ -8,7 +8,7 @@
 #include "../FileWriter.hpp"
 #include "Constants.hpp"
 
-namespace clp::streaming_archive {
+namespace glt::streaming_archive {
 /**
  * A class to encapsulate metadata directly relating to an archive.
  */
@@ -103,6 +103,6 @@ private:
     uint64_t m_compressed_size{0};
     uint64_t m_dynamic_compressed_size{0};
 };
-}  // namespace clp::streaming_archive
+}  // namespace glt::streaming_archive
 
 #endif  // STREAMING_ARCHIVE_ARCHIVEMETADATA_HPP

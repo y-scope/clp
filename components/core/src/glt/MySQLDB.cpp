@@ -4,7 +4,7 @@
 
 using std::string;
 
-namespace clp {
+namespace glt {
 MySQLDB::Iterator::Iterator(MYSQL* m_db_handle)
         : m_row(nullptr),
           m_field_lengths(nullptr),
@@ -159,4 +159,4 @@ MySQLPreparedStatement MySQLDB::prepare_statement(char const* statement, size_t 
     prepared_statement.set(statement, statement_length);
     return prepared_statement;
 }
-}  // namespace clp
+}  // namespace glt

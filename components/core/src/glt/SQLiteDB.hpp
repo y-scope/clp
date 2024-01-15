@@ -1,5 +1,5 @@
-#ifndef CLP_SQLITEDB_HPP
-#define CLP_SQLITEDB_HPP
+#ifndef GLT_SQLITEDB_HPP
+#define GLT_SQLITEDB_HPP
 
 #include <string>
 
@@ -8,7 +8,7 @@
 #include "SQLitePreparedStatement.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace glt {
 class SQLiteDB {
 public:
     // Types
@@ -41,6 +41,6 @@ private:
     // Variables
     sqlite3* m_db_handle;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_SQLITEDB_HPP
+#endif  // GLT_SQLITEDB_HPP

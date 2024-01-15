@@ -11,7 +11,7 @@
 using std::string;
 using std::vector;
 
-namespace clp::clp {
+namespace glt::glt {
 bool find_all_files_and_empty_directories(
         boost::filesystem::path& path_prefix_to_remove,
         string const& path,
@@ -200,4 +200,4 @@ bool validate_paths_exist(vector<string> const& paths) {
 
     return all_paths_exist;
 }
-}  // namespace clp::clp
+}  // namespace glt::glt

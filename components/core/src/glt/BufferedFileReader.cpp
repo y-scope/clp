@@ -10,7 +10,7 @@
 
 using std::string;
 
-namespace clp {
+namespace glt {
 namespace {
 /**
  * Reads from the given file descriptor
@@ -369,4 +369,4 @@ auto BufferedFileReader::update_file_pos(size_t pos) -> void {
     m_file_pos = pos;
     m_highest_read_pos = std::max(m_file_pos, m_highest_read_pos);
 }
-}  // namespace clp
+}  // namespace glt

@@ -23,7 +23,7 @@
 #include "../ArchiveMetadata.hpp"
 #include "../MetadataDB.hpp"
 
-namespace clp::streaming_archive::writer {
+namespace glt::streaming_archive::writer {
 class Archive {
 public:
     // Types
@@ -341,6 +341,6 @@ private:
 
     bool m_print_archive_stats_progress;
 };
-}  // namespace clp::streaming_archive::writer
+}  // namespace glt::streaming_archive::writer
 
 #endif  // STREAMING_ARCHIVE_WRITER_ARCHIVE_HPP

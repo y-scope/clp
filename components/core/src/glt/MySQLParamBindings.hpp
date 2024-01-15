@@ -1,5 +1,5 @@
-#ifndef CLP_MYSQLPARAMBINDINGS_HPP
-#define CLP_MYSQLPARAMBINDINGS_HPP
+#ifndef GLT_MYSQLPARAMBINDINGS_HPP
+#define GLT_MYSQLPARAMBINDINGS_HPP
 
 #include <cstdint>
 #include <vector>
@@ -9,7 +9,7 @@
 #include "ErrorCode.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Class representing parameter bindings for a prepared SQL statement
  */
@@ -48,6 +48,6 @@ private:
     std::vector<MYSQL_BIND> m_statement_bindings;
     std::vector<unsigned long> m_statement_binding_lengths;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_MYSQLPARAMBINDINGS_HPP
+#endif  // GLT_MYSQLPARAMBINDINGS_HPP

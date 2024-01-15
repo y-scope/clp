@@ -17,7 +17,7 @@ using std::string;
 using std::unordered_set;
 using std::vector;
 
-namespace clp::clp {
+namespace glt::glt {
 int run(int argc, char const* argv[]) {
     // Program-wide initialization
     try {
@@ -31,7 +31,7 @@ int run(int argc, char const* argv[]) {
     Profiler::init();
     TimestampPattern::init();
 
-    CommandLineArguments command_line_args("clp");
+    CommandLineArguments command_line_args("glt");
     auto parsing_result = command_line_args.parse_arguments(argc, argv);
     switch (parsing_result) {
         case CommandLineArgumentsBase::ParsingResult::Failure:
@@ -146,4 +146,4 @@ int run(int argc, char const* argv[]) {
 
     return 0;
 }
-}  // namespace clp::clp
+}  // namespace glt::glt

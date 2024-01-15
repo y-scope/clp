@@ -1,5 +1,5 @@
-#ifndef CLP_ENCODEDVARIABLEINTERPRETER_HPP
-#define CLP_ENCODEDVARIABLEINTERPRETER_HPP
+#ifndef GLT_ENCODEDVARIABLEINTERPRETER_HPP
+#define GLT_ENCODEDVARIABLEINTERPRETER_HPP
 
 #include <string>
 #include <vector>
@@ -11,7 +11,7 @@
 #include "VariableDictionaryReader.hpp"
 #include "VariableDictionaryWriter.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Class to parse and encode strings into encoded variables and to interpret encoded variables back
  * into strings. An encoded variable is one of:
@@ -198,6 +198,6 @@ private:
             std::vector<variable_dictionary_id_t>& var_ids
     );
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_ENCODEDVARIABLEINTERPRETER_HPP
+#endif  // GLT_ENCODEDVARIABLEINTERPRETER_HPP

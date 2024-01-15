@@ -14,10 +14,10 @@
 #include "../VariableDictionaryReader.hpp"
 #include "CommandLineArguments.hpp"
 
-using clp::CommandLineArgumentsBase;
-using clp::FileWriter;
-using clp::ir::VariablePlaceholder;
-using clp::segment_id_t;
+using glt::CommandLineArgumentsBase;
+using glt::FileWriter;
+using glt::ir::VariablePlaceholder;
+using glt::segment_id_t;
 using std::string;
 
 int main(int argc, char const* argv[]) {
@@ -31,7 +31,7 @@ int main(int argc, char const* argv[]) {
         return -1;
     }
 
-    clp::make_dictionaries_readable::CommandLineArguments command_line_args(
+    glt::make_dictionaries_readable::CommandLineArguments command_line_args(
             "make-dictionaries-readable"
     );
     auto parsing_result = command_line_args.parse_arguments(argc, argv);
@@ -50,19 +50,19 @@ int main(int argc, char const* argv[]) {
 
     // Open log-type dictionary
     auto logtype_dict_path = boost::filesystem::path(command_line_args.get_archive_path())
-                             / clp::streaming_archive::cLogTypeDictFilename;
+                             / glt::streaming_archive::cLogTypeDictFilename;
     auto logtype_segment_index_path = boost::filesystem::path(command_line_args.get_archive_path())
-                                      / clp::streaming_archive::cLogTypeSegmentIndexFilename;
-    clp::LogTypeDictionaryReader logtype_dict;
+                                      / glt::streaming_archive::cLogTypeSegmentIndexFilename;
+    glt::LogTypeDictionaryReader logtype_dict;
     logtype_dict.open(logtype_dict_path.string(), logtype_segment_index_path.string());
     logtype_dict.read_new_entries();
 
     // Write readable dictionary
     auto readable_logtype_dict_path = boost::filesystem::path(command_line_args.get_output_dir())
-                                      / clp::streaming_archive::cLogTypeDictFilename;
+                                      / glt::streaming_archive::cLogTypeDictFilename;
     auto readable_logtype_segment_index_path
             = boost::filesystem::path(command_line_args.get_output_dir())
-              / clp::streaming_archive::cLogTypeSegmentIndexFilename;
+              / glt::streaming_archive::cLogTypeSegmentIndexFilename;
     readable_logtype_dict_path += ".hr";
     readable_logtype_segment_index_path += ".hr";
     file_writer.open(readable_logtype_dict_path.string(), FileWriter::OpenMode::CREATE_FOR_WRITING);
@@ -103,7 +103,7 @@ int main(int argc, char const* argv[]) {
                     SPDLOG_ERROR(
                             "Logtype '{}' contains unexpected variable placeholder 0x{:x}",
                             value,
-                            clp::enum_to_underlying_type(var_placeholder)
+                            glt::enum_to_underlying_type(var_placeholder)
                     );
                     return -1;
             }
@@ -134,19 +134,19 @@ int main(int argc, char const* argv[]) {
 
     // Open variables dictionary
     auto var_dict_path = boost::filesystem::path(command_line_args.get_archive_path())
-                         / clp::streaming_archive::cVarDictFilename;
+                         / glt::streaming_archive::cVarDictFilename;
     auto var_segment_index_path = boost::filesystem::path(command_line_args.get_archive_path())
-                                  / clp::streaming_archive::cVarSegmentIndexFilename;
-    clp::VariableDictionaryReader var_dict;
+                                  / glt::streaming_archive::cVarSegmentIndexFilename;
+    glt::VariableDictionaryReader var_dict;
     var_dict.open(var_dict_path.string(), var_segment_index_path.string());
     var_dict.read_new_entries();
 
     // Write readable dictionary
     auto readable_var_dict_path = boost::filesystem::path(command_line_args.get_output_dir())
-                                  / clp::streaming_archive::cVarDictFilename;
+                                  / glt::streaming_archive::cVarDictFilename;
     auto readable_var_segment_index_path
             = boost::filesystem::path(command_line_args.get_output_dir())
-              / clp::streaming_archive::cVarSegmentIndexFilename;
+              / glt::streaming_archive::cVarSegmentIndexFilename;
     readable_var_dict_path += ".hr";
     readable_var_segment_index_path += ".hr";
     file_writer.open(readable_var_dict_path.string(), FileWriter::OpenMode::CREATE_FOR_WRITING);

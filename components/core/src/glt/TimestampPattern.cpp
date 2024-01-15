@@ -13,8 +13,8 @@ using std::to_string;
 using std::vector;
 
 // Static member default initialization
-std::unique_ptr<clp::TimestampPattern[]> clp::TimestampPattern::m_known_ts_patterns = nullptr;
-size_t clp::TimestampPattern::m_known_ts_patterns_len = 0;
+std::unique_ptr<glt::TimestampPattern[]> glt::TimestampPattern::m_known_ts_patterns = nullptr;
+size_t glt::TimestampPattern::m_known_ts_patterns_len = 0;
 
 namespace {
 enum class ParserState {
@@ -111,7 +111,7 @@ static bool convert_string_to_number(
     return true;
 }
 
-namespace clp {
+namespace glt {
 /*
  * To initialize m_known_ts_patterns, we first create a vector of patterns then copy it to a dynamic
  * array. This eases maintenance of the list and the cost doesn't matter since it is only done once
@@ -931,4 +931,4 @@ bool operator==(TimestampPattern const& lhs, TimestampPattern const& rhs) {
 bool operator!=(TimestampPattern const& lhs, TimestampPattern const& rhs) {
     return !(lhs == rhs);
 }
-}  // namespace clp
+}  // namespace glt

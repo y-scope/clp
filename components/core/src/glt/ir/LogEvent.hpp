@@ -1,5 +1,5 @@
-#ifndef CLP_IR_LOGEVENT_HPP
-#define CLP_IR_LOGEVENT_HPP
+#ifndef GLT_IR_LOGEVENT_HPP
+#define GLT_IR_LOGEVENT_HPP
 
 #include <string>
 #include <vector>
@@ -7,7 +7,7 @@
 #include "../Defs.h"
 #include "types.hpp"
 
-namespace clp::ir {
+namespace glt::ir {
 /**
  * A class representing a log event encoded using CLP's IR
  * @tparam encoded_variable_t The type of encoded variables in the event
@@ -47,6 +47,6 @@ private:
     std::vector<std::string> m_dict_vars;
     std::vector<encoded_variable_t> m_encoded_vars;
 };
-}  // namespace clp::ir
+}  // namespace glt::ir
 
-#endif  // CLP_IR_LOGEVENT_HPP
+#endif  // GLT_IR_LOGEVENT_HPP

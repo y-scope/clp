@@ -1,11 +1,11 @@
-#ifndef CLP_DEFS_H
-#define CLP_DEFS_H
+#ifndef GLT_DEFS_H
+#define GLT_DEFS_H
 
 #include <atomic>
 #include <cstdint>
 #include <limits>
 
-namespace clp {
+namespace glt {
 // Types
 typedef int64_t epochtime_t;
 constexpr epochtime_t cEpochTimeMin = std::numeric_limits<epochtime_t>::min();
@@ -49,6 +49,6 @@ typedef std::atomic_uint64_t atomic_pipeline_id_t;
 // Constants
 constexpr char cDefaultConfigFilename[] = ".clp.rc";
 constexpr int cMongoDbDuplicateKeyErrorCode = 11'000;
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_DEFS_H
+#endif  // GLT_DEFS_H

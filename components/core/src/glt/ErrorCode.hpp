@@ -1,7 +1,7 @@
-#ifndef CLP_ERRORCODE_HPP
-#define CLP_ERRORCODE_HPP
+#ifndef GLT_ERRORCODE_HPP
+#define GLT_ERRORCODE_HPP
 
-namespace clp {
+namespace glt {
 typedef enum {
     ErrorCode_Success = 0,
     ErrorCode_BadParam,
@@ -24,6 +24,6 @@ typedef enum {
     ErrorCode_MetadataCorrupted,
     ErrorCode_Failure_DB_Bulk_Write
 } ErrorCode;
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_ERROR_CODE_HPP
+#endif  // GLT_ERROR_CODE_HPP

@@ -1,5 +1,5 @@
-#ifndef CLP_CLP_COMMANDLINEARGUMENTS_HPP
-#define CLP_CLP_COMMANDLINEARGUMENTS_HPP
+#ifndef GLT_GLT_COMMANDLINEARGUMENTS_HPP
+#define GLT_GLT_COMMANDLINEARGUMENTS_HPP
 
 #include <string>
 #include <vector>
@@ -9,7 +9,7 @@
 #include "../CommandLineArgumentsBase.hpp"
 #include "../GlobalMetadataDBConfig.hpp"
 
-namespace clp::clp {
+namespace glt::glt {
 class CommandLineArguments : public CommandLineArgumentsBase {
 public:
     // Types
@@ -87,6 +87,6 @@ private:
     std::vector<std::string> m_input_paths;
     GlobalMetadataDBConfig m_metadata_db_config;
 };
-}  // namespace clp::clp
+}  // namespace glt::glt
 
-#endif  // CLP_CLP_COMMANDLINEARGUMENTS_HPP
+#endif  // GLT_GLT_COMMANDLINEARGUMENTS_HPP

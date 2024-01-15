@@ -34,7 +34,7 @@ using std::string;
 using std::to_string;
 using std::vector;
 
-namespace clp::streaming_archive {
+namespace glt::streaming_archive {
 static void
 create_tables(vector<std::pair<string, string>> const& file_field_names_and_types, SQLiteDB& db) {
     fmt::memory_buffer statement_buffer;
@@ -633,4 +633,4 @@ void MetadataDB::add_empty_directories(vector<string> const& empty_directory_pat
         m_insert_empty_directories_statement->reset();
     }
 }
-}  // namespace clp::streaming_archive
+}  // namespace glt::streaming_archive

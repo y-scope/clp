@@ -1,5 +1,5 @@
-#ifndef CLP_READERINTERFACE_HPP
-#define CLP_READERINTERFACE_HPP
+#ifndef GLT_READERINTERFACE_HPP
+#define GLT_READERINTERFACE_HPP
 
 #include <cstddef>
 #include <string>
@@ -8,7 +8,7 @@
 #include "ErrorCode.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace glt {
 class ReaderInterface {
 public:
     // Types
@@ -146,6 +146,6 @@ bool ReaderInterface::read_numeric_value(ValueType& value, bool eof_possible) {
     }
     return true;
 }
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_READERINTERFACE_HPP
+#endif  // GLT_READERINTERFACE_HPP

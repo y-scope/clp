@@ -1,5 +1,5 @@
-#ifndef CLP_STREAMING_COMPRESSION_ZSTD_DECOMPRESSOR_HPP
-#define CLP_STREAMING_COMPRESSION_ZSTD_DECOMPRESSOR_HPP
+#ifndef GLT_STREAMING_COMPRESSION_ZSTD_DECOMPRESSOR_HPP
+#define GLT_STREAMING_COMPRESSION_ZSTD_DECOMPRESSOR_HPP
 
 #include <memory>
 #include <string>
@@ -11,8 +11,8 @@
 #include "../../TraceableException.hpp"
 #include "../Decompressor.hpp"
 
-namespace clp::streaming_compression::zstd {
-class Decompressor : public ::clp::streaming_compression::Decompressor {
+namespace glt::streaming_compression::zstd {
+class Decompressor : public ::glt::streaming_compression::Decompressor {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -138,5 +138,5 @@ private:
     size_t m_unused_decompressed_stream_block_size;
     std::unique_ptr<char[]> m_unused_decompressed_stream_block_buffer;
 };
-}  // namespace clp::streaming_compression::zstd
-#endif  // CLP_STREAMING_COMPRESSION_ZSTD_DECOMPRESSOR_HPP
+}  // namespace glt::streaming_compression::zstd
+#endif  // GLT_STREAMING_COMPRESSION_ZSTD_DECOMPRESSOR_HPP

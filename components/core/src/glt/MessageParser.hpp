@@ -1,5 +1,5 @@
-#ifndef CLP_MESSAGEPARSER_HPP
-#define CLP_MESSAGEPARSER_HPP
+#ifndef GLT_MESSAGEPARSER_HPP
+#define GLT_MESSAGEPARSER_HPP
 
 #include <string>
 
@@ -8,7 +8,7 @@
 #include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace glt {
 /**
  * Class to parse log messages
  */
@@ -69,6 +69,6 @@ private:
     std::string m_line;
     ParsedMessage m_buffered_msg;
 };
-}  // namespace clp
+}  // namespace glt
 
-#endif  // CLP_MESSAGEPARSER_HPP
+#endif  // GLT_MESSAGEPARSER_HPP
