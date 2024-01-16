@@ -115,7 +115,7 @@ tasks:
       - "{{.SRC_DIR}}/cmake/**/*"
       - "{{.SRC_DIR}}/CMakeLists.txt"
       - "{{.SRC_DIR}}/src/**/*"
-      - "{{.SRC_DIR}}/submodules/**"
+      - "{{.SRC_DIR}}/submodules/**/*"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
     status:
       - >-
