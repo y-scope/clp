@@ -49,7 +49,7 @@ tasks:
       - "ln -s '{{.PACKAGE_BUILD_DIR}}' '{{.VERSIONED_PACKAGE_NAME}}'"
       - "tar czf '{{.VERSIONED_PACKAGE_NAME}}.tar.gz' --dereference '{{.VERSIONED_PACKAGE_NAME}}'"
     sources:
-      - "{{.PACKAGE_BUILD_DIR}}/**"
+      - "{{.PACKAGE_BUILD_DIR}}/**/*"
     status:
       - "test -e {{.VERSIONED_PACKAGE_NAME}}.tar.gz"
       - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y {{.VERSIONED_PACKAGE_NAME}}.tar.gz)"
@@ -97,7 +97,7 @@ tasks:
       - "components/clp-py-utils/dist/*.whl"
       - "components/compression-job-handler/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
-      - "components/package-template/src/**"
+      - "components/package-template/src/**/*"
     status:
       - "test -e '{{.PACKAGE_VERSION_FILE}}'"
       - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.PACKAGE_VERSION_FILE}}')"
@@ -112,9 +112,9 @@ tasks:
       - "cmake --build '{{.CORE_COMPONENT_BUILD_DIR}}' --parallel --target clg clo clp"
     method: "timestamp"
     sources:
-      - "{{.SRC_DIR}}/cmake/**"
+      - "{{.SRC_DIR}}/cmake/**/*"
       - "{{.SRC_DIR}}/CMakeLists.txt"
-      - "{{.SRC_DIR}}/src/**"
+      - "{{.SRC_DIR}}/src/**/*"
       - "{{.SRC_DIR}}/submodules/**"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
     status:
@@ -209,10 +209,12 @@ tasks:
 
   core-submodules:
     internal: true
-    vars:
-      SRC_DIR: "components/core"
+    dir: "components/core"
     cmds:
-      - "{{.SRC_DIR}}/tools/scripts/deps-download/download-all.sh"
+      - "tools/scripts/deps-download/download-all.sh"
+    sources:
+      - ".gitmodules"
+      - "tools/scripts/deps-download/**/*"
 
   package-venv:
     internal: true
@@ -259,7 +261,7 @@ tasks:
         poetry build --format wheel
     method: "timestamp"
     sources:
-      - "{{.PACKAGE}}/**"
+      - "{{.PACKAGE}}/**/*"
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "pyproject.toml"
