@@ -21,6 +21,7 @@ namespace glt::streaming_archive::writer {
         }
 
         m_id = id;
+        m_uncompressed_size = 0;
 
         // Construct segment path
         m_segment_path = segments_dir_path;
@@ -30,7 +31,6 @@ namespace glt::streaming_archive::writer {
     }
 
     void GLTSegment::close () {
-        m_uncompressed_size = 0;
         compress_logtype_tables_to_disk();
         m_segment_path.clear();
     }

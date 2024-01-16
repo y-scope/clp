@@ -466,7 +466,7 @@ void MetadataDB::open(string const& path) {
     file_field_names_and_types
             [enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition)]
             .first
-            = streaming_archive::cMetadataDB::File::SegmentTimestampsPosition;
+            = streaming_archive::cMetadataDB::File::SegmentOffsetPosition;
     file_field_names_and_types
             [enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition)]
             .second
