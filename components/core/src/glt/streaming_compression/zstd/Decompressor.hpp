@@ -56,6 +56,16 @@ public:
      */
     ErrorCode try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) override;
     /**
+     * Tries to read exactly "num_bytes_to_read" bytes of data
+     * from the decompressor
+     * @throw ErrorCode_Failure if fails to read required number of bytes
+     * @throw error code of zstd::Decompressor::try_read on failure
+     * @param buf
+     * @param num_bytes The number of bytes to try and read
+     * @return void
+     */
+    void exact_read(char* buf, size_t num_bytes_to_read);
+    /**
      * Tries to seek from the beginning to the given position
      * @param pos
      * @return ErrorCode_NotInit if the decompressor is not open

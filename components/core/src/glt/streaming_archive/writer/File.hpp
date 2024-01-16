@@ -13,7 +13,7 @@
 #include "../../PageAllocatedVector.hpp"
 #include "../../TimestampPattern.hpp"
 #include "Segment.hpp"
-
+#include "GLTSegment.hpp"
 namespace glt::streaming_archive::writer {
 /**
  * Class representing a log file encoded in three columns - timestamps, logtype IDs, and
@@ -50,14 +50,10 @@ public:
               m_num_messages(0),
               m_num_variables(0),
               m_segment_id(cInvalidSegmentId),
-              m_segment_timestamps_pos(0),
               m_segment_logtypes_pos(0),
-              m_segment_variables_pos(0),
+              m_segment_offset_pos(0),
               m_is_split(split_ix > 0),
               m_split_ix(split_ix),
-              m_segmentation_state(SegmentationState_NotInSegment),
-              m_is_metadata_clean(false),
-              m_is_written_out(false),
               m_is_open(false) {}
 
     // Destructor
@@ -80,16 +76,16 @@ public:
      * Writes an encoded message to the respective columns and updates the metadata of the file
      * @param timestamp
      * @param logtype_id
-     * @param encoded_vars
-     * @param var_ids
+     * @param offset
      * @param num_uncompressed_bytes
+     * @param num_vars
      */
-    void write_encoded_msg(
+    void write_encoded_msg (
             epochtime_t timestamp,
             logtype_dictionary_id_t logtype_id,
-            std::vector<encoded_variable_t> const& encoded_vars,
-            std::vector<variable_dictionary_id_t> const& var_ids,
-            size_t num_uncompressed_bytes
+            size_t offset,
+            size_t num_uncompressed_bytes,
+            size_t num_vars
     );
 
     /**
@@ -126,25 +122,6 @@ public:
      */
     group_id_t get_group_id() const { return m_group_id; }
 
-    /**
-     * Tests if the file has been moved to segment that has not yet been committed
-     * @return true if in uncommitted segment, false otherwise
-     */
-    bool is_in_uncommitted_segment() const;
-    /**
-     * Marks this file as being within a committed segment
-     */
-    void mark_as_in_committed_segment();
-    /**
-     * Tests if file's current metadata is dirty
-     * @return
-     */
-    bool is_metadata_dirty() const;
-    /**
-     * Marks the file's metadata as clean
-     */
-    void mark_metadata_as_clean();
-
     void set_is_split(bool is_split) { m_is_split = is_split; }
 
     /**
@@ -177,15 +154,11 @@ public:
 
     uint64_t get_num_variables() const { return m_num_variables; }
 
-    bool is_in_segment() const { return SegmentationState_InSegment == m_segmentation_state; }
-
     segment_id_t get_segment_id() const { return m_segment_id; }
-
-    uint64_t get_segment_timestamps_pos() const { return m_segment_timestamps_pos; }
 
     uint64_t get_segment_logtypes_pos() const { return m_segment_logtypes_pos; }
 
-    uint64_t get_segment_variables_pos() const { return m_segment_variables_pos; }
+    uint64_t get_segment_offset_pos() const { return m_segment_offset_pos; }
 
     bool is_split() const { return m_is_split; }
 
@@ -204,14 +177,12 @@ private:
      * Sets segment-related metadata to the given values
      * @param segment_id
      * @param segment_timestamps_uncompressed_pos
-     * @param segment_logtypes_uncompressed_pos
-     * @param segment_variables_uncompressed_pos
+     * @param segment_offset_uncompressed_pos
      */
     void set_segment_metadata(
             segment_id_t segment_id,
             uint64_t segment_timestamps_uncompressed_pos,
-            uint64_t segment_logtypes_uncompressed_pos,
-            uint64_t segment_variables_uncompressed_pos
+            uint64_t segment_offset_uncompressed_pos
     );
 
     // Variables
@@ -233,22 +204,20 @@ private:
     uint64_t m_num_variables;
 
     segment_id_t m_segment_id;
-    uint64_t m_segment_timestamps_pos;
     uint64_t m_segment_logtypes_pos;
-    uint64_t m_segment_variables_pos;
+    uint64_t m_segment_offset_pos;
 
     bool m_is_split;
     size_t m_split_ix;
 
     // Data variables
-    std::unique_ptr<PageAllocatedVector<epochtime_t>> m_timestamps;
     std::unique_ptr<PageAllocatedVector<logtype_dictionary_id_t>> m_logtypes;
-    std::unique_ptr<PageAllocatedVector<encoded_variable_t>> m_variables;
+    std::unique_ptr<PageAllocatedVector<offset_t>> m_offset;
+
+    // keep the logtype ids that has appeared once in the file
+    std::set<logtype_dictionary_id_t> m_logtype_id_occurance;
 
     // State variables
-    SegmentationState m_segmentation_state;
-    bool m_is_metadata_clean;
-    bool m_is_written_out;
     bool m_is_open;
 };
 }  // namespace glt::streaming_archive::writer

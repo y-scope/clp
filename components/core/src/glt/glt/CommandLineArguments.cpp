@@ -272,6 +272,12 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     po::bool_switch(&m_print_archive_stats_progress),
                     "Print statistics (ndjson) about each archive as it's compressed"
             )(
+                    "combine-threshold",
+                    po::value<double>(&m_glt_combine_threshold)
+                            ->value_name("VALUE")
+                            ->default_value(m_glt_combine_threshold),
+                    "Percentage threshold used to determine if a logtype should be"
+            )(
                     "progress",
                     po::bool_switch(&m_show_progress),
                     "Show progress during compression"
@@ -354,6 +360,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                             + "' is not a regular file."
                     );
                 }
+            }
+            if (m_glt_combine_threshold < 0 || m_glt_combine_threshold > 100) {
+                throw invalid_argument("specified combined-threshold is %d invalid");
             }
         }
 

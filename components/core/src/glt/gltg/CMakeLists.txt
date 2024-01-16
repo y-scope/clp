@@ -116,6 +116,11 @@ set(
         gltg.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
+        ../streaming_archive/writer/LogtypeTable.cpp
+        ../streaming_archive/writer/LogtypeTable.hpp
+        ../streaming_archive/writer/GLTSegment.cpp
+        ../streaming_archive/writer/GLTSegment.hpp
+        ../streaming_archive/LogtypeSizeTracker.hpp
 )
 
 add_executable(gltg ${GLTG_SOURCES})
