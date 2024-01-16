@@ -23,9 +23,8 @@ enum class FilesTableFieldIndexes : uint16_t {
     IsSplit,
     SplitIx,
     SegmentId,
-    SegmentTimestampsPosition,
     SegmentLogtypesPosition,
-    SegmentVariablesPosition,
+    SegmentOffsetPosition,
     Length,
 };
 
@@ -56,7 +55,7 @@ create_tables(vector<std::pair<string, string>> const& file_field_names_and_type
             "CREATE INDEX IF NOT EXISTS files_segment_order ON {} ({},{})",
             streaming_archive::cMetadataDB::FilesTableName,
             streaming_archive::cMetadataDB::File::SegmentId,
-            streaming_archive::cMetadataDB::File::SegmentTimestampsPosition
+            streaming_archive::cMetadataDB::File::SegmentLogtypesPosition
     );
     SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
     auto create_index_statement
@@ -163,12 +162,10 @@ static SQLitePreparedStatement get_files_select_statement(
             = streaming_archive::cMetadataDB::File::SplitIx;
     field_names[enum_to_underlying_type(FilesTableFieldIndexes::SegmentId)]
             = streaming_archive::cMetadataDB::File::SegmentId;
-    field_names[enum_to_underlying_type(FilesTableFieldIndexes::SegmentTimestampsPosition)]
-            = streaming_archive::cMetadataDB::File::SegmentTimestampsPosition;
     field_names[enum_to_underlying_type(FilesTableFieldIndexes::SegmentLogtypesPosition)]
             = streaming_archive::cMetadataDB::File::SegmentLogtypesPosition;
-    field_names[enum_to_underlying_type(FilesTableFieldIndexes::SegmentVariablesPosition)]
-            = streaming_archive::cMetadataDB::File::SegmentVariablesPosition;
+    field_names[enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition)]
+            = streaming_archive::cMetadataDB::File::SegmentOffsetPosition;
 
     fmt::memory_buffer statement_buffer;
     auto statement_buffer_ix = std::back_inserter(statement_buffer);
@@ -233,7 +230,7 @@ static SQLitePreparedStatement get_files_select_statement(
             statement_buffer_ix,
             " ORDER BY {} ASC, {} ASC",
             streaming_archive::cMetadataDB::File::SegmentId,
-            streaming_archive::cMetadataDB::File::SegmentTimestampsPosition
+            streaming_archive::cMetadataDB::File::SegmentLogtypesPosition
     );
 
     auto statement = db.prepare_statement(statement_buffer.data(), statement_buffer.size());
@@ -367,21 +364,15 @@ segment_id_t MetadataDB::FileIterator::get_segment_id() const {
     return m_statement.column_int64(enum_to_underlying_type(FilesTableFieldIndexes::SegmentId));
 }
 
-size_t MetadataDB::FileIterator::get_segment_timestamps_pos() const {
-    return m_statement.column_int64(
-            enum_to_underlying_type(FilesTableFieldIndexes::SegmentTimestampsPosition)
-    );
-}
-
 size_t MetadataDB::FileIterator::get_segment_logtypes_pos() const {
     return m_statement.column_int64(
             enum_to_underlying_type(FilesTableFieldIndexes::SegmentLogtypesPosition)
     );
 }
 
-size_t MetadataDB::FileIterator::get_segment_variables_pos() const {
+size_t MetadataDB::FileIterator::get_segment_offset_pos() const {
     return m_statement.column_int64(
-            enum_to_underlying_type(FilesTableFieldIndexes::SegmentVariablesPosition)
+            enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition)
     );
 }
 
@@ -464,15 +455,6 @@ void MetadataDB::open(string const& path) {
             = "INTEGER";
 
     file_field_names_and_types
-            [enum_to_underlying_type(FilesTableFieldIndexes::SegmentTimestampsPosition)]
-                    .first
-            = streaming_archive::cMetadataDB::File::SegmentTimestampsPosition;
-    file_field_names_and_types
-            [enum_to_underlying_type(FilesTableFieldIndexes::SegmentTimestampsPosition)]
-                    .second
-            = "INTEGER";
-
-    file_field_names_and_types
             [enum_to_underlying_type(FilesTableFieldIndexes::SegmentLogtypesPosition)]
                     .first
             = streaming_archive::cMetadataDB::File::SegmentLogtypesPosition;
@@ -482,12 +464,12 @@ void MetadataDB::open(string const& path) {
             = "INTEGER";
 
     file_field_names_and_types
-            [enum_to_underlying_type(FilesTableFieldIndexes::SegmentVariablesPosition)]
-                    .first
-            = streaming_archive::cMetadataDB::File::SegmentVariablesPosition;
+            [enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition)]
+            .first
+            = streaming_archive::cMetadataDB::File::SegmentTimestampsPosition;
     file_field_names_and_types
-            [enum_to_underlying_type(FilesTableFieldIndexes::SegmentVariablesPosition)]
-                    .second
+            [enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition)]
+            .second
             = "INTEGER";
 
     create_tables(file_field_names_and_types, m_db);
@@ -605,16 +587,12 @@ void MetadataDB::update_files(vector<writer::File*> const& files) {
                 (int64_t)file->get_segment_id()
         );
         m_upsert_file_statement->bind_int64(
-                enum_to_underlying_type(FilesTableFieldIndexes::SegmentTimestampsPosition) + 1,
-                (int64_t)file->get_segment_timestamps_pos()
-        );
-        m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::SegmentLogtypesPosition) + 1,
                 (int64_t)file->get_segment_logtypes_pos()
         );
         m_upsert_file_statement->bind_int64(
-                enum_to_underlying_type(FilesTableFieldIndexes::SegmentVariablesPosition) + 1,
-                (int64_t)file->get_segment_variables_pos()
+                enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition) + 1,
+                (int64_t)file->get_segment_offset_pos()
         );
 
         m_upsert_file_statement->step();

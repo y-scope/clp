@@ -74,9 +74,11 @@ ErrorCode File::open_me(
     m_num_variables = file_metadata_ix.get_num_variables();
 
     m_segment_id = file_metadata_ix.get_segment_id();
-    m_segment_timestamps_decompressed_stream_pos = file_metadata_ix.get_segment_timestamps_pos();
+    //m_segment_timestamps_decompressed_stream_pos = file_metadata_ix.get_segment_timestamps_pos();
+    m_segment_timestamps_decompressed_stream_pos = 0;
     m_segment_logtypes_decompressed_stream_pos = file_metadata_ix.get_segment_logtypes_pos();
-    m_segment_variables_decompressed_stream_pos = file_metadata_ix.get_segment_variables_pos();
+    m_segment_variables_decompressed_stream_pos = 0;
+    //m_segment_variables_decompressed_stream_pos = file_metadata_ix.get_segment_variables_pos();
 
     m_is_split = file_metadata_ix.is_split();
     m_split_ix = file_metadata_ix.get_split_ix();

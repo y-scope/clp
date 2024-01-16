@@ -94,9 +94,10 @@ public:
         bool is_split() const;
         size_t get_split_ix() const;
         segment_id_t get_segment_id() const;
-        size_t get_segment_timestamps_pos() const;
+
+        // GLT specific
         size_t get_segment_logtypes_pos() const;
-        size_t get_segment_variables_pos() const;
+        size_t get_segment_offset_pos () const;
     };
 
     class EmptyDirectoryIterator : public Iterator {

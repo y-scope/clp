@@ -45,6 +45,7 @@ public:
         size_t creation_num;
         size_t target_segment_uncompressed_size;
         int compression_level;
+        double glt_combine_threshold;
         std::string output_dir;
         GlobalMetadataDB* global_metadata_db;
         bool print_archive_stats_progress;
@@ -144,21 +145,6 @@ public:
     write_msg(epochtime_t timestamp, std::string const& message, size_t num_uncompressed_bytes);
 
     /**
-     * Encodes and writes a message to the given file using schema file
-     * @param log_event_view
-     * @throw FileWriter::OperationFailed if any write fails
-     */
-    void write_msg_using_schema(log_surgeon::LogEventView const& log_event_view);
-
-    /**
-     * Writes an IR log event to the current encoded file
-     * @tparam encoded_variable_t The type of the encoded variables in the log event
-     * @param log_event
-     */
-    template <typename encoded_variable_t>
-    void write_log_event_ir(ir::LogEvent<encoded_variable_t> const& log_event);
-
-    /**
      * Writes snapshot of archive to disk including metadata of all files and new dictionary
      * entries
      * @throw FileWriter::OperationFailed if failed to write or flush dictionaries
@@ -230,14 +216,15 @@ private:
     );
 
     /**
-     * Appends the content of the current encoded file to the given segment
+     * Appends the message order table of the current encoded file to the given segment
      * @param segment
      * @param logtype_ids_in_segment
      * @param var_ids_in_segment
      * @param files_in_segment
      */
     void append_file_contents_to_segment(
-            Segment& segment,
+            Segment& message_order_table,
+            GLTSegment& glt_segment,
             ArrayBackedPosIntSet<logtype_dictionary_id_t>& logtype_ids_in_segment,
             ArrayBackedPosIntSet<variable_dictionary_id_t>& var_ids_in_segment,
             std::vector<File*>& files_in_segment
@@ -261,7 +248,8 @@ private:
      * @throw Same as streaming_archive::writer::Archive::persist_file_metadata
      */
     void close_segment_and_persist_file_metadata(
-            Segment& segment,
+            Segment& message_order_table,
+            GLTSegment& glt_segment,
             std::vector<File*>& files,
             ArrayBackedPosIntSet<logtype_dictionary_id_t>& segment_logtype_ids,
             ArrayBackedPosIntSet<variable_dictionary_id_t>& segment_var_ids
@@ -304,7 +292,7 @@ private:
 
     boost::uuids::random_generator m_uuid_generator;
 
-    file_id_t m_next_file_id;
+    file_id_t m_file_id;
     // Since we batch metadata persistence operations, we need to keep track of files whose
     // metadata should be persisted Accordingly:
     // - m_files_with_timestamps_in_segment contains files that 1) have been moved to an open
@@ -312,23 +300,11 @@ private:
     // - m_files_without_timestamps_in_segment contains files that 1) have been moved to an open
     //   segment and 2) do not contain timestamps
     segment_id_t m_next_segment_id;
-    std::vector<File*> m_files_with_timestamps_in_segment;
-    std::vector<File*> m_files_without_timestamps_in_segment;
+    std::vector<File*> m_files_in_segment;
+    ArrayBackedPosIntSet<logtype_dictionary_id_t> m_logtype_ids_in_segment;
+    ArrayBackedPosIntSet<variable_dictionary_id_t> m_var_ids_in_segment;
 
     size_t m_target_segment_uncompressed_size;
-    Segment m_segment_for_files_with_timestamps;
-    ArrayBackedPosIntSet<logtype_dictionary_id_t>
-            m_logtype_ids_in_segment_for_files_with_timestamps;
-    ArrayBackedPosIntSet<variable_dictionary_id_t> m_var_ids_in_segment_for_files_with_timestamps;
-    // Logtype and variable IDs for a file that hasn't yet been assigned to the timestamp or
-    // timestamp-less segment
-    std::unordered_set<logtype_dictionary_id_t> m_logtype_ids_for_file_with_unassigned_segment;
-    std::unordered_set<variable_dictionary_id_t> m_var_ids_for_file_with_unassigned_segment;
-    Segment m_segment_for_files_without_timestamps;
-    ArrayBackedPosIntSet<logtype_dictionary_id_t>
-            m_logtype_ids_in_segment_for_files_without_timestamps;
-    ArrayBackedPosIntSet<variable_dictionary_id_t>
-            m_var_ids_in_segment_for_files_without_timestamps;
 
     int m_compression_level;
 
@@ -340,6 +316,15 @@ private:
     GlobalMetadataDB* m_global_metadata_db;
 
     bool m_print_archive_stats_progress;
+
+    // GLT related data variables
+    double m_combine_threshold;
+    // GLT TODO: remove this after file id is integrated
+    // into the database schema
+    FileWriter m_filename_dict_writer;
+
+    GLTSegment m_glt_segment;
+    Segment m_message_order_table;
 };
 }  // namespace glt::streaming_archive::writer
 
