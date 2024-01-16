@@ -22,6 +22,7 @@ namespace glt::streaming_archive::writer {
 
         m_id = id;
         m_uncompressed_size = 0;
+        m_compressed_size = 0;
 
         // Construct segment path
         m_segment_path = segments_dir_path;

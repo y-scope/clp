@@ -444,7 +444,10 @@ uint64_t Archive::get_dynamic_compressed_size() {
             m_var_dict.get_on_disk_size() +
             m_filename_dict_writer.get_pos();
 
-    // GLT TODO: do we need to Add size of unclosed segments?
+    // GLT. Note we don't need to add size of glt_segment
+    if (m_message_order_table.is_open()) {
+        on_disk_size += m_message_order_table.get_compressed_size();
+    }
     return on_disk_size;
 }
 
