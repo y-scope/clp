@@ -105,17 +105,22 @@ void Archive::open(string const& path) {
     m_segments_dir_path += '/';
     m_segments_dir_path += cSegmentsDirname;
     m_segments_dir_path += '/';
-    m_segment_manager.open(m_segments_dir_path);
 
     // Open segment list
     string segment_list_path = m_segments_dir_path;
     segment_list_path += cSegmentListFilename;
+
+    // Set invalid segment ID
+    m_current_segment_id = INT64_MAX;
 }
 
 void Archive::close() {
+    // close GLT
+    m_segment.close();
+    m_message_order_table.close();
+
     m_logtype_dictionary.close();
     m_var_dictionary.close();
-    m_segment_manager.close();
     m_segments_dir_path.clear();
     m_metadata_db.close();
     m_path.clear();
@@ -126,15 +131,34 @@ void Archive::refresh_dictionaries() {
     m_var_dictionary.read_new_entries();
 }
 
-ErrorCode Archive::open_file(File& file, MetadataDB::FileIterator const& file_metadata_ix) {
-    return file.open_me(m_logtype_dictionary, file_metadata_ix, m_segment_manager);
+ErrorCode Archive::open_file (File& file, MetadataDB::FileIterator const& file_metadata_ix) {
+    const auto segment_id = file_metadata_ix.get_segment_id();
+    if (segment_id != m_current_segment_id) {
+        if (m_current_segment_id != INT64_MAX) {
+            m_segment.close();
+            m_message_order_table.close();
+        }
+        ErrorCode error_code = m_segment.try_open(m_segments_dir_path, segment_id);
+        if(error_code != ErrorCode_Success) {
+            m_segment.close();
+            return error_code;
+        }
+        error_code = m_message_order_table.try_open(m_segments_dir_path, segment_id);
+        if(error_code != ErrorCode_Success) {
+            m_message_order_table.close();
+            m_segment.close();
+            return error_code;
+        }
+        m_current_segment_id = segment_id;
+    }
+    return file.open_me(m_logtype_dictionary, file_metadata_ix, m_segment, m_message_order_table);
 }
 
-void Archive::close_file(File& file) {
+void Archive::close_file (File& file) {
     file.close_me();
 }
 
-void Archive::reset_file_indices(streaming_archive::reader::File& file) {
+void Archive::reset_file_indices (File& file) {
     file.reset_indices();
 }
 
@@ -146,20 +170,7 @@ VariableDictionaryReader const& Archive::get_var_dictionary() const {
     return m_var_dictionary;
 }
 
-bool Archive::find_message_in_time_range(
-        File& file,
-        epochtime_t search_begin_timestamp,
-        epochtime_t search_end_timestamp,
-        Message& msg
-) {
-    return file.find_message_in_time_range(search_begin_timestamp, search_end_timestamp, msg);
-}
-
-SubQuery const* Archive::find_message_matching_query(File& file, Query const& query, Message& msg) {
-    return file.find_message_matching_query(query, msg);
-}
-
-bool Archive::get_next_message(File& file, Message& msg) {
+bool Archive::get_next_message (File& file, Message& msg) {
     return file.get_next_message(msg);
 }
 

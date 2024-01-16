@@ -71,19 +71,6 @@ public:
     void reset_file_indices(File& file);
 
     /**
-     * Wrapper for streaming_archive::reader::File::find_message_in_time_range
-     */
-    bool find_message_in_time_range(
-            File& file,
-            epochtime_t search_begin_timestamp,
-            epochtime_t search_end_timestamp,
-            Message& msg
-    );
-    /**
-     * Wrapper for streaming_archive::reader::File::find_message_matching_query
-     */
-    SubQuery const* find_message_matching_query(File& file, Query const& query, Message& msg);
-    /**
      * Wrapper for streaming_archive::reader::File::get_next_message
      */
     bool get_next_message(File& file, Message& msg);
@@ -139,9 +126,12 @@ private:
     LogTypeDictionaryReader m_logtype_dictionary;
     VariableDictionaryReader m_var_dictionary;
 
-    SegmentManager m_segment_manager;
-
     MetadataDB m_metadata_db;
+
+    //GLT Specific
+    segment_id_t m_current_segment_id;
+    GLTSegment m_segment;
+    Segment m_message_order_table;
 };
 }  // namespace glt::streaming_archive::reader
 

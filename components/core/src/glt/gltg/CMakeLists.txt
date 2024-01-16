@@ -121,6 +121,17 @@ set(
         ../streaming_archive/writer/GLTSegment.cpp
         ../streaming_archive/writer/GLTSegment.hpp
         ../streaming_archive/LogtypeSizeTracker.hpp
+        ../streaming_archive/reader/CombinedLogtypeTable.cpp
+        ../streaming_archive/reader/CombinedLogtypeTable.hpp
+        ../streaming_archive/reader/GLTSegment.cpp
+        ../streaming_archive/reader/GLTSegment.hpp
+        ../streaming_archive/reader/LogtypeMetadata.hpp
+        ../streaming_archive/reader/LogtypeTable.cpp
+        ../streaming_archive/reader/LogtypeTable.hpp
+        ../streaming_archive/reader/LogtypeTableManager.cpp
+        ../streaming_archive/reader/LogtypeTableManager.hpp
+        ../streaming_archive/reader/MultiLogtypeTablesManager.cpp
+        ../streaming_archive/reader/MultiLogtypeTablesManager.hpp
 )
 
 add_executable(gltg ${GLTG_SOURCES})

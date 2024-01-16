@@ -19,10 +19,9 @@ epochtime_t File::get_end_ts() const {
     return m_end_ts;
 }
 
-ErrorCode File::open_me(
+ErrorCode File::init(
         LogTypeDictionaryReader const& archive_logtype_dict,
-        MetadataDB::FileIterator const& file_metadata_ix,
-        SegmentManager& segment_manager
+        MetadataDB::FileIterator const& file_metadata_ix
 ) {
     m_archive_logtype_dict = &archive_logtype_dict;
 
@@ -71,78 +70,12 @@ ErrorCode File::open_me(
     }
 
     m_num_messages = file_metadata_ix.get_num_messages();
-    m_num_variables = file_metadata_ix.get_num_variables();
-
     m_segment_id = file_metadata_ix.get_segment_id();
-    //m_segment_timestamps_decompressed_stream_pos = file_metadata_ix.get_segment_timestamps_pos();
-    m_segment_timestamps_decompressed_stream_pos = 0;
-    m_segment_logtypes_decompressed_stream_pos = file_metadata_ix.get_segment_logtypes_pos();
-    m_segment_variables_decompressed_stream_pos = 0;
-    //m_segment_variables_decompressed_stream_pos = file_metadata_ix.get_segment_variables_pos();
 
     m_is_split = file_metadata_ix.is_split();
     m_split_ix = file_metadata_ix.get_split_ix();
 
-    ErrorCode error_code;
-
-    uint64_t num_bytes_to_read;
-    if (m_num_messages > 0) {
-        if (m_num_messages > m_num_segment_msgs) {
-            // Buffers too small, so increase size to required amount
-            m_segment_timestamps = std::make_unique<epochtime_t[]>(m_num_messages);
-            m_segment_logtypes = std::make_unique<logtype_dictionary_id_t[]>(m_num_messages);
-            m_num_segment_msgs = m_num_messages;
-        }
-
-        num_bytes_to_read = m_num_messages * sizeof(epochtime_t);
-        error_code = segment_manager.try_read(
-                m_segment_id,
-                m_segment_timestamps_decompressed_stream_pos,
-                reinterpret_cast<char*>(m_segment_timestamps.get()),
-                num_bytes_to_read
-        );
-        if (ErrorCode_Success != error_code) {
-            close_me();
-            return error_code;
-        }
-        m_timestamps = m_segment_timestamps.get();
-
-        num_bytes_to_read = m_num_messages * sizeof(logtype_dictionary_id_t);
-        error_code = segment_manager.try_read(
-                m_segment_id,
-                m_segment_logtypes_decompressed_stream_pos,
-                reinterpret_cast<char*>(m_segment_logtypes.get()),
-                num_bytes_to_read
-        );
-        if (ErrorCode_Success != error_code) {
-            close_me();
-            return error_code;
-        }
-        m_logtypes = m_segment_logtypes.get();
-    }
-
-    if (m_num_variables > 0) {
-        if (m_num_variables > m_num_segment_vars) {
-            // Buffer too small, so increase size to required amount
-            m_segment_variables = std::make_unique<encoded_variable_t[]>(m_num_variables);
-            m_num_segment_vars = m_num_variables;
-        }
-        num_bytes_to_read = m_num_variables * sizeof(encoded_variable_t);
-        error_code = segment_manager.try_read(
-                m_segment_id,
-                m_segment_variables_decompressed_stream_pos,
-                reinterpret_cast<char*>(m_segment_variables.get()),
-                num_bytes_to_read
-        );
-        if (ErrorCode_Success != error_code) {
-            close_me();
-            return error_code;
-        }
-        m_variables = m_segment_variables.get();
-    }
-
     m_msgs_ix = 0;
-    m_variables_ix = 0;
 
     m_current_ts_pattern_ix = 0;
     m_current_ts_in_milli = m_begin_ts;
@@ -150,19 +83,61 @@ ErrorCode File::open_me(
     return ErrorCode_Success;
 }
 
-void File::close_me() {
-    m_timestamps = nullptr;
-    m_logtypes = nullptr;
-    m_variables = nullptr;
+ErrorCode File::open_me(
+        const LogTypeDictionaryReader& archive_logtype_dict,
+        MetadataDB::FileIterator const& file_metadata_ix,
+        GLTSegment& segment,
+        Segment& message_order_table
+) {
+    File::init(archive_logtype_dict, file_metadata_ix);
+    m_segment_logtypes_decompressed_stream_pos = file_metadata_ix.get_segment_logtypes_pos();
+    m_segment_offsets_decompressed_stream_pos = file_metadata_ix.get_segment_offset_pos();
 
-    m_segment_timestamps_decompressed_stream_pos = 0;
+    if (cInvalidSegmentId == m_segment_id) {
+        SPDLOG_ERROR("Unexpected invalid segment id");
+        return ErrorCode_Truncated;
+    }
+
+    uint64_t num_bytes_to_read;
+    if (m_num_messages > 0) {
+        if (m_num_messages > m_num_segment_msgs) {
+            // Buffers too small, so increase size to required amount
+            m_segment_logtypes = std::make_unique<logtype_dictionary_id_t[]>(m_num_messages);
+            m_segment_offsets = std::make_unique<size_t[]>(m_num_messages);
+            m_num_segment_msgs = m_num_messages;
+        }
+
+        num_bytes_to_read = m_num_messages * sizeof(logtype_dictionary_id_t);
+        ErrorCode error_code = message_order_table.try_read(m_segment_logtypes_decompressed_stream_pos,
+                                                  reinterpret_cast<char*>(m_segment_logtypes.get()), num_bytes_to_read);
+        if (ErrorCode_Success != error_code) {
+            close_me();
+            return error_code;
+        }
+        m_logtypes = m_segment_logtypes.get();
+        num_bytes_to_read = m_num_messages * sizeof(size_t);
+        error_code = message_order_table.try_read(m_segment_offsets_decompressed_stream_pos,
+                                                  reinterpret_cast<char*>(m_segment_offsets.get()), num_bytes_to_read);
+        if (ErrorCode_Success != error_code) {
+            close_me();
+            return error_code;
+        }
+        m_offsets = m_segment_offsets.get();
+    }
+
+    m_segment = &segment;
+
+    return ErrorCode_Success;
+}
+
+void File::close_me() {
+
     m_segment_logtypes_decompressed_stream_pos = 0;
-    m_segment_variables_decompressed_stream_pos = 0;
+    m_segment_offsets_decompressed_stream_pos = 0;
+    m_logtype_table_offsets.clear();
 
     m_msgs_ix = 0;
     m_num_messages = 0;
-    m_variables_ix = 0;
-    m_num_variables = 0;
 
     m_current_ts_pattern_ix = 0;
     m_current_ts_in_milli = 0;
@@ -175,129 +150,13 @@ void File::close_me() {
     m_archive_logtype_dict = nullptr;
 }
 
-void File::reset_indices() {
-    m_msgs_ix = 0;
-    m_variables_ix = 0;
-}
-
-string const& File::get_orig_path() const {
-    return m_orig_path;
-}
-
-std::vector<std::pair<uint64_t, TimestampPattern>> const& File::get_timestamp_patterns() const {
-    return m_timestamp_patterns;
-}
-
-epochtime_t File::get_current_ts_in_milli() const {
-    return m_current_ts_in_milli;
-}
-
-size_t File::get_current_ts_pattern_ix() const {
-    return m_current_ts_pattern_ix;
-}
-
-void File::increment_current_ts_pattern_ix() {
-    ++m_current_ts_pattern_ix;
-}
-
-bool File::find_message_in_time_range(
-        epochtime_t search_begin_timestamp,
-        epochtime_t search_end_timestamp,
-        Message& msg
-) {
-    bool found_msg = false;
-    while (m_msgs_ix < m_num_messages && !found_msg) {
-        // Get logtype
-        // NOTE: We get the logtype before the timestamp since we need to use it to get the number
-        // of variables, and then advance the variable index, regardless of whether the timestamp
-        // falls in the time range or not
-        auto logtype_id = m_logtypes[m_msgs_ix];
-
-        // Get number of variables in logtype
-        auto const& logtype_dictionary_entry = m_archive_logtype_dict->get_entry(logtype_id);
-        auto const num_vars = logtype_dictionary_entry.get_num_variables();
-
-        auto timestamp = m_timestamps[m_msgs_ix];
-        if (search_begin_timestamp <= timestamp && timestamp <= search_end_timestamp) {
-            // Get variables
-            if (m_variables_ix + num_vars > m_num_variables) {
-                // Logtypes not in sync with variables, so stop search
-                return false;
-            }
-
-            msg.clear_vars();
-            auto vars_ix = m_variables_ix;
-            for (size_t i = 0; i < num_vars; ++i) {
-                auto var = m_variables[vars_ix];
-                ++vars_ix;
-                msg.add_var(var);
-            }
-
-            // Set remaining message properties
-            msg.set_logtype_id(logtype_id);
-            msg.set_timestamp(timestamp);
-            msg.set_message_number(m_msgs_ix);
-
-            found_msg = true;
-        }
-
-        // Advance indices
-        ++m_msgs_ix;
-        m_variables_ix += num_vars;
+size_t File::get_msg_offset (logtype_dictionary_id_t logtype_id, size_t msg_ix) {
+    if(m_logtype_table_offsets.find(logtype_id) == m_logtype_table_offsets.end()) {
+        m_logtype_table_offsets[logtype_id] = m_offsets[msg_ix];
     }
-
-    return found_msg;
-}
-
-SubQuery const* File::find_message_matching_query(Query const& query, Message& msg) {
-    SubQuery const* matching_sub_query = nullptr;
-    while (m_msgs_ix < m_num_messages && nullptr == matching_sub_query) {
-        auto logtype_id = m_logtypes[m_msgs_ix];
-
-        // Get number of variables in logtype
-        auto const& logtype_dictionary_entry = m_archive_logtype_dict->get_entry(logtype_id);
-        auto const num_vars = logtype_dictionary_entry.get_num_variables();
-
-        for (auto sub_query : query.get_relevant_sub_queries()) {
-            // Check if logtype matches search
-            if (sub_query->matches_logtype(logtype_id)) {
-                // Check if timestamp matches
-                auto timestamp = m_timestamps[m_msgs_ix];
-                if (query.timestamp_is_in_search_time_range(timestamp)) {
-                    // Get variables
-                    if (m_variables_ix + num_vars > m_num_variables) {
-                        // Logtypes not in sync with variables, so stop search
-                        return nullptr;
-                    }
-
-                    msg.clear_vars();
-                    auto vars_ix = m_variables_ix;
-                    for (size_t i = 0; i < num_vars; ++i) {
-                        auto var = m_variables[vars_ix];
-                        ++vars_ix;
-                        msg.add_var(var);
-                    }
-
-                    // Check if variables match
-                    if (sub_query->matches_vars(msg.get_vars())) {
-                        // Message matches completely, so set remaining properties
-                        msg.set_logtype_id(logtype_id);
-                        msg.set_timestamp(timestamp);
-                        msg.set_message_number(m_msgs_ix);
-
-                        matching_sub_query = sub_query;
-                        break;
-                    }
-                }
-            }
-        }
-
-        // Advance indices
-        ++m_msgs_ix;
-        m_variables_ix += num_vars;
-    }
-
-    return matching_sub_query;
+    size_t return_value = m_logtype_table_offsets[logtype_id];
+    m_logtype_table_offsets[logtype_id] += 1;
+    return return_value;
 }
 
 bool File::get_next_message(Message& msg) {
@@ -308,9 +167,6 @@ bool File::get_next_message(Message& msg) {
     // Get message number
     msg.set_message_number(m_msgs_ix);
 
-    // Get timestamp
-    msg.set_timestamp(m_timestamps[m_msgs_ix]);
-
     // Get log-type
     auto logtype_id = m_logtypes[m_msgs_ix];
     msg.set_logtype_id(logtype_id);
@@ -318,18 +174,44 @@ bool File::get_next_message(Message& msg) {
     // Get variables
     msg.clear_vars();
     auto const& logtype_dictionary_entry = m_archive_logtype_dict->get_entry(logtype_id);
+
+    // Get timestamp
+    auto variable_offset = get_msg_offset(logtype_id, m_msgs_ix);
+    auto timestamp = m_segment->get_timestamp_at_offset(logtype_id, variable_offset);
+    msg.set_timestamp(timestamp);
+
     auto const num_vars = logtype_dictionary_entry.get_num_variables();
-    if (m_variables_ix + num_vars > m_num_variables) {
-        return false;
-    }
-    for (size_t i = 0; i < num_vars; ++i) {
-        auto var = m_variables[m_variables_ix];
-        ++m_variables_ix;
-        msg.add_var(var);
+    if(num_vars > 0) {
+        // The behavior here slight changed. the function will throw an error
+        // if the attempt to load variable fails
+        m_segment->get_variable_row_at_offset(logtype_id, variable_offset, msg);
     }
 
     ++m_msgs_ix;
 
     return true;
+}
+
+void File::reset_indices () {
+    m_msgs_ix = 0;
+}
+
+const string& File::get_orig_path () const {
+    return m_orig_path;
+}
+
+const std::vector<std::pair<uint64_t, TimestampPattern>>& File::get_timestamp_patterns () const {
+    return m_timestamp_patterns;
+}
+
+epochtime_t File::get_current_ts_in_milli () const {
+    return m_current_ts_in_milli;
+}
+size_t File::get_current_ts_pattern_ix () const {
+    return m_current_ts_pattern_ix;
+}
+
+void File::increment_current_ts_pattern_ix () {
+    ++m_current_ts_pattern_ix;
 }
 }  // namespace glt::streaming_archive::reader
