@@ -161,8 +161,10 @@ def create_and_monitor_job_in_db(db_config: Database, results_cache: ResultsCach
 
 async def worker_connection_handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
     try:
-        while True:
-            pass
+        buf = await reader.read(1024)
+        if b'' == buf:
+            # Worker closed
+            return
     except asyncio.CancelledError:
         return
     finally:
