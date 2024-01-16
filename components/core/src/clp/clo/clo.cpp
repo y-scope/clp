@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <memory>
-#include <msgpack.hpp>
 
 #include <boost/filesystem.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
