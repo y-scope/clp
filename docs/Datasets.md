@@ -12,11 +12,11 @@ For evaluation results comparing CLP and other tools, see our
 | [hadoop-14TB-part1<sup>†</sup>][1] | Text   | 428.94 GB         | 20.33 GB      |
 | [openstack-24hr][2]                | Text   | 33.00 GB          | 2.06 GB       |
 | [hive-24hr][3]                     | Text   | 2.07 GB           | 122.54 MB     |
-| [cockroachdb][4]                   | JSON   | 9.79 GB           | 528.97 MB     |
-| [elasticsearch][5]                 | JSON   | 7.98 GB           | 165.91 MB     |
-| [mongodb][6]                       | JSON   | 64.80 GB          | 1.48 GB       |
-| [postgresql][7]                    | JSON   | 392.84 MB         | 14.59 MB      |
-| [spark-event-logs][8]              | JSON   | 1.98 GB           | 211.88 MB     |
+| [mongodb][4]                       | JSON   | 64.80 GB          | 1.48 GB       |
+| [cockroachdb][5]                   | JSON   | 9.79 GB           | 528.97 MB     |
+| [elasticsearch][6]                 | JSON   | 7.98 GB           | 165.91 MB     |
+| [spark-event-logs][7]              | JSON   | 1.98 GB           | 211.88 MB     |
+| [postgresql][8]                    | JSON   | 392.84 MB         | 14.59 MB      |
 
 *<sup>†</sup> We will upload the other parts soon.*
 
@@ -26,12 +26,12 @@ For evaluation results comparing CLP and other tools, see our
 
 [3]: https://zenodo.org/records/7094921
 
-[4]: https://zenodo.org/records/10516387
+[4]: https://zenodo.org/records/10516285
 
-[5]: https://zenodo.org/records/10516227
+[5]: https://zenodo.org/records/10516387
 
-[6]: https://zenodo.org/records/10516285
+[6]: https://zenodo.org/records/10516227
 
-[7]: https://zenodo.org/records/10516402
+[7]: https://zenodo.org/records/10516346
 
-[8]: https://zenodo.org/records/10516346
+[8]: https://zenodo.org/records/10516402
