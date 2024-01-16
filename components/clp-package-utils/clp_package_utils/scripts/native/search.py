@@ -245,7 +245,7 @@ def main(argv):
         return -1
 
     asyncio.run(do_search(clp_config.database, clp_config.results_cache, parsed_args.wildcard_query,
-                          parsed_args.begin_time, parsed_args.end_time, parsed_args.file_path))
+                          parsed_args.begin_time, parsed_args.end_time, parsed_args.file_path, host_ip))
 
     return 0
 
