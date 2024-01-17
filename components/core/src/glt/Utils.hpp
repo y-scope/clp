@@ -77,6 +77,7 @@ void load_lexer_from_file(
         bool done,
         log_surgeon::lexers::ByteLexer& forward_lexer_ptr
 );
+std::vector<std::string> split_wildcard(const std::string& input_str);
 }  // namespace glt
 
 #endif  // GLT_UTILS_HPP

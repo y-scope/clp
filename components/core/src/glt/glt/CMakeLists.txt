@@ -166,6 +166,8 @@ set(
         ../streaming_archive/reader/LogtypeTableManager.hpp
         ../streaming_archive/reader/MultiLogtypeTablesManager.cpp
         ../streaming_archive/reader/MultiLogtypeTablesManager.hpp
+        ../streaming_archive/reader/SingleLogtypeTableManager.cpp
+        ../streaming_archive/reader/SingleLogtypeTableManager.hpp
 )
 
 add_executable(glt ${GLT_SOURCES})

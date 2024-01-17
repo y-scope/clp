@@ -28,7 +28,9 @@ using glt::Grep;
 using glt::load_lexer_from_file;
 using glt::Profiler;
 using glt::Query;
+using glt::LogtypeQueries;
 using glt::segment_id_t;
+using glt::combined_table_id_t;
 using glt::streaming_archive::MetadataDB;
 using glt::streaming_archive::reader::Archive;
 using glt::streaming_archive::reader::File;
@@ -86,6 +88,34 @@ static size_t search_files(
         CommandLineArguments::OutputMethod output_method,
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix
+);
+/**
+ * To update
+ * @param queries
+ * @param output_method
+ * @param archive
+ * @param segment_id
+ * @return The total number of matches found across all files
+ */
+static size_t search_segments (
+        vector<Query>& queries,
+        CommandLineArguments::OutputMethod output_method,
+        Archive& archive,
+        size_t segment_id
+);
+/**
+ * get all messages in the segment within query's time range
+ * if query doesn't have a time range, outputs all messages
+ * @param query
+ * @param output_method
+ * @param archive
+ * @param segment_id
+ * @return The total number of matches found across all files
+ */
+static size_t find_message_in_segment_within_time_range (
+        const Query& query,
+        CommandLineArguments::OutputMethod output_method,
+        Archive& archive
 );
 /**
  * Prints search result to stdout in text format
@@ -207,7 +237,8 @@ static bool search(
         Archive& archive,
         log_surgeon::lexers::ByteLexer& forward_lexer,
         log_surgeon::lexers::ByteLexer& reverse_lexer,
-        bool use_heuristic
+        bool use_heuristic,
+        size_t& num_matches
 ) {
     ErrorCode error_code;
     auto search_begin_ts = command_line_args.get_search_begin_ts();
@@ -258,41 +289,19 @@ static bool search(
         }
 
         if (!no_queries_match) {
-            size_t num_matches;
             if (is_superseding_query) {
-                auto file_metadata_ix = archive.get_file_iterator(
-                        search_begin_ts,
-                        search_end_ts,
-                        command_line_args.get_file_path()
-                );
-                num_matches = search_files(
-                        queries,
-                        command_line_args.get_output_method(),
-                        archive,
-                        *file_metadata_ix
-                );
+                for (auto segment_id : archive.get_valid_segment()) {
+                    archive.open_logtype_table_manager(segment_id);
+                    // There should be only one query for a superceding query case
+                    const auto& query = queries.at(0);
+                    num_matches += find_message_in_segment_within_time_range(query, command_line_args.get_output_method(), archive);
+                    archive.close_logtype_table_manager();
+                }
             } else {
-                auto file_metadata_ix_ptr = archive.get_file_iterator(
-                        search_begin_ts,
-                        search_end_ts,
-                        command_line_args.get_file_path(),
-                        glt::cInvalidSegmentId
-                );
-                auto& file_metadata_ix = *file_metadata_ix_ptr;
-                num_matches = search_files(
-                        queries,
-                        command_line_args.get_output_method(),
-                        archive,
-                        file_metadata_ix
-                );
                 for (auto segment_id : ids_of_segments_to_search) {
-                    file_metadata_ix.set_segment_id(segment_id);
-                    num_matches += search_files(
-                            queries,
-                            command_line_args.get_output_method(),
-                            archive,
-                            file_metadata_ix
-                    );
+                    archive.open_logtype_table_manager(segment_id);
+                    num_matches += search_segments(queries, command_line_args.get_output_method(), archive, segment_id);
+                    archive.close_logtype_table_manager();
                 }
             }
             SPDLOG_DEBUG("# matches found: {}", num_matches);
@@ -390,6 +399,77 @@ static size_t search_files(
         archive.close_file(compressed_file);
     }
 
+    return num_matches;
+}
+
+static size_t find_message_in_segment_within_time_range (const Query& query, const CommandLineArguments::OutputMethod output_method, Archive& archive)
+{
+    size_t num_matches = 0;
+
+    // Setup output method
+    Grep::OutputFunc output_func;
+    void* output_func_arg;
+    switch (output_method) {
+        case CommandLineArguments::OutputMethod::StdoutText:
+            output_func = print_result_text;
+            output_func_arg = nullptr;
+            break;
+        case CommandLineArguments::OutputMethod::StdoutBinary:
+            output_func = print_result_binary;
+            output_func_arg = nullptr;
+            break;
+        default:
+            SPDLOG_ERROR("Unknown output method - {}", (char)output_method);
+            return num_matches;
+    }
+    num_matches = Grep::output_message_in_segment_within_time_range(query, SIZE_MAX, archive, output_func, output_func_arg);
+    num_matches += Grep::output_message_in_combined_segment_within_time_range(query, SIZE_MAX, archive, output_func, output_func_arg);
+    return num_matches;
+
+}
+
+static size_t search_segments (vector<Query>& queries, const CommandLineArguments::OutputMethod output_method, Archive& archive, size_t segment_id)
+{
+    size_t num_matches = 0;
+
+    // Setup output method
+    Grep::OutputFunc output_func;
+    void* output_func_arg;
+    switch (output_method) {
+        case CommandLineArguments::OutputMethod::StdoutText:
+            output_func = print_result_text;
+            output_func_arg = nullptr;
+            break;
+        case CommandLineArguments::OutputMethod::StdoutBinary:
+            output_func = print_result_binary;
+            output_func_arg = nullptr;
+            break;
+        default:
+            SPDLOG_ERROR("Unknown output method - {}", (char)output_method);
+            return num_matches;
+    }
+
+    for (auto& query : queries) {
+        query.make_sub_queries_relevant_to_segment(segment_id);
+        // here convert old queries to new query type
+        auto converted_logtype_based_queries = Grep::get_converted_logtype_query(query, segment_id);
+        // use a vector to hold queries so they are sorted based on the ascending or descending order of their size,
+        // i.e. the order they appear in the segment.
+        std::vector<LogtypeQueries> single_table_queries;
+        // first level index is basically combined table index
+        // because we might not search through all combined tables, the first level is a map instead of a vector.
+        std::map<combined_table_id_t, std::vector<LogtypeQueries>> combined_table_queires;
+        archive.get_logtype_table_manager().rearrange_queries(converted_logtype_based_queries, single_table_queries, combined_table_queires);
+
+        // first search through the single variable table
+        num_matches += Grep::search_segment_all_columns_and_output(single_table_queries, query, SIZE_MAX, archive, output_func, output_func_arg);
+        //num_matches += Grep::search_segment_and_output_optimized(single_table_queries, query, SIZE_MAX, archive, output_func, output_func_arg);
+        for(const auto& iter : combined_table_queires) {
+            combined_table_id_t table_id = iter.first;
+            const auto& combined_logtype_queries = iter.second;
+            num_matches += Grep::search_combined_table_and_output(table_id, combined_logtype_queries, query, SIZE_MAX, archive, output_func, output_func_arg);
+        }
+    }
     return num_matches;
 }
 
@@ -554,6 +634,7 @@ int main(int argc, char const* argv[]) {
 
     string archive_id;
     Archive archive_reader;
+    size_t num_matches = 0;
     for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(get_archive_iterator(
                  *global_metadata_db,
                  command_line_args.get_file_path(),
@@ -631,7 +712,8 @@ int main(int argc, char const* argv[]) {
                     archive_reader,
                     *forward_lexer_ptr,
                     *reverse_lexer_ptr,
-                    use_heuristic))
+                    use_heuristic,
+                    num_matches))
         {
             return -1;
         }
