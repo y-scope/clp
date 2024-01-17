@@ -140,7 +140,25 @@ public:
             bool& wildcard,
             const Query& query
     );
-
+    /**
+     * This functions assumes a specific logtype is loaded with m_variable_column_manager.
+     * The function takes in all logtype_query associated with the logtype,
+     * and finds next matching message in the 2D variable table
+     *
+     * @param logtype_query
+     * @param matched_rows,
+     * @param wildcard (by reference)
+     * @param query (to provide time range info)
+     * @return Return true if a matching message is found. wildcard gets set to true if the matching message
+     *         still requires wildcard match
+     * @throw Same as streaming_archive::reader::File::open_me
+     */
+    void find_message_matching_with_logtype_query_optimized (
+            const std::vector<LogtypeQuery>& logtype_query,
+            std::vector<size_t>& matched_rows,
+            std::vector<bool>& wildcard,
+            const Query& query
+    );
     bool find_message_matching_with_logtype_query_from_combined (
             const std::vector<LogtypeQuery>& logtype_query,
             Message& msg,

@@ -462,8 +462,8 @@ static size_t search_segments (vector<Query>& queries, const CommandLineArgument
         archive.get_logtype_table_manager().rearrange_queries(converted_logtype_based_queries, single_table_queries, combined_table_queires);
 
         // first search through the single variable table
-        num_matches += Grep::search_segment_all_columns_and_output(single_table_queries, query, SIZE_MAX, archive, output_func, output_func_arg);
-        //num_matches += Grep::search_segment_and_output_optimized(single_table_queries, query, SIZE_MAX, archive, output_func, output_func_arg);
+        // num_matches += Grep::search_segment_all_columns_and_output(single_table_queries, query, SIZE_MAX, archive, output_func, output_func_arg);
+        num_matches += Grep::search_segment_optimized_and_output(single_table_queries, query, SIZE_MAX, archive, output_func, output_func_arg);
         for(const auto& iter : combined_table_queires) {
             combined_table_id_t table_id = iter.first;
             const auto& combined_logtype_queries = iter.second;
