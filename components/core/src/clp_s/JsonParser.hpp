@@ -27,10 +27,11 @@ using namespace simdjson;
 namespace clp_s {
 struct JsonParserOption {
     std::vector<std::string> file_paths;
-    std::vector<std::string> timestamp_column;
     std::string archives_dir;
     size_t target_encoded_size;
     int compression_level;
+    std::vector<std::string> timestamp_column;
+    bool print_stats;
 };
 
 class JsonParser {
@@ -78,23 +79,26 @@ private:
     void split_archive();
 
     int m_num_messages;
-    int m_compression_level;
+    int m_uncompressed_size;
+
     std::vector<std::string> m_file_paths;
     std::string m_archives_dir;
-    std::string m_schema_tree_path;
+    int m_compression_level;
+    size_t m_target_encoded_size;
+    bool m_print_stats;
 
     std::set<int32_t> m_current_schema;
     std::shared_ptr<SchemaMap> m_schema_map;
 
     std::shared_ptr<SchemaTree> m_schema_tree;
+    std::string m_schema_tree_path;
     ParsedMessage m_current_parsed_message;
-    std::shared_ptr<TimestampDictionaryWriter> m_timestamp_dictionary;
 
     std::vector<std::string> m_timestamp_column;
+    std::shared_ptr<TimestampDictionaryWriter> m_timestamp_dictionary;
 
     boost::uuids::random_generator m_generator;
     std::unique_ptr<ArchiveWriter> m_archive_writer;
-    size_t m_target_encoded_size;
 };
 }  // namespace clp_s
 

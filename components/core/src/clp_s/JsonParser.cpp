@@ -3,14 +3,17 @@
 #include <iostream>
 #include <stack>
 
+#include "json/single_include/nlohmann/json.hpp"
 #include "JsonFileIterator.hpp"
 
 namespace clp_s {
 JsonParser::JsonParser(JsonParserOption const& option)
         : m_archives_dir(option.archives_dir),
           m_num_messages(0),
+          m_uncompressed_size(0),
           m_compression_level(option.compression_level),
           m_target_encoded_size(option.target_encoded_size),
+          m_print_stats(option.print_stats),
           m_timestamp_column(option.timestamp_column) {
     if (false == boost::filesystem::create_directory(m_archives_dir)) {
         SPDLOG_ERROR("The output directory '{}' already exists", m_archives_dir);
@@ -245,6 +248,8 @@ void JsonParser::parse() {
             m_current_parsed_message.clear();
         }
 
+        m_uncompressed_size += json_file_iterator.get_bytes_read();
+
         if (json_file_iterator.truncated_bytes() > 0) {
             SPDLOG_ERROR(
                     "Truncated JSON  ({} bytes) at end of file {}",
@@ -279,6 +284,30 @@ void JsonParser::store() {
     m_schema_map->store();
 
     m_timestamp_dictionary->close();
+
+    if (m_print_stats) {
+        nlohmann::json json_stats;
+        json_stats["num_messages"] = m_num_messages;
+        json_stats["num_files"] = m_file_paths.size();
+        json_stats["uncompressed_size"] = m_uncompressed_size;
+
+        TimestampEntry entry;
+        if (false == m_timestamp_column.empty()
+            && m_timestamp_dictionary->get_first_global_range(entry))
+        {
+            TimestampEntry::TimestampEncoding encoding = entry.get_encoding();
+            json_stats["timestamp_encoding"] = encoding;
+            if (encoding == TimestampEntry::TimestampEncoding::DoubleEpoch) {
+                json_stats["timestamp_begin"] = entry.get_epoch_start_double();
+                json_stats["timestamp_end"] = entry.get_epoch_end_double();
+            } else {
+                json_stats["timestamp_begin"] = entry.get_epoch_start();
+                json_stats["timestamp_end"] = entry.get_epoch_end();
+            }
+        }
+        std::cout << json_stats.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
+                  << std::endl;
+    }
 }
 
 void JsonParser::split_archive() {

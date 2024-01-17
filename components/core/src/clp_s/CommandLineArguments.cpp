@@ -113,6 +113,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<std::string>(&m_timestamp_key)->value_name("TIMESTAMP_COLUMN_KEY")->
                         default_value(""),
                     "Path (e.g. x.y) for the field containing the log event's timestamp."
+            )(
+                    "print-stats",
+                    po::bool_switch(&m_print_stats),
+                    "Print compression statistics (ndjson)"
             );
             // clang-format on
 

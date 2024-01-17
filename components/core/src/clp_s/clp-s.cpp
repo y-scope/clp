@@ -46,12 +46,13 @@ int main(int argc, char const* argv[]) {
         clp_s::JsonParserOption option;
         option.file_paths = command_line_arguments.get_file_paths();
         option.archives_dir = command_line_arguments.get_archives_dir();
-        option.target_encoded_size = command_line_arguments.get_target_encoded_size();
         option.compression_level = command_line_arguments.get_compression_level();
+        option.target_encoded_size = command_line_arguments.get_target_encoded_size();
         auto const& timestamp_key = command_line_arguments.get_timestamp_key();
         if (false == timestamp_key.empty()) {
             clp_s::StringUtils::tokenize_column_descriptor(timestamp_key, option.timestamp_column);
         }
+        option.print_stats = command_line_arguments.print_stats();
 
         clp_s::JsonParser parser(option);
         parser.parse();

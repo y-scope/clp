@@ -91,6 +91,16 @@ public:
     EvaluatedValue evaluate_filter(FilterOperation op, double timestamp);
     EvaluatedValue evaluate_filter(FilterOperation op, epochtime_t timestamp);
 
+    TimestampEncoding get_encoding() const { return m_encoding; }
+
+    double get_epoch_start_double() const { return m_epoch_start_double; }
+
+    double get_epoch_end_double() const { return m_epoch_end_double; }
+
+    epochtime_t get_epoch_start() const { return m_epoch_start; }
+
+    epochtime_t get_epoch_end() const { return m_epoch_end; }
+
 private:
     TimestampEncoding m_encoding;
     double m_epoch_start_double, m_epoch_end_double;

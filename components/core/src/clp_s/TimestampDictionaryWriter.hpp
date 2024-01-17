@@ -60,6 +60,8 @@ public:
 
     uint64_t get_pattern_id(TimestampPattern const* pattern);
 
+    bool get_first_global_range(TimestampEntry& entry);
+
     epochtime_t ingest_entry(std::string const& key, std::string const& timestamp, uint64_t& id);
 
     void ingest_entry(std::string const& key, double timestamp);

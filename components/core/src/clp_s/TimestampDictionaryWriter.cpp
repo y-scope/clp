@@ -143,4 +143,13 @@ void TimestampDictionaryWriter::merge_local_range() {
         m_global_column_to_range[it.first].merge_range(it.second);
     }
 }
+
+bool TimestampDictionaryWriter::get_first_global_range(TimestampEntry& entry) {
+    if (m_global_column_to_range.empty()) {
+        return false;
+    }
+
+    entry = m_global_column_to_range.begin()->second;
+    return true;
+}
 }  // namespace clp_s

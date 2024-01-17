@@ -36,11 +36,13 @@ public:
 
     std::string const& get_output_dir() const { return m_output_dir; }
 
-    std::string const& get_timestamp_key() const { return m_timestamp_key; }
-
     int get_compression_level() const { return m_compression_level; }
 
     size_t get_target_encoded_size() const { return m_target_encoded_size; }
+
+    std::string const& get_timestamp_key() const { return m_timestamp_key; }
+
+    bool print_stats() const { return m_print_stats; }
 
     std::string const& get_query() const { return m_query; }
 
@@ -62,9 +64,10 @@ private:
     std::vector<std::string> m_file_paths;
     std::string m_archives_dir;
     std::string m_output_dir;
-    std::string m_timestamp_key;
     int m_compression_level;
     size_t m_target_encoded_size;
+    std::string m_timestamp_key;
+    bool m_print_stats;
 
     // Search variables
     std::string m_query;

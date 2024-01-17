@@ -49,6 +49,11 @@ public:
         return 0;
     }
 
+    /**
+     * @return number of bytes read from the file
+     */
+    size_t get_bytes_read() { return m_bytes_read; }
+
 private:
     /**
      * Reads new JSON into the buffer and initializes iterators into the data.
