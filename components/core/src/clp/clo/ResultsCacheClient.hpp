@@ -25,9 +25,7 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        char const* what() const noexcept override {
-            return "ResultsCacheClient operation failed";
-        }
+        char const* what() const noexcept override { return "ResultsCacheClient operation failed"; }
     };
 
     // Constructors
