@@ -6,16 +6,32 @@
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 #include <mongocxx/exception/exception.hpp>
-#include <mongocxx/instance.hpp>
 #include <mongocxx/uri.hpp>
 
 #include "../Defs.h"
+#include "../TraceableException.hpp"
 
 namespace clp::clo {
-class MongoDBClient {
+/**
+ * Class encapsulating a MongoDB client used to send query results to results cache.
+ */
+class ResultsCacheClient {
 public:
+    // Types
+    class OperationFailed : public TraceableException {
+    public:
+        // Constructors
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
+
+        // Methods
+        char const* what() const noexcept override {
+            return "ResultsCacheClient operation failed";
+        }
+    };
+
     // Constructors
-    MongoDBClient(
+    ResultsCacheClient(
             std::string const& uri,
             std::string const& db,
             std::string const& collection,
@@ -38,11 +54,10 @@ public:
     void flush();
 
 private:
-    mongocxx::instance instance_{};
-    mongocxx::client client_;
-    mongocxx::collection collection_;
-    std::vector<bsoncxx::document::value> results_;
-    uint64_t batch_size_;
+    mongocxx::client m_client;
+    mongocxx::collection m_collection;
+    std::vector<bsoncxx::document::value> m_results;
+    uint64_t m_batch_size;
 };
 }  // namespace clp::clo
 

@@ -110,8 +110,8 @@ set(
         CommandLineArguments.hpp
         ControllerMonitoringThread.cpp
         ControllerMonitoringThread.hpp
-        MongoDBClient.cpp
-        MongoDBClient.hpp
+        ResultsCacheClient.cpp
+        ResultsCacheClient.hpp
 )
 
 add_executable(clo ${CLO_SOURCES})

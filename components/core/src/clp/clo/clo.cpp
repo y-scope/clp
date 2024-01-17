@@ -4,6 +4,7 @@
 #include <memory>
 
 #include <boost/filesystem.hpp>
+#include <mongocxx/instance.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include "../Defs.h"
@@ -15,10 +16,10 @@
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "ControllerMonitoringThread.hpp"
-#include "MongoDBClient.hpp"
+#include "ResultsCacheClient.hpp"
 
 using clp::clo::CommandLineArguments;
-using clp::clo::MongoDBClient;
+using clp::clo::ResultsCacheClient;
 using clp::CommandLineArgumentsBase;
 using clp::epochtime_t;
 using clp::ErrorCode;
@@ -72,7 +73,7 @@ static SearchFilesResult search_files(
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
         std::atomic_bool const& query_cancelled,
-        MongoDBClient& mongo_client
+        ResultsCacheClient& mongo_client
 );
 /**
  * Searches an archive with the given path
@@ -86,7 +87,7 @@ static bool search_archive(
         CommandLineArguments const& command_line_args,
         boost::filesystem::path const& archive_path,
         std::atomic_bool const& query_cancelled,
-        MongoDBClient& mongo_client
+        ResultsCacheClient& mongo_client
 );
 
 static int
@@ -143,7 +144,7 @@ static SearchFilesResult search_files(
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
         std::atomic_bool const& query_cancelled,
-        MongoDBClient& mongo_client
+        ResultsCacheClient& mongo_client
 ) {
     SearchFilesResult result = SearchFilesResult::Success;
 
@@ -193,7 +194,7 @@ static bool search_archive(
         CommandLineArguments const& command_line_args,
         boost::filesystem::path const& archive_path,
         std::atomic_bool const& query_cancelled,
-        MongoDBClient& mongo_client
+        ResultsCacheClient& mongo_client
 ) {
     if (false == boost::filesystem::exists(archive_path)) {
         SPDLOG_ERROR("Archive '{}' does not exist.", archive_path.c_str());
@@ -319,7 +320,8 @@ int main(int argc, char const* argv[]) {
         return -1;
     }
 
-    MongoDBClient mongo_client(
+    mongocxx::instance instance_{};
+    ResultsCacheClient mongo_client(
             command_line_args.get_mongodb_uri(),
             command_line_args.get_mongodb_database(),
             command_line_args.get_mongodb_collection()
