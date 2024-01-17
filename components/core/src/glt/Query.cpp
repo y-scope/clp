@@ -26,6 +26,38 @@ static void inplace_set_intersection(SetType const& a, SetType& b) {
 }
 
 namespace glt {
+namespace {
+    bool
+    matches_var(const std::vector<encoded_variable_t> &logtype_vars, const std::vector<QueryVar> &query_vars, size_t l,
+                size_t r) {
+        if (logtype_vars.size() < query_vars.size()) {
+            // Not enough variables to satisfy query
+            return false;
+        }
+
+        // Try to find m_vars in vars, in order, but not necessarily contiguously
+        size_t possible_vars_ix = 0;
+        const size_t num_possible_vars = query_vars.size();
+        size_t vars_ix = l;
+        if (r == 0) {
+            r = logtype_vars.size();
+        }
+        //const size_t num_vars = logtype_vars.size();
+        while (possible_vars_ix < num_possible_vars && vars_ix < r) {
+            const QueryVar &possible_var = query_vars[possible_vars_ix];
+
+            if (possible_var.matches(logtype_vars[vars_ix])) {
+                // Matched
+                ++possible_vars_ix;
+                ++vars_ix;
+            } else {
+                ++vars_ix;
+            }
+        }
+        return (num_possible_vars == possible_vars_ix);
+    }
+} // unnamed namespace
+
 QueryVar::QueryVar(encoded_variable_t precise_non_dict_var) {
     m_precise_var = precise_non_dict_var;
     m_is_precise_var = true;
@@ -148,28 +180,7 @@ bool SubQuery::matches_logtype(logtype_dictionary_id_t const logtype) const {
 }
 
 bool SubQuery::matches_vars(std::vector<encoded_variable_t> const& vars) const {
-    if (vars.size() < m_vars.size()) {
-        // Not enough variables to satisfy query
-        return false;
-    }
-
-    // Try to find m_vars in vars, in order, but not necessarily contiguously
-    size_t possible_vars_ix = 0;
-    size_t const num_possible_vars = m_vars.size();
-    size_t vars_ix = 0;
-    size_t const num_vars = vars.size();
-    while (possible_vars_ix < num_possible_vars && vars_ix < num_vars) {
-        QueryVar const& possible_var = m_vars[possible_vars_ix];
-
-        if (possible_var.matches(vars[vars_ix])) {
-            // Matched
-            ++possible_vars_ix;
-            ++vars_ix;
-        } else {
-            ++vars_ix;
-        }
-    }
-    return (num_possible_vars == possible_vars_ix);
+    return matches_var(vars, m_vars, 0, 0);
 }
 
 Query::Query(
@@ -201,5 +212,9 @@ void Query::make_sub_queries_relevant_to_segment(segment_id_t segment_id) {
         }
     }
     m_prev_segment_id = segment_id;
+}
+
+bool LogtypeQuery::matches_vars (const std::vector<encoded_variable_t>& vars) const {
+    return matches_var(vars, m_vars, m_l_b, m_r_b);
 }
 }  // namespace glt

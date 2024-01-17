@@ -130,6 +130,22 @@ public:
     );
 
     /**
+     * Decodes all variables and decompresses them into a message
+     * @param logtype_dict_entry
+     * @param var_dict
+     * @param encoded_vars
+     * @param decompressed_msg
+     * @param offset
+     * @return true if successful, false otherwise
+     */
+    static bool decode_variables_into_message_with_offset (
+            const LogTypeDictionaryEntry& logtype_dict_entry,
+            const VariableDictionaryReader& var_dict,
+            const std::vector<encoded_variable_t>& encoded_vars,
+            std::string& decompressed_msg,
+            size_t var_offset
+    );
+    /**
      * Encodes a string-form variable, and if it is dictionary variable, searches for its ID in the
      * given variable dictionary
      * @param var_str

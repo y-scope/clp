@@ -36,6 +36,12 @@ namespace glt::streaming_archive::reader {
         // open a logtype table, load from it, and also get the information of logtype->metadata
         // later we might want to find a smarter way to pass the 3rd argument or do some preprocessing
         void open (combined_table_id_t table_id);
+        void open_and_preload(
+                combined_table_id_t table_id,
+                logtype_dictionary_id_t logtype_id,
+                streaming_compression::Decompressor& decompressor,
+                const std::unordered_map<logtype_dictionary_id_t, CombinedMetadata>& metadata
+        );
         void close ();
 
         void open_logtype_table (logtype_dictionary_id_t logtype_id,
@@ -47,6 +53,10 @@ namespace glt::streaming_archive::reader {
                                       streaming_compression::Decompressor& decompressor,
                                       const std::unordered_map<logtype_dictionary_id_t, CombinedMetadata>& metadata);
 
+        void open_preloaded_logtype_table(
+                logtype_dictionary_id_t logtype_id,
+                const std::unordered_map<logtype_dictionary_id_t, CombinedMetadata>& metadata
+        );
         void close_logtype_table ();
 
         epochtime_t get_timestamp_at_offset (size_t offset);
@@ -75,6 +85,7 @@ namespace glt::streaming_archive::reader {
         // question: do we still need a malloced buffer?
         std::unique_ptr<char[]> m_read_buffer;
         size_t m_buffer_size;
+        char * m_decompressed_buffer;
         // for this data structure, m_column_based_variables[i] means all data at i th column
         // m_column_based_variables[i][j] means j th row at the i th column
         std::vector<encoded_variable_t> m_column_based_variables;

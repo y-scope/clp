@@ -183,4 +183,59 @@ void LogTypeDictionaryEntry::read_from_file(streaming_compression::Decompressor&
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 }
+
+    std::string LogTypeDictionaryEntry::get_human_readable_value() const {
+        std::string human_readable_value = "";
+
+        size_t constant_begin_pos = 0;
+        for (size_t var_ix = 0; var_ix < get_num_placeholders(); ++var_ix) {
+            VariablePlaceholder var_delim;
+            size_t var_pos = get_placeholder_info(var_ix, var_delim);
+
+            // Add the constant that's between the last variable and this one, with newlines escaped
+            human_readable_value.append(m_value, constant_begin_pos, var_pos - constant_begin_pos);
+
+            if (VariablePlaceholder::Dictionary == var_delim) {
+                human_readable_value += "v";
+            } else if (VariablePlaceholder::Float == var_delim) {
+                human_readable_value += "f";
+            } else {
+                human_readable_value += "i";
+            }
+            // Move past the variable delimiter
+            constant_begin_pos = var_pos + 1;
+        }
+        // Append remainder of value, if any
+        if (constant_begin_pos < m_value.length()) {
+            human_readable_value.append(m_value, constant_begin_pos, string::npos);
+        }
+        return human_readable_value;
+    }
+
+
+// return the boundary as an open Interval
+size_t LogTypeDictionaryEntry::get_var_right_index_based_on_right_boundary(size_t right_pos) const {
+    return m_placeholder_positions.size();
+//    size_t var_ix;
+//    for(var_ix = m_placeholder_positions.size(); var_ix > 0; var_ix--) {
+//        if(m_placeholder_positions[var_ix-1] <= right_pos) {
+//            return var_ix;
+//        }
+//    }
+//    // in some extreme case, say input query is " \v ASKLDH"  but the logtype is " ASKLDH \V". this might
+//    // return 0 because we can't tell a negative position. however, this should trigger some error?
+//    return var_ix;
+}
+
+size_t LogTypeDictionaryEntry::get_var_left_index_based_on_left_boundary(size_t left_pos) const {
+//    size_t var_ix;
+//    for(var_ix = 0; var_ix < m_placeholder_positions.size(); var_ix++) {
+//        if(m_placeholder_positions[var_ix] >= left_pos) {
+//            return var_ix;
+//        }
+//    }
+//    // ideally this should not be happening, unless the last possible text is after all variables?
+//    return var_ix;
+    return 0;
+}
 }  // namespace glt

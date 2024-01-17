@@ -121,6 +121,10 @@ public:
         return m_possible_logtype_entries;
     }
 
+    const std::unordered_set<logtype_dictionary_id_t>& get_possible_logtype_ids () const {
+        return m_possible_logtype_ids;
+    }
+
     size_t get_num_possible_vars() const { return m_vars.size(); }
 
     std::vector<QueryVar> const& get_vars() const { return m_vars; }
@@ -143,6 +147,8 @@ public:
      */
     bool matches_vars(std::vector<encoded_variable_t> const& vars) const;
 
+    // TODO: clean this up
+    std::vector<std::string> m_tokens;
 private:
     // Variables
     std::unordered_set<LogTypeDictionaryEntry const*> m_possible_logtype_entries;
@@ -217,6 +223,48 @@ private:
     std::vector<SubQuery const*> m_relevant_sub_queries;
     segment_id_t m_prev_segment_id{cInvalidSegmentId};
 };
+
+/**
+ * Class representing variables in a query specific to a logtype. It contains a single set of vars_to_match, and whether
+ * the query still requires wildcard matching after it matches an encoded message.
+ */
+class LogtypeQuery {
+public:
+    // Methods
+    LogtypeQuery (const std::vector<QueryVar>& vars, bool wildcard_match_required, size_t left, size_t right) {
+        m_vars = vars;
+        m_wildcard_match_required = wildcard_match_required;
+        m_l_b = left;
+        m_r_b = right;
+    }
+    /**
+     * Whether the given variables contain the subquery's variables in order (but not necessarily contiguously)
+     * @param vars
+     * @return true if matched, false otherwise
+     */
+    bool matches_vars (const std::vector<encoded_variable_t>& vars) const;
+
+    bool get_wildcard_flag () const {
+        return m_wildcard_match_required;
+    }
+
+    // temporary public
+    // the index (inclusive?)
+    size_t m_l_b;
+    size_t m_r_b;
+
+private:
+    // Variables
+    std::vector<QueryVar> m_vars;
+    bool m_wildcard_match_required;
+};
+
+class LogtypeQueries {
+public:
+    logtype_dictionary_id_t m_logtype_id;
+    std::vector<LogtypeQuery> m_queries;
+};
+
 }  // namespace glt
 
 #endif  // GLT_QUERY_HPP

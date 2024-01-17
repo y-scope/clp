@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <boost/filesystem.hpp>
+#include <string_utils/string_utils.hpp>
 
 #include "../../EncodedVariableInterpreter.hpp"
 #include "../../spdlog_with_specializations.hpp"
@@ -17,6 +18,7 @@
 using std::string;
 using std::unordered_set;
 using std::vector;
+using clp::string_utils::wildcard_match_unsafe;
 
 namespace glt::streaming_archive::reader {
 void Archive::open(string const& path) {
@@ -112,6 +114,9 @@ void Archive::open(string const& path) {
 
     // Set invalid segment ID
     m_current_segment_id = INT64_MAX;
+
+    update_valid_segment_ids();
+    load_filename_dict();
 }
 
 void Archive::close() {
@@ -124,6 +129,8 @@ void Archive::close() {
     m_segments_dir_path.clear();
     m_metadata_db.close();
     m_path.clear();
+
+    m_filename_dict.clear();
 }
 
 void Archive::refresh_dictionaries() {
@@ -245,5 +252,179 @@ void Archive::decompress_empty_directories(string const& output_dir) {
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
     }
+}
+
+// GLT specific functions
+bool Archive::get_next_message_in_logtype_table(Message& msg) {
+    return m_logtype_table_manager.get_next_row(msg);
+}
+
+void Archive::open_logtype_table_manager (size_t segment_id) {
+    std::string segment_path = m_segments_dir_path + std::to_string(segment_id);
+    m_logtype_table_manager.open(segment_path);
+}
+
+void Archive::close_logtype_table_manager() {
+    m_logtype_table_manager.close();
+}
+
+std::string Archive::get_file_name (file_id_t file_id) const {
+    if(file_id >= m_filename_dict.size()) {
+        SPDLOG_ERROR("file id {} out of bound", file_id);
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+    return m_filename_dict[file_id];
+}
+
+void Archive::load_filename_dict () {
+    FileReader filename_dict_reader;
+    std::string filename_dict_path = m_path + '/' + cFileNameDictFilename;
+    filename_dict_reader.open(filename_dict_path);
+    std::string file_name;
+
+    while(true) {
+        auto errorcode = filename_dict_reader.try_read_to_delimiter('\n',false, false, file_name);
+        if (errorcode == ErrorCode_Success) {
+            m_filename_dict.push_back(file_name);
+        } else if (errorcode == ErrorCode_EndOfFile) {
+            break;
+        } else {
+            SPDLOG_ERROR("Failed to read from {}, errno={}", filename_dict_path.c_str(), errno);
+            throw OperationFailed(errorcode, __FILENAME__, __LINE__);
+        }
+    }
+    filename_dict_reader.close();
+}
+
+void Archive::update_valid_segment_ids () {
+    m_valid_segment_id.clear();
+    // Better question here is why we produce 0 size segment
+    size_t segment_count = 0;
+    while(true) {
+        std::string segment_file_path = m_segments_dir_path + "/" + std::to_string(segment_count);
+        if (!boost::filesystem::exists(segment_file_path))
+        {
+            break;
+        }
+        boost::system::error_code boost_error_code;
+        size_t segment_file_size = boost::filesystem::file_size(segment_file_path, boost_error_code);
+        if (boost_error_code) {
+            SPDLOG_ERROR("streaming_archive::reader::Segment: Unable to obtain file size for segment: {}", segment_file_path.c_str());
+            SPDLOG_ERROR("streaming_archive::reader::Segment: {}", boost_error_code.message().c_str());
+            throw ErrorCode_Failure;
+        }
+        if (segment_file_size != 0) {
+            m_valid_segment_id.push_back(segment_count);
+        }
+        segment_count++;
+    }
+}
+
+bool Archive::find_message_matching_with_logtype_query_from_combined (const std::vector<LogtypeQuery>& logtype_query, Message& msg, bool& wildcard, const Query& query, size_t left_boundary, size_t right_boundary) {
+    while(true) {
+        // break if there's no next message
+        if(!m_logtype_table_manager.m_combined_table_segment.get_next_message_partial(msg, left_boundary, right_boundary)) {
+            break;
+        }
+
+        if (query.timestamp_is_in_search_time_range(msg.get_ts_in_milli())) {
+            for (const auto &possible_sub_query: logtype_query) {
+                if (possible_sub_query.matches_vars(msg.get_vars())) {
+                    // Message matches completely, so set remaining properties
+                    wildcard = possible_sub_query.get_wildcard_flag();
+                    m_logtype_table_manager.m_combined_table_segment.get_remaining_message(msg, left_boundary, right_boundary);
+                    return true;
+                }
+            }
+        }
+        // if there is no match, skip next row
+        m_logtype_table_manager.m_combined_table_segment.skip_next_row();
+    }
+    return false;
+}
+
+bool Archive::find_message_matching_with_logtype_query (const std::vector<LogtypeQuery>& logtype_query, Message& msg, bool& wildcard, const Query& query) {
+    while(true) {
+        if(!m_logtype_table_manager.get_next_row(msg)) {
+            break;
+        }
+
+        if (query.timestamp_is_in_search_time_range(msg.get_ts_in_milli())) {
+            // that means we need to loop through every loop. that takes time.
+            for (const auto &possible_sub_query: logtype_query) {
+                if (possible_sub_query.matches_vars(msg.get_vars())) {
+                    // Message matches completely, so set remaining properties
+                    wildcard = possible_sub_query.get_wildcard_flag();
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+size_t Archive::decompress_messages_and_output (logtype_dictionary_id_t logtype_id, std::vector<epochtime_t>& ts, std::vector<file_id_t>& id,
+                                                std::vector<encoded_variable_t>& vars, std::vector<bool>& wildcard_required, const Query& query) {
+    const auto& logtype_entry = m_logtype_dictionary.get_entry(logtype_id);
+    size_t num_vars = logtype_entry.get_num_variables();
+    const size_t total_matches = wildcard_required.size();
+    std::string decompressed_msg;
+    size_t matches = 0;
+    for(size_t ix = 0; ix < total_matches; ix++) {
+        decompressed_msg.clear();
+
+        // first decompress the message with fixed time stamp
+        size_t vars_offset = num_vars * ix;
+        if (!EncodedVariableInterpreter::decode_variables_into_message_with_offset(
+                logtype_entry,
+                m_var_dictionary,
+                vars,
+                decompressed_msg,
+                vars_offset)
+        ) {
+            SPDLOG_ERROR("streaming_archive::reader::Archive: Failed to decompress variables from logtype id {}", logtype_id);
+            throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        }
+        const std::string fixed_timestamp_pattern = "%Y-%m-%d %H:%M:%S,%3";
+        TimestampPattern ts_pattern(0, fixed_timestamp_pattern);
+        ts_pattern.insert_formatted_timestamp(ts[ix], decompressed_msg);
+
+        // Perform wildcard match if required
+        // Check if:
+        // - Sub-query requires wildcard match, or
+        // - no subqueries exist and the search string is not a match-all
+        if ((query.contains_sub_queries() && wildcard_required[ix]) ||
+            (query.contains_sub_queries() == false && query.search_string_matches_all() == false)) {
+            bool matched = wildcard_match_unsafe(
+                    decompressed_msg,
+                    query.get_search_string(),
+                    query.get_ignore_case() == false
+            );
+            if (!matched) {
+                continue;
+            }
+        }
+        matches++;
+        std::string orig_file_path = get_file_name(id[ix]);
+        // Print match
+        printf("%s:%s", orig_file_path.c_str(), decompressed_msg.c_str());
+    }
+    return matches;
+}
+
+bool Archive::decompress_message_with_fixed_timestamp_pattern (const Message& compressed_msg, std::string& decompressed_msg) {
+    decompressed_msg.clear();
+
+    // Build original message content
+    const logtype_dictionary_id_t logtype_id = compressed_msg.get_logtype_id();
+    const auto& logtype_entry = m_logtype_dictionary.get_entry(logtype_id);
+    if (!EncodedVariableInterpreter::decode_variables_into_message(logtype_entry, m_var_dictionary, compressed_msg.get_vars(), decompressed_msg)) {
+        SPDLOG_ERROR("streaming_archive::reader::Archive: Failed to decompress variables from logtype id {}", compressed_msg.get_logtype_id());
+        return false;
+    }
+    const std::string fixed_timestamp_pattern = "%Y-%m-%d %H:%M:%S,%3";
+    TimestampPattern ts_pattern(0, fixed_timestamp_pattern);
+    ts_pattern.insert_formatted_timestamp(compressed_msg.get_ts_in_milli(), decompressed_msg);
+    return true;
 }
 }  // namespace glt::streaming_archive::reader

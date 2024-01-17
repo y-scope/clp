@@ -303,4 +303,28 @@ void load_lexer_from_file(
         lexer.generate();
     }
 }
+std::vector<std::string> split_wildcard(const std::string& input_str) {
+    size_t pos = 0;
+    std::vector<std::string> return_res;
+    std::string token;
+    std::string delim = "*";
+
+    auto start = 0U;
+    auto end = input_str.find(delim);
+    while (end != std::string::npos)
+    {
+        std::string matched = input_str.substr(start, end - start);
+        if(!matched.empty()){
+            return_res.push_back(matched);
+        }
+        return_res.push_back(delim);
+        start = end + delim.length();
+        end = input_str.find(delim, start);
+    }
+    // we should never see this, because the last token is always a * due to the natural of the query
+    if(start < input_str.size()) {
+        return_res.push_back(input_str.substr(start, end));
+    }
+    return return_res;
+}
 }  // namespace glt

@@ -143,6 +143,85 @@ public:
             streaming_archive::reader::Archive& archive,
             streaming_archive::reader::File& compressed_file
     );
+
+    /**
+     * Searches the segment with the given queries and outputs any results using the given method
+     * This method doesn't do any column based optimizations
+     * @param queries
+     * @param limit
+     * @param query
+     * @param archive
+     * @param output_func
+     * @param output_func_arg
+     * @return Number of matches found
+     * @throw streaming_archive::reader::Archive::OperationFailed if decompression unexpectedly fails
+     * @throw TimestampPattern::OperationFailed if failed to insert timestamp into message
+     */
+    static size_t search_segment_all_columns_and_output (
+            const std::vector<LogtypeQueries>& queries,
+            const Query& query,
+            size_t limit,
+            streaming_archive::reader::Archive& archive,
+            OutputFunc output_func,
+            void* output_func_arg
+    );
+
+    static size_t search_combined_table_and_output (
+            combined_table_id_t table_id,
+            const std::vector<LogtypeQueries>& queries,
+            const Query& query,
+            size_t limit,
+            streaming_archive::reader::Archive& archive,
+            OutputFunc output_func,
+            void* output_func_arg
+    );
+
+    /**
+     * find all messages within the segment matching the time range specified in query and output
+     * those messages using the given method
+     * @param query
+     * @param limit
+     * @param archive
+     * @param output_func
+     * @param output_func_arg
+     * @return Number of matches found
+     * @throw streaming_archive::reader::Archive::OperationFailed if decompression unexpectedly fails
+     * @throw TimestampPattern::OperationFailed if failed to insert timestamp into message
+     */
+    static size_t output_message_in_segment_within_time_range (
+            const Query& query,
+            size_t limit,
+            streaming_archive::reader::Archive& archive,
+            OutputFunc output_func,
+            void* output_func_arg
+    );
+
+    static size_t output_message_in_combined_segment_within_time_range (
+            const Query& query,
+            size_t limit,
+            streaming_archive::reader::Archive& archive,
+            OutputFunc output_func,
+            void* output_func_arg
+    );
+    /**
+     * Converted a query of class Query into a set of LogtypeQueries, indexed by logtype_id
+     * specifically, a Query could have n subqueries, each subquery has a fixed "vars_to_match" and
+     * a set of possible logtypes. The functions converts them into a logtypes->vector<vars_to_match> mapping
+     *
+     * @param query
+     * @param segment_id
+     * @return a ordered-map of list of associated LogtypeQueries indexed by logtype_id
+     */
+    static std::unordered_map<logtype_dictionary_id_t, LogtypeQueries> get_converted_logtype_query(
+            const Query& query,
+            size_t segment_id
+    );
+
+    static void get_boundaries(
+            const std::vector<LogtypeQuery>& sub_queries,
+            size_t& left_boundary,
+            size_t& right_boundary
+    );
 };
 }  // namespace glt
 

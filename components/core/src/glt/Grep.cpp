@@ -144,23 +144,24 @@ QueryToken::QueryToken(
 
             encoded_variable_t encoded_var;
             bool converts_to_non_dict_var = false;
-            if (EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                        value_without_wildcards,
-                        encoded_var
-                )
-                || EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                        value_without_wildcards,
-                        encoded_var
-                ))
+            bool converts_to_int = EncodedVariableInterpreter::convert_string_to_representable_integer_var(value_without_wildcards, encoded_var);
+            bool converts_to_float = false;
+            if(!converts_to_int) {
+                converts_to_float = EncodedVariableInterpreter::convert_string_to_representable_float_var(value_without_wildcards, encoded_var);
+            }
+            if (converts_to_int || converts_to_float)
             {
                 converts_to_non_dict_var = true;
             }
 
             if (!converts_to_non_dict_var) {
                 // Dictionary variable
+                // Actually this is incorrect, because it's possible user enters 23412*34 aiming to
+                // match 23412.34. This should be an ambigious type.
                 m_type = Type::DictionaryVar;
                 m_cannot_convert_to_non_dict_var = true;
             } else {
+                // TODO: think about this carefully.
                 m_type = Type::Ambiguous;
                 m_possible_types.push_back(Type::IntVar);
                 m_possible_types.push_back(Type::FloatVar);
@@ -380,23 +381,12 @@ bool find_matching_message(
         Message& compressed_msg
 ) {
     if (query.contains_sub_queries()) {
-        matching_sub_query
-                = archive.find_message_matching_query(compressed_file, query, compressed_msg);
-        if (nullptr == matching_sub_query) {
-            return false;
-        }
+        return false;
     } else if ((query.get_search_begin_timestamp() > cEpochTimeMin
                 || query.get_search_end_timestamp() < cEpochTimeMax))
     {
-        bool found_msg = archive.find_message_in_time_range(
-                compressed_file,
-                query.get_search_begin_timestamp(),
-                query.get_search_end_timestamp(),
-                compressed_msg
-        );
-        if (!found_msg) {
-            return false;
-        }
+        // TODO: remove
+        return false;
     } else {
         bool read_successful = archive.get_next_message(compressed_file, compressed_msg);
         if (!read_successful) {
@@ -478,6 +468,11 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
         // Logtype will match all messages
         return SubQueryMatchabilityResult::SupercedesAllSubQueries;
     }
+
+    // TODO: one thing to be careful is that a string is connected with a wildcard, things can become complicated.
+    // because we don't know whether that string is a dictionary type or logtype.
+    // for example: "*\021 reply*"
+    sub_query.m_tokens = split_wildcard(logtype);
 
     // Find matching logtypes
     std::unordered_set<LogTypeDictionaryEntry const*> possible_logtype_entries;
@@ -1061,6 +1056,280 @@ size_t Grep::search(Query const& query, size_t limit, Archive& archive, File& co
         ++num_matches;
     }
 
+    return num_matches;
+}
+
+std::unordered_map<logtype_dictionary_id_t, LogtypeQueries> Grep::get_converted_logtype_query (const Query& query, size_t segment_id) {
+
+    // use a map so that queries are ordered by ascending logtype_id
+    std::unordered_map<logtype_dictionary_id_t, LogtypeQueries> converted_logtype_based_queries;
+    const auto& relevant_subqueries = query.get_relevant_sub_queries();
+    for(const auto& sub_query : relevant_subqueries) {
+
+        // loop through all possible logtypes
+        const auto& possible_log_entries = sub_query->get_possible_logtype_entries();
+        for(const auto& possible_logtype_entry : possible_log_entries) {
+
+            // create one LogtypeQuery for each logtype
+            logtype_dictionary_id_t possible_logtype_id = possible_logtype_entry->get_id();
+
+            // now we will get the boundary of the variables for this specific logtype.
+            const std::string& possible_logtype_value = possible_logtype_entry->get_value();
+//            size_t left_boundary = get_variable_front_boundary_delimiter(sub_query->m_tokens, possible_logtype_value);
+//            size_t right_boundary = get_variable_back_boundary_delimiter(sub_query->m_tokens, possible_logtype_value);
+            size_t left_boundary = 0;
+            size_t right_boundary = 0;
+            size_t left_var_boundary = possible_logtype_entry->get_var_left_index_based_on_left_boundary(left_boundary);
+            size_t right_var_boundary = possible_logtype_entry->get_var_right_index_based_on_right_boundary(right_boundary);
+
+            LogtypeQuery query_info(sub_query->get_vars(), sub_query->wildcard_match_required(), left_var_boundary, right_var_boundary);
+
+            // The boundary is a range like [left:right). note it's open on the right side
+            const auto& containing_segments = possible_logtype_entry->get_ids_of_segments_containing_entry();
+            if(containing_segments.find(segment_id) != containing_segments.end()) {
+                if(converted_logtype_based_queries.find(possible_logtype_id) == converted_logtype_based_queries.end()) {
+                    converted_logtype_based_queries[possible_logtype_id].m_logtype_id = possible_logtype_id;
+                }
+                converted_logtype_based_queries[possible_logtype_id].m_queries.push_back(query_info);
+            }
+        }
+    }
+    return converted_logtype_based_queries;
+}
+
+void Grep::get_boundaries(const std::vector<LogtypeQuery>& sub_queries, size_t& left_boundary, size_t& right_boundary) {
+    left_boundary = SIZE_MAX;
+    right_boundary = 0;
+    if(sub_queries.size() > 1) {
+        // we use a simple assumption atm.
+        // if subquery1 has range (a,b) and subquery2 has range (c,d).
+        // then the range will be (min(a,c), max(b,d)), even if c > b.
+        SPDLOG_DEBUG("Maybe this is not optimal");
+    }
+    for(auto const& subquery : sub_queries) {
+        // we use a simple assumption atm.
+        // if subquery1 has range (a,b) and subquery2 has range (c,d).
+        // then the range will be (min(a,c), max(b,d)), even if c > b.
+        if(left_boundary > subquery.m_l_b) {
+            left_boundary = subquery.m_l_b;
+        }
+        if(right_boundary < subquery.m_r_b) {
+            right_boundary = subquery.m_r_b;
+        }
+    }
+}
+
+// Handle the case where the processed search string is a wildcard (Note this doesn't guarantee the original search string is a wildcard)
+// Return all messages as long as they fall into the time range
+size_t Grep::output_message_in_segment_within_time_range (const Query& query, size_t limit, streaming_archive::reader::Archive& archive, OutputFunc output_func, void* output_func_arg) {
+    size_t num_matches = 0;
+
+    Message compressed_msg;
+    string decompressed_msg;
+
+    // Get the correct order of looping through logtypes
+    const auto& logtype_order = archive.get_logtype_table_manager().get_single_order();
+    for(const auto& logtype_id : logtype_order) {
+        archive.get_logtype_table_manager().load_variable_columns(logtype_id);
+        archive.get_logtype_table_manager().load_all();
+        auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_placeholders();
+        compressed_msg.resize_var(num_vars);
+        compressed_msg.set_logtype_id(logtype_id);
+        while(num_matches < limit) {
+            // Find matching message
+            bool found_message = archive.get_next_message_in_logtype_table(compressed_msg);
+            if (!found_message) {
+                break;
+            }
+            if(!query.timestamp_is_in_search_time_range(compressed_msg.get_ts_in_milli())) {
+                continue;
+            }
+            bool decompress_successful = archive.decompress_message_with_fixed_timestamp_pattern(compressed_msg, decompressed_msg);
+            if (!decompress_successful) {
+                break;
+            }
+            // Perform wildcard match if required
+            // In this branch, subqueries should not exist
+            // So just check if the search string is not a match-all
+            if (query.search_string_matches_all() == false)
+            {
+                bool matched = wildcard_match_unsafe(decompressed_msg, query.get_search_string(), query.get_ignore_case() == false);
+                if (!matched) {
+                    continue;
+                }
+            }
+            std::string orig_file_path = archive.get_file_name(compressed_msg.get_file_id());
+            // Print match
+            output_func(orig_file_path, compressed_msg, decompressed_msg, output_func_arg);
+            ++num_matches;
+        }
+        archive.get_logtype_table_manager().close_variable_columns();
+    }
+    return num_matches;
+}
+
+size_t Grep::output_message_in_combined_segment_within_time_range (const Query& query, size_t limit, streaming_archive::reader::Archive& archive, OutputFunc output_func, void* output_func_arg) {
+    size_t num_matches = 0;
+
+    Message compressed_msg;
+    string decompressed_msg;
+    size_t combined_table_count = archive.get_logtype_table_manager().get_combined_table_count();
+    const auto& combined_logtype_order = archive.get_logtype_table_manager().get_combined_order();
+    for(size_t table_ix = 0; table_ix < combined_table_count; table_ix++) {
+
+        // load the combined table
+        archive.get_logtype_table_manager().open_combined_table(table_ix);
+        const auto& logtype_order = combined_logtype_order.at(table_ix);
+
+        for(const auto& logtype_id : logtype_order) {
+            // load the logtype id
+            archive.get_logtype_table_manager().open_combined_logtype_table(logtype_id);
+            auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_placeholders();
+            compressed_msg.resize_var(num_vars);
+            compressed_msg.set_logtype_id(logtype_id);
+            while(num_matches < limit) {
+                // Find matching message
+                bool found_message = archive.get_logtype_table_manager().m_combined_table_segment.get_next_full_row(compressed_msg);
+                if (!found_message) {
+                    break;
+                }
+                if(!query.timestamp_is_in_search_time_range(compressed_msg.get_ts_in_milli())) {
+                    continue;
+                }
+                bool decompress_successful = archive.decompress_message_with_fixed_timestamp_pattern(compressed_msg, decompressed_msg);
+                if (!decompress_successful) {
+                    break;
+                }
+                // Perform wildcard match if required
+                // In this execution branch, subqueries should not exist
+                // So just check if the search string is not a match-all
+                if (query.search_string_matches_all() == false)
+                {
+                    bool matched = wildcard_match_unsafe(decompressed_msg, query.get_search_string(), query.get_ignore_case() == false);
+                    if (!matched) {
+                        continue;
+                    }
+                }
+                std::string orig_file_path = archive.get_file_name(compressed_msg.get_file_id());
+                // Print match
+                output_func(orig_file_path, compressed_msg, decompressed_msg, output_func_arg);
+                ++num_matches;
+            }
+            archive.get_logtype_table_manager().m_combined_table_segment.close_logtype_table();
+        }
+        archive.get_logtype_table_manager().close_combined_table();
+    }
+    return num_matches;
+}
+
+size_t Grep::search_segment_all_columns_and_output (const std::vector<LogtypeQueries>& queries, const Query& query, size_t limit, Archive& archive, OutputFunc output_func, void* output_func_arg) {
+    size_t num_matches = 0;
+
+    Message compressed_msg;
+    string decompressed_msg;
+
+    // Go through each logtype
+    for(const auto& query_for_logtype: queries) {
+        size_t logtype_matches = 0;
+        // preload the data
+        auto logtype_id = query_for_logtype.m_logtype_id;
+        const auto& sub_queries = query_for_logtype.m_queries;
+        archive.get_logtype_table_manager().load_variable_columns(logtype_id);
+        archive.get_logtype_table_manager().load_all();
+        auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_placeholders();
+        compressed_msg.resize_var(num_vars);
+        compressed_msg.set_logtype_id(logtype_id);
+
+        while(num_matches < limit) {
+            // Find matching message
+            bool required_wild_card = false;
+            bool found_matched = archive.find_message_matching_with_logtype_query(sub_queries,compressed_msg, required_wild_card, query);
+            if (found_matched == false) {
+                break;
+            }
+            // Decompress match
+            bool decompress_successful = archive.decompress_message_with_fixed_timestamp_pattern(compressed_msg, decompressed_msg);
+            if (!decompress_successful) {
+                break;
+            }
+
+            // Perform wildcard match if required
+            // Check if:
+            // - Sub-query requires wildcard match, or
+            // - no subqueries exist and the search string is not a match-all
+            if ((query.contains_sub_queries() && required_wild_card) ||
+                (query.contains_sub_queries() == false && query.search_string_matches_all() == false)) {
+                bool matched = wildcard_match_unsafe(decompressed_msg, query.get_search_string(),
+                                                     query.get_ignore_case() == false);
+                if (!matched) {
+                    continue;
+                }
+            }
+            std::string orig_file_path = archive.get_file_name(compressed_msg.get_file_id());
+            // Print match
+            output_func(orig_file_path, compressed_msg, decompressed_msg, output_func_arg);
+            ++logtype_matches;
+        }
+        archive.get_logtype_table_manager().close_variable_columns();
+        num_matches += logtype_matches;
+    }
+
+    return num_matches;
+}
+size_t Grep::search_combined_table_and_output (combined_table_id_t table_id, const std::vector<LogtypeQueries>& queries, const Query& query, size_t limit, Archive& archive, OutputFunc output_func, void* output_func_arg) {
+    size_t num_matches = 0;
+
+    Message compressed_msg;
+    string decompressed_msg;
+
+    archive.get_logtype_table_manager().open_combined_table(table_id);
+    for(const auto& iter: queries) {
+        logtype_dictionary_id_t logtype_id = iter.m_logtype_id;
+        archive.get_logtype_table_manager().open_combined_logtype_table(logtype_id);
+
+        const auto& queries_by_logtype = iter.m_queries;
+
+        // Initialize message
+        auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_placeholders();
+        compressed_msg.resize_var(num_vars);
+        compressed_msg.set_logtype_id(logtype_id);
+
+        size_t left_boundary, right_boundary;
+        Grep::get_boundaries(queries_by_logtype, left_boundary, right_boundary);
+
+        bool required_wild_card;
+        while(num_matches < limit) {
+            // Find matching message
+            bool found_matched = archive.find_message_matching_with_logtype_query_from_combined(queries_by_logtype,compressed_msg, required_wild_card, query, left_boundary, right_boundary);
+            if (found_matched == false) {
+                break;
+            }
+            // Decompress match
+            bool decompress_successful = archive.decompress_message_with_fixed_timestamp_pattern(compressed_msg, decompressed_msg);
+            if (!decompress_successful) {
+                break;
+            }
+
+            // Perform wildcard match if required
+            // Check if:
+            // - Sub-query requires wildcard match, or
+            // - no subqueries exist and the search string is not a match-all
+            if ((query.contains_sub_queries() && required_wild_card) ||
+                (query.contains_sub_queries() == false && query.search_string_matches_all() == false)) {
+                bool matched = wildcard_match_unsafe(decompressed_msg, query.get_search_string(),
+                                                     query.get_ignore_case() == false);
+                if (!matched) {
+                    continue;
+                }
+            }
+            std::string orig_file_path = archive.get_file_name(compressed_msg.get_file_id());
+            // Print match
+            output_func(orig_file_path, compressed_msg, decompressed_msg, output_func_arg);
+            ++num_matches;
+        }
+        archive.get_logtype_table_manager().m_combined_table_segment.close_logtype_table();
+    }
+    archive.get_logtype_table_manager().close_combined_table();
     return num_matches;
 }
 }  // namespace glt
