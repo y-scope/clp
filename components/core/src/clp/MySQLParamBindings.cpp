@@ -20,6 +20,17 @@ void MySQLParamBindings::resize(size_t num_fields) {
     }
 }
 
+void MySQLParamBindings::bind_int(size_t field_index, int& value) {
+    if (field_index >= m_statement_bindings.size()) {
+        throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);
+    }
+
+    auto& binding = m_statement_bindings[field_index];
+    binding.buffer_type = MYSQL_TYPE_LONG;
+    binding.buffer = &value;
+    m_statement_binding_lengths[field_index] = sizeof(value);
+}
+
 void MySQLParamBindings::bind_int64(size_t field_index, int64_t& value) {
     if (field_index >= m_statement_bindings.size()) {
         throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);
