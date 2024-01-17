@@ -1075,10 +1075,10 @@ std::unordered_map<logtype_dictionary_id_t, LogtypeQueries> Grep::get_converted_
 
             // now we will get the boundary of the variables for this specific logtype.
             const std::string& possible_logtype_value = possible_logtype_entry->get_value();
-//            size_t left_boundary = get_variable_front_boundary_delimiter(sub_query->m_tokens, possible_logtype_value);
-//            size_t right_boundary = get_variable_back_boundary_delimiter(sub_query->m_tokens, possible_logtype_value);
-            size_t left_boundary = 0;
-            size_t right_boundary = 0;
+            size_t left_boundary = get_variable_front_boundary_delimiter(sub_query->m_tokens, possible_logtype_value);
+            size_t right_boundary = get_variable_back_boundary_delimiter(sub_query->m_tokens, possible_logtype_value);
+//            size_t left_boundary = 0;
+//            size_t right_boundary = 0;
             size_t left_var_boundary = possible_logtype_entry->get_var_left_index_based_on_left_boundary(left_boundary);
             size_t right_var_boundary = possible_logtype_entry->get_var_right_index_based_on_right_boundary(right_boundary);
 
@@ -1332,4 +1332,54 @@ size_t Grep::search_combined_table_and_output (combined_table_id_t table_id, con
     archive.get_logtype_table_manager().close_combined_table();
     return num_matches;
 }
+
+size_t Grep::search_segment_optimized_and_output (
+        const std::vector<LogtypeQueries>& queries,
+        const Query& query,
+        size_t limit,
+        Archive& archive,
+        OutputFunc output_func,
+        void* output_func_arg
+) {
+    size_t num_matches = 0;
+
+    Message compressed_msg;
+    string decompressed_msg;
+
+    // Go through each logtype
+    for(const auto& query_for_logtype: queries) {
+        // preload the data
+        auto logtype_id = query_for_logtype.m_logtype_id;
+        const auto& sub_queries = query_for_logtype.m_queries;
+        archive.get_logtype_table_manager().load_variable_columns(logtype_id);
+
+        size_t left_boundary, right_boundary;
+        Grep::get_boundaries(sub_queries, left_boundary, right_boundary);
+
+        // load timestamps and columns that fall into the ranges.
+        archive.get_logtype_table_manager().load_ts();
+        archive.get_logtype_table_manager().load_partial_columns(left_boundary, right_boundary);
+
+        auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_placeholders();
+
+        std::vector<size_t> matched_row_ix;
+        std::vector<bool> wildcard_required;
+        // Find matching message
+        archive.find_message_matching_with_logtype_query_optimized(sub_queries, matched_row_ix, wildcard_required, query);
+
+        size_t num_potential_matches = matched_row_ix.size();
+        if(num_potential_matches != 0) {
+            // Decompress match
+            std::vector<epochtime_t> loaded_ts(num_potential_matches);
+            std::vector<file_id_t> loaded_file_id (num_potential_matches);
+            std::vector<encoded_variable_t> loaded_vars (num_potential_matches * num_vars);
+            archive.get_logtype_table_manager().m_variable_columns.load_remaining_data_into_vec(loaded_ts, loaded_file_id, loaded_vars, matched_row_ix);
+            num_matches += archive.decompress_messages_and_output(logtype_id, loaded_ts, loaded_file_id, loaded_vars, wildcard_required, query);
+        }
+        archive.get_logtype_table_manager().close_variable_columns();
+    }
+
+    return num_matches;
+}
+
 }  // namespace glt

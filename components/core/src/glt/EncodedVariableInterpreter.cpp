@@ -385,14 +385,14 @@ bool EncodedVariableInterpreter::decode_variables_into_message_with_offset (cons
 
         switch (var_placeholder) {
             case VariablePlaceholder::Integer:
-                decompressed_msg += std::to_string(encoded_vars[var_ix++]);
+                decompressed_msg += std::to_string(encoded_vars[var_index]);
                 break;
             case VariablePlaceholder::Float:
-                convert_encoded_float_to_string(encoded_vars[var_ix++], float_str);
+                convert_encoded_float_to_string(encoded_vars[var_index], float_str);
                 decompressed_msg += float_str;
                 break;
             case VariablePlaceholder::Dictionary:
-                var_dict_id = decode_var_dict_id(encoded_vars[var_ix++]);
+                var_dict_id = decode_var_dict_id(encoded_vars[var_index]);
                 decompressed_msg += var_dict.get_value(var_dict_id);
                 break;
             case VariablePlaceholder::Escape:
