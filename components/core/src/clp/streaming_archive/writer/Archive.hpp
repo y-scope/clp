@@ -304,7 +304,6 @@ private:
 
     boost::uuids::random_generator m_uuid_generator;
 
-    file_id_t m_next_file_id;
     // Since we batch metadata persistence operations, we need to keep track of files whose
     // metadata should be persisted Accordingly:
     // - m_files_with_timestamps_in_segment contains files that 1) have been moved to an open
