@@ -13,7 +13,7 @@
 
 namespace clp::clo {
 /**
- * Class encapsulating a MongoDB client used to send query results to results the cache.
+ * Class encapsulating a MongoDB client used to send query results to the results cache.
  */
 class ResultsCacheClient {
 public:
