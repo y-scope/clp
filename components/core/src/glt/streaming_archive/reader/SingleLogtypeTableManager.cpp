@@ -5,46 +5,46 @@
 #include "../LogtypeSizeTracker.hpp"
 
 namespace glt::streaming_archive::reader {
-void SingleLogtypeTableManager::load_variable_columns(logtype_dictionary_id_t logtype_id) {
+void SingleLogtypeTableManager::open_logtype_table(logtype_dictionary_id_t logtype_id) {
     if (!m_is_open) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
-    if (m_variable_column_loaded != false) {
+    if (m_logtype_table_loaded != false) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
 
     auto const& logtype_metadata = m_logtype_table_metadata[logtype_id];
-    m_variable_columns.open(m_memory_mapped_segment_file.data(), logtype_metadata);
-    m_variable_column_loaded = true;
+    m_logtype_table.open(m_memory_mapped_segment_file.data(), logtype_metadata);
+    m_logtype_table_loaded = true;
 }
 
-void SingleLogtypeTableManager::close_variable_columns() {
-    m_variable_columns.close();
-    m_variable_column_loaded = false;
+void SingleLogtypeTableManager::close_logtype_table() {
+    m_logtype_table.close();
+    m_logtype_table_loaded = false;
 }
 
 bool SingleLogtypeTableManager::get_next_row(Message& msg) {
-    return m_variable_columns.get_next_full_row(msg);
+    return m_logtype_table.get_next_message(msg);
 }
 
 bool SingleLogtypeTableManager::peek_next_ts(epochtime_t& ts) {
-    return m_variable_columns.peek_next_ts(ts);
+    return m_logtype_table.peek_next_ts(ts);
 }
 
 void SingleLogtypeTableManager::load_all() {
-    m_variable_columns.load_all();
+    m_logtype_table.load_all();
 }
 
 void SingleLogtypeTableManager::skip_row() {
-    m_variable_columns.skip_row();
+    m_logtype_table.skip_row();
 }
 
 void SingleLogtypeTableManager::load_partial_columns(size_t l, size_t r) {
-    m_variable_columns.load_partial_column(l, r);
+    m_logtype_table.load_variable_columns(l, r);
 }
 
 void SingleLogtypeTableManager::load_ts() {
-    m_variable_columns.load_timestamp();
+    m_logtype_table.load_timestamp();
 }
 
 void SingleLogtypeTableManager::open_combined_table(combined_table_id_t table_id) {
@@ -52,43 +52,21 @@ void SingleLogtypeTableManager::open_combined_table(combined_table_id_t table_id
             = m_memory_mapped_segment_file.data() + m_combined_table_info[table_id].m_begin_offset;
     size_t compressed_stream_size = m_combined_table_info[table_id].m_size;
     m_combined_table_decompressor.open(compressed_stream_ptr, compressed_stream_size);
-    m_combined_table_segment.open(table_id);
-}
-
-void SingleLogtypeTableManager::open_and_preload_combined_table(
-        combined_table_id_t table_id,
-        logtype_dictionary_id_t logtype_id
-) {
-    char const* compressed_stream_ptr
-            = m_memory_mapped_segment_file.data() + m_combined_table_info[table_id].m_begin_offset;
-    size_t compressed_stream_size = m_combined_table_info[table_id].m_size;
-    m_combined_table_decompressor.open(compressed_stream_ptr, compressed_stream_size);
-    m_combined_table_segment.open(table_id);
-    m_combined_table_segment.open_and_preload(
-            table_id,
-            logtype_id,
-            m_combined_table_decompressor,
-            m_combined_tables_metadata
-    );
+    m_combined_tables.open(table_id);
 }
 
 void SingleLogtypeTableManager::close_combined_table() {
-    m_combined_table_segment.close();
+    m_combined_tables.close();
     m_combined_table_decompressor.close();
 }
 
-void SingleLogtypeTableManager::open_combined_logtype_table(logtype_dictionary_id_t logtype_id) {
-    m_combined_table_segment.open_logtype_table(
+void SingleLogtypeTableManager::load_logtype_table_from_combine(logtype_dictionary_id_t logtype_id
+) {
+    m_combined_tables.load_logtype_table(
             logtype_id,
             m_combined_table_decompressor,
             m_combined_tables_metadata
     );
-}
-
-void SingleLogtypeTableManager::open_preloaded_combined_logtype_table(
-        logtype_dictionary_id_t logtype_id
-) {
-    m_combined_table_segment.open_preloaded_logtype_table(logtype_id, m_combined_tables_metadata);
 }
 
 // rearrange queries to separate them into single table and combined table ones.

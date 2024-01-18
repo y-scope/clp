@@ -33,14 +33,18 @@ public:
 
 class LogtypeTable {
 public:
-    LogtypeTable();
+    LogtypeTable() : m_read_buffer_ptr(nullptr), m_is_open(false) {}
 
     void open(char const* buffer, LogtypeMetadata const& metadata);
-    void close();
-
     void open_and_load_all(char const* buffer, LogtypeMetadata const& metadata);
 
+    void close();
+
     bool is_open() const { return m_is_open; }
+
+    size_t get_num_row() const { return m_num_row; }
+
+    size_t get_num_column() const { return m_num_columns; }
 
     /**
      * Get next row in the loaded 2D variable columns and load timestamp, file_id and variables into
@@ -48,8 +52,10 @@ public:
      * @param msg
      * @return
      */
-    bool get_next_full_row(Message& msg);
+    bool get_next_message(Message& msg);
 
+    void get_next_row(std::vector<encoded_variable_t>& vars, size_t var_ix_begin, size_t var_ix_end)
+            const;
     /**
      *
      */
@@ -58,9 +64,7 @@ public:
     void skip_row();
 
     void load_timestamp();
-
-    void load_partial_column(size_t l, size_t r);
-
+    void load_variable_columns(size_t var_ix_begin, size_t var_ix_end);
     void load_remaining_data_into_vec(
             std::vector<epochtime_t>& ts,
             std::vector<file_id_t>& id,
@@ -68,20 +72,14 @@ public:
             std::vector<size_t> const& potential_matched_row
     );
 
-    void get_next_row(std::vector<encoded_variable_t>& vars, size_t begin, size_t end) const;
-
     /**
      * Get row in the loaded 2D variable columns with row_index = offset
      * @param msg
      * @return
      */
-    void get_row_at_offset(size_t offset, Message& msg);
+    void get_message_at_offset(size_t offset, Message& msg);
 
     epochtime_t get_timestamp_at_offset(size_t offset);
-
-    size_t get_num_row() const { return m_num_row; }
-
-    size_t get_num_column() const { return m_num_columns; }
 
     /**
      * Open and load the 2D variable columns starting at buffer with compressed_size bytes

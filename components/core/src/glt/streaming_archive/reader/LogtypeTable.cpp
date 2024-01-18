@@ -93,11 +93,6 @@ void LogtypeTable::open(char const* buffer, LogtypeMetadata const& metadata) {
     m_column_based_variables.resize(m_num_row * m_num_columns);
 }
 
-LogtypeTable::LogtypeTable() {
-    m_read_buffer_ptr = nullptr;
-    m_is_open = false;
-}
-
 void LogtypeTable::close() {
     if (!m_is_open) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
@@ -107,7 +102,7 @@ void LogtypeTable::close() {
     m_read_buffer_ptr = nullptr;
 }
 
-bool LogtypeTable::get_next_full_row(Message& msg) {
+bool LogtypeTable::get_next_message(Message& msg) {
     if (!m_is_open) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
@@ -126,9 +121,12 @@ bool LogtypeTable::get_next_full_row(Message& msg) {
     return true;
 }
 
-void LogtypeTable::get_next_row(std::vector<encoded_variable_t>& vars, size_t begin, size_t end)
-        const {
-    for (size_t ix = begin; ix < end; ix++) {
+void LogtypeTable::get_next_row(
+        std::vector<encoded_variable_t>& vars,
+        size_t var_ix_begin,
+        size_t var_ix_end
+) const {
+    for (size_t ix = var_ix_begin; ix < var_ix_end; ix++) {
         vars[ix] = m_column_based_variables[ix * m_num_row + m_current_row];
     }
 }
@@ -155,6 +153,79 @@ void LogtypeTable::load_remaining_data_into_vec(
     load_ts_into_vec(ts, potential_matched_row);
     load_file_id_into_vec(id, potential_matched_row);
     load_vars_into_vec(vars, potential_matched_row);
+}
+
+void LogtypeTable::load_timestamp() {
+    m_timestamps.resize(m_num_row);
+    size_t num_bytes_read = 0;
+    char const* ts_start = m_file_offset + m_metadata.ts_offset;
+    m_decompressor.open(ts_start, m_metadata.ts_size);
+    m_decompressor.try_read(m_read_buffer_ptr, m_buffer_size, num_bytes_read);
+    if (num_bytes_read != m_buffer_size) {
+        SPDLOG_ERROR(
+                "Wrong number of Bytes read: Expect: {}, Got: {}",
+                m_buffer_size,
+                num_bytes_read
+        );
+        throw ErrorCode_Failure;
+    }
+    m_decompressor.close();
+    epochtime_t* converted_timestamp_ptr = reinterpret_cast<epochtime_t*>(m_read_buffer_ptr);
+    for (size_t row_ix = 0; row_ix < m_num_row; row_ix++) {
+        m_timestamps[row_ix] = converted_timestamp_ptr[row_ix];
+    }
+    m_ts_loaded = true;
+}
+
+void LogtypeTable::load_variable_columns(size_t var_ix_begin, size_t var_ix_end) {
+    for (size_t var_ix = var_ix_begin; var_ix < var_ix_end; var_ix++) {
+        if (m_column_loaded[var_ix] == false) {
+            load_column(var_ix);
+        }
+    }
+}
+
+epochtime_t LogtypeTable::get_timestamp_at_offset(size_t offset) {
+    if (!m_is_open) {
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+    assert(offset < m_num_row);
+    return m_timestamps[offset];
+}
+
+void LogtypeTable::get_message_at_offset(size_t offset, Message& msg) {
+    if (!m_is_open) {
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+    assert(offset < m_num_row);
+
+    for (size_t column_index = 0; column_index < m_num_columns; column_index++) {
+        msg.add_var(m_column_based_variables[column_index * m_num_row + offset]);
+    }
+}
+
+// this aims to be a little bit more optimized
+void LogtypeTable::load_column(size_t column_ix) {
+    char const* var_start = m_file_offset + m_metadata.column_offset[column_ix];
+    m_decompressor.open(var_start, m_metadata.column_size[column_ix]);
+    size_t num_bytes_read;
+    m_decompressor.try_read(m_read_buffer_ptr, m_buffer_size, num_bytes_read);
+    if (num_bytes_read != m_buffer_size) {
+        SPDLOG_ERROR(
+                "Wrong number of Bytes read: Expect: {}, Got: {}",
+                m_buffer_size,
+                num_bytes_read
+        );
+        throw ErrorCode_Failure;
+    }
+    m_decompressor.close();
+    encoded_variable_t* converted_variable_ptr
+            = reinterpret_cast<encoded_variable_t*>(m_read_buffer_ptr);
+    for (size_t row_ix = 0; row_ix < m_num_row; row_ix++) {
+        encoded_variable_t encoded_var = converted_variable_ptr[row_ix];
+        m_column_based_variables[column_ix * m_num_row + row_ix] = encoded_var;
+    }
+    m_column_loaded[column_ix] = true;
 }
 
 void LogtypeTable::load_file_id_into_vec(
@@ -246,79 +317,6 @@ void LogtypeTable::load_vars_into_vec(
                         [column_ix * m_num_row + potential_matched_row[ix]];
             }
         }
-    }
-}
-
-void LogtypeTable::load_timestamp() {
-    m_timestamps.resize(m_num_row);
-    size_t num_bytes_read = 0;
-    char const* ts_start = m_file_offset + m_metadata.ts_offset;
-    m_decompressor.open(ts_start, m_metadata.ts_size);
-    m_decompressor.try_read(m_read_buffer_ptr, m_buffer_size, num_bytes_read);
-    if (num_bytes_read != m_buffer_size) {
-        SPDLOG_ERROR(
-                "Wrong number of Bytes read: Expect: {}, Got: {}",
-                m_buffer_size,
-                num_bytes_read
-        );
-        throw ErrorCode_Failure;
-    }
-    m_decompressor.close();
-    epochtime_t* converted_timestamp_ptr = reinterpret_cast<epochtime_t*>(m_read_buffer_ptr);
-    for (size_t row_ix = 0; row_ix < m_num_row; row_ix++) {
-        m_timestamps[row_ix] = converted_timestamp_ptr[row_ix];
-    }
-    m_ts_loaded = true;
-}
-
-// this aims to be a little bit more optimized
-void LogtypeTable::load_column(size_t column_ix) {
-    char const* var_start = m_file_offset + m_metadata.column_offset[column_ix];
-    m_decompressor.open(var_start, m_metadata.column_size[column_ix]);
-    size_t num_bytes_read;
-    m_decompressor.try_read(m_read_buffer_ptr, m_buffer_size, num_bytes_read);
-    if (num_bytes_read != m_buffer_size) {
-        SPDLOG_ERROR(
-                "Wrong number of Bytes read: Expect: {}, Got: {}",
-                m_buffer_size,
-                num_bytes_read
-        );
-        throw ErrorCode_Failure;
-    }
-    m_decompressor.close();
-    encoded_variable_t* converted_variable_ptr
-            = reinterpret_cast<encoded_variable_t*>(m_read_buffer_ptr);
-    for (size_t row_ix = 0; row_ix < m_num_row; row_ix++) {
-        encoded_variable_t encoded_var = converted_variable_ptr[row_ix];
-        m_column_based_variables[column_ix * m_num_row + row_ix] = encoded_var;
-    }
-    m_column_loaded[column_ix] = true;
-}
-
-void LogtypeTable::load_partial_column(size_t l, size_t r) {
-    for (size_t start = l; start < r; start++) {
-        if (m_column_loaded[start] == false) {
-            load_column(start);
-        }
-    }
-}
-
-epochtime_t LogtypeTable::get_timestamp_at_offset(size_t offset) {
-    if (!m_is_open) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
-    }
-    assert(offset < m_num_row);
-    return m_timestamps[offset];
-}
-
-void LogtypeTable::get_row_at_offset(size_t offset, Message& msg) {
-    if (!m_is_open) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
-    }
-    assert(offset < m_num_row);
-
-    for (size_t column_index = 0; column_index < m_num_columns; column_index++) {
-        msg.add_var(m_column_based_variables[column_index * m_num_row + offset]);
     }
 }
 }  // namespace glt::streaming_archive::reader
