@@ -118,6 +118,7 @@ int main(int argc, char const* argv[]) {
         }
 
         std::shared_ptr<OutputHandler> output_handler;
+        mongocxx::instance mongocxx_instance_{};
         if (command_line_arguments.get_mongodb_enabled()) {
             output_handler = std::make_shared<ResultsCacheOutputHandler>(
                     command_line_arguments.get_mongodb_uri(),

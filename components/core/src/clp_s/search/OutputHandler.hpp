@@ -67,11 +67,11 @@ public:
             bool output_timestamp = true
     )
             : OutputHandler(output_timestamp),
-              batch_size_(batch_size) {
+              m_batch_size(batch_size) {
         try {
             auto mongo_uri = mongocxx::uri(uri);
-            client_ = mongocxx::client(mongo_uri);
-            collection_ = client_[mongo_uri.database()][collection];
+            m_client = mongocxx::client(mongo_uri);
+            m_collection = m_client[mongo_uri.database()][collection];
         } catch (mongocxx::exception const& e) {
             throw OperationFailed(ErrorCode::ErrorCodeBadParamDbUri, __FILENAME__, __LINE__);
         }
@@ -79,9 +79,9 @@ public:
 
     void Flush() override {
         try {
-            if (!results_.empty()) {
-                collection_.insert_many(results_);
-                results_.clear();
+            if (!m_results.empty()) {
+                m_collection.insert_many(m_results);
+                m_results.clear();
             }
         } catch (mongocxx::exception const& e) {
             throw OperationFailed(ErrorCode::ErrorCodeFailureDbBulkWrite, __FILENAME__, __LINE__);
@@ -96,11 +96,11 @@ public:
                     bsoncxx::builder::basic::kvp("timestamp", timestamp)
             );
 
-            results_.push_back(std::move(document));
+            m_results.push_back(std::move(document));
 
-            if (results_.size() >= batch_size_) {
-                collection_.insert_many(results_);
-                results_.clear();
+            if (m_results.size() >= m_batch_size) {
+                m_collection.insert_many(m_results);
+                m_results.clear();
             }
         } catch (mongocxx::exception const& e) {
             throw OperationFailed(ErrorCode::ErrorCodeFailureDbBulkWrite, __FILENAME__, __LINE__);
@@ -110,11 +110,10 @@ public:
     void Write(std::string const& message) override { Write(message, 0); }
 
 private:
-    mongocxx::instance instance_{};
-    mongocxx::client client_;
-    mongocxx::collection collection_;
-    std::vector<bsoncxx::document::value> results_;
-    uint64_t batch_size_;
+    mongocxx::client m_client;
+    mongocxx::collection m_collection;
+    std::vector<bsoncxx::document::value> m_results;
+    uint64_t m_batch_size;
 };
 }  // namespace clp_s::search
 
