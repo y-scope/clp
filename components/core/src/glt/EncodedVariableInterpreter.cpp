@@ -318,12 +318,12 @@ bool EncodedVariableInterpreter::decode_variables_into_message(
     size_t constant_begin_pos = 0;
     string float_str;
     variable_dictionary_id_t var_dict_id;
-    size_t const num_placeholders_in_logtype = logtype_dict_entry.get_num_variables();
+    size_t const num_placeholders_in_logtype = logtype_dict_entry.get_num_placeholders();
     for (size_t placeholder_ix = 0, var_ix = 0; placeholder_ix < num_placeholders_in_logtype;
          ++placeholder_ix)
     {
         size_t placeholder_position
-                = logtype_dict_entry.get_variable_info(placeholder_ix, var_placeholder);
+                = logtype_dict_entry.get_placeholder_info(placeholder_ix, var_placeholder);
 
         // Add the constant that's between the last placeholder and this one
         decompressed_msg.append(
@@ -372,7 +372,7 @@ bool EncodedVariableInterpreter::decode_variables_into_message_with_offset(
         string& decompressed_msg,
         size_t offset
 ) {
-    size_t num_variables = logtype_dict_entry.get_num_variables();
+    size_t num_placeholders = logtype_dict_entry.get_num_placeholders();
 
     // Ensure the number of variables in the logtype matches the number of encoded variables given
     auto const& logtype_value = logtype_dict_entry.get_value();
@@ -381,24 +381,35 @@ bool EncodedVariableInterpreter::decode_variables_into_message_with_offset(
     size_t constant_begin_pos = 0;
     string float_str;
     variable_dictionary_id_t var_dict_id;
-    for (size_t var_ix = 0; var_ix < num_variables; ++var_ix) {
-        size_t var_position = logtype_dict_entry.get_variable_info(var_ix, var_placeholder);
-        size_t var_index = offset + var_ix;
+    for (size_t placeholder_ix = 0, var_ix = 0; placeholder_ix < num_placeholders; ++placeholder_ix)
+    {
+        size_t placeholder_position
+                = logtype_dict_entry.get_placeholder_info(placeholder_ix, var_placeholder);
         // Add the constant that's between the last variable and this one
-        decompressed_msg
-                .append(logtype_value, constant_begin_pos, var_position - constant_begin_pos);
+        decompressed_msg.append(
+                logtype_value,
+                constant_begin_pos,
+                placeholder_position - constant_begin_pos
+        );
 
+        // The real var_index is offseted by var_ix
+        size_t var_index = offset + var_ix;
         switch (var_placeholder) {
             case VariablePlaceholder::Integer:
                 decompressed_msg += std::to_string(encoded_vars[var_index]);
+                var_ix++;
                 break;
             case VariablePlaceholder::Float:
                 convert_encoded_float_to_string(encoded_vars[var_index], float_str);
                 decompressed_msg += float_str;
+                var_ix++;
                 break;
             case VariablePlaceholder::Dictionary:
                 var_dict_id = decode_var_dict_id(encoded_vars[var_index]);
                 decompressed_msg += var_dict.get_value(var_dict_id);
+                var_ix++;
+                break;
+            case VariablePlaceholder::Escape:
                 break;
             default:
                 SPDLOG_ERROR(
@@ -410,7 +421,7 @@ bool EncodedVariableInterpreter::decode_variables_into_message_with_offset(
                 return false;
         }
         // Move past the variable delimiter
-        constant_begin_pos = var_position + 1;
+        constant_begin_pos = placeholder_position + 1;
     }
     // Append remainder of logtype, if any
     if (constant_begin_pos < logtype_value.length()) {
