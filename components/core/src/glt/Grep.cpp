@@ -1132,7 +1132,7 @@ size_t Grep::output_message_in_segment_within_time_range (const Query& query, si
     for(const auto& logtype_id : logtype_order) {
         archive.get_logtype_table_manager().load_variable_columns(logtype_id);
         archive.get_logtype_table_manager().load_all();
-        auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_placeholders();
+        auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_variables();
         compressed_msg.resize_var(num_vars);
         compressed_msg.set_logtype_id(logtype_id);
         while(num_matches < limit) {
@@ -1184,7 +1184,7 @@ size_t Grep::output_message_in_combined_segment_within_time_range (const Query& 
         for(const auto& logtype_id : logtype_order) {
             // load the logtype id
             archive.get_logtype_table_manager().open_combined_logtype_table(logtype_id);
-            auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_placeholders();
+            auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_variables();
             compressed_msg.resize_var(num_vars);
             compressed_msg.set_logtype_id(logtype_id);
             while(num_matches < limit) {
@@ -1236,7 +1236,7 @@ size_t Grep::search_segment_all_columns_and_output (const std::vector<LogtypeQue
         const auto& sub_queries = query_for_logtype.m_queries;
         archive.get_logtype_table_manager().load_variable_columns(logtype_id);
         archive.get_logtype_table_manager().load_all();
-        auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_placeholders();
+        auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_variables();
         compressed_msg.resize_var(num_vars);
         compressed_msg.set_logtype_id(logtype_id);
 
@@ -1290,7 +1290,7 @@ size_t Grep::search_combined_table_and_output (combined_table_id_t table_id, con
         const auto& queries_by_logtype = iter.m_queries;
 
         // Initialize message
-        auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_placeholders();
+        auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_variables();
         compressed_msg.resize_var(num_vars);
         compressed_msg.set_logtype_id(logtype_id);
 
@@ -1360,7 +1360,7 @@ size_t Grep::search_segment_optimized_and_output (
         archive.get_logtype_table_manager().load_ts();
         archive.get_logtype_table_manager().load_partial_columns(left_boundary, right_boundary);
 
-        auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_placeholders();
+        auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_variables();
 
         std::vector<size_t> matched_row_ix;
         std::vector<bool> wildcard_required;

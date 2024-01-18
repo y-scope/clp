@@ -366,48 +366,50 @@ bool EncodedVariableInterpreter::decode_variables_into_message(
 }
 
 bool EncodedVariableInterpreter::decode_variables_into_message_with_offset (const LogTypeDictionaryEntry& logtype_dict_entry, const VariableDictionaryReader& var_dict,
-                                                                 const vector<encoded_variable_t>& encoded_vars, string& decompressed_msg, size_t offset)
+                                                                            const vector<encoded_variable_t>& encoded_vars, string& decompressed_msg, size_t offset)
 {
-    size_t num_vars_in_logtype = logtype_dict_entry.get_num_placeholders();
+    size_t num_placeholders = logtype_dict_entry.get_num_placeholders();
 
     // Ensure the number of variables in the logtype matches the number of encoded variables given
     const auto& logtype_value = logtype_dict_entry.get_value();
 
     VariablePlaceholder var_placeholder;
     size_t constant_begin_pos = 0;
+    size_t var_ix = 0;
     string float_str;
     variable_dictionary_id_t var_dict_id;
-    for (size_t var_ix = 0; var_ix < num_vars_in_logtype; ++var_ix) {
-        size_t var_position = logtype_dict_entry.get_placeholder_info(var_ix, var_placeholder);
-        size_t var_index = offset + var_ix;
-        // Add the constant that's between the last variable and this one
-        decompressed_msg.append(logtype_value, constant_begin_pos, var_position - constant_begin_pos);
+    for (size_t placeholder_ix = 0; placeholder_ix < num_placeholders; ++placeholder_ix) {
+        size_t var_position = logtype_dict_entry.get_placeholder_info(placeholder_ix, var_placeholder);
+        if (var_placeholder != VariablePlaceholder::Escape) {
+            size_t var_index = offset + var_ix;
+            var_ix++;
+            // Add the constant that's between the last variable and this one
+            decompressed_msg.append(logtype_value, constant_begin_pos, var_position - constant_begin_pos);
 
-        switch (var_placeholder) {
-            case VariablePlaceholder::Integer:
-                decompressed_msg += std::to_string(encoded_vars[var_index]);
-                break;
-            case VariablePlaceholder::Float:
-                convert_encoded_float_to_string(encoded_vars[var_index], float_str);
-                decompressed_msg += float_str;
-                break;
-            case VariablePlaceholder::Dictionary:
-                var_dict_id = decode_var_dict_id(encoded_vars[var_index]);
-                decompressed_msg += var_dict.get_value(var_dict_id);
-                break;
-            case VariablePlaceholder::Escape:
-                break;
-            default:
-                SPDLOG_ERROR(
-                        "EncodedVariableInterpreter: Logtype '{}' contains unexpected variable "
-                        "placeholder 0x{:x}",
-                        logtype_value,
-                        enum_to_underlying_type(var_placeholder)
-                );
-                return false;
+            switch (var_placeholder) {
+                case VariablePlaceholder::Integer:
+                    decompressed_msg += std::to_string(encoded_vars[var_index]);
+                    break;
+                case VariablePlaceholder::Float:
+                    convert_encoded_float_to_string(encoded_vars[var_index], float_str);
+                    decompressed_msg += float_str;
+                    break;
+                case VariablePlaceholder::Dictionary:
+                    var_dict_id = decode_var_dict_id(encoded_vars[var_index]);
+                    decompressed_msg += var_dict.get_value(var_dict_id);
+                    break;
+                default:
+                    SPDLOG_ERROR(
+                            "EncodedVariableInterpreter: Logtype '{}' contains unexpected variable "
+                            "placeholder 0x{:x}",
+                            logtype_value,
+                            enum_to_underlying_type(var_placeholder)
+                    );
+                    return false;
+            }
+            // Move past the variable delimiter
+            constant_begin_pos = var_position + 1;
         }
-        // Move past the variable delimiter
-        constant_begin_pos = var_position + 1;
     }
     // Append remainder of logtype, if any
     if (constant_begin_pos < logtype_value.length()) {
