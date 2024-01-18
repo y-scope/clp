@@ -9,10 +9,10 @@
 namespace reducer {
 class RecordGroupIterator {
 public:
+    virtual ~RecordGroupIterator() = default;
     virtual RecordGroup const* get() = 0;
     virtual void next() = 0;
     virtual bool done() = 0;
-    virtual ~RecordGroupIterator() = default;
 };
 
 class Int64MapRecordGroupIterator : public RecordGroupIterator {

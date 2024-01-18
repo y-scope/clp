@@ -110,11 +110,12 @@ public:
      */
     bool execute_query(std::string const& sql_query);
     /**
-     * Get the number of rows affected by the previous sql statement
-     * with the semantics of mysql_affected_rows.
-     * @return the number of affected rows
+     * Get the number of rows affected by the previous SQL statement with the semantics of
+     * mysql_affected_rows returned by reference.
+     * @return true on success
+     * @return false on error
      */
-    int get_affected_rows();
+    bool get_affected_rows(uint64_t &num_affected_rows);
     /**
      * Prepares a statement on the database server
      * @param statement

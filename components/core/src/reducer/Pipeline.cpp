@@ -34,7 +34,7 @@ std::unique_ptr<RecordGroupIterator> Pipeline::finish() {
         return m_pipeline.back()->get_stored_result_iterator();
     }
 
-    return std::unique_ptr<RecordGroupIterator>(new EmptyRecordGroupIterator());
+    return std::make_unique<EmptyRecordGroupIterator>();
 }
 
 std::unique_ptr<RecordGroupIterator> Pipeline::finish(std::set<GroupTags> const& filtered_tags) {
@@ -44,6 +44,6 @@ std::unique_ptr<RecordGroupIterator> Pipeline::finish(std::set<GroupTags> const&
         return m_pipeline.back()->get_stored_result_iterator(filtered_tags);
     }
 
-    return std::unique_ptr<RecordGroupIterator>(new EmptyRecordGroupIterator());
+    return std::make_unique<EmptyRecordGroupIterator>();
 }
 }  // namespace reducer

@@ -10,18 +10,19 @@ enum class ValueType {
     DOUBLE
 };
 
-// FIXME: can do better than this
+// TODO: consider what changes (if any) are necessary for this structure, and for iterating over
+// record values in general once we start supporting nested objects.
 struct TypedRecordKey {
-    std::string const* key;
+    std::string_view key;
     ValueType type;
 };
 
 class RecordValueIterator {
 public:
+    virtual ~RecordValueIterator() = default;
     virtual TypedRecordKey get() = 0;
     virtual void next() = 0;
     virtual bool done() = 0;
-    virtual ~RecordValueIterator() = default;
 };
 
 class EmptyRecordValueIterator : public RecordValueIterator {
@@ -32,23 +33,20 @@ class EmptyRecordValueIterator : public RecordValueIterator {
     virtual bool done() { return true; }
 };
 
-class SimpleSingleValueIterator : public RecordValueIterator {
+class SingleValueIterator : public RecordValueIterator {
 public:
-    SimpleSingleValueIterator(std::string const& key, ValueType type)
-            : m_key(key),
-              m_type(type),
-              m_done(false) {}
+    SingleValueIterator(std::string_view key, ValueType type) : m_key(key), m_type(type) {}
 
-    virtual TypedRecordKey get() { return {&m_key, m_type}; }
+    virtual TypedRecordKey get() { return {m_key, m_type}; }
 
     virtual void next() { m_done = true; }
 
     virtual bool done() { return m_done; }
 
 private:
-    std::string const& m_key;
+    std::string_view m_key;
     ValueType m_type;
-    bool m_done;
+    bool m_done{false};
 };
 }  // namespace reducer
 

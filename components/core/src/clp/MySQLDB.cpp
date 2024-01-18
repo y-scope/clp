@@ -150,12 +150,13 @@ bool MySQLDB::execute_query(string const& sql_query) {
     return true;
 }
 
-int MySQLDB::get_affected_rows() {
+bool MySQLDB::get_affected_rows(uint64_t &num_affected_rows) {
     if (nullptr == m_db_handle) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
-    return mysql_affected_rows(m_db_handle);
+    num_affected_rows = mysql_affected_rows(m_db_handle);
+    return num_affected_rows != ~static_cast<uint64_t>(0);
 }
 
 MySQLPreparedStatement MySQLDB::prepare_statement(char const* statement, size_t statement_length) {

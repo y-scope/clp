@@ -1,11 +1,11 @@
 #ifndef REDUCER_REDUCER_SERVER
 #define REDUCER_REDUCER_SERVER
 
-#include <mongocxx/client.hpp>
-#include <mongocxx/collection.hpp>
 #include <set>
 
 #include <boost/asio.hpp>
+#include <mongocxx/client.hpp>
+#include <mongocxx/collection.hpp>
 
 #include "../clp/MySQLDB.hpp"
 #include "../clp/MySQLPreparedStatement.hpp"
@@ -74,7 +74,7 @@ public:
 
     std::string const& get_reducer_host() const { return m_reducer_host; }
 
-    int64_t get_reducer_port() const { return m_reducer_port; }
+    int get_reducer_port() const { return m_reducer_port; }
 
     int64_t get_job_id() const { return m_job_id; }
 
@@ -87,20 +87,20 @@ public:
      * Executed repeatedly in the main polling loop while the server is idle.
      * @return the new status of the ServerContext
      */
-    ServerStatus execute_assign_new_job();
+    ServerStatus take_job();
 
     /**
      * Write a new job status to the jobs table.
      * @return true on update success, false on failure
      */
-    bool execute_update_job_status(JobStatus new_status);
+    bool update_job_status(JobStatus new_status);
 
     /**
      * Poll the jobs table and check for an updated job status.
      * Executed repeatedly in the main polling loop when running a reduction operation.
      * @return the new status of the ServerContext
      */
-    ServerStatus execute_poll_job_done();
+    ServerStatus poll_job_done();
 
     /**
      * Upsert the current set of results from the reducer pipeline to MongoDB and clear the tags
@@ -145,18 +145,16 @@ public:
     void reset();
 
 private:
-    static constexpr char const cGetNewJobs[]
-            = "SELECT id, search_config FROM distributed_search_jobs WHERE status={}";
+    static constexpr char const cGetNewJobs[] = "SELECT id, search_config FROM {} WHERE status={}";
     static constexpr char const cTakeSearchJobStatement[]
-            = "UPDATE distributed_search_jobs SET status=?, reducer_port=?, reducer_host=? WHERE "
+            = "UPDATE {} SET status=?, reducer_port=?, reducer_host=? WHERE "
               "status=? and id=?";
-    static constexpr char const cUpdateJobStatusStatement[]
-            = "UPDATE distributed_search_jobs SET status=? WHERE id=?";
-    static constexpr char const cPollJobDone[]
-            = "SELECT status FROM distributed_search_jobs WHERE id={}";
-    std::string m_get_new_jobs;
-    std::unique_ptr<clp::MySQLPreparedStatement> m_take_search_job;
-    std::unique_ptr<clp::MySQLPreparedStatement> m_update_job_status;
+    static constexpr char const cUpdateJobStatusStatement[] = "UPDATE {} SET status=? WHERE id=?";
+    static constexpr char const cPollJobDone[] = "SELECT status FROM {} WHERE id={}";
+    std::string m_get_new_jobs_sql;
+    std::string m_poll_job_done_sql;
+    std::unique_ptr<clp::MySQLPreparedStatement> m_take_search_job_stmt;
+    std::unique_ptr<clp::MySQLPreparedStatement> m_update_job_status_stmt;
 
     boost::asio::io_context m_ioctx;
     boost::asio::ip::tcp::acceptor m_tcp_acceptor;
@@ -164,7 +162,7 @@ private:
     clp::MySQLDB m_db;  // TODO: consider switching to boost asio mysql connector
     ServerStatus m_status;
     int64_t m_job_id;
-    int64_t m_reducer_port;
+    int m_reducer_port;
     mongocxx::client m_mongodb_client;
     mongocxx::database m_mongodb_results_database;
     mongocxx::collection m_mongodb_results_collection;

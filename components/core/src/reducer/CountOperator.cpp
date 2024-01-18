@@ -18,16 +18,16 @@ void CountOperator::push_inter_stage_record_group(RecordGroup const& record_grou
 }
 
 std::unique_ptr<RecordGroupIterator> CountOperator::get_stored_result_iterator() {
-    return std::unique_ptr<RecordGroupIterator>(
-            new Int64MapRecordGroupIterator(m_group_count, "count")
-    );
+    return std::make_unique<Int64MapRecordGroupIterator>(m_group_count, "count");
 }
 
 std::unique_ptr<RecordGroupIterator> CountOperator::get_stored_result_iterator(
         std::set<GroupTags> const& filtered_tags
 ) {
-    return std::unique_ptr<RecordGroupIterator>(
-            new FilteredInt64MapRecordGroupIterator(m_group_count, filtered_tags, "count")
+    return std::make_unique<FilteredInt64MapRecordGroupIterator>(
+            m_group_count,
+            filtered_tags,
+            "count"
     );
 }
 }  // namespace reducer

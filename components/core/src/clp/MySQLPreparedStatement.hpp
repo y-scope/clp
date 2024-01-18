@@ -43,7 +43,7 @@ public:
     // Methods
     void set(char const* statement, size_t statement_length);
     bool execute();
-    int get_affected_rows();
+    bool get_affected_rows(uint64_t &num_affected_rows);
 
     MySQLParamBindings& get_statement_bindings() { return m_statement_bindings; }
 

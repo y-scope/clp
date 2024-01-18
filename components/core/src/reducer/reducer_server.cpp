@@ -1,8 +1,13 @@
 #include "reducer_server.hpp"
 
-#include <bsoncxx/builder/stream/document.hpp>
 #include <chrono>
 #include <map>
+
+#include <boost/asio.hpp>
+#include <boost/bind/bind.hpp>
+#include <bsoncxx/builder/stream/document.hpp>
+#include <fmt/core.h>
+#include <json/single_include/nlohmann/json.hpp>
 #include <mongocxx/bulk_write.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
@@ -12,11 +17,6 @@
 #include <mongocxx/model/replace_one.hpp>
 #include <mongocxx/uri.hpp>
 #include <msgpack.hpp>
-
-#include <boost/asio.hpp>
-#include <boost/bind/bind.hpp>
-#include <fmt/core.h>
-#include <json/single_include/nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include "../clp/MySQLDB.hpp"
@@ -73,30 +73,42 @@ ServerContext::ServerContext(CommandLineArguments& args)
                 args.get_db_database()
         );
     } catch (clp::MySQLDB::OperationFailed& e) {
-        SPDLOG_ERROR("Failed to connect to MySQL database error=", e.what());
-        throw OperationFailed(clp::ErrorCode_BadParam, __FILENAME__, __LINE__);
+        SPDLOG_ERROR(
+                "Failed to connect to {}:{} - {}",
+                args.get_db_host(),
+                args.get_db_port(),
+                e.what()
+        );
+        throw OperationFailed(e.get_error_code(), __FILENAME__, __LINE__);
     }
-    m_take_search_job = std::make_unique<clp::MySQLPreparedStatement>(
-            m_db.prepare_statement(cTakeSearchJobStatement, strlen(cTakeSearchJobStatement))
+    std::string take_search_job_stmt
+            = fmt::format(cTakeSearchJobStatement, args.get_db_jobs_table());
+    m_take_search_job_stmt = std::make_unique<clp::MySQLPreparedStatement>(
+            m_db.prepare_statement(take_search_job_stmt.data(), take_search_job_stmt.length())
     );
-    m_update_job_status = std::make_unique<clp::MySQLPreparedStatement>(
-            m_db.prepare_statement(cUpdateJobStatusStatement, strlen(cUpdateJobStatusStatement))
+    std::string update_job_status_stmt
+            = fmt::format(cUpdateJobStatusStatement, args.get_db_jobs_table());
+    m_update_job_status_stmt = std::make_unique<clp::MySQLPreparedStatement>(
+            m_db.prepare_statement(update_job_status_stmt.data(), update_job_status_stmt.length())
     );
-    m_get_new_jobs
-            = (fmt::format(cGetNewJobs, clp::enum_to_underlying_type(JobStatus::PENDING_REDUCER)));
+    m_get_new_jobs_sql = fmt::format(
+            cGetNewJobs,
+            args.get_db_jobs_table(),
+            clp::enum_to_underlying_type(JobStatus::PENDING_REDUCER)
+    );
+    m_poll_job_done_sql = fmt::format(cPollJobDone, args.get_db_jobs_table(), "{}");
 
     try {
         m_mongodb_client = mongocxx::client(mongocxx::uri(args.get_mongodb_uri()));
-        m_mongodb_results_database
-                = mongocxx::database(m_mongodb_client[args.get_mongodb_database()]);
     } catch (mongocxx::exception& e) {
-        SPDLOG_ERROR("Failed to connect to MongoDB database error=", e.what());
+        SPDLOG_ERROR("Failed to connect to {} - {}", args.get_mongodb_uri(), e.what());
         throw OperationFailed(clp::ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
+    m_mongodb_results_database = mongocxx::database(m_mongodb_client[args.get_mongodb_database()]);
 }
 
-ServerStatus ServerContext::execute_assign_new_job() {
-    if (false == m_db.execute_query(m_get_new_jobs)) {
+ServerStatus ServerContext::take_job() {
+    if (false == m_db.execute_query(m_get_new_jobs_sql)) {
         return ServerStatus::FINISHING_REDUCER_ERROR;
     }
 
@@ -111,26 +123,30 @@ ServerStatus ServerContext::execute_assign_new_job() {
     }
 
     for (auto& job : available_jobs) {
-        clp::MySQLParamBindings& bindings = m_take_search_job->get_statement_bindings();
+        clp::MySQLParamBindings& bindings = m_take_search_job_stmt->get_statement_bindings();
         int64_t reducer_ready = clp::enum_to_underlying_type(JobStatus::REDUCER_READY);
         int64_t pending_reducer = clp::enum_to_underlying_type(JobStatus::PENDING_REDUCER);
         bindings.bind_int64(0, reducer_ready);
-        bindings.bind_int64(1, m_reducer_port);
+        bindings.bind_int(1, m_reducer_port);
         bindings.bind_varchar(2, m_reducer_host.c_str(), m_reducer_host.length());
         bindings.bind_int64(3, pending_reducer);
         bindings.bind_int64(4, job.first);
-        if (false == m_take_search_job->execute()) {
+        if (false == m_take_search_job_stmt->execute()) {
             return ServerStatus::FINISHING_REDUCER_ERROR;
         }
 
-        if (m_take_search_job->get_affected_rows() > 0) {
+        uint64_t num_affected_rows;
+        if (false == m_take_search_job_stmt->get_affected_rows(num_affected_rows)) {
+            return ServerStatus::FINISHING_REDUCER_ERROR;
+        }
+
+        if (num_affected_rows > 0) {
             SPDLOG_INFO("Taking job {}", job.first);
             m_job_id = job.first;
 
             msgpack::object_handle handle = msgpack::unpack(job.second.data(), job.second.length());
 
-            // TODO: create a more robust method to specify reducer jobs
-            // and create pipelines
+            // TODO: create a more robust method to specify reducer jobs and create pipelines
             std::map<std::string, msgpack::type::variant> query_config = handle.get().convert();
             if (query_config.count("bucket_size")) {
                 m_timeline_aggregation = true;
@@ -138,16 +154,16 @@ ServerStatus ServerContext::execute_assign_new_job() {
                 m_timeline_aggregation = false;
             }
 
-            // For now all pipelines only perform count
+            // TODO: For now all pipelines only perform count. We will need to implement more
+            // general pipeline initialization once more operators are implemented.
             m_pipeline = std::make_unique<Pipeline>(PipelineInputMode::INTRA_STAGE);
-            m_pipeline->add_pipeline_stage(std::shared_ptr<Operator>(new CountOperator()));
+            m_pipeline->add_pipeline_stage(std::make_shared<CountOperator>());
 
-            // TODO: Inefficient to convert job_id back to a string since it was
-            // a string in the first place. Might be negligible compared to
-            // storing it as a string in addition to as an int.
-            std::string collection_name = std::to_string(job.first);
-            m_mongodb_results_collection
-                    = mongocxx::collection(m_mongodb_results_database[collection_name]);
+            // TODO: Inefficient to convert job_id back to a string since it was a string in the
+            // first place. Might be negligible compared to storing it as a string in addition to as
+            // an int.
+            auto collection_name = std::to_string(job.first);
+            m_mongodb_results_collection = m_mongodb_results_database[collection_name];
 
             return ServerStatus::RUNNING;
         }
@@ -155,17 +171,17 @@ ServerStatus ServerContext::execute_assign_new_job() {
     return ServerStatus::IDLE;
 }
 
-bool ServerContext::execute_update_job_status(JobStatus new_status) {
-    clp::MySQLParamBindings& bindings = m_update_job_status->get_statement_bindings();
+bool ServerContext::update_job_status(JobStatus new_status) {
+    clp::MySQLParamBindings& bindings = m_update_job_status_stmt->get_statement_bindings();
     int64_t new_status_int64 = clp::enum_to_underlying_type(new_status);
     bindings.bind_int64(0, new_status_int64);
     bindings.bind_int64(1, m_job_id);
 
-    return m_update_job_status->execute();
+    return m_update_job_status_stmt->execute();
 }
 
-ServerStatus ServerContext::execute_poll_job_done() {
-    if (false == m_db.execute_query(fmt::format(cPollJobDone, m_job_id))) {
+ServerStatus ServerContext::poll_job_done() {
+    if (false == m_db.execute_query(fmt::format(m_poll_job_done_sql, m_job_id))) {
         return ServerStatus::FINISHING_REDUCER_ERROR;
     }
 
@@ -540,9 +556,9 @@ void poll_db(
         boost::asio::steady_timer* poll_timer
 ) {
     if (ServerStatus::IDLE == ctx->get_status()) {
-        ctx->set_status(ctx->execute_assign_new_job());
+        ctx->set_status(ctx->take_job());
     } else if (ServerStatus::RUNNING == ctx->get_status()) {
-        ctx->set_status(ctx->execute_poll_job_done());
+        ctx->set_status(ctx->poll_job_done());
     }
 
     if (ServerStatus::RUNNING == ctx->get_status() && ctx->is_timeline_aggregation()) {
@@ -572,29 +588,28 @@ int main(int argc, char const* argv[]) {
     try {
         auto stderr_logger = spdlog::stderr_logger_st("stderr");
         spdlog::set_default_logger(stderr_logger);
-        spdlog::set_pattern("%Y-%m-%d %H:%M:%S,%e [%l] %v");
+        spdlog::set_pattern("%Y-%m-%dT%H:%M:%S.%e%z [%l] %v");
     } catch (std::exception& e) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
 
-    // mongocxx instance must be created before and destroyed after
-    // all other mongocxx classes
+    // mongocxx instance must be created before and destroyed after all other mongocxx classes
     mongocxx::instance inst;
 
     reducer::CommandLineArguments args("reducer_server");
     auto parsing_result = args.parse_arguments(argc, argv);
     if (parsing_result != clp::CommandLineArgumentsBase::ParsingResult::Success) {
-        SPDLOG_ERROR("Failed to parse arguments for reducer... exiting");
+        SPDLOG_CRITICAL("Failed to parse arguments for reducer");
         return -1;
     }
 
-    std::shared_ptr<reducer::ServerContext> ctx = nullptr;
+    std::shared_ptr<reducer::ServerContext> ctx;
 
     try {
         ctx = std::make_shared<reducer::ServerContext>(args);
     } catch (reducer::ServerContext::OperationFailed& exception) {
-        SPDLOG_ERROR("Failed to initialize reducer on error {}... exiting", exception.what());
+        SPDLOG_CRITICAL("Failed to initialize reducer on error {}", exception.what());
         return -1;
     }
 
@@ -611,7 +626,7 @@ int main(int argc, char const* argv[]) {
         if (ctx->get_tcp_acceptor().is_open()) {
             SPDLOG_INFO("Acceptor socket listening successfully");
         } else {
-            SPDLOG_ERROR("Failed to bind acceptor socket... exiting");
+            SPDLOG_CRITICAL("Failed to bind acceptor socket");
             return -1;
         }
 
@@ -637,19 +652,19 @@ int main(int argc, char const* argv[]) {
                 results_success = ctx->publish_pipeline_results();
             }
 
-            bool done_success = ctx->execute_update_job_status(reducer::JobStatus::SUCCESS);
+            bool done_success = ctx->update_job_status(reducer::JobStatus::SUCCESS);
             bool metrics_done_success
                     = ctx->publish_reducer_job_metrics(reducer::JobStatus::SUCCESS);
             if (false == results_success || false == done_success || false == metrics_done_success)
             {
-                SPDLOG_ERROR("Database operation failed... exiting");
+                SPDLOG_CRITICAL("Database operation failed");
                 return -1;
             }
         } else {
             SPDLOG_INFO("Job {} finished unsuccesfully", ctx->get_job_id());
             bool done_success = true, metrics_done_success = true;
             if (reducer::ServerStatus::FINISHING_REDUCER_ERROR == ctx->get_status()) {
-                done_success = ctx->execute_update_job_status(reducer::JobStatus::FAILED);
+                done_success = ctx->update_job_status(reducer::JobStatus::FAILED);
                 metrics_done_success = ctx->publish_reducer_job_metrics(reducer::JobStatus::FAILED);
             } else if (reducer::ServerStatus::FINISHING_CANCELLED == ctx->get_status()) {
                 metrics_done_success
@@ -659,7 +674,7 @@ int main(int argc, char const* argv[]) {
             }
 
             if (false == done_success || false == metrics_done_success) {
-                SPDLOG_ERROR("Database operation failed... exiting");
+                SPDLOG_CRITICAL("Database operation failed");
                 return -1;
             }
         }

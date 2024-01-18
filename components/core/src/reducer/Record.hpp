@@ -11,17 +11,17 @@
 namespace reducer {
 class Record {
 public:
-    virtual std::string_view get_string_value(std::string const& key) const {
+    virtual ~Record() = default;
+
+    virtual std::string_view get_string_view(std::string_view key) const {
         return std::string_view();
     }
 
-    virtual int64_t get_int64_value(std::string const& key) const { return 0.0; }
+    virtual int64_t get_int64_value(std::string_view key) const { return 0.0; }
 
-    virtual double get_double_value(std::string const& key) const { return 0; }
+    virtual double get_double_value(std::string_view key) const { return 0; }
 
-    virtual std::unique_ptr<RecordValueIterator> value_it() const = 0;
-
-    virtual ~Record() = default;
+    virtual std::unique_ptr<RecordValueIterator> value_iter() const = 0;
 };
 
 class StringRecordAdapter : public Record {
@@ -30,17 +30,15 @@ public:
 
     void set_record_value(std::string_view value) { m_value = value; }
 
-    virtual std::string_view get_string_value(std::string const& key) const {
+    virtual std::string_view get_string_view(std::string_view key) const {
         if (key == m_key_name) {
             return m_value;
         }
         return std::string_view();
     }
 
-    virtual std::unique_ptr<RecordValueIterator> value_it() const {
-        return std::unique_ptr<RecordValueIterator>(
-                new SimpleSingleValueIterator(m_key_name, ValueType::STRING)
-        );
+    virtual std::unique_ptr<RecordValueIterator> value_iter() const {
+        return std::make_unique<SingleValueIterator>(m_key_name, ValueType::STRING);
     }
 
 private:
@@ -54,17 +52,15 @@ public:
 
     void set_record_value(int64_t value) { m_value = value; }
 
-    virtual int64_t get_int64_value(std::string const& key) const {
+    virtual int64_t get_int64_value(std::string_view key) const {
         if (key == m_key_name) {
             return m_value;
         }
         return 0;
     }
 
-    virtual std::unique_ptr<RecordValueIterator> value_it() const {
-        return std::unique_ptr<RecordValueIterator>(
-                new SimpleSingleValueIterator(m_key_name, ValueType::INT64)
-        );
+    virtual std::unique_ptr<RecordValueIterator> value_iter() const {
+        return std::make_unique<SingleValueIterator>(m_key_name, ValueType::INT64);
     }
 
 private:
@@ -76,8 +72,8 @@ class EmptyRecord : public Record {
 public:
     EmptyRecord() {}
 
-    virtual std::unique_ptr<RecordValueIterator> value_it() const {
-        return std::unique_ptr<RecordValueIterator>(new EmptyRecordValueIterator());
+    virtual std::unique_ptr<RecordValueIterator> value_iter() const {
+        return std::make_unique<EmptyRecordValueIterator>();
     }
 };
 }  // namespace reducer

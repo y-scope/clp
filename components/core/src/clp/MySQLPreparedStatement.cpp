@@ -92,13 +92,13 @@ bool MySQLPreparedStatement::execute() {
     return true;
 }
 
-int MySQLPreparedStatement::get_affected_rows() {
-    if (m_statement_handle == nullptr) {
-        SPDLOG_ERROR("MySQLPreparedStatement: get_affected_rows called on uninitialized statement");
-        return 0;
+bool MySQLPreparedStatement::get_affected_rows(uint64_t &num_affected_rows) {
+    if (nullptr == m_statement_handle) {
+        throw OperationFailed(ErrorCode_NotInit, __FILE__, __LINE__);
     }
 
-    return mysql_stmt_affected_rows(m_statement_handle);
+    num_affected_rows = mysql_affected_rows(m_db_handle);
+    return num_affected_rows != ~static_cast<uint64_t>(0);
 }
 
 void MySQLPreparedStatement::close() {

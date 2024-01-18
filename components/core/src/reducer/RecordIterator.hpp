@@ -10,15 +10,15 @@
 namespace reducer {
 class RecordIterator {
 public:
+    virtual ~RecordIterator() = default;
     virtual Record const* get() = 0;
     virtual void next() = 0;
     virtual bool done() = 0;
-    virtual ~RecordIterator() = default;
 };
 
 class SingleRecordIterator : public RecordIterator {
 public:
-    SingleRecordIterator(Record const& record) : m_record(&record), m_done(false) {}
+    SingleRecordIterator(Record const* record) : m_record(record) {}
 
     virtual Record const* get() { return m_record; }
 
@@ -31,14 +31,14 @@ public:
 
 private:
     Record const* m_record;
-    bool m_done;
+    bool m_done{false};
 };
 
 class VectorRecordIterator : public RecordIterator {
 public:
-    VectorRecordIterator(std::vector<Record> const& record)
-            : m_cur(record.begin()),
-              m_end(record.end()) {}
+    VectorRecordIterator(std::vector<Record> const* records)
+            : m_cur(records->cbegin()),
+              m_end(records->cend()) {}
 
     virtual Record const* get() { return m_cur != m_end ? &*m_cur : nullptr; }
 

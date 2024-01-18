@@ -33,22 +33,22 @@ public:
 
     void set_record(nlohmann::json const* record) { m_record = record; }
 
-    virtual std::string_view get_string_value(std::string const& key) const {
+    virtual std::string_view get_string_view(std::string_view key) const {
         return (*m_record)[key].template get<std::string_view>();
     }
 
-    virtual int64_t get_int64_value(std::string const& key) const {
+    virtual int64_t get_int64_value(std::string_view key) const {
         return (*m_record)[key].template get<int64_t>();
     }
 
-    virtual double get_double_value(std::string const& key) const {
+    virtual double get_double_value(std::string_view key) const {
         return (*m_record)[key].template get<double>();
     }
 
     // FIXME: provide a real record value iterator
     // fine to omit for now since it isn't used by any existing code
-    std::unique_ptr<RecordValueIterator> value_it() const {
-        return std::unique_ptr<RecordValueIterator>(new EmptyRecordValueIterator());
+    std::unique_ptr<RecordValueIterator> value_iter() const {
+        return std::make_unique<EmptyRecordValueIterator>();
     }
 
 private:

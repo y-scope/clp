@@ -5,10 +5,8 @@
 #include <vector>
 
 namespace reducer {
-// We will do something fancier for GroupTags in the future,
-// but this is good enough to get started
-
-typedef std::vector<std::string> GroupTags;
+// We will do something fancier for GroupTags in the future, but this is good enough to get started
+using GroupTags = std::vector<std::string>;
 }  // namespace reducer
 
 #endif  // CLP_AGGREGATION_GROUPTAGS_HPP

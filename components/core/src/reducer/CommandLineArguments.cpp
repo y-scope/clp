@@ -17,10 +17,10 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             "reducer-host",
             po::value<std::string>(&m_reducer_host)
                 ->default_value(m_reducer_host),
-            "Host IP address of the server this reducer is running on"
+            "Host that this reducer should bind to"
         )(
             "reducer-port",
-            po::value<int64_t>(&m_reducer_port)
+            po::value<int>(&m_reducer_port)
                 ->default_value(m_reducer_port),
             "Port this reducer should listen on for connections"
         )(
@@ -30,9 +30,14 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             "Host the jobs database is running on"
         )(
             "db-port",
-            po::value<int64_t>(&m_db_port)
+            po::value<int>(&m_db_port)
                 ->default_value(m_db_port),
             "Port the jobs database is listening on"
+        )(
+            "db-user",
+            po::value<std::string>(&m_db_user)
+                ->default_value(m_db_user),
+            "User for the jobs database"
         )(
             "db-password",
             po::value<std::string>(&m_db_password)
@@ -43,6 +48,11 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             po::value<std::string>(&m_db_database)
                 ->default_value(m_db_database),
             "Database containing the jobs table"
+        )(
+            "db-jobs-table",
+            po::value<std::string>(&m_db_jobs_table)
+                ->default_value(m_db_jobs_table),
+            "Name of the table containing jobs"
         )(
             "mongodb-database",
             po::value<std::string>(&m_mongodb_database)

@@ -14,16 +14,18 @@ serialize(RecordGroup const& group, std::vector<uint8_t>(ser)(nlohmann::json con
 
     for (auto it = group.record_it(); !it->done(); it->next()) {
         nlohmann::json record;
-        for (auto vit = it->get()->value_it(); !vit->done(); vit->next()) {
+        for (auto vit = it->get()->value_iter(); !vit->done(); vit->next()) {
             TypedRecordKey tk = vit->get();
             switch (tk.type) {
                 case ValueType::INT64:
-                    record[*tk.key] = it->get()->get_int64_value(*tk.key);
+                    record[tk.key] = it->get()->get_int64_value(tk.key);
                     break;
                 case ValueType::STRING:
-                    record[*tk.key] = it->get()->get_string_value(*tk.key);
+                    record[tk.key] = it->get()->get_string_view(tk.key);
+                    break;
                 case ValueType::DOUBLE:
-                    record[*tk.key] = it->get()->get_double_value(*tk.key);
+                    record[tk.key] = it->get()->get_double_value(tk.key);
+                    break;
             }
         }
         records.push_back(std::move(record));
@@ -68,14 +70,14 @@ DeserializedRecordGroup::DeserializedRecordGroup(std::vector<uint8_t>& serialize
 }
 
 DeserializedRecordGroup::DeserializedRecordGroup(char* buf, size_t len)
-        : m_record_group(nlohmann::json::from_msgpack<char>(buf, len)) {
+        : m_record_group(nlohmann::json::from_msgpack(buf, buf + len)) {
     init_tags_from_json();
 }
 
 std::unique_ptr<RecordIterator> DeserializedRecordGroup::record_it() const {
-    return std::unique_ptr<RecordIterator>(new DeserializedRecordIterator(
+    return std::make_unique<DeserializedRecordIterator>(
             m_record_group["records"].template get<nlohmann::json::array_t>()
-    ));
+    );
 }
 
 GroupTags const& DeserializedRecordGroup::get_tags() const {

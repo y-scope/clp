@@ -13,9 +13,9 @@
 namespace reducer {
 class RecordGroup {
 public:
+    virtual ~RecordGroup() = default;
     virtual std::unique_ptr<RecordIterator> record_it() const = 0;
     virtual GroupTags const& get_tags() const = 0;
-    virtual ~RecordGroup() = default;
 };
 
 // TODO: change these to pointer-based so we can have nullptr/default init
@@ -29,7 +29,7 @@ public:
               m_record(record) {}
 
     virtual std::unique_ptr<RecordIterator> record_it() const {
-        return std::unique_ptr<RecordIterator>(new SingleRecordIterator(*m_record));
+        return std::make_unique<SingleRecordIterator>(m_record);
     }
 
     virtual GroupTags const& get_tags() const { return *m_tags; }
@@ -52,7 +52,7 @@ public:
               m_records(records) {}
 
     virtual std::unique_ptr<RecordIterator> record_it() const {
-        return std::unique_ptr<RecordIterator>(new VectorRecordIterator(*m_records));
+        return std::make_unique<VectorRecordIterator>(m_records);
     }
 
     virtual GroupTags const& get_tags() const { return *m_tags; }
