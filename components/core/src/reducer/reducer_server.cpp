@@ -18,6 +18,7 @@
 #include <mongocxx/uri.hpp>
 #include <msgpack.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
+#include <string_utils/string_utils.hpp>
 
 #include "../clp/MySQLDB.hpp"
 #include "../clp/MySQLPreparedStatement.hpp"
@@ -118,7 +119,11 @@ ServerStatus ServerContext::take_job() {
     while (it.contains_element()) {
         it.get_field_as_string(0, job_id_str);
         it.get_field_as_string(1, search_config);
-        available_jobs.push_back({stoi(job_id_str), std::move(search_config)});
+        int64_t job_id;
+        if (!clp::string_utils::convert_string_to_int(job_id_str, job_id)) {
+            return ServerStatus::FINISHING_REDUCER_ERROR;
+        }
+        available_jobs.emplace_back(job_id, std::move(search_config));
         it.get_next();
     }
 
@@ -597,11 +602,13 @@ int main(int argc, char const* argv[]) {
     // mongocxx instance must be created before and destroyed after all other mongocxx classes
     mongocxx::instance inst;
 
-    reducer::CommandLineArguments args("reducer_server");
+    reducer::CommandLineArguments args("reducer-server");
     auto parsing_result = args.parse_arguments(argc, argv);
-    if (parsing_result != clp::CommandLineArgumentsBase::ParsingResult::Success) {
+    if (clp::CommandLineArgumentsBase::ParsingResult::Failure == parsing_result) {
         SPDLOG_CRITICAL("Failed to parse arguments for reducer");
         return -1;
+    } else if (clp::CommandLineArgumentsBase::ParsingResult::InfoCommand == parsing_result) {
+        return 0;
     }
 
     std::shared_ptr<reducer::ServerContext> ctx;
