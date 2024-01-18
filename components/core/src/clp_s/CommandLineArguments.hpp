@@ -21,12 +21,7 @@ public:
     };
 
     // Constructors
-    explicit CommandLineArguments(std::string const& program_name)
-            : m_program_name(program_name),
-              m_compression_level(3),
-              m_target_encoded_size(8UL * 1024 * 1024 * 1024),  // 8 GiB
-              m_mongodb_enabled(false),
-              m_batch_size(1000) {}
+    explicit CommandLineArguments(std::string const& program_name) : m_program_name(program_name) {}
 
     // Methods
     ParsingResult parse_arguments(int argc, char const* argv[]);
@@ -76,14 +71,14 @@ private:
     std::string m_archives_dir;
     std::string m_output_dir;
     std::string m_timestamp_key;
-    int m_compression_level;
-    size_t m_target_encoded_size;
+    int m_compression_level = 3;
+    size_t m_target_encoded_size = 8UL * 1024 * 1024 * 1024;  // 8 GiB
 
     // MongoDB configuration variables
-    bool m_mongodb_enabled;
+    bool m_mongodb_enabled = false;
     std::string m_mongodb_uri;
     std::string m_mongodb_collection;
-    uint64_t m_batch_size;
+    uint64_t m_batch_size = 1000;
 
     // Search variables
     std::string m_query;
