@@ -109,9 +109,9 @@ void MultiLogtypeTablesManager::get_variable_row_at_offset(
         Message& msg
 ) {
     if (m_logtype_tables.find(logtype_id) != m_logtype_tables.end()) {
-        m_logtype_tables[logtype_id].get_row_at_offset(offset, msg);
+        m_logtype_tables[logtype_id].get_message_at_offset(offset, msg);
     } else if (m_combined_tables.find(logtype_id) != m_combined_tables.end()) {
-        m_combined_tables[logtype_id].get_row_at_offset(offset, msg);
+        m_combined_tables[logtype_id].get_message_at_offset(offset, msg);
     } else {
         SPDLOG_ERROR("request logtype id is invalid {}", logtype_id);
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);

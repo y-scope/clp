@@ -337,7 +337,7 @@ bool Archive::find_message_matching_with_logtype_query_from_combined(
 ) {
     while (true) {
         // break if there's no next message
-        if (!m_logtype_table_manager.m_combined_table_segment
+        if (!m_logtype_table_manager.m_combined_tables
                      .get_next_message_partial(msg, left_boundary, right_boundary))
         {
             break;
@@ -348,14 +348,14 @@ bool Archive::find_message_matching_with_logtype_query_from_combined(
                 if (possible_sub_query.matches_vars(msg.get_vars())) {
                     // Message matches completely, so set remaining properties
                     wildcard = possible_sub_query.get_wildcard_flag();
-                    m_logtype_table_manager.m_combined_table_segment
+                    m_logtype_table_manager.m_combined_tables
                             .get_remaining_message(msg, left_boundary, right_boundary);
                     return true;
                 }
             }
         }
         // if there is no match, skip next row
-        m_logtype_table_manager.m_combined_table_segment.skip_next_row();
+        m_logtype_table_manager.m_combined_tables.skip_next_row();
     }
     return false;
 }
@@ -392,15 +392,15 @@ void Archive::find_message_matching_with_logtype_query_optimized(
         Query const& query
 ) {
     epochtime_t ts;
-    size_t num_row = m_logtype_table_manager.m_variable_columns.get_num_row();
-    size_t num_column = m_logtype_table_manager.m_variable_columns.get_num_column();
+    size_t num_row = m_logtype_table_manager.m_logtype_table.get_num_row();
+    size_t num_column = m_logtype_table_manager.m_logtype_table.get_num_column();
     std::vector<encoded_variable_t> vars_to_load(num_column);
     for (size_t row_ix = 0; row_ix < num_row; row_ix++) {
         m_logtype_table_manager.peek_next_ts(ts);
         if (query.timestamp_is_in_search_time_range(ts)) {
             // that means we need to loop through every loop. that takes time.
             for (auto const& possible_sub_query : logtype_query) {
-                m_logtype_table_manager.m_variable_columns.get_next_row(
+                m_logtype_table_manager.m_logtype_table.get_next_row(
                         vars_to_load,
                         possible_sub_query.m_l_b,
                         possible_sub_query.m_r_b

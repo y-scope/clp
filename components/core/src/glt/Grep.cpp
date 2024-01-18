@@ -1168,7 +1168,7 @@ size_t Grep::output_message_in_segment_within_time_range(
     // Get the correct order of looping through logtypes
     auto const& logtype_order = archive.get_logtype_table_manager().get_single_order();
     for (auto const& logtype_id : logtype_order) {
-        archive.get_logtype_table_manager().load_variable_columns(logtype_id);
+        archive.get_logtype_table_manager().open_logtype_table(logtype_id);
         archive.get_logtype_table_manager().load_all();
         auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_variables();
         compressed_msg.resize_var(num_vars);
@@ -1207,7 +1207,7 @@ size_t Grep::output_message_in_segment_within_time_range(
             output_func(orig_file_path, compressed_msg, decompressed_msg, output_func_arg);
             ++num_matches;
         }
-        archive.get_logtype_table_manager().close_variable_columns();
+        archive.get_logtype_table_manager().close_logtype_table();
     }
     return num_matches;
 }
@@ -1232,7 +1232,7 @@ size_t Grep::output_message_in_combined_segment_within_time_range(
 
         for (auto const& logtype_id : logtype_order) {
             // load the logtype id
-            archive.get_logtype_table_manager().open_combined_logtype_table(logtype_id);
+            archive.get_logtype_table_manager().load_logtype_table_from_combine(logtype_id);
             auto num_vars
                     = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_variables();
             compressed_msg.resize_var(num_vars);
@@ -1240,8 +1240,9 @@ size_t Grep::output_message_in_combined_segment_within_time_range(
             while (num_matches < limit) {
                 // Find matching message
                 bool found_message
-                        = archive.get_logtype_table_manager()
-                                  .m_combined_table_segment.get_next_full_row(compressed_msg);
+                        = archive.get_logtype_table_manager().m_combined_tables.get_next_message(
+                                compressed_msg
+                        );
                 if (!found_message) {
                     break;
                 }
@@ -1274,7 +1275,7 @@ size_t Grep::output_message_in_combined_segment_within_time_range(
                 output_func(orig_file_path, compressed_msg, decompressed_msg, output_func_arg);
                 ++num_matches;
             }
-            archive.get_logtype_table_manager().m_combined_table_segment.close_logtype_table();
+            archive.get_logtype_table_manager().m_combined_tables.close_logtype_table();
         }
         archive.get_logtype_table_manager().close_combined_table();
     }
@@ -1300,7 +1301,7 @@ size_t Grep::search_segment_all_columns_and_output(
         // preload the data
         auto logtype_id = query_for_logtype.m_logtype_id;
         auto const& sub_queries = query_for_logtype.m_queries;
-        archive.get_logtype_table_manager().load_variable_columns(logtype_id);
+        archive.get_logtype_table_manager().open_logtype_table(logtype_id);
         archive.get_logtype_table_manager().load_all();
         auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_variables();
         compressed_msg.resize_var(num_vars);
@@ -1349,7 +1350,7 @@ size_t Grep::search_segment_all_columns_and_output(
             output_func(orig_file_path, compressed_msg, decompressed_msg, output_func_arg);
             ++logtype_matches;
         }
-        archive.get_logtype_table_manager().close_variable_columns();
+        archive.get_logtype_table_manager().close_logtype_table();
         num_matches += logtype_matches;
     }
 
@@ -1373,7 +1374,7 @@ size_t Grep::search_combined_table_and_output(
     archive.get_logtype_table_manager().open_combined_table(table_id);
     for (auto const& iter : queries) {
         logtype_dictionary_id_t logtype_id = iter.m_logtype_id;
-        archive.get_logtype_table_manager().open_combined_logtype_table(logtype_id);
+        archive.get_logtype_table_manager().load_logtype_table_from_combine(logtype_id);
 
         auto const& queries_by_logtype = iter.m_queries;
 
@@ -1430,7 +1431,7 @@ size_t Grep::search_combined_table_and_output(
             output_func(orig_file_path, compressed_msg, decompressed_msg, output_func_arg);
             ++num_matches;
         }
-        archive.get_logtype_table_manager().m_combined_table_segment.close_logtype_table();
+        archive.get_logtype_table_manager().m_combined_tables.close_logtype_table();
     }
     archive.get_logtype_table_manager().close_combined_table();
     return num_matches;
@@ -1454,7 +1455,7 @@ size_t Grep::search_segment_optimized_and_output(
         // preload the data
         auto logtype_id = query_for_logtype.m_logtype_id;
         auto const& sub_queries = query_for_logtype.m_queries;
-        archive.get_logtype_table_manager().load_variable_columns(logtype_id);
+        archive.get_logtype_table_manager().open_logtype_table(logtype_id);
 
         size_t left_boundary, right_boundary;
         Grep::get_boundaries(sub_queries, left_boundary, right_boundary);
@@ -1481,7 +1482,7 @@ size_t Grep::search_segment_optimized_and_output(
             std::vector<epochtime_t> loaded_ts(num_potential_matches);
             std::vector<file_id_t> loaded_file_id(num_potential_matches);
             std::vector<encoded_variable_t> loaded_vars(num_potential_matches * num_vars);
-            archive.get_logtype_table_manager().m_variable_columns.load_remaining_data_into_vec(
+            archive.get_logtype_table_manager().m_logtype_table.load_remaining_data_into_vec(
                     loaded_ts,
                     loaded_file_id,
                     loaded_vars,
@@ -1496,7 +1497,7 @@ size_t Grep::search_segment_optimized_and_output(
                     query
             );
         }
-        archive.get_logtype_table_manager().close_variable_columns();
+        archive.get_logtype_table_manager().close_logtype_table();
     }
 
     return num_matches;

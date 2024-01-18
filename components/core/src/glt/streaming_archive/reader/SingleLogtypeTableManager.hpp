@@ -11,15 +11,21 @@
 namespace glt::streaming_archive::reader {
 class SingleLogtypeTableManager : public streaming_archive::reader::LogtypeTableManager {
 public:
-    SingleLogtypeTableManager() : m_variable_column_loaded(false){};
-    void load_variable_columns(logtype_dictionary_id_t logtype_id);
-    void close_variable_columns();
-    bool get_next_row(Message& msg);
-    bool peek_next_ts(epochtime_t& ts);
+    SingleLogtypeTableManager() : m_logtype_table_loaded(false){};
+    void open_logtype_table(logtype_dictionary_id_t logtype_id);
+    void close_logtype_table();
+
     void load_all();
-    void skip_row();
     void load_partial_columns(size_t l, size_t r);
     void load_ts();
+
+    void skip_row();
+    bool get_next_row(Message& msg);
+    bool peek_next_ts(epochtime_t& ts);
+
+    void open_combined_table(combined_table_id_t table_id);
+    void close_combined_table();
+    void load_logtype_table_from_combine(logtype_dictionary_id_t logtype_id);
 
     void rearrange_queries(
             std::unordered_map<logtype_dictionary_id_t, LogtypeQueries> const& src_queries,
@@ -27,18 +33,9 @@ public:
             std::map<combined_table_id_t, std::vector<LogtypeQueries>>& combined_table_queries
     );
 
-    void open_combined_table(combined_table_id_t table_id);
-    void open_and_preload_combined_table(
-            combined_table_id_t table_id,
-            logtype_dictionary_id_t logtype_id
-    );
-    void open_preloaded_combined_logtype_table(logtype_dictionary_id_t logtype_id);
-    void close_combined_table();
-    void open_combined_logtype_table(logtype_dictionary_id_t logtype_id);
-
-    bool m_variable_column_loaded;
-    LogtypeTable m_variable_columns;
-    CombinedLogtypeTable m_combined_table_segment;
+    bool m_logtype_table_loaded;
+    LogtypeTable m_logtype_table;
+    CombinedLogtypeTable m_combined_tables;
 
     // compressor for combined table. try to reuse only one compressor
 #if USE_PASSTHROUGH_COMPRESSION
