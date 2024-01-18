@@ -21,7 +21,12 @@ public:
     };
 
     // Constructors
-    explicit CommandLineArguments(std::string const& program_name) : m_program_name(program_name) {}
+    explicit CommandLineArguments(std::string const& program_name)
+            : m_program_name(program_name),
+              m_compression_level(3),
+              m_target_encoded_size(8UL * 1024 * 1024 * 1024),  // 8 GB
+              m_mongodb_enabled(false),
+              m_batch_size(1000) {}
 
     // Methods
     ParsingResult parse_arguments(int argc, char const* argv[]);
@@ -46,9 +51,9 @@ public:
 
     std::string const& get_mongodb_uri() const { return m_mongodb_uri; }
 
-    std::string const& get_mongodb_database() const { return m_mongodb_database; }
-
     std::string const& get_mongodb_collection() const { return m_mongodb_collection; }
+
+    uint64_t get_batch_size() const { return m_batch_size; }
 
     std::string const& get_query() const { return m_query; }
 
@@ -77,8 +82,8 @@ private:
     // MongoDB configuration variables
     bool m_mongodb_enabled;
     std::string m_mongodb_uri;
-    std::string m_mongodb_database;
     std::string m_mongodb_collection;
+    uint64_t m_batch_size;
 
     // Search variables
     std::string m_query;

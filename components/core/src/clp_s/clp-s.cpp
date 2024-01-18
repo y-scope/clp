@@ -119,10 +119,11 @@ int main(int argc, char const* argv[]) {
 
         std::shared_ptr<OutputHandler> output_handler;
         if (command_line_arguments.get_mongodb_enabled()) {
-            output_handler = std::make_shared<MongoOutputHandler>(
+            output_handler = std::make_shared<ResultsCacheOutputHandler>(
                     command_line_arguments.get_mongodb_uri(),
-                    command_line_arguments.get_mongodb_database(),
-                    command_line_arguments.get_mongodb_collection()
+                    command_line_arguments.get_mongodb_collection(),
+                    command_line_arguments.get_batch_size(),
+                    false  // set it to false because we don't implement timestamp extraction
             );
         } else {
             output_handler = std::make_shared<StandardOutputHandler>();

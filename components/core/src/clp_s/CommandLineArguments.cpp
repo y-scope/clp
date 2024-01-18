@@ -100,18 +100,19 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format off
             compression_options.add_options()(
                     "compression-level",
-                    po::value<int>(&m_compression_level)->value_name("LEVEL")->default_value(3),
+                    po::value<int>(&m_compression_level)->value_name("LEVEL")->
+                        default_value(m_compression_level),
                     "1 (fast/low compression) to 9 (slow/high compression)."
             )(
                     "target-encoded-size",
                     po::value<size_t>(&m_target_encoded_size)->value_name("TARGET_ENCODED_SIZE")->
-                        default_value(8UL * 1024 * 1024 * 1024),  // 8 GiB
+                        default_value(m_target_encoded_size),
                     "Target size (B) for the dictionaries and encoded messages before a new "
                     "archive is created."
             )(
                     "timestamp-key",
                     po::value<std::string>(&m_timestamp_key)->value_name("TIMESTAMP_COLUMN_KEY")->
-                        default_value(""),
+                        default_value(m_timestamp_key),
                     "Path (e.g. x.y) for the field containing the log event's timestamp."
             );
             // clang-format on
@@ -218,12 +219,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             po::options_description search_options;
             // clang-format off
             search_options.add_options()(
-                    "mongodb-config",
-                    po::value<std::vector<std::string>>()->value_name("MONGODB_CONFIG")->
-                        multitoken(),
-                    "The uri, database, and collection for the MongoDB instance that the "
-                    "search results should be sent to."
-            )(
                     "archives-dir",
                     po::value<std::string>(&m_archives_dir),
                     "The directory containing the archives"
@@ -237,6 +232,25 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             po::positional_options_description positional_options;
             positional_options.add("archives-dir", 1);
             positional_options.add("query", 1);
+
+            po::options_description mongodb_options;
+            // clang-format off
+            mongodb_options.add_options()(
+                    "mongodb-uri",
+                    po::value<std::string>(&m_mongodb_uri)->value_name("MONGODB_URI"),
+                    "MongoDB URI to connect to"
+            )(
+                    "mongodb-collection",
+                    po::value<std::string>(&m_mongodb_collection)->value_name("MONGODB_COLLECTION"),
+                    "MongoDB collection to output to"
+            )(
+                    "batch-size",
+                    po::value<uint64_t>(&m_batch_size)->value_name("BATCH_SIZE")->
+                        default_value(m_batch_size),
+                    "The number of documents to insert to MongoDB in a batch"
+            );
+            // clang-format on
+            search_options.add(mongodb_options);
 
             std::vector<std::string> unrecognized_options
                     = po::collect_unrecognized(parsed.options, po::include_positional);
@@ -255,30 +269,38 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 print_search_usage();
 
                 std::cerr << "Examples:" << std::endl;
-                std::cerr << "  # Search archives-dir for logs matching a KQL query" << std::endl;
-                std::cerr << "  " << m_program_name << " s archives-dir kql-query" << std::endl;
+                std::cerr << "  # Search archives-dir for logs matching a KQL query"
+                             R"( "level: INFO" and output to stdout)"
+                          << std::endl;
+                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
+                          << std::endl;
                 std::cerr << std::endl;
+
+                std::cerr << "  # Search archives-dir for logs matching a KQL query"
+                             R"( "level: INFO" and output to MongoDB)"
+                          << std::endl;
+                std::cerr << "  " << m_program_name
+                          << " s --mongodb-uri mongodb://127.0.0.1:27017/test --mongodb-collection "
+                             R"(test archives-dir "level: INFO")"
+                          << std::endl;
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
+                visible_options.add(mongodb_options);
                 std::cerr << visible_options << '\n';
                 return ParsingResult::InfoCommand;
             }
 
-            if (parsed_command_line_options.count("mongodb-config")) {
-                auto const& mongodb_config = parsed_command_line_options["mongodb-config"]
-                                                     .as<std::vector<std::string>>();
-                if (mongodb_config.size() != 5) {
-                    throw std::invalid_argument(
-                            "mongodb-config must be a list of 3 strings: uri, database, collection"
+            if (false == m_mongodb_uri.empty() || false == m_mongodb_collection.empty()) {
+                if (m_mongodb_uri.empty() || m_mongodb_collection.empty()) {
+                    throw std::invalid_argument("MongoDB uri and collection must be both specified"
                     );
                 }
+
                 m_mongodb_enabled = true;
-                m_mongodb_uri = mongodb_config[0];
-                m_mongodb_database = mongodb_config[1];
-                m_mongodb_collection = mongodb_config[2];
-                m_archives_dir = mongodb_config[3];
-                m_query = mongodb_config[4];
+                if (m_batch_size == 0) {
+                    throw std::invalid_argument("Batch size must be greater than 0");
+                }
             } else {
                 m_mongodb_enabled = false;
             }
