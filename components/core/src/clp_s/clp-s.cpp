@@ -117,7 +117,7 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
 
-        std::shared_ptr<OutputHandler> output_handler;
+        std::unique_ptr<OutputHandler> output_handler;
         mongocxx::instance mongocxx_instance{};
         if (command_line_arguments.get_mongodb_enabled()) {
             output_handler = std::make_unique<ResultsCacheOutputHandler>(
@@ -126,7 +126,7 @@ int main(int argc, char const* argv[]) {
                     command_line_arguments.get_batch_size()
             );
         } else {
-            output_handler = std::make_shared<StandardOutputHandler>();
+            output_handler = std::make_unique<StandardOutputHandler>();
         }
 
         // output result
@@ -137,7 +137,7 @@ int main(int argc, char const* argv[]) {
                 expr,
                 archives_dir,
                 timestamp_dict,
-                output_handler
+                std::move(output_handler)
         );
         output.filter();
     }
