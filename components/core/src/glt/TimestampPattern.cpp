@@ -176,7 +176,8 @@ void TimestampPattern::init() {
     // E.g. 01-21 11:56:42.392
     patterns.emplace_back(0, "%m-%d %H:%M:%S.%3");
     // E.g. 916321
-    patterns.emplace_back(0, "%#3");
+    // GLT TODO: Disable this timestamp to avoid unexpected behavior in GLT
+    // patterns.emplace_back(0, "%#3");
 
     // Initialize m_known_ts_patterns with vector's contents
     m_known_ts_patterns_len = patterns.size();

@@ -414,10 +414,11 @@ size_t Archive::decompress_messages_and_output (logtype_dictionary_id_t logtype_
             SPDLOG_ERROR("streaming_archive::reader::Archive: Failed to decompress variables from logtype id {}", logtype_id);
             throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
         }
-        const std::string fixed_timestamp_pattern = "%Y-%m-%d %H:%M:%S,%3";
-        TimestampPattern ts_pattern(0, fixed_timestamp_pattern);
-        ts_pattern.insert_formatted_timestamp(ts[ix], decompressed_msg);
-
+        if (ts[ix] != 0) {
+            const std::string fixed_timestamp_pattern = "%Y-%m-%d %H:%M:%S,%3";
+            TimestampPattern ts_pattern(0, fixed_timestamp_pattern);
+            ts_pattern.insert_formatted_timestamp(ts[ix], decompressed_msg);
+        }
         // Perform wildcard match if required
         // Check if:
         // - Sub-query requires wildcard match, or
@@ -451,9 +452,11 @@ bool Archive::decompress_message_with_fixed_timestamp_pattern (const Message& co
         SPDLOG_ERROR("streaming_archive::reader::Archive: Failed to decompress variables from logtype id {}", compressed_msg.get_logtype_id());
         return false;
     }
-    const std::string fixed_timestamp_pattern = "%Y-%m-%d %H:%M:%S,%3";
-    TimestampPattern ts_pattern(0, fixed_timestamp_pattern);
-    ts_pattern.insert_formatted_timestamp(compressed_msg.get_ts_in_milli(), decompressed_msg);
+    if (compressed_msg.get_ts_in_milli() != 0) {
+        const std::string fixed_timestamp_pattern = "%Y-%m-%d %H:%M:%S,%3";
+        TimestampPattern ts_pattern(0, fixed_timestamp_pattern);
+        ts_pattern.insert_formatted_timestamp(compressed_msg.get_ts_in_milli(), decompressed_msg);
+    }
     return true;
 }
 }  // namespace glt::streaming_archive::reader
