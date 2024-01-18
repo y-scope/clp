@@ -15,26 +15,18 @@ namespace clp_s::search {
 class OutputHandler {
 public:
     explicit OutputHandler(bool output_timestamp, bool decompress_full_log = true)
-            : output_timestamp_(output_timestamp),
-              decompress_full_log_(decompress_full_log) {}
+            : m_output_timestamp(output_timestamp) {}
 
     virtual ~OutputHandler() = default;
 
-    virtual void Write(std::string const& message, epochtime_t timestamp) = 0;
-    virtual void Write(std::string const& message) = 0;
-    virtual void Flush() = 0;
+    virtual void write(std::string const& message, epochtime_t timestamp) = 0;
+    virtual void write(std::string const& message) = 0;
+    virtual void flush() = 0;
 
-    bool OutputTimestamp() const { return output_timestamp_; }
-
-    bool DecompressFullLog() const { return decompress_full_log_; }
-
-    void SetDecompressFullLog(bool decompress_full_log) {
-        decompress_full_log_ = decompress_full_log;
-    }
+    bool output_timestamp() const { return m_output_timestamp; }
 
 protected:
-    bool output_timestamp_;
-    bool decompress_full_log_;
+    bool m_output_timestamp;
 };
 
 class StandardOutputHandler : public OutputHandler {
@@ -42,13 +34,13 @@ public:
     explicit StandardOutputHandler(bool output_timestamp = false)
             : OutputHandler(output_timestamp) {}
 
-    void Write(std::string const& message, epochtime_t timestamp) override {
+    void write(std::string const& message, epochtime_t timestamp) override {
         printf("%lld %s", timestamp, message.c_str());
     }
 
-    void Flush() override {}
+    void flush() override {}
 
-    void Write(std::string const& message) override { printf("%s", message.c_str()); }
+    void write(std::string const& message) override { printf("%s", message.c_str()); }
 };
 
 class ResultsCacheOutputHandler : public OutputHandler {
@@ -77,7 +69,7 @@ public:
         }
     }
 
-    void Flush() override {
+    void flush() override {
         try {
             if (!m_results.empty()) {
                 m_collection.insert_many(m_results);
@@ -88,7 +80,7 @@ public:
         }
     }
 
-    void Write(std::string const& message, epochtime_t timestamp) override {
+    void write(std::string const& message, epochtime_t timestamp) override {
         try {
             auto document = bsoncxx::builder::basic::make_document(
                     bsoncxx::builder::basic::kvp("path", "logs.ndjson"),
@@ -107,7 +99,7 @@ public:
         }
     }
 
-    void Write(std::string const& message) override { Write(message, 0); }
+    void write(std::string const& message) override { write(message, 0); }
 
 private:
     mongocxx::client m_client;

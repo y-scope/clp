@@ -110,12 +110,12 @@ void Output::filter() {
 
             reader.initialize_filter(this);
             while (reader.get_next_message(message, this)) {
-                m_output_handler->Write(message);
+                m_output_handler->write(message);
             }
             reader.close();
         }
 
-        m_output_handler->Flush();
+        m_output_handler->flush();
 
         m_var_dict->close();
         m_log_dict->close();
