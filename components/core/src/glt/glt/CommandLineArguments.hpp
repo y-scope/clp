@@ -27,7 +27,7 @@ public:
               m_target_encoded_file_size(512L * 1024 * 1024),
               m_target_data_size_of_dictionaries(100L * 1024 * 1024),
               m_compression_level(3),
-              m_glt_combine_threshold(0.1) {}
+              m_combine_threshold(0.1) {}
 
     // Methods
     ParsingResult parse_arguments(int argc, char const* argv[]) override;
@@ -58,7 +58,7 @@ public:
 
     int get_compression_level() const { return m_compression_level; }
 
-    double get_glt_combine_threshold() const { return m_glt_combine_threshold; }
+    double get_combine_threshold() const { return m_combine_threshold; }
 
     Command get_command() const { return m_command; }
 
@@ -85,7 +85,7 @@ private:
     size_t m_target_segment_uncompressed_size;
     size_t m_target_data_size_of_dictionaries;
     int m_compression_level;
-    double m_glt_combine_threshold;
+    double m_combine_threshold;
     Command m_command;
     std::string m_archives_dir;
     std::vector<std::string> m_input_paths;

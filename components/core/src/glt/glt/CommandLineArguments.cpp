@@ -273,10 +273,10 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     "Print statistics (ndjson) about each archive as it's compressed"
             )(
                     "combine-threshold",
-                    po::value<double>(&m_glt_combine_threshold)
+                    po::value<double>(&m_combine_threshold)
                             ->value_name("VALUE")
-                            ->default_value(m_glt_combine_threshold),
-                    "Percentage threshold used to determine if a logtype should be"
+                            ->default_value(m_combine_threshold),
+                    "Target percentage threshold for a logtype to be stored in the combined table"
             )(
                     "progress",
                     po::bool_switch(&m_show_progress),
@@ -361,8 +361,11 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     );
                 }
             }
-            if (m_glt_combine_threshold < 0 || m_glt_combine_threshold > 100) {
-                throw invalid_argument("specified combined-threshold is %d invalid");
+            if (m_combine_threshold < 0 || m_combine_threshold > 100) {
+                throw invalid_argument(
+                        "specified combined-threshold " + std::to_string(m_combine_threshold)
+                        + "is invalid, must be between 0 and 100"
+                );
             }
         }
 
