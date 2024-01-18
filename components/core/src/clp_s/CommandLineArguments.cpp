@@ -247,7 +247,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "batch-size",
                     po::value<uint64_t>(&m_batch_size)->value_name("BATCH_SIZE")->
                         default_value(m_batch_size),
-                    "The number of documents to insert to MongoDB in a batch"
+                    "The number of documents to insert into MongoDB in a batch"
             );
             // clang-format on
             search_options.add(mongodb_options);
@@ -280,8 +280,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                              R"( "level: INFO" and output to MongoDB)"
                           << std::endl;
                 std::cerr << "  " << m_program_name
-                          << " s --mongodb-uri mongodb://127.0.0.1:27017/test --mongodb-collection "
-                             R"(test archives-dir "level: INFO")"
+                          << " s --mongodb-uri mongodb://127.0.0.1:27017/test --mongodb-collection"
+                             R"( test archives-dir "level: INFO")"
                           << std::endl;
 
                 po::options_description visible_options;
@@ -293,7 +293,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             if (false == m_mongodb_uri.empty() || false == m_mongodb_collection.empty()) {
                 if (m_mongodb_uri.empty() || m_mongodb_collection.empty()) {
-                    throw std::invalid_argument("MongoDB uri and collection must be both specified"
+                    throw std::invalid_argument(
+                            "MongoDB uri and collection must be specified together"
                     );
                 }
 

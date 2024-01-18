@@ -10,32 +10,50 @@
 #include <mongocxx/uri.hpp>
 
 #include "../Defs.hpp"
+#include "../TraceableException.hpp"
 
 namespace clp_s::search {
+/**
+ * Abstract class for handling output from the search command.
+ */
 class OutputHandler {
 public:
-    explicit OutputHandler(bool output_timestamp, bool decompress_full_log = true)
-            : m_output_timestamp(output_timestamp) {}
+    // Constructor
+    explicit OutputHandler() = default;
 
+    // Destructor
     virtual ~OutputHandler() = default;
 
+    /**
+     * Writes a message to the output handler.
+     * @param message The message to write.
+     * @param timestamp The timestamp of the message.
+     */
     virtual void write(std::string const& message, epochtime_t timestamp) = 0;
+
+    /**
+     * Writes a message to the output handler.
+     * @param message The message to write.
+     */
     virtual void write(std::string const& message) = 0;
+
+    /**
+     * Flushes the output handler.
+     */
     virtual void flush() = 0;
-
-    bool output_timestamp() const { return m_output_timestamp; }
-
-protected:
-    bool m_output_timestamp;
 };
 
+/**
+ * Output handler that writes to standard output.
+ */
 class StandardOutputHandler : public OutputHandler {
 public:
-    explicit StandardOutputHandler(bool output_timestamp = false)
-            : OutputHandler(output_timestamp) {}
+    // Constructor
+    explicit StandardOutputHandler() = default;
 
+    // Methods inherited from OutputHandler
     void write(std::string const& message, epochtime_t timestamp) override {
-        printf("%lld %s", timestamp, message.c_str());
+        printf("%" EPOCHTIME_T_PRINTF_FMT " %s", timestamp, message.c_str());
     }
 
     void flush() override {}
@@ -43,6 +61,9 @@ public:
     void write(std::string const& message) override { printf("%s", message.c_str()); }
 };
 
+/**
+ * Output handler that writes to a MongoDB collection.
+ */
 class ResultsCacheOutputHandler : public OutputHandler {
 public:
     class OperationFailed : public TraceableException {
@@ -52,52 +73,17 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
+    // Constructor
     ResultsCacheOutputHandler(
             std::string const& uri,
             std::string const& collection,
-            uint64_t batch_size,
-            bool output_timestamp = true
-    )
-            : OutputHandler(output_timestamp),
-              m_batch_size(batch_size) {
-        try {
-            auto mongo_uri = mongocxx::uri(uri);
-            m_client = mongocxx::client(mongo_uri);
-            m_collection = m_client[mongo_uri.database()][collection];
-        } catch (mongocxx::exception const& e) {
-            throw OperationFailed(ErrorCode::ErrorCodeBadParamDbUri, __FILENAME__, __LINE__);
-        }
-    }
+            uint64_t batch_size
+    );
 
-    void flush() override {
-        try {
-            if (!m_results.empty()) {
-                m_collection.insert_many(m_results);
-                m_results.clear();
-            }
-        } catch (mongocxx::exception const& e) {
-            throw OperationFailed(ErrorCode::ErrorCodeFailureDbBulkWrite, __FILENAME__, __LINE__);
-        }
-    }
+    // Methods inherited from OutputHandler
+    void flush() override;
 
-    void write(std::string const& message, epochtime_t timestamp) override {
-        try {
-            auto document = bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp("path", "logs.ndjson"),
-                    bsoncxx::builder::basic::kvp("message", message),
-                    bsoncxx::builder::basic::kvp("timestamp", timestamp)
-            );
-
-            m_results.push_back(std::move(document));
-
-            if (m_results.size() >= m_batch_size) {
-                m_collection.insert_many(m_results);
-                m_results.clear();
-            }
-        } catch (mongocxx::exception const& e) {
-            throw OperationFailed(ErrorCode::ErrorCodeFailureDbBulkWrite, __FILENAME__, __LINE__);
-        }
-    }
+    void write(std::string const& message, epochtime_t timestamp) override;
 
     void write(std::string const& message) override { write(message, 0); }
 

@@ -118,13 +118,12 @@ int main(int argc, char const* argv[]) {
         }
 
         std::shared_ptr<OutputHandler> output_handler;
-        mongocxx::instance mongocxx_instance_{};
+        mongocxx::instance mongocxx_instance{};
         if (command_line_arguments.get_mongodb_enabled()) {
-            output_handler = std::make_shared<ResultsCacheOutputHandler>(
+            output_handler = std::make_unique<ResultsCacheOutputHandler>(
                     command_line_arguments.get_mongodb_uri(),
                     command_line_arguments.get_mongodb_collection(),
-                    command_line_arguments.get_batch_size(),
-                    false  // set it to false because we don't implement timestamp extraction
+                    command_line_arguments.get_batch_size()
             );
         } else {
             output_handler = std::make_shared<StandardOutputHandler>();

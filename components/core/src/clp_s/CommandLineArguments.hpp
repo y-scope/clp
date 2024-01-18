@@ -24,7 +24,7 @@ public:
     explicit CommandLineArguments(std::string const& program_name)
             : m_program_name(program_name),
               m_compression_level(3),
-              m_target_encoded_size(8UL * 1024 * 1024 * 1024),  // 8 GB
+              m_target_encoded_size(8UL * 1024 * 1024 * 1024),  // 8 GiB
               m_mongodb_enabled(false),
               m_batch_size(1000) {}
 
