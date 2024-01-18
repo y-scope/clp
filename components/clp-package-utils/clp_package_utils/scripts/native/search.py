@@ -156,7 +156,7 @@ def create_and_monitor_job_in_db(db_config: Database, results_cache: ResultsCach
         with pymongo.MongoClient(results_cache.get_uri()) as client:
             search_results_collection = client[results_cache.db_name][str(job_id)]
             for document in search_results_collection.find():
-                print(document)
+                print(f"{document['original_path']}: {document['message']}")
 
 
 async def worker_connection_handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
