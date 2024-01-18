@@ -15,6 +15,7 @@ public:
     // Constructors
     explicit CommandLineArguments(std::string const& program_name)
             : CommandLineArgumentsBase(program_name),
+              m_batch_size(1000),
               m_ignore_case(false),
               m_search_begin_ts(cEpochTimeMin),
               m_search_end_ts(cEpochTimeMax) {}
@@ -25,6 +26,12 @@ public:
     std::string const& get_search_controller_host() const { return m_search_controller_host; }
 
     std::string const& get_search_controller_port() const { return m_search_controller_port; }
+
+    std::string const& get_mongodb_uri() const { return m_mongodb_uri; }
+
+    std::string const& get_mongodb_collection() const { return m_mongodb_collection; }
+
+    uint64_t get_batch_size() const { return m_batch_size; }
 
     std::string const& get_archive_path() const { return m_archive_path; }
 
@@ -45,6 +52,9 @@ private:
     // Variables
     std::string m_search_controller_host;
     std::string m_search_controller_port;
+    std::string m_mongodb_uri;
+    std::string m_mongodb_collection;
+    uint64_t m_batch_size;
     std::string m_archive_path;
     bool m_ignore_case;
     std::string m_search_string;
