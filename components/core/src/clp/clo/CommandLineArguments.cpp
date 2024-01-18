@@ -83,7 +83,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     po::options_description options_batch_control("Batch Controls");
     options_batch_control.add_options()(
             "batch-size,b",
-            po::value<uint64_t>(&m_batch_size)->value_name("SIZE")->default_value(1000),
+            po::value<uint64_t>(&m_batch_size)->value_name("SIZE")->default_value(m_batch_size),
             "Batch size"
     );
 

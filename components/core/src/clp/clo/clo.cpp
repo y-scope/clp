@@ -63,7 +63,7 @@ connect_to_search_controller(string const& controller_host, string const& contro
  * @param archive
  * @param file_metadata_ix
  * @param query_cancelled
- * @param mongo_client
+ * @param results_cache_client
  * @return SearchFilesResult::OpenFailure on failure to open a compressed file
  * @return SearchFilesResult::ResultSendFailure on failure to send a result
  * @return SearchFilesResult::Success otherwise
@@ -73,21 +73,21 @@ static SearchFilesResult search_files(
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
         std::atomic_bool const& query_cancelled,
-        ResultsCacheClient& mongo_client
+        ResultsCacheClient& results_cache_client
 );
 /**
  * Searches an archive with the given path
  * @param command_line_args
  * @param archive_path
  * @param query_cancelled
- * @param mongo_client
+ * @param results_cache_client
  * @return true on success, false otherwise
  */
 static bool search_archive(
         CommandLineArguments const& command_line_args,
         boost::filesystem::path const& archive_path,
         std::atomic_bool const& query_cancelled,
-        ResultsCacheClient& mongo_client
+        ResultsCacheClient& results_cache_client
 );
 
 static int
@@ -144,7 +144,7 @@ static SearchFilesResult search_files(
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
         std::atomic_bool const& query_cancelled,
-        ResultsCacheClient& mongo_client
+        ResultsCacheClient& results_cache_client
 ) {
     SearchFilesResult result = SearchFilesResult::Success;
 
@@ -177,7 +177,7 @@ static SearchFilesResult search_files(
                        decompressed_message
                ))
         {
-            mongo_client.add_result(
+            results_cache_client.add_result(
                     compressed_file.get_orig_path(),
                     decompressed_message,
                     compressed_message.get_ts_in_milli()
@@ -194,7 +194,7 @@ static bool search_archive(
         CommandLineArguments const& command_line_args,
         boost::filesystem::path const& archive_path,
         std::atomic_bool const& query_cancelled,
-        ResultsCacheClient& mongo_client
+        ResultsCacheClient& results_cache_client
 ) {
     if (false == boost::filesystem::exists(archive_path)) {
         SPDLOG_ERROR("Archive '{}' does not exist.", archive_path.c_str());
@@ -272,14 +272,14 @@ static bool search_archive(
                 archive_reader,
                 file_metadata_ix,
                 query_cancelled,
-                mongo_client
+                results_cache_client
         );
         if (SearchFilesResult::ResultSendFailure == result) {
             // Stop search now since results aren't reaching the controller
             break;
         }
     }
-    mongo_client.flush();
+    results_cache_client.flush();
     file_metadata_ix_ptr.reset(nullptr);
 
     archive_reader.close();
@@ -320,8 +320,8 @@ int main(int argc, char const* argv[]) {
         return -1;
     }
 
-    mongocxx::instance instance_{};
-    ResultsCacheClient mongo_client(
+    mongocxx::instance mongocxx_instance{};
+    ResultsCacheClient results_cache_client(
             command_line_args.get_mongodb_uri(),
             command_line_args.get_mongodb_collection(),
             command_line_args.get_batch_size()
@@ -339,7 +339,7 @@ int main(int argc, char const* argv[]) {
                     command_line_args,
                     archive_path,
                     controller_monitoring_thread.get_query_cancelled(),
-                    mongo_client
+                    results_cache_client
             ))
         {
             return_value = -1;

@@ -13,7 +13,7 @@
 
 namespace clp::clo {
 /**
- * Class encapsulating a MongoDB client used to send query results to results cache.
+ * Class encapsulating a MongoDB client used to send query results to results the cache.
  */
 class ResultsCacheClient {
 public:
@@ -32,7 +32,7 @@ public:
     ResultsCacheClient(
             std::string const& uri,
             std::string const& collection,
-            uint64_t batch_size = 1000
+            uint64_t batch_size
     );
 
     // Methods

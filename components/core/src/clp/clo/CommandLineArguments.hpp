@@ -15,6 +15,7 @@ public:
     // Constructors
     explicit CommandLineArguments(std::string const& program_name)
             : CommandLineArgumentsBase(program_name),
+              m_batch_size(1000),
               m_ignore_case(false),
               m_search_begin_ts(cEpochTimeMin),
               m_search_end_ts(cEpochTimeMax) {}
