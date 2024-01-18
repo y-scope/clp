@@ -365,13 +365,17 @@ bool EncodedVariableInterpreter::decode_variables_into_message(
     return true;
 }
 
-bool EncodedVariableInterpreter::decode_variables_into_message_with_offset (const LogTypeDictionaryEntry& logtype_dict_entry, const VariableDictionaryReader& var_dict,
-                                                                            const vector<encoded_variable_t>& encoded_vars, string& decompressed_msg, size_t offset)
-{
+bool EncodedVariableInterpreter::decode_variables_into_message_with_offset(
+        LogTypeDictionaryEntry const& logtype_dict_entry,
+        VariableDictionaryReader const& var_dict,
+        vector<encoded_variable_t> const& encoded_vars,
+        string& decompressed_msg,
+        size_t offset
+) {
     size_t num_variables = logtype_dict_entry.get_num_variables();
 
     // Ensure the number of variables in the logtype matches the number of encoded variables given
-    const auto& logtype_value = logtype_dict_entry.get_value();
+    auto const& logtype_value = logtype_dict_entry.get_value();
 
     VariablePlaceholder var_placeholder;
     size_t constant_begin_pos = 0;
@@ -381,7 +385,8 @@ bool EncodedVariableInterpreter::decode_variables_into_message_with_offset (cons
         size_t var_position = logtype_dict_entry.get_variable_info(var_ix, var_placeholder);
         size_t var_index = offset + var_ix;
         // Add the constant that's between the last variable and this one
-        decompressed_msg.append(logtype_value, constant_begin_pos, var_position - constant_begin_pos);
+        decompressed_msg
+                .append(logtype_value, constant_begin_pos, var_position - constant_begin_pos);
 
         switch (var_placeholder) {
             case VariablePlaceholder::Integer:

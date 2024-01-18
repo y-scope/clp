@@ -16,7 +16,7 @@
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 
-using glt::gltg::CommandLineArguments;
+using glt::combined_table_id_t;
 using glt::CommandLineArgumentsBase;
 using glt::epochtime_t;
 using glt::ErrorCode;
@@ -24,13 +24,13 @@ using glt::ErrorCode_errno;
 using glt::FileReader;
 using glt::GlobalMetadataDB;
 using glt::GlobalMetadataDBConfig;
+using glt::gltg::CommandLineArguments;
 using glt::Grep;
 using glt::load_lexer_from_file;
+using glt::LogtypeQueries;
 using glt::Profiler;
 using glt::Query;
-using glt::LogtypeQueries;
 using glt::segment_id_t;
-using glt::combined_table_id_t;
 using glt::streaming_archive::MetadataDB;
 using glt::streaming_archive::reader::Archive;
 using glt::streaming_archive::reader::File;
@@ -97,7 +97,7 @@ static size_t search_files(
  * @param segment_id
  * @return The total number of matches found across all files
  */
-static size_t search_segments (
+static size_t search_segments(
         vector<Query>& queries,
         CommandLineArguments::OutputMethod output_method,
         Archive& archive,
@@ -112,8 +112,8 @@ static size_t search_segments (
  * @param segment_id
  * @return The total number of matches found across all files
  */
-static size_t find_message_in_segment_within_time_range (
-        const Query& query,
+static size_t find_message_in_segment_within_time_range(
+        Query const& query,
         CommandLineArguments::OutputMethod output_method,
         Archive& archive
 );
@@ -293,14 +293,23 @@ static bool search(
                 for (auto segment_id : archive.get_valid_segment()) {
                     archive.open_logtype_table_manager(segment_id);
                     // There should be only one query for a superceding query case
-                    const auto& query = queries.at(0);
-                    num_matches += find_message_in_segment_within_time_range(query, command_line_args.get_output_method(), archive);
+                    auto const& query = queries.at(0);
+                    num_matches += find_message_in_segment_within_time_range(
+                            query,
+                            command_line_args.get_output_method(),
+                            archive
+                    );
                     archive.close_logtype_table_manager();
                 }
             } else {
                 for (auto segment_id : ids_of_segments_to_search) {
                     archive.open_logtype_table_manager(segment_id);
-                    num_matches += search_segments(queries, command_line_args.get_output_method(), archive, segment_id);
+                    num_matches += search_segments(
+                            queries,
+                            command_line_args.get_output_method(),
+                            archive,
+                            segment_id
+                    );
                     archive.close_logtype_table_manager();
                 }
             }
@@ -402,8 +411,11 @@ static size_t search_files(
     return num_matches;
 }
 
-static size_t find_message_in_segment_within_time_range (const Query& query, const CommandLineArguments::OutputMethod output_method, Archive& archive)
-{
+static size_t find_message_in_segment_within_time_range(
+        Query const& query,
+        CommandLineArguments::OutputMethod const output_method,
+        Archive& archive
+) {
     size_t num_matches = 0;
 
     // Setup output method
@@ -422,14 +434,29 @@ static size_t find_message_in_segment_within_time_range (const Query& query, con
             SPDLOG_ERROR("Unknown output method - {}", (char)output_method);
             return num_matches;
     }
-    num_matches = Grep::output_message_in_segment_within_time_range(query, SIZE_MAX, archive, output_func, output_func_arg);
-    num_matches += Grep::output_message_in_combined_segment_within_time_range(query, SIZE_MAX, archive, output_func, output_func_arg);
+    num_matches = Grep::output_message_in_segment_within_time_range(
+            query,
+            SIZE_MAX,
+            archive,
+            output_func,
+            output_func_arg
+    );
+    num_matches += Grep::output_message_in_combined_segment_within_time_range(
+            query,
+            SIZE_MAX,
+            archive,
+            output_func,
+            output_func_arg
+    );
     return num_matches;
-
 }
 
-static size_t search_segments (vector<Query>& queries, const CommandLineArguments::OutputMethod output_method, Archive& archive, size_t segment_id)
-{
+static size_t search_segments(
+        vector<Query>& queries,
+        CommandLineArguments::OutputMethod const output_method,
+        Archive& archive,
+        size_t segment_id
+) {
     size_t num_matches = 0;
 
     // Setup output method
@@ -453,21 +480,42 @@ static size_t search_segments (vector<Query>& queries, const CommandLineArgument
         query.make_sub_queries_relevant_to_segment(segment_id);
         // here convert old queries to new query type
         auto converted_logtype_based_queries = Grep::get_converted_logtype_query(query, segment_id);
-        // use a vector to hold queries so they are sorted based on the ascending or descending order of their size,
-        // i.e. the order they appear in the segment.
+        // use a vector to hold queries so they are sorted based on the ascending or descending
+        // order of their size, i.e. the order they appear in the segment.
         std::vector<LogtypeQueries> single_table_queries;
         // first level index is basically combined table index
-        // because we might not search through all combined tables, the first level is a map instead of a vector.
+        // because we might not search through all combined tables, the first level is a map instead
+        // of a vector.
         std::map<combined_table_id_t, std::vector<LogtypeQueries>> combined_table_queires;
-        archive.get_logtype_table_manager().rearrange_queries(converted_logtype_based_queries, single_table_queries, combined_table_queires);
+        archive.get_logtype_table_manager().rearrange_queries(
+                converted_logtype_based_queries,
+                single_table_queries,
+                combined_table_queires
+        );
 
         // first search through the single variable table
-        // num_matches += Grep::search_segment_all_columns_and_output(single_table_queries, query, SIZE_MAX, archive, output_func, output_func_arg);
-        num_matches += Grep::search_segment_optimized_and_output(single_table_queries, query, SIZE_MAX, archive, output_func, output_func_arg);
-        for(const auto& iter : combined_table_queires) {
+        // num_matches += Grep::search_segment_all_columns_and_output(single_table_queries, query,
+        // SIZE_MAX, archive, output_func, output_func_arg);
+        num_matches += Grep::search_segment_optimized_and_output(
+                single_table_queries,
+                query,
+                SIZE_MAX,
+                archive,
+                output_func,
+                output_func_arg
+        );
+        for (auto const& iter : combined_table_queires) {
             combined_table_id_t table_id = iter.first;
-            const auto& combined_logtype_queries = iter.second;
-            num_matches += Grep::search_combined_table_and_output(table_id, combined_logtype_queries, query, SIZE_MAX, archive, output_func, output_func_arg);
+            auto const& combined_logtype_queries = iter.second;
+            num_matches += Grep::search_combined_table_and_output(
+                    table_id,
+                    combined_logtype_queries,
+                    query,
+                    SIZE_MAX,
+                    archive,
+                    output_func,
+                    output_func_arg
+            );
         }
     }
     return num_matches;

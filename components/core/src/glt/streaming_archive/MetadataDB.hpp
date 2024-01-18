@@ -97,7 +97,7 @@ public:
 
         // GLT specific
         size_t get_segment_logtypes_pos() const;
-        size_t get_segment_offset_pos () const;
+        size_t get_segment_offset_pos() const;
     };
 
     class EmptyDirectoryIterator : public Iterator {

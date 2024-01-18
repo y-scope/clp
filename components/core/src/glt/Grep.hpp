@@ -154,22 +154,23 @@ public:
      * @param output_func
      * @param output_func_arg
      * @return Number of matches found
-     * @throw streaming_archive::reader::Archive::OperationFailed if decompression unexpectedly fails
+     * @throw streaming_archive::reader::Archive::OperationFailed if decompression unexpectedly
+     * fails
      * @throw TimestampPattern::OperationFailed if failed to insert timestamp into message
      */
-    static size_t search_segment_all_columns_and_output (
-            const std::vector<LogtypeQueries>& queries,
-            const Query& query,
+    static size_t search_segment_all_columns_and_output(
+            std::vector<LogtypeQueries> const& queries,
+            Query const& query,
             size_t limit,
             streaming_archive::reader::Archive& archive,
             OutputFunc output_func,
             void* output_func_arg
     );
 
-    static size_t search_combined_table_and_output (
+    static size_t search_combined_table_and_output(
             combined_table_id_t table_id,
-            const std::vector<LogtypeQueries>& queries,
-            const Query& query,
+            std::vector<LogtypeQueries> const& queries,
+            Query const& query,
             size_t limit,
             streaming_archive::reader::Archive& archive,
             OutputFunc output_func,
@@ -185,19 +186,20 @@ public:
      * @param output_func
      * @param output_func_arg
      * @return Number of matches found
-     * @throw streaming_archive::reader::Archive::OperationFailed if decompression unexpectedly fails
+     * @throw streaming_archive::reader::Archive::OperationFailed if decompression unexpectedly
+     * fails
      * @throw TimestampPattern::OperationFailed if failed to insert timestamp into message
      */
-    static size_t output_message_in_segment_within_time_range (
-            const Query& query,
+    static size_t output_message_in_segment_within_time_range(
+            Query const& query,
             size_t limit,
             streaming_archive::reader::Archive& archive,
             OutputFunc output_func,
             void* output_func_arg
     );
 
-    static size_t output_message_in_combined_segment_within_time_range (
-            const Query& query,
+    static size_t output_message_in_combined_segment_within_time_range(
+            Query const& query,
             size_t limit,
             streaming_archive::reader::Archive& archive,
             OutputFunc output_func,
@@ -213,12 +215,13 @@ public:
      * @param output_func
      * @param output_func_arg
      * @return Number of matches found
-     * @throw streaming_archive::reader::Archive::OperationFailed if decompression unexpectedly fails
+     * @throw streaming_archive::reader::Archive::OperationFailed if decompression unexpectedly
+     * fails
      * @throw TimestampPattern::OperationFailed if failed to insert timestamp into message
      */
-    static size_t search_segment_optimized_and_output (
-            const std::vector<LogtypeQueries>& queries,
-            const Query& query,
+    static size_t search_segment_optimized_and_output(
+            std::vector<LogtypeQueries> const& queries,
+            Query const& query,
             size_t limit,
             streaming_archive::reader::Archive& archive,
             OutputFunc output_func,
@@ -227,19 +230,18 @@ public:
     /**
      * Converted a query of class Query into a set of LogtypeQueries, indexed by logtype_id
      * specifically, a Query could have n subqueries, each subquery has a fixed "vars_to_match" and
-     * a set of possible logtypes. The functions converts them into a logtypes->vector<vars_to_match> mapping
+     * a set of possible logtypes. The functions converts them into a
+     * logtypes->vector<vars_to_match> mapping
      *
      * @param query
      * @param segment_id
      * @return a ordered-map of list of associated LogtypeQueries indexed by logtype_id
      */
-    static std::unordered_map<logtype_dictionary_id_t, LogtypeQueries> get_converted_logtype_query(
-            const Query& query,
-            size_t segment_id
-    );
+    static std::unordered_map<logtype_dictionary_id_t, LogtypeQueries>
+    get_converted_logtype_query(Query const& query, size_t segment_id);
 
     static void get_boundaries(
-            const std::vector<LogtypeQuery>& sub_queries,
+            std::vector<LogtypeQuery> const& sub_queries,
             size_t& left_boundary,
             size_t& right_boundary
     );

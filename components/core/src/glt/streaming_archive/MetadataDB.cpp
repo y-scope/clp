@@ -463,12 +463,12 @@ void MetadataDB::open(string const& path) {
                     .second
             = "INTEGER";
 
-    file_field_names_and_types
-            [enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition)]
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition
+                               )]
             .first
             = streaming_archive::cMetadataDB::File::SegmentOffsetPosition;
-    file_field_names_and_types
-            [enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition)]
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition
+                               )]
             .second
             = "INTEGER";
 

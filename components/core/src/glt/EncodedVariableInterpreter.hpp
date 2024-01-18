@@ -138,10 +138,10 @@ public:
      * @param offset
      * @return true if successful, false otherwise
      */
-    static bool decode_variables_into_message_with_offset (
-            const LogTypeDictionaryEntry& logtype_dict_entry,
-            const VariableDictionaryReader& var_dict,
-            const std::vector<encoded_variable_t>& encoded_vars,
+    static bool decode_variables_into_message_with_offset(
+            LogTypeDictionaryEntry const& logtype_dict_entry,
+            VariableDictionaryReader const& var_dict,
+            std::vector<encoded_variable_t> const& encoded_vars,
             std::string& decompressed_msg,
             size_t var_offset
     );

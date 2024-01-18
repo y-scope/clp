@@ -2,9 +2,9 @@
 #define GLT_DEFS_H
 
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <cstddef>
 
 namespace glt {
 // Types
