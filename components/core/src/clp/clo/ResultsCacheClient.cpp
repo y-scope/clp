@@ -7,9 +7,13 @@ ResultsCacheClient::ResultsCacheClient(
         uint64_t batch_size
 )
         : m_batch_size(batch_size) {
-    auto mongo_uri = mongocxx::uri(uri);
-    m_client = mongocxx::client(mongo_uri);
-    m_collection = m_client[mongo_uri.database()][collection];
+    try {
+        auto mongo_uri = mongocxx::uri(uri);
+        m_client = mongocxx::client(mongo_uri);
+        m_collection = m_client[mongo_uri.database()][collection];
+    } catch (mongocxx::exception const& e) {
+        throw OperationFailed(ErrorCode::ErrorCode_BadParam_DB_URI, __FILE__, __LINE__);
+    }
 }
 
 void ResultsCacheClient::flush() {
