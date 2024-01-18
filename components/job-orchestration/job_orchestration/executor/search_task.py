@@ -16,7 +16,7 @@ logger = get_task_logger(__name__)
 
 def run_clo(job_id: int, task_id: int, clp_home: pathlib.Path, archive_output_dir: pathlib.Path,
             logs_dir: pathlib.Path, search_config: SearchConfig, archive_id: str,
-            results_cache_uri: str, results_cache_db_name: str):
+            results_cache_uri: str):
     """
     Searches the given archive for the given wildcard query
 
@@ -28,7 +28,6 @@ def run_clo(job_id: int, task_id: int, clp_home: pathlib.Path, archive_output_di
     :param search_config:
     :param archive_id:
     :param results_cache_uri:
-    :param results_cache_db_name:
     :return: tuple -- (whether the search was successful, output messages)
     """
     # Assemble search command
@@ -37,7 +36,6 @@ def run_clo(job_id: int, task_id: int, clp_home: pathlib.Path, archive_output_di
         search_config.search_controller_host,
         str(search_config.search_controller_port),
         results_cache_uri,
-        results_cache_db_name,
         str(job_id),
         str(archive_output_dir / archive_id),
         search_config.wildcard_query
@@ -80,7 +78,7 @@ def run_clo(job_id: int, task_id: int, clp_home: pathlib.Path, archive_output_di
 
 @app.task()
 def search(job_id: int, task_id: int, search_config_json: str, archive_id: str,
-           results_cache_uri: str, results_cache_db_name: str):
+           results_cache_uri: str):
     clp_home = os.getenv('CLP_HOME')
     archive_output_dir = os.getenv('CLP_ARCHIVE_OUTPUT_DIR')
     logs_dir = os.getenv('CLP_LOGS_DIR')
@@ -100,7 +98,7 @@ def search(job_id: int, task_id: int, search_config_json: str, archive_id: str,
     search_successful, worker_output = run_clo(job_id, task_id, pathlib.Path(clp_home),
                                                pathlib.Path(archive_output_dir),
                                                pathlib.Path(logs_dir), search_config, archive_id,
-                                               results_cache_uri, results_cache_db_name)
+                                               results_cache_uri)
 
     if search_successful:
         task_update.status = TaskStatus.SUCCEEDED

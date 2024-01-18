@@ -148,7 +148,7 @@ def schedule_compression_task(job: CompressionJob, task: CompressionTask, databa
 def schedule_search_task(job: SearchJob, task: SearchTask, results_cache: ResultsCache,
                          dctx: zstandard.ZstdDecompressor):
     args = (job.id, task.id, job.get_search_config_json_str(dctx), task.archive_id,
-            results_cache.get_uri(), results_cache.db_name)
+            results_cache.get_uri())
     return search.apply_async(args, task_id=str(task.id), queue=QueueName.SEARCH, priority=task.priority)
 
 
