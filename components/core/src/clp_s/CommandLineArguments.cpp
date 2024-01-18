@@ -297,13 +297,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                             "MongoDB uri and collection must be specified together"
                     );
                 }
-
-                m_mongodb_enabled = true;
                 if (m_batch_size == 0) {
                     throw std::invalid_argument("Batch size must be greater than 0");
                 }
-            } else {
-                m_mongodb_enabled = false;
+
+                m_mongodb_enabled = true;
             }
 
             if (m_archives_dir.empty()) {
