@@ -95,6 +95,14 @@ public:
     size_t get_placeholder_info(size_t placeholder_ix, ir::VariablePlaceholder& placeholder) const;
 
     /**
+     * Gets all info about a variable placeholder in the logtype
+     * @param placeholder_ix The index of the placeholder to get the info for
+     * @param placeholder
+     * @return The placeholder's position in the logtype, or SIZE_MAX if var_ix is out of bounds
+     */
+    size_t get_variable_info(size_t var_ix, ir::VariablePlaceholder& placeholder) const;
+
+    /**
      * Gets the size (in-memory) of the data contained in this entry
      * @return Size of the data contained in this entry
      */
@@ -174,10 +182,11 @@ public:
     // GLT specific
     size_t get_var_left_index_based_on_left_boundary(size_t left_pos) const;
     size_t get_var_right_index_based_on_right_boundary(size_t right_pos) const;
-    std::string get_human_readable_value() const;
+
 private:
     // Variables
     std::vector<size_t> m_placeholder_positions;
+    std::vector<size_t> m_variable_positions;
     size_t m_num_escaped_placeholders{0};
 };
 }  // namespace glt
