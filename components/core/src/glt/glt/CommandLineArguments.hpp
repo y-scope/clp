@@ -58,7 +58,7 @@ public:
 
     int get_compression_level() const { return m_compression_level; }
 
-    double get_glt_combine_threshold () const { return m_glt_combine_threshold; }
+    double get_glt_combine_threshold() const { return m_glt_combine_threshold; }
 
     Command get_command() const { return m_command; }
 

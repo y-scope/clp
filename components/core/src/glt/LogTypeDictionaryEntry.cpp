@@ -26,7 +26,7 @@ size_t LogTypeDictionaryEntry::get_placeholder_info(
 
 size_t LogTypeDictionaryEntry::get_variable_info(
         size_t var_ix,
-        ir::VariablePlaceholder &placeholder
+        ir::VariablePlaceholder& placeholder
 ) const {
     if (var_ix >= m_variable_positions.size()) {
         return SIZE_MAX;
@@ -209,13 +209,14 @@ size_t LogTypeDictionaryEntry::get_var_right_index_based_on_right_boundary(size_
     return get_num_variables();
 
     size_t var_ix;
-    for(var_ix = m_placeholder_positions.size(); var_ix > 0; var_ix--) {
-        if(m_placeholder_positions[var_ix-1] <= right_pos) {
+    for (var_ix = m_placeholder_positions.size(); var_ix > 0; var_ix--) {
+        if (m_placeholder_positions[var_ix - 1] <= right_pos) {
             return var_ix;
         }
     }
-    // in some extreme case, say input query is " \v ASKLDH"  but the logtype is " ASKLDH \V". this might
-    // return 0 because we can't tell a negative position. however, this should trigger some error?
+    // in some extreme case, say input query is " \v ASKLDH"  but the logtype is " ASKLDH \V". this
+    // might return 0 because we can't tell a negative position. however, this should trigger some
+    // error?
     return var_ix;
 }
 
@@ -224,8 +225,8 @@ size_t LogTypeDictionaryEntry::get_var_left_index_based_on_left_boundary(size_t 
     return 0;
 
     size_t var_ix;
-    for(var_ix = 0; var_ix < m_placeholder_positions.size(); var_ix++) {
-        if(m_placeholder_positions[var_ix] >= left_pos) {
+    for (var_ix = 0; var_ix < m_placeholder_positions.size(); var_ix++) {
+        if (m_placeholder_positions[var_ix] >= left_pos) {
             return var_ix;
         }
     }

@@ -62,6 +62,6 @@ private:
     epochtime_t m_search_begin_ts, m_search_end_ts;
     GlobalMetadataDBConfig m_metadata_db_config;
 };
-}  // namespace glt::clg
+}  // namespace glt::gltg
 
 #endif  // GLT_CLG_COMMANDLINEARGUMENTS_HPP

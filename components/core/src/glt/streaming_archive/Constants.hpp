@@ -50,7 +50,7 @@ constexpr char SegmentId[] = "segment_id";
 constexpr char SegmentTimestampsPosition[] = "segment_timestamps_position";
 constexpr char SegmentLogtypesPosition[] = "segment_logtypes_position";
 constexpr char SegmentVariablesPosition[] = "segment_variables_position";
-    constexpr char SegmentOffsetPosition[] = "segment_offset_position";
+constexpr char SegmentOffsetPosition[] = "segment_offset_position";
 constexpr char ArchiveId[] = "archive_id";
 }  // namespace File
 
@@ -60,9 +60,9 @@ constexpr char Path[] = "path";
 }  // namespace cMetadataDB
 
 namespace LogtypeTableType {
-    constexpr uint64_t NonCombined = 0;
-    constexpr uint64_t Combined = 1;
-} // namespace LogtypeTableType
+constexpr uint64_t NonCombined = 0;
+constexpr uint64_t Combined = 1;
+}  // namespace LogtypeTableType
 }  // namespace glt::streaming_archive
 
 #endif  // STREAMING_ARCHIVE_CONSTANTS_HPP

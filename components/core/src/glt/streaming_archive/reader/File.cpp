@@ -84,7 +84,7 @@ ErrorCode File::init(
 }
 
 ErrorCode File::open_me(
-        const LogTypeDictionaryReader& archive_logtype_dict,
+        LogTypeDictionaryReader const& archive_logtype_dict,
         MetadataDB::FileIterator const& file_metadata_ix,
         GLTSegment& segment,
         Segment& message_order_table
@@ -108,16 +108,22 @@ ErrorCode File::open_me(
         }
 
         num_bytes_to_read = m_num_messages * sizeof(logtype_dictionary_id_t);
-        ErrorCode error_code = message_order_table.try_read(m_segment_logtypes_decompressed_stream_pos,
-                                                  reinterpret_cast<char*>(m_segment_logtypes.get()), num_bytes_to_read);
+        ErrorCode error_code = message_order_table.try_read(
+                m_segment_logtypes_decompressed_stream_pos,
+                reinterpret_cast<char*>(m_segment_logtypes.get()),
+                num_bytes_to_read
+        );
         if (ErrorCode_Success != error_code) {
             close_me();
             return error_code;
         }
         m_logtypes = m_segment_logtypes.get();
         num_bytes_to_read = m_num_messages * sizeof(size_t);
-        error_code = message_order_table.try_read(m_segment_offsets_decompressed_stream_pos,
-                                                  reinterpret_cast<char*>(m_segment_offsets.get()), num_bytes_to_read);
+        error_code = message_order_table.try_read(
+                m_segment_offsets_decompressed_stream_pos,
+                reinterpret_cast<char*>(m_segment_offsets.get()),
+                num_bytes_to_read
+        );
         if (ErrorCode_Success != error_code) {
             close_me();
             return error_code;
@@ -131,7 +137,6 @@ ErrorCode File::open_me(
 }
 
 void File::close_me() {
-
     m_segment_logtypes_decompressed_stream_pos = 0;
     m_segment_offsets_decompressed_stream_pos = 0;
     m_logtype_table_offsets.clear();
@@ -150,8 +155,8 @@ void File::close_me() {
     m_archive_logtype_dict = nullptr;
 }
 
-size_t File::get_msg_offset (logtype_dictionary_id_t logtype_id, size_t msg_ix) {
-    if(m_logtype_table_offsets.find(logtype_id) == m_logtype_table_offsets.end()) {
+size_t File::get_msg_offset(logtype_dictionary_id_t logtype_id, size_t msg_ix) {
+    if (m_logtype_table_offsets.find(logtype_id) == m_logtype_table_offsets.end()) {
         m_logtype_table_offsets[logtype_id] = m_offsets[msg_ix];
     }
     size_t return_value = m_logtype_table_offsets[logtype_id];
@@ -181,7 +186,7 @@ bool File::get_next_message(Message& msg) {
     msg.set_timestamp(timestamp);
 
     auto const num_vars = logtype_dictionary_entry.get_num_variables();
-    if(num_vars > 0) {
+    if (num_vars > 0) {
         // The behavior here slight changed. the function will throw an error
         // if the attempt to load variable fails
         m_segment->get_variable_row_at_offset(logtype_id, variable_offset, msg);
@@ -192,26 +197,27 @@ bool File::get_next_message(Message& msg) {
     return true;
 }
 
-void File::reset_indices () {
+void File::reset_indices() {
     m_msgs_ix = 0;
 }
 
-const string& File::get_orig_path () const {
+string const& File::get_orig_path() const {
     return m_orig_path;
 }
 
-const std::vector<std::pair<uint64_t, TimestampPattern>>& File::get_timestamp_patterns () const {
+std::vector<std::pair<uint64_t, TimestampPattern>> const& File::get_timestamp_patterns() const {
     return m_timestamp_patterns;
 }
 
-epochtime_t File::get_current_ts_in_milli () const {
+epochtime_t File::get_current_ts_in_milli() const {
     return m_current_ts_in_milli;
 }
-size_t File::get_current_ts_pattern_ix () const {
+
+size_t File::get_current_ts_pattern_ix() const {
     return m_current_ts_pattern_ix;
 }
 
-void File::increment_current_ts_pattern_ix () {
+void File::increment_current_ts_pattern_ix() {
     ++m_current_ts_pattern_ix;
 }
 }  // namespace glt::streaming_archive::reader

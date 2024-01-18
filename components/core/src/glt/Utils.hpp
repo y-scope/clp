@@ -77,9 +77,15 @@ void load_lexer_from_file(
         bool done,
         log_surgeon::lexers::ByteLexer& forward_lexer_ptr
 );
-size_t get_variable_front_boundary_delimiter(const std::vector<std::string>& tokens, const std::string& logtype_str);
-size_t get_variable_back_boundary_delimiter(const std::vector<std::string>& tokens, const std::string& logtype_str);
-std::vector<std::string> split_wildcard(const std::string& input_str);
+size_t get_variable_front_boundary_delimiter(
+        std::vector<std::string> const& tokens,
+        std::string const& logtype_str
+);
+size_t get_variable_back_boundary_delimiter(
+        std::vector<std::string> const& tokens,
+        std::string const& logtype_str
+);
+std::vector<std::string> split_wildcard(std::string const& input_str);
 }  // namespace glt
 
 #endif  // GLT_UTILS_HPP

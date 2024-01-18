@@ -7,10 +7,10 @@
 #include "CompositeWildcardToken.hpp"
 #include "QueryMethodFailed.hpp"
 
+using clp::string_utils::is_wildcard;
 using glt::ir::eight_byte_encoded_variable_t;
 using glt::ir::four_byte_encoded_variable_t;
 using glt::ir::is_delim;
-using clp::string_utils::is_wildcard;
 using std::pair;
 using std::string;
 using std::string_view;

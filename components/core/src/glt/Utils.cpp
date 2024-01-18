@@ -303,34 +303,44 @@ void load_lexer_from_file(
         lexer.generate();
     }
 }
+
 // This return the index that's before the first token which contains a variable
-size_t get_variable_front_boundary_delimiter(const std::vector<std::string>& tokens, const std::string& logtype_str) {
-        enum class VarDelim {
-            // NOTE: These values are used within logtypes to denote variables, so care must be taken when changing them
-            Integer = 0x11,
-            Dictionary = 0x12,
-            Float = 0x13,
-            Length = 3
-        };
+size_t get_variable_front_boundary_delimiter(
+        std::vector<std::string> const& tokens,
+        std::string const& logtype_str
+) {
+    enum class VarDelim {
+        // NOTE: These values are used within logtypes to denote variables, so care must be taken
+        // when changing them
+        Integer = 0x11,
+        Dictionary = 0x12,
+        Float = 0x13,
+        Length = 3
+    };
 
     size_t left_boundary = 0;
-    for(const auto& token: tokens) {
+    for (auto const& token : tokens) {
         if (token == "*") {
             continue;
         }
         size_t found = logtype_str.find(token);
-        if(found == std::string::npos) {
-            SPDLOG_ERROR("ERROR, this is potentially because string in {} can be also variable dictionary value", token);
+        if (found == std::string::npos) {
+            SPDLOG_ERROR(
+                    "ERROR, this is potentially because string in {} can be also variable "
+                    "dictionary value",
+                    token
+            );
             throw;
         }
         size_t first_token_position = found;
-        if(first_token_position > left_boundary) {
+        if (first_token_position > left_boundary) {
             left_boundary = first_token_position;
         }
 
-        if (token.find((char) VarDelim::Integer) != std::string::npos ||
-            token.find((char) VarDelim::Dictionary) != std::string::npos ||
-            token.find((char) VarDelim::Float) != std::string::npos) {
+        if (token.find((char)VarDelim::Integer) != std::string::npos
+            || token.find((char)VarDelim::Dictionary) != std::string::npos
+            || token.find((char)VarDelim::Float) != std::string::npos)
+        {
             // This means we found a token containing a variable, we should stop.
             break;
         }
@@ -338,10 +348,13 @@ size_t get_variable_front_boundary_delimiter(const std::vector<std::string>& tok
     return left_boundary;
 }
 
-size_t get_variable_back_boundary_delimiter(const std::vector<std::string>& tokens, const std::string& logtype_str) {
-
+size_t get_variable_back_boundary_delimiter(
+        std::vector<std::string> const& tokens,
+        std::string const& logtype_str
+) {
     enum class VarDelim {
-        // NOTE: These values are used within logtypes to denote variables, so care must be taken when changing them
+        // NOTE: These values are used within logtypes to denote variables, so care must be taken
+        // when changing them
         Integer = 0x11,
         Dictionary = 0x12,
         Float = 0x13,
@@ -350,7 +363,7 @@ size_t get_variable_back_boundary_delimiter(const std::vector<std::string>& toke
 
     size_t right_boundary = UINT64_MAX;
     for (auto iter = tokens.rbegin(); iter != tokens.rend(); iter++) {
-        const auto &token = (*iter);
+        auto const& token = (*iter);
         if (token == "*") {
             continue;
         }
@@ -366,9 +379,10 @@ size_t get_variable_back_boundary_delimiter(const std::vector<std::string>& toke
             right_boundary = first_token_position + token.size();
         }
 
-        if (token.find((char) VarDelim::Integer) != std::string::npos ||
-            token.find((char) VarDelim::Dictionary) != std::string::npos ||
-                token.find((char) VarDelim::Float) != std::string::npos) {
+        if (token.find((char)VarDelim::Integer) != std::string::npos
+            || token.find((char)VarDelim::Dictionary) != std::string::npos
+            || token.find((char)VarDelim::Float) != std::string::npos)
+        {
             // This means we found a token containing a variable, we should stop.
             break;
         }
@@ -377,7 +391,7 @@ size_t get_variable_back_boundary_delimiter(const std::vector<std::string>& toke
     return right_boundary;
 }
 
-std::vector<std::string> split_wildcard(const std::string& input_str) {
+std::vector<std::string> split_wildcard(std::string const& input_str) {
     size_t pos = 0;
     std::vector<std::string> return_res;
     std::string token;
@@ -385,18 +399,18 @@ std::vector<std::string> split_wildcard(const std::string& input_str) {
 
     auto start = 0U;
     auto end = input_str.find(delim);
-    while (end != std::string::npos)
-    {
+    while (end != std::string::npos) {
         std::string matched = input_str.substr(start, end - start);
-        if(!matched.empty()){
+        if (!matched.empty()) {
             return_res.push_back(matched);
         }
         return_res.push_back(delim);
         start = end + delim.length();
         end = input_str.find(delim, start);
     }
-    // we should never see this, because the last token is always a * due to the natural of the query
-    if(start < input_str.size()) {
+    // we should never see this, because the last token is always a * due to the natural of the
+    // query
+    if (start < input_str.size()) {
         return_res.push_back(input_str.substr(start, end));
     }
     return return_res;

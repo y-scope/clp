@@ -12,8 +12,9 @@
 #include "../../LogTypeDictionaryWriter.hpp"
 #include "../../PageAllocatedVector.hpp"
 #include "../../TimestampPattern.hpp"
-#include "Segment.hpp"
 #include "GLTSegment.hpp"
+#include "Segment.hpp"
+
 namespace glt::streaming_archive::writer {
 /**
  * Class representing a log file encoded in three columns - timestamps, logtype IDs, and
@@ -80,7 +81,7 @@ public:
      * @param num_uncompressed_bytes
      * @param num_vars
      */
-    void write_encoded_msg (
+    void write_encoded_msg(
             epochtime_t timestamp,
             logtype_dictionary_id_t logtype_id,
             size_t offset,

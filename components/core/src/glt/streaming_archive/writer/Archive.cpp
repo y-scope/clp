@@ -32,8 +32,7 @@ using std::vector;
 
 namespace glt::streaming_archive::writer {
 Archive::~Archive() {
-    if (m_path.empty() == false || m_file != nullptr || m_files_in_segment.empty() == false)
-    {
+    if (m_path.empty() == false || m_file != nullptr || m_files_in_segment.empty() == false) {
         SPDLOG_ERROR("Archive not closed before being destroyed - data loss may occur");
         delete m_file;
         for (auto file : m_files_in_segment) {
@@ -195,8 +194,10 @@ void Archive::open(UserConfig const& user_config) {
     // Save file_id to file name mapping to disk
     std::string file_id_file_path = m_path + '/' + cFileNameDictFilename;
     try {
-        m_filename_dict_writer.open(file_id_file_path,
-                                    FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_SEEKABLE_WRITING);
+        m_filename_dict_writer.open(
+                file_id_file_path,
+                FileWriter::OpenMode::CREATE_IF_NONEXISTENT_FOR_SEEKABLE_WRITING
+        );
     } catch (FileWriter::OperationFailed& e) {
         SPDLOG_CRITICAL("Failed to create file: {}", file_id_file_path.c_str());
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
@@ -211,11 +212,13 @@ void Archive::close() {
 
     // Close segments if necessary
     if (m_message_order_table.is_open()) {
-        close_segment_and_persist_file_metadata(m_message_order_table,
-                                                m_glt_segment,
-                                                m_files_in_segment,
-                                                m_logtype_ids_in_segment,
-                                                m_var_ids_in_segment);
+        close_segment_and_persist_file_metadata(
+                m_message_order_table,
+                m_glt_segment,
+                m_files_in_segment,
+                m_logtype_ids_in_segment,
+                m_var_ids_in_segment
+        );
         m_logtype_ids_in_segment.clear();
         m_var_ids_in_segment.clear();
     }
@@ -309,10 +312,16 @@ void Archive::write_msg(
     logtype_dictionary_id_t logtype_id;
     m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
     size_t offset = m_glt_segment.append_to_segment(logtype_id, timestamp, m_file_id, encoded_vars);
-    // Issue: the offset of var_segments is per file based. However, we still need to add the offset of segments.
-    // the offset of segment is not known because we don't know if the segment should be timestamped...
-    // Here for simplicity, we add the segment offset back when we close the file
-    m_file->write_encoded_msg(timestamp, logtype_id, offset, num_uncompressed_bytes, encoded_vars.size());
+    // Issue: the offset of var_segments is per file based. However, we still need to add the offset
+    // of segments. the offset of segment is not known because we don't know if the segment should
+    // be timestamped... Here for simplicity, we add the segment offset back when we close the file
+    m_file->write_encoded_msg(
+            timestamp,
+            logtype_id,
+            offset,
+            num_uncompressed_bytes,
+            encoded_vars.size()
+    );
     // Update segment indices
     m_logtype_ids_in_segment.insert(logtype_id);
     m_var_ids_in_segment.insert_all(var_ids);
@@ -341,8 +350,9 @@ void Archive::append_file_contents_to_segment(
     m_local_metadata->expand_time_range(m_file->get_begin_ts(), m_file->get_end_ts());
 
     // Close current segment if its uncompressed size is greater than the target
-    if (segment.get_uncompressed_size() + glt_segment.get_uncompressed_size() >=
-        m_target_segment_uncompressed_size) {
+    if (segment.get_uncompressed_size() + glt_segment.get_uncompressed_size()
+        >= m_target_segment_uncompressed_size)
+    {
         close_segment_and_persist_file_metadata(
                 segment,
                 glt_segment,
@@ -363,17 +373,22 @@ void Archive::append_file_to_segment() {
     // because the open happens after file content gets appended
     // to m_glt_segment.
     if (!m_message_order_table.is_open()) {
-        m_glt_segment.open(m_segments_dir_path, m_next_segment_id,
-                           m_compression_level, m_combine_threshold);
-        m_message_order_table.open(m_segments_dir_path, m_next_segment_id,
-                                   m_compression_level);
+        m_glt_segment.open(
+                m_segments_dir_path,
+                m_next_segment_id,
+                m_compression_level,
+                m_combine_threshold
+        );
+        m_message_order_table.open(m_segments_dir_path, m_next_segment_id, m_compression_level);
         m_next_segment_id++;
     }
-    append_file_contents_to_segment(m_message_order_table,
-                                    m_glt_segment,
-                                    m_logtype_ids_in_segment,
-                                    m_var_ids_in_segment,
-                                    m_files_in_segment);
+    append_file_contents_to_segment(
+            m_message_order_table,
+            m_glt_segment,
+            m_logtype_ids_in_segment,
+            m_var_ids_in_segment,
+            m_files_in_segment
+    );
 
     // Make sure file pointer is nulled and cannot be accessed outside
     m_file = nullptr;
@@ -439,10 +454,8 @@ void Archive::add_empty_directories(vector<string> const& empty_directory_paths)
 }
 
 uint64_t Archive::get_dynamic_compressed_size() {
-    uint64_t on_disk_size =
-            m_logtype_dict.get_on_disk_size() +
-            m_var_dict.get_on_disk_size() +
-            m_filename_dict_writer.get_pos();
+    uint64_t on_disk_size = m_logtype_dict.get_on_disk_size() + m_var_dict.get_on_disk_size()
+                            + m_filename_dict_writer.get_pos();
 
     // GLT. Note we don't need to add size of glt_segment
     if (m_message_order_table.is_open()) {

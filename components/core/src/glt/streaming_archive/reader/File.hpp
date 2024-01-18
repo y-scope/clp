@@ -11,8 +11,8 @@
 #include "../../Query.hpp"
 #include "../../TimestampPattern.hpp"
 #include "../MetadataDB.hpp"
-#include "Message.hpp"
 #include "GLTSegment.hpp"
+#include "Message.hpp"
 
 namespace glt::streaming_archive::reader {
 class File {
@@ -70,7 +70,7 @@ public:
      * @param msg
      * @return true if message read, false if no more messages left
      */
-    bool get_next_message (Message& msg);
+    bool get_next_message(Message& msg);
 
     /**
      * Get logtype table offset of the logtype_id
@@ -90,7 +90,10 @@ private:
      * @return Same as SegmentManager::try_read
      * @return ErrorCode_Success on success
      */
-    ErrorCode init (const LogTypeDictionaryReader& archive_logtype_dict, const MetadataDB::FileIterator& file_metadata_ix);
+    ErrorCode init(
+            LogTypeDictionaryReader const& archive_logtype_dict,
+            MetadataDB::FileIterator const& file_metadata_ix
+    );
 
     /**
      * Opens a file with GLTSegment
@@ -141,7 +144,6 @@ private:
 
     size_t m_split_ix;
     bool m_is_split;
-
 
     // GLT specific
     uint64_t m_segment_logtypes_decompressed_stream_pos;

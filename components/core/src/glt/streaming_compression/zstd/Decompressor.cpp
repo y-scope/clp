@@ -110,13 +110,13 @@ ErrorCode Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& nu
     return ErrorCode_Success;
 }
 
-void Decompressor::exact_read (char* buf, size_t num_bytes_to_read) {
+void Decompressor::exact_read(char* buf, size_t num_bytes_to_read) {
     size_t num_bytes_read;
     auto errorcode = try_read(buf, num_bytes_to_read, num_bytes_read);
-    if(num_bytes_read != num_bytes_to_read) {
+    if (num_bytes_read != num_bytes_to_read) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
-    if(errorcode != ErrorCode_Success) {
+    if (errorcode != ErrorCode_Success) {
         throw OperationFailed(errorcode, __FILENAME__, __LINE__);
     }
 }

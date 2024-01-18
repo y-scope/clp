@@ -23,11 +23,11 @@ public:
     void clear_vars();
 
     // GLT methods
-    file_id_t get_file_id () const;
-    void set_file_id (file_id_t file_id);
-    void resize_var (size_t var_size);
-    std::vector<encoded_variable_t>& get_writable_vars ();
-    void load_vars_from(const std::vector<encoded_variable_t>& vars, size_t count, size_t offset);
+    file_id_t get_file_id() const;
+    void set_file_id(file_id_t file_id);
+    void resize_var(size_t var_size);
+    std::vector<encoded_variable_t>& get_writable_vars();
+    void load_vars_from(std::vector<encoded_variable_t> const& vars, size_t count, size_t offset);
 
 private:
     friend class Archive;
