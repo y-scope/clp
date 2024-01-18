@@ -4,16 +4,16 @@ import argparse
 import asyncio
 import datetime
 import logging
-import msgpack
 import multiprocessing
 import pathlib
-import pymongo
 import socket
 import sys
 import time
-import zstandard
 from contextlib import closing
 
+import msgpack
+import pymongo
+import zstandard
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -73,10 +73,10 @@ async def run_function_in_process(function, *args, initializer=None, init_args=N
         pool.close()
 
 
-def create_and_monitor_job_in_db(db_config: Database, results_cache: ResultsCache, wildcard_query: str,
-                                 begin_timestamp: int | None, end_timestamp: int | None,
-                                 path_filter: str, search_controller_host: str,
-                                 search_controller_port: int):
+def create_and_monitor_job_in_db(db_config: Database, results_cache: ResultsCache,
+                                 wildcard_query: str, begin_timestamp: int | None,
+                                 end_timestamp: int | None, path_filter: str,
+                                 search_controller_host: str, search_controller_port: int):
     search_config = SearchConfig(
         search_controller_host=search_controller_host,
         search_controller_port=search_controller_port,
@@ -153,10 +153,10 @@ def create_and_monitor_job_in_db(db_config: Database, results_cache: ResultsCach
 
             time.sleep(0.5)
 
-        client = pymongo.MongoClient(results_cache.get_uri())
-        search_results_collection = client[results_cache.db_name][str(job_id)]
-        for document in search_results_collection.find():
-            print(document)
+        with pymongo.MongoClient(results_cache.get_uri()) as client:
+            search_results_collection = client[results_cache.db_name][str(job_id)]
+            for document in search_results_collection.find():
+                print(document)
 
 
 async def worker_connection_handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
@@ -247,7 +247,8 @@ def main(argv):
         return -1
 
     asyncio.run(do_search(clp_config.database, clp_config.results_cache, parsed_args.wildcard_query,
-                          parsed_args.begin_time, parsed_args.end_time, parsed_args.file_path, host_ip))
+                          parsed_args.begin_time, parsed_args.end_time, parsed_args.file_path,
+                          host_ip))
 
     return 0
 

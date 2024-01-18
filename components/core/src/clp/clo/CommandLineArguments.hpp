@@ -28,9 +28,9 @@ public:
 
     std::string const& get_mongodb_uri() const { return m_mongodb_uri; }
 
-    std::string const& get_mongodb_database() const { return m_mongodb_database; }
-
     std::string const& get_mongodb_collection() const { return m_mongodb_collection; }
+
+    uint64_t get_batch_size() const { return m_batch_size; }
 
     std::string const& get_archive_path() const { return m_archive_path; }
 
@@ -52,8 +52,8 @@ private:
     std::string m_search_controller_host;
     std::string m_search_controller_port;
     std::string m_mongodb_uri;
-    std::string m_mongodb_database;
     std::string m_mongodb_collection;
+    uint64_t m_batch_size;
     std::string m_archive_path;
     bool m_ignore_case;
     std::string m_search_string;

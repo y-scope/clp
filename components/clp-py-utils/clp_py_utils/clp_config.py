@@ -113,7 +113,7 @@ class ResultsCache(BaseModel):
         return field
 
     def get_uri(self):
-        return f"mongodb://{self.host}:{self.port}"
+        return f"mongodb://{self.host}:{self.port}/{self.db_name}"
 
 
 class Queue(BaseModel):

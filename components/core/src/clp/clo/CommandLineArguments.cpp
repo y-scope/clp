@@ -80,10 +80,18 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             "Ignore case distinctions in both WILDCARD STRING and the input files"
     );
 
+    po::options_description options_batch_control("Batch Controls");
+    options_batch_control.add_options()(
+            "batch-size,b",
+            po::value<uint64_t>(&m_batch_size)->value_name("SIZE")->default_value(1000),
+            "Batch size"
+    );
+
     // Define visible options
     po::options_description visible_options;
     visible_options.add(options_general);
     visible_options.add(options_match_control);
+    visible_options.add(options_batch_control);
 
     // Define hidden positional options (not shown in Boost's program options help message)
     po::options_description hidden_positional_options;
@@ -97,9 +105,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     )(
             "mongodb-uri",
             po::value<string>(&m_mongodb_uri)
-    )(
-            "mongodb-database",
-            po::value<string>(&m_mongodb_database)
     )(
             "mongodb-collection",
             po::value<string>(&m_mongodb_collection)
@@ -118,7 +123,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     positional_options_description.add("search-controller-host", 1);
     positional_options_description.add("search-controller-port", 1);
     positional_options_description.add("mongodb-uri", 1);
-    positional_options_description.add("mongodb-database", 1);
     positional_options_description.add("mongodb-collection", 1);
     positional_options_description.add("archive-path", 1);
     positional_options_description.add("wildcard-string", 1);
@@ -128,6 +132,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     po::options_description all_options;
     all_options.add(options_general);
     all_options.add(options_match_control);
+    all_options.add(options_batch_control);
     all_options.add(hidden_positional_options);
 
     // Parse options
@@ -172,12 +177,12 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             cerr << "Examples:" << endl;
             cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to )"
-                    R"(mongodb://127.0.0.1:27017 "test" database and "result" collection )"
+                    R"(mongodb://127.0.0.1:27017/test "result" collection )"
                     R"(and use localhost:5555 as the search controller)"
                  << endl;
             cerr << "  " << get_program_name()
-                 << R"(localhost 5555 mongodb://127.0.0.1:27017 )"
-                    R"(test result ARCHIVE_PATH " ERROR ")"
+                 << R"(localhost 5555 mongodb://127.0.0.1:27017/test result )"
+                    R"(ARCHIVE_PATH " ERROR ")"
                  << endl;
             cerr << endl;
 
@@ -206,11 +211,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         // Validate mongodb uri was specified
         if (m_mongodb_uri.empty()) {
             throw invalid_argument("MONGODB_URI not specified or empty.");
-        }
-
-        // Validate mongodb database was specified
-        if (m_mongodb_database.empty()) {
-            throw invalid_argument("MONGODB_DATABASE not specified or empty.");
         }
 
         // Validate mongodb collection was specified
@@ -275,6 +275,11 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 );
             }
         }
+
+        // Validate batch size
+        if (m_batch_size == 0) {
+            throw invalid_argument("Batch size cannot be 0.");
+        }
     } catch (exception& e) {
         SPDLOG_ERROR("{}", e.what());
         print_basic_usage();
@@ -288,7 +293,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 void CommandLineArguments::print_basic_usage() const {
     cerr << "Usage: " << get_program_name()
          << " [OPTIONS] SEARCH_CONTROLLER_HOST SEARCH_CONTROLLER_PORT "
-            "MONGODB_URI MONGODB_DATABASE MONGODB_COLLECTION "
+            "MONGODB_URI MONGODB_COLLECTION "
          << R"(ARCHIVE_PATH "WILDCARD STRING" [FILE])" << endl;
 }
 }  // namespace clp::clo

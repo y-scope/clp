@@ -323,8 +323,8 @@ int main(int argc, char const* argv[]) {
     mongocxx::instance instance_{};
     ResultsCacheClient mongo_client(
             command_line_args.get_mongodb_uri(),
-            command_line_args.get_mongodb_database(),
-            command_line_args.get_mongodb_collection()
+            command_line_args.get_mongodb_collection(),
+            command_line_args.get_batch_size()
     );
 
     auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());

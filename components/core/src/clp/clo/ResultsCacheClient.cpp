@@ -3,13 +3,13 @@
 namespace clp::clo {
 ResultsCacheClient::ResultsCacheClient(
         std::string const& uri,
-        std::string const& db,
         std::string const& collection,
         uint64_t batch_size
 )
-        : m_batch_size(batch_size),
-          m_client(std::move(mongocxx::client(mongocxx::uri(uri)))) {
-    m_collection = m_client[db][collection];
+        : m_batch_size(batch_size) {
+    auto mongo_uri = mongocxx::uri(uri);
+    m_client = mongocxx::client(mongo_uri);
+    m_collection = m_client[mongo_uri.database()][collection];
 }
 
 void ResultsCacheClient::flush() {

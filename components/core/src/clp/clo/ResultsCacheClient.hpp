@@ -31,7 +31,6 @@ public:
     // Constructors
     ResultsCacheClient(
             std::string const& uri,
-            std::string const& db,
             std::string const& collection,
             uint64_t batch_size = 1000
     );
