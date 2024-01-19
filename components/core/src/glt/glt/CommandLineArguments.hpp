@@ -7,6 +7,7 @@
 #include <boost/asio.hpp>
 
 #include "../CommandLineArgumentsBase.hpp"
+#include "../Defs.h"
 #include "../GlobalMetadataDBConfig.hpp"
 
 namespace glt::glt {
@@ -16,6 +17,13 @@ public:
     enum class Command : char {
         Compress = 'c',
         Extract = 'x',
+        Search = 's',
+    };
+
+    // Types
+    enum class OutputMethod : char {
+        StdoutText = 's',
+        StdoutBinary = 'b',
     };
 
     // Constructors
@@ -27,7 +35,11 @@ public:
               m_target_encoded_file_size(512L * 1024 * 1024),
               m_target_data_size_of_dictionaries(100L * 1024 * 1024),
               m_compression_level(3),
-              m_combine_threshold(0.1) {}
+              m_combine_threshold(0.1),
+              m_ignore_case(false),
+              m_output_method(OutputMethod::StdoutText),
+              m_search_begin_ts(cEpochTimeMin),
+              m_search_end_ts(cEpochTimeMax) {}
 
     // Methods
     ParsingResult parse_arguments(int argc, char const* argv[]) override;
@@ -64,11 +76,27 @@ public:
 
     GlobalMetadataDBConfig const& get_metadata_db_config() const { return m_metadata_db_config; }
 
+    // Search arguments
+    std::string const& get_search_strings_file_path() const { return m_search_strings_file_path; }
+
+    bool ignore_case() const { return m_ignore_case; }
+
+    std::string const& get_search_string() const { return m_search_string; }
+
+    std::string const& get_file_path() const { return m_file_path; }
+
+    OutputMethod get_output_method() const { return m_output_method; }
+
+    epochtime_t get_search_begin_ts() const { return m_search_begin_ts; }
+
+    epochtime_t get_search_end_ts() const { return m_search_end_ts; }
+
 private:
     // Methods
     void print_basic_usage() const override;
     void print_compression_basic_usage() const;
     void print_extraction_basic_usage() const;
+    void print_search_basic_usage() const;
 
     // Variables
     std::string m_path_list_path;
@@ -85,6 +113,14 @@ private:
     std::string m_archives_dir;
     std::vector<std::string> m_input_paths;
     GlobalMetadataDBConfig m_metadata_db_config;
+
+    // Search related variables
+    std::string m_search_strings_file_path;
+    bool m_ignore_case;
+    std::string m_search_string;
+    std::string m_file_path;
+    OutputMethod m_output_method;
+    epochtime_t m_search_begin_ts, m_search_end_ts;
 };
 }  // namespace glt::glt
 

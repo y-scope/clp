@@ -1,3 +1,5 @@
+#include "search.hpp"
+
 #include <sys/stat.h>
 
 #include <filesystem>
@@ -5,25 +7,19 @@
 
 #include <spdlog/sinks/stdout_sinks.h>
 
-#include "../Defs.h"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
 #include "../Grep.hpp"
 #include "../Profiler.hpp"
-#include "../spdlog_with_specializations.hpp"
-#include "../streaming_archive/Constants.hpp"
-#include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 
 using glt::combined_table_id_t;
-using glt::CommandLineArgumentsBase;
 using glt::epochtime_t;
 using glt::ErrorCode;
 using glt::ErrorCode_errno;
 using glt::FileReader;
 using glt::GlobalMetadataDB;
 using glt::GlobalMetadataDBConfig;
-using glt::gltg::CommandLineArguments;
 using glt::Grep;
 using glt::LogtypeQueries;
 using glt::Profiler;
@@ -38,8 +34,9 @@ using std::cerr;
 using std::cout;
 using std::endl;
 using std::string;
-using std::to_string;
 using std::vector;
+
+namespace glt::glt {
 
 /**
  * Opens the archive and reads the dictionaries
@@ -48,45 +45,6 @@ using std::vector;
  * @return true on success, false otherwise
  */
 static bool open_archive(string const& archive_path, Archive& archive_reader);
-/**
- * Searches the archive with the given parameters
- * @param search_strings
- * @param command_line_args
- * @param archive
- * @return true on success, false otherwise
- */
-static bool search(
-        vector<string> const& search_strings,
-        CommandLineArguments& command_line_args,
-        Archive& archive,
-        bool use_heuristic
-);
-/**
- * Opens a compressed file or logs any errors if it couldn't be opened
- * @param file_metadata_ix
- * @param archive
- * @param compressed_file
- * @return true on success, false otherwise
- */
-static bool open_compressed_file(
-        MetadataDB::FileIterator& file_metadata_ix,
-        Archive& archive,
-        File& compressed_file
-);
-/**
- * Searches all files referenced by a given database cursor
- * @param queries
- * @param output_method
- * @param archive
- * @param file_metadata_ix
- * @return The total number of matches found across all files
- */
-static size_t search_files(
-        vector<Query>& queries,
-        CommandLineArguments::OutputMethod output_method,
-        Archive& archive,
-        MetadataDB::FileIterator& file_metadata_ix
-);
 /**
  * To update
  * @param queries
@@ -165,7 +123,7 @@ static GlobalMetadataDB::ArchiveIterator* get_archive_iterator(
 ) {
     if (!file_path.empty()) {
         return global_metadata_db.get_archive_iterator_for_file_path(file_path);
-    } else if (begin_ts == glt::cEpochTimeMin && end_ts == glt::cEpochTimeMax) {
+    } else if (begin_ts == cEpochTimeMin && end_ts == cEpochTimeMax) {
         return global_metadata_db.get_archive_iterator();
     } else {
         return global_metadata_db.get_archive_iterator_for_time_window(begin_ts, end_ts);
@@ -331,76 +289,6 @@ static bool search(
     }
 
     return true;
-}
-
-static bool open_compressed_file(
-        MetadataDB::FileIterator& file_metadata_ix,
-        Archive& archive,
-        File& compressed_file
-) {
-    ErrorCode error_code = archive.open_file(compressed_file, file_metadata_ix);
-    if (glt::ErrorCode_Success == error_code) {
-        return true;
-    }
-    string orig_path;
-    file_metadata_ix.get_path(orig_path);
-    if (glt::ErrorCode_FileNotFound == error_code) {
-        SPDLOG_WARN("{} not found in archive", orig_path.c_str());
-    } else if (ErrorCode_errno == error_code) {
-        SPDLOG_ERROR("Failed to open {}, errno={}", orig_path.c_str(), errno);
-    } else {
-        SPDLOG_ERROR("Failed to open {}, error={}", orig_path.c_str(), error_code);
-    }
-    return false;
-}
-
-static size_t search_files(
-        vector<Query>& queries,
-        CommandLineArguments::OutputMethod const output_method,
-        Archive& archive,
-        MetadataDB::FileIterator& file_metadata_ix
-) {
-    size_t num_matches = 0;
-
-    File compressed_file;
-    // Setup output method
-    Grep::OutputFunc output_func;
-    void* output_func_arg;
-    switch (output_method) {
-        case CommandLineArguments::OutputMethod::StdoutText:
-            output_func = print_result_text;
-            output_func_arg = nullptr;
-            break;
-        case CommandLineArguments::OutputMethod::StdoutBinary:
-            output_func = print_result_binary;
-            output_func_arg = nullptr;
-            break;
-        default:
-            SPDLOG_ERROR("Unknown output method - {}", (char)output_method);
-            return num_matches;
-    }
-
-    // Run all queries on each file
-    for (; file_metadata_ix.has_next(); file_metadata_ix.next()) {
-        if (open_compressed_file(file_metadata_ix, archive, compressed_file)) {
-            Grep::calculate_sub_queries_relevant_to_file(compressed_file, queries);
-
-            for (auto const& query : queries) {
-                archive.reset_file_indices(compressed_file);
-                num_matches += Grep::search_and_output(
-                        query,
-                        SIZE_MAX,
-                        archive,
-                        compressed_file,
-                        output_func,
-                        output_func_arg
-                );
-            }
-        }
-        archive.close_file(compressed_file);
-    }
-
-    return num_matches;
 }
 
 static size_t find_message_in_segment_within_time_range(
@@ -578,33 +466,7 @@ static void print_result_binary(
     }
 }
 
-int main(int argc, char const* argv[]) {
-    // Program-wide initialization
-    try {
-        auto stderr_logger = spdlog::stderr_logger_st("stderr");
-        spdlog::set_default_logger(stderr_logger);
-        spdlog::set_pattern("%Y-%m-%d %H:%M:%S,%e [%l] %v");
-    } catch (std::exception& e) {
-        // NOTE: We can't log an exception if the logger couldn't be constructed
-        return -1;
-    }
-    Profiler::init();
-    glt::TimestampPattern::init();
-
-    CommandLineArguments command_line_args("gltg");
-    auto parsing_result = command_line_args.parse_arguments(argc, argv);
-    switch (parsing_result) {
-        case CommandLineArgumentsBase::ParsingResult::Failure:
-            return -1;
-        case CommandLineArgumentsBase::ParsingResult::InfoCommand:
-            return 0;
-        case CommandLineArgumentsBase::ParsingResult::Success:
-            // Continue processing
-            break;
-    }
-
-    Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::Search>();
-
+bool search(CommandLineArguments& command_line_args) {
     // Create vector of search strings
     vector<string> search_strings;
     if (command_line_args.get_search_strings_file_path().empty()) {
@@ -630,25 +492,23 @@ int main(int argc, char const* argv[]) {
                 archives_dir.c_str(),
                 strerror(errno)
         );
-        return -1;
+        return false;
     } else if (S_ISDIR(archives_dir_stat.st_mode) == false) {
         SPDLOG_ERROR("'{}' is not a directory.", archives_dir.c_str());
-        return -1;
+        return false;
     }
 
     auto const& global_metadata_db_config = command_line_args.get_metadata_db_config();
     std::unique_ptr<GlobalMetadataDB> global_metadata_db;
     switch (global_metadata_db_config.get_metadata_db_type()) {
         case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
-            auto global_metadata_db_path
-                    = archives_dir / glt::streaming_archive::cMetadataDBFileName;
+            auto global_metadata_db_path = archives_dir / streaming_archive::cMetadataDBFileName;
             global_metadata_db
-                    = std::make_unique<glt::GlobalSQLiteMetadataDB>(global_metadata_db_path.string()
-                    );
+                    = std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
             break;
         }
         case GlobalMetadataDBConfig::MetadataDBType::MySQL:
-            global_metadata_db = std::make_unique<glt::GlobalMySQLMetadataDB>(
+            global_metadata_db = std::make_unique<GlobalMySQLMetadataDB>(
                     global_metadata_db_config.get_metadata_db_host(),
                     global_metadata_db_config.get_metadata_db_port(),
                     global_metadata_db_config.get_metadata_db_username(),
@@ -686,22 +546,19 @@ int main(int argc, char const* argv[]) {
 
         // Open archive
         if (!open_archive(archive_path.string(), archive_reader)) {
-            return -1;
+            return false;
         }
 
         // Generate lexer if schema file exists
-        auto schema_file_path = archive_path / glt::streaming_archive::cSchemaFileName;
+        auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
         // Perform search
         if (!search(search_strings, command_line_args, archive_reader, num_matches)) {
-            return -1;
+            return false;
         }
         archive_reader.close();
     }
 
     global_metadata_db->close();
-
-    Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::Search>();
-    LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::Search)
-
-    return 0;
+    return true;
 }
+}  // namespace glt::glt

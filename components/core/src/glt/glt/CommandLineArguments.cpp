@@ -1,6 +1,7 @@
 #include "CommandLineArguments.hpp"
 
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 
 #include <boost/filesystem/operations.hpp>
@@ -60,16 +61,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     "Global metadata DB YAML config"
             );
 
-    // Define functional options
-    po::options_description options_functional("Input Options");
-    options_functional.add_options()(
-            "files-from,f",
-            po::value<string>(&m_path_list_path)
-                    ->value_name("FILE")
-                    ->default_value(m_path_list_path),
-            "Compress/extract files specified in FILE"
-    );
-
     po::options_description general_positional_options;
     char command_input;
     general_positional_options.add_options()("command", po::value<char>(&command_input))(
@@ -83,7 +74,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     // Aggregate all options
     po::options_description all_options;
     all_options.add(options_general);
-    all_options.add(options_functional);
     all_options.add(general_positional_options);
 
     // Parse options
@@ -143,9 +133,10 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 cerr << "COMMAND is one of:" << endl;
                 cerr << "  c - compress" << endl;
                 cerr << "  x - extract" << endl;
+                cerr << "  s - extract" << endl;
                 cerr << endl;
                 cerr << "Try " << get_program_name() << " c --help OR " << get_program_name()
-                     << " x --help for command-specific details." << endl;
+                     << " x --help OR s --help for command-specific details." << endl;
                 cerr << endl;
 
                 cerr << "Options can be specified on the command line or through a configuration "
@@ -153,7 +144,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                      << endl;
                 po::options_description visible_options;
                 visible_options.add(options_general);
-                visible_options.add(options_functional);
                 cerr << visible_options << endl;
                 return ParsingResult::InfoCommand;
             }
@@ -163,11 +153,22 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         switch (command_input) {
             case (char)Command::Compress:
             case (char)Command::Extract:
+            case (char)Command::Search:
                 m_command = (Command)command_input;
                 break;
             default:
                 throw invalid_argument(string("Unknown action '") + command_input + "'");
         }
+
+        // Define functional options shared by extract and compression
+        po::options_description options_functional("Input Options");
+        options_functional.add_options()(
+                "files-from,f",
+                po::value<string>(&m_path_list_path)
+                        ->value_name("FILE")
+                        ->default_value(m_path_list_path),
+                "Compress/extract files specified in FILE"
+        );
 
         if (Command::Extract == m_command) {
             // Define extraction hidden positional options
@@ -185,6 +186,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             po::options_description all_extraction_options;
             all_extraction_options.add(extraction_positional_options);
+            all_extraction_options.add(options_functional);
 
             // Parse extraction options
             vector<string> unrecognized_options
@@ -215,6 +217,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
                 po::options_description visible_options;
                 visible_options.add(options_general);
+                visible_options.add(options_functional);
                 cerr << visible_options << endl;
                 return ParsingResult::InfoCommand;
             }
@@ -222,6 +225,14 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             // Validate archive path is not empty
             if (m_archives_dir.empty()) {
                 throw invalid_argument("ARCHIVES_DIR cannot be empty.");
+            }
+
+            // Validate an output directory was specified
+            if (m_output_dir.empty()) {
+                throw invalid_argument("output-dir not specified or empty.");
+            }
+            if (m_output_dir.back() != '/') {
+                m_output_dir += '/';
             }
         } else if (Command::Compress == m_command) {
             // Define compression hidden positional options
@@ -275,7 +286,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     "combine-threshold",
                     po::value<double>(&m_combine_threshold)
                             ->value_name("VALUE")
-                            ->default_value(m_combine_threshold),
+                            ->default_value(m_combine_threshold, "0.1"),
                     "Target percentage threshold for a logtype to be stored in the combined table"
             )(
                     "progress",
@@ -285,6 +296,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             po::options_description all_compression_options;
             all_compression_options.add(options_compression);
+            all_compression_options.add(options_functional);
             all_compression_options.add(compression_positional_options);
 
             vector<string> unrecognized_options
@@ -311,6 +323,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
                 po::options_description visible_options;
                 visible_options.add(options_general);
+                visible_options.add(options_functional);
                 visible_options.add(options_compression);
                 cerr << visible_options << endl;
                 return ParsingResult::InfoCommand;
@@ -349,21 +362,201 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                         + "is invalid, must be between 0 and 100"
                 );
             }
-        }
 
-        // Validate an output directory was specified
-        if (m_output_dir.empty()) {
-            throw invalid_argument("output-dir not specified or empty.");
+            // Validate an output directory was specified
+            if (m_output_dir.empty()) {
+                throw invalid_argument("output-dir not specified or empty.");
+            }
+            if (m_output_dir.back() != '/') {
+                m_output_dir += '/';
+            }
+        } else if (Command::Search == m_command) {
+            // Define search input options
+            po::options_description options_search_input("Input Options");
+            options_search_input.add_options()(
+                    "file,f",
+                    po::value<string>(&m_search_strings_file_path)->value_name("FILE"),
+                    "Obtain wildcard strings from FILE, one per line"
+            );
+
+            // Define output options
+            po::options_description options_search_output("Output Options");
+            char output_method_input = 's';
+            options_search_output.add_options()(
+                    "output-method",
+                    po::value<char>(&output_method_input)
+                            ->value_name("CHAR")
+                            ->default_value(output_method_input),
+                    "Use output method specified by CHAR (s - stdout, b - binary)"
+            );
+
+            // Define match controls
+            po::options_description options_match_control("Match Controls");
+            options_match_control.add_options()(
+                    "tgt",
+                    po::value<epochtime_t>()->value_name("TS"),
+                    "Find messages with UNIX timestamp >  TS ms"
+            )(
+                    "tge",
+                    po::value<epochtime_t>()->value_name("TS"),
+                    "Find messages with UNIX timestamp >= TS ms"
+            )(
+                    "teq",
+                    po::value<epochtime_t>()->value_name("TS"),
+                    "Find messages with UNIX timestamp == TS ms"
+            )(
+                    "tlt",
+                    po::value<epochtime_t>()->value_name("TS"),
+                    "Find messages with UNIX timestamp <  TS ms"
+            )(
+                    "tle",
+                    po::value<epochtime_t>()->value_name("TS"),
+                    "Find messages with UNIX timestamp <= TS ms"
+            )(
+                    "ignore-case,i",
+                    po::bool_switch(&m_ignore_case),
+                    "Ignore case distinctions in both WILDCARD STRING and the input files"
+            );
+
+            // Define visible options
+            po::options_description visible_options;
+            visible_options.add(options_general);
+            visible_options.add(options_search_input);
+            visible_options.add(options_search_output);
+            visible_options.add(options_match_control);
+
+            // Define hidden positional options (not shown in Boost's program options help message)
+            po::options_description hidden_positional_options;
+            // clang-format off
+            hidden_positional_options.add_options()(
+                    "archives-dir",
+                    po::value<string>(&m_archives_dir)
+            )(
+                    "wildcard-string",
+                    po::value<string>(&m_search_string)
+            )(
+                    "file-path",
+                    po::value<string>(&m_file_path)
+            );
+            // clang-format on
+            po::positional_options_description positional_options_description;
+            positional_options_description.add("archives-dir", 1);
+            positional_options_description.add("wildcard-string", 1);
+            positional_options_description.add("file-path", 1);
+
+            // Aggregate all options
+            po::options_description all_search_options;
+            all_search_options.add(options_general);
+            all_search_options.add(options_search_input);
+            all_search_options.add(options_search_output);
+            all_search_options.add(options_match_control);
+            all_search_options.add(hidden_positional_options);
+
+            vector<string> unrecognized_options
+                    = po::collect_unrecognized(parsed.options, po::include_positional);
+            unrecognized_options.erase(unrecognized_options.begin());
+            po::store(
+                    po::command_line_parser(unrecognized_options)
+                            .options(all_search_options)
+                            .positional(positional_options_description)
+                            .run(),
+                    parsed_command_line_options
+            );
+
+            notify(parsed_command_line_options);
+
+            // Handle --help
+            if (parsed_command_line_options.count("help")) {
+                print_search_basic_usage();
+                cerr << endl;
+
+                cerr << "Examples:" << endl;
+                cerr << R"(  # Search archives-dir for " ERROR ")" << endl;
+                cerr << "  " << get_program_name() << R"( archives-dir " ERROR ")" << endl;
+                cerr << endl;
+
+                cerr << "Options can be specified on the command line or through a configuration "
+                        "file."
+                     << endl;
+                cerr << visible_options << endl;
+                return ParsingResult::InfoCommand;
+            }
+
+            // Validate at least one wildcard string exists
+            if (m_search_strings_file_path.empty() == false) {
+                if (m_search_string.empty() == false) {
+                    throw invalid_argument("Wildcard strings cannot be specified both through the "
+                                           "command line and a file.");
+                }
+            } else if (m_search_string.empty()) {
+                throw invalid_argument("Wildcard string not specified or empty.");
+            }
+
+            // Validate timestamp range and compute m_search_begin_ts and m_search_end_ts
+            if (parsed_command_line_options.count("teq")) {
+                if (parsed_command_line_options.count("tgt")
+                            + parsed_command_line_options.count("tge")
+                            + parsed_command_line_options.count("tlt")
+                            + parsed_command_line_options.count("tle")
+                    > 0)
+                {
+                    throw invalid_argument(
+                            "--teq cannot be specified with any other timestamp filtering option."
+                    );
+                }
+
+                m_search_begin_ts = parsed_command_line_options["teq"].as<epochtime_t>();
+                m_search_end_ts = parsed_command_line_options["teq"].as<epochtime_t>();
+            } else {
+                if (parsed_command_line_options.count("tgt")
+                            + parsed_command_line_options.count("tge")
+                    > 1)
+                {
+                    throw invalid_argument("--tgt cannot be used with --tge.");
+                }
+
+                // Set m_search_begin_ts
+                if (parsed_command_line_options.count("tgt")) {
+                    m_search_begin_ts = parsed_command_line_options["tgt"].as<epochtime_t>() + 1;
+                } else if (parsed_command_line_options.count("tge")) {
+                    m_search_begin_ts = parsed_command_line_options["tge"].as<epochtime_t>();
+                }
+
+                if (parsed_command_line_options.count("tlt")
+                            + parsed_command_line_options.count("tle")
+                    > 1)
+                {
+                    throw invalid_argument("--tlt cannot be used with --tle.");
+                }
+
+                // Set m_search_end_ts
+                if (parsed_command_line_options.count("tlt")) {
+                    m_search_end_ts = parsed_command_line_options["tlt"].as<epochtime_t>() - 1;
+                } else if (parsed_command_line_options.count("tle")) {
+                    m_search_end_ts = parsed_command_line_options["tle"].as<epochtime_t>();
+                }
+
+                if (m_search_begin_ts > m_search_end_ts) {
+                    throw invalid_argument(
+                            "Timestamp range is invalid - begin timestamp is after end timestamp."
+                    );
+                }
+            }
+
+            switch (output_method_input) {
+                case (char)OutputMethod::StdoutText:
+                case (char)OutputMethod::StdoutBinary:
+                    m_output_method = (OutputMethod)output_method_input;
+                    break;
+                default:
+                    throw invalid_argument("Unknown --output-method specified.");
+            }
         }
     } catch (exception& e) {
         SPDLOG_ERROR("{}", e.what());
         print_basic_usage();
         cerr << "Try " << get_program_name() << " --help for detailed usage instructions" << endl;
         return ParsingResult::Failure;
-    }
-
-    if (m_output_dir.back() != '/') {
-        m_output_dir += '/';
     }
 
     return ParsingResult::Success;
@@ -379,6 +572,11 @@ void CommandLineArguments::print_compression_basic_usage() const {
 
 void CommandLineArguments::print_extraction_basic_usage() const {
     cerr << "Usage: " << get_program_name() << " [OPTIONS] x ARCHIVES_DIR OUTPUT_DIR [FILE ...]"
+         << endl;
+}
+
+void CommandLineArguments::print_search_basic_usage() const {
+    cerr << "Usage: " << get_program_name() << R"( [OPTIONS] ARCHIVES_DIR "WILDCARD STRING" [FILE])"
          << endl;
 }
 }  // namespace glt::glt
