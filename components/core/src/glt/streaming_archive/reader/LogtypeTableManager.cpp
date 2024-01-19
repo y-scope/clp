@@ -16,9 +16,9 @@ void LogtypeTableManager::open(std::string const& segment_path) {
 
 void LogtypeTableManager::close() {
     // GLT TODO
-    //        if(!m_is_open) {
-    //            throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
-    //        }
+    // if(!m_is_open) {
+    //     throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+    // }
     m_is_open = false;
     m_memory_mapped_segment_file.close();
     m_logtype_table_metadata.clear();

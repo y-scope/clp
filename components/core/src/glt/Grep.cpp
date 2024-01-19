@@ -166,7 +166,7 @@ QueryToken::QueryToken(
                 m_type = Type::DictionaryVar;
                 m_cannot_convert_to_non_dict_var = true;
             } else {
-                // TODO: think about this carefully.
+                // GLT TODO: think about this carefully.
                 m_type = Type::Ambiguous;
                 m_possible_types.push_back(Type::IntVar);
                 m_possible_types.push_back(Type::FloatVar);
@@ -465,7 +465,7 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
         return SubQueryMatchabilityResult::SupercedesAllSubQueries;
     }
 
-    // TODO: one thing to be careful is that a string is connected with a wildcard, things can
+    // GLT TODO: one thing to be careful is that a string is connected with a wildcard, things can
     // become complicated. because we don't know whether that string is a dictionary type or
     // logtype. for example: "*\021 reply*"
     sub_query.m_tokens = split_wildcard(logtype);

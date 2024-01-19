@@ -399,7 +399,7 @@ void Archive::close_segment_and_persist_file_metadata(
     on_disk_stream.close();
     glt_segment.close();
 
-    // TODO: here the size calculation needs some attention
+    // GLT TODO: here the size calculation needs some attention
     m_local_metadata->increment_static_compressed_size(on_disk_stream.get_compressed_size());
     m_local_metadata->increment_static_compressed_size(glt_segment.get_compressed_size());
 

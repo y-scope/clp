@@ -147,7 +147,7 @@ public:
      */
     bool matches_vars(std::vector<encoded_variable_t> const& vars) const;
 
-    // TODO: clean this up
+    // GLT TODO: clean this up
     std::vector<std::string> m_tokens;
 
 private:
