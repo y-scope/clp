@@ -111,7 +111,6 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
 
                 time.sleep(0.5)
         except Exception as ex:
-            # scheduling_db.rollback()
             all_worker_jobs_successful = False
 
         if not all_worker_jobs_successful:
