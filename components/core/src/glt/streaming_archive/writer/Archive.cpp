@@ -183,6 +183,7 @@ void Archive::open(UserConfig const& user_config) {
         SPDLOG_CRITICAL("Failed to create file: {}", file_id_file_path.c_str());
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
+    m_filename_dict_compressor.open(m_filename_dict_writer, m_compression_level);
 }
 
 void Archive::close() {
@@ -203,7 +204,7 @@ void Archive::close() {
         m_logtype_ids_in_segment.clear();
         m_var_ids_in_segment.clear();
     }
-    m_filename_dict_writer.flush();
+    m_filename_dict_compressor.close();
     m_filename_dict_writer.close();
 
     // Persist all metadata including dictionaries
@@ -243,7 +244,7 @@ void Archive::create_and_open_file(
     m_file = new File(m_uuid_generator(), orig_file_id, path, group_id, split_ix);
     m_file->open();
     std::string file_name_to_write = path + '\n';
-    m_filename_dict_writer.write(file_name_to_write.c_str(), file_name_to_write.size());
+    m_filename_dict_compressor.write(file_name_to_write.c_str(), file_name_to_write.size());
 }
 
 void Archive::close_file() {
@@ -436,7 +437,7 @@ void Archive::add_empty_directories(vector<string> const& empty_directory_paths)
 
 uint64_t Archive::get_dynamic_compressed_size() {
     uint64_t on_disk_size = m_logtype_dict.get_on_disk_size() + m_var_dict.get_on_disk_size()
-                            + m_filename_dict_writer.get_pos();
+                            + m_filename_dict_compressor.get_pos();
 
     // GLT. Note we don't need to add size of glt_segment
     if (m_message_order_table.is_open()) {

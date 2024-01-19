@@ -12,6 +12,8 @@
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid.hpp>
 
+#include "../../streaming_compression/passthrough/Compressor.hpp"
+#include "../../streaming_compression/zstd/Compressor.hpp"
 #include "../../ArrayBackedPosIntSet.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../GlobalMetadataDB.hpp"
@@ -318,6 +320,13 @@ private:
     // GLT TODO: remove this after file id is integrated
     // into the database schema
     FileWriter m_filename_dict_writer;
+#if USE_PASSTHROUGH_COMPRESSION
+    streaming_compression::passthrough::Compressor m_filename_dict_compressor;
+#elif USE_ZSTD_COMPRESSION
+    streaming_compression::zstd::Compressor m_filename_dict_compressor;
+#else
+static_assert(false, "Unsupported compression mode.");
+#endif
 
     GLTSegment m_glt_segment;
     Segment m_message_order_table;
