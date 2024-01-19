@@ -179,10 +179,6 @@ public:
      */
     void read_from_file(streaming_compression::Decompressor& decompressor);
 
-    // GLT specific
-    size_t get_var_left_index_based_on_left_boundary(size_t left_pos) const;
-    size_t get_var_right_index_based_on_right_boundary(size_t right_pos) const;
-
 private:
     // Variables
     std::vector<size_t> m_placeholder_positions;

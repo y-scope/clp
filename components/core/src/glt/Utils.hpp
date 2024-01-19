@@ -64,15 +64,6 @@ std::string get_unambiguous_path(std::string const& path);
  */
 ErrorCode read_list_of_paths(std::string const& list_path, std::vector<std::string>& paths);
 
-size_t get_variable_front_boundary_delimiter(
-        std::vector<std::string> const& tokens,
-        std::string const& logtype_str
-);
-size_t get_variable_back_boundary_delimiter(
-        std::vector<std::string> const& tokens,
-        std::string const& logtype_str
-);
-std::vector<std::string> split_wildcard(std::string const& input_str);
 }  // namespace glt
 
 #endif  // GLT_UTILS_HPP

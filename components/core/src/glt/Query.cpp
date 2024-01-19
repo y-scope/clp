@@ -218,6 +218,6 @@ void Query::make_sub_queries_relevant_to_segment(segment_id_t segment_id) {
 }
 
 bool LogtypeQuery::matches_vars(std::vector<encoded_variable_t> const& vars) const {
-    return matches_var(vars, m_vars, m_l_b, m_r_b);
+    return matches_var(vars, m_vars, 0, 0);
 }
 }  // namespace glt
