@@ -63,8 +63,6 @@ public:
 
     bool is_open() const { return m_is_open; }
 
-    bool is_logtype_table_open() const { return m_is_logtype_open; }
-
 private:
     void
     load_logtype_table_data(streaming_compression::Decompressor& decompressor, char* read_buffer);

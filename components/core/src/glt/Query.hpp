@@ -268,6 +268,15 @@ private:
 
 class LogtypeQueries {
 public:
+    void set_logtype_id(logtype_dictionary_id_t logtype_id) { m_logtype_id = logtype_id; }
+
+    void add_query(LogtypeQuery const& query) { m_queries.push_back(query); }
+
+    logtype_dictionary_id_t get_logtype_id() const { return m_logtype_id; }
+
+    std::vector<LogtypeQuery> const& get_queries() const { return m_queries; }
+
+private:
     logtype_dictionary_id_t m_logtype_id;
     std::vector<LogtypeQuery> m_queries;
 };
