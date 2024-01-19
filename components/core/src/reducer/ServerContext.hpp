@@ -41,6 +41,10 @@ enum class JobStatus : int {
     WAITING_FOR_BATCH
 };
 
+namespace JobAttributes {
+char const cBucketSize[] = "bucket_size";
+}  // namespace JobAttributes
+
 class ServerContext {
 public:
     // Types

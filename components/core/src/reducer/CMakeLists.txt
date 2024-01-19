@@ -38,8 +38,9 @@ set(
         RecordGroupSerdes.hpp
         RecordIterator.hpp
         RecordValueIterator.hpp
+        ServerContext.cpp
+        ServerContext.hpp
         reducer_server.cpp
-        reducer_server.hpp
 )
 
 add_executable(reducer-server ${REDUCER_SOURCES})
