@@ -324,7 +324,7 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                         if (c == '*') {
                             contains_wildcard = true;
                             regex_search_string.push_back('.');
-                        } else if (c == '.') {
+                        } else if (log_surgeon::SchemaParser::get_special_regex_characters(). c == '.') {
                             regex_search_string.push_back('\\');
                         }
                         // TODO: we need to sanitize more regex
