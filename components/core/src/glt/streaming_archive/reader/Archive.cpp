@@ -9,6 +9,8 @@
 #include <boost/filesystem.hpp>
 #include <string_utils/string_utils.hpp>
 
+#include "../../streaming_compression/passthrough/Compressor.hpp"
+#include "../../streaming_compression/zstd/Compressor.hpp"
 #include "../../EncodedVariableInterpreter.hpp"
 #include "../../spdlog_with_specializations.hpp"
 #include "../../Utils.hpp"
@@ -277,7 +279,13 @@ std::string Archive::get_file_name(file_id_t file_id) const {
 }
 
 void Archive::load_filename_dict() {
+#if USE_PASSTHROUGH_COMPRESSION
     FileReader filename_dict_reader;
+#elif USE_ZSTD_COMPRESSION
+    streaming_compression::zstd::Decompressor filename_dict_reader;
+#else
+    static_assert(false, "Unsupported compression mode.");
+#endif
     std::string filename_dict_path = m_path + '/' + cFileNameDictFilename;
     filename_dict_reader.open(filename_dict_path);
     std::string file_name;
