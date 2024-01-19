@@ -431,12 +431,16 @@ size_t Archive::decompress_messages_and_output(
         std::vector<file_id_t>& id,
         std::vector<encoded_variable_t>& vars,
         std::vector<bool>& wildcard_required,
-        Query const& query
+        Query const& query,
+        OutputFunc output_func,
+        void* output_func_arg
 ) {
     auto const& logtype_entry = m_logtype_dictionary.get_entry(logtype_id);
     size_t num_vars = logtype_entry.get_num_variables();
     size_t const total_matches = wildcard_required.size();
     std::string decompressed_msg;
+    // The sole purpose of this dummy message is to call output func
+    Message dummy_compressed_msg;
     size_t matches = 0;
     for (size_t ix = 0; ix < total_matches; ix++) {
         decompressed_msg.clear();
@@ -481,9 +485,9 @@ size_t Archive::decompress_messages_and_output(
             }
         }
         matches++;
-        std::string orig_file_path = get_file_name(id[ix]);
+        std::string const& orig_file_path = get_file_name(id[ix]);
         // Print match
-        printf("%s:%s", orig_file_path.c_str(), decompressed_msg.c_str());
+        output_func(orig_file_path, dummy_compressed_msg, decompressed_msg, output_func_arg);
     }
     return matches;
 }

@@ -379,17 +379,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     "Obtain wildcard strings from FILE, one per line"
             );
 
-            // Define output options
-            po::options_description options_search_output("Output Options");
-            char output_method_input = 's';
-            options_search_output.add_options()(
-                    "output-method",
-                    po::value<char>(&output_method_input)
-                            ->value_name("CHAR")
-                            ->default_value(output_method_input),
-                    "Use output method specified by CHAR (s - stdout, b - binary)"
-            );
-
             // Define match controls
             po::options_description options_match_control("Match Controls");
             options_match_control.add_options()(
@@ -422,7 +411,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             po::options_description visible_options;
             visible_options.add(options_general);
             visible_options.add(options_search_input);
-            visible_options.add(options_search_output);
             visible_options.add(options_match_control);
 
             // Define hidden positional options (not shown in Boost's program options help message)
@@ -448,7 +436,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             po::options_description all_search_options;
             all_search_options.add(options_general);
             all_search_options.add(options_search_input);
-            all_search_options.add(options_search_output);
             all_search_options.add(options_match_control);
             all_search_options.add(hidden_positional_options);
 
@@ -541,15 +528,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                             "Timestamp range is invalid - begin timestamp is after end timestamp."
                     );
                 }
-            }
-
-            switch (output_method_input) {
-                case (char)OutputMethod::StdoutText:
-                case (char)OutputMethod::StdoutBinary:
-                    m_output_method = (OutputMethod)output_method_input;
-                    break;
-                default:
-                    throw invalid_argument("Unknown --output-method specified.");
             }
         }
     } catch (exception& e) {

@@ -34,6 +34,20 @@ public:
         }
     };
 
+    // GLT TODO: deduplicate this and use the definition in Grep
+    /**
+     * Handles search result
+     * @param orig_file_path Path of uncompressed file
+     * @param compressed_msg
+     * @param decompressed_msg
+     * @param custom_arg Custom argument for the output function
+     */
+    typedef void (*OutputFunc)(
+            std::string const& orig_file_path,
+            streaming_archive::reader::Message const& compressed_msg,
+            std::string const& decompressed_msg,
+            void* custom_arg
+    );
     // Methods
     /**
      * Opens archive for reading
@@ -203,7 +217,9 @@ public:
             std::vector<file_id_t>& id,
             std::vector<encoded_variable_t>& vars,
             std::vector<bool>& wildcard_required,
-            Query const& query
+            Query const& query,
+            OutputFunc output_func,
+            void* output_func_arg
     );
     /**
      * Decompresses a given message using a fixed timestamp pattern
