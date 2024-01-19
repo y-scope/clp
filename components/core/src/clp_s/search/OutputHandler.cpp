@@ -4,9 +4,11 @@ namespace clp_s::search {
 ResultsCacheOutputHandler::ResultsCacheOutputHandler(
         std::string const& uri,
         std::string const& collection,
-        uint64_t batch_size
+        uint64_t batch_size,
+        bool output_timestamp
 )
-        : m_batch_size(batch_size) {
+        : OutputHandler(output_timestamp),
+          m_batch_size(batch_size) {
     try {
         auto mongo_uri = mongocxx::uri(uri);
         m_client = mongocxx::client(mongo_uri);

@@ -11,6 +11,8 @@ void SchemaReader::close() {
         delete i;
     }
 
+    m_columns.clear();
+    m_reordered_columns.clear();
     m_column_map.clear();
     m_global_id_to_local_id.clear();
 }

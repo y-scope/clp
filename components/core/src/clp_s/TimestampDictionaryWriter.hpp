@@ -1,7 +1,6 @@
 #ifndef CLP_S_TIMESTAMPDICTIONARYWRITER_HPP
 #define CLP_S_TIMESTAMPDICTIONARYWRITER_HPP
 
-#include <map>
 #include <string>
 #include <unordered_map>
 
@@ -69,7 +68,7 @@ public:
 private:
     void merge_local_range();
     static void write_timestamp_entries(
-            std::map<std::string, TimestampEntry> const& ranges,
+            std::map<int32_t, TimestampEntry> const& ranges,
             ZstdCompressor& compressor
     );
 
@@ -87,8 +86,10 @@ private:
 
     pattern_to_id_t m_pattern_to_id;
     uint64_t m_next_id{};
-    std::map<std::string, TimestampEntry> m_global_column_to_range;
-    std::map<std::string, TimestampEntry> m_local_column_to_range;
+//    std::map<std::string, TimestampEntry> m_global_column_to_range;
+//    std::map<std::string, TimestampEntry> m_local_column_to_range;
+    std::unordered_map<int32_t, TimestampEntry> m_global_column_to_range;
+    std::unordered_map<int32_t, TimestampEntry> m_local_column_to_range;
 };
 }  // namespace clp_s
 

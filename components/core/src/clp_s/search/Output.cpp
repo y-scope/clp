@@ -24,6 +24,10 @@ namespace clp_s::search {
 void Output::filter() {
     auto top_level_expr = m_expr;
 
+    if (m_output_handler->output_timestamp()) {
+        m_timestamp_dict = ReaderUtils::read_local_timestamp_dictionary(m_archives_dir);
+    }
+
     for (auto const& archive : ReaderUtils::get_archives(m_archives_dir)) {
         std::vector<int32_t> matched_schemas;
         bool has_array = false;
@@ -109,9 +113,18 @@ void Output::filter() {
             reader.load();
 
             reader.initialize_filter(this);
-            while (reader.get_next_message(message, this)) {
-                m_output_handler->write(message);
+
+            if (m_output_handler->output_timestamp()) {
+                epochtime_t timestamp;
+//                while (reader.get_next_message(message, timestamp, this)) {
+//                    m_output_handler->write(message, timestamp);
+//                }
+            } else {
+                while (reader.get_next_message(message, this)) {
+                    m_output_handler->write(message);
+                }
             }
+
             reader.close();
         }
 
