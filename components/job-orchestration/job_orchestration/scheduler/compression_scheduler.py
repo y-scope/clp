@@ -47,10 +47,11 @@ logger.propagate = False
 
 class CompressionJob:
     def __init__(self, task: any, submission_ts: float, schedule_start_ts: float, celery_submission_ts: float) -> None:
-        self.task:any = task
-        self.submission_ts:float = submission_ts
-        self.schedule_start_ts:float = schedule_start_ts
-        self.celery_submission_ts:float = celery_submission_ts
+        self.task: any = task
+        self.submission_ts: float = submission_ts
+        self.schedule_start_ts: float = schedule_start_ts
+        self.celery_submission_ts: float = celery_submission_ts
+
 
 active_jobs = {}
 
@@ -63,6 +64,7 @@ of polling ready() like we should be able to.
 https://github.com/celery/celery/issues/4084
 ^Issue open since 2017 showing that this is a bug
 '''
+
 
 # V0.5 TODO Deduplicate
 def update_job_results(results: Dict[str, Any], archive_status: Dict[str, Any]):
@@ -150,7 +152,7 @@ def prepare_fs_compression_jobs(
             continue
 
         if file_metadata is not None:
-                paths_to_compress_buffer.add_file(file_metadata)
+            paths_to_compress_buffer.add_file(file_metadata)
         elif empty_directory_str is not None:
             paths_to_compress_buffer.add_empty_directory(empty_directory_str)
 
@@ -158,6 +160,7 @@ def prepare_fs_compression_jobs(
     for job_arguments in jobs_arguments:
         distributed_compression_jobs.append(fs_to_fs_compress.s(**job_arguments))
     return path_validation_erred
+
 
 '''
 def handle_job(
@@ -277,13 +280,14 @@ def handle_job(
         return JobStatus.SUCCESS, job_completion_ts
 '''
 
+
 def submit_job(
-    job_id_str: str,
-    output_type: str,
-    output_config: Dict[str, Any],
-    db_manager: DBManager,
-    celery_worker_method_base_kwargs: Dict[str, Any],
-    target_archive_size: int,
+        job_id_str: str,
+        output_type: str,
+        output_config: Dict[str, Any],
+        db_manager: DBManager,
+        celery_worker_method_base_kwargs: Dict[str, Any],
+        target_archive_size: int,
 ) -> JobStatus:
     global active_jobs
     logger.info(f"Starting job `{job_id_str}`.")
@@ -336,6 +340,7 @@ def submit_job(
     logger.info(f"Waiting for job {job_id_str}'s {num_compression_jobs} sub-job(s) to finish.")
     return JobStatus.RUNNING
 
+
 def set_job_finish_status(db_manager: DBManager, job_id_str: str, job_completion_status: JobStatus, end_timestamp: float):
     # FIXME: doesn't handle revoking for cancellation. Effectively we only allow
     # cancelling jobs that haven't yet been scheduled.
@@ -362,6 +367,7 @@ def set_job_finish_status(db_manager: DBManager, job_id_str: str, job_completion
             f"Job `{job_id_str}` ended with incorrect completion status"
             f" `{job_completion_status}`."
         )
+
 
 def poll_running_jobs(db_manager: DBManager) -> None:
     global active_jobs
@@ -424,13 +430,13 @@ def poll_running_jobs(db_manager: DBManager) -> None:
 
         job_completion_time_date = datetime.fromtimestamp(job_completion_ts)
 
-        #FIXME: set job status here and delete
+        # FIXME: set job status here and delete
         if not all_worker_jobs_successful:
             set_job_finish_status(db_manager, job_id_str, JobStatus.FAILED, job_completion_ts)
         else:
             set_job_finish_status(db_manager, job_id_str, JobStatus.SUCCESS, job_completion_ts)
         # FIXME: what was this trying to do?
-        #elif job_completed_with_errors:
+        # elif job_completed_with_errors:
         #    set_job_finish_status(db_manager, job_id_str, JobStatus.SUCCESS_WITH_ERRORS, job_completion_ts)
 
 
@@ -471,6 +477,7 @@ def poll_and_submit_pending_compression_jobs(
                 # FIXME: overrides cancellation
                 db_manager.set_job_status(job_id_str, JobStatus.RUNNING)
 
+
 def handle_jobs(
         output_type: str,
         output_config: Dict[str, Any],
@@ -486,7 +493,7 @@ def handle_jobs(
     db_manager.update_compression_stat()
     update_wait_time = UPDATE_TIME
     while True:
-        #TODO: set this limit based on config
+        # TODO: set this limit based on config
         new_job_limit = 960 - len(active_jobs)
         poll_and_submit_pending_compression_jobs(
             output_type=output_type,

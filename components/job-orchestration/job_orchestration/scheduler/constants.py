@@ -1,3 +1,5 @@
+import enum
+
 TASK_QUEUE_LOWEST_PRIORITY = 1
 TASK_QUEUE_HIGHEST_PRIORITY = 3
 
@@ -12,6 +14,11 @@ class JobStatus:
     SCHEDULED = 'SCHEDULED'
     SUCCEEDED = 'SUCCEEDED'
     FAILED = 'FAILED'
+
+
+class JobCompletionStatus(enum.IntEnum):
+    SUCCEEDED = 0
+    FAILED = 1
 
 
 class TaskUpdateType:
