@@ -18,16 +18,17 @@ namespace clp_s::search {
  */
 class OutputHandler {
 public:
-    // Constructor
+    // Constructors
     explicit OutputHandler() = default;
 
     // Destructor
     virtual ~OutputHandler() = default;
 
+    // Methods
     /**
-     * Writes a message to the output handler.
-     * @param message The message to write.
-     * @param timestamp The timestamp of the message.
+     * Writes a log event to the output handler.
+     * @param message The message in the log event.
+     * @param timestamp The timestamp of the log event.
      */
     virtual void write(std::string const& message, epochtime_t timestamp) = 0;
 
@@ -48,7 +49,7 @@ public:
  */
 class StandardOutputHandler : public OutputHandler {
 public:
-    // Constructor
+    // Constructors
     explicit StandardOutputHandler() = default;
 
     // Methods inherited from OutputHandler
@@ -56,9 +57,9 @@ public:
         printf("%" EPOCHTIME_T_PRINTF_FMT " %s", timestamp, message.c_str());
     }
 
-    void flush() override {}
-
     void write(std::string const& message) override { printf("%s", message.c_str()); }
+
+    void flush() override {}
 };
 
 /**

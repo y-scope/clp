@@ -45,5 +45,4 @@ void ResultsCacheOutputHandler::write(std::string const& message, epochtime_t ti
         throw OperationFailed(ErrorCode::ErrorCodeFailureDbBulkWrite, __FILENAME__, __LINE__);
     }
 }
-
 }  // namespace clp_s::search
