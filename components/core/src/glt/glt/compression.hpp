@@ -1,12 +1,10 @@
-#ifndef GLT_GLT_COMPRESSION_HPP
-#define GLT_GLT_COMPRESSION_HPP
+#ifndef COMPRESSION_HPP
+#define COMPRESSION_HPP
 
 #include <string>
 #include <vector>
 
 #include <boost/filesystem/path.hpp>
-#include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/ReaderParser.hpp>
 
 #include "CommandLineArguments.hpp"
 #include "FileToCompress.hpp"
@@ -28,9 +26,7 @@ bool compress(
         std::vector<FileToCompress>& files_to_compress,
         std::vector<std::string> const& empty_directory_paths,
         std::vector<FileToCompress>& grouped_files_to_compress,
-        size_t target_encoded_file_size,
-        std::unique_ptr<log_surgeon::ReaderParser> reader_parser,
-        bool use_heuristic
+        size_t target_encoded_file_size
 );
 
 /**
@@ -47,4 +43,4 @@ bool read_and_validate_grouped_file_list(
 );
 }  // namespace glt::glt
 
-#endif  // GLT_GLT_COMPRESSION_HPP
+#endif  // COMPRESSION_HPP

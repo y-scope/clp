@@ -7,8 +7,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include <log_surgeon/Lexer.hpp>
-
 #include "Defs.h"
 #include "ErrorCode.hpp"
 #include "FileReader.hpp"
@@ -66,17 +64,6 @@ std::string get_unambiguous_path(std::string const& path);
  */
 ErrorCode read_list_of_paths(std::string const& list_path, std::vector<std::string>& paths);
 
-/**
- * Loads a lexer from a file
- * @param schema_file_path
- * @param done
- * @param forward_lexer_ptr
- */
-void load_lexer_from_file(
-        std::string const& schema_file_path,
-        bool done,
-        log_surgeon::lexers::ByteLexer& forward_lexer_ptr
-);
 size_t get_variable_front_boundary_delimiter(
         std::vector<std::string> const& tokens,
         std::string const& logtype_str

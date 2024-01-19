@@ -11,8 +11,6 @@
 
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid.hpp>
-#include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/ReaderParser.hpp>
 
 #include "../../ArrayBackedPosIntSet.hpp"
 #include "../../ErrorCode.hpp"
@@ -69,15 +67,13 @@ public:
     std::string m_path_for_compression;
     group_id_t m_group_id;
     size_t m_target_encoded_file_size;
-    std::string m_schema_file_path;
 
     // Constructors
     Archive()
             : m_segments_dir_fd(-1),
               m_compression_level(0),
               m_global_metadata_db(nullptr),
-              m_old_ts_pattern(nullptr),
-              m_schema_file_path() {}
+              m_old_ts_pattern(nullptr) {}
 
     // Destructor
     ~Archive();

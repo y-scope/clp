@@ -36,8 +36,6 @@ set(
         ../ir/parsing.hpp
         ../ir/parsing.inc
         ../ir/types.hpp
-        ../LogSurgeonReader.cpp
-        ../LogSurgeonReader.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
         ../LogTypeDictionaryReader.hpp
@@ -143,7 +141,6 @@ target_link_libraries(gltg
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
-        log_surgeon::log_surgeon
         MariaDBClient::MariaDBClient
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
