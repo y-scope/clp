@@ -33,6 +33,12 @@ public:
             std::map<combined_table_id_t, std::vector<LogtypeQueries>>& combined_table_queries
     );
 
+    // getter
+    LogtypeTable& logtype_table() { return m_logtype_table; }
+
+    CombinedLogtypeTable& combined_tables() { return m_combined_tables; }
+
+private:
     bool m_logtype_table_loaded;
     LogtypeTable m_logtype_table;
     CombinedLogtypeTable m_combined_tables;

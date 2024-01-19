@@ -67,18 +67,36 @@ set(
         ../streaming_archive/Constants.hpp
         ../streaming_archive/MetadataDB.cpp
         ../streaming_archive/MetadataDB.hpp
+        ../streaming_archive/LogtypeSizeTracker.hpp
         ../streaming_archive/reader/Archive.cpp
         ../streaming_archive/reader/Archive.hpp
+        ../streaming_archive/reader/CombinedLogtypeTable.cpp
+        ../streaming_archive/reader/CombinedLogtypeTable.hpp
         ../streaming_archive/reader/File.cpp
         ../streaming_archive/reader/File.hpp
+        ../streaming_archive/reader/GLTSegment.cpp
+        ../streaming_archive/reader/GLTSegment.hpp
+        ../streaming_archive/reader/LogtypeMetadata.hpp
+        ../streaming_archive/reader/LogtypeTable.cpp
+        ../streaming_archive/reader/LogtypeTable.hpp
+        ../streaming_archive/reader/LogtypeTableManager.cpp
+        ../streaming_archive/reader/LogtypeTableManager.hpp
         ../streaming_archive/reader/Message.cpp
         ../streaming_archive/reader/Message.hpp
+        ../streaming_archive/reader/MultiLogtypeTablesManager.cpp
+        ../streaming_archive/reader/MultiLogtypeTablesManager.hpp
         ../streaming_archive/reader/Segment.cpp
         ../streaming_archive/reader/Segment.hpp
         ../streaming_archive/reader/SegmentManager.cpp
         ../streaming_archive/reader/SegmentManager.hpp
+        ../streaming_archive/reader/SingleLogtypeTableManager.cpp
+        ../streaming_archive/reader/SingleLogtypeTableManager.hpp
         ../streaming_archive/writer/File.cpp
         ../streaming_archive/writer/File.hpp
+        ../streaming_archive/writer/GLTSegment.cpp
+        ../streaming_archive/writer/GLTSegment.hpp
+        ../streaming_archive/writer/LogtypeTable.cpp
+        ../streaming_archive/writer/LogtypeTable.hpp
         ../streaming_archive/writer/Segment.cpp
         ../streaming_archive/writer/Segment.hpp
         ../streaming_compression/Constants.hpp
@@ -114,24 +132,6 @@ set(
         gltg.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
-        ../streaming_archive/writer/LogtypeTable.cpp
-        ../streaming_archive/writer/LogtypeTable.hpp
-        ../streaming_archive/writer/GLTSegment.cpp
-        ../streaming_archive/writer/GLTSegment.hpp
-        ../streaming_archive/LogtypeSizeTracker.hpp
-        ../streaming_archive/reader/CombinedLogtypeTable.cpp
-        ../streaming_archive/reader/CombinedLogtypeTable.hpp
-        ../streaming_archive/reader/GLTSegment.cpp
-        ../streaming_archive/reader/GLTSegment.hpp
-        ../streaming_archive/reader/LogtypeMetadata.hpp
-        ../streaming_archive/reader/LogtypeTable.cpp
-        ../streaming_archive/reader/LogtypeTable.hpp
-        ../streaming_archive/reader/LogtypeTableManager.cpp
-        ../streaming_archive/reader/LogtypeTableManager.hpp
-        ../streaming_archive/reader/MultiLogtypeTablesManager.cpp
-        ../streaming_archive/reader/MultiLogtypeTablesManager.hpp
-        ../streaming_archive/reader/SingleLogtypeTableManager.cpp
-        ../streaming_archive/reader/SingleLogtypeTableManager.hpp
 )
 
 add_executable(gltg ${GLTG_SOURCES})
