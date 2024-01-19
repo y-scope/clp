@@ -1325,7 +1325,9 @@ size_t Grep::search_segment_optimized_and_output(
                     loaded_file_id,
                     loaded_vars,
                     wildcard_required,
-                    query
+                    query,
+                    output_func,
+                    output_func_arg
             );
         }
         logtype_table_manager.close_logtype_table();
