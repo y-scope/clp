@@ -16,6 +16,10 @@ enum class PipelineInputMode {
     INTER_STAGE
 };
 
+/**
+ * Class describing an in memory aggregation pipeline consisting of a chained set of Operator
+ * objects.
+ */
 class Pipeline {
 public:
     Pipeline(PipelineInputMode input_mode) : m_input_mode(input_mode){};

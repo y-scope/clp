@@ -12,6 +12,12 @@
 #include "RecordValueIterator.hpp"
 
 namespace reducer {
+/**
+ * Class which converts serialized data into a RecordGroup and exposes iterators to the underlying
+ * data.
+ *
+ * The serialized data comes from the "serialize" function declared in this file.
+ */
 class DeserializedRecordGroup : public RecordGroup {
 public:
     DeserializedRecordGroup(std::vector<uint8_t>& serialized_data);
@@ -27,6 +33,10 @@ private:
     nlohmann::json m_record_group;
 };
 
+/**
+ * Class which exposes the Record interface on data which had been serialized by
+ * the "serialize" function declared in this file.
+ */
 class DeserializedRecord : public Record {
 public:
     DeserializedRecord() : m_record(nullptr) {}
@@ -55,6 +65,10 @@ private:
     nlohmann::json const* m_record;
 };
 
+/**
+ * Class which provides a RecordIterator over data serialized by the "serialize" function declared
+ * in this file.
+ */
 class DeserializedRecordIterator : public RecordIterator {
 public:
     DeserializedRecordIterator(nlohmann::json::array_t jarray) : m_jarray(jarray) {

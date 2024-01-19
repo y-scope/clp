@@ -8,6 +8,9 @@
 #include "Record.hpp"
 
 namespace reducer {
+/**
+ * Class which provides an iterator over Record objects in a RecordGroup.
+ */
 class RecordIterator {
 public:
     virtual ~RecordIterator() = default;
@@ -16,6 +19,9 @@ public:
     virtual bool done() = 0;
 };
 
+/**
+ * Class which provides a RecordIterator over a single record.
+ */
 class SingleRecordIterator : public RecordIterator {
 public:
     SingleRecordIterator(Record const* record) : m_record(record) {}
@@ -34,6 +40,9 @@ private:
     bool m_done{false};
 };
 
+/**
+ * Class which provides a RecordIterator over a vector of Record objects.
+ */
 class VectorRecordIterator : public RecordIterator {
 public:
     VectorRecordIterator(std::vector<Record> const* records)

@@ -11,6 +11,11 @@
 #include "RecordIterator.hpp"
 
 namespace reducer {
+
+/**
+ * Class describing a list of records which have been aggregated by some GroupTags. This is the
+ * main unit of computation in our reducer framework.
+ */
 class RecordGroup {
 public:
     virtual ~RecordGroup() = default;
@@ -18,8 +23,12 @@ public:
     virtual GroupTags const& get_tags() const = 0;
 };
 
-// TODO: change these to pointer-based so we can have nullptr/default init
-
+/**
+ * RecordGroup implementation that exposes a single Record with GroupTags.
+ *
+ * The Record and GroupTags can be updated allowing this class to act as an adapter for a larger set
+ * of data.
+ */
 class BasicSingleRecordGroup : public RecordGroup {
 public:
     BasicSingleRecordGroup() : m_tags(nullptr), m_record(nullptr) {}
@@ -43,6 +52,12 @@ private:
     Record const* m_record;
 };
 
+/**
+ * RecordGroup implementation that exposes a list of Records with GroupTags.
+ *
+ * The Records and GroupTags can be updated allowing this class to act as an adapter for a larger
+ * set of data.
+ */
 class BasicMultiRecordGroup : public RecordGroup {
 public:
     BasicMultiRecordGroup() : m_tags(nullptr), m_records(nullptr) {}

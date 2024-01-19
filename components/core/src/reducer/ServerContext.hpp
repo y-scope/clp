@@ -45,6 +45,10 @@ namespace JobAttributes {
 char const cBucketSize[] = "bucket_size";
 }  // namespace JobAttributes
 
+/**
+ * Class which manages interactions with the jobs database and result cache database. Also holds
+ * state for the reducer job this server is handling.
+ */
 class ServerContext {
 public:
     // Types

@@ -8,6 +8,9 @@
 #include "Operator.hpp"
 
 namespace reducer {
+/**
+ * Basic count operator which will accumulate counts within different tagged groups.
+ */
 class CountOperator : public Operator {
 public:
     CountOperator() : Operator() {}

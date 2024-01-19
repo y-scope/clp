@@ -20,6 +20,17 @@ enum class OperatorResultCardinality {
     INPUT
 };
 
+/**
+ * Class implementing a generic Operator which operates on RecordGroup objects composed of GroupTags
+ * and a list of Record objects.
+ *
+ * Operators implement methods to accept inter stage RecordGroups (operate on records from previous
+ * pipeline stage i.e. a combiner) and intra stage RecordGroups (operate on pre-aggregated results
+ * withing a pipeline stage i.e. a reducer).
+ *
+ * Operators can be of type GROUPBY, MAP, or REDUCE, though currently no MAP type Operators are
+ * implemented.
+ */
 class Operator {
 public:
     Operator() : m_next_stage(nullptr) {}
@@ -42,6 +53,10 @@ public:
     virtual std::unique_ptr<RecordGroupIterator> get_stored_result_iterator(
             std::set<GroupTags> const& filtered_tags
     ) {
+        /** TODO: By default operators don't have to support filtering their output. We should
+         *  implement an iterator that wraps RecordGroupIterators and performs the filtering when
+         *  the underlying operator doesn't.
+         */
         return get_stored_result_iterator();
     }
 

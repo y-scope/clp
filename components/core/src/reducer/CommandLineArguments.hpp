@@ -6,6 +6,9 @@
 #include "../clp/CommandLineArgumentsBase.hpp"
 
 namespace reducer {
+/**
+ * Class which parses and validates command line arguments for the reducer server.
+ */
 class CommandLineArguments : public clp::CommandLineArgumentsBase {
 public:
     // Constructors

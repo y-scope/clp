@@ -7,6 +7,9 @@
 #include "RecordGroup.hpp"
 
 namespace reducer {
+/**
+ * Class that allows iterating over all records in a RecordGroup.
+ */
 class RecordGroupIterator {
 public:
     virtual ~RecordGroupIterator() = default;
@@ -15,6 +18,9 @@ public:
     virtual bool done() = 0;
 };
 
+/**
+ * Class which adapts a map of GroupTags to int64_t values into a RecordGroupIterator.
+ */
 class Int64MapRecordGroupIterator : public RecordGroupIterator {
 public:
     Int64MapRecordGroupIterator(std::map<GroupTags, int64_t> const& map, std::string key)
@@ -41,6 +47,9 @@ private:
     std::map<GroupTags, int64_t>::const_iterator m_it_end;
 };
 
+/**
+ * Class which adapts a map of int64_t to int64_t values into a RecordGroupIterator.
+ */
 class Int64Int64MapRecordGroupIterator : public RecordGroupIterator {
 public:
     Int64Int64MapRecordGroupIterator(std::map<int64_t, int64_t> const& map, std::string key)
@@ -69,6 +78,10 @@ private:
     std::map<int64_t, int64_t>::const_iterator m_it_end;
 };
 
+/**
+ * Class which adapts a map of GroupTags to int64_t values into a RecordGroupIterator, and provides
+ * filtering on the output.
+ */
 class FilteredInt64MapRecordGroupIterator : public RecordGroupIterator {
 public:
     FilteredInt64MapRecordGroupIterator(
@@ -118,6 +131,9 @@ private:
     std::set<GroupTags>::const_iterator m_filter_end;
 };
 
+/**
+ * Class which provides a RecordGroupIterator over an empty RecordGroup.
+ */
 class EmptyRecordGroupIterator : public RecordGroupIterator {
 public:
     virtual RecordGroup const* get() { return nullptr; }

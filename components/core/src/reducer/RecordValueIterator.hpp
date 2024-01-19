@@ -17,6 +17,9 @@ struct TypedRecordKey {
     ValueType type;
 };
 
+/**
+ * Class which provides an iterator over all of the typed keys in a Record.
+ */
 class RecordValueIterator {
 public:
     virtual ~RecordValueIterator() = default;
@@ -25,6 +28,9 @@ public:
     virtual bool done() = 0;
 };
 
+/**
+ * Class which provides a RecordValueIterator over an empty Record.
+ */
 class EmptyRecordValueIterator : public RecordValueIterator {
     virtual TypedRecordKey get() { return {}; }
 
@@ -33,6 +39,9 @@ class EmptyRecordValueIterator : public RecordValueIterator {
     virtual bool done() { return true; }
 };
 
+/**
+ * Class which provides a RecordValueIterator over a Record with a single key-value pair.
+ */
 class SingleValueIterator : public RecordValueIterator {
 public:
     SingleValueIterator(std::string_view key, ValueType type) : m_key(key), m_type(type) {}

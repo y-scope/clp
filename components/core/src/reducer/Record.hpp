@@ -9,6 +9,10 @@
 #include "RecordValueIterator.hpp"
 
 namespace reducer {
+/**
+ * Class which describes a single Record containing data which can be accessed via typed key-value
+ * pairs.
+ */
 class Record {
 public:
     virtual ~Record() = default;
@@ -24,6 +28,12 @@ public:
     virtual std::unique_ptr<RecordValueIterator> value_iter() const = 0;
 };
 
+/**
+ * Record implementation which exposes a single string key-value pair.
+ *
+ * The value associated with the key can be updated allowing this class to act as an adapter for a
+ * larger set of data.
+ */
 class StringRecordAdapter : public Record {
 public:
     StringRecordAdapter(std::string key_name) : m_key_name(key_name) {}
@@ -46,6 +56,12 @@ private:
     std::string_view m_value;
 };
 
+/**
+ * Record implementation which exposes a single integer key-value pair.
+ *
+ * The value associated with the key can be updated allowing this class to act as an adapter for a
+ * larger set of data.
+ */
 class Int64RecordAdapter : public Record {
 public:
     Int64RecordAdapter(std::string key_name) : m_key_name(key_name) {}
@@ -68,6 +84,9 @@ private:
     int64_t m_value;
 };
 
+/**
+ * Record implementation for an empty key-value pair.
+ */
 class EmptyRecord : public Record {
 public:
     EmptyRecord() {}
