@@ -12,13 +12,13 @@
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid.hpp>
 
-#include "../../streaming_compression/passthrough/Compressor.hpp"
-#include "../../streaming_compression/zstd/Compressor.hpp"
 #include "../../ArrayBackedPosIntSet.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../GlobalMetadataDB.hpp"
 #include "../../ir/LogEvent.hpp"
 #include "../../LogTypeDictionaryWriter.hpp"
+#include "../../streaming_compression/passthrough/Compressor.hpp"
+#include "../../streaming_compression/zstd/Compressor.hpp"
 #include "../../VariableDictionaryWriter.hpp"
 #include "../ArchiveMetadata.hpp"
 #include "../MetadataDB.hpp"
@@ -325,7 +325,7 @@ private:
 #elif USE_ZSTD_COMPRESSION
     streaming_compression::zstd::Compressor m_filename_dict_compressor;
 #else
-static_assert(false, "Unsupported compression mode.");
+    static_assert(false, "Unsupported compression mode.");
 #endif
 
     GLTSegment m_glt_segment;

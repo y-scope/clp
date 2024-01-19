@@ -9,10 +9,10 @@
 #include <boost/filesystem.hpp>
 #include <string_utils/string_utils.hpp>
 
-#include "../../streaming_compression/passthrough/Compressor.hpp"
-#include "../../streaming_compression/zstd/Compressor.hpp"
 #include "../../EncodedVariableInterpreter.hpp"
 #include "../../spdlog_with_specializations.hpp"
+#include "../../streaming_compression/passthrough/Compressor.hpp"
+#include "../../streaming_compression/zstd/Compressor.hpp"
 #include "../../Utils.hpp"
 #include "../ArchiveMetadata.hpp"
 #include "../Constants.hpp"
