@@ -71,14 +71,14 @@ private:
     std::string m_archives_dir;
     std::string m_output_dir;
     std::string m_timestamp_key;
-    int m_compression_level = 3;
-    size_t m_target_encoded_size = 8UL * 1024 * 1024 * 1024;  // 8 GiB
+    int m_compression_level{3};
+    size_t m_target_encoded_size{8ULL * 1024 * 1024 * 1024};  // 8 GiB
 
     // MongoDB configuration variables
-    bool m_mongodb_enabled = false;
+    bool m_mongodb_enabled{false};
     std::string m_mongodb_uri;
     std::string m_mongodb_collection;
-    uint64_t m_batch_size = 1000;
+    uint64_t m_batch_size{1000};
 
     // Search variables
     std::string m_query;
