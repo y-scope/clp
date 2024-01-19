@@ -14,31 +14,31 @@
 #include "Pipeline.hpp"
 
 namespace reducer {
-enum class ServerStatus {
-    IDLE,
-    RUNNING,
-    FINISHING_SUCCESS,
-    FINISHING_REDUCER_ERROR,
-    FINISHING_REMOTE_ERROR,
-    FINISHING_CANCELLED
+enum class ServerStatus : uint8_t {
+    Idle,
+    Running,
+    FinishingSuccess,
+    FinishingReducerError,
+    FinishingRemoteError,
+    FinishingCancelled
 };
 
 // This enum is a hidden binding between the python
 // scheduler and this c++ reducer
 enum class JobStatus : int {
-    PENDING = 0,
-    RUNNING,
-    DONE,
-    SUCCESS,
-    SUCCESS_WITH_ERRORS,
-    FAILED,
-    CANCELLING,
-    CANCELLED,
-    PENDING_REDUCER,
-    REDUCER_READY,
-    PENDING_REDUCER_DONE,
-    NO_MATCHING_ARCHIVE,
-    WAITING_FOR_BATCH
+    Pending = 0,
+    Running,
+    Done,
+    Success,
+    SuccessWithErrors,
+    Failed,
+    Cancelling,
+    Cancelled,
+    PendingReducer,
+    ReducerReady,
+    PendingReducerDone,
+    NoMatchingArchive,
+    WaitingForBatch
 };
 
 namespace JobAttributes {

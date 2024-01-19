@@ -1,6 +1,6 @@
-
-#include <chrono>
-#include <map>
+#include <cassert>
+#include <memory>
+#include <string>
 
 #include <boost/asio.hpp>
 #include <mongocxx/instance.hpp>
@@ -15,47 +15,47 @@ using boost::asio::ip::tcp;
 
 namespace reducer {
 
-static std::string server_status_to_string(ServerStatus status) {
+namespace {
+std::string server_status_to_string(ServerStatus status) {
     switch (status) {
-        case ServerStatus::IDLE:
-            return "IDLE";
-        case ServerStatus::RUNNING:
-            return "RUNNING";
-        case ServerStatus::FINISHING_SUCCESS:
-            return "FINISHING_SUCCESS";
-        case ServerStatus::FINISHING_REDUCER_ERROR:
-            return "FINISHING_REDUCER_ERROR";
-        case ServerStatus::FINISHING_REMOTE_ERROR:
-            return "FINISHING_REMOTE_ERROR";
-        case ServerStatus::FINISHING_CANCELLED:
-            return "FINISHING_CANCELLED";
+        case ServerStatus::Idle:
+            return "Idle";
+        case ServerStatus::Running:
+            return "Running";
+        case ServerStatus::FinishingSuccess:
+            return "FinishingSuccess";
+        case ServerStatus::FinishingReducerError:
+            return "FinishingReducerError";
+        case ServerStatus::FinishingRemoteError:
+            return "FinishingRemoteError";
+        case ServerStatus::FinishingCancelled:
+            return "FinishingCancelled";
         default:
             assert(0);
     }
     return "";
 }
+}  // namespace
 
 struct RecordReceiverContext {
-    std::shared_ptr<ServerContext> ctx;
-    tcp::socket socket;
-    char* buf;
-    size_t buf_size;
-    size_t bytes_occupied;
-
     RecordReceiverContext(std::shared_ptr<ServerContext> ctx)
             : ctx(ctx),
-              socket(ctx->get_io_context()) {
-        buf_size = 1024;
-        bytes_occupied = 0;
-        buf = new char[buf_size];
-    }
+              socket(ctx->get_io_context()),
+              buf_size(cDefaultBufSize),
+              buf(new char[cDefaultBufSize]) {}
 
     ~RecordReceiverContext() {
         delete buf;
         socket.close();
     }
 
-    static std::shared_ptr<RecordReceiverContext> NewReceiver(std::shared_ptr<ServerContext> ctx) {
+    // Disallow copy and move
+    RecordReceiverContext(RecordReceiverContext const&) = delete;
+    RecordReceiverContext(RecordReceiverContext const&&) = delete;
+    RecordReceiverContext const& operator=(RecordReceiverContext const&) = delete;
+    RecordReceiverContext const& operator=(RecordReceiverContext const&&) = delete;
+
+    static std::shared_ptr<RecordReceiverContext> new_receiver(std::shared_ptr<ServerContext> ctx) {
         // Note: we use shared instead of unique to make things work with boost::bind
         std::shared_ptr<RecordReceiverContext> receiver
                 = std::make_shared<RecordReceiverContext>(ctx);
@@ -66,6 +66,13 @@ struct RecordReceiverContext {
 
         return receiver;
     }
+
+    static constexpr size_t cDefaultBufSize = 1024;
+    std::shared_ptr<ServerContext> ctx;
+    tcp::socket socket;
+    char* buf;
+    size_t buf_size;
+    size_t bytes_occupied{0};
 };
 
 void queue_accept_task(std::shared_ptr<ServerContext> ctx);
@@ -80,7 +87,7 @@ struct ReceiveTask {
         char* buf_ptr = rctx->buf;
 
         // if no new bytes terminate
-        if (0 == bytes_remaining || ServerStatus::RUNNING != rctx->ctx->get_status()) {
+        if (0 == bytes_remaining || ServerStatus::Running != rctx->ctx->get_status()) {
             return;
         }
 
@@ -95,7 +102,7 @@ struct ReceiveTask {
             }
 
             // terminate if record group size is over 16MB
-            if (record_size >= 16 * 1024 * 1024) {
+            if (record_size >= cMaxRecordSize) {
                 SPDLOG_ERROR("Record too large: {}B", record_size);
                 return;
             }
@@ -131,6 +138,7 @@ struct ReceiveTask {
     }
 
 private:
+    static constexpr size_t cMaxRecordSize = static_cast<size_t>(16 * 1024 * 1024);
     std::shared_ptr<RecordReceiverContext> rctx;
 };
 
@@ -151,7 +159,7 @@ struct ValidateSenderTask {
     void operator()(boost::system::error_code const& error, size_t bytes_remaining) {
         // if no new bytes terminate
         if (0 == bytes_remaining || error.failed()
-            || ServerStatus::RUNNING != rctx->ctx->get_status())
+            || ServerStatus::Running != rctx->ctx->get_status())
         {
             SPDLOG_ERROR("Rejecting connection because of connection error");
             return;
@@ -160,11 +168,11 @@ struct ValidateSenderTask {
         // account for leftover bytes from previous call
         bytes_remaining += rctx->bytes_occupied;
 
-        int32_t job_id;
         if (bytes_remaining > sizeof(int32_t)) {
             SPDLOG_ERROR("Rejecting connection because of invalid negotiation");
             return;
         } else if (bytes_remaining == sizeof(int32_t)) {
+            int32_t job_id = 0;
             memcpy(&job_id, rctx->buf, sizeof(int32_t));
             if (job_id != rctx->ctx->get_job_id()) {
                 SPDLOG_ERROR(
@@ -214,7 +222,7 @@ struct AcceptTask {
               rctx(rctx) {}
 
     void operator()(boost::system::error_code const& error) {
-        if (false == error.failed() && ServerStatus::RUNNING == ctx->get_status()) {
+        if (false == error.failed() && ServerStatus::Running == ctx->get_status()) {
             queue_validate_sender_task(std::move(rctx));
             queue_accept_task(std::move(ctx));
         } else if (error.failed() && boost::system::errc::operation_canceled == error.value()) {
@@ -227,7 +235,7 @@ struct AcceptTask {
             }
         } else {
             SPDLOG_WARN(
-                    "Rejecting connection while not in RUNNING state, state={}",
+                    "Rejecting connection while not in Running state, state={}",
                     server_status_to_string(ctx->get_status())
             );
             queue_accept_task(std::move(ctx));
@@ -240,7 +248,7 @@ private:
 };
 
 void queue_accept_task(std::shared_ptr<ServerContext> ctx) {
-    auto rctx = RecordReceiverContext::NewReceiver(ctx);
+    auto rctx = RecordReceiverContext::new_receiver(ctx);
 
     ctx->get_tcp_acceptor().async_accept(rctx->socket, AcceptTask(ctx, rctx));
 }
@@ -251,17 +259,17 @@ struct PollDbTask {
               poll_timer(poll_timer) {}
 
     void operator()(boost::system::error_code const& e) {
-        if (ServerStatus::IDLE == ctx->get_status()) {
+        if (ServerStatus::Idle == ctx->get_status()) {
             ctx->set_status(ctx->take_job());
-        } else if (ServerStatus::RUNNING == ctx->get_status()) {
+        } else if (ServerStatus::Running == ctx->get_status()) {
             ctx->set_status(ctx->poll_job_done());
         }
 
-        if (ServerStatus::RUNNING == ctx->get_status() && ctx->is_timeline_aggregation()) {
+        if (ServerStatus::Running == ctx->get_status() && ctx->is_timeline_aggregation()) {
             ctx->set_status(ctx->upsert_timeline_results());
         }
 
-        if (ServerStatus::IDLE == ctx->get_status() || ServerStatus::RUNNING == ctx->get_status()) {
+        if (ServerStatus::Idle == ctx->get_status() || ServerStatus::Running == ctx->get_status()) {
             poll_timer->expires_at(
                     poll_timer->expiry()
                     + boost::asio::chrono::milliseconds(ctx->get_polling_interval())
@@ -340,20 +348,20 @@ int main(int argc, char const* argv[]) {
         // Start running the event processing loop
         ctx->run();
 
-        if (reducer::ServerStatus::FINISHING_SUCCESS == ctx->get_status()) {
+        if (reducer::ServerStatus::FinishingSuccess == ctx->get_status()) {
             SPDLOG_INFO("Job {} finished successfully", ctx->get_job_id());
 
             bool results_success = false;
             if (ctx->is_timeline_aggregation()) {
                 results_success = ctx->upsert_timeline_results()
-                                  != reducer::ServerStatus::FINISHING_REDUCER_ERROR;
+                                  != reducer::ServerStatus::FinishingReducerError;
             } else {
                 results_success = ctx->publish_pipeline_results();
             }
 
-            bool done_success = ctx->update_job_status(reducer::JobStatus::SUCCESS);
+            bool done_success = ctx->update_job_status(reducer::JobStatus::Success);
             bool metrics_done_success
-                    = ctx->publish_reducer_job_metrics(reducer::JobStatus::SUCCESS);
+                    = ctx->publish_reducer_job_metrics(reducer::JobStatus::Success);
             if (false == results_success || false == done_success || false == metrics_done_success)
             {
                 SPDLOG_CRITICAL("Database operation failed");
@@ -362,14 +370,14 @@ int main(int argc, char const* argv[]) {
         } else {
             SPDLOG_INFO("Job {} finished unsuccesfully", ctx->get_job_id());
             bool done_success = true, metrics_done_success = true;
-            if (reducer::ServerStatus::FINISHING_REDUCER_ERROR == ctx->get_status()) {
-                done_success = ctx->update_job_status(reducer::JobStatus::FAILED);
-                metrics_done_success = ctx->publish_reducer_job_metrics(reducer::JobStatus::FAILED);
-            } else if (reducer::ServerStatus::FINISHING_CANCELLED == ctx->get_status()) {
+            if (reducer::ServerStatus::FinishingReducerError == ctx->get_status()) {
+                done_success = ctx->update_job_status(reducer::JobStatus::Failed);
+                metrics_done_success = ctx->publish_reducer_job_metrics(reducer::JobStatus::Failed);
+            } else if (reducer::ServerStatus::FinishingCancelled == ctx->get_status()) {
                 metrics_done_success
-                        = ctx->publish_reducer_job_metrics(reducer::JobStatus::CANCELLED);
-            } else if (reducer::ServerStatus::FINISHING_REMOTE_ERROR == ctx->get_status()) {
-                metrics_done_success = ctx->publish_reducer_job_metrics(reducer::JobStatus::FAILED);
+                        = ctx->publish_reducer_job_metrics(reducer::JobStatus::Cancelled);
+            } else if (reducer::ServerStatus::FinishingRemoteError == ctx->get_status()) {
+                metrics_done_success = ctx->publish_reducer_job_metrics(reducer::JobStatus::Failed);
             }
 
             if (false == done_success || false == metrics_done_success) {

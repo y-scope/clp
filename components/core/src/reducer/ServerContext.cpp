@@ -1,5 +1,7 @@
 #include "ServerContext.hpp"
 
+#include <chrono>
+
 #include <bsoncxx/builder/stream/document.hpp>
 #include <fmt/core.h>
 #include <json/single_include/nlohmann/json.hpp>
@@ -34,7 +36,7 @@ ServerContext::ServerContext(CommandLineArguments& args)
           m_mongodb_job_metrics_collection(args.get_mongodb_jobs_metric_collection()),
           m_polling_interval_ms(args.get_polling_interval()),
           m_pipeline(nullptr),
-          m_status(ServerStatus::IDLE),
+          m_status(ServerStatus::Idle),
           m_job_id(-1),
           m_timeline_aggregation(false) {
     try {
@@ -67,7 +69,7 @@ ServerContext::ServerContext(CommandLineArguments& args)
     m_get_new_jobs_sql = fmt::format(
             cGetNewJobs,
             args.get_db_jobs_table(),
-            clp::enum_to_underlying_type(JobStatus::PENDING_REDUCER)
+            clp::enum_to_underlying_type(JobStatus::PendingReducer)
     );
     m_poll_job_done_sql = fmt::format(cPollJobDone, args.get_db_jobs_table(), "{}");
 
@@ -82,7 +84,7 @@ ServerContext::ServerContext(CommandLineArguments& args)
 
 ServerStatus ServerContext::take_job() {
     if (false == m_db.execute_query(m_get_new_jobs_sql)) {
-        return ServerStatus::FINISHING_REDUCER_ERROR;
+        return ServerStatus::FinishingReducerError;
     }
 
     auto it = m_db.get_iterator();
@@ -93,7 +95,7 @@ ServerStatus ServerContext::take_job() {
         it.get_field_as_string(1, search_config);
         int64_t job_id;
         if (!clp::string_utils::convert_string_to_int(job_id_str, job_id)) {
-            return ServerStatus::FINISHING_REDUCER_ERROR;
+            return ServerStatus::FinishingReducerError;
         }
         available_jobs.emplace_back(job_id, std::move(search_config));
         it.get_next();
@@ -101,20 +103,20 @@ ServerStatus ServerContext::take_job() {
 
     for (auto& job : available_jobs) {
         clp::MySQLParamBindings& bindings = m_take_search_job_stmt->get_statement_bindings();
-        int64_t reducer_ready = clp::enum_to_underlying_type(JobStatus::REDUCER_READY);
-        int64_t pending_reducer = clp::enum_to_underlying_type(JobStatus::PENDING_REDUCER);
+        int64_t reducer_ready = clp::enum_to_underlying_type(JobStatus::ReducerReady);
+        int64_t pending_reducer = clp::enum_to_underlying_type(JobStatus::PendingReducer);
         bindings.bind_int64(0, reducer_ready);
         bindings.bind_int(1, m_reducer_port);
         bindings.bind_varchar(2, m_reducer_host.c_str(), m_reducer_host.length());
         bindings.bind_int64(3, pending_reducer);
         bindings.bind_int64(4, job.first);
         if (false == m_take_search_job_stmt->execute()) {
-            return ServerStatus::FINISHING_REDUCER_ERROR;
+            return ServerStatus::FinishingReducerError;
         }
 
         uint64_t num_affected_rows;
         if (false == m_take_search_job_stmt->get_affected_rows(num_affected_rows)) {
-            return ServerStatus::FINISHING_REDUCER_ERROR;
+            return ServerStatus::FinishingReducerError;
         }
 
         if (num_affected_rows > 0) {
@@ -142,10 +144,10 @@ ServerStatus ServerContext::take_job() {
             auto collection_name = std::to_string(job.first);
             m_mongodb_results_collection = m_mongodb_results_database[collection_name];
 
-            return ServerStatus::RUNNING;
+            return ServerStatus::Running;
         }
     }
-    return ServerStatus::IDLE;
+    return ServerStatus::Idle;
 }
 
 bool ServerContext::update_job_status(JobStatus new_status) {
@@ -159,7 +161,7 @@ bool ServerContext::update_job_status(JobStatus new_status) {
 
 ServerStatus ServerContext::poll_job_done() {
     if (false == m_db.execute_query(fmt::format(m_poll_job_done_sql, m_job_id))) {
-        return ServerStatus::FINISHING_REDUCER_ERROR;
+        return ServerStatus::FinishingReducerError;
     }
 
     auto it = m_db.get_iterator();
@@ -171,18 +173,18 @@ ServerStatus ServerContext::poll_job_done() {
         it.get_next();
     }
 
-    if (JobStatus::PENDING_REDUCER_DONE == job_status) {
-        return ServerStatus::FINISHING_SUCCESS;
+    if (JobStatus::PendingReducerDone == job_status) {
+        return ServerStatus::FinishingSuccess;
     }
 
     if (false
-        == (JobStatus::RUNNING == job_status || JobStatus::REDUCER_READY == job_status
-            || JobStatus::CANCELLING == job_status || JobStatus::WAITING_FOR_BATCH == job_status))
+        == (JobStatus::Running == job_status || JobStatus::ReducerReady == job_status
+            || JobStatus::Cancelling == job_status || JobStatus::WaitingForBatch == job_status))
     {
-        return ServerStatus::FINISHING_REMOTE_ERROR;
+        return ServerStatus::FinishingRemoteError;
     }
 
-    return ServerStatus::RUNNING;
+    return ServerStatus::Running;
 }
 
 bool ServerContext::publish_reducer_job_metrics(JobStatus finish_status) {
@@ -194,13 +196,13 @@ bool ServerContext::publish_reducer_job_metrics(JobStatus finish_status) {
             = mongocxx::collection(m_mongodb_results_database[m_mongodb_job_metrics_collection]);
     std::string status_string;
     switch (finish_status) {
-        case JobStatus::SUCCESS:
+        case JobStatus::Success:
             status_string = "success";
             break;
-        case JobStatus::FAILED:
+        case JobStatus::Failed:
             status_string = "failed";
             break;
-        case JobStatus::CANCELLED:
+        case JobStatus::Cancelled:
             status_string = "cancelled";
             break;
         default:
@@ -236,7 +238,7 @@ bool ServerContext::publish_reducer_job_metrics(JobStatus finish_status) {
 
 ServerStatus ServerContext::upsert_timeline_results() {
     if (m_updated_tags.empty()) {
-        return ServerStatus::RUNNING;
+        return ServerStatus::Running;
     }
 
     auto bulk_write = m_mongodb_results_collection.create_bulk_write();
@@ -265,9 +267,9 @@ ServerStatus ServerContext::upsert_timeline_results() {
         }
     } catch (mongocxx::bulk_write_exception const& e) {
         SPDLOG_ERROR("MongoDB bulk write exception during upsert: {}", e.what());
-        return ServerStatus::FINISHING_REDUCER_ERROR;
+        return ServerStatus::FinishingReducerError;
     }
-    return ServerStatus::RUNNING;
+    return ServerStatus::Running;
 }
 
 bool ServerContext::publish_pipeline_results() {
@@ -295,7 +297,7 @@ bool ServerContext::publish_pipeline_results() {
 void ServerContext::reset() {
     m_ioctx.reset();
     m_pipeline.reset(nullptr);
-    m_status = ServerStatus::IDLE;
+    m_status = ServerStatus::Idle;
     m_job_id = -1;
     m_timeline_aggregation = false;
     m_updated_tags.clear();
