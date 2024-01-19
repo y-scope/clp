@@ -56,9 +56,7 @@ bool compress(
         vector<FileToCompress>& files_to_compress,
         vector<string> const& empty_directory_paths,
         vector<FileToCompress>& grouped_files_to_compress,
-        size_t target_encoded_file_size,
-        std::unique_ptr<log_surgeon::ReaderParser> reader_parser,
-        bool use_heuristic
+        size_t target_encoded_file_size
 ) {
     auto output_dir = boost::filesystem::path(command_line_args.get_output_dir());
 
@@ -108,17 +106,13 @@ bool compress(
 
     // Open Archive
     streaming_archive::writer::Archive archive_writer;
-    // Set schema file if specified by user
-    if (false == command_line_args.get_use_heuristic()) {
-        archive_writer.m_schema_file_path = command_line_args.get_schema_file_path();
-    }
     // Open archive
     archive_writer.open(archive_user_config);
 
     archive_writer.add_empty_directories(empty_directory_paths);
 
     bool all_files_compressed_successfully = true;
-    FileCompressor file_compressor(uuid_generator, std::move(reader_parser));
+    FileCompressor file_compressor(uuid_generator);
     auto target_data_size_of_dictionaries
             = command_line_args.get_target_data_size_of_dictionaries();
 
@@ -139,8 +133,7 @@ bool compress(
                     archive_user_config,
                     target_encoded_file_size,
                     *rit,
-                    archive_writer,
-                    use_heuristic
+                    archive_writer
             ))
         {
             all_files_compressed_successfully = false;
@@ -167,8 +160,7 @@ bool compress(
                     archive_user_config,
                     target_encoded_file_size,
                     file_to_compress,
-                    archive_writer,
-                    use_heuristic
+                    archive_writer
             ))
         {
             all_files_compressed_successfully = false;

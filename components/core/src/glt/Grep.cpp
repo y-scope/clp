@@ -2,13 +2,11 @@
 
 #include <algorithm>
 
-#include <log_surgeon/Constants.hpp>
 #include <string_utils/string_utils.hpp>
 
 #include "EncodedVariableInterpreter.hpp"
 #include "ir/parsing.hpp"
 #include "ir/types.hpp"
-#include "LogSurgeonReader.hpp"
 #include "StringReader.hpp"
 #include "Utils.hpp"
 
@@ -259,15 +257,6 @@ bool QueryToken::change_to_next_possible_type() {
     }
 }
 
-/**
- * Wraps the tokens returned from the log_surgeon lexer, and stores the variable ids of the tokens
- * in a search query in a set. This allows for optimized search performance.
- */
-class SearchToken : public log_surgeon::Token {
-public:
-    std::set<int> m_type_ids_set;
-};
-
 // Local prototypes
 /**
  * Process a QueryToken that is definitely a variable
@@ -503,10 +492,7 @@ std::optional<Query> Grep::process_raw_query(
         string const& search_string,
         epochtime_t search_begin_ts,
         epochtime_t search_end_ts,
-        bool ignore_case,
-        log_surgeon::lexers::ByteLexer& forward_lexer,
-        log_surgeon::lexers::ByteLexer& reverse_lexer,
-        bool use_heuristic
+        bool ignore_case
 ) {
     // Add prefix and suffix '*' to make the search a sub-string match
     string processed_search_string = "*";
@@ -520,40 +506,26 @@ std::optional<Query> Grep::process_raw_query(
     size_t end_pos = 0;
     bool is_var;
     string search_string_for_sub_queries{processed_search_string};
-    if (use_heuristic) {
-        // Replace '?' wildcards with '*' wildcards since we currently have no support for
-        // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
-        // message uses the original wildcards, so correctness will be maintained.
-        std::replace(
-                search_string_for_sub_queries.begin(),
-                search_string_for_sub_queries.end(),
-                '?',
-                '*'
-        );
-        // Clean-up in case any instances of "?*" or "*?" were changed into "**"
-        search_string_for_sub_queries
-                = clean_up_wildcard_search_string(search_string_for_sub_queries);
-        while (get_bounds_of_next_potential_var(
-                search_string_for_sub_queries,
-                begin_pos,
-                end_pos,
-                is_var
-        ))
-        {
-            query_tokens.emplace_back(search_string_for_sub_queries, begin_pos, end_pos, is_var);
-        }
-    } else {
-        while (get_bounds_of_next_potential_var(
-                search_string_for_sub_queries,
-                begin_pos,
-                end_pos,
-                is_var,
-                forward_lexer,
-                reverse_lexer
-        ))
-        {
-            query_tokens.emplace_back(search_string_for_sub_queries, begin_pos, end_pos, is_var);
-        }
+
+    // Replace '?' wildcards with '*' wildcards since we currently have no support for
+    // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
+    // message uses the original wildcards, so correctness will be maintained.
+    std::replace(
+            search_string_for_sub_queries.begin(),
+            search_string_for_sub_queries.end(),
+            '?',
+            '*'
+    );
+    // Clean-up in case any instances of "?*" or "*?" were changed into "**"
+    search_string_for_sub_queries = clean_up_wildcard_search_string(search_string_for_sub_queries);
+    while (get_bounds_of_next_potential_var(
+            search_string_for_sub_queries,
+            begin_pos,
+            end_pos,
+            is_var
+    ))
+    {
+        query_tokens.emplace_back(search_string_for_sub_queries, begin_pos, end_pos, is_var);
     }
 
     // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in the middle since we
@@ -746,149 +718,6 @@ bool Grep::get_bounds_of_next_potential_var(
         }
     }
 
-    return (value_length != begin_pos);
-}
-
-bool Grep::get_bounds_of_next_potential_var(
-        string const& value,
-        size_t& begin_pos,
-        size_t& end_pos,
-        bool& is_var,
-        log_surgeon::lexers::ByteLexer& forward_lexer,
-        log_surgeon::lexers::ByteLexer& reverse_lexer
-) {
-    size_t const value_length = value.length();
-    if (end_pos >= value_length) {
-        return false;
-    }
-
-    is_var = false;
-    bool contains_wildcard = false;
-    while (false == is_var && false == contains_wildcard && begin_pos < value_length) {
-        // Start search at end of last token
-        begin_pos = end_pos;
-
-        // Find variable begin or wildcard
-        bool is_escaped = false;
-        for (; begin_pos < value_length; ++begin_pos) {
-            char c = value[begin_pos];
-
-            if (is_escaped) {
-                is_escaped = false;
-
-                if (false == forward_lexer.is_delimiter(c)) {
-                    // Found escaped non-delimiter, so reverse the index to retain the escape
-                    // character
-                    --begin_pos;
-                    break;
-                }
-            } else if ('\\' == c) {
-                // Escape character
-                is_escaped = true;
-            } else {
-                if (is_wildcard(c)) {
-                    contains_wildcard = true;
-                    break;
-                }
-                if (false == forward_lexer.is_delimiter(c)) {
-                    break;
-                }
-            }
-        }
-
-        // Find next delimiter
-        is_escaped = false;
-        end_pos = begin_pos;
-        for (; end_pos < value_length; ++end_pos) {
-            char c = value[end_pos];
-
-            if (is_escaped) {
-                is_escaped = false;
-
-                if (forward_lexer.is_delimiter(c)) {
-                    // Found escaped delimiter, so reverse the index to retain the escape character
-                    --end_pos;
-                    break;
-                }
-            } else if ('\\' == c) {
-                // Escape character
-                is_escaped = true;
-            } else {
-                if (is_wildcard(c)) {
-                    contains_wildcard = true;
-                } else if (forward_lexer.is_delimiter(c)) {
-                    // Found delimiter that's not also a wildcard
-                    break;
-                }
-            }
-        }
-
-        if (end_pos > begin_pos) {
-            bool has_prefix_wildcard = ('*' == value[begin_pos]) || ('?' == value[begin_pos]);
-            bool has_suffix_wildcard = ('*' == value[end_pos - 1]) || ('?' == value[begin_pos]);
-            bool has_wildcard_in_middle = false;
-            for (size_t i = begin_pos + 1; i < end_pos - 1; ++i) {
-                if (('*' == value[i] || '?' == value[i]) && value[i - 1] != '\\') {
-                    has_wildcard_in_middle = true;
-                    break;
-                }
-            }
-            SearchToken search_token;
-            if (has_wildcard_in_middle || (has_prefix_wildcard && has_suffix_wildcard)) {
-                // DO NOTHING
-            } else {
-                StringReader string_reader;
-                LogSurgeonReader reader_wrapper(string_reader);
-                log_surgeon::ParserInputBuffer parser_input_buffer;
-                if (has_suffix_wildcard) {  // text*
-                    // TODO: creating a string reader, setting it equal to a string, to read it into
-                    // the ParserInputBuffer, seems like a convoluted way to set a string equal to a
-                    // string, should be improved when adding a SearchParser to log_surgeon
-                    string_reader.open(value.substr(begin_pos, end_pos - begin_pos - 1));
-                    parser_input_buffer.read_if_safe(reader_wrapper);
-                    forward_lexer.reset();
-                    forward_lexer.scan_with_wildcard(
-                            parser_input_buffer,
-                            value[end_pos - 1],
-                            search_token
-                    );
-                } else if (has_prefix_wildcard) {  // *text
-                    std::string value_reverse
-                            = value.substr(begin_pos + 1, end_pos - begin_pos - 1);
-                    std::reverse(value_reverse.begin(), value_reverse.end());
-                    string_reader.open(value_reverse);
-                    parser_input_buffer.read_if_safe(reader_wrapper);
-                    reverse_lexer.reset();
-                    reverse_lexer.scan_with_wildcard(
-                            parser_input_buffer,
-                            value[begin_pos],
-                            search_token
-                    );
-                } else {  // no wildcards
-                    string_reader.open(value.substr(begin_pos, end_pos - begin_pos));
-                    parser_input_buffer.read_if_safe(reader_wrapper);
-                    forward_lexer.reset();
-                    forward_lexer.scan(parser_input_buffer, search_token);
-                    search_token.m_type_ids_set.insert(search_token.m_type_ids_ptr->at(0));
-                }
-                // TODO: use a set so its faster
-                // auto const& set = search_token.m_type_ids_set;
-                // if (set.find(static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID))
-                //            == set.end()
-                //     && set.find(static_cast<int>(log_surgeon::SymbolID::TokenEndID))
-                //            == set.end())
-                // {
-                //     is_var = true;
-                // }
-                auto const& type = search_token.m_type_ids_ptr->at(0);
-                if (type != static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID)
-                    && type != static_cast<int>(log_surgeon::SymbolID::TokenEndID))
-                {
-                    is_var = true;
-                }
-            }
-        }
-    }
     return (value_length != begin_pos);
 }
 

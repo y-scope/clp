@@ -11,8 +11,6 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <json/single_include/nlohmann/json.hpp>
-#include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/LogParser.hpp>
 
 #include "../../EncodedVariableInterpreter.hpp"
 #include "../../ir/types.hpp"
@@ -23,7 +21,6 @@
 
 using glt::ir::eight_byte_encoded_variable_t;
 using glt::ir::four_byte_encoded_variable_t;
-using log_surgeon::LogEventView;
 using std::list;
 using std::make_unique;
 using std::string;
@@ -117,22 +114,6 @@ void Archive::open(UserConfig const& user_config) {
     m_target_segment_uncompressed_size = user_config.target_segment_uncompressed_size;
     m_next_segment_id = 0;
     m_compression_level = user_config.compression_level;
-
-    /// TODO: add schema file size to m_stable_size???
-    // Copy schema file into archive
-    if (!m_schema_file_path.empty()) {
-        std::filesystem::path const archive_schema_filesystem_path = archive_path / cSchemaFileName;
-        try {
-            std::filesystem::path const schema_filesystem_path = m_schema_file_path;
-            std::filesystem::copy(schema_filesystem_path, archive_schema_filesystem_path);
-        } catch (FileWriter::OperationFailed& e) {
-            SPDLOG_CRITICAL(
-                    "Failed to copy schema file to archive: {}",
-                    archive_schema_filesystem_path.c_str()
-            );
-            throw;
-        }
-    }
 
     // Save metadata to disk
     auto metadata_file_path = archive_path / cMetadataFileName;
