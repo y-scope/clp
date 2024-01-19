@@ -43,6 +43,7 @@ public:
         Compression = 0,
         ParseLogFile,
         Search,
+        Execution,
         Length
     };
     enum class FragmentedMeasurementIndex : size_t {

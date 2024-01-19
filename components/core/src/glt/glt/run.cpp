@@ -10,6 +10,7 @@
 #include "CommandLineArguments.hpp"
 #include "compression.hpp"
 #include "decompression.hpp"
+#include "search.hpp"
 #include "utils.hpp"
 
 using std::string;
@@ -17,6 +18,19 @@ using std::unordered_set;
 using std::vector;
 
 namespace glt::glt {
+
+static bool
+obtain_input_paths(CommandLineArguments const& command_line_args, vector<string>& input_paths) {
+    input_paths = command_line_args.get_input_paths();
+    // Read input paths from file if necessary
+    if (false == command_line_args.get_path_list_path().empty()) {
+        if (false == read_input_paths(command_line_args.get_path_list_path(), input_paths)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 int run(int argc, char const* argv[]) {
     // Program-wide initialization
     try {
@@ -42,18 +56,13 @@ int run(int argc, char const* argv[]) {
             break;
     }
 
-    vector<string> input_paths = command_line_args.get_input_paths();
-
-    Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::Compression>();
-
-    // Read input paths from file if necessary
-    if (false == command_line_args.get_path_list_path().empty()) {
-        if (false == read_input_paths(command_line_args.get_path_list_path(), input_paths)) {
-            return -1;
-        }
-    }
+    Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::Execution>();
 
     if (CommandLineArguments::Command::Compress == command_line_args.get_command()) {
+        vector<string> input_paths;
+        if (false == obtain_input_paths(command_line_args, input_paths)) {
+            return -1;
+        }
         boost::filesystem::path path_prefix_to_remove(command_line_args.get_path_prefix_to_remove()
         );
 
@@ -124,15 +133,23 @@ int run(int argc, char const* argv[]) {
         if (!compression_successful) {
             return -1;
         }
-    } else {  // CommandLineArguments::Command::Extract == command
+    } else if (CommandLineArguments::Command::Extract == command_line_args.get_command()) {
+        vector<string> input_paths;
+        if (false == obtain_input_paths(command_line_args, input_paths)) {
+            return -1;
+        }
         unordered_set<string> files_to_decompress(input_paths.cbegin(), input_paths.cend());
         if (!decompress(command_line_args, files_to_decompress)) {
             return -1;
         }
+    } else {  // CommandLineArguments::Command::Search == command
+        if (!search(command_line_args)) {
+            return -1;
+        }
     }
 
-    Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::Compression>();
-    LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::Compression)
+    Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::Execution>();
+    LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::Execution)
 
     return 0;
 }

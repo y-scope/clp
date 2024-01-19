@@ -183,7 +183,6 @@ add_subdirectory(src/clp/clg)
 add_subdirectory(src/clp/clo)
 add_subdirectory(src/clp/clp)
 add_subdirectory(src/glt/glt)
-add_subdirectory(src/glt/gltg)
 add_subdirectory(src/clp/make_dictionaries_readable)
 add_subdirectory(src/clp_s)
 

@@ -36,6 +36,8 @@ set(
         ../GlobalMySQLMetadataDB.hpp
         ../GlobalSQLiteMetadataDB.cpp
         ../GlobalSQLiteMetadataDB.hpp
+        ../Grep.cpp
+        ../Grep.hpp
         ../ir/LogEvent.hpp
         ../ir/LogEventDeserializer.cpp
         ../ir/LogEventDeserializer.hpp
@@ -164,6 +166,8 @@ set(
         FileDecompressor.hpp
         run.cpp
         run.hpp
+        search.cpp
+        search.hpp
         utils.cpp
         utils.hpp
 )
