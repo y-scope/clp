@@ -14,6 +14,7 @@
 #include "clp_search/Query.hpp"
 #include "Expression.hpp"
 #include "Integral.hpp"
+#include "OutputHandler.hpp"
 #include "SchemaMatch.hpp"
 #include "StringLiteral.hpp"
 
@@ -29,13 +30,15 @@ public:
            SchemaMatch& match,
            std::shared_ptr<Expression> expr,
            std::string archives_dir,
-           std::shared_ptr<TimestampDictionaryReader> timestamp_dict)
+           std::shared_ptr<TimestampDictionaryReader> timestamp_dict,
+           std::unique_ptr<OutputHandler> output_handler)
             : m_schema_tree(std::move(tree)),
               m_schemas(std::move(schemas)),
               m_match(match),
               m_expr(std::move(expr)),
               m_archives_dir(std::move(archives_dir)),
-              m_timestamp_dict(std::move(timestamp_dict)) {}
+              m_timestamp_dict(std::move(timestamp_dict)),
+              m_output_handler(std::move(output_handler)) {}
 
     /**
      * Filters messages from all archives
@@ -46,6 +49,7 @@ private:
     SchemaMatch& m_match;
     std::shared_ptr<Expression> m_expr;
     std::string m_archives_dir;
+    std::unique_ptr<OutputHandler> m_output_handler;
 
     // variables for the current schema being filtered
     std::vector<BaseColumnReader*> m_searched_columns;

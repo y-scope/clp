@@ -11,6 +11,7 @@
 #include "search/NarrowTypes.hpp"
 #include "search/OrOfAndForm.hpp"
 #include "search/Output.hpp"
+#include "search/OutputHandler.hpp"
 #include "search/SchemaMatch.hpp"
 #include "TimestampPattern.hpp"
 #include "Utils.hpp"
@@ -116,8 +117,28 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
 
+        std::unique_ptr<OutputHandler> output_handler;
+        mongocxx::instance mongocxx_instance{};
+        if (command_line_arguments.get_mongodb_enabled()) {
+            output_handler = std::make_unique<ResultsCacheOutputHandler>(
+                    command_line_arguments.get_mongodb_uri(),
+                    command_line_arguments.get_mongodb_collection(),
+                    command_line_arguments.get_batch_size()
+            );
+        } else {
+            output_handler = std::make_unique<StandardOutputHandler>();
+        }
+
         // output result
-        Output output(schema_tree, schemas, match_pass, expr, archives_dir, timestamp_dict);
+        Output output(
+                schema_tree,
+                schemas,
+                match_pass,
+                expr,
+                archives_dir,
+                timestamp_dict,
+                std::move(output_handler)
+        );
         output.filter();
     }
 

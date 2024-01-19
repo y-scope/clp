@@ -42,6 +42,14 @@ public:
 
     size_t get_target_encoded_size() const { return m_target_encoded_size; }
 
+    bool get_mongodb_enabled() const { return m_mongodb_enabled; }
+
+    std::string const& get_mongodb_uri() const { return m_mongodb_uri; }
+
+    std::string const& get_mongodb_collection() const { return m_mongodb_collection; }
+
+    uint64_t get_batch_size() const { return m_batch_size; }
+
     std::string const& get_query() const { return m_query; }
 
 private:
@@ -63,8 +71,14 @@ private:
     std::string m_archives_dir;
     std::string m_output_dir;
     std::string m_timestamp_key;
-    int m_compression_level;
-    size_t m_target_encoded_size;
+    int m_compression_level{3};
+    size_t m_target_encoded_size{8ULL * 1024 * 1024 * 1024};  // 8 GiB
+
+    // MongoDB configuration variables
+    bool m_mongodb_enabled{false};
+    std::string m_mongodb_uri;
+    std::string m_mongodb_collection;
+    uint64_t m_batch_size{1000};
 
     // Search variables
     std::string m_query;

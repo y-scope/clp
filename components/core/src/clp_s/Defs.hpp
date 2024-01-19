@@ -5,6 +5,7 @@
 
 // C++ libraries
 #include <atomic>
+#include <cinttypes>
 #include <cstdint>
 #include <limits>
 
@@ -17,6 +18,7 @@ static double const cDoubleEpochTimeMin = std::numeric_limits<double>::lowest();
 static double const cDoubleEpochTimeMax = std::numeric_limits<double>::max();
 #define SECONDS_TO_EPOCHTIME(x) x * 1000
 #define MICROSECONDS_TO_EPOCHTIME(x) 0
+#define EPOCHTIME_T_PRINTF_FMT PRId64
 
 typedef uint64_t variable_dictionary_id_t;
 static variable_dictionary_id_t const cVariableDictionaryIdMax = UINT64_MAX;
