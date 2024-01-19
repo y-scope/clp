@@ -31,8 +31,7 @@ using log_surgeon::SchemaVarAST;
 using log_surgeon::Token;
 
 std::unique_ptr<SchemaAST> generate_schema_ast(const std::string& schema_file) {
-    SchemaParser schema_parser;
-    std::unique_ptr<SchemaAST> schema_ast = schema_parser.try_schema_file(schema_file);
+    std::unique_ptr<SchemaAST> schema_ast = SchemaParser::try_schema_file(schema_file);
     REQUIRE(schema_ast.get() != nullptr);
     return schema_ast;
 }

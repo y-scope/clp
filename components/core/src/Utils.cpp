@@ -178,8 +178,8 @@ ErrorCode read_list_of_paths (const string& list_path, vector<string>& paths) {
 void load_lexer_from_file (std::string schema_file_path,
                            bool reverse,
                            log_surgeon::lexers::ByteLexer& lexer) {
-    log_surgeon::SchemaParser sp;
-    std::unique_ptr<log_surgeon::SchemaAST> schema_ast = sp.try_schema_file(schema_file_path);
+    std::unique_ptr<log_surgeon::SchemaAST> schema_ast = log_surgeon::SchemaParser::try_schema_file(
+            schema_file_path);
     if (!lexer.m_symbol_id.empty()) {
         throw std::runtime_error("Error: symbol_ids initialized before setting enum symbol_ids");
     }

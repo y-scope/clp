@@ -316,18 +316,16 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                     log_surgeon::ParserInputBuffer parser_input_buffer;
                     ReaderInterfaceWrapper reader_wrapper(string_reader);
                     std::string regex_search_string;
-                    // Replace all * with .*
                     bool contains_wildcard = false;
-                    // TODO: should log-surgeon handle this sanitization, also
-                    // this sanitization is incomplete
                     for (char const& c : current_string) {
                         if (c == '*') {
                             contains_wildcard = true;
                             regex_search_string.push_back('.');
-                        } else if (log_surgeon::SchemaParser::get_special_regex_characters(). c == '.') {
+                        } else if (
+                                log_surgeon::SchemaParser::get_special_regex_characters().find(c) !=
+                                log_surgeon::SchemaParser::get_special_regex_characters().end()) {
                             regex_search_string.push_back('\\');
                         }
-                        // TODO: we need to sanitize more regex
                         regex_search_string.push_back(c);
                     }
                     log_surgeon::NonTerminal::m_next_children_start = 0;
