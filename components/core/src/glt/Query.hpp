@@ -147,9 +147,6 @@ public:
      */
     bool matches_vars(std::vector<encoded_variable_t> const& vars) const;
 
-    // GLT TODO: clean this up
-    std::vector<std::string> m_tokens;
-
 private:
     // Variables
     std::unordered_set<LogTypeDictionaryEntry const*> m_possible_logtype_entries;
@@ -233,16 +230,9 @@ private:
 class LogtypeQuery {
 public:
     // Methods
-    LogtypeQuery(
-            std::vector<QueryVar> const& vars,
-            bool wildcard_match_required,
-            size_t left,
-            size_t right
-    ) {
+    LogtypeQuery(std::vector<QueryVar> const& vars, bool wildcard_match_required) {
         m_vars = vars;
         m_wildcard_match_required = wildcard_match_required;
-        m_l_b = left;
-        m_r_b = right;
     }
 
     /**
@@ -254,11 +244,6 @@ public:
     bool matches_vars(std::vector<encoded_variable_t> const& vars) const;
 
     bool get_wildcard_flag() const { return m_wildcard_match_required; }
-
-    // temporary public
-    // the index (inclusive?)
-    size_t m_l_b;
-    size_t m_r_b;
 
 private:
     // Variables

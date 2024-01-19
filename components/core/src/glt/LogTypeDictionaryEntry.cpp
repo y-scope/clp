@@ -202,35 +202,4 @@ void LogTypeDictionaryEntry::read_from_file(streaming_compression::Decompressor&
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 }
-
-// return the boundary as an open Interval
-size_t LogTypeDictionaryEntry::get_var_right_index_based_on_right_boundary(size_t right_pos) const {
-    // Hack
-    // return get_num_variables();
-
-    size_t var_ix;
-    for (var_ix = m_variable_positions.size(); var_ix > 0; var_ix--) {
-        if (m_variable_positions[var_ix - 1] <= right_pos) {
-            return var_ix;
-        }
-    }
-    // in some extreme case, say input query is " \v ASKLDH"  but the logtype is " ASKLDH \V". this
-    // might return 0 because we can't tell a negative position. however, this should trigger some
-    // error?
-    return var_ix;
-}
-
-size_t LogTypeDictionaryEntry::get_var_left_index_based_on_left_boundary(size_t left_pos) const {
-    // Hack
-    // return 0;
-
-    size_t var_ix;
-    for (var_ix = 0; var_ix < m_variable_positions.size(); var_ix++) {
-        if (m_variable_positions[var_ix] >= left_pos) {
-            return var_ix;
-        }
-    }
-    // ideally this should not be happening, unless the last possible text is after all variables?
-    return var_ix;
-}
 }  // namespace glt

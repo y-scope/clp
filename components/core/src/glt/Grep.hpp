@@ -131,7 +131,7 @@ public:
      * fails
      * @throw TimestampPattern::OperationFailed if failed to insert timestamp into message
      */
-    static size_t search_segment_all_columns_and_output(
+    static size_t search_segment_and_output(
             std::vector<LogtypeQueries> const& queries,
             Query const& query,
             size_t limit,
@@ -212,12 +212,6 @@ public:
      */
     static std::unordered_map<logtype_dictionary_id_t, LogtypeQueries>
     get_converted_logtype_query(Query const& query, size_t segment_id);
-
-    static void get_boundaries(
-            std::vector<LogtypeQuery> const& sub_queries,
-            size_t& left_boundary,
-            size_t& right_boundary
-    );
 };
 }  // namespace glt
 
