@@ -150,7 +150,7 @@ bool MySQLDB::execute_query(string const& sql_query) {
     return true;
 }
 
-bool MySQLDB::get_affected_rows(uint64_t &num_affected_rows) {
+bool MySQLDB::get_affected_rows(uint64_t& num_affected_rows) {
     if (nullptr == m_db_handle) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }

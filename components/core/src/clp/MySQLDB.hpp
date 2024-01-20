@@ -115,7 +115,7 @@ public:
      * @return true on success
      * @return false on error
      */
-    bool get_affected_rows(uint64_t &num_affected_rows);
+    bool get_affected_rows(uint64_t& num_affected_rows);
     /**
      * Prepares a statement on the database server
      * @param statement

@@ -92,7 +92,7 @@ bool MySQLPreparedStatement::execute() {
     return true;
 }
 
-bool MySQLPreparedStatement::get_affected_rows(uint64_t &num_affected_rows) {
+bool MySQLPreparedStatement::get_affected_rows(uint64_t& num_affected_rows) {
     if (nullptr == m_statement_handle) {
         throw OperationFailed(ErrorCode_NotInit, __FILE__, __LINE__);
     }
