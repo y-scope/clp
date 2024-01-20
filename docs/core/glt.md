@@ -8,6 +8,8 @@ and `gltg` binaries described below.
 * [Compression](#compression)
 * [Decompression](#decompression)
 * [Search](#search)
+* [Utilities](#utilities)
+  * [`make-dictionaries-readable`](#make-dictionaries-readable)
 * [Current limitations](#current-limitations)
 
 ## Compression
@@ -22,7 +24,7 @@ Usage:
 * `input-path` is any new-line-delimited JSON (ndjson) log file or directory containing such files.
 * `options` allow you to specify things like a custom percentage threshold for combined logtype tables
   (`--combine-threshold <threshold>`).
-    * For a complete list, run `./gltc c --help`
+    * For a complete list, run `./glt c --help`
 
 ### Examples
 
@@ -32,15 +34,15 @@ Usage:
 ./glt c /mnt/data/archives1 /mnt/logs/log1.log
 ```
 
-**Compress `/mnt/logs/log1.log` using a custom threshold:**
+**Compress `/mnt/logs/log1.log` using a custom threshold of 1%:**
 
 ```shell
-./clp c --combined-threshold 1 /mnt/data/archives1 /mnt/logs/log1.log
+./glt c --combined-threshold 1 /mnt/data/archives1 /mnt/logs/log1.log
 ```
 
 > [!TIP]
-> The combine-threshold has higher impact on logs with a large number of logtypes.
-> In general, a higher combined-threshold results in better compression ratio but lower search speed
+> The combine-threshold has a more obvious effect on logs with a large number of logtypes.
+> In general, a higher combined-threshold results in better compression ratio and lower search speed.
 
 ## Decompression
 
@@ -58,18 +60,15 @@ Usage:
 **Decompress all logs from `/mnt/data/archives1` into `/mnt/data/archives1-decomp`:**
 
 ```bash
-./clp-s x /mnt/data/archives1 /mnt/data/archives1-decomp
+./glt x /mnt/data/archives1 /mnt/data/archives1-decomp
 ```
 
 ## Search
 
 Usage:
 
-> [!NOTE]
-> Search uses a different executable (`clg`) than compression (`clp`).
-
 ```shell
-./clg [<options>] <archives-dir> <wildcard-query> [<file-path>]
+./glt s [<options>] <archives-dir> <wildcard-query> [<file-path>]
 ```
 
 * `archives-dir` is a directory containing archives.
@@ -77,20 +76,25 @@ Usage:
     * the `*` wildcard matches 0 or more characters;
     * the `?` wildcard matches any single character.
 * `options` allow you to specify things like a time-range filter.
-    * For a complete list, run `./clg --help`
+    * For a complete list, run `./glt s --help`
+
+> [!TIP]
+> Adding spaces (when possible) at the begin and the end of the wildcard-query can improve GLT's search performance,
+> as GLT doesn't need to consider implicit wildcards during query processing.
+> For example, the query " ERROR * container " is preferred to "ERROR * container".
 
 ### Examples
 
 **Search `/mnt/data/archives1` for specific ERROR logs:**
 
 ```shell
-./clg /mnt/data/archives1 " ERROR * container "
+./glt s /mnt/data/archives1 " ERROR * container "
 ```
 
 **Search for logs in a time range:**
 
 ```shell
-./clg /mnt/data/archives1 --tge 1546344654321 --tle 1546344912345 " user1 "
+./glt s /mnt/data/archives1 --tge 1546344654321 --tle 1546344912345 " user1 "
 ```
 
 > [!NOTE]
@@ -102,13 +106,27 @@ Usage:
 ./clg /mnt/data/archives1 " session closed " /mnt/logs/file1
 ```
 
+# Utilities
+
+Below are utilities for working with GLT archives.
+
+## `make-dictionaries-readable`
+
+To convert the dictionaries of an individual archive into a human-readable form, you can use
+`make-dictionaries-readable`.
+
+```shell
+./make-dictionaries-readable archive-path <output dir>
+```
+
+* `archive-path` is a path to a specific archive (inside `archives-dir`)
+
+See the `make-dictionaries-readable`
+[README](../../components/core/src/clp/make_dictionaries_readable/README.md) for details on the
+output format.
+
+
 ## Current limitations
 
-* `clp-s` currently only supports *valid* ndjson logs; it does not handle ndjson logs with trailing
-  commas or other JSON syntax errors.
-* Time zone information is not preserved.
-* The order of log events is not preserved.
-* The input directory structure is not preserved and during decompression all files are written to
-  the same file.
-
-[1]: https://www.elastic.co/guide/en/kibana/current/kuery-query.html
+* Timestamp information is not preserved in search results. All search results use a default timestamp format.
+* The order of log events is not preserved in search results.
