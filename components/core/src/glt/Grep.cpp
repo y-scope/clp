@@ -415,13 +415,14 @@ void find_boundaries(
 {
     auto const& logtype_string = logtype_entry->get_value();
 
-    // Both left boundary and right boundary are inclusive, meaning
-    // that logtype_string.substr[0, left_boundary] and logtype_string.substr[right_boundary, ) can be safely
+    // left boundary is exclusive and right boundary are inclusive, meaning
+    // that logtype_string.substr[0, left_boundary) and logtype_string.substr[right_boundary, end) can be safely
     // ignored.
     size_t left_boundary;
     size_t right_boundary;
     // First, match the token from front to end.
     size_t find_start_index = 0;
+    bool tokens_contain_variable {false};
     for (auto const& token : tokens) {
         auto const& token_str = token.first;
         bool contains_variable = token.second;
@@ -432,9 +433,11 @@ void find_boundaries(
         }
         //the first time we see a token with variable, we know that
         // we don't care about the variables in the substr before this token in the logtype.
-        // Technically, logtype_string.substr[0, token[begin_index] - 1] (since token[begin_index] is the beginning of the token)
+        // Technically, logtype_string.substr[0, token[begin_index])
+        // (since token[begin_index] is the beginning of the token)
         if (contains_variable) {
-            left_boundary = found_index - 1;
+            tokens_contain_variable = true;
+            left_boundary = found_index;
             break;
         }
         // else, the token doesn't contain a variable
@@ -457,7 +460,9 @@ void find_boundaries(
         // the first time we see a token with variable, we know that
         // we don't care about the variables in the substr after this token in the logtype.
         // Technically, logtype_string.substr[rfound_index + len(token), end)
+        // since logtype_string[rfound_index] is the beginning of the token
         if (contains_var) {
+            tokens_contain_variable = true;
             right_boundary = rfound_index + token_str.length();
             break;
         }
@@ -474,7 +479,7 @@ void find_boundaries(
     var_begin_ix = 0;
     for(size_t var_ix = 0; var_ix < logtype_variable_num; var_ix++) {
         size_t var_position = logtype_entry->get_variable_info(var_ix, var_placeholder);
-        if (var_position <= left_boundary) {
+        if (var_position < left_boundary) {
             // if the variable is within the left boundary, then it should be skipped.
             var_begin_ix++;
         } else {
@@ -496,6 +501,13 @@ void find_boundaries(
             break;
         }
     }
+    // This means no variable needs to be readed? then the only possible is no token contains
+    // variable
+    if (var_end_ix == var_begin_ix && true == tokens_contain_variable) {
+        printf("end index %lu is same as begin index %lu, but tokens contain a variable\n",  var_end_ix, var_begin_ix);
+        throw;
+    }
+
     if (var_end_ix < var_begin_ix) {
         printf("end index %lu is smaller than begin index %lu\n", var_end_ix, var_begin_ix);
         throw;
@@ -623,7 +635,6 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
         size_t var_end_index;
         find_boundaries(logtype_entry, retokenized_string, var_begin_index, var_end_index);
         sub_query.set_logtype_boundary(logtype_entry->get_id(), var_begin_index, var_end_index);
-        //printf("begin index %lu, end index %lu\n", var_begin_index, var_end_index);
     }
     sub_query.set_possible_logtypes(possible_logtype_entries);
 
