@@ -20,6 +20,8 @@ using glt::streaming_archive::reader::File;
 using glt::streaming_archive::reader::Message;
 using std::string;
 using std::vector;
+using std::pair;
+using std::make_pair;
 
 namespace glt {
 namespace {
@@ -404,26 +406,125 @@ bool find_matching_message(
     return true;
 }
 
-vector<string> retokenization(
+void find_boundaries(
+        LogTypeDictionaryEntry const* logtype_entry,
+        vector<pair<string, bool>> const& tokens,
+        size_t& var_begin_ix,
+        size_t& var_end_ix
+)
+{
+    auto const& logtype_string = logtype_entry->get_value();
+
+    // Both left boundary and right boundary are inclusive, meaning
+    // that logtype_string.substr[0, left_boundary] and logtype_string.substr[right_boundary, ) can be safely
+    // ignored.
+    size_t left_boundary;
+    size_t right_boundary;
+    // First, match the token from front to end.
+    size_t find_start_index = 0;
+    for (auto const& token : tokens) {
+        auto const& token_str = token.first;
+        bool contains_variable = token.second;
+        size_t found_index = logtype_string.find(token_str, find_start_index);
+        if (string::npos == found_index) {
+            printf("failed to find: [%s] from %s\n", token_str.c_str(), logtype_string.substr(find_start_index).c_str());
+            throw;
+        }
+        //the first time we see a token with variable, we know that
+        // we don't care about the variables in the substr before this token in the logtype.
+        // Technically, logtype_string.substr[0, token[begin_index] - 1] (since token[begin_index] is the beginning of the token)
+        if (contains_variable) {
+            left_boundary = found_index - 1;
+            break;
+        }
+        // else, the token doesn't contain a variable
+        // we can proceed by skipping this token.
+        find_start_index = found_index + token_str.length();
+    }
+
+    // second, match the token from back
+    size_t rfind_end_index = logtype_string.length();
+    for (auto it = tokens.rbegin(); it != tokens.rend(); ++it) {
+        auto const& token_str = it->first;
+        bool contains_var = it->second;
+
+        size_t rfound_index = logtype_string.rfind(token_str, rfind_end_index);
+        if (string::npos == rfound_index) {
+            printf("failed to find: [%s] from %s\n", token_str.c_str(), logtype_string.substr(0, rfind_end_index).c_str());
+            throw;
+        }
+
+        // the first time we see a token with variable, we know that
+        // we don't care about the variables in the substr after this token in the logtype.
+        // Technically, logtype_string.substr[rfound_index + len(token), end)
+        if (contains_var) {
+            right_boundary = rfound_index + token_str.length();
+            break;
+        }
+
+        // Note, rfind end index is inclusive. has to subtract by 1 so
+        // in the next rfind, we skip the token we have already seen.
+        rfind_end_index = rfound_index - 1;
+    }
+
+    // Now we have the left boundary and right boundary, try to filter out the variables;
+    // var_begin_ix is an inclusive interval
+    size_t logtype_variable_num = logtype_entry->get_num_variables();
+    ir::VariablePlaceholder var_placeholder;
+    var_begin_ix = 0;
+    for(size_t var_ix = 0; var_ix < logtype_variable_num; var_ix++) {
+        size_t var_position = logtype_entry->get_variable_info(var_ix, var_placeholder);
+        if (var_position <= left_boundary) {
+            // if the variable is within the left boundary, then it should be skipped.
+            var_begin_ix++;
+        } else {
+            // if the variable is not within the left boundary
+            break;
+        }
+    }
+
+    // For right boundary, var_end_ix is an exclusive interval
+    var_end_ix = logtype_variable_num;
+    for(size_t var_ix = 0; var_ix < logtype_variable_num; var_ix++) {
+        size_t reversed_ix = logtype_variable_num - 1 - var_ix;
+        size_t var_position = logtype_entry->get_variable_info(reversed_ix, var_placeholder);
+        if (var_position >= right_boundary) {
+            // if the variable is within the right boundary, then it should be skipped.
+            var_end_ix--;
+        } else {
+            // if the variable is not within the right
+            break;
+        }
+    }
+    if (var_end_ix <= var_begin_ix) {
+        printf("end index %lu is smaller than begin index %lu\n", var_end_ix, var_begin_ix);
+        throw;
+    }
+
+}
+
+vector<pair<string, bool>> retokenization(
         string input_string
 )
 {
-    vector<string> retokenized_string;
+    vector<pair<string, bool>> retokenized_string;
     size_t input_length = input_string.size();
     string current_token;
+    bool contains_variable_placeholder = false;
     for (size_t ix = 0; ix < input_length; ix++) {
-        const auto& current_char = input_string.at(ix);
+        auto const& current_char = input_string.at(ix);
         if (current_char != '*') {
             current_token += current_char;
+            contains_variable_placeholder |= ir::is_variable_placeholder(current_char);
         } else {
             if (!current_token.empty()) {
-                retokenized_string.push_back(current_token);
+                retokenized_string.emplace_back(current_token, contains_variable_placeholder);
                 current_token.clear();
             }
         }
     }
     if (!current_token.empty()) {
-        retokenized_string.push_back(current_token);
+        retokenized_string.emplace_back(current_token, contains_variable_placeholder);
     }
     return retokenized_string;
 }
@@ -508,13 +609,20 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
         return SubQueryMatchabilityResult::SupercedesAllSubQueries;
     }
 
-    vector<string> retokenized_string = retokenization(logtype);
     // Find matching logtypes
     std::unordered_set<LogTypeDictionaryEntry const*> possible_logtype_entries;
+    auto retokenized_string = retokenization(logtype);
     archive.get_logtype_dictionary()
             .get_entries_matching_wildcard_string(logtype, ignore_case, possible_logtype_entries);
     if (possible_logtype_entries.empty()) {
         return SubQueryMatchabilityResult::WontMatch;
+    }
+
+    for (const auto& logtype_entry: possible_logtype_entries) {
+        size_t var_begin_index;
+        size_t var_end_index;
+        find_boundaries(logtype_entry, retokenized_string, var_begin_index, var_end_index);
+        //printf("begin index %lu, end index %lu\n", var_begin_index, var_end_index);
     }
     sub_query.set_possible_logtypes(possible_logtype_entries);
 
