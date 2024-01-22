@@ -160,7 +160,7 @@ def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, pat
         task_id=task_id,
         status=TaskStatus.SCHEDULED,
         start_time=datetime.datetime.now(),
-        dutarion=0
+        duration=0
     )
 
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")
@@ -176,6 +176,7 @@ def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, pat
             job_id=job_id,
             task_id=task_id,
             status=TaskStatus.SUCCEEDED,
+            start_time=task_update.start_time,
             duration=duration,
             total_uncompressed_size=worker_output['total_uncompressed_size'],
             total_compressed_size=worker_output['total_compressed_size']
@@ -186,6 +187,7 @@ def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, pat
             job_id=job_id,
             task_id=task_id,
             status=TaskStatus.FAILED,
+            start_time=task_update.start_time,
             duration=duration,
             error_message=worker_output['error_message']
         )
