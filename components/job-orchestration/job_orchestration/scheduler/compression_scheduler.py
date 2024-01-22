@@ -3,41 +3,24 @@ import datetime
 import logging
 import pathlib
 import sys
-import threading
 import time
-import typing
 from contextlib import closing
 
 import zstandard
+from celery import group
 from pydantic import ValidationError
 
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
-from clp_py_utils.clp_config import (
-    CLPConfig,
-    Database,
-    ResultsCache,
-)
+from clp_py_utils.clp_config import CLPConfig
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compression_task import compress
-from job_orchestration.executor.search_task import search
 from job_orchestration.scheduler.constants import \
-    QueueName, \
     JobStatus, \
-    TaskUpdateType, \
     TaskStatus
 from job_orchestration.scheduler.partition import PathsToCompressBuffer
-from job_orchestration.scheduler.scheduler_data import \
-    CompressionJob, \
-    SearchJob, \
-    CompressionTask, \
-    SearchTask, \
-    TaskUpdate, \
-    TaskFailureUpdate, \
-    CompressionTaskSuccessUpdate
-
-from celery import group
+from job_orchestration.scheduler.scheduler_data import CompressionJob
 
 # Setup logging
 # Create logger

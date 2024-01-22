@@ -67,7 +67,7 @@ class CompressionJob(BaseModel):
     id: int
     start_time: datetime.datetime
     clp_config: bytes
-    tasks: any
+    tasks: typing.Any
 
     def get_clp_config_json(self, dctx: zstandard.ZstdDecompressor = None):
         if not dctx:
