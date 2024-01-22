@@ -20,6 +20,8 @@ class TaskUpdate(BaseModel):
     job_id: int
     task_id: int
     status: str
+    start_time: datetime.datetime
+    duration: float
 
     @validator('type')
     def validate_type(cls, field):
@@ -45,23 +47,6 @@ class CompressionTaskSuccessUpdate(TaskUpdate):
     total_compressed_size: int
 
 
-class CompressionTask(BaseModel):
-    id: int
-    status: str
-    priority: int = TASK_QUEUE_LOWEST_PRIORITY
-    clp_paths_to_compress: bytes
-    start_time: datetime.datetime = None
-    instance: AsyncResult = None
-
-    class Config:
-        arbitrary_types_allowed = True
-
-    def get_clp_paths_to_compress_json(self, dctx: zstandard.ZstdDecompressor = None):
-        if dctx is None:
-            dctx = zstandard.ZstdDecompressor()
-        return json.dumps(msgpack.unpackb(dctx.decompress(self.clp_paths_to_compress)))
-
-
 class SearchTask(BaseModel):
     id: int
     status: str
@@ -80,13 +65,9 @@ class SearchTask(BaseModel):
 
 class CompressionJob(BaseModel):
     id: int
-    status: str
     start_time: datetime.datetime
     clp_config: bytes
-    num_tasks: typing.Optional[int]
-    num_tasks_completed: int
-    tasks: Dict[int, CompressionTask] = {}
-    task_results: {}
+    tasks: any
 
     def get_clp_config_json(self, dctx: zstandard.ZstdDecompressor = None):
         if not dctx:

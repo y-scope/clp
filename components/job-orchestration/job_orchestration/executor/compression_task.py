@@ -1,13 +1,14 @@
+import datetime
 import json
 import os
 import pathlib
 import subprocess
+import time
 
 import yaml
 from celery.utils.log import get_task_logger
 
 from job_orchestration.executor.celery import app
-from job_orchestration.executor.utils import append_message_to_task_results_queue
 from job_orchestration.job_config import ClpIoConfig, PathsToCompress
 from job_orchestration.scheduler.constants import TaskStatus, TaskUpdateType
 from job_orchestration.scheduler.scheduler_data import \
@@ -146,7 +147,6 @@ def compress(job_id: int, task_id: int, clp_io_config_json: str, paths_to_compre
     data_dir_str = os.getenv('CLP_DATA_DIR')
     archive_output_dir_str = os.getenv('CLP_ARCHIVE_OUTPUT_DIR')
     logs_dir_str = os.getenv('CLP_LOGS_DIR')
-    celery_broker_url = os.getenv('BROKER_URL')
 
     logger.debug(f'CLP_HOME: {clp_home_str}')
     logger.info(f"Compressing (job_id={job_id} task_id={task_id})")
@@ -154,26 +154,29 @@ def compress(job_id: int, task_id: int, clp_io_config_json: str, paths_to_compre
     clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
     paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
 
-    # task_update = TaskUpdate(
-    #     type=TaskUpdateType.COMPRESSION,
-    #     job_id=job_id,
-    #     task_id=task_id,
-    #     status=TaskStatus.IN_PROGRESS
-    # )
-    # append_message_to_task_results_queue(celery_broker_url, True, task_update.dict())
+    task_update = TaskUpdate(
+        type=TaskUpdateType.COMPRESSION,
+        job_id=job_id,
+        task_id=task_id,
+        status=TaskStatus.SCHEDULED,
+        start_time=datetime.datetime.now(),
+        dutarion=0
+    )
+
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")
 
     compression_successful, worker_output = run_clp(clp_io_config, pathlib.Path(clp_home_str),
                                                     pathlib.Path(data_dir_str), pathlib.Path(archive_output_dir_str),
                                                     pathlib.Path(logs_dir_str), job_id, task_id, paths_to_compress,
                                                     database_connection_params)
-
+    duration = datetime.datetime.now() - task_update.start_time
     if compression_successful:
         task_update = CompressionTaskSuccessUpdate(
             type=TaskUpdateType.COMPRESSION,
             job_id=job_id,
             task_id=task_id,
             status=TaskStatus.SUCCEEDED,
+            duration=duration,
             total_uncompressed_size=worker_output['total_uncompressed_size'],
             total_compressed_size=worker_output['total_compressed_size']
         )
@@ -183,7 +186,9 @@ def compress(job_id: int, task_id: int, clp_io_config_json: str, paths_to_compre
             job_id=job_id,
             task_id=task_id,
             status=TaskStatus.FAILED,
+            duration=duration,
             error_message=worker_output['error_message']
         )
-    # append_message_to_task_results_queue(celery_broker_url, False, task_update.dict())
+
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
+    return task_update.dict()

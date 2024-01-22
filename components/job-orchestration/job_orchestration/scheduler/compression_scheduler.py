@@ -49,79 +49,52 @@ logger.addHandler(console_handler)
 logger.setLevel(logging.DEBUG)
 
 scheduled_jobs = {}
-id_to_search_job: typing.Dict[int, SearchJob] = {}
-jobs_lock = threading.Lock()
 
 
 def fetch_new_jobs(db_cursor):
     db_cursor.execute(f"""
         SELECT id, clp_config
         FROM compression_jobs
-        WHERE status='{JobStatus.SUBMITTED}'
+        WHERE status='{JobStatus.SCHEDULING}'
     """)
     return db_cursor.fetchall()
 
 
-def update_task_metadata(db_cursor, task_type: str, task_id, kv: typing.Dict[str, typing.Any]):
+def update_compression_task_metadata(db_cursor, task_id, kv):
     if not len(kv):
         logger.error("Must specify at least one field to update")
         raise ValueError
 
     field_set_expressions = [f'{k}="{v}"' for k, v in kv.items()]
-    query = f'UPDATE {task_type}_tasks SET {", ".join(field_set_expressions)} WHERE id={task_id};'
-    db_cursor.execute(query)
-
-
-def update_compression_task_metadata(db_cursor, task_id, kv: typing.Dict[str, typing.Any]):
-    update_task_metadata(db_cursor, 'compression', task_id, kv)
-
-
-def update_job_metadata(db_cursor, job_type: str, job_id, kv):
-    if not len(kv):
-        logger.error("Must specify at least one field to update")
-        raise ValueError
-
-    field_set_expressions = [f'{k}="{v}"' for k, v in kv.items()]
-    query = f'UPDATE {job_type}_jobs SET {", ".join(field_set_expressions)} WHERE id={job_id};'
+    query = f'UPDATE compression_tasks SET {", ".join(field_set_expressions)} WHERE id={task_id};'
     db_cursor.execute(query)
 
 
 def update_compression_job_metadata(db_cursor, job_id, kv):
-    update_job_metadata(db_cursor, 'compression', job_id, kv)
-
-
-def increment_job_metadata(db_cursor, job_type: str, job_id, kv):
     if not len(kv):
-        logger.error("Must specify at least one field to increment")
+        logger.error("Must specify at least one field to update")
         raise ValueError
 
-    field_set_expressions = [f'{k}={k}+{v}' for k, v in kv.items()]
-    query = f'UPDATE {job_type}_jobs SET {", ".join(field_set_expressions)} WHERE id={job_id};'
+    field_set_expressions = [f'{k}="{v}"' for k, v in kv.items()]
+    query = f'UPDATE compression_jobs SET {", ".join(field_set_expressions)} WHERE id={job_id};'
     db_cursor.execute(query)
 
 
-def increment_compression_job_metadata(db_cursor, job_id, kv):
-    increment_job_metadata(db_cursor, 'compression', job_id, kv)
-
-
-def search_and_schedule_new_tasks(db_conn, db_cursor, database_config: Database):
+def search_and_schedule_new_tasks(db_conn, db_cursor, database_connection_params):
     """
     For all jobs with SUBMITTED status, split the job into tasks and schedule them.
     """
     global scheduled_jobs
-    global id_to_search_job
-    global jobs_lock
 
     logger.debug('Search and schedule new tasks')
 
     zstd_dctx = zstandard.ZstdDecompressor()
     zstd_cctx = zstandard.ZstdCompressor(level=3)
 
-    # Poll for new compression tasks
+    # Poll for new compression jobs
     for job_row in fetch_new_jobs(db_cursor):
         job = CompressionJob(
             id=job_row['id'],
-            status=job_row['status'],
             clp_config=job_row['clp_config']
         )
         db_conn.commit()
@@ -135,7 +108,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_config: Database)
             scheduling_job_id=job_id,
             zstd_cctx=zstd_cctx,
             clp_io_config=clp_io_config,
-            database_connection_params=database_config.get_clp_connection_params_and_type(True)
+            database_connection_params=database_connection_params
         )
 
         with open(pathlib.Path(clp_io_config.input.list_path).resolve(), 'r') as f:
@@ -176,13 +149,11 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_config: Database)
 
         paths_to_compress_buffer.flush()
 
-        # Ensure all of the scheduled task and the total number of tasks
-        # in the job row has been updated and committed
-        db_cursor.execute(f"""
-            UPDATE compression_jobs 
-            SET num_tasks={paths_to_compress_buffer.num_tasks}, status='{JobStatus.SCHEDULED}' 
-            WHERE id={job_id}
-        """)
+        update_compression_job_metadata(db_cursor, job_id, {
+            'num_tasks': paths_to_compress_buffer.num_tasks,
+            'status': JobStatus.SCHEDULED,
+            'start_time': datetime.datetime.now()
+        })
         db_conn.commit()
 
         tasks = paths_to_compress_buffer.get_tasks()
@@ -193,7 +164,13 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_config: Database)
         job.num_tasks = len(tasks)
 
         tasks_group = group(tasks)
-        job.task_results = tasks_group.apply_async()
+        job.tasks = tasks_group.apply_async()
+        db_cursor.execute(f"""
+            UPDATE compression_tasks
+            SET status='{TaskStatus.SCHEDULED}', scheduled_time='{datetime.datetime.now()}'
+            WHERE job_id={job_id}
+        """)
+        db_conn.commit()
         job.start_time = datetime.datetime.now()
         scheduled_jobs[job_id] = job
 
@@ -204,7 +181,7 @@ def try_getting_results(result):
     return result.get()
 
 
-def poll_running_jobs(db_conn, db_cursor, database_config: Database):
+def poll_running_jobs(db_conn, db_cursor):
     """
     Poll for running jobs and update their status.
     """
@@ -213,72 +190,62 @@ def poll_running_jobs(db_conn, db_cursor, database_config: Database):
     logger.debug('Poll running jobs')
 
     for job_id, job in scheduled_jobs.items():
-        all_tasks_successful = True
         job_success = False
-        # V0.5 TODO: ideally we should update database for each successful subtask but
-        # I don't have time to do it properly. instead, I do the aggregation here
-        job_result: Dict[str, Any] = {
-            "total_uncompressed_size": 0,
-            "total_compressed_size": 0,
-            "num_messages": 0,
-            "num_files": 0,
-            "begin_ts": sys.maxsize,
-            "end_ts": 0
-        }
+        num_tasks_completed = 0
+        uncompressed_size = 0
+        compressed_size = 0
+        error_message = ""
 
-        task_results_list = []
+        task_results = []
         try:
-            returned_results = try_getting_results(job.task_results)
+            returned_results = try_getting_results(job.tasks)
             if returned_results is not None:
-                job_completion_ts = float(time.time())
+                job_end_time = float(time.time())
+                job.duration = job_end_time - job.start_time
                 # Check for finished jobs
                 for task_result in returned_results:
-                    logger.info(task_result)
-                    task_results_list.append(task_result)
-                    if not task_result["status"]:
-                        all_worker_jobs_successful = False
-                        logger.error(f"Worker of {job_id_str} failed. See the worker logs for details.")
+                    task_results.append(task_result)
+                    if not task_result.status == TaskStatus.SUCCESS:
+                        job_success = False
+                        error_message += f"task {task_result.task_id}: {task_result.error_message}\n"
                     else:
-                        job_success = True
-                        update_job_results(job_result, task_result["archive_stat"])
-                        db_manager.update_job_progression(job_id_str)
+                        num_tasks_completed += 1
+                        uncompressed_size += task_result.total_uncompressed_size
+                        compressed_size += task_result.total_compressed_size
+                        update_compression_task_metadata(db_cursor, task_result.task_id, dict(
+                            status=task_result.status,
+                            partition_uncompressed_size=task_result.total_uncompressed_size,
+                            partition_compressed_size=task_result.total_compressed_size,
+                            duration=task_result.duration,
+                        ))
+                        db_conn.commit()
             else:
                 # If results not ready check next job
                 continue
         except Exception as e:
-            all_worker_jobs_successful = False
-            logger.error(f"job `{job_id_str}` failed: {e}")
+            job_success = False
 
-        logger.info(f"Finished job `{job_id_str}`.")
-
-        celery_worker_time = job_completion_ts - active_jobs[job_id_str].celery_submission_ts if job_success else 0
-        end_to_end_time = job_completion_ts - active_jobs[job_id_str].submission_ts if job_success else 0
-        job_metrics = {
-            "submission_ts": active_jobs[job_id_str].submission_ts,
-            "scheduler_time": active_jobs[job_id_str].schedule_start_ts - active_jobs[job_id_str].submission_ts,
-            "job_setup_time": active_jobs[job_id_str].celery_submission_ts - active_jobs[job_id_str].schedule_start_ts,
-            "celery_worker_time": celery_worker_time,
-            "end_to_end_time": end_to_end_time
-        }
-        if not db_manager.update_job_stats(job_id_str, job_result):
-            logger.warning(f"stats of job {job_id_str} not updated, job doesn't exist")
-        if not db_manager.update_job_metrics(job_id_str, job_metrics):
-            logger.warning(f"metrics of job {job_id_str} not updated, job doesn't exist")
-        db_manager.insert_tasks_metrics(task_results_list)
+        logger.info(f"Finished job `{job_id}`.")
+        if job_success:
+            logger.info(f"Job {job_id} succeeded.")
+            update_compression_job_metadata(db_cursor, job_id, dict(
+                status=JobStatus.SUCCESS,
+                duration=job.duration,
+                uncompressed_size=uncompressed_size,
+                compressed_size=compressed_size,
+                num_tasks_completed=num_tasks_completed
+            ))
+        else:
+            logger.error(f"Job {job_id} failed. See worker logs or status_msg for details.")
+            update_compression_job_metadata(db_cursor, task_result.job_id, dict(
+                status=JobStatus.FAILED,
+                status_msg=error_message,
+                num_tasks_completed=num_tasks_completed
+            ))
+        db_conn.commit()
 
         # delete job
-        del active_jobs[job_id_str]
-
-        job_completion_time_date = datetime.fromtimestamp(job_completion_ts)
-
-        # FIXME: set job status here and delete
-        if not all_worker_jobs_successful:
-            set_job_finish_status(db_manager, job_id_str, JobStatus.FAILED, job_completion_ts)
-        else:
-            set_job_finish_status(db_manager, job_id_str, JobStatus.SUCCESS, job_completion_ts)
-        # FIXME: what was this trying to do?
-        # elif job_completed_with_errors:
-        #    set_job_finish_status(db_manager, job_id_str, JobStatus.SUCCESS_WITH_ERRORS, job_completion_ts)
+        del scheduled_jobs[job_id]
 
 
 def main(argv):
@@ -305,12 +272,9 @@ def main(argv):
             # Start Job Processing Loop
             with closing(sql_adapter.create_connection(True)) as db_conn, \
                     closing(db_conn.cursor(dictionary=True)) as db_cursor:
-                search_and_schedule_new_tasks(db_conn, db_cursor, sql_adapter.database_config,
-                                              clp_config.results_cache)
-
-                poll_running_jobs()
-                update_completed_jobs(db_cursor, 'compression')
-                db_conn.commit()
+                search_and_schedule_new_tasks(db_conn, db_cursor, sql_adapter.database_config.
+                                              get_clp_connection_params_and_type(True))
+                poll_running_jobs(db_conn, db_cursor)
         except:
             logger.exception("Error in scheduling.")
         finally:
