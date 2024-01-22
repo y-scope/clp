@@ -469,7 +469,7 @@ void find_boundaries(
 
     // Now we have the left boundary and right boundary, try to filter out the variables;
     // var_begin_ix is an inclusive interval
-    size_t logtype_variable_num = logtype_entry->get_num_variables();
+    auto const logtype_variable_num = logtype_entry->get_num_variables();
     ir::VariablePlaceholder var_placeholder;
     var_begin_ix = 0;
     for(size_t var_ix = 0; var_ix < logtype_variable_num; var_ix++) {
@@ -496,7 +496,7 @@ void find_boundaries(
             break;
         }
     }
-    if (var_end_ix <= var_begin_ix) {
+    if (var_end_ix < var_begin_ix) {
         printf("end index %lu is smaller than begin index %lu\n", var_end_ix, var_begin_ix);
         throw;
     }
