@@ -154,13 +154,13 @@ def compress(job_id: int, task_id: int, clp_io_config_json: str, paths_to_compre
     clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
     paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
 
-    task_update = TaskUpdate(
-        type=TaskUpdateType.COMPRESSION,
-        job_id=job_id,
-        task_id=task_id,
-        status=TaskStatus.IN_PROGRESS
-    )
-    append_message_to_task_results_queue(celery_broker_url, True, task_update.dict())
+    # task_update = TaskUpdate(
+    #     type=TaskUpdateType.COMPRESSION,
+    #     job_id=job_id,
+    #     task_id=task_id,
+    #     status=TaskStatus.IN_PROGRESS
+    # )
+    # append_message_to_task_results_queue(celery_broker_url, True, task_update.dict())
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")
 
     compression_successful, worker_output = run_clp(clp_io_config, pathlib.Path(clp_home_str),
@@ -185,5 +185,5 @@ def compress(job_id: int, task_id: int, clp_io_config_json: str, paths_to_compre
             status=TaskStatus.FAILED,
             error_message=worker_output['error_message']
         )
-    append_message_to_task_results_queue(celery_broker_url, False, task_update.dict())
+    # append_message_to_task_results_queue(celery_broker_url, False, task_update.dict())
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")

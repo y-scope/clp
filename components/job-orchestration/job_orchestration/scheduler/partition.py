@@ -1,3 +1,5 @@
+import copy
+import json
 import pathlib
 import typing
 
@@ -16,23 +18,35 @@ from job_orchestration.job_config import (
 
 class PathsToCompressBuffer:
     def __init__(self, scheduler_db_cursor, maintain_file_ordering: bool,
-                 empty_directories_allowed: bool, target_archive_size: int,
-                 file_size_to_trigger_compression, scheduling_job_id: int, zstd_cctx):
+                 empty_directories_allowed: bool, scheduling_job_id: int, zstd_cctx,
+                 clp_io_config: dict, database_connection_params: dict):
         self.__files: typing.List[FileMetadata] = []
+        self.__tasks: typing.List[typing.Dict[str, typing.Any]] = []
         self.__maintain_file_ordering: bool = maintain_file_ordering
         if empty_directories_allowed:
             self.__empty_directories: typing.Optional[typing.List[str]] = []
         else:
             self.__empty_directories: typing.Optional[typing.List[str]] = None
         self.__total_file_size: int = 0
-        self.__target_archive_size: int = target_archive_size
-        self.__file_size_to_trigger_compression: int = file_size_to_trigger_compression
+        self.__target_archive_size: int = clp_io_config.output.target_archive_size
+        self.__file_size_to_trigger_compression: int = clp_io_config.output.target_archive_size * 2
         self.__scheduling_job_id: int = scheduling_job_id
         self.scheduling_job_id: int = scheduling_job_id
         self.__zstd_cctx = zstd_cctx
 
         self.__scheduler_db_cursor = scheduler_db_cursor
         self.num_tasks = 0
+
+        self.__task_arguments = {
+            "job_id": scheduling_job_id,
+            "task_id": 0,
+            "clp_io_config_json": json.dumps(clp_io_config),
+            "paths_to_compress_json": "",
+            "database_connection_params": database_connection_params
+        }
+
+    def get_tasks(self):
+        return self.__tasks
 
     def add_file(self, file: FileMetadata):
         self.__files.append(file)
@@ -69,6 +83,12 @@ class PathsToCompressBuffer:
             f'VALUES({str(self.__scheduling_job_id)}, {str(sum(st_sizes))}, %s);',
             (self.__zstd_cctx.compress(msgpack.packb(paths_to_compress.dict(exclude_none=True))),)
         )
+
+        task_id = self.__scheduler_db_cursor.lastrowid
+        task_arguments = self.__task_arguments.copy()
+        task_arguments['task_id'] = task_id
+        task_arguments['paths_to_compress_json'] = json.dumps(paths_to_compress.dict(exclude_none=True))
+        self.__tasks.append(copy.deepcopy(task_arguments))
         self.num_tasks += 1
 
         return partition_total_file_size

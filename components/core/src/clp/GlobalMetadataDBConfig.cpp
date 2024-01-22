@@ -29,7 +29,7 @@ void GlobalMetadataDBConfig::parse_config_file(string const& config_file_path) {
     auto db_type_string = config["type"].as<string>();
     if ("sqlite" == db_type_string) {
         m_metadata_db_type = MetadataDBType::SQLite;
-    } else if ("mysql" == db_type_string) {
+    } else if ("mysql" == db_type_string || "mariadb" == db_type_string) {
         m_metadata_db_type = MetadataDBType::MySQL;
 
         if (!config["host"]) {

@@ -86,11 +86,17 @@ class CompressionJob(BaseModel):
     num_tasks: typing.Optional[int]
     num_tasks_completed: int
     tasks: Dict[int, CompressionTask] = {}
+    task_results: {}
 
     def get_clp_config_json(self, dctx: zstandard.ZstdDecompressor = None):
         if not dctx:
             dctx = zstandard.ZstdDecompressor()
         return json.dumps(msgpack.unpackb(dctx.decompress(self.clp_config)))
+
+    def get_clp_config(self, dctx: zstandard.ZstdDecompressor = None):
+        if not dctx:
+            dctx = zstandard.ZstdDecompressor()
+        return msgpack.unpackb(dctx.decompress(self.clp_config))
 
 
 class SearchJob(BaseModel):
