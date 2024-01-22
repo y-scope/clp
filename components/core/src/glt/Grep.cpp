@@ -622,6 +622,7 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
         size_t var_begin_index;
         size_t var_end_index;
         find_boundaries(logtype_entry, retokenized_string, var_begin_index, var_end_index);
+        sub_query.set_logtype_boundary(logtype_entry->get_id(), var_begin_index, var_end_index);
         //printf("begin index %lu, end index %lu\n", var_begin_index, var_end_index);
     }
     sub_query.set_possible_logtypes(possible_logtype_entries);
@@ -1053,7 +1054,12 @@ Grep::get_converted_logtype_query(Query const& query, size_t segment_id) {
         for (auto const& possible_logtype_entry : possible_log_entries) {
             // create one LogtypeQuery for each logtype
             logtype_dictionary_id_t possible_logtype_id = possible_logtype_entry->get_id();
-            LogtypeQuery query_info(sub_query->get_vars(), sub_query->wildcard_match_required());
+            auto const& boundary = sub_query->get_boundary_by_logtype_id(possible_logtype_id);
+            LogtypeQuery query_info(
+                    sub_query->get_vars(),
+                    sub_query->wildcard_match_required(),
+                    boundary
+            );
 
             // The boundary is a range like [left:right). note it's open on the right side
             auto const& containing_segments
@@ -1307,8 +1313,9 @@ size_t Grep::search_combined_table_and_output(
         compressed_msg.resize_var(num_vars);
         compressed_msg.set_logtype_id(logtype_id);
 
-        size_t left_boundary = 0;
-        size_t right_boundary = num_vars;
+        size_t var_begin_ix = num_vars;
+        size_t var_end_ix = 0;
+        get_union_of_bounds(queries_by_logtype, var_begin_ix, var_end_ix);
 
         bool required_wild_card;
         while (num_matches < limit) {
@@ -1318,8 +1325,8 @@ size_t Grep::search_combined_table_and_output(
                     compressed_msg,
                     required_wild_card,
                     query,
-                    left_boundary,
-                    right_boundary
+                    var_begin_ix,
+                    var_end_ix
             );
             if (found_matched == false) {
                 break;
@@ -1384,12 +1391,13 @@ size_t Grep::search_segment_optimized_and_output(
 
         auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_variables();
 
-        size_t left_boundary = 0;
-        size_t right_boundary = num_vars;
+        size_t var_begin_ix = num_vars;
+        size_t var_end_ix = 0;
+        get_union_of_bounds(sub_queries, var_begin_ix, var_end_ix);
 
         // load timestamps and columns that fall into the ranges.
         logtype_table_manager.load_ts();
-        logtype_table_manager.load_partial_columns(left_boundary, right_boundary);
+        logtype_table_manager.load_partial_columns(var_begin_ix, var_end_ix);
 
         std::vector<size_t> matched_row_ix;
         std::vector<bool> wildcard_required;
@@ -1428,6 +1436,24 @@ size_t Grep::search_segment_optimized_and_output(
     }
 
     return num_matches;
+}
+
+// we use a simple assumption atm.
+// if subquery1 has range (a,b) and subquery2 has range (c,d).
+// then the range will be (min(a,c), max(b,d)), even if c > b.
+void Grep::get_union_of_bounds(
+        std::vector<LogtypeQuery> const& sub_queries,
+        size_t& var_begin_ix,
+        size_t& var_end_ix
+) {
+    for (auto const& subquery : sub_queries) {
+        // we use a simple assumption atm.
+        // if subquery1 has range [begin1, end1) and subquery2 has range [begin2, end2).
+        // then the range will be (min(begin1, begin2), max(end1, end2)).
+        // Note, this would cause some inefficiency if begin1 < end1 < begin2 < end2.
+        var_begin_ix = std::min(var_begin_ix, subquery.get_begin_ix());
+        var_end_ix = std::max(var_end_ix, subquery.get_end_ix());
+    }
 }
 
 }  // namespace glt
