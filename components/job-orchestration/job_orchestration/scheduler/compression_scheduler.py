@@ -91,7 +91,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_connection_params
             database_connection_params=database_connection_params
         )
 
-        with open(pathlib.Path(clp_io_config.input.list_path).resolve(), 'r') as f:
+        with open(pathlib.Path(clp_io_config['input']['list_path']).resolve(), 'r') as f:
             for path_idx, path in enumerate(f, start=1):
                 stripped_path = path.strip()
                 if '' == stripped_path:
