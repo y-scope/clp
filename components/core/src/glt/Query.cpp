@@ -179,7 +179,11 @@ void SubQuery::clear() {
     m_wildcard_match_required = false;
 }
 
-void SubQuery::set_logtype_boundary(glt::logtype_dictionary_id_t logtype_id, size_t var_begin_ix, size_t var_end_ix) {
+void SubQuery::set_logtype_boundary(
+        glt::logtype_dictionary_id_t logtype_id,
+        size_t var_begin_ix,
+        size_t var_end_ix
+) {
     m_logtype_boundaries.emplace(logtype_id, QueryBoundary(var_begin_ix, var_end_ix));
 }
 

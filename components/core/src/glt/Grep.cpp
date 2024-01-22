@@ -18,10 +18,10 @@ using glt::ir::is_delim;
 using glt::streaming_archive::reader::Archive;
 using glt::streaming_archive::reader::File;
 using glt::streaming_archive::reader::Message;
+using std::make_pair;
+using std::pair;
 using std::string;
 using std::vector;
-using std::pair;
-using std::make_pair;
 
 namespace glt {
 namespace {
@@ -124,8 +124,8 @@ QueryToken::QueryToken(
                    || m_has_greedy_wildcard_in_middle);
 
         if (!is_var) {
-            // GLT TODO: This also looks weird to me. if it is not a var, then it must had a wildcard with it.
-            // then it can never have type = logtype?
+            // GLT TODO: This also looks weird to me. if it is not a var, then it must had a
+            // wildcard with it. then it can never have type = logtype?
             if (!m_contains_wildcards) {
                 m_type = Type::Logtype;
             } else {
@@ -168,18 +168,18 @@ QueryToken::QueryToken(
             if (!converts_to_non_dict_var) {
                 // GLT TODO
                 // Actually this is incorrect, because it's possible user enters 23412*34 aiming to
-                // match 23412.34. we should consider the possibility that middle wildcard causes the
-                // converts_to_non_dict_var to be false.
+                // match 23412.34. we should consider the possibility that middle wildcard causes
+                // the converts_to_non_dict_var to be false.
                 m_type = Type::DictionaryVar;
                 m_cannot_convert_to_non_dict_var = true;
             } else {
                 // GLT TODO: think about this carefully.
                 // we should consider with wildcard and without wildcard.
-                // First, the token must not have a wildcard at the middle, otherwise it can't be converted.
-                // If the token doesn't have prefix or suffix, then it must not be a dictionary variable. and we know
-                // the type explicitly
-                // If the token has a prefix or suffix wildcard, then it is possible it can be a dict var, for example
-                // 88* can match to 888, 88.2 or 88type
+                // First, the token must not have a wildcard at the middle, otherwise it can't be
+                // converted. If the token doesn't have prefix or suffix, then it must not be a
+                // dictionary variable. and we know the type explicitly If the token has a prefix or
+                // suffix wildcard, then it is possible it can be a dict var, for example 88* can
+                // match to 888, 88.2 or 88type
                 m_type = Type::Ambiguous;
                 m_possible_types.push_back(Type::IntVar);
                 m_possible_types.push_back(Type::FloatVar);
@@ -411,30 +411,31 @@ void find_boundaries(
         vector<pair<string, bool>> const& tokens,
         size_t& var_begin_ix,
         size_t& var_end_ix
-)
-{
+) {
     auto const& logtype_string = logtype_entry->get_value();
 
     // left boundary is exclusive and right boundary are inclusive, meaning
-    // that logtype_string.substr[0, left_boundary) and logtype_string.substr[right_boundary, end) can be safely
-    // ignored.
+    // that logtype_string.substr[0, left_boundary) and logtype_string.substr[right_boundary, end)
+    // can be safely ignored.
     size_t left_boundary;
     size_t right_boundary;
     // First, match the token from front to end.
     size_t find_start_index = 0;
-    bool tokens_contain_variable {false};
+    bool tokens_contain_variable{false};
     for (auto const& token : tokens) {
         auto const& token_str = token.first;
         bool contains_variable = token.second;
         size_t found_index = logtype_string.find(token_str, find_start_index);
         if (string::npos == found_index) {
-            printf("failed to find: [%s] from %s\n", token_str.c_str(), logtype_string.substr(find_start_index).c_str());
+            printf("failed to find: [%s] from %s\n",
+                   token_str.c_str(),
+                   logtype_string.substr(find_start_index).c_str());
             throw;
         }
-        //the first time we see a token with variable, we know that
-        // we don't care about the variables in the substr before this token in the logtype.
-        // Technically, logtype_string.substr[0, token[begin_index])
-        // (since token[begin_index] is the beginning of the token)
+        // the first time we see a token with variable, we know that
+        //  we don't care about the variables in the substr before this token in the logtype.
+        //  Technically, logtype_string.substr[0, token[begin_index])
+        //  (since token[begin_index] is the beginning of the token)
         if (contains_variable) {
             tokens_contain_variable = true;
             left_boundary = found_index;
@@ -453,7 +454,9 @@ void find_boundaries(
 
         size_t rfound_index = logtype_string.rfind(token_str, rfind_end_index);
         if (string::npos == rfound_index) {
-            printf("failed to find: [%s] from %s\n", token_str.c_str(), logtype_string.substr(0, rfind_end_index).c_str());
+            printf("failed to find: [%s] from %s\n",
+                   token_str.c_str(),
+                   logtype_string.substr(0, rfind_end_index).c_str());
             throw;
         }
 
@@ -477,7 +480,7 @@ void find_boundaries(
     auto const logtype_variable_num = logtype_entry->get_num_variables();
     ir::VariablePlaceholder var_placeholder;
     var_begin_ix = 0;
-    for(size_t var_ix = 0; var_ix < logtype_variable_num; var_ix++) {
+    for (size_t var_ix = 0; var_ix < logtype_variable_num; var_ix++) {
         size_t var_position = logtype_entry->get_variable_info(var_ix, var_placeholder);
         if (var_position < left_boundary) {
             // if the variable is within the left boundary, then it should be skipped.
@@ -490,7 +493,7 @@ void find_boundaries(
 
     // For right boundary, var_end_ix is an exclusive interval
     var_end_ix = logtype_variable_num;
-    for(size_t var_ix = 0; var_ix < logtype_variable_num; var_ix++) {
+    for (size_t var_ix = 0; var_ix < logtype_variable_num; var_ix++) {
         size_t reversed_ix = logtype_variable_num - 1 - var_ix;
         size_t var_position = logtype_entry->get_variable_info(reversed_ix, var_placeholder);
         if (var_position >= right_boundary) {
@@ -504,7 +507,9 @@ void find_boundaries(
     // This means no variable needs to be readed? then the only possible is no token contains
     // variable
     if (var_end_ix == var_begin_ix && true == tokens_contain_variable) {
-        printf("end index %lu is same as begin index %lu, but tokens contain a variable\n",  var_end_ix, var_begin_ix);
+        printf("end index %lu is same as begin index %lu, but tokens contain a variable\n",
+               var_end_ix,
+               var_begin_ix);
         throw;
     }
 
@@ -512,13 +517,9 @@ void find_boundaries(
         printf("end index %lu is smaller than begin index %lu\n", var_end_ix, var_begin_ix);
         throw;
     }
-
 }
 
-vector<pair<string, bool>> retokenization(
-        string input_string
-)
-{
+vector<pair<string, bool>> retokenization(string input_string) {
     vector<pair<string, bool>> retokenized_string;
     size_t input_length = input_string.size();
     string current_token;
@@ -586,8 +587,9 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
                 logtype += '*';
             } else {
                 // GLT TODO: I don't understand this part.
-                // My guess it that, since it has a wildcard at the middle, there's no way it can convert to
-                // float or int. Hence, the only possible type must be dictionary variable.
+                // My guess it that, since it has a wildcard at the middle, there's no way it can
+                // convert to float or int. Hence, the only possible type must be dictionary
+                // variable.
                 logtype += '*';
                 LogTypeDictionaryEntry::add_dict_var(logtype);
                 logtype += '*';
@@ -596,8 +598,8 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
             if (!query_token.is_var()) {
                 // GLT: This is possible when an ambiguious token has type = logtype
                 // i.e. , a token with wildcard, either on the two side, or a middle wildcard.
-                // However, because we are sure it is a logtype, it is easier to handle. Maybe we just need to
-                // Treat it as usual.
+                // However, because we are sure it is a logtype, it is easier to handle. Maybe we
+                // just need to Treat it as usual.
                 ir::append_constant_to_logtype(query_token.get_value(), escape_handler, logtype);
             } else if (!process_var_token(query_token, archive, ignore_case, sub_query, logtype)) {
                 return SubQueryMatchabilityResult::WontMatch;
@@ -630,7 +632,7 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
         return SubQueryMatchabilityResult::WontMatch;
     }
 
-    for (const auto& logtype_entry: possible_logtype_entries) {
+    for (auto const& logtype_entry : possible_logtype_entries) {
         size_t var_begin_index;
         size_t var_end_index;
         find_boundaries(logtype_entry, retokenized_string, var_begin_index, var_end_index);

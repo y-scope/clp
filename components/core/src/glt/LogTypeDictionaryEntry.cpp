@@ -212,7 +212,8 @@ string LogTypeDictionaryEntry::get_human_readable_value() const {
         size_t placeholder_pos = get_placeholder_info(placeholder_ix, placeholder);
 
         // Add the constant that's between the last variable and this one, with newlines escaped
-        human_readable_value.append(m_value, constant_begin_pos, placeholder_pos - constant_begin_pos);
+        human_readable_value
+                .append(m_value, constant_begin_pos, placeholder_pos - constant_begin_pos);
 
         if (VariablePlaceholder::Dictionary == placeholder) {
             human_readable_value += "v";
