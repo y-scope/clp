@@ -28,8 +28,8 @@ class PathsToCompressBuffer:
         else:
             self.__empty_directories: typing.Optional[typing.List[str]] = None
         self.__total_file_size: int = 0
-        self.__target_archive_size: int = clp_io_config.output.target_archive_size
-        self.__file_size_to_trigger_compression: int = clp_io_config.output.target_archive_size * 2
+        self.__target_archive_size: int = clp_io_config['output']['target_archive_size']
+        self.__file_size_to_trigger_compression: int = clp_io_config['output']['target_archive_size'] * 2
         self.__scheduling_job_id: int = scheduling_job_id
         self.scheduling_job_id: int = scheduling_job_id
         self.__zstd_cctx = zstd_cctx

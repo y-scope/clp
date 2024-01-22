@@ -66,18 +66,7 @@ class SearchTask(BaseModel):
 class CompressionJob(BaseModel):
     id: int
     start_time: datetime.datetime
-    clp_config: bytes
     tasks: typing.Any
-
-    def get_clp_config_json(self, dctx: zstandard.ZstdDecompressor = None):
-        if not dctx:
-            dctx = zstandard.ZstdDecompressor()
-        return json.dumps(msgpack.unpackb(dctx.decompress(self.clp_config)))
-
-    def get_clp_config(self, dctx: zstandard.ZstdDecompressor = None):
-        if not dctx:
-            dctx = zstandard.ZstdDecompressor()
-        return msgpack.unpackb(dctx.decompress(self.clp_config))
 
 
 class SearchJob(BaseModel):

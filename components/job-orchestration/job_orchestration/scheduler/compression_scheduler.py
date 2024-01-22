@@ -6,6 +6,7 @@ import sys
 import time
 from contextlib import closing
 
+import msgpack
 import zstandard
 from celery import group
 from pydantic import ValidationError
@@ -76,13 +77,9 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_connection_params
 
     # Poll for new compression jobs
     for job_row in fetch_new_jobs(db_cursor):
-        job = CompressionJob(
-            id=job_row['id'],
-            clp_config=job_row['clp_config']
-        )
         db_conn.commit()
-        job_id = job.id
-        clp_io_config = job.get_clp_config(zstd_dctx)
+        job_id = job_row['id']
+        clp_io_config = msgpack.unpackb(zstd_dctx.decompress(job_row['clp_config']))
 
         paths_to_compress_buffer = PathsToCompressBuffer(
             scheduler_db_cursor=db_cursor,
@@ -132,10 +129,12 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_connection_params
 
         paths_to_compress_buffer.flush()
 
+        # Update job metadata
+        start_time = datetime.datetime.now()
         update_compression_job_metadata(db_cursor, job_id, {
             'num_tasks': paths_to_compress_buffer.num_tasks,
             'status': JobStatus.SCHEDULED,
-            'start_time': datetime.datetime.now()
+            'start_time': start_time
         })
         db_conn.commit()
 
@@ -144,21 +143,23 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_connection_params
             logger.warning(f'No tasks were created for job {job_id}')
             continue
 
-        job.num_tasks = len(tasks)
-
         task_instances = []
         for task in tasks:
             task_instances.append(compress.s(**task))
-
         tasks_group = group(task_instances)
-        job.tasks = tasks_group.apply_async()
+
+        job = CompressionJob(
+            id=job_id,
+            start_time=start_time,
+            tasks=tasks_group.apply_async()
+        )
         db_cursor.execute(f"""
             UPDATE compression_tasks
             SET status='{TaskStatus.SCHEDULED}', scheduled_time='{datetime.datetime.now()}'
             WHERE job_id={job_id}
         """)
         db_conn.commit()
-        job.start_time = datetime.datetime.now()
+
         scheduled_jobs[job_id] = job
 
 
@@ -224,7 +225,7 @@ def poll_running_jobs(db_conn, db_cursor):
             ))
         else:
             logger.error(f"Job {job_id} failed. See worker logs or status_msg for details.")
-            update_compression_job_metadata(db_cursor, task_result.job_id, dict(
+            update_compression_job_metadata(db_cursor, job_id, dict(
                 status=JobStatus.FAILED,
                 status_msg=error_message,
                 num_tasks_completed=num_tasks_completed

@@ -371,6 +371,8 @@ def start_scheduler(instance_id: str, scheduler_name: str, clp_config: CLPConfig
     necessary_mounts = [
         mounts.logs_dir,
     ]
+    if COMPRESSION_SCHEDULER_COMPONENT_NAME == scheduler_name:
+        necessary_mounts.append(mounts.input_logs_dir)
     for mount in necessary_mounts:
         if mount:
             container_start_cmd.append('--mount')

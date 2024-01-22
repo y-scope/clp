@@ -3,9 +3,9 @@ import json
 import os
 import pathlib
 import subprocess
-import time
 
 import yaml
+from celery.app.task import Task
 from celery.utils.log import get_task_logger
 
 from job_orchestration.executor.celery import app
@@ -141,7 +141,7 @@ def run_clp(clp_config: ClpIoConfig, clp_home: pathlib.Path, data_dir: pathlib.P
 
 
 @app.task(bind=True)
-def compress(job_id: int, task_id: int, clp_io_config_json: str, paths_to_compress_json: str,
+def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, paths_to_compress_json: str,
              database_connection_params):
     clp_home_str = os.getenv('CLP_HOME')
     data_dir_str = os.getenv('CLP_DATA_DIR')
