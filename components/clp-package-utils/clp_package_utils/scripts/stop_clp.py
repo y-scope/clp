@@ -57,7 +57,8 @@ def main(argv):
     component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
     component_args_parser.add_parser(REDIS_COMPONENT_NAME)
     component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
-    component_args_parser.add_parser(SCHEDULER_COMPONENT_NAME)
+    component_args_parser.add_parser(COMPRESSION_SCHEDULER_COMPONENT_NAME)
+    component_args_parser.add_parser(SEARCH_SCHEDULER_COMPONENT_NAME)
     component_args_parser.add_parser(WORKER_COMPONENT_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
@@ -75,7 +76,8 @@ def main(argv):
         # Validate and load necessary credentials
         if component_name in ['', DB_COMPONENT_NAME]:
             validate_and_load_db_credentials_file(clp_config, clp_home, False)
-        if component_name in ['', QUEUE_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME, WORKER_COMPONENT_NAME]:
+        if component_name in ['', QUEUE_COMPONENT_NAME, COMPRESSION_SCHEDULER_COMPONENT_NAME,
+                              SEARCH_SCHEDULER_COMPONENT_NAME, WORKER_COMPONENT_NAME]:
             validate_and_load_queue_credentials_file(clp_config, clp_home, False)
     except:
         logger.exception("Failed to load config.")

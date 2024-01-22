@@ -86,7 +86,7 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
                                 f'{pretty_size(job_compressed_size)} ({compression_ratio:.2f})')
                             job_last_uncompressed_size = job_uncompressed_size
 
-                if JobStatus.SCHEDULED == job_status:
+                if JobStatus.SCHEDULED == job_status or JobStatus.SCHEDULING == job_status:
                     pass  # Simply wait another iteration
                 elif JobStatus.SUCCEEDED == job_status:
                     # All tasks in the job is done

@@ -140,7 +140,7 @@ def run_clp(clp_config: ClpIoConfig, clp_home: pathlib.Path, data_dir: pathlib.P
         return compression_successful, {'error_message': f'See logs {stderr_log_path}'}
 
 
-@app.task()
+@app.task(bind=True)
 def compress(job_id: int, task_id: int, clp_io_config_json: str, paths_to_compress_json: str,
              database_connection_params):
     clp_home_str = os.getenv('CLP_HOME')

@@ -163,7 +163,11 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_connection_params
 
         job.num_tasks = len(tasks)
 
-        tasks_group = group(tasks)
+        task_instances = []
+        for task in tasks:
+            task_instances.append(compress.s(**task))
+
+        tasks_group = group(task_instances)
         job.tasks = tasks_group.apply_async()
         db_cursor.execute(f"""
             UPDATE compression_tasks
