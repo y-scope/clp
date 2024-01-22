@@ -339,12 +339,13 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
     logger.info(f"Started {RESULTS_CACHE_COMPONENT_NAME}.")
 
 
-def start_scheduler(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig, mounts: CLPDockerMounts):
-    logger.info(f"Starting {SCHEDULER_COMPONENT_NAME}...")
+def start_scheduler(instance_id: str, scheduler_name: str, clp_config: CLPConfig,
+                    container_clp_config: CLPConfig, mounts: CLPDockerMounts):
+    logger.info(f"Starting {scheduler_name}...")
 
-    container_name = f'clp-{SCHEDULER_COMPONENT_NAME}-{instance_id}'
+    container_name = f'clp-{scheduler_name}-{instance_id}'
     if container_exists(container_name):
-        logger.info(f"{SCHEDULER_COMPONENT_NAME} already running.")
+        logger.info(f"{scheduler_name} already running.")
         return
 
     container_config_filename = f'{container_name}.yml'
@@ -378,13 +379,13 @@ def start_scheduler(instance_id: str, clp_config: CLPConfig, container_clp_confi
 
     scheduler_cmd = [
         'python3', '-u', '-m',
-        'job_orchestration.scheduler.scheduler',
+        f'job_orchestration.scheduler.{scheduler_name}',
         '--config', str(container_clp_config.logs_directory / container_config_filename),
     ]
     cmd = container_start_cmd + scheduler_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
-    logger.info(f"Started {SCHEDULER_COMPONENT_NAME}.")
+    logger.info(f"Started {scheduler_name}.")
 
 
 def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig,
@@ -611,7 +612,8 @@ def main(argv):
     component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
     component_args_parser.add_parser(REDIS_COMPONENT_NAME)
     component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
-    component_args_parser.add_parser(SCHEDULER_COMPONENT_NAME)
+    component_args_parser.add_parser(COMPRESSION_SCHEDULER_COMPONENT_NAME)
+    component_args_parser.add_parser(SEARCH_SCHEDULER_COMPONENT_NAME)
     worker_args_parser = component_args_parser.add_parser(WORKER_COMPONENT_NAME)
     worker_args_parser.add_argument('--num-cpus', type=int, default=0,
                                     help="Number of logical CPU cores to use for compression")

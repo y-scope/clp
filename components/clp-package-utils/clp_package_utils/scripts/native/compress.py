@@ -17,7 +17,6 @@ from clp_package_utils.general import (
 )
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.sql_adapter import SQL_Adapter
-from compression_job_handler.utils.common import JobCompletionStatus
 
 from job_orchestration.job_config import (
     ClpIoConfig,
@@ -44,7 +43,6 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
     # Instantiate zstdandard compression context
     zstd_cctx = zstd.ZstdCompressor(level=3)
 
-    all_worker_jobs_successful = True
     # Connect to SQL Database
     with closing(sql_adapter.create_connection(True)) as scheduling_db, \
             closing(scheduling_db.cursor(dictionary=True)) as scheduling_db_cursor:
@@ -111,9 +109,6 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
 
                 time.sleep(0.5)
         except Exception as ex:
-            all_worker_jobs_successful = False
-
-        if not all_worker_jobs_successful:
             return JobCompletionStatus.FAILED
 
         logger.debug(f'Finished job {scheduling_job_id}')

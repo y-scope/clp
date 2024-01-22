@@ -17,7 +17,7 @@
 #  name: "clp-db"
 #
 #scheduler:
-#  jobs_poll_delay: 1  # seconds
+#  jobs_poll_delay: 0.5  # seconds
 #
 #queue:
 #  host: "localhost"

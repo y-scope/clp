@@ -18,7 +18,6 @@ SCHEDULER_COMPONENT_NAME = 'scheduler'
 SEARCH_SCHEDULER_COMPONENT_NAME = 'search_scheduler'
 SEARCH_WORKER_COMPONENT_NAME = 'search_worker'
 WORKER_COMPONENT_NAME = 'worker'
-
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path('etc') / 'credentials.yml'
 CLP_METADATA_TABLE_PREFIX = 'clp_'
 SEARCH_JOBS_TABLE_NAME = 'distributed_search_jobs'
@@ -127,7 +126,7 @@ def _validate_logging_level(cls, field):
 
 
 class Scheduler(BaseModel):
-    jobs_poll_delay: int = 1  # seconds
+    jobs_poll_delay: float = 0.5  # seconds
 
 
 class SearchScheduler(BaseModel):
