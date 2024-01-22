@@ -37,8 +37,6 @@ directory:
   for operating the CLP package.
 * [clp-py-utils](components/clp-py-utils) contains Python utilities common to several of the 
   other components.
-* [compression-job-handler](components/compression-job-handler) contains code to submit
-  compression jobs to a cluster.
 * [core](components/core) contains code to compress uncompressed logs, decompress compressed 
   logs, and search compressed logs.
 * [job-orchestration](components/job-orchestration) contains code to schedule compression jobs on

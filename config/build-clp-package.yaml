@@ -6,8 +6,6 @@ builder_image: "ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main"
 components:
   - name: "package-template"
     type: "local"
-  - name: "compression-job-handler"
-    type: "local"
   - name: "job-orchestration"
     type: "local"
   - name: "clp-py-utils"

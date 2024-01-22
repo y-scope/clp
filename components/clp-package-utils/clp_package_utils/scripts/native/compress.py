@@ -168,7 +168,7 @@ def main(argv):
         log_list_path = pathlib.Path(parsed_args.input_list).resolve()
         shutil.copy(log_list_path, comp_jobs_dir / log_list_path.name)
 
-    logger.info("Compression job submitted to compression-job-handler.")
+    logger.info("Compression job submitted.")
 
     mysql_adapter = SQL_Adapter(clp_config.database)
     clp_input_config = InputConfig(list_path=str(log_list_path))
