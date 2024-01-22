@@ -188,8 +188,7 @@ def poll_running_jobs(db_conn, db_cursor):
         try:
             returned_results = try_getting_results(job.tasks)
             if returned_results is not None:
-                job_end_time = float(time.time())
-                job.duration = job_end_time - job.start_time
+                duration = (datetime.datetime.now() - job.start_time).seconds()
                 # Check for finished jobs
                 for task_result in returned_results:
                     task_results.append(task_result)
@@ -218,7 +217,7 @@ def poll_running_jobs(db_conn, db_cursor):
             logger.info(f"Job {job_id} succeeded.")
             update_compression_job_metadata(db_cursor, job_id, dict(
                 status=JobStatus.SUCCESS,
-                duration=job.duration,
+                duration=duration,
                 uncompressed_size=uncompressed_size,
                 compressed_size=compressed_size,
                 num_tasks_completed=num_tasks_completed

@@ -169,7 +169,7 @@ def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, pat
                                                     pathlib.Path(data_dir_str), pathlib.Path(archive_output_dir_str),
                                                     pathlib.Path(logs_dir_str), job_id, task_id, paths_to_compress,
                                                     database_connection_params)
-    duration = datetime.datetime.now() - task_update.start_time
+    duration = (datetime.datetime.now() - task_update.start_time).total_seconds()
     if compression_successful:
         task_update = CompressionTaskSuccessUpdate(
             type=TaskUpdateType.COMPRESSION,

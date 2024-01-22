@@ -32,7 +32,8 @@ class TaskUpdate(BaseModel):
 
     @validator('status')
     def valid_status(cls, field):
-        supported_status = [TaskStatus.IN_PROGRESS, TaskStatus.SUCCEEDED, TaskStatus.FAILED]
+        supported_status = [TaskStatus.SCHEDULED, TaskStatus.IN_PROGRESS,
+                            TaskStatus.SUCCEEDED, TaskStatus.FAILED]
         if field not in supported_status:
             raise ValueError(f'must be one of the following {"|".join(supported_status)}')
         return field
