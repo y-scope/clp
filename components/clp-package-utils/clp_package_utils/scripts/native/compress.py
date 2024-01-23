@@ -31,7 +31,7 @@ from job_orchestration.scheduler.constants import (
 # Setup logging
 # Create logger
 logger = logging.getLogger(__file__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 # Setup console logging
 logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
