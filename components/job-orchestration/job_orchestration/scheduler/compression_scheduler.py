@@ -199,6 +199,10 @@ def poll_running_jobs(db_conn, db_cursor):
                     if not task_result['status'] == TaskStatus.SUCCEEDED:
                         job_success = False
                         error_message += f"task {task_result['task_id']}: {task_result['error_message']}\n"
+                        update_compression_task_metadata(db_cursor, task_result['task_id'], dict(
+                            status=task_result['status'],
+                            duration=task_result['duration'],
+                        ))
                     else:
                         num_tasks_completed += 1
                         uncompressed_size += task_result['total_uncompressed_size']
