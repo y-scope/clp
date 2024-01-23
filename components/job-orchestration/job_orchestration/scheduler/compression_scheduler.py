@@ -176,47 +176,47 @@ def poll_running_jobs(db_conn, db_cursor):
     global scheduled_jobs
 
     logger.debug('Poll running jobs')
-
+    jobs_to_delete = []
     for job_id, job in scheduled_jobs.items():
-        job_success = False
+        job_success = True
         num_tasks_completed = 0
         uncompressed_size = 0
         compressed_size = 0
         error_message = ""
 
-        task_results = []
         try:
             returned_results = try_getting_results(job.tasks)
             if returned_results is not None:
-                duration = (datetime.datetime.now() - job.start_time).seconds()
+                duration = (datetime.datetime.now() - job.start_time).total_seconds()
                 # Check for finished jobs
                 for task_result in returned_results:
-                    task_results.append(task_result)
-                    if not task_result.status == TaskStatus.SUCCESS:
+                    logger.info(f"task result: {task_result}")
+                    if not task_result['status'] == TaskStatus.SUCCEEDED:
                         job_success = False
-                        error_message += f"task {task_result.task_id}: {task_result.error_message}\n"
+                        error_message += f"task {task_result['task_id']}: {task_result['error_message']}\n"
                     else:
                         num_tasks_completed += 1
-                        uncompressed_size += task_result.total_uncompressed_size
-                        compressed_size += task_result.total_compressed_size
-                        update_compression_task_metadata(db_cursor, task_result.task_id, dict(
-                            status=task_result.status,
-                            partition_uncompressed_size=task_result.total_uncompressed_size,
-                            partition_compressed_size=task_result.total_compressed_size,
-                            duration=task_result.duration,
+                        uncompressed_size += task_result['total_uncompressed_size']
+                        compressed_size += task_result['total_compressed_size']
+                        update_compression_task_metadata(db_cursor, task_result['task_id'], dict(
+                            status=task_result['status'],
+                            partition_uncompressed_size=task_result['total_uncompressed_size'],
+                            partition_compressed_size=task_result['total_compressed_size'],
+                            duration=task_result['duration'],
                         ))
                         db_conn.commit()
             else:
                 # If results not ready check next job
                 continue
         except Exception as e:
+            logger.error(f"Error while getting results for job {job_id}: {e}")
             job_success = False
 
-        logger.info(f"Finished job `{job_id}`.")
+        logger.info(f"Finished job {job_id}.")
         if job_success:
             logger.info(f"Job {job_id} succeeded.")
             update_compression_job_metadata(db_cursor, job_id, dict(
-                status=JobStatus.SUCCESS,
+                status=JobStatus.SUCCEEDED,
                 duration=duration,
                 uncompressed_size=uncompressed_size,
                 compressed_size=compressed_size,
@@ -232,6 +232,9 @@ def poll_running_jobs(db_conn, db_cursor):
         db_conn.commit()
 
         # delete job
+        jobs_to_delete.append(job_id)
+
+    for job_id in jobs_to_delete:
         del scheduled_jobs[job_id]
 
 

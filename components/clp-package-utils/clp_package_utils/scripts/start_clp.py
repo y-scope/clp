@@ -365,6 +365,9 @@ def start_scheduler(instance_id: str, scheduler_name: str, clp_config: CLPConfig
         '-e', f'BROKER_URL=amqp://'
               f'{container_clp_config.queue.username}:{container_clp_config.queue.password}@'
               f'{container_clp_config.queue.host}:{container_clp_config.queue.port}',
+        '-e', f'RESULT_BACKEND=rpc://'
+              f'{container_clp_config.queue.username}:{container_clp_config.queue.password}'
+              f'@{container_clp_config.queue.host}:{container_clp_config.queue.port}',
         '-u', f'{os.getuid()}:{os.getgid()}',
         '--mount', str(mounts.clp_home),
     ]

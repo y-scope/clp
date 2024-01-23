@@ -1,4 +1,5 @@
 import datetime
+import logging
 import json
 import os
 import pathlib
@@ -18,6 +19,7 @@ from job_orchestration.scheduler.scheduler_data import \
 
 # Setup logging
 logger = get_task_logger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 def run_clp(clp_config: ClpIoConfig, clp_home: pathlib.Path, data_dir: pathlib.Path, archive_output_dir: pathlib.Path,
@@ -147,9 +149,6 @@ def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, pat
     data_dir_str = os.getenv('CLP_DATA_DIR')
     archive_output_dir_str = os.getenv('CLP_ARCHIVE_OUTPUT_DIR')
     logs_dir_str = os.getenv('CLP_LOGS_DIR')
-
-    logger.debug(f'CLP_HOME: {clp_home_str}')
-    logger.info(f"Compressing (job_id={job_id} task_id={task_id})")
 
     clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
     paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
