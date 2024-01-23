@@ -379,7 +379,7 @@ def start_worker(instance_id: str, clp_config: CLPConfig, container_clp_config: 
     container_start_cmd.append(clp_config.execution_container)
 
     worker_cmd = [
-        str(clp_site_packages_dir / 'bin' / 'celery'),
+        'python3', str(clp_site_packages_dir / 'bin' / 'celery'),
         '-A',
         'job_orchestration.executor',
         'worker',
