@@ -6,7 +6,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import mysql.connector
 
@@ -15,8 +15,9 @@ import pathlib
 
 from celery import group
 
-from clp_py_utils.clp_config import SEARCH_JOBS_TABLE_NAME
-from job_orchestration.executor.search.fs_search_method import fs_search
+from clp_py_utils.clp_config import SEARCH_JOBS_TABLE_NAME, CLP_METADATA_TABLE_PREFIX
+from job_orchestration.executor.search.fs_search_task import search
+from job_orchestration.job_config import SearchConfig
 
 from pydantic import ValidationError
 
@@ -25,7 +26,6 @@ from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logg
 from clp_py_utils.core import read_yaml_config_file
 
 from .common import JobStatus  # type: ignore
-from .search_db_manager import DBManager, MongoDBManager
 
 # Setup logging
 logger = get_logger("search-job-handler")
@@ -52,7 +52,7 @@ def fetch_new_search_jobs(db_cursor) -> list:
         SELECT {SEARCH_JOBS_TABLE_NAME}.id as job_id,
         {SEARCH_JOBS_TABLE_NAME}.status as job_status,
         {SEARCH_JOBS_TABLE_NAME}.search_config,
-        {SEARCH_JOBS_TABLE_NAME}.creation_time,
+        {SEARCH_JOBS_TABLE_NAME}.submission_time,
         FROM {SEARCH_JOBS_TABLE_NAME}
         WHERE {SEARCH_JOBS_TABLE_NAME}.status='{JobStatus.PENDING}'
     """)
@@ -74,12 +74,7 @@ def setup_search_jobs_table(db_conn):
         CREATE TABLE IF NOT EXISTS `{SEARCH_JOBS_TABLE_NAME}` (
             `id` INT NOT NULL AUTO_INCREMENT,
             `status` INT NOT NULL DEFAULT '{JobStatus.PENDING}',
-            `status_msg` VARCHAR(255) NOT NULL DEFAULT '',
-            `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-            `start_time` DATETIME NULL DEFAULT NULL,
-            `duration` INT NULL DEFAULT NULL,
-            `reducer_host` VARCHAR(32) NOT NULL DEFAULT '127.0.0.1',
-            `reducer_port` INT NOT NULL DEFAULT '0',
+            `submission_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
             `search_config` VARBINARY(60000) NOT NULL,
             PRIMARY KEY (`id`) USING BTREE,
             INDEX `JOB_STATUS` (`status`) USING BTREE
@@ -109,7 +104,7 @@ def set_job_status(
     return rval
 
 
-def poll_and_handle_cancelling_search_jobs(db_conn, mongodb_manager) -> None:
+def poll_and_handle_cancelling_search_jobs(db_conn) -> None:
     global active_jobs
 
     cursor = db_conn.cursor()
@@ -117,28 +112,25 @@ def poll_and_handle_cancelling_search_jobs(db_conn, mongodb_manager) -> None:
     db_conn.commit()
     cursor.close()
 
-    for job_id in cancelling_jobs:
+    for job_id, in cancelling_jobs:
         if job_id in active_jobs:
             cancel_job(job_id)
         logger.info(f"Cancelled job {job_id}.")
-        #TODO: also update time
         set_job_status(db_conn, job_id, JobStatus.CANCELLED, prev_status=JobStatus.CANCELLING)
-        mongodb_manager.update_job_status(job_id, JobStatus.CANCELLED)
 
 
 def get_archives_for_search(
     db_conn,
-    query: dict,
+    search_config: SearchConfig,
 ):
     cursor = db_conn.cursor()
-
     cursor.execute(
-        f'''SELECT id as archive_id, timestamp_key
-        FROM clp_archives where begin_timestamp <= {query["timestamp_end"]} and end_timestamp >= {query["timestamp_begin"]}
+        f'''SELECT id as archive_id
+        FROM {CLP_METADATA_TABLE_PREFIX}archives where begin_timestamp <= {search_config.end_timestamp} and end_timestamp >= {search_config.begin_timestamp}
         ORDER BY end_timestamp DESC
         '''
     )
-    archives_for_search = [(archive_id, timestamp_key) for archive_id, timestamp_key in cursor.fetchall()]
+    archives_for_search = [(archive_id) for archive_id, in cursor.fetchall()]
     db_conn.commit()
     cursor.close()
     return archives_for_search
@@ -146,36 +138,32 @@ def get_archives_for_search(
 
 def get_search_tasks_for_job(
     archives_for_search: List[tuple],
-    base_kwargs: Dict[str, Any],
     job_id: str,
-    query: dict,
-    db_uri: str,
+    search_config: SearchConfig,
+    results_cache_uri: str,
 ):
     return group(
-        fs_search.s(
-            **base_kwargs,
-            job_id_str=job_id,
+        search.s(
+            job_id=job_id,
             archive_id=archive_id,
-            timestamp_key=timestamp_key,
-            query=query,
-            db_uri=db_uri,
-        ) for (archive_id, timestamp_key) in archives_for_search
+            search_config=search_config,
+            results_cache_uri=results_cache_uri,
+        ) for archive_id, in archives_for_search
     )
 
 
 def dispatch_search_job(
     archives_for_search: List[tuple],
-    base_kwargs: Dict[str, Any],
     job_id: str,
-    query: dict,
-    db_uri: str
+    search_config: SearchConfig,
+    results_cache_uri: str
 ) -> None:
     global active_jobs
-    task_group = get_search_tasks_for_job(archives_for_search, base_kwargs, job_id, query, db_uri)
+    task_group = get_search_tasks_for_job(archives_for_search, job_id, search_config, results_cache_uri)
     active_jobs[job_id] = SearchJob(task_group.apply_async())
-    
 
-def poll_and_submit_pending_search_jobs(db_conn, mongodb_manager, base_kwargs) -> None:
+
+def poll_and_submit_pending_search_jobs(db_conn, results_cache_uri: str) -> None:
     global active_jobs
 
     cursor = db_conn.cursor()
@@ -183,41 +171,25 @@ def poll_and_submit_pending_search_jobs(db_conn, mongodb_manager, base_kwargs) -
     db_conn.commit()
     cursor.close()
 
-    job_detection_ts = time.time()
-    jobs_list = []
-
-    for job_id, job_status, search_config, creation_time in new_jobs:
+    for job_id, job_status, search_config, submission_time in new_jobs:
         logger.debug(f"Got job {job_id} with status {job_status}.")
-        query_info = msgpack.unpackb(search_config)
-        archives_for_search = get_archives_for_search(db_conn, query_info)
+        search_config_obj = SearchConfig.parse_obj(msgpack.unpackb(search_config))
+        archives_for_search = get_archives_for_search(db_conn, search_config_obj)
         if len(archives_for_search) == 0:
-            logger.info(f"No matching archives, skipping job {job_id}.")
-            set_job_status(db_conn, job_id, JobStatus.NO_MATCHING_ARCHIVE, JobStatus.PENDING)
+            if set_job_status(db_conn, job_id, JobStatus.SUCCESS, JobStatus.PENDING):
+                logger.info(f"No matching archives, skipping job {job_id}.")
+            else:
+                logger.info(f"Marking job {job_id} with no archives to search cancelled.")
+                set_job_status(db_conn, job_id, JobStatus.CANCELLED)
             continue
 
-        new_job_status = JobStatus.RUNNING
-        dispatch_search_job(archives_for_search, base_kwargs, str(job_id), query_info, mongodb_manager.get_db_config()["db_uri"])
-        enqueued_ts = time.time()
+        dispatch_search_job(archives_for_search, str(job_id), search_config_obj, results_cache_uri)
         if set_job_status(db_conn, job_id, JobStatus.RUNNING, job_status):
             logger.info(f"Dispatched job {job_id} with {len(archives_for_search)} archives to search.")
         else:
-            logger.error(f"Failed to dispatch job {job_id} with {len(archives_for_search)} archives to search... cancelling.")
+            logger.error(f"Marking job {job_id} with {len(archives_for_search)} archives to search cancelled.")
             cancel_job(job_id)
-            new_job_status = JobStatus.CANCELLED
             set_job_status(db_conn, job_id, JobStatus.CANCELLED)
-
-        jobs_list.append(
-            mongodb_manager.prepare_job_document(
-                job_id,
-                creation_time.timestamp(),
-                job_detection_ts,
-                enqueued_ts,
-                new_job_status,
-                query_info
-            )
-        )
-    if len(jobs_list) > 0:
-        mongodb_manager.insert_jobs(jobs_list)
 
 
 def try_getting_results(result):
@@ -226,7 +198,7 @@ def try_getting_results(result):
     return result.get()
 
 
-def check_job_status_and_update_db(db_conn, mongodb_manager):
+def check_job_status_and_update_db(db_conn):
     global active_jobs
 
     for job_id in list(active_jobs.keys()):
@@ -238,19 +210,11 @@ def check_job_status_and_update_db(db_conn, mongodb_manager):
             # clean up
             del active_jobs[job_id]
             set_job_status(db_conn, job_id, JobStatus.FAILED)
-            mongodb_manager.update_job_status(job_id, JobStatus.FAILED)
             continue
 
         if returned_results is not None:
-            # Initialize tracker variables
-            completion_ts = time.time()
-            results_count = mongodb_manager.get_results_count()
             new_job_status = JobStatus.SUCCESS
-            last_task_end_time = 0
-
             for task_result in returned_results:
-                task_end_time = task_result["task_end_to_end"] + task_result["task_start_ts"]
-                last_task_end_time = max(last_task_end_time, task_end_time)
                 if not task_result['status']:
                     task_id = task_result['task_id']
                     new_job_status = JobStatus.FAILED
@@ -258,29 +222,24 @@ def check_job_status_and_update_db(db_conn, mongodb_manager):
 
             del active_jobs[job_id]
 
+            # TODO: setting SUCCESS/FAILED unconditionally here violates the state diagram as
+            # written.
             set_job_status(db_conn, job_id, new_job_status)
             if new_job_status != JobStatus.FAILED:
                 logger.info(f"Completed job {job_id}.")
             else:
                 logger.info(f"Completed job {job_id} with failing tasks.")
 
-            job_stats = {
-                "results_count": results_count,
-                "status": new_job_status.to_str(),
-                'scheduler_delay': completion_ts - last_task_end_time
-            }
-            mongodb_manager.finalize_job_stats(job_id, completion_ts, job_stats)
 
 def handle_jobs(
     db_conn,
-    mongodb_manager,
-    base_kwargs: Dict[str, Any],
+    results_cache_uri: str,
     jobs_poll_delay: float,
 ) -> None:
     while True:
-        poll_and_submit_pending_search_jobs(db_conn, mongodb_manager, base_kwargs)
-        poll_and_handle_cancelling_search_jobs(db_conn, mongodb_manager)
-        check_job_status_and_update_db(db_conn, mongodb_manager)
+        poll_and_submit_pending_search_jobs(db_conn, results_cache_uri)
+        poll_and_handle_cancelling_search_jobs(db_conn)
+        check_job_status_and_update_db(db_conn)
         time.sleep(jobs_poll_delay)
 
 
@@ -310,10 +269,6 @@ def main(argv: List[str]) -> int:
         logger.error(ex)
         return -1
 
-    celery_worker_method_base_kwargs: Dict[str, Any] = {
-        "output_config": dict(clp_config.results_cache)
-    }
-
     db_conn = mysql.connector.connect(
         host=clp_config.database.host,
         port=clp_config.database.port,
@@ -325,9 +280,6 @@ def main(argv: List[str]) -> int:
     logger.info(f"Connected to archive database {clp_config.database.host}:{clp_config.database.port}.")
 
     setup_search_jobs_table(db_conn)
-    mongodb_manager: DBManager = MongoDBManager(logger, clp_config.results_cache.get_uri())
-
-    logger.info(f"Connected to results database {clp_config.results_cache.get_uri()}.")
 
     jobs_poll_delay = clp_config.search_scheduler.jobs_poll_delay
 
@@ -335,8 +287,7 @@ def main(argv: List[str]) -> int:
     logger.debug(f"Polling interval {jobs_poll_delay} seconds.")
     handle_jobs(
         db_conn=db_conn,
-        mongodb_manager=mongodb_manager,
-        base_kwargs=celery_worker_method_base_kwargs,
+        results_cache_uri=clp_config.results_cache.get_uri(),
         jobs_poll_delay=jobs_poll_delay,
     )
     return 0

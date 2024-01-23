@@ -11,7 +11,6 @@ class JobStatus(IntEnum):
     FAILED = auto()
     CANCELLING = auto()
     CANCELLED = auto()
-    NO_MATCHING_ARCHIVE = auto()
 
     def __str__(self) -> str:
         return str(self.value).lower()

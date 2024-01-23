@@ -15,6 +15,7 @@ WORKER_COMPONENT_NAME = 'worker'
 
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path('etc') / 'credentials.yml'
 CLP_METADATA_TABLE_PREFIX = 'clp_'
+SEARCH_JOBS_TABLE_NAME = 'distributed_search_jobs'
 
 
 class Database(BaseModel):
