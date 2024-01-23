@@ -76,7 +76,7 @@ def run_clo(job_id: int, task_id: int, clp_home: pathlib.Path, archive_output_di
         return search_successful, f"See {stderr_filename} in logs directory."
 
 
-@app.task()
+#@app.task()
 def search(job_id: int, task_id: int, search_config_json: str, archive_id: str,
            results_cache_uri: str):
     clp_home = os.getenv('CLP_HOME')

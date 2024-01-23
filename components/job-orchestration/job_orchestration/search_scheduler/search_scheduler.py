@@ -52,9 +52,9 @@ def fetch_new_search_jobs(db_cursor) -> list:
         SELECT {SEARCH_JOBS_TABLE_NAME}.id as job_id,
         {SEARCH_JOBS_TABLE_NAME}.status as job_status,
         {SEARCH_JOBS_TABLE_NAME}.search_config,
-        {SEARCH_JOBS_TABLE_NAME}.submission_time,
+        {SEARCH_JOBS_TABLE_NAME}.submission_time
         FROM {SEARCH_JOBS_TABLE_NAME}
-        WHERE {SEARCH_JOBS_TABLE_NAME}.status='{JobStatus.PENDING}'
+        WHERE {SEARCH_JOBS_TABLE_NAME}.status={JobStatus.PENDING}
     """)
     return db_cursor.fetchall()
 
@@ -63,7 +63,7 @@ def fetch_cancelling_search_jobs(db_cursor) -> list:
     db_cursor.execute(f"""
         SELECT {SEARCH_JOBS_TABLE_NAME}.id as job_id
         FROM {SEARCH_JOBS_TABLE_NAME}
-        WHERE {SEARCH_JOBS_TABLE_NAME}.status='{JobStatus.CANCELLING}'
+        WHERE {SEARCH_JOBS_TABLE_NAME}.status={JobStatus.CANCELLING}
     """)
     return db_cursor.fetchall()
 
@@ -220,11 +220,16 @@ def handle_jobs(
     results_cache_uri: str,
     jobs_poll_delay: float,
 ) -> None:
-    while True:
-        poll_and_submit_pending_search_jobs(db_conn, results_cache_uri)
-        poll_and_handle_cancelling_search_jobs(db_conn)
-        check_job_status_and_update_db(db_conn)
-        time.sleep(jobs_poll_delay)
+    try:
+        while True:
+            poll_and_submit_pending_search_jobs(db_conn, results_cache_uri)
+            poll_and_handle_cancelling_search_jobs(db_conn)
+            check_job_status_and_update_db(db_conn)
+            time.sleep(jobs_poll_delay)
+    except Exception as e:
+        logger.error(f"Uncaught exception in job handling loop: {e}")
+        return
+
 
 
 def main(argv: List[str]) -> int:
@@ -262,8 +267,8 @@ def main(argv: List[str]) -> int:
     )
 
     logger.info(f"Connected to archive database {clp_config.database.host}:{clp_config.database.port}.")
+    logger.debug("Job polling interval {clp_config.search_scheduler.jobs_poll_delay} seconds.")
     logger.info("Search scheduler started.")
-    logger.debug(f"Polling interval {jobs_poll_delay} seconds.")
     handle_jobs(
         db_conn=db_conn,
         results_cache_uri=clp_config.results_cache.get_uri(),

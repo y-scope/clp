@@ -7,6 +7,7 @@ imports = ("job_orchestration.executor.search.fs_search_task")
 task_routes = {
     'job_orchestration.executor.search.fs_search_task.search': QueueName.SEARCH,
 }
+task_create_missing_queues = True
 
 broker_url = os.getenv('BROKER_URL')
 result_backend = os.getenv('RESULT_BACKEND')

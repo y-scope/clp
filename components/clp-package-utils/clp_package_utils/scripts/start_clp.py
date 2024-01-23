@@ -383,7 +383,7 @@ def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_cl
     container_start_cmd.append(clp_config.execution_container)
     scheduler_cmd = [
         'python3', '-u', '-m',
-        'job_orchestration.scheduler.search_scheduler',
+        'job_orchestration.search_scheduler.search_scheduler',
         '--config', str(container_clp_config.logs_directory / container_config_filename),
     ]
 
