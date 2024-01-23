@@ -107,12 +107,28 @@ def get_archives_for_search(
     db_conn,
     search_config: SearchConfig,
 ):
+    query = f"""SELECT id as archive_id
+            FROM {CLP_METADATA_TABLE_PREFIX}archives
+            """
+    if search_config.end_timestamp is not None or search_config.begin_timestamp is not None:
+        query += " WHERE "
+    
+    need_and = False
+    if search_config.end_timestamp is not None:
+        query += f"begin_timestamp <= {search_config.end_timestamp}"
+        need_and = True
+
+    if search_config.begin_timestamp is not None:
+        if need_and:
+            query += " AND "
+        query += f"end_timestamp >= {search_config.begin_timestamp}"
+        need_and = True
+    
+    query += " ORDER BY end_timestamp DESC"
+
     cursor = db_conn.cursor()
     cursor.execute(
-        f'''SELECT id as archive_id
-        FROM {CLP_METADATA_TABLE_PREFIX}archives where begin_timestamp <= {search_config.end_timestamp} and end_timestamp >= {search_config.begin_timestamp}
-        ORDER BY end_timestamp DESC
-        '''
+        query
     )
     archives_for_search = [archive_id for archive_id, in cursor.fetchall()]
     db_conn.commit()
@@ -215,13 +231,14 @@ def check_job_status_and_update_db(db_conn):
 
             del active_jobs[job_id]
 
-            # TODO: setting SUCCESS/FAILED unconditionally here violates the state diagram as
-            # written.
-            set_job_status(db_conn, job_id, new_job_status)
-            if new_job_status != JobStatus.FAILED:
-                logger.info(f"Completed job {job_id}.")
+            if set_job_status(db_conn, job_id, new_job_status, JobStatus.RUNNING):
+                if new_job_status != JobStatus.FAILED:
+                    logger.info(f"Completed job {job_id}.")
+                else:
+                    logger.info(f"Completed job {job_id} with failing tasks.")
             else:
-                logger.info(f"Completed job {job_id} with failing tasks.")
+                logger.info(f"Marking job {job_id} cancelled with no remaining archives to search.")
+                set_job_status(db_conn, job_id, JobStatus.CANCELLING)
 
 
 def handle_jobs(
