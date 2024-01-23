@@ -31,7 +31,7 @@ from job_orchestration.scheduler.constants import (
 # Setup logging
 # Create logger
 logger = logging.getLogger(__file__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 # Setup console logging
 logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
@@ -62,6 +62,8 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
 
             completion_query = f"SELECT duration, uncompressed_size, compressed_size " \
                                f"FROM compression_jobs WHERE id={scheduling_job_id}"
+
+            job_last_uncompressed_size = 0
             while True:
                 scheduling_db_cursor.execute(polling_query)
                 results = scheduling_db_cursor.fetchall()
@@ -101,7 +103,7 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
                     break  # Done
                 elif JobStatus.FAILED == job_status:
                     # One or more tasks in the job has failed
-                    logger.error(f"Compression failed. See log file in {job_row['status_msg']}")
+                    logger.error(f"Compression failed {job_row['status_msg']}")
                     break  # Done
                 else:
                     logger.info(f'handler for job_status "{job_status}" is not implemented')
@@ -179,8 +181,6 @@ def main(argv):
         output=OutputConfig.parse_obj(clp_config.archive_output)
     )
 
-    logs_directory_abs = str(pathlib.Path(clp_config.logs_directory).resolve())
-    fs_logs_required_parent_dir = pathlib.Path(clp_config.input_logs_directory)
     handle_job(sql_adapter=mysql_adapter, clp_io_config=clp_io_config,
                no_progress_reporting=parsed_args.no_progress_reporting)
 

@@ -128,6 +128,14 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_connection_params
                     db_conn.commit()
 
         paths_to_compress_buffer.flush()
+        tasks = paths_to_compress_buffer.get_tasks()
+        if len(tasks) == 0:
+            logger.warning(f'No tasks were created for job {job_id}')
+            update_compression_job_metadata(db_cursor, job_id, {
+                'status': JobStatus.FAILED,
+                'status_msg': 'Invalid input path',
+            })
+            continue
 
         # Update job metadata
         start_time = datetime.datetime.now()
@@ -137,11 +145,6 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_connection_params
             'start_time': start_time
         })
         db_conn.commit()
-
-        tasks = paths_to_compress_buffer.get_tasks()
-        if len(tasks) == 0:
-            logger.warning(f'No tasks were created for job {job_id}')
-            continue
 
         task_instances = []
         for task in tasks:
@@ -163,10 +166,11 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_connection_params
         scheduled_jobs[job_id] = job
 
 
-def try_getting_results(result):
-    if not result.ready():
+def get_results_or_timeout(result):
+    try:
+        return result.get(timeout=0.01)
+    except TimeoutError:
         return None
-    return result.get()
 
 
 def poll_running_jobs(db_conn, db_cursor):
@@ -185,7 +189,7 @@ def poll_running_jobs(db_conn, db_cursor):
         error_message = ""
 
         try:
-            returned_results = try_getting_results(job.tasks)
+            returned_results = get_results_or_timeout(job.tasks)
             if returned_results is not None:
                 duration = (datetime.datetime.now() - job.start_time).total_seconds()
                 # Check for finished jobs
