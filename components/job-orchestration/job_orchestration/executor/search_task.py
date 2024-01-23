@@ -38,7 +38,7 @@ def run_clo(job_id: int, task_id: int, clp_home: pathlib.Path, archive_output_di
         results_cache_uri,
         str(job_id),
         str(archive_output_dir / archive_id),
-        search_config.wildcard_query
+        search_config.query_string
     ]
     if search_config.begin_timestamp is not None:
         cmd.append('--tge')

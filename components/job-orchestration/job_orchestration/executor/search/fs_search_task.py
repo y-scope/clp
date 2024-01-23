@@ -21,7 +21,7 @@ logger = get_task_logger(__name__)
 def search(
     self: Task,
     job_id: str,
-    search_config: SearchConfig,
+    search_config_obj: dict,
     archive_id: str,
     results_cache_uri: str,
 ) -> Dict[str, Any]:
@@ -44,12 +44,13 @@ def search(
 
     logger.info(f"Started job {job_id}. Task Id={task_id}.")
 
+    search_config = SearchConfig.parse_obj(search_config_obj)
     search_cmd = [
         str(clp_home / "bin" / "clo"),
         results_cache_uri,
         job_id,
         str(archive_directory / archive_id),
-        search_config.wildcard_query,
+        search_config.query_string,
     ]
 
     if search_config.begin_timestamp is not None:

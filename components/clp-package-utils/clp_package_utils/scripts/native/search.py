@@ -74,7 +74,7 @@ def create_and_monitor_job_in_db(db_config: Database, results_cache: ResultsCach
                                  wildcard_query: str, begin_timestamp: int | None,
                                  end_timestamp: int | None, path_filter: str):
     search_config = SearchConfig(
-        wildcard_query=wildcard_query,
+        query_string=wildcard_query,
         begin_timestamp=begin_timestamp,
         end_timestamp=end_timestamp,
         path_filter=path_filter
@@ -92,7 +92,7 @@ def create_and_monitor_job_in_db(db_config: Database, results_cache: ResultsCach
         # Wait for the job to be marked complete
         job_complete = False
         while not job_complete:
-            db_cursor.execute(f"SELECT `status` FROM `search_jobs` WHERE `id` = {job_id}")
+            db_cursor.execute(f"SELECT `status` FROM `{SEARCH_JOBS_TABLE_NAME}` WHERE `id` = {job_id}")
             # There will only ever be one row since it's impossible to have more than one job with the same ID
             new_status = db_cursor.fetchall()[0]['status']
             if new_status in (JobStatus.SUCCESS, JobStatus.FAILED, JobStatus.CANCELLED):

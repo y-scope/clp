@@ -114,7 +114,7 @@ def get_archives_for_search(
         ORDER BY end_timestamp DESC
         '''
     )
-    archives_for_search = [(archive_id) for archive_id, in cursor.fetchall()]
+    archives_for_search = [archive_id for archive_id, in cursor.fetchall()]
     db_conn.commit()
     cursor.close()
     return archives_for_search
@@ -126,13 +126,14 @@ def get_search_tasks_for_job(
     search_config: SearchConfig,
     results_cache_uri: str,
 ):
+    search_config_obj = search_config.dict()
     return group(
         search.s(
             job_id=job_id,
             archive_id=archive_id,
-            search_config=search_config,
+            search_config_obj=search_config_obj,
             results_cache_uri=results_cache_uri,
-        ) for archive_id, in archives_for_search
+        ) for archive_id in archives_for_search
     )
 
 
@@ -177,18 +178,26 @@ def poll_and_submit_pending_search_jobs(db_conn, results_cache_uri: str) -> None
 
 
 def try_getting_results(result):
+    '''
+    https://github.com/celery/celery/issues/4084
+    Ideally we'd just do it this way, but because of the open bug listed above we have to use this
+    timeout based approach until we switch to redis result backend.
     if not result.ready():
         return None
     return result.get()
+    '''
+    try:
+        return result.get(timeout=0.1)
+    except TimeoutError:
+        return None
 
 
 def check_job_status_and_update_db(db_conn):
     global active_jobs
 
     for job_id in list(active_jobs.keys()):
-        result = active_jobs[job_id].task
         try:
-            returned_results = try_getting_results(result)
+            returned_results = try_getting_results(active_jobs[job_id].async_task)
         except Exception as e:
             logger.error(f"Job `{job_id}` failed: {e}.")
             # clean up
@@ -226,10 +235,9 @@ def handle_jobs(
             poll_and_handle_cancelling_search_jobs(db_conn)
             check_job_status_and_update_db(db_conn)
             time.sleep(jobs_poll_delay)
-    except Exception as e:
-        logger.error(f"Uncaught exception in job handling loop: {e}")
+    except Exception:
+        logger.exception(f"Uncaught exception in job handling loop.")
         return
-
 
 
 def main(argv: List[str]) -> int:
