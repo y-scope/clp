@@ -4,6 +4,7 @@ import typing
 from pydantic import BaseModel, validator
 
 from .core import get_config_value, make_config_path_absolute, read_yaml_config_file, validate_path_could_be_dir
+from .clp_logging import is_valid_logging_level, get_supported_logging_level
 
 # Constants
 # Component names
@@ -11,6 +12,8 @@ DB_COMPONENT_NAME = 'database'
 QUEUE_COMPONENT_NAME = 'queue'
 RESULTS_CACHE_COMPONENT_NAME = 'results_cache'
 SCHEDULER_COMPONENT_NAME = 'scheduler'
+SEARCH_SCHEDULER_COMPONENT_NAME = 'search_scheduler'
+SEARCH_WORKER_COMPONENT_NAME = 'search_worker'
 WORKER_COMPONENT_NAME = 'worker'
 
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path('etc') / 'credentials.yml'
@@ -97,9 +100,43 @@ class Database(BaseModel):
             connection_params_and_type['ssl_cert'] = self.ssl_cert
         return connection_params_and_type
 
+def validate_logging_level_static(cls, field):
+    if not is_valid_logging_level(field):
+        raise ValueError(
+            f"{cls.__name__}: logging level '{field}' is not a valid value.\n"
+            f"Use one of the following level {get_supported_logging_level()}"
+        )
+
 
 class Scheduler(BaseModel):
     jobs_poll_delay: int = 1  # seconds
+
+
+class SearchScheduler(BaseModel):
+    jobs_poll_delay: float = 1  # seconds
+    logging_level: str = 'INFO'
+
+    @validator('num_archives_to_search_per_batch')
+    def validate_num_archives_to_search_per_batch(cls, field):
+        if not field > 0:
+            raise ValueError(
+                f"{cls.__name__}: num_archives_to_search_per_batch {field} is not a valid value"
+            )
+        return field
+
+    @validator('logging_level')
+    def validate_logging_level(cls, field):
+        validate_logging_level_static(cls, field)
+        return field
+
+
+class SearchWorker(BaseModel):
+    logging_level: str = 'INFO'
+
+    @validator('logging_level')
+    def validate_logging_level(cls, field):
+        validate_logging_level_static(cls, field)
+        return field
 
 
 class ResultsCache(BaseModel):
@@ -175,6 +212,8 @@ class CLPConfig(BaseModel):
     queue: Queue = Queue()
     results_cache: ResultsCache = ResultsCache()
     scheduler: Scheduler = Scheduler()
+    search_scheduler: SearchScheduler = SearchScheduler()
+    search_worker: SearchWorker = SearchWorker()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()
