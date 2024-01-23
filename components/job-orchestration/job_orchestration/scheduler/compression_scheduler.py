@@ -170,7 +170,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_connection_params
 def get_results_or_timeout(result):
     try:
         return result.get(timeout=0.01)
-    except TimeoutError:
+    except Exception as e:
         return None
 
 
@@ -195,7 +195,6 @@ def poll_running_jobs(db_conn, db_cursor):
                 duration = (datetime.datetime.now() - job.start_time).total_seconds()
                 # Check for finished jobs
                 for task_result in returned_results:
-                    logger.info(f"task result: {task_result}")
                     if not task_result['status'] == TaskStatus.SUCCEEDED:
                         job_success = False
                         error_message += f"task {task_result['task_id']}: {task_result['error_message']}\n"
@@ -203,6 +202,9 @@ def poll_running_jobs(db_conn, db_cursor):
                             status=task_result['status'],
                             duration=task_result['duration'],
                         ))
+                        db_conn.commit()
+                        logger.error(f"Compression task job-{job_id}-task-{task_result['task_id']} failed with error: "
+                                     f"{task_result['error_message']}.")
                     else:
                         num_tasks_completed += 1
                         uncompressed_size += task_result['total_uncompressed_size']
@@ -214,6 +216,8 @@ def poll_running_jobs(db_conn, db_cursor):
                             duration=task_result['duration'],
                         ))
                         db_conn.commit()
+                        logger.info(f"Compression task job-{job_id}-task-{task_result['task_id']} completed in "
+                                    f"{task_result['duration']} second(s).")
             else:
                 # If results not ready check next job
                 continue
@@ -221,7 +225,6 @@ def poll_running_jobs(db_conn, db_cursor):
             logger.error(f"Error while getting results for job {job_id}: {e}")
             job_success = False
 
-        logger.info(f"Finished job {job_id}.")
         if job_success:
             logger.info(f"Job {job_id} succeeded.")
             update_compression_job_metadata(db_cursor, job_id, dict(
