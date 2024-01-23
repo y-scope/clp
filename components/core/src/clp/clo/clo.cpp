@@ -335,14 +335,5 @@ int main(int argc, char const* argv[]) {
         }
         return_value = -1;
     }
-
-    // Unblock the controller monitoring thread if it's blocked
-    auto shutdown_result = shutdown(controller_socket_fd, SHUT_RDWR);
-    if (0 != shutdown_result) {
-        if (ENOTCONN != shutdown_result) {
-            SPDLOG_ERROR("Failed to shutdown socket, error={}", shutdown_result);
-        }  // else connection already disconnected, so nothing to do
-    }
-
     return return_value;
 }

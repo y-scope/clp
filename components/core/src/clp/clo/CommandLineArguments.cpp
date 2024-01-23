@@ -190,16 +190,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             return ParsingResult::InfoCommand;
         }
 
-        // Validate search controller host was specified
-        if (m_search_controller_host.empty()) {
-            throw invalid_argument("SEARCH_CONTROLLER_HOST not specified or empty.");
-        }
-
-        // Validate search controller port was specified
-        if (m_search_controller_port.empty()) {
-            throw invalid_argument("SEARCH_CONTROLLER_PORT not specified or empty.");
-        }
-
         // Validate mongodb uri was specified
         if (m_mongodb_uri.empty()) {
             throw invalid_argument("MONGODB_URI not specified or empty.");
