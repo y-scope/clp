@@ -103,7 +103,7 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
                     break  # Done
                 elif JobStatus.FAILED == job_status:
                     # One or more tasks in the job has failed
-                    logger.error(f"Compression failed {job_row['status_msg']}")
+                    logger.error(f"Compression failed. {job_row['status_msg']}")
                     break  # Done
                 else:
                     logger.info(f'handler for job_status "{job_status}" is not implemented')

@@ -133,8 +133,9 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_connection_params
             logger.warning(f'No tasks were created for job {job_id}')
             update_compression_job_metadata(db_cursor, job_id, {
                 'status': JobStatus.FAILED,
-                'status_msg': 'Invalid input path',
+                'status_msg': 'invalid input path',
             })
+            db_conn.commit()
             continue
 
         # Update job metadata
