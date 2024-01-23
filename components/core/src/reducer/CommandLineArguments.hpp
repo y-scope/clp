@@ -35,8 +35,6 @@ public:
 
     [[nodiscard]] std::string const& get_db_jobs_table() const { return m_db_jobs_table; }
 
-    [[nodiscard]] std::string const& get_mongodb_database() const { return m_mongodb_database; }
-
     [[nodiscard]] std::string const& get_mongodb_uri() const { return m_mongodb_uri; }
 
     [[nodiscard]] int get_polling_interval() const { return m_polling_interval_ms; }
@@ -54,8 +52,7 @@ private:
     std::string m_db_password{"password"};
     std::string m_db_database{"clp-db"};
     std::string m_db_jobs_table{"distributed_search_jobs"};
-    std::string m_mongodb_database{"clp-search"};
-    std::string m_mongodb_uri{"mongodb://localhost:27017/"};
+    std::string m_mongodb_uri{"mongodb://localhost:27017/clp-search"};
     int m_polling_interval_ms{100};
 };
 }  // namespace reducer

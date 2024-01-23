@@ -70,13 +70,14 @@ ServerContext::ServerContext(CommandLineArguments& args)
     );
     m_poll_job_done_sql = fmt::format(cPollJobDone, args.get_db_jobs_table(), "{}");
 
+    mongocxx::uri mongodb_uri = mongocxx::uri(args.get_mongodb_uri());
     try {
-        m_mongodb_client = mongocxx::client(mongocxx::uri(args.get_mongodb_uri()));
+        m_mongodb_client = mongocxx::client(mongodb_uri);
     } catch (mongocxx::exception& e) {
         SPDLOG_ERROR("Failed to connect to {} - {}", args.get_mongodb_uri(), e.what());
         throw OperationFailed(clp::ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
-    m_mongodb_results_database = mongocxx::database(m_mongodb_client[args.get_mongodb_database()]);
+    m_mongodb_results_database = mongocxx::database(m_mongodb_client[mongodb_uri.database()]);
 }
 
 ServerStatus ServerContext::take_job() {

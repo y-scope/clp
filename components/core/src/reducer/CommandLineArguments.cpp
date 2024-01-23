@@ -57,11 +57,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 ->default_value(m_db_jobs_table),
             "Name of the table containing jobs"
         )(
-            "mongodb-database",
-            po::value<std::string>(&m_mongodb_database)
-                ->default_value(m_mongodb_database),
-            "MongoDB database for results"
-        )(
             "mongodb-uri",
             po::value<std::string>(&m_mongodb_uri)
                 ->default_value(m_mongodb_uri),
@@ -127,11 +122,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
     if (m_db_jobs_table.empty()) {
         SPDLOG_ERROR("Empty db-jobs-table argument");
-        valid_arguments = false;
-    }
-
-    if (m_mongodb_database.empty()) {
-        SPDLOG_ERROR("Empty mongodb-database argument");
         valid_arguments = false;
     }
 
