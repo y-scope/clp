@@ -56,7 +56,7 @@ def main(argv):
                 CREATE TABLE IF NOT EXISTS `compression_tasks` (
                     `id` BIGINT NOT NULL AUTO_INCREMENT,
                     `status` VARCHAR(16) NOT NULL DEFAULT '{TaskStatus.SUBMITTED}',
-                    `scheduled_time` DATETIME NULL DEFAULT NULL,
+                    `creation_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     `start_time` DATETIME NULL DEFAULT NULL,
                     `duration` FLOAT NULL DEFAULT NULL,
                     `job_id` INT NOT NULL,

@@ -158,8 +158,7 @@ def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, pat
         job_id=job_id,
         task_id=task_id,
         status=TaskStatus.SCHEDULED,
-        start_time=datetime.datetime.now(),
-        duration=0
+        start_time=datetime.datetime.now()
     )
 
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")

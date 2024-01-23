@@ -20,8 +20,8 @@ class TaskUpdate(BaseModel):
     job_id: int
     task_id: int
     status: str
-    start_time: datetime.datetime
-    duration: float
+    start_time: typing.Optional[datetime.datetime] = None
+    duration: typing.Optional[float] = None
 
     @validator('type')
     def validate_type(cls, field):

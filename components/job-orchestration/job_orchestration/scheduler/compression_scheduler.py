@@ -37,7 +37,7 @@ scheduled_jobs = {}
 
 def fetch_new_jobs(db_cursor):
     db_cursor.execute(f"""
-        SELECT id, clp_config
+        SELECT id, clp_config, creation_time
         FROM compression_jobs
         WHERE status='{JobStatus.SCHEDULING}'
     """)
@@ -159,7 +159,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_connection_params
         )
         db_cursor.execute(f"""
             UPDATE compression_tasks
-            SET status='{TaskStatus.SCHEDULED}', scheduled_time='{datetime.datetime.now()}'
+            SET status='{TaskStatus.SCHEDULED}', start_time='{datetime.datetime.now()}'
             WHERE job_id={job_id}
         """)
         db_conn.commit()

@@ -90,8 +90,7 @@ def search(job_id: int, task_id: int, search_config_json: str, archive_id: str,
         type=TaskUpdateType.SEARCH,
         job_id=job_id,
         task_id=task_id,
-        status=TaskStatus.IN_PROGRESS,
-        duration=0
+        status=TaskStatus.IN_PROGRESS
     )
     append_message_to_task_results_queue(celery_broker_url, True, task_update.dict())
     logger.info(f"[job_id={job_id} task_id={task_id}] Search started.")
