@@ -11,6 +11,8 @@ import uuid
 
 import yaml
 
+from pydantic import BaseModel
+
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CONTAINER_CLP_HOME,
@@ -352,7 +354,6 @@ def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_cl
     container_logs_dir = container_clp_config.logs_directory / component_name
 
     clp_site_packages_dir = CONTAINER_CLP_HOME / 'lib' / 'python3' / 'site-packages'
-    redis_config = container_clp_config.redis
     container_start_cmd = [
         'docker', 'run',
         '-di',
@@ -465,7 +466,7 @@ def generic_start_worker(component_name: str, instance_id: str, clp_config: CLPC
     container_start_cmd.append(clp_config.execution_container)
 
     worker_cmd = [
-        str(clp_site_packages_dir / 'bin' / 'celery'),
+        'python3', str(clp_site_packages_dir / 'bin' / 'celery'),
         '-A',
         celery_method,
         'worker',

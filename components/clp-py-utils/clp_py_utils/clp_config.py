@@ -116,14 +116,6 @@ class SearchScheduler(BaseModel):
     jobs_poll_delay: float = 1  # seconds
     logging_level: str = 'INFO'
 
-    @validator('num_archives_to_search_per_batch')
-    def validate_num_archives_to_search_per_batch(cls, field):
-        if not field > 0:
-            raise ValueError(
-                f"{cls.__name__}: num_archives_to_search_per_batch {field} is not a valid value"
-            )
-        return field
-
     @validator('logging_level')
     def validate_logging_level(cls, field):
         validate_logging_level_static(cls, field)
