@@ -23,22 +23,17 @@ enum class ServerStatus : uint8_t {
     FinishingCancelled
 };
 
-// This enum is a hidden binding between the python
-// scheduler and this c++ reducer
+// This enum is a hidden binding between the python scheduler and this c++ reducer
 enum class JobStatus : int {
     Pending = 0,
     Running,
-    Done,
     Success,
-    SuccessWithErrors,
     Failed,
     Cancelling,
     Cancelled,
     PendingReducer,
     ReducerReady,
-    PendingReducerDone,
-    NoMatchingArchive,
-    WaitingForBatch
+    PendingReducerDone
 };
 
 namespace JobAttributes {

@@ -179,7 +179,7 @@ ServerStatus ServerContext::poll_job_done() {
 
     if (false
         == (JobStatus::Running == job_status || JobStatus::ReducerReady == job_status
-            || JobStatus::Cancelling == job_status || JobStatus::WaitingForBatch == job_status))
+            || JobStatus::Cancelling == job_status))
     {
         return ServerStatus::FinishingRemoteError;
     }
