@@ -97,12 +97,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     po::options_description hidden_positional_options;
     // clang-format off
     hidden_positional_options.add_options()(
-            "search-controller-host",
-            po::value<string>(&m_search_controller_host)
-    )(
-            "search-controller-port",
-            po::value<string>(&m_search_controller_port)
-    )(
             "mongodb-uri",
             po::value<string>(&m_mongodb_uri)
     )(
@@ -120,8 +114,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     );
     // clang-format on
     po::positional_options_description positional_options_description;
-    positional_options_description.add("search-controller-host", 1);
-    positional_options_description.add("search-controller-port", 1);
     positional_options_description.add("mongodb-uri", 1);
     positional_options_description.add("mongodb-collection", 1);
     positional_options_description.add("archive-path", 1);
