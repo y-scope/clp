@@ -68,22 +68,6 @@ def fetch_cancelling_search_jobs(db_cursor) -> list:
     return db_cursor.fetchall()
 
 
-def setup_search_jobs_table(db_conn):
-    cursor = db_conn.cursor()
-    cursor.execute(f"""
-        CREATE TABLE IF NOT EXISTS `{SEARCH_JOBS_TABLE_NAME}` (
-            `id` INT NOT NULL AUTO_INCREMENT,
-            `status` INT NOT NULL DEFAULT '{JobStatus.PENDING}',
-            `submission_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-            `search_config` VARBINARY(60000) NOT NULL,
-            PRIMARY KEY (`id`) USING BTREE,
-            INDEX `JOB_STATUS` (`status`) USING BTREE
-        ) ROW_FORMAT=DYNAMIC
-    """)
-    db_conn.commit()
-    cursor.close()
-
-
 def set_job_status(
     db_conn, job_id: str, status: JobStatus, prev_status: Optional[JobStatus] = None, **kwargs
 ) -> bool:
@@ -278,17 +262,12 @@ def main(argv: List[str]) -> int:
     )
 
     logger.info(f"Connected to archive database {clp_config.database.host}:{clp_config.database.port}.")
-
-    setup_search_jobs_table(db_conn)
-
-    jobs_poll_delay = clp_config.search_scheduler.jobs_poll_delay
-
     logger.info("Search scheduler started.")
     logger.debug(f"Polling interval {jobs_poll_delay} seconds.")
     handle_jobs(
         db_conn=db_conn,
         results_cache_uri=clp_config.results_cache.get_uri(),
-        jobs_poll_delay=jobs_poll_delay,
+        jobs_poll_delay=clp_config.search_scheduler.jobs_poll_delay,
     )
     return 0
 

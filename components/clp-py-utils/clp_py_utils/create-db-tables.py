@@ -36,6 +36,12 @@ def main(argv):
     ]
     subprocess.run(cmd, check=True)
 
+    cmd = [
+        'python3', str(script_dir / 'initialize-search-scheduler-db.py'),
+        '--config', str(config_file_path)
+    ]
+    subprocess.run(cmd, check=True)
+
     return 0
 
 
