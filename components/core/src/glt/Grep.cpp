@@ -523,27 +523,34 @@ void find_boundaries(
     }
 }
 
-vector<pair<string, bool>> retokenization(string input_string) {
-    vector<pair<string, bool>> retokenized_string;
+template <typename EscapeDecoder>
+vector<pair<string, bool>>
+retokenization(std::string_view input_string, EscapeDecoder escape_decoder) {
+    vector<pair<string, bool>> retokenized_tokens;
     size_t input_length = input_string.size();
     string current_token;
     bool contains_variable_placeholder = false;
     for (size_t ix = 0; ix < input_length; ix++) {
-        auto const& current_char = input_string.at(ix);
+        auto const current_char = input_string.at(ix);
+        if (enum_to_underlying_type(ir::VariablePlaceholder::Escape) == current_char) {
+            escape_decoder(input_string, ix, current_token);
+            continue;
+        }
+
         if (current_char != '*') {
             current_token += current_char;
             contains_variable_placeholder |= ir::is_variable_placeholder(current_char);
         } else {
             if (!current_token.empty()) {
-                retokenized_string.emplace_back(current_token, contains_variable_placeholder);
+                retokenized_tokens.emplace_back(current_token, contains_variable_placeholder);
                 current_token.clear();
             }
         }
     }
     if (!current_token.empty()) {
-        retokenized_string.emplace_back(current_token, contains_variable_placeholder);
+        retokenized_tokens.emplace_back(current_token, contains_variable_placeholder);
     }
-    return retokenized_string;
+    return retokenized_tokens;
 }
 
 SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
@@ -568,6 +575,31 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
             logtype += escape_char;
         }
     };
+    auto escape_decoder
+            = [](std::string_view input_str, size_t& current_pos, string& token) -> void {
+        auto const escape_char{enum_to_underlying_type(ir::VariablePlaceholder::Escape)};
+        // Note: we don't need to do a check, because the upstream should guarantee all
+        // escapes are followed by some characters
+        auto const next_char = input_str.at(current_pos + 1);
+        if (escape_char == next_char) {
+            // turn two consecutive escape into a single one.
+            token += escape_char;
+        } else if (is_wildcard(next_char)) {
+            // if it is an escape followed by a wildcard, we know no escape has been added.
+            // we also remove the original escape because it was purely for query
+            token += next_char;
+        } else if (ir::is_variable_placeholder(next_char)) {
+            // If we are at here, it means we have processed a '\\\v' sequence
+            // in this case, since we removed only one escape from the previous '\\' sequence
+            // we need to remove another escape here.
+            token += next_char;
+        } else {
+            printf("Unexpected\n");
+            throw;
+        }
+        current_pos++;
+    };
+
     for (auto const& query_token : query_tokens) {
         // Append from end of last token to beginning of this token, to logtype
         ir::append_constant_to_logtype(
@@ -629,17 +661,18 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
 
     // Find matching logtypes
     std::unordered_set<LogTypeDictionaryEntry const*> possible_logtype_entries;
-    auto retokenized_string = retokenization(logtype);
     archive.get_logtype_dictionary()
             .get_entries_matching_wildcard_string(logtype, ignore_case, possible_logtype_entries);
     if (possible_logtype_entries.empty()) {
         return SubQueryMatchabilityResult::WontMatch;
     }
 
+    // Find boundaries
+    auto const retokenized_tokens = retokenization(logtype, escape_decoder);
     for (auto const& logtype_entry : possible_logtype_entries) {
         size_t var_begin_index;
         size_t var_end_index;
-        find_boundaries(logtype_entry, retokenized_string, var_begin_index, var_end_index);
+        find_boundaries(logtype_entry, retokenized_tokens, var_begin_index, var_end_index);
         sub_query.set_logtype_boundary(logtype_entry->get_id(), var_begin_index, var_end_index);
     }
     sub_query.set_possible_logtypes(possible_logtype_entries);
