@@ -67,11 +67,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 ->default_value(m_mongodb_uri),
             "URI pointing to MongoDB database"
         )(
-            "mongodb-metrics-collection",
-            po::value<std::string>(&m_mongodb_jobs_metric_collection)
-                ->default_value(m_mongodb_jobs_metric_collection),
-            "MongoDB metrics collection name"
-        )(
             "polling-interval-ms",
             po::value<int>(&m_polling_interval_ms)
                 ->default_value(m_polling_interval_ms),
@@ -142,11 +137,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
     if (m_mongodb_uri.empty()) {
         SPDLOG_ERROR("Empty mongodb-uri argument");
-        valid_arguments = false;
-    }
-
-    if (m_mongodb_jobs_metric_collection.empty()) {
-        SPDLOG_ERROR("Empty mongodb-metrics-collection argument");
         valid_arguments = false;
     }
 

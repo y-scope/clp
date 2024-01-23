@@ -39,10 +39,6 @@ public:
 
     [[nodiscard]] std::string const& get_mongodb_uri() const { return m_mongodb_uri; }
 
-    [[nodiscard]] std::string const& get_mongodb_jobs_metric_collection() const {
-        return m_mongodb_jobs_metric_collection;
-    }
-
     [[nodiscard]] int get_polling_interval() const { return m_polling_interval_ms; }
 
 private:
@@ -60,7 +56,6 @@ private:
     std::string m_db_jobs_table{"distributed_search_jobs"};
     std::string m_mongodb_database{"clp-search"};
     std::string m_mongodb_uri{"mongodb://localhost:27017/"};
-    std::string m_mongodb_jobs_metric_collection{"search_jobs_metrics"};
     int m_polling_interval_ms{100};
 };
 }  // namespace reducer

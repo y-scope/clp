@@ -1,7 +1,5 @@
 #include "ServerContext.hpp"
 
-#include <chrono>
-
 #include <bsoncxx/builder/stream/document.hpp>
 #include <fmt/core.h>
 #include <json/single_include/nlohmann/json.hpp>
@@ -33,7 +31,6 @@ ServerContext::ServerContext(CommandLineArguments& args)
         : m_tcp_acceptor(m_ioctx, tcp::endpoint(tcp::v4(), args.get_reducer_port())),
           m_reducer_host(args.get_reducer_host()),
           m_reducer_port(args.get_reducer_port()),
-          m_mongodb_job_metrics_collection(args.get_mongodb_jobs_metric_collection()),
           m_polling_interval_ms(args.get_polling_interval()),
           m_pipeline(nullptr),
           m_status(ServerStatus::Idle),
@@ -185,55 +182,6 @@ ServerStatus ServerContext::poll_job_done() {
     }
 
     return ServerStatus::Running;
-}
-
-bool ServerContext::publish_reducer_job_metrics(JobStatus finish_status) {
-    std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-    std::chrono::duration<double> seconds = now.time_since_epoch();
-    double timestamp_seconds = seconds.count();
-
-    auto metrics_collection
-            = mongocxx::collection(m_mongodb_results_database[m_mongodb_job_metrics_collection]);
-    std::string status_string;
-    switch (finish_status) {
-        case JobStatus::Success:
-            status_string = "success";
-            break;
-        case JobStatus::Failed:
-            status_string = "failed";
-            break;
-        case JobStatus::Cancelled:
-            status_string = "cancelled";
-            break;
-        default:
-            SPDLOG_ERROR("Unexpected done status: {}", static_cast<int>(finish_status));
-            return false;
-    }
-
-    bsoncxx::builder::stream::document filter_builder;
-    filter_builder << "job_id" << m_job_id;
-    bsoncxx::document::value filter = filter_builder << bsoncxx::builder::stream::finalize;
-    bsoncxx::builder::stream::document update_builder;
-    update_builder << "$set" << bsoncxx::builder::stream::open_document << "status" << status_string
-                   << "reducer_end_time" << timestamp_seconds
-                   << bsoncxx::builder::stream::close_document;
-    bsoncxx::document::value update = update_builder << bsoncxx::builder::stream::finalize;
-
-    try {
-        auto result = metrics_collection.update_one(filter.view(), update.view());
-        if (result) {
-            if (result->modified_count() == 0) {
-                SPDLOG_ERROR("No matching metrics document found for the given filter.");
-            }
-        } else {
-            SPDLOG_ERROR("Failed to update metrics document.");
-        }
-    } catch (mongocxx::bulk_write_exception const& e) {
-        SPDLOG_ERROR("MongoDB bulk write exception during metrics update: {}", e.what());
-        return false;
-    }
-
-    return true;
 }
 
 ServerStatus ServerContext::upsert_timeline_results() {

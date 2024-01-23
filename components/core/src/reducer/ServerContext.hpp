@@ -121,12 +121,6 @@ public:
     bool publish_pipeline_results();
 
     /**
-     * Publish metrics about job completion time and status to MongoDB.
-     * @return true if the insert succeeds, false on failure
-     */
-    bool publish_reducer_job_metrics(JobStatus finish_status);
-
-    /**
      * Pushes a group of records into the current local reducer pipeline. If this reducer
      * pipeline is periodically upserting results this function will also keep track of which
      * tags have been updated in the last period.
@@ -170,7 +164,6 @@ private:
     mongocxx::database m_mongodb_results_database;
     mongocxx::collection m_mongodb_results_collection;
     std::string m_reducer_host;
-    std::string m_mongodb_job_metrics_collection;
     bool m_timeline_aggregation;
     std::set<GroupTags> m_updated_tags;
     int m_polling_interval_ms;

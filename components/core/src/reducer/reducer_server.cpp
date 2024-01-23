@@ -360,27 +360,18 @@ int main(int argc, char const* argv[]) {
             }
 
             bool done_success = ctx->update_job_status(reducer::JobStatus::Success);
-            bool metrics_done_success
-                    = ctx->publish_reducer_job_metrics(reducer::JobStatus::Success);
-            if (false == results_success || false == done_success || false == metrics_done_success)
-            {
+            if (false == results_success || false == done_success) {
                 SPDLOG_CRITICAL("Database operation failed");
                 return -1;
             }
         } else {
             SPDLOG_INFO("Job {} finished unsuccesfully", ctx->get_job_id());
-            bool done_success = true, metrics_done_success = true;
+            bool done_success = true;
             if (reducer::ServerStatus::FinishingReducerError == ctx->get_status()) {
                 done_success = ctx->update_job_status(reducer::JobStatus::Failed);
-                metrics_done_success = ctx->publish_reducer_job_metrics(reducer::JobStatus::Failed);
-            } else if (reducer::ServerStatus::FinishingCancelled == ctx->get_status()) {
-                metrics_done_success
-                        = ctx->publish_reducer_job_metrics(reducer::JobStatus::Cancelled);
-            } else if (reducer::ServerStatus::FinishingRemoteError == ctx->get_status()) {
-                metrics_done_success = ctx->publish_reducer_job_metrics(reducer::JobStatus::Failed);
             }
 
-            if (false == done_success || false == metrics_done_success) {
+            if (false == done_success) {
                 SPDLOG_CRITICAL("Database operation failed");
                 return -1;
             }
