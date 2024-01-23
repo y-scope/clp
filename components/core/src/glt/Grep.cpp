@@ -413,14 +413,15 @@ void find_boundaries(
         size_t& var_end_ix
 ) {
     auto const& logtype_string = logtype_entry->get_value();
-
     // left boundary is exclusive and right boundary are inclusive, meaning
     // that logtype_string.substr[0, left_boundary) and logtype_string.substr[right_boundary, end)
     // can be safely ignored.
-    size_t left_boundary;
-    size_t right_boundary;
+    // They are initialized assuming that the entire logtype can be safely ignored. So if the
+    // tokens doesn't contain variable. the behavior is consistent.
+    size_t left_boundary{logtype_string.length()};
+    size_t right_boundary{0};
     // First, match the token from front to end.
-    size_t find_start_index = 0;
+    size_t find_start_index{0};
     bool tokens_contain_variable{false};
     for (auto const& token : tokens) {
         auto const& token_str = token.first;
@@ -475,6 +476,13 @@ void find_boundaries(
         rfind_end_index = rfound_index - 1;
     }
 
+    // if we didn't find any variable, we can do an early return
+    if (false == tokens_contain_variable) {
+        var_begin_ix = logtype_entry->get_num_variables();
+        var_end_ix = 0;
+        return;
+    }
+
     // Now we have the left boundary and right boundary, try to filter out the variables;
     // var_begin_ix is an inclusive interval
     auto const logtype_variable_num = logtype_entry->get_num_variables();
@@ -500,21 +508,17 @@ void find_boundaries(
             // if the variable is within the right boundary, then it should be skipped.
             var_end_ix--;
         } else {
-            // if the variable is not within the right
+            // if the variable is not within the right boundary
             break;
         }
     }
     // This means no variable needs to be readed? then the only possible is no token contains
     // variable
-    if (var_end_ix == var_begin_ix && true == tokens_contain_variable) {
-        printf("end index %lu is same as begin index %lu, but tokens contain a variable\n",
+    if (var_end_ix <= var_begin_ix) {
+        printf("tokens contain a variable, end index %lu is smaller and equal than begin index "
+               "%lu\n",
                var_end_ix,
                var_begin_ix);
-        throw;
-    }
-
-    if (var_end_ix < var_begin_ix) {
-        printf("end index %lu is smaller than begin index %lu\n", var_end_ix, var_begin_ix);
         throw;
     }
 }
