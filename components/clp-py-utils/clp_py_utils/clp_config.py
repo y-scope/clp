@@ -100,7 +100,7 @@ class Database(BaseModel):
             connection_params_and_type['ssl_cert'] = self.ssl_cert
         return connection_params_and_type
 
-def validate_logging_level_static(cls, field):
+def _validate_logging_level(cls, field):
     if not is_valid_logging_level(field):
         raise ValueError(
             f"{cls.__name__}: '{field}' is not a valid logging level. Use one of"
@@ -118,7 +118,7 @@ class SearchScheduler(BaseModel):
 
     @validator('logging_level')
     def validate_logging_level(cls, field):
-        validate_logging_level_static(cls, field)
+        _validate_logging_level(cls, field)
         return field
 
 
@@ -127,7 +127,7 @@ class SearchWorker(BaseModel):
 
     @validator('logging_level')
     def validate_logging_level(cls, field):
-        validate_logging_level_static(cls, field)
+        _validate_logging_level(cls, field)
         return field
 
 

@@ -27,9 +27,6 @@ result_accept_content = [
     "application/x-python-serialize", # pickle
 ]
 
-# TODO: Find out how to precisely specify the serialization format for both the
-# task (args + kwargs) and the task return value (instead of using json/pickle
-# for everything). See also:
-# https://stackoverflow.com/questions/69531560/how-do-you-configure-celery-to-use-serializer-pickle
-# https://docs.celeryq.dev/en/stable/internals/protocol.html#task-messages
+# TODO: choose a serialization format for tasks and results. Sticking with json is probabl not a
+# idea.
 result_serializer = "json"
