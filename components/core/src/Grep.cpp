@@ -365,21 +365,14 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                         for (int id : schema_types) {
                             bool start_star = current_string[0] == '*' && false == prev_star;
                             bool end_star = current_string.back() == '*' && false == next_star;
-                            if ( start_star && end_star) {
-                                suffixes.emplace_back('*', "*");
-                                QueryLogtype& suffix = suffixes.back();
-                                suffix.insert(id, current_string);
+                            suffixes.emplace_back();
+                            QueryLogtype& suffix = suffixes.back();
+                            if (start_star) {
                                 suffix.insert('*', "*");
-                            } else if (start_star) {
-                                suffixes.emplace_back('*', "*");
-                                QueryLogtype& suffix = suffixes.back();
-                                suffix.insert(id, current_string);
-                            } else if (end_star) {
-                                suffixes.emplace_back(id, current_string);
-                                QueryLogtype& suffix = suffixes.back();
+                            }
+                            suffix.insert(id, current_string);
+                            if (end_star) {
                                 suffix.insert('*', "*");
-                            } else {
-                                suffixes.emplace_back(id, current_string);
                             }
                             if (false == contains_wildcard) {
                                 // we only want the highest prio type if no wildcard
