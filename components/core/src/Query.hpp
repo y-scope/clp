@@ -116,6 +116,11 @@ public:
      */
     bool matches_vars (const std::vector<encoded_variable_t>& vars) const;
 
+    /**
+     * Prints the contents of the subquery
+     */
+     auto print() const -> void;
+
 private:
     // Variables
     std::unordered_set<const LogTypeDictionaryEntry*> m_possible_logtype_entries;
