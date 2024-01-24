@@ -13,8 +13,7 @@ import mysql.connector
 import msgpack
 import pathlib
 
-from celery import group
-
+import celery
 from clp_py_utils.clp_config import SEARCH_JOBS_TABLE_NAME, CLP_METADATA_TABLE_PREFIX
 from job_orchestration.executor.search.fs_search_task import search
 from job_orchestration.job_config import SearchConfig
@@ -31,18 +30,18 @@ from .common import JobStatus  # type: ignore
 logger = get_logger("search-job-handler")
 
 class SearchJob:
-    def __init__(self, async_task: any) -> None:
-        self.async_task: any = async_task
+    def __init__(self, async_task_result: any) -> None:
+        self.async_task_result: any = async_task_result
 
 # dictionary of active jobs indexed by job id
 active_jobs : Dict[str, SearchJob] = {}
 
 def cancel_job(job_id):
     global active_jobs
-    active_jobs[job_id].async_task.revoke(terminate=True)
+    active_jobs[job_id].async_task_result.revoke(terminate=True)
     try:
-        active_jobs[job_id].async_task.get()
-    except:
+        active_jobs[job_id].async_task_result.get()
+    except Exception:
         pass
     del active_jobs[job_id]
 
@@ -88,7 +87,7 @@ def set_job_status(
     return rval
 
 
-def poll_and_handle_cancelling_search_jobs(db_conn) -> None:
+def handle_cancelling_search_jobs(db_conn) -> None:
     global active_jobs
 
     cursor = db_conn.cursor()
@@ -136,14 +135,14 @@ def get_archives_for_search(
     return archives_for_search
 
 
-def get_search_tasks_for_job(
-    archives_for_search: List[tuple],
+def get_task_group_for_job(
+    archives_for_search: List[str],
     job_id: str,
     search_config: SearchConfig,
     results_cache_uri: str,
 ):
     search_config_obj = search_config.dict()
-    return group(
+    return celery.group(
         search.s(
             job_id=job_id,
             archive_id=archive_id,
@@ -154,17 +153,17 @@ def get_search_tasks_for_job(
 
 
 def dispatch_search_job(
-    archives_for_search: List[tuple],
+    archives_for_search: List[str],
     job_id: str,
     search_config: SearchConfig,
     results_cache_uri: str
 ) -> None:
     global active_jobs
-    task_group = get_search_tasks_for_job(archives_for_search, job_id, search_config, results_cache_uri)
+    task_group = get_task_group_for_job(archives_for_search, job_id, search_config, results_cache_uri)
     active_jobs[job_id] = SearchJob(task_group.apply_async())
 
 
-def poll_and_submit_pending_search_jobs(db_conn, results_cache_uri: str) -> None:
+def handle_pending_search_jobs(db_conn, results_cache_uri: str) -> None:
     global active_jobs
 
     cursor = db_conn.cursor()
@@ -177,34 +176,29 @@ def poll_and_submit_pending_search_jobs(db_conn, results_cache_uri: str) -> None
         search_config_obj = SearchConfig.parse_obj(msgpack.unpackb(search_config))
         archives_for_search = get_archives_for_search(db_conn, search_config_obj)
         if len(archives_for_search) == 0:
-            if set_job_status(db_conn, job_id, JobStatus.SUCCESS, JobStatus.PENDING):
+            if set_job_status(db_conn, job_id, JobStatus.SUCCESS, job_status):
                 logger.info(f"No matching archives, skipping job {job_id}.")
-            else:
-                logger.info(f"Marking job {job_id} with no archives to search cancelled.")
-                set_job_status(db_conn, job_id, JobStatus.CANCELLED)
             continue
 
         dispatch_search_job(archives_for_search, str(job_id), search_config_obj, results_cache_uri)
         if set_job_status(db_conn, job_id, JobStatus.RUNNING, job_status):
             logger.info(f"Dispatched job {job_id} with {len(archives_for_search)} archives to search.")
-        else:
-            logger.error(f"Marking job {job_id} with {len(archives_for_search)} archives to search cancelled.")
-            cancel_job(job_id)
-            set_job_status(db_conn, job_id, JobStatus.CANCELLED)
 
 
-def try_getting_results(result):
-    '''
-    https://github.com/celery/celery/issues/4084
-    Ideally we'd just do it this way, but because of the open bug listed above we have to use this
-    timeout based approach until we switch to redis result backend.
-    if not result.ready():
+def try_getting_task_result(async_task_result):
+    """
+    Ideally, we'd use this code:
+
+    if not async_task_result.ready():
         return None
-    return result.get()
-    '''
+    return async_task_result.get()
+
+    But because of https://github.com/celery/celery/issues/4084, wew have to use the following
+    timeout based approach until we switch to the Redis result backend.
+    """
     try:
-        return result.get(timeout=0.1)
-    except TimeoutError:
+        return async_task_result.get(timeout=0.1)
+    except celery.exceptions.TimeoutError:
         return None
 
 
@@ -213,12 +207,12 @@ def check_job_status_and_update_db(db_conn):
 
     for job_id in list(active_jobs.keys()):
         try:
-            returned_results = try_getting_results(active_jobs[job_id].async_task)
+            returned_results = try_getting_task_result(active_jobs[job_id].async_task_result)
         except Exception as e:
             logger.error(f"Job `{job_id}` failed: {e}.")
             # clean up
             del active_jobs[job_id]
-            set_job_status(db_conn, job_id, JobStatus.FAILED)
+            set_job_status(db_conn, job_id, JobStatus.FAILED, JobStatus.RUNNING)
             continue
 
         if returned_results is not None:
@@ -236,9 +230,6 @@ def check_job_status_and_update_db(db_conn):
                     logger.info(f"Completed job {job_id}.")
                 else:
                     logger.info(f"Completed job {job_id} with failing tasks.")
-            else:
-                logger.info(f"Marking job {job_id} cancelled with no remaining archives to search.")
-                set_job_status(db_conn, job_id, JobStatus.CANCELLING)
 
 
 def handle_jobs(
@@ -246,15 +237,11 @@ def handle_jobs(
     results_cache_uri: str,
     jobs_poll_delay: float,
 ) -> None:
-    try:
-        while True:
-            poll_and_submit_pending_search_jobs(db_conn, results_cache_uri)
-            poll_and_handle_cancelling_search_jobs(db_conn)
-            check_job_status_and_update_db(db_conn)
-            time.sleep(jobs_poll_delay)
-    except Exception:
-        logger.exception(f"Uncaught exception in job handling loop.")
-        return
+    while True:
+        handle_pending_search_jobs(db_conn, results_cache_uri)
+        handle_cancelling_search_jobs(db_conn)
+        check_job_status_and_update_db(db_conn)
+        time.sleep(jobs_poll_delay)
 
 
 def main(argv: List[str]) -> int:
@@ -294,11 +281,15 @@ def main(argv: List[str]) -> int:
     logger.info(f"Connected to archive database {clp_config.database.host}:{clp_config.database.port}.")
     logger.debug("Job polling interval {clp_config.search_scheduler.jobs_poll_delay} seconds.")
     logger.info("Search scheduler started.")
-    handle_jobs(
-        db_conn=db_conn,
-        results_cache_uri=clp_config.results_cache.get_uri(),
-        jobs_poll_delay=clp_config.search_scheduler.jobs_poll_delay,
-    )
+    try:
+        handle_jobs(
+            db_conn=db_conn,
+            results_cache_uri=clp_config.results_cache.get_uri(),
+            jobs_poll_delay=clp_config.search_scheduler.jobs_poll_delay,
+        )
+    except Exception:
+        logger.exception(f"Uncaught exception in job handling loop.")
+
     return 0
 
 

@@ -10,7 +10,7 @@ LOGGING_LEVEL_MAPPING = {
 }
 
 def get_logging_formatter():
-    return logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+    return logging.Formatter("%(asctime)s %(name)s [%(levelname)s] %(message)s")
 
 def get_logger(name: str):
     logger = logging.getLogger(name)
@@ -18,13 +18,12 @@ def get_logger(name: str):
     logging_console_handler = logging.StreamHandler()
     logging_console_handler.setFormatter(get_logging_formatter())
     logger.addHandler(logging_console_handler)
-    # Prevents double logging from sub loggers
+    # Prevent double logging from sub loggers
     logger.propagate = False
-
     return logger
 
 
-def get_supported_logging_level():
+def get_valid_logging_level():
     return [i for i in LOGGING_LEVEL_MAPPING.keys()]
 
 

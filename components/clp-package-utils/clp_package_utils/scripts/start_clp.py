@@ -381,13 +381,12 @@ def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_cl
             container_start_cmd.append('--mount')
             container_start_cmd.append(str(mount))
     container_start_cmd.append(clp_config.execution_container)
+
     scheduler_cmd = [
         'python3', '-u', '-m',
         'job_orchestration.search_scheduler.search_scheduler',
         '--config', str(container_clp_config.logs_directory / container_config_filename),
     ]
-
-    # for now, let's use what we have.
     cmd = container_start_cmd + scheduler_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
@@ -581,9 +580,12 @@ def main(argv):
         clp_config = validate_and_load_config_file(config_file_path, default_config_file_path, clp_home)
 
         # Validate and load necessary credentials
-        if component_name in ['', DB_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME]:
+        if component_name in ['', DB_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME,
+                              SEARCH_SCHEDULER_COMPONENT_NAME]:
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
-        if component_name in ['', QUEUE_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME, WORKER_COMPONENT_NAME]:
+        if component_name in ['', QUEUE_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME,
+                              WORKER_COMPONENT_NAME, SEARCH_SCHEDULER_COMPONENT_NAME,
+                              SEARCH_WORKER_COMPONENT_NAME]:
             validate_and_load_queue_credentials_file(clp_config, clp_home, True)
 
         clp_config.validate_data_dir()
@@ -629,7 +631,7 @@ def main(argv):
             start_scheduler(instance_id, clp_config, container_clp_config, mounts)
         if '' == component_name or SEARCH_SCHEDULER_COMPONENT_NAME == component_name:
             start_search_scheduler(instance_id, clp_config, container_clp_config, mounts)
-        if '' == component_name or SEARCH_SCHEDULER_COMPONENT_NAME == component_name:
+        if '' == component_name or SEARCH_WORKER_COMPONENT_NAME == component_name:
             start_search_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
         if '' == component_name or WORKER_COMPONENT_NAME == component_name:
             start_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)

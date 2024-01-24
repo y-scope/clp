@@ -62,7 +62,7 @@ def search(
     if search_config.path_filter is not None:
         search_cmd.append(search_config.path_filter)
 
-    logger.info(f'Searching: {" ".join(search_cmd)}')
+    logger.info(f'Running: {" ".join(search_cmd)}')
     search_successful = False
     search_proc = subprocess.Popen(
         search_cmd,
@@ -75,12 +75,11 @@ def search(
     def sigterm_handler(_signo, _stack_frame):
         logger.debug("Entered sigterm handler")
         if search_proc.poll() is None:
-            logger.debug("try to kill search process")
-            # kill with group id for when we're running both obs and clo
+            logger.debug("Trying to kill search process")
+            # Kill the process group in case the search process also forked
             os.killpg(os.getpgid(search_proc.pid), signal.SIGTERM)
             os.waitpid(search_proc.pid, 0)
             logger.info(f"Cancelling search task: {task_id}")
-        logger.debug(f"Exiting with error code {_signo + 128}")
         sys.exit(_signo + 128)
 
     # Register the function to kill the child process at exit

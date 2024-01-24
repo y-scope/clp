@@ -4,7 +4,7 @@ import typing
 from pydantic import BaseModel, validator
 
 from .core import get_config_value, make_config_path_absolute, read_yaml_config_file, validate_path_could_be_dir
-from .clp_logging import is_valid_logging_level, get_supported_logging_level
+from .clp_logging import is_valid_logging_level, get_valid_logging_level
 
 # Constants
 # Component names
@@ -103,8 +103,8 @@ class Database(BaseModel):
 def validate_logging_level_static(cls, field):
     if not is_valid_logging_level(field):
         raise ValueError(
-            f"{cls.__name__}: logging level '{field}' is not a valid value.\n"
-            f"Use one of the following level {get_supported_logging_level()}"
+            f"{cls.__name__}: '{field}' is not a valid logging level. Use one of"
+            f" {get_valid_logging_level()}"
         )
 
 
@@ -113,7 +113,7 @@ class Scheduler(BaseModel):
 
 
 class SearchScheduler(BaseModel):
-    jobs_poll_delay: float = 1  # seconds
+    jobs_poll_delay: float = 0.1  # seconds
     logging_level: str = 'INFO'
 
     @validator('logging_level')

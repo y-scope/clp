@@ -1,27 +1,18 @@
 #!/usr/bin/env python3
 import argparse
-import logging
 import sys
 from contextlib import closing
 
 from clp_py_utils.clp_config import Database, SEARCH_JOBS_TABLE_NAME
+from clp_py_utils.clp_logging import get_logger
 from clp_py_utils.core import read_yaml_config_file
 from job_orchestration.search_scheduler.common import JobStatus
 from sql_adapter import SQL_Adapter
 
-# Setup logging
-# Create logger
-logger = logging.getLogger(__file__)
-logger.setLevel(logging.INFO)
-# Setup console logging
-logging_console_handler = logging.StreamHandler()
-logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-logging_console_handler.setFormatter(logging_formatter)
-logger.addHandler(logging_console_handler)
-
+logger = get_logger(__file__)
 
 def main(argv):
-    args_parser = argparse.ArgumentParser(description="Sets up metadata tables for job orchestration.")
+    args_parser = argparse.ArgumentParser(description="Sets up tables for the search scheduler.")
     args_parser.add_argument('--config', required=True, help="Database config file.")
     parsed_args = args_parser.parse_args(argv[1:])
 

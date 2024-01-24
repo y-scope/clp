@@ -90,14 +90,13 @@ def create_and_monitor_job_in_db(db_config: Database, results_cache: ResultsCach
         job_id = db_cursor.lastrowid
 
         # Wait for the job to be marked complete
-        job_complete = False
-        while not job_complete:
+        while True:
             db_cursor.execute(f"SELECT `status` FROM `{SEARCH_JOBS_TABLE_NAME}` WHERE `id` = {job_id}")
             # There will only ever be one row since it's impossible to have more than one job with the same ID
             new_status = db_cursor.fetchall()[0]['status']
-            if new_status in (JobStatus.SUCCESS, JobStatus.FAILED, JobStatus.CANCELLED):
-                job_complete = True
             db_conn.commit()
+            if new_status in (JobStatus.SUCCESS, JobStatus.FAILED, JobStatus.CANCELLED):
+                break
 
             time.sleep(0.5)
 
@@ -114,11 +113,10 @@ async def do_search(db_config: Database, results_cache: ResultsCache, wildcard_q
                                 begin_timestamp, end_timestamp, path_filter))
 
     # Wait for the job to complete or an error to occur
-    pending = [db_monitor_task]
     try:
-        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
-    except asyncio.CancelledError:
         await db_monitor_task
+    except asyncio.CancelledError:
+        pass
 
 
 def main(argv):

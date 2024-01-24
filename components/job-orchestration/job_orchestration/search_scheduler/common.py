@@ -12,12 +12,13 @@ class JobStatus(IntEnum):
     CANCELLING = auto()
     CANCELLED = auto()
 
-    def __str__(self) -> str:
-        return str(self.value).lower()
-
-    def to_str(self) -> str:
-        return str(self.name).lower()
-
     @staticmethod
     def from_str(label: str) -> JobStatus:
         return JobStatus[label.upper()]
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+    def to_str(self) -> str:
+        return str(self.name)
+

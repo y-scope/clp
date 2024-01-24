@@ -170,10 +170,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             cerr << "Examples:" << endl;
             cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to )"
                     R"(mongodb://127.0.0.1:27017/test "result" collection )"
-                    R"(and use localhost:5555 as the search controller)"
                  << endl;
             cerr << "  " << get_program_name()
-                 << R"(localhost 5555 mongodb://127.0.0.1:27017/test result )"
+                 << R"(mongodb://127.0.0.1:27017/test result )"
                     R"(ARCHIVE_PATH " ERROR ")"
                  << endl;
             cerr << endl;
@@ -274,8 +273,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
 void CommandLineArguments::print_basic_usage() const {
     cerr << "Usage: " << get_program_name()
-         << " [OPTIONS] SEARCH_CONTROLLER_HOST SEARCH_CONTROLLER_PORT "
-            "MONGODB_URI MONGODB_COLLECTION "
+         << " [OPTIONS] MONGODB_URI MONGODB_COLLECTION "
          << R"(ARCHIVE_PATH "WILDCARD STRING" [FILE])" << endl;
 }
 }  // namespace clp::clo
