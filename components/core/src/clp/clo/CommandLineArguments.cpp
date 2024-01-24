@@ -272,8 +272,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 }
 
 void CommandLineArguments::print_basic_usage() const {
-    cerr << "Usage: " << get_program_name()
-         << " [OPTIONS] MONGODB_URI MONGODB_COLLECTION "
+    cerr << "Usage: " << get_program_name() << " [OPTIONS] MONGODB_URI MONGODB_COLLECTION "
          << R"(ARCHIVE_PATH "WILDCARD STRING" [FILE])" << endl;
 }
 }  // namespace clp::clo
