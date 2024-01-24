@@ -11,9 +11,6 @@ ResultsCacheClient::ResultsCacheClient(
         auto mongo_uri = mongocxx::uri(uri);
         m_client = mongocxx::client(mongo_uri);
         m_collection = m_client[mongo_uri.database()][collection];
-        mongocxx::write_concern write_concern;
-        write_concern.acknowledge_level(mongocxx::write_concern::level::k_majority);
-        m_collection.write_concern(write_concern);
     } catch (mongocxx::exception const& e) {
         throw OperationFailed(ErrorCode::ErrorCode_BadParam_DB_URI, __FILE__, __LINE__);
     }
