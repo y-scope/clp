@@ -231,18 +231,20 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     processed_search_string = clean_up_wildcard_search_string(processed_search_string);
     query.set_search_string(processed_search_string);
 
-    // Split search_string into tokens with wildcards
-    vector<QueryToken> query_tokens;
-    size_t begin_pos = 0;
-    size_t end_pos = 0;
-    bool is_var;
+    // Replace non-greedy wildcards with greedy wildcards since we currently
+    // have no support for searching compressed files with non-greedy
+    // wildcards
+    std::replace(processed_search_string.begin(), processed_search_string.end(), '?', '*');
+    // Clean-up in case any instances of "?*" or "*?" were changed into "**"
+    processed_search_string = clean_up_wildcard_search_string(processed_search_string);
+
     if (use_heuristic) {
-        // Replace non-greedy wildcards with greedy wildcards since we currently
-        // have no support for searching compressed files with non-greedy
-        // wildcards
-        std::replace(processed_search_string.begin(), processed_search_string.end(), '?', '*');
-        // Clean-up in case any instances of "?*" or "*?" were changed into "**"
-        processed_search_string = clean_up_wildcard_search_string(processed_search_string);
+        // Split search_string into tokens with wildcards
+        vector<QueryToken> query_tokens;
+        size_t begin_pos = 0;
+        size_t end_pos = 0;
+        bool is_var;
+        
         while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos, is_var)) {
             query_tokens.emplace_back(processed_search_string, begin_pos, end_pos, is_var);
         }
