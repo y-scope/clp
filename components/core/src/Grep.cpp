@@ -310,7 +310,7 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                 std::vector<QueryLogtype> suffixes;
                 SearchToken search_token;
                 if (current_string == "*") {
-                    suffixes.emplace_back('*', current_string);
+                    suffixes.emplace_back('*', "*", false);
                 } else {
                     // TODO: add this step to the documentation
                     // add * if preceding and proceeding characters are *
@@ -361,6 +361,7 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                          forward_lexer.is_delimiter(processed_search_string[i + 1]))) {
                         is_surrounded_by_delims = true;
                     }
+                    // All variables must be surrounded by delimiters
                     if (is_surrounded_by_delims) {
                         for (int id : schema_types) {
                             bool start_star = current_string[0] == '*' && false == prev_star;
@@ -368,18 +369,20 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                             suffixes.emplace_back();
                             QueryLogtype& suffix = suffixes.back();
                             if (start_star) {
-                                suffix.insert('*', "*");
+                                suffix.insert('*', "*", false);
                             }
-                            suffix.insert(id, current_string);
+                            suffix.insert(id, current_string, contains_wildcard);
                             if (end_star) {
-                                suffix.insert('*', "*");
+                                suffix.insert('*', "*", false);
                             }
+                            // If no wildcard, only use the top priority type 
                             if (false == contains_wildcard) {
-                                // we only want the highest prio type if no wildcard
                                 break;
                             }
                         }
                     }
+                    // If it's not guaranteed to be a variable, store it is 
+                    // static text
                     if (schema_types.empty() || contains_wildcard ||
                         is_surrounded_by_delims == false) {
                         suffixes.emplace_back();
@@ -390,7 +393,7 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                         for(uint32_t k = start_id; k < end_id; k++) {
                             char const& c = current_string[k];
                             std::string char_string({c});
-                            suffix.insert(c, char_string);
+                            suffix.insert(c, char_string, false);
                         }
                     }
                 }
@@ -437,20 +440,22 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
             std::string logtype_string;
             bool has_vars = true;
             bool has_special = false;
-            for(uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
+            for (uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
                 auto const& value = query_logtype.m_logtype[i];
                 auto const& var_str = query_logtype.m_search_query[i];
                 auto const& is_special = query_logtype.m_is_special[i];
+                auto const& var_has_wildcard = query_logtype.m_var_has_wildcard[i];
                 if (std::holds_alternative<char>(value)) {
                     logtype_string.push_back(std::get<char>(value));
                 } else {
                     auto& schema_type = forward_lexer.m_id_symbol[std::get<int>(value)];
                     encoded_variable_t encoded_var;
                     // Create a duplicate query that will treat a wildcard
-                    // int/float as an int/float
+                    // int/float as an int/float encoded in a segment
                     // TODO: this is wrong you don't care if query has a wildcard, just that var.
                     //       also all queries have wildcard so this variable seems useless
-                    if(false == is_special && query_logtype.m_has_wildcard && (schema_type == "int" ||schema_type == "float")) {
+                    if (false == is_special && var_has_wildcard &&
+                        (schema_type == "int" || schema_type == "float")) {
                         QueryLogtype new_query_logtype = query_logtype;
                         new_query_logtype.m_is_special[i] = true;
                         // TODO: this is kinda sketchy, but it'll work because 
@@ -464,19 +469,24 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                         } else if (schema_type == "float") {
                             LogTypeDictionaryEntry::add_float_var(logtype_string);
                         }
-                    } else if( schema_type == "int" && EncodedVariableInterpreter::convert_string_to_representable_integer_var(var_str, encoded_var)) {
+                    } else if (schema_type == "int" &&
+                               EncodedVariableInterpreter::convert_string_to_representable_integer_var(
+                                       var_str, encoded_var)) {
                         LogTypeDictionaryEntry::add_int_var(logtype_string);
                         sub_query.add_non_dict_var(encoded_var);
-                    } else if (schema_type == "float" && EncodedVariableInterpreter::convert_string_to_representable_float_var(var_str, encoded_var)) {
+                    } else if (schema_type == "float" &&
+                               EncodedVariableInterpreter::convert_string_to_representable_float_var(
+                                       var_str, encoded_var)) {
                         LogTypeDictionaryEntry::add_float_var(logtype_string);
                         sub_query.add_non_dict_var(encoded_var);
                     } else {
                         LogTypeDictionaryEntry::add_dict_var(logtype_string);
                         auto& var_dict = archive.get_var_dictionary();
-                        if(query_logtype.m_has_wildcard) {
+                        if (var_has_wildcard) {
                             // Find matches
                             std::unordered_set<const VariableDictionaryEntry*> var_dict_entries;
-                            var_dict.get_entries_matching_wildcard_string(var_str, ignore_case, var_dict_entries);
+                            var_dict.get_entries_matching_wildcard_string(var_str, ignore_case,
+                                                                          var_dict_entries);
                             if (var_dict_entries.empty()) {
                                 // Not in dictionary
                                 has_vars = false;

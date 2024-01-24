@@ -19,30 +19,34 @@ public:
     std::vector<std::variant<char, int>> m_logtype;
     std::vector<std::string> m_search_query;
     std::vector<bool> m_is_special;
-    bool m_has_wildcard = false;
+    std::vector<bool> m_var_has_wildcard;
 
     auto insert (QueryLogtype& query_logtype) -> void {
-        m_logtype.insert(m_logtype.end(), query_logtype.m_logtype.begin(), query_logtype.m_logtype.end());
-        m_search_query.insert(m_search_query.end(), query_logtype.m_search_query.begin(), query_logtype.m_search_query.end());
-        m_is_special.insert(m_is_special.end(), query_logtype.m_is_special.begin(), query_logtype.m_is_special.end());
-        m_has_wildcard = m_has_wildcard||query_logtype.m_has_wildcard;
+        m_logtype.insert(m_logtype.end(), query_logtype.m_logtype.begin(),
+                         query_logtype.m_logtype.end());
+        m_search_query.insert(m_search_query.end(), query_logtype.m_search_query.begin(),
+                              query_logtype.m_search_query.end());
+        m_is_special.insert(m_is_special.end(), query_logtype.m_is_special.begin(),
+                            query_logtype.m_is_special.end());
+        m_var_has_wildcard.insert(m_var_has_wildcard.end(),
+                                  query_logtype.m_var_has_wildcard.begin(),
+                                  query_logtype.m_var_has_wildcard.end());
     }
 
-    auto insert (std::variant<char, int> const& val, std::string const& string) -> void {
-        if(std::holds_alternative<char>(val) && std::get<char>(val) == '*') {
-            m_has_wildcard = true;
-        }
+    auto insert (std::variant<char, int> const& val, std::string const& string,
+                 bool var_contains_wildcard) -> void {
+        m_var_has_wildcard.push_back(var_contains_wildcard);
         m_logtype.push_back(val);
         m_search_query.push_back(string);
         m_is_special.push_back(false);
     }
-    
-    QueryLogtype(std::variant<char, int> const& val, std::string const& string) {
-        insert(val, string);
+
+    QueryLogtype (std::variant<char, int> const& val, std::string const& string,
+                  bool var_contains_wildcard) {
+        insert(val, string, var_contains_wildcard);
     }
 
-    QueryLogtype() {
-    }
+    QueryLogtype () = default;
     
     bool operator<(const QueryLogtype &rhs) const{
         if(m_logtype.size() < rhs.m_logtype.size()) {
