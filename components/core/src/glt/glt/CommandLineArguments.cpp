@@ -133,10 +133,11 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 cerr << "COMMAND is one of:" << endl;
                 cerr << "  c - compress" << endl;
                 cerr << "  x - extract" << endl;
-                cerr << "  s - extract" << endl;
+                cerr << "  s - search" << endl;
                 cerr << endl;
                 cerr << "Try " << get_program_name() << " c --help OR " << get_program_name()
-                     << " x --help OR s --help for command-specific details." << endl;
+                     << " x --help OR " << get_program_name()
+                     << " s --help for command-specific details." << endl;
                 cerr << endl;
 
                 cerr << "Options can be specified on the command line or through a configuration "
@@ -283,11 +284,11 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     po::bool_switch(&m_print_archive_stats_progress),
                     "Print statistics (ndjson) about each archive as it's compressed"
             )(
-                    "combine-threshold",
+                    "table-combine-threshold",
                     po::value<double>(&m_combine_threshold)
                             ->value_name("VALUE")
                             ->default_value(m_combine_threshold, "0.1"),
-                    "Target percentage threshold for a logtype to be stored in the combined table"
+                    "Target size (%) of a table (relative to the archive's size) for it to be stored in the combined table"
             )(
                     "progress",
                     po::bool_switch(&m_show_progress),
@@ -359,7 +360,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             if (m_combine_threshold < 0 || m_combine_threshold > 100) {
                 throw invalid_argument(
                         "specified combined-threshold " + std::to_string(m_combine_threshold)
-                        + "is invalid, must be between 0 and 100"
+                        + " is invalid - threshold must be between 0 and 100"
                 );
             }
 
@@ -459,7 +460,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
                 cerr << "Examples:" << endl;
                 cerr << R"(  # Search archives-dir for " ERROR ")" << endl;
-                cerr << "  " << get_program_name() << R"( archives-dir " ERROR ")" << endl;
+                cerr << "  " << get_program_name() << R"( s archives-dir " ERROR ")" << endl;
                 cerr << endl;
 
                 cerr << "Options can be specified on the command line or through a configuration "
@@ -554,7 +555,7 @@ void CommandLineArguments::print_extraction_basic_usage() const {
 }
 
 void CommandLineArguments::print_search_basic_usage() const {
-    cerr << "Usage: " << get_program_name() << R"( [OPTIONS] ARCHIVES_DIR "WILDCARD STRING" [FILE])"
-         << endl;
+    cerr << "Usage: " << get_program_name()
+         << R"( [OPTIONS] s ARCHIVES_DIR "WILDCARD STRING" [FILE])" << endl;
 }
 }  // namespace glt::glt

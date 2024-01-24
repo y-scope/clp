@@ -1,7 +1,13 @@
 # Using GLT for unstructured logs
 
-For unstructured (plain text) logs, you can compress, decompress, and search them using the `glt`
-and `gltg` binaries described below.
+GLT is a version of CLP-unstructured that specialize in search performance, at cost of 
+higher compression memory usage. 
+During compression, the log types are grouped together into tables that can be compressed and searched more efficiently. 
+In general, GLT has higher compression ratio than CLP, but it could result in slightly worse compression ratio depending
+on the nature of input logs. 
+
+For unstructured (plain text) logs, you can compress, decompress, and search them using the `glt` binary 
+described below.
 
 ## Contents
 
@@ -23,7 +29,6 @@ Usage:
 * `archives-dir` is the directory that archives should be written to.
 * `input-path` is any new-line-delimited JSON (ndjson) log file or directory containing such files.
 * `options` allow you to specify things like a custom percentage threshold for combined logtype tables
-  (`--combine-threshold <threshold>`).
     * For a complete list, run `./glt c --help`
 
 ### Examples
@@ -33,16 +38,6 @@ Usage:
 ```shell
 ./glt c /mnt/data/archives1 /mnt/logs/log1.log
 ```
-
-**Compress `/mnt/logs/log1.log` using a custom threshold of 1%:**
-
-```shell
-./glt c --combined-threshold 1 /mnt/data/archives1 /mnt/logs/log1.log
-```
-
-> [!TIP]
-> The combine-threshold has a more obvious effect on logs with a large number of logtypes.
-> In general, a higher combined-threshold results in better compression ratio and lower search speed.
 
 ## Decompression
 
@@ -128,5 +123,5 @@ output format.
 
 ## Current limitations
 
-* Timestamp information is not preserved in search results. All search results use a default timestamp format.
-* The order of log events is not preserved in search results.
+* Timestamp format information is not preserved in search results. All search results use a default timestamp format.
+* Search results are not output in the same order that they were in the original log files.

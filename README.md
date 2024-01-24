@@ -51,13 +51,13 @@ directory:
 The artifacts published to [GitHub packages][1] in this repo are a set of Docker container images
 useful for building and running CLP:
 
-| Image name                                                        | Image contents                                                                                | Link   |
-|-------------------------------------------------------------------|-----------------------------------------------------------------------------------------------|--------|
-| `ghcr.io/y-scope/clp/clp-core-dependencies-x86-centos7.4:main`    | The dependencies necessary to build CLP core in a Centos 7.4 x86 environment.                 | [↗][2] |
-| `ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main` | The dependencies necessary to build CLP core in an Ubuntu Focal x86 environment.              | [↗][3] |
-| `ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-jammy:main` | The dependencies necessary to build CLP core in an Ubuntu Jammy x86 environment.              | [↗][4] |
-| `ghcr.io/y-scope/clp/clp-core-x86-ubuntu-focal:main`              | The CLP core binaries (`clg`, `clp`, `clp-s`, etc.) built in an Ubuntu Focal x86 environment. | [↗][5] |
-| `ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-focal:main`         | The dependencies necessary to run the CLP package in an x86 environment.                      | [↗][6] |
+| Image name                                                        | Image contents                                                                                       | Link   |
+|-------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|--------|
+| `ghcr.io/y-scope/clp/clp-core-dependencies-x86-centos7.4:main`    | The dependencies necessary to build CLP core in a Centos 7.4 x86 environment.                        | [↗][2] |
+| `ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main` | The dependencies necessary to build CLP core in an Ubuntu Focal x86 environment.                     | [↗][3] |
+| `ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-jammy:main` | The dependencies necessary to build CLP core in an Ubuntu Jammy x86 environment.                     | [↗][4] |
+| `ghcr.io/y-scope/clp/clp-core-x86-ubuntu-focal:main`              | The CLP core binaries (`clg`, `clp`, `clp-s`, `glt`, etc.) built in an Ubuntu Focal x86 environment. | [↗][5] |
+| `ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-focal:main`         | The dependencies necessary to run the CLP package in an x86 environment.                             | [↗][6] |
 
 # Next Steps
 
