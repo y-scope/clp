@@ -107,4 +107,4 @@ the relevant paths on your machine.
 
 See [Using CLP for unstructured logs](../../docs/core/clp-unstructured.md), 
 [Using CLP for semi-structured logs](../../docs/core/clp-structured.md) and 
-[Using CLP for unstructured logs](../../docs/core/glt.md) for usage instructions.
+[Using GLR for unstructured logs](../../docs/core/glt.md) for usage instructions.
