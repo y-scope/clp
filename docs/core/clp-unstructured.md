@@ -68,7 +68,7 @@ Usage:
 **Decompress just `/mnt/logs/file1.log`:**
 
 ```shell
-./clp x /mnt/data/archives1 /mnt/data/archives1 /mnt/logs/file1.log
+./clp x /mnt/data/archives1 /mnt/data/archives1-decomp /mnt/logs/file1.log
 ```
 
 ## Search

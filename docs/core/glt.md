@@ -1,7 +1,7 @@
 # Using GLT for unstructured logs
 
-GLT (Group-by Log Type) is a version of CLP specialized for enhanced search performance, at cost of 
-higher memory usage during compression. During compression, log events with the same log type are 
+GLT (Group-by Log Type) is a version of CLP specialized for enhanced search performance, at the cost 
+of higher memory usage during compression. During compression, log events with the same log type are 
 grouped together into tables that can be compressed and searched more efficiently. In most cases, 
 GLT achieves a higher compression ratio than CLP.
 
@@ -64,7 +64,7 @@ Usage:
 **Decompress just `/mnt/logs/file1.log`:**
 
 ```shell
-./glt x /mnt/data/archives1 /mnt/data/archives1 /mnt/logs/file1.log
+./glt x /mnt/data/archives1 /mnt/data/archives1-decomp /mnt/logs/file1.log
 ```
 
 ## Search
