@@ -14,7 +14,6 @@ import msgpack
 import pathlib
 from pydantic import ValidationError
 
-from .common import SearchJobStatus  # type: ignore
 from clp_py_utils.clp_config import (
     CLPConfig,
     SEARCH_JOBS_TABLE_NAME,
@@ -24,6 +23,7 @@ from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logg
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.search.fs_search_task import search
+from job_orchestration.scheduler.constants import SearchJobStatus
 from job_orchestration.scheduler.job_config import SearchConfig
 from job_orchestration.scheduler.scheduler_data import SearchJob, SearchTaskResult
 

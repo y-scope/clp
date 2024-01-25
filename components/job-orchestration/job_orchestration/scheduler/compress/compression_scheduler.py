@@ -290,7 +290,7 @@ def main(argv):
             logger.exception("Error in scheduling.")
         finally:
             try:
-                time.sleep(clp_config.scheduler.jobs_poll_delay)
+                time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
             except KeyboardInterrupt:
                 logger.info('Gracefully shutting down')
                 break
