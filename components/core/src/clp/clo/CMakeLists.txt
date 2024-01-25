@@ -108,8 +108,6 @@ set(
         clo.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
-        ControllerMonitoringThread.cpp
-        ControllerMonitoringThread.hpp
         ResultsCacheClient.cpp
         ResultsCacheClient.hpp
 )

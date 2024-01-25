@@ -16,6 +16,8 @@ from clp_py_utils.clp_config import (
     DB_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    SEARCH_SCHEDULER_COMPONENT_NAME,
+    SEARCH_WORKER_COMPONENT_NAME,
     SCHEDULER_COMPONENT_NAME,
     WORKER_COMPONENT_NAME
 )
@@ -89,8 +91,17 @@ def main(argv):
 
         if '' == component_name or WORKER_COMPONENT_NAME == component_name:
             stop_container(f'clp-{WORKER_COMPONENT_NAME}-{instance_id}')
+        if '' == component_name or SEARCH_WORKER_COMPONENT_NAME == component_name:
+            stop_container(f'clp-{SEARCH_WORKER_COMPONENT_NAME}-{instance_id}')
         if '' == component_name or SCHEDULER_COMPONENT_NAME == component_name:
             container_name = f'clp-{SCHEDULER_COMPONENT_NAME}-{instance_id}'
+            stop_container(container_name)
+
+            container_config_file_path = logs_dir / f'{container_name}.yml'
+            if container_config_file_path.exists():
+                container_config_file_path.unlink()
+        if '' == component_name or SEARCH_SCHEDULER_COMPONENT_NAME == component_name:
+            container_name = f'clp-{SEARCH_SCHEDULER_COMPONENT_NAME}-{instance_id}'
             stop_container(container_name)
 
             container_config_file_path = logs_dir / f'{container_name}.yml'

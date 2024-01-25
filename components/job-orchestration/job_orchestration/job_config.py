@@ -30,9 +30,11 @@ class ClpIoConfig(BaseModel):
 
 
 class SearchConfig(BaseModel):
-    search_controller_host: str
-    search_controller_port: int
-    wildcard_query: str
+    query_string: str
     begin_timestamp: typing.Optional[int] = None
     end_timestamp: typing.Optional[int] = None
     path_filter: typing.Optional[str] = None
+
+class SearchTaskResult(BaseModel):
+    success: bool
+    task_id: str
