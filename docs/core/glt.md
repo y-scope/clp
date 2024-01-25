@@ -3,7 +3,8 @@
 GLT (Group-by Log Type) is a version of CLP specialized for enhanced search performance, at the cost 
 of higher memory usage during compression. During compression, log events with the same log type are 
 grouped together into tables that can be compressed and searched more efficiently. In most cases, 
-GLT achieves a higher compression ratio than CLP.
+GLT achieves a higher compression ratio than CLP. On average, when compared to CLP, GLT demonstrates a 
+7.8x acceleration in search speed and a 24% enhancement in compression ratio based on our dataset.
 
 You can use GLT to compress, decompress, and search unstructured (plain-text) logs using the `glt`
 binary described below.
