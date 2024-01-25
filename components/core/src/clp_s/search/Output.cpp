@@ -587,11 +587,13 @@ bool Output::evaluate_array_filter(
 
     // pre-evaluate whether we can match strings or numbers to eliminate
     // duplicate effort on every item
-    m_maybe_string = operand->as_var_string(m_array_search_string, op)
+    m_maybe_string = op == FilterOperation::EXISTS || op == FilterOperation::NEXISTS
+                     || operand->as_var_string(m_array_search_string, op)
                      || operand->as_clp_string(m_array_search_string, op);
     double tmp_double;
     int64_t tmp_int;
-    m_maybe_number = operand->as_float(tmp_double, op) || operand->as_int(tmp_int, op);
+    m_maybe_number = op == FilterOperation::EXISTS || op == FilterOperation::NEXISTS
+                     || operand->as_float(tmp_double, op) || operand->as_int(tmp_int, op);
 
     return evaluate_array_filter(array, op, unresolved_tokens, 0, operand);
 }
