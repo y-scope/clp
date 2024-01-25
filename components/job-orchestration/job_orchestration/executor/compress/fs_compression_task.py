@@ -9,13 +9,14 @@ import yaml
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
 
-from job_orchestration.executor.celery import app
+from job_orchestration.executor.compress.celery import app
 from job_orchestration.job_config import ClpIoConfig, PathsToCompress
 from job_orchestration.scheduler.constants import TaskStatus, TaskUpdateType
-from job_orchestration.scheduler.scheduler_data import \
-    TaskUpdate, \
-    TaskFailureUpdate, \
+from job_orchestration.scheduler.scheduler_data import (
+    TaskUpdate,
+    TaskFailureUpdate,
     CompressionTaskSuccessUpdate
+)
 
 # Setup logging
 logger = get_task_logger(__name__)
@@ -65,7 +66,7 @@ def run_clp(clp_config: ClpIoConfig, clp_home: pathlib.Path, data_dir: pathlib.P
     if path_prefix_to_remove:
         compression_cmd.append('--remove-path-prefix')
         compression_cmd.append(path_prefix_to_remove)
-    
+
     # Use schema file if it exists
     schema_path: pathlib.Path = clp_home / "etc" / "clp-schema.txt"
     if schema_path.exists():

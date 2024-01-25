@@ -9,32 +9,35 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
+import celery
 import msgpack
 import pathlib
-
-import celery
-from clp_py_utils.clp_config import SEARCH_JOBS_TABLE_NAME, CLP_METADATA_TABLE_PREFIX
-from job_orchestration.executor.search.fs_search_task import search
-from job_orchestration.job_config import SearchConfig, SearchTaskResult
-
 from pydantic import ValidationError
 
-from clp_py_utils.clp_config import CLPConfig
+from .common import JobStatus  # type: ignore
+from clp_py_utils.clp_config import (
+    CLPConfig,
+    SEARCH_JOBS_TABLE_NAME,
+    CLP_METADATA_TABLE_PREFIX
+)
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.sql_adapter import SQL_Adapter
-
-from .common import JobStatus  # type: ignore
+from job_orchestration.executor.search.fs_search_task import search
+from job_orchestration.job_config import SearchConfig, SearchTaskResult
 
 # Setup logging
 logger = get_logger("search-job-handler")
+
 
 class SearchJob:
     def __init__(self, async_task_result: any) -> None:
         self.async_task_result: any = async_task_result
 
+
 # Dictionary of active jobs indexed by job id
-active_jobs : Dict[str, SearchJob] = {}
+active_jobs: Dict[str, SearchJob] = {}
+
 
 def cancel_job(job_id):
     global active_jobs
@@ -68,7 +71,7 @@ def fetch_cancelling_search_jobs(db_cursor) -> list:
 
 
 def set_job_status(
-    db_conn, job_id: str, status: JobStatus, prev_status: Optional[JobStatus] = None, **kwargs
+        db_conn, job_id: str, status: JobStatus, prev_status: Optional[JobStatus] = None, **kwargs
 ) -> bool:
     field_set_expressions = [f'{k}="{v}"' for k, v in kwargs.items()]
     field_set_expressions.append(f"status={status}")
@@ -76,7 +79,7 @@ def set_job_status(
 
     if prev_status is not None:
         update += f' AND status={prev_status}'
-    
+
     with contextlib.closing(db_conn.cursor()) as cursor:
         cursor.execute(update)
         db_conn.commit()
@@ -102,8 +105,8 @@ def handle_cancelling_search_jobs(db_conn) -> None:
 
 
 def get_archives_for_search(
-    db_conn,
-    search_config: SearchConfig,
+        db_conn,
+        search_config: SearchConfig,
 ):
     query = f"""SELECT id as archive_id
             FROM {CLP_METADATA_TABLE_PREFIX}archives
@@ -127,10 +130,10 @@ def get_archives_for_search(
 
 
 def get_task_group_for_job(
-    archives_for_search: List[str],
-    job_id: str,
-    search_config: SearchConfig,
-    results_cache_uri: str,
+        archives_for_search: List[str],
+        job_id: str,
+        search_config: SearchConfig,
+        results_cache_uri: str,
 ):
     search_config_obj = search_config.dict()
     return celery.group(
@@ -144,10 +147,10 @@ def get_task_group_for_job(
 
 
 def dispatch_search_job(
-    archives_for_search: List[str],
-    job_id: str,
-    search_config: SearchConfig,
-    results_cache_uri: str
+        archives_for_search: List[str],
+        job_id: str,
+        search_config: SearchConfig,
+        results_cache_uri: str
 ) -> None:
     global active_jobs
     task_group = get_task_group_for_job(archives_for_search, job_id, search_config, results_cache_uri)
@@ -213,9 +216,9 @@ def check_job_status_and_update_db(db_conn):
 
 
 def handle_jobs(
-    db_conn,
-    results_cache_uri: str,
-    jobs_poll_delay: float,
+        db_conn,
+        results_cache_uri: str,
+        jobs_poll_delay: float,
 ) -> None:
     while True:
         handle_pending_search_jobs(db_conn, results_cache_uri)

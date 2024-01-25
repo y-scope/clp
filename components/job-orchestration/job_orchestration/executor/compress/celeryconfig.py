@@ -6,7 +6,7 @@ from job_orchestration.scheduler.constants import QueueName, TASK_QUEUE_HIGHEST_
 # Force workers to consume only one task at a time
 worker_prefetch_multiplier = 1
 imports = [
-    'job_orchestration.executor.compression_task',
+    'job_orchestration.executor.compression.fs_compression_task',
 ]
 
 # Queue settings

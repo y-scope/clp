@@ -16,7 +16,7 @@ from clp_py_utils.clp_config import CLPConfig
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.executor.compression_task import compress
+from job_orchestration.executor.compress.fs_compression_task import compress
 from job_orchestration.scheduler.constants import \
     JobStatus, \
     TaskStatus

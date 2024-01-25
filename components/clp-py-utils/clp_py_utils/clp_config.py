@@ -14,7 +14,7 @@ DB_COMPONENT_NAME = 'database'
 QUEUE_COMPONENT_NAME = 'queue'
 REDIS_COMPONENT_NAME = 'redis'
 RESULTS_CACHE_COMPONENT_NAME = 'results_cache'
-SCHEDULER_COMPONENT_NAME = 'scheduler'
+COMPRESSION_SCHEDULER_COMPONENT_NAME = 'scheduler'
 SEARCH_SCHEDULER_COMPONENT_NAME = 'search_scheduler'
 SEARCH_WORKER_COMPONENT_NAME = 'search_worker'
 WORKER_COMPONENT_NAME = 'worker'
@@ -117,6 +117,7 @@ class Database(BaseModel):
             connection_params_and_type['ssl_cert'] = self.ssl_cert
         return connection_params_and_type
 
+
 def _validate_logging_level(cls, field):
     if not is_valid_logging_level(field):
         raise ValueError(
@@ -125,8 +126,14 @@ def _validate_logging_level(cls, field):
         )
 
 
-class Scheduler(BaseModel):
-    jobs_poll_delay: float = 0.5  # seconds
+class CompressionScheduler(BaseModel):
+    jobs_poll_delay: float = 0.1  # seconds
+    logging_level: str = 'INFO'
+
+    @validator('logging_level')
+    def validate_logging_level(cls, field):
+        _validate_logging_level(cls, field)
+        return field
 
 
 class SearchScheduler(BaseModel):
@@ -236,7 +243,7 @@ class CLPConfig(BaseModel):
     queue: Queue = Queue()
     redis: Redis = Redis()
     results_cache: ResultsCache = ResultsCache()
-    scheduler: Scheduler = Scheduler()
+    compression_scheduler: CompressionScheduler = CompressionScheduler()
     search_scheduler: SearchScheduler = SearchScheduler()
     search_worker: SearchWorker = SearchWorker()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH

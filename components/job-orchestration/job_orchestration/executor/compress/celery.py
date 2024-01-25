@@ -1,8 +1,8 @@
 from celery import Celery
 
-from . import celeryconfig
+from job_orchestration.executor.compress import celeryconfig
 
-app = Celery('clp_scheduler')
+app = Celery('compress')
 app.config_from_object(celeryconfig)
 
 if '__main__' == __name__:

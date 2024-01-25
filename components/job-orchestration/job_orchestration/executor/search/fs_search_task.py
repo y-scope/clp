@@ -18,6 +18,7 @@ from job_orchestration.job_config import SearchConfig, SearchTaskResult
 # Setup logging
 logger = get_task_logger(__name__)
 
+
 def make_clo_command(clp_home: Path, archive_path: Path, search_config: SearchConfig,
                      results_cache_uri: str, results_collection: str):
     search_cmd = [
@@ -38,6 +39,7 @@ def make_clo_command(clp_home: Path, archive_path: Path, search_config: SearchCo
         search_cmd.append(search_config.path_filter)
     
     return search_cmd
+
 
 @app.task(bind=True)
 def search(
