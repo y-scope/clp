@@ -19,7 +19,6 @@
 #include "StringLiteral.hpp"
 
 using namespace simdjson;
-using nlohmann::json;
 using namespace clp_s::search::clp_search;
 
 namespace clp_s::search {
@@ -232,7 +231,42 @@ private:
     bool evaluate_array_filter(
             FilterOperation op,
             DescriptorList const& unresolved_tokens,
-            std::string const& value,
+            std::string& value,
+            std::shared_ptr<Literal> const& operand
+    );
+
+    /**
+     * The implementation of evaluate_array_filter
+     * @param item
+     * @param op
+     * @param unresolved_tokens
+     * @param cur_idx
+     * @param value
+     * @param operand
+     * @return true if the expression evaluates to true, false otherwise
+     */
+    inline bool evaluate_array_filter(
+            ondemand::value& item,
+            FilterOperation op,
+            DescriptorList const& unresolved_tokens,
+            size_t cur_idx,
+            std::shared_ptr<Literal> const& operand
+    ) const;
+
+    /**
+     * The implementation of evaluate_array_filter
+     * @param array
+     * @param op
+     * @param unresolved_tokens
+     * @param cur_idx
+     * @param operand
+     * @return true if the expression evaluates to true, false otherwise
+     */
+    bool evaluate_array_filter(
+            ondemand::array& array,
+            FilterOperation op,
+            DescriptorList const& unresolved_tokens,
+            size_t cur_idx,
             std::shared_ptr<Literal> const& operand
     ) const;
 
@@ -242,18 +276,15 @@ private:
      * @param op
      * @param unresolved_tokens
      * @param cur_idx
-     * @param value
      * @param operand
-     * @param array_or_object if true, we are traversing an array
      * @return true if the expression evaluates to true, false otherwise
      */
     bool evaluate_array_filter(
-            json& object,
+            ondemand::object& object,
             FilterOperation op,
             DescriptorList const& unresolved_tokens,
             size_t cur_idx,
-            std::shared_ptr<Literal> const& operand,
-            bool array_or_object
+            std::shared_ptr<Literal> const& operand
     ) const;
 
     /**
