@@ -5,6 +5,7 @@ WORKDIR /clp
 ADD ./clg ./
 ADD ./clp ./
 ADD ./clp-s ./
+ADD ./glt ./
 ADD ./make-dictionaries-readable ./
 
 CMD bash
