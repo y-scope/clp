@@ -208,6 +208,10 @@ def generate_credentials_file(credentials_file_path: pathlib.Path):
             'user': 'clp-user',
             'password': secrets.token_urlsafe(8)
         },
+        REDIS_COMPONENT_NAME: {
+            # redis can perform authentication without a username
+            'password': secrets.token_urlsafe(16)
+        }
     }
 
     with open(credentials_file_path, 'w') as f:
@@ -236,6 +240,11 @@ def validate_and_load_queue_credentials_file(clp_config: CLPConfig, clp_home: pa
     validate_credentials_file_path(clp_config, clp_home, generate_default_file)
     clp_config.load_queue_credentials_from_file()
 
+def validate_and_load_redis_credentials_file(clp_config: CLPConfig, clp_home: pathlib.Path,
+                                             generate_default_file: bool):
+    validate_credentials_file_path(clp_config, clp_home, generate_default_file)
+    clp_config.load_redis_credentials_from_file()
+
 
 def validate_db_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path):
     try:
@@ -260,7 +269,8 @@ def validate_queue_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
     validate_port(f"{QUEUE_COMPONENT_NAME}.port", clp_config.queue.host, clp_config.queue.port)
 
 
-def validate_redis_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path):
+def validate_redis_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path,
+                          base_config: pathlib.Path):
     try:
         validate_path_could_be_dir(data_dir)
     except ValueError as ex:
@@ -270,6 +280,9 @@ def validate_redis_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_di
         validate_path_could_be_dir(logs_dir)
     except ValueError as ex:
         raise ValueError(f"{REDIS_COMPONENT_NAME} logs directory is invalid: {ex}")
+    
+    if not base_config.exists():
+        raise ValueError(f"{REDIS_COMPONENT_NAME} base configuration at {str(base_config)} is missing.")
 
     validate_port(f"{REDIS_COMPONENT_NAME}.port", clp_config.redis.host, clp_config.redis.port)
 

@@ -112,6 +112,10 @@ def main(argv):
         if '' == component_name or REDIS_COMPONENT_NAME == component_name:
             container_name = f'clp-{REDIS_COMPONENT_NAME}-{instance_id}'
             stop_container(container_name)
+
+            redis_config_file_path = logs_dir / f'{container_name}.conf'
+            if redis_config_file_path.exists():
+                redis_config_file_path.unlink()
         if '' == component_name or RESULTS_CACHE_COMPONENT_NAME == component_name:
             container_name = f'clp-{RESULTS_CACHE_COMPONENT_NAME}-{instance_id}'
             stop_container(container_name)

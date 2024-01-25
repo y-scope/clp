@@ -26,6 +26,7 @@ from clp_package_utils.general import (
     validate_and_load_config_file,
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file,
+    validate_and_load_redis_credentials_file,
     validate_db_config,
     validate_queue_config,
     validate_redis_config,
@@ -258,14 +259,22 @@ def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path)
     redis_logs_dir = clp_config.logs_directory / REDIS_COMPONENT_NAME
     redis_data_dir = clp_config.data_directory / REDIS_COMPONENT_NAME
 
-    validate_redis_config(clp_config, redis_data_dir, redis_logs_dir)
+    base_config_file_path = conf_dir / 'redis' / 'redis.conf'
+    validate_redis_config(clp_config, redis_data_dir, redis_logs_dir, base_config_file_path)
+
+    config_filename = f'{container_name}.conf'
+    host_config_file_path = clp_config.logs_directory / config_filename
+    with open(base_config_file_path, 'r') as base, open(host_config_file_path, 'w') as full:
+        for line in base.readlines():
+            full.write(line)
+        full.write(f'requirepass {clp_config.redis.password}\n')
 
     redis_data_dir.mkdir(exist_ok=True, parents=True)
     redis_logs_dir.mkdir(exist_ok=True, parents=True)
 
     # Start container
     mounts = [
-        DockerMount(DockerMountType.BIND, conf_dir / 'redis', pathlib.Path('/') / 'usr' / 'local' / 'etc' / 'redis', True),
+        DockerMount(DockerMountType.BIND, host_config_file_path, pathlib.Path('/') / 'usr' / 'local' / 'etc' / 'redis' / 'redis.conf', True),
         DockerMount(DockerMountType.BIND, redis_logs_dir, pathlib.Path('/') / 'var' / 'log' / 'redis'),
         DockerMount(DockerMountType.BIND, redis_data_dir, pathlib.Path('/') / 'data'),
     ]
@@ -409,7 +418,7 @@ def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_cl
         '-e', f'BROKER_URL=amqp://'
               f'{container_clp_config.queue.username}:{container_clp_config.queue.password}@'
               f'{container_clp_config.queue.host}:{container_clp_config.queue.port}',
-        '-e', f'RESULT_BACKEND=redis://'
+        '-e', f'RESULT_BACKEND=redis://default:{container_clp_config.redis.password}@'
               f'{container_clp_config.redis.host}:{container_clp_config.redis.port}/'
               f'{container_clp_config.redis.search_backend_database}',
         '-e', f'CLP_LOGS_DIR={container_logs_dir}',
@@ -486,7 +495,7 @@ def generic_start_worker(component_name: str, instance_id: str, clp_config: CLPC
         '-e', f'BROKER_URL=amqp://'
               f'{container_clp_config.queue.username}:{container_clp_config.queue.password}@'
               f'{container_clp_config.queue.host}:{container_clp_config.queue.port}',
-        '-e', f'RESULT_BACKEND=redis://'
+        '-e', f'RESULT_BACKEND=redis://default:{container_clp_config.redis.password}@'
               f'{container_clp_config.redis.host}:{container_clp_config.redis.port}/{redis_database}',
         '-e', f'CLP_HOME={CONTAINER_CLP_HOME}',
         '-e', f'CLP_DATA_DIR={container_clp_config.data_directory}',
@@ -632,6 +641,9 @@ def main(argv):
                               WORKER_COMPONENT_NAME, SEARCH_SCHEDULER_COMPONENT_NAME,
                               SEARCH_WORKER_COMPONENT_NAME]:
             validate_and_load_queue_credentials_file(clp_config, clp_home, True)
+        if component_name in ['', REDIS_COMPONENT_NAME, SEARCH_SCHEDULER_COMPONENT_NAME,
+                              WORKER_COMPONENT_NAME]:
+            validate_and_load_redis_credentials_file(clp_config, clp_home, True)
 
         clp_config.validate_data_dir()
         clp_config.validate_logs_dir()

@@ -280,6 +280,16 @@ class CLPConfig(BaseModel):
             self.queue.password = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.password")
         except KeyError as ex:
             raise ValueError(f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'.")
+        
+    def load_redis_credentials_from_file(self):
+        config = read_yaml_config_file(self.credentials_file_path)
+        if config is None:
+            raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
+        try:
+            self.redis.password = get_config_value(config, f"{REDIS_COMPONENT_NAME}.password")
+        except KeyError as ex:
+            raise ValueError(f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'.")
+
 
     def dump_to_primitive_dict(self):
         d = self.dict()
