@@ -23,7 +23,7 @@ public:
      * @param schema
      * @return the Id of the schema
      */
-    int32_t add_schema(Schema& schema);
+    int32_t add_schema(Schema const& schema);
 
     /**
      * Write the contents of the SchemaMap to archives_dir/schema_ids

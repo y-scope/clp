@@ -58,7 +58,7 @@ public:
      * @param schema
      * @param message
      */
-    void append_message(int32_t schema_id, Schema& schema, ParsedMessage& message);
+    void append_message(int32_t schema_id, Schema const& schema, ParsedMessage& message);
 
     /**
      * @return Size of the uncompressed data written to the archive
@@ -71,7 +71,7 @@ private:
      * @param writer
      * @param schema
      */
-    void initialize_schema_writer(SchemaWriter* writer, Schema& schema);
+    void initialize_schema_writer(SchemaWriter* writer, Schema const& schema);
 
     size_t m_encoded_message_size;
 

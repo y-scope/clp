@@ -4,7 +4,7 @@
 #include "ZstdCompressor.hpp"
 
 namespace clp_s {
-int32_t SchemaMap::add_schema(Schema& schema) {
+int32_t SchemaMap::add_schema(Schema const& schema) {
     auto schema_it = m_schema_map.find(schema);
     if (schema_it != m_schema_map.end()) {
         return schema_it->second;
