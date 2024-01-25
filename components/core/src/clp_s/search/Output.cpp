@@ -587,13 +587,13 @@ bool Output::evaluate_array_filter(
 
     // pre-evaluate whether we can match strings or numbers to eliminate
     // duplicate effort on every item
-    m_maybe_string = op == FilterOperation::EXISTS || op == FilterOperation::NEXISTS
-                     || operand->as_var_string(m_array_search_string, op)
-                     || operand->as_clp_string(m_array_search_string, op);
+    m_maybe_string = !(op == FilterOperation::EXISTS || op == FilterOperation::NEXISTS)
+                     && (operand->as_var_string(m_array_search_string, op)
+                         || operand->as_clp_string(m_array_search_string, op));
     double tmp_double;
     int64_t tmp_int;
-    m_maybe_number = op == FilterOperation::EXISTS || op == FilterOperation::NEXISTS
-                     || operand->as_float(tmp_double, op) || operand->as_int(tmp_int, op);
+    m_maybe_number = !(op == FilterOperation::EXISTS || op == FilterOperation::NEXISTS)
+                     && (operand->as_float(tmp_double, op) || operand->as_int(tmp_int, op));
 
     return evaluate_array_filter(array, op, unresolved_tokens, 0, operand);
 }
@@ -646,7 +646,9 @@ bool Output::evaluate_array_filter(
             }
         } break;
         case ondemand::json_type::boolean: {
-            if (unresolved_tokens.size() != cur_idx) {
+            if (unresolved_tokens.size() != cur_idx || op == FilterOperation::EXISTS
+                || op == FilterOperation::NEXISTS)
+            {
                 break;
             }
             bool tmp_bool;
@@ -655,7 +657,9 @@ bool Output::evaluate_array_filter(
             }
         } break;
         case ondemand::json_type::null: {
-            if (operand->as_null(op)) {
+            if (op != FilterOperation::EXISTS && op != FilterOperation::NEXISTS
+                && operand->as_null(op))
+            {
                 match = op == FilterOperation::EQ;
             }
         } break;
