@@ -17,7 +17,7 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    typedef std::map<int32_t, std::set<int32_t>> SchemaMap;
+    typedef std::map<int32_t, std::vector<int32_t>> SchemaMap;
     static constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 
     /**
@@ -105,7 +105,7 @@ public:
      */
     static void append_reader_columns(
             SchemaReader* reader,
-            std::set<int32_t>& columns,
+            std::vector<int32_t>& columns,
             std::shared_ptr<SchemaTree> const& schema_tree,
             std::shared_ptr<VariableDictionaryReader> const& var_dict,
             std::shared_ptr<LogTypeDictionaryReader> const& log_dict,

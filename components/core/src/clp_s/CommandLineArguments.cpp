@@ -58,9 +58,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 std::cerr << "  x - decompress" << std::endl;
                 std::cerr << "  s - search" << std::endl;
                 std::cerr << std::endl;
-                std::cerr << "Try "
-                          << " c --help OR"
-                          << " x --help OR"
+                std::cerr << "Try " << " c --help OR" << " x --help OR"
                           << " s --help for command-specific details." << std::endl;
 
                 po::options_description visible_options;

@@ -58,11 +58,7 @@ void ArchiveWriter::close() {
     m_encoded_message_size = 0UL;
 }
 
-void ArchiveWriter::append_message(
-        int32_t schema_id,
-        std::set<int32_t>& schema,
-        ParsedMessage& message
-) {
+void ArchiveWriter::append_message(int32_t schema_id, Schema& schema, ParsedMessage& message) {
     SchemaWriter* schema_writer;
     auto it = m_schema_id_to_writer.find(schema_id);
     if (it != m_schema_id_to_writer.end()) {
@@ -85,7 +81,7 @@ size_t ArchiveWriter::get_data_size() {
            + m_encoded_message_size;
 }
 
-void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, std::set<int32_t>& schema) {
+void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema& schema) {
     for (int32_t id : schema) {
         auto node = m_schema_tree->get_node(id);
         std::string key_name = node->get_key_name();

@@ -103,7 +103,7 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(std::string co
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
 
-        std::set<int32_t>& schema = schemas[schema_id];
+        std::vector<int32_t>& schema = schemas[schema_id];
         for (size_t j = 0; j < schema_node_size; j++) {
             int32_t node_id;
             error_code = schema_id_decompressor.try_read_numeric_value(node_id);
@@ -111,7 +111,7 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(std::string co
                 throw OperationFailed(error_code, __FILENAME__, __LINE__);
             }
 
-            schema.insert(node_id);
+            schema.push_back(node_id);
         }
     }
 
@@ -182,7 +182,7 @@ std::vector<int32_t> ReaderUtils::get_schemas(std::string const& archive_path) {
 
 void ReaderUtils::append_reader_columns(
         SchemaReader* reader,
-        std::set<int32_t>& columns,
+        std::vector<int32_t>& columns,
         std::shared_ptr<SchemaTree> const& schema_tree,
         std::shared_ptr<VariableDictionaryReader> const& var_dict,
         std::shared_ptr<LogTypeDictionaryReader> const& log_dict,

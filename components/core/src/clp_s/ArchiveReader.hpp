@@ -29,7 +29,7 @@ public:
     // Constructor
     ArchiveReader(
             std::shared_ptr<SchemaTree> schema_tree,
-            std::map<int32_t, std::set<int32_t>> id_to_schema,
+            std::map<int32_t, std::vector<int32_t>> id_to_schema,
             std::shared_ptr<TimestampDictionaryReader> timestamp_dict
     )
             : m_schema_tree(std::move(schema_tree)),
@@ -61,7 +61,7 @@ private:
     std::shared_ptr<LogTypeDictionaryReader> m_array_dict;
 
     std::shared_ptr<SchemaTree> m_schema_tree;
-    std::map<int32_t, std::set<int32_t>> m_id_to_schema;
+    std::map<int32_t, std::vector<int32_t>> m_id_to_schema;
     std::map<int32_t, SchemaReader*> m_schema_id_to_reader;
 
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dict;
