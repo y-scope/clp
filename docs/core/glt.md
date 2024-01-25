@@ -1,13 +1,12 @@
 # Using GLT for unstructured logs
 
-GLT is a version of CLP-unstructured that specialize in search performance, at cost of 
-higher compression memory usage. 
-During compression, the log types are grouped together into tables that can be compressed and searched more efficiently. 
-In general, GLT has higher compression ratio than CLP, but it could result in slightly worse compression ratio depending
-on the nature of input logs. 
+GLT (Group-by Log Type) is a version of CLP specialized for enhanced search performance, at cost of 
+higher memory usage during compression. During compression, log events with the same log type are 
+grouped together into tables that can be compressed and searched more efficiently. In most cases, 
+GLT achieves a higher compression ratio than CLP.
 
-For unstructured (plain text) logs, you can compress, decompress, and search them using the `glt` binary 
-described below.
+You can use GLT to compress, decompress, and search unstructured (plain-text) logs using the `glt`
+binary described below.
 
 ## Contents
 
@@ -27,8 +26,11 @@ Usage:
 ```
 
 * `archives-dir` is the directory that archives should be written to.
-* `input-path` is any new-line-delimited JSON (ndjson) log file or directory containing such files.
-* `options` allow you to specify things like a custom percentage threshold for combined logtype tables
+  * `glt` will create a number of files and directories within, so it's best if this directory is
+    empty.
+  * You can use the same directory repeatedly and `glt` will add to the compressed logs within.
+* `input-path` is any plain-text log file or directory containing such files.
+* `options` allow you to specify things like the level of compression to apply.
     * For a complete list, run `./glt c --help`
 
 ### Examples
@@ -43,19 +45,26 @@ Usage:
 
 Usage:
 
-```bash
-./glt x <archives-dir> <output-dir>
+```shell
+./glt x [<options>] <archives-dir> <output-dir> [<file-path>]
 ```
 
 * `archives-dir` is a directory containing archives.
 * `output-dir` is the directory that decompressed logs should be written to.
+* `file-path` is an optional file path to decompress, in particular.
 
 ### Examples
 
 **Decompress all logs from `/mnt/data/archives1` into `/mnt/data/archives1-decomp`:**
 
-```bash
+```shell
 ./glt x /mnt/data/archives1 /mnt/data/archives1-decomp
+```
+
+**Decompress just `/mnt/logs/file1.log`:**
+
+```shell
+./glt x /mnt/data/archives1 /mnt/data/archives1 /mnt/logs/file1.log
 ```
 
 ## Search
@@ -74,8 +83,8 @@ Usage:
     * For a complete list, run `./glt s --help`
 
 > [!TIP]
-> Adding spaces (when possible) at the begin and the end of the wildcard-query can improve GLT's search performance,
-> as GLT doesn't need to consider implicit wildcards during query processing.
+> Adding spaces (when possible) at the beginning and the end of the wildcard-query can improve GLT's 
+> search performance, since GLT won't need to consider implicit wildcards during query processing.
 > For example, the query " ERROR * container " is preferred to "ERROR * container".
 
 ### Examples
@@ -123,5 +132,6 @@ output format.
 
 ## Current limitations
 
-* Timestamp format information is not preserved in search results. All search results use a default timestamp format.
+* Timestamp format information is not preserved in search results. Instead, all search results use a
+  default timestamp format.
 * Search results are not output in the same order that they were in the original log files.

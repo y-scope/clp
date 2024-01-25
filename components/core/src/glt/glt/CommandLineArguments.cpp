@@ -288,7 +288,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     po::value<double>(&m_combine_threshold)
                             ->value_name("VALUE")
                             ->default_value(m_combine_threshold, "0.1"),
-                    "Target size (%) of a table (relative to the archive's size) for it to be stored in the combined table"
+                    "Target size (%) of a table (relative to the archive's size) for it to be"
+                    " stored in the combined table"
             )(
                     "progress",
                     po::bool_switch(&m_show_progress),
@@ -359,7 +360,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             if (m_combine_threshold < 0 || m_combine_threshold > 100) {
                 throw invalid_argument(
-                        "specified combined-threshold " + std::to_string(m_combine_threshold)
+                        "table-combined-threshold " + std::to_string(m_combine_threshold)
                         + " is invalid - threshold must be between 0 and 100"
                 );
             }

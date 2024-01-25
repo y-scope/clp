@@ -103,8 +103,8 @@ the relevant paths on your machine.
   * `clg` is used for performing wildcard searches on the compressed unstructured logs.
   * `clp-s` is used for compressing and searching semi-structured logs (e.g., JSON) with support for
     handling highly dynamic schemas.
-  * `glt` is a version of clp specialized for search, used for compressing and extracting unstructured (plain text) logs.
+  * `glt` is a version of clp specialized for searching unstructured (plain text) logs.
 
-See [Using CLP for unstructured logs](../../docs/core/clp-unstructured.md), 
-[Using CLP for semi-structured logs](../../docs/core/clp-structured.md) and 
-[Using GLR for unstructured logs](../../docs/core/glt.md) for usage instructions.
+See [Using CLP for unstructured logs](../../docs/core/clp-unstructured.md),
+ [Using CLP for semi-structured logs](../../docs/core/clp-structured.md) and
+ [Using GLT for unstructured logs](../../docs/core/glt.md) for usage instructions.
