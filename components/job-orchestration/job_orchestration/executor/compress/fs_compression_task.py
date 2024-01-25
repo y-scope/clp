@@ -10,11 +10,11 @@ from celery.app.task import Task
 from celery.utils.log import get_task_logger
 
 from job_orchestration.executor.compress.celery import app
-from job_orchestration.job_config import ClpIoConfig, PathsToCompress
-from job_orchestration.scheduler.constants import TaskStatus, TaskUpdateType
+from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
+from job_orchestration.scheduler.constants import CompressionTaskStatus, CompressionTaskUpdateType
 from job_orchestration.scheduler.scheduler_data import (
-    TaskUpdate,
-    TaskFailureUpdate,
+    CompressionTaskUpdate,
+    CompressionTaskFailureUpdate,
     CompressionTaskSuccessUpdate
 )
 
@@ -154,11 +154,11 @@ def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, pat
     clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
     paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
 
-    task_update = TaskUpdate(
-        type=TaskUpdateType.COMPRESSION,
+    task_update = CompressionTaskUpdate(
+        type=CompressionTaskUpdateType.COMPRESSION,
         job_id=job_id,
         task_id=task_id,
-        status=TaskStatus.SCHEDULED,
+        status=CompressionTaskStatus.SCHEDULED,
         start_time=datetime.datetime.now()
     )
 
@@ -171,21 +171,21 @@ def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, pat
     duration = (datetime.datetime.now() - task_update.start_time).total_seconds()
     if compression_successful:
         task_update = CompressionTaskSuccessUpdate(
-            type=TaskUpdateType.COMPRESSION,
+            type=CompressionTaskUpdateType.COMPRESSION,
             job_id=job_id,
             task_id=task_id,
-            status=TaskStatus.SUCCEEDED,
+            status=CompressionTaskStatus.SUCCEEDED,
             start_time=task_update.start_time,
             duration=duration,
             total_uncompressed_size=worker_output['total_uncompressed_size'],
             total_compressed_size=worker_output['total_compressed_size']
         )
     else:
-        task_update = TaskFailureUpdate(
-            type=TaskUpdateType.COMPRESSION,
+        task_update = CompressionTaskFailureUpdate(
+            type=CompressionTaskUpdateType.COMPRESSION,
             job_id=job_id,
             task_id=task_id,
-            status=TaskStatus.FAILED,
+            status=CompressionTaskStatus.FAILED,
             start_time=task_update.start_time,
             duration=duration,
             error_message=worker_output['error_message']

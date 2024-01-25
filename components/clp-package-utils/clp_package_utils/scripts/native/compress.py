@@ -18,12 +18,12 @@ from clp_package_utils.general import (
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.sql_adapter import SQL_Adapter
 
-from job_orchestration.job_config import (
+from job_orchestration import (
     ClpIoConfig,
     InputConfig,
     OutputConfig
 )
-from job_orchestration.scheduler.constants import (
+from job_orchestration import (
     JobStatus,
     JobCompletionStatus
 )

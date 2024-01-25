@@ -23,8 +23,8 @@ from clp_py_utils.clp_config import (
     ResultsCache
 )
 from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.job_config import SearchConfig
-from job_orchestration.search_scheduler.common import JobStatus
+from job_orchestration import SearchConfig
+from job_orchestration import JobStatus
 
 # Setup logging
 # Create logger

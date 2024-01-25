@@ -14,13 +14,16 @@ DB_COMPONENT_NAME = 'database'
 QUEUE_COMPONENT_NAME = 'queue'
 REDIS_COMPONENT_NAME = 'redis'
 RESULTS_CACHE_COMPONENT_NAME = 'results_cache'
-COMPRESSION_SCHEDULER_COMPONENT_NAME = 'scheduler'
+COMPRESSION_SCHEDULER_COMPONENT_NAME = 'compression_scheduler'
 SEARCH_SCHEDULER_COMPONENT_NAME = 'search_scheduler'
 SEARCH_WORKER_COMPONENT_NAME = 'search_worker'
 WORKER_COMPONENT_NAME = 'worker'
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path('etc') / 'credentials.yml'
 CLP_METADATA_TABLE_PREFIX = 'clp_'
-SEARCH_JOBS_TABLE_NAME = 'distributed_search_jobs'
+
+SEARCH_JOBS_TABLE_NAME = 'search_jobs'
+COMPRESSION_JOBS_TABLE_NAME = 'compression_jobs'
+COMPRESSION_TASKS_TABLE_NAME = 'compression_tasks'
 
 class StorageEngine(KebabCaseStrEnum):
     CLP = auto()

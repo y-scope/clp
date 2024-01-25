@@ -11,9 +11,7 @@ from clp_py_utils.compression import (
     group_files_by_similar_filenames,
 )
 
-from job_orchestration.job_config import (
-    PathsToCompress,
-)
+from job_orchestration.scheduler.job_config import PathsToCompress
 
 
 class PathsToCompressBuffer:

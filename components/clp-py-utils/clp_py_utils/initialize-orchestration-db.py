@@ -4,9 +4,18 @@ import logging
 import sys
 from contextlib import closing
 
-from clp_py_utils.clp_config import Database
+from clp_py_utils.clp_config import (
+    Database,
+    COMPRESSION_JOBS_TABLE_NAME,
+    COMPRESSION_TASKS_TABLE_NAME,
+    SEARCH_JOBS_TABLE_NAME
+)
 from clp_py_utils.core import read_yaml_config_file
-from job_orchestration.scheduler.constants import JobStatus, TaskStatus
+from job_orchestration.scheduler.constants import (
+    CompressionJobStatus,
+    CompressionTaskStatus,
+    SearchJobStatus
+)
 from sql_adapter import SQL_Adapter
 
 # Setup logging
@@ -33,9 +42,9 @@ def main(argv):
         with closing(sql_adapter.create_connection(True)) as scheduling_db, \
                 closing(scheduling_db.cursor(dictionary=True)) as scheduling_db_cursor:
             scheduling_db_cursor.execute(f"""
-                CREATE TABLE IF NOT EXISTS `compression_jobs` (
+                CREATE TABLE IF NOT EXISTS `{COMPRESSION_JOBS_TABLE_NAME}` (
                     `id` INT NOT NULL AUTO_INCREMENT,
-                    `status` VARCHAR(16) NOT NULL DEFAULT '{JobStatus.SCHEDULING}',
+                    `status` VARCHAR(16) NOT NULL DEFAULT '{CompressionJobStatus.SCHEDULING}',
                     `status_msg` VARCHAR(255) NOT NULL DEFAULT '',
                     `creation_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     `start_time` DATETIME NULL DEFAULT NULL,
@@ -53,9 +62,9 @@ def main(argv):
             """)
 
             scheduling_db_cursor.execute(f"""
-                CREATE TABLE IF NOT EXISTS `compression_tasks` (
+                CREATE TABLE IF NOT EXISTS `{COMPRESSION_TASKS_TABLE_NAME}` (
                     `id` BIGINT NOT NULL AUTO_INCREMENT,
-                    `status` VARCHAR(16) NOT NULL DEFAULT '{TaskStatus.SUBMITTED}',
+                    `status` VARCHAR(16) NOT NULL DEFAULT '{CompressionTaskStatus.SUBMITTED}',
                     `creation_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     `start_time` DATETIME NULL DEFAULT NULL,
                     `duration` FLOAT NULL DEFAULT NULL,
@@ -74,37 +83,13 @@ def main(argv):
             """)
 
             scheduling_db_cursor.execute(f"""
-                CREATE TABLE IF NOT EXISTS `search_jobs` (
+                CREATE TABLE IF NOT EXISTS `{SEARCH_JOBS_TABLE_NAME}` (
                     `id` INT NOT NULL AUTO_INCREMENT,
-                    `status` VARCHAR(16) NOT NULL DEFAULT '{JobStatus.SCHEDULING}',
-                    `status_msg` VARCHAR(255) NOT NULL DEFAULT '',
-                    `creation_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    `start_time` DATETIME NULL DEFAULT NULL,
-                    `duration` INT NULL DEFAULT NULL,
-                    `num_tasks` INT NOT NULL DEFAULT '0',
-                    `num_tasks_completed` INT NOT NULL DEFAULT '0',
-                    `clp_binary_version` INT NULL DEFAULT NULL,
+                    `status` INT NOT NULL DEFAULT '{SearchJobStatus.PENDING}',
+                    `submission_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
                     `search_config` VARBINARY(60000) NOT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `JOB_STATUS` (`status`) USING BTREE
-                ) ROW_FORMAT=DYNAMIC
-            """)
-
-            scheduling_db_cursor.execute(f"""
-                CREATE TABLE IF NOT EXISTS `search_tasks` (
-                    `id` BIGINT NOT NULL AUTO_INCREMENT,
-                    `status` VARCHAR(16) NOT NULL DEFAULT '{TaskStatus.SUBMITTED}',
-                    `scheduled_time` DATETIME NULL DEFAULT NULL,
-                    `start_time` DATETIME NULL DEFAULT NULL,
-                    `duration` SMALLINT NULL DEFAULT NULL,
-                    `job_id` INT NOT NULL,
-                    `archive_id` VARCHAR(64) NOT NULL,
-                    PRIMARY KEY (`id`) USING BTREE,
-                    INDEX `job_id` (`job_id`) USING BTREE,
-                    INDEX `TASK_STATUS` (`status`) USING BTREE,
-                    INDEX `TASK_START_TIME` (`start_time`) USING BTREE,
-                    CONSTRAINT `search_tasks` FOREIGN KEY (`job_id`) 
-                    REFERENCES `search_jobs` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION
                 ) ROW_FORMAT=DYNAMIC
             """)
 

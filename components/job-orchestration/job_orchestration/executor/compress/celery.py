@@ -1,6 +1,6 @@
 from celery import Celery
 
-from job_orchestration.executor.compress import celeryconfig
+from . import celeryconfig
 
 app = Celery('compress')
 app.config_from_object(celeryconfig)

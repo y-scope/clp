@@ -44,7 +44,7 @@ from clp_py_utils.clp_config import (
     SEARCH_WORKER_COMPONENT_NAME,
     WORKER_COMPONENT_NAME,
 )
-from job_orchestration.scheduler.constants import QueueName
+from job_orchestration import QueueName
 
 # Setup logging
 # Create logger
