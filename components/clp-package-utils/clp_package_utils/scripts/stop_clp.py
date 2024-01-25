@@ -17,10 +17,10 @@ from clp_py_utils.clp_config import (
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    COMPRESSION_SCHEDULER_COMPONENT_NAME,
     SEARCH_SCHEDULER_COMPONENT_NAME,
+    COMPRESSION_WORKER_COMPONENT_NAME,
     SEARCH_WORKER_COMPONENT_NAME,
-    SCHEDULER_COMPONENT_NAME,
-    WORKER_COMPONENT_NAME
 )
 
 # Setup logging
@@ -59,7 +59,8 @@ def main(argv):
     component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
     component_args_parser.add_parser(COMPRESSION_SCHEDULER_COMPONENT_NAME)
     component_args_parser.add_parser(SEARCH_SCHEDULER_COMPONENT_NAME)
-    component_args_parser.add_parser(WORKER_COMPONENT_NAME)
+    component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
+    component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -77,7 +78,8 @@ def main(argv):
         if component_name in ['', DB_COMPONENT_NAME]:
             validate_and_load_db_credentials_file(clp_config, clp_home, False)
         if component_name in ['', QUEUE_COMPONENT_NAME, COMPRESSION_SCHEDULER_COMPONENT_NAME,
-                              SEARCH_SCHEDULER_COMPONENT_NAME, WORKER_COMPONENT_NAME]:
+                              SEARCH_SCHEDULER_COMPONENT_NAME, COMPRESSION_WORKER_COMPONENT_NAME,
+                              SEARCH_WORKER_COMPONENT_NAME]:
             validate_and_load_queue_credentials_file(clp_config, clp_home, False)
     except:
         logger.exception("Failed to load config.")
@@ -93,19 +95,19 @@ def main(argv):
         with open(instance_id_file_path, 'r') as f:
             instance_id = f.readline()
 
-        if '' == component_name or WORKER_COMPONENT_NAME == component_name:
-            stop_container(f'clp-{WORKER_COMPONENT_NAME}-{instance_id}')
         if '' == component_name or SEARCH_WORKER_COMPONENT_NAME == component_name:
             stop_container(f'clp-{SEARCH_WORKER_COMPONENT_NAME}-{instance_id}')
-        if '' == component_name or SCHEDULER_COMPONENT_NAME == component_name:
-            container_name = f'clp-{SCHEDULER_COMPONENT_NAME}-{instance_id}'
+        if '' == component_name or COMPRESSION_WORKER_COMPONENT_NAME == component_name:
+            stop_container(f'clp-{COMPRESSION_WORKER_COMPONENT_NAME}-{instance_id}')
+        if '' == component_name or SEARCH_SCHEDULER_COMPONENT_NAME == component_name:
+            container_name = f'clp-{SEARCH_SCHEDULER_COMPONENT_NAME}-{instance_id}'
             stop_container(container_name)
 
             container_config_file_path = logs_dir / f'{container_name}.yml'
             if container_config_file_path.exists():
                 container_config_file_path.unlink()
-        if '' == component_name or SEARCH_SCHEDULER_COMPONENT_NAME == component_name:
-            container_name = f'clp-{SEARCH_SCHEDULER_COMPONENT_NAME}-{instance_id}'
+        if '' == component_name or COMPRESSION_SCHEDULER_COMPONENT_NAME == component_name:
+            container_name = f'clp-{COMPRESSION_SCHEDULER_COMPONENT_NAME}-{instance_id}'
             stop_container(container_name)
 
             container_config_file_path = logs_dir / f'{container_name}.yml'

@@ -2,7 +2,9 @@ import os
 
 from job_orchestration.scheduler.constants import QueueName
 
-imports = "job_orchestration.executor.search.fs_search_task"
+imports = [
+    "job_orchestration.executor.search.fs_search_task"
+]
 
 task_routes = {
     'job_orchestration.executor.search.fs_search_task.search': QueueName.SEARCH,

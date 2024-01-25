@@ -16,14 +16,16 @@ REDIS_COMPONENT_NAME = 'redis'
 RESULTS_CACHE_COMPONENT_NAME = 'results_cache'
 COMPRESSION_SCHEDULER_COMPONENT_NAME = 'compression_scheduler'
 SEARCH_SCHEDULER_COMPONENT_NAME = 'search_scheduler'
+COMPRESSION_WORKER_COMPONENT_NAME = 'worker'
 SEARCH_WORKER_COMPONENT_NAME = 'search_worker'
-WORKER_COMPONENT_NAME = 'worker'
-CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path('etc') / 'credentials.yml'
-CLP_METADATA_TABLE_PREFIX = 'clp_'
 
 SEARCH_JOBS_TABLE_NAME = 'search_jobs'
 COMPRESSION_JOBS_TABLE_NAME = 'compression_jobs'
 COMPRESSION_TASKS_TABLE_NAME = 'compression_tasks'
+
+CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path('etc') / 'credentials.yml'
+CLP_METADATA_TABLE_PREFIX = 'clp_'
+
 
 class StorageEngine(KebabCaseStrEnum):
     CLP = auto()
@@ -149,6 +151,15 @@ class SearchScheduler(BaseModel):
         return field
 
 
+class CompressionWorker(BaseModel):
+    logging_level: str = 'INFO'
+
+    @validator('logging_level')
+    def validate_logging_level(cls, field):
+        _validate_logging_level(cls, field)
+        return field
+
+
 class SearchWorker(BaseModel):
     logging_level: str = 'INFO'
 
@@ -248,6 +259,7 @@ class CLPConfig(BaseModel):
     results_cache: ResultsCache = ResultsCache()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
     search_scheduler: SearchScheduler = SearchScheduler()
+    compression_worker: CompressionWorker = CompressionWorker()
     search_worker: SearchWorker = SearchWorker()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 

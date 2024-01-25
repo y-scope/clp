@@ -15,17 +15,18 @@ from clp_package_utils.general import (
     validate_and_load_config_file,
     get_clp_home
 )
+from clp_py_utils.clp_config import COMPRESSION_JOBS_TABLE_NAME
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.sql_adapter import SQL_Adapter
 
-from job_orchestration import (
+from job_orchestration.scheduler.job_config import (
     ClpIoConfig,
     InputConfig,
     OutputConfig
 )
-from job_orchestration import (
-    JobStatus,
-    JobCompletionStatus
+from job_orchestration.scheduler.constants import (
+    CompressionJobStatus,
+    CompressionJobCompletionStatus
 )
 
 # Setup logging
@@ -48,20 +49,20 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
             closing(scheduling_db.cursor(dictionary=True)) as scheduling_db_cursor:
         try:
             scheduling_db_cursor.execute(
-                'INSERT INTO compression_jobs (clp_config) VALUES (%s);',
+                f'INSERT INTO {COMPRESSION_JOBS_TABLE_NAME} (clp_config) VALUES (%s);',
                 (zstd_cctx.compress(msgpack.packb(clp_io_config.dict(exclude_none=True, exclude_unset=True))),)
             )
             scheduling_db.commit()
             scheduling_job_id = scheduling_db_cursor.lastrowid
 
             if no_progress_reporting:
-                polling_query = f"SELECT status, status_msg FROM compression_jobs WHERE id={scheduling_job_id}"
+                polling_query = f"SELECT status, status_msg FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id={scheduling_job_id}"
             else:
                 polling_query = f"SELECT status, status_msg, uncompressed_size, compressed_size " \
-                                f"FROM compression_jobs WHERE id={scheduling_job_id}"
+                                f"FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id={scheduling_job_id}"
 
             completion_query = f"SELECT duration, uncompressed_size, compressed_size " \
-                               f"FROM compression_jobs WHERE id={scheduling_job_id}"
+                               f"FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id={scheduling_job_id}"
 
             job_last_uncompressed_size = 0
             while True:
@@ -88,9 +89,10 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
                                 f'{pretty_size(job_compressed_size)} ({compression_ratio:.2f})')
                             job_last_uncompressed_size = job_uncompressed_size
 
-                if JobStatus.SCHEDULED == job_status or JobStatus.SCHEDULING == job_status:
+                if CompressionJobStatus.SCHEDULED == job_status or \
+                        CompressionJobStatus.SCHEDULING == job_status:
                     pass  # Simply wait another iteration
-                elif JobStatus.SUCCEEDED == job_status:
+                elif CompressionJobStatus.SUCCEEDED == job_status:
                     # All tasks in the job is done
                     speed = 0
                     if not no_progress_reporting:
@@ -101,7 +103,7 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
                         logger.info(f"Compression finished. Runtime: {str(job_row['duration'])}s. "
                                     f"Speed: {pretty_size(speed)}/s.")
                     break  # Done
-                elif JobStatus.FAILED == job_status:
+                elif CompressionJobStatus.FAILED == job_status:
                     # One or more tasks in the job has failed
                     logger.error(f"Compression failed. {job_row['status_msg']}")
                     break  # Done
@@ -111,11 +113,11 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
 
                 time.sleep(0.5)
         except Exception as ex:
-            return JobCompletionStatus.FAILED
+            return CompressionJobCompletionStatus.FAILED
 
         logger.debug(f'Finished job {scheduling_job_id}')
 
-        return JobCompletionStatus.SUCCEEDED
+        return CompressionJobCompletionStatus.SUCCEEDED
 
 
 def main(argv):

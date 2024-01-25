@@ -5,12 +5,12 @@ import typing
 
 import msgpack
 
+from clp_py_utils.clp_config import COMPRESSION_TASKS_TABLE_NAME
 from clp_py_utils.compression import (
     FileMetadata,
     FilesPartition,
     group_files_by_similar_filenames,
 )
-
 from job_orchestration.scheduler.job_config import PathsToCompress
 
 
@@ -76,7 +76,7 @@ class PathsToCompressBuffer:
         # Note: partition_total_file_size => estimated size, aggregate
         # the st_size => real original size
         self.__scheduler_db_cursor.execute(
-            f'INSERT INTO compression_tasks '
+            f'INSERT INTO {COMPRESSION_TASKS_TABLE_NAME} '
             f'(job_id, partition_original_size, clp_paths_to_compress) '
             f'VALUES({str(self.__scheduling_job_id)}, {str(sum(st_sizes))}, %s);',
             (self.__zstd_cctx.compress(msgpack.packb(paths_to_compress.dict(exclude_none=True))),)

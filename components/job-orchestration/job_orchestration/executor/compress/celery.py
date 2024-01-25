@@ -1,5 +1,4 @@
 from celery import Celery
-
 from . import celeryconfig
 
 app = Celery('compress')

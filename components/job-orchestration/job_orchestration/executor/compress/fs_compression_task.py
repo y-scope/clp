@@ -20,7 +20,6 @@ from job_orchestration.scheduler.scheduler_data import (
 
 # Setup logging
 logger = get_task_logger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 def run_clp(clp_config: ClpIoConfig, clp_home: pathlib.Path, data_dir: pathlib.Path, archive_output_dir: pathlib.Path,

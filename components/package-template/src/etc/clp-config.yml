@@ -38,6 +38,9 @@
 #  port: 27017
 #  db_name: "clp-search"
 #
+#compression_worker:
+#  logging_level: "INFO"
+#
 #search_worker:
 #  logging_level: "INFO"
 #

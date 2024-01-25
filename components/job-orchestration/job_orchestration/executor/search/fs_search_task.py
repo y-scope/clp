@@ -11,8 +11,9 @@ from celery.utils.log import get_task_logger
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.clp_config import StorageEngine
 
-from job_orchestration.scheduler.search.celery import app
+from job_orchestration.executor.search.celery import app
 from job_orchestration.scheduler.job_config import SearchConfig
+from job_orchestration.scheduler.scheduler_data import SearchTaskResult
 
 # Setup logging
 logger = get_task_logger(__name__)

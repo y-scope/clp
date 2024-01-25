@@ -30,7 +30,7 @@ from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
 from job_orchestration.scheduler.scheduler_data import CompressionJob
 
 # Setup logging
-logger = get_logger("search-job-handler")
+logger = get_logger("compression-job-handler")
 
 scheduled_jobs = {}
 
