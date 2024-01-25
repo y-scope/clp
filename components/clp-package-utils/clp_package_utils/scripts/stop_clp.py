@@ -56,6 +56,8 @@ def main(argv):
     component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
     component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
     component_args_parser.add_parser(SCHEDULER_COMPONENT_NAME)
+    component_args_parser.add_parser(SEARCH_SCHEDULER_COMPONENT_NAME)
+    component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
     component_args_parser.add_parser(WORKER_COMPONENT_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])

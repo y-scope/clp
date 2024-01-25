@@ -557,12 +557,13 @@ def main(argv):
     component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
     component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
     component_args_parser.add_parser(SCHEDULER_COMPONENT_NAME)
-    worker_args_parser = component_args_parser.add_parser(WORKER_COMPONENT_NAME)
-    worker_args_parser.add_argument('--num-cpus', type=int, default=0,
-                                    help="Number of logical CPU cores to use for compression")
+    component_args_parser.add_parser(SEARCH_SCHEDULER_COMPONENT_NAME)
+    component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
+    component_args_parser.add_parser(WORKER_COMPONENT_NAME)
+    args_parser.add_argument('--num-cpus', type=int, default=0,
+                                           help="Number of logical CPU cores to use for search")
 
     parsed_args = args_parser.parse_args(argv[1:])
-
     if parsed_args.component_name:
         component_name = parsed_args.component_name
     else:
@@ -596,7 +597,8 @@ def main(argv):
 
     # Get the number of CPU cores to use
     num_cpus = multiprocessing.cpu_count()
-    if WORKER_COMPONENT_NAME == component_name and parsed_args.num_cpus != 0:
+    if parsed_args.num_cpus != 0 and component_name in (SEARCH_WORKER_COMPONENT_NAME,
+                                                        WORKER_COMPONENT_NAME):
         num_cpus = parsed_args.num_cpus
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
