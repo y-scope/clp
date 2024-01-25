@@ -110,7 +110,7 @@ def get_archives_for_search(
             """
     filter_clauses = []
     if search_config.end_timestamp is not None:
-        filter_clauses.append("begin_timestamp <= {search_config.end_timestamp}")
+        filter_clauses.append(f"begin_timestamp <= {search_config.end_timestamp}")
     if search_config.begin_timestamp is not None:
         filter_clauses.append(f"end_timestamp >= {search_config.begin_timestamp}")
     if len(filter_clauses) > 0:

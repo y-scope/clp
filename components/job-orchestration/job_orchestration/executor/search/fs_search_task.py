@@ -84,7 +84,7 @@ def search(
     signal.signal(signal.SIGTERM, sigterm_handler)
 
     logger.info("Waiting for search to finish")
-    # communicate is equivalent to wait in this case, but avoid deadlocks if we switch to piping
+    # communicate is equivalent to wait in this case, but avoids deadlocks if we switch to piping
     # stdout/stderr in the future.
     search_proc.communicate()
     return_code = search_proc.returncode

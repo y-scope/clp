@@ -1,5 +1,3 @@
-#include <sys/socket.h>
-
 #include <iostream>
 #include <memory>
 
@@ -9,7 +7,6 @@
 
 #include "../Defs.h"
 #include "../Grep.hpp"
-#include "../networking/socket_utils.hpp"
 #include "../Profiler.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/Constants.hpp"
@@ -52,7 +49,6 @@ enum class SearchFilesResult {
  * @param query
  * @param archive
  * @param file_metadata_ix
- * @param query_cancelled
  * @param results_cache_client
  * @return SearchFilesResult::OpenFailure on failure to open a compressed file
  * @return SearchFilesResult::ResultSendFailure on failure to send a result

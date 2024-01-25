@@ -27,6 +27,6 @@ result_accept_content = [
     "application/x-python-serialize", # pickle
 ]
 
-# TODO: choose a serialization format for tasks and results. Sticking with json is probabl not a
-# idea.
+# TODO: Choose a different serialization format for tasks and results. Sticking with json is
+# probably not a good idea.
 result_serializer = "json"
