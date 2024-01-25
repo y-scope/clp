@@ -410,7 +410,8 @@ def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_cl
               f'{container_clp_config.queue.username}:{container_clp_config.queue.password}@'
               f'{container_clp_config.queue.host}:{container_clp_config.queue.port}',
         '-e', f'RESULT_BACKEND=redis://'
-              f'{container_clp_config.redis.host}:{container_clp_config.redis.port}/0',
+              f'{container_clp_config.redis.host}:{container_clp_config.redis.port}/'
+              f'{container_clp_config.redis.search_backend_database}',
         '-e', f'CLP_LOGS_DIR={container_logs_dir}',
         '-e', f'CLP_LOGGING_LEVEL={clp_config.search_scheduler.logging_level}',
         '-u', f'{os.getuid()}:{os.getgid()}',
@@ -448,6 +449,7 @@ def start_search_worker(instance_id: str, clp_config: CLPConfig, container_clp_c
         container_clp_config,
         celery_method,
         celery_route,
+        clp_config.redis.search_backend_database,
         num_cpus,
         mounts
     )
@@ -455,7 +457,7 @@ def start_search_worker(instance_id: str, clp_config: CLPConfig, container_clp_c
 
 def generic_start_worker(component_name: str, instance_id: str, clp_config: CLPConfig, worker_config: BaseModel,
                  container_clp_config: CLPConfig, celery_method: str, celery_route: str,
-                 num_cpus: int, mounts: CLPDockerMounts):
+                 redis_database: int, num_cpus: int, mounts: CLPDockerMounts):
     logger.info(f"Starting {component_name}...")
 
     container_name = f'clp-{component_name}-{instance_id}'
@@ -485,7 +487,7 @@ def generic_start_worker(component_name: str, instance_id: str, clp_config: CLPC
               f'{container_clp_config.queue.username}:{container_clp_config.queue.password}@'
               f'{container_clp_config.queue.host}:{container_clp_config.queue.port}',
         '-e', f'RESULT_BACKEND=redis://'
-              f'{container_clp_config.redis.host}:{container_clp_config.redis.port}/0',
+              f'{container_clp_config.redis.host}:{container_clp_config.redis.port}/{redis_database}',
         '-e', f'CLP_HOME={CONTAINER_CLP_HOME}',
         '-e', f'CLP_DATA_DIR={container_clp_config.data_directory}',
         '-e', f'CLP_ARCHIVE_OUTPUT_DIR={container_clp_config.archive_output.directory}',

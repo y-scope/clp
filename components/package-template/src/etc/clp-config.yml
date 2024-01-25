@@ -23,6 +23,7 @@
 #redis:
 #  host: "localhost"
 #  port: 6379
+#  search_backend_database: 0
 #
 #results_cache:
 #  host: "localhost"

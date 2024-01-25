@@ -135,8 +135,14 @@ class SearchWorker(BaseModel):
 class Redis(BaseModel):
     host: str = 'localhost'
     port: int = 6379
-    username: typing.Optional[str]
+    search_backend_database: int = 0
     password: typing.Optional[str]
+
+    @validator('host')
+    def validate_host(cls, field):
+        if '' == field:
+            raise ValueError(f'{REDIS_COMPONENT_NAME}.host cannot be empty.')
+        return field
 
 
 class ResultsCache(BaseModel):
