@@ -341,19 +341,19 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
 
 def start_compression_scheduler(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig,
                                 mounts: CLPDockerMounts):
-    execution_path = 'job_orchestration.scheduler.compress.compression_scheduler'
-    generic_start_scheduler(COMPRESSION_SCHEDULER_COMPONENT_NAME, execution_path, instance_id,
+    module_name = 'job_orchestration.scheduler.compress.compression_scheduler'
+    generic_start_scheduler(COMPRESSION_SCHEDULER_COMPONENT_NAME, module_name, instance_id,
                             clp_config, container_clp_config, mounts)
 
 
 def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig,
                            mounts: CLPDockerMounts):
-    execution_path = 'job_orchestration.scheduler.search.search_scheduler'
-    generic_start_scheduler(SEARCH_SCHEDULER_COMPONENT_NAME, execution_path, instance_id,
+    module_name = 'job_orchestration.scheduler.search.search_scheduler'
+    generic_start_scheduler(SEARCH_SCHEDULER_COMPONENT_NAME, module_name, instance_id,
                             clp_config, container_clp_config, mounts)
 
 
-def generic_start_scheduler(component_name: str, execution_path: str, instance_id: str, clp_config: CLPConfig,
+def generic_start_scheduler(component_name: str, module_name: str, instance_id: str, clp_config: CLPConfig,
                             container_clp_config: CLPConfig, mounts: CLPDockerMounts):
     logger.info(f"Starting {component_name}...")
 
@@ -404,7 +404,7 @@ def generic_start_scheduler(component_name: str, execution_path: str, instance_i
 
     scheduler_cmd = [
         'python3', '-u', '-m',
-        execution_path,
+        module_name,
         '--config', str(container_clp_config.logs_directory / container_config_filename),
     ]
     cmd = container_start_cmd + scheduler_cmd
@@ -577,7 +577,7 @@ def main(argv):
         return -1
 
     # Get the number of CPU cores to use
-    num_cpus = multiprocessing.cpu_count() / 2
+    num_cpus = multiprocessing.cpu_count() // 2
     if (COMPRESSION_WORKER_COMPONENT_NAME == component_name or
             SEARCH_WORKER_COMPONENT_NAME == component_name) and parsed_args.num_cpus != 0:
         num_cpus = parsed_args.num_cpus
