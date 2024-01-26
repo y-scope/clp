@@ -359,7 +359,7 @@ def generic_start_scheduler(component_name: str, module_name: str, instance_id: 
 
     container_name = f'clp-{component_name}-{instance_id}'
     if container_exists(container_name):
-        logger.info(f"{SEARCH_SCHEDULER_COMPONENT_NAME} already running.")
+        logger.info(f"{component_name} already running.")
         return
 
     container_config_filename = f'{container_name}.yml'
