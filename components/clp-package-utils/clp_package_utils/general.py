@@ -14,13 +14,14 @@ from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     DB_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
-    RESULTS_CACHE_COMPONENT_NAME
+    RESULTS_CACHE_COMPONENT_NAME,
+    WEBUI_COMPONENT_NAME,
 )
 from clp_py_utils.core import (
     get_config_value,
     make_config_path_absolute,
     read_yaml_config_file,
-    validate_path_could_be_dir
+    validate_path_could_be_dir,
 )
 
 # CONSTANTS
@@ -41,12 +42,18 @@ class DockerMountType(enum.IntEnum):
 class DockerMount:
     def __init__(self, type: DockerMountType, src: pathlib.Path, dst: pathlib.Path, is_read_only: bool = False):
         self.__type = type
-        self.__src = src
-        self.__dst = dst
+        self._src = src
+        self._dst = dst
         self.__is_read_only = is_read_only
 
+    def get_src(self):
+        return self._src
+
+    def get_dst(self):
+        return self._dst
+
     def __str__(self):
-        mount_str = f"type={DOCKER_MOUNT_TYPE_STRINGS[self.__type]},src={self.__src},dst={self.__dst}"
+        mount_str = f"type={DOCKER_MOUNT_TYPE_STRINGS[self.__type]},src={self._src},dst={self._dst}"
         if self.__is_read_only:
             mount_str += ",readonly"
         return mount_str
@@ -59,6 +66,7 @@ class CLPDockerMounts:
         self.data_dir: typing.Optional[DockerMount] = None
         self.logs_dir: typing.Optional[DockerMount] = None
         self.archives_output_dir: typing.Optional[DockerMount] = None
+
 
 def get_clp_home():
     # Determine CLP_HOME from an environment variable or this script's path
@@ -77,6 +85,7 @@ def get_clp_home():
         raise ValueError("CLP_HOME set to nonexistent path.")
 
     return clp_home.resolve()
+
 
 def check_dependencies():
     try:
@@ -277,3 +286,10 @@ def validate_results_cache_config(clp_config: CLPConfig, data_dir: pathlib.Path,
 def validate_worker_config(clp_config: CLPConfig):
     clp_config.validate_input_logs_dir()
     clp_config.validate_archive_output_dir()
+
+
+def validate_webui_config(clp_config: CLPConfig):
+    component_name = WEBUI_COMPONENT_NAME
+
+    validate_port(f"{component_name}.port", clp_config.webui.host,
+                  clp_config.webui.port)

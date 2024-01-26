@@ -15,6 +15,7 @@ SCHEDULER_COMPONENT_NAME = 'scheduler'
 SEARCH_SCHEDULER_COMPONENT_NAME = 'search_scheduler'
 SEARCH_WORKER_COMPONENT_NAME = 'search_worker'
 WORKER_COMPONENT_NAME = 'worker'
+WEBUI_COMPONENT_NAME = 'webui'
 
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path('etc') / 'credentials.yml'
 CLP_METADATA_TABLE_PREFIX = 'clp_'
@@ -100,6 +101,7 @@ class Database(BaseModel):
             connection_params_and_type['ssl_cert'] = self.ssl_cert
         return connection_params_and_type
 
+
 def _validate_logging_level(cls, field):
     if not is_valid_logging_level(field):
         raise ValueError(
@@ -140,6 +142,12 @@ class ResultsCache(BaseModel):
     def validate_host(cls, field):
         if '' == field:
             raise ValueError(f'{RESULTS_CACHE_COMPONENT_NAME}.host cannot be empty.')
+        return field
+
+    @validator('db_name')
+    def validate_db_name(cls, field):
+        if '' == field:
+            raise ValueError(f'{RESULTS_CACHE_COMPONENT_NAME}.db_name cannot be empty.')
         return field
 
     def get_uri(self):
@@ -195,6 +203,11 @@ class ArchiveOutput(BaseModel):
         return d
 
 
+class WebUi(BaseModel):
+    host: str = 'localhost'
+    port: int = 4000
+
+
 class CLPConfig(BaseModel):
     execution_container: str = 'ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-focal:main'
 
@@ -206,6 +219,7 @@ class CLPConfig(BaseModel):
     scheduler: Scheduler = Scheduler()
     search_scheduler: SearchScheduler = SearchScheduler()
     search_worker: SearchWorker = SearchWorker()
+    webui: WebUi = WebUi()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()

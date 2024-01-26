@@ -1,0 +1,6 @@
+{
+  "public": {
+    "SearchResultsCollectionName": "results",
+    "SearchResultsMetadataCollectionName": "results-metadata"
+  }
+}

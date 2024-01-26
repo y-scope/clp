@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 import multiprocessing
 import os
@@ -29,6 +30,7 @@ from clp_package_utils.general import (
     validate_db_config,
     validate_queue_config,
     validate_results_cache_config,
+    validate_webui_config,
     validate_worker_config
 )
 from clp_py_utils.clp_config import (
@@ -40,6 +42,7 @@ from clp_py_utils.clp_config import (
     SEARCH_SCHEDULER_COMPONENT_NAME,
     SEARCH_WORKER_COMPONENT_NAME,
     WORKER_COMPONENT_NAME,
+    WEBUI_COMPONENT_NAME,
 )
 from job_orchestration.scheduler.constants import QueueName
 
@@ -544,6 +547,58 @@ def start_worker(instance_id: str, clp_config: CLPConfig, container_clp_config: 
     logger.info(f"Started {WORKER_COMPONENT_NAME}.")
 
 
+def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts):
+    logger.info(f"Starting {WEBUI_COMPONENT_NAME}...")
+
+    container_name = f'clp-{WEBUI_COMPONENT_NAME}-{instance_id}'
+    if container_exists(container_name):
+        logger.info(f"{WEBUI_COMPONENT_NAME} already running.")
+        return
+
+    validate_webui_config(clp_config)
+
+    settings_json_path = str(mounts.clp_home.get_src() / 'var' / 'www' / 'settings.json')
+    with open(settings_json_path, 'r') as settings_json_file:
+        settings_json_content = settings_json_file.read()
+        meteor_settings = json.loads(settings_json_content)
+
+    # Start container
+    container_cmd = [
+        'docker', 'run',
+        '-d',
+        '--network', 'host',
+        '--rm',
+        '--name', container_name,
+        '-e', f'MONGO_URL={clp_config.results_cache.get_uri()}',
+        '-e', f'PORT={clp_config.webui.port}',
+        '-e', f'ROOT_URL=http://{clp_config.webui.host}',
+        '-e', f'METEOR_SETTINGS={json.dumps(meteor_settings)}',
+        '-e', f'CLP_DB_HOST={clp_config.database.host}',
+        '-e', f'CLP_DB_PORT={clp_config.database.port}',
+        '-e', f'CLP_DB_NAME={clp_config.database.name}',
+        '-e', f'CLP_DB_USER={clp_config.database.username}',
+        '-e', f'CLP_DB_PASS={clp_config.database.password}',
+        '-u', f'{os.getuid()}:{os.getgid()}',
+    ]
+    necessary_mounts = [
+        mounts.clp_home,
+    ]
+    for mount in necessary_mounts:
+        if mount:
+            container_cmd.append('--mount')
+            container_cmd.append(str(mount))
+    container_cmd.append(clp_config.execution_container)
+
+    node_cmd = [
+        str(CONTAINER_CLP_HOME / 'bin' / 'node'),
+        str(CONTAINER_CLP_HOME / 'var' / 'www' / 'main.js')
+    ]
+    cmd = container_cmd + node_cmd
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+
+    logger.info(f"Started {WEBUI_COMPONENT_NAME}.")
+
+
 def main(argv):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
@@ -557,6 +612,7 @@ def main(argv):
     component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
     component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
     component_args_parser.add_parser(SCHEDULER_COMPONENT_NAME)
+    component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
     worker_args_parser = component_args_parser.add_parser(WORKER_COMPONENT_NAME)
     worker_args_parser.add_argument('--num-cpus', type=int, default=0,
                                     help="Number of logical CPU cores to use for compression")
@@ -581,7 +637,7 @@ def main(argv):
 
         # Validate and load necessary credentials
         if component_name in ['', DB_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME,
-                              SEARCH_SCHEDULER_COMPONENT_NAME]:
+                              SEARCH_SCHEDULER_COMPONENT_NAME, WEBUI_COMPONENT_NAME]:
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
         if component_name in ['', QUEUE_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME,
                               WORKER_COMPONENT_NAME, SEARCH_SCHEDULER_COMPONENT_NAME,
@@ -635,6 +691,8 @@ def main(argv):
             start_search_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
         if '' == component_name or WORKER_COMPONENT_NAME == component_name:
             start_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
+        if '' == component_name or WEBUI_COMPONENT_NAME == component_name:
+            start_webui(instance_id, clp_config, mounts)
     except Exception as ex:
         # Stop CLP
         subprocess.run([str(clp_home / 'sbin' / 'stop-clp.sh')], check=True)

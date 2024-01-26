@@ -19,7 +19,8 @@ from clp_py_utils.clp_config import (
     SEARCH_SCHEDULER_COMPONENT_NAME,
     SEARCH_WORKER_COMPONENT_NAME,
     SCHEDULER_COMPONENT_NAME,
-    WORKER_COMPONENT_NAME
+    WORKER_COMPONENT_NAME,
+    WEBUI_COMPONENT_NAME,
 )
 
 # Setup logging
@@ -57,6 +58,7 @@ def main(argv):
     component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
     component_args_parser.add_parser(SCHEDULER_COMPONENT_NAME)
     component_args_parser.add_parser(WORKER_COMPONENT_NAME)
+    component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -89,6 +91,8 @@ def main(argv):
         with open(instance_id_file_path, 'r') as f:
             instance_id = f.readline()
 
+        if '' == component_name or WEBUI_COMPONENT_NAME == component_name:
+            stop_container(f'clp-{WEBUI_COMPONENT_NAME}-{instance_id}')
         if '' == component_name or WORKER_COMPONENT_NAME == component_name:
             stop_container(f'clp-{WORKER_COMPONENT_NAME}-{instance_id}')
         if '' == component_name or SEARCH_WORKER_COMPONENT_NAME == component_name:
