@@ -108,9 +108,11 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
     with closing(sql_adapter.create_connection(True)) as db, \
             closing(db.cursor(dictionary=True)) as db_cursor:
         try:
+            compressed_clp_io_config = zstd_cctx.compress(
+                msgpack.packb(clp_io_config.dict(exclude_none=True, exclude_unset=True)))
             db_cursor.execute(
                 f'INSERT INTO {COMPRESSION_JOBS_TABLE_NAME} (clp_config) VALUES (%s)',
-                (zstd_cctx.compress(msgpack.packb(clp_io_config.dict(exclude_none=True, exclude_unset=True))),)
+                (compressed_clp_io_config,)
             )
             db.commit()
             job_id = db_cursor.lastrowid
