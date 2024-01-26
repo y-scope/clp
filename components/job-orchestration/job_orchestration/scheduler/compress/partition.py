@@ -5,7 +5,6 @@ import typing
 
 import msgpack
 
-from clp_py_utils.clp_config import COMPRESSION_TASKS_TABLE_NAME
 from clp_py_utils.compression import (
     FileMetadata,
     FilesPartition,
@@ -15,11 +14,12 @@ from job_orchestration.scheduler.job_config import PathsToCompress, ClpIoConfig
 
 
 class PathsToCompressBuffer:
-    def __init__(self, scheduler_db_cursor, maintain_file_ordering: bool,
-                 empty_directories_allowed: bool, scheduling_job_id: int, zstd_cctx,
-                 clp_io_config: ClpIoConfig, clp_metadata_db_connection_config: dict):
+    def __init__(self, maintain_file_ordering: bool, empty_directories_allowed: bool,
+                 scheduling_job_id: int, zstd_cctx, clp_io_config: ClpIoConfig,
+                 clp_metadata_db_connection_config: dict):
         self.__files: typing.List[FileMetadata] = []
         self.__tasks: typing.List[typing.Dict[str, typing.Any]] = []
+        self.__partition_info: typing.List[typing.Dict[str, typing.Any]] = []
         self.__maintain_file_ordering: bool = maintain_file_ordering
         if empty_directories_allowed:
             self.__empty_directories: typing.Optional[typing.List[str]] = []
@@ -28,13 +28,9 @@ class PathsToCompressBuffer:
         self.__total_file_size: int = 0
         self.__target_archive_size: int = clp_io_config.output.target_archive_size
         self.__file_size_to_trigger_compression: int = clp_io_config.output.target_archive_size * 2
-        self.__scheduling_job_id: int = scheduling_job_id
-        self.scheduling_job_id: int = scheduling_job_id
         self.__zstd_cctx = zstd_cctx
 
-        self.__scheduler_db_cursor = scheduler_db_cursor
         self.num_tasks = 0
-
         self.__task_arguments = {
             "job_id": scheduling_job_id,
             "task_id": 0,
@@ -45,6 +41,9 @@ class PathsToCompressBuffer:
 
     def get_tasks(self):
         return self.__tasks
+
+    def get_partition_info(self):
+        return self.__partition_info
 
     def add_file(self, file: FileMetadata):
         self.__files.append(file)
@@ -73,18 +72,12 @@ class PathsToCompressBuffer:
             paths_to_compress.empty_directories = self.__empty_directories
             self.__empty_directories = []
 
-        # Note: partition_total_file_size => estimated size, aggregate
-        # the st_size => real original size
-        self.__scheduler_db_cursor.execute(
-            f'INSERT INTO {COMPRESSION_TASKS_TABLE_NAME} '
-            f'(job_id, partition_original_size, clp_paths_to_compress) '
-            f'VALUES({str(self.__scheduling_job_id)}, {str(sum(st_sizes))}, %s);',
-            (self.__zstd_cctx.compress(msgpack.packb(paths_to_compress.dict(exclude_none=True))),)
-        )
+        self.__partition_info.append({
+            'partition_original_size': str(sum(st_sizes)),
+            'paths_to_compress': self.__zstd_cctx.compress(msgpack.packb(paths_to_compress.dict(exclude_none=True)))
+        })
 
-        task_id = self.__scheduler_db_cursor.lastrowid
         task_arguments = self.__task_arguments.copy()
-        task_arguments['task_id'] = task_id
         task_arguments['paths_to_compress_json'] = paths_to_compress.json(exclude_none=True)
         self.__tasks.append(copy.deepcopy(task_arguments))
         self.num_tasks += 1

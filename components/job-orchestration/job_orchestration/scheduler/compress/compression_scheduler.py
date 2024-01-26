@@ -135,6 +135,8 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
 
         paths_to_compress_buffer.flush()
         tasks = paths_to_compress_buffer.get_tasks()
+        partition_info = paths_to_compress_buffer.get_partition_info()
+
         if len(tasks) == 0:
             logger.warning(f'No tasks were created for job {job_id}')
             update_compression_job_metadata(db_cursor, job_id, {
@@ -154,7 +156,15 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
         db_conn.commit()
 
         task_instances = []
-        for task in tasks:
+        for task_idx, task in enumerate(tasks):
+            db_cursor.execute(
+                f'INSERT INTO {COMPRESSION_TASKS_TABLE_NAME} '
+                f'(job_id, partition_original_size, clp_paths_to_compress) '
+                f'VALUES({str(job_id)}, {partition_info[task_idx]["partition_original_size"]}, '
+                f'{partition_info[task_idx]["clp_paths_to_compress"]});'
+            )
+            db_conn.commit()
+            task['task_id'] = db_cursor.lastrowid
             task_instances.append(compress.s(**task))
         tasks_group = celery.group(task_instances)
 
@@ -165,8 +175,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
         )
         db_cursor.execute(f"""
             UPDATE {COMPRESSION_TASKS_TABLE_NAME}
-            SET status='{CompressionTaskStatus.RUNNING}', start_time='{datetime.datetime.now()}'
-            WHERE job_id={job_id}
+            SET status='{CompressionTaskStatus.RUNNING}' WHERE job_id={job_id}
         """)
         db_conn.commit()
 
@@ -208,6 +217,7 @@ def poll_running_jobs(db_conn, db_cursor):
                     job_success = False
                     error_message += f"task {task_result.task_id}: {task_result.error_message}\n"
                     update_compression_task_metadata(db_cursor, task_result.task_id, dict(
+                        start_time=task_result.start_time,
                         status=task_result.status,
                         duration=task_result.duration,
                     ))
@@ -219,6 +229,7 @@ def poll_running_jobs(db_conn, db_cursor):
                     uncompressed_size += task_result.total_uncompressed_size
                     compressed_size += task_result.total_compressed_size
                     update_compression_task_metadata(db_cursor, task_result.task_id, dict(
+                        start_time=task_result.start_time,
                         status=task_result.status,
                         partition_uncompressed_size=task_result.total_uncompressed_size,
                         partition_compressed_size=task_result.total_compressed_size,
