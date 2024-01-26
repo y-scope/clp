@@ -84,9 +84,10 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
             if not no_progress_reporting:
                 db_cursor.execute(completion_query)
                 job_row = db_cursor.fetchone()
+                db.commit()
                 if job_row['duration'] and job_row['duration'] > 0:
                     speed = job_row['uncompressed_size'] / job_row['duration']
-                logger.info(f"Compression finished. Runtime: {str(job_row['duration'])}s. "
+                logger.info(f"Compression finished. Runtime: {job_row['duration']}s. "
                             f"Speed: {pretty_size(speed)}/s.")
             break  # Done
         elif CompressionJobStatus.FAILED == job_status:
@@ -94,8 +95,8 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
             logger.error(f"Compression failed. {job_row['status_msg']}")
             break  # Done
         else:
-            logger.info(f'handler for job_status "{job_status}" is not implemented')
-            raise NotImplementedError
+            error_msg = f"Unhandled CompressionJobStatus: {job_status}"
+            raise NotImplementedError(error_msg)
 
         time.sleep(0.5)
 
@@ -118,6 +119,7 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
             job_id = db_cursor.lastrowid
             handle_job_update(db, db_cursor, job_id, no_progress_reporting)
         except Exception as ex:
+            logger.error(ex)
             return CompressionJobCompletionStatus.FAILED
 
         logger.debug(f'Finished job {job_id}')
