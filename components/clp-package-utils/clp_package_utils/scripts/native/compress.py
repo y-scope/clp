@@ -54,7 +54,6 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
     while True:
         db_cursor.execute(polling_query)
         job_row = db_cursor.fetchone()
-        db.commit()
         if job_row is None:
             raise Exception(f"Job with id={job_id} not found in database")
 

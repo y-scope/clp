@@ -155,6 +155,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
         db_conn.commit()
 
         task_instances = []
+        logger.info(f'partition_info: {partition_info}')
         for task_idx, task in enumerate(tasks):
             db_cursor.execute(
                 f'INSERT INTO {COMPRESSION_TASKS_TABLE_NAME} '

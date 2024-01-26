@@ -74,7 +74,7 @@ class PathsToCompressBuffer:
 
         self.__partition_info.append({
             'partition_original_size': str(sum(st_sizes)),
-            'paths_to_compress': self.__zstd_cctx.compress(msgpack.packb(paths_to_compress.dict(exclude_none=True)))
+            'clp_paths_to_compress': self.__zstd_cctx.compress(msgpack.packb(paths_to_compress.dict(exclude_none=True)))
         })
 
         task_arguments = self.__task_arguments.copy()
