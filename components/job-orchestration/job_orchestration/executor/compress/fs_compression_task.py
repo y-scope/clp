@@ -13,8 +13,8 @@ from job_orchestration.executor.compress.celery import app
 from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
 from job_orchestration.scheduler.constants import CompressionTaskStatus, CompressionTaskUpdateType
 from job_orchestration.scheduler.scheduler_data import (
-    CompressionTaskFailureUpdate,
-    CompressionTaskSuccessUpdate
+    CompressionTaskFailureResult,
+    CompressionTaskSuccessResult
 )
 
 # Setup logging
@@ -162,7 +162,7 @@ def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, pat
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
 
     if compression_successful:
-        return CompressionTaskSuccessUpdate(
+        return CompressionTaskSuccessResult(
             type=CompressionTaskUpdateType.COMPRESSION,
             job_id=job_id,
             task_id=task_id,
@@ -173,7 +173,7 @@ def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, pat
             total_compressed_size=worker_output['total_compressed_size']
         ).dict()
     else:
-        return CompressionTaskFailureUpdate(
+        return CompressionTaskFailureResult(
             type=CompressionTaskUpdateType.COMPRESSION,
             job_id=job_id,
             task_id=task_id,

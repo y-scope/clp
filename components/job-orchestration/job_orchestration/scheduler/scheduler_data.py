@@ -15,7 +15,7 @@ class CompressionJob(BaseModel):
     async_task_result: typing.Any
 
 
-class CompressionTaskUpdate(BaseModel):
+class CompressionTaskResult(BaseModel):
     type: str
     task_id: int
     status: str
@@ -38,11 +38,11 @@ class CompressionTaskUpdate(BaseModel):
         return field
 
 
-class CompressionTaskFailureUpdate(CompressionTaskUpdate):
+class CompressionTaskFailureResult(CompressionTaskResult):
     error_message: str
 
 
-class CompressionTaskSuccessUpdate(CompressionTaskUpdate):
+class CompressionTaskSuccessResult(CompressionTaskResult):
     total_uncompressed_size: int
     total_compressed_size: int
 
