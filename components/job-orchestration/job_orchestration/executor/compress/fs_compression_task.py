@@ -163,7 +163,6 @@ def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, pat
 
     if compression_successful:
         return CompressionTaskSuccessResult(
-            job_id=job_id,
             task_id=task_id,
             status=CompressionTaskStatus.SUCCEEDED,
             start_time=start_time,
@@ -173,7 +172,6 @@ def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, pat
         ).dict()
     else:
         return CompressionTaskFailureResult(
-            job_id=job_id,
             task_id=task_id,
             status=CompressionTaskStatus.FAILED,
             start_time=start_time,
