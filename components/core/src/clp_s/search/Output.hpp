@@ -241,7 +241,6 @@ private:
      * @param op
      * @param unresolved_tokens
      * @param cur_idx
-     * @param value
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
