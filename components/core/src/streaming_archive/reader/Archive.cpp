@@ -157,25 +157,6 @@ namespace streaming_archive { namespace reader {
             SPDLOG_ERROR("streaming_archive::reader::Archive: Failed to decompress variables from logtype id {}", compressed_msg.get_logtype_id());
             return false;
         }
-
-        // Determine which timestamp pattern to use
-        const auto& timestamp_patterns = file.get_timestamp_patterns();
-        if (!timestamp_patterns.empty() && compressed_msg.get_message_number() >= timestamp_patterns[file.get_current_ts_pattern_ix()].first) {
-            while (true) {
-                if (file.get_current_ts_pattern_ix() >= timestamp_patterns.size() - 1) {
-                    // Already at last timestamp pattern
-                    break;
-                }
-                auto next_patt_start_message_num = timestamp_patterns[file.get_current_ts_pattern_ix() + 1].first;
-                if (compressed_msg.get_message_number() < next_patt_start_message_num) {
-                    // Not yet time for next timestamp pattern
-                    break;
-                }
-                file.increment_current_ts_pattern_ix();
-            }
-            timestamp_patterns[file.get_current_ts_pattern_ix()].second.insert_formatted_timestamp(compressed_msg.get_ts_in_milli(), decompressed_msg);
-        }
-
         return true;
     }
 
