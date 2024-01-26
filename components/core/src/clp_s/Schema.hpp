@@ -1,6 +1,7 @@
 #ifndef CLP_S_SCHEMA_HPP
 #define CLP_S_SCHEMA_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
