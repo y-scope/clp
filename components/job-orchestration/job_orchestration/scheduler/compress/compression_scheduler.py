@@ -285,21 +285,20 @@ def main(argv):
     logger.info('Starting compression scheduler')
     sql_adapter = SQL_Adapter(clp_config.database)
 
-    while True:
-        try:
-            # Start Job Processing Loop
-            with closing(sql_adapter.create_connection(True)) as db_conn, \
-                    closing(db_conn.cursor(dictionary=True)) as db_cursor:
+    with closing(sql_adapter.create_connection(True)) as db_conn, \
+            closing(db_conn.cursor(dictionary=True)) as db_cursor:
+        # Start Job Processing Loop
+        while True:
+            try:
                 search_and_schedule_new_tasks(db_conn, db_cursor, sql_adapter.database_config.
                                               get_clp_connection_params_and_type(True))
                 poll_running_jobs(db_conn, db_cursor)
-        except:
-            logger.exception("Error in scheduling.")
-        finally:
-            try:
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
             except KeyboardInterrupt:
                 logger.info('Gracefully shutting down')
+                break
+            except Exception as ex:
+                logger.exception(f"Error in scheduling: {ex}")
                 break
 
 
