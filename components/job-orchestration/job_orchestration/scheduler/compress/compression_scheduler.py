@@ -88,7 +88,6 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
         clp_io_config = ClpIoConfig.parse_obj(msgpack.unpackb(zstd_dctx.decompress(job_row['clp_config'])))
 
         paths_to_compress_buffer = PathsToCompressBuffer(
-            scheduler_db_cursor=db_cursor,
             maintain_file_ordering=False,
             empty_directories_allowed=True,
             scheduling_job_id=job_id,
@@ -163,9 +162,9 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
                 f'VALUES({str(job_id)}, {partition_info[task_idx]["partition_original_size"]}, '
                 f'{partition_info[task_idx]["clp_paths_to_compress"]});'
             )
-            db_conn.commit()
             task['task_id'] = db_cursor.lastrowid
             task_instances.append(compress.s(**task))
+        db_conn.commit()
         tasks_group = celery.group(task_instances)
 
         job = CompressionJob(
