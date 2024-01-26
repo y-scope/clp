@@ -202,9 +202,8 @@ def poll_running_jobs(db_conn, db_cursor):
             duration = (datetime.datetime.now() - job.start_time).total_seconds()
             # Check for finished jobs
             for task_result in returned_results:
-                task_result = CompressionTaskSuccessUpdate.parse_obj(task_result)
                 if not task_result['status'] == CompressionTaskStatus.SUCCEEDED:
-                    task_result = CompressionTaskSuccessUpdate.parse_obj(task_result)
+                    task_result = CompressionTaskFailureUpdate.parse_obj(task_result)
                     job_success = False
                     error_message += f"task {task_result.task_id}: {task_result.error_message}\n"
                     update_compression_task_metadata(db_cursor, task_result.task_id, dict(

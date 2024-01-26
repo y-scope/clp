@@ -3,9 +3,10 @@ import typing
 
 from pydantic import BaseModel, validator
 
-from job_orchestration.scheduler.constants import \
-    CompressionTaskStatus, \
+from job_orchestration.scheduler.constants import (
+    CompressionTaskStatus,
     CompressionTaskUpdateType
+)
 
 
 class CompressionJob(BaseModel):
