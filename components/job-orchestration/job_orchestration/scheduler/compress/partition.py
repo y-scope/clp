@@ -38,7 +38,7 @@ class PathsToCompressBuffer:
         self.__task_arguments = {
             "job_id": scheduling_job_id,
             "task_id": 0,
-            "clp_io_config_json": clp_io_config.json(),
+            "clp_io_config_json": clp_io_config.json(exclude_none=True),
             "paths_to_compress_json": "",
             "clp_metadata_db_connection_config": clp_metadata_db_connection_config
         }
@@ -85,7 +85,7 @@ class PathsToCompressBuffer:
         task_id = self.__scheduler_db_cursor.lastrowid
         task_arguments = self.__task_arguments.copy()
         task_arguments['task_id'] = task_id
-        task_arguments['paths_to_compress_json'] = json.dumps(paths_to_compress.dict(exclude_none=True))
+        task_arguments['paths_to_compress_json'] = paths_to_compress.json(exclude_none=True)
         self.__tasks.append(copy.deepcopy(task_arguments))
         self.num_tasks += 1
 
