@@ -10,6 +10,7 @@
 
 #include "Defs.h"
 #include "ErrorCode.hpp"
+#include "math_utils.hpp"
 #include "Platform.hpp"
 #include "spdlog_with_specializations.hpp"
 #include "TraceableException.hpp"
@@ -250,9 +251,9 @@ void PageAllocatedVector<ValueType>::increase_capacity(size_t required_capacity)
     if (required_capacity <= m_capacity) {
         return;
     }
-    size_t new_size = ROUND_UP_TO_MULTIPLE(
+    size_t new_size = int_round_up_to_multiple(
             std::max(2 * m_capacity, required_capacity) * sizeof(ValueType),
-            m_page_size
+            static_cast<size_t>(m_page_size)
     );
 
     void* new_region;

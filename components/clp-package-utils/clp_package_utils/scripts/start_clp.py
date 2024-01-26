@@ -11,6 +11,8 @@ import uuid
 
 import yaml
 
+from pydantic import BaseModel
+
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CONTAINER_CLP_HOME,
@@ -35,6 +37,8 @@ from clp_py_utils.clp_config import (
     QUEUE_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
     SCHEDULER_COMPONENT_NAME,
+    SEARCH_SCHEDULER_COMPONENT_NAME,
+    SEARCH_WORKER_COMPONENT_NAME,
     WORKER_COMPONENT_NAME,
 )
 from job_orchestration.scheduler.constants import QueueName
@@ -330,6 +334,153 @@ def start_scheduler(instance_id: str, clp_config: CLPConfig, container_clp_confi
     logger.info(f"Started {SCHEDULER_COMPONENT_NAME}.")
 
 
+def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig,
+                           mounts: CLPDockerMounts):
+    component_name = SEARCH_SCHEDULER_COMPONENT_NAME
+    logger.info(f"Starting {component_name}...")
+
+    container_name = f'clp-{component_name}-{instance_id}'
+    if container_exists(container_name):
+        logger.info(f"{SEARCH_SCHEDULER_COMPONENT_NAME} already running.")
+        return
+
+    container_config_filename = f'{container_name}.yml'
+    container_config_file_path = clp_config.logs_directory / container_config_filename
+    with open(container_config_file_path, 'w') as f:
+        yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
+
+    logs_dir = clp_config.logs_directory / component_name
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    container_logs_dir = container_clp_config.logs_directory / component_name
+
+    clp_site_packages_dir = CONTAINER_CLP_HOME / 'lib' / 'python3' / 'site-packages'
+    container_start_cmd = [
+        'docker', 'run',
+        '-di',
+        '--network', 'host',
+        '-w', str(CONTAINER_CLP_HOME),
+        '--rm',
+        '--name', container_name,
+        '-e', f'PYTHONPATH={clp_site_packages_dir}',
+        '-e', f'BROKER_URL=amqp://'
+              f'{container_clp_config.queue.username}:{container_clp_config.queue.password}@'
+              f'{container_clp_config.queue.host}:{container_clp_config.queue.port}',
+        '-e', f'RESULT_BACKEND=rpc://'
+              f'{container_clp_config.queue.username}:{container_clp_config.queue.password}@'
+              f'{container_clp_config.queue.host}:{container_clp_config.queue.port}',
+        '-e', f'CLP_LOGS_DIR={container_logs_dir}',
+        '-e', f'CLP_LOGGING_LEVEL={clp_config.search_scheduler.logging_level}',
+        '-u', f'{os.getuid()}:{os.getgid()}',
+        '--mount', str(mounts.clp_home),
+    ]
+    necessary_mounts = [
+        mounts.logs_dir,
+    ]
+    for mount in necessary_mounts:
+        if mount:
+            container_start_cmd.append('--mount')
+            container_start_cmd.append(str(mount))
+    container_start_cmd.append(clp_config.execution_container)
+
+    scheduler_cmd = [
+        'python3', '-u', '-m',
+        'job_orchestration.search_scheduler.search_scheduler',
+        '--config', str(container_clp_config.logs_directory / container_config_filename),
+    ]
+    cmd = container_start_cmd + scheduler_cmd
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+
+    logger.info(f"Started {component_name}.")
+
+
+def start_search_worker(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig,
+                        num_cpus: int, mounts: CLPDockerMounts):
+    celery_method = 'job_orchestration.executor.search'
+    celery_route = f"{QueueName.SEARCH}"
+    generic_start_worker(
+        SEARCH_WORKER_COMPONENT_NAME,
+        instance_id,
+        clp_config,
+        clp_config.search_worker,
+        container_clp_config,
+        celery_method,
+        celery_route,
+        num_cpus,
+        mounts
+    )
+
+
+def generic_start_worker(component_name: str, instance_id: str, clp_config: CLPConfig, worker_config: BaseModel,
+                 container_clp_config: CLPConfig, celery_method: str, celery_route: str,
+                 num_cpus: int, mounts: CLPDockerMounts):
+    logger.info(f"Starting {component_name}...")
+
+    container_name = f'clp-{component_name}-{instance_id}'
+    if container_exists(container_name):
+        logger.info(f"{component_name} already running.")
+        return
+
+    validate_worker_config(clp_config)
+
+    logs_dir = clp_config.logs_directory / component_name
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    container_logs_dir = container_clp_config.logs_directory / component_name
+
+    # Create necessary directories
+    clp_config.archive_output.directory.mkdir(parents=True, exist_ok=True)
+
+    clp_site_packages_dir = CONTAINER_CLP_HOME / 'lib' / 'python3' / 'site-packages'
+    container_start_cmd = [
+        'docker', 'run',
+        '-di',
+        '--network', 'host',
+        '-w', str(CONTAINER_CLP_HOME),
+        '--rm',
+        '--name', container_name,
+        '-e', f'PYTHONPATH={clp_site_packages_dir}',
+        '-e', f'BROKER_URL=amqp://'
+              f'{container_clp_config.queue.username}:{container_clp_config.queue.password}@'
+              f'{container_clp_config.queue.host}:{container_clp_config.queue.port}',
+        '-e', f'RESULT_BACKEND=rpc://'
+              f'{container_clp_config.queue.username}:{container_clp_config.queue.password}@'
+              f'{container_clp_config.queue.host}:{container_clp_config.queue.port}',
+        '-e', f'CLP_HOME={CONTAINER_CLP_HOME}',
+        '-e', f'CLP_DATA_DIR={container_clp_config.data_directory}',
+        '-e', f'CLP_ARCHIVE_OUTPUT_DIR={container_clp_config.archive_output.directory}',
+        '-e', f'CLP_LOGS_DIR={container_logs_dir}',
+        '-e', f'CLP_LOGGING_LEVEL={worker_config.logging_level}',
+        '-u', f'{os.getuid()}:{os.getgid()}',
+        '--mount', str(mounts.clp_home),
+    ]
+    necessary_mounts = [
+        mounts.data_dir,
+        mounts.logs_dir,
+        mounts.archives_output_dir,
+        mounts.input_logs_dir,
+    ]
+    for mount in necessary_mounts:
+        if mount:
+            container_start_cmd.append('--mount')
+            container_start_cmd.append(str(mount))
+    container_start_cmd.append(clp_config.execution_container)
+
+    worker_cmd = [
+        'python3', str(clp_site_packages_dir / 'bin' / 'celery'),
+        '-A',
+        celery_method,
+        'worker',
+        '--concurrency', str(num_cpus),
+        '--loglevel', 'WARNING',
+        '-f', str(container_logs_dir / "worker.log"),
+        '-Q', celery_route,
+        '-n', component_name,
+    ]
+    cmd = container_start_cmd + worker_cmd
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+
+    logger.info(f"Started {component_name}.")
+
+
 def start_worker(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig, num_cpus: int,
                  mounts: CLPDockerMounts):
     logger.info(f"Starting {WORKER_COMPONENT_NAME}...")
@@ -379,13 +530,13 @@ def start_worker(instance_id: str, clp_config: CLPConfig, container_clp_config: 
     container_start_cmd.append(clp_config.execution_container)
 
     worker_cmd = [
-        str(clp_site_packages_dir / 'bin' / 'celery'),
+        'python3', str(clp_site_packages_dir / 'bin' / 'celery'),
         '-A',
         'job_orchestration.executor',
         'worker',
         '--concurrency', str(num_cpus),
         '--loglevel', 'WARNING',
-        '-Q', f"{QueueName.COMPRESSION},{QueueName.SEARCH}",
+        '-Q', f"{QueueName.COMPRESSION}",
     ]
     cmd = container_start_cmd + worker_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
@@ -429,9 +580,12 @@ def main(argv):
         clp_config = validate_and_load_config_file(config_file_path, default_config_file_path, clp_home)
 
         # Validate and load necessary credentials
-        if component_name in ['', DB_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME]:
+        if component_name in ['', DB_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME,
+                              SEARCH_SCHEDULER_COMPONENT_NAME]:
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
-        if component_name in ['', QUEUE_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME, WORKER_COMPONENT_NAME]:
+        if component_name in ['', QUEUE_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME,
+                              WORKER_COMPONENT_NAME, SEARCH_SCHEDULER_COMPONENT_NAME,
+                              SEARCH_WORKER_COMPONENT_NAME]:
             validate_and_load_queue_credentials_file(clp_config, clp_home, True)
 
         clp_config.validate_data_dir()
@@ -475,6 +629,10 @@ def main(argv):
             start_results_cache(instance_id, clp_config, conf_dir)
         if '' == component_name or SCHEDULER_COMPONENT_NAME == component_name:
             start_scheduler(instance_id, clp_config, container_clp_config, mounts)
+        if '' == component_name or SEARCH_SCHEDULER_COMPONENT_NAME == component_name:
+            start_search_scheduler(instance_id, clp_config, container_clp_config, mounts)
+        if '' == component_name or SEARCH_WORKER_COMPONENT_NAME == component_name:
+            start_search_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
         if '' == component_name or WORKER_COMPONENT_NAME == component_name:
             start_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
     except Exception as ex:

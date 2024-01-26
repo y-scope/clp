@@ -80,20 +80,28 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             "Ignore case distinctions in both WILDCARD STRING and the input files"
     );
 
+    po::options_description options_batch_control("Batch Controls");
+    options_batch_control.add_options()(
+            "batch-size,b",
+            po::value<uint64_t>(&m_batch_size)->value_name("SIZE")->default_value(m_batch_size),
+            "Batch size"
+    );
+
     // Define visible options
     po::options_description visible_options;
     visible_options.add(options_general);
     visible_options.add(options_match_control);
+    visible_options.add(options_batch_control);
 
     // Define hidden positional options (not shown in Boost's program options help message)
     po::options_description hidden_positional_options;
     // clang-format off
     hidden_positional_options.add_options()(
-            "search-controller-host",
-            po::value<string>(&m_search_controller_host)
+            "mongodb-uri",
+            po::value<string>(&m_mongodb_uri)
     )(
-            "search-controller-port",
-            po::value<string>(&m_search_controller_port)
+            "mongodb-collection",
+            po::value<string>(&m_mongodb_collection)
     )(
             "archive-path",
             po::value<string>(&m_archive_path)
@@ -106,8 +114,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     );
     // clang-format on
     po::positional_options_description positional_options_description;
-    positional_options_description.add("search-controller-host", 1);
-    positional_options_description.add("search-controller-port", 1);
+    positional_options_description.add("mongodb-uri", 1);
+    positional_options_description.add("mongodb-collection", 1);
     positional_options_description.add("archive-path", 1);
     positional_options_description.add("wildcard-string", 1);
     positional_options_description.add("file-path", 1);
@@ -116,6 +124,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     po::options_description all_options;
     all_options.add(options_general);
     all_options.add(options_match_control);
+    all_options.add(options_batch_control);
     all_options.add(hidden_positional_options);
 
     // Parse options
@@ -159,10 +168,12 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             cerr << endl;
 
             cerr << "Examples:" << endl;
-            cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to the controller)"
-                    R"( at localhost:5555)"
+            cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to )"
+                    R"(mongodb://127.0.0.1:27017/test "result" collection )"
                  << endl;
-            cerr << "  " << get_program_name() << R"( localhost 5555 ARCHIVE_PATH " ERROR ")"
+            cerr << "  " << get_program_name()
+                 << R"(mongodb://127.0.0.1:27017/test result )"
+                    R"(ARCHIVE_PATH " ERROR ")"
                  << endl;
             cerr << endl;
 
@@ -178,14 +189,14 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             return ParsingResult::InfoCommand;
         }
 
-        // Validate search controller host was specified
-        if (m_search_controller_host.empty()) {
-            throw invalid_argument("SEARCH_CONTROLLER_HOST not specified or empty.");
+        // Validate mongodb uri was specified
+        if (m_mongodb_uri.empty()) {
+            throw invalid_argument("MONGODB_URI not specified or empty.");
         }
 
-        // Validate search controller port was specified
-        if (m_search_controller_port.empty()) {
-            throw invalid_argument("SEARCH_CONTROLLER_PORT not specified or empty.");
+        // Validate mongodb collection was specified
+        if (m_mongodb_collection.empty()) {
+            throw invalid_argument("MONGODB_COLLECTION not specified or empty.");
         }
 
         // Validate archive path was specified
@@ -245,6 +256,11 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 );
             }
         }
+
+        // Validate batch size
+        if (m_batch_size == 0) {
+            throw invalid_argument("Batch size cannot be 0.");
+        }
     } catch (exception& e) {
         SPDLOG_ERROR("{}", e.what());
         print_basic_usage();
@@ -256,8 +272,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 }
 
 void CommandLineArguments::print_basic_usage() const {
-    cerr << "Usage: " << get_program_name()
-         << " [OPTIONS] SEARCH_CONTROLLER_HOST SEARCH_CONTROLLER_PORT "
+    cerr << "Usage: " << get_program_name() << " [OPTIONS] MONGODB_URI MONGODB_COLLECTION "
          << R"(ARCHIVE_PATH "WILDCARD STRING" [FILE])" << endl;
 }
 }  // namespace clp::clo
