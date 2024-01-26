@@ -53,15 +53,11 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
     job_last_uncompressed_size = 0
     while True:
         db_cursor.execute(polling_query)
-        results = db_cursor.fetchall()
+        job_row = db_cursor.fetchone()
         db.commit()
-        if len(results) > 1:
-            logging.error("Duplicated job_id")
-            logging.error(str(results))
-        if len(results) == 0:
-            time.sleep(0.5)
-            continue
-        job_row = results[0]
+        if job_row is None:
+            raise Exception(f"Job with id={job_id} not found in database")
+
         job_status = job_row['status']
 
         if not no_progress_reporting:
