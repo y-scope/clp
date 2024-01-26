@@ -14,7 +14,7 @@ class CompressionJob(BaseModel):
 
 class CompressionTaskResult(BaseModel):
     task_id: int
-    status: str
+    status: int
     start_time: datetime.datetime
     duration: float
 
