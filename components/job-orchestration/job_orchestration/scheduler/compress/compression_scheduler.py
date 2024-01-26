@@ -3,10 +3,10 @@ import celery
 import datetime
 import logging
 import os
-import pathlib
 import sys
 import time
 from contextlib import closing
+from pathlib import Path
 
 import msgpack
 import zstandard
@@ -27,10 +27,11 @@ from job_orchestration.scheduler.constants import \
     CompressionJobStatus, \
     CompressionTaskStatus
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
+from job_orchestration.scheduler.job_config import ClpIoConfig
 from job_orchestration.scheduler.scheduler_data import CompressionJob
 
 # Setup logging
-logger = get_logger("compression-job-handler")
+logger = get_logger(__name__)
 
 scheduled_jobs = {}
 
@@ -64,7 +65,7 @@ def update_compression_job_metadata(db_cursor, job_id, kv):
     db_cursor.execute(query)
 
 
-def search_and_schedule_new_tasks(db_conn, db_cursor, database_connection_params):
+def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection_config):
     """
     For all jobs with SUBMITTED status, split the job into tasks and schedule them.
     """
@@ -79,7 +80,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_connection_params
     for job_row in fetch_new_jobs(db_cursor):
         db_conn.commit()
         job_id = job_row['id']
-        clp_io_config = msgpack.unpackb(zstd_dctx.decompress(job_row['clp_config']))
+        clp_io_config = ClpIoConfig.parse_obj(msgpack.unpackb(zstd_dctx.decompress(job_row['clp_config'])))
 
         paths_to_compress_buffer = PathsToCompressBuffer(
             scheduler_db_cursor=db_cursor,
@@ -88,16 +89,16 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, database_connection_params
             scheduling_job_id=job_id,
             zstd_cctx=zstd_cctx,
             clp_io_config=clp_io_config,
-            database_connection_params=database_connection_params
+            clp_metadata_db_connection_config=clp_metadata_db_connection_config
         )
 
-        with open(pathlib.Path(clp_io_config['input']['list_path']).resolve(), 'r') as f:
+        with open(Path(clp_io_config.input.list_path).resolve(), 'r') as f:
             for path_idx, path in enumerate(f, start=1):
                 stripped_path = path.strip()
                 if '' == stripped_path:
                     # Skip empty paths
                     continue
-                path = pathlib.Path(stripped_path)
+                path = Path(stripped_path)
 
                 try:
                     file, empty_directory = validate_path_and_get_info(CONTAINER_INPUT_LOGS_ROOT_DIR, path)
@@ -256,7 +257,7 @@ def main(argv):
     args = args_parser.parse_args(argv[1:])
 
     # Setup logging
-    log_file = pathlib.Path(os.getenv("CLP_LOGS_DIR")) / "compression_scheduler.log"
+    log_file = Path(os.getenv("CLP_LOGS_DIR")) / "compression_scheduler.log"
     logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
     logging_file_handler.setFormatter(get_logging_formatter())
     logger.addHandler(logging_file_handler)
@@ -265,17 +266,18 @@ def main(argv):
     set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
 
     # Load configuration
-    config_path = pathlib.Path(args.config)
+    config_path = Path(args.config)
     try:
         clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
     except ValidationError as err:
         logger.error(err)
+        return -1
     except Exception as ex:
         logger.error(ex)
         # read_yaml_config_file already logs the parsing error inside
         return -1
 
-    logger.info('Starting CLP compression job scheduler')
+    logger.info('Starting compression scheduler')
     sql_adapter = SQL_Adapter(clp_config.database)
 
     while True:

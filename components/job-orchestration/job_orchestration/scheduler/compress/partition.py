@@ -11,13 +11,13 @@ from clp_py_utils.compression import (
     FilesPartition,
     group_files_by_similar_filenames,
 )
-from job_orchestration.scheduler.job_config import PathsToCompress
+from job_orchestration.scheduler.job_config import PathsToCompress, ClpIoConfig
 
 
 class PathsToCompressBuffer:
     def __init__(self, scheduler_db_cursor, maintain_file_ordering: bool,
                  empty_directories_allowed: bool, scheduling_job_id: int, zstd_cctx,
-                 clp_io_config: dict, database_connection_params: dict):
+                 clp_io_config: ClpIoConfig, clp_metadata_db_connection_config: dict):
         self.__files: typing.List[FileMetadata] = []
         self.__tasks: typing.List[typing.Dict[str, typing.Any]] = []
         self.__maintain_file_ordering: bool = maintain_file_ordering
@@ -26,8 +26,8 @@ class PathsToCompressBuffer:
         else:
             self.__empty_directories: typing.Optional[typing.List[str]] = None
         self.__total_file_size: int = 0
-        self.__target_archive_size: int = clp_io_config['output']['target_archive_size']
-        self.__file_size_to_trigger_compression: int = clp_io_config['output']['target_archive_size'] * 2
+        self.__target_archive_size: int = clp_io_config.output.target_archive_size
+        self.__file_size_to_trigger_compression: int = clp_io_config.output.target_archive_size * 2
         self.__scheduling_job_id: int = scheduling_job_id
         self.scheduling_job_id: int = scheduling_job_id
         self.__zstd_cctx = zstd_cctx
@@ -38,9 +38,9 @@ class PathsToCompressBuffer:
         self.__task_arguments = {
             "job_id": scheduling_job_id,
             "task_id": 0,
-            "clp_io_config_json": json.dumps(clp_io_config),
+            "clp_io_config_json": clp_io_config.json(),
             "paths_to_compress_json": "",
-            "database_connection_params": database_connection_params
+            "clp_metadata_db_connection_config": clp_metadata_db_connection_config
         }
 
     def get_tasks(self):

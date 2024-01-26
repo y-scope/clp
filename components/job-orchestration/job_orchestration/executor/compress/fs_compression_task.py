@@ -24,7 +24,7 @@ logger = get_task_logger(__name__)
 
 def run_clp(clp_config: ClpIoConfig, clp_home: pathlib.Path, data_dir: pathlib.Path, archive_output_dir: pathlib.Path,
             logs_dir: pathlib.Path, job_id: int, task_id: int, paths_to_compress: PathsToCompress,
-            database_connection_params):
+            clp_metadata_db_connection_config):
     """
     Compresses files from an FS into archives on an FS
 
@@ -36,7 +36,7 @@ def run_clp(clp_config: ClpIoConfig, clp_home: pathlib.Path, data_dir: pathlib.P
     :param job_id:
     :param task_id:
     :param paths_to_compress: PathToCompress
-    :param database_connection_params:
+    :param clp_metadata_db_connection_config
     :return: tuple -- (whether compression was successful, output messages)
     """
     instance_id_str = f'compression-job-{job_id}-task-{task_id}'
@@ -48,7 +48,7 @@ def run_clp(clp_config: ClpIoConfig, clp_home: pathlib.Path, data_dir: pathlib.P
     # Generate database config file for clp
     db_config_file_path = data_dir / f'{instance_id_str}-db-config.yml'
     db_config_file = open(db_config_file_path, 'w')
-    yaml.safe_dump(database_connection_params, db_config_file)
+    yaml.safe_dump(clp_metadata_db_connection_config, db_config_file)
     db_config_file.close()
 
     # Start assembling compression command
@@ -144,7 +144,7 @@ def run_clp(clp_config: ClpIoConfig, clp_home: pathlib.Path, data_dir: pathlib.P
 
 @app.task(bind=True)
 def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, paths_to_compress_json: str,
-             database_connection_params):
+             clp_metadata_db_connection_config):
     clp_home_str = os.getenv('CLP_HOME')
     data_dir_str = os.getenv('CLP_DATA_DIR')
     archive_output_dir_str = os.getenv('CLP_ARCHIVE_OUTPUT_DIR')
@@ -166,7 +166,7 @@ def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, pat
     compression_successful, worker_output = run_clp(clp_io_config, pathlib.Path(clp_home_str),
                                                     pathlib.Path(data_dir_str), pathlib.Path(archive_output_dir_str),
                                                     pathlib.Path(logs_dir_str), job_id, task_id, paths_to_compress,
-                                                    database_connection_params)
+                                                    clp_metadata_db_connection_config)
     duration = (datetime.datetime.now() - task_update.start_time).total_seconds()
     if compression_successful:
         task_update = CompressionTaskSuccessUpdate(

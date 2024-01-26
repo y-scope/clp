@@ -49,7 +49,7 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
             closing(scheduling_db.cursor(dictionary=True)) as scheduling_db_cursor:
         try:
             scheduling_db_cursor.execute(
-                f'INSERT INTO {COMPRESSION_JOBS_TABLE_NAME} (clp_config) VALUES (%s);',
+                f'INSERT INTO {COMPRESSION_JOBS_TABLE_NAME} (clp_config) VALUES (%s)',
                 (zstd_cctx.compress(msgpack.packb(clp_io_config.dict(exclude_none=True, exclude_unset=True))),)
             )
             scheduling_db.commit()
