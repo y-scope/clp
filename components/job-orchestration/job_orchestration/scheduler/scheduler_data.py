@@ -12,7 +12,7 @@ from job_orchestration.scheduler.constants import (
 class CompressionJob(BaseModel):
     id: int
     start_time: datetime.datetime
-    tasks: typing.Any
+    async_task_result: typing.Any
 
 
 class CompressionTaskUpdate(BaseModel):

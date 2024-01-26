@@ -161,7 +161,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
         job = CompressionJob(
             id=job_id,
             start_time=start_time,
-            tasks=tasks_group.apply_async()
+            async_task_result=tasks_group.apply_async()
         )
         db_cursor.execute(f"""
             UPDATE {COMPRESSION_TASKS_TABLE_NAME}
@@ -196,7 +196,7 @@ def poll_running_jobs(db_conn, db_cursor):
         error_message = ""
 
         try:
-            returned_results = get_results_or_timeout(job.tasks)
+            returned_results = get_results_or_timeout(job.async_task_result)
             if returned_results is None:
                 continue
 
