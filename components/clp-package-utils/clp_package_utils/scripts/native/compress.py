@@ -110,6 +110,8 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
                 (compressed_clp_io_config,)
             )
             db.commit()
+            logger.info("Compression job submitted.")
+
             job_id = db_cursor.lastrowid
             handle_job_update(db, db_cursor, job_id, no_progress_reporting)
         except Exception as ex:
@@ -172,8 +174,6 @@ def main(argv):
         # Copy to jobs directory
         log_list_path = pathlib.Path(parsed_args.input_list).resolve()
         shutil.copy(log_list_path, comp_jobs_dir / log_list_path.name)
-
-    logger.info("Compression job submitted.")
 
     mysql_adapter = SQL_Adapter(clp_config.database)
     clp_input_config = InputConfig(list_path=str(log_list_path))
