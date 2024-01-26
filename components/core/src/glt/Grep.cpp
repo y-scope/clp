@@ -124,12 +124,9 @@ QueryToken::QueryToken(
                    || m_has_greedy_wildcard_in_middle);
 
         if (!is_var) {
-            // GLT TODO: This also looks weird to me. if it is not a var, then it must had a
-            // wildcard with it. then it can never have type = logtype?
             if (!m_contains_wildcards) {
                 m_type = Type::Logtype;
             } else {
-                // GLT TODO: this looks little weird to me. why it can still be a float or intvar?
                 m_type = Type::Ambiguous;
                 m_possible_types.push_back(Type::Logtype);
                 m_possible_types.push_back(Type::IntVar);
@@ -145,8 +142,6 @@ QueryToken::QueryToken(
                 value_without_wildcards.resize(value_without_wildcards.length() - 1);
             }
 
-            // GLT TODO: how about wildcard at the middle?
-            // maybe we need a little more complicated if-else statement
             encoded_variable_t encoded_var;
             bool converts_to_non_dict_var = false;
             bool converts_to_int
@@ -173,13 +168,6 @@ QueryToken::QueryToken(
                 m_type = Type::DictionaryVar;
                 m_cannot_convert_to_non_dict_var = true;
             } else {
-                // GLT TODO: think about this carefully.
-                // we should consider with wildcard and without wildcard.
-                // First, the token must not have a wildcard at the middle, otherwise it can't be
-                // converted. If the token doesn't have prefix or suffix, then it must not be a
-                // dictionary variable. and we know the type explicitly If the token has a prefix or
-                // suffix wildcard, then it is possible it can be a dict var, for example 88* can
-                // match to 888, 88.2 or 88type
                 m_type = Type::Ambiguous;
                 m_possible_types.push_back(Type::IntVar);
                 m_possible_types.push_back(Type::FloatVar);
@@ -512,8 +500,7 @@ void find_boundaries(
             break;
         }
     }
-    // This means no variable needs to be readed? then the only possible is no token contains
-    // variable
+
     if (var_end_ix <= var_begin_ix) {
         printf("tokens contain a variable, end index %lu is smaller and equal than begin index "
                "%lu\n",
@@ -589,7 +576,7 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
             // we also remove the original escape because it was purely for query
             token += next_char;
         } else if (ir::is_variable_placeholder(next_char)) {
-            // If we are at here, it means we have processed a '\\\v' sequence
+            // If we are at here, it means we are in the middle of processing a '\\\v' sequence
             // in this case, since we removed only one escape from the previous '\\' sequence
             // we need to remove another escape here.
             token += next_char;
@@ -622,20 +609,12 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
                 // Must mean the token is text only, with * in it.
                 logtype += '*';
             } else {
-                // GLT TODO: I don't understand this part.
-                // My guess it that, since it has a wildcard at the middle, there's no way it can
-                // convert to float or int. Hence, the only possible type must be dictionary
-                // variable.
                 logtype += '*';
                 LogTypeDictionaryEntry::add_dict_var(logtype);
                 logtype += '*';
             }
         } else {
             if (!query_token.is_var()) {
-                // GLT: This is possible when an ambiguious token has type = logtype
-                // i.e. , a token with wildcard, either on the two side, or a middle wildcard.
-                // However, because we are sure it is a logtype, it is easier to handle. Maybe we
-                // just need to Treat it as usual.
                 ir::append_constant_to_logtype(query_token.get_value(), escape_handler, logtype);
             } else if (!process_var_token(query_token, archive, ignore_case, sub_query, logtype)) {
                 return SubQueryMatchabilityResult::WontMatch;
