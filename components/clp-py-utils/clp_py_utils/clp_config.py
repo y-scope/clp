@@ -1,6 +1,5 @@
 import pathlib
 import typing
-from typing import Any, List
 
 from pydantic import BaseModel, validator
 from enum import auto
