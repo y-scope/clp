@@ -153,42 +153,33 @@ def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, pat
     clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
     paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
 
-    task_update = CompressionTaskUpdate(
-        type=CompressionTaskUpdateType.COMPRESSION,
-        job_id=job_id,
-        task_id=task_id,
-        status=CompressionTaskStatus.SCHEDULED,
-        start_time=datetime.datetime.now()
-    )
-
+    start_time = datetime.datetime.now()
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")
-
     compression_successful, worker_output = run_clp(clp_io_config, pathlib.Path(clp_home_str),
                                                     pathlib.Path(data_dir_str), pathlib.Path(archive_output_dir_str),
                                                     pathlib.Path(logs_dir_str), job_id, task_id, paths_to_compress,
                                                     clp_metadata_db_connection_config)
-    duration = (datetime.datetime.now() - task_update.start_time).total_seconds()
+    duration = (datetime.datetime.now() - start_time).total_seconds()
+    logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
+
     if compression_successful:
-        task_update = CompressionTaskSuccessUpdate(
+        return CompressionTaskSuccessUpdate(
             type=CompressionTaskUpdateType.COMPRESSION,
             job_id=job_id,
             task_id=task_id,
             status=CompressionTaskStatus.SUCCEEDED,
-            start_time=task_update.start_time,
+            start_time=start_time,
             duration=duration,
             total_uncompressed_size=worker_output['total_uncompressed_size'],
             total_compressed_size=worker_output['total_compressed_size']
-        )
+        ).dict()
     else:
-        task_update = CompressionTaskFailureUpdate(
+        return CompressionTaskFailureUpdate(
             type=CompressionTaskUpdateType.COMPRESSION,
             job_id=job_id,
             task_id=task_id,
             status=CompressionTaskStatus.FAILED,
-            start_time=task_update.start_time,
+            start_time=start_time,
             duration=duration,
             error_message=worker_output['error_message']
-        )
-
-    logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
-    return task_update.dict()
+        ).dict()

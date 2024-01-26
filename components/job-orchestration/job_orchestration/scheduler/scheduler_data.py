@@ -16,11 +16,10 @@ class CompressionJob(BaseModel):
 
 class CompressionTaskUpdate(BaseModel):
     type: str
-    job_id: int
     task_id: int
     status: str
-    start_time: typing.Optional[datetime.datetime] = None
-    duration: typing.Optional[float] = None
+    start_time: datetime.datetime
+    duration: float
 
     @validator('type')
     def validate_type(cls, field):

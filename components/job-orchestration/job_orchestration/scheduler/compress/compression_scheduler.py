@@ -28,7 +28,11 @@ from job_orchestration.scheduler.constants import \
     CompressionTaskStatus
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
 from job_orchestration.scheduler.job_config import ClpIoConfig
-from job_orchestration.scheduler.scheduler_data import CompressionJob
+from job_orchestration.scheduler.scheduler_data import (
+    CompressionJob,
+    CompressionTaskSuccessUpdate,
+    CompressionTaskFailureUpdate,
+)
 
 # Setup logging
 logger = get_logger(__name__)
@@ -198,32 +202,35 @@ def poll_running_jobs(db_conn, db_cursor):
             duration = (datetime.datetime.now() - job.start_time).total_seconds()
             # Check for finished jobs
             for task_result in returned_results:
+                task_result = CompressionTaskSuccessUpdate.parse_obj(task_result)
                 if not task_result['status'] == CompressionTaskStatus.SUCCEEDED:
+                    task_result = CompressionTaskSuccessUpdate.parse_obj(task_result)
                     job_success = False
-                    error_message += f"task {task_result['task_id']}: {task_result['error_message']}\n"
-                    update_compression_task_metadata(db_cursor, task_result['task_id'], dict(
-                        status=task_result['status'],
-                        duration=task_result['duration'],
+                    error_message += f"task {task_result.task_id}: {task_result.error_message}\n"
+                    update_compression_task_metadata(db_cursor, task_result.task_id, dict(
+                        status=task_result.status,
+                        duration=task_result.duration,
                     ))
-                    db_conn.commit()
-                    logger.error(f"Compression task job-{job_id}-task-{task_result['task_id']} failed with error: "
-                                 f"{task_result['error_message']}.")
+                    logger.error(f"Compression task job-{job_id}-task-{task_result.task_id} failed with error: "
+                                 f"{task_result.error_message}.")
                 else:
+                    task_result = CompressionTaskSuccessUpdate.parse_obj(task_result)
                     num_tasks_completed += 1
-                    uncompressed_size += task_result['total_uncompressed_size']
-                    compressed_size += task_result['total_compressed_size']
-                    update_compression_task_metadata(db_cursor, task_result['task_id'], dict(
-                        status=task_result['status'],
-                        partition_uncompressed_size=task_result['total_uncompressed_size'],
-                        partition_compressed_size=task_result['total_compressed_size'],
-                        duration=task_result['duration'],
+                    uncompressed_size += task_result.total_uncompressed_size
+                    compressed_size += task_result.total_compressed_size
+                    update_compression_task_metadata(db_cursor, task_result.task_id, dict(
+                        status=task_result.status,
+                        partition_uncompressed_size=task_result.total_uncompressed_size,
+                        partition_compressed_size=task_result.total_compressed_size,
+                        duration=task_result.duration,
                     ))
-                    db_conn.commit()
-                    logger.info(f"Compression task job-{job_id}-task-{task_result['task_id']} completed in "
-                                f"{task_result['duration']} second(s).")
+                    logger.info(f"Compression task job-{job_id}-task-{task_result.task_id} completed in "
+                                f"{task_result.duration} second(s).")
         except Exception as e:
             logger.error(f"Error while getting results for job {job_id}: {e}")
             job_success = False
+
+        db_conn.commit()
 
         if job_success:
             logger.info(f"Job {job_id} succeeded.")
@@ -243,7 +250,6 @@ def poll_running_jobs(db_conn, db_cursor):
             ))
         db_conn.commit()
 
-        # delete job
         jobs_to_delete.append(job_id)
 
     for job_id in jobs_to_delete:
