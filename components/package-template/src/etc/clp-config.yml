@@ -7,6 +7,9 @@
 ## File containing credentials for services
 #credentials_file_path: "etc/credentials.yml"
 #
+#package:
+#  mode: "clp"
+#
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
 #  host: "localhost"

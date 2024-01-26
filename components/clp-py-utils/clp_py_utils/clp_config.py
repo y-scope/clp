@@ -1,7 +1,10 @@
 import pathlib
 import typing
+from typing import Any, List
 
 from pydantic import BaseModel, validator
+from enum import auto
+from strenum import KebabCaseStrEnum
 
 from .core import get_config_value, make_config_path_absolute, read_yaml_config_file, validate_path_could_be_dir
 from .clp_logging import is_valid_logging_level, get_valid_logging_level
@@ -19,6 +22,22 @@ WORKER_COMPONENT_NAME = 'worker'
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path('etc') / 'credentials.yml'
 CLP_METADATA_TABLE_PREFIX = 'clp_'
 SEARCH_JOBS_TABLE_NAME = 'distributed_search_jobs'
+
+# Package modes
+class PackageMode(KebabCaseStrEnum):
+    CLP = auto()
+
+VALID_PACKAGE_MODES = [mode.value for mode in PackageMode]
+
+
+class Package(BaseModel):
+    mode: str = 'clp'
+
+    @validator('mode')
+    def validate_mode(cls, field):
+        if field not in VALID_PACKAGE_MODES:
+            raise ValueError(f"package.mode must be one of the follwing {'|'.join(VALID_PACKAGE_MODES)}")
+        return field
 
 
 class Database(BaseModel):
@@ -200,6 +219,7 @@ class CLPConfig(BaseModel):
 
     input_logs_directory: pathlib.Path = pathlib.Path('/')
 
+    package: Package = Package()
     database: Database = Database()
     queue: Queue = Queue()
     results_cache: ResultsCache = ResultsCache()
