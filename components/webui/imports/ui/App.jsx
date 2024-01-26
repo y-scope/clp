@@ -43,9 +43,9 @@ export const App = () => {
     return (<div style={{display: "flex", height: "100%"}}>
         <Sidebar
             isSidebarCollapsed={isSidebarStateCollapsed}
+            routes={ROUTES}
             onSidebarToggle={handleSidebarToggle}
             onSidebarTransitioned={handleSidebarTransitioned}
-            routes={ROUTES}
         />
         <div style={{flexGrow: 1, minWidth: 0}}>
             <div style={{height: "100%"}}>

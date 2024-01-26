@@ -7,7 +7,17 @@ import {
     faAngleDoubleRight,
 } from "@fortawesome/free-solid-svg-icons";
 
-const Sidebar = ({isSidebarCollapsed, onSidebarToggle, onSidebarTransitioned, routes}) => {
+/**
+ * Renders a sidebar navigation component, which includes navigation links and a toggle for
+ * collapsing or expanding the sidebar.
+ *
+ * @param {boolean} isSidebarCollapsed indicates whether the sidebar is collapsed
+ * @param {Object[]} routes objects for navigation links
+ * @param {function} onSidebarToggle callback to toggle the sidebar's collapsed state
+ * @param {function} onSidebarTransitioned callback for sidebar transition end event
+ * @returns {JSX.Element}
+ */
+const Sidebar = ({isSidebarCollapsed, routes, onSidebarToggle, onSidebarTransitioned}) => {
     return (
         <div
             id="sidebar"

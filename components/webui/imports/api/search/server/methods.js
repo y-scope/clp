@@ -8,9 +8,21 @@ import {getCollection, MY_MONGO_DB, SearchResultsMetadataCollection} from "../co
 
 const SEARCH_JOBS_TABLE_NAME = "distributed_search_jobs";
 
-const sleep = (s) => new Promise(r => setTimeout(r, s * 1000));
+/**
+ * Creates a promise that resolves after a specified number of seconds.
+ *
+ * @param {number} seconds to wait before resolving the promise
+ * @returns {Promise<void>} that resolves after the specified delay
+ */
+const sleep = (seconds) => new Promise(r => setTimeout(r, seconds * 1000));
 
 
+/**
+ * Submits a query job to the SQL database and returns the job ID.
+ *
+ * @param {Object} args containing the search configuration.
+ * @returns {number|null} job ID on successful submission, or null in case of failure
+ */
 const submitQuery = async (args) => {
     let jobId = null;
 
@@ -25,7 +37,14 @@ const submitQuery = async (args) => {
     return jobId;
 };
 
-
+/**
+ * Waits for a job to finish and retrieves its status from the database.
+ *
+ * @param {number} jobId of the job to monitor
+ *
+ * @returns {?string} null if the job completes successfully; an error message if the job exits
+ * in an unexpected status or encounters an error during monitoring
+ */
 const waitTillJobFinishes = async (jobId) => {
     let errorMsg = null;
 
@@ -58,13 +77,22 @@ const waitTillJobFinishes = async (jobId) => {
     return errorMsg;
 };
 
+/**
+ * Cancels a job by updating its status to 'CANCELLING' in the database.
+ *
+ * @param {number} jobId of the job to be cancelled
+ */
 const cancelQuery = async (jobId) => {
     const [rows, _] = await SQL_CONNECTION.query(`UPDATE ${SEARCH_JOBS_TABLE_NAME}
                                                   SET status = ${JobStatus.CANCELLING}
                                                   WHERE id = (?)`, [jobId]);
 };
 
-
+/**
+ * Updates the search event when the specified job finishes.
+ *
+ * @param {number} jobId of the job to monitor
+ */
 const updateSearchEventWhenJobFinishes = async (jobId) => {
     const errorMsg = await waitTillJobFinishes(jobId);
     const filter = {
@@ -81,6 +109,11 @@ const updateSearchEventWhenJobFinishes = async (jobId) => {
     SearchResultsMetadataCollection.update(filter, modifier);
 };
 
+/**
+ * Creates MongoDB indexes for a specific job's collection.
+ *
+ * @param {?number} jobId used to identify the Mongo Collection to add indexes
+ */
 const createMongoIndexes = async (jobId) => {
     const timestampAscendingIndex = {
         key: {timestamp: 1, _id: 1},
@@ -100,6 +133,15 @@ const createMongoIndexes = async (jobId) => {
 };
 
 Meteor.methods({
+    /**
+     * Submits a search query and initiates the search process.
+     *
+     * @param {string} queryString
+     * @param {number} timestampBegin
+     * @param {number} timestampEnd
+     *
+     * @returns {Object} containing {jobId} of the submitted search job
+     */
     async "search.submitQuery"({
                                    queryString,
                                    timestampBegin,
@@ -132,6 +174,11 @@ Meteor.methods({
         return {jobId};
     },
 
+    /**
+     * Clears the results of a search operation identified by jobId.
+     *
+     * @param {string} jobId of the search results to clear
+     */
     async "search.clearResults"({
                                     jobId
                                 })
@@ -144,6 +191,11 @@ Meteor.methods({
         delete MY_MONGO_DB[jobId.toString()];
     },
 
+    /**
+     * Cancels an ongoing search operation identified by jobId.
+     *
+     * @param {string} jobId of the search operation to cancel
+     */
     async "search.cancelOperation"({
                                        jobId
                                    }) {

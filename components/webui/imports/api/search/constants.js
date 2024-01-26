@@ -1,4 +1,13 @@
 let enumSearchSignal;
+/**
+ * Enum of search-related signals.
+ *
+ * This includes request and response signals for various search operations and their respective
+ * states.
+ *
+ * @constant
+ * @type {Object}
+ */
 export const SearchSignal = Object.freeze({
     NONE: (enumSearchSignal=0),
     REQ_MASK: (enumSearchSignal = 0x10000000),
@@ -13,8 +22,13 @@ export const SearchSignal = Object.freeze({
 export const isSearchSignalReq = (e) => (0 !== (SearchSignal.REQ_MASK & e));
 export const isSearchSignalRsp = (e) => (0 !== (SearchSignal.RSP_MASK & e));
 
-// below should match `job_orchestration.search_scheduler.common`: class JobStatus
 let enumJobStatus;
+/**
+ * Enum of job statuses, matching the `JobStatus` class in `job_orchestration.search_scheduler.common`.
+ *
+ * @constant
+ * @type {Object}
+ */
 export const JobStatus = Object.freeze({
     PENDING: (enumJobStatus=0),
     RUNNING: ++enumJobStatus,

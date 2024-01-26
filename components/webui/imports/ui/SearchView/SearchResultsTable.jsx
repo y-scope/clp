@@ -6,6 +6,21 @@ import ReactVisibilitySensor from "react-visibility-sensor";
 
 export const VISIBLE_RESULTS_LIMIT_INITIAL = 10;
 const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
+
+/**
+ * Renders a table displaying search results, which includes features like sorting and dynamic
+ * loading of more results when scrolling to the bottom, up to the number of results available on
+ * the server.
+ *
+ * @param {Object[]} searchResults results to display
+ * @param {number} maxLinesPerResult maximum number of lines to display per search result
+ * @param {Object} fieldToSortBy used for sorting results
+ * @param {function} setFieldToSortBy callback to set fieldToSortBy
+ * @param {number} numResultsOnServer total number of results available on the server
+ * @param {number} visibleSearchResultsLimit limit of visible search results
+ * @param {function} setVisibleSearchResultsLimit callback to set visibleSearchResultsLimit
+ * @returns {JSX.Element}
+ */
 export const SearchResultsTable = ({
     searchResults,
     maxLinesPerResult,

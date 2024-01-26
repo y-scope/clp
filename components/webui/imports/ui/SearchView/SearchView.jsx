@@ -15,14 +15,17 @@ import {SearchControls} from "./SearchControls";
 import {SearchResults} from "./SearchResults";
 import {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResultsTable";
 
+/**
+ * Provides a search interface, which search queries and visualizes search results.
+ */
 const SearchView = () => {
     // Query states
     const [jobId, setJobId] = useState(INVALID_JOB_ID);
-
     const [operationErrorMsg, setOperationErrorMsg] = useState("");
     const [localLastSearchSignal, setLocalLastSearchSignal] = useState(SearchSignal.NONE);
-
     const dbRef = useRef({});
+    // gets updated as soon as localLastSearchSignal is updated
+    // to avoid reading old localLastSearchSignal value from Closures
     const localLastSearchSignalRef = useRef(localLastSearchSignal);
 
     // Query options
@@ -131,7 +134,7 @@ const SearchView = () => {
             }
 
             if (SearchSignal.REQ_CLEARING === localLastSearchSignalRef.current) {
-                // The check prevents clearing localLastSearchSignal=SearchSignal.REQ_QUERYING
+                // The check prevents clearing `localLastSearchSignal = SearchSignal.REQ_QUERYING`
                 // when `handleClearResults` is called by submitQuery.
                 setLocalLastSearchSignal(SearchSignal.NONE);
             }
@@ -161,9 +164,9 @@ const SearchView = () => {
                 timeRange={timeRange}
                 setTimeRange={setTimeRange}
                 resultsMetadata={resultsMetadata}
-                submitQuery={submitQuery}
-                handleClearResults={handleClearResults}
-                cancelOperation={cancelOperation}
+                onSubmitQuery={submitQuery}
+                onClearResults={handleClearResults}
+                onCancelOperation={cancelOperation}
             />
 
             <SearchStatus
@@ -188,6 +191,14 @@ const SearchView = () => {
     </div>);
 };
 
+/**
+ * Displays the status of a search operation, which shows error messages if any, and otherwise
+ * displays the current status of the search.
+ *
+ * @param {Object} resultsMetadata including the last search signal
+ * @param {string} [errorMsg] - message if there is an error
+ * @returns {JSX.Element}
+ */
 const SearchStatus = ({
     resultsMetadata,
     errorMsg,

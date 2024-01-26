@@ -13,6 +13,17 @@ import {
 } from "react-bootstrap";
 import {SearchSignal} from "../../api/search/constants";
 
+/**
+ * Renders the header for the search results, which includes the job ID, the number of results
+ * found, and a control for setting the maximum number of lines per search result.
+ *
+ * @param {string} jobId of the search job
+ * @param {Object} resultsMetadata which includes last request / response signal
+ * @param {number} numResultsOnServer of the search job
+ * @param {number} maxLinesPerResult to display
+ * @param {function} setMaxLinesPerResult callback to set setMaxLinesPerResult
+ * @returns {JSX.Element}
+ */
 export const SearchResultsHeader = ({
     jobId,
     resultsMetadata,

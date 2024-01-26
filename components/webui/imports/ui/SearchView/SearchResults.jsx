@@ -2,6 +2,21 @@ import React from "react";
 import {SearchResultsHeader} from "./SearchResultsHeader";
 import {SearchResultsTable} from "./SearchResultsTable";
 
+/**
+ * Renders the search results, which includes the search results header and the search results
+ * table.
+ *
+ * @param {string} jobId of the search job
+ * @param {Object[]} searchResults results to display
+ * @param {Object} resultsMetadata which includes total results count and last request / response signal
+ * @param {Object} fieldToSortBy used for sorting results
+ * @param {function} setFieldToSortBy callback to set fieldToSortBy
+ * @param {number} visibleSearchResultsLimit limit of visible search results
+ * @param {function} setVisibleSearchResultsLimit callback to set visibleSearchResultsLimit
+ * @param {number} maxLinesPerResult to display
+ * @param {function} setMaxLinesPerResult callback to set maxLinesPerResult
+ * @returns {JSX.Element}
+ */
 export const SearchResults = ({
     jobId,
     searchResults,
@@ -14,10 +29,9 @@ export const SearchResults = ({
     setMaxLinesPerResult,
 }) => {
     const numResultsOnServer = resultsMetadata["numTotalResults"] || searchResults.length;
-    const isMessageTable = searchResults.length === 0 ||
-        Object.keys(searchResults[0]).includes("timestamp");
+
     return <>
-        {isMessageTable && <div className={"flex-column"}>
+        <div className={"flex-column"}>
             <SearchResultsHeader
                 jobId={jobId}
                 resultsMetadata={resultsMetadata}
@@ -25,7 +39,7 @@ export const SearchResults = ({
                 maxLinesPerResult={maxLinesPerResult}
                 setMaxLinesPerResult={setMaxLinesPerResult}
             />
-        </div>}
+        </div>
         {(0 < searchResults.length) && <div className="flex-column overflow-auto">
             <SearchResultsTable
                 searchResults={searchResults}

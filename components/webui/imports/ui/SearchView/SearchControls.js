@@ -10,7 +10,12 @@ import {cTimePresets} from "./datetime";
 import LOCAL_STORAGE_KEYS from "../constants/LOCAL_STORAGE_KEYS";
 import {isSearchSignalReq, SearchSignal} from "../../api/search/constants";
 
-
+/**
+ * Renders a date picker control for selecting date and time.
+ *
+ * @param {Object} props to be passed to the DatePicker component
+ * @returns {JSX.Element}
+ */
 const SearchControlsDatePicker = (props) => (<DatePicker
     {...props}
     className={"timestamp-picker"}
@@ -23,6 +28,12 @@ const SearchControlsDatePicker = (props) => (<DatePicker
     timeIntervals={15}
 />)
 
+/**
+ * Renders a label for a search filter control.
+ *
+ * @param {Object} props to be passed to the Form.Label component
+ * @returns {JSX.Element}
+ */
 const SearchControlsFilterLabel = (props) => (<Form.Label
     {...props}
     column={"sm"}
@@ -30,6 +41,14 @@ const SearchControlsFilterLabel = (props) => (<Form.Label
     className="search-filter-control-label"
 />)
 
+/**
+ * Renders the controls for filtering search results by time range, including a date picker and
+ * preset time range options.
+ *
+ * @param {Object} timeRange for filtering.
+ * @param {function} setTimeRange callback to set timeRange
+ * @returns {JSX.Element}
+ */
 const SearchFilterControlsDrawer = ({
                                         timeRange, setTimeRange
                                     }) => {
@@ -70,7 +89,9 @@ const SearchFilterControlsDrawer = ({
     // Compute range of end timestamp so that it's after the begin timestamp
     let timestampEndMin = null;
     let timestampEndMax = null;
-    if (timeRange.begin.getFullYear() === timeRange.end.getFullYear() && timeRange.begin.getMonth() === timeRange.end.getMonth() && timeRange.begin.getDate() === timeRange.end.getDate()) {
+    if (timeRange.begin.getFullYear() === timeRange.end.getFullYear() &&
+        timeRange.begin.getMonth() === timeRange.end.getMonth() &&
+        timeRange.begin.getDate() === timeRange.end.getDate()) {
         timestampEndMin = new Date(timeRange.begin);
         // TODO This doesn't handle leap seconds
         timestampEndMax = new Date(timeRange.end).setHours(23, 59, 59, 999);
@@ -121,15 +142,29 @@ const SearchFilterControlsDrawer = ({
     </div>);
 }
 
+/**
+ * Renders the search controls including query input, filter drawer toggle, and operation buttons
+ * like submit, clear, and cancel. It also manages the state of the drawer.
+ *
+ * @param {string} queryString for matching logs
+ * @param {function} setQueryString callback to set queryString
+ * @param {Object} timeRange for filtering
+ * @param {function} setTimeRange callback to set timeRange
+ * @param {Object} resultsMetadata which includes last request / response signal
+ * @param {function} onSubmitQuery callback to submit the search query
+ * @param {function} onClearResults callback to clear search results
+ * @param {function} onCancelOperation callback to cancel the ongoing search operation
+ * @returns {JSX.Element}
+ */
 export const SearchControls = ({
                                    queryString,
                                    setQueryString,
                                    timeRange,
                                    setTimeRange,
                                    resultsMetadata,
-                                   submitQuery,
-                                   handleClearResults,
-                                   cancelOperation,
+                                   onSubmitQuery,
+                                   onClearResults,
+                                   onCancelOperation,
                                }) => {
     const [drawerOpen, setDrawerOpen] = useState("true" === localStorage.getItem(LOCAL_STORAGE_KEYS.SEARCH_CONTROLS_VISIBLE));
     const [canceling, setCanceling] = useState(false);
@@ -150,12 +185,12 @@ export const SearchControls = ({
         e.preventDefault();
 
         setCanceling(false);
-        submitQuery();
+        onSubmitQuery();
     }
 
     const handleCancelOperation = () => {
         setCanceling(true);
-        cancelOperation();
+        onCancelOperation();
     }
 
     return <>
@@ -186,7 +221,7 @@ export const SearchControls = ({
                         (SearchSignal.RSP_DONE === resultsMetadata["lastSignal"]) &&
                         <Button
                             disabled={true === isSearchSignalReq(resultsMetadata["lastSignal"])}
-                            onClick={handleClearResults}
+                            onClick={onClearResults}
                             title={"Clear Results"}
                             variant={"info"}>
                             <FontAwesomeIcon icon={faTrash}/>
