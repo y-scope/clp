@@ -74,9 +74,11 @@ export const SearchResultsHeader = ({
                                 </InputGroup>
                             </Form>
                         </Popover>}>
-                        <Button type={"button"} variant={"light"}
-                                title={"Display Settings"}><FontAwesomeIcon
-                            icon={faCog}/></Button>
+                        {(0 < numResultsOnServer) ? <Button type={"button"}
+                                 variant={"light"}
+                                 title={"Display Settings"}>
+                            <FontAwesomeIcon icon={faCog}/>
+                        </Button> : <></>}
                     </OverlayTrigger>
                 </Col>
             </Row>
