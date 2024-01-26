@@ -192,36 +192,35 @@ def poll_running_jobs(db_conn, db_cursor):
 
         try:
             returned_results = get_results_or_timeout(job.tasks)
-            if returned_results is not None:
-                duration = (datetime.datetime.now() - job.start_time).total_seconds()
-                # Check for finished jobs
-                for task_result in returned_results:
-                    if not task_result['status'] == CompressionTaskStatus.SUCCEEDED:
-                        job_success = False
-                        error_message += f"task {task_result['task_id']}: {task_result['error_message']}\n"
-                        update_compression_task_metadata(db_cursor, task_result['task_id'], dict(
-                            status=task_result['status'],
-                            duration=task_result['duration'],
-                        ))
-                        db_conn.commit()
-                        logger.error(f"Compression task job-{job_id}-task-{task_result['task_id']} failed with error: "
-                                     f"{task_result['error_message']}.")
-                    else:
-                        num_tasks_completed += 1
-                        uncompressed_size += task_result['total_uncompressed_size']
-                        compressed_size += task_result['total_compressed_size']
-                        update_compression_task_metadata(db_cursor, task_result['task_id'], dict(
-                            status=task_result['status'],
-                            partition_uncompressed_size=task_result['total_uncompressed_size'],
-                            partition_compressed_size=task_result['total_compressed_size'],
-                            duration=task_result['duration'],
-                        ))
-                        db_conn.commit()
-                        logger.info(f"Compression task job-{job_id}-task-{task_result['task_id']} completed in "
-                                    f"{task_result['duration']} second(s).")
-            else:
-                # If results not ready check next job
+            if returned_results is None:
                 continue
+
+            duration = (datetime.datetime.now() - job.start_time).total_seconds()
+            # Check for finished jobs
+            for task_result in returned_results:
+                if not task_result['status'] == CompressionTaskStatus.SUCCEEDED:
+                    job_success = False
+                    error_message += f"task {task_result['task_id']}: {task_result['error_message']}\n"
+                    update_compression_task_metadata(db_cursor, task_result['task_id'], dict(
+                        status=task_result['status'],
+                        duration=task_result['duration'],
+                    ))
+                    db_conn.commit()
+                    logger.error(f"Compression task job-{job_id}-task-{task_result['task_id']} failed with error: "
+                                 f"{task_result['error_message']}.")
+                else:
+                    num_tasks_completed += 1
+                    uncompressed_size += task_result['total_uncompressed_size']
+                    compressed_size += task_result['total_compressed_size']
+                    update_compression_task_metadata(db_cursor, task_result['task_id'], dict(
+                        status=task_result['status'],
+                        partition_uncompressed_size=task_result['total_uncompressed_size'],
+                        partition_compressed_size=task_result['total_compressed_size'],
+                        duration=task_result['duration'],
+                    ))
+                    db_conn.commit()
+                    logger.info(f"Compression task job-{job_id}-task-{task_result['task_id']} completed in "
+                                f"{task_result['duration']} second(s).")
         except Exception as e:
             logger.error(f"Error while getting results for job {job_id}: {e}")
             job_success = False
