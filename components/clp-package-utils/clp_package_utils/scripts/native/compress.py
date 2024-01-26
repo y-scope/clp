@@ -184,10 +184,8 @@ def main(argv):
         output=OutputConfig.parse_obj(clp_config.archive_output)
     )
 
-    handle_job(sql_adapter=mysql_adapter, clp_io_config=clp_io_config,
-               no_progress_reporting=parsed_args.no_progress_reporting)
-
-    return 0
+    return handle_job(sql_adapter=mysql_adapter, clp_io_config=clp_io_config,
+                      no_progress_reporting=parsed_args.no_progress_reporting)
 
 
 if '__main__' == __name__:
