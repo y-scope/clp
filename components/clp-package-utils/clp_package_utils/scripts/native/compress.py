@@ -98,10 +98,8 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
 
 
 def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress_reporting: bool):
-    # Instantiate zstdandard compression context
     zstd_cctx = zstd.ZstdCompressor(level=3)
 
-    # Connect to SQL Database
     with closing(sql_adapter.create_connection(True)) as db, \
             closing(db.cursor(dictionary=True)) as db_cursor:
         try:
