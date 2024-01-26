@@ -236,7 +236,7 @@ private:
     );
 
     /**
-     * The implementation of evaluate_array_filter
+     * Evaluates a filter expression on a single value for precise array search.
      * @param item
      * @param op
      * @param unresolved_tokens
@@ -244,7 +244,7 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    inline bool evaluate_array_filter(
+    inline bool evaluate_array_filter_value(
             ondemand::value& item,
             FilterOperation op,
             DescriptorList const& unresolved_tokens,
@@ -253,7 +253,7 @@ private:
     ) const;
 
     /**
-     * The implementation of evaluate_array_filter
+     * Evaluates a filter expression on an array (top level or nested) for precise array search.
      * @param array
      * @param op
      * @param unresolved_tokens
@@ -261,7 +261,7 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_array_filter(
+    bool evaluate_array_filter_array(
             ondemand::array& array,
             FilterOperation op,
             DescriptorList const& unresolved_tokens,
@@ -270,7 +270,7 @@ private:
     ) const;
 
     /**
-     * The implementation of evaluate_array_filter
+     * Evaluates a filter expression on an object inside of an array for precise array search.
      * @param object
      * @param op
      * @param unresolved_tokens
@@ -278,7 +278,7 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_array_filter(
+    bool evaluate_array_filter_object(
             ondemand::object& object,
             FilterOperation op,
             DescriptorList const& unresolved_tokens,

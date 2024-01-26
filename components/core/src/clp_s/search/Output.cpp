@@ -595,10 +595,10 @@ bool Output::evaluate_array_filter(
     m_maybe_number = !(op == FilterOperation::EXISTS || op == FilterOperation::NEXISTS)
                      && (operand->as_float(tmp_double, op) || operand->as_int(tmp_int, op));
 
-    return evaluate_array_filter(array, op, unresolved_tokens, 0, operand);
+    return evaluate_array_filter_array(array, op, unresolved_tokens, 0, operand);
 }
 
-bool Output::evaluate_array_filter(
+bool Output::evaluate_array_filter_value(
         ondemand::value& item,
         FilterOperation op,
         DescriptorList const& unresolved_tokens,
@@ -609,13 +609,21 @@ bool Output::evaluate_array_filter(
     switch (item.type()) {
         case ondemand::json_type::object: {
             ondemand::object nested_object = item.get_object();
-            if (evaluate_array_filter(nested_object, op, unresolved_tokens, cur_idx, operand)) {
+            if (evaluate_array_filter_object(
+                        nested_object,
+                        op,
+                        unresolved_tokens,
+                        cur_idx,
+                        operand
+                ))
+            {
                 match = true;
             }
         } break;
         case ondemand::json_type::array: {
             ondemand::array nested_array = item.get_array();
-            if (evaluate_array_filter(nested_array, op, unresolved_tokens, cur_idx, operand)) {
+            if (evaluate_array_filter_array(nested_array, op, unresolved_tokens, cur_idx, operand))
+            {
                 match = true;
             }
         } break;
@@ -642,7 +650,10 @@ bool Output::evaluate_array_filter(
             } else {
                 int64_t tmp_int;
                 operand->as_int(tmp_int, op);
-                match = eval(op, number.get_int64(), tmp_int);
+                // TODO: once we properly support unsigned at at least the AST level we should
+                // replace this with something like operand->as_uint(tmp_uint)
+                uint64_t tmp_uint = bit_cast<uint64_t, int64_t>(tmp_int);
+                match = eval(op, number.get_int64(), tmp_uint);
             }
         } break;
         case ondemand::json_type::boolean: {
@@ -667,23 +678,22 @@ bool Output::evaluate_array_filter(
     return match;
 }
 
-bool Output::evaluate_array_filter(
+bool Output::evaluate_array_filter_array(
         ondemand::array& array,
         FilterOperation op,
         DescriptorList const& unresolved_tokens,
         size_t cur_idx,
         std::shared_ptr<Literal> const& operand
 ) const {
-    bool match = false;
     for (ondemand::value item : array) {
-        if (evaluate_array_filter(item, op, unresolved_tokens, cur_idx, operand)) {
+        if (evaluate_array_filter_value(item, op, unresolved_tokens, cur_idx, operand)) {
             return true;
         }
     }
     return false;
 }
 
-bool Output::evaluate_array_filter(
+bool Output::evaluate_array_filter_object(
         ondemand::object& object,
         FilterOperation op,
         DescriptorList const& unresolved_tokens,
@@ -709,7 +719,7 @@ bool Output::evaluate_array_filter(
         }
 
         ondemand::value item = field.value();
-        return evaluate_array_filter(item, op, unresolved_tokens, cur_idx, operand);
+        return evaluate_array_filter_value(item, op, unresolved_tokens, cur_idx, operand);
     }
     return false;
 }
