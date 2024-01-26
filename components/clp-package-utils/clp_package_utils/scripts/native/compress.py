@@ -109,9 +109,9 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
                 (compressed_clp_io_config,)
             )
             db.commit()
-            logger.info("Compression job submitted.")
-
             job_id = db_cursor.lastrowid
+            logger.info(f"Compression job {job_id} submitted.")
+
             handle_job_update(db, db_cursor, job_id, no_progress_reporting)
         except Exception as ex:
             logger.error(ex)
