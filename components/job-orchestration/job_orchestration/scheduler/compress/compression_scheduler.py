@@ -72,7 +72,7 @@ def update_compression_job_metadata(db_cursor, job_id, kv):
 
 def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection_config):
     """
-    For all jobs with SUBMITTED status, split the job into tasks and schedule them.
+    For all jobs with PENDING status, split the job into tasks and schedule them.
     """
     global scheduled_jobs
 
