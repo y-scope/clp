@@ -99,7 +99,7 @@ const SearchFilterControlsDrawer = ({
 
     return (<div className={"search-filter-controls-drawer"}>
         <Container fluid={true}>
-            <Form.Group as={Row} className={"mt-2 mb-2"}>
+            <Form.Group as={Row} className={"mb-2"}>
                 <SearchControlsFilterLabel>
                     Time Range
                 </SearchControlsFilterLabel>

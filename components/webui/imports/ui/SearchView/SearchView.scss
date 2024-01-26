@@ -82,6 +82,23 @@
   height: 4px;
 }
 
+.search-filter {
+  &-controls-drawer {
+    background-color: #efefef;
+    border-top: 1px solid #fff;
+
+    padding: 1rem 0 0.5rem 0;
+    position: relative;
+
+    width: 100%;
+  }
+
+  &-control-label {
+    color: #666;
+    width: 110px;
+  }
+}
+
 .timestamp-picker {
   border: 1px solid rgb(206, 212, 218);
   border-radius: 0;
