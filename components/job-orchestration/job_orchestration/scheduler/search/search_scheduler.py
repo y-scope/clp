@@ -164,7 +164,7 @@ def handle_pending_search_jobs(db_conn, results_cache_uri: str) -> None:
         search_config_obj = SearchConfig.parse_obj(msgpack.unpackb(job['search_config']))
         archives_for_search = get_archives_for_search(db_conn, search_config_obj)
         if len(archives_for_search) == 0:
-            if set_job_status(db_conn, job['job_id'], SearchJobStatus.SUCCESS, job['job_status']):
+            if set_job_status(db_conn, job['job_id'], SearchJobStatus.SUCCEEDED, job['job_status']):
                 logger.info(f"No matching archives, skipping job {job['job_id']}.")
             continue
 
@@ -193,7 +193,7 @@ def check_job_status_and_update_db(db_conn):
             continue
 
         if returned_results is not None:
-            new_job_status = SearchJobStatus.SUCCESS
+            new_job_status = SearchJobStatus.SUCCEEDED
             for task_result_obj in returned_results:
                 task_result = SearchTaskResult.parse_obj(task_result_obj)
                 if not task_result.success:

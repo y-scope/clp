@@ -44,7 +44,7 @@ def main(argv):
             scheduling_db_cursor.execute(f"""
                 CREATE TABLE IF NOT EXISTS `{COMPRESSION_JOBS_TABLE_NAME}` (
                     `id` INT NOT NULL AUTO_INCREMENT,
-                    `status` VARCHAR(16) NOT NULL DEFAULT '{CompressionJobStatus.SCHEDULING}',
+                    `status` VARCHAR(16) NOT NULL DEFAULT '{CompressionJobStatus.PENDING}',
                     `status_msg` VARCHAR(255) NOT NULL DEFAULT '',
                     `creation_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     `start_time` DATETIME NULL DEFAULT NULL,
@@ -64,7 +64,7 @@ def main(argv):
             scheduling_db_cursor.execute(f"""
                 CREATE TABLE IF NOT EXISTS `{COMPRESSION_TASKS_TABLE_NAME}` (
                     `id` BIGINT NOT NULL AUTO_INCREMENT,
-                    `status` VARCHAR(16) NOT NULL DEFAULT '{CompressionTaskStatus.SUBMITTED}',
+                    `status` VARCHAR(16) NOT NULL DEFAULT '{CompressionTaskStatus.PENDING}',
                     `creation_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     `start_time` DATETIME NULL DEFAULT NULL,
                     `duration` FLOAT NULL DEFAULT NULL,

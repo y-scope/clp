@@ -95,7 +95,7 @@ def create_and_monitor_job_in_db(db_config: Database, results_cache: ResultsCach
             # There will only ever be one row since it's impossible to have more than one job with the same ID
             new_status = db_cursor.fetchall()[0]['status']
             db_conn.commit()
-            if new_status in (SearchJobStatus.SUCCESS, SearchJobStatus.FAILED, SearchJobStatus.CANCELLED):
+            if new_status in (SearchJobStatus.SUCCEEDED, SearchJobStatus.FAILED, SearchJobStatus.CANCELLED):
                 break
 
             time.sleep(0.5)

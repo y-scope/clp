@@ -75,8 +75,8 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
                         f'{pretty_size(job_compressed_size)} ({compression_ratio:.2f})')
                     job_last_uncompressed_size = job_uncompressed_size
 
-        if CompressionJobStatus.SCHEDULED == job_status or \
-                CompressionJobStatus.SCHEDULING == job_status:
+        if CompressionJobStatus.RUNNING == job_status or \
+                CompressionJobStatus.PENDING == job_status:
             pass  # Simply wait another iteration
         elif CompressionJobStatus.SUCCEEDED == job_status:
             # All tasks in the job is done

@@ -3,10 +3,7 @@ import typing
 
 from pydantic import BaseModel, validator
 
-from job_orchestration.scheduler.constants import (
-    CompressionTaskStatus,
-    CompressionTaskUpdateType
-)
+from job_orchestration.scheduler.constants import CompressionTaskStatus
 
 
 class CompressionJob(BaseModel):
@@ -16,23 +13,14 @@ class CompressionJob(BaseModel):
 
 
 class CompressionTaskResult(BaseModel):
-    type: str
     task_id: int
     status: str
     start_time: datetime.datetime
     duration: float
 
-    @validator('type')
-    def validate_type(cls, field):
-        supported_types = [CompressionTaskUpdateType.COMPRESSION, CompressionTaskUpdateType.SEARCH]
-        if field not in supported_types:
-            raise ValueError(f"Unsupported task update type: '{field}'")
-        return field
-
     @validator('status')
     def valid_status(cls, field):
-        supported_status = [CompressionTaskStatus.SCHEDULED, CompressionTaskStatus.IN_PROGRESS,
-                            CompressionTaskStatus.SUCCEEDED, CompressionTaskStatus.FAILED]
+        supported_status = [CompressionTaskStatus.SUCCEEDED, CompressionTaskStatus.FAILED]
         if field not in supported_status:
             raise ValueError(f'must be one of the following {"|".join(supported_status)}')
         return field

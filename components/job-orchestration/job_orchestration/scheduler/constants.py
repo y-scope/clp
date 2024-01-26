@@ -11,29 +11,23 @@ class QueueName:
     SEARCH = "search"
 
 
-class CompressionJobStatus:
-    SCHEDULING = 'SCHEDULING'
-    SCHEDULED = 'SCHEDULED'
-    SUCCEEDED = 'SUCCEEDED'
-    FAILED = 'FAILED'
+class CompressionJobStatus(IntEnum):
+    PENDING = 0
+    RUNNING = auto()
+    SUCCEEDED = auto()
+    FAILED = auto()
 
 
 class CompressionJobCompletionStatus(IntEnum):
     SUCCEEDED = 0
-    FAILED = 1
+    FAILED = auto()
 
 
-class CompressionTaskUpdateType:
-    COMPRESSION = 'COMPRESSION'
-    SEARCH = 'SEARCH'
-
-
-class CompressionTaskStatus:
-    SUBMITTED = 'SUBMITTED'
-    SCHEDULED = 'SCHEDULED'
-    IN_PROGRESS = 'IN_PROGRESS'
-    SUCCEEDED = 'SUCCEEDED'
-    FAILED = 'FAILED'
+class CompressionTaskStatus(IntEnum):
+    PENDING = 0
+    RUNNING = auto()
+    SUCCEEDED = auto()
+    FAILED = auto()
 
 
 # When adding new states always add them to the end of this enum
@@ -41,7 +35,7 @@ class CompressionTaskStatus:
 class SearchJobStatus(IntEnum):
     PENDING = 0
     RUNNING = auto()
-    SUCCESS = auto()
+    SUCCEEDED = auto()
     FAILED = auto()
     CANCELLING = auto()
     CANCELLED = auto()

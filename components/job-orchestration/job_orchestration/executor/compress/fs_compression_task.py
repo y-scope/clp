@@ -11,7 +11,7 @@ from celery.utils.log import get_task_logger
 
 from job_orchestration.executor.compress.celery import app
 from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
-from job_orchestration.scheduler.constants import CompressionTaskStatus, CompressionTaskUpdateType
+from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.scheduler_data import (
     CompressionTaskFailureResult,
     CompressionTaskSuccessResult
@@ -163,7 +163,6 @@ def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, pat
 
     if compression_successful:
         return CompressionTaskSuccessResult(
-            type=CompressionTaskUpdateType.COMPRESSION,
             job_id=job_id,
             task_id=task_id,
             status=CompressionTaskStatus.SUCCEEDED,
@@ -174,7 +173,6 @@ def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, pat
         ).dict()
     else:
         return CompressionTaskFailureResult(
-            type=CompressionTaskUpdateType.COMPRESSION,
             job_id=job_id,
             task_id=task_id,
             status=CompressionTaskStatus.FAILED,

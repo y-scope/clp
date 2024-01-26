@@ -45,7 +45,7 @@ def fetch_new_jobs(db_cursor):
     db_cursor.execute(f"""
         SELECT id, clp_config, creation_time
         FROM {COMPRESSION_JOBS_TABLE_NAME}
-        WHERE status='{CompressionJobStatus.SCHEDULING}'
+        WHERE status='{CompressionJobStatus.PENDING}'
     """)
     return db_cursor.fetchall()
 
@@ -148,7 +148,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
         start_time = datetime.datetime.now()
         update_compression_job_metadata(db_cursor, job_id, {
             'num_tasks': paths_to_compress_buffer.num_tasks,
-            'status': CompressionJobStatus.SCHEDULED,
+            'status': CompressionJobStatus.RUNNING,
             'start_time': start_time
         })
         db_conn.commit()
@@ -165,7 +165,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
         )
         db_cursor.execute(f"""
             UPDATE {COMPRESSION_TASKS_TABLE_NAME}
-            SET status='{CompressionTaskStatus.SCHEDULED}', start_time='{datetime.datetime.now()}'
+            SET status='{CompressionTaskStatus.RUNNING}', start_time='{datetime.datetime.now()}'
             WHERE job_id={job_id}
         """)
         db_conn.commit()
