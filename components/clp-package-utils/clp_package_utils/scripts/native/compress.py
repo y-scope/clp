@@ -83,7 +83,6 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
             if not no_progress_reporting:
                 db_cursor.execute(completion_query)
                 job_row = db_cursor.fetchone()
-                db.commit()
                 if job_row['duration'] and job_row['duration'] > 0:
                     speed = job_row['uncompressed_size'] / job_row['duration']
                 logger.info(f"Compression finished. Runtime: {job_row['duration']}s. "

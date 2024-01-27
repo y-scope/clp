@@ -82,7 +82,9 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
     zstd_cctx = zstandard.ZstdCompressor(level=3)
 
     # Poll for new compression jobs
-    for job_row in fetch_new_jobs(db_cursor):
+    jobs = fetch_new_jobs(db_cursor)
+    db_conn.commit()
+    for job_row in jobs:
         db_conn.commit()
         job_id = job_row['id']
         clp_io_config = ClpIoConfig.parse_obj(msgpack.unpackb(zstd_dctx.decompress(job_row['clp_config'])))
@@ -160,8 +162,8 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
             db_cursor.execute(
                 f'INSERT INTO {COMPRESSION_TASKS_TABLE_NAME} '
                 f'(job_id, partition_original_size, clp_paths_to_compress) '
-                f'VALUES({str(job_id)}, {partition_info[task_idx]["partition_original_size"]}, '
-                f'{partition_info[task_idx]["clp_paths_to_compress"]});'
+                f'VALUES({str(job_id)}, {partition_info[task_idx]["partition_original_size"]}, %s);',
+                (partition_info[task_idx]["clp_paths_to_compress"],)
             )
             task['task_id'] = db_cursor.lastrowid
             task_instances.append(compress.s(**task))
