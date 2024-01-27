@@ -23,19 +23,19 @@ CLP_METADATA_TABLE_PREFIX = 'clp_'
 SEARCH_JOBS_TABLE_NAME = 'distributed_search_jobs'
 
 # Package modes
-class PackageMode(KebabCaseStrEnum):
+class StorageEngine(KebabCaseStrEnum):
     CLP = auto()
 
-VALID_PACKAGE_MODES = [mode.value for mode in PackageMode]
+VALID_STORAGE_ENGINES = [storage_engine.value for storage_engine in StorageEngine]
 
 
 class Package(BaseModel):
-    mode: str = 'clp'
+    storage_engine: str = 'clp'
 
-    @validator('mode')
-    def validate_mode(cls, field):
-        if field not in VALID_PACKAGE_MODES:
-            raise ValueError(f"package.mode must be one of the follwing {'|'.join(VALID_PACKAGE_MODES)}")
+    @validator('storage_engine')
+    def validate_storage_engine(cls, field):
+        if field not in VALID_STORAGE_ENGINES:
+            raise ValueError(f"package.storage_engine must be one of the follwing {'|'.join(VALID_STORAGE_ENGINES)}")
         return field
 
 

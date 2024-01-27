@@ -10,7 +10,7 @@ from celery.app.task import Task
 from celery.utils.log import get_task_logger
 
 from clp_py_utils.clp_logging import set_logging_level
-from clp_py_utils.clp_config import PackageMode
+from clp_py_utils.clp_config import StorageEngine
 
 from job_orchestration.executor.search.celery import app
 from job_orchestration.job_config import SearchConfig, SearchTaskResult
@@ -52,7 +52,7 @@ def search(
     archive_directory = Path(os.getenv('CLP_ARCHIVE_OUTPUT_DIR'))
     clp_logs_dir = Path(os.getenv("CLP_LOGS_DIR"))
     clp_logging_level = str(os.getenv("CLP_LOGGING_LEVEL"))
-    clp_package_mode = str(os.getenv("CLP_PACKAGE_MODE"))
+    clp_storage_engine = str(os.getenv("CLP_STORAGE_ENGINE"))
 
     # Setup logging to file
     worker_logs_dir = clp_logs_dir / job_id
@@ -66,7 +66,7 @@ def search(
     search_config = SearchConfig.parse_obj(search_config_obj)
     archive_path = archive_directory / archive_id
 
-    if PackageMode.CLP == clp_package_mode:
+    if StorageEngine.CLP == clp_storage_engine:
         search_cmd = make_clo_command(
             clp_home=clp_home,
             archive_path=archive_path,
@@ -75,12 +75,11 @@ def search(
             results_collection=job_id
         )
     else:
-        logger.error(f"Unsupported package mode {clp_package_mode}")
+        logger.error(f"Unsupported storage engine {clp_storage_engine}")
         return SearchTaskResult(
             success=False,
             task_id=task_id,
         ).dict()
-
 
     logger.info(f'Running: {" ".join(search_cmd)}')
     search_successful = False

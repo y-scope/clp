@@ -8,7 +8,7 @@
 #credentials_file_path: "etc/credentials.yml"
 #
 #package:
-#  mode: "clp"
+#  storage_engine: "clp"
 #
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
