@@ -11,7 +11,7 @@ namespace clp_s {
  */
 class Schema {
 public:
-    typedef std::vector<int32_t> schema_t;
+    using schema_t = std::vector<int32_t>;
 
     /**
      * Insert a single node into the ordered region of the schema.
@@ -26,7 +26,7 @@ public:
     /**
      * Insert an unordered list of nodes into the unordered region of the schema.
      */
-    void insert_unordered(std::vector<int32_t> const& mst_node_ids);
+    void insert_unordered(schema_t const& mst_node_ids);
 
     /**
      * Clear the Schema object so that it can be reused without reallocating the underlying vector.
@@ -63,8 +63,8 @@ public:
     bool operator==(Schema const& rhs) const { return m_schema == rhs.m_schema; }
 
 private:
-    std::vector<int32_t> m_schema{};
-    size_t m_num_unordered{};
+    std::vector<int32_t> m_schema;
+    size_t m_num_unordered{0};
 };
 }  // namespace clp_s
 

@@ -12,10 +12,10 @@ void Schema::insert_ordered(int32_t mst_node_id) {
 
 void Schema::insert_unordered(int32_t mst_node_id) {
     m_schema.push_back(mst_node_id);
-    m_num_unordered += 1;
+    ++m_num_unordered;
 }
 
-void Schema::insert_unordered(std::vector<int32_t> const& mst_node_ids) {
+void Schema::insert_unordered(schema_t const& mst_node_ids) {
     m_schema.insert(m_schema.end(), mst_node_ids.begin(), mst_node_ids.end());
     m_num_unordered += mst_node_ids.size();
 }

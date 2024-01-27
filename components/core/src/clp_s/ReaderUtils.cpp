@@ -103,7 +103,7 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(std::string co
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
 
-        std::vector<int32_t>& schema = schemas[schema_id];
+        auto& schema = schemas[schema_id];
         for (size_t j = 0; j < schema_node_size; j++) {
             int32_t node_id;
             error_code = schema_id_decompressor.try_read_numeric_value(node_id);

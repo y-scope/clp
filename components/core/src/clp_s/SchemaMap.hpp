@@ -9,7 +9,7 @@
 namespace clp_s {
 class SchemaMap {
 public:
-    typedef std::map<Schema, int32_t> schema_map_t;
+    using schema_map_t = std::map<Schema, int32_t>;
 
     // Constructor
     explicit SchemaMap(std::string const& archives_dir, int compression_level)
