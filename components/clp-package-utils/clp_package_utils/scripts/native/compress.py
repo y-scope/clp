@@ -54,6 +54,7 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
     while True:
         db_cursor.execute(polling_query)
         results = db_cursor.fetchall()
+        db.commit()
         if len(results) > 1:
             logging.error("Duplicated job_id")
         if len(results) == 0:
