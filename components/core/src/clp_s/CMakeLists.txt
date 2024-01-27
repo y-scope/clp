@@ -67,6 +67,8 @@ set(
 
 set(
         CLP_S_SEARCH_SOURCES
+        search/AddTimestampConditions.cpp
+        search/AddTimestampConditions.hpp
         search/AndExpr.cpp
         search/AndExpr.hpp
         search/BooleanLiteral.cpp

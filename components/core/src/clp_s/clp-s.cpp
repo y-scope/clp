@@ -4,6 +4,7 @@
 #include "JsonConstructor.hpp"
 #include "JsonParser.hpp"
 #include "ReaderUtils.hpp"
+#include "search/AddTimestampConditions.hpp"
 #include "search/ConvertToExists.hpp"
 #include "search/EmptyExpr.hpp"
 #include "search/EvaluateTimestampIndex.hpp"
@@ -80,6 +81,17 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
 
+        auto timestamp_dict = clp_s::ReaderUtils::read_timestamp_dictionary(archives_dir);
+        AddTimestampConditions add_timestamp_conditions(
+                timestamp_dict,
+                command_line_arguments.get_search_begin_ts(),
+                command_line_arguments.get_search_end_ts()
+        );
+        if (expr = add_timestamp_conditions.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+            SPDLOG_ERROR("Query '{}' is logically false", query);
+            return 1;
+        }
+
         OrOfAndForm standardize_pass;
         if (expr = standardize_pass.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
             SPDLOG_ERROR("Query '{}' is logically false", query);
@@ -100,7 +112,6 @@ int main(int argc, char const* argv[]) {
 
         // skip decompressing the archive if we won't match based on
         // the timestamp index
-        auto timestamp_dict = clp_s::ReaderUtils::read_timestamp_dictionary(archives_dir);
         EvaluateTimestampIndex timestamp_index(timestamp_dict);
         if (clp_s::EvaluatedValue::False == timestamp_index.run(expr)) {
             SPDLOG_ERROR("No matching timestamp ranges for query '{}'", query);
