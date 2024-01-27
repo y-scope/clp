@@ -206,6 +206,27 @@ class ArchiveOutput(BaseModel):
 class WebUi(BaseModel):
     host: str = 'localhost'
     port: int = 4000
+    logging_level: str = 'INFO'
+
+    @validator('host')
+    def validate_host(cls, field):
+        if '' == field:
+            raise ValueError(f'{WEBUI_COMPONENT_NAME}.host cannot be empty.')
+        return field
+
+    @validator('port')
+    def validate_port(cls, field):
+        min_valid_port = 0
+        max_valid_port = 2 ** 16 - 1
+        if min_valid_port > field or max_valid_port < field:
+            raise ValueError(f'{WEBUI_COMPONENT_NAME}.port is not within valid range '
+                             f'{min_valid_port}-{max_valid_port}.')
+        return field
+
+    @validator('logging_level')
+    def validate_logging_level(cls, field):
+        _validate_logging_level(cls, field)
+        return field
 
 
 class CLPConfig(BaseModel):

@@ -5,13 +5,14 @@ import JSON5 from "json5";
 const MAX_LOGS_FILE_SIZE = "100m";
 const MAX_LOGS_RETENTION_DAYS = "30d";
 
-const clpLoggingLevelToWinstonMap = {
-    "DEBUG": "debug",
-    "INFO": "info",
-    "WARN": "warn",
-    "WARNING": "warn",
-    "ERROR": "error",
-    "CRITICAL": "error",
+// attribute names should match clp_py_utils.clp_logging.LOGGING_LEVEL_MAPPING
+const webuiLoggingLevelToWinstonMap = {
+    DEBUG: "debug",
+    INFO: "info",
+    WARN: "warn",
+    WARNING: "warn",
+    ERROR: "error",
+    CRITICAL: "error",
 };
 
 const getStackInfo = () => {
@@ -75,9 +76,9 @@ export let logger = Object.freeze({
     silly: (...args) => (fileLineFuncLog("silly", ...args)),
 });
 
-export const initLogger = (logsDir, clpLoggingLevel, isTraceEnabled = false) => {
+export const initLogger = (logsDir, webuiLoggingLevel, isTraceEnabled = false) => {
     winstonLogger = winston.createLogger({
-        level: clpLoggingLevelToWinstonMap[clpLoggingLevel],
+        level: webuiLoggingLevelToWinstonMap[webuiLoggingLevel],
         format: winston.format.combine(
             winston.format.timestamp(),
             winston.format.printf((info) => {

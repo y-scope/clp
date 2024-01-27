@@ -42,18 +42,12 @@ class DockerMountType(enum.IntEnum):
 class DockerMount:
     def __init__(self, type: DockerMountType, src: pathlib.Path, dst: pathlib.Path, is_read_only: bool = False):
         self.__type = type
-        self._src = src
-        self._dst = dst
+        self.__src = src
+        self.__dst = dst
         self.__is_read_only = is_read_only
 
-    def get_src(self):
-        return self._src
-
-    def get_dst(self):
-        return self._dst
-
     def __str__(self):
-        mount_str = f"type={DOCKER_MOUNT_TYPE_STRINGS[self.__type]},src={self._src},dst={self._dst}"
+        mount_str = f"type={DOCKER_MOUNT_TYPE_STRINGS[self.__type]},src={self.__src},dst={self.__dst}"
         if self.__is_read_only:
             mount_str += ",readonly"
         return mount_str
@@ -288,8 +282,14 @@ def validate_worker_config(clp_config: CLPConfig):
     clp_config.validate_archive_output_dir()
 
 
-def validate_webui_config(clp_config: CLPConfig):
-    component_name = WEBUI_COMPONENT_NAME
+def validate_webui_config(clp_config: CLPConfig, logs_dir: pathlib.Path, settings_json_path: pathlib.Path):
+    if not settings_json_path.exists():
+        raise ValueError(f"{WEBUI_COMPONENT_NAME} {settings_json_path} is not a valid path to Meteor settings.json")
 
-    validate_port(f"{component_name}.port", clp_config.webui.host,
+    try:
+        validate_path_could_be_dir(logs_dir)
+    except ValueError as ex:
+        raise ValueError(f"{WEBUI_COMPONENT_NAME} logs directory is invalid: {ex}")
+
+    validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host,
                   clp_config.webui.port)

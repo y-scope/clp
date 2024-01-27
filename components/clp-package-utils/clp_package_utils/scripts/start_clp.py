@@ -555,9 +555,15 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
         logger.info(f"{WEBUI_COMPONENT_NAME} already running.")
         return
 
-    validate_webui_config(clp_config)
+    webui_logs_dir = clp_config.logs_directory / WEBUI_COMPONENT_NAME
+    settings_json_path = get_clp_home() / 'var' / 'www' / 'settings.json'
 
-    settings_json_path = str(mounts.clp_home.get_src() / 'var' / 'www' / 'settings.json')
+    validate_webui_config(clp_config, webui_logs_dir, settings_json_path)
+
+    # Create directories
+    webui_logs_dir.mkdir(exist_ok=True, parents=True)
+
+    container_webui_logs_dir = pathlib.Path('/') / 'var' / 'log' / WEBUI_COMPONENT_NAME
     with open(settings_json_path, 'r') as settings_json_file:
         settings_json_content = settings_json_file.read()
         meteor_settings = json.loads(settings_json_content)
@@ -578,10 +584,13 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
         '-e', f'CLP_DB_NAME={clp_config.database.name}',
         '-e', f'CLP_DB_USER={clp_config.database.username}',
         '-e', f'CLP_DB_PASS={clp_config.database.password}',
+        '-e', f'WEBUI_LOGS_DIR={container_webui_logs_dir}',
+        '-e', f'WEBUI_LOGGING_LEVEL={clp_config.webui.logging_level}',
         '-u', f'{os.getuid()}:{os.getgid()}',
     ]
     necessary_mounts = [
         mounts.clp_home,
+        DockerMount(DockerMountType.BIND, webui_logs_dir, container_webui_logs_dir),
     ]
     for mount in necessary_mounts:
         if mount:

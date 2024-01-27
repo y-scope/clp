@@ -9,7 +9,7 @@ import {initSearchEventCollection} from "../imports/api/search/collections";
 import {initLogger} from "../imports/utils/logger";
 
 const DEFAULT_LOGS_DIR = ".";
-const DEFAULT_LOGGING_LEVEL = Meteor.isDevelopment ? "DEBUG" : "INFO";
+const DEFAULT_LOGGING_LEVEL = Meteor.isDevelopment ? "debug" : "info";
 
 function parseArgs() {
     const CLP_DB_HOST = process.env["CLP_DB_HOST"];
@@ -24,8 +24,8 @@ function parseArgs() {
         process.exit(1);
     }
 
-    const CLP_LOGS_DIR = process.env["CLP_LOGS_DIR"] || DEFAULT_LOGS_DIR;
-    const CLP_LOGGING_LEVEL = process.env["CLP_LOGGING_LEVEL"] || DEFAULT_LOGGING_LEVEL;
+    const WEBUI_LOGS_DIR = process.env["WEBUI_LOGS_DIR"] || DEFAULT_LOGS_DIR;
+    const WEBUI_LOGGING_LEVEL = process.env["WEBUI_LOGGING_LEVEL"] || DEFAULT_LOGGING_LEVEL;
 
     return {
         CLP_DB_HOST,
@@ -33,15 +33,15 @@ function parseArgs() {
         CLP_DB_NAME,
         CLP_DB_USER,
         CLP_DB_PASS,
-        CLP_LOGS_DIR,
-        CLP_LOGGING_LEVEL,
+        WEBUI_LOGS_DIR,
+        WEBUI_LOGGING_LEVEL,
     };
 }
 
 Meteor.startup(async () => {
     const args = parseArgs();
 
-    initLogger(args.CLP_LOGS_DIR, args.CLP_LOGGING_LEVEL, Meteor.isDevelopment);
+    initLogger(args.WEBUI_LOGS_DIR, args.WEBUI_LOGGING_LEVEL, Meteor.isDevelopment);
 
     await initSQL(
         args.CLP_DB_HOST,
