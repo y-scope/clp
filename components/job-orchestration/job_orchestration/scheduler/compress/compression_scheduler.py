@@ -36,7 +36,7 @@ from job_orchestration.scheduler.scheduler_data import (
 )
 
 # Setup logging
-logger = get_logger(__name__)
+logger = get_logger("compression_scheduler")
 
 scheduled_jobs = {}
 
@@ -85,7 +85,6 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
     jobs = fetch_new_jobs(db_cursor)
     db_conn.commit()
     for job_row in jobs:
-        db_conn.commit()
         job_id = job_row['id']
         clp_io_config = ClpIoConfig.parse_obj(msgpack.unpackb(zstd_dctx.decompress(job_row['clp_config'])))
 
@@ -157,7 +156,6 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
         db_conn.commit()
 
         task_instances = []
-        logger.info(f'partition_info: {partition_info}')
         for task_idx, task in enumerate(tasks):
             db_cursor.execute(
                 f'INSERT INTO {COMPRESSION_TASKS_TABLE_NAME} '
@@ -309,11 +307,11 @@ def main(argv):
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
             except KeyboardInterrupt:
                 logger.info('Gracefully shutting down')
-                break
-            except Exception as ex:
-                logger.exception(f"Error in scheduling: {ex}")
-                break
+                return -1
+            except Exception:
+                logger.exception(f"Error in scheduling.")
+                return -1
 
 
 if '__main__' == __name__:
-    main(sys.argv)
+    sys.exit(main(sys.argv))

@@ -33,9 +33,9 @@ class PathsToCompressBuffer:
         self.num_tasks = 0
         self.__task_arguments = {
             "job_id": scheduling_job_id,
-            "task_id": 0,
+            "task_id": -1,
             "clp_io_config_json": clp_io_config.json(exclude_none=True),
-            "paths_to_compress_json": "",
+            "paths_to_compress_json": None,
             "clp_metadata_db_connection_config": clp_metadata_db_connection_config
         }
 
