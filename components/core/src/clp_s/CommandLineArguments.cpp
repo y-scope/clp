@@ -229,6 +229,20 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             // clang-format on
 
+            po::options_description match_options("Match Controls");
+            // clang-format off
+            match_options.add_options()(
+                "tge",
+                po::value<epochtime_t>()->value_name("TS"),
+                "Find records with UNIX timestamp >= TS ms"
+            )(
+                "tle",
+                po::value<epochtime_t>()->value_name("TS"),
+                "Find messages with UNIX timestamp <= TS ms"
+            );
+            // clang-format on
+            search_options.add(match_options);
+
             po::positional_options_description positional_options;
             positional_options.add("archives-dir", 1);
             positional_options.add("query", 1);
@@ -286,9 +300,26 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
+                visible_options.add(match_options);
                 visible_options.add(mongodb_options);
                 std::cerr << visible_options << '\n';
                 return ParsingResult::InfoCommand;
+            }
+
+            if (parsed_command_line_options.count("tge")) {
+                m_search_begin_ts = parsed_command_line_options["tge"].as<epochtime_t>();
+            }
+
+            if (parsed_command_line_options.count("tle")) {
+                m_search_end_ts = parsed_command_line_options["tle"].as<epochtime_t>();
+            }
+
+            if (m_search_begin_ts.has_value() && m_search_end_ts.has_value()
+                && m_search_begin_ts.value() > m_search_end_ts.value())
+            {
+                throw std::invalid_argument(
+                        "Timestamp range is invalid - begin timestamp is after end timestamp."
+                );
             }
 
             if (false == m_mongodb_uri.empty() || false == m_mongodb_collection.empty()) {
