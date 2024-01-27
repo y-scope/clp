@@ -136,6 +136,7 @@ class Redis(BaseModel):
     host: str = 'localhost'
     port: int = 6379
     search_backend_database: int = 0
+    # redis can perform authentication without a username
     password: typing.Optional[str]
 
     @validator('host')

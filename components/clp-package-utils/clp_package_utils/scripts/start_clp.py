@@ -273,12 +273,12 @@ def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path)
     redis_logs_dir.mkdir(exist_ok=True, parents=True)
 
     # Start container
+    config_file_path = pathlib.Path('/') / 'usr' / 'local' / 'etc' / 'redis' / 'redis.conf'
     mounts = [
-        DockerMount(DockerMountType.BIND, host_config_file_path, pathlib.Path('/') / 'usr' / 'local' / 'etc' / 'redis' / 'redis.conf', True),
+        DockerMount(DockerMountType.BIND, host_config_file_path, config_file_path, True),
         DockerMount(DockerMountType.BIND, redis_logs_dir, pathlib.Path('/') / 'var' / 'log' / 'redis'),
         DockerMount(DockerMountType.BIND, redis_data_dir, pathlib.Path('/') / 'data'),
     ]
-
     cmd = [
         'docker', 'run',
         '-d',
@@ -292,7 +292,7 @@ def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path)
     append_docker_port_settings_for_host_ips(clp_config.redis.host, clp_config.redis.port, 6379, cmd)
     cmd.append('redis:7.2.4')
     cmd.append('redis-server')
-    cmd.append(str(pathlib.Path('/') / 'usr' / 'local' / 'etc' / 'redis' / 'redis.conf'))
+    cmd.append(str(config_file_path))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     logger.info(f"Started {REDIS_COMPONENT_NAME}.")

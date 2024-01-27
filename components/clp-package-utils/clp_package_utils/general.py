@@ -209,7 +209,6 @@ def generate_credentials_file(credentials_file_path: pathlib.Path):
             'password': secrets.token_urlsafe(8)
         },
         REDIS_COMPONENT_NAME: {
-            # redis can perform authentication without a username
             'password': secrets.token_urlsafe(16)
         }
     }
