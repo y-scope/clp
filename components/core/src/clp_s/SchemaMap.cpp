@@ -5,13 +5,12 @@
 
 namespace clp_s {
 int32_t SchemaMap::add_schema(Schema const& schema) {
-    auto schema_it = m_schema_map.find(schema);
-    if (schema_it != m_schema_map.end()) {
+    auto const schema_it = m_schema_map.find(schema);
+    if (m_schema_map.end() != schema_it) {
         return schema_it->second;
-    } else {
-        m_schema_map[schema] = m_current_schema_id;
-        return m_current_schema_id++;
     }
+    m_schema_map.emplace(schema, m_current_schema_id);
+    return m_current_schema_id++;
 }
 
 void SchemaMap::store() {
