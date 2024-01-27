@@ -1,4 +1,5 @@
 import {Meteor} from "meteor/meteor";
+import {logger} from "/imports/utils/logger";
 
 import {SearchResultsMetadataCollection, getCollection, MY_MONGO_DB} from "../collections";
 
@@ -11,9 +12,11 @@ import {SearchResultsMetadataCollection, getCollection, MY_MONGO_DB} from "../co
  * @returns {Mongo.Cursor} cursor that provides access to the search results metadata
  */
 Meteor.publish(Meteor.settings.public.SearchResultsMetadataCollectionName, ({jobId}) => {
+    logger.debug(`Subscription '${Meteor.settings.public.SearchResultsMetadataCollectionName}'`,
+        `jobId=${jobId}`);
     const filter = {
-        _id: jobId.toString()
-    }
+        _id: jobId.toString(),
+    };
 
     return SearchResultsMetadataCollection.find(filter);
 });
@@ -29,14 +32,19 @@ Meteor.publish(Meteor.settings.public.SearchResultsMetadataCollectionName, ({job
  * @returns {Mongo.Cursor} cursor that provides access to the search results
  */
 Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
-                                                                        jobId, fieldToSortBy, visibleSearchResultsLimit
-                                                                    }) => {
-    const collection = getCollection(MY_MONGO_DB, jobId.toString())
+    jobId,
+    fieldToSortBy,
+    visibleSearchResultsLimit,
+}) => {
+    logger.debug(`Subscription '${Meteor.settings.public.SearchResultsCollectionName}'`,
+        `jobId=${jobId}, fieldToSortBy=${fieldToSortBy}, ` +
+        `visibleSearchResultsLimit=${visibleSearchResultsLimit}`);
+    const collection = getCollection(MY_MONGO_DB, jobId.toString());
 
     const findOptions = {
         limit: visibleSearchResultsLimit,
         disableOplog: true,
-        pollingIntervalMs: 250
+        pollingIntervalMs: 250,
     };
     if (fieldToSortBy) {
         const sort = {};

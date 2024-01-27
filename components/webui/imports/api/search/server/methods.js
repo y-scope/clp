@@ -1,5 +1,6 @@
 import {Meteor} from "meteor/meteor";
 import msgpack from "@msgpack/msgpack";
+import {logger} from "/imports/utils/logger";
 
 import {JOB_STATUS_WAITING_STATES, JobStatus, SearchSignal} from "../constants";
 import {SQL_CONNECTION} from "../sql";
@@ -31,7 +32,7 @@ const submitQuery = async (args) => {
                                                                  VALUES (?) `, [Buffer.from(msgpack.encode(args))]);
         jobId = queryInsertResults["insertId"];
     } catch (e) {
-        console.error("Unable to submit query job to SQL DB", e);
+        logger.error("Unable to submit query job to SQL DB", e);
     }
 
     return jobId;
@@ -55,14 +56,10 @@ const waitTillJobFinishes = async (jobId) => {
                                                           where id = ${jobId}`);
             const status = rows[0]["status"];
             if (!JOB_STATUS_WAITING_STATES.includes(status)) {
-                console.debug(`Job ${jobId} exited with status = ${status}`);
+                logger.info(`Job ${jobId} exited with status = ${status}`);
 
                 if (JobStatus.SUCCESS !== status) {
-                    if (JobStatus.NO_MATCHING_ARCHIVE === status) {
-                        errorMsg = "No matching archive by query string and time range";
-                    } else {
-                        errorMsg = `Job exited in an unexpected status=${status}: ${Object.keys(JobStatus)[status]}`;
-                    }
+                    errorMsg = `Job exited in an unexpected status=${status}: ${Object.keys(JobStatus)[status]}`;
                 }
                 break;
             }
@@ -71,7 +68,7 @@ const waitTillJobFinishes = async (jobId) => {
         }
     } catch (e) {
         errorMsg = `Error querying job status, jobId=${jobId}: ${e}`;
-        console.error(errorMsg);
+        logger.error(errorMsg);
     }
 
     return errorMsg;
@@ -80,7 +77,7 @@ const waitTillJobFinishes = async (jobId) => {
 /**
  * Cancels a job by updating its status to 'CANCELLING' in the database.
  *
- * @param {number} jobId of the job to be cancelled
+ * @param {string} jobId of the job to be cancelled
  */
 const cancelQuery = async (jobId) => {
     const [rows, _] = await SQL_CONNECTION.query(`UPDATE ${SEARCH_JOBS_TABLE_NAME}
@@ -106,6 +103,7 @@ const updateSearchEventWhenJobFinishes = async (jobId) => {
         }
     };
 
+    logger.debug("modifier = ", modifier)
     SearchResultsMetadataCollection.update(filter, modifier);
 };
 
@@ -154,6 +152,7 @@ Meteor.methods({
             begin_timestamp: timestampBegin,
             end_timestamp: timestampEnd,
         };
+        logger.info("search.submitQuery args =", args)
 
         jobId = await submitQuery(args);
         if (null !== jobId) {
@@ -183,7 +182,7 @@ Meteor.methods({
                                     jobId
                                 })
     {
-        console.debug(`Got request to clear results. jobid  = ${jobId}`);
+        logger.info("search.clearResults jobId =", jobId)
 
         const resultsCollection = getCollection(MY_MONGO_DB, jobId.toString());
         await resultsCollection.dropCollectionAsync();
@@ -199,6 +198,8 @@ Meteor.methods({
     async "search.cancelOperation"({
                                        jobId
                                    }) {
+        logger.info("search.cancelOperation jobId =", jobId)
+
         await cancelQuery(jobId);
     },
 });

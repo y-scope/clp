@@ -1,4 +1,5 @@
 import mysql from "mysql2/promise";
+import {logger} from "/imports/utils/logger";
 
 // SQL connection for submitting queries to the backend
 export let SQL_CONNECTION = null;
@@ -16,33 +17,28 @@ export let SQL_CONNECTION = null;
  *
  * @throws {Error} Throws an error and exits the process if any required environment variables are undefined.
  */
-export const initSQL = async () => {
-    const CLP_DB_HOST = process.env['CLP_DB_HOST'];
-    const CLP_DB_PORT = process.env['CLP_DB_PORT'];
-    const CLP_DB_NAME = process.env['CLP_DB_NAME'];
-    const CLP_DB_USER = process.env['CLP_DB_USER'];
-    const CLP_DB_PASS = process.env['CLP_DB_PASS'];
-    if ([CLP_DB_HOST, CLP_DB_PORT, CLP_DB_NAME, CLP_DB_USER, CLP_DB_PASS].includes(undefined)) {
-        console.error("Environment variables CLP_DB_URL, CLP_DB_USER and CLP_DB_PASS need to be defined");
-        process.exit(1);
+export const initSQL = async (host, port, database, user, password) => {
+    try {
+        SQL_CONNECTION = await mysql.createConnection({
+            host: host,
+            port: port,
+            database: database,
+            user: user,
+            password: password,
+        });
+        await SQL_CONNECTION.connect();
+    } catch (e) {
+        logger.error(`Unable to create MySQL / mariadb connection with ` +
+            `host=${host}, port=${port}, database=${database}, user=${user}`);
     }
-
-    SQL_CONNECTION = await mysql.createConnection({
-        host: CLP_DB_HOST,
-        port: parseInt(CLP_DB_PORT),
-        database: CLP_DB_NAME,
-        user: CLP_DB_USER,
-        password: CLP_DB_PASS,
-    });
-    await SQL_CONNECTION.connect();
-}
+};
 
 /**
- * Deinitializes the SQL database connection if it is initialized.
+ * De-initializes the SQL database connection if it is initialized.
  */
 export const deinitSQL = async () => {
     if (null !== SQL_CONNECTION) {
         await SQL_CONNECTION.end();
         SQL_CONNECTION = null;
     }
-}
+};
