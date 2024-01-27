@@ -74,10 +74,7 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
                         f'{pretty_size(job_compressed_size)} ({compression_ratio:.2f})')
                     job_last_uncompressed_size = job_uncompressed_size
 
-        if CompressionJobStatus.RUNNING == job_status or \
-                CompressionJobStatus.PENDING == job_status:
-            pass  # Simply wait another iteration
-        elif CompressionJobStatus.SUCCEEDED == job_status:
+        if CompressionJobStatus.SUCCEEDED == job_status:
             # All tasks in the job is done
             speed = 0
             if not no_progress_reporting:
@@ -88,10 +85,13 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
                 logger.info(f"Compression finished. Runtime: {job_row['duration']}s. "
                             f"Speed: {pretty_size(speed)}/s.")
             break  # Done
-        elif CompressionJobStatus.FAILED == job_status:
+        if CompressionJobStatus.FAILED == job_status:
             # One or more tasks in the job has failed
             logger.error(f"Compression failed. {job_row['status_msg']}")
             break  # Done
+        if CompressionJobStatus.RUNNING == job_status or \
+                CompressionJobStatus.PENDING == job_status:
+            pass  # Simply wait another iteration
         else:
             error_msg = f"Unhandled CompressionJobStatus: {job_status}"
             raise NotImplementedError(error_msg)
