@@ -15,6 +15,7 @@ from clp_package_utils.general import (
 from clp_py_utils.clp_config import (
     DB_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
+    REDIS_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
     SEARCH_SCHEDULER_COMPONENT_NAME,
     SEARCH_WORKER_COMPONENT_NAME,
@@ -54,6 +55,7 @@ def main(argv):
     component_args_parser = args_parser.add_subparsers(dest='component_name')
     component_args_parser.add_parser(DB_COMPONENT_NAME)
     component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
+    component_args_parser.add_parser(REDIS_COMPONENT_NAME)
     component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
     component_args_parser.add_parser(SCHEDULER_COMPONENT_NAME)
     component_args_parser.add_parser(WORKER_COMPONENT_NAME)
@@ -107,6 +109,13 @@ def main(argv):
             container_config_file_path = logs_dir / f'{container_name}.yml'
             if container_config_file_path.exists():
                 container_config_file_path.unlink()
+        if '' == component_name or REDIS_COMPONENT_NAME == component_name:
+            container_name = f'clp-{REDIS_COMPONENT_NAME}-{instance_id}'
+            stop_container(container_name)
+
+            redis_config_file_path = logs_dir / f'{container_name}.conf'
+            if redis_config_file_path.exists():
+                redis_config_file_path.unlink()
         if '' == component_name or RESULTS_CACHE_COMPONENT_NAME == component_name:
             container_name = f'clp-{RESULTS_CACHE_COMPONENT_NAME}-{instance_id}'
             stop_container(container_name)

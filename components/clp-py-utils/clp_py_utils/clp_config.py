@@ -10,6 +10,7 @@ from .clp_logging import is_valid_logging_level, get_valid_logging_level
 # Component names
 DB_COMPONENT_NAME = 'database'
 QUEUE_COMPONENT_NAME = 'queue'
+REDIS_COMPONENT_NAME = 'redis'
 RESULTS_CACHE_COMPONENT_NAME = 'results_cache'
 SCHEDULER_COMPONENT_NAME = 'scheduler'
 SEARCH_SCHEDULER_COMPONENT_NAME = 'search_scheduler'
@@ -131,6 +132,20 @@ class SearchWorker(BaseModel):
         return field
 
 
+class Redis(BaseModel):
+    host: str = 'localhost'
+    port: int = 6379
+    search_backend_database: int = 0
+    # redis can perform authentication without a username
+    password: typing.Optional[str]
+
+    @validator('host')
+    def validate_host(cls, field):
+        if '' == field:
+            raise ValueError(f'{REDIS_COMPONENT_NAME}.host cannot be empty.')
+        return field
+
+
 class ResultsCache(BaseModel):
     host: str = 'localhost'
     port: int = 27017
@@ -202,6 +217,7 @@ class CLPConfig(BaseModel):
 
     database: Database = Database()
     queue: Queue = Queue()
+    redis: Redis = Redis()
     results_cache: ResultsCache = ResultsCache()
     scheduler: Scheduler = Scheduler()
     search_scheduler: SearchScheduler = SearchScheduler()
@@ -265,6 +281,16 @@ class CLPConfig(BaseModel):
             self.queue.password = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.password")
         except KeyError as ex:
             raise ValueError(f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'.")
+        
+    def load_redis_credentials_from_file(self):
+        config = read_yaml_config_file(self.credentials_file_path)
+        if config is None:
+            raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
+        try:
+            self.redis.password = get_config_value(config, f"{REDIS_COMPONENT_NAME}.password")
+        except KeyError as ex:
+            raise ValueError(f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'.")
+
 
     def dump_to_primitive_dict(self):
         d = self.dict()

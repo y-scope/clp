@@ -176,20 +176,9 @@ def handle_pending_search_jobs(db_conn, results_cache_uri: str) -> None:
 
 
 def try_getting_task_result(async_task_result):
-    """
-    Ideally, we'd use this code:
-
     if not async_task_result.ready():
         return None
     return async_task_result.get()
-
-    But because of https://github.com/celery/celery/issues/4084, wew have to use the following
-    timeout based approach until we switch to the Redis result backend.
-    """
-    try:
-        return async_task_result.get(timeout=0.1)
-    except celery.exceptions.TimeoutError:
-        return None
 
 
 def check_job_status_and_update_db(db_conn):
