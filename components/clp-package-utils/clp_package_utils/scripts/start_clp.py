@@ -556,6 +556,7 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
         return
 
     webui_logs_dir = clp_config.logs_directory / WEBUI_COMPONENT_NAME
+    node_path = str(CONTAINER_CLP_HOME / 'var' / 'www' / 'programs'/'server'/'npm'/'node_modules')
     settings_json_path = get_clp_home() / 'var' / 'www' / 'settings.json'
 
     validate_webui_config(clp_config, webui_logs_dir, settings_json_path)
@@ -575,6 +576,7 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
         '--network', 'host',
         '--rm',
         '--name', container_name,
+        '-e', f"NODE_PATH={node_path}",
         '-e', f'MONGO_URL={clp_config.results_cache.get_uri()}',
         '-e', f'PORT={clp_config.webui.port}',
         '-e', f'ROOT_URL=http://{clp_config.webui.host}',
@@ -600,6 +602,7 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
 
     node_cmd = [
         str(CONTAINER_CLP_HOME / 'bin' / 'node'),
+        str(CONTAINER_CLP_HOME / 'var' / 'www' / 'launcher.js'),
         str(CONTAINER_CLP_HOME / 'var' / 'www' / 'main.js')
     ]
     cmd = container_cmd + node_cmd

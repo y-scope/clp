@@ -124,9 +124,10 @@ tasks:
       - >-
         rsync -a
         "{{.WEBUI_BUILD_DIR}}/bundle/"
+        "$PWD/settings.json"
+        "$PWD/launcher.js"
         "{{.WEBUI_BUILD_DIR}}/"
       - "rm -rf '{{.WEBUI_BUILD_DIR}}/bundle/'"
-      - "cp $PWD/settings.json {{.WEBUI_BUILD_DIR}}/"
       - |-
         cd {{.WEBUI_BUILD_DIR}}/programs/server
         PATH={{.NODEJS_BIN_DIR}}:$PATH $(readlink -f {{.NODEJS_BIN_DIR}}/npm) install
