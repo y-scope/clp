@@ -425,6 +425,7 @@ def start_compression_worker(instance_id: str, clp_config: CLPConfig, container_
         container_clp_config,
         celery_method,
         celery_route,
+        clp_config.redis.compression_backend_database,
         num_cpus,
         mounts
     )
