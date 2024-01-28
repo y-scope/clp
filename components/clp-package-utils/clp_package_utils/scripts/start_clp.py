@@ -449,8 +449,8 @@ def start_search_worker(instance_id: str, clp_config: CLPConfig, container_clp_c
 
 
 def generic_start_worker(component_name: str, instance_id: str, clp_config: CLPConfig, worker_config: BaseModel,
-                 container_clp_config: CLPConfig, celery_method: str, celery_route: str,
-                 redis_database: int, num_cpus: int, mounts: CLPDockerMounts):
+                         container_clp_config: CLPConfig, celery_method: str, celery_route: str,
+                         redis_database: int, num_cpus: int, mounts: CLPDockerMounts):
     logger.info(f"Starting {component_name}...")
 
     container_name = f'clp-{component_name}-{instance_id}'
@@ -566,8 +566,9 @@ def main(argv):
                               SEARCH_SCHEDULER_COMPONENT_NAME, COMPRESSION_WORKER_COMPONENT_NAME,
                               SEARCH_WORKER_COMPONENT_NAME]:
             validate_and_load_queue_credentials_file(clp_config, clp_home, True)
-        if component_name in ['', REDIS_COMPONENT_NAME, SEARCH_SCHEDULER_COMPONENT_NAME,
-                              WORKER_COMPONENT_NAME]:
+        if component_name in ['', REDIS_COMPONENT_NAME, COMPRESSION_SCHEDULER_COMPONENT_NAME,
+                              SEARCH_SCHEDULER_COMPONENT_NAME, COMPRESSION_WORKER_COMPONENT_NAME,
+                              SEARCH_WORKER_COMPONENT_NAME]:
             validate_and_load_redis_credentials_file(clp_config, clp_home, True)
 
         clp_config.validate_data_dir()
