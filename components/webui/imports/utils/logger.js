@@ -5,6 +5,7 @@ import JSON5 from "json5";
 const MAX_LOGS_FILE_SIZE = "100m";
 const MAX_LOGS_RETENTION_DAYS = "30d";
 
+let winstonLogger = null;
 let isTraceEnabled = false;
 
 // attribute names should match clp_py_utils.clp_logging.LOGGING_LEVEL_MAPPING
@@ -17,6 +18,12 @@ const webuiLoggingLevelToWinstonMap = {
     CRITICAL: "error",
 };
 
+/**
+ * Retrieves information about the calling function's stack trace.
+ *
+ * @returns {Object|null} an object containing method, filePath, and line information,
+ *                        or null if the information couldn't be extracted
+ */
 const getStackInfo = () => {
     let info = null;
 
@@ -45,7 +52,12 @@ const getStackInfo = () => {
 };
 
 
-let winstonLogger = null;
+/**
+ * Logs a message with the specified log level, including optional trace information.
+ *
+ * @param {string} level of the log message
+ * @param {...any} args message or data to be logged
+ */
 const fileLineFuncLog = (level, ...args) => {
     let logMessage = `${args.map(a => ("string" === typeof a) ? a : JSON5.stringify(a)).join(" ")}`;
     let logLabel = "";
@@ -79,6 +91,13 @@ export let logger = Object.freeze({
     silly: (...args) => (fileLineFuncLog("silly", ...args)),
 });
 
+/**
+ * Initializes winston logger with the specified configuration.
+ *
+ * @param {string} logsDir where log files will be stored.
+ * @param {string} webuiLoggingLevel messages higher than this level will be logged
+ * @param {boolean} [_isTraceEnabled=false] whether to log function & file names and line numbers
+ */
 export const initLogger = (logsDir, webuiLoggingLevel, _isTraceEnabled = false) => {
     isTraceEnabled = _isTraceEnabled;
 

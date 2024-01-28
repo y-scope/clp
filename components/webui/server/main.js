@@ -11,7 +11,15 @@ import {initLogger} from "../imports/utils/logger";
 const DEFAULT_LOGS_DIR = ".";
 const DEFAULT_LOGGING_LEVEL = Meteor.isDevelopment ? "debug" : "info";
 
-function parseArgs() {
+/**
+ * Parses environment variables and retrieves configuration values for the application.
+ *
+ * @returns {Object} object containing configuration values including database host, port,
+ *                   name, user, password, logs directory, and logging level
+ * @throws {Error} if required environment variables are not defined, it exits the process with
+ * an error
+ */
+const parseArgs = () => {
     const CLP_DB_HOST = process.env["CLP_DB_HOST"];
     const CLP_DB_PORT = process.env["CLP_DB_PORT"];
     const CLP_DB_NAME = process.env["CLP_DB_NAME"];
@@ -36,7 +44,7 @@ function parseArgs() {
         WEBUI_LOGS_DIR,
         WEBUI_LOGGING_LEVEL,
     };
-}
+};
 
 Meteor.startup(async () => {
     const args = parseArgs();
