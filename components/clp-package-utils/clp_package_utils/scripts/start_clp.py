@@ -502,6 +502,7 @@ def generic_start_worker(component_name: str, instance_id: str, clp_config: CLPC
         '-e', f'CLP_ARCHIVE_OUTPUT_DIR={container_clp_config.archive_output.directory}',
         '-e', f'CLP_LOGS_DIR={container_logs_dir}',
         '-e', f'CLP_LOGGING_LEVEL={worker_config.logging_level}',
+        '-e', f'CLP_STORAGE_ENGINE={clp_config.package.storage_engine}',
         '-u', f'{os.getuid()}:{os.getgid()}',
         '--mount', str(mounts.clp_home),
     ]

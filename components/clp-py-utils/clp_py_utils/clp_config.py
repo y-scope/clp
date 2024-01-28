@@ -2,6 +2,8 @@ import pathlib
 import typing
 
 from pydantic import BaseModel, validator
+from enum import auto
+from strenum import KebabCaseStrEnum
 
 from .core import get_config_value, make_config_path_absolute, read_yaml_config_file, validate_path_could_be_dir
 from .clp_logging import is_valid_logging_level, get_valid_logging_level
@@ -20,6 +22,21 @@ WORKER_COMPONENT_NAME = 'worker'
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path('etc') / 'credentials.yml'
 CLP_METADATA_TABLE_PREFIX = 'clp_'
 SEARCH_JOBS_TABLE_NAME = 'distributed_search_jobs'
+
+class StorageEngine(KebabCaseStrEnum):
+    CLP = auto()
+
+VALID_STORAGE_ENGINES = [storage_engine.value for storage_engine in StorageEngine]
+
+
+class Package(BaseModel):
+    storage_engine: str = 'clp'
+
+    @validator('storage_engine')
+    def validate_storage_engine(cls, field):
+        if field not in VALID_STORAGE_ENGINES:
+            raise ValueError(f"package.storage_engine must be one of the follwing {'|'.join(VALID_STORAGE_ENGINES)}")
+        return field
 
 
 class Database(BaseModel):
@@ -215,6 +232,7 @@ class CLPConfig(BaseModel):
 
     input_logs_directory: pathlib.Path = pathlib.Path('/')
 
+    package: Package = Package()
     database: Database = Database()
     queue: Queue = Queue()
     redis: Redis = Redis()
