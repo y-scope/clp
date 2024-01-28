@@ -5,6 +5,8 @@ import JSON5 from "json5";
 const MAX_LOGS_FILE_SIZE = "100m";
 const MAX_LOGS_RETENTION_DAYS = "30d";
 
+let isTraceEnabled = false;
+
 // attribute names should match clp_py_utils.clp_logging.LOGGING_LEVEL_MAPPING
 const webuiLoggingLevelToWinstonMap = {
     DEBUG: "debug",
@@ -45,22 +47,23 @@ const getStackInfo = () => {
 
 let winstonLogger = null;
 const fileLineFuncLog = (level, ...args) => {
-    const stackInfo = getStackInfo();
-    if (null !== stackInfo) {
-        const logMessage = `[${stackInfo.filePath}:${stackInfo.line}] ` +
-            `${args.map(a => ("string" === typeof a) ? a : JSON5.stringify(a)).join(" ")}`;
-        winstonLogger.log({
-            level,
-            message: logMessage,
-            label: stackInfo.method,
-        });
-    } else {
-        winstonLogger.log({
-            level,
-            message,
-            label: "",
-        });
+    let logMessage = `${args.map(a => ("string" === typeof a) ? a : JSON5.stringify(a)).join(" ")}`;
+    let logLabel = "";
+
+    if (true === isTraceEnabled) {
+        const stackInfo = getStackInfo();
+
+        if (null !== stackInfo) {
+            logMessage = `[${stackInfo.filePath}:${stackInfo.line}] ` + logMessage;
+            logLabel = stackInfo.method;
+        }
     }
+
+    winstonLogger.log({
+        level,
+        message: logMessage,
+        label: logLabel,
+    });
 };
 
 export let logger = Object.freeze({
@@ -76,7 +79,9 @@ export let logger = Object.freeze({
     silly: (...args) => (fileLineFuncLog("silly", ...args)),
 });
 
-export const initLogger = (logsDir, webuiLoggingLevel, isTraceEnabled = false) => {
+export const initLogger = (logsDir, webuiLoggingLevel, _isTraceEnabled = false) => {
+    isTraceEnabled = _isTraceEnabled;
+
     winstonLogger = winston.createLogger({
         level: webuiLoggingLevelToWinstonMap[webuiLoggingLevel],
         format: winston.format.combine(
@@ -101,10 +106,6 @@ export const initLogger = (logsDir, webuiLoggingLevel, isTraceEnabled = false) =
             }),
         ],
     });
-
-    if (false === isTraceEnabled) {
-        logger = winstonLogger;
-    }
 
     logger.info("logger has been initialized");
 };
