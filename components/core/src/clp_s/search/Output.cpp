@@ -3,8 +3,6 @@
 #include <regex>
 #include <stack>
 
-#include <json/single_include/nlohmann/json.hpp>
-
 #include "../FileWriter.hpp"
 #include "../ReaderUtils.hpp"
 #include "../Utils.hpp"
@@ -15,8 +13,6 @@
 #include "FilterExpr.hpp"
 #include "OrExpr.hpp"
 #include "SearchUtils.hpp"
-
-using json = nlohmann::json;
 
 #define eval(op, a, b) (((op) == FilterOperation::EQ) ? ((a) == (b)) : ((a) != (b)))
 
@@ -580,83 +576,152 @@ bool Output::evaluate_var_string_filter(
 bool Output::evaluate_array_filter(
         FilterOperation op,
         DescriptorList const& unresolved_tokens,
-        std::string const& value,
+        std::string& value,
         std::shared_ptr<Literal> const& operand
-) const {
-    auto object = json::parse(value);
-    return evaluate_array_filter(object, op, unresolved_tokens, 0, operand, true);
+) {
+    if (value.capacity() < (value.size() + simdjson::SIMDJSON_PADDING)) {
+        value.reserve(value.size() + simdjson::SIMDJSON_PADDING);
+    }
+    auto obj = m_array_parser.iterate(value);
+    ondemand::array array = obj.get_array();
+
+    // pre-evaluate whether we can match strings or numbers to eliminate
+    // duplicate effort on every item
+    m_maybe_string = !(op == FilterOperation::EXISTS || op == FilterOperation::NEXISTS)
+                     && (operand->as_var_string(m_array_search_string, op)
+                         || operand->as_clp_string(m_array_search_string, op));
+    double tmp_double;
+    int64_t tmp_int;
+    m_maybe_number = !(op == FilterOperation::EXISTS || op == FilterOperation::NEXISTS)
+                     && (operand->as_float(tmp_double, op) || operand->as_int(tmp_int, op));
+
+    return evaluate_array_filter_array(array, op, unresolved_tokens, 0, operand);
 }
 
-bool Output::evaluate_array_filter(
-        json& object,
+bool Output::evaluate_array_filter_value(
+        ondemand::value& item,
         FilterOperation op,
         DescriptorList const& unresolved_tokens,
         size_t cur_idx,
-        std::shared_ptr<Literal> const& operand,
-        bool array_or_object
+        std::shared_ptr<Literal> const& operand
 ) const {
     bool match = false;
-    if (cur_idx > unresolved_tokens.size()) {
-        return false;
-    }
-
-    for (auto i = object.begin(); i != object.end(); ++i) {
-        auto& value = i.value();
-        if (value.is_array()) {
-            match |= evaluate_array_filter(value, op, unresolved_tokens, cur_idx, operand, true);
-        } else if (value.is_object()) {
-            if (false == array_or_object && cur_idx < unresolved_tokens.size()
-                && i.key() == unresolved_tokens[cur_idx].get_token())
-            {
-                match |= evaluate_array_filter(
-                        value,
-                        op,
-                        unresolved_tokens,
-                        cur_idx + 1,
-                        operand,
-                        false
-                );
-            } else if (array_or_object) {
-                match |= evaluate_array_filter(
-                        value,
+    switch (item.type()) {
+        case ondemand::json_type::object: {
+            ondemand::object nested_object = item.get_object();
+            if (evaluate_array_filter_object(
+                        nested_object,
                         op,
                         unresolved_tokens,
                         cur_idx,
-                        operand,
-                        false
-                );
-            }
-        } else if (((array_or_object && cur_idx == unresolved_tokens.size())
-                    || (!array_or_object && cur_idx == unresolved_tokens.size() - 1
-                        && i.key() == unresolved_tokens[cur_idx].get_token())))
-        {
-            std::string tmp_string;
-            int64_t tmp_int;
-            double tmp_float;
-            bool tmp_bool;
-            if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op
-                || (value.is_number_integer() && operand->as_int(tmp_int, op)
-                    && eval(op, value.get<int64_t>(), tmp_int))
-                || (value.is_number_float() && operand->as_float(tmp_float, op)
-                    && eval(op, value.get<double>(), tmp_float))
-                || (value.is_boolean() && operand->as_bool(tmp_bool, op)
-                    && eval(op, value.get<bool>(), tmp_bool)))
+                        operand
+                ))
             {
                 match = true;
-            } else if (value.is_string() && (operand->as_var_string(tmp_string, op) || operand->as_clp_string(tmp_string, op)))
-            {
-                std::string s = value.get<std::string>();
-                match = wildcard_match(s, tmp_string) ? op == FilterOperation::EQ
-                                                      : op == FilterOperation::NEQ;
             }
-        }
+        } break;
+        case ondemand::json_type::array: {
+            ondemand::array nested_array = item.get_array();
+            if (evaluate_array_filter_array(nested_array, op, unresolved_tokens, cur_idx, operand))
+            {
+                match = true;
+            }
+        } break;
+        case ondemand::json_type::string: {
+            if (true == m_maybe_string && unresolved_tokens.size() == cur_idx
+                && wildcard_match(item.get_string().value(), m_array_search_string))
+            {
+                match = op == FilterOperation::EQ;
+            }
+        } break;
+        case ondemand::json_type::number: {
+            if (false == m_maybe_number || unresolved_tokens.size() != cur_idx) {
+                break;
+            }
+            ondemand::number number = item.get_number();
+            if (number.is_double()) {
+                double tmp_double;
+                operand->as_float(tmp_double, op);
+                match = eval(op, number.get_double(), tmp_double);
+            } else if (number.is_uint64()) {
+                int64_t tmp_int;
+                operand->as_int(tmp_int, op);
+                match = eval(op, number.get_uint64(), tmp_int);
+            } else {
+                int64_t tmp_int;
+                operand->as_int(tmp_int, op);
+                // TODO: once we properly support unsigned at at least the AST level we should
+                // replace this with something like operand->as_uint(tmp_uint)
+                uint64_t tmp_uint = bit_cast<uint64_t, int64_t>(tmp_int);
+                match = eval(op, number.get_int64(), tmp_uint);
+            }
+        } break;
+        case ondemand::json_type::boolean: {
+            if (unresolved_tokens.size() != cur_idx || op == FilterOperation::EXISTS
+                || op == FilterOperation::NEXISTS)
+            {
+                break;
+            }
+            bool tmp_bool;
+            if (operand->as_bool(tmp_bool, op) && eval(op, item.get_bool(), tmp_bool)) {
+                match = true;
+            }
+        } break;
+        case ondemand::json_type::null: {
+            if (op != FilterOperation::EXISTS && op != FilterOperation::NEXISTS
+                && operand->as_null(op))
+            {
+                match = op == FilterOperation::EQ;
+            }
+        } break;
+    }
+    return match;
+}
 
-        if (match) {
+bool Output::evaluate_array_filter_array(
+        ondemand::array& array,
+        FilterOperation op,
+        DescriptorList const& unresolved_tokens,
+        size_t cur_idx,
+        std::shared_ptr<Literal> const& operand
+) const {
+    for (ondemand::value item : array) {
+        if (evaluate_array_filter_value(item, op, unresolved_tokens, cur_idx, operand)) {
             return true;
         }
     }
+    return false;
+}
 
-    return match;
+bool Output::evaluate_array_filter_object(
+        ondemand::object& object,
+        FilterOperation op,
+        DescriptorList const& unresolved_tokens,
+        size_t cur_idx,
+        std::shared_ptr<Literal> const& operand
+) const {
+    if (cur_idx >= unresolved_tokens.size()) {
+        return false;
+    }
+
+    for (auto field : object) {
+        // Note: field.key() yields the escaped JSON key, so the descriptor tokens passed to search
+        // must likewise be escaped.
+        if (field.key() != unresolved_tokens[cur_idx].get_token()) {
+            continue;
+        }
+
+        cur_idx += 1;
+        if (cur_idx == unresolved_tokens.size()
+            && (op == FilterOperation::EXISTS || op == FilterOperation::NEXISTS))
+        {
+            return op == FilterOperation::EXISTS;
+        }
+
+        ondemand::value item = field.value();
+        return evaluate_array_filter_value(item, op, unresolved_tokens, cur_idx, operand);
+    }
+    return false;
 }
 
 bool Output::evaluate_wildcard_array_filter(
