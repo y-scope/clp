@@ -158,7 +158,7 @@ Meteor.methods({
         if (null !== jobId) {
             SearchResultsMetadataCollection.insert({
                 _id: jobId.toString(),
-                lastSignal: SearchSignal.RSP_SEARCHING,
+                lastSignal: SearchSignal.RSP_QUERYING,
                 errorMsg: null
             });
 

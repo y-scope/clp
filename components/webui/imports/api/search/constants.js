@@ -10,17 +10,23 @@ let enumSearchSignal;
  */
 export const SearchSignal = Object.freeze({
     NONE: (enumSearchSignal=0),
+
     REQ_MASK: (enumSearchSignal = 0x10000000),
+    REQ_CLEARING: ++enumSearchSignal,
     REQ_CANCELLING: ++enumSearchSignal,
     REQ_QUERYING: ++enumSearchSignal,
-    REQ_CLEARING: ++enumSearchSignal,
+
     RSP_MASK: (enumSearchSignal = 0x20000000),
     RSP_DONE: ++enumSearchSignal,
     RSP_ERROR: ++enumSearchSignal,
-    RSP_SEARCHING: ++enumSearchSignal,
+    RSP_QUERYING: ++enumSearchSignal,
 });
-export const isSearchSignalReq = (e) => (0 !== (SearchSignal.REQ_MASK & e));
-export const isSearchSignalRsp = (e) => (0 !== (SearchSignal.RSP_MASK & e));
+
+export const isSearchSignalReq = (s) => (0 !== (SearchSignal.REQ_MASK & s));
+export const isSearchSignalRsp = (s) => (0 !== (SearchSignal.RSP_MASK & s));
+export const isSearchSignalQuerying = (s) => (
+    [SearchSignal.REQ_QUERYING, SearchSignal.RSP_QUERYING].includes(s)
+);
 
 let enumJobStatus;
 /**

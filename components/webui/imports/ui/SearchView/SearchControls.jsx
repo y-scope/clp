@@ -1,4 +1,3 @@
-import * as PropTypes from "prop-types";
 import React, {useEffect, useState} from "react";
 
 import {Button, Col, Container, Dropdown, DropdownButton, Form, InputGroup, Row} from "react-bootstrap";
@@ -208,7 +207,7 @@ export const SearchControls = ({
                     <Form.Control
                         disabled={
                             (true === isSearchSignalReq(resultsMetadata["lastSignal"])) ||
-                            (SearchSignal.RSP_SEARCHING === resultsMetadata["lastSignal"])
+                            (SearchSignal.RSP_QUERYING === resultsMetadata["lastSignal"])
                         }
                         autoFocus={true}
                         className={"border-top-0"}
@@ -220,15 +219,16 @@ export const SearchControls = ({
                     {
                         (SearchSignal.RSP_DONE === resultsMetadata["lastSignal"]) &&
                         <Button
+                            className={"border-top-0 rounded-0"}
                             disabled={true === isSearchSignalReq(resultsMetadata["lastSignal"])}
                             onClick={onClearResults}
                             title={"Clear Results"}
                             variant={"info"}>
-                            <FontAwesomeIcon icon={faTrash}/>
+                            <FontAwesomeIcon icon={faTrash} fixedWidth={true}/>
                         </Button>
                     }
                     {
-                        (SearchSignal.RSP_SEARCHING === resultsMetadata["lastSignal"]) ?
+                        (SearchSignal.RSP_QUERYING === resultsMetadata["lastSignal"]) ?
                         <Button
                             className={"border-top-0 rounded-0"}
                             disabled={true === canceling}

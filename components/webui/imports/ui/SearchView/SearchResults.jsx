@@ -6,7 +6,7 @@ import {SearchResultsTable} from "./SearchResultsTable";
  * Renders the search results, which includes the search results header and the search results
  * table.
  *
- * @param {string} jobId of the search job
+ * @param {number} jobId of the search job
  * @param {Object[]} searchResults results to display
  * @param {Object} resultsMetadata which includes total results count and last request / response signal
  * @param {Object} fieldToSortBy used for sorting results

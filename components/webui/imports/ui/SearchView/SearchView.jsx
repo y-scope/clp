@@ -6,7 +6,7 @@ import React, {useEffect, useRef, useState} from "react";
 import {ProgressBar} from "react-bootstrap";
 
 import {getCollection, SearchResultsMetadataCollection} from "../../api/search/collections";
-import {INVALID_JOB_ID, SearchSignal} from "../../api/search/constants";
+import {INVALID_JOB_ID, isSearchSignalQuerying, SearchSignal} from "../../api/search/constants";
 
 import "react-datepicker/dist/react-datepicker.css";
 import LOCAL_STORAGE_KEYS from "../constants/LOCAL_STORAGE_KEYS";
@@ -14,6 +14,10 @@ import {changeTimezoneToUTCWithoutChangingTime, computeLast15MinTimeRange} from 
 import {SearchControls} from "./SearchControls";
 import {SearchResults} from "./SearchResults";
 import {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResultsTable";
+
+// for pseudo progress bar
+const PROGRESS_INCREMENT = 5;
+const PROGRESS_INTERVAL_MS = 100;
 
 /**
  * Provides a search interface, which search queries and visualizes search results.
@@ -203,13 +207,30 @@ const SearchStatus = ({
     resultsMetadata,
     errorMsg,
 }) => {
+    const [progress, setProgress] = useState(0);
+    const timerIntervalRef = useRef(null);
+
+    useEffect(() => {
+        if (true === isSearchSignalQuerying(resultsMetadata["lastSignal"])) {
+            timerIntervalRef.current = timerIntervalRef.current ?? setInterval(() => {
+                setProgress((progress) => (progress + PROGRESS_INCREMENT));
+            }, PROGRESS_INTERVAL_MS);
+        } else {
+            if (null !== timerIntervalRef.current) {
+                clearInterval(timerIntervalRef.current);
+                timerIntervalRef.current = null;
+            }
+            setProgress(0);
+        }
+    }, [resultsMetadata["lastSignal"]]);
+
     if ("" !== errorMsg && null !== errorMsg && undefined !== errorMsg) {
         return (<div className={"search-error"}>
             <FontAwesomeIcon className="search-error-icon" icon={faExclamationCircle}/>
             {errorMsg}
         </div>);
     } else {
-        let message;
+        let message = null;
         switch (resultsMetadata["lastSignal"]) {
             case SearchSignal.NONE:
                 message = "Ready";
@@ -220,23 +241,20 @@ const SearchStatus = ({
             case SearchSignal.REQ_CLEARING:
                 message = "Clearing...";
                 break;
-            case SearchSignal.REQ_QUERYING:
-            case SearchSignal.RSP_SEARCHING:
-                message = "Searching...";
-                break;
             default:
-                message = "Unknown state / No message";
+                break;
         }
 
         return <>
             <ProgressBar
-                animated={SearchSignal.RSP_DONE !== resultsMetadata["lastSignal"]}
+                style={{visibility: (0 === progress) ? "hidden" : "visible"}}
+                animated={true}
                 className={"search-progress-bar"}
-                striped={SearchSignal.RSP_DONE !== resultsMetadata["lastSignal"]}
-                now={SearchSignal.RSP_DONE === resultsMetadata["lastSignal"] ? 100 : 0}
+                striped={true}
+                now={progress}
                 variant={"primary"}
             />
-            {SearchSignal.RSP_DONE !== resultsMetadata["lastSignal"] &&
+            {null !== message &&
                 <div className={"search-no-results-status"}>{message}</div>}
         </>;
     }

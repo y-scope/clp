@@ -17,7 +17,7 @@ import {SearchSignal} from "../../api/search/constants";
  * Renders the header for the search results, which includes the job ID, the number of results
  * found, and a control for setting the maximum number of lines per search result.
  *
- * @param {string} jobId of the search job
+ * @param {number} jobId of the search job
  * @param {Object} resultsMetadata which includes last request / response signal
  * @param {number} numResultsOnServer of the search job
  * @param {number} maxLinesPerResult to display
@@ -39,7 +39,7 @@ export const SearchResultsHeader = ({
         }
     };
 
-    let numResultsText = `(Job ID ${jobId}) `;
+    let numResultsText = `Job ID ${jobId}: `;
     if (0 === numResultsOnServer) {
         numResultsText += SearchSignal.RSP_DONE !== resultsMetadata["lastSignal"] ?
             "Query is running" :
@@ -53,8 +53,11 @@ export const SearchResultsHeader = ({
     return (<>
         <Container fluid={true}>
             <Row className={"search-results-title-bar"}>
-                <Col className={"mr-auto"}><span
-                    className={"search-results-count"}>{numResultsText}</span></Col>
+                <Col className={"mr-auto"}>
+                    <span className={"search-results-count"}>
+                        Job ID {jobId} | Results count: {numResultsOnServer}
+                    </span>
+                </Col>
                 <Col className={"pr-0"} xs={"auto"}>
                     <OverlayTrigger
                         placement={"left"}
