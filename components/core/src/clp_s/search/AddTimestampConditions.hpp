@@ -9,6 +9,15 @@
 #include "Transformation.hpp"
 
 namespace clp_s::search {
+/**
+ * Transformation pass which takes optional begin and end filters on a timestamp column and augments
+ * the AST with additional filters on the provided timestamp column.
+ *
+ * Providing an empty option for begin_ts and end_ts always results in no change to the AST.
+ *
+ * If either begin_ts or end_ts is specified and the timestamp_column option is empty then this
+ * transformation pass will yield EmptyExpr.
+ */
 class AddTimestampConditions : public Transformation {
 public:
     // Constructors
@@ -24,6 +33,8 @@ public:
     /**
      * Takes in an AST and adds filters on the authoritative timestamp column if the user specified
      * such filters on the command line.
+     * @param expr the AST to transform
+     * @return the transformed AST
      */
     std::shared_ptr<Expression> run(std::shared_ptr<Expression>& expr) override;
 

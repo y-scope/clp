@@ -96,7 +96,7 @@ TimestampDictionaryReader::get_authoritative_timestamp_column() {
     // should enforce a convention that the first entry in the timestamp dictionary corresponds to
     // the "authoritative" timestamp column for the dataset.
     std::optional<std::vector<std::string>> timestamp_column;
-    for (auto it = tokenized_column_to_range_begin(); it != tokenized_column_to_range_end(); ++it) {
+    for (auto it = tokenized_column_to_range_begin(); tokenized_column_to_range_end() != it; ++it) {
         timestamp_column = it->first;
         break;
     }
