@@ -234,11 +234,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             match_options.add_options()(
                 "tge",
                 po::value<epochtime_t>()->value_name("TS"),
-                "Find records with UNIX timestamp >= TS ms"
+                "Find records with UNIX epoch timestamp >= TS ms"
             )(
                 "tle",
                 po::value<epochtime_t>()->value_name("TS"),
-                "Find records with UNIX timestamp <= TS ms"
+                "Find records with UNIX epoch timestamp <= TS ms"
             );
             // clang-format on
             search_options.add(match_options);
