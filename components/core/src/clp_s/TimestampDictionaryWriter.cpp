@@ -110,7 +110,7 @@ uint64_t TimestampDictionaryWriter::get_pattern_id(TimestampPattern const* patte
 epochtime_t TimestampDictionaryWriter::ingest_entry(
         int32_t column_id,
         std::string const& timestamp,
-        uint64_t& id
+        uint64_t& pattern_id
 ) {
     epochtime_t ret;
     size_t timestamp_begin_pos = 0, timestamp_end_pos = 0;
@@ -126,7 +126,7 @@ epochtime_t TimestampDictionaryWriter::ingest_entry(
         throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
     }
 
-    id = get_pattern_id(pattern);
+    pattern_id = get_pattern_id(pattern);
 
     return ret;
 }

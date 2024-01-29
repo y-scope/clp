@@ -74,10 +74,13 @@ void TimestampEntry::write_to_file(
     }
 }
 
-ErrorCode TimestampEntry::try_read_from_file(ZstdDecompressor& decompressor, std::string& column) {
+ErrorCode TimestampEntry::try_read_from_file(
+        ZstdDecompressor& decompressor,
+        int32_t& column_id,
+        std::string& column_name
+) {
     ErrorCode error_code;
 
-    int32_t column_id;
     error_code = decompressor.try_read_numeric_value<int32_t>(column_id);
     if (ErrorCodeSuccess != error_code) {
         return error_code;
@@ -88,7 +91,7 @@ ErrorCode TimestampEntry::try_read_from_file(ZstdDecompressor& decompressor, std
     if (ErrorCodeSuccess != error_code) {
         return error_code;
     }
-    error_code = decompressor.try_read_string(column_len, column);
+    error_code = decompressor.try_read_string(column_len, column_name);
     if (ErrorCodeSuccess != error_code) {
         return error_code;
     }

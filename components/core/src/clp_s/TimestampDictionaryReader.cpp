@@ -43,12 +43,13 @@ void TimestampDictionaryReader::read_new_entries(bool local) {
     }
 
     for (int i = 0; i < range_index_size; ++i) {
-        std::string col;
+        int32_t column_id;
+        std::string column_name;
         TimestampEntry entry;
-        entry.try_read_from_file(m_dictionary_decompressor, col);
-        TimestampEntry& e = m_column_to_range[col] = entry;
+        entry.try_read_from_file(m_dictionary_decompressor, column_id, column_name);
+        TimestampEntry& e = m_column_to_range[column_id] = entry;
         std::vector<std::string> tokens;
-        StringUtils::tokenize_column_descriptor(col, tokens);
+        StringUtils::tokenize_column_descriptor(column_name, tokens);
         m_tokenized_column_to_range.emplace_back(std::move(tokens), &e);
     }
 

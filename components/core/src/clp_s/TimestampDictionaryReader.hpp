@@ -81,7 +81,7 @@ public:
 
 private:
     typedef std::map<uint64_t, TimestampPattern> id_to_pattern_t;
-    typedef std::map<std::string, TimestampEntry> column_to_range_t;
+    typedef std::map<int32_t, TimestampEntry> column_to_range_t;
     typedef std::vector<std::pair<std::vector<std::string>, TimestampEntry*>>
             tokenized_column_to_range_t;
 

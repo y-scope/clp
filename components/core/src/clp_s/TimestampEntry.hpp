@@ -59,18 +59,27 @@ public:
     /**
      * Write the timestamp entry to a file
      * @param compressor
-     * @param column
+     * @param column_id
+     * @param column_name
      */
-    void
-    write_to_file(ZstdCompressor& compressor, int32_t column_id, std::string const& column) const;
+    void write_to_file(
+            ZstdCompressor& compressor,
+            int32_t column_id,
+            std::string const& column_name
+    ) const;
 
     /**
      * Try to read the timestamp entry from a file
      * @param decompressor
-     * @param column
+     * @param column_id
+     * @param column_name
      * @return ErrorCode
      */
-    ErrorCode try_read_from_file(ZstdDecompressor& decompressor, std::string& column);
+    ErrorCode try_read_from_file(
+            ZstdDecompressor& decompressor,
+            int32_t& column_id,
+            std::string& column_name
+    );
 
     /**
      * Read the timestamp entry from a file

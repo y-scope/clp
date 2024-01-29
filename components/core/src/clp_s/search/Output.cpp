@@ -25,7 +25,8 @@ void Output::filter() {
     auto top_level_expr = m_expr;
 
     if (m_output_handler->output_timestamp()) {
-        m_timestamp_dict = ReaderUtils::read_local_timestamp_dictionary(m_archives_dir);
+        m_timestamp_dict = ReaderUtils::read_timestamp_dictionary(m_archives_dir);
+
     }
 
     for (auto const& archive : ReaderUtils::get_archives(m_archives_dir)) {

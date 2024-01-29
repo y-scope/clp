@@ -73,10 +73,10 @@ public:
      * Ingests a timestamp entry
      * @param column_id
      * @param timestamp
-     * @param id
+     * @param pattern_id
      * @return the epoch time corresponding to the string timestamp
      */
-    epochtime_t ingest_entry(int32_t column_id, std::string const& timestamp, uint64_t& id);
+    epochtime_t ingest_entry(int32_t column_id, std::string const& timestamp, uint64_t& pattern_id);
 
     /**
      * Ingests a timestamp entry
