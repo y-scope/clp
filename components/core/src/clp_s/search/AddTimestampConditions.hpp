@@ -21,7 +21,7 @@ public:
               m_end_ts(end_ts) {}
 
     /**
-     * Takes in an AST and adds filters on the authoratative timestamp column if the user specified
+     * Takes in an AST and adds filters on the authoritative timestamp column if the user specified
      * such filters on the command line.
      */
     std::shared_ptr<Expression> run(std::shared_ptr<Expression>& expr) override;

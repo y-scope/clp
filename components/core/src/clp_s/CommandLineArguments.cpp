@@ -238,7 +238,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             )(
                 "tle",
                 po::value<epochtime_t>()->value_name("TS"),
-                "Find messages with UNIX timestamp <= TS ms"
+                "Find records with UNIX timestamp <= TS ms"
             );
             // clang-format on
             search_options.add(match_options);

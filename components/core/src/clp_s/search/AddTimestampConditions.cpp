@@ -13,10 +13,10 @@ std::shared_ptr<Expression> AddTimestampConditions::run(std::shared_ptr<Expressi
     }
 
     // Find the name of the timestamp column
-    // TODO: At the moment we only allow a single timestamp column at ingestion time, but the
-    // timestamp dictionary is designed to store the ranges of several timestamp columns. We should
-    // enforce a convention that the first entry in the timestamp dictionary corresponds to the
-    // "authoratative" timestamp column for the dataset.
+    // TODO: Currently, we only allow a single authoritative timestamp column at ingestion time, but
+    // the timestamp dictionary is designed to store the ranges of several timestamp columns. We
+    // should enforce a convention that the first entry in the timestamp dictionary corresponds to
+    // the "authoritative" timestamp column for the dataset.
     std::shared_ptr<ColumnDescriptor> timestamp_column;
     for (auto it = m_timestamp_dict->tokenized_column_to_range_begin();
          it != m_timestamp_dict->tokenized_column_to_range_end();
@@ -26,7 +26,7 @@ std::shared_ptr<Expression> AddTimestampConditions::run(std::shared_ptr<Expressi
         break;
     }
 
-    // If there is no authoratative timestamp column then the timestamp filters specified by the
+    // If there is no authoritative timestamp column then the timestamp filters specified by the
     // user do not make sense, and the query shouldn't match any results.
     if (nullptr == timestamp_column) {
         return EmptyExpr::create();
