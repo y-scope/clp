@@ -124,8 +124,12 @@ ErrorCode TimestampEntry::try_read_from_file(
     return error_code;
 }
 
-void TimestampEntry::read_from_file(ZstdDecompressor& decompressor, std::string& column) {
-    auto error_code = try_read_from_file(decompressor, column);
+void TimestampEntry::read_from_file(
+        ZstdDecompressor& decompressor,
+        int32_t& column_id,
+        std::string& column_name
+) {
+    auto error_code = try_read_from_file(decompressor, column_id, column_name);
     if (ErrorCodeSuccess != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }

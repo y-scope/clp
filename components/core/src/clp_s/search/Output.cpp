@@ -152,10 +152,10 @@ void Output::init(
         VariableStringColumnReader* var_reader
                 = dynamic_cast<VariableStringColumnReader*>(column.second);
         if (m_match.schema_searches_against_column(schema_id, column.first)) {
-            if (clp_reader != nullptr && clp_reader->get_type() == "string") {
+            if (clp_reader != nullptr && clp_reader->get_type() == NodeType::CLPSTRING) {
                 m_clp_string_readers[column.first] = clp_reader;
                 m_other_columns.push_back(column.second);
-            } else if (var_reader != nullptr && var_reader->get_type() == "string") {
+            } else if (var_reader != nullptr && var_reader->get_type() == NodeType::VARSTRING) {
                 m_var_string_readers[column.first] = var_reader;
                 m_other_columns.push_back(column.second);
             } else if (auto date_column_reader = dynamic_cast<DateStringColumnReader*>(column.second))

@@ -84,9 +84,11 @@ public:
     /**
      * Read the timestamp entry from a file
      * @param decompressor
-     * @param column
+     * @param column_id
+     * @param column_name
      */
-    void read_from_file(ZstdDecompressor& decompressor, std::string& column);
+    void
+    read_from_file(ZstdDecompressor& decompressor, int32_t& column_id, std::string& column_name);
 
     /**
      * Check if a timestamp is in the range of this TimestampEntry
