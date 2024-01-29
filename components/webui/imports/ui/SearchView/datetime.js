@@ -209,3 +209,5 @@ export const dateTimeToDateWithoutChangingTimestamp = (dateTime) => {
         millisecond: dateTime.millisecond,
     }).toJSDate();
 };
+
+export const DEFAULT_TIME_RANGE_GETTER = computeAllTimeRange;
