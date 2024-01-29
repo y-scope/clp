@@ -31,8 +31,7 @@ public:
               m_end_ts(end_ts) {}
 
     /**
-     * Takes in an AST and adds filters on the authoritative timestamp column if the user specified
-     * such filters on the command line.
+     * Takes in an AST and adds filters on the provided timestamp column.
      * @param expr the AST to transform
      * @return the transformed AST
      */
