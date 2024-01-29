@@ -8,6 +8,7 @@
 #include <boost/filesystem.hpp>
 
 #include "DictionaryReader.hpp"
+#include "ReaderUtils.hpp"
 #include "SchemaReader.hpp"
 #include "TimestampDictionaryReader.hpp"
 
@@ -29,11 +30,11 @@ public:
     // Constructor
     ArchiveReader(
             std::shared_ptr<SchemaTree> schema_tree,
-            std::map<int32_t, std::vector<int32_t>> id_to_schema,
+            ReaderUtils::SchemaMap schema_map,
             std::shared_ptr<TimestampDictionaryReader> timestamp_dict
     )
             : m_schema_tree(std::move(schema_tree)),
-              m_id_to_schema(std::move(id_to_schema)),
+              m_schema_map(std::move(schema_map)),
               m_timestamp_dict(std::move(timestamp_dict)) {}
 
     /**
@@ -61,7 +62,7 @@ private:
     std::shared_ptr<LogTypeDictionaryReader> m_array_dict;
 
     std::shared_ptr<SchemaTree> m_schema_tree;
-    std::map<int32_t, std::vector<int32_t>> m_id_to_schema;
+    ReaderUtils::SchemaMap m_schema_map;
     std::map<int32_t, SchemaReader*> m_schema_id_to_reader;
 
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dict;

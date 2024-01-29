@@ -90,6 +90,8 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(std::string co
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 
+    // TODO: consider decompressing all schemas into the same buffer and providing access to them
+    // via const spans.
     for (size_t i = 0; i < schema_size; i++) {
         int32_t schema_id;
         error_code = schema_id_decompressor.try_read_numeric_value(schema_id);
@@ -111,7 +113,8 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(std::string co
                 throw OperationFailed(error_code, __FILENAME__, __LINE__);
             }
 
-            schema.push_back(node_id);
+            // Maintain schema ordering defined at compression time
+            schema.insert_unordered(node_id);
         }
     }
 
@@ -182,7 +185,7 @@ std::vector<int32_t> ReaderUtils::get_schemas(std::string const& archive_path) {
 
 void ReaderUtils::append_reader_columns(
         SchemaReader* reader,
-        std::vector<int32_t>& columns,
+        Schema const& columns,
         std::shared_ptr<SchemaTree> const& schema_tree,
         std::shared_ptr<VariableDictionaryReader> const& var_dict,
         std::shared_ptr<LogTypeDictionaryReader> const& log_dict,
