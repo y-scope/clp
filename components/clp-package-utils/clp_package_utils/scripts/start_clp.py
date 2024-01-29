@@ -39,10 +39,10 @@ from clp_py_utils.clp_config import (
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
-    SCHEDULER_COMPONENT_NAME,
+    COMPRESSION_SCHEDULER_COMPONENT_NAME,
     SEARCH_SCHEDULER_COMPONENT_NAME,
+    COMPRESSION_WORKER_COMPONENT_NAME,
     SEARCH_WORKER_COMPONENT_NAME,
-    WORKER_COMPONENT_NAME,
 )
 from job_orchestration.scheduler.constants import QueueName
 
@@ -339,62 +339,27 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
     logger.info(f"Started {RESULTS_CACHE_COMPONENT_NAME}.")
 
 
-def start_scheduler(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig, mounts: CLPDockerMounts):
-    logger.info(f"Starting {SCHEDULER_COMPONENT_NAME}...")
-
-    container_name = f'clp-{SCHEDULER_COMPONENT_NAME}-{instance_id}'
-    if container_exists(container_name):
-        logger.info(f"{SCHEDULER_COMPONENT_NAME} already running.")
-        return
-
-    container_config_filename = f'{container_name}.yml'
-    container_config_file_path = clp_config.logs_directory / container_config_filename
-    with open(container_config_file_path, 'w') as f:
-        yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
-
-    clp_site_packages_dir = CONTAINER_CLP_HOME / 'lib' / 'python3' / 'site-packages'
-    container_start_cmd = [
-        'docker', 'run',
-        '-di',
-        '--network', 'host',
-        '-w', str(CONTAINER_CLP_HOME),
-        '--rm',
-        '--name', container_name,
-        '-e', f'PYTHONPATH={clp_site_packages_dir}',
-        '-e', f'BROKER_URL=amqp://'
-              f'{container_clp_config.queue.username}:{container_clp_config.queue.password}@'
-              f'{container_clp_config.queue.host}:{container_clp_config.queue.port}',
-        '-u', f'{os.getuid()}:{os.getgid()}',
-        '--mount', str(mounts.clp_home),
-    ]
-    necessary_mounts = [
-        mounts.logs_dir,
-    ]
-    for mount in necessary_mounts:
-        if mount:
-            container_start_cmd.append('--mount')
-            container_start_cmd.append(str(mount))
-    container_start_cmd.append(clp_config.execution_container)
-
-    scheduler_cmd = [
-        'python3', '-u', '-m',
-        'job_orchestration.scheduler.scheduler',
-        '--config', str(container_clp_config.logs_directory / container_config_filename),
-    ]
-    cmd = container_start_cmd + scheduler_cmd
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
-
-    logger.info(f"Started {SCHEDULER_COMPONENT_NAME}.")
+def start_compression_scheduler(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig,
+                                mounts: CLPDockerMounts):
+    module_name = 'job_orchestration.scheduler.compress.compression_scheduler'
+    generic_start_scheduler(COMPRESSION_SCHEDULER_COMPONENT_NAME, module_name, instance_id,
+                            clp_config, container_clp_config, mounts)
 
 
 def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig,
                            mounts: CLPDockerMounts):
-    component_name = SEARCH_SCHEDULER_COMPONENT_NAME
+    module_name = 'job_orchestration.scheduler.search.search_scheduler'
+    generic_start_scheduler(SEARCH_SCHEDULER_COMPONENT_NAME, module_name, instance_id,
+                            clp_config, container_clp_config, mounts)
+
+
+def generic_start_scheduler(component_name: str, module_name: str, instance_id: str, clp_config: CLPConfig,
+                            container_clp_config: CLPConfig, mounts: CLPDockerMounts):
     logger.info(f"Starting {component_name}...")
 
     container_name = f'clp-{component_name}-{instance_id}'
     if container_exists(container_name):
-        logger.info(f"{SEARCH_SCHEDULER_COMPONENT_NAME} already running.")
+        logger.info(f"{component_name} already running.")
         return
 
     container_config_filename = f'{container_name}.yml'
@@ -429,6 +394,8 @@ def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_cl
     necessary_mounts = [
         mounts.logs_dir,
     ]
+    if COMPRESSION_SCHEDULER_COMPONENT_NAME == component_name:
+        necessary_mounts.append(mounts.input_logs_dir)
     for mount in necessary_mounts:
         if mount:
             container_start_cmd.append('--mount')
@@ -437,13 +404,31 @@ def start_search_scheduler(instance_id: str, clp_config: CLPConfig, container_cl
 
     scheduler_cmd = [
         'python3', '-u', '-m',
-        'job_orchestration.search_scheduler.search_scheduler',
+        module_name,
         '--config', str(container_clp_config.logs_directory / container_config_filename),
     ]
     cmd = container_start_cmd + scheduler_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     logger.info(f"Started {component_name}.")
+
+
+def start_compression_worker(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig,
+                             num_cpus: int, mounts: CLPDockerMounts):
+    celery_method = 'job_orchestration.executor.compress'
+    celery_route = f"{QueueName.COMPRESSION}"
+    generic_start_worker(
+        COMPRESSION_WORKER_COMPONENT_NAME,
+        instance_id,
+        clp_config,
+        clp_config.compression_worker,
+        container_clp_config,
+        celery_method,
+        celery_route,
+        clp_config.redis.compression_backend_database,
+        num_cpus,
+        mounts
+    )
 
 
 def start_search_worker(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig,
@@ -465,8 +450,8 @@ def start_search_worker(instance_id: str, clp_config: CLPConfig, container_clp_c
 
 
 def generic_start_worker(component_name: str, instance_id: str, clp_config: CLPConfig, worker_config: BaseModel,
-                 container_clp_config: CLPConfig, celery_method: str, celery_route: str,
-                 redis_database: int, num_cpus: int, mounts: CLPDockerMounts):
+                         container_clp_config: CLPConfig, celery_method: str, celery_route: str,
+                         redis_database: int, num_cpus: int, mounts: CLPDockerMounts):
     logger.info(f"Starting {component_name}...")
 
     container_name = f'clp-{component_name}-{instance_id}'
@@ -535,69 +520,6 @@ def generic_start_worker(component_name: str, instance_id: str, clp_config: CLPC
     logger.info(f"Started {component_name}.")
 
 
-def start_worker(instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig, num_cpus: int,
-                 mounts: CLPDockerMounts):
-    logger.info(f"Starting {WORKER_COMPONENT_NAME}...")
-
-    container_name = f'clp-{WORKER_COMPONENT_NAME}-{instance_id}'
-    if container_exists(container_name):
-        logger.info(f"{WORKER_COMPONENT_NAME} already running.")
-        return
-
-    validate_worker_config(clp_config)
-
-    # Create necessary directories
-    clp_config.archive_output.directory.mkdir(parents=True, exist_ok=True)
-
-    clp_site_packages_dir = CONTAINER_CLP_HOME / 'lib' / 'python3' / 'site-packages'
-    container_start_cmd = [
-        'docker', 'run',
-        '-di',
-        '--network', 'host',
-        '-w', str(CONTAINER_CLP_HOME),
-        '--rm',
-        '--name', container_name,
-        '-e', f'PYTHONPATH={clp_site_packages_dir}',
-        '-e', f'BROKER_URL=amqp://'
-              f'{container_clp_config.queue.username}:{container_clp_config.queue.password}@'
-              f'{container_clp_config.queue.host}:{container_clp_config.queue.port}',
-        '-e', f'RESULT_BACKEND=rpc://'
-              f'{container_clp_config.queue.username}:{container_clp_config.queue.password}'
-              f'@{container_clp_config.queue.host}:{container_clp_config.queue.port}',
-        '-e', f'CLP_HOME={CONTAINER_CLP_HOME}',
-        '-e', f'CLP_DATA_DIR={container_clp_config.data_directory}',
-        '-e', f'CLP_ARCHIVE_OUTPUT_DIR={container_clp_config.archive_output.directory}',
-        '-e', f'CLP_LOGS_DIR={container_clp_config.logs_directory}',
-        '-u', f'{os.getuid()}:{os.getgid()}',
-        '--mount', str(mounts.clp_home),
-    ]
-    necessary_mounts = [
-        mounts.data_dir,
-        mounts.logs_dir,
-        mounts.archives_output_dir,
-        mounts.input_logs_dir,
-    ]
-    for mount in necessary_mounts:
-        if mount:
-            container_start_cmd.append('--mount')
-            container_start_cmd.append(str(mount))
-    container_start_cmd.append(clp_config.execution_container)
-
-    worker_cmd = [
-        'python3', str(clp_site_packages_dir / 'bin' / 'celery'),
-        '-A',
-        'job_orchestration.executor',
-        'worker',
-        '--concurrency', str(num_cpus),
-        '--loglevel', 'WARNING',
-        '-Q', f"{QueueName.COMPRESSION}",
-    ]
-    cmd = container_start_cmd + worker_cmd
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
-
-    logger.info(f"Started {WORKER_COMPONENT_NAME}.")
-
-
 def main(argv):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
@@ -611,10 +533,12 @@ def main(argv):
     component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
     component_args_parser.add_parser(REDIS_COMPONENT_NAME)
     component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
-    component_args_parser.add_parser(SCHEDULER_COMPONENT_NAME)
-    worker_args_parser = component_args_parser.add_parser(WORKER_COMPONENT_NAME)
-    worker_args_parser.add_argument('--num-cpus', type=int, default=0,
-                                    help="Number of logical CPU cores to use for compression")
+    component_args_parser.add_parser(COMPRESSION_SCHEDULER_COMPONENT_NAME)
+    component_args_parser.add_parser(SEARCH_SCHEDULER_COMPONENT_NAME)
+    component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
+    component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
+    args_parser.add_argument('--num-cpus', type=int, default=0,
+                             help="Number of logical CPU cores to use for compression and search")
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -632,18 +556,20 @@ def main(argv):
     # Validate and load config file
     try:
         config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = validate_and_load_config_file(config_file_path, default_config_file_path, clp_home)
+        clp_config = validate_and_load_config_file(config_file_path, default_config_file_path,
+                                                   clp_home)
 
         # Validate and load necessary credentials
-        if component_name in ['', DB_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME,
+        if component_name in ['', DB_COMPONENT_NAME, COMPRESSION_SCHEDULER_COMPONENT_NAME,
                               SEARCH_SCHEDULER_COMPONENT_NAME]:
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
-        if component_name in ['', QUEUE_COMPONENT_NAME, SCHEDULER_COMPONENT_NAME,
-                              WORKER_COMPONENT_NAME, SEARCH_SCHEDULER_COMPONENT_NAME,
+        if component_name in ['', QUEUE_COMPONENT_NAME, COMPRESSION_SCHEDULER_COMPONENT_NAME,
+                              SEARCH_SCHEDULER_COMPONENT_NAME, COMPRESSION_WORKER_COMPONENT_NAME,
                               SEARCH_WORKER_COMPONENT_NAME]:
             validate_and_load_queue_credentials_file(clp_config, clp_home, True)
-        if component_name in ['', REDIS_COMPONENT_NAME, SEARCH_SCHEDULER_COMPONENT_NAME,
-                              WORKER_COMPONENT_NAME]:
+        if component_name in ['', REDIS_COMPONENT_NAME, COMPRESSION_SCHEDULER_COMPONENT_NAME,
+                              SEARCH_SCHEDULER_COMPONENT_NAME, COMPRESSION_WORKER_COMPONENT_NAME,
+                              SEARCH_WORKER_COMPONENT_NAME]:
             validate_and_load_redis_credentials_file(clp_config, clp_home, True)
 
         clp_config.validate_data_dir()
@@ -653,8 +579,9 @@ def main(argv):
         return -1
 
     # Get the number of CPU cores to use
-    num_cpus = multiprocessing.cpu_count()
-    if WORKER_COMPONENT_NAME == component_name and parsed_args.num_cpus != 0:
+    num_cpus = multiprocessing.cpu_count() // 2
+    if (COMPRESSION_WORKER_COMPONENT_NAME == component_name or
+            SEARCH_WORKER_COMPONENT_NAME == component_name) and parsed_args.num_cpus != 0:
         num_cpus = parsed_args.num_cpus
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
@@ -687,14 +614,15 @@ def main(argv):
             start_redis(instance_id, clp_config, conf_dir)
         if '' == component_name or RESULTS_CACHE_COMPONENT_NAME == component_name:
             start_results_cache(instance_id, clp_config, conf_dir)
-        if '' == component_name or SCHEDULER_COMPONENT_NAME == component_name:
-            start_scheduler(instance_id, clp_config, container_clp_config, mounts)
+        if '' == component_name or COMPRESSION_SCHEDULER_COMPONENT_NAME == component_name:
+            start_compression_scheduler(instance_id, clp_config, container_clp_config, mounts)
         if '' == component_name or SEARCH_SCHEDULER_COMPONENT_NAME == component_name:
             start_search_scheduler(instance_id, clp_config, container_clp_config, mounts)
+        if '' == component_name or COMPRESSION_WORKER_COMPONENT_NAME == component_name:
+            start_compression_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
         if '' == component_name or SEARCH_WORKER_COMPONENT_NAME == component_name:
             start_search_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
-        if '' == component_name or WORKER_COMPONENT_NAME == component_name:
-            start_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
+
     except Exception as ex:
         # Stop CLP
         subprocess.run([str(clp_home / 'sbin' / 'stop-clp.sh')], check=True)

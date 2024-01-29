@@ -1,4 +1,3 @@
-import logging
 import os
 import sys
 import signal
@@ -13,10 +12,12 @@ from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.clp_config import StorageEngine
 
 from job_orchestration.executor.search.celery import app
-from job_orchestration.job_config import SearchConfig, SearchTaskResult
+from job_orchestration.scheduler.job_config import SearchConfig
+from job_orchestration.scheduler.scheduler_data import SearchTaskResult
 
 # Setup logging
 logger = get_task_logger(__name__)
+
 
 def make_clo_command(clp_home: Path, archive_path: Path, search_config: SearchConfig,
                      results_cache_uri: str, results_collection: str):
@@ -38,6 +39,7 @@ def make_clo_command(clp_home: Path, archive_path: Path, search_config: SearchCo
         search_cmd.append(search_config.path_filter)
     
     return search_cmd
+
 
 @app.task(bind=True)
 def search(

@@ -1,19 +1,21 @@
+import datetime
+import logging
 import json
 import os
 import pathlib
 import subprocess
 
 import yaml
+from celery.app.task import Task
 from celery.utils.log import get_task_logger
 
-from job_orchestration.executor.celery import app
-from job_orchestration.executor.utils import append_message_to_task_results_queue
-from job_orchestration.job_config import ClpIoConfig, PathsToCompress
-from job_orchestration.scheduler.constants import TaskStatus, TaskUpdateType
-from job_orchestration.scheduler.scheduler_data import \
-    TaskUpdate, \
-    TaskFailureUpdate, \
-    CompressionTaskSuccessUpdate
+from job_orchestration.executor.compress.celery import app
+from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
+from job_orchestration.scheduler.constants import CompressionTaskStatus
+from job_orchestration.scheduler.scheduler_data import (
+    CompressionTaskFailureResult,
+    CompressionTaskSuccessResult
+)
 
 # Setup logging
 logger = get_task_logger(__name__)
@@ -21,7 +23,7 @@ logger = get_task_logger(__name__)
 
 def run_clp(clp_config: ClpIoConfig, clp_home: pathlib.Path, data_dir: pathlib.Path, archive_output_dir: pathlib.Path,
             logs_dir: pathlib.Path, job_id: int, task_id: int, paths_to_compress: PathsToCompress,
-            database_connection_params):
+            clp_metadata_db_connection_config):
     """
     Compresses files from an FS into archives on an FS
 
@@ -33,7 +35,7 @@ def run_clp(clp_config: ClpIoConfig, clp_home: pathlib.Path, data_dir: pathlib.P
     :param job_id:
     :param task_id:
     :param paths_to_compress: PathToCompress
-    :param database_connection_params:
+    :param clp_metadata_db_connection_config
     :return: tuple -- (whether compression was successful, output messages)
     """
     instance_id_str = f'compression-job-{job_id}-task-{task_id}'
@@ -45,7 +47,7 @@ def run_clp(clp_config: ClpIoConfig, clp_home: pathlib.Path, data_dir: pathlib.P
     # Generate database config file for clp
     db_config_file_path = data_dir / f'{instance_id_str}-db-config.yml'
     db_config_file = open(db_config_file_path, 'w')
-    yaml.safe_dump(database_connection_params, db_config_file)
+    yaml.safe_dump(clp_metadata_db_connection_config, db_config_file)
     db_config_file.close()
 
     # Start assembling compression command
@@ -62,7 +64,7 @@ def run_clp(clp_config: ClpIoConfig, clp_home: pathlib.Path, data_dir: pathlib.P
     if path_prefix_to_remove:
         compression_cmd.append('--remove-path-prefix')
         compression_cmd.append(path_prefix_to_remove)
-    
+
     # Use schema file if it exists
     schema_path: pathlib.Path = clp_home / "etc" / "clp-schema.txt"
     if schema_path.exists():
@@ -139,51 +141,40 @@ def run_clp(clp_config: ClpIoConfig, clp_home: pathlib.Path, data_dir: pathlib.P
         return compression_successful, {'error_message': f'See logs {stderr_log_path}'}
 
 
-@app.task()
-def compress(job_id: int, task_id: int, clp_io_config_json: str, paths_to_compress_json: str,
-             database_connection_params):
+@app.task(bind=True)
+def compress(self: Task, job_id: int, task_id: int, clp_io_config_json: str, paths_to_compress_json: str,
+             clp_metadata_db_connection_config):
     clp_home_str = os.getenv('CLP_HOME')
     data_dir_str = os.getenv('CLP_DATA_DIR')
     archive_output_dir_str = os.getenv('CLP_ARCHIVE_OUTPUT_DIR')
     logs_dir_str = os.getenv('CLP_LOGS_DIR')
-    celery_broker_url = os.getenv('BROKER_URL')
-
-    logger.debug(f'CLP_HOME: {clp_home_str}')
-    logger.info(f"Compressing (job_id={job_id} task_id={task_id})")
 
     clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
     paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
 
-    task_update = TaskUpdate(
-        type=TaskUpdateType.COMPRESSION,
-        job_id=job_id,
-        task_id=task_id,
-        status=TaskStatus.IN_PROGRESS
-    )
-    append_message_to_task_results_queue(celery_broker_url, True, task_update.dict())
+    start_time = datetime.datetime.now()
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")
-
     compression_successful, worker_output = run_clp(clp_io_config, pathlib.Path(clp_home_str),
                                                     pathlib.Path(data_dir_str), pathlib.Path(archive_output_dir_str),
                                                     pathlib.Path(logs_dir_str), job_id, task_id, paths_to_compress,
-                                                    database_connection_params)
+                                                    clp_metadata_db_connection_config)
+    duration = (datetime.datetime.now() - start_time).total_seconds()
+    logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
 
     if compression_successful:
-        task_update = CompressionTaskSuccessUpdate(
-            type=TaskUpdateType.COMPRESSION,
-            job_id=job_id,
+        return CompressionTaskSuccessResult(
             task_id=task_id,
-            status=TaskStatus.SUCCEEDED,
+            status=CompressionTaskStatus.SUCCEEDED,
+            start_time=start_time,
+            duration=duration,
             total_uncompressed_size=worker_output['total_uncompressed_size'],
             total_compressed_size=worker_output['total_compressed_size']
-        )
+        ).dict()
     else:
-        task_update = TaskFailureUpdate(
-            type=TaskUpdateType.COMPRESSION,
-            job_id=job_id,
+        return CompressionTaskFailureResult(
             task_id=task_id,
-            status=TaskStatus.FAILED,
+            status=CompressionTaskStatus.FAILED,
+            start_time=start_time,
+            duration=duration,
             error_message=worker_output['error_message']
-        )
-    append_message_to_task_results_queue(celery_broker_url, False, task_update.dict())
-    logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
+        ).dict()
