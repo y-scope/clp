@@ -53,7 +53,7 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
              range_it != m_timestamp_dict->tokenized_column_to_range_end();
              range_it++)
         {
-            std::vector<std::string>& tokens = range_it->first;
+            std::vector<std::string> const& tokens = range_it->first;
             auto const& descriptors = column->get_descriptor_list();
             // TODO: handle wildcard matching; the initial check on timestamp index happens
             // before schema matching, so

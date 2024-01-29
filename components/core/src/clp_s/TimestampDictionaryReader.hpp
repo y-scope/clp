@@ -2,6 +2,7 @@
 #define CLP_S_TIMESTAMPDICTIONARYREADER_HPP
 
 #include <map>
+#include <optional>
 
 #include "FileReader.hpp"
 #include "search/FilterOperation.hpp"
@@ -53,31 +54,29 @@ public:
      * @param epoch
      * @param format_id
      */
-    std::string get_string_encoding(epochtime_t epoch, uint64_t format_id);
-
-    typedef std::map<uint64_t, TimestampPattern>::iterator id_to_pattern_iterator_t;
-    typedef std::vector<std::pair<std::vector<std::string>, TimestampEntry*>>::iterator
-            tokenized_column_to_range_it_t;
+    std::string get_string_encoding(epochtime_t epoch, uint64_t format_id) const;
 
     /**
      * Gets iterators for the timestamp patterns
      * @return begin and end iterators for the timestamp patterns
      */
-    id_to_pattern_iterator_t pattern_begin() { return m_patterns.begin(); }
+    auto pattern_begin() const { return m_patterns.begin(); }
 
-    id_to_pattern_iterator_t pattern_end() { return m_patterns.end(); }
+    auto pattern_end() const { return m_patterns.end(); }
 
     /**
      * Gets iterators for the column to range mappings
      * @return begin and end iterators for the column to range mappings
      */
-    tokenized_column_to_range_it_t tokenized_column_to_range_begin() {
-        return m_tokenized_column_to_range.begin();
-    }
+    auto tokenized_column_to_range_begin() const { return m_tokenized_column_to_range.begin(); }
 
-    tokenized_column_to_range_it_t tokenized_column_to_range_end() {
-        return m_tokenized_column_to_range.end();
-    }
+    auto tokenized_column_to_range_end() const { return m_tokenized_column_to_range.end(); }
+
+    /**
+     * @return the tokens for the authoritative timestamp column if it exists, or an
+     * empty option if it does not
+     */
+    std::optional<std::vector<std::string>> get_authoritative_timestamp_column() const;
 
 private:
     typedef std::map<uint64_t, TimestampPattern> id_to_pattern_t;
