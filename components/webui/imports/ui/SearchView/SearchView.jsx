@@ -235,9 +235,6 @@ const SearchStatus = ({
             case SearchSignal.NONE:
                 message = "Ready";
                 break;
-            case SearchSignal.REQ_CANCELLING:
-                message = "Cancelling...";
-                break;
             case SearchSignal.REQ_CLEARING:
                 message = "Clearing...";
                 break;
