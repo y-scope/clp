@@ -1,3 +1,6 @@
+[project]
+requires-python = ">= 3.8"
+
 [tool.poetry]
 name = "clp-package-utils"
 version = "0.0.3-dev"
@@ -15,3 +18,4 @@ zstandard = "~0.22"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
