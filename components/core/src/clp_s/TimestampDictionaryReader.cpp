@@ -88,4 +88,18 @@ std::string TimestampDictionaryReader::get_string_encoding(epochtime_t epoch, ui
 
     return ret;
 }
+
+std::optional<std::vector<std::string>>
+TimestampDictionaryReader::get_authoritative_timestamp_column() {
+    // TODO: Currently, we only allow a single authoritative timestamp column at ingestion time, but
+    // the timestamp dictionary is designed to store the ranges of several timestamp columns. We
+    // should enforce a convention that the first entry in the timestamp dictionary corresponds to
+    // the "authoritative" timestamp column for the dataset.
+    std::optional<std::vector<std::string>> timestamp_column;
+    for (auto it = tokenized_column_to_range_begin(); it != tokenized_column_to_range_end(); ++it) {
+        timestamp_column = it->first;
+        break;
+    }
+    return timestamp_column;
+}
 }  // namespace clp_s

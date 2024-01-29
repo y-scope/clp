@@ -2,6 +2,7 @@
 #define CLP_S_TIMESTAMPDICTIONARYREADER_HPP
 
 #include <map>
+#include <optional>
 
 #include "FileReader.hpp"
 #include "search/FilterOperation.hpp"
@@ -78,6 +79,12 @@ public:
     tokenized_column_to_range_it_t tokenized_column_to_range_end() {
         return m_tokenized_column_to_range.end();
     }
+
+    /**
+     * @return the tokens for the authoritative timestamp column if it exists, or an
+     * empty option if it does not
+     */
+    std::optional<std::vector<std::string>> get_authoritative_timestamp_column();
 
 private:
     typedef std::map<uint64_t, TimestampPattern> id_to_pattern_t;
