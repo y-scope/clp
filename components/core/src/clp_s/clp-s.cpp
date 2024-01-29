@@ -20,6 +20,7 @@
 
 using namespace clp_s::search;
 using clp_s::cEpochTimeMax;
+using clp_s::cEpochTimeMin;
 using clp_s::CommandLineArguments;
 
 int main(int argc, char const* argv[]) {
@@ -94,7 +95,7 @@ int main(int argc, char const* argv[]) {
                     "Query '{}' specified timestamp filters tge {} tle {}, but no authoritative "
                     "timestamp column was found for this archive",
                     query,
-                    command_line_arguments.get_search_begin_ts().value_or(0),
+                    command_line_arguments.get_search_begin_ts().value_or(cEpochTimeMin),
                     command_line_arguments.get_search_end_ts().value_or(cEpochTimeMax)
             );
             return 1;
