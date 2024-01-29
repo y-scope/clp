@@ -246,7 +246,7 @@ const SearchStatus = ({
             <ProgressBar
                 style={{visibility: (0 === progress) ? "hidden" : "visible"}}
                 animated={true}
-                className={"search-progress-bar"}
+                className={"search-progress-bar rounded-0 border-bottom"}
                 striped={true}
                 now={progress}
                 variant={"primary"}

@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useState, useRef} from "react";
 
 import {Button, Col, Container, Dropdown, DropdownButton, Form, InputGroup, Row} from "react-bootstrap";
 import DatePicker from "react-datepicker";
@@ -7,7 +7,7 @@ import {faBars, faSearch, faTimes, faTrash} from "@fortawesome/free-solid-svg-ic
 
 import {cTimePresets} from "./datetime";
 import LOCAL_STORAGE_KEYS from "../constants/LOCAL_STORAGE_KEYS";
-import {isSearchSignalReq, SearchSignal} from "../../api/search/constants";
+import {isSearchSignalQuerying, isSearchSignalReq, SearchSignal} from "../../api/search/constants";
 
 /**
  * Renders a date picker control for selecting date and time.
@@ -96,7 +96,7 @@ const SearchFilterControlsDrawer = ({
         timestampEndMax = new Date(timeRange.end).setHours(23, 59, 59, 999);
     }
 
-    return (<div className={"search-filter-controls-drawer"}>
+    return (<div className={"search-filter-controls-drawer border-bottom"}>
         <Container fluid={true}>
             <Form.Group as={Row} className={"mb-2"}>
                 <SearchControlsFilterLabel>
@@ -167,6 +167,17 @@ export const SearchControls = ({
                                }) => {
     const [drawerOpen, setDrawerOpen] = useState("true" === localStorage.getItem(LOCAL_STORAGE_KEYS.SEARCH_CONTROLS_VISIBLE));
     const [canceling, setCanceling] = useState(false);
+    const inputRef = useRef(null);
+
+    const isInputDisabled =
+        (true === isSearchSignalReq(resultsMetadata["lastSignal"])) ||
+        (true === isSearchSignalQuerying(resultsMetadata["lastSignal"]));
+
+    useEffect(() => {
+        if (false === isInputDisabled) {
+            inputRef.current?.focus();
+        }
+    }, [isInputDisabled]);
 
     useEffect(() => {
         localStorage.setItem(LOCAL_STORAGE_KEYS.SEARCH_CONTROLS_VISIBLE, drawerOpen.toString());
@@ -194,32 +205,30 @@ export const SearchControls = ({
 
     return <>
         <Form onSubmit={handleQuerySubmission}>
-            <Form.Group className={"mb-0"}>
+            <Form.Group className={"mb-0 border-bottom"}>
                 <InputGroup>
                     <Button
                         active={false}
-                        className={"border-top-0 rounded-0"}
+                        className={"border-top-0 border-bottom-0 rounded-0"}
                         onClick={handleDrawerToggleClick}
                         variant={"secondary"}
                     >
                         <FontAwesomeIcon icon={faBars}/>
                     </Button>
                     <Form.Control
-                        disabled={
-                            (true === isSearchSignalReq(resultsMetadata["lastSignal"])) ||
-                            (SearchSignal.RSP_QUERYING === resultsMetadata["lastSignal"])
-                        }
+                        ref={inputRef}
+                        disabled={isInputDisabled}
                         autoFocus={true}
-                        className={"border-top-0"}
+                        className={"border-top-0 border-bottom-0"}
                         type={"text"}
                         placeholder={"Enter your query..."}
-                        onChange={queryChangeHandler}
                         value={queryString}
+                        onChange={queryChangeHandler}
                     />
                     {
                         (SearchSignal.RSP_DONE === resultsMetadata["lastSignal"]) &&
                         <Button
-                            className={"border-top-0 rounded-0"}
+                            className={"border-top-0 border-bottom-0 rounded-0"}
                             disabled={true === isSearchSignalReq(resultsMetadata["lastSignal"])}
                             onClick={onClearResults}
                             title={"Clear Results"}
@@ -230,19 +239,16 @@ export const SearchControls = ({
                     {
                         (SearchSignal.RSP_QUERYING === resultsMetadata["lastSignal"]) ?
                         <Button
-                            className={"border-top-0 rounded-0"}
+                            className={"border-top-0 border-bottom-0 rounded-0"}
                             disabled={true === canceling}
-                            onClick={handleCancelOperation}
                             variant={"danger"}
+                            onClick={handleCancelOperation}
                         >
                             <FontAwesomeIcon icon={faTimes} fixedWidth={true}/>
                         </Button> :
                         <Button
-                            className={"border-top-0 rounded-0"}
-                            disabled={
-                                (true === isSearchSignalReq(resultsMetadata["lastSignal"])) ||
-                                ("" === queryString)
-                            }
+                            className={"border-top-0 border-bottom-0 rounded-0"}
+                            disabled={isInputDisabled || "" === queryString}
                             variant={"primary"}
                             type={"submit"}
                         >
