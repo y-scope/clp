@@ -54,7 +54,12 @@ void TimestampEntry::merge_range(TimestampEntry const& entry) {
     }
 }
 
-void TimestampEntry::write_to_file(ZstdCompressor& compressor, std::string const& column) const {
+void TimestampEntry::write_to_file(
+        ZstdCompressor& compressor,
+        int32_t column_id,
+        std::string const& column
+) const {
+    compressor.write_numeric_value<int32_t>(column_id);
     compressor.write_numeric_value<uint64_t>(column.length());
     compressor.write_string(column);
 
@@ -72,6 +77,12 @@ void TimestampEntry::write_to_file(ZstdCompressor& compressor, std::string const
 ErrorCode TimestampEntry::try_read_from_file(ZstdDecompressor& decompressor, std::string& column) {
     ErrorCode error_code;
 
+    int32_t column_id;
+    error_code = decompressor.try_read_numeric_value<int32_t>(column_id);
+    if (ErrorCodeSuccess != error_code) {
+        return error_code;
+    }
+
     uint64_t column_len;
     error_code = decompressor.try_read_numeric_value<uint64_t>(column_len);
     if (ErrorCodeSuccess != error_code) {
@@ -82,7 +93,6 @@ ErrorCode TimestampEntry::try_read_from_file(ZstdDecompressor& decompressor, std
         return error_code;
     }
 
-    uint64_t encoding;
     error_code = decompressor.try_read_numeric_value<TimestampEncoding>(m_encoding);
     if (ErrorCodeSuccess != error_code) {
         return error_code;

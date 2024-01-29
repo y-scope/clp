@@ -4,13 +4,14 @@
 
 namespace clp_s {
 void TimestampDictionaryWriter::write_timestamp_entries(
-        std::map<int32_t, TimestampEntry> const& ranges,
+        std::unordered_map<int32_t, TimestampEntry> const& ranges,
         ZstdCompressor& compressor
 ) {
     compressor.write_numeric_value<uint64_t>(ranges.size());
 
     for (auto const& range : ranges) {
-        range.second.write_to_file(compressor, range.first);
+        std::string column_name = m_schema_tree->get_node(range.first)->get_key_name();
+        range.second.write_to_file(compressor, range.first, column_name);
     }
 }
 
@@ -107,7 +108,7 @@ uint64_t TimestampDictionaryWriter::get_pattern_id(TimestampPattern const* patte
 }
 
 epochtime_t TimestampDictionaryWriter::ingest_entry(
-        int32_t node_id,
+        int32_t column_id,
         std::string const& timestamp,
         uint64_t& id
 ) {
@@ -119,7 +120,7 @@ epochtime_t TimestampDictionaryWriter::ingest_entry(
             timestamp_begin_pos,
             timestamp_end_pos
     );
-    m_local_column_to_range[node_id].ingest_timestamp(ret);
+    m_local_column_to_range[column_id].ingest_timestamp(ret);
 
     if (pattern == nullptr) {
         throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
@@ -130,12 +131,12 @@ epochtime_t TimestampDictionaryWriter::ingest_entry(
     return ret;
 }
 
-void TimestampDictionaryWriter::ingest_entry(int32_t node_id, double timestamp) {
-    m_local_column_to_range[node_id].ingest_timestamp(timestamp);
+void TimestampDictionaryWriter::ingest_entry(int32_t column_id, double timestamp) {
+    m_local_column_to_range[column_id].ingest_timestamp(timestamp);
 }
 
-void TimestampDictionaryWriter::ingest_entry(std::string const& key, int64_t timestamp) {
-    m_local_column_to_range[node_id].ingest_timestamp(timestamp);
+void TimestampDictionaryWriter::ingest_entry(int32_t column_id, int64_t timestamp) {
+    m_local_column_to_range[column_id].ingest_timestamp(timestamp);
 }
 
 void TimestampDictionaryWriter::merge_local_range() {

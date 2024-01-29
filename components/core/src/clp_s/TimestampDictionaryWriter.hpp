@@ -3,8 +3,10 @@
 
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 #include "FileWriter.hpp"
+#include "SchemaTree.hpp"
 #include "TimestampEntry.hpp"
 #include "TimestampPattern.hpp"
 #include "ZstdCompressor.hpp"
@@ -21,7 +23,10 @@ public:
     };
 
     // Constructors
-    TimestampDictionaryWriter() : m_is_open(false), m_is_open_local(false) {}
+    TimestampDictionaryWriter(std::shared_ptr<SchemaTree> schema_tree)
+            : m_is_open(false),
+              m_is_open_local(false),
+              m_schema_tree(std::move(schema_tree)) {}
 
     /**
      * Opens the global timestamp dictionary for writing
@@ -57,18 +62,44 @@ public:
      */
     void write_local_and_flush_to_disk();
 
+    /**
+     * Gets the pattern id for a given pattern
+     * @param pattern
+     * @return the pattern id
+     */
     uint64_t get_pattern_id(TimestampPattern const* pattern);
 
-    epochtime_t ingest_entry(std::string const& key, std::string const& timestamp, uint64_t& id);
+    /**
+     * Ingests a timestamp entry
+     * @param column_id
+     * @param timestamp
+     * @param id
+     * @return the epoch time corresponding to the string timestamp
+     */
+    epochtime_t ingest_entry(int32_t column_id, std::string const& timestamp, uint64_t& id);
 
-    void ingest_entry(std::string const& key, double timestamp);
+    /**
+     * Ingests a timestamp entry
+     * @param column_id
+     * @param timestamp
+     */
+    void ingest_entry(int32_t column_id, double timestamp);
 
-    void ingest_entry(std::string const& key, int64_t timestamp);
+    void ingest_entry(int32_t column_id, int64_t timestamp);
 
 private:
+    /**
+     * Merges the local timestamp ranges into the global timestamp ranges
+     */
     void merge_local_range();
-    static void write_timestamp_entries(
-            std::map<int32_t, TimestampEntry> const& ranges,
+
+    /**
+     * Writes the timestamp entries to disk
+     * @param ranges
+     * @param compressor
+     */
+    void write_timestamp_entries(
+            std::unordered_map<int32_t, TimestampEntry> const& ranges,
             ZstdCompressor& compressor
     );
 
@@ -86,10 +117,10 @@ private:
 
     pattern_to_id_t m_pattern_to_id;
     uint64_t m_next_id{};
-//    std::map<std::string, TimestampEntry> m_global_column_to_range;
-//    std::map<std::string, TimestampEntry> m_local_column_to_range;
     std::unordered_map<int32_t, TimestampEntry> m_global_column_to_range;
     std::unordered_map<int32_t, TimestampEntry> m_local_column_to_range;
+
+    std::shared_ptr<SchemaTree> m_schema_tree;
 };
 }  // namespace clp_s
 

@@ -18,7 +18,7 @@ namespace clp_s {
 class BaseColumnWriter {
 public:
     // Constructor
-    explicit BaseColumnWriter(std::string name) : m_name(std::move(name)) {}
+    explicit BaseColumnWriter(int32_t id, std::string name) : m_id(id), m_name(std::move(name)) {}
 
     // Destructor
     virtual ~BaseColumnWriter() = default;
@@ -43,13 +43,15 @@ public:
     std::string get_name() { return m_name; }
 
 protected:
+    int32_t m_id;
     std::string m_name;
 };
 
 class Int64ColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
-    explicit Int64ColumnWriter(std::string name) : BaseColumnWriter(std::move(name)) {}
+    explicit Int64ColumnWriter(int32_t id, std::string name)
+            : BaseColumnWriter(id, std::move(name)) {}
 
     // Destructor
     ~Int64ColumnWriter() override = default;
@@ -66,7 +68,8 @@ private:
 class FloatColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
-    explicit FloatColumnWriter(std::string name) : BaseColumnWriter(std::move(name)) {}
+    explicit FloatColumnWriter(int32_t id, std::string name)
+            : BaseColumnWriter(id, std::move(name)) {}
 
     // Destructor
     ~FloatColumnWriter() override = default;
@@ -83,7 +86,8 @@ private:
 class BooleanColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
-    explicit BooleanColumnWriter(std::string name) : BaseColumnWriter(std::move(name)) {}
+    explicit BooleanColumnWriter(int32_t id, std::string name)
+            : BaseColumnWriter(id, std::move(name)) {}
 
     // Destructor
     ~BooleanColumnWriter() override = default;
@@ -101,11 +105,12 @@ class ClpStringColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
     ClpStringColumnWriter(
+            int32_t id,
             std::string const& name,
             std::shared_ptr<VariableDictionaryWriter> var_dict,
             std::shared_ptr<LogTypeDictionaryWriter> log_dict
     )
-            : BaseColumnWriter(name),
+            : BaseColumnWriter(id, name),
               m_var_dict(std::move(var_dict)),
               m_log_dict(std::move(log_dict)) {}
 
@@ -160,10 +165,11 @@ class VariableStringColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
     VariableStringColumnWriter(
+            int32_t id,
             std::string const& name,
             std::shared_ptr<VariableDictionaryWriter> var_dict
     )
-            : BaseColumnWriter(name),
+            : BaseColumnWriter(id, name),
               m_var_dict(std::move(var_dict)) {}
 
     // Destructor
@@ -183,10 +189,11 @@ class DateStringColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
     DateStringColumnWriter(
+            int32_t id,
             std::string const& name,
             std::shared_ptr<TimestampDictionaryWriter> timestamp_dict
     )
-            : BaseColumnWriter(name),
+            : BaseColumnWriter(id, name),
               m_timestamp_dict(std::move(timestamp_dict)) {}
 
     // Destructor
@@ -208,10 +215,11 @@ class FloatDateStringColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
     FloatDateStringColumnWriter(
+            int32_t id,
             std::string const& name,
             std::shared_ptr<TimestampDictionaryWriter> timestamp_dict
     )
-            : BaseColumnWriter(name),
+            : BaseColumnWriter(id, name),
               m_timestamp_dict(std::move(timestamp_dict)) {}
 
     // Destructor
