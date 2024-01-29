@@ -28,9 +28,6 @@ tasks:
           COMPONENT: "clp-py-utils"
       - task: "clean-python-component"
         vars:
-          COMPONENT: "compression-job-handler"
-      - task: "clean-python-component"
-        vars:
           COMPONENT: "job-orchestration"
   clean-package:
     cmds:
@@ -63,7 +60,6 @@ tasks:
       - "core"
       - "clp-package-utils"
       - "clp-py-utils"
-      - "compression-job-handler"
       - "job-orchestration"
       - "package-venv"
       - "webui"
@@ -77,7 +73,6 @@ tasks:
         pip3 install --upgrade \
           components/clp-package-utils/dist/*.whl \
           components/clp-py-utils/dist/*.whl \
-          components/compression-job-handler/dist/*.whl \
           components/job-orchestration/dist/*.whl \
           -t "{{.PACKAGE_BUILD_DIR}}/lib/python3/site-packages"
       - "mkdir -p '{{.PACKAGE_BUILD_DIR}}/bin'"
@@ -105,7 +100,6 @@ tasks:
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
-      - "components/compression-job-handler/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
       - "components/package-template/src/**/*"
     status:
@@ -191,11 +185,6 @@ tasks:
         COMPONENT: "{{.TASK}}"
 
   clp-py-utils:
-    - task: "python-component"
-      vars:
-        COMPONENT: "{{.TASK}}"
-
-  compression-job-handler:
     - task: "python-component"
       vars:
         COMPONENT: "{{.TASK}}"

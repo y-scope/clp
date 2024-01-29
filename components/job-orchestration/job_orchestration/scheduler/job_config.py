@@ -34,7 +34,3 @@ class SearchConfig(BaseModel):
     begin_timestamp: typing.Optional[int] = None
     end_timestamp: typing.Optional[int] = None
     path_filter: typing.Optional[str] = None
-
-class SearchTaskResult(BaseModel):
-    success: bool
-    task_id: str

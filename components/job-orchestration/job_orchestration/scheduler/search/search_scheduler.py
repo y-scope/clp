@@ -9,32 +9,30 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
+import celery
 import msgpack
 import pathlib
-
-import celery
-from clp_py_utils.clp_config import SEARCH_JOBS_TABLE_NAME, CLP_METADATA_TABLE_PREFIX
-from job_orchestration.executor.search.fs_search_task import search
-from job_orchestration.job_config import SearchConfig, SearchTaskResult
-
 from pydantic import ValidationError
 
-from clp_py_utils.clp_config import CLPConfig
+from clp_py_utils.clp_config import (
+    CLPConfig,
+    SEARCH_JOBS_TABLE_NAME,
+    CLP_METADATA_TABLE_PREFIX
+)
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.sql_adapter import SQL_Adapter
-
-from .common import JobStatus  # type: ignore
+from job_orchestration.executor.search.fs_search_task import search
+from job_orchestration.scheduler.constants import SearchJobStatus
+from job_orchestration.scheduler.job_config import SearchConfig
+from job_orchestration.scheduler.scheduler_data import SearchJob, SearchTaskResult
 
 # Setup logging
 logger = get_logger("search-job-handler")
 
-class SearchJob:
-    def __init__(self, async_task_result: any) -> None:
-        self.async_task_result: any = async_task_result
-
 # Dictionary of active jobs indexed by job id
-active_jobs : Dict[str, SearchJob] = {}
+active_jobs: Dict[str, SearchJob] = {}
+
 
 def cancel_job(job_id):
     global active_jobs
@@ -53,7 +51,7 @@ def fetch_new_search_jobs(db_cursor) -> list:
         {SEARCH_JOBS_TABLE_NAME}.search_config,
         {SEARCH_JOBS_TABLE_NAME}.submission_time
         FROM {SEARCH_JOBS_TABLE_NAME}
-        WHERE {SEARCH_JOBS_TABLE_NAME}.status={JobStatus.PENDING}
+        WHERE {SEARCH_JOBS_TABLE_NAME}.status={SearchJobStatus.PENDING}
     """)
     return db_cursor.fetchall()
 
@@ -62,13 +60,13 @@ def fetch_cancelling_search_jobs(db_cursor) -> list:
     db_cursor.execute(f"""
         SELECT {SEARCH_JOBS_TABLE_NAME}.id as job_id
         FROM {SEARCH_JOBS_TABLE_NAME}
-        WHERE {SEARCH_JOBS_TABLE_NAME}.status={JobStatus.CANCELLING}
+        WHERE {SEARCH_JOBS_TABLE_NAME}.status={SearchJobStatus.CANCELLING}
     """)
     return db_cursor.fetchall()
 
 
 def set_job_status(
-    db_conn, job_id: str, status: JobStatus, prev_status: Optional[JobStatus] = None, **kwargs
+        db_conn, job_id: str, status: SearchJobStatus, prev_status: Optional[SearchJobStatus] = None, **kwargs
 ) -> bool:
     field_set_expressions = [f'{k}="{v}"' for k, v in kwargs.items()]
     field_set_expressions.append(f"status={status}")
@@ -76,7 +74,7 @@ def set_job_status(
 
     if prev_status is not None:
         update += f' AND status={prev_status}'
-    
+
     with contextlib.closing(db_conn.cursor()) as cursor:
         cursor.execute(update)
         db_conn.commit()
@@ -95,15 +93,15 @@ def handle_cancelling_search_jobs(db_conn) -> None:
         job_id = job['job_id']
         if job_id in active_jobs:
             cancel_job(job_id)
-        if set_job_status(db_conn, job_id, JobStatus.CANCELLED, prev_status=JobStatus.CANCELLING):
+        if set_job_status(db_conn, job_id, SearchJobStatus.CANCELLED, prev_status=SearchJobStatus.CANCELLING):
             logger.info(f"Cancelled job {job_id}.")
         else:
             logger.error(f"Failed to cancel job {job_id}.")
 
 
 def get_archives_for_search(
-    db_conn,
-    search_config: SearchConfig,
+        db_conn,
+        search_config: SearchConfig,
 ):
     query = f"""SELECT id as archive_id
             FROM {CLP_METADATA_TABLE_PREFIX}archives
@@ -127,10 +125,10 @@ def get_archives_for_search(
 
 
 def get_task_group_for_job(
-    archives_for_search: List[str],
-    job_id: str,
-    search_config: SearchConfig,
-    results_cache_uri: str,
+        archives_for_search: List[str],
+        job_id: str,
+        search_config: SearchConfig,
+        results_cache_uri: str,
 ):
     search_config_obj = search_config.dict()
     return celery.group(
@@ -144,10 +142,10 @@ def get_task_group_for_job(
 
 
 def dispatch_search_job(
-    archives_for_search: List[str],
-    job_id: str,
-    search_config: SearchConfig,
-    results_cache_uri: str
+        archives_for_search: List[str],
+        job_id: str,
+        search_config: SearchConfig,
+        results_cache_uri: str
 ) -> None:
     global active_jobs
     task_group = get_task_group_for_job(archives_for_search, job_id, search_config, results_cache_uri)
@@ -166,30 +164,19 @@ def handle_pending_search_jobs(db_conn, results_cache_uri: str) -> None:
         search_config_obj = SearchConfig.parse_obj(msgpack.unpackb(job['search_config']))
         archives_for_search = get_archives_for_search(db_conn, search_config_obj)
         if len(archives_for_search) == 0:
-            if set_job_status(db_conn, job['job_id'], JobStatus.SUCCESS, job['job_status']):
+            if set_job_status(db_conn, job['job_id'], SearchJobStatus.SUCCEEDED, job['job_status']):
                 logger.info(f"No matching archives, skipping job {job['job_id']}.")
             continue
 
         dispatch_search_job(archives_for_search, str(job['job_id']), search_config_obj, results_cache_uri)
-        if set_job_status(db_conn, job['job_id'], JobStatus.RUNNING, job['job_status']):
+        if set_job_status(db_conn, job['job_id'], SearchJobStatus.RUNNING, job['job_status']):
             logger.info(f"Dispatched job {job['job_id']} with {len(archives_for_search)} archives to search.")
 
 
 def try_getting_task_result(async_task_result):
-    """
-    Ideally, we'd use this code:
-
     if not async_task_result.ready():
         return None
     return async_task_result.get()
-
-    But because of https://github.com/celery/celery/issues/4084, wew have to use the following
-    timeout based approach until we switch to the Redis result backend.
-    """
-    try:
-        return async_task_result.get(timeout=0.1)
-    except celery.exceptions.TimeoutError:
-        return None
 
 
 def check_job_status_and_update_db(db_conn):
@@ -202,31 +189,31 @@ def check_job_status_and_update_db(db_conn):
             logger.error(f"Job `{job_id}` failed: {e}.")
             # clean up
             del active_jobs[job_id]
-            set_job_status(db_conn, job_id, JobStatus.FAILED, JobStatus.RUNNING)
+            set_job_status(db_conn, job_id, SearchJobStatus.FAILED, SearchJobStatus.RUNNING)
             continue
 
         if returned_results is not None:
-            new_job_status = JobStatus.SUCCESS
+            new_job_status = SearchJobStatus.SUCCEEDED
             for task_result_obj in returned_results:
                 task_result = SearchTaskResult.parse_obj(task_result_obj)
                 if not task_result.success:
                     task_id = task_result.task_id
-                    new_job_status = JobStatus.FAILED
+                    new_job_status = SearchJobStatus.FAILED
                     logger.debug(f"Task {task_id} failed - result {task_result}.")
 
             del active_jobs[job_id]
 
-            if set_job_status(db_conn, job_id, new_job_status, JobStatus.RUNNING):
-                if new_job_status != JobStatus.FAILED:
+            if set_job_status(db_conn, job_id, new_job_status, SearchJobStatus.RUNNING):
+                if new_job_status != SearchJobStatus.FAILED:
                     logger.info(f"Completed job {job_id}.")
                 else:
                     logger.info(f"Completed job {job_id} with failing tasks.")
 
 
 def handle_jobs(
-    db_conn,
-    results_cache_uri: str,
-    jobs_poll_delay: float,
+        db_conn,
+        results_cache_uri: str,
+        jobs_poll_delay: float,
 ) -> None:
     while True:
         handle_pending_search_jobs(db_conn, results_cache_uri)

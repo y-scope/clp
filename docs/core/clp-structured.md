@@ -121,5 +121,12 @@ or
 * The order of log events is not preserved.
 * The input directory structure is not preserved and during decompression all files are written to
   the same file.
+* The KQL implementation does not fully respect the {} object within array syntax. A matching record
+  will satisfy all of the conditions in the filter, but not necessarily on the same object in the
+  array. This means that filters like `"a": {"b": 0, "c": 0}` will match documents like
+  `{"a": [{"b": 0}, {"c": 0}]}` instead of matching only documents like `{"a": [{"b": 0, "c": 0}]}`
+* Searches on arrays must either be fully precise (no wildcard tokens in the key) or fully imprecise
+  (a single wildcard token). This means filters like `"*": "uuid"` and `"a.b.c": "uuid"` will search
+  inside of array columns, but filters like `"a.*": "uuid"` or `a.*.c: "uuid"` will not.
 
 [1]: https://www.elastic.co/guide/en/kibana/current/kuery-query.html

@@ -2,6 +2,8 @@ import pathlib
 import typing
 
 from pydantic import BaseModel, validator
+from enum import auto
+from strenum import KebabCaseStrEnum
 
 from .core import get_config_value, make_config_path_absolute, read_yaml_config_file, validate_path_could_be_dir
 from .clp_logging import is_valid_logging_level, get_valid_logging_level
@@ -10,16 +12,36 @@ from .clp_logging import is_valid_logging_level, get_valid_logging_level
 # Component names
 DB_COMPONENT_NAME = 'database'
 QUEUE_COMPONENT_NAME = 'queue'
+REDIS_COMPONENT_NAME = 'redis'
 RESULTS_CACHE_COMPONENT_NAME = 'results_cache'
-SCHEDULER_COMPONENT_NAME = 'scheduler'
+COMPRESSION_SCHEDULER_COMPONENT_NAME = 'compression_scheduler'
 SEARCH_SCHEDULER_COMPONENT_NAME = 'search_scheduler'
+COMPRESSION_WORKER_COMPONENT_NAME = 'compression_worker'
 SEARCH_WORKER_COMPONENT_NAME = 'search_worker'
-WORKER_COMPONENT_NAME = 'worker'
+SEARCH_JOBS_TABLE_NAME = 'search_jobs'
+COMPRESSION_JOBS_TABLE_NAME = 'compression_jobs'
+COMPRESSION_TASKS_TABLE_NAME = 'compression_tasks'
 WEBUI_COMPONENT_NAME = 'webui'
 
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path('etc') / 'credentials.yml'
 CLP_METADATA_TABLE_PREFIX = 'clp_'
-SEARCH_JOBS_TABLE_NAME = 'distributed_search_jobs'
+
+
+class StorageEngine(KebabCaseStrEnum):
+    CLP = auto()
+
+
+VALID_STORAGE_ENGINES = [storage_engine.value for storage_engine in StorageEngine]
+
+
+class Package(BaseModel):
+    storage_engine: str = 'clp'
+
+    @validator('storage_engine')
+    def validate_storage_engine(cls, field):
+        if field not in VALID_STORAGE_ENGINES:
+            raise ValueError(f"package.storage_engine must be one of the follwing {'|'.join(VALID_STORAGE_ENGINES)}")
+        return field
 
 
 class Database(BaseModel):
@@ -110,12 +132,27 @@ def _validate_logging_level(cls, field):
         )
 
 
-class Scheduler(BaseModel):
-    jobs_poll_delay: int = 1  # seconds
+class CompressionScheduler(BaseModel):
+    jobs_poll_delay: float = 0.1  # seconds
+    logging_level: str = 'INFO'
+
+    @validator('logging_level')
+    def validate_logging_level(cls, field):
+        _validate_logging_level(cls, field)
+        return field
 
 
 class SearchScheduler(BaseModel):
     jobs_poll_delay: float = 0.1  # seconds
+    logging_level: str = 'INFO'
+
+    @validator('logging_level')
+    def validate_logging_level(cls, field):
+        _validate_logging_level(cls, field)
+        return field
+
+
+class CompressionWorker(BaseModel):
     logging_level: str = 'INFO'
 
     @validator('logging_level')
@@ -130,6 +167,21 @@ class SearchWorker(BaseModel):
     @validator('logging_level')
     def validate_logging_level(cls, field):
         _validate_logging_level(cls, field)
+        return field
+
+
+class Redis(BaseModel):
+    host: str = 'localhost'
+    port: int = 6379
+    search_backend_database: int = 0
+    compression_backend_database: int = 1
+    # redis can perform authentication without a username
+    password: typing.Optional[str]
+
+    @validator('host')
+    def validate_host(cls, field):
+        if '' == field:
+            raise ValueError(f'{REDIS_COMPONENT_NAME}.host cannot be empty.')
         return field
 
 
@@ -234,11 +286,14 @@ class CLPConfig(BaseModel):
 
     input_logs_directory: pathlib.Path = pathlib.Path('/')
 
+    package: Package = Package()
     database: Database = Database()
     queue: Queue = Queue()
+    redis: Redis = Redis()
     results_cache: ResultsCache = ResultsCache()
-    scheduler: Scheduler = Scheduler()
+    compression_scheduler: CompressionScheduler = CompressionScheduler()
     search_scheduler: SearchScheduler = SearchScheduler()
+    compression_worker: CompressionWorker = CompressionWorker()
     search_worker: SearchWorker = SearchWorker()
     webui: WebUi = WebUi()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
@@ -298,6 +353,15 @@ class CLPConfig(BaseModel):
         try:
             self.queue.username = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.user")
             self.queue.password = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.password")
+        except KeyError as ex:
+            raise ValueError(f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'.")
+
+    def load_redis_credentials_from_file(self):
+        config = read_yaml_config_file(self.credentials_file_path)
+        if config is None:
+            raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
+        try:
+            self.redis.password = get_config_value(config, f"{REDIS_COMPONENT_NAME}.password")
         except KeyError as ex:
             raise ValueError(f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'.")
 
