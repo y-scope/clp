@@ -100,6 +100,10 @@ static SearchFilesResult search_files(
             continue;
         }
 
+        uint64_t num_messages = compressed_file.get_num_messages();
+        epochtime_t begin_ts = compressed_file.get_begin_ts();
+        epochtime_t end_ts = compressed_file.get_end_ts();
+
         query.make_sub_queries_relevant_to_segment(compressed_file.get_segment_id());
         while (Grep::search_and_decompress(
                 query,

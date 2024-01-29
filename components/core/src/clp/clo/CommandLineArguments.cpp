@@ -80,18 +80,25 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             "Ignore case distinctions in both WILDCARD STRING and the input files"
     );
 
-    po::options_description options_batch_control("Batch Controls");
-    options_batch_control.add_options()(
+    po::options_description options_results_control("Results Controls");
+    // clang-format off
+    options_results_control.add_options()(
             "batch-size,b",
             po::value<uint64_t>(&m_batch_size)->value_name("SIZE")->default_value(m_batch_size),
-            "Batch size"
+            "Batch size for sending results to MongoDB"
+    )(
+            "num-latest-results,n",
+            po::value<uint64_t>(&m_num_latest_results)->value_name("NUM")->
+                default_value(m_num_latest_results),
+            "Number of latest results to send to MongoDB"
     );
+    // clang-format on
 
     // Define visible options
     po::options_description visible_options;
     visible_options.add(options_general);
     visible_options.add(options_match_control);
-    visible_options.add(options_batch_control);
+    visible_options.add(options_results_control);
 
     // Define hidden positional options (not shown in Boost's program options help message)
     po::options_description hidden_positional_options;
@@ -124,7 +131,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     po::options_description all_options;
     all_options.add(options_general);
     all_options.add(options_match_control);
-    all_options.add(options_batch_control);
+    all_options.add(options_results_control);
     all_options.add(hidden_positional_options);
 
     // Parse options

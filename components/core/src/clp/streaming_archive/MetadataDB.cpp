@@ -136,7 +136,8 @@ static SQLitePreparedStatement get_files_select_statement(
         epochtime_t ts_end,
         std::string const& file_path,
         bool in_specific_segment,
-        segment_id_t segment_id
+        segment_id_t segment_id,
+        bool order_timestamp
 ) {
     vector<string> field_names(enum_to_underlying_type(FilesTableFieldIndexes::Length));
     field_names[enum_to_underlying_type(FilesTableFieldIndexes::Id)]
@@ -229,12 +230,22 @@ static SQLitePreparedStatement get_files_select_statement(
     }
 
     // Add ordering
-    fmt::format_to(
-            statement_buffer_ix,
-            " ORDER BY {} ASC, {} ASC",
-            streaming_archive::cMetadataDB::File::SegmentId,
-            streaming_archive::cMetadataDB::File::SegmentTimestampsPosition
-    );
+    if (order_timestamp) {
+        fmt::format_to(
+                statement_buffer_ix,
+                " ORDER BY {} DESC, {} ASC, {} ASC",
+                streaming_archive::cMetadataDB::File::EndTimestamp,
+                streaming_archive::cMetadataDB::File::SegmentId,
+                streaming_archive::cMetadataDB::File::SegmentTimestampsPosition
+        );
+    } else {
+        fmt::format_to(
+                statement_buffer_ix,
+                " ORDER BY {} ASC, {} ASC",
+                streaming_archive::cMetadataDB::File::SegmentId,
+                streaming_archive::cMetadataDB::File::SegmentTimestampsPosition
+        );
+    }
 
     auto statement = db.prepare_statement(statement_buffer.data(), statement_buffer.size());
     if (cEpochTimeMin != ts_begin) {
@@ -291,13 +302,13 @@ MetadataDB::FileIterator::FileIterator(
         segment_id_t segment_id
 )
         : Iterator(get_files_select_statement(
-                db,
-                begin_timestamp,
-                end_timestamp,
-                file_path,
-                in_specific_segment,
-                segment_id
-        )) {}
+                  db,
+                  begin_timestamp,
+                  end_timestamp,
+                  file_path,
+                  in_specific_segment,
+                  segment_id
+          )) {}
 
 MetadataDB::EmptyDirectoryIterator::EmptyDirectoryIterator(SQLiteDB& db)
         : Iterator(get_empty_directories_select_statement(db)) {}
