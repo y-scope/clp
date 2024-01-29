@@ -82,15 +82,16 @@ void TimestampDictionaryReader::read_new_entries(bool local) {
     }
 }
 
-std::string TimestampDictionaryReader::get_string_encoding(epochtime_t epoch, uint64_t format_id) {
+std::string
+TimestampDictionaryReader::get_string_encoding(epochtime_t epoch, uint64_t format_id) const {
     std::string ret;
-    m_patterns[format_id].insert_formatted_timestamp(epoch, ret);
+    m_patterns.at(format_id).insert_formatted_timestamp(epoch, ret);
 
     return ret;
 }
 
 std::optional<std::vector<std::string>>
-TimestampDictionaryReader::get_authoritative_timestamp_column() {
+TimestampDictionaryReader::get_authoritative_timestamp_column() const {
     // TODO: Currently, we only allow a single authoritative timestamp column at ingestion time, but
     // the timestamp dictionary is designed to store the ranges of several timestamp columns. We
     // should enforce a convention that the first entry in the timestamp dictionary corresponds to
