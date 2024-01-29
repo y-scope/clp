@@ -92,12 +92,25 @@ public:
     bool get_next_message(std::string& message);
 
     /**
-     * Gets next message with a filter
+     * Gets next message from a filter
      * @param message
      * @param filter
      * @return true if there is a next message
      */
     bool get_next_message(std::string& message, FilterClass* filter);
+
+    /**
+     * Gets next message with a timestamp from a filter
+     * @param message
+     * @param timestamp
+     * @param filter
+     * @return true if there is a next message
+     */
+    bool get_next_message_with_timestamp(
+            std::string& message,
+            epochtime_t& timestamp,
+            FilterClass* filter
+    );
 
     /**
      * Initializes the filter
@@ -125,6 +138,11 @@ private:
      * @param json_pointer
      */
     void generate_json_template(int32_t id);
+
+    /**
+     * Generates a json string
+     */
+    void generate_json_string();
 
     int32_t m_schema_id;
     std::string m_path;

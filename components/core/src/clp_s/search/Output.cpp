@@ -113,9 +113,9 @@ void Output::filter() {
 
             if (m_output_handler->output_timestamp()) {
                 epochtime_t timestamp;
-//                while (reader.get_next_message(message, timestamp, this)) {
-//                    m_output_handler->write(message, timestamp);
-//                }
+                while (reader.get_next_message_with_timestamp(message, timestamp, this)) {
+                    m_output_handler->write(message, timestamp);
+                }
             } else {
                 while (reader.get_next_message(message, this)) {
                     m_output_handler->write(message);

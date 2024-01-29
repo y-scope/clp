@@ -81,9 +81,7 @@ public:
 
     bool has_timestamp() { return !m_column_to_range.empty(); }
 
-    int32_t get_first_column_id() {
-        return m_column_to_range.begin()->first;
-    }
+    int32_t get_first_column_id() { return m_column_to_range.begin()->first; }
 
 private:
     typedef std::map<uint64_t, TimestampPattern> id_to_pattern_t;
