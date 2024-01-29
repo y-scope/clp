@@ -49,6 +49,7 @@ public:
     explicit SchemaReader(std::shared_ptr<SchemaTree> schema_tree, int32_t schema_id)
             : m_num_messages(0),
               m_cur_message(0),
+              m_get_timestamp([]() -> epochtime_t { return 0; }),
               m_global_schema_tree(std::move(schema_tree)),
               m_schema_id(schema_id),
               m_json_serializer(std::make_shared<JsonSerializer>()) {}
