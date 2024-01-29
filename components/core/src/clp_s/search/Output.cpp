@@ -24,11 +24,6 @@ namespace clp_s::search {
 void Output::filter() {
     auto top_level_expr = m_expr;
 
-    if (m_output_handler->output_timestamp()) {
-        m_timestamp_dict = ReaderUtils::read_timestamp_dictionary(m_archives_dir);
-
-    }
-
     for (auto const& archive : ReaderUtils::get_archives(m_archives_dir)) {
         std::vector<int32_t> matched_schemas;
         bool has_array = false;
@@ -109,7 +104,8 @@ void Output::filter() {
                     m_var_dict,
                     m_log_dict,
                     m_array_dict,
-                    m_timestamp_dict
+                    m_timestamp_dict,
+                    m_output_handler->output_timestamp()
             );
             reader.load();
 

@@ -51,7 +51,8 @@ void ArchiveReader::open(ArchiveReaderOption& option) {
                 m_var_dict,
                 m_log_dict,
                 m_array_dict,
-                m_timestamp_dict
+                m_timestamp_dict,
+                false
         );
 
         schema_reader->load();

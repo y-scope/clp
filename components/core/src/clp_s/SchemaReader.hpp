@@ -105,6 +105,12 @@ public:
      */
     void initialize_filter(FilterClass* filter);
 
+    /**
+     * Marks a column as timestamp
+     * @param column_reader
+     */
+    void mark_column_as_timestamp(BaseColumnReader* column_reader);
+
 private:
     /**
      * Generates a local schema tree
@@ -120,13 +126,6 @@ private:
      */
     void generate_json_template(int32_t id);
 
-    /**
-     * Gets a json pointer string
-     * @param s
-     * @return
-     */
-    static std::string get_json_pointer_string(std::string const& s);
-
     int32_t m_schema_id;
     std::string m_path;
     uint64_t m_num_messages;
@@ -138,6 +137,9 @@ private:
     std::unordered_map<int32_t, BaseColumnReader*> m_column_map;
     std::vector<BaseColumnReader*> m_columns;
     std::vector<BaseColumnReader*> m_reordered_columns;
+
+    BaseColumnReader* m_timestamp_column;
+    std::function<epochtime_t()> m_get_timestamp;
 
     std::shared_ptr<SchemaTree> m_global_schema_tree;
     std::shared_ptr<SchemaTree> m_local_schema_tree;

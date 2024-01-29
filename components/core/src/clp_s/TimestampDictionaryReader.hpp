@@ -79,6 +79,12 @@ public:
         return m_tokenized_column_to_range.end();
     }
 
+    bool has_timestamp() { return !m_column_to_range.empty(); }
+
+    int32_t get_first_column_id() {
+        return m_column_to_range.begin()->first;
+    }
+
 private:
     typedef std::map<uint64_t, TimestampPattern> id_to_pattern_t;
     typedef std::map<int32_t, TimestampEntry> column_to_range_t;

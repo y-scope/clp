@@ -5,6 +5,7 @@
 #include <variant>
 
 #include "DictionaryReader.hpp"
+#include "SchemaTree.hpp"
 #include "TimestampDictionaryReader.hpp"
 #include "Utils.hpp"
 #include "ZstdDecompressor.hpp"
@@ -36,7 +37,7 @@ public:
 
     int32_t get_id() const { return m_id; }
 
-    virtual std::string get_type() { return "base"; }
+    virtual NodeType get_type() { return NodeType::UNKNOWN; }
 
     /**
      * Extracts a value of the column
@@ -63,7 +64,7 @@ public:
     // Methods inherited from BaseColumnReader
     void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
 
-    std::string get_type() override { return "int"; }
+    NodeType get_type() override { return NodeType::INTEGER; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
@@ -84,7 +85,7 @@ public:
     // Methods inherited from BaseColumnReader
     void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
 
-    std::string get_type() override { return "float"; }
+    NodeType get_type() override { return NodeType::FLOAT; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
@@ -105,7 +106,7 @@ public:
     // Methods inherited from BaseColumnReader
     void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
 
-    std::string get_type() override { return "bool"; }
+    NodeType get_type() override { return NodeType::BOOLEAN; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
@@ -135,7 +136,7 @@ public:
     // Methods inherited from BaseColumnReader
     void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
 
-    std::string get_type() override { return m_is_array ? "array" : "string"; }
+    NodeType get_type() override { return m_is_array ? NodeType::ARRAY : NodeType::CLPSTRING; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
@@ -182,7 +183,7 @@ public:
     // Methods inherited from BaseColumnReader
     void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
 
-    std::string get_type() override { return "string"; }
+    NodeType get_type() override { return NodeType::VARSTRING; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
@@ -217,7 +218,7 @@ public:
     // Methods inherited from BaseColumnReader
     void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
 
-    std::string get_type() override { return "string"; }
+    NodeType get_type() override { return NodeType::DATESTRING; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
@@ -246,7 +247,7 @@ public:
     // Methods inherited from BaseColumnReader
     void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
 
-    std::string get_type() override { return "string"; }
+    NodeType get_type() override { return NodeType::FLOATDATESTRING; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;

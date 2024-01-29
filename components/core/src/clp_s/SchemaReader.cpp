@@ -23,6 +23,28 @@ void SchemaReader::append_column(BaseColumnReader* column_reader) {
     generate_local_tree(column_reader->get_id());
 }
 
+void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
+    m_timestamp_column = column_reader;
+    if (m_timestamp_column->get_type() == NodeType::DATESTRING) {
+        m_get_timestamp = [this]() {
+            return static_cast<DateStringColumnReader*>(m_timestamp_column)->get_encoded_time(m_cur_message);
+        };
+    } else if (m_timestamp_column->get_type() == NodeType::FLOATDATESTRING) {
+        m_get_timestamp = [this]() {
+            double timestamp =  static_cast<FloatDateStringColumnReader*>(m_timestamp_column)->get_encoded_time(m_cur_message);
+            return static_cast<epochtime_t>(timestamp);
+        };
+    } else if (m_timestamp_column->get_type() == NodeType::INTEGER) {
+        m_get_timestamp = [this]() {
+            return std::get<epochtime_t>(m_extracted_values[m_timestamp_column->get_id()]);
+        };
+    } else if (m_timestamp_column->get_type() == NodeType::FLOAT) {
+        m_get_timestamp = [this]() {
+            return static_cast<epochtime_t>(std::get<double>(m_extracted_values[m_timestamp_column->get_id()]));
+        };
+    }
+}
+
 void SchemaReader::append_column(int32_t id) {
     generate_local_tree(id);
 }
