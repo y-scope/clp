@@ -96,11 +96,9 @@ TimestampDictionaryReader::get_authoritative_timestamp_column() const {
     // the timestamp dictionary is designed to store the ranges of several timestamp columns. We
     // should enforce a convention that the first entry in the timestamp dictionary corresponds to
     // the "authoritative" timestamp column for the dataset.
-    std::optional<std::vector<std::string>> timestamp_column;
     for (auto it = tokenized_column_to_range_begin(); tokenized_column_to_range_end() != it; ++it) {
-        timestamp_column = it->first;
-        break;
+        return it->first;
     }
-    return timestamp_column;
+    return std::nullopt;
 }
 }  // namespace clp_s
