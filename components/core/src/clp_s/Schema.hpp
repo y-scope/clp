@@ -48,24 +48,37 @@ public:
     [[nodiscard]] size_t size() const { return m_schema.size(); }
 
     /**
-     * @return iterators to the underlying schema
+     * @return iterator to the start of the underlying schema
      */
     [[nodiscard]] auto begin() { return m_schema.begin(); }
 
+    /**
+     * @return iterator to the start of the underlying schema
+     */
     [[nodiscard]] auto end() { return m_schema.end(); }
 
     /**
-     * @return constant iterators to the underlying schema
+     * @return constant iterator to the start of the underlying schema
      */
     [[nodiscard]] auto begin() const { return m_schema.cbegin(); }
 
+    /**
+     * @return constant iterator to the end of the underlying schema
+     */
     [[nodiscard]] auto end() const { return m_schema.cend(); }
 
     /**
-     * Comparison operators so that Schema can act as a key for SchemaMap
+     * Less than comparison operator so that Schema can act as a key for SchemaMap
+     * @return true if this schema is less than the schema on the right hand side
+     * @return false otherwise
      */
     bool operator<(Schema const& rhs) const { return m_schema < rhs.m_schema; }
 
+    /**
+     * Equal to comparison operator so that Schema can act as a key for SchemaMap
+     * @return true if this schema is equal to the schema on the right hand side
+     * @return false otherwise
+     */
     bool operator==(Schema const& rhs) const { return m_schema == rhs.m_schema; }
 
 private:
