@@ -8,11 +8,16 @@
 namespace clp_s {
 /**
  * Class representing a schema made up of MST nodes.
+ *
+ * Internally the schema is represented by a vector where the first m_num_ordered entries are
+ * ordered by MST node Id, and all of the following entries are allowed to have arbitrary order.
+ *
+ * In the current implementation of clp-s MST node Ids in a schema must be unique, so the caller
+ * is responsible for not inserting duplicate MST nodes into a schema. Future version of clp-s will
+ * likely relax this requirement.
  */
 class Schema {
 public:
-    using schema_t = std::vector<int32_t>;
-
     /**
      * Inserts a node into the ordered region of the schema.
      */
@@ -24,16 +29,17 @@ public:
     void insert_unordered(int32_t mst_node_id);
 
     /**
-     * Inserts an unordered list of nodes into the unordered region of the schema.
+     * Inserts another schema into the unordered region of the schema maintaining that Schema's
+     * order.
      */
-    void insert_unordered(schema_t const& mst_node_ids);
+    void insert_unordered(Schema const& schema);
 
     /**
      * Clear the Schema object so that it can be reused without reallocating the underlying vector.
      */
     void clear() {
         m_schema.clear();
-        m_num_unordered = 0;
+        m_num_ordered = 0;
     }
 
     /**
@@ -44,16 +50,16 @@ public:
     /**
      * @return iterators to the underlying schema
      */
-    auto begin() { return m_schema.begin(); }
+    [[nodiscard]] auto begin() { return m_schema.begin(); }
 
-    auto end() { return m_schema.end(); }
+    [[nodiscard]] auto end() { return m_schema.end(); }
 
     /**
      * @return constant iterators to the underlying schema
      */
-    auto begin() const { return m_schema.cbegin(); }
+    [[nodiscard]] auto begin() const { return m_schema.cbegin(); }
 
-    auto end() const { return m_schema.cend(); }
+    [[nodiscard]] auto end() const { return m_schema.cend(); }
 
     /**
      * Comparison operators so that Schema can act as a key for SchemaMap
@@ -64,7 +70,7 @@ public:
 
 private:
     std::vector<int32_t> m_schema;
-    size_t m_num_unordered{0};
+    size_t m_num_ordered{0};
 };
 }  // namespace clp_s
 

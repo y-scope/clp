@@ -5,18 +5,22 @@
 namespace clp_s {
 void Schema::insert_ordered(int32_t mst_node_id) {
     m_schema.insert(
-            std::upper_bound(m_schema.begin(), m_schema.end() - m_num_unordered, mst_node_id),
+            std::upper_bound(
+                    m_schema.begin(),
+                    m_schema.begin()
+                            + static_cast<decltype(m_schema)::difference_type>(m_num_ordered),
+                    mst_node_id
+            ),
             mst_node_id
     );
+    ++m_num_ordered;
 }
 
 void Schema::insert_unordered(int32_t mst_node_id) {
     m_schema.push_back(mst_node_id);
-    ++m_num_unordered;
 }
 
-void Schema::insert_unordered(schema_t const& mst_node_ids) {
-    m_schema.insert(m_schema.end(), mst_node_ids.begin(), mst_node_ids.end());
-    m_num_unordered += mst_node_ids.size();
+void Schema::insert_unordered(Schema const& schema) {
+    m_schema.insert(m_schema.end(), schema.begin(), schema.end());
 }
 }  // namespace clp_s
