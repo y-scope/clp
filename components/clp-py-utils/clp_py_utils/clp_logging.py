@@ -1,16 +1,18 @@
 import logging
 
 LOGGING_LEVEL_MAPPING = {
-    'INFO': logging.INFO,
-    'DEBUG': logging.DEBUG,
-    'WARN': logging.WARNING,
-    'WARNING': logging.WARNING,
-    'ERROR': logging.ERROR,
-    'CRITICAL': logging.CRITICAL
+    "INFO": logging.INFO,
+    "DEBUG": logging.DEBUG,
+    "WARN": logging.WARNING,
+    "WARNING": logging.WARNING,
+    "ERROR": logging.ERROR,
+    "CRITICAL": logging.CRITICAL,
 }
+
 
 def get_logging_formatter():
     return logging.Formatter("%(asctime)s %(name)s [%(levelname)s] %(message)s")
+
 
 def get_logger(name: str):
     logger = logging.getLogger(name)
@@ -37,4 +39,3 @@ def set_logging_level(logger: logging.Logger, level: str):
         logger.setLevel(logging.INFO)
         return
     logger.setLevel(LOGGING_LEVEL_MAPPING[level])
-

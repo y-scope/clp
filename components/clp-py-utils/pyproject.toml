@@ -1,3 +1,6 @@
+[project]
+requires-python = ">= 3.8"
+
 [tool.poetry]
 name = "clp-py-utils"
 version = "0.0.3-dev"

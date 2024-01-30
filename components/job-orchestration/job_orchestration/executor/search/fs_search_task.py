@@ -1,16 +1,14 @@
 import os
-import sys
 import signal
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any, Dict
 
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
-
-from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.clp_config import StorageEngine
-
+from clp_py_utils.clp_logging import set_logging_level
 from job_orchestration.executor.search.celery import app
 from job_orchestration.scheduler.job_config import SearchConfig
 from job_orchestration.scheduler.scheduler_data import SearchTaskResult
@@ -19,25 +17,30 @@ from job_orchestration.scheduler.scheduler_data import SearchTaskResult
 logger = get_task_logger(__name__)
 
 
-def make_clo_command(clp_home: Path, archive_path: Path, search_config: SearchConfig,
-                     results_cache_uri: str, results_collection: str):
+def make_clo_command(
+    clp_home: Path,
+    archive_path: Path,
+    search_config: SearchConfig,
+    results_cache_uri: str,
+    results_collection: str,
+):
     search_cmd = [
         str(clp_home / "bin" / "clo"),
         results_cache_uri,
         results_collection,
         str(archive_path),
-        search_config.query_string
+        search_config.query_string,
     ]
 
     if search_config.begin_timestamp is not None:
-        search_cmd.append('--tge')
+        search_cmd.append("--tge")
         search_cmd.append(str(search_config.begin_timestamp))
     if search_config.end_timestamp is not None:
-        search_cmd.append('--tle')
+        search_cmd.append("--tle")
         search_cmd.append(str(search_config.end_timestamp))
     if search_config.path_filter is not None:
         search_cmd.append(search_config.path_filter)
-    
+
     return search_cmd
 
 
@@ -51,7 +54,7 @@ def search(
 ) -> Dict[str, Any]:
     task_id = str(self.request.id)
     clp_home = Path(os.getenv("CLP_HOME"))
-    archive_directory = Path(os.getenv('CLP_ARCHIVE_OUTPUT_DIR'))
+    archive_directory = Path(os.getenv("CLP_ARCHIVE_OUTPUT_DIR"))
     clp_logs_dir = Path(os.getenv("CLP_LOGS_DIR"))
     clp_logging_level = str(os.getenv("CLP_LOGGING_LEVEL"))
     clp_storage_engine = str(os.getenv("CLP_STORAGE_ENGINE"))
@@ -74,7 +77,7 @@ def search(
             archive_path=archive_path,
             search_config=search_config,
             results_cache_uri=results_cache_uri,
-            results_collection=job_id
+            results_collection=job_id,
         )
     else:
         logger.error(f"Unsupported storage engine {clp_storage_engine}")
