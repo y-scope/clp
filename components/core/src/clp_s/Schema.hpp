@@ -9,11 +9,11 @@ namespace clp_s {
 /**
  * Class representing a schema made up of MST nodes.
  *
- * Internally the schema is represented by a vector where the first m_num_ordered entries are
- * ordered by MST node Id, and all of the following entries are allowed to have arbitrary order.
+ * Internally, the schema is represented by a vector where the first m_num_ordered entries are
+ * ordered by MST node ID, and the following entries are allowed to have arbitrary order.
  *
- * In the current implementation of clp-s MST node Ids in a schema must be unique, so the caller
- * is responsible for not inserting duplicate MST nodes into a schema. Future version of clp-s will
+ * In the current implementation of clp-s, MST node IDs in a schema must be unique, so the caller
+ * is responsible for not inserting duplicate MST nodes into a schema. Future versions of clp-s will
  * likely relax this requirement.
  */
 class Schema {
@@ -29,7 +29,7 @@ public:
     void insert_unordered(int32_t mst_node_id);
 
     /**
-     * Inserts another schema into the unordered region of the schema maintaining that Schema's
+     * Inserts another schema into the unordered region of the schema, maintaining that Schema's
      * order.
      */
     void insert_unordered(Schema const& schema);
@@ -53,7 +53,7 @@ public:
     [[nodiscard]] auto begin() { return m_schema.begin(); }
 
     /**
-     * @return iterator to the start of the underlying schema
+     * @return iterator to the end of the underlying schema
      */
     [[nodiscard]] auto end() { return m_schema.end(); }
 
