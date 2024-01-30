@@ -7,24 +7,24 @@
 
 namespace clp_s {
 /**
- * Class representing a a schema made up of MST
+ * Class representing a schema made up of MST nodes.
  */
 class Schema {
 public:
     using schema_t = std::vector<int32_t>;
 
     /**
-     * Insert a single node into the ordered region of the schema.
+     * Inserts a node into the ordered region of the schema.
      */
     void insert_ordered(int32_t mst_node_id);
 
     /**
-     * Insert a single node into the unordered region of the schema.
+     * Inserts a node into the unordered region of the schema.
      */
     void insert_unordered(int32_t mst_node_id);
 
     /**
-     * Insert an unordered list of nodes into the unordered region of the schema.
+     * Inserts an unordered list of nodes into the unordered region of the schema.
      */
     void insert_unordered(schema_t const& mst_node_ids);
 
@@ -39,7 +39,7 @@ public:
     /**
      * @return the number of elements in the underlying schema
      */
-    size_t size() const { return m_schema.size(); }
+    [[nodiscard]] size_t size() const { return m_schema.size(); }
 
     /**
      * @return iterators to the underlying schema
