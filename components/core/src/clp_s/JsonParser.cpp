@@ -87,7 +87,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 auto objref = object_stack.top();
                 auto it = ondemand::object_iterator(objref.begin());
                 if (it == objref.end()) {
-                    m_current_schema.insert(node_id);
+                    m_current_schema.insert_ordered(node_id);
                     object_stack.pop();
                     break;
                 } else {
@@ -100,7 +100,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 std::string value = std::string(std::string_view(simdjson::to_json_string(line)));
                 node_id = m_schema_tree->add_node(node_id_stack.top(), NodeType::ARRAY, cur_key);
                 m_current_parsed_message.add_value(node_id, value);
-                m_current_schema.insert(node_id);
+                m_current_schema.insert_ordered(node_id);
                 break;
             }
             case ondemand::json_type::number: {
@@ -136,7 +136,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                         matches_timestamp = may_match_timestamp = can_match_timestamp = false;
                     }
                 }
-                m_current_schema.insert(node_id);
+                m_current_schema.insert_ordered(node_id);
                 break;
             }
             case ondemand::json_type::string: {
@@ -172,7 +172,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                     m_current_parsed_message.add_value(node_id, value);
                 }
 
-                m_current_schema.insert(node_id);
+                m_current_schema.insert_ordered(node_id);
                 break;
             }
             case ondemand::json_type::boolean: {
@@ -180,13 +180,13 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 node_id = m_schema_tree->add_node(node_id_stack.top(), NodeType::BOOLEAN, cur_key);
 
                 m_current_parsed_message.add_value(node_id, value);
-                m_current_schema.insert(node_id);
+                m_current_schema.insert_ordered(node_id);
                 break;
             }
             case ondemand::json_type::null: {
                 node_id = m_schema_tree
                                   ->add_node(node_id_stack.top(), NodeType::NULLVALUE, cur_key);
-                m_current_schema.insert(node_id);
+                m_current_schema.insert_ordered(node_id);
                 break;
             }
         }

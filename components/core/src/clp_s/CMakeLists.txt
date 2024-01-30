@@ -36,6 +36,8 @@ set(
         ParsedMessage.hpp
         ReaderUtils.cpp
         ReaderUtils.hpp
+        Schema.cpp
+        Schema.hpp
         SchemaMap.cpp
         SchemaMap.hpp
         SchemaReader.cpp
