@@ -68,6 +68,16 @@ public:
     [[nodiscard]] auto end() const { return m_schema.cend(); }
 
     /**
+     * @return constant iterator to the start of the underlying schema
+     */
+    [[nodiscard]] auto cbegin() const { return m_schema.cbegin(); }
+
+    /**
+     * @return constant iterator to the end of the underlying schema
+     */
+    [[nodiscard]] auto cend() const { return m_schema.cend(); }
+
+    /**
      * Less than comparison operator so that Schema can act as a key for SchemaMap
      * @return true if this schema is less than the schema on the right hand side
      * @return false otherwise
