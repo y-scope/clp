@@ -21,10 +21,6 @@ public:
               m_segments_to_search(segments_to_search) {}
 
     bool need_to_scan(clp::streaming_archive::reader::File& compressed_file) {
-        if (m_target_num_latest_results == 0) {
-            return true;
-        }
-
         epochtime_t begin_ts = compressed_file.get_begin_ts();
         epochtime_t end_ts = compressed_file.get_end_ts();
         if (m_num_accumulated_results >= m_target_num_latest_results && end_ts < last_begin_ts) {
@@ -39,10 +35,6 @@ public:
     }
 
     bool is_segment_id_relevant(segment_id_t segment_id) const {
-        if (m_target_num_latest_results == 0) {
-            return true;
-        }
-
         return m_segments_to_search.find(segment_id) != m_segments_to_search.end();
     }
 
