@@ -123,27 +123,30 @@ public:
         );
     }
 
-    std::unique_ptr<MetadataDB::FileIterator>
-    get_file_iterator(epochtime_t begin_ts, epochtime_t end_ts, std::string const& file_path) {
-        return m_metadata_db
-                .get_file_iterator(begin_ts, end_ts, file_path, false, cInvalidSegmentId, false);
-    }
-
     std::unique_ptr<MetadataDB::FileIterator> get_file_iterator(
             epochtime_t begin_ts,
             epochtime_t end_ts,
             std::string const& file_path,
-            segment_id_t segment_id,
             bool order_by_begin_ts
     ) {
         return m_metadata_db.get_file_iterator(
                 begin_ts,
                 end_ts,
                 file_path,
-                true,
-                segment_id,
+                false,
+                cInvalidSegmentId,
                 order_by_begin_ts
         );
+    }
+
+    std::unique_ptr<MetadataDB::FileIterator> get_file_iterator(
+            epochtime_t begin_ts,
+            epochtime_t end_ts,
+            std::string const& file_path,
+            segment_id_t segment_id
+    ) {
+        return m_metadata_db
+                .get_file_iterator(begin_ts, end_ts, file_path, true, segment_id, false);
     }
 
 private:

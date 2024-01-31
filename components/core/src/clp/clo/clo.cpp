@@ -62,7 +62,7 @@ static SearchFilesResult search_files(
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
         ResultsCacheClient& results_cache_client,
-        LatestResultsChecker& latest_results_checker
+        std::unique_ptr<LatestResultsChecker> latest_results_checker
 );
 /**
  * Searches an archive with the given path
@@ -84,7 +84,7 @@ static SearchFilesResult search_files(
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
         ResultsCacheClient& results_cache_client,
-        LatestResultsChecker& latest_results_checker
+        std::unique_ptr<LatestResultsChecker> latest_results_checker
 ) {
     SearchFilesResult result = SearchFilesResult::Success;
 
@@ -94,8 +94,11 @@ static SearchFilesResult search_files(
 
     // Run query on each file
     for (; file_metadata_ix.has_next(); file_metadata_ix.next()) {
-        if (false
-            == latest_results_checker.is_segment_id_relevant(file_metadata_ix.get_segment_id()))
+        if (latest_results_checker
+            && false
+                       == latest_results_checker->is_segment_id_relevant(
+                               file_metadata_ix.get_segment_id()
+                       ))
         {
             continue;
         }
@@ -113,7 +116,9 @@ static SearchFilesResult search_files(
             continue;
         }
 
-        if (false == latest_results_checker.need_to_scan(compressed_file)) {
+        if (latest_results_checker
+            && false == latest_results_checker->need_to_scan(compressed_file))
+        {
             break;
         }
 
@@ -131,7 +136,10 @@ static SearchFilesResult search_files(
                     decompressed_message,
                     compressed_message.get_ts_in_milli()
             );
-            latest_results_checker.increment_num_accumulated_results();
+
+            if (latest_results_checker) {
+                latest_results_checker->increment_num_accumulated_results();
+            }
         }
 
         archive.close_file(compressed_file);
@@ -207,19 +215,15 @@ static bool search_archive(
         );
     }
 
-    LatestResultsChecker latest_results_checker(
-            target_num_latest_results, ids_of_segments_to_search);
-
-    // Search segments
-    auto file_metadata_ix_ptr = archive_reader.get_file_iterator(
-            search_begin_ts,
-            search_end_ts,
-            command_line_args.get_file_path(),
-            clp::cInvalidSegmentId,
-            target_num_latest_results > 0
-    );
-    auto& file_metadata_ix = *file_metadata_ix_ptr;
     if (target_num_latest_results == 0) {
+        // Search segments
+        auto file_metadata_ix_ptr = archive_reader.get_file_iterator(
+                search_begin_ts,
+                search_end_ts,
+                command_line_args.get_file_path(),
+                clp::cInvalidSegmentId
+        );
+        auto& file_metadata_ix = *file_metadata_ix_ptr;
         for (auto segment_id : ids_of_segments_to_search) {
             file_metadata_ix.set_segment_id(segment_id);
             auto result = search_files(
@@ -227,29 +231,40 @@ static bool search_archive(
                     archive_reader,
                     file_metadata_ix,
                     results_cache_client,
-                    latest_results_checker
+                    nullptr
             );
             if (SearchFilesResult::ResultSendFailure == result) {
                 // Stop search now since results aren't reaching the controller
                 break;
             }
         }
+        file_metadata_ix_ptr.reset(nullptr);
     } else {
+        auto file_metadata_ix_ptr = archive_reader.get_file_iterator(
+                search_begin_ts,
+                search_end_ts,
+                command_line_args.get_file_path(),
+                true
+        );
+        auto& file_metadata_ix = *file_metadata_ix_ptr;
+        auto latest_results_checker = std::make_unique<LatestResultsChecker>(
+                target_num_latest_results,
+                ids_of_segments_to_search
+        );
         auto result = search_files(
                 query,
                 archive_reader,
                 file_metadata_ix,
                 results_cache_client,
-                latest_results_checker
+                std::move(latest_results_checker)
         );
         if (SearchFilesResult::ResultSendFailure == result) {
             return true;
         }
+        file_metadata_ix_ptr.reset(nullptr);
     }
 
     results_cache_client.flush();
-    file_metadata_ix_ptr.reset(nullptr);
-
     archive_reader.close();
 
     return true;

@@ -303,14 +303,14 @@ MetadataDB::FileIterator::FileIterator(
         bool order_by_begin_ts
 )
         : Iterator(get_files_select_statement(
-                  db,
-                  begin_timestamp,
-                  end_timestamp,
-                  file_path,
-                  in_specific_segment,
-                  segment_id,
-                  order_by_begin_ts
-          )) {}
+                db,
+                begin_timestamp,
+                end_timestamp,
+                file_path,
+                in_specific_segment,
+                segment_id,
+                order_by_begin_ts
+        )) {}
 
 MetadataDB::EmptyDirectoryIterator::EmptyDirectoryIterator(SQLiteDB& db)
         : Iterator(get_empty_directories_select_statement(db)) {}
