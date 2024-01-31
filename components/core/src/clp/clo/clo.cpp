@@ -12,9 +12,11 @@
 #include "../streaming_archive/Constants.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
+#include "LatestResultsChecker.hpp"
 #include "ResultsCacheClient.hpp"
 
 using clp::clo::CommandLineArguments;
+using clp::clo::LatestResultsChecker;
 using clp::clo::ResultsCacheClient;
 using clp::CommandLineArgumentsBase;
 using clp::epochtime_t;
@@ -50,6 +52,7 @@ enum class SearchFilesResult {
  * @param archive
  * @param file_metadata_ix
  * @param results_cache_client
+ * @param latest_results_checker
  * @return SearchFilesResult::OpenFailure on failure to open a compressed file
  * @return SearchFilesResult::ResultSendFailure on failure to send a result
  * @return SearchFilesResult::Success otherwise
@@ -58,26 +61,30 @@ static SearchFilesResult search_files(
         Query& query,
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
-        ResultsCacheClient& results_cache_client
+        ResultsCacheClient& results_cache_client,
+        LatestResultsChecker& latest_results_checker
 );
 /**
  * Searches an archive with the given path
  * @param command_line_args
  * @param archive_path
  * @param results_cache_client
+ * @param target_num_latest_results
  * @return true on success, false otherwise
  */
 static bool search_archive(
         CommandLineArguments const& command_line_args,
         boost::filesystem::path const& archive_path,
-        ResultsCacheClient& results_cache_client
+        ResultsCacheClient& results_cache_client,
+        uint64_t target_num_latest_results
 );
 
 static SearchFilesResult search_files(
         Query& query,
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
-        ResultsCacheClient& results_cache_client
+        ResultsCacheClient& results_cache_client,
+        LatestResultsChecker& latest_results_checker
 ) {
     SearchFilesResult result = SearchFilesResult::Success;
 
@@ -87,6 +94,12 @@ static SearchFilesResult search_files(
 
     // Run query on each file
     for (; file_metadata_ix.has_next(); file_metadata_ix.next()) {
+        if (false
+            == latest_results_checker.is_segment_id_relevant(file_metadata_ix.get_segment_id()))
+        {
+            continue;
+        }
+
         ErrorCode error_code = archive.open_file(compressed_file, file_metadata_ix);
         if (ErrorCode_Success != error_code) {
             string orig_path;
@@ -100,9 +113,9 @@ static SearchFilesResult search_files(
             continue;
         }
 
-        uint64_t num_messages = compressed_file.get_num_messages();
-        epochtime_t begin_ts = compressed_file.get_begin_ts();
-        epochtime_t end_ts = compressed_file.get_end_ts();
+        if (false == latest_results_checker.need_to_scan(compressed_file)) {
+            break;
+        }
 
         query.make_sub_queries_relevant_to_segment(compressed_file.get_segment_id());
         while (Grep::search_and_decompress(
@@ -118,6 +131,7 @@ static SearchFilesResult search_files(
                     decompressed_message,
                     compressed_message.get_ts_in_milli()
             );
+            latest_results_checker.increment_num_accumulated_results();
         }
 
         archive.close_file(compressed_file);
@@ -129,7 +143,8 @@ static SearchFilesResult search_files(
 static bool search_archive(
         CommandLineArguments const& command_line_args,
         boost::filesystem::path const& archive_path,
-        ResultsCacheClient& results_cache_client
+        ResultsCacheClient& results_cache_client,
+        uint64_t target_num_latest_results
 ) {
     if (false == boost::filesystem::exists(archive_path)) {
         SPDLOG_ERROR("Archive '{}' does not exist.", archive_path.c_str());
@@ -192,22 +207,46 @@ static bool search_archive(
         );
     }
 
+    LatestResultsChecker latest_results_checker(
+            target_num_latest_results, ids_of_segments_to_search);
+
     // Search segments
     auto file_metadata_ix_ptr = archive_reader.get_file_iterator(
             search_begin_ts,
             search_end_ts,
             command_line_args.get_file_path(),
-            clp::cInvalidSegmentId
+            clp::cInvalidSegmentId,
+            target_num_latest_results > 0
     );
     auto& file_metadata_ix = *file_metadata_ix_ptr;
-    for (auto segment_id : ids_of_segments_to_search) {
-        file_metadata_ix.set_segment_id(segment_id);
-        auto result = search_files(query, archive_reader, file_metadata_ix, results_cache_client);
+    if (target_num_latest_results == 0) {
+        for (auto segment_id : ids_of_segments_to_search) {
+            file_metadata_ix.set_segment_id(segment_id);
+            auto result = search_files(
+                    query,
+                    archive_reader,
+                    file_metadata_ix,
+                    results_cache_client,
+                    latest_results_checker
+            );
+            if (SearchFilesResult::ResultSendFailure == result) {
+                // Stop search now since results aren't reaching the controller
+                break;
+            }
+        }
+    } else {
+        auto result = search_files(
+                query,
+                archive_reader,
+                file_metadata_ix,
+                results_cache_client,
+                latest_results_checker
+        );
         if (SearchFilesResult::ResultSendFailure == result) {
-            // Stop search now since results aren't reaching the controller
-            break;
+            return true;
         }
     }
+
     results_cache_client.flush();
     file_metadata_ix_ptr.reset(nullptr);
 
@@ -245,14 +284,22 @@ int main(int argc, char const* argv[]) {
     ResultsCacheClient results_cache_client(
             command_line_args.get_mongodb_uri(),
             command_line_args.get_mongodb_collection(),
-            command_line_args.get_batch_size()
+            command_line_args.get_batch_size(),
+            command_line_args.get_target_num_latest_results()
     );
 
     auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());
 
     int return_value = 0;
     try {
-        if (false == search_archive(command_line_args, archive_path, results_cache_client)) {
+        if (false
+            == search_archive(
+                    command_line_args,
+                    archive_path,
+                    results_cache_client,
+                    command_line_args.get_target_num_latest_results()
+            ))
+        {
             return_value = -1;
         }
     } catch (TraceableException& e) {

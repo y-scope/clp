@@ -88,8 +88,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             "Batch size for sending results to MongoDB"
     )(
             "num-latest-results,n",
-            po::value<uint64_t>(&m_num_latest_results)->value_name("NUM")->
-                default_value(m_num_latest_results),
+            po::value<uint64_t>(&m_target_num_latest_results)->value_name("NUM")->
+                default_value(m_target_num_latest_results),
             "Number of latest results to send to MongoDB"
     );
     // clang-format on

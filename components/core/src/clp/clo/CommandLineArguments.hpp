@@ -19,7 +19,7 @@ public:
               m_ignore_case(false),
               m_search_begin_ts(cEpochTimeMin),
               m_search_end_ts(cEpochTimeMax),
-              m_num_latest_results(0) {}
+              m_target_num_latest_results(0) {}
 
     // Methods
     ParsingResult parse_arguments(int argc, char const* argv[]) override;
@@ -42,7 +42,7 @@ public:
 
     epochtime_t get_search_end_ts() const { return m_search_end_ts; }
 
-    uint64_t get_num_latest_results() const { return m_num_latest_results; }
+    uint64_t get_target_num_latest_results() const { return m_target_num_latest_results; }
 
 private:
     // Methods
@@ -57,7 +57,7 @@ private:
     std::string m_search_string;
     std::string m_file_path;
     epochtime_t m_search_begin_ts, m_search_end_ts;
-    uint64_t m_num_latest_results;
+    uint64_t m_target_num_latest_results;
 };
 }  // namespace clp::clo
 

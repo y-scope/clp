@@ -1,6 +1,7 @@
 #ifndef CLP_CLO_MONGODBCLIENT_HPP
 #define CLP_CLO_MONGODBCLIENT_HPP
 
+#include <queue>
 #include <string>
 
 #include <mongocxx/client.hpp>
@@ -17,6 +18,27 @@ namespace clp::clo {
  */
 class ResultsCacheClient {
 public:
+    struct QueryResult {
+        // Constructors
+        QueryResult(std::string original_path, std::string message, epochtime_t timestamp)
+                : original_path(std::move(original_path)),
+                  message(std::move(message)),
+                  timestamp(timestamp) {}
+
+        std::string original_path;
+        std::string message;
+        epochtime_t timestamp;
+    };
+
+    struct CompareQueryResults {
+        bool operator()(
+                std::unique_ptr<QueryResult> const& r1,
+                std::unique_ptr<QueryResult> const& r2
+        ) const {
+            return r1->timestamp < r2->timestamp;
+        }
+    };
+
     // Types
     class OperationFailed : public TraceableException {
     public:
@@ -29,7 +51,12 @@ public:
     };
 
     // Constructors
-    ResultsCacheClient(std::string const& uri, std::string const& collection, uint64_t batch_size);
+    ResultsCacheClient(
+            std::string const& uri,
+            std::string const& collection,
+            uint64_t batch_size,
+            uint64_t target_num_latest_results
+    );
 
     // Methods
     /**
@@ -51,6 +78,13 @@ private:
     mongocxx::collection m_collection;
     std::vector<bsoncxx::document::value> m_results;
     uint64_t m_batch_size;
+
+    uint64_t m_target_num_latest_results;
+    std::priority_queue<
+            std::unique_ptr<QueryResult>,
+            std::vector<std::unique_ptr<QueryResult>>,
+            CompareQueryResults>
+            m_top_results;
 };
 }  // namespace clp::clo
 
