@@ -21,7 +21,7 @@ ResultsCacheClient::ResultsCacheClient(
 void ResultsCacheClient::flush() {
     while (false == m_top_results.empty()) {
         auto const& result = m_top_results.top();
-        m_results.push_back(bsoncxx::builder::basic::make_document(
+        m_results.emplace_back(bsoncxx::builder::basic::make_document(
                 bsoncxx::builder::basic::kvp("original_path", std::move(result->original_path)),
                 bsoncxx::builder::basic::kvp("message", std::move(result->message)),
                 bsoncxx::builder::basic::kvp("timestamp", result->timestamp)
