@@ -121,10 +121,15 @@ epochtime_t TimestampDictionaryWriter::ingest_entry(
             timestamp_begin_pos,
             timestamp_end_pos
     );
-    if (m_local_column_id_to_range.count(node_id) == 0) {
-        m_local_column_id_to_range.emplace(node_id, key);
+
+    auto entry = m_local_column_id_to_range.find(node_id);
+    if (entry == m_local_column_id_to_range.end()) {
+        TimestampEntry new_entry(key);
+        new_entry.ingest_timestamp(ret);
+        m_local_column_id_to_range.emplace(node_id, std::move(new_entry));
+    } else {
+        entry->second.ingest_timestamp(ret);
     }
-    m_local_column_id_to_range[node_id].ingest_timestamp(ret);
 
     if (pattern == nullptr) {
         throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
@@ -140,10 +145,14 @@ void TimestampDictionaryWriter::ingest_entry(
         int32_t node_id,
         double timestamp
 ) {
-    if (m_local_column_id_to_range.count(node_id) == 0) {
-        m_local_column_id_to_range.emplace(node_id, key);
+    auto entry = m_local_column_id_to_range.find(node_id);
+    if (entry == m_local_column_id_to_range.end()) {
+        TimestampEntry new_entry(key);
+        new_entry.ingest_timestamp(timestamp);
+        m_local_column_id_to_range.emplace(node_id, std::move(new_entry));
+    } else {
+        entry->second.ingest_timestamp(timestamp);
     }
-    m_local_column_id_to_range[node_id].ingest_timestamp(timestamp);
 }
 
 void TimestampDictionaryWriter::ingest_entry(
@@ -151,31 +160,37 @@ void TimestampDictionaryWriter::ingest_entry(
         int32_t node_id,
         int64_t timestamp
 ) {
-    if (m_local_column_id_to_range.count(node_id) == 0) {
-        m_local_column_id_to_range.emplace(node_id, key);
+    auto entry = m_local_column_id_to_range.find(node_id);
+    if (entry == m_local_column_id_to_range.end()) {
+        TimestampEntry new_entry(key);
+        new_entry.ingest_timestamp(timestamp);
+        m_local_column_id_to_range.emplace(node_id, std::move(new_entry));
+    } else {
+        entry->second.ingest_timestamp(timestamp);
     }
-    m_local_column_id_to_range[node_id].ingest_timestamp(timestamp);
 }
 
 void TimestampDictionaryWriter::merge_local_range() {
     for (auto const& it : m_local_column_id_to_range) {
         std::string key = it.second.get_key_name();
-        if (m_local_column_key_to_range.count(key) == 0) {
-            m_local_column_key_to_range.emplace(key, it.second);
+        auto entry = m_local_column_key_to_range.find(key);
+        if (entry == m_local_column_key_to_range.end()) {
+            TimestampEntry new_entry = it.second;
+            new_entry.insert_column_id(it.first);
+            m_local_column_key_to_range.emplace(key, std::move(new_entry));
         } else {
-            auto& entry = m_local_column_key_to_range[key];
-            entry.merge_range(it.second);
-            entry.insert_column_id(it.first);
+            entry->second.merge_range(it.second);
+            entry->second.insert_column_id(it.first);
         }
     }
 
     for (auto const& it : m_local_column_key_to_range) {
-        if (m_global_column_key_to_range.count(it.first) == 0) {
+        auto entry = m_global_column_key_to_range.find(it.first);
+        if (entry == m_global_column_key_to_range.end()) {
             m_global_column_key_to_range.emplace(it.first, it.second);
         } else {
-            auto& entry = m_global_column_key_to_range[it.first];
-            entry.merge_range(it.second);
-            entry.insert_column_ids(it.second.get_column_ids());
+            entry->second.merge_range(it.second);
+            entry->second.insert_column_ids(it.second.get_column_ids());
         }
     }
 }
