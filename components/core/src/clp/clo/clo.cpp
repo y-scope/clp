@@ -237,16 +237,14 @@ static bool search_archive(
                 true
         );
         auto& file_metadata_ix = *file_metadata_ix_ptr;
-        auto result = search_files(
+        search_files(
                 query,
                 archive_reader,
                 file_metadata_ix,
                 results_cache_client,
                 ids_of_segments_to_search
         );
-        if (SearchFilesResult::ResultSendFailure == result) {
-            return true;
-        }
+
         file_metadata_ix_ptr.reset(nullptr);
     }
 
