@@ -55,7 +55,6 @@ int main(int argc, char const* argv[]) {
         option.compression_level = command_line_arguments.get_compression_level();
         option.timestamp_key = command_line_arguments.get_timestamp_key();
 
-
         clp_s::JsonParser parser(option);
         parser.parse();
         parser.store();

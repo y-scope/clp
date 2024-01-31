@@ -74,7 +74,11 @@ void TimestampEntry::write_to_file(ZstdCompressor& compressor, std::string const
     }
 }
 
-ErrorCode TimestampEntry::try_read_from_file(ZstdDecompressor& decompressor, std::string& column_name, std::unordered_set<int32_t> &column_ids) {
+ErrorCode TimestampEntry::try_read_from_file(
+        ZstdDecompressor& decompressor,
+        std::string& column_name,
+        std::unordered_set<int32_t>& column_ids
+) {
     ErrorCode error_code;
 
     uint64_t column_len;
@@ -130,7 +134,11 @@ ErrorCode TimestampEntry::try_read_from_file(ZstdDecompressor& decompressor, std
     return error_code;
 }
 
-void TimestampEntry::read_from_file(ZstdDecompressor& decompressor, std::string& column_name, std::unordered_set<int32_t> &column_ids) {
+void TimestampEntry::read_from_file(
+        ZstdDecompressor& decompressor,
+        std::string& column_name,
+        std::unordered_set<int32_t>& column_ids
+) {
     auto error_code = try_read_from_file(decompressor, column_name, column_ids);
     if (ErrorCodeSuccess != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);

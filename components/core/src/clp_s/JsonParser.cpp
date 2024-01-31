@@ -136,7 +136,8 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                     double double_value = line.get_double();
                     m_current_parsed_message.add_value(node_id, double_value);
                     if (matches_timestamp) {
-                        m_timestamp_dictionary->ingest_entry(m_timestamp_key, node_id, double_value);
+                        m_timestamp_dictionary
+                                ->ingest_entry(m_timestamp_key, node_id, double_value);
                         matches_timestamp = may_match_timestamp = can_match_timestamp = false;
                     }
                 }

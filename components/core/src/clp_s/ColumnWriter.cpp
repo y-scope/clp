@@ -104,7 +104,8 @@ void DateStringColumnWriter::add_value(
     std::string string_timestamp = std::get<std::string>(value);
 
     uint64_t encoding_id;
-    epochtime_t timestamp = m_timestamp_dict->ingest_entry(m_name, m_id, string_timestamp, encoding_id);
+    epochtime_t timestamp
+            = m_timestamp_dict->ingest_entry(m_name, m_id, string_timestamp, encoding_id);
 
     m_timestamps.push_back(timestamp);
     m_timestamp_encodings.push_back(encoding_id);

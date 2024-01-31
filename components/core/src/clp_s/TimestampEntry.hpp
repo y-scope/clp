@@ -71,7 +71,8 @@ public:
     /**
      * Try to read the timestamp entry from a file
      * @param decompressor
-     * @param column
+     * @param column_name
+     * @param column_ids
      * @return ErrorCode
      */
     ErrorCode try_read_from_file(
@@ -83,9 +84,14 @@ public:
     /**
      * Read the timestamp entry from a file
      * @param decompressor
-     * @param column
+     * @param column_name
+     * @param column_ids
      */
-    void read_from_file(ZstdDecompressor& decompressor, std::string& column);
+    void read_from_file(
+            ZstdDecompressor& decompressor,
+            std::string& column_name,
+            std::unordered_set<int32_t>& column_ids
+    );
 
     /**
      * Check if a timestamp is in the range of this TimestampEntry

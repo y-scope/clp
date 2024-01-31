@@ -86,7 +86,8 @@ private:
 class BooleanColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
-    explicit BooleanColumnWriter(std::string name, int32_t id) : BaseColumnWriter(std::move(name), id) {}
+    explicit BooleanColumnWriter(std::string name, int32_t id)
+            : BaseColumnWriter(std::move(name), id) {}
 
     // Destructor
     ~BooleanColumnWriter() override = default;
