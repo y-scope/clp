@@ -53,10 +53,8 @@ int main(int argc, char const* argv[]) {
         option.archives_dir = command_line_arguments.get_archives_dir();
         option.target_encoded_size = command_line_arguments.get_target_encoded_size();
         option.compression_level = command_line_arguments.get_compression_level();
-        auto const& timestamp_key = command_line_arguments.get_timestamp_key();
-        if (false == timestamp_key.empty()) {
-            clp_s::StringUtils::tokenize_column_descriptor(timestamp_key, option.timestamp_column);
-        }
+        option.timestamp_key = command_line_arguments.get_timestamp_key();
+
 
         clp_s::JsonParser parser(option);
         parser.parse();

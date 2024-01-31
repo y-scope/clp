@@ -11,7 +11,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_num_messages(0),
           m_compression_level(option.compression_level),
           m_target_encoded_size(option.target_encoded_size),
-          m_timestamp_column(option.timestamp_column) {
+          m_timestamp_key(option.timestamp_key) {
     if (false == boost::filesystem::create_directory(m_archives_dir)) {
         SPDLOG_ERROR("The output directory '{}' already exists", m_archives_dir);
         exit(1);
@@ -19,6 +19,10 @@ JsonParser::JsonParser(JsonParserOption const& option)
 
     if (false == FileUtils::validate_path(option.file_paths)) {
         exit(1);
+    }
+
+    if (false == m_timestamp_key.empty()) {
+        clp_s::StringUtils::tokenize_column_descriptor(m_timestamp_key, m_timestamp_column);
     }
 
     for (auto& file_path : option.file_paths) {
@@ -125,14 +129,14 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
 
                     m_current_parsed_message.add_value(node_id, i64_value);
                     if (matches_timestamp) {
-                        m_timestamp_dictionary->ingest_entry(cur_key, i64_value);
+                        m_timestamp_dictionary->ingest_entry(m_timestamp_key, i64_value);
                         matches_timestamp = may_match_timestamp = can_match_timestamp = false;
                     }
                 } else {
                     double double_value = line.get_double();
                     m_current_parsed_message.add_value(node_id, double_value);
                     if (matches_timestamp) {
-                        m_timestamp_dictionary->ingest_entry(cur_key, double_value);
+                        m_timestamp_dictionary->ingest_entry(m_timestamp_key, double_value);
                         matches_timestamp = may_match_timestamp = can_match_timestamp = false;
                     }
                 }
@@ -150,14 +154,14 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                         node_id = m_schema_tree->add_node(
                                 node_id_stack.top(),
                                 NodeType::FLOATDATESTRING,
-                                cur_key
+                                m_timestamp_key
                         );
                         m_current_parsed_message.add_value(node_id, ret_double);
                     } else {
                         node_id = m_schema_tree->add_node(
                                 node_id_stack.top(),
                                 NodeType::DATESTRING,
-                                cur_key
+                                m_timestamp_key
                         );
                         m_current_parsed_message.add_value(node_id, value);
                     }
