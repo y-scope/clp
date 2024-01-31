@@ -3,11 +3,7 @@
 #include <cmath>
 
 namespace clp_s {
-void TimestampEntry::ingest_timestamp(std::string const& key, epochtime_t timestamp) {
-    if (m_key_name.empty()) {
-        m_key_name = key;
-    }
-
+void TimestampEntry::ingest_timestamp(epochtime_t timestamp) {
     if (m_encoding == DoubleEpoch) {
         if (timestamp < std::ceil(m_epoch_start_double)) {
             m_epoch_start_double = timestamp;
@@ -31,11 +27,7 @@ void TimestampEntry::ingest_timestamp(std::string const& key, epochtime_t timest
     }
 }
 
-void TimestampEntry::ingest_timestamp(std::string const& key, double timestamp) {
-    if (m_key_name.empty()) {
-        m_key_name = key;
-    }
-
+void TimestampEntry::ingest_timestamp(double timestamp) {
     if (m_encoding == UnkownTimestampEncoding) {
         m_encoding = DoubleEpoch;
     } else if (m_encoding == Epoch) {
@@ -54,17 +46,23 @@ void TimestampEntry::ingest_timestamp(std::string const& key, double timestamp) 
 
 void TimestampEntry::merge_range(TimestampEntry const& entry) {
     if (entry.m_encoding == Epoch) {
-        ingest_timestamp(entry.m_key_name, entry.m_epoch_start);
-        ingest_timestamp(entry.m_key_name, entry.m_epoch_end);
+        ingest_timestamp(entry.m_epoch_start);
+        ingest_timestamp(entry.m_epoch_end);
     } else if (entry.m_encoding == DoubleEpoch) {
-        ingest_timestamp(entry.m_key_name, entry.m_epoch_start_double);
-        ingest_timestamp(entry.m_key_name, entry.m_epoch_end_double);
+        ingest_timestamp(entry.m_epoch_start_double);
+        ingest_timestamp(entry.m_epoch_end_double);
     }
 }
 
-void TimestampEntry::write_to_file(ZstdCompressor& compressor, std::string const& column) const {
-    compressor.write_numeric_value<TimestampEncoding>(m_encoding);
+void TimestampEntry::write_to_file(ZstdCompressor& compressor) const {
+    compressor.write_numeric_value<uint64_t>(m_key_name.size());
+    compressor.write_string(m_key_name);
+    compressor.write_numeric_value<uint64_t>(m_column_ids.size());
+    for (auto const& id : m_column_ids) {
+        compressor.write_numeric_value<int32_t>(id);
+    }
 
+    compressor.write_numeric_value<TimestampEncoding>(m_encoding);
     if (m_encoding == Epoch) {
         compressor.write_numeric_value<epochtime_t>(m_epoch_start);
         compressor.write_numeric_value<epochtime_t>(m_epoch_end);
@@ -74,11 +72,7 @@ void TimestampEntry::write_to_file(ZstdCompressor& compressor, std::string const
     }
 }
 
-ErrorCode TimestampEntry::try_read_from_file(
-        ZstdDecompressor& decompressor,
-        std::string& column_name,
-        std::unordered_set<int32_t>& column_ids
-) {
+ErrorCode TimestampEntry::try_read_from_file(ZstdDecompressor& decompressor) {
     ErrorCode error_code;
 
     uint64_t column_len;
@@ -86,7 +80,7 @@ ErrorCode TimestampEntry::try_read_from_file(
     if (ErrorCodeSuccess != error_code) {
         return error_code;
     }
-    error_code = decompressor.try_read_string(column_len, column_name);
+    error_code = decompressor.try_read_string(column_len, m_key_name);
     if (ErrorCodeSuccess != error_code) {
         return error_code;
     }
@@ -102,7 +96,7 @@ ErrorCode TimestampEntry::try_read_from_file(
         if (ErrorCodeSuccess != error_code) {
             return error_code;
         }
-        column_ids.insert(id);
+        m_column_ids.insert(id);
     }
 
     uint64_t encoding;
@@ -134,12 +128,8 @@ ErrorCode TimestampEntry::try_read_from_file(
     return error_code;
 }
 
-void TimestampEntry::read_from_file(
-        ZstdDecompressor& decompressor,
-        std::string& column_name,
-        std::unordered_set<int32_t>& column_ids
-) {
-    auto error_code = try_read_from_file(decompressor, column_name, column_ids);
+void TimestampEntry::read_from_file(ZstdDecompressor& decompressor) {
+    auto error_code = try_read_from_file(decompressor);
     if (ErrorCodeSuccess != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }

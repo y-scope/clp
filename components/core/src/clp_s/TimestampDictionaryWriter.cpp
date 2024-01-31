@@ -5,27 +5,18 @@
 namespace clp_s {
 void TimestampDictionaryWriter::write_timestamp_entries(
         std::map<std::string, TimestampEntry> const& ranges,
-        std::map<std::string, std::unordered_set<int32_t>> const& column_key_name_to_node_ids,
         ZstdCompressor& compressor
 ) {
     compressor.write_numeric_value<uint64_t>(ranges.size());
 
     for (auto const& range : ranges) {
-        compressor.write_numeric_value<uint64_t>(range.first.length());
-        compressor.write_string(range.first);
-        compressor.write_numeric_value<uint64_t>(column_key_name_to_node_ids.at(range.first).size()
-        );
-        for (auto const& id : column_key_name_to_node_ids.at(range.first)) {
-            compressor.write_numeric_value<int32_t>(id);
-        }
-        range.second.write_to_file(compressor, range.first);
+        range.second.write_to_file(compressor);
     }
 }
 
 void TimestampDictionaryWriter::write_and_flush_to_disk() {
     write_timestamp_entries(
             m_global_column_key_to_range,
-            m_local_column_key_to_ids,
             m_dictionary_compressor
     );
 
@@ -46,7 +37,6 @@ void TimestampDictionaryWriter::write_and_flush_to_disk() {
 void TimestampDictionaryWriter::write_local_and_flush_to_disk() {
     write_timestamp_entries(
             m_local_column_key_to_range,
-            m_local_column_key_to_ids,
             m_dictionary_compressor_local
     );
 
@@ -110,7 +100,6 @@ void TimestampDictionaryWriter::close_local() {
     merge_local_range();
     m_local_column_id_to_range.clear();
     m_local_column_key_to_range.clear();
-    m_local_column_key_to_ids.clear();
 }
 
 uint64_t TimestampDictionaryWriter::get_pattern_id(TimestampPattern const* pattern) {
@@ -138,7 +127,10 @@ epochtime_t TimestampDictionaryWriter::ingest_entry(
             timestamp_begin_pos,
             timestamp_end_pos
     );
-    m_local_column_id_to_range[node_id].ingest_timestamp(key, ret);
+    if (m_local_column_id_to_range.count(node_id) == 0) {
+        m_local_column_id_to_range.emplace(node_id, key);
+    }
+    m_local_column_id_to_range[node_id].ingest_timestamp(ret);
 
     if (pattern == nullptr) {
         throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
@@ -154,7 +146,10 @@ void TimestampDictionaryWriter::ingest_entry(
         int32_t node_id,
         double timestamp
 ) {
-    m_local_column_id_to_range[node_id].ingest_timestamp(key, timestamp);
+    if (m_local_column_id_to_range.count(node_id) == 0) {
+        m_local_column_id_to_range.emplace(node_id, key);
+    }
+    m_local_column_id_to_range[node_id].ingest_timestamp(timestamp);
 }
 
 void TimestampDictionaryWriter::ingest_entry(
@@ -162,19 +157,32 @@ void TimestampDictionaryWriter::ingest_entry(
         int32_t node_id,
         int64_t timestamp
 ) {
-    m_local_column_id_to_range[node_id].ingest_timestamp(key, timestamp);
+    if (m_local_column_id_to_range.count(node_id) == 0) {
+        m_local_column_id_to_range.emplace(node_id, key);
+    }
+    m_local_column_id_to_range[node_id].ingest_timestamp(timestamp);
 }
 
 void TimestampDictionaryWriter::merge_local_range() {
     for (auto const& it : m_local_column_id_to_range) {
         std::string key = it.second.get_key_name();
-        m_local_column_key_to_range[key].merge_range(it.second);
-        m_local_column_key_to_ids[key].insert(it.first);
-        m_global_column_key_to_ids[key].insert(it.first);
+        if (m_local_column_key_to_range.count(key) == 0) {
+            m_local_column_key_to_range.emplace(key, it.second);
+        } else {
+            auto& entry = m_local_column_key_to_range[key];
+            entry.merge_range(it.second);
+            entry.insert_column_id(it.first);
+        }
     }
 
     for (auto const& it : m_local_column_key_to_range) {
-        m_global_column_key_to_range[it.first].merge_range(it.second);
+        if (m_global_column_key_to_range.count(it.first) == 0) {
+            m_global_column_key_to_range.emplace(it.first, it.second);
+        } else {
+            auto& entry = m_global_column_key_to_range[it.first];
+            entry.merge_range(it.second);
+            entry.insert_column_ids(it.second.get_column_ids());
+        }
     }
 }
 }  // namespace clp_s

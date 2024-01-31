@@ -45,10 +45,9 @@ void TimestampDictionaryReader::read_new_entries(bool local) {
     }
 
     for (int i = 0; i < range_index_size; ++i) {
-        std::string column_name;
-        std::unordered_set<int32_t> column_ids;
         TimestampEntry entry;
-        entry.try_read_from_file(m_dictionary_decompressor, column_name, column_ids);
+        entry.try_read_from_file(m_dictionary_decompressor);
+        std::string column_name = entry.get_key_name();
         TimestampEntry& e = m_column_to_range[column_name] = entry;
         std::vector<std::string> tokens;
         StringUtils::tokenize_column_descriptor(column_name, tokens);

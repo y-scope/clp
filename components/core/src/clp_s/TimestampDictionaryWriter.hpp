@@ -75,7 +75,6 @@ private:
     void merge_local_range();
     void write_timestamp_entries(
             std::map<std::string, TimestampEntry> const& ranges,
-            std::map<std::string, std::unordered_set<int32_t>> const& column_key_to_ids,
             ZstdCompressor& compressor
     );
 
@@ -95,8 +94,6 @@ private:
     uint64_t m_next_id{};
     std::map<std::string, TimestampEntry> m_global_column_key_to_range;
     std::map<std::string, TimestampEntry> m_local_column_key_to_range;
-    std::map<std::string, std::unordered_set<int32_t>> m_global_column_key_to_ids;
-    std::map<std::string, std::unordered_set<int32_t>> m_local_column_key_to_ids;
     std::unordered_map<int32_t, TimestampEntry> m_local_column_id_to_range;
 };
 }  // namespace clp_s
