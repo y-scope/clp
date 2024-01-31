@@ -97,6 +97,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format on
 
             po::options_description compression_options("Compression options");
+            std::string metadata_db_config_file_path;
             // clang-format off
             compression_options.add_options()(
                     "compression-level",
@@ -114,6 +115,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<std::string>(&m_timestamp_key)->value_name("TIMESTAMP_COLUMN_KEY")->
                         default_value(m_timestamp_key),
                     "Path (e.g. x.y) for the field containing the log event's timestamp."
+            )(
+                    "db-config-file",
+                    po::value<std::string>(&metadata_db_config_file_path)->value_name("FILE")->
+                    default_value(metadata_db_config_file_path),
+                    "Global metadata DB YAML config"
             );
             // clang-format on
 
@@ -158,6 +164,27 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             if (m_archives_dir.empty()) {
                 throw std::invalid_argument("No archives directory specified.");
+            }
+
+            // Parse and validate global metadata DB config
+            if (false == metadata_db_config_file_path.empty()) {
+                clp::GlobalMetadataDBConfig metadata_db_config;
+                try {
+                    metadata_db_config.parse_config_file(metadata_db_config_file_path);
+                } catch (std::exception& e) {
+                    SPDLOG_ERROR("Failed to validate metadata database config - {}.", e.what());
+                    return ParsingResult::Failure;
+                }
+
+                if (clp::GlobalMetadataDBConfig::MetadataDBType::MySQL
+                    != metadata_db_config.get_metadata_db_type())
+                {
+                    SPDLOG_ERROR("Invalid metadata database type for clp-s; only supported type is "
+                                 "MySQL.");
+                    return ParsingResult::Failure;
+                }
+
+                m_metadata_db_config = std::move(metadata_db_config);
             }
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;

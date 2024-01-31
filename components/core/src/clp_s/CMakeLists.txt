@@ -1,6 +1,32 @@
 add_subdirectory(search/kql)
 
 set(
+        CLP_SOURCES
+        ../clp/database_utils.cpp
+        ../clp/database_utils.hpp
+        ../clp/Defs.h
+        ../clp/ErrorCode.hpp
+        ../clp/GlobalMetadataDB.hpp
+        ../clp/GlobalMetadataDBConfig.cpp
+        ../clp/GlobalMetadataDBConfig.hpp
+        ../clp/GlobalMySQLMetadataDB.cpp
+        ../clp/GlobalMySQLMetadataDB.hpp
+        ../clp/MySQLDB.cpp
+        ../clp/MySQLDB.hpp
+        ../clp/MySQLParamBindings.cpp
+        ../clp/MySQLParamBindings.hpp
+        ../clp/MySQLPreparedStatement.cpp
+        ../clp/MySQLPreparedStatement.hpp
+        ../clp/ReaderInterface.cpp
+        ../clp/ReaderInterface.hpp
+        ../clp/WriterInterface.cpp
+        ../clp/WriterInterface.hpp
+        ../clp/streaming_archive/ArchiveMetadata.cpp
+        ../clp/streaming_archive/ArchiveMetadata.hpp
+        ../clp/TraceableException.hpp
+)
+
+set(
         CLP_S_SOURCES
         "${PROJECT_SOURCE_DIR}/submodules/date/include/date/date.h"
         ArchiveReader.cpp
@@ -123,17 +149,20 @@ set(
         search/Value.hpp
 )
 
-add_executable(clp-s clp-s.cpp ${CLP_S_SOURCES} ${CLP_S_SEARCH_SOURCES})
+add_executable(clp-s clp-s.cpp ${CLP_SOURCES} ${CLP_S_SOURCES} ${CLP_S_SEARCH_SOURCES})
 target_compile_features(clp-s PRIVATE cxx_std_17)
 target_link_libraries(
         clp-s
         PRIVATE
         absl::flat_hash_map
         Boost::filesystem Boost::iostreams Boost::program_options
+        clp::string_utils
         kql
+        MariaDBClient::MariaDBClient
         ${MONGOCXX_TARGET}
         simdjson
         spdlog::spdlog
+        yaml-cpp::yaml-cpp
         ZStd::ZStd
 )
 target_include_directories(clp-s PRIVATE "${PROJECT_SOURCE_DIR}/submodules")

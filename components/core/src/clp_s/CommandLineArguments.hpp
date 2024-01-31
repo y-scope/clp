@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "../clp/GlobalMetadataDBConfig.hpp"
 #include "Defs.hpp"
 
 namespace clp_s {
@@ -59,6 +60,10 @@ public:
 
     std::optional<epochtime_t> get_search_end_ts() const { return m_search_end_ts; }
 
+    std::optional<clp::GlobalMetadataDBConfig> const& get_metadata_db_config() const {
+        return m_metadata_db_config;
+    }
+
 private:
     // Methods
     void print_basic_usage() const;
@@ -80,6 +85,9 @@ private:
     std::string m_timestamp_key;
     int m_compression_level{3};
     size_t m_target_encoded_size{8ULL * 1024 * 1024 * 1024};  // 8 GiB
+
+    // Metadata db variables
+    std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;
 
     // MongoDB configuration variables
     bool m_mongodb_enabled{false};

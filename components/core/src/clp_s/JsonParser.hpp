@@ -73,6 +73,12 @@ public:
      */
     [[nodiscard]] size_t get_compressed_size() { return m_compressed_size; }
 
+    [[nodiscard]] epochtime_t get_epoch_start() {
+        return m_timestamp_dictionary->get_epoch_start();
+    }
+
+    [[nodiscard]] epochtime_t get_epoch_end() { return m_timestamp_dictionary->get_epoch_end(); }
+
 private:
     /**
      * Parses a JSON line

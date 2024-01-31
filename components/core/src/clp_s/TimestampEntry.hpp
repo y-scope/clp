@@ -109,6 +109,24 @@ public:
         m_column_ids.insert(column_ids.begin(), column_ids.end());
     }
 
+    /**
+     * Get the beginning of this time range
+     * TODO: guarantee epoch milliseconds. The current clp-s approach to encoding timestamps and
+     * timestamp ranges makes no effort to convert second and nanosecond encoded timestamps into
+     * millisecond encoded timestamps.
+     * @return the beginning of the time range in UNIX epoch time
+     */
+    epochtime_t get_epoch_start() const;
+
+    /**
+     * Get the end of this time range
+     * TODO: guarantee epoch milliseconds. The current clp-s approach to encoding timestamps and
+     * timestamp ranges makes no effort to convert second and nanosecond encoded timestamps into
+     * millisecond encoded timestamps.
+     * @return the end of the time range in UNIX epoch time
+     */
+    epochtime_t get_epoch_end() const;
+
 private:
     TimestampEncoding m_encoding;
     double m_epoch_start_double, m_epoch_end_double;

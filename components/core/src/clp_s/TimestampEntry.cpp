@@ -359,4 +359,22 @@ EvaluatedValue TimestampEntry::evaluate_filter(FilterOperation op, epochtime_t t
         return EvaluatedValue::Unknown;
     }
 }
+
+epochtime_t TimestampEntry::get_epoch_start() const {
+    if (Epoch == m_encoding) {
+        return m_epoch_start;
+    } else if (DoubleEpoch == m_encoding) {
+        return static_cast<epochtime_t>(m_epoch_start_double);
+    }
+    return 0;
+}
+
+epochtime_t TimestampEntry::get_epoch_end() const {
+    if (Epoch == m_encoding) {
+        return m_epoch_end;
+    } else if (DoubleEpoch == m_encoding) {
+        return static_cast<epochtime_t>(std::ceil(m_epoch_end_double));
+    }
+    return 0;
+}
 }  // namespace clp_s

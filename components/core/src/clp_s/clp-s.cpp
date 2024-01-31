@@ -1,5 +1,10 @@
+#include <filesystem>
+
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
+#include "../clp/GlobalMySQLMetadataDB.hpp"
 #include "CommandLineArguments.hpp"
 #include "Defs.hpp"
 #include "JsonConstructor.hpp"
@@ -19,6 +24,7 @@
 #include "Utils.hpp"
 
 using namespace clp_s::search;
+using clp_s::cArchiveFormatDevelopmentVersionFlag;
 using clp_s::cEpochTimeMax;
 using clp_s::cEpochTimeMin;
 using clp_s::CommandLineArguments;
@@ -48,9 +54,26 @@ int main(int argc, char const* argv[]) {
     if (CommandLineArguments::Command::Compress == command_line_arguments.get_command()) {
         clp_s::TimestampPattern::init();
 
+        boost::uuids::random_generator generator;
+        std::string archive_id = boost::uuids::to_string(generator());
+        auto archive_path
+                = std::filesystem::path(command_line_arguments.get_archives_dir()) / archive_id;
+
+        // Create output directory in case it doesn't exist
+        try {
+            std::filesystem::create_directory(archive_path.parent_path().string());
+        } catch (std::exception& e) {
+            SPDLOG_ERROR(
+                    "Failed to create archive directory {} - {}",
+                    archive_path.parent_path().string(),
+                    e.what()
+            );
+            return 1;
+        }
+
         clp_s::JsonParserOption option;
         option.file_paths = command_line_arguments.get_file_paths();
-        option.archives_dir = command_line_arguments.get_archives_dir();
+        option.archives_dir = archive_path.string();
         option.target_encoded_size = command_line_arguments.get_target_encoded_size();
         option.compression_level = command_line_arguments.get_compression_level();
         option.timestamp_key = command_line_arguments.get_timestamp_key();
@@ -59,6 +82,32 @@ int main(int argc, char const* argv[]) {
         parser.parse();
         parser.store();
         parser.close();
+
+        if (command_line_arguments.get_metadata_db_config().has_value()) {
+            auto const& db_config = command_line_arguments.get_metadata_db_config().value();
+            clp::GlobalMySQLMetadataDB metadata_db(
+                    db_config.get_metadata_db_host(),
+                    db_config.get_metadata_db_port(),
+                    db_config.get_metadata_db_username(),
+                    db_config.get_metadata_db_password(),
+                    db_config.get_metadata_db_name(),
+                    db_config.get_metadata_table_prefix()
+            );
+
+            clp::streaming_archive::ArchiveMetadata metadata(
+                    cArchiveFormatDevelopmentVersionFlag,
+                    "",
+                    0ULL
+            );
+            metadata.set_dynamic_compressed_size(parser.get_compressed_size());
+            metadata.increment_static_compressed_size(parser.get_compressed_size());
+            metadata.set_dynamic_uncompressed_size(parser.get_uncompressed_size());
+            metadata.increment_static_uncompressed_size(parser.get_uncompressed_size());
+            metadata.expand_time_range(parser.get_epoch_start(), parser.get_epoch_end());
+            metadata_db.open();
+            metadata_db.add_archive(archive_id, metadata);
+            metadata_db.close();
+        }
     } else if (CommandLineArguments::Command::Extract == command_line_arguments.get_command()) {
         clp_s::JsonConstructorOption option;
         option.archives_dir = command_line_arguments.get_archives_dir();

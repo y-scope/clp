@@ -198,4 +198,24 @@ void TimestampDictionaryWriter::merge_local_range() {
         }
     }
 }
+
+epochtime_t TimestampDictionaryWriter::get_epoch_start() const {
+    auto it = m_global_column_to_range.begin();
+    if (it == m_global_column_to_range.end()) {
+        // replicate behaviour of CLP
+        return 0;
+    }
+
+    return it->second.get_epoch_start();
+}
+
+epochtime_t TimestampDictionaryWriter::get_epoch_end() const {
+    auto it = m_global_column_to_range.begin();
+    if (it == m_global_column_to_range.end()) {
+        // replicate behaviour of CLP
+        return 0;
+    }
+
+    return it->second.get_epoch_end();
+}
 }  // namespace clp_s
