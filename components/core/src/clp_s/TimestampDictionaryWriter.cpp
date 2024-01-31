@@ -15,10 +15,7 @@ void TimestampDictionaryWriter::write_timestamp_entries(
 }
 
 void TimestampDictionaryWriter::write_and_flush_to_disk() {
-    write_timestamp_entries(
-            m_global_column_key_to_range,
-            m_dictionary_compressor
-    );
+    write_timestamp_entries(m_global_column_key_to_range, m_dictionary_compressor);
 
     m_dictionary_compressor.write_numeric_value<uint64_t>(m_pattern_to_id.size());
     for (auto& it : m_pattern_to_id) {
@@ -35,10 +32,7 @@ void TimestampDictionaryWriter::write_and_flush_to_disk() {
 }
 
 void TimestampDictionaryWriter::write_local_and_flush_to_disk() {
-    write_timestamp_entries(
-            m_local_column_key_to_range,
-            m_dictionary_compressor_local
-    );
+    write_timestamp_entries(m_local_column_key_to_range, m_dictionary_compressor_local);
 
     m_dictionary_compressor_local.flush();
     m_dictionary_file_writer_local.flush();
