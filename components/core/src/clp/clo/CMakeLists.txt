@@ -108,7 +108,6 @@ set(
         clo.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
-        LatestResultsChecker.hpp
         ResultsCacheClient.cpp
         ResultsCacheClient.hpp
 )

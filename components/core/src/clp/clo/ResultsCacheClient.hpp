@@ -73,6 +73,15 @@ public:
      */
     void flush();
 
+    /**
+     * Returns the smallest timestamp in the top results.
+     */
+    epochtime_t get_smallest_timestamp() const {
+        return m_top_results.empty() ? 0 : m_top_results.top()->timestamp;
+    }
+
+    uint64_t get_target_num_latest_results() const { return m_target_num_latest_results; }
+
 private:
     mongocxx::client m_client;
     mongocxx::collection m_collection;

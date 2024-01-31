@@ -12,11 +12,9 @@
 #include "../streaming_archive/Constants.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
-#include "LatestResultsChecker.hpp"
 #include "ResultsCacheClient.hpp"
 
 using clp::clo::CommandLineArguments;
-using clp::clo::LatestResultsChecker;
 using clp::clo::ResultsCacheClient;
 using clp::CommandLineArgumentsBase;
 using clp::epochtime_t;
@@ -52,7 +50,7 @@ enum class SearchFilesResult {
  * @param archive
  * @param file_metadata_ix
  * @param results_cache_client
- * @param latest_results_checker
+ * @param segments_to_search
  * @return SearchFilesResult::OpenFailure on failure to open a compressed file
  * @return SearchFilesResult::ResultSendFailure on failure to send a result
  * @return SearchFilesResult::Success otherwise
@@ -62,7 +60,7 @@ static SearchFilesResult search_files(
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
         ResultsCacheClient& results_cache_client,
-        std::unique_ptr<LatestResultsChecker> latest_results_checker
+        std::set<clp::segment_id_t> const& segments_to_search
 );
 /**
  * Searches an archive with the given path
@@ -84,7 +82,7 @@ static SearchFilesResult search_files(
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
         ResultsCacheClient& results_cache_client,
-        std::unique_ptr<LatestResultsChecker> latest_results_checker
+        std::set<clp::segment_id_t> const& segments_to_search
 ) {
     SearchFilesResult result = SearchFilesResult::Success;
 
@@ -94,13 +92,15 @@ static SearchFilesResult search_files(
 
     // Run query on each file
     for (; file_metadata_ix.has_next(); file_metadata_ix.next()) {
-        if (latest_results_checker
-            && false
-                       == latest_results_checker->is_segment_id_relevant(
-                               file_metadata_ix.get_segment_id()
-                       ))
-        {
-            continue;
+        if (results_cache_client.get_target_num_latest_results() > 0) {
+            if (segments_to_search.find(file_metadata_ix.get_segment_id())
+                == segments_to_search.end())
+            {
+                continue;
+            }
+            if (results_cache_client.get_smallest_timestamp() > file_metadata_ix.get_end_ts()) {
+                break;
+            }
         }
 
         ErrorCode error_code = archive.open_file(compressed_file, file_metadata_ix);
@@ -114,12 +114,6 @@ static SearchFilesResult search_files(
             }
             result = SearchFilesResult::OpenFailure;
             continue;
-        }
-
-        if (latest_results_checker
-            && false == latest_results_checker->need_to_scan(compressed_file))
-        {
-            break;
         }
 
         query.make_sub_queries_relevant_to_segment(compressed_file.get_segment_id());
@@ -136,10 +130,6 @@ static SearchFilesResult search_files(
                     decompressed_message,
                     compressed_message.get_ts_in_milli()
             );
-
-            if (latest_results_checker) {
-                latest_results_checker->increment_num_accumulated_results();
-            }
         }
 
         archive.close_file(compressed_file);
@@ -231,7 +221,7 @@ static bool search_archive(
                     archive_reader,
                     file_metadata_ix,
                     results_cache_client,
-                    nullptr
+                    ids_of_segments_to_search
             );
             if (SearchFilesResult::ResultSendFailure == result) {
                 // Stop search now since results aren't reaching the controller
@@ -247,16 +237,12 @@ static bool search_archive(
                 true
         );
         auto& file_metadata_ix = *file_metadata_ix_ptr;
-        auto latest_results_checker = std::make_unique<LatestResultsChecker>(
-                target_num_latest_results,
-                ids_of_segments_to_search
-        );
         auto result = search_files(
                 query,
                 archive_reader,
                 file_metadata_ix,
                 results_cache_client,
-                std::move(latest_results_checker)
+                ids_of_segments_to_search
         );
         if (SearchFilesResult::ResultSendFailure == result) {
             return true;
