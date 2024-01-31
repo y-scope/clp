@@ -35,7 +35,7 @@ public:
                 std::unique_ptr<QueryResult> const& r1,
                 std::unique_ptr<QueryResult> const& r2
         ) const {
-            return r1->timestamp < r2->timestamp;
+            return r1->timestamp > r2->timestamp;
         }
     };
 
