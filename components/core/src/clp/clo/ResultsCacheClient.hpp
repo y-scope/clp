@@ -77,10 +77,14 @@ public:
      * Returns the smallest timestamp in the top results.
      */
     epochtime_t get_smallest_timestamp() const {
-        return m_top_results.empty() ? 0 : m_top_results.top()->timestamp;
+        return m_latest_results.empty() ? 0 : m_latest_results.top()->timestamp;
     }
 
     uint64_t get_target_num_latest_results() const { return m_target_num_latest_results; }
+
+    bool is_latest_results_full() const {
+        return m_latest_results.size() >= m_target_num_latest_results;
+    }
 
 private:
     mongocxx::client m_client;
@@ -93,7 +97,7 @@ private:
             std::unique_ptr<QueryResult>,
             std::vector<std::unique_ptr<QueryResult>>,
             CompareQueryResults>
-            m_top_results;
+            m_latest_results;
 };
 }  // namespace clp::clo
 

@@ -98,7 +98,9 @@ static SearchFilesResult search_files(
             {
                 continue;
             }
-            if (results_cache_client.get_smallest_timestamp() > file_metadata_ix.get_end_ts()) {
+            if (results_cache_client.is_latest_results_full()
+                && results_cache_client.get_smallest_timestamp() > file_metadata_ix.get_end_ts())
+            {
                 break;
             }
         }
