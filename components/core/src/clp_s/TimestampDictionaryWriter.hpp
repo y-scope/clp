@@ -40,13 +40,15 @@ public:
 
     /**
      * Closes the global timestamp dictionary
+     * @return the compressed size of the global timestamp dictionary in bytes
      */
-    void close();
+    [[nodiscard]] size_t close();
 
     /**
      * Closes the local timestamp dictionary
+     * @return the compressed size of the local timestamp dictionary in bytes
      */
-    void close_local();
+    [[nodiscard]] size_t close_local();
 
     /**
      * Writes the global timestamp dictionary to disk

@@ -33,8 +33,9 @@ public:
 
     /**
      * Closes the dictionary
+     * @return the compressed size of the dictionary in bytes
      */
-    void close();
+    [[nodiscard]] size_t close();
 
     /**
      * Writes the dictionary's header and flushes unwritten content to disk
@@ -124,18 +125,20 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open(
 }
 
 template <typename DictionaryIdType, typename EntryType>
-void DictionaryWriter<DictionaryIdType, EntryType>::close() {
+size_t DictionaryWriter<DictionaryIdType, EntryType>::close() {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCodeNotInit, __FILENAME__, __LINE__);
     }
 
     write_header_and_flush_to_disk();
     m_dictionary_compressor.close();
+    size_t compressed_size = m_dictionary_file_writer.get_pos();
     m_dictionary_file_writer.close();
 
     m_value_to_id.clear();
 
     m_is_open = false;
+    return compressed_size;
 }
 
 template <typename DictionaryIdType, typename EntryType>

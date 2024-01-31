@@ -13,7 +13,7 @@ int32_t SchemaMap::add_schema(Schema const& schema) {
     return m_current_schema_id++;
 }
 
-void SchemaMap::store() {
+size_t SchemaMap::store() {
     FileWriter schema_map_writer;
     ZstdCompressor schema_map_compressor;
 
@@ -31,6 +31,8 @@ void SchemaMap::store() {
     }
 
     schema_map_compressor.close();
+    size_t compressed_size = schema_map_writer.get_pos();
     schema_map_writer.close();
+    return compressed_size;
 }
 }  // namespace clp_s
