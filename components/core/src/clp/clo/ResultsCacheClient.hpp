@@ -82,9 +82,7 @@ public:
 
     uint64_t get_max_num_results() const { return m_max_num_results; }
 
-    bool is_latest_results_full() const {
-        return m_latest_results.size() >= m_max_num_results;
-    }
+    bool is_latest_results_full() const { return m_latest_results.size() >= m_max_num_results; }
 
 private:
     mongocxx::client m_client;
