@@ -8,7 +8,7 @@ ResultsCacheClient::ResultsCacheClient(
         uint64_t target_num_latest_results
 )
         : m_batch_size(batch_size),
-          m_target_num_latest_results(target_num_latest_results) {
+          m_max_num_results(target_num_latest_results) {
     try {
         auto mongo_uri = mongocxx::uri(uri);
         m_client = mongocxx::client(mongo_uri);
@@ -20,13 +20,13 @@ ResultsCacheClient::ResultsCacheClient(
 
 void ResultsCacheClient::flush() {
     while (false == m_latest_results.empty()) {
-        auto const& result = m_latest_results.top();
-        m_results.emplace_back(bsoncxx::builder::basic::make_document(
-                bsoncxx::builder::basic::kvp("original_path", std::move(result->original_path)),
-                bsoncxx::builder::basic::kvp("message", std::move(result->message)),
-                bsoncxx::builder::basic::kvp("timestamp", result->timestamp)
-        ));
+        auto result = std::move(*m_latest_results.top());
         m_latest_results.pop();
+        m_results.emplace_back(bsoncxx::builder::basic::make_document(
+                bsoncxx::builder::basic::kvp("original_path", std::move(result.original_path)),
+                bsoncxx::builder::basic::kvp("message", std::move(result.message)),
+                bsoncxx::builder::basic::kvp("timestamp", result.timestamp)
+        ));
     }
 
     try {
@@ -44,7 +44,7 @@ void ResultsCacheClient::add_result(
         std::string const& message,
         epochtime_t timestamp
 ) {
-    if (m_target_num_latest_results == 0) {
+    if (m_max_num_results == 0) {
         try {
             auto document = bsoncxx::builder::basic::make_document(
                     bsoncxx::builder::basic::kvp("original_path", original_path),
@@ -61,11 +61,11 @@ void ResultsCacheClient::add_result(
         } catch (mongocxx::exception const& e) {
             throw OperationFailed(ErrorCode::ErrorCode_Failure_DB_Bulk_Write, __FILE__, __LINE__);
         }
-    } else if (m_latest_results.size() < m_target_num_latest_results) {
+    } else if (m_latest_results.size() < m_max_num_results) {
         m_latest_results.emplace(std::make_unique<QueryResult>(original_path, message, timestamp));
     } else if (m_latest_results.top()->timestamp < timestamp) {
         m_latest_results.pop();
-        m_latest_results.push(std::make_unique<QueryResult>(original_path, message, timestamp));
+        m_latest_results.emplace(std::make_unique<QueryResult>(original_path, message, timestamp));
     }
 }
 }  // namespace clp::clo

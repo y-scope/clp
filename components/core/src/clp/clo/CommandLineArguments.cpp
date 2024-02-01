@@ -80,17 +80,17 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             "Ignore case distinctions in both WILDCARD STRING and the input files"
     );
 
-    po::options_description options_results_control("Results Controls");
+    po::options_description options_output_control("Output Controls");
     // clang-format off
-    options_results_control.add_options()(
+    options_output_control.add_options()(
             "batch-size,b",
             po::value<uint64_t>(&m_batch_size)->value_name("SIZE")->default_value(m_batch_size),
-            "Batch size for sending results to MongoDB"
+            "The number of documents to insert into MongoDB in a batch"
     )(
-            "num-latest-results,n",
-            po::value<uint64_t>(&m_target_num_latest_results)->value_name("NUM")->
-                default_value(m_target_num_latest_results),
-            "Number of latest results to send to MongoDB"
+            "max-num-results,m",
+            po::value<uint64_t>(&m_max_num_results)->value_name("NUM")->
+                default_value(m_max_num_results),
+            "The maximum number of results to output"
     );
     // clang-format on
 
@@ -98,7 +98,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     po::options_description visible_options;
     visible_options.add(options_general);
     visible_options.add(options_match_control);
-    visible_options.add(options_results_control);
+    visible_options.add(options_output_control);
 
     // Define hidden positional options (not shown in Boost's program options help message)
     po::options_description hidden_positional_options;
@@ -131,7 +131,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     po::options_description all_options;
     all_options.add(options_general);
     all_options.add(options_match_control);
-    all_options.add(options_results_control);
+    all_options.add(options_output_control);
     all_options.add(hidden_positional_options);
 
     // Parse options

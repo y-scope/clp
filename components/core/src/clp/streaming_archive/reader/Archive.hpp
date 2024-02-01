@@ -127,7 +127,7 @@ public:
             epochtime_t begin_ts,
             epochtime_t end_ts,
             std::string const& file_path,
-            bool order_by_end_ts
+            bool order_by_segment_ts
     ) {
         return m_metadata_db.get_file_iterator(
                 begin_ts,
@@ -135,7 +135,7 @@ public:
                 file_path,
                 false,
                 cInvalidSegmentId,
-                order_by_end_ts
+                order_by_segment_ts
         );
     }
 

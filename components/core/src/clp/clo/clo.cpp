@@ -92,7 +92,7 @@ static SearchFilesResult search_files(
 
     // Run query on each file
     for (; file_metadata_ix.has_next(); file_metadata_ix.next()) {
-        if (results_cache_client.get_target_num_latest_results() > 0) {
+        if (results_cache_client.get_max_num_results() > 0) {
             if (segments_to_search.find(file_metadata_ix.get_segment_id())
                 == segments_to_search.end())
             {
@@ -101,7 +101,7 @@ static SearchFilesResult search_files(
             if (results_cache_client.is_latest_results_full()
                 && results_cache_client.get_smallest_timestamp() > file_metadata_ix.get_end_ts())
             {
-                break;
+                continue;
             }
         }
 
@@ -286,7 +286,7 @@ int main(int argc, char const* argv[]) {
             command_line_args.get_mongodb_uri(),
             command_line_args.get_mongodb_collection(),
             command_line_args.get_batch_size(),
-            command_line_args.get_target_num_latest_results()
+            command_line_args.get_max_num_results()
     );
 
     auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());
@@ -298,7 +298,7 @@ int main(int argc, char const* argv[]) {
                     command_line_args,
                     archive_path,
                     results_cache_client,
-                    command_line_args.get_target_num_latest_results()
+                    command_line_args.get_max_num_results()
             ))
         {
             return_value = -1;

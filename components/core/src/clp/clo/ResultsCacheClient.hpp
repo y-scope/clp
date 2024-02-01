@@ -18,6 +18,7 @@ namespace clp::clo {
  */
 class ResultsCacheClient {
 public:
+    // Types
     struct QueryResult {
         // Constructors
         QueryResult(std::string original_path, std::string message, epochtime_t timestamp)
@@ -30,7 +31,7 @@ public:
         epochtime_t timestamp;
     };
 
-    struct CompareQueryResults {
+    struct QueryResultGreaterTimestampComparator {
         bool operator()(
                 std::unique_ptr<QueryResult> const& r1,
                 std::unique_ptr<QueryResult> const& r2
@@ -39,7 +40,6 @@ public:
         }
     };
 
-    // Types
     class OperationFailed : public TraceableException {
     public:
         // Constructors
@@ -80,10 +80,10 @@ public:
         return m_latest_results.empty() ? 0 : m_latest_results.top()->timestamp;
     }
 
-    uint64_t get_target_num_latest_results() const { return m_target_num_latest_results; }
+    uint64_t get_max_num_results() const { return m_max_num_results; }
 
     bool is_latest_results_full() const {
-        return m_latest_results.size() >= m_target_num_latest_results;
+        return m_latest_results.size() >= m_max_num_results;
     }
 
 private:
@@ -92,11 +92,11 @@ private:
     std::vector<bsoncxx::document::value> m_results;
     uint64_t m_batch_size;
 
-    uint64_t m_target_num_latest_results;
+    uint64_t m_max_num_results;
     std::priority_queue<
             std::unique_ptr<QueryResult>,
             std::vector<std::unique_ptr<QueryResult>>,
-            CompareQueryResults>
+            QueryResultGreaterTimestampComparator>
             m_latest_results;
 };
 }  // namespace clp::clo
