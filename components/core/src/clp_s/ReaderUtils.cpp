@@ -225,6 +225,8 @@ BaseColumnReader* ReaderUtils::append_reader_column(
         case NodeType::NULLVALUE:
             reader->append_column(column_id);
             break;
+        case NodeType::UNKNOWN:
+            break;
     }
 
     if (column_reader) {
@@ -243,10 +245,7 @@ void ReaderUtils::append_reader_columns(
         std::shared_ptr<TimestampDictionaryReader> const& timestamp_dict,
         bool extract_timestamp
 ) {
-    int32_t timestamp_column_id = -1;
-    if (timestamp_dict->has_timestamp()) {
-        timestamp_column_id = timestamp_dict->get_first_column_id();
-    }
+    auto timestamp_column_ids = timestamp_dict->get_authoritative_timestamp_column_ids();
 
     for (int32_t column_id : columns) {
         BaseColumnReader* column_reader = append_reader_column(
@@ -259,7 +258,7 @@ void ReaderUtils::append_reader_columns(
                 timestamp_dict
         );
 
-        if (extract_timestamp && column_reader && column_reader->get_id() == timestamp_column_id) {
+        if (extract_timestamp && column_reader && timestamp_column_ids.count(column_id) > 0) {
             reader->mark_column_as_timestamp(column_reader);
         }
     }

@@ -83,7 +83,7 @@ int main(int argc, char const* argv[]) {
 
         auto timestamp_dict = clp_s::ReaderUtils::read_timestamp_dictionary(archives_dir);
         AddTimestampConditions add_timestamp_conditions(
-                timestamp_dict->get_authoritative_timestamp_column(),
+                timestamp_dict->get_authoritative_timestamp_tokenized_column(),
                 command_line_arguments.get_search_begin_ts(),
                 command_line_arguments.get_search_end_ts()
         );

@@ -4,18 +4,13 @@
 
 namespace clp_s {
 void TimestampDictionaryWriter::write_timestamp_entries(
-        std::unordered_map<int32_t, TimestampEntry> const& ranges,
+        std::map<std::string, TimestampEntry> const& ranges,
         ZstdCompressor& compressor
 ) {
     compressor.write_numeric_value<uint64_t>(ranges.size());
 
     for (auto const& range : ranges) {
-<<<<<<< HEAD
-        std::string column_name = m_schema_tree->get_node(range.first)->get_key_name();
-        range.second.write_to_file(compressor, range.first, column_name);
-=======
         range.second.write_to_file(compressor);
->>>>>>> origin/main
     }
 }
 

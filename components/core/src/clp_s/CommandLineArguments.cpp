@@ -262,6 +262,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<uint64_t>(&m_batch_size)->value_name("BATCH_SIZE")->
                         default_value(m_batch_size),
                     "The number of documents to insert into MongoDB in a batch"
+            )(
+                    "max-num-results",
+                    po::value<uint64_t>(&m_max_num_results)->value_name("MAX_NUM_RESULTS")->
+                        default_value(m_max_num_results),
+                    "The maximum number of results to output"
             );
             // clang-format on
             search_options.add(output_options);
