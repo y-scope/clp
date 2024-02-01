@@ -153,6 +153,9 @@ def main(argv):
     args_parser.add_argument(
         "--no-progress-reporting", action="store_true", help="Disables progress reporting."
     )
+    args_parser.add_argument(
+        "--timestamp-key", help="The authoritative key to use for the timestamp index."
+    )
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate some input paths were specified
@@ -196,7 +199,9 @@ def main(argv):
         shutil.copy(log_list_path, comp_jobs_dir / log_list_path.name)
 
     mysql_adapter = SQL_Adapter(clp_config.database)
-    clp_input_config = InputConfig(list_path=str(log_list_path))
+    clp_input_config = InputConfig(
+        list_path=str(log_list_path), timestamp_key=parsed_args.timestamp_key
+    )
     if parsed_args.remove_path_prefix:
         clp_input_config.path_prefix_to_remove = parsed_args.remove_path_prefix
     clp_io_config = ClpIoConfig(

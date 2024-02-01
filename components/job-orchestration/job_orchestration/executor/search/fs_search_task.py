@@ -24,6 +24,7 @@ def make_clo_command(
     results_cache_uri: str,
     results_collection: str,
 ):
+    # fmt: off
     search_cmd = [
         str(clp_home / "bin" / "clo"),
         results_cache_uri,
@@ -31,6 +32,7 @@ def make_clo_command(
         str(archive_path),
         search_config.query_string,
     ]
+    # fmt: on
 
     if search_config.begin_timestamp is not None:
         search_cmd.append("--tge")
@@ -43,6 +45,32 @@ def make_clo_command(
 
     return search_cmd
 
+def make_clp_s_command(
+    clp_home: Path,
+    archive_path: Path,
+    search_config: SearchConfig,
+    results_cache_uri: str,
+    results_collection: str,
+):
+    # fmt: off
+    search_cmd = [
+        str(clp_home / "bin" / "clp-s"),
+        "s",
+        str(archive_path),
+        search_config.query_string,
+        "--mongodb-uri", results_cache_uri,
+        "--mongodb-collection", results_collection,
+    ]
+    # fmt: on
+
+    if search_config.begin_timestamp is not None:
+        search_cmd.append("--tge")
+        search_cmd.append(str(search_config.begin_timestamp))
+    if search_config.end_timestamp is not None:
+        search_cmd.append("--tle")
+        search_cmd.append(str(search_config.end_timestamp))
+
+    return search_cmd
 
 @app.task(bind=True)
 def search(
@@ -73,6 +101,14 @@ def search(
 
     if StorageEngine.CLP == clp_storage_engine:
         search_cmd = make_clo_command(
+            clp_home=clp_home,
+            archive_path=archive_path,
+            search_config=search_config,
+            results_cache_uri=results_cache_uri,
+            results_collection=job_id,
+        )
+    elif StorageEngine.CLP_S == clp_storage_engine:
+        search_cmd = make_clp_s_command(
             clp_home=clp_home,
             archive_path=archive_path,
             search_config=search_config,

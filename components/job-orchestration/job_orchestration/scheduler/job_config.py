@@ -15,6 +15,7 @@ class PathsToCompress(BaseModel):
 class InputConfig(BaseModel):
     list_path: str
     path_prefix_to_remove: str = None
+    timestamp_key: typing.Optional[str] = None
 
 
 class OutputConfig(BaseModel):

@@ -8,6 +8,7 @@ import subprocess
 import yaml
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
+from clp_py_utils.clp_config import StorageEngine
 from job_orchestration.executor.compress.celery import app
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
@@ -19,45 +20,19 @@ from job_orchestration.scheduler.scheduler_data import (
 # Setup logging
 logger = get_task_logger(__name__)
 
-
-def run_clp(
-    clp_config: ClpIoConfig,
+def make_clp_command(
     clp_home: pathlib.Path,
     data_dir: pathlib.Path,
     archive_output_dir: pathlib.Path,
-    logs_dir: pathlib.Path,
-    job_id: int,
-    task_id: int,
+    clp_config: ClpIoConfig,
+    db_config_file_path: pathlib.Path,
     paths_to_compress: PathsToCompress,
-    clp_metadata_db_connection_config,
+    instance_id_str: str,
 ):
-    """
-    Compresses files from an FS into archives on an FS
-
-    :param clp_config: ClpIoConfig
-    :param clp_home:
-    :param data_dir:
-    :param archive_output_dir:
-    :param logs_dir:
-    :param job_id:
-    :param task_id:
-    :param paths_to_compress: PathToCompress
-    :param clp_metadata_db_connection_config
-    :return: tuple -- (whether compression was successful, output messages)
-    """
-    instance_id_str = f"compression-job-{job_id}-task-{task_id}"
-
     path_prefix_to_remove = clp_config.input.path_prefix_to_remove
 
     file_paths = paths_to_compress.file_paths
 
-    # Generate database config file for clp
-    db_config_file_path = data_dir / f"{instance_id_str}-db-config.yml"
-    db_config_file = open(db_config_file_path, "w")
-    yaml.safe_dump(clp_metadata_db_connection_config, db_config_file)
-    db_config_file.close()
-
-    # Start assembling compression command
     # fmt: off
     compression_cmd = [
         str(clp_home / "bin" / "clp"),
@@ -94,6 +69,98 @@ def run_clp(
 
         compression_cmd.append("--files-from")
         compression_cmd.append(str(log_list_path))
+    return compression_cmd, log_list_path
+
+def make_clp_s_command(
+    clp_home: pathlib.Path,
+    data_dir: pathlib.Path,
+    archive_output_dir: pathlib.Path,
+    clp_config: ClpIoConfig,
+    db_config_file_path: pathlib.Path,
+    paths_to_compress: PathsToCompress,
+    instance_id_str: str,
+
+):
+    file_paths = paths_to_compress.file_paths
+
+    # fmt: off
+    compression_cmd = [
+        str(clp_home / "bin" / "clp-s"),
+        "c", str(archive_output_dir),
+        "--target-encoded-size", str(clp_config.output.target_segment_size + clp_config.output.target_dictionaries_size),
+        "--db-config-file", str(db_config_file_path),
+    ]
+    # fmt: on
+
+    if clp_config.input.timestamp_key is not None:
+        compression_cmd.append("--timestamp-key")
+        compression_cmd.append(clp_config.input.timestamp_key)
+
+    # Prepare list of paths to compress for clp
+    if len(file_paths) > 0:
+        compression_cmd.append("--input-paths")
+    for path_str in file_paths:
+        compression_cmd.append(path_str)
+    return compression_cmd, None
+
+def run_clp(
+    clp_config: ClpIoConfig,
+    clp_home: pathlib.Path,
+    data_dir: pathlib.Path,
+    archive_output_dir: pathlib.Path,
+    logs_dir: pathlib.Path,
+    job_id: int,
+    task_id: int,
+    paths_to_compress: PathsToCompress,
+    clp_metadata_db_connection_config,
+):
+    """
+    Compresses files from an FS into archives on an FS
+
+    :param clp_config: ClpIoConfig
+    :param clp_home:
+    :param data_dir:
+    :param archive_output_dir:
+    :param logs_dir:
+    :param job_id:
+    :param task_id:
+    :param paths_to_compress: PathToCompress
+    :param clp_metadata_db_connection_config
+    :return: tuple -- (whether compression was successful, output messages)
+    """
+    clp_storage_engine = str(os.getenv("CLP_STORAGE_ENGINE"))
+
+    instance_id_str = f"compression-job-{job_id}-task-{task_id}"
+
+    # Generate database config file for clp
+    db_config_file_path = data_dir / f"{instance_id_str}-db-config.yml"
+    db_config_file = open(db_config_file_path, "w")
+    yaml.safe_dump(clp_metadata_db_connection_config, db_config_file)
+    db_config_file.close()
+
+    if StorageEngine.CLP == clp_storage_engine:
+        compression_cmd, log_list_path = make_clp_command(
+            clp_home,
+            data_dir,
+            archive_output_dir,
+            clp_config,
+            db_config_file_path,
+            paths_to_compress,
+            instance_id_str
+        )
+    elif StorageEngine.CLP_S == clp_storage_engine:
+        compression_cmd, log_list_path = make_clp_s_command(
+            clp_home,
+            data_dir,
+            archive_output_dir,
+            clp_config,
+            db_config_file_path,
+            paths_to_compress,
+            instance_id_str
+        )
+    else:
+        logger.error(f"Unsupported storage engine {clp_storage_engine}")
+        return False, {"error_message": f"Unsupported storage engine {clp_storage_engine}"}
 
     # Open stderr log file
     stderr_log_path = logs_dir / f"{instance_id_str}-stderr.log"

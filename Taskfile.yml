@@ -78,6 +78,7 @@ tasks:
         "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
         "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
         "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
+        "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
         "{{.PACKAGE_BUILD_DIR}}/bin/"
       # This step must be last since we use this file to detect whether the package was built
       # successfully
@@ -87,6 +88,7 @@ tasks:
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
@@ -103,7 +105,7 @@ tasks:
     cmds:
       - "mkdir -p '{{.CORE_COMPONENT_BUILD_DIR}}'"
       - "cmake -S '{{.SRC_DIR}}' -B '{{.CORE_COMPONENT_BUILD_DIR}}'"
-      - "cmake --build '{{.CORE_COMPONENT_BUILD_DIR}}' --parallel --target clg clo clp"
+      - "cmake --build '{{.CORE_COMPONENT_BUILD_DIR}}' --parallel --target clg clo clp clp-s"
     method: "timestamp"
     sources:
       - "{{.SRC_DIR}}/cmake/**/*"
@@ -116,12 +118,15 @@ tasks:
         test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clg'
         && test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clo'
         && test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clp'
+        && test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clp-s'
       - >-
         test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clg')
         && test {{.TIMESTAMP | unixEpoch}} -lt
         $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clo')
         && test {{.TIMESTAMP | unixEpoch}} -lt
         $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clp')
+        && test {{.TIMESTAMP | unixEpoch}} -lt
+        $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clp-s')
 
   clp-package-utils:
     - task: "python-component"
