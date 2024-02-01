@@ -1,9 +1,11 @@
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include "CommandLineArguments.hpp"
+#include "Defs.hpp"
 #include "JsonConstructor.hpp"
 #include "JsonParser.hpp"
 #include "ReaderUtils.hpp"
+#include "search/AddTimestampConditions.hpp"
 #include "search/ConvertToExists.hpp"
 #include "search/EmptyExpr.hpp"
 #include "search/EvaluateTimestampIndex.hpp"
@@ -17,6 +19,8 @@
 #include "Utils.hpp"
 
 using namespace clp_s::search;
+using clp_s::cEpochTimeMax;
+using clp_s::cEpochTimeMin;
 using clp_s::CommandLineArguments;
 
 int main(int argc, char const* argv[]) {
@@ -49,10 +53,7 @@ int main(int argc, char const* argv[]) {
         option.archives_dir = command_line_arguments.get_archives_dir();
         option.target_encoded_size = command_line_arguments.get_target_encoded_size();
         option.compression_level = command_line_arguments.get_compression_level();
-        auto const& timestamp_key = command_line_arguments.get_timestamp_key();
-        if (false == timestamp_key.empty()) {
-            clp_s::StringUtils::tokenize_column_descriptor(timestamp_key, option.timestamp_column);
-        }
+        option.timestamp_key = command_line_arguments.get_timestamp_key();
 
         clp_s::JsonParser parser(option);
         parser.parse();
@@ -80,6 +81,23 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
 
+        auto timestamp_dict = clp_s::ReaderUtils::read_timestamp_dictionary(archives_dir);
+        AddTimestampConditions add_timestamp_conditions(
+                timestamp_dict->get_authoritative_timestamp_column(),
+                command_line_arguments.get_search_begin_ts(),
+                command_line_arguments.get_search_end_ts()
+        );
+        if (expr = add_timestamp_conditions.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+            SPDLOG_ERROR(
+                    "Query '{}' specified timestamp filters tge {} tle {}, but no authoritative "
+                    "timestamp column was found for this archive",
+                    query,
+                    command_line_arguments.get_search_begin_ts().value_or(cEpochTimeMin),
+                    command_line_arguments.get_search_end_ts().value_or(cEpochTimeMax)
+            );
+            return 1;
+        }
+
         OrOfAndForm standardize_pass;
         if (expr = standardize_pass.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
             SPDLOG_ERROR("Query '{}' is logically false", query);
@@ -100,7 +118,6 @@ int main(int argc, char const* argv[]) {
 
         // skip decompressing the archive if we won't match based on
         // the timestamp index
-        auto timestamp_dict = clp_s::ReaderUtils::read_timestamp_dictionary(archives_dir);
         EvaluateTimestampIndex timestamp_index(timestamp_dict);
         if (clp_s::EvaluatedValue::False == timestamp_index.run(expr)) {
             SPDLOG_ERROR("No matching timestamp ranges for query '{}'", query);

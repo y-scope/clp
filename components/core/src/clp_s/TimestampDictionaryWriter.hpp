@@ -25,8 +25,7 @@ public:
     // Constructors
     TimestampDictionaryWriter(std::shared_ptr<SchemaTree> schema_tree)
             : m_is_open(false),
-              m_is_open_local(false),
-              m_schema_tree(std::move(schema_tree)) {}
+              m_is_open_local(false) {}
 
     /**
      * Opens the global timestamp dictionary for writing
@@ -71,21 +70,28 @@ public:
 
     /**
      * Ingests a timestamp entry
-     * @param column_id
+     * @param key
+     * @param node_id
      * @param timestamp
      * @param pattern_id
      * @return the epoch time corresponding to the string timestamp
      */
-    epochtime_t ingest_entry(int32_t column_id, std::string const& timestamp, uint64_t& pattern_id);
+    epochtime_t ingest_entry(
+            std::string const& key,
+            int32_t node_id,
+            std::string const& timestamp,
+            uint64_t& pattern_id
+    );
 
     /**
      * Ingests a timestamp entry
-     * @param column_id
+     * @param column_key
+     * @param node_id
      * @param timestamp
      */
-    void ingest_entry(int32_t column_id, double timestamp);
+    void ingest_entry(std::string const& key, int32_t node_id, double timestamp);
 
-    void ingest_entry(int32_t column_id, int64_t timestamp);
+    void ingest_entry(std::string const& key, int32_t node_id, int64_t timestamp);
 
 private:
     /**
@@ -94,12 +100,12 @@ private:
     void merge_local_range();
 
     /**
-     * Writes the timestamp entries to disk
+     * Writes the timestamp entries to the disk
      * @param ranges
      * @param compressor
      */
     void write_timestamp_entries(
-            std::unordered_map<int32_t, TimestampEntry> const& ranges,
+            std::map<std::string, TimestampEntry> const& ranges,
             ZstdCompressor& compressor
     );
 
@@ -117,10 +123,10 @@ private:
 
     pattern_to_id_t m_pattern_to_id;
     uint64_t m_next_id{};
-    std::unordered_map<int32_t, TimestampEntry> m_global_column_to_range;
-    std::unordered_map<int32_t, TimestampEntry> m_local_column_to_range;
 
-    std::shared_ptr<SchemaTree> m_schema_tree;
+    std::map<std::string, TimestampEntry> m_global_column_key_to_range;
+    std::map<std::string, TimestampEntry> m_local_column_key_to_range;
+    std::unordered_map<int32_t, TimestampEntry> m_local_column_id_to_range;
 };
 }  // namespace clp_s
 

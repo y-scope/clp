@@ -54,17 +54,15 @@ void TimestampEntry::merge_range(TimestampEntry const& entry) {
     }
 }
 
-void TimestampEntry::write_to_file(
-        ZstdCompressor& compressor,
-        int32_t column_id,
-        std::string const& column
-) const {
-    compressor.write_numeric_value<int32_t>(column_id);
-    compressor.write_numeric_value<uint64_t>(column.length());
-    compressor.write_string(column);
+void TimestampEntry::write_to_file(ZstdCompressor& compressor) const {
+    compressor.write_numeric_value<uint64_t>(m_key_name.size());
+    compressor.write_string(m_key_name);
+    compressor.write_numeric_value<uint64_t>(m_column_ids.size());
+    for (auto const& id : m_column_ids) {
+        compressor.write_numeric_value<int32_t>(id);
+    }
 
     compressor.write_numeric_value<TimestampEncoding>(m_encoding);
-
     if (m_encoding == Epoch) {
         compressor.write_numeric_value<epochtime_t>(m_epoch_start);
         compressor.write_numeric_value<epochtime_t>(m_epoch_end);
@@ -74,28 +72,35 @@ void TimestampEntry::write_to_file(
     }
 }
 
-ErrorCode TimestampEntry::try_read_from_file(
-        ZstdDecompressor& decompressor,
-        int32_t& column_id,
-        std::string& column_name
-) {
+ErrorCode TimestampEntry::try_read_from_file(ZstdDecompressor& decompressor) {
     ErrorCode error_code;
-
-    error_code = decompressor.try_read_numeric_value<int32_t>(column_id);
-    if (ErrorCodeSuccess != error_code) {
-        return error_code;
-    }
 
     uint64_t column_len;
     error_code = decompressor.try_read_numeric_value<uint64_t>(column_len);
     if (ErrorCodeSuccess != error_code) {
         return error_code;
     }
-    error_code = decompressor.try_read_string(column_len, column_name);
+
+    error_code = decompressor.try_read_string(column_len, m_key_name);
     if (ErrorCodeSuccess != error_code) {
         return error_code;
     }
 
+    uint64_t column_ids_size;
+    error_code = decompressor.try_read_numeric_value<uint64_t>(column_ids_size);
+    if (ErrorCodeSuccess != error_code) {
+        return error_code;
+    }
+    for (int i = 0; i < column_ids_size; ++i) {
+        int32_t id;
+        error_code = decompressor.try_read_numeric_value<int32_t>(id);
+        if (ErrorCodeSuccess != error_code) {
+            return error_code;
+        }
+        m_column_ids.insert(id);
+    }
+
+    uint64_t encoding;
     error_code = decompressor.try_read_numeric_value<TimestampEncoding>(m_encoding);
     if (ErrorCodeSuccess != error_code) {
         return error_code;
@@ -124,12 +129,8 @@ ErrorCode TimestampEntry::try_read_from_file(
     return error_code;
 }
 
-void TimestampEntry::read_from_file(
-        ZstdDecompressor& decompressor,
-        int32_t& column_id,
-        std::string& column_name
-) {
-    auto error_code = try_read_from_file(decompressor, column_id, column_name);
+void TimestampEntry::read_from_file(ZstdDecompressor& decompressor) {
+    auto error_code = try_read_from_file(decompressor);
     if (ErrorCodeSuccess != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }

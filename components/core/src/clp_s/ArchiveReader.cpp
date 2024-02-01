@@ -40,7 +40,7 @@ void ArchiveReader::open(ArchiveReaderOption& option) {
 
     // Open schema readers and load encoded messages
     for (int32_t schema_id : schema_ids) {
-        auto& schema = m_id_to_schema[schema_id];
+        auto& schema = m_schema_map[schema_id];
         auto schema_reader = new SchemaReader(m_schema_tree, schema_id);
         schema_reader->open(encoded_messages_dir + "/" + std::to_string(schema_id));
 

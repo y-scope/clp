@@ -1,5 +1,7 @@
 #include "TimestampDictionaryReader.hpp"
 
+#include <unordered_set>
+
 #include "Utils.hpp"
 
 namespace clp_s {
@@ -43,11 +45,10 @@ void TimestampDictionaryReader::read_new_entries(bool local) {
     }
 
     for (int i = 0; i < range_index_size; ++i) {
-        int32_t column_id;
-        std::string column_name;
         TimestampEntry entry;
-        entry.try_read_from_file(m_dictionary_decompressor, column_id, column_name);
-        TimestampEntry& e = m_column_to_range[column_id] = entry;
+        entry.try_read_from_file(m_dictionary_decompressor);
+        std::string column_name = entry.get_key_name();
+        TimestampEntry& e = m_column_to_range[column_name] = entry;
         std::vector<std::string> tokens;
         StringUtils::tokenize_column_descriptor(column_name, tokens);
         m_tokenized_column_to_range.emplace_back(std::move(tokens), &e);
@@ -83,10 +84,23 @@ void TimestampDictionaryReader::read_new_entries(bool local) {
     }
 }
 
-std::string TimestampDictionaryReader::get_string_encoding(epochtime_t epoch, uint64_t format_id) {
+std::string
+TimestampDictionaryReader::get_string_encoding(epochtime_t epoch, uint64_t format_id) const {
     std::string ret;
-    m_patterns[format_id].insert_formatted_timestamp(epoch, ret);
+    m_patterns.at(format_id).insert_formatted_timestamp(epoch, ret);
 
     return ret;
+}
+
+std::optional<std::vector<std::string>>
+TimestampDictionaryReader::get_authoritative_timestamp_column() const {
+    // TODO: Currently, we only allow a single authoritative timestamp column at ingestion time, but
+    // the timestamp dictionary is designed to store the ranges of several timestamp columns. We
+    // should enforce a convention that the first entry in the timestamp dictionary corresponds to
+    // the "authoritative" timestamp column for the dataset.
+    for (auto it = tokenized_column_to_range_begin(); tokenized_column_to_range_end() != it; ++it) {
+        return it->first;
+    }
+    return std::nullopt;
 }
 }  // namespace clp_s

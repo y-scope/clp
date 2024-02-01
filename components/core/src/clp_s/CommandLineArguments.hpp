@@ -1,8 +1,11 @@
 #ifndef CLP_S_COMMANDLINEARGUMENTS_HPP
 #define CLP_S_COMMANDLINEARGUMENTS_HPP
 
+#include <optional>
 #include <string>
 #include <vector>
+
+#include "Defs.hpp"
 
 namespace clp_s {
 class CommandLineArguments {
@@ -52,6 +55,10 @@ public:
 
     std::string const& get_query() const { return m_query; }
 
+    std::optional<epochtime_t> get_search_begin_ts() const { return m_search_begin_ts; }
+
+    std::optional<epochtime_t> get_search_end_ts() const { return m_search_end_ts; }
+
 private:
     // Methods
     void print_basic_usage() const;
@@ -82,6 +89,8 @@ private:
 
     // Search variables
     std::string m_query;
+    std::optional<epochtime_t> m_search_begin_ts;
+    std::optional<epochtime_t> m_search_end_ts;
 };
 }  // namespace clp_s
 
