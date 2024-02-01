@@ -2,6 +2,7 @@
 #define CLP_S_TIMESTAMPENTRY_HPP
 
 #include <string>
+#include <unordered_set>
 #include <variant>
 
 #include "Defs.hpp"
@@ -42,10 +43,17 @@ public:
               m_epoch_start(cEpochTimeMax),
               m_epoch_end(cEpochTimeMin) {}
 
+    TimestampEntry(std::string const& key_name)
+            : m_encoding(UnkownTimestampEncoding),
+              m_epoch_start_double(cDoubleEpochTimeMax),
+              m_epoch_end_double(cDoubleEpochTimeMin),
+              m_epoch_start(cEpochTimeMax),
+              m_epoch_end(cEpochTimeMin),
+              m_key_name(key_name) {}
+
     /**
      * Ingest a timestamp potentially adjusting the start and end bounds for this
      * TimestampEntry.
-     *
      * @param timestamp the timestamp to be ingested
      * @return the epoch time corresponding to the string timestamp
      */
@@ -65,22 +73,22 @@ public:
      * @param compressor
      * @param column
      */
-    void write_to_file(ZstdCompressor& compressor, std::string const& column) const;
+    void write_to_file(ZstdCompressor& compressor) const;
 
     /**
      * Try to read the timestamp entry from a file
      * @param decompressor
-     * @param column
      * @return ErrorCode
      */
-    ErrorCode try_read_from_file(ZstdDecompressor& decompressor, std::string& column);
+    ErrorCode try_read_from_file(ZstdDecompressor& decompressor);
 
     /**
      * Read the timestamp entry from a file
      * @param decompressor
-     * @param column
+     * @param column_name
+     * @param column_ids
      */
-    void read_from_file(ZstdDecompressor& decompressor, std::string& column);
+    void read_from_file(ZstdDecompressor& decompressor);
 
     /**
      * Check if a timestamp is in the range of this TimestampEntry
@@ -91,10 +99,23 @@ public:
     EvaluatedValue evaluate_filter(FilterOperation op, double timestamp);
     EvaluatedValue evaluate_filter(FilterOperation op, epochtime_t timestamp);
 
+    std::string get_key_name() const { return m_key_name; }
+
+    std::unordered_set<int32_t> const& get_column_ids() const { return m_column_ids; }
+
+    void insert_column_id(int32_t column_id) { m_column_ids.insert(column_id); }
+
+    void insert_column_ids(std::unordered_set<int32_t> const& column_ids) {
+        m_column_ids.insert(column_ids.begin(), column_ids.end());
+    }
+
 private:
     TimestampEncoding m_encoding;
     double m_epoch_start_double, m_epoch_end_double;
     epochtime_t m_epoch_start, m_epoch_end;
+
+    std::string m_key_name;
+    std::unordered_set<int32_t> m_column_ids;
 };
 }  // namespace clp_s
 

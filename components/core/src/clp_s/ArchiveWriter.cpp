@@ -91,29 +91,34 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
         std::string key_name = node->get_key_name();
         switch (node->get_type()) {
             case NodeType::INTEGER:
-                writer->append_column(new Int64ColumnWriter(key_name));
+                writer->append_column(new Int64ColumnWriter(key_name, id));
                 break;
             case NodeType::FLOAT:
-                writer->append_column(new FloatColumnWriter(key_name));
+                writer->append_column(new FloatColumnWriter(key_name, id));
                 break;
             case NodeType::CLPSTRING:
-                writer->append_column(new ClpStringColumnWriter(key_name, m_var_dict, m_log_dict));
+                writer->append_column(
+                        new ClpStringColumnWriter(key_name, id, m_var_dict, m_log_dict)
+                );
                 break;
             case NodeType::VARSTRING:
-                writer->append_column(new VariableStringColumnWriter(key_name, m_var_dict));
+                writer->append_column(new VariableStringColumnWriter(key_name, id, m_var_dict));
                 break;
             case NodeType::BOOLEAN:
-                writer->append_column(new BooleanColumnWriter(key_name));
+                writer->append_column(new BooleanColumnWriter(key_name, id));
                 break;
             case NodeType::ARRAY:
-                writer->append_column(new ClpStringColumnWriter(key_name, m_var_dict, m_array_dict)
+                writer->append_column(
+                        new ClpStringColumnWriter(key_name, id, m_var_dict, m_array_dict)
                 );
                 break;
             case NodeType::DATESTRING:
-                writer->append_column(new DateStringColumnWriter(key_name, m_timestamp_dict));
+                writer->append_column(new DateStringColumnWriter(key_name, id, m_timestamp_dict));
                 break;
             case NodeType::FLOATDATESTRING:
-                writer->append_column(new FloatDateStringColumnWriter(key_name, m_timestamp_dict));
+                writer->append_column(
+                        new FloatDateStringColumnWriter(key_name, id, m_timestamp_dict)
+                );
                 break;
             case NodeType::OBJECT:
             case NodeType::NULLVALUE:
