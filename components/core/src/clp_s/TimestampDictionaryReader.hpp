@@ -72,7 +72,6 @@ public:
 
     auto tokenized_column_to_range_end() const { return m_tokenized_column_to_range.end(); }
 
-
     std::optional<std::vector<std::string>>& get_authoritative_timestamp_tokenized_column() {
         return m_authoritative_timestamp_tokenized_column;
     }
