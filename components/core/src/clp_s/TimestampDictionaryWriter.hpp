@@ -23,9 +23,7 @@ public:
     };
 
     // Constructors
-    TimestampDictionaryWriter(std::shared_ptr<SchemaTree> schema_tree)
-            : m_is_open(false),
-              m_is_open_local(false) {}
+    TimestampDictionaryWriter() : m_is_open(false), m_is_open_local(false) {}
 
     /**
      * Opens the global timestamp dictionary for writing

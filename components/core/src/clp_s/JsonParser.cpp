@@ -34,7 +34,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
 
     m_schema_map = std::make_shared<SchemaMap>(m_archives_dir, m_compression_level);
 
-    m_timestamp_dictionary = std::make_shared<TimestampDictionaryWriter>(m_schema_tree);
+    m_timestamp_dictionary = std::make_shared<TimestampDictionaryWriter>();
     m_timestamp_dictionary->open(m_archives_dir + "/timestamp.dict", option.compression_level);
 
     ArchiveWriterOption archive_writer_option;
