@@ -336,6 +336,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 if (m_batch_size == 0) {
                     throw std::invalid_argument("Batch size must be greater than 0");
                 }
+                if (m_max_num_results == 0) {
+                    throw std::invalid_argument("Max number of results must be greater than 0");
+                }
 
                 m_mongodb_enabled = true;
             }

@@ -88,7 +88,7 @@ private:
     std::string m_mongodb_uri;
     std::string m_mongodb_collection;
     uint64_t m_batch_size{1000};
-    uint64_t m_max_num_results{0};
+    uint64_t m_max_num_results{1000};
 
     // Search variables
     std::string m_query;

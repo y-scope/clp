@@ -140,10 +140,13 @@ int main(int argc, char const* argv[]) {
             output_handler = std::make_unique<ResultsCacheOutputHandler>(
                     command_line_arguments.get_mongodb_uri(),
                     command_line_arguments.get_mongodb_collection(),
-                    command_line_arguments.get_batch_size()
+                    command_line_arguments.get_batch_size(),
+                    command_line_arguments.get_max_num_results()
             );
         } else {
-            output_handler = std::make_unique<StandardOutputHandler>();
+            output_handler = std::make_unique<StandardOutputHandler>(
+                    command_line_arguments.get_max_num_results()
+            );
         }
 
         // output result

@@ -1,6 +1,7 @@
 #ifndef CLP_S_SEARCH_OUTPUTHANDLER_HPP
 #define CLP_S_SEARCH_OUTPUTHANDLER_HPP
 
+#include <queue>
 #include <string>
 
 #include <mongocxx/client.hpp>
@@ -43,7 +44,7 @@ public:
      */
     virtual void flush() = 0;
 
-    bool output_timestamp() const { return m_output_timestamp; }
+    [[nodiscard]] bool output_timestamp() const { return m_output_timestamp; }
 
 protected:
     bool m_output_timestamp;
@@ -73,6 +74,28 @@ public:
  */
 class ResultsCacheOutputHandler : public OutputHandler {
 public:
+    // Types
+    struct QueryResult {
+        // Constructors
+        QueryResult(std::string original_path, std::string message, epochtime_t timestamp)
+                : original_path(std::move(original_path)),
+                  message(std::move(message)),
+                  timestamp(timestamp) {}
+
+        std::string original_path;
+        std::string message;
+        epochtime_t timestamp;
+    };
+
+    struct QueryResultGreaterTimestampComparator {
+        bool operator()(
+                std::unique_ptr<QueryResult> const& r1,
+                std::unique_ptr<QueryResult> const& r2
+        ) const {
+            return r1->timestamp > r2->timestamp;
+        }
+    };
+
     class OperationFailed : public TraceableException {
     public:
         // Constructors
@@ -85,6 +108,7 @@ public:
             std::string const& uri,
             std::string const& collection,
             uint64_t batch_size,
+            uint64_t max_num_results,
             bool output_timestamp = true
     );
 
@@ -100,6 +124,12 @@ private:
     mongocxx::collection m_collection;
     std::vector<bsoncxx::document::value> m_results;
     uint64_t m_batch_size;
+    uint64_t m_max_num_results;
+    std::priority_queue<
+            std::unique_ptr<QueryResult>,
+            std::vector<std::unique_ptr<QueryResult>>,
+            QueryResultGreaterTimestampComparator>
+            m_latest_results;
 };
 }  // namespace clp_s::search
 
