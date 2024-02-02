@@ -99,9 +99,7 @@ int main(int argc, char const* argv[]) {
                     "",
                     0ULL
             );
-            metadata.set_dynamic_compressed_size(parser.get_compressed_size());
             metadata.increment_static_compressed_size(parser.get_compressed_size());
-            metadata.set_dynamic_uncompressed_size(parser.get_uncompressed_size());
             metadata.increment_static_uncompressed_size(parser.get_uncompressed_size());
             metadata.expand_time_range(parser.get_epoch_start(), parser.get_epoch_end());
             metadata_db.open();
