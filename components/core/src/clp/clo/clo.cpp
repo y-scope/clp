@@ -90,15 +90,13 @@ static SearchFilesResult search_files(
 
     // Run query on each file
     for (; file_metadata_ix.has_next(); file_metadata_ix.next()) {
-        if (results_cache_client.get_max_num_results() > 0) {
-            if (segments_to_search.count(file_metadata_ix.get_segment_id()) == 0) {
-                continue;
-            }
-            if (results_cache_client.is_latest_results_full()
-                && results_cache_client.get_smallest_timestamp() > file_metadata_ix.get_end_ts())
-            {
-                continue;
-            }
+        if (segments_to_search.count(file_metadata_ix.get_segment_id()) == 0) {
+            continue;
+        }
+        if (results_cache_client.is_latest_results_full()
+            && results_cache_client.get_smallest_timestamp() > file_metadata_ix.get_end_ts())
+        {
+            continue;
         }
 
         ErrorCode error_code = archive.open_file(compressed_file, file_metadata_ix);
