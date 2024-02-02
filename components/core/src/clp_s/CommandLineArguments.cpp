@@ -5,9 +5,45 @@
 #include <boost/program_options.hpp>
 #include <spdlog/spdlog.h>
 
+#include "FileReader.hpp"
+
 namespace po = boost::program_options;
 
 namespace clp_s {
+bool read_paths_from_file(
+        std::string const& input_path_list_file,
+        std::vector<std::string>& path_destination
+) {
+    FileReader reader;
+    auto error_code = reader.try_open(input_path_list_file);
+    if (ErrorCodeFileNotFound == error_code) {
+        SPDLOG_ERROR(
+                "Failed to open input path list file {} - file not found",
+                input_path_list_file
+        );
+        return false;
+    } else if (ErrorCodeSuccess != error_code) {
+        SPDLOG_ERROR("Error opening input path list file {}", input_path_list_file);
+        return false;
+    }
+
+    std::string line;
+    while (true) {
+        error_code = reader.try_read_to_delimiter('\n', false, false, line);
+        if (ErrorCodeSuccess != error_code) {
+            break;
+        }
+        if (false == line.empty()) {
+            path_destination.push_back(line);
+        }
+    }
+
+    if (ErrorCodeEndOfFile != error_code) {
+        return false;
+    }
+    return true;
+}
+
 CommandLineArguments::ParsingResult
 CommandLineArguments::parse_arguments(int argc, char const** argv) {
     if (1 == argc) {
@@ -98,6 +134,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             po::options_description compression_options("Compression options");
             std::string metadata_db_config_file_path;
+            std::string input_path_list_file;
             // clang-format off
             compression_options.add_options()(
                     "compression-level",
@@ -120,6 +157,12 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<std::string>(&metadata_db_config_file_path)->value_name("FILE")->
                     default_value(metadata_db_config_file_path),
                     "Global metadata DB YAML config"
+            )(
+                    "files-from,f",
+                    po::value<std::string>(&input_path_list_file)
+                            ->value_name("FILE")
+                            ->default_value(input_path_list_file),
+                    "Compress files specified in FILE"
             );
             // clang-format on
 
@@ -158,12 +201,19 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 return ParsingResult::InfoCommand;
             }
 
-            if (m_file_paths.empty()) {
-                throw std::invalid_argument("No input paths specified.");
-            }
-
             if (m_archives_dir.empty()) {
                 throw std::invalid_argument("No archives directory specified.");
+            }
+
+            if (false == input_path_list_file.empty()) {
+                if (false == read_paths_from_file(input_path_list_file, m_file_paths)) {
+                    SPDLOG_ERROR("Failed to read paths from {}", input_path_list_file);
+                    return ParsingResult::Failure;
+                }
+            }
+
+            if (m_file_paths.empty()) {
+                throw std::invalid_argument("No input paths specified.");
             }
 
             // Parse and validate global metadata DB config

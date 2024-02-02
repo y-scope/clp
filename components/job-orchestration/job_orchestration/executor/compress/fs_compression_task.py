@@ -20,18 +20,14 @@ from job_orchestration.scheduler.scheduler_data import (
 # Setup logging
 logger = get_task_logger(__name__)
 
+
 def make_clp_command(
     clp_home: pathlib.Path,
-    data_dir: pathlib.Path,
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
     db_config_file_path: pathlib.Path,
-    paths_to_compress: PathsToCompress,
-    instance_id_str: str,
 ):
     path_prefix_to_remove = clp_config.input.path_prefix_to_remove
-
-    file_paths = paths_to_compress.file_paths
 
     # fmt: off
     compression_cmd = [
@@ -54,35 +50,15 @@ def make_clp_command(
         compression_cmd.append("--schema-path")
         compression_cmd.append(str(schema_path))
 
-    # Prepare list of paths to compress for clp
-    log_list_path = data_dir / f"{instance_id_str}-log-paths.txt"
-    with open(log_list_path, "w") as file:
-        if len(file_paths) > 0:
-            for path_str in file_paths:
-                file.write(path_str)
-                file.write("\n")
-        if paths_to_compress.empty_directories and len(paths_to_compress.empty_directories) > 0:
-            # Prepare list of paths to compress for clp
-            for path_str in paths_to_compress.empty_directories:
-                file.write(path_str)
-                file.write("\n")
+    return compression_cmd
 
-        compression_cmd.append("--files-from")
-        compression_cmd.append(str(log_list_path))
-    return compression_cmd, log_list_path
 
 def make_clp_s_command(
     clp_home: pathlib.Path,
-    data_dir: pathlib.Path,
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
     db_config_file_path: pathlib.Path,
-    paths_to_compress: PathsToCompress,
-    instance_id_str: str,
-
 ):
-    file_paths = paths_to_compress.file_paths
-
     # fmt: off
     compression_cmd = [
         str(clp_home / "bin" / "clp-s"),
@@ -96,12 +72,8 @@ def make_clp_s_command(
         compression_cmd.append("--timestamp-key")
         compression_cmd.append(clp_config.input.timestamp_key)
 
-    # Prepare list of paths to compress for clp
-    if len(file_paths) > 0:
-        compression_cmd.append("--input-paths")
-    for path_str in file_paths:
-        compression_cmd.append(path_str)
-    return compression_cmd, None
+    return compression_cmd
+
 
 def run_clp(
     clp_config: ClpIoConfig,
@@ -139,28 +111,39 @@ def run_clp(
     db_config_file.close()
 
     if StorageEngine.CLP == clp_storage_engine:
-        compression_cmd, log_list_path = make_clp_command(
-            clp_home,
-            data_dir,
-            archive_output_dir,
-            clp_config,
-            db_config_file_path,
-            paths_to_compress,
-            instance_id_str
+        compression_cmd = make_clp_command(
+            clp_home=clp_home,
+            archive_output_dir=archive_output_dir,
+            clp_config=clp_config,
+            db_config_file_path=db_config_file_path,
         )
     elif StorageEngine.CLP_S == clp_storage_engine:
-        compression_cmd, log_list_path = make_clp_s_command(
-            clp_home,
-            data_dir,
-            archive_output_dir,
-            clp_config,
-            db_config_file_path,
-            paths_to_compress,
-            instance_id_str
+        compression_cmd = make_clp_s_command(
+            clp_home=clp_home,
+            archive_output_dir=archive_output_dir,
+            clp_config=clp_config,
+            db_config_file_path=db_config_file_path,
         )
     else:
         logger.error(f"Unsupported storage engine {clp_storage_engine}")
         return False, {"error_message": f"Unsupported storage engine {clp_storage_engine}"}
+
+    # Prepare list of paths to compress for clp
+    file_paths = paths_to_compress.file_paths
+    log_list_path = data_dir / f"{instance_id_str}-log-paths.txt"
+    with open(log_list_path, "w") as file:
+        if len(file_paths) > 0:
+            for path_str in file_paths:
+                file.write(path_str)
+                file.write("\n")
+        if paths_to_compress.empty_directories and len(paths_to_compress.empty_directories) > 0:
+            # Prepare list of paths to compress for clp
+            for path_str in paths_to_compress.empty_directories:
+                file.write(path_str)
+                file.write("\n")
+
+        compression_cmd.append("--files-from")
+        compression_cmd.append(str(log_list_path))
 
     # Open stderr log file
     stderr_log_path = logs_dir / f"{instance_id_str}-stderr.log"

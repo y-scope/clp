@@ -45,6 +45,7 @@ def make_clo_command(
 
     return search_cmd
 
+
 def make_clp_s_command(
     clp_home: Path,
     archive_path: Path,
@@ -71,6 +72,7 @@ def make_clp_s_command(
         search_cmd.append(str(search_config.end_timestamp))
 
     return search_cmd
+
 
 @app.task(bind=True)
 def search(
