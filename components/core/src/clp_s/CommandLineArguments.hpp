@@ -46,6 +46,8 @@ public:
 
     size_t get_target_encoded_size() const { return m_target_encoded_size; }
 
+    [[nodiscard]] bool print_archive_stats() const { return m_print_archive_stats; }
+
     bool get_mongodb_enabled() const { return m_mongodb_enabled; }
 
     std::string const& get_mongodb_uri() const { return m_mongodb_uri; }
@@ -85,6 +87,7 @@ private:
     std::string m_timestamp_key;
     int m_compression_level{3};
     size_t m_target_encoded_size{8ULL * 1024 * 1024 * 1024};  // 8 GiB
+    bool m_print_archive_stats{false};
 
     // Metadata db variables
     std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;

@@ -163,6 +163,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                             ->value_name("FILE")
                             ->default_value(input_path_list_file),
                     "Compress files specified in FILE"
+            )(
+                    "print-archive-stats",
+                    po::bool_switch(&m_print_archive_stats),
+                    "Print statistics (json) about the archive after it's compressed."
             );
             // clang-format on
 

@@ -1,7 +1,9 @@
 #include <filesystem>
+#include <iostream>
 
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <json/single_include/nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include "../clp/GlobalMySQLMetadataDB.hpp"
@@ -82,6 +84,15 @@ int main(int argc, char const* argv[]) {
         parser.parse();
         parser.store();
         parser.close();
+
+        if (command_line_arguments.print_archive_stats()) {
+            nlohmann::json json_msg;
+            json_msg["id"] = archive_id;
+            json_msg["uncompressed_size"] = parser.get_uncompressed_size();
+            json_msg["size"] = parser.get_compressed_size();
+            std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
+                      << std::endl;
+        }
 
         if (command_line_arguments.get_metadata_db_config().has_value()) {
             auto const& db_config = command_line_arguments.get_metadata_db_config().value();

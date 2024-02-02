@@ -63,6 +63,7 @@ def make_clp_s_command(
     compression_cmd = [
         str(clp_home / "bin" / "clp-s"),
         "c", str(archive_output_dir),
+        "--print-archive-stats",
         "--target-encoded-size", str(clp_config.output.target_segment_size + clp_config.output.target_dictionaries_size),
         "--db-config-file", str(db_config_file_path),
     ]
