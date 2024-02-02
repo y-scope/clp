@@ -137,7 +137,7 @@ static SQLitePreparedStatement get_files_select_statement(
         std::string const& file_path,
         bool in_specific_segment,
         segment_id_t segment_id,
-        bool order_by_segment_ts
+        bool order_by_segment_end_ts
 ) {
     vector<string> field_names(enum_to_underlying_type(FilesTableFieldIndexes::Length));
     field_names[enum_to_underlying_type(FilesTableFieldIndexes::Id)]
@@ -230,7 +230,7 @@ static SQLitePreparedStatement get_files_select_statement(
     }
 
     // Add ordering
-    if (order_by_segment_ts) {
+    if (order_by_segment_end_ts) {
         fmt::format_to(
                 statement_buffer_ix,
                 " ORDER BY MAX({}) OVER (PARTITION by {}) DESC, {} ASC",
@@ -300,7 +300,7 @@ MetadataDB::FileIterator::FileIterator(
         std::string const& file_path,
         bool in_specific_segment,
         segment_id_t segment_id,
-        bool order_by_segment_ts
+        bool order_by_segment_end_ts
 )
         : Iterator(get_files_select_statement(
                 db,
@@ -309,7 +309,7 @@ MetadataDB::FileIterator::FileIterator(
                 file_path,
                 in_specific_segment,
                 segment_id,
-                order_by_segment_ts
+                order_by_segment_end_ts
         )) {}
 
 MetadataDB::EmptyDirectoryIterator::EmptyDirectoryIterator(SQLiteDB& db)

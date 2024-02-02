@@ -55,7 +55,7 @@ public:
             std::string const& uri,
             std::string const& collection,
             uint64_t batch_size,
-            uint64_t target_num_latest_results
+            uint64_t max_num_results
     );
 
     // Methods
@@ -74,23 +74,28 @@ public:
     void flush();
 
     /**
-     * Returns the smallest timestamp in the top results.
+     * @return The earliest (smallest) timestamp in the heap of latest results
      */
-    epochtime_t get_smallest_timestamp() const {
-        return m_latest_results.empty() ? 0 : m_latest_results.top()->timestamp;
+    [[nodiscard]] epochtime_t get_smallest_timestamp() const {
+        return m_latest_results.empty() ? cEpochTimeMin : m_latest_results.top()->timestamp;
     }
 
-    uint64_t get_max_num_results() const { return m_max_num_results; }
+    [[nodiscard]] uint64_t get_max_num_results() const { return m_max_num_results; }
 
-    bool is_latest_results_full() const { return m_latest_results.size() >= m_max_num_results; }
+    /**
+     * @return Whether the heap of latest results is full.
+     */
+    [[nodiscard]] bool is_latest_results_full() const {
+        return m_latest_results.size() >= m_max_num_results;
+    }
 
 private:
     mongocxx::client m_client;
     mongocxx::collection m_collection;
     std::vector<bsoncxx::document::value> m_results;
     uint64_t m_batch_size;
-
     uint64_t m_max_num_results;
+    // The search results with the latest timestamps
     std::priority_queue<
             std::unique_ptr<QueryResult>,
             std::vector<std::unique_ptr<QueryResult>>,

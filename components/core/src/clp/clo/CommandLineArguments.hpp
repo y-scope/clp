@@ -19,7 +19,7 @@ public:
               m_ignore_case(false),
               m_search_begin_ts(cEpochTimeMin),
               m_search_end_ts(cEpochTimeMax),
-              m_max_num_results(0) {}
+              m_max_num_results(1000) {}
 
     // Methods
     ParsingResult parse_arguments(int argc, char const* argv[]) override;

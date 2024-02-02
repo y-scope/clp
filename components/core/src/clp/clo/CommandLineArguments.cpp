@@ -268,6 +268,11 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         if (m_batch_size == 0) {
             throw invalid_argument("Batch size cannot be 0.");
         }
+
+        // Validate max number of results
+        if (m_max_num_results == 0) {
+            throw invalid_argument("Max number of results cannot be 0.");
+        }
     } catch (exception& e) {
         SPDLOG_ERROR("{}", e.what());
         print_basic_usage();
