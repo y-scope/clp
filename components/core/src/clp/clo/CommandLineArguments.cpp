@@ -80,18 +80,25 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             "Ignore case distinctions in both WILDCARD STRING and the input files"
     );
 
-    po::options_description options_batch_control("Batch Controls");
-    options_batch_control.add_options()(
+    po::options_description options_output_control("Output Controls");
+    // clang-format off
+    options_output_control.add_options()(
             "batch-size,b",
             po::value<uint64_t>(&m_batch_size)->value_name("SIZE")->default_value(m_batch_size),
-            "Batch size"
+            "The number of documents to insert into MongoDB in a batch"
+    )(
+            "max-num-results,m",
+            po::value<uint64_t>(&m_max_num_results)->value_name("NUM")->
+                default_value(m_max_num_results),
+            "The maximum number of results to output"
     );
+    // clang-format on
 
     // Define visible options
     po::options_description visible_options;
     visible_options.add(options_general);
     visible_options.add(options_match_control);
-    visible_options.add(options_batch_control);
+    visible_options.add(options_output_control);
 
     // Define hidden positional options (not shown in Boost's program options help message)
     po::options_description hidden_positional_options;
@@ -124,7 +131,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     po::options_description all_options;
     all_options.add(options_general);
     all_options.add(options_match_control);
-    all_options.add(options_batch_control);
+    all_options.add(options_output_control);
     all_options.add(hidden_positional_options);
 
     // Parse options
@@ -260,6 +267,11 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         // Validate batch size
         if (m_batch_size == 0) {
             throw invalid_argument("Batch size cannot be 0.");
+        }
+
+        // Validate max number of results
+        if (m_max_num_results == 0) {
+            throw invalid_argument("Max number of results cannot be 0.");
         }
     } catch (exception& e) {
         SPDLOG_ERROR("{}", e.what());

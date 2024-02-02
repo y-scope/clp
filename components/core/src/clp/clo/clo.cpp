@@ -50,6 +50,7 @@ enum class SearchFilesResult {
  * @param archive
  * @param file_metadata_ix
  * @param results_cache_client
+ * @param segments_to_search
  * @return SearchFilesResult::OpenFailure on failure to open a compressed file
  * @return SearchFilesResult::ResultSendFailure on failure to send a result
  * @return SearchFilesResult::Success otherwise
@@ -58,7 +59,8 @@ static SearchFilesResult search_files(
         Query& query,
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
-        ResultsCacheClient& results_cache_client
+        ResultsCacheClient& results_cache_client,
+        std::set<clp::segment_id_t> const& segments_to_search
 );
 /**
  * Searches an archive with the given path
@@ -77,7 +79,8 @@ static SearchFilesResult search_files(
         Query& query,
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
-        ResultsCacheClient& results_cache_client
+        ResultsCacheClient& results_cache_client,
+        std::set<clp::segment_id_t> const& segments_to_search
 ) {
     SearchFilesResult result = SearchFilesResult::Success;
 
@@ -87,6 +90,15 @@ static SearchFilesResult search_files(
 
     // Run query on each file
     for (; file_metadata_ix.has_next(); file_metadata_ix.next()) {
+        if (segments_to_search.count(file_metadata_ix.get_segment_id()) == 0) {
+            continue;
+        }
+        if (results_cache_client.is_latest_results_full()
+            && results_cache_client.get_smallest_timestamp() > file_metadata_ix.get_end_ts())
+        {
+            continue;
+        }
+
         ErrorCode error_code = archive.open_file(compressed_file, file_metadata_ix);
         if (ErrorCode_Success != error_code) {
             string orig_path;
@@ -188,25 +200,23 @@ static bool search_archive(
         );
     }
 
-    // Search segments
     auto file_metadata_ix_ptr = archive_reader.get_file_iterator(
             search_begin_ts,
             search_end_ts,
             command_line_args.get_file_path(),
-            clp::cInvalidSegmentId
+            true
     );
     auto& file_metadata_ix = *file_metadata_ix_ptr;
-    for (auto segment_id : ids_of_segments_to_search) {
-        file_metadata_ix.set_segment_id(segment_id);
-        auto result = search_files(query, archive_reader, file_metadata_ix, results_cache_client);
-        if (SearchFilesResult::ResultSendFailure == result) {
-            // Stop search now since results aren't reaching the controller
-            break;
-        }
-    }
-    results_cache_client.flush();
+    search_files(
+            query,
+            archive_reader,
+            file_metadata_ix,
+            results_cache_client,
+            ids_of_segments_to_search
+    );
     file_metadata_ix_ptr.reset(nullptr);
 
+    results_cache_client.flush();
     archive_reader.close();
 
     return true;
@@ -241,7 +251,8 @@ int main(int argc, char const* argv[]) {
     ResultsCacheClient results_cache_client(
             command_line_args.get_mongodb_uri(),
             command_line_args.get_mongodb_collection(),
-            command_line_args.get_batch_size()
+            command_line_args.get_batch_size(),
+            command_line_args.get_max_num_results()
     );
 
     auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());
