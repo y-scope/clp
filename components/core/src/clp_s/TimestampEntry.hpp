@@ -115,7 +115,7 @@ public:
      * millisecond encoded timestamps.
      * @return the beginning of the time range as milliseconds since the UNIX epoch
      */
-    epochtime_t get_epoch_start() const;
+    epochtime_t get_begin_timestamp() const;
 
     /**
      * TODO: guarantee epoch milliseconds. The current clp-s approach to encoding timestamps and
@@ -123,7 +123,7 @@ public:
      * millisecond encoded timestamps.
      * @return the end of the time range as milliseconds since the UNIX epoch
      */
-    epochtime_t get_epoch_end() const;
+    epochtime_t get_end_timestamp() const;
 
 private:
     TimestampEncoding m_encoding;

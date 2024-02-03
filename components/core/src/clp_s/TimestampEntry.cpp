@@ -360,7 +360,7 @@ EvaluatedValue TimestampEntry::evaluate_filter(FilterOperation op, epochtime_t t
     }
 }
 
-epochtime_t TimestampEntry::get_epoch_start() const {
+epochtime_t TimestampEntry::get_begin_timestamp() const {
     if (Epoch == m_encoding) {
         return m_epoch_start;
     } else if (DoubleEpoch == m_encoding) {
@@ -369,7 +369,7 @@ epochtime_t TimestampEntry::get_epoch_start() const {
     return 0;
 }
 
-epochtime_t TimestampEntry::get_epoch_end() const {
+epochtime_t TimestampEntry::get_end_timestamp() const {
     if (Epoch == m_encoding) {
         return m_epoch_end;
     } else if (DoubleEpoch == m_encoding) {

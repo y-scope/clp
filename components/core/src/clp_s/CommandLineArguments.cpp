@@ -10,20 +10,29 @@
 namespace po = boost::program_options;
 
 namespace clp_s {
+namespace {
+/**
+ * Read a list of newline-delimited paths from a file and put them into a vector passed by reference
+ * TODO: deduplicate this code with the version in clp
+ * @param input_path_list_file_path path to the file containing the list of paths
+ * @param path_destination the vector that the paths are pushed into
+ * @return true on success
+ * @return false on error
+ */
 bool read_paths_from_file(
-        std::string const& input_path_list_file,
+        std::string const& input_path_list_file_path,
         std::vector<std::string>& path_destination
 ) {
     FileReader reader;
-    auto error_code = reader.try_open(input_path_list_file);
+    auto error_code = reader.try_open(input_path_list_file_path);
     if (ErrorCodeFileNotFound == error_code) {
         SPDLOG_ERROR(
                 "Failed to open input path list file {} - file not found",
-                input_path_list_file
+                input_path_list_file_path
         );
         return false;
     } else if (ErrorCodeSuccess != error_code) {
-        SPDLOG_ERROR("Error opening input path list file {}", input_path_list_file);
+        SPDLOG_ERROR("Error opening input path list file {}", input_path_list_file_path);
         return false;
     }
 
@@ -43,6 +52,7 @@ bool read_paths_from_file(
     }
     return true;
 }
+}  // namespace
 
 CommandLineArguments::ParsingResult
 CommandLineArguments::parse_arguments(int argc, char const** argv) {
@@ -159,9 +169,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "Global metadata DB YAML config"
             )(
                     "files-from,f",
-                    po::value<std::string>(&input_path_list_file)
+                    po::value<std::string>(&input_path_list_file_path)
                             ->value_name("FILE")
-                            ->default_value(input_path_list_file),
+                            ->default_value(input_path_list_file_path),
                     "Compress files specified in FILE"
             )(
                     "print-archive-stats",
@@ -209,9 +219,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument("No archives directory specified.");
             }
 
-            if (false == input_path_list_file.empty()) {
-                if (false == read_paths_from_file(input_path_list_file, m_file_paths)) {
-                    SPDLOG_ERROR("Failed to read paths from {}", input_path_list_file);
+            if (false == input_path_list_file_path.empty()) {
+                if (false == read_paths_from_file(input_path_list_file_path, m_file_paths)) {
+                    SPDLOG_ERROR("Failed to read paths from {}", input_path_list_file_path);
                     return ParsingResult::Failure;
                 }
             }
@@ -233,8 +243,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 if (clp::GlobalMetadataDBConfig::MetadataDBType::MySQL
                     != metadata_db_config.get_metadata_db_type())
                 {
-                    SPDLOG_ERROR("Invalid metadata database type for clp-s; only supported type is "
-                                 "MySQL.");
+                    SPDLOG_ERROR(
+                            "Invalid metadata database type for {}; only supported type is MySQL.",
+                            m_program_name
+                    );
                     return ParsingResult::Failure;
                 }
 

@@ -199,23 +199,23 @@ void TimestampDictionaryWriter::merge_local_range() {
     }
 }
 
-epochtime_t TimestampDictionaryWriter::get_epoch_start() const {
+epochtime_t TimestampDictionaryWriter::get_begin_timestamp() const {
     auto it = m_global_column_key_to_range.begin();
     if (m_global_column_key_to_range.end() == it) {
         // replicate behaviour of CLP
         return 0;
     }
 
-    return it->second.get_epoch_start();
+    return it->second.get_begin_timestamp();
 }
 
-epochtime_t TimestampDictionaryWriter::get_epoch_end() const {
+epochtime_t TimestampDictionaryWriter::get_end_timestamp() const {
     auto it = m_global_column_key_to_range.begin();
     if (m_global_column_key_to_range.end() == it) {
         // replicate behaviour of CLP
         return 0;
     }
 
-    return it->second.get_epoch_end();
+    return it->second.get_end_timestamp();
 }
 }  // namespace clp_s

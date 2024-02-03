@@ -73,11 +73,13 @@ public:
      */
     [[nodiscard]] size_t get_compressed_size() { return m_compressed_size; }
 
-    [[nodiscard]] epochtime_t get_epoch_start() {
-        return m_timestamp_dictionary->get_epoch_start();
+    [[nodiscard]] epochtime_t get_begin_timestamp() {
+        return m_timestamp_dictionary->get_begin_timestamp();
     }
 
-    [[nodiscard]] epochtime_t get_epoch_end() { return m_timestamp_dictionary->get_epoch_end(); }
+    [[nodiscard]] epochtime_t get_end_timestamp() {
+        return m_timestamp_dictionary->get_end_timestamp();
+    }
 
 private:
     /**

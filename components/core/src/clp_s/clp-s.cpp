@@ -58,16 +58,17 @@ int main(int argc, char const* argv[]) {
 
         boost::uuids::random_generator generator;
         auto archive_id = boost::uuids::to_string(generator());
-        auto archive_path
-                = std::filesystem::path(command_line_arguments.get_archives_dir()) / archive_id;
+        auto archives_dir
+                = std::filesystem::path(command_line_arguments.get_archives_dir()) auto archive_path
+                = archives_dir / archive_id;
 
         // Create output directory in case it doesn't exist
         try {
-            std::filesystem::create_directory(archive_path.parent_path().string());
+            std::filesystem::create_directory(archives_dir.string());
         } catch (std::exception& e) {
             SPDLOG_ERROR(
                     "Failed to create archives directory {} - {}",
-                    archive_path.parent_path().string(),
+                    archives_dir.string(),
                     e.what()
             );
             return 1;
@@ -112,7 +113,7 @@ int main(int argc, char const* argv[]) {
             );
             metadata.increment_static_compressed_size(parser.get_compressed_size());
             metadata.increment_static_uncompressed_size(parser.get_uncompressed_size());
-            metadata.expand_time_range(parser.get_epoch_start(), parser.get_epoch_end());
+            metadata.expand_time_range(parser.get_begin_timestamp(), parser.get_end_timestamp());
             metadata_db.open();
             metadata_db.add_archive(archive_id, metadata);
             metadata_db.close();
