@@ -44,8 +44,8 @@ from clp_package_utils.general import (
     validate_queue_config,
     validate_redis_config,
     validate_results_cache_config,
-    validate_worker_config,
     validate_webui_config,
+    validate_worker_config,
 )
 
 # Setup logging
@@ -628,45 +628,63 @@ def generic_start_worker(
 def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts):
     logger.info(f"Starting {WEBUI_COMPONENT_NAME}...")
 
-    container_name = f'clp-{WEBUI_COMPONENT_NAME}-{instance_id}'
+    container_name = f"clp-{WEBUI_COMPONENT_NAME}-{instance_id}"
     if container_exists(container_name):
         logger.info(f"{WEBUI_COMPONENT_NAME} already running.")
         return
 
     webui_logs_dir = clp_config.logs_directory / WEBUI_COMPONENT_NAME
-    node_path = str(CONTAINER_CLP_HOME / 'var' / 'www' / 'programs'/'server'/'npm'/'node_modules')
-    settings_json_path = get_clp_home() / 'var' / 'www' / 'settings.json'
+    node_path = str(
+        CONTAINER_CLP_HOME / "var" / "www" / "programs" / "server" / "npm" / "node_modules"
+    )
+    settings_json_path = get_clp_home() / "var" / "www" / "settings.json"
 
     validate_webui_config(clp_config, webui_logs_dir, settings_json_path)
 
     # Create directories
     webui_logs_dir.mkdir(exist_ok=True, parents=True)
 
-    container_webui_logs_dir = pathlib.Path('/') / 'var' / 'log' / WEBUI_COMPONENT_NAME
-    with open(settings_json_path, 'r') as settings_json_file:
+    container_webui_logs_dir = pathlib.Path("/") / "var" / "log" / WEBUI_COMPONENT_NAME
+    with open(settings_json_path, "r") as settings_json_file:
         settings_json_content = settings_json_file.read()
         meteor_settings = json.loads(settings_json_content)
 
     # Start container
     container_cmd = [
-        'docker', 'run',
-        '-d',
-        '--network', 'host',
-        '--rm',
-        '--name', container_name,
-        '-e', f"NODE_PATH={node_path}",
-        '-e', f'MONGO_URL={clp_config.results_cache.get_uri()}',
-        '-e', f'PORT={clp_config.webui.port}',
-        '-e', f'ROOT_URL=http://{clp_config.webui.host}',
-        '-e', f'METEOR_SETTINGS={json.dumps(meteor_settings)}',
-        '-e', f'CLP_DB_HOST={clp_config.database.host}',
-        '-e', f'CLP_DB_PORT={clp_config.database.port}',
-        '-e', f'CLP_DB_NAME={clp_config.database.name}',
-        '-e', f'CLP_DB_USER={clp_config.database.username}',
-        '-e', f'CLP_DB_PASS={clp_config.database.password}',
-        '-e', f'WEBUI_LOGS_DIR={container_webui_logs_dir}',
-        '-e', f'WEBUI_LOGGING_LEVEL={clp_config.webui.logging_level}',
-        '-u', f'{os.getuid()}:{os.getgid()}',
+        "docker",
+        "run",
+        "-d",
+        "--network",
+        "host",
+        "--rm",
+        "--name",
+        container_name,
+        "-e",
+        f"NODE_PATH={node_path}",
+        "-e",
+        f"MONGO_URL={clp_config.results_cache.get_uri()}",
+        "-e",
+        f"PORT={clp_config.webui.port}",
+        "-e",
+        f"ROOT_URL=http://{clp_config.webui.host}",
+        "-e",
+        f"METEOR_SETTINGS={json.dumps(meteor_settings)}",
+        "-e",
+        f"CLP_DB_HOST={clp_config.database.host}",
+        "-e",
+        f"CLP_DB_PORT={clp_config.database.port}",
+        "-e",
+        f"CLP_DB_NAME={clp_config.database.name}",
+        "-e",
+        f"CLP_DB_USER={clp_config.database.username}",
+        "-e",
+        f"CLP_DB_PASS={clp_config.database.password}",
+        "-e",
+        f"WEBUI_LOGS_DIR={container_webui_logs_dir}",
+        "-e",
+        f"WEBUI_LOGGING_LEVEL={clp_config.webui.logging_level}",
+        "-u",
+        f"{os.getuid()}:{os.getgid()}",
     ]
     necessary_mounts = [
         mounts.clp_home,
@@ -674,14 +692,14 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
     ]
     for mount in necessary_mounts:
         if mount:
-            container_cmd.append('--mount')
+            container_cmd.append("--mount")
             container_cmd.append(str(mount))
     container_cmd.append(clp_config.execution_container)
 
     node_cmd = [
-        str(CONTAINER_CLP_HOME / 'bin' / 'node'),
-        str(CONTAINER_CLP_HOME / 'var' / 'www' / 'launcher.js'),
-        str(CONTAINER_CLP_HOME / 'var' / 'www' / 'main.js')
+        str(CONTAINER_CLP_HOME / "bin" / "node"),
+        str(CONTAINER_CLP_HOME / "var" / "www" / "launcher.js"),
+        str(CONTAINER_CLP_HOME / "var" / "www" / "main.js"),
     ]
     cmd = container_cmd + node_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
@@ -821,7 +839,7 @@ def main(argv):
             )
         if "" == component_name or SEARCH_WORKER_COMPONENT_NAME == component_name:
             start_search_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
-        if '' == component_name or WEBUI_COMPONENT_NAME == component_name:
+        if "" == component_name or WEBUI_COMPONENT_NAME == component_name:
             start_webui(instance_id, clp_config, mounts)
 
     except Exception as ex:

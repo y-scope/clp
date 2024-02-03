@@ -110,7 +110,7 @@ def main(argv):
             instance_id = f.readline()
 
         if "" == component_name or WEBUI_COMPONENT_NAME == component_name:
-            stop_container(f'clp-{WEBUI_COMPONENT_NAME}-{instance_id}')
+            stop_container(f"clp-{WEBUI_COMPONENT_NAME}-{instance_id}")
         if "" == component_name or SEARCH_WORKER_COMPONENT_NAME == component_name:
             stop_container(f"clp-{SEARCH_WORKER_COMPONENT_NAME}-{instance_id}")
         if "" == component_name or COMPRESSION_WORKER_COMPONENT_NAME == component_name:

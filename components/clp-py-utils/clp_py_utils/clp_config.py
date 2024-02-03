@@ -23,7 +23,7 @@ COMPRESSION_SCHEDULER_COMPONENT_NAME = "compression_scheduler"
 SEARCH_SCHEDULER_COMPONENT_NAME = "search_scheduler"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 SEARCH_WORKER_COMPONENT_NAME = "search_worker"
-WEBUI_COMPONENT_NAME = 'webui'
+WEBUI_COMPONENT_NAME = "webui"
 
 SEARCH_JOBS_TABLE_NAME = "search_jobs"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
@@ -207,10 +207,10 @@ class ResultsCache(BaseModel):
             raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.host cannot be empty.")
         return field
 
-    @validator('db_name')
+    @validator("db_name")
     def validate_db_name(cls, field):
-        if '' == field:
-            raise ValueError(f'{RESULTS_CACHE_COMPONENT_NAME}.db_name cannot be empty.')
+        if "" == field:
+            raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.db_name cannot be empty.")
         return field
 
     def get_uri(self):
@@ -267,26 +267,28 @@ class ArchiveOutput(BaseModel):
 
 
 class WebUi(BaseModel):
-    host: str = 'localhost'
+    host: str = "localhost"
     port: int = 4000
-    logging_level: str = 'INFO'
+    logging_level: str = "INFO"
 
-    @validator('host')
+    @validator("host")
     def validate_host(cls, field):
-        if '' == field:
-            raise ValueError(f'{WEBUI_COMPONENT_NAME}.host cannot be empty.')
+        if "" == field:
+            raise ValueError(f"{WEBUI_COMPONENT_NAME}.host cannot be empty.")
         return field
 
-    @validator('port')
+    @validator("port")
     def validate_port(cls, field):
         min_valid_port = 0
-        max_valid_port = 2 ** 16 - 1
+        max_valid_port = 2**16 - 1
         if min_valid_port > field or max_valid_port < field:
-            raise ValueError(f'{WEBUI_COMPONENT_NAME}.port is not within valid range '
-                             f'{min_valid_port}-{max_valid_port}.')
+            raise ValueError(
+                f"{WEBUI_COMPONENT_NAME}.port is not within valid range "
+                f"{min_valid_port}-{max_valid_port}."
+            )
         return field
 
-    @validator('logging_level')
+    @validator("logging_level")
     def validate_logging_level(cls, field):
         _validate_logging_level(cls, field)
         return field
