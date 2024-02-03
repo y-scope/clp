@@ -151,7 +151,9 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 );
                 if (matches_timestamp) {
                     double ret_double;
-                    if (StringUtils::convert_string_to_double(value, ret_double)) {
+                    if (std::string::npos != value.find('.')
+                        && StringUtils::convert_string_to_double(value, ret_double))
+                    {
                         node_id = m_schema_tree->add_node(
                                 node_id_stack.top(),
                                 NodeType::FLOATDATESTRING,
