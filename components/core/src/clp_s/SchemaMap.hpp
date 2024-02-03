@@ -27,8 +27,9 @@ public:
 
     /**
      * Write the contents of the SchemaMap to archives_dir/schema_ids
+     * @return the compressed size of the SchemaMap in bytes
      */
-    void store();
+    [[nodiscard]] size_t store();
 
     /**
      * Get const iterators into the schema map

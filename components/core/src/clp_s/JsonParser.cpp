@@ -250,6 +250,8 @@ void JsonParser::parse() {
             m_current_parsed_message.clear();
         }
 
+        m_uncompressed_size += json_file_iterator.get_num_bytes_read();
+
         if (json_file_iterator.truncated_bytes() > 0) {
             SPDLOG_ERROR(
                     "Truncated JSON  ({} bytes) at end of file {}",
@@ -279,15 +281,16 @@ void JsonParser::store() {
     }
 
     schema_tree_compressor.close();
+    m_compressed_size += schema_tree_writer.get_pos();
     schema_tree_writer.close();
 
-    m_schema_map->store();
+    m_compressed_size += m_schema_map->store();
 
-    m_timestamp_dictionary->close();
+    m_compressed_size += m_timestamp_dictionary->close();
 }
 
 void JsonParser::split_archive() {
-    m_archive_writer->close();
+    m_compressed_size += m_archive_writer->close();
 
     ArchiveWriterOption archive_writer_option;
     archive_writer_option.archives_dir = m_archives_dir;
@@ -298,6 +301,6 @@ void JsonParser::split_archive() {
 }
 
 void JsonParser::close() {
-    m_archive_writer->close();
+    m_compressed_size += m_archive_writer->close();
 }
 }  // namespace clp_s
