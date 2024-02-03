@@ -211,6 +211,18 @@ void TimestampPattern::init() {
     patterns.emplace_back(0, "%Y-%m-%dT%H:%M:%S.%TZ");
     // E.g. 2022-04-06T03:33:23Z
     patterns.emplace_back(0, "%Y-%m-%dT%H:%M:%SZ");
+    // E.g. 2022-04-06 03:33:23.476Z ...47, ...4 ...()
+    patterns.emplace_back(0, "%Y-%m-%d %H:%M:%S.%TZ");
+    // E.g. 2022-04-06 03:33:23Z
+    patterns.emplace_back(0, "%Y-%m-%d %H:%M:%SZ");
+    // E.g. 2022/04/06T03:33:23.476Z ...47, ...4 ...()
+    patterns.emplace_back(0, "%Y/%m/%dT%H:%M:%S.%TZ");
+    // E.g. 2022/04/06T03:33:23Z
+    patterns.emplace_back(0, "%Y/%m/%dT%H:%M:%SZ");
+    // E.g. 2022/04/06 03:33:23.476Z ...47, ...4 ...()
+    patterns.emplace_back(0, "%Y/%m/%d %H:%M:%S.%TZ");
+    // E.g. 2022/04/06 03:33:23Z
+    patterns.emplace_back(0, "%Y/%m/%d %H:%M:%SZ");
     // E.g. 2015-01-31T15:50:45.392
     patterns.emplace_back(0, "%Y-%m-%dT%H:%M:%S.%3");
     // E.g. 2015-01-31T15:50:45,392
