@@ -12,7 +12,7 @@ export const SearchResultsMetadataCollection = new Mongo.Collection(Meteor.setti
  */
 export const initSearchEventCollection = () => {
     // create the collection if not exists
-    if (SearchResultsMetadataCollection.find().count() === 0) {
+    if (SearchResultsMetadataCollection.countDocuments() === 0) {
         SearchResultsMetadataCollection.insert({
             _id: INVALID_JOB_ID.toString(),
             lastEvent: SearchSignal.NONE,
@@ -28,7 +28,9 @@ export const initSearchEventCollection = () => {
  *
  * @constant
  * @type {Object}
- */export const MY_MONGO_DB = {}
+ */
+// FIXME: change to use Map before submission
+export const MY_MONGO_DB = new Map();
 
 /**
  * Retrieves a Mongo Collection object by name, creating it if it does not already exist.
@@ -40,8 +42,9 @@ export const initSearchEventCollection = () => {
  * @returns {Mongo.Collection}
  */
 export const getCollection = (dbRef, name) => {
-    if (dbRef[name] === undefined) {
-        dbRef[name] = new Mongo.Collection(name);
+    if (undefined === dbRef.get(name)) {
+        dbRef.set(name, new Mongo.Collection(name));
     }
-    return dbRef[name];
+
+    return dbRef.get(name);
 };

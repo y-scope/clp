@@ -21,23 +21,16 @@ export const App = () => {
     );
 
     React.useEffect(async () => {
-        const result = await login()
+        const result = await login();
         setLoggedIn(result)
     }, []);
 
     React.useEffect(() => {
         localStorage.setItem(LOCAL_STORAGE_KEYS.IS_SIDEBAR_COLLAPSED, isSidebarStateCollapsed.toString());
     }, [isSidebarStateCollapsed]);
-    const [isSidebarVisuallyCollapsed, setSidebarVisuallyCollapsed] = React.useState(
-        "true" === localStorage.getItem(LOCAL_STORAGE_KEYS.IS_SIDEBAR_COLLAPSED)
-    );
 
     const handleSidebarToggle = () => {
         setSidebarStateCollapsed(!isSidebarStateCollapsed);
-    }
-
-    const handleSidebarTransitioned = () => {
-        setSidebarVisuallyCollapsed(isSidebarStateCollapsed);
     }
 
     return (<div style={{display: "flex", height: "100%"}}>
@@ -45,7 +38,6 @@ export const App = () => {
             isSidebarCollapsed={isSidebarStateCollapsed}
             routes={ROUTES}
             onSidebarToggle={handleSidebarToggle}
-            onSidebarTransitioned={handleSidebarTransitioned}
         />
         <div style={{flexGrow: 1, minWidth: 0}}>
             <div style={{height: "100%"}}>

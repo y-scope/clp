@@ -4,9 +4,9 @@ import "/imports/api/search/server/methods";
 import "/imports/api/search/server/publications";
 import "/imports/api/user/server/methods";
 
-import {initSQL, deinitSQL} from "../imports/api/search/sql";
-import {initSearchEventCollection} from "../imports/api/search/collections";
-import {initLogger} from "../imports/utils/logger";
+import {initSql, deinitSql} from "/imports/api/search/server/sql";
+import {initSearchEventCollection} from "/imports/api/search/collections";
+import {initLogger} from "/imports/utils/logger";
 
 const DEFAULT_LOGS_DIR = ".";
 const DEFAULT_LOGGING_LEVEL = Meteor.isDevelopment ? "debug" : "info";
@@ -51,7 +51,7 @@ Meteor.startup(async () => {
 
     initLogger(args.WEBUI_LOGS_DIR, args.WEBUI_LOGGING_LEVEL, Meteor.isDevelopment);
 
-    await initSQL(
+    await initSql(
         args.CLP_DB_HOST,
         parseInt(args.CLP_DB_PORT),
         args.CLP_DB_NAME,
@@ -64,5 +64,5 @@ Meteor.startup(async () => {
 
 process.on("exit", async (code) => {
     console.log(`Node.js is about to exit with code: ${code}`);
-    await deinitSQL();
+    await deinitSql();
 });

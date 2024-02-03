@@ -1,11 +1,20 @@
 import React, {useEffect, useState, useRef} from "react";
 
-import {Button, Col, Container, Dropdown, DropdownButton, Form, InputGroup, Row} from "react-bootstrap";
+import {
+    Button,
+    Col,
+    Container,
+    Dropdown,
+    DropdownButton,
+    Form,
+    InputGroup,
+    Row,
+} from "react-bootstrap";
 import DatePicker from "react-datepicker";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faBars, faSearch, faTimes, faTrash} from "@fortawesome/free-solid-svg-icons";
 
-import {cTimePresets} from "./datetime";
+import {getRangeComputer, TIME_RANGE_PRESET_LABEL} from "./datetime";
 import LOCAL_STORAGE_KEYS from "../constants/LOCAL_STORAGE_KEYS";
 import {isSearchSignalQuerying, isSearchSignalReq, SearchSignal} from "../../api/search/constants";
 
@@ -25,7 +34,7 @@ const SearchControlsDatePicker = (props) => (<DatePicker
     timeCaption={"Time"}
     timeFormat={"HH:mm"}
     timeIntervals={15}
-/>)
+/>);
 
 /**
  * Renders a label for a search filter control.
@@ -38,7 +47,7 @@ const SearchControlsFilterLabel = (props) => (<Form.Label
     column={"sm"}
     xs={"auto"}
     className="search-filter-control-label"
-/>)
+/>);
 
 /**
  * Renders the controls for filtering search results by time range, including a date picker and
@@ -49,41 +58,44 @@ const SearchControlsFilterLabel = (props) => (<Form.Label
  * @returns {JSX.Element}
  */
 const SearchFilterControlsDrawer = ({
-                                        timeRange, setTimeRange
-                                    }) => {
+    timeRange,
+    setTimeRange,
+}) => {
     const updateBeginTimestamp = (date) => {
         if (date.getTime() > timeRange.end.getTime()) {
-            setTimeRange({begin: date, end: date});
+            setTimeRange({
+                begin: date,
+                end: date,
+            });
         } else {
-            setTimeRange({begin: date, end: timeRange.end});
+            setTimeRange({
+                begin: date,
+                end: timeRange.end,
+            });
         }
-    }
+    };
     const updateEndTimestamp = (date) => {
-        setTimeRange({begin: timeRange.begin, end: date});
-    }
+        setTimeRange({
+            begin: timeRange.begin,
+            end: date,
+        });
+    };
 
     const handleTimeRangePresetSelection = (event) => {
         event.preventDefault();
 
-        let preset_ix = parseInt(event.target.getAttribute("data-preset"));
-        if (isNaN(preset_ix) || preset_ix >= cTimePresets.length) {
-            console.error(`Unknown time range preset index: ${preset_ix}`);
-        }
-        let preset = cTimePresets[preset_ix];
-        let timeRange = preset.compute();
-        setTimeRange(timeRange);
-    }
+        let presetToken = event.target.getAttribute("data-preset");
+        const timeRange = getRangeComputer(presetToken);
 
-    let timeRangePresetItems = [];
-    for (let i = 0; i < cTimePresets.length; ++i) {
-        timeRangePresetItems.push(
-            <Dropdown.Item
-                key={i} data-preset={i}
-                onClick={handleTimeRangePresetSelection}>
-                {cTimePresets[i].label}
-            </Dropdown.Item>
-        );
-    }
+        setTimeRange(timeRange);
+    };
+
+    const timeRangePresetItems = Object.entries(TIME_RANGE_PRESET_LABEL).map(([token, label]) =>
+        <Dropdown.Item
+            key={token} data-preset={token}
+            onClick={handleTimeRangePresetSelection}>
+            {label}
+        </Dropdown.Item>);
 
     // Compute range of end timestamp so that it's after the begin timestamp
     let timestampEndMin = null;
@@ -139,7 +151,7 @@ const SearchFilterControlsDrawer = ({
             </Form.Group>
         </Container>
     </div>);
-}
+};
 
 /**
  * Renders the search controls including query input, filter drawer toggle, and operation buttons
@@ -156,16 +168,17 @@ const SearchFilterControlsDrawer = ({
  * @returns {JSX.Element}
  */
 export const SearchControls = ({
-                                   queryString,
-                                   setQueryString,
-                                   timeRange,
-                                   setTimeRange,
-                                   resultsMetadata,
-                                   onSubmitQuery,
-                                   onClearResults,
-                                   onCancelOperation,
-                               }) => {
-    const [drawerOpen, setDrawerOpen] = useState("true" === localStorage.getItem(LOCAL_STORAGE_KEYS.SEARCH_CONTROLS_VISIBLE));
+    queryString,
+    setQueryString,
+    timeRange,
+    setTimeRange,
+    resultsMetadata,
+    onSubmitQuery,
+    onClearResults,
+    onCancelOperation,
+}) => {
+    const [drawerOpen, setDrawerOpen] = useState(
+        "true" === localStorage.getItem(LOCAL_STORAGE_KEYS.SEARCH_CONTROLS_VISIBLE));
     const [canceling, setCanceling] = useState(false);
     const inputRef = useRef(null);
 
@@ -185,23 +198,23 @@ export const SearchControls = ({
 
     const queryChangeHandler = (e) => {
         setQueryString(e.target.value);
-    }
+    };
 
     const handleDrawerToggleClick = () => {
         setDrawerOpen(!drawerOpen);
-    }
+    };
 
     const handleQuerySubmission = (e) => {
         e.preventDefault();
 
         setCanceling(false);
         onSubmitQuery();
-    }
+    };
 
     const handleCancelOperation = () => {
         setCanceling(true);
         onCancelOperation();
-    }
+    };
 
     return <>
         <Form onSubmit={handleQuerySubmission}>
@@ -226,7 +239,7 @@ export const SearchControls = ({
                         onChange={queryChangeHandler}
                     />
                     {
-                        (SearchSignal.RSP_DONE === resultsMetadata["lastSignal"]) &&
+                        (SearchSignal.RESP_DONE === resultsMetadata["lastSignal"]) &&
                         <Button
                             className={"border-top-0 border-bottom-0 rounded-0"}
                             disabled={true === isSearchSignalReq(resultsMetadata["lastSignal"])}
@@ -237,23 +250,23 @@ export const SearchControls = ({
                         </Button>
                     }
                     {
-                        (SearchSignal.RSP_QUERYING === resultsMetadata["lastSignal"]) ?
-                        <Button
-                            className={"border-top-0 border-bottom-0 rounded-0"}
-                            disabled={true === canceling}
-                            variant={"danger"}
-                            onClick={handleCancelOperation}
-                        >
-                            <FontAwesomeIcon icon={faTimes} fixedWidth={true}/>
-                        </Button> :
-                        <Button
-                            className={"border-top-0 border-bottom-0 rounded-0"}
-                            disabled={isInputDisabled || "" === queryString}
-                            variant={"primary"}
-                            type={"submit"}
-                        >
-                            <FontAwesomeIcon icon={faSearch} fixedWidth={true}/>
-                        </Button>
+                        (SearchSignal.RESP_QUERYING === resultsMetadata["lastSignal"]) ?
+                            <Button
+                                className={"border-top-0 border-bottom-0 rounded-0"}
+                                disabled={true === canceling}
+                                variant={"danger"}
+                                onClick={handleCancelOperation}
+                            >
+                                <FontAwesomeIcon icon={faTimes} fixedWidth={true}/>
+                            </Button> :
+                            <Button
+                                className={"border-top-0 border-bottom-0 rounded-0"}
+                                disabled={isInputDisabled || "" === queryString}
+                                variant={"primary"}
+                                type={"submit"}
+                            >
+                                <FontAwesomeIcon icon={faSearch} fixedWidth={true}/>
+                            </Button>
                     }
                 </InputGroup>
             </Form.Group>
@@ -263,5 +276,5 @@ export const SearchControls = ({
             timeRange={timeRange}
             setTimeRange={setTimeRange}
         />}
-    </>
-}
+    </>;
+};

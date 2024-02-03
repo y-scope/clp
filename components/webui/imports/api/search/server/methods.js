@@ -1,89 +1,8 @@
-import {Meteor} from "meteor/meteor";
-import msgpack from "@msgpack/msgpack";
 import {logger} from "/imports/utils/logger";
-
-import {JOB_STATUS_WAITING_STATES, JobStatus, SearchSignal} from "../constants";
-import {SQL_CONNECTION} from "../sql";
+import {Meteor} from "meteor/meteor";
 import {getCollection, MY_MONGO_DB, SearchResultsMetadataCollection} from "../collections";
-
-
-const SEARCH_JOBS_TABLE_NAME = "distributed_search_jobs";
-
-/**
- * Creates a promise that resolves after a specified number of seconds.
- *
- * @param {number} seconds to wait before resolving the promise
- * @returns {Promise<void>} that resolves after the specified delay
- */
-const sleep = (seconds) => new Promise(r => setTimeout(r, seconds * 1000));
-
-
-/**
- * Submits a query job to the SQL database and returns the job ID.
- *
- * @param {Object} args containing the search configuration.
- * @returns {number|null} job ID on successful submission, or null in case of failure
- */
-const submitQuery = async (args) => {
-    let jobId = null;
-
-    try {
-        const [queryInsertResults] = await SQL_CONNECTION.query(`INSERT INTO ${SEARCH_JOBS_TABLE_NAME} (search_config)
-                                                                 VALUES (?) `, [Buffer.from(msgpack.encode(args))]);
-        jobId = queryInsertResults["insertId"];
-    } catch (e) {
-        logger.error("Unable to submit query job to SQL DB", e);
-    }
-
-    return jobId;
-};
-
-/**
- * Waits for a job to finish and retrieves its status from the database.
- *
- * @param {number} jobId of the job to monitor
- *
- * @returns {?string} null if the job completes successfully; an error message if the job exits
- * in an unexpected status or encounters an error during monitoring
- */
-const waitTillJobFinishes = async (jobId) => {
-    let errorMsg = null;
-
-    try {
-        while (true) {
-            const [rows, _] = await SQL_CONNECTION.query(`SELECT status
-                                                          from ${SEARCH_JOBS_TABLE_NAME}
-                                                          where id = ${jobId}`);
-            const status = rows[0]["status"];
-            if (!JOB_STATUS_WAITING_STATES.includes(status)) {
-                logger.info(`Job ${jobId} exited with status = ${status}`);
-
-                if (JobStatus.SUCCESS !== status) {
-                    errorMsg = `Job exited in an unexpected status=${status}: ${Object.keys(JobStatus)[status]}`;
-                }
-                break;
-            }
-
-            await sleep(0.5);
-        }
-    } catch (e) {
-        errorMsg = `Error querying job status, jobId=${jobId}: ${e}`;
-        logger.error(errorMsg);
-    }
-
-    return errorMsg;
-};
-
-/**
- * Cancels a job by updating its status to 'CANCELLING' in the database.
- *
- * @param {string} jobId of the job to be cancelled
- */
-const cancelQuery = async (jobId) => {
-    const [rows, _] = await SQL_CONNECTION.query(`UPDATE ${SEARCH_JOBS_TABLE_NAME}
-                                                  SET status = ${JobStatus.CANCELLING}
-                                                  WHERE id = (?)`, [jobId]);
-};
+import {SearchSignal} from "../constants";
+import {cancelQuery, submitQuery, waitTillJobFinishes} from "./sql";
 
 /**
  * Updates the search event when the specified job finishes.
@@ -97,9 +16,9 @@ const updateSearchEventWhenJobFinishes = async (jobId) => {
     };
     const modifier = {
         $set: {
-            lastSignal: SearchSignal.RSP_DONE,
+            lastSignal: SearchSignal.RESP_DONE,
             errorMsg: errorMsg,
-            numTotalResults: await getCollection(MY_MONGO_DB, jobId).countDocuments()
+            numTotalResults: await getCollection(MY_MONGO_DB, jobId.toString()).countDocuments()
         }
     };
 
@@ -117,17 +36,14 @@ const createMongoIndexes = async (jobId) => {
         key: {timestamp: 1, _id: 1},
         name: "timestamp-ascending"
     };
-
     const timestampDescendingIndex = {
         key: {timestamp: -1, _id: -1},
         name: "timestamp-descending"
     };
 
-    if (null !== jobId) {
-        const queryJobCollection = getCollection(MY_MONGO_DB, jobId.toString());
-        const queryJobRawCollection = queryJobCollection.rawCollection();
-        await queryJobRawCollection.createIndexes([timestampAscendingIndex, timestampDescendingIndex]);
-    }
+    const queryJobCollection = getCollection(MY_MONGO_DB, jobId.toString());
+    const queryJobRawCollection = queryJobCollection.rawCollection();
+    await queryJobRawCollection.createIndexes([timestampAscendingIndex, timestampDescendingIndex]);
 };
 
 Meteor.methods({
@@ -137,7 +53,6 @@ Meteor.methods({
      * @param {string} queryString
      * @param {number} timestampBegin
      * @param {number} timestampEnd
-     *
      * @returns {Object} containing {jobId} of the submitted search job
      */
     async "search.submitQuery"({
@@ -158,7 +73,7 @@ Meteor.methods({
         if (null !== jobId) {
             SearchResultsMetadataCollection.insert({
                 _id: jobId.toString(),
-                lastSignal: SearchSignal.RSP_QUERYING,
+                lastSignal: SearchSignal.RESP_QUERYING,
                 errorMsg: null
             });
 
@@ -166,7 +81,6 @@ Meteor.methods({
                 await updateSearchEventWhenJobFinishes(jobId);
             });
 
-            // Create indexes for ascending / descending sort
             await createMongoIndexes(jobId);
         }
 
@@ -184,10 +98,14 @@ Meteor.methods({
     {
         logger.info("search.clearResults jobId =", jobId)
 
-        const resultsCollection = getCollection(MY_MONGO_DB, jobId.toString());
-        await resultsCollection.dropCollectionAsync();
+        try {
+            const resultsCollection = getCollection(MY_MONGO_DB, jobId.toString());
+            await resultsCollection.dropCollectionAsync();
 
-        delete MY_MONGO_DB[jobId.toString()];
+            delete MY_MONGO_DB[jobId.toString()];
+        } catch (e) {
+            logger.error(`Unable to clear search results for jobId=${jobId}`, e);
+        }
     },
 
     /**
@@ -200,6 +118,10 @@ Meteor.methods({
                                    }) {
         logger.info("search.cancelOperation jobId =", jobId)
 
-        await cancelQuery(jobId);
+        try {
+            await cancelQuery(jobId);
+        } catch (e) {
+            logger.error(`Unable to cancel search operation for jobId=${jobId}`, e);
+        }
     },
 });

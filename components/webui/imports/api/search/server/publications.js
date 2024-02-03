@@ -14,6 +14,7 @@ import {SearchResultsMetadataCollection, getCollection, MY_MONGO_DB} from "../co
 Meteor.publish(Meteor.settings.public.SearchResultsMetadataCollectionName, ({jobId}) => {
     logger.debug(`Subscription '${Meteor.settings.public.SearchResultsMetadataCollectionName}'`,
         `jobId=${jobId}`);
+
     const filter = {
         _id: jobId.toString(),
     };
@@ -39,13 +40,14 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
     logger.debug(`Subscription '${Meteor.settings.public.SearchResultsCollectionName}'`,
         `jobId=${jobId}, fieldToSortBy=${fieldToSortBy}, ` +
         `visibleSearchResultsLimit=${visibleSearchResultsLimit}`);
-    const collection = getCollection(MY_MONGO_DB, jobId.toString());
 
+    const collection = getCollection(MY_MONGO_DB, jobId.toString());
     const findOptions = {
         limit: visibleSearchResultsLimit,
         disableOplog: true,
         pollingIntervalMs: 250,
     };
+
     if (fieldToSortBy) {
         const sort = {};
         sort[fieldToSortBy.name] = fieldToSortBy.direction;

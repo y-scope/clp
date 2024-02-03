@@ -14,15 +14,13 @@ import {
  * @param {boolean} isSidebarCollapsed indicates whether the sidebar is collapsed
  * @param {Object[]} routes objects for navigation links
  * @param {function} onSidebarToggle callback to toggle the sidebar's collapsed state
- * @param {function} onSidebarTransitioned callback for sidebar transition end event
  * @returns {JSX.Element}
  */
-const Sidebar = ({isSidebarCollapsed, routes, onSidebarToggle, onSidebarTransitioned}) => {
+const Sidebar = ({isSidebarCollapsed, routes, onSidebarToggle}) => {
     return (
         <div
             id="sidebar"
             className={isSidebarCollapsed ? "collapsed" : ""}
-            onTransitionEnd={onSidebarTransitioned}
         >
             <div className="brand">
                 {!isSidebarCollapsed && <b style={{marginRight: "0.25rem"}}>YScope</b>}

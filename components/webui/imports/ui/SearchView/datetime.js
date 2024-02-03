@@ -1,190 +1,98 @@
 import {DateTime} from "luxon";
 
-export const computeTodayTimeRange = () => {
-    const endTime = DateTime.utc();
-    const beginTime = endTime.minus({days: 1});
+const TIME_RANGE_UNIT = Object.freeze({
+    ALL: "all",
+    MINUTE: "minute",
+    HOUR: "hour",
+    DAY: "day",
+    WEEK: "week",
+    MONTH: "month",
+    YEAR: "year",
+});
+
+const TIME_RANGE_MODIFIER = Object.freeze({
+    NONE: "none",
+    TODAY: "today",
+    LAST: "last",
+    PREV: "prev",
+    TO_DATE: "to-date",
+});
+
+// TODO Switch date pickers so we don't have to do this hack
+const dateTimeToDateWithoutChangingTimestamp = (dateTime) => {
+    return dateTime.toLocal().set({
+        year: dateTime.year,
+        month: dateTime.month,
+        day: dateTime.day,
+        hour: dateTime.hour,
+        minute: dateTime.minute,
+        second: dateTime.second,
+        millisecond: dateTime.millisecond,
+    }).toJSDate();
+};
+
+export const TIME_RANGE_PRESET_LABEL = Object.freeze({
+    [`${TIME_RANGE_UNIT.MINUTE}_${TIME_RANGE_MODIFIER.LAST}_15`]: "Last 15 Minutes",
+    [`${TIME_RANGE_UNIT.MINUTE}_${TIME_RANGE_MODIFIER.LAST}_60`]: "Last 60 Minutes",
+    [`${TIME_RANGE_UNIT.HOUR}_${TIME_RANGE_MODIFIER.LAST}_4`]: "Last 4 Hours",
+    [`${TIME_RANGE_UNIT.HOUR}_${TIME_RANGE_MODIFIER.LAST}_24`]: "Last 24 Hours",
+    [`${TIME_RANGE_UNIT.DAY}_${TIME_RANGE_MODIFIER.PREV}_1`]: "Previous Day",
+    [`${TIME_RANGE_UNIT.WEEK}_${TIME_RANGE_MODIFIER.PREV}_1`]: "Previous Week",
+    [`${TIME_RANGE_UNIT.MONTH}_${TIME_RANGE_MODIFIER.PREV}_1`]: "Previous Month",
+    [`${TIME_RANGE_UNIT.YEAR}_${TIME_RANGE_MODIFIER.PREV}_1`]: "Previous Year",
+    [`${TIME_RANGE_UNIT.DAY}_${TIME_RANGE_MODIFIER.TODAY}_0`]: "Today",
+    [`${TIME_RANGE_UNIT.WEEK}_${TIME_RANGE_MODIFIER.TO_DATE}_0`]: "Week to Date",
+    [`${TIME_RANGE_UNIT.MONTH}_${TIME_RANGE_MODIFIER.TO_DATE}_0`]: "Month to Date",
+    [`${TIME_RANGE_UNIT.YEAR}_${TIME_RANGE_MODIFIER.TO_DATE}_0`]: "Year to Date",
+    [`${TIME_RANGE_UNIT.ALL}_${TIME_RANGE_MODIFIER.NONE}_0`]: "All Time",
+});
+
+/**
+ * Computes a time range based on a token.
+ *
+ * @param {string} token representing the time range to compute; format: `unit_modifier_amount`
+ * @returns {Object} containing Date objects representing the computed begin and end time range
+ */
+export const getRangeComputer = (token) => () => {
+    const [unit, modifier, amount] = token.split("_");
+    let endTime;
+    let beginTime;
+
+    if (unit === "all") {
+        endTime = DateTime.utc().plus({years: 1});
+        beginTime = DateTime.fromMillis(0, {zone: "UTC"});
+    } else {
+        const isEndingNow = [
+            TIME_RANGE_MODIFIER.LAST,
+            TIME_RANGE_MODIFIER.TODAY,
+            TIME_RANGE_MODIFIER.TO_DATE,
+        ].includes(modifier);
+        const isBeginStartOfUnit = [
+            TIME_RANGE_MODIFIER.PREV,
+            TIME_RANGE_MODIFIER.TODAY,
+            TIME_RANGE_MODIFIER.TO_DATE,
+        ].includes(modifier);
+
+        endTime = (true === isEndingNow) ?
+            DateTime.utc() :
+            DateTime.utc().minus({[unit]: amount}).endOf(unit);
+        beginTime = (true === isBeginStartOfUnit) ?
+            endTime.startOf(unit) :
+            endTime.minus({[unit]: amount});
+    }
+
     return {
         begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
         end: dateTimeToDateWithoutChangingTimestamp(endTime),
     };
 };
 
-export const computeWeekToDateTimeRange = () => {
-    const endTime = DateTime.utc();
-    const beginTime = endTime.startOf("week");
-    return {
-        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
-        end: dateTimeToDateWithoutChangingTimestamp(endTime),
-    };
-};
-
-export const computeMonthToDateTimeRange = () => {
-    const endTime = DateTime.utc();
-    const beginTime = endTime.startOf("month");
-    return {
-        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
-        end: dateTimeToDateWithoutChangingTimestamp(endTime),
-    };
-};
-
-export const computeYearToDateTimeRange = () => {
-    const endTime = DateTime.utc();
-    const beginTime = endTime.startOf("year");
-    return {
-        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
-        end: dateTimeToDateWithoutChangingTimestamp(endTime),
-    };
-};
-
-export const computePrevDayTimeRange = () => {
-    const endTime = DateTime.utc().minus({days: 1}).endOf("day");
-    const beginTime = endTime.startOf("day");
-    return {
-        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
-        end: dateTimeToDateWithoutChangingTimestamp(endTime),
-    };
-};
-
-export const computePrevWeekTimeRange = () => {
-    const endTime = DateTime.utc().minus({weeks: 1}).endOf("week");
-    const beginTime = endTime.startOf("week");
-    return {
-        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
-        end: dateTimeToDateWithoutChangingTimestamp(endTime),
-    };
-};
-
-export const computePrevMonthTimeRange = () => {
-    const endTime = DateTime.utc().minus({months: 1}).endOf("month");
-    const beginTime = endTime.startOf("month");
-    return {
-        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
-        end: dateTimeToDateWithoutChangingTimestamp(endTime),
-    };
-};
-
-export const computePrevYearTimeRange = () => {
-    const endTime = DateTime.utc().minus({years: 1}).endOf("year");
-    const beginTime = endTime.startOf("year");
-    return {
-        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
-        end: dateTimeToDateWithoutChangingTimestamp(endTime),
-    };
-};
-
-export const computeLast15MinTimeRange = () => {
-    const endTime = DateTime.utc();
-    const beginTime = endTime.minus({minutes: 15});
-    return {
-        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
-        end: dateTimeToDateWithoutChangingTimestamp(endTime),
-    };
-};
-
-export const computeLast60MinTimeRange = () => {
-    const endTime = DateTime.utc();
-    const beginTime = endTime.minus({minutes: 60});
-    return {
-        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
-        end: dateTimeToDateWithoutChangingTimestamp(endTime),
-    };
-};
-
-export const computeLast4HourTimeRange = () => {
-    const endTime = DateTime.utc();
-    const beginTime = endTime.minus({hours: 4});
-    return {
-        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
-        end: dateTimeToDateWithoutChangingTimestamp(endTime),
-    };
-};
-
-export const computeLast24HourTimeRange = () => {
-    const endTime = DateTime.utc();
-    const beginTime = endTime.minus({hours: 24});
-    return {
-        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
-        end: dateTimeToDateWithoutChangingTimestamp(endTime),
-    };
-};
-
-export const computeAllTimeRange = () => {
-    const endTime = DateTime.utc().plus({years: 1});
-    const beginTime = DateTime.fromMillis(0, {zone: "UTC"});
-    return {
-        begin: dateTimeToDateWithoutChangingTimestamp(beginTime),
-        end: dateTimeToDateWithoutChangingTimestamp(endTime),
-    };
-};
-
-export const cTimePresets = [
-    {
-        key: "last-15-mins",
-        label: "Last 15 Minutes",
-        compute: computeLast15MinTimeRange,
-    },
-    {
-        key: "last-60-mins",
-        label: "Last 60 Minutes",
-        compute: computeLast60MinTimeRange,
-    },
-    {
-        key: "last-4-hours",
-        label: "Last 4 Hours",
-        compute: computeLast4HourTimeRange,
-    },
-    {
-        key: "last-24-hours",
-        label: "Last 24 Hours",
-        compute: computeLast24HourTimeRange,
-    },
-    {
-        key: "prev-day",
-        label: "Previous Day",
-        compute: computePrevDayTimeRange,
-    },
-    {
-        key: "prev-week",
-        label: "Previous Week",
-        compute: computePrevWeekTimeRange,
-    },
-    {
-        key: "prev-month",
-        label: "Previous Month",
-        compute: computePrevMonthTimeRange,
-    },
-    {
-        key: "prev-year",
-        label: "Previous Year",
-        compute: computePrevYearTimeRange,
-    },
-    {
-        key: "today",
-        label: "Today",
-        compute: computeTodayTimeRange,
-    },
-    {
-        key: "week-to-date",
-        label: "Week to Date",
-        compute: computeWeekToDateTimeRange,
-    },
-    {
-        key: "month-to-date",
-        label: "Month to Date",
-        compute: computeMonthToDateTimeRange,
-    },
-    {
-        key: "year-to-date",
-        label: "Year to Date",
-        compute: computeYearToDateTimeRange,
-    },
-    {
-        key: "all-time",
-        label: "All Time",
-        compute: computeAllTimeRange,
-    },
-];
-
+/**
+ * Changes the timezone of a given Date object to UTC without changing the time.
+ *
+ * @param {Date} date Date object to convert to UTC
+ * @returns {Date} A new Date object with the same time values in UTC timezone
+ */
 export const changeTimezoneToUTCWithoutChangingTime = (date) => {
     return new Date(Date.UTC(
         date.getFullYear(),
@@ -197,17 +105,6 @@ export const changeTimezoneToUTCWithoutChangingTime = (date) => {
     ));
 };
 
-// TODO Switch date pickers so we don't have to do this hack
-export const dateTimeToDateWithoutChangingTimestamp = (dateTime) => {
-    return dateTime.toLocal().set({
-        year: dateTime.year,
-        month: dateTime.month,
-        day: dateTime.day,
-        hour: dateTime.hour,
-        minute: dateTime.minute,
-        second: dateTime.second,
-        millisecond: dateTime.millisecond,
-    }).toJSDate();
-};
-
-export const DEFAULT_TIME_RANGE_GETTER = computeAllTimeRange;
+export const DEFAULT_TIME_RANGE_GETTER = getRangeComputer(
+    `${TIME_RANGE_UNIT.ALL}_${TIME_RANGE_MODIFIER.NONE}_0`,
+);

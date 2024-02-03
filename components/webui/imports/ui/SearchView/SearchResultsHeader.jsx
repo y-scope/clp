@@ -41,7 +41,7 @@ export const SearchResultsHeader = ({
 
     let numResultsText = `Job ID ${jobId}: `;
     if (0 === numResultsOnServer) {
-        numResultsText += SearchSignal.RSP_DONE !== resultsMetadata["lastSignal"] ?
+        numResultsText += SearchSignal.RESP_DONE !== resultsMetadata["lastSignal"] ?
             "Query is running" :
             "No results found";
     } else if (1 === numResultsOnServer) {
