@@ -58,9 +58,8 @@ int main(int argc, char const* argv[]) {
 
         boost::uuids::random_generator generator;
         auto archive_id = boost::uuids::to_string(generator());
-        auto archives_dir
-                = std::filesystem::path(command_line_arguments.get_archives_dir()) auto archive_path
-                = archives_dir / archive_id;
+        auto archives_dir = std::filesystem::path(command_line_arguments.get_archives_dir());
+        auto archive_path = archives_dir / archive_id;
 
         // Create output directory in case it doesn't exist
         try {
