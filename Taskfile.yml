@@ -29,6 +29,7 @@ tasks:
       - task: "clean-python-component"
         vars:
           COMPONENT: "job-orchestration"
+
   clean-package:
     cmds:
       - "rm -rf '{{.PACKAGE_BUILD_DIR}}'"
@@ -126,12 +127,7 @@ tasks:
         cd {{.WEBUI_BUILD_DIR}}/programs/server
         PATH={{.NODEJS_BIN_DIR}}:$PATH $(readlink -f {{.NODEJS_BIN_DIR}}/npm) install
     sources:
-      - "./.meteor/*"
-      - "./client/**/*"
-      - "./imports/**/*"
-      - "./server/**/*"
-      - "./tests/**/*"
-      - "./*"
+      - "{{.WEBUI_BUILD_DIR}}/**/*"
 
   nodejs:
     vars:
