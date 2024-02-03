@@ -8,7 +8,9 @@
 
 #include <date/include/date/date.h>
 #include <spdlog/spdlog.h>
+#include <string_utils/string_utils.hpp>
 
+using clp::string_utils::convert_string_to_int;
 using std::string;
 using std::to_string;
 using std::vector;
@@ -91,7 +93,6 @@ static bool convert_string_to_number_notz(
         size_t max_digits,
         size_t begin_ix,
         size_t& end_ix,
-        char padding_character,
         int& value
 );
 
@@ -214,6 +215,8 @@ void TimestampPattern::init() {
     patterns.emplace_back(0, "%Y-%m-%dT%H:%M:%S.%3");
     // E.g. 2015-01-31T15:50:45,392
     patterns.emplace_back(0, "%Y-%m-%dT%H:%M:%S,%3");
+    // E.g. 1706980946603
+    patterns.emplace_back(0, "%E");
     // E.g. [2015-01-31T15:50:45
     patterns.emplace_back(0, "[%Y-%m-%dT%H:%M:%S");
     // E.g. [20170106-16:56:41]
@@ -230,6 +233,16 @@ void TimestampPattern::init() {
     patterns.emplace_back(1, "%Y-%m-%d  %H:%M:%S");
     // E.g. 2015/01/31 15:50:45
     patterns.emplace_back(0, "%Y/%m/%d %H:%M:%S");
+    // E.g. 2015/01/31 15:50:45.123
+    patterns.emplace_back(0, "%Y/%m/%d %H:%M:%S.%3");
+    // E.g. 2015/01/31 15:50:45,123
+    patterns.emplace_back(0, "%Y/%m/%d %H:%M:%S,%3");
+    // E.g. 2015/01/31T15:50:45,123
+    patterns.emplace_back(0, "%Y/%m/%dT%H:%M:%S");
+    // E.g. 2015/01/31T15:50:45.123
+    patterns.emplace_back(0, "%Y/%m/%dT%H:%M:%S.%3");
+    // E.g. 2015/01/31T15:50:45,123
+    patterns.emplace_back(0, "%Y/%m/%dT%H:%M:%S,%3");
     // E.g. 15/01/31 15:50:45
     patterns.emplace_back(0, "%y/%m/%d %H:%M:%S");
     // E.g. 150131  9:50:45
@@ -772,6 +785,19 @@ bool TimestampPattern::parse_timestamp(
                     break;
                 }
 
+                case 'E': {  // UNIX epoch milliseconds timestamp
+                    // only allow consuming entire timestamp string
+                    // Note: "timestamp" is how the result is returned by reference
+                    // Note: this format will also accept any integer timestamp (including UNIX
+                    // epoch seconds and nanoseconds as well)
+                    if (line_ix > 0 || false == convert_string_to_int(line, timestamp)) {
+                        return false;
+                    }
+                    timestamp_begin_pos = 0;
+                    timestamp_end_pos = line.length();
+                    return true;
+                }
+
                 default:
                     return false;
             }
@@ -981,6 +1007,12 @@ void TimestampPattern::insert_formatted_timestamp(epochtime_t timestamp, string&
 
                 case 'T':  // Zero-padded millisecond no trailing 0
                     append_padded_value_notz(millisecond, '0', 3, new_msg);
+                    break;
+
+                case 'E':  // UNIX epoch milliseconds
+                    // Note: this timestamp format is required to make up the entire timestamp, so
+                    // this is safe
+                    new_msg = std::to_string(timestamp);
                     break;
 
                 default: {
