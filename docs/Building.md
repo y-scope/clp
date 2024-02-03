@@ -12,6 +12,8 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
     extra configuration.
 * Python 3.8 or newer
 * python3-venv
+* [Node.js 14](https://nodejs.org/download/release/v14.21.3/): Meteor.js only runs on that specific version. 
+* [Meteor.js](https://docs.meteor.com/install.html#installation)
 * [Task](https://taskfile.dev/)
 
 # Setup
