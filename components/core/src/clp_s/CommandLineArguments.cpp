@@ -134,7 +134,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             po::options_description compression_options("Compression options");
             std::string metadata_db_config_file_path;
-            std::string input_path_list_file;
+            std::string input_path_list_file_path;
             // clang-format off
             compression_options.add_options()(
                     "compression-level",

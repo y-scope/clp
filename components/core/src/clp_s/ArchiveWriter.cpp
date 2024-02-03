@@ -43,7 +43,7 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
 }
 
 size_t ArchiveWriter::close() {
-    size_t compressed_size = 0ULL;
+    size_t compressed_size{0};
     compressed_size += m_var_dict->close();
     compressed_size += m_log_dict->close();
     compressed_size += m_array_dict->close();

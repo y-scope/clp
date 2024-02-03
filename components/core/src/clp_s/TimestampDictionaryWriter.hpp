@@ -74,20 +74,18 @@ public:
     void ingest_entry(std::string const& key, int32_t node_id, int64_t timestamp);
 
     /**
-     * Get the beginning of the time range for this archive
      * TODO: guarantee epoch milliseconds. The current clp-s approach to encoding timestamps and
      * timestamp ranges makes no effort to convert second and nanosecond encoded timestamps into
      * millisecond encoded timestamps.
-     * @return the beginning of the time range in UNIX epoch time
+     * @return the beginning of this archive's time range as milliseconds since the UNIX epoch
      */
     epochtime_t get_epoch_start() const;
 
     /**
-     * Get the end of the time range for this archive
      * TODO: guarantee epoch milliseconds. The current clp-s approach to encoding timestamps and
      * timestamp ranges makes no effort to convert second and nanosecond encoded timestamps into
      * millisecond encoded timestamps.
-     * @return the end of the time range in UNIX epoch time
+     * @return the end of this archive's time range as milliseconds since the UNIX epoch
      */
     epochtime_t get_epoch_end() const;
 

@@ -64,7 +64,7 @@ public:
     void close();
 
     /**
-     * @return the size data before compression in bytes
+     * @return the size of the input data before compression in bytes
      */
     [[nodiscard]] size_t get_uncompressed_size() { return m_uncompressed_size; }
 

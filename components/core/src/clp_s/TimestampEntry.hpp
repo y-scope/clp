@@ -110,20 +110,18 @@ public:
     }
 
     /**
-     * Get the beginning of this time range
      * TODO: guarantee epoch milliseconds. The current clp-s approach to encoding timestamps and
      * timestamp ranges makes no effort to convert second and nanosecond encoded timestamps into
      * millisecond encoded timestamps.
-     * @return the beginning of the time range in UNIX epoch time
+     * @return the beginning of the time range as milliseconds since the UNIX epoch
      */
     epochtime_t get_epoch_start() const;
 
     /**
-     * Get the end of this time range
      * TODO: guarantee epoch milliseconds. The current clp-s approach to encoding timestamps and
      * timestamp ranges makes no effort to convert second and nanosecond encoded timestamps into
      * millisecond encoded timestamps.
-     * @return the end of the time range in UNIX epoch time
+     * @return the end of the time range as milliseconds since the UNIX epoch
      */
     epochtime_t get_epoch_end() const;
 

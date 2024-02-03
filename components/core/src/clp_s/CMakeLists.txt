@@ -19,11 +19,11 @@ set(
         ../clp/MySQLPreparedStatement.hpp
         ../clp/ReaderInterface.cpp
         ../clp/ReaderInterface.hpp
-        ../clp/WriterInterface.cpp
-        ../clp/WriterInterface.hpp
         ../clp/streaming_archive/ArchiveMetadata.cpp
         ../clp/streaming_archive/ArchiveMetadata.hpp
         ../clp/TraceableException.hpp
+        ../clp/WriterInterface.cpp
+        ../clp/WriterInterface.hpp
 )
 
 set(

@@ -45,7 +45,7 @@ def main(argv):
         "-f", "--input-list", dest="input_list", help="A file listing all paths to compress."
     )
     args_parser.add_argument(
-        "--timestamp-key", help="The authoritative key to use for the timestamp index."
+        "--timestamp-key", help="The key specifying each record's timestamp."
     )
 
     parsed_args = args_parser.parse_args(argv[1:])

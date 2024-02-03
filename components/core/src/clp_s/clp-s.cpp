@@ -57,7 +57,7 @@ int main(int argc, char const* argv[]) {
         clp_s::TimestampPattern::init();
 
         boost::uuids::random_generator generator;
-        std::string archive_id = boost::uuids::to_string(generator());
+        auto archive_id = boost::uuids::to_string(generator());
         auto archive_path
                 = std::filesystem::path(command_line_arguments.get_archives_dir()) / archive_id;
 
@@ -66,7 +66,7 @@ int main(int argc, char const* argv[]) {
             std::filesystem::create_directory(archive_path.parent_path().string());
         } catch (std::exception& e) {
             SPDLOG_ERROR(
-                    "Failed to create archive directory {} - {}",
+                    "Failed to create archives directory {} - {}",
                     archive_path.parent_path().string(),
                     e.what()
             );
