@@ -154,7 +154,8 @@ def main(argv):
         "--no-progress-reporting", action="store_true", help="Disables progress reporting."
     )
     args_parser.add_argument(
-        "--timestamp-key", help="The authoritative key to use for the timestamp index."
+        "--timestamp-key",
+        help="The path (e.g. x.y) for the field containing the log event's timestamp.",
     )
     parsed_args = args_parser.parse_args(argv[1:])
 
