@@ -1,9 +1,8 @@
 import datetime
 import typing
 
-from pydantic import BaseModel, validator
-
 from job_orchestration.scheduler.constants import CompressionTaskStatus
+from pydantic import BaseModel, validator
 
 
 class CompressionJob(BaseModel):
@@ -18,7 +17,7 @@ class CompressionTaskResult(BaseModel):
     start_time: datetime.datetime
     duration: float
 
-    @validator('status')
+    @validator("status")
     def valid_status(cls, field):
         supported_status = [CompressionTaskStatus.SUCCEEDED, CompressionTaskStatus.FAILED]
         if field not in supported_status:

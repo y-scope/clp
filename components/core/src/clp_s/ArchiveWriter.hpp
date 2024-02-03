@@ -1,7 +1,6 @@
 #ifndef CLP_S_ARCHIVEWRITER_HPP
 #define CLP_S_ARCHIVEWRITER_HPP
 
-#include <set>
 #include <utility>
 
 #include <boost/filesystem.hpp>
@@ -9,6 +8,7 @@
 #include <boost/uuid/uuid_io.hpp>
 
 #include "DictionaryWriter.hpp"
+#include "Schema.hpp"
 #include "SchemaTree.hpp"
 #include "SchemaWriter.hpp"
 #include "TimestampDictionaryWriter.hpp"
@@ -58,7 +58,7 @@ public:
      * @param schema
      * @param message
      */
-    void append_message(int32_t schema_id, std::set<int32_t>& schema, ParsedMessage& message);
+    void append_message(int32_t schema_id, Schema const& schema, ParsedMessage& message);
 
     /**
      * @return Size of the uncompressed data written to the archive
@@ -71,7 +71,7 @@ private:
      * @param writer
      * @param schema
      */
-    void initialize_schema_writer(SchemaWriter* writer, std::set<int32_t>& schema);
+    void initialize_schema_writer(SchemaWriter* writer, Schema const& schema);
 
     size_t m_encoded_message_size;
 

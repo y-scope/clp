@@ -36,6 +36,8 @@ set(
         ParsedMessage.hpp
         ReaderUtils.cpp
         ReaderUtils.hpp
+        Schema.cpp
+        Schema.hpp
         SchemaMap.cpp
         SchemaMap.hpp
         SchemaReader.cpp
@@ -67,6 +69,8 @@ set(
 
 set(
         CLP_S_SEARCH_SOURCES
+        search/AddTimestampConditions.cpp
+        search/AddTimestampConditions.hpp
         search/AndExpr.cpp
         search/AndExpr.hpp
         search/BooleanLiteral.cpp

@@ -193,11 +193,13 @@ tasks:
   lint-check:
     cmds:
       - task: "core-lint-check"
+      - task: "py-lint-check"
       - task: "yamllint"
 
   lint-fix:
     cmds:
       - task: "core-lint-fix"
+      - task: "py-lint-fix"
       - task: "yamllint"
 
   core-lint-check:
@@ -226,6 +228,20 @@ tasks:
           FLAGS: "-i"
     sources: *core_lint_source_files
 
+  py-lint-check:
+    cmds:
+      - task: "py-lint"
+        vars:
+          BLACK_FLAGS: "--check"
+          RUFF_FLAGS: ""
+
+  py-lint-fix:
+    cmds:
+      - task: "py-lint"
+        vars:
+          BLACK_FLAGS: ""
+          RUFF_FLAGS: "--fix"
+
   yamllint:
     deps: ["lint-venv"]
     cmds:
@@ -247,6 +263,22 @@ tasks:
           \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.inc" \) \
           -print0 | \
             xargs -0 clang-format {{.FLAGS}} -Werror
+
+  py-lint:
+    internal: true
+    requires:
+      vars: ["BLACK_FLAGS", "RUFF_FLAGS"]
+    deps: ["lint-venv"]
+    cmds:
+      - for:
+          - "components/clp-package-utils/clp_package_utils"
+          - "components/clp-py-utils/clp_py_utils"
+          - "components/job-orchestration/job_orchestration"
+        cmd: |-
+          . "{{.LINT_VENV_DIR}}/bin/activate"
+          cd "{{.ITEM}}"
+          black --color --line-length 100 {{.BLACK_FLAGS}} .
+          ruff check {{.RUFF_FLAGS}} .
 
   core-submodules:
     internal: true

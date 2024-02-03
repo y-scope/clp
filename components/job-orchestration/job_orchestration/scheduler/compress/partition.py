@@ -4,19 +4,24 @@ import pathlib
 import typing
 
 import msgpack
-
 from clp_py_utils.compression import (
     FileMetadata,
     FilesPartition,
     group_files_by_similar_filenames,
 )
-from job_orchestration.scheduler.job_config import PathsToCompress, ClpIoConfig
+from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
 
 
 class PathsToCompressBuffer:
-    def __init__(self, maintain_file_ordering: bool, empty_directories_allowed: bool,
-                 scheduling_job_id: int, zstd_cctx, clp_io_config: ClpIoConfig,
-                 clp_metadata_db_connection_config: dict):
+    def __init__(
+        self,
+        maintain_file_ordering: bool,
+        empty_directories_allowed: bool,
+        scheduling_job_id: int,
+        zstd_cctx,
+        clp_io_config: ClpIoConfig,
+        clp_metadata_db_connection_config: dict,
+    ):
         self.__files: typing.List[FileMetadata] = []
         self.__tasks: typing.List[typing.Dict[str, typing.Any]] = []
         self.__partition_info: typing.List[typing.Dict[str, typing.Any]] = []
@@ -36,7 +41,7 @@ class PathsToCompressBuffer:
             "task_id": -1,
             "clp_io_config_json": clp_io_config.json(exclude_none=True),
             "paths_to_compress_json": None,
-            "clp_metadata_db_connection_config": clp_metadata_db_connection_config
+            "clp_metadata_db_connection_config": clp_metadata_db_connection_config,
         }
 
     def get_tasks(self):
@@ -62,23 +67,30 @@ class PathsToCompressBuffer:
 
     def contains_paths(self):
         return len(self.__files) > 0 or (
-                self.__empty_directories and len(self.__empty_directories) > 0)
+            self.__empty_directories and len(self.__empty_directories) > 0
+        )
 
     def __submit_partition_for_compression(self, partition: FilesPartition):
         files, file_paths, group_ids, st_sizes, partition_total_file_size = partition.pop_files()
-        paths_to_compress = PathsToCompress(file_paths=file_paths, group_ids=group_ids, st_sizes=st_sizes)
+        paths_to_compress = PathsToCompress(
+            file_paths=file_paths, group_ids=group_ids, st_sizes=st_sizes
+        )
 
         if self.__empty_directories is not None and len(self.__empty_directories) > 0:
             paths_to_compress.empty_directories = self.__empty_directories
             self.__empty_directories = []
 
-        self.__partition_info.append({
-            'partition_original_size': str(sum(st_sizes)),
-            'clp_paths_to_compress': self.__zstd_cctx.compress(msgpack.packb(paths_to_compress.dict(exclude_none=True)))
-        })
+        self.__partition_info.append(
+            {
+                "partition_original_size": str(sum(st_sizes)),
+                "clp_paths_to_compress": self.__zstd_cctx.compress(
+                    msgpack.packb(paths_to_compress.dict(exclude_none=True))
+                ),
+            }
+        )
 
         task_arguments = self.__task_arguments.copy()
-        task_arguments['paths_to_compress_json'] = paths_to_compress.json(exclude_none=True)
+        task_arguments["paths_to_compress_json"] = paths_to_compress.json(exclude_none=True)
         self.__tasks.append(copy.deepcopy(task_arguments))
         self.num_tasks += 1
 
@@ -97,8 +109,8 @@ class PathsToCompressBuffer:
         group_ix = 0
         while len(groups) > 0:
             group_file_ix = next_file_ix_per_group[group_ix]
-            group_id = groups[group_ix]['id']
-            group_files = groups[group_ix]['files']
+            group_id = groups[group_ix]["id"]
+            group_files = groups[group_ix]["files"]
 
             file = group_files[group_file_ix]
 
@@ -149,13 +161,12 @@ class PathsToCompressBuffer:
 
                     # Compress partition if ready
                     if partition.get_total_file_size() >= self.__target_archive_size:
-                        self.__total_file_size -= self.__submit_partition_for_compression(
-                            partition)
+                        self.__total_file_size -= self.__submit_partition_for_compression(partition)
                         if self.__total_file_size < self.__target_archive_size:
                             # Not enough files to fill a partition, so break
                             break
                 # Pop compressed files
-                self.__files = self.__files[file_ix + 1:]
+                self.__files = self.__files[file_ix + 1 :]
 
             # Compress remaining partial partition if necessary
             if flush_buffer and self.contains_paths():
@@ -171,8 +182,8 @@ class PathsToCompressBuffer:
             group_ix = 0
             while len(groups) > 0:
                 group_file_ix = next_file_ix_per_group[group_ix]
-                group_id = groups[group_ix]['id']
-                group_files = groups[group_ix]['files']
+                group_id = groups[group_ix]["id"]
+                group_files = groups[group_ix]["files"]
 
                 file = group_files[group_file_ix]
 
@@ -204,7 +215,7 @@ class PathsToCompressBuffer:
             # Pop compressed files
             remaining_files = []
             for group_ix, group in enumerate(groups):
-                group_files = group['files']
+                group_files = group["files"]
                 group_file_ix = next_file_ix_per_group[group_ix]
                 for i in range(group_file_ix, len(group_files)):
                     remaining_files.append(group_files[i])

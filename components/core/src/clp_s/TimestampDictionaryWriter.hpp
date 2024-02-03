@@ -60,15 +60,20 @@ public:
 
     uint64_t get_pattern_id(TimestampPattern const* pattern);
 
-    epochtime_t ingest_entry(std::string const& key, std::string const& timestamp, uint64_t& id);
+    epochtime_t ingest_entry(
+            std::string const& key,
+            int32_t node_id,
+            std::string const& timestamp,
+            uint64_t& pattern_id
+    );
 
-    void ingest_entry(std::string const& key, double timestamp);
+    void ingest_entry(std::string const& key, int32_t node_id, double timestamp);
 
-    void ingest_entry(std::string const& key, int64_t timestamp);
+    void ingest_entry(std::string const& key, int32_t node_id, int64_t timestamp);
 
 private:
     void merge_local_range();
-    static void write_timestamp_entries(
+    void write_timestamp_entries(
             std::map<std::string, TimestampEntry> const& ranges,
             ZstdCompressor& compressor
     );
@@ -87,8 +92,9 @@ private:
 
     pattern_to_id_t m_pattern_to_id;
     uint64_t m_next_id{};
-    std::map<std::string, TimestampEntry> m_global_column_to_range;
-    std::map<std::string, TimestampEntry> m_local_column_to_range;
+    std::map<std::string, TimestampEntry> m_global_column_key_to_range;
+    std::map<std::string, TimestampEntry> m_local_column_key_to_range;
+    std::unordered_map<int32_t, TimestampEntry> m_local_column_id_to_range;
 };
 }  // namespace clp_s
 

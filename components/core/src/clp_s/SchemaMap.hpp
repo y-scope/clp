@@ -2,13 +2,14 @@
 #define CLP_S_SCHEMAMAP_HPP
 
 #include <map>
-#include <set>
 #include <string>
+
+#include "Schema.hpp"
 
 namespace clp_s {
 class SchemaMap {
 public:
-    typedef std::map<std::set<int32_t>, int32_t> schema_map_t;
+    using schema_map_t = std::map<Schema, int32_t>;
 
     // Constructor
     explicit SchemaMap(std::string const& archives_dir, int compression_level)
@@ -22,7 +23,7 @@ public:
      * @param schema
      * @return the Id of the schema
      */
-    int32_t add_schema(std::set<int32_t>& schema);
+    int32_t add_schema(Schema const& schema);
 
     /**
      * Write the contents of the SchemaMap to archives_dir/schema_ids

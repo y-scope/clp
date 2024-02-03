@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from enum import IntEnum, auto
+from enum import auto, IntEnum
 
 TASK_QUEUE_LOWEST_PRIORITY = 1
 TASK_QUEUE_HIGHEST_PRIORITY = 3

@@ -102,8 +102,14 @@ public:
     void decompress_empty_directories(std::string const& output_dir);
 
     std::unique_ptr<MetadataDB::FileIterator> get_file_iterator() {
-        return m_metadata_db
-                .get_file_iterator(cEpochTimeMin, cEpochTimeMax, "", false, cInvalidSegmentId);
+        return m_metadata_db.get_file_iterator(
+                cEpochTimeMin,
+                cEpochTimeMax,
+                "",
+                false,
+                cInvalidSegmentId,
+                false
+        );
     }
 
     std::unique_ptr<MetadataDB::FileIterator> get_file_iterator(std::string const& file_path) {
@@ -112,23 +118,42 @@ public:
                 cEpochTimeMax,
                 file_path,
                 false,
-                cInvalidSegmentId
+                cInvalidSegmentId,
+                false
         );
-    }
-
-    std::unique_ptr<MetadataDB::FileIterator>
-    get_file_iterator(epochtime_t begin_ts, epochtime_t end_ts, std::string const& file_path) {
-        return m_metadata_db
-                .get_file_iterator(begin_ts, end_ts, file_path, false, cInvalidSegmentId);
     }
 
     std::unique_ptr<MetadataDB::FileIterator> get_file_iterator(
             epochtime_t begin_ts,
             epochtime_t end_ts,
             std::string const& file_path,
-            segment_id_t segment_id
+            bool order_by_segment_end_ts
     ) {
-        return m_metadata_db.get_file_iterator(begin_ts, end_ts, file_path, true, segment_id);
+        return m_metadata_db.get_file_iterator(
+                begin_ts,
+                end_ts,
+                file_path,
+                false,
+                cInvalidSegmentId,
+                order_by_segment_end_ts
+        );
+    }
+
+    std::unique_ptr<MetadataDB::FileIterator> get_file_iterator(
+            epochtime_t begin_ts,
+            epochtime_t end_ts,
+            std::string const& file_path,
+            segment_id_t segment_id,
+            bool order_by_segment_end_ts
+    ) {
+        return m_metadata_db.get_file_iterator(
+                begin_ts,
+                end_ts,
+                file_path,
+                true,
+                segment_id,
+                order_by_segment_end_ts
+        );
     }
 
 private:
