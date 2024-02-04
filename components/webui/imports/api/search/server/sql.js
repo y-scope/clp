@@ -5,17 +5,11 @@ import {logger} from "/imports/utils/logger";
 import {sleep} from "../../../utils/utils";
 import {JOB_STATUS_WAITING_STATES, JobStatus} from "../constants";
 
-const SEARCH_JOBS_TABLE_NAME = "distributed_search_jobs";
+const SEARCH_JOBS_TABLE_NAME = "search_jobs";
 const SEARCH_JOBS_TABLE_COLUMN_NAMES = {
     ID: "id",
     STATUS: "status",
-    STATUS_MSG: "status_msg",
-    CREATION_TIME: "creation_time",
-    START_TIME: "start_time",
-    DURATION: "duration",
-    REDUCER_HOST:  "reducer_host",
-    REDUCER_PORT:  "reducer_port",
-    SEARCH_CONFIG:  "search_config",
+    SEARCH_CONFIG: "search_config",
 };
 
 /**
@@ -25,7 +19,7 @@ const SEARCH_JOBS_TABLE_COLUMN_NAMES = {
 export let SQL_CONNECTION = null;
 
 /**
- * Initializes the SQL database connection using environment variables.
+ * Initializes the SQL database connection.
  *
  * @throws {Error} if unable to connect to the SQL database.
  */
@@ -69,8 +63,9 @@ export const submitQuery = async (args) => {
     try {
         const [queryInsertResults] = await SQL_CONNECTION.query(
             `INSERT INTO ${SEARCH_JOBS_TABLE_NAME}
-                 (search_config)
-             VALUES (?) `, [Buffer.from(msgpack.encode(args))],
+                (${SEARCH_JOBS_TABLE_COLUMN_NAMES.SEARCH_CONFIG})
+                VALUES (?)`,
+            [Buffer.from(msgpack.encode(args))],
         );
         jobId = queryInsertResults.insertId;
     } catch (e) {
@@ -93,17 +88,19 @@ export const waitTillJobFinishes = async (jobId) => {
 
     try {
         while (true) {
-            const [rows, _] = await SQL_CONNECTION.query(`SELECT status
-                                                          FROM ${SEARCH_JOBS_TABLE_NAME}
-                                                          WHERE id = ${jobId}`);
+            const [rows, _] = await SQL_CONNECTION.query(
+                `SELECT ${SEARCH_JOBS_TABLE_COLUMN_NAMES.STATUS}
+                    FROM ${SEARCH_JOBS_TABLE_NAME}
+                    WHERE ${SEARCH_JOBS_TABLE_COLUMN_NAMES.ID} = ${jobId}`
+            );
             const status = rows[0][SEARCH_JOBS_TABLE_COLUMN_NAMES.STATUS];
 
             if (false === JOB_STATUS_WAITING_STATES.includes(status)) {
-                logger.info(`Job ${jobId} exited with status = ${status}: ${Object.keys(
-                        JobStatus)[status]}.`)
+                logger.info(`Job ${jobId} exited with status=${status}: ${Object.keys(
+                    JobStatus)[status]}.`);
 
                 if (JobStatus.CANCELLED === status) {
-                  errorMsg = `Job was cancelled.`
+                  errorMsg = `Job was cancelled.`;
                 } else if (JobStatus.SUCCESS !== status) {
                     errorMsg = `Job exited with unexpected status=${status}: ${Object.keys(
                         JobStatus)[status]}.`;
@@ -128,7 +125,10 @@ export const waitTillJobFinishes = async (jobId) => {
  * @param {string} jobId of the job to be cancelled
  */
 export const cancelQuery = async (jobId) => {
-    await SQL_CONNECTION.query(`UPDATE ${SEARCH_JOBS_TABLE_NAME}
-                                SET status = ${JobStatus.CANCELLING}
-                                WHERE id = (?)`, [jobId]);
+    await SQL_CONNECTION.query(
+        `UPDATE ${SEARCH_JOBS_TABLE_NAME}
+            SET ${SEARCH_JOBS_TABLE_COLUMN_NAMES.STATUS} = ${JobStatus.CANCELLING}
+            WHERE ${SEARCH_JOBS_TABLE_COLUMN_NAMES.ID} = (?)`,
+        [jobId]
+    );
 };
