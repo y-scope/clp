@@ -15,7 +15,9 @@ private:
      * @param cur the expression to narrow
      * @return the narrowed expression
      */
-    static std::shared_ptr<Expression> narrow(std::shared_ptr<Expression> cur);
+    std::shared_ptr<Expression> narrow(std::shared_ptr<Expression> cur);
+
+    bool m_should_renormalize{false};
 };
 }  // namespace clp_s::search
 

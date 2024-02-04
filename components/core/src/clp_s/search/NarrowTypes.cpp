@@ -4,10 +4,17 @@
 #include "EmptyExpr.hpp"
 #include "FilterExpr.hpp"
 #include "Literal.hpp"
+#include "OrExpr.hpp"
+#include "OrOfAndForm.hpp"
 
 namespace clp_s::search {
 std::shared_ptr<Expression> NarrowTypes::run(std::shared_ptr<Expression>& expr) {
     expr = narrow(expr);
+
+    if (m_should_renormalize) {
+        OrOfAndForm normalize;
+        expr = normalize.run(expr);
+    }
 
     ConstantProp constant_prop;
     return constant_prop.run(expr);
@@ -20,6 +27,7 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
             auto new_child = narrow(child);
             if (new_child != child) {
                 new_child->copy_replace(cur.get(), it);
+                m_should_renormalize = true;
             }
         }
     } else if (auto filter = std::dynamic_pointer_cast<FilterExpr>(cur)) {
@@ -36,12 +44,18 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
         int64_t tmpint;
         double tmpdouble;
         bool tmpbool;
+        bool narrowed_clp_string{false};
+        bool narrowed_var_string{false};
+        bool matches_var_and_clp_string = column->matches_type(LiteralType::ClpStringT)
+                                          && column->matches_type(LiteralType::VarStringT);
 
         if (false == literal->as_any(op)) {
             if (false == literal->as_clp_string(tmpstring, op)) {
+                narrowed_clp_string = true;
                 column->remove_matching_type(LiteralType::ClpStringT);
             }
             if (false == literal->as_var_string(tmpstring, op)) {
+                narrowed_var_string = true;
                 column->remove_matching_type(LiteralType::VarStringT);
             }
             if (false == literal->as_int(tmpint, op)) {
@@ -69,6 +83,35 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
 
         if (false == column->matches_any(cAllTypes)) {
             return EmptyExpr::create();
+        }
+
+        /**
+         * Fix for bug #254
+         * If a filtering operation which can originally match a clp string and a var string is
+         * narrowed to just one of those underlying types AND the filter is performing a not equals
+         * operation then we need to replace the filter with an OR across that filter expression,
+         * and an EXISTS expression for the other underlying type.
+         *
+         * This is because if we are trying to see if some value is not equal to a specific variable
+         * string we can guarantee that every clp string is not equal to that specific variable
+         * string (because that variable string must not contain a space, but any clp string must).
+         * The reverse is true for checking if some value matches a specific clp string.
+         *
+         * Really the issue is that we have multiple string types. Technically similar logic applies
+         * for the date string column types, but we don't allow string matches against them so we
+         * don't have to worry about supporting that here.
+         */
+        if ((filter->is_inverted() && FilterOperation::EQ == op)
+            || (false == filter->is_inverted() && FilterOperation::NEQ == op)
+                       && matches_var_and_clp_string && narrowed_clp_string != narrowed_var_string)
+        {
+            auto exists_column_type
+                    = narrowed_clp_string ? LiteralType::ClpStringT : LiteralType::VarStringT;
+            auto exists_column = filter->get_column()->copy();
+            exists_column->set_matching_type(exists_column_type);
+            auto exists_expr = FilterExpr::create(exists_column, FilterOperation::EXISTS);
+            auto filter_as_expr_type = std::static_pointer_cast<Expression>(filter);
+            return OrExpr::create(filter_as_expr_type, exists_expr);
         }
     }
     return cur;
