@@ -10,7 +10,7 @@ import {INVALID_JOB_ID, isSearchSignalQuerying, SearchSignal} from "../../api/se
 
 import "react-datepicker/dist/react-datepicker.css";
 import LOCAL_STORAGE_KEYS from "../constants/LOCAL_STORAGE_KEYS";
-import {changeTimezoneToUTCWithoutChangingTime, DEFAULT_TIME_RANGE_GETTER} from "./datetime";
+import {changeTimezoneToUtcWithoutChangingTime, DEFAULT_TIME_RANGE_GETTER} from "./datetime";
 import {SearchControls} from "./SearchControls";
 import {SearchResults} from "./SearchResults";
 import {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResultsTable";
@@ -103,9 +103,9 @@ const SearchView = () => {
         setLocalLastSearchSignal(SearchSignal.REQ_QUERYING);
         resetVisibleResultSettings();
 
-        const timestampBeginMillis = changeTimezoneToUTCWithoutChangingTime(timeRange.begin).
+        const timestampBeginMillis = changeTimezoneToUtcWithoutChangingTime(timeRange.begin).
             getTime();
-        const timestampEndMillis = changeTimezoneToUTCWithoutChangingTime(timeRange.end).getTime();
+        const timestampEndMillis = changeTimezoneToUtcWithoutChangingTime(timeRange.end).getTime();
 
         const args = {
             queryString: queryString,

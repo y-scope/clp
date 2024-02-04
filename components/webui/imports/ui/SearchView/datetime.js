@@ -19,6 +19,12 @@ const TIME_RANGE_MODIFIER = Object.freeze({
 });
 
 // TODO Switch date pickers so we don't have to do this hack
+/**
+ * Converts a DateTime object into a JavaScript Date object without changing the timestamp (hour,
+ * minute, second, etc.).
+ * @param dateTime
+ * @returns {Date} The corresponding Date object
+ */
 const dateTimeToDateWithoutChangingTimestamp = (dateTime) => {
     return dateTime.toLocal().set({
         year: dateTime.year,
@@ -53,12 +59,12 @@ export const TIME_RANGE_PRESET_LABEL = Object.freeze({
  * @param {string} token representing the time range to compute; format: `unit_modifier_amount`
  * @returns {Object} containing Date objects representing the computed begin and end time range
  */
-export const getRangeComputer = (token) => () => {
+export const computeTimeRange = (token) => () => {
     const [unit, modifier, amount] = token.split("_");
     let endTime;
     let beginTime;
 
-    if (unit === "all") {
+    if (TIME_RANGE_UNIT.ALL === unit) {
         endTime = DateTime.utc().plus({years: 1});
         beginTime = DateTime.fromMillis(0, {zone: "UTC"});
     } else {
@@ -93,7 +99,7 @@ export const getRangeComputer = (token) => () => {
  * @param {Date} date Date object to convert to UTC
  * @returns {Date} A new Date object with the same time values in UTC timezone
  */
-export const changeTimezoneToUTCWithoutChangingTime = (date) => {
+export const changeTimezoneToUtcWithoutChangingTime = (date) => {
     return new Date(Date.UTC(
         date.getFullYear(),
         date.getMonth(),
@@ -105,6 +111,6 @@ export const changeTimezoneToUTCWithoutChangingTime = (date) => {
     ));
 };
 
-export const DEFAULT_TIME_RANGE_GETTER = getRangeComputer(
+export const DEFAULT_TIME_RANGE_GETTER = computeTimeRange(
     `${TIME_RANGE_UNIT.ALL}_${TIME_RANGE_MODIFIER.NONE}_0`,
 );
