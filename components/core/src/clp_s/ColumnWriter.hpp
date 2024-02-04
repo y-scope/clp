@@ -188,23 +188,6 @@ private:
     std::vector<int64_t> m_timestamps;
     std::vector<int64_t> m_timestamp_encodings;
 };
-
-class FloatDateStringColumnWriter : public BaseColumnWriter {
-public:
-    // Constructor
-    FloatDateStringColumnWriter(int32_t id) : BaseColumnWriter(id) {}
-
-    // Destructor
-    ~FloatDateStringColumnWriter() override = default;
-
-    // Methods inherited from BaseColumnWriter
-    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
-
-    void store(ZstdCompressor& compressor) override;
-
-private:
-    std::vector<double> m_timestamps;
-};
 }  // namespace clp_s
 
 #endif  // CLP_S_COLUMNWRITER_HPP

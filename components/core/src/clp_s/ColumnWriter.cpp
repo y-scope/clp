@@ -98,17 +98,4 @@ void DateStringColumnWriter::store(ZstdCompressor& compressor) {
             m_timestamp_encodings.size() * sizeof(int64_t)
     );
 }
-
-void FloatDateStringColumnWriter::add_value(ParsedMessage::variable_t& value, size_t& size) {
-    size = sizeof(double);
-    double timestamp = std::get<double>(value);
-    m_timestamps.push_back(timestamp);
-}
-
-void FloatDateStringColumnWriter::store(ZstdCompressor& compressor) {
-    compressor.write(
-            reinterpret_cast<char const*>(m_timestamps.data()),
-            m_timestamps.size() * sizeof(double)
-    );
-}
 }  // namespace clp_s
