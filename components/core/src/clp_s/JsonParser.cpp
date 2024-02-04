@@ -157,16 +157,24 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                         node_id = m_schema_tree->add_node(
                                 node_id_stack.top(),
                                 NodeType::FLOATDATESTRING,
-                                m_timestamp_key
+                                cur_key
                         );
+                        m_timestamp_dictionary->ingest_entry(m_timestamp_key, node_id, ret_double);
                         m_current_parsed_message.add_value(node_id, ret_double);
                     } else {
                         node_id = m_schema_tree->add_node(
                                 node_id_stack.top(),
                                 NodeType::DATESTRING,
-                                m_timestamp_key
+                                cur_key
                         );
-                        m_current_parsed_message.add_value(node_id, value);
+                        uint64_t encoding_id{0};
+                        epochtime_t timestamp = m_timestamp_dictionary->ingest_entry(
+                                m_timestamp_key,
+                                node_id,
+                                value,
+                                encoding_id
+                        );
+                        m_current_parsed_message.add_value(node_id, encoding_id, timestamp);
                     }
                     matches_timestamp = may_match_timestamp = can_match_timestamp = false;
                 } else if (value.find(' ') != std::string::npos) {
