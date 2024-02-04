@@ -1,6 +1,9 @@
 #ifndef CLP_S_SEARCH_NARROWTYPES_HPP
 #define CLP_S_SEARCH_NARROWTYPES_HPP
 
+#include <vector>
+
+#include "ColumnDescriptor.hpp"
 #include "Transformation.hpp"
 
 namespace clp_s::search {
@@ -18,6 +21,7 @@ private:
     std::shared_ptr<Expression> narrow(std::shared_ptr<Expression> cur);
 
     bool m_should_renormalize{false};
+    std::vector<std::shared_ptr<ColumnDescriptor>> m_local_exists_descriptors;
 };
 }  // namespace clp_s::search
 

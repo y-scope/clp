@@ -56,6 +56,13 @@ public:
      */
     std::string const& get_token() const { return m_token; }
 
+    /**
+     * Equal to operator to allow comparison between descriptor tokens.
+     * @return true if this token is equal to right hand side
+     * @return false if this token is not equal to the right hand side
+     */
+    bool operator==(DescriptorToken const& rhs) const { return m_token == rhs.m_token; }
+
 private:
     bool m_wildcard{};
     bool m_regex{};
@@ -187,6 +194,13 @@ public:
     bool matches_any(LiteralTypeBitmask mask) override { return m_flags & mask; }
 
     bool matches_exactly(LiteralTypeBitmask mask) override { return m_flags == mask; }
+
+    /**
+     * Equal to operator to allow comparison between two column descriptors.
+     * @return true if this column descriptor is equal to the right hand side
+     * @return false if this column descriptor is not equal to the right hand side
+     */
+    bool operator==(ColumnDescriptor const& rhs) const;
 
 private:
     DescriptorList m_descriptors;  // list of descriptors describing the column
