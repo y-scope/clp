@@ -63,7 +63,7 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
                 column->remove_matching_type(LiteralType::EpochDateT);
             }
             if (false == literal->as_float_date()) {
-                column->remove_matching_type(LiteralType::EpochDateT);
+                column->remove_matching_type(LiteralType::FloatDateT);
             }
         }
 
