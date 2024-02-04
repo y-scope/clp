@@ -125,6 +125,7 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
                     [exists_column](auto const& rhs) -> bool { return *exists_column == *rhs; }
             );
             if (m_local_exists_descriptors.end() == it) {
+                m_local_exists_descriptors.push_back(exists_column);
                 auto exists_expr = FilterExpr::create(exists_column, FilterOperation::EXISTS);
                 auto filter_as_expr_type = std::static_pointer_cast<Expression>(filter);
                 return OrExpr::create(filter_as_expr_type, exists_expr);
