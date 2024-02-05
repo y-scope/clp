@@ -8,8 +8,9 @@ void SchemaWriter::open(std::string path, int compression_level) {
     m_compression_level = compression_level;
 }
 
-void SchemaWriter::close() {
+size_t SchemaWriter::close() {
     m_compressor.close();
+    size_t compressed_size = m_file_writer.get_pos();
     m_file_writer.close();
 
     for (auto i : m_columns) {
@@ -17,6 +18,7 @@ void SchemaWriter::close() {
     }
 
     m_columns.clear();
+    return compressed_size;
 }
 
 void SchemaWriter::append_column(BaseColumnWriter* column_writer) {

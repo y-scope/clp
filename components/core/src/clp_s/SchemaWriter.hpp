@@ -44,8 +44,9 @@ public:
 
     /**
      * Closes the schema writer.
+     * @return the compressed size of the schema table in bytes
      */
-    void close();
+    [[nodiscard]] size_t close();
 
 private:
     FileWriter m_file_writer;

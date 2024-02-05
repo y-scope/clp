@@ -42,20 +42,22 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_timestamp_dict->open_local(timestamp_local_dict_path, m_compression_level);
 }
 
-void ArchiveWriter::close() {
-    m_var_dict->close();
-    m_log_dict->close();
-    m_array_dict->close();
-    m_timestamp_dict->close_local();
+size_t ArchiveWriter::close() {
+    size_t compressed_size{0};
+    compressed_size += m_var_dict->close();
+    compressed_size += m_log_dict->close();
+    compressed_size += m_array_dict->close();
+    compressed_size += m_timestamp_dict->close_local();
 
     for (auto& i : m_schema_id_to_writer) {
         i.second->store();
-        i.second->close();
+        compressed_size += i.second->close();
         delete i.second;
     }
 
     m_schema_id_to_writer.clear();
     m_encoded_message_size = 0UL;
+    return compressed_size;
 }
 
 void ArchiveWriter::append_message(

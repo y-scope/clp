@@ -8,6 +8,7 @@ import subprocess
 import yaml
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
+from clp_py_utils.clp_config import StorageEngine
 from job_orchestration.executor.compress.celery import app
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
@@ -18,6 +19,61 @@ from job_orchestration.scheduler.scheduler_data import (
 
 # Setup logging
 logger = get_task_logger(__name__)
+
+
+def make_clp_command(
+    clp_home: pathlib.Path,
+    archive_output_dir: pathlib.Path,
+    clp_config: ClpIoConfig,
+    db_config_file_path: pathlib.Path,
+):
+    path_prefix_to_remove = clp_config.input.path_prefix_to_remove
+
+    # fmt: off
+    compression_cmd = [
+        str(clp_home / "bin" / "clp"),
+        "c", str(archive_output_dir),
+        "--print-archive-stats-progress",
+        "--target-dictionaries-size", str(clp_config.output.target_dictionaries_size),
+        "--target-segment-size", str(clp_config.output.target_segment_size),
+        "--target-encoded-file-size", str(clp_config.output.target_encoded_file_size),
+        "--db-config-file", str(db_config_file_path),
+    ]
+    # fmt: on
+    if path_prefix_to_remove:
+        compression_cmd.append("--remove-path-prefix")
+        compression_cmd.append(path_prefix_to_remove)
+
+    # Use schema file if it exists
+    schema_path: pathlib.Path = clp_home / "etc" / "clp-schema.txt"
+    if schema_path.exists():
+        compression_cmd.append("--schema-path")
+        compression_cmd.append(str(schema_path))
+
+    return compression_cmd
+
+
+def make_clp_s_command(
+    clp_home: pathlib.Path,
+    archive_output_dir: pathlib.Path,
+    clp_config: ClpIoConfig,
+    db_config_file_path: pathlib.Path,
+):
+    # fmt: off
+    compression_cmd = [
+        str(clp_home / "bin" / "clp-s"),
+        "c", str(archive_output_dir),
+        "--print-archive-stats",
+        "--target-encoded-size", str(clp_config.output.target_segment_size + clp_config.output.target_dictionaries_size),
+        "--db-config-file", str(db_config_file_path),
+    ]
+    # fmt: on
+
+    if clp_config.input.timestamp_key is not None:
+        compression_cmd.append("--timestamp-key")
+        compression_cmd.append(clp_config.input.timestamp_key)
+
+    return compression_cmd
 
 
 def run_clp(
@@ -45,11 +101,9 @@ def run_clp(
     :param clp_metadata_db_connection_config
     :return: tuple -- (whether compression was successful, output messages)
     """
+    clp_storage_engine = str(os.getenv("CLP_STORAGE_ENGINE"))
+
     instance_id_str = f"compression-job-{job_id}-task-{task_id}"
-
-    path_prefix_to_remove = clp_config.input.path_prefix_to_remove
-
-    file_paths = paths_to_compress.file_paths
 
     # Generate database config file for clp
     db_config_file_path = data_dir / f"{instance_id_str}-db-config.yml"
@@ -57,29 +111,26 @@ def run_clp(
     yaml.safe_dump(clp_metadata_db_connection_config, db_config_file)
     db_config_file.close()
 
-    # Start assembling compression command
-    # fmt: off
-    compression_cmd = [
-        str(clp_home / "bin" / "clp"),
-        "c", str(archive_output_dir),
-        "--print-archive-stats-progress",
-        "--target-dictionaries-size", str(clp_config.output.target_dictionaries_size),
-        "--target-segment-size", str(clp_config.output.target_segment_size),
-        "--target-encoded-file-size", str(clp_config.output.target_encoded_file_size),
-        "--db-config-file", str(db_config_file_path),
-    ]
-    # fmt: on
-    if path_prefix_to_remove:
-        compression_cmd.append("--remove-path-prefix")
-        compression_cmd.append(path_prefix_to_remove)
-
-    # Use schema file if it exists
-    schema_path: pathlib.Path = clp_home / "etc" / "clp-schema.txt"
-    if schema_path.exists():
-        compression_cmd.append("--schema-path")
-        compression_cmd.append(str(schema_path))
+    if StorageEngine.CLP == clp_storage_engine:
+        compression_cmd = make_clp_command(
+            clp_home=clp_home,
+            archive_output_dir=archive_output_dir,
+            clp_config=clp_config,
+            db_config_file_path=db_config_file_path,
+        )
+    elif StorageEngine.CLP_S == clp_storage_engine:
+        compression_cmd = make_clp_s_command(
+            clp_home=clp_home,
+            archive_output_dir=archive_output_dir,
+            clp_config=clp_config,
+            db_config_file_path=db_config_file_path,
+        )
+    else:
+        logger.error(f"Unsupported storage engine {clp_storage_engine}")
+        return False, {"error_message": f"Unsupported storage engine {clp_storage_engine}"}
 
     # Prepare list of paths to compress for clp
+    file_paths = paths_to_compress.file_paths
     log_list_path = data_dir / f"{instance_id_str}-log-paths.txt"
     with open(log_list_path, "w") as file:
         if len(file_paths) > 0:

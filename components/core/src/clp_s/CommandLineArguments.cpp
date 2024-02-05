@@ -5,9 +5,55 @@
 #include <boost/program_options.hpp>
 #include <spdlog/spdlog.h>
 
+#include "FileReader.hpp"
+
 namespace po = boost::program_options;
 
 namespace clp_s {
+namespace {
+/**
+ * Read a list of newline-delimited paths from a file and put them into a vector passed by reference
+ * TODO: deduplicate this code with the version in clp
+ * @param input_path_list_file_path path to the file containing the list of paths
+ * @param path_destination the vector that the paths are pushed into
+ * @return true on success
+ * @return false on error
+ */
+bool read_paths_from_file(
+        std::string const& input_path_list_file_path,
+        std::vector<std::string>& path_destination
+) {
+    FileReader reader;
+    auto error_code = reader.try_open(input_path_list_file_path);
+    if (ErrorCodeFileNotFound == error_code) {
+        SPDLOG_ERROR(
+                "Failed to open input path list file {} - file not found",
+                input_path_list_file_path
+        );
+        return false;
+    } else if (ErrorCodeSuccess != error_code) {
+        SPDLOG_ERROR("Error opening input path list file {}", input_path_list_file_path);
+        return false;
+    }
+
+    std::string line;
+    while (true) {
+        error_code = reader.try_read_to_delimiter('\n', false, false, line);
+        if (ErrorCodeSuccess != error_code) {
+            break;
+        }
+        if (false == line.empty()) {
+            path_destination.push_back(line);
+        }
+    }
+
+    if (ErrorCodeEndOfFile != error_code) {
+        return false;
+    }
+    return true;
+}
+}  // namespace
+
 CommandLineArguments::ParsingResult
 CommandLineArguments::parse_arguments(int argc, char const** argv) {
     if (1 == argc) {
@@ -97,6 +143,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format on
 
             po::options_description compression_options("Compression options");
+            std::string metadata_db_config_file_path;
+            std::string input_path_list_file_path;
             // clang-format off
             compression_options.add_options()(
                     "compression-level",
@@ -114,6 +162,21 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<std::string>(&m_timestamp_key)->value_name("TIMESTAMP_COLUMN_KEY")->
                         default_value(m_timestamp_key),
                     "Path (e.g. x.y) for the field containing the log event's timestamp."
+            )(
+                    "db-config-file",
+                    po::value<std::string>(&metadata_db_config_file_path)->value_name("FILE")->
+                    default_value(metadata_db_config_file_path),
+                    "Global metadata DB YAML config"
+            )(
+                    "files-from,f",
+                    po::value<std::string>(&input_path_list_file_path)
+                            ->value_name("FILE")
+                            ->default_value(input_path_list_file_path),
+                    "Compress files specified in FILE"
+            )(
+                    "print-archive-stats",
+                    po::bool_switch(&m_print_archive_stats),
+                    "Print statistics (json) about the archive after it's compressed."
             );
             // clang-format on
 
@@ -152,12 +215,42 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 return ParsingResult::InfoCommand;
             }
 
+            if (m_archives_dir.empty()) {
+                throw std::invalid_argument("No archives directory specified.");
+            }
+
+            if (false == input_path_list_file_path.empty()) {
+                if (false == read_paths_from_file(input_path_list_file_path, m_file_paths)) {
+                    SPDLOG_ERROR("Failed to read paths from {}", input_path_list_file_path);
+                    return ParsingResult::Failure;
+                }
+            }
+
             if (m_file_paths.empty()) {
                 throw std::invalid_argument("No input paths specified.");
             }
 
-            if (m_archives_dir.empty()) {
-                throw std::invalid_argument("No archives directory specified.");
+            // Parse and validate global metadata DB config
+            if (false == metadata_db_config_file_path.empty()) {
+                clp::GlobalMetadataDBConfig metadata_db_config;
+                try {
+                    metadata_db_config.parse_config_file(metadata_db_config_file_path);
+                } catch (std::exception& e) {
+                    SPDLOG_ERROR("Failed to validate metadata database config - {}.", e.what());
+                    return ParsingResult::Failure;
+                }
+
+                if (clp::GlobalMetadataDBConfig::MetadataDBType::MySQL
+                    != metadata_db_config.get_metadata_db_type())
+                {
+                    SPDLOG_ERROR(
+                            "Invalid metadata database type for {}; only supported type is MySQL.",
+                            m_program_name
+                    );
+                    return ParsingResult::Failure;
+                }
+
+                m_metadata_db_config = std::move(metadata_db_config);
             }
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;

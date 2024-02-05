@@ -40,13 +40,15 @@ public:
 
     /**
      * Closes the global timestamp dictionary
+     * @return the compressed size of the global timestamp dictionary in bytes
      */
-    void close();
+    [[nodiscard]] size_t close();
 
     /**
      * Closes the local timestamp dictionary
+     * @return the compressed size of the local timestamp dictionary in bytes
      */
-    void close_local();
+    [[nodiscard]] size_t close_local();
 
     /**
      * Writes the global timestamp dictionary to disk
@@ -70,6 +72,22 @@ public:
     void ingest_entry(std::string const& key, int32_t node_id, double timestamp);
 
     void ingest_entry(std::string const& key, int32_t node_id, int64_t timestamp);
+
+    /**
+     * TODO: guarantee epoch milliseconds. The current clp-s approach to encoding timestamps and
+     * timestamp ranges makes no effort to convert second and nanosecond encoded timestamps into
+     * millisecond encoded timestamps.
+     * @return the beginning of this archive's time range as milliseconds since the UNIX epoch
+     */
+    epochtime_t get_begin_timestamp() const;
+
+    /**
+     * TODO: guarantee epoch milliseconds. The current clp-s approach to encoding timestamps and
+     * timestamp ranges makes no effort to convert second and nanosecond encoded timestamps into
+     * millisecond encoded timestamps.
+     * @return the end of this archive's time range as milliseconds since the UNIX epoch
+     */
+    epochtime_t get_end_timestamp() const;
 
 private:
     void merge_local_range();

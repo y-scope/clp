@@ -82,6 +82,7 @@ tasks:
         "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
         "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
         "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
+        "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
         "{{.BUILD_DIR}}/nodejs/node/bin/node"
         "{{.PACKAGE_BUILD_DIR}}/bin/"
       - "mkdir -p '{{.PACKAGE_BUILD_DIR}}/var/www/'"
@@ -97,6 +98,7 @@ tasks:
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.BUILD_DIR}}/webui/built/**/*"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "components/clp-package-utils/dist/*.whl"
@@ -155,7 +157,7 @@ tasks:
     cmds:
       - "mkdir -p '{{.CORE_COMPONENT_BUILD_DIR}}'"
       - "cmake -S '{{.SRC_DIR}}' -B '{{.CORE_COMPONENT_BUILD_DIR}}'"
-      - "cmake --build '{{.CORE_COMPONENT_BUILD_DIR}}' --parallel --target clg clo clp"
+      - "cmake --build '{{.CORE_COMPONENT_BUILD_DIR}}' --parallel --target clg clo clp clp-s"
     method: "timestamp"
     sources:
       - "{{.SRC_DIR}}/cmake/**/*"
@@ -168,12 +170,15 @@ tasks:
         test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clg'
         && test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clo'
         && test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clp'
+        && test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clp-s'
       - >-
         test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clg')
         && test {{.TIMESTAMP | unixEpoch}} -lt
         $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clo')
         && test {{.TIMESTAMP | unixEpoch}} -lt
         $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clp')
+        && test {{.TIMESTAMP | unixEpoch}} -lt
+        $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clp-s')
 
   clp-package-utils:
     - task: "python-component"

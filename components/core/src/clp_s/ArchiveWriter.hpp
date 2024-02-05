@@ -49,8 +49,9 @@ public:
 
     /**
      * Closes the archive writer
+     * @return the compressed size of the archive in bytes
      */
-    void close();
+    [[nodiscard]] size_t close();
 
     /**
      * Appends a message to the archive writer

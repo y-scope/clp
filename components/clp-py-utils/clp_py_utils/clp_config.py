@@ -35,6 +35,7 @@ CLP_METADATA_TABLE_PREFIX = "clp_"
 
 class StorageEngine(KebabCaseStrEnum):
     CLP = auto()
+    CLP_S = auto()
 
 
 VALID_STORAGE_ENGINES = [storage_engine.value for storage_engine in StorageEngine]
