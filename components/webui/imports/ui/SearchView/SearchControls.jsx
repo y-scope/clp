@@ -31,7 +31,6 @@ const SearchControlsDatePicker = (props) => (<DatePicker
     className={"timestamp-picker"}
     dateFormat={"MMM d, yyyy h:mm aa"}
     dropdownMode={"select"}
-    popperClassName={"timestamp-picker-popper"}
     showTimeSelect={true}
     timeCaption={"Time"}
     timeFormat={"HH:mm"}

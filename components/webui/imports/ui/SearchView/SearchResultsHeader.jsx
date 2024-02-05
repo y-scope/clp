@@ -55,19 +55,18 @@ export const SearchResultsHeader = ({
     return (<>
         <Container fluid={true}>
             <Row className={"search-results-title-bar"}>
-                <Col className={"mr-auto"}>
+                <Col>
                     <span className={"search-results-count"}>
                         Job ID {jobId} | Results count: {numResultsOnServer}
                     </span>
                 </Col>
-                <Col className={"pr-0"} xs={"auto"}>
+                <Col xs={"auto"}>
                     <OverlayTrigger
                         placement={"left"}
                         trigger={"click"}
-                        overlay={<Popover id={"searchResultsDisplaySettings"}
-                                          className={"search-results-display-settings-container"}>
+                        overlay={<Popover id={"searchResultsDisplaySettings"}>
                             <Form onSubmit={handleMaxLinesPerResultSubmission}>
-                                <InputGroup className={"search-results-display-settings"}>
+                                <InputGroup>
                                     <InputGroup.Text>Max lines per result</InputGroup.Text>
                                     <Form.Control
                                         id={"maxLinesPerResult"}
