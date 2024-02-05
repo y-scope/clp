@@ -2,7 +2,7 @@ import msgpack from "@msgpack/msgpack";
 import mysql from "mysql2/promise";
 
 import {logger} from "/imports/utils/logger";
-import {sleep} from "../../../utils/utils";
+import {sleep} from "../../../utils/misc";
 import {JOB_STATUS_WAITING_STATES, JobStatus} from "../constants";
 
 const SEARCH_JOBS_TABLE_NAME = "search_jobs";

@@ -15,7 +15,7 @@ import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faBars, faSearch, faTimes, faTrash} from "@fortawesome/free-solid-svg-icons";
 
 import {computeTimeRange, TIME_RANGE_PRESET_LABEL} from "./datetime";
-import LOCAL_STORAGE_KEYS from "../constants/LOCAL_STORAGE_KEYS";
+import LOCAL_STORAGE_KEYS from "../constants";
 import {isSearchSignalQuerying, isSearchSignalReq, SearchSignal} from "../../api/search/constants";
 
 import "./SearchControls.scss";

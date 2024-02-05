@@ -9,7 +9,7 @@ import {getCollection, SearchResultsMetadataCollection} from "../../api/search/c
 import {INVALID_JOB_ID, isSearchSignalQuerying, SearchSignal} from "../../api/search/constants";
 
 import "react-datepicker/dist/react-datepicker.css";
-import LOCAL_STORAGE_KEYS from "../constants/LOCAL_STORAGE_KEYS";
+import LOCAL_STORAGE_KEYS from "../constants";
 import {changeTimezoneToUtcWithoutChangingTime, DEFAULT_TIME_RANGE_GETTER} from "./datetime";
 import {SearchControls} from "./SearchControls.jsx";
 import {SearchResults} from "./SearchResults.jsx";
