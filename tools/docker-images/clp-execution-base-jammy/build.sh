@@ -14,4 +14,4 @@ else
     exit 1
 fi
 
-docker build -t clp-execution-${arch_name}-ubuntu-focal:dev ${repo_root} --file ${script_dir}/Dockerfile
+docker build -t clp-execution-x86-ubuntu-focal:dev ${repo_root} --file ${script_dir}/Dockerfile
