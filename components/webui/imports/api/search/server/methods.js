@@ -29,7 +29,7 @@ const updateSearchEventWhenJobFinishes = async (jobId) => {
 /**
  * Creates MongoDB indexes for a specific job's collection.
  *
- * @param {?number} jobId used to identify the Mongo Collection to add indexes
+ * @param {number} jobId used to identify the Mongo Collection to add indexes
  */
 const createMongoIndexes = async (jobId) => {
     const timestampAscendingIndex = {

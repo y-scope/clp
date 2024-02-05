@@ -26,8 +26,7 @@ export const initSearchEventCollection = () => {
  * Object to store references to MongoDB collections.
  * This should only be accessed by the server; clients should use a React referenced-object.
  *
- * @constant
- * @type {Object}
+ * @type {Map<any, any>}
  */
 // FIXME: change to use Map before submission
 export const MY_MONGO_DB = new Map();
