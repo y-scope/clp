@@ -91,7 +91,7 @@ public:
     bool get_next_message(std::string& message);
 
     /**
-     * Gets next message from a filter
+     * Gets the next message matching a filter
      * @param message
      * @param filter
      * @return true if there is a next message
@@ -99,7 +99,7 @@ public:
     bool get_next_message(std::string& message, FilterClass* filter);
 
     /**
-     * Gets next message with a timestamp from a filter
+     * Gets the next message matching a filter, and its timestamp
      * @param message
      * @param timestamp
      * @param filter
@@ -139,7 +139,7 @@ private:
     void generate_json_template(int32_t id);
 
     /**
-     * Generates a json string
+     * Generates a json string from the extracted values
      */
     void generate_json_string();
 

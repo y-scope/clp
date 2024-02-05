@@ -6,9 +6,9 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
         std::string const& collection,
         uint64_t batch_size,
         uint64_t max_num_results,
-        bool output_timestamp
+        bool should_output_timestamp
 )
-        : OutputHandler(output_timestamp),
+        : OutputHandler(should_output_timestamp),
           m_batch_size(batch_size),
           m_max_num_results(max_num_results) {
     try {

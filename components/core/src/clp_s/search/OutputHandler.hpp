@@ -20,7 +20,8 @@ namespace clp_s::search {
 class OutputHandler {
 public:
     // Constructors
-    explicit OutputHandler(bool output_timestamp) : m_output_timestamp(output_timestamp){};
+    explicit OutputHandler(bool should_output_timestamp)
+            : m_should_output_timestamp(should_output_timestamp){};
 
     // Destructor
     virtual ~OutputHandler() = default;
@@ -44,10 +45,10 @@ public:
      */
     virtual void flush() = 0;
 
-    [[nodiscard]] bool output_timestamp() const { return m_output_timestamp; }
+    [[nodiscard]] bool should_output_timestamp() const { return m_should_output_timestamp; }
 
 protected:
-    bool m_output_timestamp;
+    bool m_should_output_timestamp;
 };
 
 /**
@@ -56,8 +57,8 @@ protected:
 class StandardOutputHandler : public OutputHandler {
 public:
     // Constructors
-    explicit StandardOutputHandler(bool output_timestamp = false)
-            : OutputHandler(output_timestamp) {}
+    explicit StandardOutputHandler(bool should_output_timestamp = false)
+            : OutputHandler(should_output_timestamp) {}
 
     // Methods inherited from OutputHandler
     void write(std::string const& message, epochtime_t timestamp) override {
@@ -109,7 +110,7 @@ public:
             std::string const& collection,
             uint64_t batch_size,
             uint64_t max_num_results,
-            bool output_timestamp = true
+            bool should_output_timestamp = true
     );
 
     // Methods inherited from OutputHandler

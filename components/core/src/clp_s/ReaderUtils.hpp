@@ -95,27 +95,6 @@ public:
     static std::vector<int32_t> get_schemas(std::string const& archive_path);
 
     /**
-     * Appends a column to the given schema reader
-     * @param reader
-     * @param column_id
-     * @param schema_tree
-     * @param var_dict
-     * @param log_dict
-     * @param array_dict
-     * @param timestamp_dict
-     * @return the appended reader column
-     */
-    static BaseColumnReader* append_reader_column(
-            SchemaReader* reader,
-            int32_t column_id,
-            std::shared_ptr<SchemaTree> const& schema_tree,
-            std::shared_ptr<VariableDictionaryReader> const& var_dict,
-            std::shared_ptr<LogTypeDictionaryReader> const& log_dict,
-            std::shared_ptr<LogTypeDictionaryReader> const& array_dict,
-            std::shared_ptr<TimestampDictionaryReader> const& timestamp_dict
-    );
-
-    /**
      * Append a set of columns to the given schema reader
      * @param reader
      * @param columns
@@ -135,6 +114,28 @@ public:
             std::shared_ptr<LogTypeDictionaryReader> const& array_dict,
             std::shared_ptr<TimestampDictionaryReader> const& timestamp_dict,
             bool extract_timestamp
+    );
+
+private:
+    /**
+     * Appends a column to the given schema reader
+     * @param reader
+     * @param column_id
+     * @param schema_tree
+     * @param var_dict
+     * @param log_dict
+     * @param array_dict
+     * @param timestamp_dict
+     * @return the appended reader column
+     */
+    static BaseColumnReader* append_reader_column(
+            SchemaReader* reader,
+            int32_t column_id,
+            std::shared_ptr<SchemaTree> const& schema_tree,
+            std::shared_ptr<VariableDictionaryReader> const& var_dict,
+            std::shared_ptr<LogTypeDictionaryReader> const& log_dict,
+            std::shared_ptr<LogTypeDictionaryReader> const& array_dict,
+            std::shared_ptr<TimestampDictionaryReader> const& timestamp_dict
     );
 };
 }  // namespace clp_s

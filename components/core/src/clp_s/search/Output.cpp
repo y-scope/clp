@@ -101,13 +101,13 @@ void Output::filter() {
                     m_log_dict,
                     m_array_dict,
                     m_timestamp_dict,
-                    m_output_handler->output_timestamp()
+                    m_output_handler->should_output_timestamp()
             );
             reader.load();
 
             reader.initialize_filter(this);
 
-            if (m_output_handler->output_timestamp()) {
+            if (m_output_handler->should_output_timestamp()) {
                 epochtime_t timestamp;
                 while (reader.get_next_message_with_timestamp(message, timestamp, this)) {
                     m_output_handler->write(message, timestamp);
