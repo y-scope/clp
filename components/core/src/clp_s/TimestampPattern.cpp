@@ -821,7 +821,7 @@ bool TimestampPattern::parse_timestamp(
                     }
                     auto dot_position = line.find('.');
                     auto nanosecond_start = dot_position + 1;
-                    if (std::string::npos == dot_position || dot_position == 0 ||
+                    if (std::string::npos == dot_position || dot_position == 0
                         || cNanosecondDigits != (line.length() - nanosecond_start))
                     {
                         return false;
