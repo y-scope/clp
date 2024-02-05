@@ -814,7 +814,7 @@ bool TimestampPattern::parse_timestamp(
 
                 case 'F': {  // Nanosecond precision floating point UNIX epoch timestamp
                     constexpr auto cNanosecondDigits = 9;
-                    constexpr auto cNanosecondMultiplier = 1000 * 1000 * 1000;
+                    constexpr auto cNanosecondMultiplier = 1'000'000'000;
                     // only allow consuming entire timestamp string
                     if (line_ix > 0) {
                         return false;
