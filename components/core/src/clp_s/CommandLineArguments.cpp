@@ -333,10 +333,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                             "MongoDB uri and collection must be specified together"
                     );
                 }
-                if (m_batch_size == 0) {
+                if (0 == m_batch_size) {
                     throw std::invalid_argument("Batch size must be greater than 0");
                 }
-                if (m_max_num_results == 0) {
+                if (0 == m_max_num_results) {
                     throw std::invalid_argument("Max number of results must be greater than 0");
                 }
 

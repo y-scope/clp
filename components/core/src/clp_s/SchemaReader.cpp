@@ -10,11 +10,6 @@ void SchemaReader::close() {
     for (auto& i : m_columns) {
         delete i;
     }
-
-    m_columns.clear();
-    m_reordered_columns.clear();
-    m_column_map.clear();
-    m_global_id_to_local_id.clear();
 }
 
 void SchemaReader::append_column(BaseColumnReader* column_reader) {
@@ -183,6 +178,8 @@ bool SchemaReader::get_next_message_with_timestamp(
         epochtime_t& timestamp,
         FilterClass* filter
 ) {
+    // TODO: If we already get max_num_results messages, we can skip messages
+    // with the timestamp less than the smallest timestamp in the priority queue
     while (m_cur_message < m_num_messages) {
         if (false == filter->filter(m_cur_message, m_extracted_values)) {
             m_cur_message++;

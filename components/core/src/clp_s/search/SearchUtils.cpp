@@ -36,6 +36,8 @@ LiteralType node_to_literal_type(NodeType type) {
             return LiteralType::EpochDateT;
         case NodeType::FLOATDATESTRING:
             return LiteralType::FloatDateT;
+        case NodeType::UNKNOWN:
+            return LiteralType::UnknownT;
         default:
             return LiteralType::UnknownT;
     }
