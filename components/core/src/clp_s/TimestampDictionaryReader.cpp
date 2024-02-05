@@ -44,14 +44,24 @@ void TimestampDictionaryReader::read_new_entries(bool local) {
         throw OperationFailed(error, __FILENAME__, __LINE__);
     }
 
-    for (int i = 0; i < range_index_size; ++i) {
+    for (uint64_t i = 0; i < range_index_size; ++i) {
         TimestampEntry entry;
         entry.try_read_from_file(m_dictionary_decompressor);
+        m_entries.emplace_back(std::move(entry));
+
         std::string column_name = entry.get_key_name();
-        TimestampEntry& e = m_column_to_range[column_name] = entry;
         std::vector<std::string> tokens;
         StringUtils::tokenize_column_descriptor(column_name, tokens);
-        m_tokenized_column_to_range.emplace_back(std::move(tokens), &e);
+        m_tokenized_column_to_range.emplace_back(std::move(tokens), &m_entries.back());
+
+        // TODO: Currently, we only allow a single authoritative timestamp column at ingestion time,
+        // but the timestamp dictionary is designed to store the ranges of several timestamp
+        // columns. We should enforce a convention that the first entry in the timestamp dictionary
+        // corresponds to the "authoritative" timestamp column for the dataset.
+        if (i == 0) {
+            m_authoritative_timestamp_column_ids = m_entries.back().get_column_ids();
+            m_authoritative_timestamp_tokenized_column = tokens;
+        }
     }
 
     // Local timestamp dictionaries only contain range indices, and
@@ -92,15 +102,4 @@ TimestampDictionaryReader::get_string_encoding(epochtime_t epoch, uint64_t forma
     return ret;
 }
 
-std::optional<std::vector<std::string>>
-TimestampDictionaryReader::get_authoritative_timestamp_column() const {
-    // TODO: Currently, we only allow a single authoritative timestamp column at ingestion time, but
-    // the timestamp dictionary is designed to store the ranges of several timestamp columns. We
-    // should enforce a convention that the first entry in the timestamp dictionary corresponds to
-    // the "authoritative" timestamp column for the dataset.
-    for (auto it = tokenized_column_to_range_begin(); tokenized_column_to_range_end() != it; ++it) {
-        return it->first;
-    }
-    return std::nullopt;
-}
 }  // namespace clp_s

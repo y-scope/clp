@@ -141,7 +141,7 @@ int main(int argc, char const* argv[]) {
 
         auto timestamp_dict = clp_s::ReaderUtils::read_timestamp_dictionary(archives_dir);
         AddTimestampConditions add_timestamp_conditions(
-                timestamp_dict->get_authoritative_timestamp_column(),
+                timestamp_dict->get_authoritative_timestamp_tokenized_column(),
                 command_line_arguments.get_search_begin_ts(),
                 command_line_arguments.get_search_end_ts()
         );
@@ -198,10 +198,13 @@ int main(int argc, char const* argv[]) {
             output_handler = std::make_unique<ResultsCacheOutputHandler>(
                     command_line_arguments.get_mongodb_uri(),
                     command_line_arguments.get_mongodb_collection(),
-                    command_line_arguments.get_batch_size()
+                    command_line_arguments.get_batch_size(),
+                    command_line_arguments.get_max_num_results()
             );
         } else {
-            output_handler = std::make_unique<StandardOutputHandler>();
+            output_handler = std::make_unique<StandardOutputHandler>(
+                    command_line_arguments.get_max_num_results()
+            );
         }
 
         // output result

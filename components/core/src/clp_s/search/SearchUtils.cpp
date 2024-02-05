@@ -34,6 +34,7 @@ LiteralType node_to_literal_type(NodeType type) {
             return LiteralType::NullT;
         case NodeType::DATESTRING:
             return LiteralType::EpochDateT;
+        case NodeType::UNKNOWN:
         default:
             return LiteralType::UnknownT;
     }

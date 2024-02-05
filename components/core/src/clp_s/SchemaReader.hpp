@@ -47,6 +47,7 @@ public:
     explicit SchemaReader(std::shared_ptr<SchemaTree> schema_tree, int32_t schema_id)
             : m_num_messages(0),
               m_cur_message(0),
+              m_get_timestamp([]() -> epochtime_t { return 0; }),
               m_global_schema_tree(std::move(schema_tree)),
               m_schema_id(schema_id),
               m_json_serializer(std::make_shared<JsonSerializer>()) {}
@@ -90,7 +91,7 @@ public:
     bool get_next_message(std::string& message);
 
     /**
-     * Gets next message with a filter
+     * Gets the next message matching a filter
      * @param message
      * @param filter
      * @return true if there is a next message
@@ -98,10 +99,29 @@ public:
     bool get_next_message(std::string& message, FilterClass* filter);
 
     /**
+     * Gets the next message matching a filter, and its timestamp
+     * @param message
+     * @param timestamp
+     * @param filter
+     * @return true if there is a next message
+     */
+    bool get_next_message_with_timestamp(
+            std::string& message,
+            epochtime_t& timestamp,
+            FilterClass* filter
+    );
+
+    /**
      * Initializes the filter
      * @param filter
      */
     void initialize_filter(FilterClass* filter);
+
+    /**
+     * Marks a column as timestamp
+     * @param column_reader
+     */
+    void mark_column_as_timestamp(BaseColumnReader* column_reader);
 
 private:
     /**
@@ -119,11 +139,9 @@ private:
     void generate_json_template(int32_t id);
 
     /**
-     * Gets a json pointer string
-     * @param s
-     * @return
+     * Generates a json string from the extracted values
      */
-    static std::string get_json_pointer_string(std::string const& s);
+    void generate_json_string();
 
     int32_t m_schema_id;
     std::string m_path;
@@ -136,6 +154,9 @@ private:
     std::unordered_map<int32_t, BaseColumnReader*> m_column_map;
     std::vector<BaseColumnReader*> m_columns;
     std::vector<BaseColumnReader*> m_reordered_columns;
+
+    BaseColumnReader* m_timestamp_column;
+    std::function<epochtime_t()> m_get_timestamp;
 
     std::shared_ptr<SchemaTree> m_global_schema_tree;
     std::shared_ptr<SchemaTree> m_local_schema_tree;

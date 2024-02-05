@@ -103,10 +103,34 @@ public:
      * @param log_dict
      * @param array_dict
      * @param timestamp_dict
+     * @param extract_timestamp
      */
     static void append_reader_columns(
             SchemaReader* reader,
             Schema const& columns,
+            std::shared_ptr<SchemaTree> const& schema_tree,
+            std::shared_ptr<VariableDictionaryReader> const& var_dict,
+            std::shared_ptr<LogTypeDictionaryReader> const& log_dict,
+            std::shared_ptr<LogTypeDictionaryReader> const& array_dict,
+            std::shared_ptr<TimestampDictionaryReader> const& timestamp_dict,
+            bool extract_timestamp
+    );
+
+private:
+    /**
+     * Appends a column to the given schema reader
+     * @param reader
+     * @param column_id
+     * @param schema_tree
+     * @param var_dict
+     * @param log_dict
+     * @param array_dict
+     * @param timestamp_dict
+     * @return the appended reader column
+     */
+    static BaseColumnReader* append_reader_column(
+            SchemaReader* reader,
+            int32_t column_id,
             std::shared_ptr<SchemaTree> const& schema_tree,
             std::shared_ptr<VariableDictionaryReader> const& var_dict,
             std::shared_ptr<LogTypeDictionaryReader> const& log_dict,
