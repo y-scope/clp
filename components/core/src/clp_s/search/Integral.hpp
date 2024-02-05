@@ -62,8 +62,6 @@ public:
 
     bool as_epoch_date() override { return true; }
 
-    bool as_float_date() override { return true; }
-
     bool as_var_string(std::string& ret, FilterOperation op) override;
 
     bool as_float(double& ret, FilterOperation op) override;

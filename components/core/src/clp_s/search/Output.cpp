@@ -78,7 +78,6 @@ void Output::filter() {
             m_wildcard_to_searched_clpstrings.clear();
             m_wildcard_to_searched_varstrings.clear();
             m_wildcard_to_searched_datestrings.clear();
-            m_wildcard_to_searched_floatdatestrings.clear();
             m_schema = schema_id;
 
             populate_searched_wildcard_columns(m_expr);
@@ -147,10 +146,6 @@ void Output::init(
             } else if (auto date_column_reader = dynamic_cast<DateStringColumnReader*>(column.second))
             {
                 m_datestring_readers[column.first] = date_column_reader;
-                m_other_columns.push_back(column.second);
-            } else if (auto float_date_column_reader = dynamic_cast<FloatDateStringColumnReader*>(column.second))
-            {
-                m_floatdatestring_readers[column.first] = float_date_column_reader;
                 m_other_columns.push_back(column.second);
             } else {
                 m_searched_columns.push_back(column.second);
@@ -311,12 +306,6 @@ bool Output::evaluate_wildcard_filter(
         }
     }
 
-    for (int32_t column_id : m_wildcard_to_searched_floatdatestrings[column]) {
-        if (evaluate_float_date_filter(op, m_floatdatestring_readers[column_id], literal)) {
-            return true;
-        }
-    }
-
     m_maybe_number = expr->get_column()->matches_type(LiteralType::FloatT);
     for (int32_t column_id : m_wildcard_to_searched_columns[column]) {
         bool ret = false;
@@ -420,12 +409,6 @@ bool Output::evaluate_filter(
             return evaluate_epoch_date_filter(
                     expr->get_operation(),
                     m_datestring_readers[column_id],
-                    literal
-            );
-        case LiteralType::FloatDateT:
-            return evaluate_float_date_filter(
-                    expr->get_operation(),
-                    m_floatdatestring_readers[column_id],
                     literal
             );
             // case LiteralType::NullT:
@@ -997,8 +980,6 @@ void Output::populate_searched_wildcard_columns(std::shared_ptr<Expression> cons
                     m_wildcard_to_searched_varstrings[col].push_back(node);
                 } else if (tree_node_type == NodeType::DATESTRING) {
                     m_wildcard_to_searched_datestrings[col].push_back(node);
-                } else if (tree_node_type == NodeType::FLOATDATESTRING) {
-                    m_wildcard_to_searched_floatdatestrings[col].push_back(node);
                 } else {
                     // Arrays and basic types
                     m_wildcard_to_searched_columns[col].push_back(node);
@@ -1022,12 +1003,6 @@ void Output::add_wildcard_columns_to_searched_columns() {
     }
 
     for (auto& e : m_wildcard_to_searched_datestrings) {
-        for (int32_t node : e.second) {
-            m_match.add_searched_column_to_schema(m_schema, node);
-        }
-    }
-
-    for (auto& e : m_wildcard_to_searched_floatdatestrings) {
         for (int32_t node : e.second) {
             m_match.add_searched_column_to_schema(m_schema, node);
         }
@@ -1122,8 +1097,7 @@ Output::constant_propagate(std::shared_ptr<Expression> const& expr, int32_t sche
             bool has_clp_string = false;
             bool matches_clp_string = false;
             bool has_other = !m_wildcard_to_searched_columns[wildcard].empty()
-                             || !m_wildcard_to_searched_datestrings[wildcard].empty()
-                             || !m_wildcard_to_searched_floatdatestrings[wildcard].empty();
+                             || !m_wildcard_to_searched_datestrings[wildcard].empty();
             std::string filter_string;
             bool valid
                     = filter->get_operand()->as_var_string(filter_string, filter->get_operation())
@@ -1237,13 +1211,5 @@ bool Output::evaluate_epoch_date_filter(
         std::shared_ptr<Literal>& operand
 ) {
     return evaluate_int_filter(op, reader->get_encoded_time(m_cur_message), operand);
-}
-
-bool Output::evaluate_float_date_filter(
-        FilterOperation op,
-        FloatDateStringColumnReader* reader,
-        std::shared_ptr<Literal>& operand
-) {
-    return evaluate_float_filter(op, reader->get_encoded_time(m_cur_message), operand);
 }
 }  // namespace clp_s::search

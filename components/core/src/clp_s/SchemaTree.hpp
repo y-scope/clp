@@ -19,8 +19,7 @@ enum class NodeType : uint8_t {
     OBJECT,
     ARRAY,
     NULLVALUE,
-    DATESTRING,
-    FLOATDATESTRING
+    DATESTRING
 };
 
 class SchemaNode {

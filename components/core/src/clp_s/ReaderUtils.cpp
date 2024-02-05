@@ -221,9 +221,6 @@ void ReaderUtils::append_reader_columns(
             case NodeType::DATESTRING:
                 reader->append_column(new DateStringColumnReader(key_name, column, timestamp_dict));
                 break;
-            case NodeType::FLOATDATESTRING:
-                reader->append_column(new FloatDateStringColumnReader(key_name, column));
-                break;
             case NodeType::OBJECT:
             case NodeType::NULLVALUE:
                 reader->append_column(column);

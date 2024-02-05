@@ -271,8 +271,7 @@ void SchemaReader::generate_json_template(int32_t id) {
             }
             case NodeType::CLPSTRING:
             case NodeType::VARSTRING:
-            case NodeType::DATESTRING:
-            case NodeType::FLOATDATESTRING: {
+            case NodeType::DATESTRING: {
                 m_json_serializer->add_op(JsonSerializer::Op::AddStringField);
                 m_reordered_columns.push_back(m_column_map[child_global_id]);
                 break;

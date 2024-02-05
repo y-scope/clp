@@ -112,9 +112,6 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
             case NodeType::DATESTRING:
                 writer->append_column(new DateStringColumnWriter(id));
                 break;
-            case NodeType::FLOATDATESTRING:
-                writer->append_column(new FloatColumnWriter(id));
-                break;
             case NodeType::OBJECT:
             case NodeType::NULLVALUE:
                 break;

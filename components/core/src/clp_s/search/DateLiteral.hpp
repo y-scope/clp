@@ -7,7 +7,7 @@
 #include "Integral.hpp"
 
 namespace clp_s::search {
-constexpr LiteralTypeBitmask cDateLiteralTypes = EpochDateT | FloatDateT;
+constexpr LiteralTypeBitmask cDateLiteralTypes = EpochDateT;
 
 /**
  * Class for Date literal in the search AST. Represents time
@@ -45,8 +45,6 @@ public:
     bool matches_exactly(LiteralTypeBitmask mask) override { return mask == cDateLiteralTypes; }
 
     bool as_epoch_date() override { return true; }
-
-    bool as_float_date() override { return true; }
 
     bool as_clp_string(std::string& ret, FilterOperation op) override;
 
