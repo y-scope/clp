@@ -18,7 +18,6 @@ export const SearchSignal = Object.freeze({
 
     RESP_MASK: (enumSearchSignal = 0x20000000),
     RESP_DONE: ++enumSearchSignal,
-    RESP_ERROR: ++enumSearchSignal,
     RESP_QUERYING: ++enumSearchSignal,
 });
 
