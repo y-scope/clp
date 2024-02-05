@@ -126,6 +126,11 @@ epochtime_t TimestampDictionaryWriter::ingest_entry(
             timestamp_end_pos
     );
 
+    if (pattern == nullptr) {
+        throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
+    }
+
+    pattern_id = get_pattern_id(pattern);
     auto entry = m_local_column_id_to_range.find(node_id);
     if (entry == m_local_column_id_to_range.end()) {
         TimestampEntry new_entry(key);
@@ -134,12 +139,6 @@ epochtime_t TimestampDictionaryWriter::ingest_entry(
     } else {
         entry->second.ingest_timestamp(ret);
     }
-
-    if (pattern == nullptr) {
-        throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
-    }
-
-    pattern_id = get_pattern_id(pattern);
 
     return ret;
 }

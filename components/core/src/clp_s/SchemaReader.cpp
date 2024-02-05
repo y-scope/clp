@@ -10,15 +10,38 @@ void SchemaReader::close() {
     for (auto& i : m_columns) {
         delete i;
     }
-
-    m_column_map.clear();
-    m_global_id_to_local_id.clear();
 }
 
 void SchemaReader::append_column(BaseColumnReader* column_reader) {
     m_column_map[column_reader->get_id()] = column_reader;
     m_columns.push_back(column_reader);
     generate_local_tree(column_reader->get_id());
+}
+
+void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
+    m_timestamp_column = column_reader;
+    if (m_timestamp_column->get_type() == NodeType::DATESTRING) {
+        m_get_timestamp = [this]() {
+            return static_cast<DateStringColumnReader*>(m_timestamp_column)
+                    ->get_encoded_time(m_cur_message);
+        };
+    } else if (m_timestamp_column->get_type() == NodeType::FLOATDATESTRING) {
+        m_get_timestamp = [this]() {
+            double timestamp = static_cast<FloatDateStringColumnReader*>(m_timestamp_column)
+                                       ->get_encoded_time(m_cur_message);
+            return static_cast<epochtime_t>(timestamp);
+        };
+    } else if (m_timestamp_column->get_type() == NodeType::INTEGER) {
+        m_get_timestamp = [this]() {
+            return std::get<epochtime_t>(m_extracted_values[m_timestamp_column->get_id()]);
+        };
+    } else if (m_timestamp_column->get_type() == NodeType::FLOAT) {
+        m_get_timestamp = [this]() {
+            return static_cast<epochtime_t>(
+                    std::get<double>(m_extracted_values[m_timestamp_column->get_id()])
+            );
+        };
+    }
 }
 
 void SchemaReader::append_column(int32_t id) {
@@ -44,11 +67,7 @@ void SchemaReader::load() {
     generate_json_template(0);
 }
 
-bool SchemaReader::get_next_message(std::string& message) {
-    if (m_cur_message >= m_num_messages) {
-        return false;
-    }
-
+void SchemaReader::generate_json_string() {
     m_json_serializer->reset();
     m_json_serializer->begin_document();
     size_t column_id_index = 0;
@@ -114,6 +133,14 @@ bool SchemaReader::get_next_message(std::string& message) {
     }
 
     m_json_serializer->end_document();
+}
+
+bool SchemaReader::get_next_message(std::string& message) {
+    if (m_cur_message >= m_num_messages) {
+        return false;
+    }
+
+    generate_json_string();
 
     message = m_json_serializer->get_serialized_string();
 
@@ -132,77 +159,41 @@ bool SchemaReader::get_next_message(std::string& message, FilterClass* filter) {
             continue;
         }
 
-        m_json_serializer->reset();
-        m_json_serializer->begin_document();
-        size_t column_id_index = 0;
-        BaseColumnReader* column;
-        JsonSerializer::Op op;
-        while (m_json_serializer->get_next_op(op)) {
-            switch (op) {
-                case JsonSerializer::Op::BeginObject: {
-                    m_json_serializer->begin_object();
-                    break;
-                }
-                case JsonSerializer::Op::EndObject: {
-                    m_json_serializer->end_object();
-                    break;
-                }
-                case JsonSerializer::Op::AddIntField: {
-                    column = m_reordered_columns[column_id_index++];
-                    m_json_serializer->append_key(column->get_name());
-                    m_json_serializer->append_value(
-                            std::to_string(std::get<int64_t>(m_extracted_values[column->get_id()]))
-                    );
-                    break;
-                }
-                case JsonSerializer::Op::AddFloatField: {
-                    column = m_reordered_columns[column_id_index++];
-                    m_json_serializer->append_key(column->get_name());
-                    m_json_serializer->append_value(
-                            std::to_string(std::get<double>(m_extracted_values[column->get_id()]))
-                    );
-                    break;
-                }
-                case JsonSerializer::Op::AddBoolField: {
-                    column = m_reordered_columns[column_id_index++];
-                    m_json_serializer->append_key(column->get_name());
-                    m_json_serializer->append_value(
-                            std::get<uint8_t>(m_extracted_values[column->get_id()]) != 0 ? "true"
-                                                                                         : "false"
-                    );
-                    break;
-                }
-                case JsonSerializer::Op::AddStringField: {
-                    column = m_reordered_columns[column_id_index++];
-                    m_json_serializer->append_key(column->get_name());
-                    m_json_serializer->append_value_with_quotes(
-                            std::get<std::string>(m_extracted_values[column->get_id()])
-                    );
-                    break;
-                }
-                case JsonSerializer::Op::AddArrayField: {
-                    column = m_reordered_columns[column_id_index++];
-                    m_json_serializer->append_key(column->get_name());
-                    m_json_serializer->append_value(
-                            std::get<std::string>(m_extracted_values[column->get_id()])
-                    );
-                    break;
-                }
-                case JsonSerializer::Op::AddNullField: {
-                    m_json_serializer->append_key();
-                    m_json_serializer->append_value("null");
-                    break;
-                }
-            }
-        }
-
-        m_json_serializer->end_document();
-
+        generate_json_string();
         message = m_json_serializer->get_serialized_string();
 
         if (message.back() != '\n') {
             message += '\n';
         }
+
+        m_cur_message++;
+        return true;
+    }
+
+    return false;
+}
+
+bool SchemaReader::get_next_message_with_timestamp(
+        std::string& message,
+        epochtime_t& timestamp,
+        FilterClass* filter
+) {
+    // TODO: If we already get max_num_results messages, we can skip messages
+    // with the timestamp less than the smallest timestamp in the priority queue
+    while (m_cur_message < m_num_messages) {
+        if (false == filter->filter(m_cur_message, m_extracted_values)) {
+            m_cur_message++;
+            continue;
+        }
+
+        generate_json_string();
+        message = m_json_serializer->get_serialized_string();
+
+        if (message.back() != '\n') {
+            message += '\n';
+        }
+
+        timestamp = m_get_timestamp();
 
         m_cur_message++;
         return true;

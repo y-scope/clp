@@ -220,6 +220,7 @@ public:
             std::shared_ptr<TimestampDictionaryWriter> timestamp_dict
     )
             : BaseColumnWriter(name, id),
+
               m_timestamp_dict(std::move(timestamp_dict)) {}
 
     // Destructor

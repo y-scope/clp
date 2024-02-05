@@ -183,6 +183,58 @@ std::vector<int32_t> ReaderUtils::get_schemas(std::string const& archive_path) {
     return schemas;
 }
 
+BaseColumnReader* ReaderUtils::append_reader_column(
+        SchemaReader* reader,
+        int32_t column_id,
+        std::shared_ptr<SchemaTree> const& schema_tree,
+        std::shared_ptr<VariableDictionaryReader> const& var_dict,
+        std::shared_ptr<LogTypeDictionaryReader> const& log_dict,
+        std::shared_ptr<LogTypeDictionaryReader> const& array_dict,
+        std::shared_ptr<TimestampDictionaryReader> const& timestamp_dict
+) {
+    BaseColumnReader* column_reader = nullptr;
+    auto node = schema_tree->get_node(column_id);
+    std::string key_name = node->get_key_name();
+    switch (node->get_type()) {
+        case NodeType::INTEGER:
+            column_reader = new Int64ColumnReader(key_name, column_id);
+            break;
+        case NodeType::FLOAT:
+            column_reader = new FloatColumnReader(key_name, column_id);
+            break;
+        case NodeType::CLPSTRING:
+            column_reader = new ClpStringColumnReader(key_name, column_id, var_dict, log_dict);
+            break;
+        case NodeType::VARSTRING:
+            column_reader = new VariableStringColumnReader(key_name, column_id, var_dict);
+            break;
+        case NodeType::BOOLEAN:
+            reader->append_column(new BooleanColumnReader(key_name, column_id));
+            break;
+        case NodeType::ARRAY:
+            column_reader
+                    = new ClpStringColumnReader(key_name, column_id, var_dict, array_dict, true);
+            break;
+        case NodeType::DATESTRING:
+            column_reader = new DateStringColumnReader(key_name, column_id, timestamp_dict);
+            break;
+        case NodeType::FLOATDATESTRING:
+            column_reader = new FloatDateStringColumnReader(key_name, column_id);
+            break;
+        case NodeType::OBJECT:
+        case NodeType::NULLVALUE:
+            reader->append_column(column_id);
+            break;
+        case NodeType::UNKNOWN:
+            break;
+    }
+
+    if (column_reader) {
+        reader->append_column(column_reader);
+    }
+    return column_reader;
+}
+
 void ReaderUtils::append_reader_columns(
         SchemaReader* reader,
         Schema const& columns,
@@ -190,44 +242,24 @@ void ReaderUtils::append_reader_columns(
         std::shared_ptr<VariableDictionaryReader> const& var_dict,
         std::shared_ptr<LogTypeDictionaryReader> const& log_dict,
         std::shared_ptr<LogTypeDictionaryReader> const& array_dict,
-        std::shared_ptr<TimestampDictionaryReader> const& timestamp_dict
+        std::shared_ptr<TimestampDictionaryReader> const& timestamp_dict,
+        bool extract_timestamp
 ) {
-    for (int32_t column : columns) {
-        auto node = schema_tree->get_node(column);
-        std::string key_name = node->get_key_name();
-        switch (node->get_type()) {
-            case NodeType::INTEGER:
-                reader->append_column(new Int64ColumnReader(key_name, column));
-                break;
-            case NodeType::FLOAT:
-                reader->append_column(new FloatColumnReader(key_name, column));
-                break;
-            case NodeType::CLPSTRING:
-                reader->append_column(
-                        new ClpStringColumnReader(key_name, column, var_dict, log_dict)
-                );
-                break;
-            case NodeType::VARSTRING:
-                reader->append_column(new VariableStringColumnReader(key_name, column, var_dict));
-                break;
-            case NodeType::BOOLEAN:
-                reader->append_column(new BooleanColumnReader(key_name, column));
-                break;
-            case NodeType::ARRAY:
-                reader->append_column(
-                        new ClpStringColumnReader(key_name, column, var_dict, array_dict, true)
-                );
-                break;
-            case NodeType::DATESTRING:
-                reader->append_column(new DateStringColumnReader(key_name, column, timestamp_dict));
-                break;
-            case NodeType::FLOATDATESTRING:
-                reader->append_column(new FloatDateStringColumnReader(key_name, column));
-                break;
-            case NodeType::OBJECT:
-            case NodeType::NULLVALUE:
-                reader->append_column(column);
-                break;
+    auto timestamp_column_ids = timestamp_dict->get_authoritative_timestamp_column_ids();
+
+    for (int32_t column_id : columns) {
+        BaseColumnReader* column_reader = append_reader_column(
+                reader,
+                column_id,
+                schema_tree,
+                var_dict,
+                log_dict,
+                array_dict,
+                timestamp_dict
+        );
+
+        if (extract_timestamp && column_reader && timestamp_column_ids.count(column_id) > 0) {
+            reader->mark_column_as_timestamp(column_reader);
         }
     }
 }

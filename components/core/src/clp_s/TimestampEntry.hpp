@@ -55,23 +55,19 @@ public:
      * Ingest a timestamp potentially adjusting the start and end bounds for this
      * TimestampEntry.
      * @param timestamp the timestamp to be ingested
-     * @return the epoch time corresponding to the string timestamp
      */
     void ingest_timestamp(epochtime_t timestamp);
     void ingest_timestamp(double timestamp);
 
     /**
      * Merge a timestamp range potentially adjusting the start and end bounds for this
-     *
      * @param timestamp the timestamp to be ingested
-     * @return the epoch time corresponding to the string timestamp
      */
     void merge_range(TimestampEntry const& entry);
 
     /**
      * Write the timestamp entry to a file
      * @param compressor
-     * @param column
      */
     void write_to_file(ZstdCompressor& compressor) const;
 
@@ -85,8 +81,6 @@ public:
     /**
      * Read the timestamp entry from a file
      * @param decompressor
-     * @param column_name
-     * @param column_ids
      */
     void read_from_file(ZstdDecompressor& decompressor);
 

@@ -1,11 +1,12 @@
 #ifndef CLP_S_TIMESTAMPDICTIONARYWRITER_HPP
 #define CLP_S_TIMESTAMPDICTIONARYWRITER_HPP
 
-#include <map>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 #include "FileWriter.hpp"
+#include "SchemaTree.hpp"
 #include "TimestampEntry.hpp"
 #include "TimestampPattern.hpp"
 #include "ZstdCompressor.hpp"
@@ -60,8 +61,21 @@ public:
      */
     void write_local_and_flush_to_disk();
 
+    /**
+     * Gets the pattern id for a given pattern
+     * @param pattern
+     * @return the pattern id
+     */
     uint64_t get_pattern_id(TimestampPattern const* pattern);
 
+    /**
+     * Ingests a timestamp entry
+     * @param key
+     * @param node_id
+     * @param timestamp
+     * @param pattern_id
+     * @return the epoch time corresponding to the string timestamp
+     */
     epochtime_t ingest_entry(
             std::string const& key,
             int32_t node_id,
@@ -69,6 +83,12 @@ public:
             uint64_t& pattern_id
     );
 
+    /**
+     * Ingests a timestamp entry
+     * @param column_key
+     * @param node_id
+     * @param timestamp
+     */
     void ingest_entry(std::string const& key, int32_t node_id, double timestamp);
 
     void ingest_entry(std::string const& key, int32_t node_id, int64_t timestamp);
@@ -90,7 +110,16 @@ public:
     epochtime_t get_end_timestamp() const;
 
 private:
+    /**
+     * Merges the local timestamp ranges into the global timestamp ranges
+     */
     void merge_local_range();
+
+    /**
+     * Writes the timestamp entries to the disk
+     * @param ranges
+     * @param compressor
+     */
     void write_timestamp_entries(
             std::map<std::string, TimestampEntry> const& ranges,
             ZstdCompressor& compressor
@@ -110,6 +139,7 @@ private:
 
     pattern_to_id_t m_pattern_to_id;
     uint64_t m_next_id{};
+
     std::map<std::string, TimestampEntry> m_global_column_key_to_range;
     std::map<std::string, TimestampEntry> m_local_column_key_to_range;
     std::unordered_map<int32_t, TimestampEntry> m_local_column_id_to_range;

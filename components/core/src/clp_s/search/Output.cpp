@@ -100,14 +100,24 @@ void Output::filter() {
                     m_var_dict,
                     m_log_dict,
                     m_array_dict,
-                    m_timestamp_dict
+                    m_timestamp_dict,
+                    m_output_handler->should_output_timestamp()
             );
             reader.load();
 
             reader.initialize_filter(this);
-            while (reader.get_next_message(message, this)) {
-                m_output_handler->write(message);
+
+            if (m_output_handler->should_output_timestamp()) {
+                epochtime_t timestamp;
+                while (reader.get_next_message_with_timestamp(message, timestamp, this)) {
+                    m_output_handler->write(message, timestamp);
+                }
+            } else {
+                while (reader.get_next_message(message, this)) {
+                    m_output_handler->write(message);
+                }
             }
+
             reader.close();
         }
 
@@ -138,10 +148,10 @@ void Output::init(
         VariableStringColumnReader* var_reader
                 = dynamic_cast<VariableStringColumnReader*>(column.second);
         if (m_match.schema_searches_against_column(schema_id, column.first)) {
-            if (clp_reader != nullptr && clp_reader->get_type() == "string") {
+            if (clp_reader != nullptr && clp_reader->get_type() == NodeType::CLPSTRING) {
                 m_clp_string_readers[column.first] = clp_reader;
                 m_other_columns.push_back(column.second);
-            } else if (var_reader != nullptr && var_reader->get_type() == "string") {
+            } else if (var_reader != nullptr && var_reader->get_type() == NodeType::VARSTRING) {
                 m_var_string_readers[column.first] = var_reader;
                 m_other_columns.push_back(column.second);
             } else if (auto date_column_reader = dynamic_cast<DateStringColumnReader*>(column.second))
