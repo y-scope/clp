@@ -11,9 +11,9 @@ import {INVALID_JOB_ID, isSearchSignalQuerying, SearchSignal} from "../../api/se
 import "react-datepicker/dist/react-datepicker.css";
 import LOCAL_STORAGE_KEYS from "../constants/LOCAL_STORAGE_KEYS";
 import {changeTimezoneToUtcWithoutChangingTime, DEFAULT_TIME_RANGE_GETTER} from "./datetime";
-import {SearchControls} from "./SearchControls";
-import {SearchResults} from "./SearchResults";
-import {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResultsTable";
+import {SearchControls} from "./SearchControls.jsx";
+import {SearchResults} from "./SearchResults.jsx";
+import {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResultsTable.jsx";
 
 // for pseudo progress bar
 const PROGRESS_INCREMENT = 5;

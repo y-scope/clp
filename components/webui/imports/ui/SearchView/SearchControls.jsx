@@ -18,6 +18,8 @@ import {computeTimeRange, TIME_RANGE_PRESET_LABEL} from "./datetime";
 import LOCAL_STORAGE_KEYS from "../constants/LOCAL_STORAGE_KEYS";
 import {isSearchSignalQuerying, isSearchSignalReq, SearchSignal} from "../../api/search/constants";
 
+import "./SearchControls.scss";
+
 /**
  * Renders a date picker control for selecting date and time.
  *

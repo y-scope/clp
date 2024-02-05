@@ -13,6 +13,8 @@ import {
 } from "react-bootstrap";
 import {SearchSignal} from "../../api/search/constants";
 
+import "./SearchResultsHeader.scss";
+
 /**
  * Renders the header for the search results, which includes the job ID, the number of results
  * found, and a control for setting the maximum number of lines per search result.
