@@ -44,6 +44,7 @@ namespace clp_s {
  * - 3  0-padded millisecond (000-999)
  * - T  0-padded millisecond no trailing 0 (000)-999) e.g. (000), 9(00), 99(0), 099
  * - E  N-digit UNIX epoch timestamp in milliseconds
+ * - F  N-digit UNIX epoch timestamp in floating point format with 9-digits trailing the decimal
  */
 class TimestampPattern {
 public:

@@ -207,6 +207,10 @@ static bool convert_string_to_number_notz(
 void TimestampPattern::init() {
     // First create vector of observed patterns so that it's easy to maintain
     vector<TimestampPattern> patterns;
+    // E.g. 1706980946603
+    patterns.emplace_back(0, "%E");
+    // E.g. 1679711330.789032462
+    patterns.emplace_back(0, "%F");
     // E.g. 2022-04-06T03:33:23.476Z ...47, ...4 ...()
     patterns.emplace_back(0, "%Y-%m-%dT%H:%M:%S.%TZ");
     // E.g. 2022-04-06T03:33:23Z
@@ -227,8 +231,6 @@ void TimestampPattern::init() {
     patterns.emplace_back(0, "%Y-%m-%dT%H:%M:%S.%3");
     // E.g. 2015-01-31T15:50:45,392
     patterns.emplace_back(0, "%Y-%m-%dT%H:%M:%S,%3");
-    // E.g. 1706980946603
-    patterns.emplace_back(0, "%E");
     // E.g. [2015-01-31T15:50:45
     patterns.emplace_back(0, "[%Y-%m-%dT%H:%M:%S");
     // E.g. [20170106-16:56:41]
@@ -249,7 +251,7 @@ void TimestampPattern::init() {
     patterns.emplace_back(0, "%Y/%m/%d %H:%M:%S.%3");
     // E.g. 2015/01/31 15:50:45,123
     patterns.emplace_back(0, "%Y/%m/%d %H:%M:%S,%3");
-    // E.g. 2015/01/31T15:50:45,123
+    // E.g. 2015/01/31T15:50:45
     patterns.emplace_back(0, "%Y/%m/%dT%H:%M:%S");
     // E.g. 2015/01/31T15:50:45.123
     patterns.emplace_back(0, "%Y/%m/%dT%H:%M:%S.%3");
@@ -810,6 +812,44 @@ bool TimestampPattern::parse_timestamp(
                     return true;
                 }
 
+                case 'F': {  // Nanosecond precision floating point UNIX epoch timestamp
+                    constexpr auto cNanosecondDigits = 9;
+                    constexpr auto cNanosecondMultiplier = 1000 * 1000 * 1000;
+                    // only allow consuming entire timestamp string
+                    if (line_ix > 0) {
+                        return false;
+                    }
+                    auto dot_position = line.find('.');
+                    auto nanosecond_start = dot_position + 1;
+                    if (std::string::npos == dot_position || dot_position == 0 ||
+                        || cNanosecondDigits != (line.length() - nanosecond_start))
+                    {
+                        return false;
+                    }
+
+                    auto timestamp_view = std::string_view(line);
+                    if (false
+                        == convert_string_to_int(timestamp_view.substr(0, dot_position), timestamp))
+                    {
+                        return false;
+                    }
+
+                    epochtime_t timestamp_nanoseconds;
+                    if (false
+                        == convert_string_to_int(
+                                timestamp_view.substr(nanosecond_start, cNanosecondDigits),
+                                timestamp_nanoseconds
+                        ))
+                    {
+                        return false;
+                    }
+
+                    timestamp = timestamp * cNanosecondMultiplier + timestamp_nanoseconds;
+                    timestamp_begin_pos = 0;
+                    timestamp_end_pos = line.length();
+                    return true;
+                }
+
                 default:
                     return false;
             }
@@ -1026,6 +1066,15 @@ void TimestampPattern::insert_formatted_timestamp(epochtime_t timestamp, string&
                     // this is safe
                     new_msg = std::to_string(timestamp);
                     break;
+
+                case 'F': {  // Nanosecond precision floating point UNIX epoch timestamp
+                    constexpr auto cNanosecondDigits = 9;
+                    // Note: this timestamp format is required to make up the entire timestamp, so
+                    // this is safe
+                    new_msg = std::to_string(timestamp);
+                    new_msg.insert(new_msg.end() - cNanosecondDigits, '.');
+                    break;
+                }
 
                 default: {
                     throw OperationFailed(ErrorCodeUnsupported, __FILENAME__, __LINE__);
