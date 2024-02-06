@@ -11,6 +11,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   checkinstall \
   curl \
   libmariadb-dev \
+  libspdlog-dev \
   python3 \
   rsync \
   zstd
