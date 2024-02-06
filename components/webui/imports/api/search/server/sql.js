@@ -5,7 +5,7 @@ import {logger} from "/imports/utils/logger";
 import {sleep} from "../../../utils/misc";
 import {JOB_STATUS_WAITING_STATES, JobStatus} from "../constants";
 
-const SEARCH_JOBS_TABLE_NAME = "search_jobs";
+const SEARCH_JOBS_TABLE_NAME = Meteor.settings.private.SqlDbSearchJobsTableName;
 const SEARCH_JOBS_TABLE_COLUMN_NAMES = {
     ID: "id",
     STATUS: "status",
