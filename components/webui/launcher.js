@@ -27,6 +27,12 @@ const DEFAULT_LOGS_DIR = ".";
 const MAX_LOGS_FILE_SIZE = "100m";
 const MAX_LOGS_RETENTION_DAYS = "30d";
 
+/**
+ * Creates a logger using winston module.
+ *
+ * @param {string} logsDir directory where the log files will be saved.
+ * @returns {object} the logger object
+ */
 const getLogger = (logsDir) => {
     return winston.createLogger({
         format: winston.format.combine(
@@ -52,6 +58,13 @@ const getLogger = (logsDir) => {
     });
 };
 
+
+/**
+ * Runs a script with logging support.
+ *
+ * @param {string} logsDir path where the logs will be stored
+ * @param {string} scriptPath path of the script to be executed
+ */
 const runScript = (logsDir, scriptPath) => {
     const logger = getLogger(logsDir);
     const script = spawn(process.argv0, [scriptPath]);
@@ -65,6 +78,12 @@ const runScript = (logsDir, scriptPath) => {
     });
 };
 
+/**
+ * Parses the command line arguments and retrieves the values for the
+ * WEBUI_LOGS_DIR and scriptPath variables.
+ *
+ * @returns {Object} containing the values for WEBUI_LOGS_DIR and scriptPath
+ */
 const parseArgs = () => {
     const WEBUI_LOGS_DIR = process.env["WEBUI_LOGS_DIR"] || DEFAULT_LOGS_DIR;
     const scriptPath = process.argv[2];
@@ -75,6 +94,13 @@ const parseArgs = () => {
     };
 };
 
+/**
+ * The main function of the program.
+ *
+ * This function is the entry point of the program.
+ *
+ * @returns {void}
+ */
 const main = () => {
     const args = parseArgs();
 
