@@ -43,10 +43,10 @@ if [ $installed -eq 0 ] ; then
 fi
 
 echo "Checking for elevated privileges..."
-install_command_prefix_args=()
+install_cmd_args=()
 if [ ${EUID:-$(id -u)} -ne 0 ] ; then
   sudo echo "Script can elevate privileges."
-  install_command_prefix_args+=("sudo")
+  install_cmd_args+=("sudo")
 fi
 
 # Download
@@ -74,6 +74,7 @@ cmake \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX=/usr/local \
   -DBUILD_SHARED_AND_STATIC_LIBS=ON \
+  -DBUILD_SHARED_LIBS_WITH_STATIC_MONGOC=ON \
   -DENABLE_TESTS=OFF \
   ..
 
@@ -85,7 +86,7 @@ set -e
 
 # Install
 if [ $checkinstall_installed -eq 0 ] ; then
-  install_command_prefix_args+=(
+  install_cmd_args+=(
     checkinstall
     --pkgname "${package_name}"
     --pkgversion "${version}"
@@ -95,7 +96,13 @@ if [ $checkinstall_installed -eq 0 ] ; then
     --pakdir "${deb_output_dir}"
   )
 fi
-"${install_command_prefix_args[@]}" cmake --build . --target install --parallel
+install_cmd_args+=(
+  cmake
+  --build .
+  --target install
+  --parallel
+)
+"${install_cmd_args[@]}"
 
 # Clean up
 rm -rf "$temp_dir"

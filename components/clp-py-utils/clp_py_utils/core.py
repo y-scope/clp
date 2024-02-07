@@ -14,7 +14,7 @@ def get_config_value(config, key):
     :param config:
     :param key:
     """
-    singular_keys = key.split('.')
+    singular_keys = key.split(".")
     current_config = config
     for current_key in singular_keys:
         current_config = current_config[current_key]
@@ -36,7 +36,7 @@ def make_config_path_absolute(default_root: pathlib.Path, config_path: pathlib.P
 
 
 def read_yaml_config_file(yaml_config_file_path: pathlib.Path):
-    with open(yaml_config_file_path, 'r') as yaml_config_file:
+    with open(yaml_config_file_path, "r") as yaml_config_file:
         try:
             config = yaml.safe_load(yaml_config_file)
         except ParserError as ex:

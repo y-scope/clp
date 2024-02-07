@@ -263,7 +263,8 @@ static bool search(
                 auto file_metadata_ix = archive.get_file_iterator(
                         search_begin_ts,
                         search_end_ts,
-                        command_line_args.get_file_path()
+                        command_line_args.get_file_path(),
+                        false
                 );
                 num_matches = search_files(
                         queries,
@@ -276,7 +277,8 @@ static bool search(
                         search_begin_ts,
                         search_end_ts,
                         command_line_args.get_file_path(),
-                        clp::cInvalidSegmentId
+                        clp::cInvalidSegmentId,
+                        false
                 );
                 auto& file_metadata_ix = *file_metadata_ix_ptr;
                 num_matches = search_files(

@@ -118,8 +118,6 @@ void Archive::open(UserConfig const& user_config) {
     auto metadata_db_path = archive_path / cMetadataDBFileName;
     m_metadata_db.open(metadata_db_path.string());
 
-    m_next_file_id = 0;
-
     m_target_segment_uncompressed_size = user_config.target_segment_uncompressed_size;
     m_next_segment_id = 0;
     m_compression_level = user_config.compression_level;

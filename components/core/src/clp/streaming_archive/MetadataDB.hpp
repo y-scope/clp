@@ -76,7 +76,8 @@ public:
                 epochtime_t end_timestamp,
                 std::string const& file_path,
                 bool in_specific_segment,
-                segment_id_t segment_id
+                segment_id_t segment_id,
+                bool order_by_segment_end_ts
         );
 
         // Methods
@@ -136,7 +137,8 @@ public:
             epochtime_t end_ts,
             std::string const& file_path,
             bool in_specific_segment,
-            segment_id_t segment_id
+            segment_id_t segment_id,
+            bool order_by_segment_end_ts
     ) {
         return std::make_unique<FileIterator>(
                 m_db,
@@ -144,7 +146,8 @@ public:
                 end_ts,
                 file_path,
                 in_specific_segment,
-                segment_id
+                segment_id,
+                order_by_segment_end_ts
         );
     }
 

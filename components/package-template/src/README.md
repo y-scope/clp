@@ -113,8 +113,9 @@ On the control node, run the following commands (these must be started in the
 order below):
 
 ```bash
-sbin/start-clp.sh db
+sbin/start-clp.sh database
 sbin/start-clp.sh queue
+sbin/start-clp.sh results_cache
 sbin/start-clp.sh scheduler
 ```
 

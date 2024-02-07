@@ -8,30 +8,28 @@ import subprocess
 import typing
 
 import yaml
-
-from clp_py_utils.clp_config import CLPConfig, CLP_DEFAULT_CREDENTIALS_FILE_PATH
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_CREDENTIALS_FILE_PATH,
+    CLPConfig,
+    DB_COMPONENT_NAME,
+    QUEUE_COMPONENT_NAME,
+    REDIS_COMPONENT_NAME,
+    RESULTS_CACHE_COMPONENT_NAME,
+)
 from clp_py_utils.core import (
     get_config_value,
     make_config_path_absolute,
     read_yaml_config_file,
-    validate_path_could_be_dir
+    validate_path_could_be_dir,
 )
 
 # CONSTANTS
-# Component names
-DB_COMPONENT_NAME = 'db'
-QUEUE_COMPONENT_NAME = 'queue'
-SCHEDULER_COMPONENT_NAME = 'scheduler'
-WORKER_COMPONENT_NAME = 'worker'
-
 # Paths
-CONTAINER_CLP_HOME = pathlib.Path('/') / 'opt' / 'clp'
-CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path('/') / 'mnt' / 'logs'
-CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path('etc') / 'clp-config.yml'
+CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
+CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path("/") / "mnt" / "logs"
+CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path("etc") / "clp-config.yml"
 
-DOCKER_MOUNT_TYPE_STRINGS = [
-    'bind'
-]
+DOCKER_MOUNT_TYPE_STRINGS = ["bind"]
 
 
 class DockerMountType(enum.IntEnum):
@@ -39,14 +37,22 @@ class DockerMountType(enum.IntEnum):
 
 
 class DockerMount:
-    def __init__(self, type: DockerMountType, src: pathlib.Path, dst: pathlib.Path, is_read_only: bool = False):
+    def __init__(
+        self,
+        type: DockerMountType,
+        src: pathlib.Path,
+        dst: pathlib.Path,
+        is_read_only: bool = False,
+    ):
         self.__type = type
         self.__src = src
         self.__dst = dst
         self.__is_read_only = is_read_only
 
     def __str__(self):
-        mount_str = f"type={DOCKER_MOUNT_TYPE_STRINGS[self.__type]},src={self.__src},dst={self.__dst}"
+        mount_str = (
+            f"type={DOCKER_MOUNT_TYPE_STRINGS[self.__type]},src={self.__src},dst={self.__dst}"
+        )
         if self.__is_read_only:
             mount_str += ",readonly"
         return mount_str
@@ -55,19 +61,22 @@ class DockerMount:
 class CLPDockerMounts:
     def __init__(self, clp_home: pathlib.Path, docker_clp_home: pathlib.Path):
         self.input_logs_dir: typing.Optional[DockerMount] = None
-        self.clp_home: typing.Optional[DockerMount] = DockerMount(DockerMountType.BIND, clp_home, docker_clp_home)
+        self.clp_home: typing.Optional[DockerMount] = DockerMount(
+            DockerMountType.BIND, clp_home, docker_clp_home
+        )
         self.data_dir: typing.Optional[DockerMount] = None
         self.logs_dir: typing.Optional[DockerMount] = None
         self.archives_output_dir: typing.Optional[DockerMount] = None
 
+
 def get_clp_home():
     # Determine CLP_HOME from an environment variable or this script's path
     clp_home = None
-    if 'CLP_HOME' in os.environ:
-        clp_home = pathlib.Path(os.environ['CLP_HOME'])
+    if "CLP_HOME" in os.environ:
+        clp_home = pathlib.Path(os.environ["CLP_HOME"])
     else:
         for path in pathlib.Path(__file__).resolve().parents:
-            if 'lib' == path.name:
+            if "lib" == path.name:
                 clp_home = path.parent
                 break
 
@@ -78,21 +87,30 @@ def get_clp_home():
 
     return clp_home.resolve()
 
+
 def check_dependencies():
     try:
-        subprocess.run("command -v docker", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
+        subprocess.run(
+            "command -v docker",
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=True,
+        )
     except subprocess.CalledProcessError:
         raise EnvironmentError("docker is not installed or available on the path")
     try:
-        subprocess.run(['docker', 'ps'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
+        subprocess.run(
+            ["docker", "ps"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True
+        )
     except subprocess.CalledProcessError:
         raise EnvironmentError("docker cannot run without superuser privileges (sudo).")
 
 
 def container_exists(container_name):
-    cmd = ['docker', 'ps', '-q', '-f', f'name={container_name}']
+    cmd = ["docker", "ps", "-q", "-f", f"name={container_name}"]
     proc = subprocess.run(cmd, stdout=subprocess.PIPE)
-    for line in proc.stdout.decode('utf-8'):
+    for line in proc.stdout.decode("utf-8"):
         if line != "":
             return True
 
@@ -107,13 +125,19 @@ def validate_port(port_name: str, hostname: str, port: int):
         sock.close()
     except OSError as e:
         if e.errno == errno.EADDRINUSE:
-            raise ValueError(f"{port_name} {hostname}:{port} is already in use. Please choose a different port.")
+            raise ValueError(
+                f"{port_name} {hostname}:{port} is already in use. Please choose a different port."
+            )
         else:
             raise ValueError(f"{port_name} {hostname}:{port} is invalid: {e.strerror}.")
 
 
-def is_path_already_mounted(mounted_host_root: pathlib.Path, mounted_container_root: pathlib.Path,
-                            host_path: pathlib.Path, container_path: pathlib.Path):
+def is_path_already_mounted(
+    mounted_host_root: pathlib.Path,
+    mounted_container_root: pathlib.Path,
+    host_path: pathlib.Path,
+    container_path: pathlib.Path,
+):
     try:
         host_path_relative_to_mounted_root = host_path.relative_to(mounted_host_root)
     except ValueError:
@@ -139,28 +163,41 @@ def generate_container_config(clp_config: CLPConfig, clp_home: pathlib.Path):
     docker_mounts = CLPDockerMounts(clp_home, CONTAINER_CLP_HOME)
 
     input_logs_dir = clp_config.input_logs_directory.resolve()
-    container_clp_config.input_logs_directory = CONTAINER_INPUT_LOGS_ROOT_DIR / \
-                                                input_logs_dir.relative_to(input_logs_dir.anchor)
-    docker_mounts.input_logs_dir = DockerMount(DockerMountType.BIND, input_logs_dir,
-                                               container_clp_config.input_logs_directory, True)
+    container_clp_config.input_logs_directory = (
+        CONTAINER_INPUT_LOGS_ROOT_DIR / input_logs_dir.relative_to(input_logs_dir.anchor)
+    )
+    docker_mounts.input_logs_dir = DockerMount(
+        DockerMountType.BIND, input_logs_dir, container_clp_config.input_logs_directory, True
+    )
 
-    container_clp_config.data_directory = CONTAINER_CLP_HOME / 'var' / 'data'
-    if not is_path_already_mounted(clp_home, CONTAINER_CLP_HOME, clp_config.data_directory,
-                                   container_clp_config.data_directory):
-        docker_mounts.data_dir = DockerMount(DockerMountType.BIND, clp_config.data_directory,
-                                             container_clp_config.data_directory)
+    container_clp_config.data_directory = CONTAINER_CLP_HOME / "var" / "data"
+    if not is_path_already_mounted(
+        clp_home, CONTAINER_CLP_HOME, clp_config.data_directory, container_clp_config.data_directory
+    ):
+        docker_mounts.data_dir = DockerMount(
+            DockerMountType.BIND, clp_config.data_directory, container_clp_config.data_directory
+        )
 
-    container_clp_config.logs_directory = CONTAINER_CLP_HOME / 'var' / 'log'
-    if not is_path_already_mounted(clp_home, CONTAINER_CLP_HOME, clp_config.logs_directory,
-                                   container_clp_config.logs_directory):
-        docker_mounts.logs_dir = DockerMount(DockerMountType.BIND, clp_config.logs_directory,
-                                             container_clp_config.logs_directory)
+    container_clp_config.logs_directory = CONTAINER_CLP_HOME / "var" / "log"
+    if not is_path_already_mounted(
+        clp_home, CONTAINER_CLP_HOME, clp_config.logs_directory, container_clp_config.logs_directory
+    ):
+        docker_mounts.logs_dir = DockerMount(
+            DockerMountType.BIND, clp_config.logs_directory, container_clp_config.logs_directory
+        )
 
-    container_clp_config.archive_output.directory = pathlib.Path('/') / 'mnt' / 'archive-output'
-    if not is_path_already_mounted(clp_home, CONTAINER_CLP_HOME, clp_config.archive_output.directory,
-                                   container_clp_config.archive_output.directory):
-        docker_mounts.archives_output_dir = DockerMount(DockerMountType.BIND, clp_config.archive_output.directory,
-                                                        container_clp_config.archive_output.directory)
+    container_clp_config.archive_output.directory = pathlib.Path("/") / "mnt" / "archive-output"
+    if not is_path_already_mounted(
+        clp_home,
+        CONTAINER_CLP_HOME,
+        clp_config.archive_output.directory,
+        container_clp_config.archive_output.directory,
+    ):
+        docker_mounts.archives_output_dir = DockerMount(
+            DockerMountType.BIND,
+            clp_config.archive_output.directory,
+            container_clp_config.archive_output.directory,
+        )
 
     return container_clp_config, docker_mounts
 
@@ -173,8 +210,9 @@ def validate_config_key_existence(config, key):
     return value
 
 
-def validate_and_load_config_file(config_file_path: pathlib.Path, default_config_file_path: pathlib.Path,
-                                  clp_home: pathlib.Path):
+def validate_and_load_config_file(
+    config_file_path: pathlib.Path, default_config_file_path: pathlib.Path, clp_home: pathlib.Path
+):
     if config_file_path.exists():
         raw_clp_config = read_yaml_config_file(config_file_path)
         if raw_clp_config is None:
@@ -199,25 +237,25 @@ def validate_and_load_config_file(config_file_path: pathlib.Path, default_config
 
 def generate_credentials_file(credentials_file_path: pathlib.Path):
     credentials = {
-        DB_COMPONENT_NAME: {
-            'user': 'clp-user',
-            'password': secrets.token_urlsafe(8)
-        },
-        QUEUE_COMPONENT_NAME: {
-            'user': 'clp-user',
-            'password': secrets.token_urlsafe(8)
-        },
+        DB_COMPONENT_NAME: {"user": "clp-user", "password": secrets.token_urlsafe(8)},
+        QUEUE_COMPONENT_NAME: {"user": "clp-user", "password": secrets.token_urlsafe(8)},
+        REDIS_COMPONENT_NAME: {"password": secrets.token_urlsafe(16)},
     }
 
-    with open(credentials_file_path, 'w') as f:
+    with open(credentials_file_path, "w") as f:
         yaml.safe_dump(credentials, f)
 
 
-def validate_credentials_file_path(clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool):
+def validate_credentials_file_path(
+    clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
+):
     credentials_file_path = clp_config.credentials_file_path
     if not credentials_file_path.exists():
-        if make_config_path_absolute(clp_home, CLP_DEFAULT_CREDENTIALS_FILE_PATH) == credentials_file_path \
-                and generate_default_file:
+        if (
+            make_config_path_absolute(clp_home, CLP_DEFAULT_CREDENTIALS_FILE_PATH)
+            == credentials_file_path
+            and generate_default_file
+        ):
             generate_credentials_file(credentials_file_path)
         else:
             raise ValueError(f"Credentials file path '{credentials_file_path}' does not exist.")
@@ -225,38 +263,89 @@ def validate_credentials_file_path(clp_config: CLPConfig, clp_home: pathlib.Path
         raise ValueError(f"Credentials file path '{credentials_file_path}' is not a file.")
 
 
-def validate_and_load_db_credentials_file(clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool):
+def validate_and_load_db_credentials_file(
+    clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
+):
     validate_credentials_file_path(clp_config, clp_home, generate_default_file)
     clp_config.load_database_credentials_from_file()
 
 
-def validate_and_load_queue_credentials_file(clp_config: CLPConfig, clp_home: pathlib.Path,
-                                             generate_default_file: bool):
+def validate_and_load_queue_credentials_file(
+    clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
+):
     validate_credentials_file_path(clp_config, clp_home, generate_default_file)
     clp_config.load_queue_credentials_from_file()
+
+
+def validate_and_load_redis_credentials_file(
+    clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
+):
+    validate_credentials_file_path(clp_config, clp_home, generate_default_file)
+    clp_config.load_redis_credentials_from_file()
 
 
 def validate_db_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path):
     try:
         validate_path_could_be_dir(data_dir)
     except ValueError as ex:
-        raise ValueError(f"database data directory is invalid: {ex}")
+        raise ValueError(f"{DB_COMPONENT_NAME} data directory is invalid: {ex}")
 
     try:
         validate_path_could_be_dir(logs_dir)
     except ValueError as ex:
-        raise ValueError(f"database logs directory is invalid: {ex}")
+        raise ValueError(f"{DB_COMPONENT_NAME} logs directory is invalid: {ex}")
 
-    validate_port("database.port", clp_config.database.host, clp_config.database.port)
+    validate_port(f"{DB_COMPONENT_NAME}.port", clp_config.database.host, clp_config.database.port)
 
 
 def validate_queue_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
     try:
         validate_path_could_be_dir(logs_dir)
     except ValueError as ex:
-        raise ValueError(f"queue logs directory is invalid: {ex}")
+        raise ValueError(f"{QUEUE_COMPONENT_NAME} logs directory is invalid: {ex}")
 
-    validate_port("queue.port", clp_config.queue.host, clp_config.queue.port)
+    validate_port(f"{QUEUE_COMPONENT_NAME}.port", clp_config.queue.host, clp_config.queue.port)
+
+
+def validate_redis_config(
+    clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path, base_config: pathlib.Path
+):
+    try:
+        validate_path_could_be_dir(data_dir)
+    except ValueError as ex:
+        raise ValueError(f"{REDIS_COMPONENT_NAME} data directory is invalid {ex}")
+
+    try:
+        validate_path_could_be_dir(logs_dir)
+    except ValueError as ex:
+        raise ValueError(f"{REDIS_COMPONENT_NAME} logs directory is invalid: {ex}")
+
+    if not base_config.exists():
+        raise ValueError(
+            f"{REDIS_COMPONENT_NAME} base configuration at {str(base_config)} is missing."
+        )
+
+    validate_port(f"{REDIS_COMPONENT_NAME}.port", clp_config.redis.host, clp_config.redis.port)
+
+
+def validate_results_cache_config(
+    clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path
+):
+    try:
+        validate_path_could_be_dir(data_dir)
+    except ValueError as ex:
+        raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME} data directory is invalid: {ex}")
+
+    try:
+        validate_path_could_be_dir(logs_dir)
+    except ValueError as ex:
+        raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME} logs directory is invalid: {ex}")
+
+    validate_port(
+        f"{RESULTS_CACHE_COMPONENT_NAME}.port",
+        clp_config.results_cache.host,
+        clp_config.results_cache.port,
+    )
 
 
 def validate_worker_config(clp_config: CLPConfig):

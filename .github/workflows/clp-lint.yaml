@@ -1,0 +1,28 @@
+name: "clp-lint"
+
+on: ["pull_request", "push", "workflow_dispatch"]
+
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+  # Cancel in-progress jobs for efficiency
+  cancel-in-progress: true
+
+jobs:
+  lint-check:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+        with:
+          submodules: "recursive"
+
+      - uses: "actions/setup-python@v5"
+        with:
+          python-version: "3.11"
+
+      - name: "Install task"
+        shell: "bash"
+        run: "npm install -g @go-task/cli"
+
+      - name: "Run lint task"
+        shell: "bash"
+        run: "task lint-check"
