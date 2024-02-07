@@ -5,7 +5,10 @@ import {useTracker} from "meteor/react-meteor-data";
 import React, {useEffect, useRef, useState} from "react";
 import {ProgressBar} from "react-bootstrap";
 
-import {SearchResultsMetadataCollection} from "../../api/search/collections";
+import {
+    addSortToMongoFindOptions,
+    SearchResultsMetadataCollection
+} from "../../api/search/collections";
 import {INVALID_JOB_ID, isSearchSignalQuerying, SearchSignal} from "../../api/search/constants";
 import SearchJobCollectionsManager from "../../api/search/SearchJobCollectionsManager";
 
@@ -77,13 +80,16 @@ const SearchView = () => {
             visibleSearchResultsLimit: visibleSearchResultsLimit,
         });
 
+        const findOptions = {};
+        addSortToMongoFindOptions(fieldToSortBy, findOptions);
+
         // NOTE: Although we publish and subscribe using the name
         // `Meteor.settings.public.SearchResultsCollectionName`, the rows are still returned in the
         // job-specific collection (e.g., "1"); this is because on the server, we're returning a
         // cursor from the job-specific collection and Meteor creates a collection with the same
         // name on the client rather than returning the rows in a collection with the published
         // name.
-        return dbRef.current.getOrCreateCollection(jobId).find().fetch();
+        return dbRef.current.getOrCreateCollection(jobId).find({}, findOptions).fetch();
     }, [jobId, fieldToSortBy, visibleSearchResultsLimit]);
 
     // State transitions
