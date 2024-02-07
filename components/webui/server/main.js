@@ -10,7 +10,7 @@ import {initSearchEventCollection} from "/imports/api/search/collections";
 import {initLogger} from "/imports/utils/logger";
 
 const DEFAULT_LOGS_DIR = ".";
-const DEFAULT_LOGGING_LEVEL = Meteor.isDevelopment ? "debug" : "info";
+const DEFAULT_LOGGING_LEVEL = Meteor.isDevelopment ? "DEBUG" : "INFO";
 
 /**
  * Parses environment variables into config values for the application.
