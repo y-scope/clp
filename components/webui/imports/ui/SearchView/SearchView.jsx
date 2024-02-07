@@ -127,7 +127,9 @@ const SearchView = () => {
         };
         Meteor.call("search.submitQuery", args, (error, result) => {
             if (error) {
+                setJobId(INVALID_JOB_ID);
                 setOperationErrorMsg(error.reason);
+                return;
             }
 
             setJobId(result["jobId"]);
@@ -148,6 +150,7 @@ const SearchView = () => {
         Meteor.call("search.clearResults", args, (error) => {
             if (error) {
                 setOperationErrorMsg(error.reason);
+                return;
             }
 
             if (SearchSignal.REQ_CLEARING === localLastSearchSignalRef.current) {
