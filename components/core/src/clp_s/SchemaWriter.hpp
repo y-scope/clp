@@ -40,7 +40,7 @@ public:
     /**
      * Stores the schema to disk.
      */
-    void store();
+    void store(ZstdCompressor& compressor);
 
     /**
      * Closes the schema writer.
@@ -48,11 +48,9 @@ public:
      */
     [[nodiscard]] size_t close();
 
+    uint64_t get_num_messages() const { return m_num_messages; }
+
 private:
-    FileWriter m_file_writer;
-    ZstdCompressor m_compressor;
-    std::string m_path;
-    int m_compression_level{};
     uint64_t m_num_messages;
 
     std::vector<BaseColumnWriter*> m_columns;

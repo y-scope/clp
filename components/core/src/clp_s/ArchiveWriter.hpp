@@ -88,7 +88,10 @@ private:
     int m_compression_level{};
 
     std::shared_ptr<SchemaTree> m_schema_tree;
-    std::map<int32_t, SchemaWriter*> m_schema_id_to_writer;
+    std::map<int32_t, SchemaWriter*> m_id_to_schema_writer;
+
+    FileWriter m_table_file_writer, m_metadata_file_writer;
+    ZstdCompressor m_table_compressor, m_metadata_compressor;
 };
 }  // namespace clp_s
 

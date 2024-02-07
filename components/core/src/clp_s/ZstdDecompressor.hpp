@@ -96,6 +96,15 @@ public:
      */
     ErrorCode try_read_string(size_t str_length, std::string& str);
 
+    /**
+     * Tries to seek from the beginning to the given position
+     * @param pos
+     * @return ErrorCode_NotInit if the decompressor is not open
+     * @return Same as the underlying medium's try_read_exact_length method
+     * @return ErrorCode_Success on success
+     */
+    ErrorCode try_seek_from_begin(size_t pos);
+
 private:
     // Enum class
     enum class InputType {
@@ -135,11 +144,7 @@ private:
 
 template <typename ValueType>
 ErrorCode ZstdDecompressor::try_read_numeric_value(ValueType& value) {
-    ErrorCode error_code = try_read_exact_length(reinterpret_cast<char*>(&value), sizeof(value));
-    if (ErrorCodeSuccess != error_code) {
-        return error_code;
-    }
-    return ErrorCodeSuccess;
+    return try_read_exact_length(reinterpret_cast<char*>(&value), sizeof(value));
 }
 }  // namespace clp_s
 

@@ -21,15 +21,7 @@ JsonConstructor::JsonConstructor(JsonConstructorOption const& option)
         exit(1);
     }
 
-    boost::filesystem::directory_iterator iter(m_archives_dir);
-    boost::filesystem::directory_iterator end;
-
-    for (; iter != end; ++iter) {
-        if (boost::filesystem::is_directory(iter->path())) {
-            m_archive_paths.push_back(iter->path().string());
-        }
-    }
-
+    m_archive_paths = std::move(ReaderUtils::get_archives(m_archives_dir));
     if (m_archive_paths.empty()) {
         SPDLOG_ERROR("No archives in '{}'", m_archives_dir);
         exit(1);
@@ -39,15 +31,12 @@ JsonConstructor::JsonConstructor(JsonConstructorOption const& option)
 }
 
 void JsonConstructor::construct() {
-    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
-
     m_schema_tree = ReaderUtils::read_schema_tree(m_archives_dir);
     auto id_to_schema = ReaderUtils::read_schemas(m_archives_dir);
-
     auto timestamp_dict = ReaderUtils::read_timestamp_dictionary(m_archives_dir);
 
     m_archive_reader
-            = std::make_unique<ArchiveReader>(m_schema_tree, *id_to_schema, timestamp_dict);
+            = std::make_unique<ArchiveReader>(m_schema_tree, id_to_schema, timestamp_dict);
 }
 
 void JsonConstructor::store() {
@@ -55,9 +44,8 @@ void JsonConstructor::store() {
     writer.open(m_output_dir + "/original", FileWriter::OpenMode::CreateForWriting);
 
     while (m_current_archive_index <= m_max_archive_index) {
-        ArchiveReaderOption option;
-        option.archive_path = m_archive_paths[m_current_archive_index];
-        m_archive_reader->open(option);
+        m_archive_reader->open(m_archive_paths[m_current_archive_index]);
+        m_archive_reader->load_dictionaries_and_metadata();
         m_archive_reader->store(writer);
         m_archive_reader->close();
         m_current_archive_index++;
