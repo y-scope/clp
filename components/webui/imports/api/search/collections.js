@@ -23,28 +23,16 @@ export const initSearchEventCollection = () => {
 }
 
 /**
- * Object to store references to MongoDB collections.
- * This should only be accessed by the server; clients should use a React referenced-object.
- *
- * @constant
- * @type {Object}
+ * Adds the given sort to the find options for a MongoDB collection.
+ * @param {Object|null} fieldToSortBy An object mapping field names to the direction to sort by
+ * (ASC = 1, DESC = -1).
+ * @param {Object} findOptions
  */
-// FIXME: change to use Map before submission
-export const MY_MONGO_DB = new Map();
-
-/**
- * Retrieves a Mongo Collection object by name, creating it if it does not already exist.
- * This is to adhere to Meteor.js's restriction against creating more than one Collection object
- * with the same name.
- *
- * @param {Object} dbRef database object where collections are stored
- * @param {string} name of the collection to retrieve or create
- * @returns {Mongo.Collection}
- */
-export const getCollection = (dbRef, name) => {
-    if (undefined === dbRef.get(name)) {
-        dbRef.set(name, new Mongo.Collection(name));
+export const addSortToMongoFindOptions = (fieldToSortBy, findOptions) => {
+    if (fieldToSortBy) {
+        findOptions["sort"] = {
+            [fieldToSortBy.name]: fieldToSortBy.direction,
+            _id: fieldToSortBy.direction,
+        };
     }
-
-    return dbRef.get(name);
-};
+}

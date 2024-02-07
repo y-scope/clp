@@ -1,6 +1,6 @@
 import React from "react";
-import {SearchResultsHeader} from "./SearchResultsHeader";
-import {SearchResultsTable} from "./SearchResultsTable";
+import {SearchResultsHeader} from "./SearchResultsHeader.jsx";
+import {SearchResultsTable} from "./SearchResultsTable.jsx";
 
 /**
  * Renders the search results, which includes the search results header and the search results

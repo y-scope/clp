@@ -7,6 +7,8 @@ import ReactVisibilitySensor from "react-visibility-sensor";
 export const VISIBLE_RESULTS_LIMIT_INITIAL = 10;
 const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
 
+import "./SearchResultsTable.scss";
+
 /**
  * Renders a table displaying search results, which includes features like sorting and dynamic
  * loading of more results when scrolling to the bottom, up to the number of results available on

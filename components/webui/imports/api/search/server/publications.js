@@ -1,7 +1,8 @@
 import {Meteor} from "meteor/meteor";
 import {logger} from "/imports/utils/logger";
 
-import {SearchResultsMetadataCollection, getCollection, MY_MONGO_DB} from "../collections";
+import {addSortToMongoFindOptions, SearchResultsMetadataCollection} from "../collections";
+import {searchJobCollectionsManager} from "./collections";
 
 /**
  * Publishes search results metadata for a specific job.
@@ -41,19 +42,14 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
         `jobId=${jobId}, fieldToSortBy=${fieldToSortBy}, ` +
         `visibleSearchResultsLimit=${visibleSearchResultsLimit}`);
 
-    const collection = getCollection(MY_MONGO_DB, jobId.toString());
+    const collection = searchJobCollectionsManager.getOrCreateCollection(jobId);
+
     const findOptions = {
         limit: visibleSearchResultsLimit,
         disableOplog: true,
         pollingIntervalMs: 250,
     };
-
-    if (fieldToSortBy) {
-        const sort = {};
-        sort[fieldToSortBy.name] = fieldToSortBy.direction;
-        sort["_id"] = fieldToSortBy.direction;
-        findOptions["sort"] = sort;
-    }
+    addSortToMongoFindOptions(fieldToSortBy, findOptions);
 
     return collection.find({}, findOptions);
 });

@@ -1,9 +1,10 @@
-/* Production launcher for CLP WebUI, which redirects Meteor server stderr to rotated error logs
+/**
+ * Production launcher for CLP WebUI, which redirects Meteor server stderr to rotated error logs
  * files in a specified directory for error monitoring.
 
  * To avoid duplicated installations of dependencies, use the same `node_modules` for the server
- *  by setting envvar NODE_PATH="./programs/server/npm/node_modules", assumning this script is
- *  placed under the same directory where bundled `main.js` locates.
+ * by setting envvar NODE_PATH="./programs/server/npm/node_modules", assuming this script is
+ * placed under the same directory where the bundled `main.js` is located.
  *
  * This is not intended for development use. For development, please refer to README.md in the
  * component root for launching a development server with Meteor-specific error messages print
@@ -14,7 +15,6 @@
  *   - WEBUI_LOGS_DIR: path to error logs directory
  * SCRIPT USAGE:
  *   - usage: node /path/to/launcher.js /path/to/main.js
- *
  */
 
 const {spawn} = require("child_process");

@@ -8,6 +8,7 @@ import socket
 import subprocess
 import sys
 import time
+import typing
 import uuid
 
 import yaml
@@ -19,6 +20,7 @@ from clp_py_utils.clp_config import (
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    SEARCH_JOBS_TABLE_NAME,
     SEARCH_SCHEDULER_COMPONENT_NAME,
     SEARCH_WORKER_COMPONENT_NAME,
     WEBUI_COMPONENT_NAME,
@@ -625,6 +627,29 @@ def generic_start_worker(
     logger.info(f"Started {component_name}.")
 
 
+def update_meteor_settings(
+    parent_key_prefix: str,
+    settings: typing.Dict[str, typing.Any],
+    updates: typing.Dict[str, typing.Any],
+):
+    """
+    Recursively updates the given Meteor settings object with the values from `updates`.
+
+    :param parent_key_prefix: The prefix for keys at this level in the settings dictionary.
+    :param settings: The settings to update.
+    :param updates: The updates.
+    :raises ValueError: If a key in `updates` doesn't exist in `settings`.
+    """
+    for key, value in updates.items():
+        if key not in settings:
+            error_msg = f"{parent_key_prefix}{key} is not a valid configuration key for the webui."
+            raise ValueError(error_msg)
+        if isinstance(value, dict):
+            update_meteor_settings(f"{parent_key_prefix}{key}.", settings[key], value)
+        else:
+            settings[key] = updates[key]
+
+
 def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts):
     logger.info(f"Starting {WEBUI_COMPONENT_NAME}...")
 
@@ -646,8 +671,16 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
 
     container_webui_logs_dir = pathlib.Path("/") / "var" / "log" / WEBUI_COMPONENT_NAME
     with open(settings_json_path, "r") as settings_json_file:
-        settings_json_content = settings_json_file.read()
-        meteor_settings = json.loads(settings_json_content)
+        meteor_settings = json.loads(settings_json_file.read())
+    meteor_settings_updates = {
+        "private": {
+            "SqlDbHost": clp_config.database.host,
+            "SqlDbPort": clp_config.database.port,
+            "SqlDbName": clp_config.database.name,
+            "SqlDbSearchJobsTableName": SEARCH_JOBS_TABLE_NAME,
+        }
+    }
+    update_meteor_settings("", meteor_settings, meteor_settings_updates)
 
     # Start container
     # fmt: off
@@ -662,9 +695,6 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
         "-e", f"PORT={clp_config.webui.port}",
         "-e", f"ROOT_URL=http://{clp_config.webui.host}",
         "-e", f"METEOR_SETTINGS={json.dumps(meteor_settings)}",
-        "-e", f"CLP_DB_HOST={clp_config.database.host}",
-        "-e", f"CLP_DB_PORT={clp_config.database.port}",
-        "-e", f"CLP_DB_NAME={clp_config.database.name}",
         "-e", f"CLP_DB_USER={clp_config.database.username}",
         "-e", f"CLP_DB_PASS={clp_config.database.password}",
         "-e", f"WEBUI_LOGS_DIR={container_webui_logs_dir}",

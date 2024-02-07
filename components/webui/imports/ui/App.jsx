@@ -7,7 +7,7 @@ import Sidebar from "./Sidebar/Sidebar.jsx";
 
 import {login} from "../api/user/client/methods";
 import "./App.scss";
-import LOCAL_STORAGE_KEYS from "./constants/LOCAL_STORAGE_KEYS";
+import LOCAL_STORAGE_KEYS from "./constants";
 
 
 const ROUTES = [

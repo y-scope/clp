@@ -1,44 +1,41 @@
 import {Meteor} from "meteor/meteor";
 
+import "/imports/api/search/server/collections";
 import "/imports/api/search/server/methods";
 import "/imports/api/search/server/publications";
 import "/imports/api/user/server/methods";
 
-import {initSql, deinitSql} from "/imports/api/search/server/sql";
 import {initSearchEventCollection} from "/imports/api/search/collections";
+import {
+    deinitSearchJobsDbManager,
+    initSearchJobsDbManager,
+} from "/imports/api/search/server/methods";
 import {initLogger} from "/imports/utils/logger";
 
 const DEFAULT_LOGS_DIR = ".";
-const DEFAULT_LOGGING_LEVEL = Meteor.isDevelopment ? "debug" : "info";
+const DEFAULT_LOGGING_LEVEL = Meteor.isDevelopment ? "DEBUG" : "INFO";
 
 /**
- * Parses environment variables and retrieves configuration values for the application.
+ * Parses environment variables into config values for the application.
  *
- * @returns {Object} object containing configuration values including database host, port,
- *                   name, user, password, logs directory, and logging level
- * @throws {Error} if required environment variables are not defined, it exits the process with
- * an error
+ * @returns {Object} An object containing config values including the SQL database credentials,
+ *                   logs directory, and logging level.
+ * @throws {Error} if the required environment variables are undefined, it exits the process with an
+ *                 error.
  */
-const parseArgs = () => {
-    const CLP_DB_HOST = process.env["CLP_DB_HOST"];
-    const CLP_DB_PORT = process.env["CLP_DB_PORT"];
-    const CLP_DB_NAME = process.env["CLP_DB_NAME"];
+const parseEnvVars = () => {
     const CLP_DB_USER = process.env["CLP_DB_USER"];
     const CLP_DB_PASS = process.env["CLP_DB_PASS"];
 
-    if ([CLP_DB_HOST, CLP_DB_PORT, CLP_DB_NAME, CLP_DB_USER, CLP_DB_PASS].includes(undefined)) {
-        console.error(
-            "Environment variables CLP_DB_URL, CLP_DB_USER and CLP_DB_PASS need to be defined");
-        process.exit(1);
+    if ([CLP_DB_USER, CLP_DB_PASS].includes(undefined)) {
+        console.error("Environment variables CLP_DB_USER and CLP_DB_PASS must be defined");
+        process.exit(1)
     }
 
     const WEBUI_LOGS_DIR = process.env["WEBUI_LOGS_DIR"] || DEFAULT_LOGS_DIR;
     const WEBUI_LOGGING_LEVEL = process.env["WEBUI_LOGGING_LEVEL"] || DEFAULT_LOGGING_LEVEL;
 
     return {
-        CLP_DB_HOST,
-        CLP_DB_PORT,
-        CLP_DB_NAME,
         CLP_DB_USER,
         CLP_DB_PASS,
         WEBUI_LOGS_DIR,
@@ -47,22 +44,23 @@ const parseArgs = () => {
 };
 
 Meteor.startup(async () => {
-    const args = parseArgs();
+    const envVars = parseEnvVars();
 
-    initLogger(args.WEBUI_LOGS_DIR, args.WEBUI_LOGGING_LEVEL, Meteor.isDevelopment);
+    initLogger(envVars.WEBUI_LOGS_DIR, envVars.WEBUI_LOGGING_LEVEL, Meteor.isDevelopment);
 
-    await initSql(
-        args.CLP_DB_HOST,
-        parseInt(args.CLP_DB_PORT),
-        args.CLP_DB_NAME,
-        args.CLP_DB_USER,
-        args.CLP_DB_PASS,
-    );
+    await initSearchJobsDbManager({
+        dbHost: Meteor.settings.private.SqlDbHost,
+        dbPort: Meteor.settings.private.SqlDbPort,
+        dbName: Meteor.settings.private.SqlDbName,
+        dbUser: envVars.CLP_DB_USER,
+        dbPassword: envVars.CLP_DB_PASS,
+        searchJobsTableName: Meteor.settings.private.SqlDbSearchJobsTableName,
+    })
 
     initSearchEventCollection();
 });
 
 process.on("exit", async (code) => {
     console.log(`Node.js is about to exit with code: ${code}`);
-    await deinitSql();
+    await deinitSearchJobsDbManager();
 });

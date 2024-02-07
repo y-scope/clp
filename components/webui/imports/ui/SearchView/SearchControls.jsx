@@ -15,8 +15,10 @@ import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faBars, faSearch, faTimes, faTrash} from "@fortawesome/free-solid-svg-icons";
 
 import {computeTimeRange, TIME_RANGE_PRESET_LABEL} from "./datetime";
-import LOCAL_STORAGE_KEYS from "../constants/LOCAL_STORAGE_KEYS";
+import LOCAL_STORAGE_KEYS from "../constants";
 import {isSearchSignalQuerying, isSearchSignalReq, SearchSignal} from "../../api/search/constants";
+
+import "./SearchControls.scss";
 
 /**
  * Renders a date picker control for selecting date and time.
@@ -29,7 +31,6 @@ const SearchControlsDatePicker = (props) => (<DatePicker
     className={"timestamp-picker"}
     dateFormat={"MMM d, yyyy h:mm aa"}
     dropdownMode={"select"}
-    popperClassName={"timestamp-picker-popper"}
     showTimeSelect={true}
     timeCaption={"Time"}
     timeFormat={"HH:mm"}

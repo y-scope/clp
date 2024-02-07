@@ -18,7 +18,6 @@ export const SearchSignal = Object.freeze({
 
     RESP_MASK: (enumSearchSignal = 0x20000000),
     RESP_DONE: ++enumSearchSignal,
-    RESP_ERROR: ++enumSearchSignal,
     RESP_QUERYING: ++enumSearchSignal,
 });
 
@@ -30,7 +29,8 @@ export const isSearchSignalQuerying = (s) => (
 
 let enumJobStatus;
 /**
- * Enum of job statuses, matching the `JobStatus` class in `job_orchestration.search_scheduler.common`.
+ * Enum of job statuses, matching the `SearchJobStatus` class in
+ * `job_orchestration.search_scheduler.constants`.
  *
  * @constant
  * @type {Object}

@@ -5,15 +5,19 @@ import {useTracker} from "meteor/react-meteor-data";
 import React, {useEffect, useRef, useState} from "react";
 import {ProgressBar} from "react-bootstrap";
 
-import {getCollection, SearchResultsMetadataCollection} from "../../api/search/collections";
+import {
+    addSortToMongoFindOptions,
+    SearchResultsMetadataCollection
+} from "../../api/search/collections";
 import {INVALID_JOB_ID, isSearchSignalQuerying, SearchSignal} from "../../api/search/constants";
+import SearchJobCollectionsManager from "../../api/search/SearchJobCollectionsManager";
 
 import "react-datepicker/dist/react-datepicker.css";
-import LOCAL_STORAGE_KEYS from "../constants/LOCAL_STORAGE_KEYS";
+import LOCAL_STORAGE_KEYS from "../constants";
 import {changeTimezoneToUtcWithoutChangingTime, DEFAULT_TIME_RANGE_GETTER} from "./datetime";
-import {SearchControls} from "./SearchControls";
-import {SearchResults} from "./SearchResults";
-import {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResultsTable";
+import {SearchControls} from "./SearchControls.jsx";
+import {SearchResults} from "./SearchResults.jsx";
+import {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResultsTable.jsx";
 
 // for pseudo progress bar
 const PROGRESS_INCREMENT = 5;
@@ -27,7 +31,7 @@ const SearchView = () => {
     const [jobId, setJobId] = useState(INVALID_JOB_ID);
     const [operationErrorMsg, setOperationErrorMsg] = useState("");
     const [localLastSearchSignal, setLocalLastSearchSignal] = useState(SearchSignal.NONE);
-    const dbRef = useRef(new Map());
+    const dbRef = useRef(new SearchJobCollectionsManager());
     // gets updated as soon as localLastSearchSignal is updated
     // to avoid reading old localLastSearchSignal value from Closures
     const localLastSearchSignalRef = useRef(localLastSearchSignal);
@@ -76,7 +80,16 @@ const SearchView = () => {
             visibleSearchResultsLimit: visibleSearchResultsLimit,
         });
 
-        return getCollection(dbRef.current, jobId.toString()).find().fetch();
+        const findOptions = {};
+        addSortToMongoFindOptions(fieldToSortBy, findOptions);
+
+        // NOTE: Although we publish and subscribe using the name
+        // `Meteor.settings.public.SearchResultsCollectionName`, the rows are still returned in the
+        // job-specific collection (e.g., "1"); this is because on the server, we're returning a
+        // cursor from the job-specific collection and Meteor creates a collection with the same
+        // name on the client rather than returning the rows in a collection with the published
+        // name.
+        return dbRef.current.getOrCreateCollection(jobId).find({}, findOptions).fetch();
     }, [jobId, fieldToSortBy, visibleSearchResultsLimit]);
 
     // State transitions
@@ -114,7 +127,9 @@ const SearchView = () => {
         };
         Meteor.call("search.submitQuery", args, (error, result) => {
             if (error) {
+                setJobId(INVALID_JOB_ID);
                 setOperationErrorMsg(error.reason);
+                return;
             }
 
             setJobId(result["jobId"]);
@@ -122,7 +137,7 @@ const SearchView = () => {
     };
 
     const handleClearResults = () => {
-        delete dbRef.current[jobId.toString()];
+        dbRef.current.removeCollection(jobId);
 
         setJobId(INVALID_JOB_ID);
         setOperationErrorMsg("");
@@ -135,6 +150,7 @@ const SearchView = () => {
         Meteor.call("search.clearResults", args, (error) => {
             if (error) {
                 setOperationErrorMsg(error.reason);
+                return;
             }
 
             if (SearchSignal.REQ_CLEARING === localLastSearchSignalRef.current) {
