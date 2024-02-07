@@ -1,4 +1,10 @@
 {
+  "private": {
+    "SqlDbHost": "localhost",
+    "SqlDbPort": 3306,
+    "SqlDbName": "clp-db",
+    "SqlDbSearchJobsTableName": "search_jobs"
+  },
   "public": {
     "SearchResultsCollectionName": "results",
     "SearchResultsMetadataCollectionName": "results-metadata"
