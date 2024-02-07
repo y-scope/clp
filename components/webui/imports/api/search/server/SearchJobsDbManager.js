@@ -1,7 +1,7 @@
-import mysql from "mysql2/promise";
 import msgpack from "@msgpack/msgpack";
-import {JOB_STATUS_WAITING_STATES, JobStatus} from "../constants";
+
 import {sleep} from "../../../utils/misc";
+import {JOB_STATUS_WAITING_STATES, JobStatus} from "../constants";
 
 const SEARCH_JOBS_TABLE_COLUMN_NAMES = {
     ID: "id",
@@ -17,52 +17,13 @@ class SearchJobsDbManager {
     #searchJobsTableName;
 
     /**
-     * Creates a new instance.
-     * @param {string} dbHost
-     * @param {number} dbPort
-     * @param {string} dbName
-     * @param {string} dbUser
-     * @param {string} dbPassword
-     * @param {string} searchJobsTableName
-     * @returns {Promise<SearchJobsDbManager>}
-     * @throws {Error} on error.
-     */
-    static async createNew({dbHost, dbPort, dbName, dbUser, dbPassword, searchJobsTableName}) {
-        const conn = await mysql.createConnection({
-            host: dbHost,
-            port: dbPort,
-            database: dbName,
-            user: dbUser,
-            password: dbPassword,
-        });
-        return new SearchJobsDbManager(conn, searchJobsTableName);
-    }
-
-    /**
      * @param {mysql.Connection} sqlDbConnection
-     * @param {string} searchJobsTableName
+     * @param {object} tableNames
+     * @param {string} tableNames.searchJobsTableName
      */
-    constructor(sqlDbConnection, searchJobsTableName) {
+    constructor(sqlDbConnection, {searchJobsTableName}) {
         this.#sqlDbConnection = sqlDbConnection;
         this.#searchJobsTableName = searchJobsTableName;
-    }
-
-    /**
-     * Connects to the database.
-     * @returns {Promise<void>}
-     * @throws {Error} on error.
-     */
-    async connect() {
-        await this.#sqlDbConnection.connect();
-    }
-
-    /**
-     * Disconnects from the database.
-     * @returns {Promise<void>}
-     * @throws {Error} on error.
-     */
-    async disconnect() {
-        await this.#sqlDbConnection.end();
     }
 
     /**
@@ -74,8 +35,8 @@ class SearchJobsDbManager {
     async submitQuery(searchConfig) {
         const [queryInsertResults] = await this.#sqlDbConnection.query(
             `INSERT INTO ${this.#searchJobsTableName}
-                    (${SEARCH_JOBS_TABLE_COLUMN_NAMES.SEARCH_CONFIG})
-                    VALUES (?)`,
+                 (${SEARCH_JOBS_TABLE_COLUMN_NAMES.SEARCH_CONFIG})
+             VALUES (?)`,
             [Buffer.from(msgpack.encode(searchConfig))],
         );
         return queryInsertResults.insertId;
@@ -90,8 +51,8 @@ class SearchJobsDbManager {
     async submitQueryCancellation(jobId) {
         await this.#sqlDbConnection.query(
             `UPDATE ${this.#searchJobsTableName}
-                    SET ${SEARCH_JOBS_TABLE_COLUMN_NAMES.STATUS} = ${JobStatus.CANCELLING}
-                    WHERE ${SEARCH_JOBS_TABLE_COLUMN_NAMES.ID} = ?`,
+             SET ${SEARCH_JOBS_TABLE_COLUMN_NAMES.STATUS} = ${JobStatus.CANCELLING}
+             WHERE ${SEARCH_JOBS_TABLE_COLUMN_NAMES.ID} = ?`,
             jobId,
         );
     }
@@ -109,8 +70,8 @@ class SearchJobsDbManager {
             try {
                 const [queryRows, _] = await this.#sqlDbConnection.query(
                     `SELECT ${SEARCH_JOBS_TABLE_COLUMN_NAMES.STATUS}
-                        FROM ${this.#searchJobsTableName}
-                        WHERE ${SEARCH_JOBS_TABLE_COLUMN_NAMES.ID} = ?`,
+                     FROM ${this.#searchJobsTableName}
+                     WHERE ${SEARCH_JOBS_TABLE_COLUMN_NAMES.ID} = ?`,
                     jobId,
                 );
                 rows = queryRows;
@@ -127,7 +88,7 @@ class SearchJobsDbManager {
                     throw new Error(`Job ${jobId} was cancelled.`);
                 } else if (JobStatus.SUCCESS !== status) {
                     throw new Error(`Job ${jobId} exited with unexpected status=${status}: `
-                            `${Object.keys(JobStatus)[status]}.`);
+                        `${Object.keys(JobStatus)[status]}.`);
                 }
                 break;
             }

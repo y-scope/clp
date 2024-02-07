@@ -1,22 +1,25 @@
 import React from "react";
 import {Redirect, Route, Switch} from "react-router";
-import {faSearch} from "@fortawesome/free-solid-svg-icons";
+import {faSearch, faFileUpload} from "@fortawesome/free-solid-svg-icons";
 
+import IngestView from './IngestView/IngestView.jsx';
 import SearchView from "./SearchView/SearchView.jsx";
 import Sidebar from "./Sidebar/Sidebar.jsx";
 
 import {login} from "../api/user/client/methods";
+import {LOCAL_STORAGE_KEYS} from "./constants";
+
 import "./App.scss";
-import LOCAL_STORAGE_KEYS from "./constants";
 
 
 const ROUTES = [
+    {path: "/ingest", label: "Ingest", icon: faFileUpload, component: IngestView},
     {path: "/search", label: "Search", icon: faSearch, component: SearchView},
 ];
 
 export const App = () => {
     const [loggedIn, setLoggedIn] = React.useState(false);
-    const [isSidebarStateCollapsed, setSidebarStateCollapsed] = React.useState(
+    const [isSidebarCollapsed, setSidebarStateCollapsed] = React.useState(
         "true" === localStorage.getItem(LOCAL_STORAGE_KEYS.IS_SIDEBAR_COLLAPSED)
     );
 
@@ -26,35 +29,43 @@ export const App = () => {
     }, []);
 
     React.useEffect(() => {
-        localStorage.setItem(LOCAL_STORAGE_KEYS.IS_SIDEBAR_COLLAPSED, isSidebarStateCollapsed.toString());
-    }, [isSidebarStateCollapsed]);
+        localStorage.setItem(LOCAL_STORAGE_KEYS.IS_SIDEBAR_COLLAPSED, isSidebarCollapsed.toString());
+    }, [isSidebarCollapsed]);
 
     const handleSidebarToggle = () => {
-        setSidebarStateCollapsed(!isSidebarStateCollapsed);
+        setSidebarStateCollapsed(!isSidebarCollapsed);
     }
+
+    const Spinner = () => <div className="h-100">
+        <div className="d-flex justify-content-center align-items-center h-100">
+            <div className="spinner-grow"
+                 style={{width: '3rem', height: '3rem'}} role="status">
+                <span className="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>;
+
+    const Routes = () => <Switch>
+        <Route exact path="/">
+            <Redirect to="/ingest"/>
+        </Route>
+        <Route exact path={'/ingest'}>
+            <IngestView/>
+        </Route>
+        <Route exact path={'/search'}>
+            <SearchView/>
+        </Route>
+    </Switch>;
 
     return (<div style={{display: "flex", height: "100%"}}>
         <Sidebar
-            isSidebarCollapsed={isSidebarStateCollapsed}
+            isSidebarCollapsed={isSidebarCollapsed}
             routes={ROUTES}
             onSidebarToggle={handleSidebarToggle}
         />
         <div style={{flexGrow: 1, minWidth: 0}}>
             <div style={{height: "100%"}}>
-                {!loggedIn ? <div className="h-100">
-                    <div className="d-flex justify-content-center align-items-center h-100">
-                        <div className="spinner-grow" style={{width: '3rem', height: '3rem'}} role="status">
-                            <span className="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
-                </div> : <Switch>
-                    <Route exact path="/">
-                        <Redirect to="/search"/>
-                    </Route>
-                    <Route exact path={"/search"}>
-                        <SearchView/>
-                    </Route>
-                </Switch>}
+                {!loggedIn ? <Spinner/> : <Routes/>}
             </div>
         </div>
     </div>);

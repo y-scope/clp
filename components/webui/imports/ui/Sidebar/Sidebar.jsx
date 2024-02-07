@@ -31,9 +31,10 @@ const Sidebar = ({isSidebarCollapsed, routes, onSidebarToggle}) => {
                 {routes.map((route, i) =>
                         (false === (route["hide"] ?? false)) && (
                             <NavLink to={route["path"]} activeClassName="active" key={i}>
-                                <div className={"sidebar-item-icon"}><FontAwesomeIcon fixedWidth={true}
-                                                                                      size={"sm"}
-                                                                                      icon={route["icon"]}/>
+                                <div className={"sidebar-item-icon"}>
+                                    <FontAwesomeIcon fixedWidth={true}
+                                                     size={"sm"}
+                                                     icon={route["icon"]}/>
                                 </div>
                                 <span className={"sidebar-item-text"}>{route["label"]}</span>
                             </NavLink>

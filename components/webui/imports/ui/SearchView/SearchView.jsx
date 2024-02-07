@@ -7,13 +7,13 @@ import {ProgressBar} from "react-bootstrap";
 
 import {
     addSortToMongoFindOptions,
-    SearchResultsMetadataCollection
+    SearchResultsMetadataCollection,
 } from "../../api/search/collections";
 import {INVALID_JOB_ID, isSearchSignalQuerying, SearchSignal} from "../../api/search/constants";
 import SearchJobCollectionsManager from "../../api/search/SearchJobCollectionsManager";
 
 import "react-datepicker/dist/react-datepicker.css";
-import LOCAL_STORAGE_KEYS from "../constants";
+import {LOCAL_STORAGE_KEYS} from "../constants";
 import {changeTimezoneToUtcWithoutChangingTime, DEFAULT_TIME_RANGE_GETTER} from "./datetime";
 import {SearchControls} from "./SearchControls.jsx";
 import {SearchResults} from "./SearchResults.jsx";

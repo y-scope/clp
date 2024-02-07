@@ -63,7 +63,7 @@ export const loginWithUsername = (username) => {
 /**
  * Attempts to log in a user using a stored username or register a new one if none is found.
  *
- * @returns {boolean} true if the login is successful
+ * @returns {Promise<boolean>} true if the login is successful
  *                    false if there's an error during login or registration
  */
 export const login = async () => {

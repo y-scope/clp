@@ -3,10 +3,13 @@
     "SqlDbHost": "localhost",
     "SqlDbPort": 3306,
     "SqlDbName": "clp-db",
-    "SqlDbSearchJobsTableName": "search_jobs"
+    "SqlDbSearchJobsTableName": "search_jobs",
+    "SqlDbArchivesTableName": "clp_archives",
+    "SqlDbClpFilesTableName": "clp_files"
   },
   "public": {
     "SearchResultsCollectionName": "results",
-    "SearchResultsMetadataCollectionName": "results-metadata"
+    "SearchResultsMetadataCollectionName": "results-metadata",
+    "StatsCollectionName": "stats"
   }
 }

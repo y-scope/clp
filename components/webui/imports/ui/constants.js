@@ -10,4 +10,4 @@ const LOCAL_STORAGE_KEYS = Object.freeze({
     SEARCH_CONTROLS_VISIBLE: "searchFilterControlsVisible",
 });
 
-export default LOCAL_STORAGE_KEYS;
+export {LOCAL_STORAGE_KEYS};
