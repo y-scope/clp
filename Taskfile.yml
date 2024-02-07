@@ -109,47 +109,6 @@ tasks:
       - "test -e '{{.PACKAGE_VERSION_FILE}}'"
       - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.PACKAGE_VERSION_FILE}}')"
 
-  webui:
-    deps:
-      - "nodejs"
-    dir: "components/webui"
-    cmds:
-      - "rm -rf '{{.WEBUI_BUILD_DIR}}'"
-      - "mkdir -p '{{.WEBUI_BUILD_DIR}}'"
-      - "meteor npm install --production"
-      - "meteor build --directory '{{.WEBUI_BUILD_DIR}}'"
-      - >-
-        rsync -a
-        "{{.WEBUI_BUILD_DIR}}/bundle/"
-        launcher.js
-        settings.json
-        "{{.WEBUI_BUILD_DIR}}/"
-      - "rm -rf '{{.WEBUI_BUILD_DIR}}/bundle/'"
-      - |-
-        cd "{{.WEBUI_BUILD_DIR}}/programs/server"
-        PATH="{{.NODEJS_BIN_DIR}}":$PATH $(readlink -f "{{.NODEJS_BIN_DIR}}/npm") install
-    sources:
-      - "{{.WEBUI_BUILD_DIR}}/**/*"
-
-  nodejs:
-    vars:
-      NODEJS_VERSION: "14.21.3"
-      TAR_FILE_NAME: "node-v14.21.3-linux-x64.tar.xz"
-      TAR_FILE_PATH: "{{.NODEJS_BUILD_DIR}}/node-v14.21.3-linux-x64.tar.xz"
-    cmds:
-      - "rm -rf '{{.NODEJS_BUILD_DIR}}/node'"
-      - "mkdir -p '{{.NODEJS_BUILD_DIR}}'"
-      - >-
-        curl -fsSL
-        "https://nodejs.org/dist/v{{.NODEJS_VERSION}}/{{.TAR_FILE_NAME}}"
-        -o "{{.NODEJS_BUILD_DIR}}/{{.TAR_FILE_NAME}}"
-      - "tar xf '{{.NODEJS_BUILD_DIR}}/{{.TAR_FILE_NAME}}' -C '{{.NODEJS_BUILD_DIR}}'"
-      - >-
-        mv "{{.NODEJS_BUILD_DIR}}/node-v{{.NODEJS_VERSION}}-linux-x64" "{{.NODEJS_BUILD_DIR}}/node"
-      - "rm -f '{{.NODEJS_BUILD_DIR}}/{{.TAR_FILE_NAME}}'"
-    sources:
-      - "{{.NODEJS_BUILD_DIR}}/node/**/*"
-
   core:
     deps: ["core-submodules"]
     vars:
@@ -194,6 +153,47 @@ tasks:
     - task: "python-component"
       vars:
         COMPONENT: "{{.TASK}}"
+
+  nodejs:
+    vars:
+      NODEJS_VERSION: "14.21.3"
+      TAR_FILE_NAME: "node-v14.21.3-linux-x64.tar.xz"
+      TAR_FILE_PATH: "{{.NODEJS_BUILD_DIR}}/node-v14.21.3-linux-x64.tar.xz"
+    cmds:
+      - "rm -rf '{{.NODEJS_BUILD_DIR}}/node'"
+      - "mkdir -p '{{.NODEJS_BUILD_DIR}}'"
+      - >-
+        curl -fsSL
+        "https://nodejs.org/dist/v{{.NODEJS_VERSION}}/{{.TAR_FILE_NAME}}"
+        -o "{{.NODEJS_BUILD_DIR}}/{{.TAR_FILE_NAME}}"
+      - "tar xf '{{.NODEJS_BUILD_DIR}}/{{.TAR_FILE_NAME}}' -C '{{.NODEJS_BUILD_DIR}}'"
+      - >-
+        mv "{{.NODEJS_BUILD_DIR}}/node-v{{.NODEJS_VERSION}}-linux-x64" "{{.NODEJS_BUILD_DIR}}/node"
+      - "rm -f '{{.NODEJS_BUILD_DIR}}/{{.TAR_FILE_NAME}}'"
+    sources:
+      - "{{.NODEJS_BUILD_DIR}}/node/**/*"
+
+  webui:
+    deps:
+      - "nodejs"
+    dir: "components/webui"
+    cmds:
+      - "rm -rf '{{.WEBUI_BUILD_DIR}}'"
+      - "mkdir -p '{{.WEBUI_BUILD_DIR}}'"
+      - "meteor npm install --production"
+      - "meteor build --directory '{{.WEBUI_BUILD_DIR}}'"
+      - >-
+        rsync -a
+        "{{.WEBUI_BUILD_DIR}}/bundle/"
+        launcher.js
+        settings.json
+        "{{.WEBUI_BUILD_DIR}}/"
+      - "rm -rf '{{.WEBUI_BUILD_DIR}}/bundle/'"
+      - |-
+        cd "{{.WEBUI_BUILD_DIR}}/programs/server"
+        PATH="{{.NODEJS_BIN_DIR}}":$PATH $(readlink -f "{{.NODEJS_BIN_DIR}}/npm") install
+    sources:
+      - "{{.WEBUI_BUILD_DIR}}/**/*"
 
   lint-check:
     cmds:
