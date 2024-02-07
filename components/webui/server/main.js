@@ -5,8 +5,11 @@ import "/imports/api/search/server/methods";
 import "/imports/api/search/server/publications";
 import "/imports/api/user/server/methods";
 
-import {initSql, deinitSql} from "/imports/api/search/server/sql";
 import {initSearchEventCollection} from "/imports/api/search/collections";
+import {
+    deinitSearchJobsDbManager,
+    initSearchJobsDbManager,
+} from "/imports/api/search/server/methods";
 import {initLogger} from "/imports/utils/logger";
 
 const DEFAULT_LOGS_DIR = ".";
@@ -45,18 +48,19 @@ Meteor.startup(async () => {
 
     initLogger(envVars.WEBUI_LOGS_DIR, envVars.WEBUI_LOGGING_LEVEL, Meteor.isDevelopment);
 
-    await initSql(
-        Meteor.settings.private.SqlDbHost,
-        Meteor.settings.private.SqlDbPort,
-        Meteor.settings.private.SqlDbName,
-        envVars.CLP_DB_USER,
-        envVars.CLP_DB_PASS,
-    );
+    await initSearchJobsDbManager({
+        dbHost: Meteor.settings.private.SqlDbHost,
+        dbPort: Meteor.settings.private.SqlDbPort,
+        dbName: Meteor.settings.private.SqlDbName,
+        dbUser: envVars.CLP_DB_USER,
+        dbPassword: envVars.CLP_DB_PASS,
+        searchJobsTableName: Meteor.settings.private.SqlDbSearchJobsTableName,
+    })
 
     initSearchEventCollection();
 });
 
 process.on("exit", async (code) => {
     console.log(`Node.js is about to exit with code: ${code}`);
-    await deinitSql();
+    await deinitSearchJobsDbManager();
 });
