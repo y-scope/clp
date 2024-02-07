@@ -174,7 +174,7 @@ private:
 class DateStringColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
-    DateStringColumnWriter(int32_t id) : BaseColumnWriter(id) {}
+    explicit DateStringColumnWriter(int32_t id) : BaseColumnWriter(id) {}
 
     // Destructor
     ~DateStringColumnWriter() override = default;

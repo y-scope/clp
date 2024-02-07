@@ -799,8 +799,8 @@ bool TimestampPattern::parse_timestamp(
                     break;
                 }
 
-                case 'E': {  // UNIX epoch milliseconds timestamp
-                    // only allow consuming entire timestamp string
+                case 'E': {  // Millisecond-precision UNIX epoch timestamp
+                    // Only allow consuming entire timestamp string
                     // Note: "timestamp" is how the result is returned by reference
                     // Note: this format will also accept any integer timestamp (including UNIX
                     // epoch seconds and nanoseconds as well)
@@ -812,16 +812,16 @@ bool TimestampPattern::parse_timestamp(
                     return true;
                 }
 
-                case 'F': {  // Nanosecond precision floating point UNIX epoch timestamp
+                case 'F': {  // Nanosecond-precision floating-point UNIX epoch timestamp
                     constexpr auto cNanosecondDigits = 9;
                     constexpr auto cNanosecondMultiplier = 1'000'000'000;
-                    // only allow consuming entire timestamp string
+                    // Only allow consuming entire timestamp string
                     if (line_ix > 0) {
                         return false;
                     }
                     auto dot_position = line.find('.');
                     auto nanosecond_start = dot_position + 1;
-                    if (std::string::npos == dot_position || dot_position == 0
+                    if (std::string::npos == dot_position || 0 == dot_position
                         || cNanosecondDigits != (line.length() - nanosecond_start))
                     {
                         return false;
