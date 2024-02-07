@@ -1,5 +1,6 @@
 import {Meteor} from "meteor/meteor";
 
+import "/imports/api/search/server/collections";
 import "/imports/api/search/server/methods";
 import "/imports/api/search/server/publications";
 import "/imports/api/user/server/methods";

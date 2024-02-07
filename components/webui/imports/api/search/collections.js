@@ -21,29 +21,3 @@ export const initSearchEventCollection = () => {
         });
     }
 }
-
-/**
- * Object to store references to MongoDB collections.
- * This should only be accessed by the server; clients should use a React referenced-object.
- *
- * @type {Map<any, any>}
- */
-// FIXME: change to use Map before submission
-export const MY_MONGO_DB = new Map();
-
-/**
- * Retrieves a Mongo Collection object by name, creating it if it does not already exist.
- * This is to adhere to Meteor.js's restriction against creating more than one Collection object
- * with the same name.
- *
- * @param {Object} dbRef database object where collections are stored
- * @param {string} name of the collection to retrieve or create
- * @returns {Mongo.Collection}
- */
-export const getCollection = (dbRef, name) => {
-    if (undefined === dbRef.get(name)) {
-        dbRef.set(name, new Mongo.Collection(name));
-    }
-
-    return dbRef.get(name);
-};

@@ -5,8 +5,9 @@ import {useTracker} from "meteor/react-meteor-data";
 import React, {useEffect, useRef, useState} from "react";
 import {ProgressBar} from "react-bootstrap";
 
-import {getCollection, SearchResultsMetadataCollection} from "../../api/search/collections";
+import {SearchResultsMetadataCollection} from "../../api/search/collections";
 import {INVALID_JOB_ID, isSearchSignalQuerying, SearchSignal} from "../../api/search/constants";
+import SearchJobCollectionsManager from "../../api/search/SearchJobCollectionsManager";
 
 import "react-datepicker/dist/react-datepicker.css";
 import LOCAL_STORAGE_KEYS from "../constants";
@@ -27,7 +28,7 @@ const SearchView = () => {
     const [jobId, setJobId] = useState(INVALID_JOB_ID);
     const [operationErrorMsg, setOperationErrorMsg] = useState("");
     const [localLastSearchSignal, setLocalLastSearchSignal] = useState(SearchSignal.NONE);
-    const dbRef = useRef(new Map());
+    const dbRef = useRef(new SearchJobCollectionsManager());
     // gets updated as soon as localLastSearchSignal is updated
     // to avoid reading old localLastSearchSignal value from Closures
     const localLastSearchSignalRef = useRef(localLastSearchSignal);
@@ -76,7 +77,13 @@ const SearchView = () => {
             visibleSearchResultsLimit: visibleSearchResultsLimit,
         });
 
-        return getCollection(dbRef.current, jobId.toString()).find().fetch();
+        // NOTE: Although we publish and subscribe using the name
+        // `Meteor.settings.public.SearchResultsCollectionName`, the rows are still returned in the
+        // job-specific collection (e.g., "1"); this is because on the server, we're returning a
+        // cursor from the job-specific collection and Meteor creates a collection with the same
+        // name on the client rather than returning the rows in a collection with the published
+        // name.
+        return dbRef.current.getOrCreateCollection(jobId).find().fetch();
     }, [jobId, fieldToSortBy, visibleSearchResultsLimit]);
 
     // State transitions
@@ -122,7 +129,7 @@ const SearchView = () => {
     };
 
     const handleClearResults = () => {
-        delete dbRef.current[jobId.toString()];
+        dbRef.current.removeCollection(jobId);
 
         setJobId(INVALID_JOB_ID);
         setOperationErrorMsg("");

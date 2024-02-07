@@ -1,6 +1,7 @@
 import {logger} from "/imports/utils/logger";
 import {Meteor} from "meteor/meteor";
-import {getCollection, MY_MONGO_DB, SearchResultsMetadataCollection} from "../collections";
+import {SearchResultsMetadataCollection} from "../collections";
+import {searchJobCollectionsManager} from "./collections";
 import {SearchSignal} from "../constants";
 import {cancelQuery, submitQuery, waitTillJobFinishes} from "./sql";
 
@@ -18,7 +19,8 @@ const updateSearchEventWhenJobFinishes = async (jobId) => {
         $set: {
             lastSignal: SearchSignal.RESP_DONE,
             errorMsg: errorMsg,
-            numTotalResults: await getCollection(MY_MONGO_DB, jobId.toString()).countDocuments()
+            numTotalResults:
+                await searchJobCollectionsManager.getOrCreateCollection(jobId).countDocuments(),
         }
     };
 
@@ -41,7 +43,7 @@ const createMongoIndexes = async (jobId) => {
         name: "timestamp-descending"
     };
 
-    const queryJobCollection = getCollection(MY_MONGO_DB, jobId.toString());
+    const queryJobCollection = searchJobCollectionsManager.getOrCreateCollection(jobId);
     const queryJobRawCollection = queryJobCollection.rawCollection();
     await queryJobRawCollection.createIndexes([timestampAscendingIndex, timestampDescendingIndex]);
 };
@@ -90,7 +92,7 @@ Meteor.methods({
     /**
      * Clears the results of a search operation identified by jobId.
      *
-     * @param {string} jobId of the search results to clear
+     * @param {number} jobId of the search results to clear
      */
     async "search.clearResults"({
                                     jobId
@@ -99,10 +101,10 @@ Meteor.methods({
         logger.info("search.clearResults jobId =", jobId)
 
         try {
-            const resultsCollection = getCollection(MY_MONGO_DB, jobId.toString());
+            const resultsCollection = searchJobCollectionsManager.getOrCreateCollection(jobId);
             await resultsCollection.dropCollectionAsync();
 
-            delete MY_MONGO_DB[jobId.toString()];
+            searchJobCollectionsManager.removeCollection(jobId);
         } catch (e) {
             logger.error(`Unable to clear search results for jobId=${jobId}`, e);
         }
@@ -111,7 +113,7 @@ Meteor.methods({
     /**
      * Cancels an ongoing search operation identified by jobId.
      *
-     * @param {string} jobId of the search operation to cancel
+     * @param {number} jobId of the search operation to cancel
      */
     async "search.cancelOperation"({
                                        jobId

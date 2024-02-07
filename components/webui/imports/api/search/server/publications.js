@@ -1,7 +1,8 @@
 import {Meteor} from "meteor/meteor";
 import {logger} from "/imports/utils/logger";
 
-import {SearchResultsMetadataCollection, getCollection, MY_MONGO_DB} from "../collections";
+import {SearchResultsMetadataCollection} from "../collections";
+import {searchJobCollectionsManager} from "./collections";
 
 /**
  * Publishes search results metadata for a specific job.
@@ -41,7 +42,7 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
         `jobId=${jobId}, fieldToSortBy=${fieldToSortBy}, ` +
         `visibleSearchResultsLimit=${visibleSearchResultsLimit}`);
 
-    const collection = getCollection(MY_MONGO_DB, jobId.toString());
+    const collection = searchJobCollectionsManager.getOrCreateCollection(jobId);
     const findOptions = {
         limit: visibleSearchResultsLimit,
         disableOplog: true,
