@@ -29,7 +29,8 @@ export const isSearchSignalQuerying = (s) => (
 
 let enumJobStatus;
 /**
- * Enum of job statuses, matching the `JobStatus` class in `job_orchestration.search_scheduler.common`.
+ * Enum of job statuses, matching the `SearchJobStatus` class in
+ * `job_orchestration.search_scheduler.constants`.
  *
  * @constant
  * @type {Object}
