@@ -14,7 +14,7 @@ import SearchJobCollectionsManager from "../../api/search/SearchJobCollectionsMa
 
 import "react-datepicker/dist/react-datepicker.css";
 import {LOCAL_STORAGE_KEYS} from "../constants";
-import {changeTimezoneToUtcWithoutChangingTime, DEFAULT_TIME_RANGE_GETTER} from "./datetime";
+import {changeTimezoneToUtcWithoutChangingTime, DEFAULT_TIME_RANGE} from "./datetime";
 import {SearchControls} from "./SearchControls.jsx";
 import {SearchResults} from "./SearchResults.jsx";
 import {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResultsTable.jsx";
@@ -38,7 +38,7 @@ const SearchView = () => {
 
     // Query options
     const [queryString, setQueryString] = useState("");
-    const [timeRange, setTimeRange] = useState(DEFAULT_TIME_RANGE_GETTER);
+    const [timeRange, setTimeRange] = useState(DEFAULT_TIME_RANGE);
     const [visibleSearchResultsLimit, setVisibleSearchResultsLimit] = useState(
         VISIBLE_RESULTS_LIMIT_INITIAL);
     const [fieldToSortBy, setFieldToSortBy] = useState({
@@ -116,8 +116,8 @@ const SearchView = () => {
         setLocalLastSearchSignal(SearchSignal.REQ_QUERYING);
         resetVisibleResultSettings();
 
-        const timestampBeginMillis = changeTimezoneToUtcWithoutChangingTime(timeRange.begin).
-            getTime();
+        const timestampBeginMillis = changeTimezoneToUtcWithoutChangingTime(timeRange.begin)
+            .getTime();
         const timestampEndMillis = changeTimezoneToUtcWithoutChangingTime(timeRange.end).getTime();
 
         const args = {

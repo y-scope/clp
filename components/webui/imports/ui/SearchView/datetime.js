@@ -111,6 +111,6 @@ export const changeTimezoneToUtcWithoutChangingTime = (date) => {
     ));
 };
 
-export const DEFAULT_TIME_RANGE_GETTER = computeTimeRange(
+export const DEFAULT_TIME_RANGE = computeTimeRange(
     `${TIME_RANGE_UNIT.ALL}_${TIME_RANGE_MODIFIER.NONE}_0`,
 );
