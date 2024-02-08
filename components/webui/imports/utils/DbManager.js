@@ -39,7 +39,7 @@ const initDbManagers = async ({
     clpFilesTableName
 }) => {
     if (null !== dbConnection) {
-        logger.error("This method should not be called twice. ");
+        logger.error("This method should not be called twice.");
         return;
     }
 
@@ -63,8 +63,7 @@ const initDbManagers = async ({
             clpFilesTableName,
         });
     } catch (e) {
-        logger.error("Unable to create MySQL / mariadb connection.",
-            e.toString());
+        logger.error("Unable to create MySQL / mariadb connection.", e.toString());
         throw e;
     }
 };

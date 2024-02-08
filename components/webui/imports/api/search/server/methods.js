@@ -14,7 +14,6 @@ let searchJobsDbManager = null;
  * @param {mysql.Connection} sqlDbConnection
  * @param {object} tableNames
  * @param {string} tableNames.searchJobsTableName
- * @returns {void}
  * @throws {Error} on error.
  */
 const initSearchJobsDbManager = (sqlDbConnection, {searchJobsTableName}) => {

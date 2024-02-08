@@ -64,7 +64,7 @@ export const loginWithUsername = (username) => {
  * Attempts to log in a user using a stored username or register a new one if none is found.
  *
  * @returns {Promise<boolean>} true if the login is successful
- *                    false if there's an error during login or registration
+ *                             false if there's an error during login or registration
  */
 export const login = async () => {
     let username = localStorage.getItem(LOCAL_STORAGE_KEY_USERNAME);

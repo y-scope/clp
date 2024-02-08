@@ -49,9 +49,6 @@ const refreshCompressionStats = async () => {
  * @param {object} tableNames
  * @param {string} tableNames.clpArchivesTableName
  * @param {string} tableNames.clpFilesTableName
- * @param {string} clpArchivesTableName
- * @param {string} clpFilesTableName
- * @returns {void}
  * @throws {Error} on error.
  */
 const initStatsDbManager = (sqlDbConnection, {
@@ -66,9 +63,6 @@ const initStatsDbManager = (sqlDbConnection, {
     refreshMeteorInterval = Meteor.setInterval(refreshCompressionStats, STATS_REFRESH_INTERVAL_MS);
 };
 
-/**
- * @returns {void}
- */
 const deinitStatsDbManager = () => {
     if (null !== refreshMeteorInterval) {
         Meteor.clearInterval(refreshMeteorInterval);
@@ -77,15 +71,13 @@ const deinitStatsDbManager = () => {
 };
 
 /**
- * Updates and Publishes compression statistics.
+ * Updates and publishes compression statistics.
  *
  * @param {string} publicationName
  *
  * @returns {Mongo.Cursor}
  */
 Meteor.publish(Meteor.settings.public.StatsCollectionName, async () => {
-    // logger.debug(`Subscription '${Meteor.settings.public.StatsCollectionName}'`);
-
     await refreshCompressionStats();
 
     const filter = {

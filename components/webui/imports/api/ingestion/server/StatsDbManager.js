@@ -11,12 +11,12 @@ const CLP_FILES_TABLE_COLUMN_NAMES = {
 };
 
 /**
- * Class for retrieving compression stats in the database.
+ * Class for retrieving compression stats from the database.
  */
 class StatsDbManager {
     #sqlDbConnection;
-    #clpFilesTableName;
     #clpArchivesTableName;
+    #clpFilesTableName;
 
     /**
      * @param {mysql.Connection} sqlDbConnection
@@ -35,8 +35,18 @@ class StatsDbManager {
     }
 
     /**
+     * @typedef {object} Stats
+     * @property {number|null} begin_timestamp
+     * @property {number|null} end_timestamp
+     * @property {number|null} total_uncompressed_size
+     * @property {number|null} total_compressed_size
+     * @property {number|null} num_files
+     * @property {number|null} num_messages
+     */
+
+    /**
      * Queries compression stats.
-     * @returns {Promise<object>} stats
+     * @returns {Promise<Stats>}
      * @throws {Error} on error.
      */
     async getCompressionStats() {
@@ -56,8 +66,6 @@ class StatsDbManager {
                           SUM(${CLP_FILES_TABLE_COLUMN_NAMES.NUM_MESSAGES})                       AS num_messages
                    FROM ${this.#clpFilesTableName}) b;`,
         );
-
-
         return queryStats[0];
     }
 }
