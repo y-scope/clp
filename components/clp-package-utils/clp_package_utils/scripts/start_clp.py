@@ -18,6 +18,7 @@ from clp_py_utils.clp_config import (
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     DB_COMPONENT_NAME,
+    MASTER_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
@@ -747,6 +748,7 @@ def main(argv):
     component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
     component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
     component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
+    component_args_parser.add_parser(MASTER_COMPONENT_NAME)
 
     args_parser.add_argument(
         "--num-cpus",
@@ -778,6 +780,7 @@ def main(argv):
         # Validate and load necessary credentials
         if component_name in [
             "",
+            MASTER_COMPONENT_NAME,
             DB_COMPONENT_NAME,
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
             SEARCH_SCHEDULER_COMPONENT_NAME,
@@ -786,6 +789,7 @@ def main(argv):
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
         if component_name in [
             "",
+            MASTER_COMPONENT_NAME,
             QUEUE_COMPONENT_NAME,
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
             SEARCH_SCHEDULER_COMPONENT_NAME,
@@ -795,6 +799,7 @@ def main(argv):
             validate_and_load_queue_credentials_file(clp_config, clp_home, True)
         if component_name in [
             "",
+            MASTER_COMPONENT_NAME,
             REDIS_COMPONENT_NAME,
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
             SEARCH_SCHEDULER_COMPONENT_NAME,
@@ -838,26 +843,32 @@ def main(argv):
         conf_dir = clp_home / "etc"
 
         # Start components
-        if "" == component_name or DB_COMPONENT_NAME == component_name:
+        LAUNCH_ALL = ""
+        if component_name in [LAUNCH_ALL, DB_COMPONENT_NAME]:
             start_db(instance_id, clp_config, conf_dir)
+        if component_name in [LAUNCH_ALL, DB_COMPONENT_NAME, MASTER_COMPONENT_NAME]:
             create_db_tables(instance_id, clp_config, container_clp_config, mounts)
-        if "" == component_name or QUEUE_COMPONENT_NAME == component_name:
+        if component_name in [LAUNCH_ALL, QUEUE_COMPONENT_NAME, MASTER_COMPONENT_NAME]:
             start_queue(instance_id, clp_config)
-        if "" == component_name or REDIS_COMPONENT_NAME == component_name:
+        if component_name in [LAUNCH_ALL, REDIS_COMPONENT_NAME, MASTER_COMPONENT_NAME]:
             start_redis(instance_id, clp_config, conf_dir)
-        if "" == component_name or RESULTS_CACHE_COMPONENT_NAME == component_name:
+        if component_name in [LAUNCH_ALL, RESULTS_CACHE_COMPONENT_NAME]:
             start_results_cache(instance_id, clp_config, conf_dir)
-        if "" == component_name or COMPRESSION_SCHEDULER_COMPONENT_NAME == component_name:
+        if component_name in [
+            LAUNCH_ALL,
+            COMPRESSION_SCHEDULER_COMPONENT_NAME,
+            MASTER_COMPONENT_NAME,
+        ]:
             start_compression_scheduler(instance_id, clp_config, container_clp_config, mounts)
-        if "" == component_name or SEARCH_SCHEDULER_COMPONENT_NAME == component_name:
+        if component_name in [LAUNCH_ALL, SEARCH_SCHEDULER_COMPONENT_NAME, MASTER_COMPONENT_NAME]:
             start_search_scheduler(instance_id, clp_config, container_clp_config, mounts)
-        if "" == component_name or COMPRESSION_WORKER_COMPONENT_NAME == component_name:
+        if component_name in [LAUNCH_ALL, COMPRESSION_WORKER_COMPONENT_NAME]:
             start_compression_worker(
                 instance_id, clp_config, container_clp_config, num_cpus, mounts
             )
-        if "" == component_name or SEARCH_WORKER_COMPONENT_NAME == component_name:
+        if component_name in [LAUNCH_ALL, SEARCH_WORKER_COMPONENT_NAME]:
             start_search_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
-        if "" == component_name or WEBUI_COMPONENT_NAME == component_name:
+        if component_name in [LAUNCH_ALL, WEBUI_COMPONENT_NAME, MASTER_COMPONENT_NAME]:
             start_webui(instance_id, clp_config, mounts)
 
     except Exception as ex:
