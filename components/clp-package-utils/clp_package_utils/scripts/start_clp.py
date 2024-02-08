@@ -13,6 +13,7 @@ import uuid
 
 import yaml
 from clp_py_utils.clp_config import (
+    CLP_METADATA_TABLE_PREFIX,
     CLPConfig,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
@@ -678,6 +679,8 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
             "SqlDbPort": clp_config.database.port,
             "SqlDbName": clp_config.database.name,
             "SqlDbSearchJobsTableName": SEARCH_JOBS_TABLE_NAME,
+            "SqlDbClpArchivesTableName": f"{CLP_METADATA_TABLE_PREFIX}archives",
+            "SqlDbClpFilesTableName": f"{CLP_METADATA_TABLE_PREFIX}files",
         }
     }
     update_meteor_settings("", meteor_settings, meteor_settings_updates)
