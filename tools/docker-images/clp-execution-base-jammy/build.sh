@@ -20,5 +20,5 @@ else
     exit 1
 fi
 
-docker build -t clp-execution-${arch_name}-ubuntu-focal:dev ${repo_root} \
+docker build -t clp-execution-${arch_name}-ubuntu-jammy:dev ${repo_root} \
     --file ${script_dir}/Dockerfile

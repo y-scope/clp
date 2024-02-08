@@ -1,6 +1,7 @@
 #ifndef CLP_S_SEARCH_OUTPUTHANDLER_HPP
 #define CLP_S_SEARCH_OUTPUTHANDLER_HPP
 
+#include <queue>
 #include <string>
 
 #include <mongocxx/client.hpp>
@@ -19,7 +20,8 @@ namespace clp_s::search {
 class OutputHandler {
 public:
     // Constructors
-    explicit OutputHandler() = default;
+    explicit OutputHandler(bool should_output_timestamp)
+            : m_should_output_timestamp(should_output_timestamp){};
 
     // Destructor
     virtual ~OutputHandler() = default;
@@ -42,6 +44,11 @@ public:
      * Flushes the output handler.
      */
     virtual void flush() = 0;
+
+    [[nodiscard]] bool should_output_timestamp() const { return m_should_output_timestamp; }
+
+protected:
+    bool m_should_output_timestamp;
 };
 
 /**
@@ -50,7 +57,8 @@ public:
 class StandardOutputHandler : public OutputHandler {
 public:
     // Constructors
-    explicit StandardOutputHandler() = default;
+    explicit StandardOutputHandler(bool should_output_timestamp = false)
+            : OutputHandler(should_output_timestamp) {}
 
     // Methods inherited from OutputHandler
     void write(std::string const& message, epochtime_t timestamp) override {
@@ -67,6 +75,28 @@ public:
  */
 class ResultsCacheOutputHandler : public OutputHandler {
 public:
+    // Types
+    struct QueryResult {
+        // Constructors
+        QueryResult(std::string original_path, std::string message, epochtime_t timestamp)
+                : original_path(std::move(original_path)),
+                  message(std::move(message)),
+                  timestamp(timestamp) {}
+
+        std::string original_path;
+        std::string message;
+        epochtime_t timestamp;
+    };
+
+    struct QueryResultGreaterTimestampComparator {
+        bool operator()(
+                std::unique_ptr<QueryResult> const& r1,
+                std::unique_ptr<QueryResult> const& r2
+        ) const {
+            return r1->timestamp > r2->timestamp;
+        }
+    };
+
     class OperationFailed : public TraceableException {
     public:
         // Constructors
@@ -78,7 +108,9 @@ public:
     ResultsCacheOutputHandler(
             std::string const& uri,
             std::string const& collection,
-            uint64_t batch_size
+            uint64_t batch_size,
+            uint64_t max_num_results,
+            bool should_output_timestamp = true
     );
 
     // Methods inherited from OutputHandler
@@ -93,6 +125,12 @@ private:
     mongocxx::collection m_collection;
     std::vector<bsoncxx::document::value> m_results;
     uint64_t m_batch_size;
+    uint64_t m_max_num_results;
+    std::priority_queue<
+            std::unique_ptr<QueryResult>,
+            std::vector<std::unique_ptr<QueryResult>>,
+            QueryResultGreaterTimestampComparator>
+            m_latest_results;
 };
 }  // namespace clp_s::search
 

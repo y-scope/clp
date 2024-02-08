@@ -355,6 +355,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<uint64_t>(&m_batch_size)->value_name("BATCH_SIZE")->
                         default_value(m_batch_size),
                     "The number of documents to insert into MongoDB in a batch"
+            )(
+                    "max-num-results",
+                    po::value<uint64_t>(&m_max_num_results)->value_name("MAX_NUM_RESULTS")->
+                        default_value(m_max_num_results),
+                    "The maximum number of results to output"
             );
             // clang-format on
             search_options.add(output_options);
@@ -421,8 +426,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                             "MongoDB uri and collection must be specified together"
                     );
                 }
-                if (m_batch_size == 0) {
+                if (0 == m_batch_size) {
                     throw std::invalid_argument("Batch size must be greater than 0");
+                }
+                if (0 == m_max_num_results) {
+                    throw std::invalid_argument("Max number of results must be greater than 0");
                 }
 
                 m_mongodb_enabled = true;

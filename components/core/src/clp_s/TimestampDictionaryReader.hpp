@@ -72,15 +72,16 @@ public:
 
     auto tokenized_column_to_range_end() const { return m_tokenized_column_to_range.end(); }
 
-    /**
-     * @return the tokens for the authoritative timestamp column if it exists, or an
-     * empty option if it does not
-     */
-    std::optional<std::vector<std::string>> get_authoritative_timestamp_column() const;
+    std::optional<std::vector<std::string>>& get_authoritative_timestamp_tokenized_column() {
+        return m_authoritative_timestamp_tokenized_column;
+    }
+
+    std::unordered_set<int32_t>& get_authoritative_timestamp_column_ids() {
+        return m_authoritative_timestamp_column_ids;
+    }
 
 private:
     typedef std::map<uint64_t, TimestampPattern> id_to_pattern_t;
-    typedef std::map<std::string, TimestampEntry> column_to_range_t;
     typedef std::vector<std::pair<std::vector<std::string>, TimestampEntry*>>
             tokenized_column_to_range_t;
 
@@ -90,8 +91,11 @@ private:
     ZstdDecompressor m_dictionary_decompressor;
 
     id_to_pattern_t m_patterns;
-    column_to_range_t m_column_to_range;
+    std::vector<TimestampEntry> m_entries;
     tokenized_column_to_range_t m_tokenized_column_to_range;
+
+    std::optional<std::vector<std::string>> m_authoritative_timestamp_tokenized_column;
+    std::unordered_set<int32_t> m_authoritative_timestamp_column_ids;
 };
 }  // namespace clp_s
 

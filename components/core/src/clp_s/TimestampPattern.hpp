@@ -42,7 +42,10 @@ namespace clp_s {
  * - M  2-digit 0-padded minute (00-59)
  * - S  2-digit 0-padded second (00-60) (60 to account for leap seconds)
  * - 3  0-padded millisecond (000-999)
- * - T  0-padded millisecond no trailing 0 (000)-999) e.g. (000), 9(00), 99(0), 099
+ * - T  0-padded millisecond no trailing 0 (000-999) e.g. (000), 9(00), 99(0), 099
+ * - E  N-digit millisecond-precision UNIX epoch timestamp
+ * - F  N-digit nanosecond-precision UNIX epoch timestamp in floating-point format with 9 digits
+ *      trailing the decimal
  */
 class TimestampPattern {
 public:

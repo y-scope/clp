@@ -156,22 +156,4 @@ std::variant<int64_t, double, std::string, uint8_t> DateStringColumnReader::extr
 epochtime_t DateStringColumnReader::get_encoded_time(uint64_t cur_message) {
     return m_timestamps[cur_message];
 }
-
-void FloatDateStringColumnReader::load(ZstdDecompressor& decompressor, uint64_t num_messages) {
-    m_timestamps = std::make_unique<double[]>(num_messages);
-    decompressor.try_read_exact_length(
-            reinterpret_cast<char*>(m_timestamps.get()),
-            num_messages * sizeof(double)
-    );
-}
-
-std::variant<int64_t, double, std::string, uint8_t> FloatDateStringColumnReader::extract_value(
-        uint64_t cur_message
-) {
-    return std::to_string(m_timestamps[cur_message]);
-}
-
-double FloatDateStringColumnReader::get_encoded_time(uint64_t cur_message) {
-    return m_timestamps[cur_message];
-}
 }  // namespace clp_s

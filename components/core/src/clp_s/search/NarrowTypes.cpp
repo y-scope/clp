@@ -79,9 +79,6 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
             if (false == literal->as_epoch_date()) {
                 column->remove_matching_type(LiteralType::EpochDateT);
             }
-            if (false == literal->as_float_date()) {
-                column->remove_matching_type(LiteralType::FloatDateT);
-            }
         }
 
         if (false == column->matches_any(cAllTypes)) {

@@ -101,14 +101,13 @@ size_t TimestampDictionaryWriter::close_local() {
 }
 
 uint64_t TimestampDictionaryWriter::get_pattern_id(TimestampPattern const* pattern) {
-    if (0 == m_pattern_to_id.count(pattern)) {
+    auto it = m_pattern_to_id.find(pattern);
+    if (m_pattern_to_id.end() == it) {
         uint64_t id = m_next_id++;
-        m_pattern_to_id[pattern] = id;
-
+        m_pattern_to_id.emplace(pattern, id);
         return id;
     }
-
-    return m_pattern_to_id.at(pattern);
+    return it->second;
 }
 
 epochtime_t TimestampDictionaryWriter::ingest_entry(
@@ -119,12 +118,31 @@ epochtime_t TimestampDictionaryWriter::ingest_entry(
 ) {
     epochtime_t ret;
     size_t timestamp_begin_pos = 0, timestamp_end_pos = 0;
-    TimestampPattern const* pattern = TimestampPattern::search_known_ts_patterns(
-            timestamp,
-            ret,
-            timestamp_begin_pos,
-            timestamp_end_pos
-    );
+    TimestampPattern const* pattern{nullptr};
+
+    // Try parsing the timestamp as one of the previously seen timestamp patterns
+    for (auto it : m_pattern_to_id) {
+        if (it.first->parse_timestamp(timestamp, ret, timestamp_begin_pos, timestamp_end_pos)) {
+            pattern = it.first;
+            pattern_id = it.second;
+            break;
+        }
+    }
+
+    // Fall back to consulting all known timestamp patterns
+    if (nullptr == pattern) {
+        pattern = TimestampPattern::search_known_ts_patterns(
+                timestamp,
+                ret,
+                timestamp_begin_pos,
+                timestamp_end_pos
+        );
+        pattern_id = get_pattern_id(pattern);
+    }
+
+    if (nullptr == pattern) {
+        throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
+    }
 
     auto entry = m_local_column_id_to_range.find(node_id);
     if (entry == m_local_column_id_to_range.end()) {
@@ -134,12 +152,6 @@ epochtime_t TimestampDictionaryWriter::ingest_entry(
     } else {
         entry->second.ingest_timestamp(ret);
     }
-
-    if (pattern == nullptr) {
-        throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
-    }
-
-    pattern_id = get_pattern_id(pattern);
 
     return ret;
 }

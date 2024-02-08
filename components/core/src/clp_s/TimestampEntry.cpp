@@ -80,6 +80,7 @@ ErrorCode TimestampEntry::try_read_from_file(ZstdDecompressor& decompressor) {
     if (ErrorCodeSuccess != error_code) {
         return error_code;
     }
+
     error_code = decompressor.try_read_string(column_len, m_key_name);
     if (ErrorCodeSuccess != error_code) {
         return error_code;
