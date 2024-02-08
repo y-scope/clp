@@ -1,14 +1,49 @@
 import {Meteor} from "meteor/meteor";
-import {logger} from "../../../utils/logger";
 
-import {StatsCollection} from "../collections";
+import {STATS_COLLECTION_ID_COMPRESSION, StatsCollection} from "../collections";
 
 import StatsDbManager from "./StatsDbManager";
+
+
+/**
+ * @type {number}
+ */
+const STATS_REFRESH_INTERVAL_MS = 5000;
 
 /**
  * @type {StatsDbManager|null}
  */
 let statsDbManager = null;
+
+/**
+ * @type {number|null}
+ */
+let refreshMeteorInterval = null;
+
+/**
+ * Updates the compression statistics in the StatsCollection.
+ *
+ * @async
+ * @returns {Promise<void>}
+ */
+const refreshCompressionStats = async () => {
+    if (Meteor.server.stream_server.all_sockets().length === 0) {
+        return;
+    }
+
+    const stats = await statsDbManager.getCompressionStats();
+    const filter = {
+        id: STATS_COLLECTION_ID_COMPRESSION,
+    };
+    const modifier = {
+        $set: stats,
+    };
+    const options = {
+        upsert: true,
+    };
+
+    await StatsCollection.updateAsync(filter, modifier, options);
+};
 
 /**
  * @param {mysql.Connection} sqlDbConnection
@@ -28,6 +63,18 @@ const initStatsDbManager = (sqlDbConnection, {
         clpArchivesTableName,
         clpFilesTableName,
     });
+
+    refreshMeteorInterval = Meteor.setInterval(refreshCompressionStats, STATS_REFRESH_INTERVAL_MS);
+};
+
+/**
+ * @returns {void}
+ */
+const deinitStatsDbManager = () => {
+    if (null !== refreshMeteorInterval) {
+        Meteor.clearInterval(refreshMeteorInterval);
+        refreshMeteorInterval = null;
+    }
 };
 
 /**
@@ -40,20 +87,13 @@ const initStatsDbManager = (sqlDbConnection, {
 Meteor.publish(Meteor.settings.public.StatsCollectionName, async () => {
     // logger.debug(`Subscription '${Meteor.settings.public.StatsCollectionName}'`);
 
-    const stats = await statsDbManager.getCompressionStats();
+    await refreshCompressionStats();
 
     const filter = {
-        id: "compression_stats",
+        id: STATS_COLLECTION_ID_COMPRESSION,
     };
-    const modifier = {
-        $set: stats,
-    };
-    const options = {
-        upsert: true,
-    };
-    await StatsCollection.updateAsync(filter, modifier, options);
 
     return StatsCollection.find(filter);
 });
 
-export {initStatsDbManager};
+export {initStatsDbManager, deinitStatsDbManager};

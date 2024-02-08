@@ -2,9 +2,8 @@ import {faChartBar, faClock, faEnvelope, faFileAlt, faHdd} from "@fortawesome/fr
 
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {DateTime} from "luxon";
-import {Meteor} from "meteor/meteor";
 import {useTracker} from "meteor/react-meteor-data";
-import React, {useEffect} from "react";
+import React from "react";
 import {Col, Container, ProgressBar, Row} from "react-bootstrap";
 
 import {StatsCollection} from "../../api/ingestion/collections";
@@ -17,20 +16,9 @@ import {computeHumanSize} from "../../utils/misc";
  */
 const IngestView = () => {
     const stats = useTracker(() => {
+        Meteor.subscribe(Meteor.settings.public.StatsCollectionName);
+
         return StatsCollection.findOne();
-    }, []);
-
-    useEffect(() => {
-        let subscription = Meteor.subscribe(Meteor.settings.public.StatsCollectionName);
-        const interval = Meteor.setInterval(() => {
-            const oldSubscription = subscription;
-            subscription = Meteor.subscribe(Meteor.settings.public.StatsCollectionName);
-            oldSubscription.stop();
-        }, 5000);
-
-        return () => {
-            Meteor.clearInterval(interval);
-        };
     }, []);
 
     return (
@@ -62,7 +50,9 @@ const IngestView = () => {
 const SpaceSavings = ({stats}) => {
     const logsUncompressedSize = parseInt(stats.total_uncompressed_size) || 0;
     const logsCompressedSize = parseInt(stats.total_compressed_size) || 0;
-    const spaceSavings = logsUncompressedSize > 0 ? 100 * (1 - logsCompressedSize / logsUncompressedSize) : 0;
+    const spaceSavings = logsUncompressedSize > 0 ?
+        100 * (1 - logsCompressedSize / logsUncompressedSize) :
+        0;
 
     return (
         <div className="panel">
@@ -113,7 +103,7 @@ const Details = ({stats}) => {
         begin_timestamp: beginTimeStamp,
         end_timestamp: endTimeStamp,
         num_files: numFiles,
-        num_messages: numMessages
+        num_messages: numMessages,
     } = stats;
 
     let timeRangeRow = null;

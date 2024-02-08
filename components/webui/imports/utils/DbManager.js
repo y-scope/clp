@@ -1,5 +1,5 @@
 import mysql from "mysql2/promise";
-import {initStatsDbManager} from "../api/ingestion/server/publications";
+import {deinitStatsDbManager, initStatsDbManager} from "../api/ingestion/server/publications";
 import {initSearchJobsDbManager} from "../api/search/server/methods";
 import {logger} from "./logger";
 
@@ -73,6 +73,8 @@ const initDbManagers = async ({
  * @throws {Error} on error.
  */
 const deinitDbManagers = async () => {
+    deinitStatsDbManager();
+
     await dbConnection.end();
 };
 
