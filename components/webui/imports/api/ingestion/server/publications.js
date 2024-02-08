@@ -23,7 +23,6 @@ let refreshMeteorInterval = null;
 /**
  * Updates the compression statistics in the StatsCollection.
  *
- * @async
  * @returns {Promise<void>}
  */
 const refreshCompressionStats = async () => {
