@@ -88,7 +88,7 @@ class SearchJobsDbManager {
                     throw new Error(`Job ${jobId} was cancelled.`);
                 } else if (JobStatus.SUCCESS !== status) {
                     throw new Error(`Job ${jobId} exited with unexpected status=${status}: `
-                        `${Object.keys(JobStatus)[status]}.`);
+                        + `${Object.keys(JobStatus)[status]}.`);
                 }
                 break;
             }
