@@ -99,10 +99,12 @@ const SpaceSavings = ({stats}) => {
  * @returns {JSX.Element}
  */
 const Details = ({stats}) => {
-    const beginTimestamp = Number(stats.begin_timestamp);
-    const endTimestamp = Number(stats.end_timestamp);
-    const numFiles = Number(stats.num_files);
-    const numMessages = Number(stats.num_messages);
+    const {
+        begin_timestamp: beginTimestamp,
+        end_timestamp: endTimestamp,
+        num_files: numFiles,
+        num_messages: numMessages,
+    } = stats;
 
     let timeRangeRow = null;
     if (null !== endTimestamp) {
@@ -114,9 +116,9 @@ const Details = ({stats}) => {
                 </div>
                 <div className="ingest-stats-details-text-container">
                     <span className="ingest-stats-detail">
-                        {DateTime.fromMillis(beginTimestamp).toFormat(timestampFormat)}
+                        {DateTime.fromMillis(Number(beginTimestamp)).toFormat(timestampFormat)}
                         <span className="ingest-desc-text"> to </span>
-                        {DateTime.fromMillis(endTimestamp).toFormat(timestampFormat)}
+                        {DateTime.fromMillis(Number(endTimestamp)).toFormat(timestampFormat)}
                     </span>
                     <span className="ingest-desc-text">time range</span>
                 </div>
@@ -132,7 +134,7 @@ const Details = ({stats}) => {
                     <FontAwesomeIcon icon={faFileAlt}/>
                 </div>
                 <div className="ingest-stats-details-text-container">
-                    <span className="ingest-stats-detail">{numFiles.toLocaleString()}</span>
+                    <span className="ingest-stats-detail">{Number(numFiles).toLocaleString()}</span>
                     <span className="ingest-desc-text">files</span>
                 </div>
             </div>
@@ -147,7 +149,9 @@ const Details = ({stats}) => {
                     <FontAwesomeIcon icon={faEnvelope}/>
                 </div>
                 <div className="ingest-stats-details-text-container">
-                    <span className="ingest-stats-detail">{numMessages.toLocaleString()}</span>
+                    <span
+                        className="ingest-stats-detail"
+                    >{Number(numMessages).toLocaleString()}</span>
                     <span className="ingest-desc-text">messages</span>
                 </div>
             </div>
