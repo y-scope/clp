@@ -4,7 +4,7 @@
     "SqlDbPort": 3306,
     "SqlDbName": "clp-db",
     "SqlDbSearchJobsTableName": "search_jobs",
-    "SqlDbArchivesTableName": "clp_archives",
+    "SqlDbClpArchivesTableName": "clp_archives",
     "SqlDbClpFilesTableName": "clp_files"
   },
   "public": {
