@@ -140,8 +140,6 @@ void TimestampPattern::init() {
     patterns.emplace_back(1, "%Y-%m-%d  %H:%M:%S");
     // E.g. 2015/01/31 15:50:45
     patterns.emplace_back(0, "%Y/%m/%d %H:%M:%S");
-    // E.g. 15/01/31 15:50:45
-    patterns.emplace_back(0, "%y/%m/%d %H:%M:%S");
     // E.g. 2015/01/31 15:50:45.123
     patterns.emplace_back(0, "%Y/%m/%d %H:%M:%S.%3");
     // E.g. 2015/01/31 15:50:45,123
