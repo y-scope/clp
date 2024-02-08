@@ -13,14 +13,14 @@ const sleep = (seconds) => new Promise(r => setTimeout(r, seconds * 1000));
  * @returns {string}
  */
 const computeHumanSize = (num) => {
-    const si_prefixes = ["", "K", "M", "G", "T", "P", "E", "Z"];
-    for (let i = 0; i < si_prefixes.length; ++i) {
+    const siPrefixes = ["", "K", "M", "G", "T", "P", "E", "Z"];
+    for (let i = 0; i < siPrefixes.length; ++i) {
         if (Math.abs(num) < 1024.0) {
-            return "" + Math.round(num) + " " + si_prefixes[i] + "B";
+            return `${Math.round(num)} ${siPrefixes[i]}B`;
         }
         num /= 1024.0;
     }
-    return Math.round(num) + " B";
+    return `${Math.round(num)} B`;
 };
 
-export {sleep, computeHumanSize};
+export {computeHumanSize, sleep};

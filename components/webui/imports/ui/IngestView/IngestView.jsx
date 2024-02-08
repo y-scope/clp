@@ -100,15 +100,15 @@ const SpaceSavings = ({stats}) => {
  */
 const Details = ({stats}) => {
     const {
-        begin_timestamp: beginTimeStamp,
-        end_timestamp: endTimeStamp,
+        begin_timestamp: beginTimestamp,
+        end_timestamp: endTimestamp,
         num_files: numFiles,
         num_messages: numMessages,
     } = stats;
 
     let timeRangeRow = null;
-    if (null !== endTimeStamp) {
-        let timestamp_format = "kkkk-MMM-dd HH:mm";
+    if (null !== endTimestamp) {
+        let timestampFormat = "kkkk-MMM-dd HH:mm";
         timeRangeRow = (
             <div className="ingest-stats-details-row">
                 <div className="ingest-stats-details-icon-container">
@@ -116,9 +116,9 @@ const Details = ({stats}) => {
                 </div>
                 <div className="ingest-stats-details-text-container">
                     <span className="ingest-stats-detail">
-                        {DateTime.fromMillis(beginTimeStamp).toFormat(timestamp_format)}
+                        {DateTime.fromMillis(beginTimestamp).toFormat(timestampFormat)}
                         <span className="ingest-desc-text"> to </span>
-                        {DateTime.fromMillis(endTimeStamp).toFormat(timestamp_format)}
+                        {DateTime.fromMillis(endTimestamp).toFormat(timestampFormat)}
                     </span>
                     <span className="ingest-desc-text">time range</span>
                 </div>
@@ -126,9 +126,9 @@ const Details = ({stats}) => {
         );
     }
 
-    let num_files_row = null;
+    let numFilesRow = null;
     if (null !== numFiles) {
-        num_files_row = (
+        numFilesRow = (
             <div className="ingest-stats-details-row">
                 <div className="ingest-stats-details-icon-container">
                     <FontAwesomeIcon icon={faFileAlt}/>
@@ -141,9 +141,9 @@ const Details = ({stats}) => {
         );
     }
 
-    let num_messages_row = null;
+    let numMessagesRow = null;
     if (null !== numMessages) {
-        num_messages_row = (
+        numMessagesRow = (
             <div className="ingest-stats-details-row">
                 <div className="ingest-stats-details-icon-container">
                     <FontAwesomeIcon icon={faEnvelope}/>
@@ -156,7 +156,7 @@ const Details = ({stats}) => {
         );
     }
 
-    if (!(timeRangeRow || num_files_row || num_messages_row)) {
+    if (!(timeRangeRow || numFilesRow || numMessagesRow)) {
         // No details to display
         return (<></>);
     }
@@ -170,8 +170,8 @@ const Details = ({stats}) => {
             <Row>
                 <Col>
                     {timeRangeRow}
-                    {num_files_row}
-                    {num_messages_row}
+                    {numFilesRow}
+                    {numMessagesRow}
                 </Col>
             </Row>
         </div>
