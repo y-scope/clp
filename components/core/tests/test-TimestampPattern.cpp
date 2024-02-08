@@ -536,4 +536,16 @@ TEST_CASE("Test known timestamp patterns", "[KnownTimestampPatterns]") {
     content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
     specific_pattern.insert_formatted_timestamp(timestamp, content);
     REQUIRE(line == content);
+
+    line = "2015-01-31T15:50:45 content after";
+    specific_pattern = TimestampPattern{0, "%Y-%m-%dT%H:%M:%S"};
+    specific_pattern.parse_timestamp(line, timestamp, timestamp_begin_pos, timestamp_end_pos);
+    REQUIRE(specific_pattern.get_num_spaces_before_ts() == 0);
+    REQUIRE(specific_pattern.get_format() == "%Y-%m-%dT%H:%M:%S");
+    REQUIRE(0 == timestamp_begin_pos);
+    REQUIRE(19 == timestamp_end_pos);
+    content.assign(line, 0, timestamp_begin_pos);
+    content.append(line, timestamp_end_pos, line.length() - timestamp_end_pos);
+    specific_pattern.insert_formatted_timestamp(timestamp, content);
+    REQUIRE(line == content);
 }
