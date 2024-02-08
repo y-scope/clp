@@ -99,12 +99,10 @@ const SpaceSavings = ({stats}) => {
  * @returns {JSX.Element}
  */
 const Details = ({stats}) => {
-    const {
-        begin_timestamp: beginTimestamp,
-        end_timestamp: endTimestamp,
-        num_files: numFiles,
-        num_messages: numMessages,
-    } = stats;
+    const beginTimestamp = Number(stats.begin_timestamp);
+    const endTimestamp = Number(stats.end_timestamp);
+    const numFiles = Number(stats.num_files);
+    const numMessages = Number(stats.num_messages);
 
     let timeRangeRow = null;
     if (null !== endTimestamp) {

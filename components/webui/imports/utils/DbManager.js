@@ -50,6 +50,8 @@ const initDbManagers = async ({
             database: dbName,
             user: dbUser,
             password: dbPassword,
+            bigNumberStrings: true,
+            supportBigNumbers: true,
         });
         await dbConnection.connect();
 
