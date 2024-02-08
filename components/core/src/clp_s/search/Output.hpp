@@ -73,14 +73,12 @@ private:
     std::unordered_map<int32_t, ClpStringColumnReader*> m_clp_string_readers;
     std::unordered_map<int32_t, VariableStringColumnReader*> m_var_string_readers;
     std::unordered_map<int32_t, DateStringColumnReader*> m_datestring_readers;
-    std::unordered_map<int32_t, FloatDateStringColumnReader*> m_floatdatestring_readers;
     uint64_t m_cur_message;
     EvaluatedValue m_expression_value;
 
     std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_clpstrings;
     std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_varstrings;
     std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_datestrings;
-    std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_floatdatestrings;
     std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_columns;
 
     simdjson::ondemand::parser m_array_parser;
@@ -204,19 +202,6 @@ private:
     bool evaluate_epoch_date_filter(
             FilterOperation op,
             DateStringColumnReader* reader,
-            std::shared_ptr<Literal>& operand
-    );
-
-    /**
-     * Evaluates a float date string filter expression
-     * @param op
-     * @param reader
-     * @param operand
-     * @return true if the expression evaluates to true, false otherwise
-     */
-    bool evaluate_float_date_filter(
-            FilterOperation op,
-            FloatDateStringColumnReader* reader,
             std::shared_ptr<Literal>& operand
     );
 

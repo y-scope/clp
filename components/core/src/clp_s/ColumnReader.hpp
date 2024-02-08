@@ -235,32 +235,6 @@ private:
     std::unique_ptr<int64_t[]> m_timestamps;
     std::unique_ptr<int64_t[]> m_timestamp_encodings;
 };
-
-class FloatDateStringColumnReader : public BaseColumnReader {
-public:
-    // Constructor
-    FloatDateStringColumnReader(std::string const& name, int32_t id) : BaseColumnReader(name, id) {}
-
-    // Destructor
-    ~FloatDateStringColumnReader() override = default;
-
-    // Methods inherited from BaseColumnReader
-    void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
-
-    NodeType get_type() override { return NodeType::FLOATDATESTRING; }
-
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
-    ) override;
-
-    /**
-     * @param cur_message
-     * @return The encoded time in float epoch time
-     */
-    double get_encoded_time(uint64_t cur_message);
-
-private:
-    std::unique_ptr<double[]> m_timestamps;
-};
 }  // namespace clp_s
 
 #endif  // CLP_S_COLUMNREADER_HPP

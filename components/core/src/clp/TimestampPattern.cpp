@@ -124,28 +124,45 @@ void TimestampPattern::init() {
     patterns.emplace_back(0, "%Y-%m-%dT%H:%M:%S.%3");
     // E.g. 2015-01-31T15:50:45,392
     patterns.emplace_back(0, "%Y-%m-%dT%H:%M:%S,%3");
+    // E.g. 2015-01-31 15:50:45.392
+    patterns.emplace_back(0, "%Y-%m-%d %H:%M:%S.%3");
+    // E.g. 2015-01-31 15:50:45,392
+    patterns.emplace_back(0, "%Y-%m-%d %H:%M:%S,%3");
+    // E.g. 2015/01/31T15:50:45.123
+    patterns.emplace_back(0, "%Y/%m/%dT%H:%M:%S.%3");
+    // E.g. 2015/01/31T15:50:45,123
+    patterns.emplace_back(0, "%Y/%m/%dT%H:%M:%S,%3");
+    // E.g. 2015/01/31 15:50:45.123
+    patterns.emplace_back(0, "%Y/%m/%d %H:%M:%S.%3");
+    // E.g. 2015/01/31 15:50:45,123
+    patterns.emplace_back(0, "%Y/%m/%d %H:%M:%S,%3");
+    // E.g. [2015-01-31 15:50:45,085]
+    patterns.emplace_back(0, "[%Y-%m-%d %H:%M:%S,%3]");
+    // E.g. INFO [main] 2015-01-31 15:50:45,085
+    patterns.emplace_back(2, "%Y-%m-%d %H:%M:%S,%3");
+    // E.g. <<<2016-11-10 03:02:29:936
+    patterns.emplace_back(0, "<<<%Y-%m-%d %H:%M:%S:%3");
+    // E.g. 01 Jan 2016 15:50:17,085
+    patterns.emplace_back(0, "%d %b %Y %H:%M:%S,%3");
+
+    // E.g. 2015-01-31T15:50:45
+    patterns.emplace_back(0, "%Y-%m-%dT%H:%M:%S");
+    // E.g. 2015-01-31 15:50:45
+    patterns.emplace_back(0, "%Y-%m-%d %H:%M:%S");
+    // E.g. 2015/01/31T15:50:45
+    patterns.emplace_back(0, "%Y/%m/%dT%H:%M:%S");
+    // E.g. 2015/01/31 15:50:45
+    patterns.emplace_back(0, "%Y/%m/%d %H:%M:%S");
     // E.g. [2015-01-31T15:50:45
     patterns.emplace_back(0, "[%Y-%m-%dT%H:%M:%S");
     // E.g. [20170106-16:56:41]
     patterns.emplace_back(0, "[%Y%m%d-%H:%M:%S]");
-    // E.g. 2015-01-31 15:50:45,392
-    patterns.emplace_back(0, "%Y-%m-%d %H:%M:%S,%3");
-    // E.g. 2015-01-31 15:50:45.392
-    patterns.emplace_back(0, "%Y-%m-%d %H:%M:%S.%3");
-    // E.g. [2015-01-31 15:50:45,085]
-    patterns.emplace_back(0, "[%Y-%m-%d %H:%M:%S,%3]");
-    // E.g. 2015-01-31 15:50:45
-    patterns.emplace_back(0, "%Y-%m-%d %H:%M:%S");
     // E.g. Start-Date: 2015-01-31  15:50:45
     patterns.emplace_back(1, "%Y-%m-%d  %H:%M:%S");
-    // E.g. 2015/01/31 15:50:45
-    patterns.emplace_back(0, "%Y/%m/%d %H:%M:%S");
     // E.g. 15/01/31 15:50:45
     patterns.emplace_back(0, "%y/%m/%d %H:%M:%S");
     // E.g. 150131  9:50:45
     patterns.emplace_back(0, "%y%m%d %k:%M:%S");
-    // E.g. 01 Jan 2016 15:50:17,085
-    patterns.emplace_back(0, "%d %b %Y %H:%M:%S,%3");
     // E.g. Jan 01, 2016 3:50:17 PM
     patterns.emplace_back(0, "%b %d, %Y %l:%M:%S %p");
     // E.g. January 31, 2015 15:50
@@ -157,16 +174,12 @@ void TimestampPattern::init() {
     patterns.emplace_back(3, "[%d/%b/%Y:%H:%M:%S");
     // E.g. 192.168.4.5 - - [01/01/2016:15:50:17
     patterns.emplace_back(3, "[%d/%m/%Y:%H:%M:%S");
-    // E.g. INFO [main] 2015-01-31 15:50:45,085
-    patterns.emplace_back(2, "%Y-%m-%d %H:%M:%S,%3");
     // E.g. Started POST "/api/v3/internal/allowed" for 127.0.0.1 at 2017-06-18 00:20:44
     patterns.emplace_back(6, "%Y-%m-%d %H:%M:%S");
     // E.g. update-alternatives 2015-01-31 15:50:45
     patterns.emplace_back(1, "%Y-%m-%d %H:%M:%S");
     // E.g. ERROR: apport (pid 4557) Sun Jan  1 15:50:45 2015
     patterns.emplace_back(4, "%a %b %e %H:%M:%S %Y");
-    // E.g. <<<2016-11-10 03:02:29:936
-    patterns.emplace_back(0, "<<<%Y-%m-%d %H:%M:%S:%3");
     // E.g. Sun Jan  1 15:50:45 2015
     patterns.emplace_back(0, "%a %b %e %H:%M:%S %Y");
 

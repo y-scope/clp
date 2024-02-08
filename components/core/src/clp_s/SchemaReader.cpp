@@ -25,12 +25,6 @@ void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
             return static_cast<DateStringColumnReader*>(m_timestamp_column)
                     ->get_encoded_time(m_cur_message);
         };
-    } else if (m_timestamp_column->get_type() == NodeType::FLOATDATESTRING) {
-        m_get_timestamp = [this]() {
-            double timestamp = static_cast<FloatDateStringColumnReader*>(m_timestamp_column)
-                                       ->get_encoded_time(m_cur_message);
-            return static_cast<epochtime_t>(timestamp);
-        };
     } else if (m_timestamp_column->get_type() == NodeType::INTEGER) {
         m_get_timestamp = [this]() {
             return std::get<epochtime_t>(m_extracted_values[m_timestamp_column->get_id()]);
@@ -262,8 +256,7 @@ void SchemaReader::generate_json_template(int32_t id) {
             }
             case NodeType::CLPSTRING:
             case NodeType::VARSTRING:
-            case NodeType::DATESTRING:
-            case NodeType::FLOATDATESTRING: {
+            case NodeType::DATESTRING: {
                 m_json_serializer->add_op(JsonSerializer::Op::AddStringField);
                 m_reordered_columns.push_back(m_column_map[child_global_id]);
                 break;
