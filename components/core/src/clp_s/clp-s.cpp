@@ -205,9 +205,7 @@ int main(int argc, char const* argv[]) {
                     command_line_arguments.get_max_num_results()
             );
         } else {
-            output_handler = std::make_unique<StandardOutputHandler>(
-                    command_line_arguments.get_max_num_results()
-            );
+            output_handler = std::make_unique<StandardOutputHandler>();
         }
 
         // output result
