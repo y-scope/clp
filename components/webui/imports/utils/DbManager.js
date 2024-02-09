@@ -1,7 +1,8 @@
+import {logger} from "/imports/utils/logger";
 import mysql from "mysql2/promise";
+
 import {deinitStatsDbManager, initStatsDbManager} from "../api/ingestion/server/publications";
 import {initSearchJobsDbManager} from "../api/search/server/methods";
-import {logger} from "./logger";
 
 
 /**

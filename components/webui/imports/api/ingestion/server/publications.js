@@ -1,7 +1,7 @@
+import {logger} from "/imports/utils/logger";
 import {Meteor} from "meteor/meteor";
 
 import {STATS_COLLECTION_ID_COMPRESSION, StatsCollection} from "../collections";
-
 import StatsDbManager from "./StatsDbManager";
 
 
@@ -78,6 +78,8 @@ const deinitStatsDbManager = () => {
  * @returns {Mongo.Cursor}
  */
 Meteor.publish(Meteor.settings.public.StatsCollectionName, async () => {
+    logger.debug(`Subscription '${Meteor.settings.public.SearchResultsCollectionName}'`);
+
     await refreshCompressionStats();
 
     const filter = {
