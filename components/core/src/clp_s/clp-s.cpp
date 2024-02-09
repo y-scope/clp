@@ -59,18 +59,16 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
  * Searches the given archive.
  * @param command_line_arguments
  * @param archive_dir
- * @param expr The search AST
+ * @param expr A copy of the search AST which may be modified
  * @return Whether the search succeeded
  */
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::string const& archive_dir,
-        std::shared_ptr<Expression>& expr
+        std::shared_ptr<Expression> expr
 );
 
 bool compress(CommandLineArguments const& command_line_arguments) {
-    clp_s::TimestampPattern::init();
-
     boost::uuids::random_generator generator;
     auto archive_id = boost::uuids::to_string(generator());
     auto archives_dir = std::filesystem::path(command_line_arguments.get_archives_dir());
@@ -147,7 +145,7 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::string const& archive_dir,
-        std::shared_ptr<Expression>& expr
+        std::shared_ptr<Expression> expr
 ) {
     auto const& query = command_line_arguments.get_query();
 
@@ -242,6 +240,8 @@ int main(int argc, char const* argv[]) {
         return 1;
     }
 
+    clp_s::TimestampPattern::init();
+
     CommandLineArguments command_line_arguments("clp-s");
     auto parsing_result = command_line_arguments.parse_arguments(argc, argv);
     switch (parsing_result) {
@@ -288,7 +288,6 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
     } else {
-        clp_s::TimestampPattern::init();
         mongocxx::instance const mongocxx_instance{};
 
         auto const& query = command_line_arguments.get_query();
@@ -324,7 +323,7 @@ int main(int argc, char const* argv[]) {
                     continue;
                 }
 
-                if (false == search_archive(command_line_arguments, entry.path(), expr)) {
+                if (false == search_archive(command_line_arguments, entry.path(), expr->copy())) {
                     return 1;
                 }
             }
