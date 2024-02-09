@@ -1,9 +1,9 @@
-import {faChartBar, faClock, faEnvelope, faFileAlt, faHdd} from "@fortawesome/free-solid-svg-icons";
+import React from "react";
 
+import {faChartBar, faClock, faEnvelope, faFileAlt, faHdd} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {DateTime} from "luxon";
 import {useTracker} from "meteor/react-meteor-data";
-import React from "react";
 import {Col, Container, ProgressBar, Row} from "react-bootstrap";
 
 import {StatsCollection} from "../../api/ingestion/collections";

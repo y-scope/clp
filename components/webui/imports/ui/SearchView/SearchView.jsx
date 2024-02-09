@@ -1,8 +1,9 @@
+import React, {useEffect, useRef, useState} from "react";
+
 import {faExclamationCircle} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {Meteor} from "meteor/meteor";
 import {useTracker} from "meteor/react-meteor-data";
-import React, {useEffect, useRef, useState} from "react";
 import {ProgressBar} from "react-bootstrap";
 
 import {
@@ -11,10 +12,9 @@ import {
 } from "../../api/search/collections";
 import {INVALID_JOB_ID, isSearchSignalQuerying, SearchSignal} from "../../api/search/constants";
 import SearchJobCollectionsManager from "../../api/search/SearchJobCollectionsManager";
-
-import "react-datepicker/dist/react-datepicker.css";
 import {LOCAL_STORAGE_KEYS} from "../constants";
 import {changeTimezoneToUtcWithoutChangingTime, DEFAULT_TIME_RANGE} from "./datetime";
+
 import SearchControls from "./SearchControls.jsx";
 import SearchResults from "./SearchResults.jsx";
 import {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResultsTable.jsx";

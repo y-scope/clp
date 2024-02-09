@@ -1,6 +1,6 @@
-import {Meteor} from "meteor/meteor";
-import {Accounts} from "meteor/accounts-base";
 import {logger} from "/imports/utils/logger";
+import {Accounts} from "meteor/accounts-base";
+import {Meteor} from "meteor/meteor";
 
 
 Meteor.methods({

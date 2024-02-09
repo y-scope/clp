@@ -1,8 +1,10 @@
+import React, {useEffect, useState} from "react";
+
 import {faSort, faSortDown, faSortUp} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import React, {useEffect, useState} from "react";
 import {Spinner, Table} from "react-bootstrap";
 import ReactVisibilitySensor from "react-visibility-sensor";
+
 import "./SearchResultsTable.scss";
 
 

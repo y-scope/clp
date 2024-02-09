@@ -1,5 +1,5 @@
-import {Meteor} from "meteor/meteor";
 import {logger} from "/imports/utils/logger";
+import {Meteor} from "meteor/meteor";
 
 import {addSortToMongoFindOptions, SearchResultsMetadataCollection} from "../collections";
 import {searchJobCollectionsManager} from "./collections";

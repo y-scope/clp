@@ -1,11 +1,8 @@
 import React from "react";
-import {NavLink} from "react-router-dom";
 
+import {faAngleDoubleLeft, faAngleDoubleRight} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {
-    faAngleDoubleLeft,
-    faAngleDoubleRight,
-} from "@fortawesome/free-solid-svg-icons";
+import {NavLink} from "react-router-dom";
 
 
 /**
@@ -17,7 +14,11 @@ import {
  * @param {function} onSidebarToggle callback to toggle the sidebar's collapsed state
  * @returns {JSX.Element}
  */
-const Sidebar = ({isSidebarCollapsed, routes, onSidebarToggle}) => {
+const Sidebar = ({
+    isSidebarCollapsed,
+    routes,
+    onSidebarToggle,
+}) => {
     return (
         <div
             id="sidebar"
@@ -39,7 +40,7 @@ const Sidebar = ({isSidebarCollapsed, routes, onSidebarToggle}) => {
                                 </div>
                                 <span className={"sidebar-item-text"}>{route["label"]}</span>
                             </NavLink>
-                        )
+                        ),
                 )}
             </div>
 

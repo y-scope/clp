@@ -4,6 +4,7 @@
  */
 class SearchJobCollectionsManager {
     #collections;
+
     constructor() {
         this.#collections = new Map();
     }

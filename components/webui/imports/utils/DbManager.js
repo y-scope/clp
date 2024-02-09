@@ -36,7 +36,7 @@ const initDbManagers = async ({
 }, {
     searchJobsTableName,
     clpArchivesTableName,
-    clpFilesTableName
+    clpFilesTableName,
 }) => {
     if (null !== dbConnection) {
         logger.error("This method should not be called twice.");
@@ -56,7 +56,7 @@ const initDbManagers = async ({
         await dbConnection.connect();
 
         initSearchJobsDbManager(dbConnection, {
-            searchJobsTableName
+            searchJobsTableName,
         });
         initStatsDbManager(dbConnection, {
             clpArchivesTableName,

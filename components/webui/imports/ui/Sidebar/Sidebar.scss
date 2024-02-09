@@ -18,20 +18,20 @@
 }
 
 #sidebar .brand {
-  align-items: center;        /* center element vertically */
+  align-items: center; /* center element vertically */
   display: flex;
-  flex: 0 0 3rem;             /* cannot grow, cannot shrink, 44px height */
-  justify-content: center;    /* center element horizontally */
+  flex: 0 0 3rem; /* cannot grow, cannot shrink, 44px height */
+  justify-content: center; /* center element horizontally */
 
   border-left: 1px solid #111;
 
   font-size: 1.25rem;
-  white-space: nowrap;        /* proper animation */
-  overflow: hidden;           /* proper animation */
+  white-space: nowrap; /* proper animation */
+  overflow: hidden; /* proper animation */
 }
 
 .sidebar-menu {
-  flex: 1 1 auto;             /* can shrink, can grow, auto height */
+  flex: 1 1 auto; /* can shrink, can grow, auto height */
   display: flex;
   flex-direction: column;
   overflow-y: auto;

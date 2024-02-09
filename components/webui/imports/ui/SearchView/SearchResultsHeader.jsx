@@ -1,6 +1,7 @@
+import React from "react";
+
 import {faCog} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import React from "react";
 import {
     Button,
     Col,
@@ -27,7 +28,7 @@ import "./SearchResultsHeader.scss";
  * @param {function} setMaxLinesPerResult callback to set setMaxLinesPerResult
  * @returns {JSX.Element}
  */
-export const SearchResultsHeader = ({
+const SearchResultsHeader = ({
     jobId,
     resultsMetadata,
     numResultsOnServer,
@@ -80,8 +81,8 @@ export const SearchResultsHeader = ({
                             </Form>
                         </Popover>}>
                         {(0 < numResultsOnServer) ? <Button type={"button"}
-                                 variant={"light"}
-                                 title={"Display Settings"}>
+                                                            variant={"light"}
+                                                            title={"Display Settings"}>
                             <FontAwesomeIcon icon={faCog}/>
                         </Button> : <></>}
                     </OverlayTrigger>
@@ -90,3 +91,5 @@ export const SearchResultsHeader = ({
         </Container>
     </>);
 };
+
+export default SearchResultsHeader;

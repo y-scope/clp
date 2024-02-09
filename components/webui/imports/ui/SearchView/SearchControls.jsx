@@ -1,5 +1,7 @@
-import React, {useEffect, useState, useRef} from "react";
+import React, {useEffect, useRef, useState} from "react";
 
+import {faBars, faSearch, faTimes, faTrash} from "@fortawesome/free-solid-svg-icons";
+import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {
     Button,
     Col,
@@ -11,13 +13,12 @@ import {
     Row,
 } from "react-bootstrap";
 import DatePicker from "react-datepicker";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {faBars, faSearch, faTimes, faTrash} from "@fortawesome/free-solid-svg-icons";
+import {isSearchSignalQuerying, isSearchSignalReq, SearchSignal} from "../../api/search/constants";
 
 import {computeTimeRange, TIME_RANGE_PRESET_LABEL} from "./datetime";
 import {LOCAL_STORAGE_KEYS} from "../constants";
-import {isSearchSignalQuerying, isSearchSignalReq, SearchSignal} from "../../api/search/constants";
 
+import "react-datepicker/dist/react-datepicker.css";
 import "./SearchControls.scss";
 
 
