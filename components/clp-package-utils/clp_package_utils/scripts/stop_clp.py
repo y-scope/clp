@@ -13,6 +13,7 @@ from clp_py_utils.clp_config import (
     RESULTS_CACHE_COMPONENT_NAME,
     SEARCH_SCHEDULER_COMPONENT_NAME,
     SEARCH_WORKER_COMPONENT_NAME,
+    WEBUI_COMPONENT_NAME,
 )
 
 from clp_package_utils.general import (
@@ -66,6 +67,7 @@ def main(argv):
     component_args_parser.add_parser(SEARCH_SCHEDULER_COMPONENT_NAME)
     component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
     component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
+    component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -107,6 +109,8 @@ def main(argv):
         with open(instance_id_file_path, "r") as f:
             instance_id = f.readline()
 
+        if "" == component_name or WEBUI_COMPONENT_NAME == component_name:
+            stop_container(f"clp-{WEBUI_COMPONENT_NAME}-{instance_id}")
         if "" == component_name or SEARCH_WORKER_COMPONENT_NAME == component_name:
             stop_container(f"clp-{SEARCH_WORKER_COMPONENT_NAME}-{instance_id}")
         if "" == component_name or COMPRESSION_WORKER_COMPONENT_NAME == component_name:

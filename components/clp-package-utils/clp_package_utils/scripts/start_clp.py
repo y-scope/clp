@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 import multiprocessing
 import os
@@ -7,10 +8,12 @@ import socket
 import subprocess
 import sys
 import time
+import typing
 import uuid
 
 import yaml
 from clp_py_utils.clp_config import (
+    CLP_METADATA_TABLE_PREFIX,
     CLPConfig,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
@@ -18,8 +21,10 @@ from clp_py_utils.clp_config import (
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    SEARCH_JOBS_TABLE_NAME,
     SEARCH_SCHEDULER_COMPONENT_NAME,
     SEARCH_WORKER_COMPONENT_NAME,
+    WEBUI_COMPONENT_NAME,
 )
 from job_orchestration.scheduler.constants import QueueName
 from pydantic import BaseModel
@@ -42,6 +47,7 @@ from clp_package_utils.general import (
     validate_queue_config,
     validate_redis_config,
     validate_results_cache_config,
+    validate_webui_config,
     validate_worker_config,
 )
 
@@ -622,6 +628,104 @@ def generic_start_worker(
     logger.info(f"Started {component_name}.")
 
 
+def update_meteor_settings(
+    parent_key_prefix: str,
+    settings: typing.Dict[str, typing.Any],
+    updates: typing.Dict[str, typing.Any],
+):
+    """
+    Recursively updates the given Meteor settings object with the values from `updates`.
+
+    :param parent_key_prefix: The prefix for keys at this level in the settings dictionary.
+    :param settings: The settings to update.
+    :param updates: The updates.
+    :raises ValueError: If a key in `updates` doesn't exist in `settings`.
+    """
+    for key, value in updates.items():
+        if key not in settings:
+            error_msg = f"{parent_key_prefix}{key} is not a valid configuration key for the webui."
+            raise ValueError(error_msg)
+        if isinstance(value, dict):
+            update_meteor_settings(f"{parent_key_prefix}{key}.", settings[key], value)
+        else:
+            settings[key] = updates[key]
+
+
+def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts):
+    logger.info(f"Starting {WEBUI_COMPONENT_NAME}...")
+
+    container_name = f"clp-{WEBUI_COMPONENT_NAME}-{instance_id}"
+    if container_exists(container_name):
+        logger.info(f"{WEBUI_COMPONENT_NAME} already running.")
+        return
+
+    webui_logs_dir = clp_config.logs_directory / WEBUI_COMPONENT_NAME
+    node_path = str(
+        CONTAINER_CLP_HOME / "var" / "www" / "programs" / "server" / "npm" / "node_modules"
+    )
+    settings_json_path = get_clp_home() / "var" / "www" / "settings.json"
+
+    validate_webui_config(clp_config, webui_logs_dir, settings_json_path)
+
+    # Create directories
+    webui_logs_dir.mkdir(exist_ok=True, parents=True)
+
+    container_webui_logs_dir = pathlib.Path("/") / "var" / "log" / WEBUI_COMPONENT_NAME
+    with open(settings_json_path, "r") as settings_json_file:
+        meteor_settings = json.loads(settings_json_file.read())
+    meteor_settings_updates = {
+        "private": {
+            "SqlDbHost": clp_config.database.host,
+            "SqlDbPort": clp_config.database.port,
+            "SqlDbName": clp_config.database.name,
+            "SqlDbSearchJobsTableName": SEARCH_JOBS_TABLE_NAME,
+            "SqlDbClpArchivesTableName": f"{CLP_METADATA_TABLE_PREFIX}archives",
+            "SqlDbClpFilesTableName": f"{CLP_METADATA_TABLE_PREFIX}files",
+        }
+    }
+    update_meteor_settings("", meteor_settings, meteor_settings_updates)
+
+    # Start container
+    # fmt: off
+    container_cmd = [
+        "docker", "run",
+        "-d",
+        "--network", "host",
+        "--rm",
+        "--name", container_name,
+        "-e", f"NODE_PATH={node_path}",
+        "-e", f"MONGO_URL={clp_config.results_cache.get_uri()}",
+        "-e", f"PORT={clp_config.webui.port}",
+        "-e", f"ROOT_URL=http://{clp_config.webui.host}",
+        "-e", f"METEOR_SETTINGS={json.dumps(meteor_settings)}",
+        "-e", f"CLP_DB_USER={clp_config.database.username}",
+        "-e", f"CLP_DB_PASS={clp_config.database.password}",
+        "-e", f"WEBUI_LOGS_DIR={container_webui_logs_dir}",
+        "-e", f"WEBUI_LOGGING_LEVEL={clp_config.webui.logging_level}",
+        "-u", f"{os.getuid()}:{os.getgid()}",
+    ]
+    # fmt: on
+    necessary_mounts = [
+        mounts.clp_home,
+        DockerMount(DockerMountType.BIND, webui_logs_dir, container_webui_logs_dir),
+    ]
+    for mount in necessary_mounts:
+        if mount:
+            container_cmd.append("--mount")
+            container_cmd.append(str(mount))
+    container_cmd.append(clp_config.execution_container)
+
+    node_cmd = [
+        str(CONTAINER_CLP_HOME / "bin" / "node"),
+        str(CONTAINER_CLP_HOME / "var" / "www" / "launcher.js"),
+        str(CONTAINER_CLP_HOME / "var" / "www" / "main.js"),
+    ]
+    cmd = container_cmd + node_cmd
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+
+    logger.info(f"Started {WEBUI_COMPONENT_NAME}.")
+
+
 def main(argv):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
@@ -643,6 +747,8 @@ def main(argv):
     component_args_parser.add_parser(SEARCH_SCHEDULER_COMPONENT_NAME)
     component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
     component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
+    component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
+
     args_parser.add_argument(
         "--num-cpus",
         type=int,
@@ -676,6 +782,7 @@ def main(argv):
             DB_COMPONENT_NAME,
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
             SEARCH_SCHEDULER_COMPONENT_NAME,
+            WEBUI_COMPONENT_NAME,
         ]:
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
         if component_name in [
@@ -751,6 +858,8 @@ def main(argv):
             )
         if "" == component_name or SEARCH_WORKER_COMPONENT_NAME == component_name:
             start_search_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
+        if "" == component_name or WEBUI_COMPONENT_NAME == component_name:
+            start_webui(instance_id, clp_config, mounts)
 
     except Exception as ex:
         # Stop CLP

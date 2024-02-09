@@ -1,0 +1,15 @@
+{
+  "private": {
+    "SqlDbHost": "localhost",
+    "SqlDbPort": 3306,
+    "SqlDbName": "clp-db",
+    "SqlDbSearchJobsTableName": "search_jobs",
+    "SqlDbClpArchivesTableName": "clp_archives",
+    "SqlDbClpFilesTableName": "clp_files"
+  },
+  "public": {
+    "SearchResultsCollectionName": "results",
+    "SearchResultsMetadataCollectionName": "results-metadata",
+    "StatsCollectionName": "stats"
+  }
+}

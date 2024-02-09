@@ -1,0 +1,16 @@
+@import "bootstrap-customized.scss";
+
+html {
+  font-size: 14px;
+  height: 100%;
+}
+
+body {
+  background-image: linear-gradient(135deg, white, rgba(255, 255, 255, 0.5));
+  font-family: 'Source Sans Pro', sans-serif;
+  height: 100%;
+}
+
+@import "IngestView/IngestView.scss";
+@import "SearchView/SearchView.scss";
+@import "Sidebar/Sidebar.scss";
