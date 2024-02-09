@@ -21,11 +21,6 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
         throw OperationFailed(ErrorCodeErrno, __FILENAME__, __LINE__);
     }
 
-    m_encoded_messages_dir = m_archive_path + "/encoded_messages";
-    if (false == boost::filesystem::create_directory(m_encoded_messages_dir)) {
-        throw OperationFailed(ErrorCodeErrno, __FILENAME__, __LINE__);
-    }
-
     std::string var_dict_path = m_archive_path + "/var.dict";
     m_var_dict = std::make_shared<VariableDictionaryWriter>();
     m_var_dict->open(var_dict_path, m_compression_level, UINT64_MAX);
