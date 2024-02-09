@@ -57,11 +57,14 @@ Usage:
 Usage:
 
 ```bash
-./clp-s x [options] <archives-dir> <output-dir>
+./clp-s x [<options>] <archives-dir> <output-dir>
 ```
 
 * `archives-dir` is a directory containing archives.
 * `output-dir` is the directory that decompressed logs should be written to.
+* `options` allow you to specify things like a specific archive (from within `archives-dir`) to
+  decompress (`--archive-id <archive-id>`).
+  * For a complete list, run `./clp-s x --help`
 
 ### Examples
 
@@ -76,11 +79,14 @@ Usage:
 Usage:
 
 ```bash
-./clp-s s [options] <archives-dir> <kql-query>
+./clp-s s [<options>] <archives-dir> <kql-query>
 ```
 
 * `archives-dir` is a directory containing archives.
 * `kql-query` is a [KQL][1] query.
+* `options` allow you to specify things like a specific archive (from within `archives-dir`) to
+  search (`--archive-id <archive-id>`).
+  * For a complete list, run `./clp-s s --help`
 
 ### Examples
 
