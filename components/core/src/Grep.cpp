@@ -343,8 +343,6 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                         current_string.push_back('*');
                     }
                     // TODO: add this step to the documentation too
-                    bool contains_wildcard = false;
-                    set<uint32_t> schema_types;
                     bool is_surrounded_by_delims = false;
                     if ((j == 0 || current_string[0] == '*' ||
                          forward_lexer.is_delimiter(processed_search_string[j - 1])) &&
@@ -353,15 +351,23 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                          forward_lexer.is_delimiter(processed_search_string[i + 1]))) {
                         is_surrounded_by_delims = true;
                     }
+                    bool contains_wildcard = false;
+                    set<uint32_t> schema_types;
+                    // All variables must be surrounded by delimiters
                     if (is_surrounded_by_delims) {
                         StringReader string_reader;
                         log_surgeon::ParserInputBuffer parser_input_buffer;
                         ReaderInterfaceWrapper reader_wrapper(string_reader);
                         std::string regex_search_string;
+                        bool contains_central_wildcard = false;
+                        uint32_t pos = 0;
                         for (char const& c : current_string) {
                             if (c == '*') {
                                 contains_wildcard = true;
                                 regex_search_string.push_back('.');
+                                if(pos > 0 && pos < current_string.size() - 1) {
+                                    contains_central_wildcard = true;
+                                }
                             } else if (
                                     log_surgeon::SchemaParser::get_special_regex_characters().find(
                                             c) !=
@@ -369,15 +375,29 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                                 regex_search_string.push_back('\\');
                             }
                             regex_search_string.push_back(c);
+                            pos++;
                         }
                         log_surgeon::NonTerminal::m_next_children_start = 0;
                         log_surgeon::Schema schema2;
-                        stopwatch5.start();
+                        if (contains_wildcard) {
+                            stopwatch4.start();
+                        }
+                        if (contains_central_wildcard) {
+                            stopwatch5.start();
+                        }
+                        stopwatch6.start();
                         // TODO: we don't always need to do a DFA intersect
                         //       most of the time we can just use the forward
                         //       and reverse lexers which is much much faster
+                        // TODO: NFA creation not optimized at all
                         schema2.add_variable("search", regex_search_string, -1);
-                        stopwatch5.stop();
+                        if (contains_wildcard) {
+                            stopwatch4.stop();
+                        }
+                        if (contains_central_wildcard) {
+                            stopwatch5.stop();
+                        }
+                        stopwatch6.stop();
                         RegexNFA<RegexNFAByteState> nfa;
                         for (std::unique_ptr<ParserAST> const& parser_ast :
                                 schema2.get_schema_ast_ptr()->m_schema_vars) {
@@ -385,20 +405,33 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                             ByteLexer::Rule rule(0, std::move(schema_var_ast->m_regex_ptr));
                             rule.add_ast(&nfa);
                         }
-                        // TODO: DFA creation isn't optimized for perforamnce 
+                        // TODO: DFA creation isn't optimized for performance 
                         //       at all
-                        // TODO: this is obviously bad, but the code needs to be
-                        //       reorganized a lot to fix the fact that DFAs and
-                        //       NFAs can't be used without a lexer
-                        stopwatch7.start();
+                        // TODO: log-suregon code needs to be refactored to
+                        //       allow direct usage of DFA/NFA without lexer
+                        if (contains_central_wildcard) {
+                            stopwatch7.start();
+                        }
+                        stopwatch8.start();
                         unique_ptr<RegexDFA<RegexDFAByteState>> dfa2 =
                                 forward_lexer.nfa_to_dfa(nfa);
                         unique_ptr<RegexDFA<RegexDFAByteState>> const& dfa1 =
                                 forward_lexer.get_dfa();
                         schema_types = dfa1->get_intersect(dfa2);
-                        stopwatch7.stop();
-                        // All variables must be surrounded by delimiters
+                        if (contains_central_wildcard) {
+                            stopwatch7.stop();
+                        }
+                        stopwatch8.stop();
+                        // TODO: add this step to the documentation
+                        bool already_added_var = false;
                         for (int id : schema_types) {
+                            auto& schema_type = forward_lexer.m_id_symbol[id];
+                            if (schema_type != "int" && schema_type != "float") {
+                                if (already_added_var) {
+                                    continue;
+                                }
+                                already_added_var = true;
+                            }
                             bool start_star = current_string[0] == '*' && false == prev_star;
                             bool end_star = current_string.back() == '*' && false == next_star;
                             suffixes.emplace_back();
@@ -416,8 +449,7 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                             }
                         }
                     }
-                    // If it's not guaranteed to be a variable, store it as 
-                    // static text
+                    // Non-guaranteed variables, are potentially static text
                     if (schema_types.empty() || contains_wildcard ||
                         is_surrounded_by_delims == false) {
                         suffixes.emplace_back();
@@ -452,26 +484,24 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
         stopwatch1.stop();
         stopwatch10.start();
         uint32_t last_row = query_matrix.size() - 1;
-        /*
+        
         std::cout << "query_matrix" << std::endl;
-        for(set<QueryLogtype>& query_logtypes : query_matrix) {
-            for(QueryLogtype const& query_logtype : query_logtypes) {
-                for(uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
-                    auto& val = query_logtype.m_logtype[i];
-                    auto& str = query_logtype.m_search_query[i];
-                    if (std::holds_alternative<char>(val)) {
-                        std::cout << std::get<char>(val);
-                    } else {
-                        std::cout << "<" << forward_lexer.m_id_symbol[std::get<int>(val)] << ">";
-                        std::cout << "(" << str << ")";
-                    }
+        for(QueryLogtype const& query_logtype : query_matrix[last_row]) {
+            for(uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
+                auto& val = query_logtype.m_logtype[i];
+                auto& str = query_logtype.m_search_query[i];
+                if (std::holds_alternative<char>(val)) {
+                    std::cout << std::get<char>(val);
+                } else {
+                    std::cout << "<" << forward_lexer.m_id_symbol[std::get<int>(val)] << ">";
+                    std::cout << "(" << str << ")";
                 }
-                std::cout << " | ";
             }
-            std::cout << std::endl;
+            std::cout << " | ";
         }
+        std::cout << std::endl;
         std::cout << query_matrix[last_row].size() << std::endl;
-        */
+        
         for (QueryLogtype const& query_logtype: query_matrix[last_row]) {
             SubQuery sub_query;
             std::string logtype_string;
@@ -489,18 +519,16 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                     encoded_variable_t encoded_var;
                     // Create a duplicate query that will treat a wildcard
                     // int/float as an int/float encoded in a segment
-                    // TODO: this is wrong you don't care if query has a wildcard, just that var.
-                    //       also all queries have wildcard so this variable seems useless
                     if (false == is_special && var_has_wildcard &&
                         (schema_type == "int" || schema_type == "float")) {
                         QueryLogtype new_query_logtype = query_logtype;
                         new_query_logtype.m_is_special[i] = true;
                         // TODO: this is kinda sketchy, but it'll work because 
-                        // of how the < operator is defined
+                        //       the < operator is defined in a way that will
+                        //       insert it after the current iterator
                         query_matrix[last_row].insert(new_query_logtype);
                     }
                     if (is_special) {
-                        sub_query.mark_wildcard_match_required();
                         if (schema_type == "int") {
                             LogTypeDictionaryEntry::add_int_var(logtype_string);
                         } else if (schema_type == "float") {
@@ -510,14 +538,40 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                                EncodedVariableInterpreter::convert_string_to_representable_integer_var(
                                        var_str, encoded_var)) {
                         LogTypeDictionaryEntry::add_int_var(logtype_string);
-                        sub_query.add_non_dict_var(encoded_var);
                     } else if (schema_type == "float" &&
                                EncodedVariableInterpreter::convert_string_to_representable_float_var(
                                        var_str, encoded_var)) {
                         LogTypeDictionaryEntry::add_float_var(logtype_string);
-                        sub_query.add_non_dict_var(encoded_var);
                     } else {
                         LogTypeDictionaryEntry::add_dict_var(logtype_string);
+                    }
+                }
+            }
+            std::unordered_set<const LogTypeDictionaryEntry*> possible_logtype_entries;
+            archive.get_logtype_dictionary().get_entries_matching_wildcard_string(logtype_string, ignore_case,
+                                                                                  possible_logtype_entries);
+            if(possible_logtype_entries.empty()) {
+                continue;
+            }
+            for (uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
+                auto const& value = query_logtype.m_logtype[i];
+                auto const& var_str = query_logtype.m_search_query[i];
+                auto const& is_special = query_logtype.m_is_special[i];
+                auto const& var_has_wildcard = query_logtype.m_var_has_wildcard[i];
+                if (std::holds_alternative<int>(value)) {
+                    auto& schema_type = forward_lexer.m_id_symbol[std::get<int>(value)];
+                    encoded_variable_t encoded_var;
+                    if (is_special) {
+                        sub_query.mark_wildcard_match_required();
+                    } else if (schema_type == "int" &&
+                               EncodedVariableInterpreter::convert_string_to_representable_integer_var(
+                                       var_str, encoded_var)) {
+                        sub_query.add_non_dict_var(encoded_var);
+                    } else if (schema_type == "float" &&
+                               EncodedVariableInterpreter::convert_string_to_representable_float_var(
+                                       var_str, encoded_var)) {
+                        sub_query.add_non_dict_var(encoded_var);
+                    } else {
                         auto& var_dict = archive.get_var_dictionary();
                         if (var_has_wildcard) {
                             stopwatch12.start();
@@ -557,9 +611,6 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
             if(false == has_vars) {
                 continue;
             }
-            std::unordered_set<const LogTypeDictionaryEntry*> possible_logtype_entries;
-            archive.get_logtype_dictionary().get_entries_matching_wildcard_string(logtype_string, ignore_case,
-                                                                                  possible_logtype_entries);
             if (false == possible_logtype_entries.empty()) {
                 //std::cout << logtype_string << std::endl;
                 sub_query.set_possible_logtypes(possible_logtype_entries);
@@ -594,11 +645,11 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     SPDLOG_WARN("time_taken1: {}", time_taken1);
     //SPDLOG_WARN("time_taken2: {}", time_taken2);
     //SPDLOG_WARN("time_taken3: {}", time_taken3);
-    //SPDLOG_WARN("time_taken4: {}", time_taken4);
+    SPDLOG_WARN("time_taken4: {}", time_taken4);
     SPDLOG_WARN("time_taken5: {}", time_taken5);
-    //SPDLOG_WARN("time_taken6: {}", time_taken6);
+    SPDLOG_WARN("time_taken6: {}", time_taken6);
     SPDLOG_WARN("time_taken7: {}", time_taken7);
-    //SPDLOG_WARN("time_taken8: {}", time_taken8);
+    SPDLOG_WARN("time_taken8: {}", time_taken8);
     //SPDLOG_WARN("time_taken9: {}", time_taken9);
     SPDLOG_WARN("time_taken10: {}", time_taken10);
     //SPDLOG_WARN("time_taken11: {}", time_taken11);
