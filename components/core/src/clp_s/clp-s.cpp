@@ -3,6 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <sstream>
+#include <string>
 #include <utility>
 
 #include <boost/uuid/random_generator.hpp>
@@ -50,9 +51,9 @@ bool compress(CommandLineArguments const& command_line_arguments);
 
 /**
  * Decompresses the archive specified by the given JsonConstructorOption.
- * @param jsonConstructorOption
+ * @param json_constructor_option
  */
-void decompress_archive(clp_s::JsonConstructorOption const& jsonConstructorOption);
+void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_option);
 
 /**
  * Searches the given archive.
@@ -136,8 +137,8 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     return true;
 }
 
-void decompress_archive(clp_s::JsonConstructorOption const& jsonConstructorOption) {
-    clp_s::JsonConstructor constructor(jsonConstructorOption);
+void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_option) {
+    clp_s::JsonConstructor constructor(json_constructor_option);
     constructor.construct();
     constructor.store();
     constructor.close();
@@ -267,14 +268,20 @@ int main(int argc, char const* argv[]) {
         clp_s::JsonConstructorOption option;
         option.output_dir = command_line_arguments.get_output_dir();
         try {
-            for (auto const& entry : std::filesystem::directory_iterator(archives_dir)) {
-                if (false == entry.is_directory()) {
-                    // Skip non-directories
-                    continue;
-                }
-
-                option.archives_dir = entry.path();
+            auto const& archive_id = command_line_arguments.get_archive_id();
+            if (false == archive_id.empty()) {
+                option.archives_dir = std::filesystem::path{archives_dir} / archive_id;
                 decompress_archive(option);
+            } else {
+                for (auto const& entry : std::filesystem::directory_iterator(archives_dir)) {
+                    if (false == entry.is_directory()) {
+                        // Skip non-directories
+                        continue;
+                    }
+
+                    option.archives_dir = entry.path();
+                    decompress_archive(option);
+                }
             }
         } catch (clp_s::TraceableException& e) {
             SPDLOG_ERROR("{}", e.what());
@@ -303,13 +310,23 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
 
-        for (auto const& entry : std::filesystem::directory_iterator(archives_dir)) {
-            if (false == entry.is_directory()) {
-                // Skip non-directories
-                continue;
-            }
-            if (false == search_archive(command_line_arguments, entry.path(), expr)) {
+        auto const& archive_id = command_line_arguments.get_archive_id();
+        if (false == archive_id.empty()) {
+            std::filesystem::path const archives_dir_path{archives_dir};
+            std::string const archive_path{archives_dir_path / archive_id};
+            if (false == search_archive(command_line_arguments, archive_path, expr)) {
                 return 1;
+            }
+        } else {
+            for (auto const& entry : std::filesystem::directory_iterator(archives_dir)) {
+                if (false == entry.is_directory()) {
+                    // Skip non-directories
+                    continue;
+                }
+
+                if (false == search_archive(command_line_arguments, entry.path(), expr)) {
+                    return 1;
+                }
             }
         }
     }

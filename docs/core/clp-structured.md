@@ -57,7 +57,7 @@ Usage:
 Usage:
 
 ```bash
-./clp-s x <archives-dir> <output-dir>
+./clp-s x [options] <archives-dir> <output-dir>
 ```
 
 * `archives-dir` is a directory containing archives.
@@ -76,7 +76,7 @@ Usage:
 Usage:
 
 ```bash
-./clp-s s <archives-dir> <kql-query>
+./clp-s s [options] <archives-dir> <kql-query>
 ```
 
 * `archives-dir` is a directory containing archives.
