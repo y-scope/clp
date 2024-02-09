@@ -125,7 +125,6 @@ int main(int argc, char const* argv[]) {
         clp_s::JsonConstructor constructor(option);
         constructor.construct();
         constructor.store();
-        constructor.close();
     } else {
         auto const& archives_dir = command_line_arguments.get_archives_dir();
         auto const& query = command_line_arguments.get_query();

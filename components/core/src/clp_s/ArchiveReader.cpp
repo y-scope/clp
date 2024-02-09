@@ -7,6 +7,7 @@ void ArchiveReader::open(std::string const& archive_path) {
     if (m_is_open) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
+    m_is_open = true;
     m_archive_path = archive_path;
 
     m_var_dict = ReaderUtils::get_variable_dictionary_reader(m_archive_path);
@@ -14,6 +15,8 @@ void ArchiveReader::open(std::string const& archive_path) {
     m_array_dict = ReaderUtils::get_array_dictionary_reader(m_archive_path);
 
     m_table_file_reader.open(m_archive_path + "/table");
+    m_table_decompressor.open(m_table_file_reader, 64 * 1024);
+
     m_metadata_file_reader.open(m_archive_path + "/metadata");
 }
 
@@ -75,9 +78,10 @@ std::unique_ptr<SchemaReader> ArchiveReader::load_table(int32_t schema_id) {
             m_id_to_table_metadata[schema_id]
     );
     append_reader_columns(schema_reader, true);
-    m_table_decompressor.open(m_table_file_reader, cDecompressorFileReadBufferCapacity);
+    //    m_table_decompressor.open(m_table_file_reader, cDecompressorFileReadBufferCapacity);
+    //    m_table_decompressor.try_seek_from_begin()
     schema_reader->load(m_table_decompressor);
-    m_table_decompressor.close();
+    //    m_table_decompressor.close();
     return schema_reader;
 }
 

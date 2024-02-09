@@ -38,11 +38,6 @@ public:
      */
     void store();
 
-    /**
-     * Closes the JsonConstructor
-     */
-    void close();
-
 private:
     std::string m_archives_dir;
     std::string m_output_dir;

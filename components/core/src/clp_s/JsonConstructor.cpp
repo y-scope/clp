@@ -53,7 +53,4 @@ void JsonConstructor::store() {
     writer.close();
 }
 
-void JsonConstructor::close() {
-    //    archive_reader_->Close();
-}
 }  // namespace clp_s
