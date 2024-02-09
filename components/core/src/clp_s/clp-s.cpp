@@ -216,7 +216,8 @@ int main(int argc, char const* argv[]) {
                 expr,
                 archives_dir,
                 timestamp_dict,
-                std::move(output_handler)
+                std::move(output_handler),
+                command_line_arguments.get_ignore_case()
         );
         output.filter();
     }

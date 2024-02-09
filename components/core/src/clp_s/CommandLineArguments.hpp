@@ -64,6 +64,8 @@ public:
 
     std::optional<epochtime_t> get_search_end_ts() const { return m_search_end_ts; }
 
+    bool get_ignore_case() const { return m_ignore_case; }
+
     std::optional<clp::GlobalMetadataDBConfig> const& get_metadata_db_config() const {
         return m_metadata_db_config;
     }
@@ -105,6 +107,7 @@ private:
     std::string m_query;
     std::optional<epochtime_t> m_search_begin_ts;
     std::optional<epochtime_t> m_search_end_ts;
+    bool m_ignore_case{false};
 };
 }  // namespace clp_s
 
