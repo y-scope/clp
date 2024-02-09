@@ -38,14 +38,14 @@ int main(int argc, char const* argv[]) {
         spdlog::set_pattern("%Y-%m-%dT%H:%M:%S.%e%z [%l] %v");
     } catch (std::exception& e) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
-        return -1;
+        return 1;
     }
 
     CommandLineArguments command_line_arguments("clp-s");
     auto parsing_result = command_line_arguments.parse_arguments(argc, argv);
     switch (parsing_result) {
         case CommandLineArguments::ParsingResult::Failure:
-            return -1;
+            return 1;
         case CommandLineArguments::ParsingResult::InfoCommand:
             return 0;
         case CommandLineArguments::ParsingResult::Success:
@@ -133,6 +133,9 @@ int main(int argc, char const* argv[]) {
 
         auto query_stream = std::istringstream(query);
         auto expr = kql::parse_kql_expression(query_stream);
+        if (nullptr == expr) {
+            return 1;
+        }
 
         if (std::dynamic_pointer_cast<EmptyExpr>(expr)) {
             SPDLOG_ERROR("Query '{}' is logically false", query);
@@ -178,8 +181,8 @@ int main(int argc, char const* argv[]) {
         // the timestamp index
         EvaluateTimestampIndex timestamp_index(timestamp_dict);
         if (clp_s::EvaluatedValue::False == timestamp_index.run(expr)) {
-            SPDLOG_ERROR("No matching timestamp ranges for query '{}'", query);
-            return 1;
+            SPDLOG_INFO("No matching timestamp ranges for query '{}'", query);
+            return 0;
         }
 
         auto schema_tree = clp_s::ReaderUtils::read_schema_tree(archives_dir);
@@ -188,8 +191,8 @@ int main(int argc, char const* argv[]) {
         // Narrow against schemas
         SchemaMatch match_pass(schema_tree, schemas);
         if (expr = match_pass.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
-            SPDLOG_ERROR("No matching schemas for query '{}'", query);
-            return 1;
+            SPDLOG_INFO("No matching schemas for query '{}'", query);
+            return 0;
         }
 
         std::unique_ptr<OutputHandler> output_handler;

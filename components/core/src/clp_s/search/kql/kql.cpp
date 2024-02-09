@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <antlr4-runtime.h>
+#include <spdlog/spdlog.h>
 
 #include "KqlBaseVisitor.h"
 #include "KqlLexer.h"
@@ -221,7 +222,6 @@ public:
 };
 
 std::shared_ptr<Expression> parse_kql_expression(std::istream& in) {
-    std::shared_ptr<Expression> expr = EmptyExpr::create();
     ErrorListener lexer_error_listener;
     ErrorListener parser_error_listener;
 
@@ -234,15 +234,14 @@ std::shared_ptr<Expression> parse_kql_expression(std::istream& in) {
     KqlParser::StartContext* tree = parser.start();
 
     if (lexer_error_listener.error()) {
-        std::cout << "Lexer Error" << std::endl;
-        return expr;
+        SPDLOG_ERROR("Lexer error");
+        return {};
     } else if (parser_error_listener.error()) {
-        std::cout << "Parser Error" << std::endl;
-        return expr;
+        SPDLOG_ERROR("Parser error");
+        return {};
     }
 
     ParseTreeVisitor visitor;
-    expr = std::any_cast<std::shared_ptr<Expression>>(visitor.visitStart(tree));
-    return expr;
+    return std::any_cast<std::shared_ptr<Expression>>(visitor.visitStart(tree));
 }
 }  // namespace clp_s::search::kql
