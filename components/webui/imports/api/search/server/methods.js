@@ -5,6 +5,7 @@ import {SearchSignal} from "../constants";
 import {searchJobCollectionsManager} from "./collections";
 import SearchJobsDbManager from "./SearchJobsDbManager";
 
+
 /**
  * @type {SearchJobsDbManager|null}
  */

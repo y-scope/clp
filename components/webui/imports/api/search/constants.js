@@ -5,10 +5,9 @@ let enumSearchSignal;
  * This includes request and response signals for various search operations and their respective
  * states.
  *
- * @constant
  * @type {Object}
  */
-export const SearchSignal = Object.freeze({
+const SearchSignal = Object.freeze({
     NONE: (enumSearchSignal = 0),
 
     REQ_MASK: (enumSearchSignal = 0x10000000),
@@ -21,10 +20,13 @@ export const SearchSignal = Object.freeze({
     RESP_QUERYING: ++enumSearchSignal,
 });
 
-export const isSearchSignalReq = (s) => (0 !== (SearchSignal.REQ_MASK & s));
-export const isSearchSignalRsp = (s) => (0 !== (SearchSignal.RESP_MASK & s));
-export const isSearchSignalQuerying = (s) => (
-    [SearchSignal.REQ_QUERYING, SearchSignal.RESP_QUERYING].includes(s)
+const isSearchSignalReq = (s) => (0 !== (SearchSignal.REQ_MASK & s));
+const isSearchSignalResp = (s) => (0 !== (SearchSignal.RESP_MASK & s));
+const isSearchSignalQuerying = (s) => (
+    [
+        SearchSignal.REQ_QUERYING,
+        SearchSignal.RESP_QUERYING,
+    ].includes(s)
 );
 
 let enumJobStatus;
@@ -32,22 +34,31 @@ let enumJobStatus;
  * Enum of job statuses, matching the `SearchJobStatus` class in
  * `job_orchestration.search_scheduler.constants`.
  *
- * @constant
  * @type {Object}
  */
-export const JobStatus = Object.freeze({
-    PENDING: (enumJobStatus=0),
+const JobStatus = Object.freeze({
+    PENDING: (enumJobStatus = 0),
     RUNNING: ++enumJobStatus,
     SUCCESS: ++enumJobStatus,
     FAILED: ++enumJobStatus,
     CANCELLING: ++enumJobStatus,
-    CANCELLED: ++enumJobStatus
-})
+    CANCELLED: ++enumJobStatus,
+});
 
-export const JOB_STATUS_WAITING_STATES = [
+const JOB_STATUS_WAITING_STATES = [
     JobStatus.PENDING,
     JobStatus.RUNNING,
-    JobStatus.CANCELLING
-]
+    JobStatus.CANCELLING,
+];
 
-export const INVALID_JOB_ID = -1;
+const INVALID_JOB_ID = -1;
+
+export {
+    SearchSignal,
+    isSearchSignalReq,
+    isSearchSignalResp,
+    isSearchSignalQuerying,
+    JobStatus,
+    JOB_STATUS_WAITING_STATES,
+    INVALID_JOB_ID,
+};

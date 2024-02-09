@@ -2,6 +2,7 @@ import React from "react";
 import {SearchResultsHeader} from "./SearchResultsHeader.jsx";
 import {SearchResultsTable} from "./SearchResultsTable.jsx";
 
+
 /**
  * Renders the search results, which includes the search results header and the search results
  * table.
@@ -17,7 +18,7 @@ import {SearchResultsTable} from "./SearchResultsTable.jsx";
  * @param {function} setMaxLinesPerResult callback to set maxLinesPerResult
  * @returns {JSX.Element}
  */
-export const SearchResults = ({
+const SearchResults = ({
     jobId,
     searchResults,
     resultsMetadata,
@@ -54,3 +55,5 @@ export const SearchResults = ({
         </div>}
     </>;
 };
+
+export default SearchResults;

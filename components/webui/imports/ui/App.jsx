@@ -17,7 +17,7 @@ const ROUTES = [
     {path: "/search", label: "Search", icon: faSearch, component: SearchView},
 ];
 
-export const App = () => {
+const App = () => {
     const [loggedIn, setLoggedIn] = React.useState(false);
     const [isSidebarCollapsed, setSidebarStateCollapsed] = React.useState(
         "true" === localStorage.getItem(LOCAL_STORAGE_KEYS.IS_SIDEBAR_COLLAPSED)
@@ -70,3 +70,5 @@ export const App = () => {
         </div>
     </div>);
 }
+
+export {App};

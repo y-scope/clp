@@ -2,6 +2,7 @@ import {Meteor} from "meteor/meteor";
 import {Accounts} from "meteor/accounts-base";
 import {logger} from "/imports/utils/logger";
 
+
 Meteor.methods({
     /**
      * Creates a user account with a provided username and password.

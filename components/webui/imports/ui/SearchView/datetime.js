@@ -1,5 +1,6 @@
 import {DateTime} from "luxon";
 
+
 const TIME_RANGE_UNIT = Object.freeze({
     ALL: "all",
     MINUTE: "minute",
@@ -37,7 +38,7 @@ const dateTimeToDateWithoutChangingTimestamp = (dateTime) => {
     }).toJSDate();
 };
 
-export const TIME_RANGE_PRESET_LABEL = Object.freeze({
+const TIME_RANGE_PRESET_LABEL = Object.freeze({
     [`${TIME_RANGE_UNIT.MINUTE}_${TIME_RANGE_MODIFIER.LAST}_15`]: "Last 15 Minutes",
     [`${TIME_RANGE_UNIT.MINUTE}_${TIME_RANGE_MODIFIER.LAST}_60`]: "Last 60 Minutes",
     [`${TIME_RANGE_UNIT.HOUR}_${TIME_RANGE_MODIFIER.LAST}_4`]: "Last 4 Hours",
@@ -59,7 +60,7 @@ export const TIME_RANGE_PRESET_LABEL = Object.freeze({
  * @param {string} token representing the time range to compute; format: `unit_modifier_amount`
  * @returns {Object} containing Date objects representing the computed begin and end time range
  */
-export const computeTimeRange = (token) => () => {
+const computeTimeRange = (token) => () => {
     const [unit, modifier, amount] = token.split("_");
     let endTime;
     let beginTime;
@@ -99,7 +100,7 @@ export const computeTimeRange = (token) => () => {
  * @param {Date} date Date object to convert to UTC
  * @returns {Date} A new Date object with the same time values in UTC timezone
  */
-export const changeTimezoneToUtcWithoutChangingTime = (date) => {
+const changeTimezoneToUtcWithoutChangingTime = (date) => {
     return new Date(Date.UTC(
         date.getFullYear(),
         date.getMonth(),
@@ -111,6 +112,13 @@ export const changeTimezoneToUtcWithoutChangingTime = (date) => {
     ));
 };
 
-export const DEFAULT_TIME_RANGE = computeTimeRange(
+const DEFAULT_TIME_RANGE = computeTimeRange(
     `${TIME_RANGE_UNIT.ALL}_${TIME_RANGE_MODIFIER.NONE}_0`,
 );
+
+export {
+    TIME_RANGE_PRESET_LABEL,
+    computeTimeRange,
+    changeTimezoneToUtcWithoutChangingTime,
+    DEFAULT_TIME_RANGE,
+};

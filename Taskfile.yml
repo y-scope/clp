@@ -83,7 +83,7 @@ tasks:
         "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
         "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
         "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
-        "{{.BUILD_DIR}}/nodejs/node/bin/node"
+        "{{.NODEJS_BIN_DIR}}/node"
         "{{.PACKAGE_BUILD_DIR}}/bin/"
       - "mkdir -p '{{.PACKAGE_BUILD_DIR}}/var/www/'"
       - >-

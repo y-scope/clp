@@ -4,6 +4,7 @@ import {logger} from "/imports/utils/logger";
 import {addSortToMongoFindOptions, SearchResultsMetadataCollection} from "../collections";
 import {searchJobCollectionsManager} from "./collections";
 
+
 /**
  * Publishes search results metadata for a specific job.
  *

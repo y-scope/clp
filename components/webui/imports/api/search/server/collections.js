@@ -1,3 +1,5 @@
 import SearchJobCollectionsManager from "../SearchJobCollectionsManager";
 
-export const searchJobCollectionsManager = new SearchJobCollectionsManager();
+const searchJobCollectionsManager = new SearchJobCollectionsManager();
+
+export {searchJobCollectionsManager};

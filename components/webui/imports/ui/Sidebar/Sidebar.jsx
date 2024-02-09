@@ -7,6 +7,7 @@ import {
     faAngleDoubleRight,
 } from "@fortawesome/free-solid-svg-icons";
 
+
 /**
  * Renders a sidebar navigation component, which includes navigation links and a toggle for
  * collapsing or expanding the sidebar.

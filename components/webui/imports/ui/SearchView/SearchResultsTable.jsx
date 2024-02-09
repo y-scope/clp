@@ -3,27 +3,37 @@ import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import React, {useEffect, useState} from "react";
 import {Spinner, Table} from "react-bootstrap";
 import ReactVisibilitySensor from "react-visibility-sensor";
-
-export const VISIBLE_RESULTS_LIMIT_INITIAL = 10;
-const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
-
 import "./SearchResultsTable.scss";
 
+
 /**
- * Renders a table displaying search results, which includes features like sorting and dynamic
- * loading of more results when scrolling to the bottom, up to the number of results available on
- * the server.
+ * The initial visible results limit.
  *
- * @param {Object[]} searchResults results to display
- * @param {number} maxLinesPerResult maximum number of lines to display per search result
- * @param {Object} fieldToSortBy used for sorting results
- * @param {function} setFieldToSortBy callback to set fieldToSortBy
- * @param {number} numResultsOnServer total number of results available on the server
- * @param {number} visibleSearchResultsLimit limit of visible search results
- * @param {function} setVisibleSearchResultsLimit callback to set visibleSearchResultsLimit
- * @returns {JSX.Element}
+ * @type {number}
+ * @constant
  */
-export const SearchResultsTable = ({
+const VISIBLE_RESULTS_LIMIT_INITIAL = 10;
+/**
+ * The increment value for the visible results limit.
+ *
+ * @type {number}
+ * @constant
+ */
+const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
+
+/**
+ * Represents a table component to display search results.
+ *
+ * @param {Object} searchResults - The array of search results.
+ * @param {number} maxLinesPerResult - The maximum number of lines to show per search result.
+ * @param {Object} fieldToSortBy - The field to sort the search results by.
+ * @param {function} setFieldToSortBy - The function to set the field to sort by.
+ * @param {number} numResultsOnServer - The total number of search results on the server.
+ * @param {number} visibleSearchResultsLimit - The number of search results currently visible.
+ * @param {function} setVisibleSearchResultsLimit - The function to set the number of visible search results.
+ * @returns {JSX.Element} - The rendered SearchResultsTable component.
+ */
+const SearchResultsTable = ({
     searchResults,
     maxLinesPerResult,
     fieldToSortBy,
@@ -131,3 +141,5 @@ export const SearchResultsTable = ({
         </ReactVisibilitySensor>
     </div>);
 };
+
+export {SearchResultsTable, VISIBLE_RESULTS_LIMIT_INITIAL};

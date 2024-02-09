@@ -15,9 +15,10 @@ import SearchJobCollectionsManager from "../../api/search/SearchJobCollectionsMa
 import "react-datepicker/dist/react-datepicker.css";
 import {LOCAL_STORAGE_KEYS} from "../constants";
 import {changeTimezoneToUtcWithoutChangingTime, DEFAULT_TIME_RANGE} from "./datetime";
-import {SearchControls} from "./SearchControls.jsx";
-import {SearchResults} from "./SearchResults.jsx";
+import SearchControls from "./SearchControls.jsx";
+import SearchResults from "./SearchResults.jsx";
 import {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResultsTable.jsx";
+
 
 // for pseudo progress bar
 const PROGRESS_INCREMENT = 5;

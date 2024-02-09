@@ -3,6 +3,7 @@ import msgpack from "@msgpack/msgpack";
 import {sleep} from "../../../utils/misc";
 import {JOB_STATUS_WAITING_STATES, JobStatus} from "../constants";
 
+
 const SEARCH_JOBS_TABLE_COLUMN_NAMES = {
     ID: "id",
     STATUS: "status",

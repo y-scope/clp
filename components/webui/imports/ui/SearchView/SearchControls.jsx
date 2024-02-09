@@ -20,6 +20,7 @@ import {isSearchSignalQuerying, isSearchSignalReq, SearchSignal} from "../../api
 
 import "./SearchControls.scss";
 
+
 /**
  * Renders a date picker control for selecting date and time.
  *
@@ -168,7 +169,7 @@ const SearchFilterControlsDrawer = ({
  * @param {function} onCancelOperation callback to cancel the ongoing search operation
  * @returns {JSX.Element}
  */
-export const SearchControls = ({
+const SearchControls = ({
     queryString,
     setQueryString,
     timeRange,
@@ -279,3 +280,5 @@ export const SearchControls = ({
         />}
     </>;
 };
+
+export default SearchControls;

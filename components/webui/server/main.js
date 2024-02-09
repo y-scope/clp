@@ -10,6 +10,7 @@ import "/imports/api/search/server/publications";
 import "/imports/api/user/server/methods";
 import {deinitDbManagers, initDbManagers} from "../imports/utils/DbManager";
 
+
 const DEFAULT_LOGS_DIR = ".";
 const DEFAULT_LOGGING_LEVEL = Meteor.isDevelopment ? "DEBUG" : "INFO";
 

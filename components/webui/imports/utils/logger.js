@@ -1,6 +1,7 @@
+import JSON5 from "json5";
 import winston from "winston";
 import "winston-daily-rotate-file";
-import JSON5 from "json5";
+
 
 const MAX_LOGS_FILE_SIZE = "100m";
 const MAX_LOGS_RETENTION_DAYS = "30d";
@@ -78,7 +79,7 @@ const fileLineFuncLog = (level, ...args) => {
     });
 };
 
-export let logger = Object.freeze({
+let logger = Object.freeze({
     error: (...args) => (fileLineFuncLog("error", ...args)),
     warn: (...args) => (fileLineFuncLog("warn", ...args)),
     help: (...args) => (fileLineFuncLog("help", ...args)),
@@ -98,7 +99,7 @@ export let logger = Object.freeze({
  * @param {string} webuiLoggingLevel messages higher than this level will be logged
  * @param {boolean} [_isTraceEnabled=false] whether to log function & file names and line numbers
  */
-export const initLogger = (logsDir, webuiLoggingLevel, _isTraceEnabled = false) => {
+const initLogger = (logsDir, webuiLoggingLevel, _isTraceEnabled = false) => {
     isTraceEnabled = _isTraceEnabled;
 
     winstonLogger = winston.createLogger({
@@ -128,3 +129,5 @@ export const initLogger = (logsDir, webuiLoggingLevel, _isTraceEnabled = false) 
 
     logger.info("logger has been initialized");
 };
+
+export {logger, initLogger};

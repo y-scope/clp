@@ -1,7 +1,6 @@
 /**
  * Dictionary for local storage items used in the application.
  *
- * @constant
  * @type {Object}
  */
 const LOCAL_STORAGE_KEYS = Object.freeze({

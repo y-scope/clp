@@ -1,6 +1,7 @@
 import {Meteor} from "meteor/meteor";
 import {v4 as uuidv4} from "uuid";
 
+
 // TODO: implement a full-fledged registration sys
 const LOCAL_STORAGE_KEY_USERNAME = "username";
 const DUMMY_PASSWORD = "DummyPassword";
@@ -16,7 +17,7 @@ const CONST_MAX_LOGIN_RETRY = 3;
  * @returns {Promise<boolean>} true if the registration and login are successful
  *                             false if there's an error during registration or login
  */
-export const registerAndLoginWithUsername = async (username) => {
+const registerAndLoginWithUsername = async (username) => {
     return new Promise((resolve) => {
         Meteor.call("user.create", {
             username,
@@ -42,7 +43,7 @@ export const registerAndLoginWithUsername = async (username) => {
  *                             false if there's an error during login or if the maximum login
  *                             retries are reached
  */
-export const loginWithUsername = (username) => {
+const loginWithUsername = (username) => {
     return new Promise((resolve) => {
         Meteor.loginWithPassword(username, DUMMY_PASSWORD, (error) => {
             if (!error) {
@@ -66,7 +67,7 @@ export const loginWithUsername = (username) => {
  * @returns {Promise<boolean>} true if the login is successful
  *                             false if there's an error during login or registration
  */
-export const login = async () => {
+const login = async () => {
     let username = localStorage.getItem(LOCAL_STORAGE_KEY_USERNAME);
     let result;
 
@@ -79,3 +80,5 @@ export const login = async () => {
 
     return result;
 };
+
+export {registerAndLoginWithUsername, loginWithUsername, login};
