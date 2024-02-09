@@ -39,7 +39,7 @@ public:
               m_archives_dir(std::move(archives_dir)),
               m_timestamp_dict(std::move(timestamp_dict)),
               m_output_handler(std::move(output_handler)),
-    m_ignore_case(ignore_case){}
+              m_ignore_case(ignore_case) {}
 
     /**
      * Filters messages from all archives
