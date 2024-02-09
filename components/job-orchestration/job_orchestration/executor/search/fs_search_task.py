@@ -40,6 +40,8 @@ def make_clo_command(
     if search_config.end_timestamp is not None:
         search_cmd.append("--tle")
         search_cmd.append(str(search_config.end_timestamp))
+    if search_config.ignore_case:
+        search_cmd.append("--ignore-case")
     if search_config.path_filter is not None:
         search_cmd.append(search_config.path_filter)
 
@@ -70,6 +72,8 @@ def make_clp_s_command(
     if search_config.end_timestamp is not None:
         search_cmd.append("--tle")
         search_cmd.append(str(search_config.end_timestamp))
+    if search_config.ignore_case:
+        search_cmd.append("--ignore-case")
 
     return search_cmd
 
