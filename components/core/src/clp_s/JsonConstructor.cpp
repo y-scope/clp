@@ -35,8 +35,7 @@ void JsonConstructor::construct() {
     auto id_to_schema = ReaderUtils::read_schemas(m_archives_dir);
     auto timestamp_dict = ReaderUtils::read_timestamp_dictionary(m_archives_dir);
 
-    m_archive_reader
-            = std::make_unique<ArchiveReader>(m_schema_tree, id_to_schema, timestamp_dict);
+    m_archive_reader = std::make_unique<ArchiveReader>(m_schema_tree, id_to_schema, timestamp_dict);
 }
 
 void JsonConstructor::store() {
