@@ -335,7 +335,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             )(
                 "ignore-case,i",
                 po::bool_switch(&m_ignore_case),
-                "Ignore case distinctions in query values"
+                "Ignore case distinctions between values in the query and the compressed data"
             );
             // clang-format on
             search_options.add(match_options);

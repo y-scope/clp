@@ -170,7 +170,7 @@ def main(argv):
     args_parser.add_argument(
         "--ignore-case",
         action="store_true",
-        help="Ignore case when searching for the query.",
+        help="Ignore case distinctions between values in the query and the compressed data.",
     )
     args_parser.add_argument("--file-path", help="File to search.")
     parsed_args = args_parser.parse_args(argv[1:])
