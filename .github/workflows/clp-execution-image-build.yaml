@@ -47,8 +47,7 @@ jobs:
           images: "${{env.CONTAINER_IMAGE_REGISTRY}}/${{steps.sanitization.outputs.REPOSITORY}}\
             /clp-execution-x86-ubuntu-focal"
 
-      # - if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
-      - if: success()
+      - if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
         uses: "docker/build-push-action@v5"
         with:
           context: "./"
