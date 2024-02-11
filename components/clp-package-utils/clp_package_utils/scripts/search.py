@@ -90,8 +90,7 @@ def main(argv):
     ]
     # fmt: on
     necessary_mounts = [
-        mounts.logs_dir,
-        mounts.archives_output_dir,
+        mounts.logs_dir
     ]
     for mount in necessary_mounts:
         if mount:
