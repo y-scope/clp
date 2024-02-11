@@ -27,16 +27,16 @@ mkdir -p $temp_dir
 cd $temp_dir
 
 # Download source
-tar_filename=curl_${version}.tar.gz
+tar_filename=curl-${version}.tar.gz
 curl -fsSL https://curl.se/download/curl-${version}.tar.gz -o ${tar_filename}
 tar xzf ${tar_filename}
-cd curl_${version}
+cd curl-${version}
 
 # Build
 ./configure
 make -j${num_cpus}
 
-# Install
+# # Install
 if [ ${EUID:-$(id -u)} -ne 0 ] ; then
   sudo make install
 else
