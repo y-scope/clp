@@ -128,6 +128,15 @@ else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for LibArchive")
 endif()
 
+# Find and setup libcurl
+# By default, CURL does not provide static libraries
+find_package(CURL REQUIRED)
+if(CURL_FOUND)
+    message(STATUS "Found curl ${CURL_VERSION}")
+else()
+    message(FATAL_ERROR "Could not found CURL")
+endif()
+
 # Add log surgeon
 add_subdirectory(submodules/log-surgeon EXCLUDE_FROM_ALL)
 
@@ -349,6 +358,8 @@ set(SOURCE_FILES_unitTest
         src/clp/streaming_compression/zstd/Constants.hpp
         src/clp/streaming_compression/zstd/Decompressor.cpp
         src/clp/streaming_compression/zstd/Decompressor.hpp
+        src/clp/StreamingReader.cpp
+        src/clp/StreamingReader.hpp
         src/clp/StringReader.cpp
         src/clp/StringReader.hpp
         src/clp/TimestampPattern.cpp
@@ -393,6 +404,7 @@ target_include_directories(unitTest
 target_link_libraries(unitTest
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
+        ${CURL_LIBRARIES}
         fmt::fmt
         log_surgeon::log_surgeon
         LibArchive::LibArchive
@@ -405,5 +417,5 @@ target_link_libraries(unitTest
         ZStd::ZStd
         )
 target_compile_features(unitTest
-        PRIVATE cxx_std_17
+        PRIVATE cxx_std_20
         )
