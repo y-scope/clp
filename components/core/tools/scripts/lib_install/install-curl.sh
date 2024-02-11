@@ -33,10 +33,10 @@ tar xzf ${tar_filename}
 cd curl-${version}
 
 # Build
-./configure
+./configure --with-openssl
 make -j${num_cpus}
 
-# # Install
+# Install
 if [ ${EUID:-$(id -u)} -ne 0 ] ; then
   sudo make install
 else
