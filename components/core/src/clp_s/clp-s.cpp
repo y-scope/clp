@@ -222,7 +222,8 @@ bool search_archive(
             expr,
             archive_dir,
             timestamp_dict,
-            std::move(output_handler)
+            std::move(output_handler),
+            command_line_arguments.get_ignore_case()
     );
     output.filter();
 
@@ -323,27 +324,10 @@ int main(int argc, char const* argv[]) {
                     continue;
                 }
 
-<<<<<<< HEAD
-        // output result
-        Output output(
-                schema_tree,
-                schemas,
-                match_pass,
-                expr,
-                archives_dir,
-                timestamp_dict,
-                std::move(output_handler),
-                command_line_arguments.get_ignore_case()
-        );
-        output.filter();
-=======
                 if (false == search_archive(command_line_arguments, entry.path(), expr->copy())) {
                     return 1;
                 }
             }
         }
->>>>>>> origin/main
     }
-
-    return 0;
 }
