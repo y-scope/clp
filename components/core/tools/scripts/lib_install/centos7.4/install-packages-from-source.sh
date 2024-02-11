@@ -14,6 +14,7 @@ source /opt/rh/rh-git227/enable
 # unbound variables in them.
 set -u
 
+# NOTE: curl must be installed ahead since the rest of scripts will use `curl` to download the src
 ./tools/scripts/lib_install/install-curl.sh 7.76.0
 
 # NOTE: cmake and boost must be installed first since the remaining packages depend on them

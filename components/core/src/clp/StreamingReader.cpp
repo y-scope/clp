@@ -69,9 +69,6 @@ auto StreamingReader::transfer_thread_entry(
     );
     curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, static_cast<long>(reader.m_operation_timeout));
 
-    // Setup verbose
-    // curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, 1L);
-
     // Setup the header (if necessary)
     reader.m_file_pos = offset;
     struct curl_slist* request_header{nullptr};
