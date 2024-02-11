@@ -38,8 +38,16 @@ runs:
         local_registry_port: "${{inputs.local_registry_port}}"
         token: "${{inputs.token}}"
 
+    - id: "generate_image_id"
+      shell: "bash"
+      run: |
+        # Docker doesn't support repository names with uppercase characters, so we convert to
+        # lowercase here as the image id.
+        echo "REPOSITORY=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')" \
+          >> "$GITHUB_OUTPUT"
+
     - if: "inputs.deps_image_changed == 'false'"
       uses: "./.github/actions/clp-core-build"
       with:
-        image_name: >-
-          ghcr.io/${{github.repository}}/clp-core-dependencies-x86-${{inputs.os_name}}:main
+        image_name: ghcr.io/${{steps.generate_image_id.REPOSITORY}}\
+          /clp-core-dependencies-x86-${{inputs.os_name}}:main
