@@ -33,7 +33,7 @@ tar xzf ${tar_filename}
 cd curl-${version}
 
 # Build
-./configure --with-openssl
+./configure
 make -j${num_cpus}
 
 # Install
