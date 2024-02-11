@@ -1,30 +1,32 @@
-#include <filesystem>
-#include <string_view>
-#include <vector>
-
 #include <Catch2/single_include/catch2/catch.hpp>
+#include <iostream>
+#include <vector>
+#include <string_view>
+#include <filesystem>
 
-#include "../src/clp/FileReader.hpp"
 #include "../src/clp/ReaderInterface.hpp"
 #include "../src/clp/StreamingReader.hpp"
+#include "../src/clp/FileReader.hpp"
 
 using clp::StreamingReader;
 
 namespace {
 /**
  * @return The src url that the StreamingReader will stream from.
- */
+*/
 [[nodiscard]] auto get_test_src_url() -> std::string_view {
-    static constexpr char cTestUrl[]{"https://raw.githubusercontent.com/y-scope/clp/main/README.md"
+    static constexpr char cTestUrl[]{
+            "https://raw.githubusercontent.com/y-scope/clp/main/components/core/tests/"
+            "test_network_reader_src/random.log"
     };
     return cTestUrl;
 }
 
 [[nodiscard]] auto get_ref_file_abs_path() -> std::filesystem::path {
     std::filesystem::path const file_path{__FILE__};
-    auto const repo_root_path{file_path.parent_path().parent_path().parent_path().parent_path()};
-    return repo_root_path / "README.md";
-}
+    auto const test_root_path{file_path.parent_path()};
+    return test_root_path / "test_network_reader_src/random.log";
+};
 
 /**
  * Reads the content of a given reader into a memory buffer.
@@ -32,7 +34,7 @@ namespace {
  * @param in_mem_buf
  * @param reader_buffer_size The size of the buffer used to create a buffer for the underlying
  * `read` operation.
- */
+*/
 auto read_into_memory_buffer(
         clp::ReaderInterface& reader,
         std::vector<char>& in_mem_buf,
@@ -48,7 +50,7 @@ auto read_into_memory_buffer(
         in_mem_buf.insert(in_mem_buf.cend(), view.cbegin(), view.cend());
     }
 }
-}  // namespace
+}
 
 TEST_CASE("streaming_reader_basic", "[StreamingReader]") {
     clp::FileReader ref_reader;
