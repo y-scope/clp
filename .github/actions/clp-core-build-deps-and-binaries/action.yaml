@@ -29,7 +29,8 @@ runs:
         os_name: "${{inputs.os_name}}"
         clp_core_dir: "components/core"
         push_deps_image: >-
-          ${{github.event_name != 'pull_request'
+          ${{inputs.deps_image_changed == 'true'
+          && github.event_name != 'pull_request'
           && github.ref == 'refs/heads/main'}}
         push_binaries_image: >-
           ${{inputs.push_binaries_image == 'true'
