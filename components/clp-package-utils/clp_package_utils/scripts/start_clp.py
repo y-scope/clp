@@ -71,30 +71,23 @@ def append_docker_port_settings_for_host_ips(
         cmd.append(f"{ip}:{host_port}:{container_port}")
 
 
-def wait_for_database_to_init(container_name: str, clp_config: CLPConfig, timeout: int):
-    # Try to connect to the database
+def wait_for_container_cmd(container_name: str, cmd_to_run: [str], timeout: int):
+    container_exec_cmd = ["docker", "exec", container_name]
+    cmd = container_exec_cmd + cmd_to_run
+
     begin_time = time.time()
-    container_exec_cmd = ["docker", "exec", "-it", container_name]
-    # fmt: off
-    mysqladmin_cmd = [
-        "mysqladmin", "ping",
-        "--silent",
-        "-h", "127.0.0.1",
-        "-u", str(clp_config.database.username),
-        f"--password={clp_config.database.password}",
-    ]
-    # fmt: on
-    cmd = container_exec_cmd + mysqladmin_cmd
+
     while True:
         try:
-            subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
             return True
         except subprocess.CalledProcessError:
             if time.time() - begin_time > timeout:
                 break
             time.sleep(1)
 
-    logger.error(f"Timeout while waiting for {DB_COMPONENT_NAME} to initialize.")
+    flatten_cmd = " ".join(cmd_to_run)
+    logger.error(f"Timeout while waiting for cmd {flatten_cmd} to run after {timeout} seconds")
     return False
 
 
@@ -151,7 +144,17 @@ def start_db(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
         cmd.append("mariadb:10.6.4-focal")
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
-    if not wait_for_database_to_init(container_name, clp_config, 30):
+    # fmt: off
+    mysqladmin_cmd = [
+        "mysqladmin", "ping",
+        "--silent",
+        "-h", "127.0.0.1",
+        "-u", str(clp_config.database.username),
+        f"--password={clp_config.database.password}",
+    ]
+    # fmt: on
+
+    if not wait_for_container_cmd(container_name, mysqladmin_cmd, 30):
         raise EnvironmentError(f"{DB_COMPONENT_NAME} did not initialize in time")
 
     logger.info(f"Started {DB_COMPONENT_NAME}.")
@@ -270,12 +273,11 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
 
     # Wait for queue to start up
     # fmt: off
-    cmd = [
-        "docker", "exec", "-it", container_name,
-        "rabbitmqctl", "wait", str(rabbitmq_pid_file_path),
-    ]
+    rabbitmq_cmd = ["rabbitmqctl", "status"]
     # fmt: on
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+
+    if not wait_for_container_cmd(container_name, rabbitmq_cmd, 30):
+        raise EnvironmentError(f"{QUEUE_COMPONENT_NAME} did not initialize in time")
 
     logger.info(f"Started {QUEUE_COMPONENT_NAME}.")
 
