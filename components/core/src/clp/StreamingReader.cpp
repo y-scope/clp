@@ -1,9 +1,9 @@
 #include "StreamingReader.hpp"
 
-#include <curl/curl.h>
-
 #include <chrono>
 #include <cstring>
+
+#include <curl/curl.h>
 
 namespace clp {
 namespace {
@@ -69,7 +69,7 @@ auto StreamingReader::transfer_thread_entry(
     curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, static_cast<long>(reader.m_operation_timeout));
 
     // Setup verbose
-    curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, 1L);
+    // curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, 1L);
 
     // Setup the header (if necessary)
     reader.m_file_pos = offset;
@@ -111,7 +111,7 @@ auto StreamingReader::write_callback(char* ptr, size_t size, size_t nmemb, void*
     auto const num_total_bytes{size * nmemb};
     try {
         StreamingReader::BufferView input_buffer{ptr, num_total_bytes};
-        auto* reader{get_reader(ptr)};
+        auto* reader{get_reader(reader_ptr)};
         while (false == input_buffer.empty()) {
             auto const num_bytes_left{input_buffer.size()};
             StreamingReader::BufferView fetching_buffer;
@@ -338,7 +338,7 @@ auto StreamingReader::read_from_fetched_buffers(
                 num_bytes_to_read > reading_buffer_size ? reading_buffer_size : num_bytes_to_read
         };
         if (dst_view.has_value()) {
-            memcpy(dst_view.value().last(num_bytes_read).data(),
+            memcpy(dst_view.value().last(num_bytes_to_read).data(),
                    reading_buffer.data(),
                    num_bytes_to_consume_from_buffer);
         }

@@ -1,8 +1,6 @@
 #ifndef CLP_S3_STREAMING_READER_HPP
 #define CLP_S3_STREAMING_READER_HPP
 
-#include <curl/curl.h>
-
 #include <condition_variable>
 #include <mutex>
 #include <optional>
@@ -12,6 +10,8 @@
 #include <string_view>
 #include <thread>
 #include <vector>
+
+#include <curl/curl.h>
 
 #include "Defs.h"
 #include "ErrorCode.hpp"
@@ -296,7 +296,7 @@ private:
      * Terminates the current transfer. When this function returns, it will ensure that the current
      * data transfer session has been terminated, and all the daemon threads exit.
      */
-     auto terminate_current_transfer() -> void;
+    auto terminate_current_transfer() -> void;
 
     /**
      * Aborts the current on-going data transfer session.
@@ -374,8 +374,8 @@ private:
     std::string m_src_url;
     size_t m_file_pos{0};
 
-    size_t m_buffer_pool_size{cDefaultBufferPoolSize};
-    size_t m_buffer_size{cDefaultBufferSize};
+    size_t m_buffer_pool_size;
+    size_t m_buffer_size;
     size_t m_num_fetched_buffer{0};
     size_t m_curr_fetching_buffer_idx{0};
     size_t m_fetching_buffer_pos{0};

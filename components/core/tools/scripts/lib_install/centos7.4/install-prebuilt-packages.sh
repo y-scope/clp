@@ -10,6 +10,8 @@ yum install -y \
   bzip2 \
   centos-release-scl \
   java-11-openjdk \
+  libcurl \
+  libcurl-devel \
   make \
   openssl-devel \
   openssl-static \

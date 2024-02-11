@@ -392,6 +392,7 @@ set(SOURCE_FILES_unitTest
         tests/test-Segment.cpp
         tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
+        tests/test-StreamingReader.cpp
         tests/test-string_utils.cpp
         tests/test-TimestampPattern.cpp
         tests/test-Utils.cpp
