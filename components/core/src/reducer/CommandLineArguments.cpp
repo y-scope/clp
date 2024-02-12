@@ -27,35 +27,15 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 ->default_value(m_reducer_port),
             "Port this reducer should listen on for connections"
         )(
-            "db-host",
-            po::value<std::string>(&m_db_host)
-                ->default_value(m_db_host),
-            "Host the jobs database is running on"
+            "scheduler-host",
+            po::value<std::string>(&m_scheduler_host)
+                ->default_value(m_scheduler_host),
+            "Host the search scheduler is running on"
         )(
-            "db-port",
-            po::value<int>(&m_db_port)
-                ->default_value(m_db_port),
-            "Port the jobs database is listening on"
-        )(
-            "db-user",
-            po::value<std::string>(&m_db_user)
-                ->default_value(m_db_user),
-            "User for the jobs database"
-        )(
-            "db-password",
-            po::value<std::string>(&m_db_password)
-                ->default_value(m_db_password),
-            "Password for the jobs database"
-        )(
-            "db-database",
-            po::value<std::string>(&m_db_database)
-                ->default_value(m_db_database),
-            "Database containing the jobs table"
-        )(
-            "db-jobs-table",
-            po::value<std::string>(&m_db_jobs_table)
-                ->default_value(m_db_jobs_table),
-            "Name of the table containing jobs"
+            "scheduler-port",
+            po::value<int>(&m_scheduler_port)
+                ->default_value(m_scheduler_port),
+            "Port the search scheduler is listening on"
         )(
             "mongodb-uri",
             po::value<std::string>(&m_mongodb_uri)
@@ -105,23 +85,13 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         valid_arguments = false;
     }
 
-    if (m_db_host.empty()) {
-        SPDLOG_ERROR("Empty db-host argument");
+    if (m_scheduler_host.empty()) {
+        SPDLOG_ERROR("Empty scheduler-host argument");
         valid_arguments = false;
     }
 
-    if (m_db_port <= 0) {
-        SPDLOG_ERROR("Invalid argument for db-port {}", m_db_port);
-        valid_arguments = false;
-    }
-
-    if (m_db_database.empty()) {
-        SPDLOG_ERROR("Empty db-database argument");
-        valid_arguments = false;
-    }
-
-    if (m_db_jobs_table.empty()) {
-        SPDLOG_ERROR("Empty db-jobs-table argument");
+    if (m_scheduler_port <= 0) {
+        SPDLOG_ERROR("Invalid argument for scheduler-port {}", m_scheduler_port);
         valid_arguments = false;
     }
 

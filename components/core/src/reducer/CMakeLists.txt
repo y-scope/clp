@@ -1,7 +1,5 @@
 set(
         REDUCER_SOURCES
-        ../clp/database_utils.cpp
-        ../clp/database_utils.hpp
         ../clp/Defs.h
         ../clp/ErrorCode.hpp
         ../clp/ffi/encoding_methods.cpp
@@ -11,14 +9,8 @@ set(
         ../clp/ir/parsing.hpp
         ../clp/ir/parsing.inc
         ../clp/ir/types.hpp
-        ../clp/MySQLDB.cpp
-        ../clp/MySQLDB.hpp
-        ../clp/MySQLParamBindings.cpp
-        ../clp/MySQLParamBindings.hpp
-        ../clp/MySQLPreparedStatement.cpp
-        ../clp/MySQLPreparedStatement.hpp
         ../clp/spdlog_with_specializations.hpp
-        ../clp/TraceableException.hpp
+        #../clp/TraceableException.hpp
         ../clp/type_utils.hpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp

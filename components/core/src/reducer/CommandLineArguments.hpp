@@ -23,17 +23,9 @@ public:
 
     [[nodiscard]] int get_reducer_port() const { return m_reducer_port; }
 
-    [[nodiscard]] std::string const& get_db_host() const { return m_db_host; }
+    [[nodiscard]] std::string const& get_scheduler_host() const { return m_scheduler_host; }
 
-    [[nodiscard]] int get_db_port() const { return m_db_port; }
-
-    [[nodiscard]] std::string const& get_db_user() const { return m_db_user; }
-
-    [[nodiscard]] std::string const& get_db_password() const { return m_db_password; }
-
-    [[nodiscard]] std::string const& get_db_database() const { return m_db_database; }
-
-    [[nodiscard]] std::string const& get_db_jobs_table() const { return m_db_jobs_table; }
+    [[nodiscard]] int get_scheduler_port() const { return m_scheduler_port; }
 
     [[nodiscard]] std::string const& get_mongodb_uri() const { return m_mongodb_uri; }
 
@@ -46,12 +38,8 @@ private:
     // Variables
     std::string m_reducer_host{"127.0.0.1"};
     int m_reducer_port{14'009};
-    std::string m_db_host{"127.0.0.1"};
-    int m_db_port{3306};
-    std::string m_db_user{"clp-user"};
-    std::string m_db_password{"password"};
-    std::string m_db_database{"clp-db"};
-    std::string m_db_jobs_table{"distributed_search_jobs"};
+    std::string m_scheduler_host{"127.0.0.1"};
+    int m_scheduler_port{7000};
     std::string m_mongodb_uri{"mongodb://localhost:27017/clp-search"};
     int m_polling_interval_ms{100};
 };

@@ -13,8 +13,6 @@
 #include <msgpack.hpp>
 #include <string_utils/string_utils.hpp>
 
-#include "../clp/MySQLDB.hpp"
-#include "../clp/MySQLPreparedStatement.hpp"
 #include "../clp/spdlog_with_specializations.hpp"
 #include "../clp/type_utils.hpp"
 #include "CommandLineArguments.hpp"
@@ -29,6 +27,8 @@ namespace reducer {
 // guaranteed to work, so for now, we use v4 to be safe.
 ServerContext::ServerContext(CommandLineArguments& args)
         : m_tcp_acceptor(m_ioctx, tcp::endpoint(tcp::v4(), args.get_reducer_port())),
+          m_scheduler_socket(m_ioctx),
+          m_upsert_timer(m_ioctx),
           m_reducer_host(args.get_reducer_host()),
           m_reducer_port(args.get_reducer_port()),
           m_polling_interval_ms(args.get_polling_interval()),
@@ -36,40 +36,6 @@ ServerContext::ServerContext(CommandLineArguments& args)
           m_status(ServerStatus::Idle),
           m_job_id(-1),
           m_timeline_aggregation(false) {
-    try {
-        m_db.open(
-                args.get_db_host(),
-                args.get_db_port(),
-                args.get_db_user(),
-                args.get_db_password(),
-                args.get_db_database()
-        );
-    } catch (clp::MySQLDB::OperationFailed& e) {
-        SPDLOG_ERROR(
-                "Failed to connect to {}:{} - {}",
-                args.get_db_host(),
-                args.get_db_port(),
-                e.what()
-        );
-        throw OperationFailed(e.get_error_code(), __FILENAME__, __LINE__);
-    }
-    std::string take_search_job_stmt
-            = fmt::format(cTakeSearchJobStatement, args.get_db_jobs_table());
-    m_take_search_job_stmt = std::make_unique<clp::MySQLPreparedStatement>(
-            m_db.prepare_statement(take_search_job_stmt.data(), take_search_job_stmt.length())
-    );
-    std::string update_job_status_stmt
-            = fmt::format(cUpdateJobStatusStatement, args.get_db_jobs_table());
-    m_update_job_status_stmt = std::make_unique<clp::MySQLPreparedStatement>(
-            m_db.prepare_statement(update_job_status_stmt.data(), update_job_status_stmt.length())
-    );
-    m_get_new_jobs_sql = fmt::format(
-            cGetNewJobs,
-            args.get_db_jobs_table(),
-            clp::enum_to_underlying_type(JobStatus::PendingReducer)
-    );
-    m_poll_job_done_sql = fmt::format(cPollJobDone, args.get_db_jobs_table(), "{}");
-
     mongocxx::uri mongodb_uri = mongocxx::uri(args.get_mongodb_uri());
     try {
         m_mongodb_client = mongocxx::client(mongodb_uri);
@@ -80,114 +46,41 @@ ServerContext::ServerContext(CommandLineArguments& args)
     m_mongodb_results_database = mongocxx::database(m_mongodb_client[mongodb_uri.database()]);
 }
 
-ServerStatus ServerContext::take_job() {
-    if (false == m_db.execute_query(m_get_new_jobs_sql)) {
-        return ServerStatus::FinishingReducerError;
+void ServerContext::set_up_pipeline(std::map<std::string, msgpack::type::variant>& query_config) {
+    m_job_id = query_config["job_id"].as_int64_t();
+
+    SPDLOG_INFO("Taking job {}", m_job_id);
+
+    // TODO: create a more robust method to specify reducer jobs and create pipelines
+    if (query_config.count(JobAttributes::cBucketSize)) {
+        m_timeline_aggregation = true;
+    } else {
+        m_timeline_aggregation = false;
     }
 
-    auto it = m_db.get_iterator();
-    std::string job_id_str, search_config;
-    std::vector<std::pair<int64_t, std::string>> available_jobs;
-    while (it.contains_element()) {
-        it.get_field_as_string(0, job_id_str);
-        it.get_field_as_string(1, search_config);
-        int64_t job_id;
-        if (!clp::string_utils::convert_string_to_int(job_id_str, job_id)) {
-            return ServerStatus::FinishingReducerError;
-        }
-        available_jobs.emplace_back(job_id, std::move(search_config));
-        it.get_next();
-    }
+    // TODO: For now all pipelines only perform count. We will need to implement more
+    // general pipeline initialization once more operators are implemented.
+    m_pipeline = std::make_unique<Pipeline>(PipelineInputMode::INTRA_STAGE);
+    m_pipeline->add_pipeline_stage(std::make_shared<CountOperator>());
 
-    for (auto& job : available_jobs) {
-        clp::MySQLParamBindings& bindings = m_take_search_job_stmt->get_statement_bindings();
-        int64_t reducer_ready = clp::enum_to_underlying_type(JobStatus::ReducerReady);
-        int64_t pending_reducer = clp::enum_to_underlying_type(JobStatus::PendingReducer);
-        bindings.bind_int64(0, reducer_ready);
-        bindings.bind_int(1, m_reducer_port);
-        bindings.bind_varchar(2, m_reducer_host.c_str(), m_reducer_host.length());
-        bindings.bind_int64(3, pending_reducer);
-        bindings.bind_int64(4, job.first);
-        if (false == m_take_search_job_stmt->execute()) {
-            return ServerStatus::FinishingReducerError;
-        }
-
-        uint64_t num_affected_rows;
-        if (false == m_take_search_job_stmt->get_affected_rows(num_affected_rows)) {
-            return ServerStatus::FinishingReducerError;
-        }
-
-        if (num_affected_rows > 0) {
-            SPDLOG_INFO("Taking job {}", job.first);
-            m_job_id = job.first;
-
-            msgpack::object_handle handle = msgpack::unpack(job.second.data(), job.second.length());
-
-            // TODO: create a more robust method to specify reducer jobs and create pipelines
-            std::map<std::string, msgpack::type::variant> query_config = handle.get().convert();
-            if (query_config.count(JobAttributes::cBucketSize)) {
-                m_timeline_aggregation = true;
-            } else {
-                m_timeline_aggregation = false;
-            }
-
-            // TODO: For now all pipelines only perform count. We will need to implement more
-            // general pipeline initialization once more operators are implemented.
-            m_pipeline = std::make_unique<Pipeline>(PipelineInputMode::INTRA_STAGE);
-            m_pipeline->add_pipeline_stage(std::make_shared<CountOperator>());
-
-            // TODO: Inefficient to convert job_id back to a string since it was a string in the
-            // first place. Might be negligible compared to storing it as a string in addition to as
-            // an int.
-            auto collection_name = std::to_string(job.first);
-            m_mongodb_results_collection = m_mongodb_results_database[collection_name];
-
-            return ServerStatus::Running;
-        }
-    }
-    return ServerStatus::Idle;
+    auto collection_name = std::to_string(m_job_id);
+    m_mongodb_results_collection = m_mongodb_results_database[collection_name];
 }
 
-bool ServerContext::update_job_status(JobStatus new_status) {
-    clp::MySQLParamBindings& bindings = m_update_job_status_stmt->get_statement_bindings();
-    int64_t new_status_int64 = clp::enum_to_underlying_type(new_status);
-    bindings.bind_int64(0, new_status_int64);
-    bindings.bind_int64(1, m_job_id);
-
-    return m_update_job_status_stmt->execute();
+bool ServerContext::ack_search_scheduler() {
+    boost::system::error_code e;
+    char const scheduler_response = 'y';
+    m_scheduler_socket.write_some(boost::asio::buffer(&scheduler_response, 1), e);
+    if (e) {
+        SPDLOG_INFO("Failed to notify search scheduler - {}", e.message());
+        return false;
+    }
+    return true;
 }
 
-ServerStatus ServerContext::poll_job_done() {
-    if (false == m_db.execute_query(fmt::format(m_poll_job_done_sql, m_job_id))) {
-        return ServerStatus::FinishingReducerError;
-    }
-
-    auto it = m_db.get_iterator();
-    std::string job_status_str;
-    JobStatus job_status;
-    while (it.contains_element()) {
-        it.get_field_as_string(0, job_status_str);
-        job_status = static_cast<JobStatus>(stoi(job_status_str));
-        it.get_next();
-    }
-
-    if (JobStatus::PendingReducerDone == job_status) {
-        return ServerStatus::FinishingSuccess;
-    }
-
-    if (false
-        == (JobStatus::Running == job_status || JobStatus::ReducerReady == job_status
-            || JobStatus::Cancelling == job_status))
-    {
-        return ServerStatus::FinishingRemoteError;
-    }
-
-    return ServerStatus::Running;
-}
-
-ServerStatus ServerContext::upsert_timeline_results() {
+bool ServerContext::upsert_timeline_results() {
     if (m_updated_tags.empty()) {
-        return ServerStatus::Running;
+        return true;
     }
 
     auto bulk_write = m_mongodb_results_collection.create_bulk_write();
@@ -216,9 +109,9 @@ ServerStatus ServerContext::upsert_timeline_results() {
         }
     } catch (mongocxx::bulk_write_exception const& e) {
         SPDLOG_ERROR("MongoDB bulk write exception during upsert: {}", e.what());
-        return ServerStatus::FinishingReducerError;
+        return false;
     }
-    return ServerStatus::Running;
+    return true;
 }
 
 bool ServerContext::publish_pipeline_results() {
@@ -243,6 +136,26 @@ bool ServerContext::publish_pipeline_results() {
     return true;
 }
 
+bool ServerContext::try_finalize_results() {
+    if (ServerStatus::ReceivedAllResults == m_status && 0 == m_remaining_receiver_tasks) {
+        bool pushed_results_succesfully{false};
+        if (m_timeline_aggregation) {
+            pushed_results_succesfully = upsert_timeline_results();
+        } else {
+            pushed_results_succesfully = publish_pipeline_results();
+        }
+
+        if (false == pushed_results_succesfully) {
+            SPDLOG_ERROR("Failed to push results to results cache");
+            return false;
+        }
+
+        // notify the search scheduler that the results have been pushed
+        return ack_search_scheduler();
+    }
+    return true;
+}
+
 void ServerContext::reset() {
     m_ioctx.reset();
     m_pipeline.reset(nullptr);
@@ -250,6 +163,49 @@ void ServerContext::reset() {
     m_job_id = -1;
     m_timeline_aggregation = false;
     m_updated_tags.clear();
+    m_remaining_receiver_tasks = 0;
 }
 
+void ServerContext::decrement_remaining_receiver_tasks() {
+    if (0 == --m_remaining_receiver_tasks && ServerStatus::ReceivedAllResults == m_status) {
+        if (false == try_finalize_results()) {
+            m_status = ServerStatus::UnrecoverableFailure;
+        }
+    }
+}
+
+bool ServerContext::register_with_scheduler(
+        boost::asio::ip::tcp::resolver::results_type const& endpoint
+) {
+    try {
+        boost::asio::connect(m_scheduler_socket, endpoint);
+    } catch (boost::system::system_error& error) {
+        SPDLOG_ERROR("Failed to connect to search scheduler - {}", error.what());
+        return false;
+    }
+
+    nlohmann::json reducer_advertisement;
+    reducer_advertisement["host"] = m_reducer_host;
+    reducer_advertisement["port"] = m_reducer_port;
+    auto serialized_advertisement = nlohmann::json::to_msgpack(reducer_advertisement);
+    size_t message_size = serialized_advertisement.size();
+    boost::system::error_code error;
+    m_scheduler_socket.write_some(boost::asio::buffer(&message_size, sizeof(message_size)), error);
+    if (error) {
+        m_scheduler_socket.close();
+        return false;
+    }
+
+    m_scheduler_socket.write_some(boost::asio::buffer(serialized_advertisement), error);
+    if (error) {
+        m_scheduler_socket.close();
+        return false;
+    }
+    return true;
+}
+
+void ServerContext::stop_event_loop() {
+    m_tcp_acceptor.cancel();
+    m_scheduler_socket.close();
+}
 }  // namespace reducer

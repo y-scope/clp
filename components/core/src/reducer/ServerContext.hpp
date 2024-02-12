@@ -1,14 +1,14 @@
 #ifndef REDUCER_REDUCER_SERVER
 #define REDUCER_REDUCER_SERVER
 
+#include <optional>
 #include <set>
 
 #include <boost/asio.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
+#include <msgpack.hpp>
 
-#include "../clp/MySQLDB.hpp"
-#include "../clp/MySQLPreparedStatement.hpp"
 #include "../clp/TraceableException.hpp"
 #include "CommandLineArguments.hpp"
 #include "Pipeline.hpp"
@@ -17,23 +17,9 @@ namespace reducer {
 enum class ServerStatus : uint8_t {
     Idle,
     Running,
-    FinishingSuccess,
-    FinishingReducerError,
-    FinishingRemoteError,
-    FinishingCancelled
-};
-
-// This enum is a hidden binding between the python scheduler and this c++ reducer
-enum class JobStatus : int {
-    Pending = 0,
-    Running,
-    Success,
-    Failed,
-    Cancelling,
-    Cancelled,
-    PendingReducer,
-    ReducerReady,
-    PendingReducerDone
+    ReceivedAllResults,
+    RecoverableFailure,
+    UnrecoverableFailure
 };
 
 namespace JobAttributes {
@@ -86,39 +72,39 @@ public:
     void set_status(ServerStatus new_status) { m_status = new_status; }
 
     /**
-     * Poll jobs table to and try to assign this server to run an available job.
-     * Executed repeatedly in the main polling loop while the server is idle.
-     * @return the new status of the ServerContext
+     * Take in a msgpack query configuration and configure the in memory aggregation pipeline
      */
-    ServerStatus take_job();
+    void set_up_pipeline(std::map<std::string, msgpack::type::variant>& query_config);
 
     /**
-     * Write a new job status to the jobs table.
-     * @return true on update success, false on failure
+     * Synchronously send a generic ack message to the search scheduler.
+     * @return true if the ack is sent succesfully
+     * @return false on any error
      */
-    bool update_job_status(JobStatus new_status);
-
-    /**
-     * Poll the jobs table and check for an updated job status.
-     * Executed repeatedly in the main polling loop when running a reduction operation.
-     * @return the new status of the ServerContext
-     */
-    ServerStatus poll_job_done();
+    bool ack_search_scheduler();
 
     /**
      * Upsert the current set of results from the reducer pipeline to MongoDB and clear the tags
      * updated in the last period.
      * Executed repeatedly in the main polling loop while running a reduction pipeline that is set
      * to periodically upsert results.
-     * @return the new status of the ServerContext
+     * @return true on success
+     * @return false on any error
      */
-    ServerStatus upsert_timeline_results();
+    bool upsert_timeline_results();
 
     /**
      * Publish final reducer pipeline results to MongoDB.
      * @return true if the insert succeeds, false on failure
      */
     bool publish_pipeline_results();
+
+    /**
+     * If all results have been received then this function tries to push results to the results
+     * cache and notify the search scheduler. If there are still results in flight then this
+     * function will succeed silently.
+     */
+    bool try_finalize_results();
 
     /**
      * Pushes a group of records into the current local reducer pipeline. If this reducer
@@ -141,22 +127,42 @@ public:
      */
     void reset();
 
-private:
-    static constexpr char const cGetNewJobs[] = "SELECT id, search_config FROM {} WHERE status={}";
-    static constexpr char const cTakeSearchJobStatement[]
-            = "UPDATE {} SET status=?, reducer_port=?, reducer_host=? WHERE "
-              "status=? and id=?";
-    static constexpr char const cUpdateJobStatusStatement[] = "UPDATE {} SET status=? WHERE id=?";
-    static constexpr char const cPollJobDone[] = "SELECT status FROM {} WHERE id={}";
-    std::string m_get_new_jobs_sql;
-    std::string m_poll_job_done_sql;
-    std::unique_ptr<clp::MySQLPreparedStatement> m_take_search_job_stmt;
-    std::unique_ptr<clp::MySQLPreparedStatement> m_update_job_status_stmt;
+    /**
+     * Increment the counter tracking the number of active receiver tasks which may possibly receive
+     * some results.
+     */
+    void increment_remaining_receiver_tasks() { ++m_remaining_receiver_tasks; }
 
+    /**
+     * Decrement the counter tracking the number of active receiver tasks which may possibly receive
+     * some results. If the counter hits zero, and the server is in state ReceivedAllResults then
+     * the results of the aggregation are uploaded to the results cache, and the scheduler is
+     * notified of task completion.
+     */
+    void decrement_remaining_receiver_tasks();
+
+    /**
+     * Opens a connection between this reducer and the scheduler
+     * @param endpoint an endpoint that can be used to connect to the scheduler
+     * @return true if a connection is opened succesfully
+     */
+    bool register_with_scheduler(boost::asio::ip::tcp::resolver::results_type const& endpoint);
+
+    boost::asio::ip::tcp::socket& get_scheduler_update_socket() { return m_scheduler_socket; }
+
+    std::vector<char>& get_scheduler_update_buffer() { return m_scheduler_update_buffer; }
+
+    boost::asio::steady_timer& get_upsert_timer() { return m_upsert_timer; }
+
+    void stop_event_loop();
+
+private:
     boost::asio::io_context m_ioctx;
     boost::asio::ip::tcp::acceptor m_tcp_acceptor;
+    boost::asio::ip::tcp::socket m_scheduler_socket;
+    boost::asio::steady_timer m_upsert_timer;
+    std::vector<char> m_scheduler_update_buffer;
     std::unique_ptr<Pipeline> m_pipeline;
-    clp::MySQLDB m_db;  // TODO: consider switching to boost asio mysql connector
     ServerStatus m_status;
     int64_t m_job_id;
     int m_reducer_port;
@@ -167,6 +173,7 @@ private:
     bool m_timeline_aggregation;
     std::set<GroupTags> m_updated_tags;
     int m_polling_interval_ms;
+    int m_remaining_receiver_tasks{0};
 };
 
 }  // namespace reducer

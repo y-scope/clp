@@ -4,6 +4,7 @@
 
 #include <boost/asio.hpp>
 #include <mongocxx/instance.hpp>
+#include <msgpack.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include "../clp/spdlog_with_specializations.hpp"
@@ -22,14 +23,12 @@ std::string server_status_to_string(ServerStatus status) {
             return "Idle";
         case ServerStatus::Running:
             return "Running";
-        case ServerStatus::FinishingSuccess:
-            return "FinishingSuccess";
-        case ServerStatus::FinishingReducerError:
-            return "FinishingReducerError";
-        case ServerStatus::FinishingRemoteError:
-            return "FinishingRemoteError";
-        case ServerStatus::FinishingCancelled:
-            return "FinishingCancelled";
+        case ServerStatus::ReceivedAllResults:
+            return "ReceivedAllResults";
+        case ServerStatus::RecoverableFailure:
+            return "RecoverableFailure";
+        case ServerStatus::UnrecoverableFailure:
+            return "UnrecoverableFailure";
         default:
             assert(0);
     }
@@ -78,6 +77,7 @@ struct RecordReceiverContext {
 void queue_accept_task(std::shared_ptr<ServerContext> ctx);
 void queue_receive_task(std::shared_ptr<RecordReceiverContext> rctx);
 void queue_validate_sender_task(std::shared_ptr<RecordReceiverContext> rctx);
+void queue_scheduler_update_listener_task(std::shared_ptr<ServerContext> ctx);
 
 struct ReceiveTask {
     ReceiveTask(std::shared_ptr<RecordReceiverContext> rctx) : rctx(rctx) {}
@@ -88,6 +88,7 @@ struct ReceiveTask {
 
         // if no new bytes terminate
         if (0 == bytes_remaining || ServerStatus::Running != rctx->ctx->get_status()) {
+            rctx->ctx->decrement_remaining_receiver_tasks();
             return;
         }
 
@@ -104,6 +105,7 @@ struct ReceiveTask {
             // terminate if record group size is over 16MB
             if (record_size >= cMaxRecordSize) {
                 SPDLOG_ERROR("Record too large: {}B", record_size);
+                rctx->ctx->decrement_remaining_receiver_tasks();
                 return;
             }
 
@@ -134,11 +136,13 @@ struct ReceiveTask {
         // only queue another receive if the connection is still open
         if (false == error.failed()) {
             queue_receive_task(std::move(rctx));
+        } else {
+            rctx->ctx->decrement_remaining_receiver_tasks();
         }
     }
 
 private:
-    static constexpr size_t cMaxRecordSize = static_cast<size_t>(16 * 1024 * 1024);
+    static constexpr size_t cMaxRecordSize = 16ULL * 1024 * 1024;
     std::shared_ptr<RecordReceiverContext> rctx;
 };
 
@@ -162,6 +166,7 @@ struct ValidateSenderTask {
             || ServerStatus::Running != rctx->ctx->get_status())
         {
             SPDLOG_ERROR("Rejecting connection because of connection error");
+            rctx->ctx->decrement_remaining_receiver_tasks();
             return;
         }
 
@@ -170,6 +175,7 @@ struct ValidateSenderTask {
 
         if (bytes_remaining > sizeof(int32_t)) {
             SPDLOG_ERROR("Rejecting connection because of invalid negotiation");
+            rctx->ctx->decrement_remaining_receiver_tasks();
             return;
         } else if (bytes_remaining == sizeof(int32_t)) {
             int32_t job_id = 0;
@@ -181,6 +187,7 @@ struct ValidateSenderTask {
                         job_id,
                         rctx->ctx->get_job_id()
                 );
+                rctx->ctx->decrement_remaining_receiver_tasks();
                 return;
             }
             rctx->bytes_occupied = 0;
@@ -191,6 +198,7 @@ struct ValidateSenderTask {
             if (e || transferred < sizeof(response)) {
                 SPDLOG_ERROR("Rejecting connection because of connection error while attempting to "
                              "send acceptance");
+                rctx->ctx->decrement_remaining_receiver_tasks();
                 return;
             }
 
@@ -206,6 +214,7 @@ private:
 };
 
 void queue_validate_sender_task(std::shared_ptr<RecordReceiverContext> rctx) {
+    rctx->ctx->increment_remaining_receiver_tasks();
     boost::asio::async_read(
             rctx->socket,
             boost::asio::buffer(
@@ -253,41 +262,113 @@ void queue_accept_task(std::shared_ptr<ServerContext> ctx) {
     ctx->get_tcp_acceptor().async_accept(rctx->socket, AcceptTask(ctx, rctx));
 }
 
-struct PollDbTask {
-    PollDbTask(std::shared_ptr<ServerContext> ctx, boost::asio::steady_timer* poll_timer)
-            : ctx(ctx),
-              poll_timer(poll_timer) {}
+struct PeriodicUpsertTask {
+    PeriodicUpsertTask(std::shared_ptr<ServerContext> ctx) : ctx(ctx) {}
 
     void operator()(boost::system::error_code const& e) {
-        if (ServerStatus::Idle == ctx->get_status()) {
-            ctx->set_status(ctx->take_job());
-        } else if (ServerStatus::Running == ctx->get_status()) {
-            ctx->set_status(ctx->poll_job_done());
-        }
+        if (ServerStatus::Running == ctx->get_status()) {
+            if (false == ctx->upsert_timeline_results()) {
+                ctx->set_status(ServerStatus::UnrecoverableFailure);
+                ctx->stop_event_loop();
+                return;
+            }
 
-        if (ServerStatus::Running == ctx->get_status() && ctx->is_timeline_aggregation()) {
-            ctx->set_status(ctx->upsert_timeline_results());
-        }
-
-        if (ServerStatus::Idle == ctx->get_status() || ServerStatus::Running == ctx->get_status()) {
-            poll_timer->expires_at(
-                    poll_timer->expiry()
-                    + boost::asio::chrono::milliseconds(ctx->get_polling_interval())
-            );
-            poll_timer->async_wait(PollDbTask(ctx, poll_timer));
-        } else {
-            SPDLOG_INFO(
-                    "Cancelling operations on acceptor socket in state {}",
-                    server_status_to_string(ctx->get_status())
-            );
-            ctx->get_tcp_acceptor().cancel();
+            auto& upsert_timer = ctx->get_upsert_timer();
+            upsert_timer.expires_from_now(std::chrono::milliseconds(ctx->get_polling_interval()));
+            upsert_timer.async_wait(PeriodicUpsertTask(ctx));
         }
     }
 
 private:
     std::shared_ptr<ServerContext> ctx;
-    boost::asio::steady_timer* poll_timer;
 };
+
+struct SchedulerUpdateListenerTask {
+    SchedulerUpdateListenerTask(std::shared_ptr<ServerContext> ctx) : ctx(ctx) {}
+
+    void operator()(boost::system::error_code const& error, size_t bytes_read) {
+        // This can include the scheduler closing the connection because the job has been cancelled
+        if (0 == bytes_read || error.failed()) {
+            SPDLOG_ERROR("Closing connection with scheduler due to connection error or shutdown");
+            ctx->set_status(ServerStatus::RecoverableFailure);
+            ctx->stop_event_loop();
+            return;
+        }
+
+        // Try to read the message from the scheduler
+        auto& buffer = ctx->get_scheduler_update_buffer();
+        size_t size_header;
+        if (buffer.size() < sizeof(size_header)) {
+            queue_scheduler_update_listener_task(ctx);
+        }
+        memcpy(&size_header, buffer.data(), sizeof(size_header));
+
+        if (size_header > cMaxMessageSize) {
+            SPDLOG_ERROR("Message from scheduler too large {}B", size_header);
+            ctx->set_status(ServerStatus::RecoverableFailure);
+            ctx->stop_event_loop();
+            return;
+        }
+
+        size_t total_message_size = sizeof(size_header) + size_header;
+        if (buffer.size() < total_message_size) {
+            queue_scheduler_update_listener_task(ctx);
+        }
+
+        msgpack::object_handle handle
+                = msgpack::unpack(buffer.data() + sizeof(size_header), size_header);
+        std::map<std::string, msgpack::type::variant> message = handle.get().convert();
+        buffer.clear();
+
+        if (ServerStatus::Idle == ctx->get_status()) {
+            ctx->set_up_pipeline(message);
+            ctx->set_status(ServerStatus::Running);
+            if (ctx->is_timeline_aggregation()) {
+                auto& upsert_timer = ctx->get_upsert_timer();
+                upsert_timer.expires_from_now(std::chrono::milliseconds(ctx->get_polling_interval())
+                );
+                upsert_timer.async_wait(PeriodicUpsertTask(ctx));
+            }
+
+            // Synchronously notify the scheduler that the reducer is ready
+            if (false == ctx->ack_search_scheduler()) {
+                ctx->set_status(ServerStatus::RecoverableFailure);
+                ctx->stop_event_loop();
+                return;
+            }
+        } else if (ServerStatus::Running == ctx->get_status()) {
+            // Assuming for now that if we receive a message while in running state we know that it
+            // is the "all results sent" message. No need to examine the contents.
+            ctx->set_status(ServerStatus::ReceivedAllResults);
+
+            // If there are no results still in flight this function will submit the final results
+            // to the results cache and
+            if (false == ctx->try_finalize_results()) {
+                ctx->set_status(ServerStatus::RecoverableFailure);
+                ctx->stop_event_loop();
+                return;
+            }
+
+            ctx->get_tcp_acceptor().cancel();
+        }
+
+        if (ServerStatus::Running == ctx->get_status()) {
+            queue_scheduler_update_listener_task(ctx);
+        }
+    }
+
+private:
+    static constexpr size_t cMaxMessageSize = 16ULL * 1024 * 1024;
+    std::shared_ptr<ServerContext> ctx;
+};
+
+void queue_scheduler_update_listener_task(std::shared_ptr<ServerContext> ctx) {
+    boost::asio::async_read(
+            ctx->get_scheduler_update_socket(),
+            boost::asio::dynamic_buffer(ctx->get_scheduler_update_buffer()),
+            SchedulerUpdateListenerTask(ctx)
+    );
+}
 }  // namespace reducer
 
 int main(int argc, char const* argv[]) {
@@ -322,12 +403,6 @@ int main(int argc, char const* argv[]) {
         return -1;
     }
 
-    // Polling interval
-    boost::asio::steady_timer polling_timer(
-            ctx->get_io_context(),
-            boost::asio::chrono::milliseconds(ctx->get_polling_interval())
-    );
-
     SPDLOG_INFO("Starting on host {} port {}", ctx->get_reducer_host(), ctx->get_reducer_port());
 
     // Job acquisition loop
@@ -339,8 +414,19 @@ int main(int argc, char const* argv[]) {
             return -1;
         }
 
-        // Queue up polling and tcp accepting
-        polling_timer.async_wait(reducer::PollDbTask(ctx, &polling_timer));
+        // connect to scheduler and register this reducer as available
+        tcp::resolver resolver(ctx->get_io_context());
+        auto endpoints = resolver.resolve(
+                args.get_scheduler_host(),
+                std::to_string(args.get_scheduler_port())
+        );
+        if (false == ctx->register_with_scheduler(endpoints)) {
+            SPDLOG_CRITICAL("Failed to communicate with scheduler");
+            return -1;
+        }
+
+        // Queue up listening for scheduler updates, and tcp accepting
+        reducer::queue_scheduler_update_listener_task(ctx);
         reducer::queue_accept_task(ctx);
 
         SPDLOG_INFO("Waiting for job...");
@@ -348,33 +434,20 @@ int main(int argc, char const* argv[]) {
         // Start running the event processing loop
         ctx->run();
 
-        if (reducer::ServerStatus::FinishingSuccess == ctx->get_status()) {
+        if (reducer::ServerStatus::ReceivedAllResults == ctx->get_status()) {
             SPDLOG_INFO("Job {} finished successfully", ctx->get_job_id());
-
-            bool results_success = false;
-            if (ctx->is_timeline_aggregation()) {
-                results_success = ctx->upsert_timeline_results()
-                                  != reducer::ServerStatus::FinishingReducerError;
-            } else {
-                results_success = ctx->publish_pipeline_results();
-            }
-
-            bool done_success = ctx->update_job_status(reducer::JobStatus::Success);
-            if (false == results_success || false == done_success) {
-                SPDLOG_CRITICAL("Database operation failed");
-                return -1;
-            }
+        } else if (reducer::ServerStatus::RecoverableFailure == ctx->get_status()) {
+            SPDLOG_ERROR("Job {} finished with a recoverable error", ctx->get_job_id());
+        } else if ((reducer::ServerStatus::UnrecoverableFailure == ctx->get_status())) {
+            SPDLOG_CRITICAL("Job {} finished with an unrecoverable error", ctx->get_job_id());
+            return -1;
         } else {
-            SPDLOG_INFO("Job {} finished unsuccesfully", ctx->get_job_id());
-            bool done_success = true;
-            if (reducer::ServerStatus::FinishingReducerError == ctx->get_status()) {
-                done_success = ctx->update_job_status(reducer::JobStatus::Failed);
-            }
-
-            if (false == done_success) {
-                SPDLOG_CRITICAL("Database operation failed");
-                return -1;
-            }
+            SPDLOG_CRITICAL(
+                    "Job {} finished in unexpected state {}",
+                    ctx->get_job_id(),
+                    ctx->get_status()
+            );
+            return -1;
         }
 
         // cleanup reducer state for next job
