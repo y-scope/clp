@@ -77,7 +77,10 @@ struct RecordReceiverContext {
 void queue_accept_task(std::shared_ptr<ServerContext> ctx);
 void queue_receive_task(std::shared_ptr<RecordReceiverContext> rctx);
 void queue_validate_sender_task(std::shared_ptr<RecordReceiverContext> rctx);
-void queue_scheduler_update_listener_task(std::shared_ptr<ServerContext> ctx);
+void queue_scheduler_update_listener_task(
+        std::shared_ptr<ServerContext> ctx,
+        size_t current_buffer_occupancy
+);
 
 struct ReceiveTask {
     ReceiveTask(std::shared_ptr<RecordReceiverContext> rctx) : rctx(rctx) {}
@@ -162,7 +165,7 @@ struct ValidateSenderTask {
 
     void operator()(boost::system::error_code const& error, size_t bytes_remaining) {
         // if no new bytes terminate
-        if (0 == bytes_remaining || error.failed()
+        if ((0 == bytes_remaining && error.failed())
             || ServerStatus::Running != rctx->ctx->get_status())
         {
             SPDLOG_ERROR("Rejecting connection because of connection error");
@@ -284,23 +287,27 @@ private:
 };
 
 struct SchedulerUpdateListenerTask {
-    SchedulerUpdateListenerTask(std::shared_ptr<ServerContext> ctx) : ctx(ctx) {}
+    SchedulerUpdateListenerTask(std::shared_ptr<ServerContext> ctx, size_t current_buffer_occupancy)
+            : ctx(ctx),
+              current_buffer_occupancy(current_buffer_occupancy) {}
 
     void operator()(boost::system::error_code const& error, size_t bytes_read) {
         // This can include the scheduler closing the connection because the job has been cancelled
-        if (0 == bytes_read || error.failed()) {
+        if (0 == bytes_read && error.failed()) {
             SPDLOG_ERROR("Closing connection with scheduler due to connection error or shutdown");
             ctx->set_status(ServerStatus::RecoverableFailure);
             ctx->stop_event_loop();
             return;
         }
 
+        current_buffer_occupancy += bytes_read;
+
         // Try to read the message from the scheduler
-        auto& buffer = ctx->get_scheduler_update_buffer();
         size_t size_header;
-        if (buffer.size() < sizeof(size_header)) {
-            queue_scheduler_update_listener_task(ctx);
+        if (current_buffer_occupancy < sizeof(size_header)) {
+            queue_scheduler_update_listener_task(ctx, current_buffer_occupancy);
         }
+        auto& buffer = ctx->get_scheduler_update_buffer();
         memcpy(&size_header, buffer.data(), sizeof(size_header));
 
         if (size_header > cMaxMessageSize) {
@@ -311,13 +318,14 @@ struct SchedulerUpdateListenerTask {
         }
 
         size_t total_message_size = sizeof(size_header) + size_header;
-        if (buffer.size() < total_message_size) {
-            queue_scheduler_update_listener_task(ctx);
+        if (current_buffer_occupancy < total_message_size) {
+            queue_scheduler_update_listener_task(ctx, current_buffer_occupancy);
         }
 
-        msgpack::object_handle handle
-                = msgpack::unpack(buffer.data() + sizeof(size_header), size_header);
-        std::map<std::string, msgpack::type::variant> message = handle.get().convert();
+        nlohmann::json message = nlohmann::json::from_msgpack(
+                buffer.data() + sizeof(size_header),
+                buffer.data() + sizeof(size_header) + size_header
+        );
         buffer.clear();
 
         if (ServerStatus::Idle == ctx->get_status()) {
@@ -353,20 +361,25 @@ struct SchedulerUpdateListenerTask {
         }
 
         if (ServerStatus::Running == ctx->get_status()) {
-            queue_scheduler_update_listener_task(ctx);
+            queue_scheduler_update_listener_task(ctx, 0);
         }
     }
 
 private:
     static constexpr size_t cMaxMessageSize = 16ULL * 1024 * 1024;
     std::shared_ptr<ServerContext> ctx;
+    size_t current_buffer_occupancy;
 };
 
-void queue_scheduler_update_listener_task(std::shared_ptr<ServerContext> ctx) {
+void queue_scheduler_update_listener_task(
+        std::shared_ptr<ServerContext> ctx,
+        size_t current_buffer_occupancy
+) {
     boost::asio::async_read(
             ctx->get_scheduler_update_socket(),
             boost::asio::dynamic_buffer(ctx->get_scheduler_update_buffer()),
-            SchedulerUpdateListenerTask(ctx)
+            boost::asio::transfer_at_least(1),
+            SchedulerUpdateListenerTask(ctx, current_buffer_occupancy)
     );
 }
 }  // namespace reducer
@@ -426,7 +439,7 @@ int main(int argc, char const* argv[]) {
         }
 
         // Queue up listening for scheduler updates, and tcp accepting
-        reducer::queue_scheduler_update_listener_task(ctx);
+        reducer::queue_scheduler_update_listener_task(ctx, 0);
         reducer::queue_accept_task(ctx);
 
         SPDLOG_INFO("Waiting for job...");

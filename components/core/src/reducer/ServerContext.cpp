@@ -46,8 +46,8 @@ ServerContext::ServerContext(CommandLineArguments& args)
     m_mongodb_results_database = mongocxx::database(m_mongodb_client[mongodb_uri.database()]);
 }
 
-void ServerContext::set_up_pipeline(std::map<std::string, msgpack::type::variant>& query_config) {
-    m_job_id = query_config["job_id"].as_int64_t();
+void ServerContext::set_up_pipeline(nlohmann::json const& query_config) {
+    m_job_id = query_config[JobAttributes::cJobId];
 
     SPDLOG_INFO("Taking job {}", m_job_id);
 

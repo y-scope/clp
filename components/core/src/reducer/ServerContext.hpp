@@ -5,9 +5,9 @@
 #include <set>
 
 #include <boost/asio.hpp>
+#include <json/single_include/nlohmann/json.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
-#include <msgpack.hpp>
 
 #include "../clp/TraceableException.hpp"
 #include "CommandLineArguments.hpp"
@@ -23,6 +23,7 @@ enum class ServerStatus : uint8_t {
 };
 
 namespace JobAttributes {
+char const cJobId[] = "job_id";
 char const cBucketSize[] = "bucket_size";
 }  // namespace JobAttributes
 
@@ -72,9 +73,9 @@ public:
     void set_status(ServerStatus new_status) { m_status = new_status; }
 
     /**
-     * Take in a msgpack query configuration and configure the in memory aggregation pipeline
+     * Take in a query configuration and configure the in memory aggregation pipeline
      */
-    void set_up_pipeline(std::map<std::string, msgpack::type::variant>& query_config);
+    void set_up_pipeline(nlohmann::json const& query_config);
 
     /**
      * Synchronously send a generic ack message to the search scheduler.
