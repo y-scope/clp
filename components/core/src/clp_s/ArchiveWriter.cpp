@@ -57,8 +57,10 @@ size_t ArchiveWriter::close() {
         m_metadata_compressor.write_numeric_value(m_table_file_writer.get_pos());
 
         m_table_compressor.open(m_table_file_writer, m_compression_level);
+        std::cout << "m_table_file_writer.get_pos() = " << m_table_file_writer.get_pos() << std::endl;
         i.second->store(m_table_compressor);
         m_table_compressor.close();
+        std::cout << "m_table_file_writer.get_pos() = " << m_table_file_writer.get_pos() << std::endl;
         delete i.second;
     }
     m_metadata_compressor.close();

@@ -38,7 +38,6 @@ void SchemaReader::append_column(int32_t id) {
 }
 
 void SchemaReader::load(ZstdDecompressor& decompressor) {
-    decompressor.try_seek_from_begin(m_offset);
     for (auto& reader : m_columns) {
         reader->load(decompressor, m_num_messages);
     }

@@ -15,7 +15,7 @@ void ArchiveReader::open(std::string const& archive_path) {
     m_array_dict = ReaderUtils::get_array_dictionary_reader(m_archive_path);
 
     m_table_file_reader.open(m_archive_path + "/table");
-    m_table_decompressor.open(m_table_file_reader, 64 * 1024);
+//    m_table_decompressor.open(m_table_file_reader, 64 * 1024);
 
     m_metadata_file_reader.open(m_archive_path + "/metadata");
 }
@@ -68,6 +68,7 @@ void ArchiveReader::load_dictionaries_and_metadata() {
 
 std::unique_ptr<SchemaReader> ArchiveReader::load_table(int32_t schema_id) {
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
+
     if (m_id_to_table_metadata.count(schema_id) == 0) {
         throw OperationFailed(ErrorCodeFileNotFound, __FILENAME__, __LINE__);
     }
@@ -75,13 +76,13 @@ std::unique_ptr<SchemaReader> ArchiveReader::load_table(int32_t schema_id) {
     auto schema_reader = std::make_unique<SchemaReader>(
             m_schema_tree,
             schema_id,
-            m_id_to_table_metadata[schema_id]
+            m_id_to_table_metadata[schema_id].num_messages
     );
     append_reader_columns(schema_reader, true);
-    //    m_table_decompressor.open(m_table_file_reader, cDecompressorFileReadBufferCapacity);
-    //    m_table_decompressor.try_seek_from_begin()
+    m_table_file_reader.try_seek_from_begin(m_id_to_table_metadata[schema_id].offset);
+    m_table_decompressor.open(m_table_file_reader, 64 * 1024);
     schema_reader->load(m_table_decompressor);
-    //    m_table_decompressor.close();
+    m_table_decompressor.close();
     return schema_reader;
 }
 

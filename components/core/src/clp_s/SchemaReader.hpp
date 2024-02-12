@@ -52,11 +52,10 @@ public:
     explicit SchemaReader(
             std::shared_ptr<SchemaTree> schema_tree,
             int32_t schema_id,
-            TableMetadata metadata
+            uint64_t num_messages
     )
             : m_schema_id(schema_id),
-              m_offset(metadata.offset),
-              m_num_messages(metadata.num_messages),
+              m_num_messages(num_messages),
               m_cur_message(0),
               m_timestamp_column(nullptr),
               m_get_timestamp([]() -> epochtime_t { return 0; }),
@@ -150,7 +149,6 @@ private:
     void generate_json_string();
 
     int32_t m_schema_id;
-    size_t m_offset;
     uint64_t m_num_messages;
     uint64_t m_cur_message;
 
