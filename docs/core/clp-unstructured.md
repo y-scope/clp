@@ -91,8 +91,7 @@ Usage:
 
 ### Examples
 
-**Search `/mnt/data/archives1` for specific ERROR logs and ignore case distinctions between values
-in the query and the compressed data:**
+**Search `/mnt/data/archives1` for specific ERROR logs and ignore case distinctions:**
 
 ```shell
 ./clg --ignore-case /mnt/data/archives1 " ERROR * container "
