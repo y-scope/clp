@@ -15,13 +15,12 @@ void ArchiveReader::open(std::string const& archive_path) {
     m_array_dict = ReaderUtils::get_array_dictionary_reader(m_archive_path);
 
     m_table_file_reader.open(m_archive_path + "/table");
-    //    m_table_decompressor.open(m_table_file_reader, 64 * 1024);
-
     m_metadata_file_reader.open(m_archive_path + "/metadata");
 }
 
 void ArchiveReader::load_metadata() {
-    m_metadata_decompressor.open(m_metadata_file_reader, 64 * 1024);
+    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 16 KB
+    m_metadata_decompressor.open(m_metadata_file_reader, cDecompressorFileReadBufferCapacity);
 
     size_t num_schemas;
     if (auto error = m_metadata_decompressor.try_read_numeric_value(num_schemas);
@@ -68,7 +67,7 @@ void ArchiveReader::load_dictionaries_and_metadata() {
 
 std::unique_ptr<SchemaReader>
 ArchiveReader::load_table(int32_t schema_id, bool should_extract_timestamp) {
-    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
+    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 16 KB
 
     if (m_id_to_table_metadata.count(schema_id) == 0) {
         throw OperationFailed(ErrorCodeFileNotFound, __FILENAME__, __LINE__);
@@ -80,8 +79,9 @@ ArchiveReader::load_table(int32_t schema_id, bool should_extract_timestamp) {
             m_id_to_table_metadata[schema_id].num_messages
     );
     append_reader_columns(schema_reader, should_extract_timestamp);
+
     m_table_file_reader.try_seek_from_begin(m_id_to_table_metadata[schema_id].offset);
-    m_table_decompressor.open(m_table_file_reader, 64 * 1024);
+    m_table_decompressor.open(m_table_file_reader, cDecompressorFileReadBufferCapacity);
     schema_reader->load(m_table_decompressor);
     m_table_decompressor.close();
     return schema_reader;
