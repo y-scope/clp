@@ -96,15 +96,6 @@ public:
      */
     ErrorCode try_read_string(size_t str_length, std::string& str);
 
-    /**
-     * Tries to seek from the beginning to the given position
-     * @param pos
-     * @return ErrorCode_NotInit if the decompressor is not open
-     * @return Same as the underlying medium's try_read_exact_length method
-     * @return ErrorCode_Success on success
-     */
-    ErrorCode try_seek_from_begin(size_t pos);
-
 private:
     // Enum class
     enum class InputType {

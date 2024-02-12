@@ -236,34 +236,4 @@ void ZstdDecompressor::reset_stream() {
     m_compressed_stream_block.pos = 0;
 }
 
-ErrorCode ZstdDecompressor::try_seek_from_begin(size_t pos) {
-    if (InputType::NotInitialized == m_input_type) {
-        throw OperationFailed(ErrorCodeNotInit, __FILENAME__, __LINE__);
-    }
-
-    // Check if we've already decompressed passed the desired position
-    if (m_decompressed_stream_pos > pos) {
-        // ZStd has no way for us to seek back to the desired position, so just reset the stream
-        // to the beginning
-        reset_stream();
-    }
-
-    // We need to fast forward the decompression stream to decompressed_stream_pos
-    ErrorCode error;
-    while (m_decompressed_stream_pos < pos) {
-        size_t num_bytes_to_decompress = std::min(
-                m_unused_decompressed_stream_block_size,
-                pos - m_decompressed_stream_pos
-        );
-        error = try_read_exact_length(
-                m_unused_decompressed_stream_block_buffer.get(),
-                num_bytes_to_decompress
-        );
-        if (ErrorCodeSuccess != error) {
-            return error;
-        }
-    }
-
-    return ErrorCodeSuccess;
-}
 }  // namespace clp_s

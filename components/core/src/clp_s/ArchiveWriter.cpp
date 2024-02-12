@@ -124,6 +124,7 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
                 break;
             case NodeType::OBJECT:
             case NodeType::NULLVALUE:
+            case NodeType::UNKNOWN:
                 break;
         }
     }
