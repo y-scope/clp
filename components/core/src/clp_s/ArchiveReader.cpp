@@ -18,7 +18,7 @@ void ArchiveReader::open(std::string const& archive_path) {
     m_metadata_file_reader.open(m_archive_path + "/metadata");
 }
 
-void ArchiveReader::load_metadata() {
+void ArchiveReader::read_metadata() {
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 16 KB
     m_metadata_decompressor.open(m_metadata_file_reader, cDecompressorFileReadBufferCapacity);
 
@@ -58,15 +58,15 @@ void ArchiveReader::load_metadata() {
     m_metadata_decompressor.close();
 }
 
-void ArchiveReader::load_dictionaries_and_metadata() {
-    load_variable_dictionary();
-    load_log_type_dictionary();
-    load_array_dictionary();
-    load_metadata();
+void ArchiveReader::read_dictionaries_and_metadata() {
+    read_variable_dictionary();
+    read_log_type_dictionary();
+    read_array_dictionary();
+    read_metadata();
 }
 
 std::unique_ptr<SchemaReader>
-ArchiveReader::load_table(int32_t schema_id, bool should_extract_timestamp) {
+ArchiveReader::read_table(int32_t schema_id, bool should_extract_timestamp) {
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 16 KB
 
     if (m_id_to_table_metadata.count(schema_id) == 0) {
@@ -163,7 +163,7 @@ void ArchiveReader::store(FileWriter& writer) {
     std::string message;
 
     for (auto& [id, table_metadata] : m_id_to_table_metadata) {
-        auto schema_reader = load_table(id, false);
+        auto schema_reader = read_table(id, false);
         while (schema_reader->get_next_message(message)) {
             writer.write(message.c_str(), message.length());
         }

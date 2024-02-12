@@ -74,7 +74,7 @@ void JsonConstructor::store() {
 
     while (m_current_archive_index <= m_max_archive_index) {
         m_archive_reader->open(m_archive_paths[m_current_archive_index]);
-        m_archive_reader->load_dictionaries_and_metadata();
+        m_archive_reader->read_dictionaries_and_metadata();
         m_archive_reader->store(writer);
         m_archive_reader->close();
         m_current_archive_index++;

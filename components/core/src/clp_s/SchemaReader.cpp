@@ -244,6 +244,8 @@ void SchemaReader::generate_json_template(int32_t id) {
                 m_json_serializer.add_special_key(key);
                 break;
             }
+            case NodeType::UNKNOWN:
+                break;
         }
     }
 }

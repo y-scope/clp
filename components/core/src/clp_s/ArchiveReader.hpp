@@ -40,32 +40,44 @@ public:
     void open(std::string const& archive_path);
 
     /**
-     * Loads the dictionaries and metadata.
+     * Reads the dictionaries and metadata.
      */
-    void load_dictionaries_and_metadata();
+    void read_dictionaries_and_metadata();
 
     /**
-     * Loads the variable dictionary from the archive.
+     * Reads the variable dictionary from the archive.
      * @param lazy
+     * @return the variable dictionary reader
      */
-    void load_variable_dictionary(bool lazy = false) { m_var_dict->read_new_entries(lazy); }
+    std::shared_ptr<VariableDictionaryReader> read_variable_dictionary(bool lazy = false) {
+        m_var_dict->read_new_entries(lazy);
+        return m_var_dict;
+    }
 
     /**
-     * Loads the log type dictionary from the archive.
+     * Reads the log type dictionary from the archive.
      * @param lazy
+     * @return the log type dictionary reader
      */
-    void load_log_type_dictionary(bool lazy = false) { m_log_dict->read_new_entries(lazy); }
+    std::shared_ptr<LogTypeDictionaryReader> read_log_type_dictionary(bool lazy = false) {
+        m_log_dict->read_new_entries(lazy);
+        return m_log_dict;
+    }
 
     /**
-     * Loads the array dictionary from the archive.
+     * Reads the array dictionary from the archive.
      * @param lazy
+     * @return the array dictionary reader
      */
-    void load_array_dictionary(bool lazy = false) { m_array_dict->read_new_entries(lazy); }
+    std::shared_ptr<LogTypeDictionaryReader> read_array_dictionary(bool lazy = false) {
+        m_array_dict->read_new_entries(lazy);
+        return m_array_dict;
+    }
 
     /**
-     * Loads the metadata from the archive.
+     * Reads the metadata from the archive.
      */
-    void load_metadata();
+    void read_metadata();
 
     /**
      * Reads the local timestamp dictionary from the archive.
@@ -74,12 +86,12 @@ public:
     std::shared_ptr<TimestampDictionaryReader> read_timestamp_dictionary();
 
     /**
-     * Loads a table from the archive.
+     * Reads a table from the archive.
      * @param schema_id
      * @param should_extract_timestamp
      * @return the schema reader
      */
-    std::unique_ptr<SchemaReader> load_table(int32_t schema_id, bool should_extract_timestamp);
+    std::unique_ptr<SchemaReader> read_table(int32_t schema_id, bool should_extract_timestamp);
 
     /**
      * Writes decoded messages to a file.

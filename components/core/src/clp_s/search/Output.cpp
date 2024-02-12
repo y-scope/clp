@@ -28,6 +28,7 @@ void Output::filter() {
         bool has_array_search = false;
 
         archive_reader.open(archive);
+        archive_reader.read_metadata();
         for (auto schema_id : archive_reader.get_schema_ids()) {
             if (m_match.schema_matched(schema_id)) {
                 matched_schemas.push_back(schema_id);
@@ -55,14 +56,14 @@ void Output::filter() {
             continue;
         }
 
-        archive_reader.load_variable_dictionary();
-        archive_reader.load_log_type_dictionary();
+        m_var_dict = archive_reader.read_variable_dictionary();
+        m_log_dict = archive_reader.read_log_type_dictionary();
 
         if (has_array) {
             if (has_array_search) {
-                archive_reader.load_array_dictionary();
+                m_array_dict = archive_reader.read_array_dictionary();
             } else {
-                archive_reader.load_array_dictionary(true);
+                m_array_dict = archive_reader.read_array_dictionary(true);
             }
         }
 
@@ -91,7 +92,7 @@ void Output::filter() {
 
             add_wildcard_columns_to_searched_columns();
 
-            auto reader = archive_reader.load_table(
+            auto reader = archive_reader.read_table(
                     schema_id,
                     m_output_handler->should_output_timestamp()
             );
