@@ -50,5 +50,5 @@ runs:
     - if: "inputs.deps_image_changed == 'false'"
       uses: "./.github/actions/clp-core-build"
       with:
-        image_name: "ghcr.io/${{steps.sanitization.REPOSITORY}}\
+        image_name: "ghcr.io/${{steps.sanitization.outputs.REPOSITORY}}\
           /clp-core-dependencies-x86-${{inputs.os_name}}:main"

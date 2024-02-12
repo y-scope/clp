@@ -44,7 +44,7 @@ jobs:
       - id: "meta"
         uses: "docker/metadata-action@v5"
         with:
-          images: "${{env.CONTAINER_IMAGE_REGISTRY}}/${{steps.sanitization.REPOSITORY}}\
+          images: "${{env.CONTAINER_IMAGE_REGISTRY}}/${{steps.sanitization.outputs.REPOSITORY}}\
             /clp-execution-x86-ubuntu-focal"
 
       - if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
