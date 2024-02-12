@@ -3,12 +3,15 @@
 
 #include <set>
 #include <string>
+#include <utility>
 
 #include "ArchiveReader.hpp"
 #include "ColumnReader.hpp"
 #include "DictionaryReader.hpp"
+#include "ErrorCode.hpp"
 #include "SchemaReader.hpp"
 #include "SchemaTree.hpp"
+#include "TraceableException.hpp"
 
 namespace clp_s {
 struct JsonConstructorOption {
@@ -21,8 +24,20 @@ public:
     class OperationFailed : public TraceableException {
     public:
         // Constructors
-        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
+        OperationFailed(
+                ErrorCode error_code,
+                char const* const filename,
+                int line_number,
+                std::string message
+        )
+                : TraceableException(error_code, filename, line_number),
+                  m_message(std::move(message)) {}
+
+        // Methods
+        [[nodiscard]] char const* what() const noexcept override { return m_message.c_str(); }
+
+    private:
+        std::string m_message;
     };
 
     // Constructors

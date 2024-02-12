@@ -266,6 +266,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             // clang-format on
 
+            po::options_description input_options("Input Options");
+            input_options.add_options()(
+                    "archive-id",
+                    po::value<std::string>(&m_archive_id)->value_name("ID"),
+                    "ID of the archive to decompress"
+            );
+            extraction_options.add(input_options);
+
             po::positional_options_description positional_options;
             positional_options.add("archives-dir", 1);
             positional_options.add("output-dir", 1);
@@ -287,13 +295,15 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 print_decompression_usage();
 
                 std::cerr << "Examples:" << std::endl;
-                std::cerr << "  # Decompress all files from archives-dir into output-dir"
+                std::cerr << "  # Decompress all files from archives in archives-dir"
+                             "    into output-dir"
                           << std::endl;
                 std::cerr << "  " << m_program_name << " x archives-dir output-dir" << std::endl;
                 std::cerr << std::endl;
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
+                visible_options.add(input_options);
                 std::cerr << visible_options << std::endl;
                 return ParsingResult::InfoCommand;
             }
@@ -321,6 +331,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "Query to perform"
             );
             // clang-format on
+
+            po::options_description input_options("Input Options");
+            input_options.add_options()(
+                    "archive-id",
+                    po::value<std::string>(&m_archive_id)->value_name("ID"),
+                    "ID of the archive to search"
+            );
+            search_options.add(input_options);
 
             po::options_description match_options("Match Controls");
             // clang-format off
@@ -381,14 +399,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 print_search_usage();
 
                 std::cerr << "Examples:" << std::endl;
-                std::cerr << "  # Search archives-dir for logs matching a KQL query"
+                std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
                              R"( "level: INFO" and output to stdout)"
                           << std::endl;
                 std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
                           << std::endl;
                 std::cerr << std::endl;
 
-                std::cerr << "  # Search archives-dir for logs matching a KQL query"
+                std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
                              R"( "level: INFO" and output to MongoDB)"
                           << std::endl;
                 std::cerr << "  " << m_program_name
@@ -398,6 +416,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
+                visible_options.add(input_options);
                 visible_options.add(match_options);
                 visible_options.add(output_options);
                 std::cerr << visible_options << '\n';

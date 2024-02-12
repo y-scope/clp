@@ -24,7 +24,6 @@ size_t SchemaWriter::append_message(ParsedMessage& message) {
 void SchemaWriter::store(ZstdCompressor& compressor) {
     for (auto& writer : m_columns) {
         writer->store(compressor);
-//        break;
     }
 }
 

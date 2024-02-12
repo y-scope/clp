@@ -23,6 +23,7 @@ COMPRESSION_SCHEDULER_COMPONENT_NAME = "compression_scheduler"
 SEARCH_SCHEDULER_COMPONENT_NAME = "search_scheduler"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 SEARCH_WORKER_COMPONENT_NAME = "search_worker"
+WEBUI_COMPONENT_NAME = "webui"
 
 SEARCH_JOBS_TABLE_NAME = "search_jobs"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
@@ -207,6 +208,12 @@ class ResultsCache(BaseModel):
             raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.host cannot be empty.")
         return field
 
+    @validator("db_name")
+    def validate_db_name(cls, field):
+        if "" == field:
+            raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.db_name cannot be empty.")
+        return field
+
     def get_uri(self):
         return f"mongodb://{self.host}:{self.port}/{self.db_name}"
 
@@ -260,6 +267,34 @@ class ArchiveOutput(BaseModel):
         return d
 
 
+class WebUi(BaseModel):
+    host: str = "localhost"
+    port: int = 4000
+    logging_level: str = "INFO"
+
+    @validator("host")
+    def validate_host(cls, field):
+        if "" == field:
+            raise ValueError(f"{WEBUI_COMPONENT_NAME}.host cannot be empty.")
+        return field
+
+    @validator("port")
+    def validate_port(cls, field):
+        min_valid_port = 0
+        max_valid_port = 2**16 - 1
+        if min_valid_port > field or max_valid_port < field:
+            raise ValueError(
+                f"{WEBUI_COMPONENT_NAME}.port is not within valid range "
+                f"{min_valid_port}-{max_valid_port}."
+            )
+        return field
+
+    @validator("logging_level")
+    def validate_logging_level(cls, field):
+        _validate_logging_level(cls, field)
+        return field
+
+
 class CLPConfig(BaseModel):
     execution_container: str = "ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-focal:main"
 
@@ -274,6 +309,7 @@ class CLPConfig(BaseModel):
     search_scheduler: SearchScheduler = SearchScheduler()
     compression_worker: CompressionWorker = CompressionWorker()
     search_worker: SearchWorker = SearchWorker()
+    webui: WebUi = WebUi()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()

@@ -1,0 +1,34 @@
+.search-results-container {
+  position: relative;
+}
+
+// NOTE: We use a hierarchical selector to override Bootstrap's hierarchical selector (classes can't override hierarchical selectors without !important)
+.search-results thead th {
+  border: none;
+  padding: 0;
+}
+
+.search-results-th {
+  position: sticky;
+  top: 0;
+
+  &-sortable {
+    cursor: pointer;
+    user-select: none;
+  }
+}
+
+.search-results-table-header {
+  background-color: #fff;
+  border-bottom: 1px solid #ccc;
+  border-top: 1px solid #dee2e6;
+  padding: 10px;
+}
+
+.search-results-message {
+  font-size: 0.93rem;
+  line-height: 1.4rem;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

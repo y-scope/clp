@@ -6,7 +6,7 @@
 #include "OrExpr.hpp"
 
 namespace clp_s::search {
-constexpr LiteralTypeBitmask cDateTypes = cIntegralTypes | EpochDateT | FloatDateT;
+constexpr LiteralTypeBitmask cDateTypes = cIntegralTypes | EpochDateT;
 
 EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& expr) {
     if (std::dynamic_pointer_cast<OrExpr>(expr)) {

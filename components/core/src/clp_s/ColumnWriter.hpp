@@ -8,6 +8,7 @@
 
 #include "DictionaryWriter.hpp"
 #include "FileWriter.hpp"
+#include "ParsedMessage.hpp"
 #include "TimestampDictionaryWriter.hpp"
 #include "VariableEncoder.hpp"
 #include "ZstdCompressor.hpp"
@@ -18,7 +19,7 @@ namespace clp_s {
 class BaseColumnWriter {
 public:
     // Constructor
-    explicit BaseColumnWriter(std::string name, int32_t id) : m_name(std::move(name)), m_id(id) {}
+    explicit BaseColumnWriter(int32_t id) : m_id(id) {}
 
     // Destructor
     virtual ~BaseColumnWriter() = default;
@@ -28,8 +29,7 @@ public:
      * @param value
      * @param size
      */
-    virtual void add_value(std::variant<int64_t, double, std::string, bool>& value, size_t& size)
-            = 0;
+    virtual void add_value(ParsedMessage::variable_t& value, size_t& size) = 0;
 
     /**
      * Stores the column to a compressed file
@@ -37,27 +37,20 @@ public:
      */
     virtual void store(ZstdCompressor& compressor) = 0;
 
-    /**
-     * @return Name of the column
-     */
-    std::string get_name() { return m_name; }
-
 protected:
-    std::string m_name;
     int32_t m_id;
 };
 
 class Int64ColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
-    explicit Int64ColumnWriter(std::string name, int32_t id)
-            : BaseColumnWriter(std::move(name), id) {}
+    explicit Int64ColumnWriter(int32_t id) : BaseColumnWriter(id) {}
 
     // Destructor
     ~Int64ColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    void add_value(std::variant<int64_t, double, std::string, bool>& value, size_t& size) override;
+    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
 
     void store(ZstdCompressor& compressor) override;
 
@@ -68,14 +61,13 @@ private:
 class FloatColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
-    explicit FloatColumnWriter(std::string name, int32_t id)
-            : BaseColumnWriter(std::move(name), id) {}
+    explicit FloatColumnWriter(int32_t id) : BaseColumnWriter(id) {}
 
     // Destructor
     ~FloatColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    void add_value(std::variant<int64_t, double, std::string, bool>& value, size_t& size) override;
+    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
 
     void store(ZstdCompressor& compressor) override;
 
@@ -86,14 +78,13 @@ private:
 class BooleanColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
-    explicit BooleanColumnWriter(std::string name, int32_t id)
-            : BaseColumnWriter(std::move(name), id) {}
+    explicit BooleanColumnWriter(int32_t id) : BaseColumnWriter(id) {}
 
     // Destructor
     ~BooleanColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    void add_value(std::variant<int64_t, double, std::string, bool>& value, size_t& size) override;
+    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
 
     void store(ZstdCompressor& compressor) override;
 
@@ -105,12 +96,11 @@ class ClpStringColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
     ClpStringColumnWriter(
-            std::string const& name,
             int32_t id,
             std::shared_ptr<VariableDictionaryWriter> var_dict,
             std::shared_ptr<LogTypeDictionaryWriter> log_dict
     )
-            : BaseColumnWriter(name, id),
+            : BaseColumnWriter(id),
               m_var_dict(std::move(var_dict)),
               m_log_dict(std::move(log_dict)) {}
 
@@ -118,7 +108,7 @@ public:
     ~ClpStringColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    void add_value(std::variant<int64_t, double, std::string, bool>& value, size_t& size) override;
+    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
 
     void store(ZstdCompressor& compressor) override;
 
@@ -164,19 +154,15 @@ private:
 class VariableStringColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
-    VariableStringColumnWriter(
-            std::string const& name,
-            int32_t id,
-            std::shared_ptr<VariableDictionaryWriter> var_dict
-    )
-            : BaseColumnWriter(name, id),
+    VariableStringColumnWriter(int32_t id, std::shared_ptr<VariableDictionaryWriter> var_dict)
+            : BaseColumnWriter(id),
               m_var_dict(std::move(var_dict)) {}
 
     // Destructor
     ~VariableStringColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    void add_value(std::variant<int64_t, double, std::string, bool>& value, size_t& size) override;
+    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
 
     void store(ZstdCompressor& compressor) override;
 
@@ -188,53 +174,19 @@ private:
 class DateStringColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
-    DateStringColumnWriter(
-            std::string const& name,
-            int32_t id,
-            std::shared_ptr<TimestampDictionaryWriter> timestamp_dict
-    )
-            : BaseColumnWriter(name, id),
-              m_timestamp_dict(std::move(timestamp_dict)) {}
+    explicit DateStringColumnWriter(int32_t id) : BaseColumnWriter(id) {}
 
     // Destructor
     ~DateStringColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    void add_value(std::variant<int64_t, double, std::string, bool>& value, size_t& size) override;
+    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
 
     void store(ZstdCompressor& compressor) override;
 
 private:
-    std::shared_ptr<TimestampDictionaryWriter> m_timestamp_dict;
-
     std::vector<int64_t> m_timestamps;
     std::vector<int64_t> m_timestamp_encodings;
-};
-
-class FloatDateStringColumnWriter : public BaseColumnWriter {
-public:
-    // Constructor
-    FloatDateStringColumnWriter(
-            std::string const& name,
-            int32_t id,
-            std::shared_ptr<TimestampDictionaryWriter> timestamp_dict
-    )
-            : BaseColumnWriter(name, id),
-
-              m_timestamp_dict(std::move(timestamp_dict)) {}
-
-    // Destructor
-    ~FloatDateStringColumnWriter() override = default;
-
-    // Methods inherited from BaseColumnWriter
-    void add_value(std::variant<int64_t, double, std::string, bool>& value, size_t& size) override;
-
-    void store(ZstdCompressor& compressor) override;
-
-private:
-    std::shared_ptr<TimestampDictionaryWriter> m_timestamp_dict;
-
-    std::vector<double> m_timestamps;
 };
 }  // namespace clp_s
 

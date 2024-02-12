@@ -128,9 +128,6 @@ ArchiveReader::append_reader_column(std::unique_ptr<SchemaReader>& reader, int32
         case NodeType::DATESTRING:
             column_reader = new DateStringColumnReader(key_name, column_id, m_timestamp_dict);
             break;
-        case NodeType::FLOATDATESTRING:
-            column_reader = new FloatDateStringColumnReader(key_name, column_id);
-            break;
         case NodeType::OBJECT:
         case NodeType::NULLVALUE:
             reader->append_column(column_id);

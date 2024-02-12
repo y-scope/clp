@@ -64,6 +64,8 @@ public:
 
     std::optional<epochtime_t> get_search_end_ts() const { return m_search_end_ts; }
 
+    std::string const& get_archive_id() const { return m_archive_id; }
+
     std::optional<clp::GlobalMetadataDBConfig> const& get_metadata_db_config() const {
         return m_metadata_db_config;
     }
@@ -105,6 +107,9 @@ private:
     std::string m_query;
     std::optional<epochtime_t> m_search_begin_ts;
     std::optional<epochtime_t> m_search_end_ts;
+
+    // Decompression and search variables
+    std::string m_archive_id;
 };
 }  // namespace clp_s
 

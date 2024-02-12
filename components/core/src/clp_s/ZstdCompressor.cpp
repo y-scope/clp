@@ -114,8 +114,6 @@ void ZstdCompressor::flush() {
             reinterpret_cast<char const*>(m_compressed_stream_block.dst),
             m_compressed_stream_block.pos
     );
-    std::cout << m_compressed_stream_block.pos << std::endl;
-    std::cout << m_compressed_stream_file_writer->get_pos() << std::endl;
 
     m_compression_stream_contains_data = false;
 }

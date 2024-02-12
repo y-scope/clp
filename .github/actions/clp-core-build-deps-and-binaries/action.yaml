@@ -23,13 +23,14 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - if: "inputs.deps_image_changed == 'true'"
+    - if: "inputs.deps_image_changed == 'true' || inputs.push_binaries_image == 'true'"
       uses: "./.github/actions/clp-core-build-containers"
       with:
         os_name: "${{inputs.os_name}}"
         clp_core_dir: "components/core"
         push_deps_image: >-
-          ${{github.event_name != 'pull_request'
+          ${{inputs.deps_image_changed == 'true'
+          && github.event_name != 'pull_request'
           && github.ref == 'refs/heads/main'}}
         push_binaries_image: >-
           ${{inputs.push_binaries_image == 'true'
@@ -38,8 +39,16 @@ runs:
         local_registry_port: "${{inputs.local_registry_port}}"
         token: "${{inputs.token}}"
 
+    - id: "sanitization"
+      shell: "bash"
+      run: |
+        # Docker doesn't support repository names with uppercase characters, so we convert the name
+        # to lowercase here.
+        echo "REPOSITORY=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')" \
+          >> "$GITHUB_OUTPUT"
+
     - if: "inputs.deps_image_changed == 'false'"
       uses: "./.github/actions/clp-core-build"
       with:
-        image_name: >-
-          ghcr.io/${{github.repository}}/clp-core-dependencies-x86-${{inputs.os_name}}:main
+        image_name: "ghcr.io/${{steps.sanitization.outputs.REPOSITORY}}\
+          /clp-core-dependencies-x86-${{inputs.os_name}}:main"

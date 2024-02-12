@@ -46,13 +46,10 @@ void TimestampDictionaryReader::read_new_entries(bool local) {
 
     for (uint64_t i = 0; i < range_index_size; ++i) {
         TimestampEntry entry;
-        entry.try_read_from_file(m_dictionary_decompressor);
-        m_entries.emplace_back(std::move(entry));
-
-        std::string column_name = entry.get_key_name();
         std::vector<std::string> tokens;
-        StringUtils::tokenize_column_descriptor(column_name, tokens);
-        m_tokenized_column_to_range.emplace_back(std::move(tokens), &m_entries.back());
+        entry.try_read_from_file(m_dictionary_decompressor);
+        StringUtils::tokenize_column_descriptor(entry.get_key_name(), tokens);
+        m_entries.emplace_back(std::move(entry));
 
         // TODO: Currently, we only allow a single authoritative timestamp column at ingestion time,
         // but the timestamp dictionary is designed to store the ranges of several timestamp
@@ -62,6 +59,8 @@ void TimestampDictionaryReader::read_new_entries(bool local) {
             m_authoritative_timestamp_column_ids = m_entries.back().get_column_ids();
             m_authoritative_timestamp_tokenized_column = tokens;
         }
+
+        m_tokenized_column_to_range.emplace_back(std::move(tokens), &m_entries.back());
     }
 
     // Local timestamp dictionaries only contain range indices, and
