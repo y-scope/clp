@@ -44,7 +44,7 @@ struct RecordReceiverContext {
               buf(new char[cDefaultBufSize]) {}
 
     ~RecordReceiverContext() {
-        delete buf;
+        delete[] buf;
         socket.close();
     }
 
@@ -127,7 +127,7 @@ struct ReceiveTask {
             if (rctx->buf_size < (record_size + sizeof(record_size))) {
                 char* new_buf = new char[record_size + sizeof(record_size)];
                 memcpy(new_buf, buf_ptr, bytes_remaining);
-                delete rctx->buf;
+                delete[] rctx->buf;
                 rctx->buf = new_buf;
                 rctx->bytes_occupied = bytes_remaining;
             } else {
@@ -461,7 +461,7 @@ int main(int argc, char const* argv[]) {
             SPDLOG_CRITICAL(
                     "Job {} finished in unexpected state {}",
                     ctx->get_job_id(),
-                    ctx->get_status()
+                    server_status_to_string(ctx->get_status())
             );
             return -1;
         }
