@@ -157,8 +157,8 @@ tasks:
   nodejs:
     vars:
       NODEJS_VERSION: "14.21.3"
-      TAR_FILE_NAME: "node-v14.21.3-linux-x64.tar.xz"
-      TAR_FILE_PATH: "{{.NODEJS_BUILD_DIR}}/node-v14.21.3-linux-x64.tar.xz"
+      NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
+      TAR_FILE_NAME: "node-v{{.NODEJS_VERSION}}-linux-{{.NODEJS_ARCH}}.tar.xz"
     cmds:
       - "rm -rf '{{.NODEJS_BUILD_DIR}}/node'"
       - "mkdir -p '{{.NODEJS_BUILD_DIR}}'"
@@ -175,8 +175,18 @@ tasks:
 
   webui:
     deps:
+      - "webui-bundle"
       - "nodejs"
     dir: "components/webui"
+    cmds:
+      - "rm -rf '{{.WEBUI_BUILD_DIR}}/bundle/'"
+      - |-
+        cd "{{.WEBUI_BUILD_DIR}}/programs/server"
+        PATH="{{.NODEJS_BIN_DIR}}":$PATH $(readlink -f "{{.NODEJS_BIN_DIR}}/npm") install
+
+  webui-bundle:
+    dir: "components/webui"
+    platforms: ["386", "amd64"]
     cmds:
       - "rm -rf '{{.WEBUI_BUILD_DIR}}'"
       - "mkdir -p '{{.WEBUI_BUILD_DIR}}'"
@@ -188,10 +198,6 @@ tasks:
         launcher.js
         settings.json
         "{{.WEBUI_BUILD_DIR}}/"
-      - "rm -rf '{{.WEBUI_BUILD_DIR}}/bundle/'"
-      - |-
-        cd "{{.WEBUI_BUILD_DIR}}/programs/server"
-        PATH="{{.NODEJS_BIN_DIR}}":$PATH $(readlink -f "{{.NODEJS_BIN_DIR}}/npm") install
     sources:
       - "./.meteor/*"
       - "./client/**/*"
