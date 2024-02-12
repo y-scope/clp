@@ -926,9 +926,16 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
                 // if it matches VarStringT then it contains no space, so we
                 // don't't add more wildcards. Likewise if it already contains some wildcards
                 // we do not add more
-                Grep::process_raw_query(m_log_dict, m_var_dict, query_string, false, q, false);
+                Grep::process_raw_query(
+                        m_log_dict,
+                        m_var_dict,
+                        query_string,
+                        m_ignore_case,
+                        q,
+                        false
+                );
             } else {
-                Grep::process_raw_query(m_log_dict, m_var_dict, query_string, false, q);
+                Grep::process_raw_query(m_log_dict, m_var_dict, query_string, m_ignore_case, q);
             }
         }
         SubQuery sub_query;
@@ -941,7 +948,7 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
 
             std::unordered_set<int64_t>& matching_vars = m_string_var_match_map[query_string];
             if (query_string.find('*') == std::string::npos) {
-                auto entry = m_var_dict->get_entry_matching_value(query_string, false);
+                auto entry = m_var_dict->get_entry_matching_value(query_string, m_ignore_case);
 
                 if (entry != nullptr) {
                     matching_vars.insert(entry->get_id());
@@ -950,7 +957,7 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
                                wildcard_search_dictionary_and_get_encoded_matches(
                                        query_string,
                                        *m_var_dict,
-                                       false,
+                                       m_ignore_case,
                                        sub_query
                                ))
             {

@@ -350,6 +350,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 "tle",
                 po::value<epochtime_t>()->value_name("TS"),
                 "Find records with UNIX epoch timestamp <= TS ms"
+            )(
+                "ignore-case,i",
+                po::bool_switch(&m_ignore_case),
+                "Ignore case distinctions between values in the query and the compressed data"
             );
             // clang-format on
             search_options.add(match_options);

@@ -74,12 +74,14 @@ def create_and_monitor_job_in_db(
     wildcard_query: str,
     begin_timestamp: int | None,
     end_timestamp: int | None,
+    ignore_case: bool,
     path_filter: str,
 ):
     search_config = SearchConfig(
         query_string=wildcard_query,
         begin_timestamp=begin_timestamp,
         end_timestamp=end_timestamp,
+        ignore_case=ignore_case,
         path_filter=path_filter,
     )
 
@@ -125,6 +127,7 @@ async def do_search(
     wildcard_query: str,
     begin_timestamp: int | None,
     end_timestamp: int | None,
+    ignore_case: bool,
     path_filter: str,
 ):
     db_monitor_task = asyncio.ensure_future(
@@ -135,6 +138,7 @@ async def do_search(
             wildcard_query,
             begin_timestamp,
             end_timestamp,
+            ignore_case,
             path_filter,
         )
     )
@@ -162,6 +166,11 @@ def main(argv):
         "--end-time",
         type=int,
         help="Time range filter upper-bound (inclusive) as milliseconds" " from the UNIX epoch.",
+    )
+    args_parser.add_argument(
+        "--ignore-case",
+        action="store_true",
+        help="Ignore case distinctions between values in the query and the compressed data.",
     )
     args_parser.add_argument("--file-path", help="File to search.")
     parsed_args = args_parser.parse_args(argv[1:])
@@ -191,6 +200,7 @@ def main(argv):
             parsed_args.wildcard_query,
             parsed_args.begin_time,
             parsed_args.end_time,
+            parsed_args.ignore_case,
             parsed_args.file_path,
         )
     )

@@ -113,10 +113,11 @@ or
 ./clp-s s /mnt/data/archives1 'level: ERROR AND message: "job*"'
 ```
 
-**Find both FATAL and ERROR log events:**
+**Find FATAL or ERROR log events and ignore case distinctions between values in the query and the
+compressed data:**
 
 ```bash
-./clp-s s /mnt/data/archives1 'level: FATAL OR level: ERROR'
+./clp-s s --ignore-case /mnt/data/archives1 'level: FATAL OR level: ERROR'
 ```
 
 ## Current limitations

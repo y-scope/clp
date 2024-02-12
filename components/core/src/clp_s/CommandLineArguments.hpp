@@ -64,6 +64,8 @@ public:
 
     std::optional<epochtime_t> get_search_end_ts() const { return m_search_end_ts; }
 
+    bool get_ignore_case() const { return m_ignore_case; }
+
     std::string const& get_archive_id() const { return m_archive_id; }
 
     std::optional<clp::GlobalMetadataDBConfig> const& get_metadata_db_config() const {
@@ -107,6 +109,7 @@ private:
     std::string m_query;
     std::optional<epochtime_t> m_search_begin_ts;
     std::optional<epochtime_t> m_search_end_ts;
+    bool m_ignore_case{false};
 
     // Decompression and search variables
     std::string m_archive_id;
