@@ -436,6 +436,7 @@ int main(int argc, char const* argv[]) {
 
         if (reducer::ServerStatus::ReceivedAllResults == ctx->get_status()) {
             SPDLOG_INFO("Job {} finished successfully", ctx->get_job_id());
+            ctx->get_scheduler_update_socket().close();
         } else if (reducer::ServerStatus::RecoverableFailure == ctx->get_status()) {
             SPDLOG_ERROR("Job {} finished with a recoverable error", ctx->get_job_id());
         } else if ((reducer::ServerStatus::UnrecoverableFailure == ctx->get_status())) {

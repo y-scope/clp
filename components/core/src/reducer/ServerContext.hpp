@@ -148,12 +148,27 @@ public:
      */
     bool register_with_scheduler(boost::asio::ip::tcp::resolver::results_type const& endpoint);
 
+    /**
+     * @return a reference to the tcp socket used to communicate with the search scheduler
+     */
     boost::asio::ip::tcp::socket& get_scheduler_update_socket() { return m_scheduler_socket; }
 
+    /**
+     * @return a reference to the buffer used to receive messages from the search scheduler
+     */
     std::vector<char>& get_scheduler_update_buffer() { return m_scheduler_update_buffer; }
 
+    /**
+     * @return a reference to the timer object used to periodically upsert results to the results
+     * cache
+     */
     boost::asio::steady_timer& get_upsert_timer() { return m_upsert_timer; }
 
+    /**
+     * Stop the event loop by closing the connection with the scheduler, and cancelling any ongoing
+     * operations on this server's listener socket. There may be a short period where periodic tasks
+     * and results receivers keep running before the event loop exits.
+     */
     void stop_event_loop();
 
 private:
