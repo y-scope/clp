@@ -461,7 +461,7 @@ int main(int argc, char const* argv[]) {
             SPDLOG_CRITICAL(
                     "Job {} finished in unexpected state {}",
                     ctx->get_job_id(),
-                    server_status_to_string(ctx->get_status())
+                    reducer::server_status_to_string(ctx->get_status())
             );
             return -1;
         }
