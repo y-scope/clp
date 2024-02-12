@@ -135,7 +135,6 @@ std::shared_ptr<TimestampDictionaryReader> ReaderUtils::read_timestamp_dictionar
     return reader;
 }
 
-
 std::vector<std::string> ReaderUtils::get_archives(std::string const& archives_dir) {
     std::vector<std::string> archive_paths;
 

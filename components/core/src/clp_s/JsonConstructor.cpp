@@ -39,7 +39,6 @@ JsonConstructor::JsonConstructor(JsonConstructorOption const& option)
         );
     }
 
-
     for (auto const& entry : std::filesystem::directory_iterator(m_archives_dir)) {
         if (false == entry.is_directory()) {
             // Skip non-directories

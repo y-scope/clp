@@ -1,5 +1,4 @@
 // Code from CLP
-#include <iostream>
 #include "ZstdCompressor.hpp"
 
 namespace clp_s {

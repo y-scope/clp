@@ -76,9 +76,10 @@ public:
     /**
      * Loads a table from the archive.
      * @param schema_id
+     * @param should_extract_timestamp
      * @return the schema reader
      */
-    std::unique_ptr<SchemaReader> load_table(int32_t schema_id);
+    std::unique_ptr<SchemaReader> load_table(int32_t schema_id, bool should_extract_timestamp);
 
     /**
      * Writes decoded messages to a file.

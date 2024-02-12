@@ -15,7 +15,7 @@ void ArchiveReader::open(std::string const& archive_path) {
     m_array_dict = ReaderUtils::get_array_dictionary_reader(m_archive_path);
 
     m_table_file_reader.open(m_archive_path + "/table");
-//    m_table_decompressor.open(m_table_file_reader, 64 * 1024);
+    //    m_table_decompressor.open(m_table_file_reader, 64 * 1024);
 
     m_metadata_file_reader.open(m_archive_path + "/metadata");
 }
@@ -66,7 +66,8 @@ void ArchiveReader::load_dictionaries_and_metadata() {
     load_metadata();
 }
 
-std::unique_ptr<SchemaReader> ArchiveReader::load_table(int32_t schema_id) {
+std::unique_ptr<SchemaReader>
+ArchiveReader::load_table(int32_t schema_id, bool should_extract_timestamp) {
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 
     if (m_id_to_table_metadata.count(schema_id) == 0) {
@@ -78,7 +79,7 @@ std::unique_ptr<SchemaReader> ArchiveReader::load_table(int32_t schema_id) {
             schema_id,
             m_id_to_table_metadata[schema_id].num_messages
     );
-    append_reader_columns(schema_reader, true);
+    append_reader_columns(schema_reader, should_extract_timestamp);
     m_table_file_reader.try_seek_from_begin(m_id_to_table_metadata[schema_id].offset);
     m_table_decompressor.open(m_table_file_reader, 64 * 1024);
     schema_reader->load(m_table_decompressor);
@@ -144,14 +145,15 @@ ArchiveReader::append_reader_column(std::unique_ptr<SchemaReader>& reader, int32
 
 void ArchiveReader::append_reader_columns(
         std::unique_ptr<SchemaReader>& reader,
-        bool extract_timestamp
+        bool should_extract_timestamp
 ) {
     auto timestamp_column_ids = m_timestamp_dict->get_authoritative_timestamp_column_ids();
 
     for (int32_t column_id : (*m_schema_map)[reader->get_schema_id()]) {
         BaseColumnReader* column_reader = append_reader_column(reader, column_id);
 
-        if (extract_timestamp && column_reader && timestamp_column_ids.count(column_id) > 0) {
+        if (should_extract_timestamp && column_reader && timestamp_column_ids.count(column_id) > 0)
+        {
             reader->mark_column_as_timestamp(column_reader);
         }
     }
@@ -161,7 +163,7 @@ void ArchiveReader::store(FileWriter& writer) {
     std::string message;
 
     for (auto& [id, table_metadata] : m_id_to_table_metadata) {
-        auto schema_reader = load_table(id);
+        auto schema_reader = load_table(id, false);
         while (schema_reader->get_next_message(message)) {
             writer.write(message.c_str(), message.length());
         }
