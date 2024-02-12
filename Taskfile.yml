@@ -176,11 +176,9 @@ tasks:
 
   webui:
     deps:
-      - "webui-bundle"
       - "nodejs"
-    dir: "components/webui"
+      - "webui-bundle"
     cmds:
-      - "rm -rf '{{.WEBUI_BUILD_DIR}}/bundle/'"
       - |-
         cd "{{.WEBUI_BUILD_DIR}}/programs/server"
         PATH="{{.NODEJS_BIN_DIR}}":$PATH $(readlink -f "{{.NODEJS_BIN_DIR}}/npm") install
@@ -199,6 +197,7 @@ tasks:
         launcher.js
         settings.json
         "{{.WEBUI_BUILD_DIR}}/"
+      - "rm -rf '{{.WEBUI_BUILD_DIR}}/bundle/'"
     sources:
       - "./.meteor/*"
       - "./client/**/*"
