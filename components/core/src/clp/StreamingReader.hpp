@@ -110,6 +110,7 @@ public:
             m_buffer_pool_size = cMinimalBufferPoolSize;
         }
         for (size_t i = 0; i < m_buffer_pool_size; ++i) {
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
             m_buffer_pool.emplace_back(std::make_unique<char[]>(m_buffer_size));
         }
     }
@@ -117,7 +118,7 @@ public:
     /**
      * Destructor.
      */
-    ~StreamingReader() {
+    virtual ~StreamingReader() {
         if (StatusCode::NotInit == m_status_code) {
             return;
         }
@@ -383,6 +384,7 @@ private:
     uint32_t m_connection_timeout{cDefaultConnectionTimeout};
     uint32_t m_operation_timeout{cDefaultOperationTimeout};
 
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
     std::vector<std::unique_ptr<char[]>> m_buffer_pool;
     std::queue<BufferView> m_fetched_buffer_queue;
     std::optional<BufferView> m_fetching_buffer{std::nullopt};

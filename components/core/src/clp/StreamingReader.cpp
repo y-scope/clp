@@ -14,6 +14,7 @@ namespace {
  * @return a StreamingReader type pointer.
  */
 [[nodiscard]] auto get_reader(void* ptr) -> StreamingReader* {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     return reinterpret_cast<StreamingReader*>(ptr);
 }
 }  // namespace
@@ -75,7 +76,7 @@ auto StreamingReader::transfer_thread_entry(
     reader.m_file_pos = offset;
     struct curl_slist* request_header{nullptr};
     if (0 != offset) {
-        std::string range{"Range: bytes=" + std::to_string(offset) + "-"};
+        std::string const range{"Range: bytes=" + std::to_string(offset) + "-"};
         request_header = curl_slist_append(request_header, range.c_str());
     }
     if (disable_caching) {
@@ -153,8 +154,7 @@ auto StreamingReader::open(std::string_view src_url, size_t offset, bool disable
 
 auto StreamingReader::terminate_current_transfer() -> void {
     if (StatusCode::InProgress != m_status_code) {
-        while (false == is_transfer_terminated())
-            ;
+        while (false == is_transfer_terminated()) {}
         return;
     }
     // If control flow reaches here, it means the we need to kill the current connected session.
@@ -207,7 +207,7 @@ auto StreamingReader::commit_fetching_buffer() -> void {
     if (false == m_fetching_buffer.has_value()) {
         return;
     }
-    std::unique_lock<std::mutex> buffer_resource_lock{m_buffer_resource_mutex};
+    std::unique_lock<std::mutex> const buffer_resource_lock{m_buffer_resource_mutex};
     auto const fetching_buffer{m_fetching_buffer.value()};
     m_fetched_buffer_queue.emplace(fetching_buffer.data(), m_fetching_buffer_pos);
     ++m_num_fetched_buffer;
@@ -243,7 +243,7 @@ auto StreamingReader::set_reading_buffer() -> bool {
 }
 
 auto StreamingReader::free_reading_buffer() -> void {
-    std::unique_lock<std::mutex> buffer_resource_lock{m_buffer_resource_mutex};
+    std::unique_lock<std::mutex> const buffer_resource_lock{m_buffer_resource_mutex};
     m_reading_buffer.reset();
     --m_num_fetched_buffer;
     m_cv_fetcher.notify_all();
@@ -260,6 +260,9 @@ auto StreamingReader::commit_fetching(size_t num_bytes_fetched) -> void {
 }
 
 auto StreamingReader::commit_reading(size_t num_bytes_read) -> void {
+    if (false == m_reading_buffer.has_value()) {
+        throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
+    }
     auto const reading_buffer_size{m_reading_buffer.value().size()};
     if (reading_buffer_size < num_bytes_read) {
         throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
@@ -274,7 +277,7 @@ auto StreamingReader::commit_reading(size_t num_bytes_read) -> void {
 
 auto StreamingReader::get_buffer_to_fetch(BufferView& fetching_buffer) -> bool {
     if (false == m_fetching_buffer.has_value()) {
-        if (false == set_fetching_buffer()) {
+        if (false == set_fetching_buffer() || false == m_fetching_buffer.has_value()) {
             return false;
         }
         fetching_buffer = m_fetching_buffer.value();
@@ -325,7 +328,7 @@ auto StreamingReader::read_from_fetched_buffers(
     }
     while (0 != num_bytes_to_read) {
         if (false == m_reading_buffer.has_value()) {
-            if (false == set_reading_buffer()) {
+            if (false == set_reading_buffer() || false == m_reading_buffer.has_value()) {
                 return ErrorCode_EndOfFile;
             }
         }
