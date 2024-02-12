@@ -306,6 +306,7 @@ struct SchedulerUpdateListenerTask {
         size_t size_header;
         if (current_buffer_occupancy < sizeof(size_header)) {
             queue_scheduler_update_listener_task(ctx, current_buffer_occupancy);
+            return;
         }
         auto& buffer = ctx->get_scheduler_update_buffer();
         memcpy(&size_header, buffer.data(), sizeof(size_header));
@@ -320,6 +321,7 @@ struct SchedulerUpdateListenerTask {
         size_t total_message_size = sizeof(size_header) + size_header;
         if (current_buffer_occupancy < total_message_size) {
             queue_scheduler_update_listener_task(ctx, current_buffer_occupancy);
+            return;
         }
 
         nlohmann::json message = nlohmann::json::from_msgpack(
@@ -378,7 +380,7 @@ void queue_scheduler_update_listener_task(
     boost::asio::async_read(
             ctx->get_scheduler_update_socket(),
             boost::asio::dynamic_buffer(ctx->get_scheduler_update_buffer()),
-            boost::asio::transfer_at_least(1),
+            boost::asio::transfer_at_least(1),  // makes boost asio foreward results right away
             SchedulerUpdateListenerTask(ctx, current_buffer_occupancy)
     );
 }
