@@ -168,7 +168,8 @@ tasks:
         -o "{{.NODEJS_BUILD_DIR}}/{{.TAR_FILE_NAME}}"
       - "tar xf '{{.NODEJS_BUILD_DIR}}/{{.TAR_FILE_NAME}}' -C '{{.NODEJS_BUILD_DIR}}'"
       - >-
-        mv "{{.NODEJS_BUILD_DIR}}/node-v{{.NODEJS_VERSION}}-linux-{{.NODEJS_ARCH}}" "{{.NODEJS_BUILD_DIR}}/node"
+        mv "{{.NODEJS_BUILD_DIR}}/node-v{{.NODEJS_VERSION}}-linux-{{.NODEJS_ARCH}}"
+        "{{.NODEJS_BUILD_DIR}}/node"
       - "rm -f '{{.NODEJS_BUILD_DIR}}/{{.TAR_FILE_NAME}}'"
     sources:
       - "{{.NODEJS_BUILD_DIR}}/node/**/*"
