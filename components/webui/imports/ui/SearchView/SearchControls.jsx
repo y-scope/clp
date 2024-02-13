@@ -50,12 +50,8 @@ const SearchControlsFilterLabel = (props) => (
         {...props}
         className={"search-filter-control-label"}
         column={"sm"}
-        xs={3}
         sm={2}
-        md={2}
-        lg={2}
-        xl={1}
-        xxl={1}/>
+        llg={1}/>
 );
 
 /**
@@ -147,8 +143,8 @@ const SearchFilterControlsDrawer = ({
         timestampEndMax = new Date(timeRange.end).setHours(23, 59, 59, 999);
     }
 
-    return (<div className={"search-filter-controls-drawer border-bottom"}>
-        <Container fluid={true}>
+    return (<div className={"search-filter-controls-drawer border-bottom px-2 py-3 w-100"}>
+        <Container fluid={"sm"} className={"mx-0"}>
             <Form.Group as={Row} className={"mb-2"}>
                 <SearchControlsFilterLabel>
                     Time Range
@@ -188,7 +184,7 @@ const SearchFilterControlsDrawer = ({
                     </InputGroup>
                 </Col>
             </Form.Group>
-            <Form.Group as={Row} className={"mb-2"}>
+            <Form.Group as={Row}>
                 <SearchControlsFilterLabel>
                     Case sensitivity
                 </SearchControlsFilterLabel>
