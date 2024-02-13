@@ -194,14 +194,14 @@ const SearchFilterControlsDrawer = ({
                 </SearchControlsFilterLabel>
                 <Col className={"mt-1"}>
                     <SearchControlsCaseSensitivityCheck
-                        checked={false === ignoreCase}
-                        label={"Sensitive"}
-                        value={false}
-                        onChange={handleCaseSensitivityChange}/>
-                    <SearchControlsCaseSensitivityCheck
                         checked={true === ignoreCase}
                         label={"Insensitive"}
                         value={true}
+                        onChange={handleCaseSensitivityChange}/>
+                    <SearchControlsCaseSensitivityCheck
+                        checked={false === ignoreCase}
+                        label={"Sensitive"}
+                        value={false}
                         onChange={handleCaseSensitivityChange}/>
                 </Col>
             </Form.Group>
