@@ -7,13 +7,13 @@ set -e
 set -u
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-scripts_prefix=$script_dir/..
+lib_install_scripts_dir=$script_dir/..
 
-"$scripts_prefix"/fmtlib.sh 8.0.1
-"$scripts_prefix"/libarchive.sh 3.5.1
-"$scripts_prefix"/lz4.sh 1.8.2
-"$scripts_prefix"/mongoc.sh 1.24.4
-"$scripts_prefix"/mongocxx.sh 3.8.0
-"$scripts_prefix"/msgpack.sh 6.0.0
-"$scripts_prefix"/spdlog.sh 1.9.2
-"$scripts_prefix"/zstandard.sh 1.4.9
+"$lib_install_scripts_dir"/fmtlib.sh 8.0.1
+"$lib_install_scripts_dir"/libarchive.sh 3.5.1
+"$lib_install_scripts_dir"/lz4.sh 1.8.2
+"$lib_install_scripts_dir"/mongoc.sh 1.24.4
+"$lib_install_scripts_dir"/mongocxx.sh 3.8.0
+"$lib_install_scripts_dir"/msgpack.sh 6.0.0
+"$lib_install_scripts_dir"/spdlog.sh 1.9.2
+"$lib_install_scripts_dir"/zstandard.sh 1.4.9
