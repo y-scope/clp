@@ -24,6 +24,8 @@ import {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResultsTable.jsx";
 const PROGRESS_INCREMENT = 5;
 const PROGRESS_INTERVAL_MS = 100;
 
+const DEFAULT_IGNORE_CASE_SETTING = true;
+
 /**
  * Provides a search interface, which search queries and visualizes search results.
  */
@@ -40,6 +42,7 @@ const SearchView = () => {
     // Query options
     const [queryString, setQueryString] = useState("");
     const [timeRange, setTimeRange] = useState(DEFAULT_TIME_RANGE);
+    const [ignoreCase, setIgnoreCase] = useState(DEFAULT_IGNORE_CASE_SETTING);
     const [visibleSearchResultsLimit, setVisibleSearchResultsLimit] = useState(
         VISIBLE_RESULTS_LIMIT_INITIAL);
     const [fieldToSortBy, setFieldToSortBy] = useState({
@@ -125,6 +128,7 @@ const SearchView = () => {
             queryString: queryString,
             timestampBegin: timestampBeginMillis,
             timestampEnd: timestampEndMillis,
+            ignoreCase: ignoreCase
         };
         Meteor.call("search.submitQuery", args, (error, result) => {
             if (error) {
@@ -184,6 +188,8 @@ const SearchView = () => {
                 setQueryString={setQueryString}
                 timeRange={timeRange}
                 setTimeRange={setTimeRange}
+                ignoreCase={ignoreCase}
+                setIgnoreCase={setIgnoreCase}
                 resultsMetadata={resultsMetadata}
                 onSubmitQuery={submitQuery}
                 onClearResults={handleClearResults}

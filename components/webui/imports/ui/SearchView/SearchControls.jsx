@@ -42,27 +42,48 @@ const SearchControlsDatePicker = (props) => (<DatePicker
 /**
  * Renders a label for a search filter control.
  *
- * @param {Object} props to be passed to the Form.Label component
+ * @param {Object} props
  * @returns {JSX.Element}
  */
-const SearchControlsFilterLabel = (props) => (<Form.Label
-    {...props}
-    column={"sm"}
-    xs={"auto"}
-    className="search-filter-control-label"
-/>);
+const SearchControlsFilterLabel = (props) => (
+    <Form.Label
+        {...props}
+        className={"search-filter-control-label"}
+        column={"sm"}
+        sm={2}/>
+);
+
+/**
+ * Renders a case sensitivity checkbox.
+ *
+ * @param {Object} props
+ * @param {string} props.label
+ * @returns {JSX.Element}
+ */
+const SearchControlsCaseSensitivityCheck = (props) => (
+    <Form.Check
+        {...props}
+        id={props.label}
+        inline={true}
+        name={"case-sensitivity"}
+        type={"radio"}/>
+);
 
 /**
  * Renders the controls for filtering search results by time range, including a date picker and
  * preset time range options.
  *
- * @param {Object} timeRange for filtering.
- * @param {function} setTimeRange callback to set timeRange
+ * @param {Object} timeRange
+ * @param {function} setTimeRange
+ * @param {boolean} ignoreCase
+ * @param {function} setIgnoreCase
  * @returns {JSX.Element}
  */
 const SearchFilterControlsDrawer = ({
     timeRange,
     setTimeRange,
+    ignoreCase,
+    setIgnoreCase,
 }) => {
     const updateBeginTimestamp = (date) => {
         if (date.getTime() > timeRange.end.getTime()) {
@@ -91,6 +112,16 @@ const SearchFilterControlsDrawer = ({
         const timeRange = computeTimeRange(presetToken);
 
         setTimeRange(timeRange);
+    };
+
+    /**
+     * Handles case sensitivity change.
+     *
+     * @param {InputEvent} event
+     * @returns {void}
+     */
+    const handleCaseSensitivityChange = (event) => {
+        setIgnoreCase("true" === event.target.value);
     };
 
     const timeRangePresetItems = Object.entries(TIME_RANGE_PRESET_LABEL).map(([token, label]) =>
@@ -152,6 +183,23 @@ const SearchFilterControlsDrawer = ({
                     </InputGroup>
                 </Col>
             </Form.Group>
+            <Form.Group as={Row} className={"mb-2"}>
+                <SearchControlsFilterLabel>
+                    Case sensitivity
+                </SearchControlsFilterLabel>
+                <Col className={"mt-1"}>
+                    <SearchControlsCaseSensitivityCheck
+                        checked={false === ignoreCase}
+                        label={"Sensitive"}
+                        value={false}
+                        onChange={handleCaseSensitivityChange}/>
+                    <SearchControlsCaseSensitivityCheck
+                        checked={true === ignoreCase}
+                        label={"Insensitive"}
+                        value={true}
+                        onChange={handleCaseSensitivityChange}/>
+                </Col>
+            </Form.Group>
         </Container>
     </div>);
 };
@@ -160,14 +208,16 @@ const SearchFilterControlsDrawer = ({
  * Renders the search controls including query input, filter drawer toggle, and operation buttons
  * like submit, clear, and cancel. It also manages the state of the drawer.
  *
- * @param {string} queryString for matching logs
- * @param {function} setQueryString callback to set queryString
- * @param {Object} timeRange for filtering
- * @param {function} setTimeRange callback to set timeRange
- * @param {Object} resultsMetadata which includes last request / response signal
- * @param {function} onSubmitQuery callback to submit the search query
- * @param {function} onClearResults callback to clear search results
- * @param {function} onCancelOperation callback to cancel the ongoing search operation
+ * @param {string} queryString
+ * @param {function} setQueryString
+ * @param {Object} timeRange
+ * @param {function} setTimeRange
+ * @param {boolean} ignoreCase
+ * @param {function} setIgnoreCase
+ * @param {Object} resultsMetadata
+ * @param {function} onSubmitQuery
+ * @param {function} onClearResults
+ * @param {function} onCancelOperation
  * @returns {JSX.Element}
  */
 const SearchControls = ({
@@ -175,6 +225,8 @@ const SearchControls = ({
     setQueryString,
     timeRange,
     setTimeRange,
+    ignoreCase,
+    setIgnoreCase,
     resultsMetadata,
     onSubmitQuery,
     onClearResults,
@@ -278,6 +330,8 @@ const SearchControls = ({
         {drawerOpen && <SearchFilterControlsDrawer
             timeRange={timeRange}
             setTimeRange={setTimeRange}
+            ignoreCase={ignoreCase}
+            setIgnoreCase={setIgnoreCase}
         />}
     </>;
 };
