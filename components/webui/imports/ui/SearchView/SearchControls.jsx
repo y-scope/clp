@@ -50,7 +50,12 @@ const SearchControlsFilterLabel = (props) => (
         {...props}
         className={"search-filter-control-label"}
         column={"sm"}
-        sm={2}/>
+        xs={3}
+        sm={2}
+        md={2}
+        lg={2}
+        xl={1}
+        xxl={1}/>
 );
 
 /**
