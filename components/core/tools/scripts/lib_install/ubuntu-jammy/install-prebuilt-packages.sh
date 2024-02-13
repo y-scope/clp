@@ -17,6 +17,8 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   libboost-filesystem-dev \
   libboost-iostreams-dev \
   libboost-program-options-dev \
+  libcurl4 \
+  libcurl4-openssl-dev \
   libmariadb-dev \
   libssl-dev \
   openjdk-11-jdk \
