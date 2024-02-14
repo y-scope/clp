@@ -158,7 +158,7 @@ def main(argv):
         help="The path (e.g. x.y) for the field containing the log event's timestamp.",
     )
     args_parser.add_argument(
-        "-t", "--tag", help="A comma-separated list of tags to add to the compressed archive."
+        "-t", "--tags", help="A comma-separated list of tags to add to the compressed archive."
     )
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -209,8 +209,8 @@ def main(argv):
     if parsed_args.remove_path_prefix:
         clp_input_config.path_prefix_to_remove = parsed_args.remove_path_prefix
     clp_output_config = OutputConfig.parse_obj(clp_config.archive_output)
-    if parsed_args.tag:
-        clp_output_config.tags = parsed_args.tag.split(",")
+    if parsed_args.tags:
+        clp_output_config.tags = parsed_args.tags.split(",")
     clp_io_config = ClpIoConfig(input=clp_input_config, output=clp_output_config)
 
     return handle_job(
