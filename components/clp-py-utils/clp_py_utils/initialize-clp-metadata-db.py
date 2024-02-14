@@ -33,7 +33,7 @@ def main(argv):
         clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
         table_prefix = clp_db_connection_params["table_prefix"]
         with closing(sql_adapter.create_connection(True)) as metadata_db, closing(
-            metadata_db.cursor(dictionary=True)
+                metadata_db.cursor(dictionary=True)
         ) as metadata_db_cursor:
             metadata_db_cursor.execute(
                 f"""
@@ -49,6 +49,29 @@ def main(argv):
                     KEY `archives_creation_order` (`creator_id`,`creation_ix`) USING BTREE,
                     UNIQUE KEY `archive_id` (`id`) USING BTREE,
                     PRIMARY KEY (`pagination_id`)
+                )
+                """
+            )
+
+            metadata_db_cursor.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS `{table_prefix}tags` (
+                    `tag_id` INT unsigned NOT NULL AUTO_INCREMENT,
+                    `tag_name` VARCHAR(255) NOT NULL,
+                    UNIQUE KEY (`tag_name`) USING BTREE,
+                    PRIMARY KEY (`tag_id`)
+                )
+                """
+            )
+
+            metadata_db_cursor.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS `{table_prefix}archive_tags` (
+                    `archive_id` VARCHAR(64) NOT NULL,
+                    `tag_id` INT unsigned NOT NULL,
+                    PRIMARY KEY (`archive_id`,`tag_id`),
+                    FOREIGN KEY (`archive_id`) REFERENCES `{table_prefix}archives` (`id`),
+                    FOREIGN KEY (`tag_id`) REFERENCES `{table_prefix}tags` (`tag_id`)
                 )
                 """
             )
