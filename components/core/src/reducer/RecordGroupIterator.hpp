@@ -8,7 +8,7 @@
 
 namespace reducer {
 /**
- * Class that allows iterating over all records in a RecordGroup.
+ * Class that allows iterating over a list of RecordGroups.
  */
 class RecordGroupIterator {
 public:
