@@ -15,6 +15,7 @@ from clp_py_utils.clp_config import (
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    WEBUI_COMPONENT_NAME,
 )
 from clp_py_utils.core import (
     get_config_value,
@@ -351,3 +352,19 @@ def validate_results_cache_config(
 def validate_worker_config(clp_config: CLPConfig):
     clp_config.validate_input_logs_dir()
     clp_config.validate_archive_output_dir()
+
+
+def validate_webui_config(
+    clp_config: CLPConfig, logs_dir: pathlib.Path, settings_json_path: pathlib.Path
+):
+    if not settings_json_path.exists():
+        raise ValueError(
+            f"{WEBUI_COMPONENT_NAME} {settings_json_path} is not a valid path to Meteor settings.json"
+        )
+
+    try:
+        validate_path_could_be_dir(logs_dir)
+    except ValueError as ex:
+        raise ValueError(f"{WEBUI_COMPONENT_NAME} logs directory is invalid: {ex}")
+
+    validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)

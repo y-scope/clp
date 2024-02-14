@@ -33,11 +33,19 @@ jobs:
           username: "${{github.actor}}"
           password: "${{secrets.GITHUB_TOKEN}}"
 
+      - id: "sanitization"
+        shell: "bash"
+        run: |
+          # Docker doesn't support repository names with uppercase characters, so we convert the
+          # name to lowercase here.
+          echo "REPOSITORY=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')" \
+            >> "$GITHUB_OUTPUT"
+
       - id: "meta"
         uses: "docker/metadata-action@v5"
         with:
-          images: >-
-            ${{env.CONTAINER_IMAGE_REGISTRY}}/${{github.repository}}/clp-execution-x86-ubuntu-focal
+          images: "${{env.CONTAINER_IMAGE_REGISTRY}}/${{steps.sanitization.outputs.REPOSITORY}}\
+            /clp-execution-x86-ubuntu-focal"
 
       - if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
         uses: "docker/build-push-action@v5"

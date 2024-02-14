@@ -1,9 +1,14 @@
 #include "JsonConstructor.hpp"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
+#include <system_error>
 
+#include <fmt/core.h>
+
+#include "ErrorCode.hpp"
 #include "ReaderUtils.hpp"
 #include "SchemaTree.hpp"
+#include "TraceableException.hpp"
 
 namespace clp_s {
 JsonConstructor::JsonConstructor(JsonConstructorOption const& option)
@@ -11,28 +16,45 @@ JsonConstructor::JsonConstructor(JsonConstructorOption const& option)
           m_archives_dir(option.archives_dir),
           m_current_archive_index(0),
           m_max_archive_index(0) {
-    if (false == boost::filesystem::create_directory(m_output_dir)) {
-        SPDLOG_ERROR("Can not create directory '{}'", m_output_dir);
-        exit(1);
+    std::error_code error_code;
+    if (false == std::filesystem::create_directory(option.output_dir, error_code) && error_code) {
+        throw OperationFailed(
+                ErrorCodeFailure,
+                __FILENAME__,
+                __LINE__,
+                fmt::format(
+                        "Cannot create directory '{}' - {}",
+                        option.output_dir,
+                        error_code.message()
+                )
+        );
     }
 
-    if (false == boost::filesystem::is_directory(m_archives_dir)) {
-        SPDLOG_ERROR("'{}' is not a directory", m_archives_dir);
-        exit(1);
+    if (false == std::filesystem::is_directory(m_archives_dir)) {
+        throw OperationFailed(
+                ErrorCodeFailure,
+                __FILENAME__,
+                __LINE__,
+                fmt::format("'{}' is not a directory", m_archives_dir)
+        );
     }
 
-    boost::filesystem::directory_iterator iter(m_archives_dir);
-    boost::filesystem::directory_iterator end;
-
-    for (; iter != end; ++iter) {
-        if (boost::filesystem::is_directory(iter->path())) {
-            m_archive_paths.push_back(iter->path().string());
+    for (auto const& entry : std::filesystem::directory_iterator(m_archives_dir)) {
+        if (false == entry.is_directory()) {
+            // Skip non-directories
+            continue;
         }
+
+        m_archive_paths.push_back(entry.path().string());
     }
 
     if (m_archive_paths.empty()) {
-        SPDLOG_ERROR("No archives in '{}'", m_archives_dir);
-        exit(1);
+        throw OperationFailed(
+                ErrorCodeFailure,
+                __FILENAME__,
+                __LINE__,
+                fmt::format("No sub-archives in '{}'", m_archives_dir)
+        );
     }
 
     m_max_archive_index = m_archive_paths.size() - 1;
@@ -52,7 +74,7 @@ void JsonConstructor::construct() {
 
 void JsonConstructor::store() {
     FileWriter writer;
-    writer.open(m_output_dir + "/original", FileWriter::OpenMode::CreateForWriting);
+    writer.open(m_output_dir + "/original", FileWriter::OpenMode::CreateIfNonexistentForAppending);
 
     while (m_current_archive_index <= m_max_archive_index) {
         ArchiveReaderOption option;

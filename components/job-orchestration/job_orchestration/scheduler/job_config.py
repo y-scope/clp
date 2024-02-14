@@ -34,4 +34,5 @@ class SearchConfig(BaseModel):
     query_string: str
     begin_timestamp: typing.Optional[int] = None
     end_timestamp: typing.Optional[int] = None
+    ignore_case: bool = False
     path_filter: typing.Optional[str] = None

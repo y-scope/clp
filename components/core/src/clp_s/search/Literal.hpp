@@ -20,7 +20,6 @@ enum LiteralType : uint32_t {
     ArrayT = 1 << 5,
     NullT = 1 << 6,
     EpochDateT = 1 << 7,
-    FloatDateT = 1 << 8,
     TypesEnd = 1 << 9,
     UnknownT = ((uint32_t)1) << 31
 };
@@ -74,8 +73,6 @@ public:
                 return "null";
             case LiteralType::EpochDateT:
                 return "epochdate";
-            case LiteralType::FloatDateT:
-                return "floatdate";
             default:
                 return "errtype";
         }
@@ -105,8 +102,6 @@ public:
     }
 
     virtual bool as_epoch_date() { return false; }
-
-    virtual bool as_float_date() { return false; }
 
     virtual bool as_any(FilterOperation op) { return false; }
 };

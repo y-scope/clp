@@ -86,12 +86,7 @@ def main(argv):
         "--mount", str(mounts.clp_home),
     ]
     # fmt: on
-    necessary_mounts = [
-        mounts.input_logs_dir,
-        mounts.data_dir,
-        mounts.logs_dir,
-        mounts.archives_output_dir,
-    ]
+    necessary_mounts = [mounts.input_logs_dir, mounts.data_dir, mounts.logs_dir]
     for mount in necessary_mounts:
         if mount:
             container_start_cmd.append("--mount")

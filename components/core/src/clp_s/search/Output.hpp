@@ -30,14 +30,16 @@ public:
            std::shared_ptr<Expression> expr,
            std::string archives_dir,
            std::shared_ptr<TimestampDictionaryReader> timestamp_dict,
-           std::unique_ptr<OutputHandler> output_handler)
+           std::unique_ptr<OutputHandler> output_handler,
+           bool ignore_case)
             : m_schema_tree(std::move(tree)),
               m_schemas(std::move(schemas)),
               m_match(match),
               m_expr(std::move(expr)),
               m_archives_dir(std::move(archives_dir)),
               m_timestamp_dict(std::move(timestamp_dict)),
-              m_output_handler(std::move(output_handler)) {}
+              m_output_handler(std::move(output_handler)),
+              m_ignore_case(ignore_case) {}
 
     /**
      * Filters messages from all archives
@@ -49,6 +51,7 @@ private:
     std::shared_ptr<Expression> m_expr;
     std::string m_archives_dir;
     std::unique_ptr<OutputHandler> m_output_handler;
+    bool m_ignore_case;
 
     // variables for the current schema being filtered
     std::vector<BaseColumnReader*> m_searched_columns;
@@ -73,14 +76,12 @@ private:
     std::unordered_map<int32_t, ClpStringColumnReader*> m_clp_string_readers;
     std::unordered_map<int32_t, VariableStringColumnReader*> m_var_string_readers;
     std::unordered_map<int32_t, DateStringColumnReader*> m_datestring_readers;
-    std::unordered_map<int32_t, FloatDateStringColumnReader*> m_floatdatestring_readers;
     uint64_t m_cur_message;
     EvaluatedValue m_expression_value;
 
     std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_clpstrings;
     std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_varstrings;
     std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_datestrings;
-    std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_floatdatestrings;
     std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_columns;
 
     simdjson::ondemand::parser m_array_parser;
@@ -204,19 +205,6 @@ private:
     bool evaluate_epoch_date_filter(
             FilterOperation op,
             DateStringColumnReader* reader,
-            std::shared_ptr<Literal>& operand
-    );
-
-    /**
-     * Evaluates a float date string filter expression
-     * @param op
-     * @param reader
-     * @param operand
-     * @return true if the expression evaluates to true, false otherwise
-     */
-    bool evaluate_float_date_filter(
-            FilterOperation op,
-            FloatDateStringColumnReader* reader,
             std::shared_ptr<Literal>& operand
     );
 

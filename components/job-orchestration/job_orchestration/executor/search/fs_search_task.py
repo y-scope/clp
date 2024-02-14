@@ -40,6 +40,8 @@ def make_clo_command(
     if search_config.end_timestamp is not None:
         search_cmd.append("--tle")
         search_cmd.append(str(search_config.end_timestamp))
+    if search_config.ignore_case:
+        search_cmd.append("--ignore-case")
     if search_config.path_filter is not None:
         search_cmd.append(search_config.path_filter)
 
@@ -48,7 +50,8 @@ def make_clo_command(
 
 def make_clp_s_command(
     clp_home: Path,
-    archive_path: Path,
+    archives_dir: Path,
+    archive_id: str,
     search_config: SearchConfig,
     results_cache_uri: str,
     results_collection: str,
@@ -57,7 +60,8 @@ def make_clp_s_command(
     search_cmd = [
         str(clp_home / "bin" / "clp-s"),
         "s",
-        str(archive_path),
+        str(archives_dir),
+        "--archive-id", archive_id,
         search_config.query_string,
         "--mongodb-uri", results_cache_uri,
         "--mongodb-collection", results_collection,
@@ -70,6 +74,8 @@ def make_clp_s_command(
     if search_config.end_timestamp is not None:
         search_cmd.append("--tle")
         search_cmd.append(str(search_config.end_timestamp))
+    if search_config.ignore_case:
+        search_cmd.append("--ignore-case")
 
     return search_cmd
 
@@ -112,7 +118,8 @@ def search(
     elif StorageEngine.CLP_S == clp_storage_engine:
         search_cmd = make_clp_s_command(
             clp_home=clp_home,
-            archive_path=archive_path,
+            archives_dir=archive_directory,
+            archive_id=archive_id,
             search_config=search_config,
             results_cache_uri=results_cache_uri,
             results_collection=job_id,

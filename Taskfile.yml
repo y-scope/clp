@@ -4,11 +4,14 @@ vars:
   BUILD_DIR: "{{.TASKFILE_DIR}}/build"
   CORE_COMPONENT_BUILD_DIR: "{{.TASKFILE_DIR}}/build/core"
   LINT_VENV_DIR: "{{.TASKFILE_DIR}}/.lint-venv"
+  NODEJS_BIN_DIR: "{{.TASKFILE_DIR}}/build/nodejs/node/bin"
+  NODEJS_BUILD_DIR: "{{.TASKFILE_DIR}}/build/nodejs"
   PACKAGE_BUILD_DIR: "{{.TASKFILE_DIR}}/build/clp-package"
   PACKAGE_VENV_DIR: "{{.TASKFILE_DIR}}/build/package-venv"
   PACKAGE_VERSION: "0.0.3-dev"
   PYTHON_VERSION:
     sh: "python3 -c \"import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')\""
+  WEBUI_BUILD_DIR: "{{.TASKFILE_DIR}}/build/webui"
 
 tasks:
   default:
@@ -60,6 +63,7 @@ tasks:
       - "clp-py-utils"
       - "job-orchestration"
       - "package-venv"
+      - "webui"
     cmds:
       - task: "clean-package"
       - "mkdir -p '{{.PACKAGE_BUILD_DIR}}'"
@@ -79,7 +83,13 @@ tasks:
         "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
         "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
         "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
+        "{{.NODEJS_BIN_DIR}}/node"
         "{{.PACKAGE_BUILD_DIR}}/bin/"
+      - "mkdir -p '{{.PACKAGE_BUILD_DIR}}/var/www/'"
+      - >-
+        rsync -a --delete
+        "{{.WEBUI_BUILD_DIR}}/"
+        "{{.PACKAGE_BUILD_DIR}}/var/www/"
       # This step must be last since we use this file to detect whether the package was built
       # successfully
       - "echo {{.PACKAGE_VERSION}} > '{{.PACKAGE_VERSION_FILE}}'"
@@ -90,6 +100,7 @@ tasks:
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "{{.WEBUI_BUILD_DIR}}/**/*"
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
@@ -142,6 +153,59 @@ tasks:
     - task: "python-component"
       vars:
         COMPONENT: "{{.TASK}}"
+
+  nodejs:
+    vars:
+      NODEJS_VERSION: "14.21.3"
+      NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
+      TAR_FILE_NAME: "node-v{{.NODEJS_VERSION}}-linux-{{.NODEJS_ARCH}}.tar.xz"
+    cmds:
+      - "rm -rf '{{.NODEJS_BUILD_DIR}}/node'"
+      - "mkdir -p '{{.NODEJS_BUILD_DIR}}'"
+      - >-
+        curl -fsSL
+        "https://nodejs.org/dist/v{{.NODEJS_VERSION}}/{{.TAR_FILE_NAME}}"
+        -o "{{.NODEJS_BUILD_DIR}}/{{.TAR_FILE_NAME}}"
+      - "tar xf '{{.NODEJS_BUILD_DIR}}/{{.TAR_FILE_NAME}}' -C '{{.NODEJS_BUILD_DIR}}'"
+      - >-
+        mv "{{.NODEJS_BUILD_DIR}}/node-v{{.NODEJS_VERSION}}-linux-{{.NODEJS_ARCH}}"
+        "{{.NODEJS_BUILD_DIR}}/node"
+      - "rm -f '{{.NODEJS_BUILD_DIR}}/{{.TAR_FILE_NAME}}'"
+    sources:
+      - "{{.NODEJS_BUILD_DIR}}/node/**/*"
+
+  webui:
+    deps:
+      - "nodejs"
+      - "webui-bundle"
+    cmds:
+      - |-
+        cd "{{.WEBUI_BUILD_DIR}}/programs/server"
+        PATH="{{.NODEJS_BIN_DIR}}":$PATH $(readlink -f "{{.NODEJS_BIN_DIR}}/npm") install
+
+  webui-bundle:
+    dir: "components/webui"
+    platforms: ["386", "amd64"]
+    cmds:
+      - "rm -rf '{{.WEBUI_BUILD_DIR}}'"
+      - "mkdir -p '{{.WEBUI_BUILD_DIR}}'"
+      - "meteor npm install --production"
+      - "meteor build --directory '{{.WEBUI_BUILD_DIR}}'"
+      - >-
+        rsync -a
+        "{{.WEBUI_BUILD_DIR}}/bundle/"
+        launcher.js
+        settings.json
+        "{{.WEBUI_BUILD_DIR}}/"
+      - "rm -rf '{{.WEBUI_BUILD_DIR}}/bundle/'"
+    sources:
+      - "./.meteor/*"
+      - "./client/**/*"
+      - "./imports/**/*"
+      - "./server/**/*"
+      - "./tests/**/*"
+      - "./*"
+      - "{{.WEBUI_BUILD_DIR}}/**/*"
 
   lint-check:
     cmds:

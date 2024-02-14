@@ -91,10 +91,10 @@ Usage:
 
 ### Examples
 
-**Search `/mnt/data/archives1` for specific ERROR logs:**
+**Search `/mnt/data/archives1` for specific ERROR logs and ignore case distinctions:**
 
 ```shell
-./clg /mnt/data/archives1 " ERROR * container "
+./clg --ignore-case /mnt/data/archives1 " ERROR * container "
 ```
 
 **Search for logs in a time range:**

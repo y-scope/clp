@@ -57,11 +57,14 @@ Usage:
 Usage:
 
 ```bash
-./clp-s x <archives-dir> <output-dir>
+./clp-s x [<options>] <archives-dir> <output-dir>
 ```
 
 * `archives-dir` is a directory containing archives.
 * `output-dir` is the directory that decompressed logs should be written to.
+* `options` allow you to specify things like a specific archive (from within `archives-dir`) to
+  decompress (`--archive-id <archive-id>`).
+  * For a complete list, run `./clp-s x --help`
 
 ### Examples
 
@@ -76,11 +79,14 @@ Usage:
 Usage:
 
 ```bash
-./clp-s s <archives-dir> <kql-query>
+./clp-s s [<options>] <archives-dir> <kql-query>
 ```
 
 * `archives-dir` is a directory containing archives.
 * `kql-query` is a [KQL][1] query.
+* `options` allow you to specify things like a specific archive (from within `archives-dir`) to
+  search (`--archive-id <archive-id>`).
+  * For a complete list, run `./clp-s s --help`
 
 ### Examples
 
@@ -107,10 +113,11 @@ or
 ./clp-s s /mnt/data/archives1 'level: ERROR AND message: "job*"'
 ```
 
-**Find both FATAL and ERROR log events:**
+**Find FATAL or ERROR log events and ignore case distinctions between values in the query and the
+compressed data:**
 
 ```bash
-./clp-s s /mnt/data/archives1 'level: FATAL OR level: ERROR'
+./clp-s s --ignore-case /mnt/data/archives1 'level: FATAL OR level: ERROR'
 ```
 
 ## Current limitations

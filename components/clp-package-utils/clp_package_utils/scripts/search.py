@@ -50,6 +50,11 @@ def main(argv):
         type=int,
         help="Time range filter upper-bound (inclusive) as milliseconds" " from the UNIX epoch.",
     )
+    args_parser.add_argument(
+        "--ignore-case",
+        action="store_true",
+        help="Ignore case distinctions between values in the query and the compressed data.",
+    )
     args_parser.add_argument("--file-path", help="File to search.")
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -89,10 +94,7 @@ def main(argv):
         "--mount", str(mounts.clp_home),
     ]
     # fmt: on
-    necessary_mounts = [
-        mounts.logs_dir,
-        mounts.archives_output_dir,
-    ]
+    necessary_mounts = [mounts.logs_dir]
     for mount in necessary_mounts:
         if mount:
             container_start_cmd.append("--mount")
@@ -113,6 +115,8 @@ def main(argv):
     if parsed_args.end_time is not None:
         search_cmd.append("--end-time")
         search_cmd.append(str(parsed_args.end_time))
+    if parsed_args.ignore_case:
+        search_cmd.append("--ignore-case")
     if parsed_args.file_path:
         search_cmd.append("--file-path")
         search_cmd.append(parsed_args.file_path)
