@@ -128,7 +128,7 @@ def get_archives_for_search(
 
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
         if search_config.tags is not None:
-            tag_values = ', '.join(['%s' for _ in search_config.tags])
+            tag_values = ", ".join(["%s" for _ in search_config.tags])
             query = query % tag_values
             cursor.execute(query, tuple(search_config.tags))
         else:
