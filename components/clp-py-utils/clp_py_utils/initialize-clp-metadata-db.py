@@ -33,7 +33,7 @@ def main(argv):
         clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
         table_prefix = clp_db_connection_params["table_prefix"]
         with closing(sql_adapter.create_connection(True)) as metadata_db, closing(
-                metadata_db.cursor(dictionary=True)
+            metadata_db.cursor(dictionary=True)
         ) as metadata_db_cursor:
             metadata_db_cursor.execute(
                 f"""

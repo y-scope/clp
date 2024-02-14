@@ -24,10 +24,10 @@ logger = get_task_logger(__name__)
 
 
 def make_clp_command(
-        clp_home: pathlib.Path,
-        archive_output_dir: pathlib.Path,
-        clp_config: ClpIoConfig,
-        db_config_file_path: pathlib.Path,
+    clp_home: pathlib.Path,
+    archive_output_dir: pathlib.Path,
+    clp_config: ClpIoConfig,
+    db_config_file_path: pathlib.Path,
 ):
     path_prefix_to_remove = clp_config.input.path_prefix_to_remove
 
@@ -56,10 +56,10 @@ def make_clp_command(
 
 
 def make_clp_s_command(
-        clp_home: pathlib.Path,
-        archive_output_dir: pathlib.Path,
-        clp_config: ClpIoConfig,
-        db_config_file_path: pathlib.Path,
+    clp_home: pathlib.Path,
+    archive_output_dir: pathlib.Path,
+    clp_config: ClpIoConfig,
+    db_config_file_path: pathlib.Path,
 ):
     # fmt: off
     compression_cmd = [
@@ -91,15 +91,15 @@ def update_tags(db_conn, db_cursor, table_prefix, archive_id, tags):
 
 
 def run_clp(
-        clp_config: ClpIoConfig,
-        clp_home: pathlib.Path,
-        data_dir: pathlib.Path,
-        archive_output_dir: pathlib.Path,
-        logs_dir: pathlib.Path,
-        job_id: int,
-        task_id: int,
-        paths_to_compress: PathsToCompress,
-        clp_metadata_db_connection_config,
+    clp_config: ClpIoConfig,
+    clp_home: pathlib.Path,
+    data_dir: pathlib.Path,
+    archive_output_dir: pathlib.Path,
+    logs_dir: pathlib.Path,
+    job_id: int,
+    task_id: int,
+    paths_to_compress: PathsToCompress,
+    clp_metadata_db_connection_config,
 ):
     """
     Compresses files from an FS into archives on an FS
@@ -171,7 +171,7 @@ def run_clp(
 
     sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_connection_config))
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-            db_conn.cursor(dictionary=True)
+        db_conn.cursor(dictionary=True)
     ) as db_cursor:
         # Compute the total amount of data compressed
         last_archive_stats = None
@@ -188,7 +188,8 @@ def run_clp(
                 total_uncompressed_size += last_archive_stats["uncompressed_size"]
                 total_compressed_size += last_archive_stats["size"]
                 if clp_config.output.tags:
-                    update_tags(db_conn, db_cursor, clp_metadata_db_connection_config["table_prefix"],
+                    update_tags(db_conn, db_cursor,
+                                clp_metadata_db_connection_config["table_prefix"],
                                 last_archive_stats["id"], clp_config.output.tags)
             last_archive_stats = stats
         if last_archive_stats is not None:
@@ -226,12 +227,12 @@ def run_clp(
 
 @app.task(bind=True)
 def compress(
-        self: Task,
-        job_id: int,
-        task_id: int,
-        clp_io_config_json: str,
-        paths_to_compress_json: str,
-        clp_metadata_db_connection_config,
+    self: Task,
+    job_id: int,
+    task_id: int,
+    clp_io_config_json: str,
+    paths_to_compress_json: str,
+    clp_metadata_db_connection_config,
 ):
     clp_home_str = os.getenv("CLP_HOME")
     data_dir_str = os.getenv("CLP_DATA_DIR")
