@@ -37,7 +37,6 @@ public:
      */
     void resize(size_t num_fields);
 
-    void bind_int(size_t field_index, int& value);
     void bind_int64(size_t field_index, int64_t& value);
     void bind_uint64(size_t field_index, uint64_t& value);
     void bind_varchar(size_t field_index, char const* value, size_t value_length);

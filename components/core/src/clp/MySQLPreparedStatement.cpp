@@ -92,15 +92,6 @@ bool MySQLPreparedStatement::execute() {
     return true;
 }
 
-bool MySQLPreparedStatement::get_affected_rows(uint64_t& num_affected_rows) {
-    if (nullptr == m_statement_handle) {
-        throw OperationFailed(ErrorCode_NotInit, __FILE__, __LINE__);
-    }
-
-    num_affected_rows = mysql_affected_rows(m_db_handle);
-    return num_affected_rows != ~static_cast<uint64_t>(0);
-}
-
 void MySQLPreparedStatement::close() {
     if (nullptr != m_statement_handle) {
         if (0 != mysql_stmt_close(m_statement_handle)) {
