@@ -19,6 +19,7 @@ class InputConfig(BaseModel):
 
 
 class OutputConfig(BaseModel):
+    tags: typing.Optional[typing.List[str]] = None
     target_archive_size: int
     target_dictionaries_size: int
     target_segment_size: int
