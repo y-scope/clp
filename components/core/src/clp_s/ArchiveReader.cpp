@@ -174,6 +174,7 @@ void ArchiveReader::close() {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCodeNotInit, __FILENAME__, __LINE__);
     }
+    m_is_open = false;
 
     m_var_dict->close();
     m_log_dict->close();
