@@ -211,9 +211,7 @@ def main(argv):
     clp_output_config = OutputConfig.parse_obj(clp_config.archive_output)
     if parsed_args.tag:
         clp_output_config.tags = parsed_args.tag.split(",")
-    clp_io_config = ClpIoConfig(
-        input=clp_input_config, output=clp_output_config
-    )
+    clp_io_config = ClpIoConfig(input=clp_input_config, output=clp_output_config)
 
     return handle_job(
         sql_adapter=mysql_adapter,

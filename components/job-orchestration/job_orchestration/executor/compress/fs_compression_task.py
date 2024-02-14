@@ -81,12 +81,12 @@ def make_clp_s_command(
 
 def update_tags(db_conn, db_cursor, table_prefix, archive_id, tags):
     for tag in tags:
-        db_cursor.execute(
-            f"INSERT IGNORE INTO {table_prefix}_tags (tag_name) VALUES (%s)", (tag,))
+        db_cursor.execute(f"INSERT IGNORE INTO {table_prefix}_tags (tag_name) VALUES (%s)", (tag,))
         db_cursor.execute(
             f"INSERT INTO {table_prefix}_archive_tags (archive_id, tag_id) VALUES "
             f"(%s, (SELECT tag_id FROM {table_prefix}_tags WHERE tag_name = %s))",
-            (archive_id, tag))
+            (archive_id, tag),
+        )
     db_conn.commit()
 
 
@@ -188,17 +188,26 @@ def run_clp(
                 total_uncompressed_size += last_archive_stats["uncompressed_size"]
                 total_compressed_size += last_archive_stats["size"]
                 if clp_config.output.tags:
-                    update_tags(db_conn, db_cursor,
-                                clp_metadata_db_connection_config["table_prefix"],
-                                last_archive_stats["id"], clp_config.output.tags)
+                    update_tags(
+                        db_conn,
+                        db_cursor,
+                        clp_metadata_db_connection_config["table_prefix"],
+                        last_archive_stats["id"],
+                        clp_config.output.tags,
+                    )
             last_archive_stats = stats
         if last_archive_stats is not None:
             # Add the last archive's last reported size
             total_uncompressed_size += last_archive_stats["uncompressed_size"]
             total_compressed_size += last_archive_stats["size"]
             if clp_config.output.tags:
-                update_tags(db_conn, db_cursor, clp_metadata_db_connection_config["table_prefix"],
-                            last_archive_stats["id"], clp_config.output.tags)
+                update_tags(
+                    db_conn,
+                    db_cursor,
+                    clp_metadata_db_connection_config["table_prefix"],
+                    last_archive_stats["id"],
+                    clp_config.output.tags,
+                )
 
     # Wait for compression to finish
     return_code = proc.wait()
