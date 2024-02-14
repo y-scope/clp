@@ -48,10 +48,9 @@ const SearchControlsDatePicker = (props) => (<DatePicker
 const SearchControlsFilterLabel = (props) => (
     <Form.Label
         {...props}
-        className={"search-filter-control-label"}
+        className={"search-filter-control-label text-nowrap"}
         column={"sm"}
-        sm={2}
-        llg={1}/>
+        md={1}/>
 );
 
 /**
@@ -147,7 +146,7 @@ const SearchFilterControlsDrawer = ({
         <Container fluid={"sm"} className={"mx-0"}>
             <Form.Group as={Row} className={"mb-2"}>
                 <SearchControlsFilterLabel>
-                    Time Range
+                    Time range
                 </SearchControlsFilterLabel>
                 <Col>
                     <InputGroup size={"sm"}>
