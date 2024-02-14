@@ -118,7 +118,6 @@ const SearchFilterControlsDrawer = ({
      * Handles case sensitivity change.
      *
      * @param {InputEvent} event
-     * @returns {void}
      */
     const handleCaseSensitivityChange = (event) => {
         setIgnoreCase("true" === event.target.value);
