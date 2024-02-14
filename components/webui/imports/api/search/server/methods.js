@@ -82,17 +82,20 @@ Meteor.methods({
      * @param {string} queryString
      * @param {number} timestampBegin
      * @param {number} timestampEnd
+     * @param {boolean} ignoreCase
      * @returns {Object} containing {jobId} of the submitted search job
      */
     async "search.submitQuery"({
         queryString,
         timestampBegin,
         timestampEnd,
+        ignoreCase,
     }) {
         const args = {
             query_string: queryString,
             begin_timestamp: timestampBegin,
             end_timestamp: timestampEnd,
+            ignore_case: ignoreCase,
         };
         logger.info("search.submitQuery args =", args);
 
