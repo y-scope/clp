@@ -36,4 +36,5 @@ class SearchConfig(BaseModel):
     begin_timestamp: typing.Optional[int] = None
     end_timestamp: typing.Optional[int] = None
     ignore_case: bool = False
+    tags: typing.Optional[typing.List[str]] = None
     path_filter: typing.Optional[str] = None

@@ -75,7 +75,8 @@ def create_and_monitor_job_in_db(
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
-    path_filter: str,
+    tags: str | None,
+    path_filter: str | None,
 ):
     search_config = SearchConfig(
         query_string=wildcard_query,
@@ -84,6 +85,8 @@ def create_and_monitor_job_in_db(
         ignore_case=ignore_case,
         path_filter=path_filter,
     )
+    if tags:
+        search_config.tags = tags.split(",")
 
     sql_adapter = SQL_Adapter(db_config)
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
@@ -128,7 +131,8 @@ async def do_search(
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
-    path_filter: str,
+    tags: str | None,
+    path_filter: str | None,
 ):
     db_monitor_task = asyncio.ensure_future(
         run_function_in_process(
@@ -139,6 +143,7 @@ async def do_search(
             begin_timestamp,
             end_timestamp,
             ignore_case,
+            tags,
             path_filter,
         )
     )
@@ -172,6 +177,9 @@ def main(argv):
         action="store_true",
         help="Ignore case distinctions between values in the query and the compressed data.",
     )
+    args_parser.add_argument(
+        "-t", "--tags", help="Comma-separated list of tags to filter archives to search."
+    )
     args_parser.add_argument("--file-path", help="File to search.")
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -201,6 +209,7 @@ def main(argv):
             parsed_args.begin_time,
             parsed_args.end_time,
             parsed_args.ignore_case,
+            parsed_args.tags,
             parsed_args.file_path,
         )
     )

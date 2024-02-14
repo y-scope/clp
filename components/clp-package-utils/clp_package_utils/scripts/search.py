@@ -55,6 +55,9 @@ def main(argv):
         action="store_true",
         help="Ignore case distinctions between values in the query and the compressed data.",
     )
+    args_parser.add_argument(
+        "-t", "--tags", help="Comma-separated list of tags to filter archives to search."
+    )
     args_parser.add_argument("--file-path", help="File to search.")
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -117,6 +120,9 @@ def main(argv):
         search_cmd.append(str(parsed_args.end_time))
     if parsed_args.ignore_case:
         search_cmd.append("--ignore-case")
+    if parsed_args.tags:
+        search_cmd.append("--tags")
+        search_cmd.append(parsed_args.tags)
     if parsed_args.file_path:
         search_cmd.append("--file-path")
         search_cmd.append(parsed_args.file_path)
