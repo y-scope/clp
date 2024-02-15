@@ -58,6 +58,10 @@ public:
 
     /**
      * Equal to operator to allow comparison between descriptor tokens.
+     * 
+     * Note: we only need to compare the m_token field because m_regex and m_wildcard are derived
+     * from m_token.
+     * 
      * @return Whether this token is equal to the given token
      */
     bool operator==(DescriptorToken const& rhs) const { return m_token == rhs.m_token; }
@@ -196,8 +200,7 @@ public:
 
     /**
      * Equal to operator to allow comparison between two column descriptors.
-     * @return true if this column descriptor is equal to the right hand side
-     * @return false if this column descriptor is not equal to the right hand side
+     * @return whether this column descriptor is equal to the given column descriptor
      */
     bool operator==(ColumnDescriptor const& rhs) const;
 
