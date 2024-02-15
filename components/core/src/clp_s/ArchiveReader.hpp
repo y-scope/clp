@@ -111,11 +111,12 @@ public:
 
 private:
     /**
-     * Appends a set of columns to the givenschema reader.
-     * @param reader
+     * Creates a schema reader for a given schema.
+     * @param schema_id
      * @param extract_timestamp
      */
-    void append_reader_columns(std::unique_ptr<SchemaReader>& reader, bool extract_timestamp);
+    std::unique_ptr<SchemaReader>
+    create_schema_reader(int32_t schema_id, bool should_extract_timestamp);
 
     /**
      * Appends a column to the schema reader.

@@ -73,12 +73,7 @@ ArchiveReader::read_table(int32_t schema_id, bool should_extract_timestamp) {
         throw OperationFailed(ErrorCodeFileNotFound, __FILENAME__, __LINE__);
     }
 
-    auto schema_reader = std::make_unique<SchemaReader>(
-            m_schema_tree,
-            schema_id,
-            m_id_to_table_metadata[schema_id].num_messages
-    );
-    append_reader_columns(schema_reader, should_extract_timestamp);
+    auto schema_reader = create_schema_reader(schema_id, should_extract_timestamp);
 
     m_table_file_reader.try_seek_from_begin(m_id_to_table_metadata[schema_id].offset);
     m_table_decompressor.open(m_table_file_reader, cDecompressorFileReadBufferCapacity);
@@ -115,7 +110,7 @@ ArchiveReader::append_reader_column(std::unique_ptr<SchemaReader>& reader, int32
             column_reader = new VariableStringColumnReader(key_name, column_id, m_var_dict);
             break;
         case NodeType::BOOLEAN:
-            reader->append_column(new BooleanColumnReader(key_name, column_id));
+            column_reader = new BooleanColumnReader(key_name, column_id);
             break;
         case NodeType::ARRAY:
             column_reader = new ClpStringColumnReader(
@@ -143,10 +138,13 @@ ArchiveReader::append_reader_column(std::unique_ptr<SchemaReader>& reader, int32
     return column_reader;
 }
 
-void ArchiveReader::append_reader_columns(
-        std::unique_ptr<SchemaReader>& reader,
-        bool should_extract_timestamp
-) {
+std::unique_ptr<SchemaReader>
+ArchiveReader::create_schema_reader(int32_t schema_id, bool should_extract_timestamp) {
+    auto reader = std::make_unique<SchemaReader>(
+            m_schema_tree,
+            schema_id,
+            m_id_to_table_metadata[schema_id].num_messages
+    );
     auto timestamp_column_ids = m_timestamp_dict->get_authoritative_timestamp_column_ids();
 
     for (int32_t column_id : (*m_schema_map)[reader->get_schema_id()]) {
@@ -157,6 +155,7 @@ void ArchiveReader::append_reader_columns(
             reader->mark_column_as_timestamp(column_reader);
         }
     }
+    return reader;
 }
 
 void ArchiveReader::store(FileWriter& writer) {
