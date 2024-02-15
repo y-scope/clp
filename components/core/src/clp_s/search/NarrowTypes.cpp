@@ -47,8 +47,8 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
         int64_t tmpint;
         double tmpdouble;
         bool tmpbool;
-        bool narrowed_clp_string{false};
-        bool narrowed_var_string{false};
+        bool narrowed_clp_string = false;
+        bool narrowed_var_string = false;
         bool matches_var_and_clp_string = column->matches_type(LiteralType::ClpStringT)
                                           && column->matches_type(LiteralType::VarStringT);
 
