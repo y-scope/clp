@@ -5,8 +5,10 @@ import subprocess
 import sys
 
 from clp_py_utils.clp_config import (
+    ALL_TARGET,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
+    CONTROLLER_TARGET_NAME,
     DB_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
@@ -58,7 +60,7 @@ def main(argv):
         help="CLP package configuration file.",
     )
 
-    component_args_parser = args_parser.add_subparsers(dest="component_name")
+    component_args_parser = args_parser.add_subparsers(dest="target")
     component_args_parser.add_parser(DB_COMPONENT_NAME)
     component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
     component_args_parser.add_parser(REDIS_COMPONENT_NAME)
@@ -71,10 +73,10 @@ def main(argv):
 
     parsed_args = args_parser.parse_args(argv[1:])
 
-    if parsed_args.component_name:
-        component_name = parsed_args.component_name
+    if parsed_args.target:
+        target = parsed_args.target
     else:
-        component_name = ""
+        target = ALL_TARGET
 
     # Validate and load config file
     try:
@@ -84,16 +86,17 @@ def main(argv):
         )
 
         # Validate and load necessary credentials
-        if component_name in ["", DB_COMPONENT_NAME]:
+        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, DB_COMPONENT_NAME):
             validate_and_load_db_credentials_file(clp_config, clp_home, False)
-        if component_name in [
-            "",
-            QUEUE_COMPONENT_NAME,
+        if target in (
+            ALL_TARGET,
+            CONTROLLER_TARGET_NAME,
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
-            SEARCH_SCHEDULER_COMPONENT_NAME,
             COMPRESSION_WORKER_COMPONENT_NAME,
+            QUEUE_COMPONENT_NAME,
+            SEARCH_SCHEDULER_COMPONENT_NAME,
             SEARCH_WORKER_COMPONENT_NAME,
-        ]:
+        ):
             validate_and_load_queue_credentials_file(clp_config, clp_home, False)
     except:
         logger.exception("Failed to load config.")
@@ -109,47 +112,47 @@ def main(argv):
         with open(instance_id_file_path, "r") as f:
             instance_id = f.readline()
 
-        if "" == component_name or WEBUI_COMPONENT_NAME == component_name:
+        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, WEBUI_COMPONENT_NAME):
             stop_container(f"clp-{WEBUI_COMPONENT_NAME}-{instance_id}")
-        if "" == component_name or SEARCH_WORKER_COMPONENT_NAME == component_name:
+        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, SEARCH_WORKER_COMPONENT_NAME):
             stop_container(f"clp-{SEARCH_WORKER_COMPONENT_NAME}-{instance_id}")
-        if "" == component_name or COMPRESSION_WORKER_COMPONENT_NAME == component_name:
+        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
             stop_container(f"clp-{COMPRESSION_WORKER_COMPONENT_NAME}-{instance_id}")
-        if "" == component_name or SEARCH_SCHEDULER_COMPONENT_NAME == component_name:
+        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, SEARCH_SCHEDULER_COMPONENT_NAME):
             container_name = f"clp-{SEARCH_SCHEDULER_COMPONENT_NAME}-{instance_id}"
             stop_container(container_name)
 
             container_config_file_path = logs_dir / f"{container_name}.yml"
             if container_config_file_path.exists():
                 container_config_file_path.unlink()
-        if "" == component_name or COMPRESSION_SCHEDULER_COMPONENT_NAME == component_name:
+        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, COMPRESSION_SCHEDULER_COMPONENT_NAME):
             container_name = f"clp-{COMPRESSION_SCHEDULER_COMPONENT_NAME}-{instance_id}"
             stop_container(container_name)
 
             container_config_file_path = logs_dir / f"{container_name}.yml"
             if container_config_file_path.exists():
                 container_config_file_path.unlink()
-        if "" == component_name or REDIS_COMPONENT_NAME == component_name:
+        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, REDIS_COMPONENT_NAME):
             container_name = f"clp-{REDIS_COMPONENT_NAME}-{instance_id}"
             stop_container(container_name)
 
             redis_config_file_path = logs_dir / f"{container_name}.conf"
             if redis_config_file_path.exists():
                 redis_config_file_path.unlink()
-        if "" == component_name or RESULTS_CACHE_COMPONENT_NAME == component_name:
+        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
             container_name = f"clp-{RESULTS_CACHE_COMPONENT_NAME}-{instance_id}"
             stop_container(container_name)
-        if "" == component_name or QUEUE_COMPONENT_NAME == component_name:
+        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, QUEUE_COMPONENT_NAME):
             container_name = f"clp-{QUEUE_COMPONENT_NAME}-{instance_id}"
             stop_container(container_name)
 
             queue_config_file_path = logs_dir / f"{container_name}.conf"
             if queue_config_file_path.exists():
                 queue_config_file_path.unlink()
-        if "" == component_name or DB_COMPONENT_NAME == component_name:
+        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, DB_COMPONENT_NAME):
             stop_container(f"clp-{DB_COMPONENT_NAME}-{instance_id}")
 
-        if "" == component_name:
+        if target in ALL_TARGET:
             # NOTE: We can only remove the instance ID file if all containers have been stopped.
             # Currently, we only remove the instance file when all containers are stopped at once.
             # If a single container is stopped, it's expensive to check if the others are running,
