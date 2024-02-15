@@ -856,7 +856,7 @@ def main(argv):
             start_results_cache(instance_id, clp_config, conf_dir)
         if target in (ALL_TARGET, COMPRESSION_SCHEDULER_COMPONENT_NAME, CONTROLLER_TARGET_NAME):
             start_compression_scheduler(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET, SEARCH_SCHEDULER_COMPONENT_NAME, CONTROLLER_TARGET_NAME):
+        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, SEARCH_SCHEDULER_COMPONENT_NAME):
             start_search_scheduler(instance_id, clp_config, container_clp_config, mounts)
         if target in (ALL_TARGET, COMPRESSION_WORKER_COMPONENT_NAME):
             start_compression_worker(
