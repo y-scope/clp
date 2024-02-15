@@ -58,10 +58,10 @@ public:
 
     /**
      * Equal to operator to allow comparison between descriptor tokens.
-     * 
+     *
      * Note: we only need to compare the m_token field because m_regex and m_wildcard are derived
      * from m_token.
-     * 
+     *
      * @return Whether this token is equal to the given token
      */
     bool operator==(DescriptorToken const& rhs) const { return m_token == rhs.m_token; }
