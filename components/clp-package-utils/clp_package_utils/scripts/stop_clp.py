@@ -144,7 +144,7 @@ def main(argv):
             redis_config_file_path = logs_dir / f"{container_name}.conf"
             if redis_config_file_path.exists():
                 redis_config_file_path.unlink()
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
+        if target in (ALL_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
             container_name = f"clp-{RESULTS_CACHE_COMPONENT_NAME}-{instance_id}"
             stop_container(container_name)
         if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUEUE_COMPONENT_NAME):
@@ -154,7 +154,7 @@ def main(argv):
             queue_config_file_path = logs_dir / f"{container_name}.conf"
             if queue_config_file_path.exists():
                 queue_config_file_path.unlink()
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, DB_COMPONENT_NAME):
+        if target in (ALL_TARGET_NAME, DB_COMPONENT_NAME):
             stop_container(f"clp-{DB_COMPONENT_NAME}-{instance_id}")
 
         if target in ALL_TARGET_NAME:

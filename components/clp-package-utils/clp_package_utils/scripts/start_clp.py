@@ -740,6 +740,7 @@ def main(argv):
     )
 
     component_args_parser = args_parser.add_subparsers(dest="target")
+    component_args_parser.add_parser(CONTROLLER_TARGET_NAME)
     component_args_parser.add_parser(DB_COMPONENT_NAME)
     component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
     component_args_parser.add_parser(REDIS_COMPONENT_NAME)
@@ -749,7 +750,6 @@ def main(argv):
     component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
     component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
     component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
-    component_args_parser.add_parser(CONTROLLER_TARGET_NAME)
 
     args_parser.add_argument(
         "--num-cpus",
