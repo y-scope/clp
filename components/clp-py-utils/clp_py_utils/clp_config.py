@@ -27,7 +27,7 @@ SEARCH_WORKER_COMPONENT_NAME = "search_worker"
 WEBUI_COMPONENT_NAME = "webui"
 
 # target names
-ALL_TARGET = ""
+ALL_TARGET_NAME = ""
 CONTROLLER_TARGET_NAME = "controller"
 
 SEARCH_JOBS_TABLE_NAME = "search_jobs"

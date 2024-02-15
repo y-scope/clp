@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 from clp_py_utils.clp_config import (
-    ALL_TARGET,
+    ALL_TARGET_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     CONTROLLER_TARGET_NAME,
@@ -77,7 +77,7 @@ def main(argv):
     if parsed_args.target:
         target = parsed_args.target
     else:
-        target = ALL_TARGET
+        target = ALL_TARGET_NAME
 
     # Validate and load config file
     try:
@@ -87,10 +87,10 @@ def main(argv):
         )
 
         # Validate and load necessary credentials
-        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, DB_COMPONENT_NAME):
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, DB_COMPONENT_NAME):
             validate_and_load_db_credentials_file(clp_config, clp_home, False)
         if target in (
-            ALL_TARGET,
+            ALL_TARGET_NAME,
             CONTROLLER_TARGET_NAME,
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
             COMPRESSION_WORKER_COMPONENT_NAME,
@@ -113,47 +113,51 @@ def main(argv):
         with open(instance_id_file_path, "r") as f:
             instance_id = f.readline()
 
-        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, WEBUI_COMPONENT_NAME):
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, WEBUI_COMPONENT_NAME):
             stop_container(f"clp-{WEBUI_COMPONENT_NAME}-{instance_id}")
-        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, SEARCH_WORKER_COMPONENT_NAME):
+        if target in (CONTROLLER_TARGET_NAME, SEARCH_WORKER_COMPONENT_NAME):
             stop_container(f"clp-{SEARCH_WORKER_COMPONENT_NAME}-{instance_id}")
-        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
+        if target in (CONTROLLER_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
             stop_container(f"clp-{COMPRESSION_WORKER_COMPONENT_NAME}-{instance_id}")
-        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, SEARCH_SCHEDULER_COMPONENT_NAME):
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, SEARCH_SCHEDULER_COMPONENT_NAME):
             container_name = f"clp-{SEARCH_SCHEDULER_COMPONENT_NAME}-{instance_id}"
             stop_container(container_name)
 
             container_config_file_path = logs_dir / f"{container_name}.yml"
             if container_config_file_path.exists():
                 container_config_file_path.unlink()
-        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, COMPRESSION_SCHEDULER_COMPONENT_NAME):
+        if target in (
+            ALL_TARGET_NAME,
+            CONTROLLER_TARGET_NAME,
+            COMPRESSION_SCHEDULER_COMPONENT_NAME,
+        ):
             container_name = f"clp-{COMPRESSION_SCHEDULER_COMPONENT_NAME}-{instance_id}"
             stop_container(container_name)
 
             container_config_file_path = logs_dir / f"{container_name}.yml"
             if container_config_file_path.exists():
                 container_config_file_path.unlink()
-        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, REDIS_COMPONENT_NAME):
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, REDIS_COMPONENT_NAME):
             container_name = f"clp-{REDIS_COMPONENT_NAME}-{instance_id}"
             stop_container(container_name)
 
             redis_config_file_path = logs_dir / f"{container_name}.conf"
             if redis_config_file_path.exists():
                 redis_config_file_path.unlink()
-        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
             container_name = f"clp-{RESULTS_CACHE_COMPONENT_NAME}-{instance_id}"
             stop_container(container_name)
-        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, QUEUE_COMPONENT_NAME):
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUEUE_COMPONENT_NAME):
             container_name = f"clp-{QUEUE_COMPONENT_NAME}-{instance_id}"
             stop_container(container_name)
 
             queue_config_file_path = logs_dir / f"{container_name}.conf"
             if queue_config_file_path.exists():
                 queue_config_file_path.unlink()
-        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, DB_COMPONENT_NAME):
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, DB_COMPONENT_NAME):
             stop_container(f"clp-{DB_COMPONENT_NAME}-{instance_id}")
 
-        if target in ALL_TARGET:
+        if target in ALL_TARGET_NAME:
             # NOTE: We can only remove the instance ID file if all containers have been stopped.
             # Currently, we only remove the instance file when all containers are stopped at once.
             # If a single container is stopped, it's expensive to check if the others are running,

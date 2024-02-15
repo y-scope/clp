@@ -13,7 +13,7 @@ import uuid
 
 import yaml
 from clp_py_utils.clp_config import (
-    ALL_TARGET,
+    ALL_TARGET_NAME,
     CLP_METADATA_TABLE_PREFIX,
     CLPConfig,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
@@ -763,7 +763,7 @@ def main(argv):
     if parsed_args.target:
         target = parsed_args.target
     else:
-        target = ALL_TARGET
+        target = ALL_TARGET_NAME
 
     try:
         check_dependencies()
@@ -780,7 +780,7 @@ def main(argv):
 
         # Validate and load necessary credentials
         if target in (
-            ALL_TARGET,
+            ALL_TARGET_NAME,
             CONTROLLER_TARGET_NAME,
             DB_COMPONENT_NAME,
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
@@ -789,7 +789,7 @@ def main(argv):
         ):
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
         if target in (
-            ALL_TARGET,
+            ALL_TARGET_NAME,
             CONTROLLER_TARGET_NAME,
             QUEUE_COMPONENT_NAME,
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
@@ -799,7 +799,7 @@ def main(argv):
         ):
             validate_and_load_queue_credentials_file(clp_config, clp_home, True)
         if target in (
-            ALL_TARGET,
+            ALL_TARGET_NAME,
             CONTROLLER_TARGET_NAME,
             REDIS_COMPONENT_NAME,
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
@@ -844,27 +844,31 @@ def main(argv):
         conf_dir = clp_home / "etc"
 
         # Start components
-        if target in (ALL_TARGET, DB_COMPONENT_NAME):
+        if target in (ALL_TARGET_NAME, DB_COMPONENT_NAME):
             start_db(instance_id, clp_config, conf_dir)
-        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, DB_COMPONENT_NAME):
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, DB_COMPONENT_NAME):
             create_db_tables(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET, QUEUE_COMPONENT_NAME, CONTROLLER_TARGET_NAME):
+        if target in (ALL_TARGET_NAME, QUEUE_COMPONENT_NAME, CONTROLLER_TARGET_NAME):
             start_queue(instance_id, clp_config)
-        if target in (ALL_TARGET, REDIS_COMPONENT_NAME, CONTROLLER_TARGET_NAME):
+        if target in (ALL_TARGET_NAME, REDIS_COMPONENT_NAME, CONTROLLER_TARGET_NAME):
             start_redis(instance_id, clp_config, conf_dir)
-        if target in (ALL_TARGET, RESULTS_CACHE_COMPONENT_NAME):
+        if target in (ALL_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
             start_results_cache(instance_id, clp_config, conf_dir)
-        if target in (ALL_TARGET, COMPRESSION_SCHEDULER_COMPONENT_NAME, CONTROLLER_TARGET_NAME):
+        if target in (
+            ALL_TARGET_NAME,
+            COMPRESSION_SCHEDULER_COMPONENT_NAME,
+            CONTROLLER_TARGET_NAME,
+        ):
             start_compression_scheduler(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET, SEARCH_SCHEDULER_COMPONENT_NAME, CONTROLLER_TARGET_NAME):
+        if target in (ALL_TARGET_NAME, SEARCH_SCHEDULER_COMPONENT_NAME, CONTROLLER_TARGET_NAME):
             start_search_scheduler(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET, COMPRESSION_WORKER_COMPONENT_NAME):
+        if target in (ALL_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
             start_compression_worker(
                 instance_id, clp_config, container_clp_config, num_cpus, mounts
             )
-        if target in (ALL_TARGET, SEARCH_WORKER_COMPONENT_NAME):
+        if target in (ALL_TARGET_NAME, SEARCH_WORKER_COMPONENT_NAME):
             start_search_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
-        if target in (ALL_TARGET, WEBUI_COMPONENT_NAME, CONTROLLER_TARGET_NAME):
+        if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME, CONTROLLER_TARGET_NAME):
             start_webui(instance_id, clp_config, mounts)
 
     except Exception as ex:
