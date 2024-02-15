@@ -115,9 +115,9 @@ def main(argv):
 
         if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, WEBUI_COMPONENT_NAME):
             stop_container(f"clp-{WEBUI_COMPONENT_NAME}-{instance_id}")
-        if target in (CONTROLLER_TARGET_NAME, SEARCH_WORKER_COMPONENT_NAME):
+        if target in (ALL_TARGET_NAME, SEARCH_WORKER_COMPONENT_NAME):
             stop_container(f"clp-{SEARCH_WORKER_COMPONENT_NAME}-{instance_id}")
-        if target in (CONTROLLER_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
+        if target in (ALL_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
             stop_container(f"clp-{COMPRESSION_WORKER_COMPONENT_NAME}-{instance_id}")
         if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, SEARCH_SCHEDULER_COMPONENT_NAME):
             container_name = f"clp-{SEARCH_SCHEDULER_COMPONENT_NAME}-{instance_id}"
