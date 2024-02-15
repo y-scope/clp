@@ -86,7 +86,7 @@ def wait_for_container_cmd(container_name: str, cmd_to_run: [str], timeout: int)
                 break
             time.sleep(1)
 
-    cmd_str  = " ".join(cmd_to_run)
+    cmd_str = " ".join(cmd_to_run)
     logger.error(f"Timeout while waiting for cmd {flatten_cmd} to run after {timeout} seconds")
     return False
 
@@ -272,9 +272,7 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     # Wait for queue to start up
-    # fmt: off
     rabbitmq_cmd = ["rabbitmq-diagnostics", "check_running"]
-    # fmt: on
 
     if not wait_for_container_cmd(container_name, rabbitmq_cmd, 60):
         raise EnvironmentError(f"{QUEUE_COMPONENT_NAME} did not initialize in time")
