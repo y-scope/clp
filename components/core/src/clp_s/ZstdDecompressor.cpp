@@ -235,5 +235,4 @@ void ZstdDecompressor::reset_stream() {
 
     m_compressed_stream_block.pos = 0;
 }
-
 }  // namespace clp_s

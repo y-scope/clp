@@ -19,7 +19,7 @@ void ArchiveReader::open(std::string const& archive_path) {
 }
 
 void ArchiveReader::read_metadata() {
-    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 16 KB
+    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
     m_metadata_decompressor.open(m_metadata_file_reader, cDecompressorFileReadBufferCapacity);
 
     size_t num_schemas;
@@ -67,7 +67,7 @@ void ArchiveReader::read_dictionaries_and_metadata() {
 
 std::unique_ptr<SchemaReader>
 ArchiveReader::read_table(int32_t schema_id, bool should_extract_timestamp) {
-    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 16 KB
+    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 
     if (m_id_to_table_metadata.count(schema_id) == 0) {
         throw OperationFailed(ErrorCodeFileNotFound, __FILENAME__, __LINE__);

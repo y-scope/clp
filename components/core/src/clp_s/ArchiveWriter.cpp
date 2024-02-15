@@ -44,9 +44,9 @@ size_t ArchiveWriter::close() {
     compressed_size += m_array_dict->close();
     compressed_size += m_timestamp_dict->close_local();
 
-    m_table_file_writer.open(m_archive_path + "/table", FileWriter::OpenMode::CreateForWriting);
+    m_table_file_writer.open(m_archive_path + "/tables", FileWriter::OpenMode::CreateForWriting);
     m_metadata_file_writer.open(
-            m_archive_path + "/metadata",
+            m_archive_path + "/table_metadata",
             FileWriter::OpenMode::CreateForWriting
     );
     m_metadata_compressor.open(m_metadata_file_writer, m_compression_level);

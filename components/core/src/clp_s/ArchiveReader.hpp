@@ -139,8 +139,10 @@ private:
     std::vector<int32_t> m_schema_ids;
     std::map<int32_t, SchemaReader::TableMetadata> m_id_to_table_metadata;
 
-    FileReader m_table_file_reader, m_metadata_file_reader;
-    ZstdDecompressor m_table_decompressor, m_metadata_decompressor;
+    FileReader m_table_file_reader;
+    FileReader m_metadata_file_reader;
+    ZstdDecompressor m_table_decompressor;
+    ZstdDecompressor m_metadata_decompressor;
 };
 }  // namespace clp_s
 
