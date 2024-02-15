@@ -864,7 +864,7 @@ def main(argv):
             )
         if target in (ALL_TARGET, SEARCH_WORKER_COMPONENT_NAME):
             start_search_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
-        if target in (ALL_TARGET, WEBUI_COMPONENT_NAME, CONTROLLER_TARGET_NAME):
+        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, WEBUI_COMPONENT_NAME):
             start_webui(instance_id, clp_config, mounts)
 
     except Exception as ex:
