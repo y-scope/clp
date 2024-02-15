@@ -58,8 +58,7 @@ public:
 
     /**
      * Equal to operator to allow comparison between descriptor tokens.
-     * @return true if this token is equal to right hand side
-     * @return false if this token is not equal to the right hand side
+     * @return Whether this token is equal to the given token
      */
     bool operator==(DescriptorToken const& rhs) const { return m_token == rhs.m_token; }
 

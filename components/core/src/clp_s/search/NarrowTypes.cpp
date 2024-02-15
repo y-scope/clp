@@ -86,16 +86,20 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
         }
 
         /**
-         * Fix for bug #254
-         * If a filtering operation which can originally match a clp string and a var string is
-         * narrowed to just one of those underlying types AND the filter is performing a not equals
-         * operation then we need to replace the filter with an OR across that filter expression,
-         * and an EXISTS expression for the other underlying type.
+         * Fix for bug y-scope/clp#254.
+         * If:
+         * - a filtering operation that can match a clp string and a var string is narrowed to just
+         *   one of those underlying types
+         * - AND the filter is performing a not equals operation
+         * then we need to replace the filter with an OR across:
+         * - the filter expression
+         * - and an EXISTS expression for the other underlying type.
          *
-         * This is because if we are trying to see if some value is not equal to a specific variable
-         * string we can guarantee that every clp string is not equal to that specific variable
-         * string (because that variable string must not contain a space, but any clp string must).
-         * The reverse is true for checking if some value matches a specific clp string.
+         * This is because if we are trying to determine if some value is not equal to a specific
+         * variable string, we can guarantee that every clp string is not equal to that specific
+         * variable string (because that variable string must not contain a space, but any clp
+         * string must). The reverse is true for checking if some value matches a specific clp
+         * string.
          *
          * Really the issue is that we have multiple string types. Technically similar logic applies
          * for the date string column types, but we don't allow string matches against them so we
@@ -112,10 +116,10 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
 
             // This is an optimization to avoid creating multiple equivalent expressions in this
             // subtree of the AST. If the user has specified a long list of not equals expressions
-            // on the same column (as is common when someone tries filter out e.g. a long list of
-            // UUIDs) then we only need to transform one filter expression within the parent OR or
-            // AND into an OR with the necessary EXISTS condition. Splitting each filter into an OR
-            // could result in a much larger AST than necessary and slow down Schema Matching.
+            // on the same column (as is common when someone tries to filter out, e.g., a long list
+            // of UUIDs) then we only need to transform one filter expression within the parent
+            // OR/AND into an OR with the necessary EXISTS condition. Splitting each filter into an
+            // OR could result in a much larger AST than necessary and slow down Schema Matching.
             auto it = std::find_if(
                     m_local_exists_descriptors.begin(),
                     m_local_exists_descriptors.end(),
