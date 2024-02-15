@@ -850,7 +850,7 @@ def main(argv):
             create_db_tables(instance_id, clp_config, container_clp_config, mounts)
         if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, QUEUE_COMPONENT_NAME):
             start_queue(instance_id, clp_config)
-        if target in (ALL_TARGET, REDIS_COMPONENT_NAME, CONTROLLER_TARGET_NAME):
+        if target in (ALL_TARGET, CONTROLLER_TARGET_NAME, REDIS_COMPONENT_NAME):
             start_redis(instance_id, clp_config, conf_dir)
         if target in (ALL_TARGET, RESULTS_CACHE_COMPONENT_NAME):
             start_results_cache(instance_id, clp_config, conf_dir)
