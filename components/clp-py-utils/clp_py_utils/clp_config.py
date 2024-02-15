@@ -15,7 +15,6 @@ from .core import (
 
 # Constants
 # Component names
-
 DB_COMPONENT_NAME = "database"
 QUEUE_COMPONENT_NAME = "queue"
 REDIS_COMPONENT_NAME = "redis"
@@ -26,7 +25,7 @@ COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 SEARCH_WORKER_COMPONENT_NAME = "search_worker"
 WEBUI_COMPONENT_NAME = "webui"
 
-# target names
+# Target names
 ALL_TARGET_NAME = ""
 CONTROLLER_TARGET_NAME = "controller"
 

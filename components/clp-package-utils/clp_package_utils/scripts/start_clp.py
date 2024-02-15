@@ -848,19 +848,15 @@ def main(argv):
             start_db(instance_id, clp_config, conf_dir)
         if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, DB_COMPONENT_NAME):
             create_db_tables(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET_NAME, QUEUE_COMPONENT_NAME, CONTROLLER_TARGET_NAME):
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUEUE_COMPONENT_NAME):
             start_queue(instance_id, clp_config)
-        if target in (ALL_TARGET_NAME, REDIS_COMPONENT_NAME, CONTROLLER_TARGET_NAME):
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, REDIS_COMPONENT_NAME):
             start_redis(instance_id, clp_config, conf_dir)
         if target in (ALL_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
             start_results_cache(instance_id, clp_config, conf_dir)
-        if target in (
-            ALL_TARGET_NAME,
-            COMPRESSION_SCHEDULER_COMPONENT_NAME,
-            CONTROLLER_TARGET_NAME,
-        ):
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, COMPRESSION_SCHEDULER_COMPONENT_NAME):
             start_compression_scheduler(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET_NAME, SEARCH_SCHEDULER_COMPONENT_NAME, CONTROLLER_TARGET_NAME):
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, SEARCH_SCHEDULER_COMPONENT_NAME):
             start_search_scheduler(instance_id, clp_config, container_clp_config, mounts)
         if target in (ALL_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
             start_compression_worker(
@@ -868,7 +864,7 @@ def main(argv):
             )
         if target in (ALL_TARGET_NAME, SEARCH_WORKER_COMPONENT_NAME):
             start_search_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
-        if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME, CONTROLLER_TARGET_NAME):
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, WEBUI_COMPONENT_NAME):
             start_webui(instance_id, clp_config, mounts)
 
     except Exception as ex:
