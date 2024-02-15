@@ -15,7 +15,6 @@ from .core import (
 
 # Constants
 # Component names
-
 DB_COMPONENT_NAME = "database"
 QUEUE_COMPONENT_NAME = "queue"
 REDIS_COMPONENT_NAME = "redis"
