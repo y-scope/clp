@@ -86,7 +86,7 @@ def wait_for_container_cmd(container_name: str, cmd_to_run: [str], timeout: int)
                 break
             time.sleep(1)
 
-    flatten_cmd = " ".join(cmd_to_run)
+    cmd_str  = " ".join(cmd_to_run)
     logger.error(f"Timeout while waiting for cmd {flatten_cmd} to run after {timeout} seconds")
     return False
 
