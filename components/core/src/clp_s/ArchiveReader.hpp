@@ -105,7 +105,8 @@ public:
     void close();
 
     /**
-     * @return The schema ids in the archive.
+     * @return The schema ids in the archive. It also defines the order that tables should be read
+     * in to avoid seeking backwards.
      */
     [[nodiscard]] std::vector<int32_t> const& get_schema_ids() const { return m_schema_ids; }
 
