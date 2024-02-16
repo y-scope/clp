@@ -5,8 +5,10 @@ FROM ubuntu:focal AS BASE
 RUN apt-get update \
     && apt-get install -y \
     libmariadb-dev \
-    libssl-dev \
-    && apt-get clean \
+    libssl-dev
+
+# Remove cached files
+RUN apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 WORKDIR /clp
