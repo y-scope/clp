@@ -28,6 +28,9 @@ logger = get_logger("search-job-handler")
 # Dictionary of active jobs indexed by job id
 active_jobs: Dict[str, SearchJob] = {}
 
+# Dictionary of archive search queues indexed by job_id
+archive_queue: Dict[str, List[str]] = {}
+
 
 def cancel_job(job_id):
     global active_jobs
@@ -157,29 +160,40 @@ def dispatch_search_job(
     active_jobs[job_id] = SearchJob(task_group.apply_async())
 
 
-def handle_pending_search_jobs(db_conn, results_cache_uri: str) -> None:
-    global active_jobs
+def handle_pending_search_jobs(
+    db_conn, results_cache_uri: str, num_archives_to_search_per_batch: int
+) -> None:
+    global archive_queue
 
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
         new_jobs = fetch_new_search_jobs(cursor)
         db_conn.commit()
 
     for job in new_jobs:
-        logger.debug(f"Got job {job['job_id']} with status {job['job_status']}.")
+        job_id = str(job["job_id"])
+        job_status = job["job_status"]
+        logger.debug(f"Got job {job_id} with status {job_status}.")
         search_config_obj = SearchConfig.parse_obj(msgpack.unpackb(job["search_config"]))
         archives_for_search = get_archives_for_search(db_conn, search_config_obj)
         if len(archives_for_search) == 0:
-            if set_job_status(db_conn, job["job_id"], SearchJobStatus.SUCCEEDED, job["job_status"]):
-                logger.info(f"No matching archives, skipping job {job['job_id']}.")
+            if set_job_status(db_conn, job_id, SearchJobStatus.SUCCEEDED, job_status):
+                logger.info(f"No matching archives, skipping job {job_id}.")
             continue
 
-        dispatch_search_job(
-            archives_for_search, str(job["job_id"]), search_config_obj, results_cache_uri
-        )
-        if set_job_status(db_conn, job["job_id"], SearchJobStatus.RUNNING, job["job_status"]):
+        if job_id not in archive_queue:
+            archive_queue[job_id] = archives_for_search
+
+        if len(archive_queue[job_id]) >= num_archives_to_search_per_batch:
+            archives_for_search = archive_queue[job_id][:num_archives_to_search_per_batch]
+            archive_queue[job_id] = archive_queue[job_id][num_archives_to_search_per_batch:]
+        else:
+            archives_for_search = archive_queue[job_id]
+            del archive_queue[job_id]
+
+        dispatch_search_job(archives_for_search, job_id, search_config_obj, results_cache_uri)
+        if set_job_status(db_conn, job_id, SearchJobStatus.RUNNING, job_status):
             logger.info(
-                f"Dispatched job {job['job_id']} with {len(archives_for_search)} archives to"
-                f" search."
+                f"Dispatched job {job_id} with {len(archives_for_search)} archives to search."
             )
 
 
@@ -224,9 +238,10 @@ def handle_jobs(
     db_conn,
     results_cache_uri: str,
     jobs_poll_delay: float,
+    num_archives_to_search_per_batch: int,
 ) -> None:
     while True:
-        handle_pending_search_jobs(db_conn, results_cache_uri)
+        handle_pending_search_jobs(db_conn, results_cache_uri, num_archives_to_search_per_batch)
         handle_cancelling_search_jobs(db_conn)
         check_job_status_and_update_db(db_conn)
         time.sleep(jobs_poll_delay)
@@ -272,6 +287,7 @@ def main(argv: List[str]) -> int:
                 db_conn=db_conn,
                 results_cache_uri=clp_config.results_cache.get_uri(),
                 jobs_poll_delay=clp_config.search_scheduler.jobs_poll_delay,
+                num_archives_to_search_per_batch=clp_config.search_scheduler.num_archives_to_search_per_batch,
             )
     except Exception:
         logger.exception(f"Uncaught exception in job handling loop.")
