@@ -35,6 +35,7 @@ class CompressionTaskStatus(IntEnum):
 class SearchJobStatus(IntEnum):
     PENDING = 0
     RUNNING = auto()
+    WAITING_FOR_BATCH = auto()
     SUCCEEDED = auto()
     FAILED = auto()
     CANCELLING = auto()

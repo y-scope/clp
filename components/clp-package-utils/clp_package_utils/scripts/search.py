@@ -114,7 +114,7 @@ def main(argv):
         "-m", "clp_package_utils.scripts.native.search",
         "--config", str(container_clp_config.logs_directory / container_config_filename),
         parsed_args.wildcard_query,
-        "--max-results-per-archive", str(parsed_args.max_results),
+        "--max-results", str(parsed_args.max_results),
     ]
     # fmt: on
     if parsed_args.begin_time is not None:
