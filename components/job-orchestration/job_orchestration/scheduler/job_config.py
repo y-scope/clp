@@ -32,6 +32,7 @@ class ClpIoConfig(BaseModel):
 
 class SearchConfig(BaseModel):
     query_string: str
+    max_results: int
     begin_timestamp: typing.Optional[int] = None
     end_timestamp: typing.Optional[int] = None
     ignore_case: bool = False

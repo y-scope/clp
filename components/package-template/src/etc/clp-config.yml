@@ -22,7 +22,7 @@
 #
 #search_scheduler:
 #  jobs_poll_delay: 0.1  # seconds
-#  num_archives_to_search_per_batch: 100
+#  num_archives_to_search_per_batch: 16
 #  logging_level: "INFO"
 #
 #queue:

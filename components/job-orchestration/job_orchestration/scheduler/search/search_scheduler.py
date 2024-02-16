@@ -12,6 +12,7 @@ from typing import Dict, List, Optional
 
 import celery
 import msgpack
+import pymongo
 from clp_py_utils.clp_config import CLP_METADATA_TABLE_PREFIX, CLPConfig, SEARCH_JOBS_TABLE_NAME
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.core import read_yaml_config_file
@@ -113,7 +114,7 @@ def get_archives_for_search(
     db_conn,
     search_config: SearchConfig,
 ):
-    query = f"""SELECT id as archive_id
+    query = f"""SELECT id as archive_id, end_timestamp 
             FROM {CLP_METADATA_TABLE_PREFIX}archives
             """
     filter_clauses = []
@@ -127,7 +128,7 @@ def get_archives_for_search(
 
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
         cursor.execute(query)
-        archives_for_search = [archive["archive_id"] for archive in cursor.fetchall()]
+        archives_for_search = cursor.fetchall()
         db_conn.commit()
     return archives_for_search
 
@@ -157,7 +158,10 @@ def dispatch_search_job(
     task_group = get_task_group_for_job(
         archives_for_search, job_id, search_config, results_cache_uri
     )
-    active_jobs[job_id] = SearchJob(task_group.apply_async())
+    active_jobs[job_id] = SearchJob(
+        async_task_result=task_group.apply_async(),
+        max_results=search_config.max_results,
+    )
 
 
 def handle_pending_search_jobs(
@@ -203,7 +207,7 @@ def try_getting_task_result(async_task_result):
     return async_task_result.get()
 
 
-def check_job_status_and_update_db(db_conn):
+def check_job_status_and_update_db(db_conn, results_cache_uri):
     global active_jobs
 
     for job_id in list(active_jobs.keys()):
@@ -217,13 +221,39 @@ def check_job_status_and_update_db(db_conn):
             continue
 
         if returned_results is not None:
-            new_job_status = SearchJobStatus.SUCCEEDED
+            new_job_status = SearchJobStatus.RUNNING
             for task_result_obj in returned_results:
                 task_result = SearchTaskResult.parse_obj(task_result_obj)
                 if not task_result.success:
                     task_id = task_result.task_id
                     new_job_status = SearchJobStatus.FAILED
                     logger.debug(f"Task {task_id} failed - result {task_result}.")
+
+            if new_job_status != SearchJobStatus.FAILED:
+                if job_id not in archive_queue:
+                    new_job_status = SearchJobStatus.SUCCEEDED
+                    logger.info(f"Search job {job_id} succeeded.")
+                elif active_jobs[job_id].max_results > 0:
+                    results_cache_client = pymongo.MongoClient(results_cache_uri)
+                    results_cache_collection = results_cache_client.get_default_database()[job_id]
+                    results_count = results_cache_collection.count_documents({})
+                    if results_count >= active_jobs[job_id].max_results:
+                        pipeline = [
+                            {"$sort": {"timestamp": -1}},
+                            {"$limit": active_jobs[job_id].max_results},
+                            {"$group": {"_id": None, "min_timestamp": {"$min": "$timestamp"}}},
+                        ]
+
+                        result = list(results_cache_collection.aggregate(pipeline))
+                        if result is not None:
+                            min_timestamp_in_results_cache = result[0]["timestamp"]
+                        else:
+                            min_timestamp_in_results_cache = 0
+                        results_cache_client.close()
+                        max_timestamp_in_archive = archive_queue[job_id][0]["end_timestamp"]
+                        if max_timestamp_in_archive <= min_timestamp_in_results_cache:
+                            new_job_status = SearchJobStatus.SUCCEEDED
+                            logger.info(f"Search job {job_id} succeeded.")
 
             del active_jobs[job_id]
 
@@ -243,7 +273,7 @@ def handle_jobs(
     while True:
         handle_pending_search_jobs(db_conn, results_cache_uri, num_archives_to_search_per_batch)
         handle_cancelling_search_jobs(db_conn)
-        check_job_status_and_update_db(db_conn)
+        check_job_status_and_update_db(db_conn, results_cache_uri)
         time.sleep(jobs_poll_delay)
 
 

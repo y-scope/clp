@@ -34,9 +34,9 @@ class CompressionTaskSuccessResult(CompressionTaskResult):
     total_compressed_size: int
 
 
-class SearchJob:
-    def __init__(self, async_task_result: any) -> None:
-        self.async_task_result: any = async_task_result
+class SearchJob(BaseModel):
+    async_task_result: typing.Any
+    max_results: int
 
 
 class SearchTaskResult(BaseModel):
