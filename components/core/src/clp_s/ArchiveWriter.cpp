@@ -44,30 +44,30 @@ size_t ArchiveWriter::close() {
     compressed_size += m_array_dict->close();
     compressed_size += m_timestamp_dict->close_local();
 
-    m_table_file_writer.open(m_archive_path + "/tables", FileWriter::OpenMode::CreateForWriting);
-    m_metadata_file_writer.open(
+    m_tables_file_writer.open(m_archive_path + "/tables", FileWriter::OpenMode::CreateForWriting);
+    m_table_metadata_file_writer.open(
             m_archive_path + "/table_metadata",
             FileWriter::OpenMode::CreateForWriting
     );
-    m_metadata_compressor.open(m_metadata_file_writer, m_compression_level);
-    m_metadata_compressor.write_numeric_value(m_id_to_schema_writer.size());
+    m_table_metadata_compressor.open(m_table_metadata_file_writer, m_compression_level);
+    m_table_metadata_compressor.write_numeric_value(m_id_to_schema_writer.size());
     for (auto& i : m_id_to_schema_writer) {
-        m_metadata_compressor.write_numeric_value(i.first);
-        m_metadata_compressor.write_numeric_value(i.second->get_num_messages());
-        m_metadata_compressor.write_numeric_value(m_table_file_writer.get_pos());
+        m_table_metadata_compressor.write_numeric_value(i.first);
+        m_table_metadata_compressor.write_numeric_value(i.second->get_num_messages());
+        m_table_metadata_compressor.write_numeric_value(m_tables_file_writer.get_pos());
 
-        m_table_compressor.open(m_table_file_writer, m_compression_level);
-        i.second->store(m_table_compressor);
-        m_table_compressor.close();
+        m_tables_compressor.open(m_tables_file_writer, m_compression_level);
+        i.second->store(m_tables_compressor);
+        m_tables_compressor.close();
         delete i.second;
     }
-    m_metadata_compressor.close();
+    m_table_metadata_compressor.close();
 
-    compressed_size += m_metadata_file_writer.get_pos();
-    compressed_size += m_table_file_writer.get_pos();
+    compressed_size += m_table_metadata_file_writer.get_pos();
+    compressed_size += m_tables_file_writer.get_pos();
 
-    m_metadata_file_writer.close();
-    m_table_file_writer.close();
+    m_table_metadata_file_writer.close();
+    m_tables_file_writer.close();
 
     m_id_to_schema_writer.clear();
     m_encoded_message_size = 0UL;

@@ -83,6 +83,7 @@ public:
 
     /**
      * Loads the encoded messages
+     * @param decompressor
      */
     void load(ZstdDecompressor& decompressor);
 

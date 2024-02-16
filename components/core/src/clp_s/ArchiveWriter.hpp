@@ -90,8 +90,10 @@ private:
     std::shared_ptr<SchemaTree> m_schema_tree;
     std::map<int32_t, SchemaWriter*> m_id_to_schema_writer;
 
-    FileWriter m_table_file_writer, m_metadata_file_writer;
-    ZstdCompressor m_table_compressor, m_metadata_compressor;
+    FileWriter m_tables_file_writer;
+    FileWriter m_table_metadata_file_writer;
+    ZstdCompressor m_tables_compressor;
+    ZstdCompressor m_table_metadata_compressor;
 };
 }  // namespace clp_s
 

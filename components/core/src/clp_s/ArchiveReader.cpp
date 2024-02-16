@@ -14,16 +14,16 @@ void ArchiveReader::open(std::string const& archive_path) {
     m_log_dict = ReaderUtils::get_log_type_dictionary_reader(m_archive_path);
     m_array_dict = ReaderUtils::get_array_dictionary_reader(m_archive_path);
 
-    m_table_file_reader.open(m_archive_path + "/table");
-    m_metadata_file_reader.open(m_archive_path + "/metadata");
+    m_tables_file_reader.open(m_archive_path + "/table");
+    m_table_metadata_file_reader.open(m_archive_path + "/metadata");
 }
 
 void ArchiveReader::read_metadata() {
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
-    m_metadata_decompressor.open(m_metadata_file_reader, cDecompressorFileReadBufferCapacity);
+    m_table_metadata_decompressor.open(m_table_metadata_file_reader, cDecompressorFileReadBufferCapacity);
 
     size_t num_schemas;
-    if (auto error = m_metadata_decompressor.try_read_numeric_value(num_schemas);
+    if (auto error = m_table_metadata_decompressor.try_read_numeric_value(num_schemas);
         ErrorCodeSuccess != error)
     {
         throw OperationFailed(error, __FILENAME__, __LINE__);
@@ -34,19 +34,19 @@ void ArchiveReader::read_metadata() {
         uint64_t num_messages;
         size_t table_offset;
 
-        if (auto error = m_metadata_decompressor.try_read_numeric_value(schema_id);
+        if (auto error = m_table_metadata_decompressor.try_read_numeric_value(schema_id);
             ErrorCodeSuccess != error)
         {
             throw OperationFailed(error, __FILENAME__, __LINE__);
         }
 
-        if (auto error = m_metadata_decompressor.try_read_numeric_value(num_messages);
+        if (auto error = m_table_metadata_decompressor.try_read_numeric_value(num_messages);
             ErrorCodeSuccess != error)
         {
             throw OperationFailed(error, __FILENAME__, __LINE__);
         }
 
-        if (auto error = m_metadata_decompressor.try_read_numeric_value(table_offset);
+        if (auto error = m_table_metadata_decompressor.try_read_numeric_value(table_offset);
             ErrorCodeSuccess != error)
         {
             throw OperationFailed(error, __FILENAME__, __LINE__);
@@ -55,7 +55,7 @@ void ArchiveReader::read_metadata() {
         m_id_to_table_metadata[schema_id] = {num_messages, table_offset};
         m_schema_ids.push_back(schema_id);
     }
-    m_metadata_decompressor.close();
+    m_table_metadata_decompressor.close();
 }
 
 void ArchiveReader::read_dictionaries_and_metadata() {
@@ -75,10 +75,10 @@ ArchiveReader::read_table(int32_t schema_id, bool should_extract_timestamp) {
 
     auto schema_reader = create_schema_reader(schema_id, should_extract_timestamp);
 
-    m_table_file_reader.try_seek_from_begin(m_id_to_table_metadata[schema_id].offset);
-    m_table_decompressor.open(m_table_file_reader, cDecompressorFileReadBufferCapacity);
-    schema_reader->load(m_table_decompressor);
-    m_table_decompressor.close();
+    m_tables_file_reader.try_seek_from_begin(m_id_to_table_metadata[schema_id].offset);
+    m_tables_decompressor.open(m_tables_file_reader, cDecompressorFileReadBufferCapacity);
+    schema_reader->load(m_tables_decompressor);
+    m_tables_decompressor.close();
     return schema_reader;
 }
 
@@ -179,8 +179,8 @@ void ArchiveReader::close() {
     m_log_dict->close();
     m_array_dict->close();
 
-    m_table_file_reader.close();
-    m_metadata_file_reader.close();
+    m_tables_file_reader.close();
+    m_table_metadata_file_reader.close();
 
     m_id_to_table_metadata.clear();
 }

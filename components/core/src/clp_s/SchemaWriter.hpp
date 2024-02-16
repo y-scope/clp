@@ -38,7 +38,8 @@ public:
     size_t append_message(ParsedMessage& message);
 
     /**
-     * Stores the schema to disk.
+     * Stores the columns to disk.
+     * @param compressor
      */
     void store(ZstdCompressor& compressor);
 

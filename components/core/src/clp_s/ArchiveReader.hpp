@@ -35,7 +35,7 @@ public:
 
     /**
      * Opens an archive for reading.
-     * @param option
+     * @param archive_path
      */
     void open(std::string const& archive_path);
 
@@ -140,10 +140,10 @@ private:
     std::vector<int32_t> m_schema_ids;
     std::map<int32_t, SchemaReader::TableMetadata> m_id_to_table_metadata;
 
-    FileReader m_table_file_reader;
-    FileReader m_metadata_file_reader;
-    ZstdDecompressor m_table_decompressor;
-    ZstdDecompressor m_metadata_decompressor;
+    FileReader m_tables_file_reader;
+    FileReader m_table_metadata_file_reader;
+    ZstdDecompressor m_tables_decompressor;
+    ZstdDecompressor m_table_metadata_decompressor;
 };
 }  // namespace clp_s
 
