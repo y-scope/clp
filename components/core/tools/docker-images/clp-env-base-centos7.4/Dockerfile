@@ -22,7 +22,7 @@ RUN ln -s /opt/rh/devtoolset-10/enable /etc/profile.d/devtoolset.sh
 RUN cp ./tools/docker-images/clp-env-base-centos7.4/setup-scripts/git /usr/bin/git
 
 # Remove cached files
-RUN yum clean \
+RUN yum clean all \
     && rm -rf /tmp/* /var/tmp/*
 
 # Load .bashrc for non-interactive bash shells
