@@ -187,7 +187,7 @@ def handle_pending_search_jobs(
         if job_id not in archive_queue:
             archive_queue[job_id] = archives_for_search
 
-        if len(archive_queue[job_id]) >= num_archives_to_search_per_batch:
+        if len(archive_queue[job_id]) > num_archives_to_search_per_batch:
             archives_for_search = archive_queue[job_id][:num_archives_to_search_per_batch]
             archive_queue[job_id] = archive_queue[job_id][num_archives_to_search_per_batch:]
         else:
