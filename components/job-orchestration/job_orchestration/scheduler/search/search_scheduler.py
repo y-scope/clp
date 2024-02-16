@@ -128,7 +128,7 @@ def get_archives_for_search(
 
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
         cursor.execute(query)
-        archives_for_search = cursor.fetchall()
+        archives_for_search = list(cursor.fetchall())
         db_conn.commit()
     return archives_for_search
 
@@ -239,20 +239,18 @@ def check_job_status_and_update_db(db_conn, results_cache_uri):
                     results_cache_collection = results_cache_client.get_default_database()[job_id]
                     results_count = results_cache_collection.count_documents({})
                     if results_count >= active_jobs[job_id].max_results:
-                        pipeline = [
-                            {"$sort": {"timestamp": -1}},
-                            {"$limit": active_jobs[job_id].max_results},
-                            {"$group": {"_id": None, "min_timestamp": {"$min": "$timestamp"}}},
-                        ]
-
-                        result = list(results_cache_collection.aggregate(pipeline))
+                        result = list(
+                            results_cache_collection.find()
+                            .sort("timestamp", -1)
+                            .limit(active_jobs[job_id].max_results)
+                        )
                         if result is not None:
-                            min_timestamp_in_results_cache = result[0]["timestamp"]
+                            min_timestamp_in_top_results = result[-1]["timestamp"]
                         else:
-                            min_timestamp_in_results_cache = 0
+                            min_timestamp_in_top_results = 0
                         results_cache_client.close()
                         max_timestamp_in_archive = archive_queue[job_id][0]["end_timestamp"]
-                        if max_timestamp_in_archive <= min_timestamp_in_results_cache:
+                        if max_timestamp_in_archive <= min_timestamp_in_top_results:
                             new_job_status = SearchJobStatus.SUCCEEDED
 
             del active_jobs[job_id]
