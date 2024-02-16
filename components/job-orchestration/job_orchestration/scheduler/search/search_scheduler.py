@@ -160,7 +160,7 @@ def dispatch_search_job(
     )
     active_jobs[job_id] = SearchJob(
         async_task_result=task_group.apply_async(),
-        max_results=search_config.max_results,
+        max_num_results=search_config.max_num_results,
     )
 
 
@@ -234,15 +234,15 @@ def check_job_status_and_update_db(db_conn, results_cache_uri):
                 if job_id not in archive_queue:
                     new_job_status = SearchJobStatus.SUCCEEDED
                 # check if we have reached max results
-                elif active_jobs[job_id].max_results > 0:
+                elif active_jobs[job_id].max_num_results > 0:
                     results_cache_client = pymongo.MongoClient(results_cache_uri)
                     results_cache_collection = results_cache_client.get_default_database()[job_id]
                     results_count = results_cache_collection.count_documents({})
-                    if results_count >= active_jobs[job_id].max_results:
+                    if results_count >= active_jobs[job_id].max_num_results:
                         result = list(
                             results_cache_collection.find()
                             .sort("timestamp", -1)
-                            .limit(active_jobs[job_id].max_results)
+                            .limit(active_jobs[job_id].max_num_results)
                         )
                         if result is not None:
                             min_timestamp_in_top_results = result[-1]["timestamp"]

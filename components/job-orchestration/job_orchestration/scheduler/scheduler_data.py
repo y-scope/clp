@@ -36,7 +36,7 @@ class CompressionTaskSuccessResult(CompressionTaskResult):
 
 class SearchJob(BaseModel):
     async_task_result: typing.Any
-    max_results: int
+    max_num_results: int
 
 
 class SearchTaskResult(BaseModel):

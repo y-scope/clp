@@ -75,7 +75,7 @@ def create_and_monitor_job_in_db(
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
-    max_results: int,
+    max_num_results: int,
     path_filter: str,
 ):
     search_config = SearchConfig(
@@ -83,7 +83,7 @@ def create_and_monitor_job_in_db(
         begin_timestamp=begin_timestamp,
         end_timestamp=end_timestamp,
         ignore_case=ignore_case,
-        max_results=max_results,
+        max_num_results=max_num_results,
         path_filter=path_filter,
     )
 
@@ -119,12 +119,12 @@ def create_and_monitor_job_in_db(
 
         with pymongo.MongoClient(results_cache.get_uri()) as client:
             search_results_collection = client[results_cache.db_name][str(job_id)]
-            if max_results <= 0:
+            if max_num_results <= 0:
                 for document in search_results_collection.find():
                     print(f"{document['original_path']}: {document['message']}", end="")
             else:
                 for document in (
-                    search_results_collection.find().sort("timestamp", -1).limit(max_results)
+                    search_results_collection.find().sort("timestamp", -1).limit(max_num_results)
                 ):
                     print(f"{document['original_path']}: {document['message']}", end="")
 
@@ -136,7 +136,7 @@ async def do_search(
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
-    max_results: int,
+    max_num_results: int,
     path_filter: str,
 ):
     db_monitor_task = asyncio.ensure_future(
@@ -148,7 +148,7 @@ async def do_search(
             begin_timestamp,
             end_timestamp,
             ignore_case,
-            max_results,
+            max_num_results,
             path_filter,
         )
     )
@@ -183,11 +183,11 @@ def main(argv):
         help="Ignore case distinctions between values in the query and the compressed data.",
     )
     args_parser.add_argument(
-        "--max-results",
+        "--max-num-results",
         "-m",
         type=int,
-        default=0,
-        help="Maximum number of results to return. <= 0 means no limit.",
+        default=1000,
+        help="Maximum number of results to return.",
     )
     args_parser.add_argument("--file-path", help="File to search.")
     parsed_args = args_parser.parse_args(argv[1:])
@@ -218,7 +218,7 @@ def main(argv):
             parsed_args.begin_time,
             parsed_args.end_time,
             parsed_args.ignore_case,
-            parsed_args.max_results,
+            parsed_args.max_num_results,
             parsed_args.file_path,
         )
     )
