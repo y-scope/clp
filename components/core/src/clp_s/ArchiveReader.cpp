@@ -20,7 +20,10 @@ void ArchiveReader::open(std::string const& archive_path) {
 
 void ArchiveReader::read_metadata() {
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
-    m_table_metadata_decompressor.open(m_table_metadata_file_reader, cDecompressorFileReadBufferCapacity);
+    m_table_metadata_decompressor.open(
+            m_table_metadata_file_reader,
+            cDecompressorFileReadBufferCapacity
+    );
 
     size_t num_schemas;
     if (auto error = m_table_metadata_decompressor.try_read_numeric_value(num_schemas);
