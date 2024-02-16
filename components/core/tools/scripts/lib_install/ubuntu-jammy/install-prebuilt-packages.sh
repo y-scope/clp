@@ -7,7 +7,7 @@ set -e
 set -u
 
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
+DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   ca-certificates \
   checkinstall \
   cmake \
@@ -23,5 +23,4 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   pkg-config \
   python3 \
   python3-pip \
-  rsync \
   software-properties-common
