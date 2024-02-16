@@ -11,10 +11,6 @@ RUN ./tools/scripts/lib_install/ubuntu-jammy/install-all.sh
 RUN apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Reset the working directory so that it's accessible by any user who runs the
-# container
-WORKDIR /
-
 # Flatten the image
 FROM scratch
 COPY --from=BASE / /

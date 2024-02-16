@@ -9,16 +9,16 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-WORKDIR /clp
-
 ADD ./clg ./
 ADD ./clp ./
 ADD ./clp-s ./
 ADD ./glt ./
 ADD ./make-dictionaries-readable ./
 
-CMD bash
-
 # Flatten the image
 FROM scratch
 COPY --from=BASE / /
+
+WORKDIR /clp
+
+CMD bash
