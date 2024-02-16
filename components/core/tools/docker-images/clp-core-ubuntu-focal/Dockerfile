@@ -1,4 +1,13 @@
-FROM ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main
+FROM ubuntu:focal AS BASE
+
+# Install runtime dependencies
+# TODO: Investigate why libssl-dev is a hidden dependency of clp-s
+RUN apt-get update \
+    && apt-get install -y \
+    libmariadb-dev \
+    libssl-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 WORKDIR /clp
 
@@ -9,3 +18,7 @@ ADD ./glt ./
 ADD ./make-dictionaries-readable ./
 
 CMD bash
+
+# Flatten the image
+FROM scratch
+COPY --from=BASE / /

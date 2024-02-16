@@ -1,4 +1,4 @@
-FROM centos:centos7.4.1708
+FROM centos:centos7.4.1708 AS BASE
 
 WORKDIR /root
 
@@ -21,9 +21,17 @@ RUN ln -s /opt/rh/devtoolset-10/enable /etc/profile.d/devtoolset.sh
 #       cannot be forced to use a bash shell that loads .bashrc
 RUN cp ./tools/docker-images/clp-env-base-centos7.4/setup-scripts/git /usr/bin/git
 
+# Remove cached files
+RUN yum clean \
+    && rm -rf /tmp/* /var/tmp/*
+
 # Load .bashrc for non-interactive bash shells
 ENV BASH_ENV=/etc/bashrc
 
 # Reset the working directory so that it's accessible by any user who runs the
 # container
 WORKDIR /
+
+# Flatten the image
+FROM scratch
+COPY --from=BASE / /

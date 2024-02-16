@@ -7,7 +7,7 @@ set -e
 set -u
 
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
+DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   checkinstall \
   curl \
   libmariadb-dev \
