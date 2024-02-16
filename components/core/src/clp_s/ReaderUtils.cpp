@@ -135,17 +135,6 @@ std::shared_ptr<TimestampDictionaryReader> ReaderUtils::read_timestamp_dictionar
     return reader;
 }
 
-std::shared_ptr<TimestampDictionaryReader> ReaderUtils::read_local_timestamp_dictionary(
-        std::string const& archive_path
-) {
-    auto reader = std::make_shared<TimestampDictionaryReader>();
-    reader->open(archive_path + "/timestamp.dict");
-    reader->read_local_entries();
-    reader->close();
-
-    return reader;
-}
-
 std::vector<std::string> ReaderUtils::get_archives(std::string const& archives_dir) {
     std::vector<std::string> archive_paths;
 
@@ -164,100 +153,4 @@ std::vector<std::string> ReaderUtils::get_archives(std::string const& archives_d
     return archive_paths;
 }
 
-std::vector<int32_t> ReaderUtils::get_schemas(std::string const& archive_path) {
-    std::vector<int32_t> schemas;
-    std::string encoded_messages_dir = archive_path + "/encoded_messages";
-
-    boost::filesystem::directory_iterator iter(encoded_messages_dir);
-    boost::filesystem::directory_iterator end;
-
-    for (; iter != end; ++iter) {
-        if (boost::filesystem::is_regular_file(iter->path())) {
-            std::string schema = iter->path().rbegin()->string();
-            if (false == schema.empty() && std::all_of(schema.begin(), schema.end(), ::isdigit)) {
-                schemas.push_back(std::stoi(schema));
-            }
-        }
-    }
-
-    return schemas;
-}
-
-BaseColumnReader* ReaderUtils::append_reader_column(
-        SchemaReader* reader,
-        int32_t column_id,
-        std::shared_ptr<SchemaTree> const& schema_tree,
-        std::shared_ptr<VariableDictionaryReader> const& var_dict,
-        std::shared_ptr<LogTypeDictionaryReader> const& log_dict,
-        std::shared_ptr<LogTypeDictionaryReader> const& array_dict,
-        std::shared_ptr<TimestampDictionaryReader> const& timestamp_dict
-) {
-    BaseColumnReader* column_reader = nullptr;
-    auto node = schema_tree->get_node(column_id);
-    std::string key_name = node->get_key_name();
-    switch (node->get_type()) {
-        case NodeType::INTEGER:
-            column_reader = new Int64ColumnReader(key_name, column_id);
-            break;
-        case NodeType::FLOAT:
-            column_reader = new FloatColumnReader(key_name, column_id);
-            break;
-        case NodeType::CLPSTRING:
-            column_reader = new ClpStringColumnReader(key_name, column_id, var_dict, log_dict);
-            break;
-        case NodeType::VARSTRING:
-            column_reader = new VariableStringColumnReader(key_name, column_id, var_dict);
-            break;
-        case NodeType::BOOLEAN:
-            reader->append_column(new BooleanColumnReader(key_name, column_id));
-            break;
-        case NodeType::ARRAY:
-            column_reader
-                    = new ClpStringColumnReader(key_name, column_id, var_dict, array_dict, true);
-            break;
-        case NodeType::DATESTRING:
-            column_reader = new DateStringColumnReader(key_name, column_id, timestamp_dict);
-            break;
-        case NodeType::OBJECT:
-        case NodeType::NULLVALUE:
-            reader->append_column(column_id);
-            break;
-        case NodeType::UNKNOWN:
-            break;
-    }
-
-    if (column_reader) {
-        reader->append_column(column_reader);
-    }
-    return column_reader;
-}
-
-void ReaderUtils::append_reader_columns(
-        SchemaReader* reader,
-        Schema const& columns,
-        std::shared_ptr<SchemaTree> const& schema_tree,
-        std::shared_ptr<VariableDictionaryReader> const& var_dict,
-        std::shared_ptr<LogTypeDictionaryReader> const& log_dict,
-        std::shared_ptr<LogTypeDictionaryReader> const& array_dict,
-        std::shared_ptr<TimestampDictionaryReader> const& timestamp_dict,
-        bool extract_timestamp
-) {
-    auto timestamp_column_ids = timestamp_dict->get_authoritative_timestamp_column_ids();
-
-    for (int32_t column_id : columns) {
-        BaseColumnReader* column_reader = append_reader_column(
-                reader,
-                column_id,
-                schema_tree,
-                var_dict,
-                log_dict,
-                array_dict,
-                timestamp_dict
-        );
-
-        if (extract_timestamp && column_reader && timestamp_column_ids.count(column_id) > 0) {
-            reader->mark_column_as_timestamp(column_reader);
-        }
-    }
-}
 }  // namespace clp_s
