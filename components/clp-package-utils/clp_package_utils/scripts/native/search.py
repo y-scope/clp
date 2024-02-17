@@ -187,7 +187,7 @@ def main(argv):
         "-m",
         type=int,
         default=1000,
-        help="Maximum number of results to return.",
+        help="Maximum number of latest results to return.",
     )
     args_parser.add_argument("--file-path", help="File to search.")
     parsed_args = args_parser.parse_args(argv[1:])
