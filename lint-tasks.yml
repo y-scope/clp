@@ -1,0 +1,125 @@
+version: "3"
+
+vars:
+  VENV_DIR: "{{.TASKFILE_DIR}}/.lint-venv"
+
+tasks:
+  check:
+    cmds:
+      - task: "cpp-check"
+      - task: "py-check"
+      - task: "yml-check"
+
+  fix:
+    cmds:
+      - task: "cpp-fix"
+      - task: "py-fix"
+      - task: "yml-fix"
+
+  cpp-check:
+    dir: "{{.TASKFILE_DIR}}/components/core"
+    cmds:
+      - task: "cpp"
+        vars:
+          FLAGS: "--dry-run"
+    sources: &cpp_source_files
+      - ".clang-format"
+      - "src/**/*.cpp"
+      - "src/**/*.h"
+      - "src/**/*.hpp"
+      - "src/**/*.inc"
+      - "Taskfile.yml"
+      - "tests/**/*.cpp"
+      - "tests/**/*.h"
+      - "tests/**/*.hpp"
+      - "tests/**/*.inc"
+
+  cpp-fix:
+    dir: "{{.TASKFILE_DIR}}/components/core"
+    cmds:
+      - task: "cpp"
+        vars:
+          FLAGS: "-i"
+    sources: *cpp_source_files
+
+  py-check:
+    cmds:
+      - task: "py"
+        vars:
+          BLACK_FLAGS: "--check"
+          RUFF_FLAGS: ""
+
+  py-fix:
+    cmds:
+      - task: "py"
+        vars:
+          BLACK_FLAGS: ""
+          RUFF_FLAGS: "--fix"
+
+  yml:
+    aliases:
+      - "yml-check"
+      - "yml-fix"
+    deps: ["venv"]
+    cmds:
+      - |-
+        . "{{.VENV_DIR}}/bin/activate"
+        yamllint .
+
+  cpp:
+    internal: true
+    requires:
+      vars: ["FLAGS"]
+    deps: ["venv"]
+    dir: "{{.TASKFILE_DIR}}/components/core"
+    cmds:
+      - |-
+        . "{{.VENV_DIR}}/bin/activate"
+        find src tests \
+          -type f \
+          \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.inc" \) \
+          -print0 | \
+            xargs -0 clang-format {{.FLAGS}} -Werror
+
+  py:
+    internal: true
+    requires:
+      vars: ["BLACK_FLAGS", "RUFF_FLAGS"]
+    deps: ["venv"]
+    cmds:
+      - for:
+          - "components/clp-package-utils/clp_package_utils"
+          - "components/clp-py-utils/clp_py_utils"
+          - "components/job-orchestration/job_orchestration"
+        cmd: |-
+          . "{{.VENV_DIR}}/bin/activate"
+          cd "{{.ITEM}}"
+          black --color --line-length 100 {{.BLACK_FLAGS}} .
+          ruff check {{.RUFF_FLAGS}} .
+
+  venv:
+    internal: true
+    vars:
+      CREATION_TIMESTAMP_FILE: "{{.VENV_DIR}}/creation_time.txt"
+    dir: "{{.TASKFILE_DIR}}"
+    cmds:
+      - "rm -rf '{{.VENV_DIR}}'"
+      - "python3 -m venv '{{.VENV_DIR}}'"
+      # Remove calls to `hash` since Task uses `gosh` rather than `bash`.
+      # NOTE: Older versions of Python's venv would only call `hash` if they detected the running
+      # shell was one that had the command, but that's not the case in newer versions.
+      - "sed -i 's/^\\s*hash\\s\\+.*/true/g' \"{{.VENV_DIR}}/bin/activate\""
+      - |-
+        . "{{.VENV_DIR}}/bin/activate"
+        pip3 install --upgrade pip
+        pip3 install --upgrade -r lint-requirements.txt
+      # This step must be last since we use this file to detect whether the venv was created
+      # successfully
+      - "date +%s > '{{.CREATION_TIMESTAMP_FILE}}'"
+    method: "timestamp"
+    sources:
+      - "lint-requirements.txt"
+      - "Taskfile.yml"
+    status:
+      - "test -e '{{.CREATION_TIMESTAMP_FILE}}'"
+      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.CREATION_TIMESTAMP_FILE}}')"
