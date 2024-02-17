@@ -373,7 +373,6 @@ tasks:
       - |-
         . "{{.COMPONENT_VENV_DIR}}/bin/activate"
         pip3 install --upgrade -r "{{.TASKFILE_DIR}}/requirements.txt"
-        poetry update
       # This step must be last since we use this file to detect whether the venv was created
       # successfully
       - "date +%s > '{{.CREATION_TIMESTAMP_FILE}}'"
@@ -394,7 +393,6 @@ tasks:
     dir: "components/{{.COMPONENT}}"
     cmds:
       - "rm -rf dist"
-      - "rm -rf poetry.lock"
 
   lint-venv:
     internal: true
