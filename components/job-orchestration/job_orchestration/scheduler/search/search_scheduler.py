@@ -51,7 +51,8 @@ def fetch_new_search_jobs(db_cursor) -> list:
         {SEARCH_JOBS_TABLE_NAME}.search_config,
         {SEARCH_JOBS_TABLE_NAME}.submission_time
         FROM {SEARCH_JOBS_TABLE_NAME}
-        WHERE {SEARCH_JOBS_TABLE_NAME}.status={SearchJobStatus.PENDING}
+        WHERE {SEARCH_JOBS_TABLE_NAME}.status={SearchJobStatus.PENDING} OR 
+        {SEARCH_JOBS_TABLE_NAME}.status={SearchJobStatus.WAITING_FOR_BATCH}
         """
     )
     return db_cursor.fetchall()
