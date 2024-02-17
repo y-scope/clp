@@ -75,13 +75,13 @@ you can run the [clp-lint](.github/workflows/clp-lint.yaml) workflow in your for
 To perform the linting checks:
 
 ```shell
-task lint-check
+task lint:check
 ```
 
 To also apply any automatic fixes:
 
 ```shell
-task lint-fix
+task lint:fix
 ```
 
 [1]: https://github.com/orgs/y-scope/packages?repo_name=clp
