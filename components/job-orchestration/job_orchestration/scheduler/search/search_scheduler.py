@@ -134,7 +134,7 @@ def get_archives_for_search(
 
 
 def get_task_group_for_job(
-    archives_for_search: List[str],
+    archives_for_search: List[Dict[str, any]],
     job_id: str,
     search_config: SearchConfig,
     results_cache_uri: str,
@@ -143,16 +143,19 @@ def get_task_group_for_job(
     return celery.group(
         search.s(
             job_id=job_id,
-            archive_id=archive_id,
+            archive_id=archive["archive_id"],
             search_config_obj=search_config_obj,
             results_cache_uri=results_cache_uri,
         )
-        for archive_id in archives_for_search
+        for archive in archives_for_search
     )
 
 
 def dispatch_search_job(
-    archives_for_search: List[str], job_id: str, search_config: SearchConfig, results_cache_uri: str
+    archives_for_search: List[Dict[str, any]],
+    job_id: str,
+    search_config: SearchConfig,
+    results_cache_uri: str,
 ) -> None:
     global active_jobs
     task_group = get_task_group_for_job(
