@@ -119,7 +119,7 @@ tasks:
       - "components/job-orchestration/dist/*.whl"
       - "components/package-template/src/**/*"
     status:
-      - test -f "{{.CHECKSUM_FILE}}"
+      - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
         diff
         <(tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} "{{.OUTPUT_DIR}}" | sha256sum)
@@ -184,7 +184,7 @@ tasks:
     sources:
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
     status:
-      - test -f "{{.CHECKSUM_FILE}}"
+      - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
         diff
         <(tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} "{{.OUTPUT_DIR}}" | sha256sum)
@@ -219,7 +219,7 @@ tasks:
       - "server/**/*"
       - "tests/**/*"
     status:
-      - test -f "{{.CHECKSUM_FILE}}"
+      - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
         diff
         <(tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} "{{.OUTPUT_DIR}}" | sha256sum)
@@ -240,7 +240,7 @@ tasks:
       - ".gitmodules"
       - "tools/scripts/deps-download/**/*"
     status:
-      - test -f "{{.CHECKSUM_FILE}}"
+      - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
         diff
         <(tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} "{{.OUTPUT_DIR}}" | sha256sum)
@@ -263,7 +263,7 @@ tasks:
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
     status:
-      - test -f "{{.CHECKSUM_FILE}}"
+      - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
         diff
         <(tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} "{{.OUTPUT_DIR}}" | sha256sum)
@@ -321,7 +321,7 @@ tasks:
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "pyproject.toml"
     status:
-      - test -f "{{.CHECKSUM_FILE}}"
+      - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
         diff
         <(tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} "{{.OUTPUT_DIR}}" | sha256sum)
