@@ -45,16 +45,14 @@ tasks:
           source /etc/os-release
           echo "clp-package-${ID}-${VERSION_CODENAME}-$(arch)-v{{.PACKAGE_VERSION}}"
     dir: "{{.BUILD_DIR}}"
-    method: "timestamp"
     cmds:
       - "rm -rf '{{.VERSIONED_PACKAGE_NAME}}' '{{.VERSIONED_PACKAGE_NAME}}.tar.gz'"
       - "ln -s '{{.PACKAGE_BUILD_DIR}}' '{{.VERSIONED_PACKAGE_NAME}}'"
       - "tar czf '{{.VERSIONED_PACKAGE_NAME}}.tar.gz' --dereference '{{.VERSIONED_PACKAGE_NAME}}'"
     sources:
       - "{{.PACKAGE_BUILD_DIR}}/**/*"
-    status:
-      - "test -e {{.VERSIONED_PACKAGE_NAME}}.tar.gz"
-      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y {{.VERSIONED_PACKAGE_NAME}}.tar.gz)"
+    generates:
+      - "{{.VERSIONED_PACKAGE_NAME}}.tar.gz"
 
   package:
     vars:
@@ -96,10 +94,6 @@ tasks:
       - |-
         cd "{{.PACKAGE_BUILD_DIR}}/var/www/programs/server"
         PATH="{{.NODEJS_BIN_DIR}}":$PATH npm install
-      # This step must be last since we use this file to detect whether the package was built
-      # successfully
-      - "echo {{.PACKAGE_VERSION}} > '{{.PACKAGE_VERSION_FILE}}'"
-    method: "timestamp"
     sources:
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
@@ -112,9 +106,8 @@ tasks:
       - "components/clp-py-utils/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
       - "components/package-template/src/**/*"
-    status:
-      - "test -e '{{.PACKAGE_VERSION_FILE}}'"
-      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.PACKAGE_VERSION_FILE}}')"
+    generates:
+      - "{{.PACKAGE_BUILD_DIR}}/**/*"
 
   core:
     deps: ["core-submodules"]
@@ -124,27 +117,17 @@ tasks:
       - "mkdir -p '{{.CORE_COMPONENT_BUILD_DIR}}'"
       - "cmake -S '{{.SRC_DIR}}' -B '{{.CORE_COMPONENT_BUILD_DIR}}'"
       - "cmake --build '{{.CORE_COMPONENT_BUILD_DIR}}' --parallel --target clg clo clp clp-s"
-    method: "timestamp"
     sources:
       - "{{.SRC_DIR}}/cmake/**/*"
       - "{{.SRC_DIR}}/CMakeLists.txt"
       - "{{.SRC_DIR}}/src/**/*"
       - "{{.SRC_DIR}}/submodules/**/*"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
-    status:
-      - >-
-        test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clg'
-        && test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clo'
-        && test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clp'
-        && test -e '{{.CORE_COMPONENT_BUILD_DIR}}/clp-s'
-      - >-
-        test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clg')
-        && test {{.TIMESTAMP | unixEpoch}} -lt
-        $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clo')
-        && test {{.TIMESTAMP | unixEpoch}} -lt
-        $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clp')
-        && test {{.TIMESTAMP | unixEpoch}} -lt
-        $(stat --format %Y '{{.CORE_COMPONENT_BUILD_DIR}}/clp-s')
+    generates:
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
 
   clp-package-utils:
     - task: "python-component"
@@ -178,7 +161,7 @@ tasks:
         mv "{{.NODEJS_BUILD_DIR}}/node-v{{.NODEJS_VERSION}}-linux-{{.NODEJS_ARCH}}"
         "{{.NODEJS_BUILD_DIR}}/node"
       - "rm -f '{{.NODEJS_BUILD_DIR}}/{{.TAR_FILE_NAME}}'"
-    sources:
+    generates:
       - "{{.NODEJS_BUILD_DIR}}/node/**/*"
 
   webui:
@@ -203,6 +186,7 @@ tasks:
       - "server/**/*"
       - "tests/**/*"
       - "*"
+    generates:
       - "{{.WEBUI_BUILD_DIR}}/**/*"
 
   core-submodules:
@@ -213,27 +197,22 @@ tasks:
     sources:
       - ".gitmodules"
       - "tools/scripts/deps-download/**/*"
+    generates:
+      - "submodules/**/*"
 
   package-venv:
     internal: true
-    vars:
-      CREATION_TIMESTAMP_FILE: "{{.PACKAGE_VENV_DIR}}/creation_time.txt"
     cmds:
       - "rm -rf '{{.PACKAGE_VENV_DIR}}'"
       - "python3 -m venv '{{.PACKAGE_VENV_DIR}}'"
       - |-
         . "{{.PACKAGE_VENV_DIR}}/bin/activate"
         pip3 install --upgrade -r "{{.TASKFILE_DIR}}/requirements.txt"
-      # This step must be last since we use this file to detect whether the venv was created
-      # successfully
-      - "date +%s > '{{.CREATION_TIMESTAMP_FILE}}'"
-    method: "timestamp"
     sources:
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
-    status:
-      - "test -e '{{.CREATION_TIMESTAMP_FILE}}'"
-      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.CREATION_TIMESTAMP_FILE}}')"
+    generates:
+      - "{{.PACKAGE_VENV_DIR}}/**/*"
 
   python-component:
     internal: true
@@ -257,15 +236,13 @@ tasks:
       - |-
         . "{{.VENV_DIR}}/bin/activate"
         poetry build --format wheel
-    method: "timestamp"
     sources:
       - "{{.PACKAGE}}/**/*"
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "pyproject.toml"
-    status:
-      - "ls dist/*.whl"
-      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y dist/*.whl)"
+    generates:
+      - "dist/*.whl"
 
   component-venv:
     internal: true
@@ -273,25 +250,18 @@ tasks:
       vars: ["COMPONENT", "COMPONENT_VENV_DIR"]
     label: "{{.COMPONENT}}_venv"
     dir: "components/{{.COMPONENT}}"
-    vars:
-      CREATION_TIMESTAMP_FILE: "{{.COMPONENT_VENV_DIR}}/creation_time.txt"
     cmds:
       - "rm -rf '{{.COMPONENT_VENV_DIR}}'"
       - "python3 -m venv '{{.COMPONENT_VENV_DIR}}'"
       - |-
         . "{{.COMPONENT_VENV_DIR}}/bin/activate"
         pip3 install --upgrade -r "{{.TASKFILE_DIR}}/requirements.txt"
-      # This step must be last since we use this file to detect whether the venv was created
-      # successfully
-      - "date +%s > '{{.CREATION_TIMESTAMP_FILE}}'"
-    method: "timestamp"
     sources:
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "pyproject.toml"
-    status:
-      - "test -e '{{.CREATION_TIMESTAMP_FILE}}'"
-      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.CREATION_TIMESTAMP_FILE}}')"
+    generates:
+      - "{{.COMPONENT_VENV_DIR}}/**/*"
 
   clean-python-component:
     internal: true

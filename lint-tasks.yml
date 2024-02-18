@@ -99,8 +99,6 @@ tasks:
 
   venv:
     internal: true
-    vars:
-      CREATION_TIMESTAMP_FILE: "{{.VENV_DIR}}/creation_time.txt"
     dir: "{{.TASKFILE_DIR}}"
     cmds:
       - "rm -rf '{{.VENV_DIR}}'"
@@ -113,13 +111,8 @@ tasks:
         . "{{.VENV_DIR}}/bin/activate"
         pip3 install --upgrade pip
         pip3 install --upgrade -r lint-requirements.txt
-      # This step must be last since we use this file to detect whether the venv was created
-      # successfully
-      - "date +%s > '{{.CREATION_TIMESTAMP_FILE}}'"
-    method: "timestamp"
     sources:
       - "lint-requirements.txt"
       - "Taskfile.yml"
-    status:
-      - "test -e '{{.CREATION_TIMESTAMP_FILE}}'"
-      - "test {{.TIMESTAMP | unixEpoch}} -lt $(stat --format %Y '{{.CREATION_TIMESTAMP_FILE}}')"
+    generates:
+      - "{{.VENV_DIR}}/**/*"
