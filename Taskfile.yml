@@ -65,6 +65,7 @@ tasks:
       - "clp-py-utils"
       - "job-orchestration"
       - "package-venv"
+      - "nodejs"
       - "webui"
     cmds:
       - task: "clean-package"
@@ -89,9 +90,12 @@ tasks:
         "{{.PACKAGE_BUILD_DIR}}/bin/"
       - "mkdir -p '{{.PACKAGE_BUILD_DIR}}/var/www/'"
       - >-
-        rsync -a --delete
+        rsync -a
         "{{.WEBUI_BUILD_DIR}}/"
         "{{.PACKAGE_BUILD_DIR}}/var/www/"
+      - |-
+        cd "{{.PACKAGE_BUILD_DIR}}/var/www/programs/server"
+        PATH="{{.NODEJS_BIN_DIR}}":$PATH npm install
       # This step must be last since we use this file to detect whether the package was built
       # successfully
       - "echo {{.PACKAGE_VERSION}} > '{{.PACKAGE_VERSION_FILE}}'"
@@ -101,6 +105,7 @@ tasks:
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
+      - "{{.NODEJS_BUILD_DIR}}/node/**/*"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "{{.WEBUI_BUILD_DIR}}/**/*"
       - "components/clp-package-utils/dist/*.whl"
@@ -177,15 +182,6 @@ tasks:
       - "{{.NODEJS_BUILD_DIR}}/node/**/*"
 
   webui:
-    deps:
-      - "nodejs"
-      - "webui-bundle"
-    cmds:
-      - |-
-        cd "{{.WEBUI_BUILD_DIR}}/programs/server"
-        PATH="{{.NODEJS_BIN_DIR}}":$PATH $(readlink -f "{{.NODEJS_BIN_DIR}}/npm") install
-
-  webui-bundle:
     dir: "components/webui"
     platforms: ["386", "amd64"]
     cmds:
@@ -201,12 +197,12 @@ tasks:
         "{{.WEBUI_BUILD_DIR}}/"
       - "rm -rf '{{.WEBUI_BUILD_DIR}}/bundle/'"
     sources:
-      - "./.meteor/*"
-      - "./client/**/*"
-      - "./imports/**/*"
-      - "./server/**/*"
-      - "./tests/**/*"
-      - "./*"
+      - ".meteor/*"
+      - "client/**/*"
+      - "imports/**/*"
+      - "server/**/*"
+      - "tests/**/*"
+      - "*"
       - "{{.WEBUI_BUILD_DIR}}/**/*"
 
   core-submodules:
