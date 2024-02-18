@@ -100,6 +100,7 @@ tasks:
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.NODEJS_BUILD_DIR}}/node/**/*"
+      - "{{.PACKAGE_VENV_DIR}}/**/*"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "{{.WEBUI_BUILD_DIR}}/**/*"
       - "components/clp-package-utils/dist/*.whl"
@@ -240,6 +241,7 @@ tasks:
       - "{{.PACKAGE}}/**/*"
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "{{.VENV_DIR}}/**/*"
       - "pyproject.toml"
     generates:
       - "dist/*.whl"
