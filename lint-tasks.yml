@@ -24,11 +24,11 @@ tasks:
           FLAGS: "--dry-run"
     sources: &cpp_source_files
       - ".clang-format"
+      - "lint-tasks.yml"
       - "src/**/*.cpp"
       - "src/**/*.h"
       - "src/**/*.hpp"
       - "src/**/*.inc"
-      - "Taskfile.yml"
       - "tests/**/*.cpp"
       - "tests/**/*.h"
       - "tests/**/*.hpp"
@@ -113,6 +113,6 @@ tasks:
         pip3 install --upgrade -r lint-requirements.txt
     sources:
       - "lint-requirements.txt"
-      - "Taskfile.yml"
+      - "lint-tasks.yml"
     generates:
       - "{{.VENV_DIR}}/**/*"

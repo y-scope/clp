@@ -51,6 +51,7 @@ tasks:
       - "tar czf '{{.VERSIONED_PACKAGE_NAME}}.tar.gz' --dereference '{{.VERSIONED_PACKAGE_NAME}}'"
     sources:
       - "{{.PACKAGE_BUILD_DIR}}/**/*"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
     generates:
       - "{{.VERSIONED_PACKAGE_NAME}}.tar.gz"
 
@@ -162,6 +163,8 @@ tasks:
         mv "{{.NODEJS_BUILD_DIR}}/node-v{{.NODEJS_VERSION}}-linux-{{.NODEJS_ARCH}}"
         "{{.NODEJS_BUILD_DIR}}/node"
       - "rm -f '{{.NODEJS_BUILD_DIR}}/{{.TAR_FILE_NAME}}'"
+    sources:
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
     generates:
       - "{{.NODEJS_BUILD_DIR}}/node/**/*"
 
@@ -181,12 +184,13 @@ tasks:
         "{{.WEBUI_BUILD_DIR}}/"
       - "rm -rf '{{.WEBUI_BUILD_DIR}}/bundle/'"
     sources:
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "*"
       - ".meteor/*"
       - "client/**/*"
       - "imports/**/*"
       - "server/**/*"
       - "tests/**/*"
-      - "*"
     generates:
       - "{{.WEBUI_BUILD_DIR}}/**/*"
 
@@ -196,6 +200,7 @@ tasks:
     cmds:
       - "tools/scripts/deps-download/download-all.sh"
     sources:
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - ".gitmodules"
       - "tools/scripts/deps-download/**/*"
     generates:
