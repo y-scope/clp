@@ -56,14 +56,14 @@ tasks:
       - "ln -s '{{.PACKAGE_BUILD_DIR}}' '{{.VERSIONED_PACKAGE_NAME}}'"
       - "tar czf '{{.VERSIONED_PACKAGE_NAME}}.tar.gz' --dereference '{{.VERSIONED_PACKAGE_NAME}}'"
     sources:
-      - "{{.BUILD_DIR}}/package.sha256"
+      - "{{.BUILD_DIR}}/package.md5"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
     generates:
       - "{{.VERSIONED_PACKAGE_NAME}}.tar.gz"
 
   package:
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.sha256"
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.PACKAGE_BUILD_DIR}}"
       PACKAGE_VERSION_FILE: "{{.PACKAGE_BUILD_DIR}}/VERSION"
     deps:
@@ -104,11 +104,11 @@ tasks:
         cd "{{.OUTPUT_DIR}}/var/www/programs/server"
         PATH="{{.NODEJS_BIN_DIR}}":$PATH npm install
       # Checksum the generated files (this command must be last)
-      - "tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} '{{.OUTPUT_DIR}}' | sha256sum > '{{.CHECKSUM_FILE}}'"
+      - "tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} '{{.OUTPUT_DIR}}' | md5sum > '{{.CHECKSUM_FILE}}'"
     sources:
-      - "{{.BUILD_DIR}}/nodejs.sha256"
-      - "{{.BUILD_DIR}}/package-venv.sha256"
-      - "{{.BUILD_DIR}}/webui.sha256"
+      - "{{.BUILD_DIR}}/nodejs.md5"
+      - "{{.BUILD_DIR}}/package-venv.md5"
+      - "{{.BUILD_DIR}}/webui.md5"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
@@ -122,7 +122,7 @@ tasks:
       - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
         diff
-        <(tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} "{{.OUTPUT_DIR}}" | sha256sum)
+        <(tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} "{{.OUTPUT_DIR}}" | md5sum)
         "{{.CHECKSUM_FILE}}"
 
   core:
@@ -134,7 +134,7 @@ tasks:
       - "cmake -S '{{.SRC_DIR}}' -B '{{.CORE_COMPONENT_BUILD_DIR}}'"
       - "cmake --build '{{.CORE_COMPONENT_BUILD_DIR}}' --parallel --target clg clo clp clp-s"
     sources:
-      - "{{.BUILD_DIR}}/core-submodules.sha256"
+      - "{{.BUILD_DIR}}/core-submodules.md5"
       - "{{.SRC_DIR}}/cmake/**/*"
       - "{{.SRC_DIR}}/CMakeLists.txt"
       - "{{.SRC_DIR}}/src/**/*"
@@ -162,7 +162,7 @@ tasks:
 
   nodejs:
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.sha256"
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
       NODEJS_VERSION: "14.21.3"
       NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
       OUTPUT_DIR: "{{.NODEJS_BUILD_DIR}}"
@@ -180,21 +180,21 @@ tasks:
         "{{.OUTPUT_DIR}}/node"
       - "rm -f '{{.OUTPUT_DIR}}/{{.TAR_FILE_NAME}}'"
       # Checksum the generated files (this command must be last)
-      - "tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} '{{.OUTPUT_DIR}}' | sha256sum > '{{.CHECKSUM_FILE}}'"
+      - "tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} '{{.OUTPUT_DIR}}' | md5sum > '{{.CHECKSUM_FILE}}'"
     sources:
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
     status:
       - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
         diff
-        <(tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} "{{.OUTPUT_DIR}}" | sha256sum)
+        <(tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} "{{.OUTPUT_DIR}}" | md5sum)
         "{{.CHECKSUM_FILE}}"
 
   webui:
     dir: "components/webui"
     platforms: ["386", "amd64"]
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.sha256"
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.WEBUI_BUILD_DIR}}"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
@@ -209,7 +209,7 @@ tasks:
         "{{.OUTPUT_DIR}}/"
       - "rm -rf '{{.OUTPUT_DIR}}/bundle/'"
       # Checksum the generated files (this command must be last)
-      - "tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} '{{.OUTPUT_DIR}}' | sha256sum > '{{.CHECKSUM_FILE}}'"
+      - "tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} '{{.OUTPUT_DIR}}' | md5sum > '{{.CHECKSUM_FILE}}'"
     sources:
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "*"
@@ -222,19 +222,19 @@ tasks:
       - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
         diff
-        <(tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} "{{.OUTPUT_DIR}}" | sha256sum)
+        <(tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} "{{.OUTPUT_DIR}}" | md5sum)
         "{{.CHECKSUM_FILE}}"
 
   core-submodules:
     internal: true
     dir: "components/core"
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.sha256"
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "submodules"
     cmds:
       - "tools/scripts/deps-download/download-all.sh"
       # Checksum the generated files (this command must be last)
-      - "tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} '{{.OUTPUT_DIR}}' | sha256sum > '{{.CHECKSUM_FILE}}'"
+      - "tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} '{{.OUTPUT_DIR}}' | md5sum > '{{.CHECKSUM_FILE}}'"
     sources:
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - ".gitmodules"
@@ -243,13 +243,13 @@ tasks:
       - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
         diff
-        <(tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} "{{.OUTPUT_DIR}}" | sha256sum)
+        <(tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} "{{.OUTPUT_DIR}}" | md5sum)
         "{{.CHECKSUM_FILE}}"
 
   package-venv:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.sha256"
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.PACKAGE_VENV_DIR}}"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
@@ -258,7 +258,7 @@ tasks:
         . "{{.OUTPUT_DIR}}/bin/activate"
         pip3 install --upgrade -r "{{.TASKFILE_DIR}}/requirements.txt"
       # Checksum the generated files (this command must be last)
-      - "tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} '{{.OUTPUT_DIR}}' | sha256sum > '{{.CHECKSUM_FILE}}'"
+      - "tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} '{{.OUTPUT_DIR}}' | md5sum > '{{.CHECKSUM_FILE}}'"
     sources:
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
@@ -266,7 +266,7 @@ tasks:
       - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
         diff
-        <(tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} "{{.OUTPUT_DIR}}" | sha256sum)
+        <(tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} "{{.OUTPUT_DIR}}" | md5sum)
         "{{.CHECKSUM_FILE}}"
 
   python-component:
@@ -292,7 +292,7 @@ tasks:
         . "{{.VENV_DIR}}/bin/activate"
         poetry build --format wheel
     sources:
-      - "{{.BUILD_DIR}}/{{.COMPONENT}}_venv.sha256"
+      - "{{.BUILD_DIR}}/{{.COMPONENT}}_venv.md5"
       - "{{.PACKAGE}}/**/*"
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
@@ -307,7 +307,7 @@ tasks:
     label: "{{.COMPONENT}}_venv"
     dir: "components/{{.COMPONENT}}"
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.COMPONENT}}_venv.sha256"
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.COMPONENT}}_venv.md5"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "python3 -m venv '{{.OUTPUT_DIR}}'"
@@ -315,7 +315,7 @@ tasks:
         . "{{.OUTPUT_DIR}}/bin/activate"
         pip3 install --upgrade -r "{{.TASKFILE_DIR}}/requirements.txt"
       # Checksum the generated files (this command must be last)
-      - "tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} '{{.OUTPUT_DIR}}' | sha256sum > '{{.CHECKSUM_FILE}}'"
+      - "tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} '{{.OUTPUT_DIR}}' | md5sum > '{{.CHECKSUM_FILE}}'"
     sources:
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
@@ -324,7 +324,7 @@ tasks:
       - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
         diff
-        <(tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} "{{.OUTPUT_DIR}}" | sha256sum)
+        <(tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} "{{.OUTPUT_DIR}}" | md5sum)
         "{{.CHECKSUM_FILE}}"
 
   clean-python-component:
