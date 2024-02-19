@@ -6,11 +6,11 @@ includes:
 vars:
   BUILD_DIR: "{{.TASKFILE_DIR}}/build"
   CHECKSUM_TAR_BASE_ARGS: >-
-    --sort=name
-    --mtime='UTC 1970-01-01'
     --group=0
-    --owner=0
+    --mtime='UTC 1970-01-01'
     --numeric-owner
+    --owner=0
+    --sort=name
     --xattrs
   CORE_COMPONENT_BUILD_DIR: "{{.TASKFILE_DIR}}/build/core"
   NODEJS_BIN_DIR: "{{.TASKFILE_DIR}}/build/nodejs/node/bin"
