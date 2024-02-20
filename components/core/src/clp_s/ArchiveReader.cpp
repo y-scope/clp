@@ -1,5 +1,6 @@
 #include "ArchiveReader.hpp"
 
+#include "ArchiveConstants.hpp"
 #include "ReaderUtils.hpp"
 
 namespace clp_s {
@@ -14,8 +15,8 @@ void ArchiveReader::open(std::string const& archive_path) {
     m_log_dict = ReaderUtils::get_log_type_dictionary_reader(m_archive_path);
     m_array_dict = ReaderUtils::get_array_dictionary_reader(m_archive_path);
 
-    m_tables_file_reader.open(m_archive_path + "/table");
-    m_table_metadata_file_reader.open(m_archive_path + "/metadata");
+    m_tables_file_reader.open(m_archive_path + constants::cArchiveTablesFile);
+    m_table_metadata_file_reader.open(m_archive_path + constants::cArchiveTableMetadataFile);
 }
 
 void ArchiveReader::read_metadata() {
@@ -87,7 +88,7 @@ ArchiveReader::read_table(int32_t schema_id, bool should_extract_timestamp) {
 
 std::shared_ptr<TimestampDictionaryReader> ArchiveReader::read_timestamp_dictionary() {
     auto reader = std::make_shared<TimestampDictionaryReader>();
-    reader->open(m_archive_path + "/timestamp.dict");
+    reader->open(m_archive_path + constants::cArchiveTimestampDictFile);
     reader->read_local_entries();
     reader->close();
 
