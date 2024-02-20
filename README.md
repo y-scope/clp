@@ -11,7 +11,7 @@ purpose-built web interfaces for searching and viewing the compressed logs.
 To learn more about it, you can read our 
 [paper](https://www.usenix.org/system/files/osdi21-rodrigues.pdf).
 
-# Benchmark
+# Benchmarks
 
 ![CLP Benchmark on JSON Logs](docs/img/clp-json-benchmark.png)
 ![CLP Benchmark on Unstructured Logs](docs/img/clp-unstructured-benchmark.png)
@@ -21,7 +21,7 @@ the experiments between JSON and unstructured logs because (1) some tools can on
 logs, and (2) tools that can handle both types often have different designs for each type (such as CLP). 
 
 Compression ratio is measured as the average across a variety of log datasets. Some of these datasets
-can be found [here] (docs/Datasets.md). Search performance is measured using queries on the MongoDB logs
+can be found [here](docs/Datasets.md). Search performance is measured using queries on the MongoDB logs
 (for JSON) and the Hadoop logs (for unstructured logs). Note that CLP uses an index-less design, so for
 a fair comparison, we disabled MongoDB and PostgreSQL's indexes; If we left them enabled, MongoDB and
 PostgreSQL's compression ratio would be worse. We didn’t disable indexing for Elasticsearch or Splunk
@@ -36,11 +36,11 @@ More details about our experimental methodology can be found in the
 CLP provides an end-to-end log management pipeline consisting of compression, search, analytics, and
 viewing. The figure above shows the system architecture. It consists of the following features:
 
-- Compression and Search: CLP compresses logs into archives, which can be searched and analyzed in a 
-  [web UI](https://github.com/y-scope/clp/tree/main/components/webui). The input can either be raw logs
+- **Compression and Search**: CLP compresses logs into archives, which can be searched and analyzed in a 
+  [web UI](components/webui). The input can either be raw logs
   or CLP's compressed IR (intermediate representation) produced by CLP's logging libraries.
 
-- Real-time Compression with CLP Logging Libraries: CLP provides logging libraries for 
+- **Real-time Compression with CLP Logging Libraries**: CLP provides logging libraries for 
   [Python](https://github.com/y-scope/clp-loglib-py) and Java ([Log4j](https://github.com/y-scope/log4j1-appenders) 
   and [Logback](https://github.com/y-scope/logback-appenders)). The logging libraries compress logs in
   real-time, so only compressed logs are written to disk or transmitted over the network. The compressed
@@ -49,18 +49,19 @@ viewing. The figure above shows the system architecture. It consists of the foll
   compression ratio and enable global search, but this requires more memory usage as it needs to buffer
   enough logs. More details on IR versus archives can be found in this [Uber Engineering Blog](https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp).
 
-- [Log Viewer](https://github.com/y-scope/yscope-log-viewer): the compressed IR can be viewed in a 
+- **[Log Viewer](https://github.com/y-scope/yscope-log-viewer)**: the compressed IR can be viewed in a 
   webUI log viewer. Compared to viewing the logs in an editor, CLP's log viewer supports advanced 
   features like filtering logs based on log level verbosity (e.g., only displaying logs with log level
   equal or higher than ERROR). These features are possible because CLP's logging libraries parse the
   logs before compressing them into IR. 
 
-- IR Analytics Libraries: we also provide a [Python library](https://github.com/y-scope/clp-ffi-py)
+- **IR Analytics Libraries**: we also provide a [Python library](https://github.com/y-scope/clp-ffi-py)
   and a [Go library](https://github.com/y-scope/clp-ffi-go) that can analyze compressed IR.
  
-- [Log parser](https://github.com/y-scope/log-surgeon): CLP also includes a custom 
+- **[Log parser](https://github.com/y-scope/log-surgeon)**: CLP also includes a custom 
   pushdown-automata-based log parser that is 3x faster than state-of-the-art regular expression engines
-  like RE2. The log parser is available as a library that can be used by other applications. 
+  like [RE2](https://github.com/google/re2). The log parser is available as a library that can be used 
+  by other applications. 
 
 # Getting Started
 
