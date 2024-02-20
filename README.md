@@ -34,7 +34,7 @@ More details about our experimental methodology can be found in the
 ![CLP systems overview](docs/img/clp-complete-solution.png)
 
 CLP provides an end-to-end log management pipeline consisting of compression, search, analytics, and
-viewing. The figure above shows the system architecture. It consists of the following features:
+viewing. The figure above shows the CLP ecosystem architecture. It consists of the following features:
 
 - **Compression and Search**: CLP compresses logs into archives, which can be searched and analyzed in a 
   [web UI](components/webui). The input can either be raw logs
