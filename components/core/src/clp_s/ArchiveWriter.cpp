@@ -1,6 +1,6 @@
 #include "ArchiveWriter.hpp"
 
-#include "ArchiveConstants.hpp"
+#include "archive_constants.hpp"
 #include "SchemaTree.hpp"
 
 namespace clp_s {

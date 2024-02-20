@@ -1,6 +1,6 @@
 #include "ArchiveReader.hpp"
 
-#include "ArchiveConstants.hpp"
+#include "archive_constants.hpp"
 #include "ReaderUtils.hpp"
 
 namespace clp_s {

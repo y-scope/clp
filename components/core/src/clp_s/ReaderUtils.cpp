@@ -1,6 +1,6 @@
 #include "ReaderUtils.hpp"
 
-#include "ArchiveConstants.hpp"
+#include "archive_constants.hpp"
 
 namespace clp_s {
 std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(std::string const& archives_dir) {

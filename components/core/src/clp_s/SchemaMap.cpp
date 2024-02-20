@@ -1,6 +1,6 @@
 #include "SchemaMap.hpp"
 
-#include "ArchiveConstants.hpp"
+#include "archive_constants.hpp"
 #include "FileWriter.hpp"
 #include "ZstdCompressor.hpp"
 
