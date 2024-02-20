@@ -4,7 +4,7 @@
 [![Open feature requests](https://img.shields.io/github/issues/y-scope/clp/enhancement?label=feature-requests)](https://github.com/y-scope/clp/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement)
 [![CLP on Zulip](https://img.shields.io/badge/zulip-yscope--clp%20chat-1888FA?logo=zulip)](https://yscope-clp.zulipchat.com/) 
 
-YScope's Compressed Log Processor (CLP) compresses text logs, and allows you to search the compressed
+YScope's Compressed Log Processor (CLP) compresses your logs, and allows you to search the compressed
 logs without decompression. CLP supports both JSON logs and unstructured (i.e., free text) logs. It 
 also supports real-time log compression within several logging libraries. CLP also includes 
 purpose-built web interfaces for searching and viewing the compressed logs. 
@@ -24,8 +24,8 @@ Compression ratio is measured as the average across a variety of log datasets. S
 can be found [here](docs/Datasets.md). Search performance is measured using queries on the MongoDB logs
 (for JSON) and the Hadoop logs (for unstructured logs). Note that CLP uses an index-less design, so for
 a fair comparison, we disabled MongoDB and PostgreSQL's indexes; If we left them enabled, MongoDB and
-PostgreSQL's compression ratio would be worse. We didn’t disable indexing for Elasticsearch or Splunk
-since these tools are fundamentally index-based tools (i.e., logs cannot be searched without indexes).
+PostgreSQL's compression ratio would be worse. We didn't disable indexing for Elasticsearch or Splunk
+since these tools are fundamentally index-based (i.e., logs cannot be searched without indexes).
 More details about our experimental methodology can be found in the 
 [CLP paper](https://www.usenix.org/system/files/osdi21-rodrigues.pdf).
 
@@ -50,7 +50,7 @@ viewing. The figure above shows the system architecture. It consists of the foll
   enough logs. More details on IR versus archives can be found in this [Uber Engineering Blog](https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp).
 
 - **[Log Viewer](https://github.com/y-scope/yscope-log-viewer)**: the compressed IR can be viewed in a 
-  webUI log viewer. Compared to viewing the logs in an editor, CLP's log viewer supports advanced 
+  web-based log viewer. Compared to viewing the logs in an editor, CLP's log viewer supports advanced 
   features like filtering logs based on log level verbosity (e.g., only displaying logs with log level
   equal or higher than ERROR). These features are possible because CLP's logging libraries parse the
   logs before compressing them into IR. 
