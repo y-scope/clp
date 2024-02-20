@@ -1,5 +1,6 @@
 #include "ArchiveWriter.hpp"
 
+#include "archive_constants.hpp"
 #include "SchemaTree.hpp"
 
 namespace clp_s {
@@ -21,19 +22,19 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
         throw OperationFailed(ErrorCodeErrno, __FILENAME__, __LINE__);
     }
 
-    std::string var_dict_path = m_archive_path + "/var.dict";
+    std::string var_dict_path = m_archive_path + constants::cArchiveVarDictFile;
     m_var_dict = std::make_shared<VariableDictionaryWriter>();
     m_var_dict->open(var_dict_path, m_compression_level, UINT64_MAX);
 
-    std::string log_dict_path = m_archive_path + "/log.dict";
+    std::string log_dict_path = m_archive_path + constants::cArchiveLogDictFile;
     m_log_dict = std::make_shared<LogTypeDictionaryWriter>();
     m_log_dict->open(log_dict_path, m_compression_level, UINT64_MAX);
 
-    std::string array_dict_path = m_archive_path + "/array.dict";
+    std::string array_dict_path = m_archive_path + constants::cArchiveArrayDictFile;
     m_array_dict = std::make_shared<LogTypeDictionaryWriter>();
     m_array_dict->open(array_dict_path, m_compression_level, UINT64_MAX);
 
-    std::string timestamp_local_dict_path = m_archive_path + "/timestamp.dict";
+    std::string timestamp_local_dict_path = m_archive_path + constants::cArchiveTimestampDictFile;
     m_timestamp_dict->open_local(timestamp_local_dict_path, m_compression_level);
 }
 
@@ -44,9 +45,12 @@ size_t ArchiveWriter::close() {
     compressed_size += m_array_dict->close();
     compressed_size += m_timestamp_dict->close_local();
 
-    m_tables_file_writer.open(m_archive_path + "/tables", FileWriter::OpenMode::CreateForWriting);
+    m_tables_file_writer.open(
+            m_archive_path + constants::cArchiveTablesFile,
+            FileWriter::OpenMode::CreateForWriting
+    );
     m_table_metadata_file_writer.open(
-            m_archive_path + "/table_metadata",
+            m_archive_path + constants::cArchiveTableMetadataFile,
             FileWriter::OpenMode::CreateForWriting
     );
     m_table_metadata_compressor.open(m_table_metadata_file_writer, m_compression_level);

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <stack>
 
+#include "archive_constants.hpp"
 #include "JsonFileIterator.hpp"
 
 namespace clp_s {
@@ -30,12 +31,15 @@ JsonParser::JsonParser(JsonParserOption const& option)
     }
 
     m_schema_tree = std::make_shared<SchemaTree>();
-    m_schema_tree_path = m_archives_dir + "/schema_tree";
+    m_schema_tree_path = m_archives_dir + constants::cArchiveSchemaTreeFile;
 
     m_schema_map = std::make_shared<SchemaMap>(m_archives_dir, m_compression_level);
 
     m_timestamp_dictionary = std::make_shared<TimestampDictionaryWriter>();
-    m_timestamp_dictionary->open(m_archives_dir + "/timestamp.dict", option.compression_level);
+    m_timestamp_dictionary->open(
+            m_archives_dir + constants::cArchiveTimestampDictFile,
+            option.compression_level
+    );
 
     ArchiveWriterOption archive_writer_option;
     archive_writer_option.archives_dir = m_archives_dir;

@@ -26,7 +26,7 @@ public:
     int32_t add_schema(Schema const& schema);
 
     /**
-     * Write the contents of the SchemaMap to archives_dir/schema_ids
+     * Write the contents of the SchemaMap to the schema map file
      * @return the compressed size of the SchemaMap in bytes
      */
     [[nodiscard]] size_t store();

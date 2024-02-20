@@ -1,5 +1,7 @@
 #include "ReaderUtils.hpp"
 
+#include "archive_constants.hpp"
+
 namespace clp_s {
 std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(std::string const& archives_dir) {
     FileReader schema_tree_reader;
@@ -7,7 +9,7 @@ std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(std::string const& arc
 
     std::shared_ptr<SchemaTree> tree = std::make_shared<SchemaTree>();
 
-    schema_tree_reader.open(archives_dir + "/schema_tree");
+    schema_tree_reader.open(archives_dir + constants::cArchiveSchemaTreeFile);
     schema_tree_decompressor.open(schema_tree_reader, cDecompressorFileReadBufferCapacity);
 
     size_t num_nodes;
@@ -55,7 +57,7 @@ std::shared_ptr<VariableDictionaryReader> ReaderUtils::get_variable_dictionary_r
         std::string const& archive_path
 ) {
     auto reader = std::make_shared<VariableDictionaryReader>();
-    reader->open(archive_path + "/var.dict");
+    reader->open(archive_path + constants::cArchiveVarDictFile);
     return reader;
 }
 
@@ -63,7 +65,7 @@ std::shared_ptr<LogTypeDictionaryReader> ReaderUtils::get_log_type_dictionary_re
         std::string const& archive_path
 ) {
     auto reader = std::make_shared<LogTypeDictionaryReader>();
-    reader->open(archive_path + "/log.dict");
+    reader->open(archive_path + constants::cArchiveLogDictFile);
     return reader;
 }
 
@@ -71,7 +73,7 @@ std::shared_ptr<LogTypeDictionaryReader> ReaderUtils::get_array_dictionary_reade
         std::string const& archive_path
 ) {
     auto reader = std::make_shared<LogTypeDictionaryReader>();
-    reader->open(archive_path + "/array.dict");
+    reader->open(archive_path + constants::cArchiveArrayDictFile);
     return reader;
 }
 
@@ -81,7 +83,7 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(std::string co
     FileReader schema_id_reader;
     ZstdDecompressor schema_id_decompressor;
 
-    schema_id_reader.open(archives_dir + "/schema_ids");
+    schema_id_reader.open(archives_dir + constants::cArchiveSchemaMapFile);
     schema_id_decompressor.open(schema_id_reader, cDecompressorFileReadBufferCapacity);
 
     size_t schema_size;
@@ -128,7 +130,7 @@ std::shared_ptr<TimestampDictionaryReader> ReaderUtils::read_timestamp_dictionar
         std::string const& archives_dir
 ) {
     auto reader = std::make_shared<TimestampDictionaryReader>();
-    reader->open(archives_dir + "/timestamp.dict");
+    reader->open(archives_dir + constants::cArchiveTimestampDictFile);
     reader->read_new_entries();
     reader->close();
 
