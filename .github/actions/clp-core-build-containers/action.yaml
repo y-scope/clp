@@ -21,11 +21,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    # TODO Delete
-    - name: "Test docker load using variable"
-      run: "docker load --input /tmp/${{inputs.image_name}}.tar"
-      shell: "bash"
-
     - uses: "docker/setup-buildx-action@v3"
 
     - if: "inputs.push_deps_image == 'true'"
