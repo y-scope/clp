@@ -11,22 +11,23 @@
 
 namespace clp_s {
 enum class NodeType : uint8_t {
-    INTEGER,
-    FLOAT,
-    CLPSTRING,
-    VARSTRING,
-    BOOLEAN,
-    OBJECT,
-    ARRAY,
-    NULLVALUE,
-    DATESTRING,
-    UNKNOWN
+    Integer,
+    Float,
+    ClpString,
+    VarString,
+    Boolean,
+    Object,
+    UnstructuredArray,
+    NullValue,
+    DateString,
+    StructuredArray,
+    Unknown = std::underlying_type<NodeType>::type(~0ULL)
 };
 
 class SchemaNode {
 public:
     // Constructor
-    SchemaNode() : m_parent_id(-1), m_id(-1), m_type(NodeType::INTEGER), m_count(0) {}
+    SchemaNode() : m_parent_id(-1), m_id(-1), m_type(NodeType::Integer), m_count(0) {}
 
     SchemaNode(int32_t parent_id, int32_t id, std::string key_name, NodeType type)
             : m_parent_id(parent_id),

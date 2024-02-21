@@ -80,7 +80,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
         switch (line.type()) {
             case ondemand::json_type::object: {
                 node_id = m_archive_writer
-                                  ->add_node(node_id_stack.top(), NodeType::OBJECT, cur_key);
+                                  ->add_node(node_id_stack.top(), NodeType::Object, cur_key);
                 object_stack.push(std::move(line.get_object()));
                 auto objref = object_stack.top();
                 auto it = ondemand::object_iterator(objref.begin());
@@ -96,7 +96,11 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
             }
             case ondemand::json_type::array: {
                 std::string value = std::string(std::string_view(simdjson::to_json_string(line)));
-                node_id = m_archive_writer->add_node(node_id_stack.top(), NodeType::ARRAY, cur_key);
+                node_id = m_archive_writer->add_node(
+                        node_id_stack.top(),
+                        NodeType::UnstructuredArray,
+                        cur_key
+                );
                 m_current_parsed_message.add_value(node_id, value);
                 m_current_schema.insert_ordered(node_id);
                 break;
@@ -107,13 +111,13 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 if (false == number_value.is_double()) {
                     // FIXME: should have separate integer and unsigned
                     // integer types to handle values greater than max int64
-                    type = NodeType::INTEGER;
+                    type = NodeType::Integer;
                 } else {
-                    type = NodeType::FLOAT;
+                    type = NodeType::Float;
                 }
                 node_id = m_archive_writer->add_node(node_id_stack.top(), type, cur_key);
 
-                if (type == NodeType::INTEGER) {
+                if (type == NodeType::Integer) {
                     int64_t i64_value;
                     if (number_value.is_uint64()) {
                         i64_value = static_cast<int64_t>(number_value.get_uint64());
@@ -147,7 +151,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 if (matches_timestamp) {
                     node_id = m_archive_writer->add_node(
                             node_id_stack.top(),
-                            NodeType::DATESTRING,
+                            NodeType::DateString,
                             cur_key
                     );
                     uint64_t encoding_id{0};
@@ -161,11 +165,11 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                     matches_timestamp = may_match_timestamp = can_match_timestamp = false;
                 } else if (value.find(' ') != std::string::npos) {
                     node_id = m_archive_writer
-                                      ->add_node(node_id_stack.top(), NodeType::CLPSTRING, cur_key);
+                                      ->add_node(node_id_stack.top(), NodeType::ClpString, cur_key);
                     m_current_parsed_message.add_value(node_id, value);
                 } else {
                     node_id = m_archive_writer
-                                      ->add_node(node_id_stack.top(), NodeType::VARSTRING, cur_key);
+                                      ->add_node(node_id_stack.top(), NodeType::VarString, cur_key);
                     m_current_parsed_message.add_value(node_id, value);
                 }
 
@@ -175,15 +179,14 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
             case ondemand::json_type::boolean: {
                 bool value = line.get_bool();
                 node_id = m_archive_writer
-                                  ->add_node(node_id_stack.top(), NodeType::BOOLEAN, cur_key);
-
+                                  ->add_node(node_id_stack.top(), NodeType::Boolean, cur_key);
                 m_current_parsed_message.add_value(node_id, value);
                 m_current_schema.insert_ordered(node_id);
                 break;
             }
             case ondemand::json_type::null: {
                 node_id = m_archive_writer
-                                  ->add_node(node_id_stack.top(), NodeType::NULLVALUE, cur_key);
+                                  ->add_node(node_id_stack.top(), NodeType::NullValue, cur_key);
                 m_current_schema.insert_ordered(node_id);
                 break;
             }

@@ -12,17 +12,17 @@ void SchemaReader::append_column(BaseColumnReader* column_reader) {
 
 void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
     m_timestamp_column = column_reader;
-    if (m_timestamp_column->get_type() == NodeType::DATESTRING) {
+    if (m_timestamp_column->get_type() == NodeType::DateString) {
         m_get_timestamp = [this]() {
             return static_cast<DateStringColumnReader*>(m_timestamp_column)
                     ->get_encoded_time(m_cur_message);
         };
-    } else if (m_timestamp_column->get_type() == NodeType::INTEGER) {
+    } else if (m_timestamp_column->get_type() == NodeType::Integer) {
         m_get_timestamp = [this]() {
             return std::get<int64_t>(static_cast<Int64ColumnReader*>(m_timestamp_column)
                                              ->extract_value(m_cur_message));
         };
-    } else if (m_timestamp_column->get_type() == NodeType::FLOAT) {
+    } else if (m_timestamp_column->get_type() == NodeType::Float) {
         m_get_timestamp = [this]() {
             return static_cast<epochtime_t>(
                     std::get<double>(static_cast<FloatColumnReader*>(m_timestamp_column)
@@ -219,46 +219,46 @@ void SchemaReader::generate_json_template(int32_t id) {
         auto child_node = m_local_schema_tree->get_node(child_id);
         std::string const& key = child_node->get_key_name();
         switch (child_node->get_type()) {
-            case NodeType::OBJECT: {
+            case NodeType::Object: {
                 m_json_serializer.add_op(JsonSerializer::Op::BeginObject);
                 m_json_serializer.add_special_key(key);
                 generate_json_template(child_id);
                 m_json_serializer.add_op(JsonSerializer::Op::EndObject);
                 break;
             }
-            case NodeType::ARRAY: {
+            case NodeType::UnstructuredArray: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddArrayField);
                 m_reordered_columns.push_back(m_column_map[child_global_id]);
                 break;
             }
-            case NodeType::INTEGER: {
+            case NodeType::Integer: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddIntField);
                 m_reordered_columns.push_back(m_column_map[child_global_id]);
                 break;
             }
-            case NodeType::FLOAT: {
+            case NodeType::Float: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddFloatField);
                 m_reordered_columns.push_back(m_column_map[child_global_id]);
                 break;
             }
-            case NodeType::BOOLEAN: {
+            case NodeType::Boolean: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddBoolField);
                 m_reordered_columns.push_back(m_column_map[child_global_id]);
                 break;
             }
-            case NodeType::CLPSTRING:
-            case NodeType::VARSTRING:
-            case NodeType::DATESTRING: {
+            case NodeType::ClpString:
+            case NodeType::VarString:
+            case NodeType::DateString: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
                 m_reordered_columns.push_back(m_column_map[child_global_id]);
                 break;
             }
-            case NodeType::NULLVALUE: {
+            case NodeType::NullValue: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddNullField);
                 m_json_serializer.add_special_key(key);
                 break;
             }
-            case NodeType::UNKNOWN:
+            case NodeType::Unknown:
                 break;
         }
     }

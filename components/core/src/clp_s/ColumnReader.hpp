@@ -37,7 +37,7 @@ public:
 
     int32_t get_id() const { return m_id; }
 
-    virtual NodeType get_type() { return NodeType::UNKNOWN; }
+    virtual NodeType get_type() { return NodeType::Unknown; }
 
     /**
      * Extracts a value of the column
@@ -64,7 +64,7 @@ public:
     // Methods inherited from BaseColumnReader
     void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
 
-    NodeType get_type() override { return NodeType::INTEGER; }
+    NodeType get_type() override { return NodeType::Integer; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
@@ -85,7 +85,7 @@ public:
     // Methods inherited from BaseColumnReader
     void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
 
-    NodeType get_type() override { return NodeType::FLOAT; }
+    NodeType get_type() override { return NodeType::Float; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
@@ -106,7 +106,7 @@ public:
     // Methods inherited from BaseColumnReader
     void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
 
-    NodeType get_type() override { return NodeType::BOOLEAN; }
+    NodeType get_type() override { return NodeType::Boolean; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
@@ -136,7 +136,9 @@ public:
     // Methods inherited from BaseColumnReader
     void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
 
-    NodeType get_type() override { return m_is_array ? NodeType::ARRAY : NodeType::CLPSTRING; }
+    NodeType get_type() override {
+        return m_is_array ? NodeType::UnstructuredArray : NodeType::ClpString;
+    }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
@@ -183,7 +185,7 @@ public:
     // Methods inherited from BaseColumnReader
     void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
 
-    NodeType get_type() override { return NodeType::VARSTRING; }
+    NodeType get_type() override { return NodeType::VarString; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
@@ -218,7 +220,7 @@ public:
     // Methods inherited from BaseColumnReader
     void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
 
-    NodeType get_type() override { return NodeType::DATESTRING; }
+    NodeType get_type() override { return NodeType::DateString; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;

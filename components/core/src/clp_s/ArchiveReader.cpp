@@ -101,22 +101,22 @@ ArchiveReader::append_reader_column(std::unique_ptr<SchemaReader>& reader, int32
     auto node = m_schema_tree->get_node(column_id);
     std::string key_name = node->get_key_name();
     switch (node->get_type()) {
-        case NodeType::INTEGER:
+        case NodeType::Integer:
             column_reader = new Int64ColumnReader(key_name, column_id);
             break;
-        case NodeType::FLOAT:
+        case NodeType::Float:
             column_reader = new FloatColumnReader(key_name, column_id);
             break;
-        case NodeType::CLPSTRING:
+        case NodeType::ClpString:
             column_reader = new ClpStringColumnReader(key_name, column_id, m_var_dict, m_log_dict);
             break;
-        case NodeType::VARSTRING:
+        case NodeType::VarString:
             column_reader = new VariableStringColumnReader(key_name, column_id, m_var_dict);
             break;
-        case NodeType::BOOLEAN:
+        case NodeType::Boolean:
             column_reader = new BooleanColumnReader(key_name, column_id);
             break;
-        case NodeType::ARRAY:
+        case NodeType::UnstructuredArray:
             column_reader = new ClpStringColumnReader(
                     key_name,
                     column_id,
@@ -125,14 +125,14 @@ ArchiveReader::append_reader_column(std::unique_ptr<SchemaReader>& reader, int32
                     true
             );
             break;
-        case NodeType::DATESTRING:
+        case NodeType::DateString:
             column_reader = new DateStringColumnReader(key_name, column_id, m_timestamp_dict);
             break;
-        case NodeType::OBJECT:
-        case NodeType::NULLVALUE:
+        case NodeType::Object:
+        case NodeType::NullValue:
             reader->append_column(column_id);
             break;
-        case NodeType::UNKNOWN:
+        case NodeType::Unknown:
             break;
     }
 

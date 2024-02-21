@@ -18,23 +18,24 @@ void splice_into(
 // TODO: make sure to handle Object types correctly
 LiteralType node_to_literal_type(NodeType type) {
     switch (type) {
-        case NodeType::INTEGER:
+        case NodeType::Integer:
             return LiteralType::IntegerT;
-        case NodeType::FLOAT:
+        case NodeType::Float:
             return LiteralType::FloatT;
-        case NodeType::CLPSTRING:
+        case NodeType::ClpString:
             return LiteralType::ClpStringT;
-        case NodeType::VARSTRING:
+        case NodeType::VarString:
             return LiteralType::VarStringT;
-        case NodeType::BOOLEAN:
+        case NodeType::Boolean:
             return LiteralType::BooleanT;
-        case NodeType::ARRAY:
+        case NodeType::StructuredArray:
+        case NodeType::UnstructuredArray:
             return LiteralType::ArrayT;
-        case NodeType::NULLVALUE:
+        case NodeType::NullValue:
             return LiteralType::NullT;
-        case NodeType::DATESTRING:
+        case NodeType::DateString:
             return LiteralType::EpochDateT;
-        case NodeType::UNKNOWN:
+        case NodeType::Unknown:
         default:
             return LiteralType::UnknownT;
     }

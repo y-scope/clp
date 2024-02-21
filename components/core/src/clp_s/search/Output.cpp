@@ -140,10 +140,10 @@ void Output::init(
         VariableStringColumnReader* var_reader
                 = dynamic_cast<VariableStringColumnReader*>(column.second);
         if (m_match.schema_searches_against_column(schema_id, column.first)) {
-            if (clp_reader != nullptr && clp_reader->get_type() == NodeType::CLPSTRING) {
+            if (clp_reader != nullptr && clp_reader->get_type() == NodeType::ClpString) {
                 m_clp_string_readers[column.first] = clp_reader;
                 m_other_columns.push_back(column.second);
-            } else if (var_reader != nullptr && var_reader->get_type() == NodeType::VARSTRING) {
+            } else if (var_reader != nullptr && var_reader->get_type() == NodeType::VarString) {
                 m_var_string_readers[column.first] = var_reader;
                 m_other_columns.push_back(column.second);
             } else if (auto date_column_reader = dynamic_cast<DateStringColumnReader*>(column.second))
@@ -991,11 +991,11 @@ void Output::populate_searched_wildcard_columns(std::shared_ptr<Expression> cons
         for (int32_t node : (*m_schemas)[m_schema]) {
             auto tree_node_type = m_schema_tree->get_node(node)->get_type();
             if (col->matches_type(node_to_literal_type(tree_node_type))) {
-                if (tree_node_type == NodeType::CLPSTRING) {
+                if (tree_node_type == NodeType::ClpString) {
                     m_wildcard_to_searched_clpstrings[col].push_back(node);
-                } else if (tree_node_type == NodeType::VARSTRING) {
+                } else if (tree_node_type == NodeType::VarString) {
                     m_wildcard_to_searched_varstrings[col].push_back(node);
-                } else if (tree_node_type == NodeType::DATESTRING) {
+                } else if (tree_node_type == NodeType::DateString) {
                     m_wildcard_to_searched_datestrings[col].push_back(node);
                 } else {
                     // Arrays and basic types

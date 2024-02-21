@@ -144,7 +144,9 @@ bool SchemaMatch::populate_column_mapping(
 
     if (accepted) {
         // For array search, users need to specify the full path
-        if (cur_node->get_type() == NodeType::ARRAY && !column->is_unresolved_descriptor()) {
+        if (cur_node->get_type() == NodeType::UnstructuredArray
+            && !column->is_unresolved_descriptor())
+        {
             matched = true;
             column->add_unresolved_tokens(next);
             m_column_to_descriptor[node_id].insert(column);
@@ -194,7 +196,7 @@ void SchemaMatch::populate_schema_mapping() {
     for (auto& it : *m_schemas) {
         int32_t schema_id = it.first;
         for (int32_t column_id : it.second) {
-            if (m_tree->get_node(column_id)->get_type() == NodeType::ARRAY) {
+            if (m_tree->get_node(column_id)->get_type() == NodeType::UnstructuredArray) {
                 m_array_schema_ids.insert(schema_id);
             }
             if (false == m_column_to_descriptor.count(column_id)) {
@@ -353,7 +355,7 @@ void SchemaMatch::split_expression_by_schema(
                         && 0 == m_array_search_schema_ids.count(schema_id)))
             {
                 for (auto column_id : (*m_schemas)[schema_id]) {
-                    if (m_tree->get_node(column_id)->get_type() == NodeType::ARRAY) {
+                    if (m_tree->get_node(column_id)->get_type() == NodeType::UnstructuredArray) {
                         m_array_search_schema_ids.insert(schema_id);
                         break;
                     }
