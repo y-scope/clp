@@ -21,6 +21,10 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: "Test printing variable"
+      run: "echo /tmp/${{inputs.image_name}}.tar"
+      shell: "bash"
+
     - uses: "docker/setup-buildx-action@v3"
 
     - if: "inputs.push_deps_image == 'true'"

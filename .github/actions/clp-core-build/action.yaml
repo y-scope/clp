@@ -33,7 +33,8 @@ runs:
 
     - if: "inputs.use_published_image == 'false'"
       name: "Load image"
-      run: "docker load --input '/tmp/${{inputs.image_name}}.tar'"
+      run: |-
+        docker load --input '/tmp/${{inputs.image_name}}.tar'
       shell: "bash"
 
     - id: "get_image_props"
