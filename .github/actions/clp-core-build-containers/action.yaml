@@ -21,8 +21,9 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: "Test printing variable"
-      run: "echo /tmp/${{inputs.image_name}}.tar"
+    # TODO Delete
+    - name: "Test docker load using variable"
+      run: "docker load --input /tmp/${{inputs.image_name}}.tar"
       shell: "bash"
 
     - uses: "docker/setup-buildx-action@v3"
