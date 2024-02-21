@@ -80,13 +80,11 @@ def make_clp_s_command(
 
 
 def update_tags(db_conn, db_cursor, table_prefix, archive_id, tags):
-    for tag in tags:
-        db_cursor.execute(f"INSERT IGNORE INTO {table_prefix}tags (tag_name) VALUES (%s)", (tag,))
-        db_cursor.execute(
-            f"INSERT INTO {table_prefix}archive_tags (archive_id, tag_id) VALUES "
-            f"(%s, (SELECT tag_id FROM {table_prefix}tags WHERE tag_name = %s))",
-            (archive_id, tag),
-        )
+    db_cursor.executemany(
+        f"INSERT INTO {table_prefix}archive_tags (archive_id, tag_id) VALUES "
+        f"(%s, (SELECT tag_id FROM {table_prefix}tags WHERE tag_name = %s))",
+        [(archive_id, tag) for tag in tags],
+    )
     db_conn.commit()
 
 

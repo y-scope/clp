@@ -13,6 +13,7 @@ import zstandard
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
     CLPConfig,
+    CLP_METADATA_TABLE_PREFIX,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
 )
@@ -172,6 +173,11 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
                 "start_time": start_time,
             },
         )
+        if clp_io_config.output.tags:
+            db_cursor.executemany(
+                f"INSERT IGNORE INTO {CLP_METADATA_TABLE_PREFIX}tags (tag_name) VALUES (%s)",
+                [(tag,) for tag in clp_io_config.output.tags],
+            )
         db_conn.commit()
 
         task_instances = []

@@ -210,7 +210,9 @@ def main(argv):
         clp_input_config.path_prefix_to_remove = parsed_args.remove_path_prefix
     clp_output_config = OutputConfig.parse_obj(clp_config.archive_output)
     if parsed_args.tags:
-        clp_output_config.tags = parsed_args.tags.split(",")
+        tag_list = [tag.strip() for tag in parsed_args.tags.split(",") if tag]
+        if len(tag_list) > 0:
+            clp_output_config.tags = tag_list
     clp_io_config = ClpIoConfig(input=clp_input_config, output=clp_output_config)
 
     return handle_job(

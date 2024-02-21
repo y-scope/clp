@@ -72,10 +72,10 @@ def create_and_monitor_job_in_db(
     db_config: Database,
     results_cache: ResultsCache,
     wildcard_query: str,
+    tags: str | None,
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
-    tags: str | None,
     path_filter: str | None,
 ):
     search_config = SearchConfig(
@@ -86,7 +86,9 @@ def create_and_monitor_job_in_db(
         path_filter=path_filter,
     )
     if tags:
-        search_config.tags = tags.split(",")
+        tag_list = [tag.strip() for tag in tags.split(",") if tag]
+        if len(tag_list) > 0:
+            search_config.tags = tag_list
 
     sql_adapter = SQL_Adapter(db_config)
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
@@ -128,10 +130,10 @@ async def do_search(
     db_config: Database,
     results_cache: ResultsCache,
     wildcard_query: str,
+    tags: str | None,
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
-    tags: str | None,
     path_filter: str | None,
 ):
     db_monitor_task = asyncio.ensure_future(
@@ -140,10 +142,10 @@ async def do_search(
             db_config,
             results_cache,
             wildcard_query,
+            tags,
             begin_timestamp,
             end_timestamp,
             ignore_case,
-            tags,
             path_filter,
         )
     )
@@ -163,6 +165,9 @@ def main(argv):
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
+        "-t", "--tags", help="Comma-separated list of tags of archives to search."
+    )
+    args_parser.add_argument(
         "--begin-time",
         type=int,
         help="Time range filter lower-bound (inclusive) as milliseconds" " from the UNIX epoch.",
@@ -176,9 +181,6 @@ def main(argv):
         "--ignore-case",
         action="store_true",
         help="Ignore case distinctions between values in the query and the compressed data.",
-    )
-    args_parser.add_argument(
-        "-t", "--tags", help="Comma-separated list of tags to filter archives to search."
     )
     args_parser.add_argument("--file-path", help="File to search.")
     parsed_args = args_parser.parse_args(argv[1:])
@@ -206,10 +208,10 @@ def main(argv):
             clp_config.database,
             clp_config.results_cache,
             parsed_args.wildcard_query,
+            parsed_args.tags,
             parsed_args.begin_time,
             parsed_args.end_time,
             parsed_args.ignore_case,
-            parsed_args.tags,
             parsed_args.file_path,
         )
     )
