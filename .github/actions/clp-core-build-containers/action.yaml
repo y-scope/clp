@@ -2,6 +2,9 @@ name: "clp-core-build-containers"
 description: "Builds and publishes container images for CLP-core's dependencies"
 
 inputs:
+  image_name:
+    description: "Name of the image to create (without registry or repository)"
+    required: true
   os_name:
     description: "Name of container OS"
     required: true
@@ -30,20 +33,20 @@ runs:
     - id: "get_image_props"
       shell: "bash"
       run: |
-        image_name="clp-core-dependencies-x86-${{inputs.os_name}}"
         if [[ "${{inputs.push_deps_image}}" == "true" ]] ; then
           # Docker doesn't support repository names with uppercase characters, so we convert to
           # lowercase here.
           repository=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')
 
-          echo "qualified_image_name=ghcr.io/${repository}/${image_name}" >> "$GITHUB_OUTPUT"
+          echo "qualified_image_name=ghcr.io/${repository}/${{inputs.image_name}}" \
+            >> "$GITHUB_OUTPUT"
           echo "branch=${{github.ref_name}}" >> "$GITHUB_OUTPUT"
           echo "output=type=registry" >> "$GITHUB_OUTPUT"
         else
-          image_path="/tmp/image.tar"
+          image_path="/tmp/${{inputs.image_name}}.tar"
           echo "image_path=${image_path}" >> "$GITHUB_OUTPUT"
 
-          echo "qualified_image_name=${image_name}" >> "$GITHUB_OUTPUT"
+          echo "qualified_image_name=${{inputs.image_name}}" >> "$GITHUB_OUTPUT"
           echo "branch=latest" >> "$GITHUB_OUTPUT"
           echo "output=type=docker,dest=${image_path}" >> "$GITHUB_OUTPUT"
         fi

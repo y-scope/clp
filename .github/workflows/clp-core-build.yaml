@@ -17,6 +17,10 @@ on:
       - "!components/core/tools/scripts/lib_install/macos-12/**"
   workflow_dispatch:
 
+env:
+  BINARIES_ARTIFACT_NAME_PREFIX: "clp-core-binaries-"
+  DEPS_IMAGE_NAME_PREFIX: "clp-core-dependencies-x86-"
+
 # Currency group to prevent multiple workflow instances from trying to publish container images
 concurrency: "${{github.workflow}}-${{github.ref}}"
 
@@ -94,8 +98,11 @@ jobs:
         shell: "bash"
 
       - uses: "./.github/actions/clp-core-build-containers"
+        env:
+          OS_NAME: "centos7.4"
         with:
-          os_name: "centos7.4"
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          os_name: "${{env.OS_NAME}}"
           clp_core_dir: "components/core"
           push_deps_image: >-
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
@@ -115,8 +122,11 @@ jobs:
         shell: "bash"
 
       - uses: "./.github/actions/clp-core-build-containers"
+        env:
+          OS_NAME: "ubuntu-focal"
         with:
-          os_name: "ubuntu-focal"
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          os_name: "${{env.OS_NAME}}"
           clp_core_dir: "components/core"
           push_deps_image: >-
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
@@ -136,8 +146,11 @@ jobs:
         shell: "bash"
 
       - uses: "./.github/actions/clp-core-build-containers"
+        env:
+          OS_NAME: "ubuntu-jammy"
         with:
-          os_name: "ubuntu-jammy"
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          os_name: "${{env.OS_NAME}}"
           clp_core_dir: "components/core"
           push_deps_image: >-
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
@@ -188,12 +201,15 @@ jobs:
         shell: "bash"
 
       - uses: "./.github/actions/clp-core-build"
+        env:
+          OS_NAME: "ubuntu-focal"
         with:
-          os_name: "ubuntu-focal"
+          os_name: "${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_focal_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
           upload_binaries: "true"
+          binaries_artifact_name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
 
   ubuntu-jammy-binaries:
     # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
@@ -233,7 +249,7 @@ jobs:
     needs: "ubuntu-focal-binaries"
     runs-on: "ubuntu-latest"
     env:
-      BINARIES_DIR: "/tmp/clp-core-binaries"
+      BINARIES_DIR: "/tmp/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}ubuntu-focal"
       OS_NAME: "ubuntu-focal"
     steps:
       - uses: "actions/checkout@v3"
@@ -246,7 +262,7 @@ jobs:
 
       - uses: "actions/download-artifact@v4"
         with:
-          name: "clp-core-binaries-${{env.OS_NAME}}"
+          name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
           path: "${{env.BINARIES_DIR}}"
 
       - uses: "docker/login-action@v3"
