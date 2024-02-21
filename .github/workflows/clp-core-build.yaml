@@ -249,7 +249,7 @@ jobs:
     needs: "ubuntu-focal-binaries"
     runs-on: "ubuntu-latest"
     env:
-      BINARIES_DIR: "/tmp/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}ubuntu-focal"
+      BINARIES_ARTIFACT_NAME: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}ubuntu-focal"
       OS_NAME: "ubuntu-focal"
     steps:
       - uses: "actions/checkout@v3"
@@ -262,8 +262,8 @@ jobs:
 
       - uses: "actions/download-artifact@v4"
         with:
-          name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
-          path: "${{env.BINARIES_DIR}}"
+          name: "${{BINARIES_ARTIFACT_NAME}}"
+          path: "/tmp/${{BINARIES_ARTIFACT_NAME}}"
 
       - uses: "docker/login-action@v3"
         with:
@@ -289,7 +289,7 @@ jobs:
 
       - uses: "docker/build-push-action@v5"
         with:
-          context: "${{env.BINARIES_DIR}}"
+          context: "/tmp/${{BINARIES_ARTIFACT_NAME}}"
           file: "components/core/tools/docker-images/clp-core-${{env.OS_NAME}}/Dockerfile"
           push: true
           tags: "${{steps.core_image_meta.outputs.tags}}"
