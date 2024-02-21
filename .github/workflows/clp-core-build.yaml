@@ -42,11 +42,13 @@ jobs:
         id: "filter"
         with:
           # Consider changes between the current commit and `main`
-          # NOTE: If a pull request changes the image, then we need to build the image and then
-          # build CLP using the changed image; otherwise we can build CLP using the published image.
-          # So when determining what files have changed, we use `main` rather than the previous
-          # commit to ensure that on every push to the PR, we can detect if the image was changed
-          # and use it to build and test CLP.
+          # NOTE: If a pull request changes one of the images, then we need to (1) build the image
+          # (based on commits in the PR) and then (2) build CLP using the changed image. If a pull
+          # request doesn't change an image, then we don't need to rebuild the image; instead we can
+          # use the published image which is based on `main`. So when determining what files have
+          # changed, we need to consider the delta between the current commit and `main` (rather
+          # than the current and previous commits) in order to detect if we need to rebuild the
+          # image (since it would be different from the published image).
           base: "main"
           filters: |
             centos74_image:
