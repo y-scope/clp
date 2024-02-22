@@ -17,13 +17,13 @@ serialize(RecordGroup const& group, std::vector<uint8_t>(ser)(nlohmann::json con
         for (auto vit = it->get()->value_iter(); !vit->done(); vit->next()) {
             TypedRecordKey tk = vit->get();
             switch (tk.type) {
-                case ValueType::INT64:
+                case ValueType::Int64:
                     record[tk.key] = it->get()->get_int64_value(tk.key);
                     break;
-                case ValueType::STRING:
+                case ValueType::String:
                     record[tk.key] = it->get()->get_string_view(tk.key);
                     break;
-                case ValueType::DOUBLE:
+                case ValueType::Double:
                     record[tk.key] = it->get()->get_double_value(tk.key);
                     break;
             }
@@ -54,13 +54,13 @@ DeserializedRecordGroup deserialize(std::vector<uint8_t>& data) {
 }
 
 DeserializedRecordGroup deserialize(char* buf, size_t len) {
-    return DeserializedRecordGroup(buf, len);
+    return {buf, len};
 }
 
 void DeserializedRecordGroup::init_tags_from_json() {
     auto jtags = m_record_group["group_tags"].template get<nlohmann::json::array_t>();
-    for (auto it = jtags.begin(); it != jtags.end(); ++it) {
-        m_tags.push_back(it->template get<std::string>());
+    for (auto& jtag : jtags) {
+        m_tags.push_back(jtag.template get<std::string>());
     }
 }
 

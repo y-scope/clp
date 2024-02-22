@@ -4,10 +4,10 @@
 #include <string_view>
 
 namespace reducer {
-enum class ValueType {
-    STRING,
-    INT64,
-    DOUBLE
+enum class ValueType : uint8_t {
+    String,
+    Int64,
+    Double
 };
 
 // TODO: consider what changes (if any) are necessary for this structure, and for iterating over
@@ -32,11 +32,11 @@ public:
  * Class which provides a RecordValueIterator over an empty Record.
  */
 class EmptyRecordValueIterator : public RecordValueIterator {
-    virtual TypedRecordKey get() { return {}; }
+    TypedRecordKey get() override { return {}; }
 
-    virtual void next() {}
+    void next() override {}
 
-    virtual bool done() { return true; }
+    bool done() override { return true; }
 };
 
 /**
@@ -46,11 +46,11 @@ class SingleValueIterator : public RecordValueIterator {
 public:
     SingleValueIterator(std::string_view key, ValueType type) : m_key(key), m_type(type) {}
 
-    virtual TypedRecordKey get() { return {m_key, m_type}; }
+    TypedRecordKey get() override { return {m_key, m_type}; }
 
-    virtual void next() { m_done = true; }
+    void next() override { m_done = true; }
 
-    virtual bool done() { return m_done; }
+    bool done() override { return m_done; }
 
 private:
     std::string_view m_key;

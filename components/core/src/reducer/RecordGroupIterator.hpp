@@ -3,6 +3,7 @@
 
 #include <map>
 #include <set>
+#include <utility>
 
 #include "RecordGroup.hpp"
 
@@ -26,19 +27,19 @@ public:
     Int64MapRecordGroupIterator(std::map<GroupTags, int64_t> const& map, std::string key)
             : m_it_cur(map.cbegin()),
               m_it_end(map.cend()),
-              m_record(key) {
+              m_record(std::move(key)) {
         m_group.set_record(&m_record);
     }
 
-    virtual RecordGroup const* get() {
+    RecordGroup const* get() override {
         m_record.set_record_value(m_it_cur->second);
         m_group.set_tags(&m_it_cur->first);
         return &m_group;
     }
 
-    virtual void next() { ++m_it_cur; }
+    void next() override { ++m_it_cur; }
 
-    virtual bool done() { return m_it_cur == m_it_end; }
+    bool done() override { return m_it_cur == m_it_end; }
 
 private:
     Int64RecordAdapter m_record;
@@ -55,20 +56,20 @@ public:
     Int64Int64MapRecordGroupIterator(std::map<int64_t, int64_t> const& map, std::string key)
             : m_it_cur(map.cbegin()),
               m_it_end(map.cend()),
-              m_record(key) {
+              m_record(std::move(key)) {
         m_group.set_record(&m_record);
     }
 
-    virtual RecordGroup const* get() {
+    RecordGroup const* get() override {
         m_tags = {std::to_string(m_it_cur->first)};
         m_record.set_record_value(m_it_cur->second);
         m_group.set_tags(&m_tags);
         return &m_group;
     }
 
-    virtual void next() { ++m_it_cur; }
+    void next() override { ++m_it_cur; }
 
-    virtual bool done() { return m_it_cur == m_it_end; }
+    bool done() override { return m_it_cur == m_it_end; }
 
 private:
     Int64RecordAdapter m_record;
@@ -94,20 +95,20 @@ public:
               m_it_cur(map.cend()),
               m_filter_cur(filter.cbegin()),
               m_filter_end(filter.cend()),
-              m_record(key) {
+              m_record(std::move(key)) {
         m_group.set_record(&m_record);
         advance_to_next_filter();
     }
 
-    virtual RecordGroup const* get() {
+    RecordGroup const* get() override {
         m_record.set_record_value(m_it_cur->second);
         m_group.set_tags(&m_it_cur->first);
         return &m_group;
     }
 
-    virtual void next() { advance_to_next_filter(); }
+    void next() override { advance_to_next_filter(); }
 
-    virtual bool done() { return m_it_cur == m_it_end; }
+    bool done() override { return m_it_cur == m_it_end; }
 
 private:
     void advance_to_next_filter() {
@@ -136,11 +137,11 @@ private:
  */
 class EmptyRecordGroupIterator : public RecordGroupIterator {
 public:
-    virtual RecordGroup const* get() { return nullptr; }
+    RecordGroup const* get() override { return nullptr; }
 
-    virtual void next() {}
+    void next() override {}
 
-    virtual bool done() { return true; }
+    bool done() override { return true; }
 };
 }  // namespace reducer
 

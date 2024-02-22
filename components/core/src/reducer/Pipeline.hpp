@@ -11,9 +11,9 @@
 #include "RecordGroup.hpp"
 
 namespace reducer {
-enum class PipelineInputMode {
-    INTRA_STAGE,
-    INTER_STAGE
+enum class PipelineInputMode : uint8_t {
+    IntraStage,
+    InterStage
 };
 
 /**
@@ -22,7 +22,7 @@ enum class PipelineInputMode {
  */
 class Pipeline {
 public:
-    Pipeline(PipelineInputMode input_mode) : m_input_mode(input_mode){};
+    explicit Pipeline(PipelineInputMode input_mode) : m_input_mode(input_mode){};
 
     void push_record(Record const& record);
     void push_record_group(RecordGroup const& record_group);

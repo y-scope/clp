@@ -5,9 +5,9 @@
 namespace reducer {
 void Pipeline::push_record_group(RecordGroup const& record_group) {
     if (m_pipeline.size() > 0) {
-        if (m_input_mode == PipelineInputMode::INTER_STAGE) {
+        if (m_input_mode == PipelineInputMode::InterStage) {
             m_pipeline[0]->push_inter_stage_record_group(record_group);
-        } else /*input_mode == PipelineInputMode::INTRA_STAGE*/ {
+        } else /*input_mode == PipelineInputMode::IntraStage*/ {
             m_pipeline[0]->push_intra_stage_record_group(record_group);
         }
     }

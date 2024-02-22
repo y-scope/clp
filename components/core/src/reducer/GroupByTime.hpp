@@ -23,33 +23,30 @@ namespace reducer {
  */
 class GroupByTime : public Operator {
 public:
-    GroupByTime(int64_t bucket_size = 5 * 60 * 1000)
-            : Operator(),
-              m_bucket_size(bucket_size),
-              m_prev_time(-1) {
-        m_tags.push_back("0");
+    explicit GroupByTime(int64_t bucket_size = 5 * 60 * 1000) : m_bucket_size(bucket_size) {
+        m_tags.emplace_back("0");
     }
 
-    virtual OperatorType get_type() const { return OperatorType::GROUPBY; }
+    [[nodiscard]] OperatorType get_type() const override { return OperatorType::GroupBy; }
 
-    virtual OperatorResultCardinality get_cardinality() const {
-        return OperatorResultCardinality::INPUT;
+    [[nodiscard]] OperatorResultCardinality get_cardinality() const override {
+        return OperatorResultCardinality::Input;
     }
 
-    virtual void push_intra_stage_record_group(RecordGroup const& record_group) {
+    void push_intra_stage_record_group(RecordGroup const& record_group) override {
         push_inter_stage_record_group(record_group);
     }
 
-    virtual void push_inter_stage_record_group(RecordGroup const& record_group);
+    void push_inter_stage_record_group(RecordGroup const& record_group) override;
 
-    virtual std::unique_ptr<RecordGroupIterator> get_stored_result_iterator() {
+    std::unique_ptr<RecordGroupIterator> get_stored_result_iterator() override {
         return std::make_unique<EmptyRecordGroupIterator>();
     }
 
 private:
     EmptyRecord m_empty;
     GroupTags m_tags;
-    int64_t m_prev_time;
+    int64_t m_prev_time{-1};
     int64_t m_bucket_size;
 };
 }  // namespace reducer

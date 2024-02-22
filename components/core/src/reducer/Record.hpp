@@ -54,7 +54,7 @@ public:
     }
 
     [[nodiscard]] std::unique_ptr<RecordValueIterator> value_iter() const override {
-        return std::make_unique<SingleValueIterator>(m_key_name, ValueType::STRING);
+        return std::make_unique<SingleValueIterator>(m_key_name, ValueType::String);
     }
 
 private:
@@ -82,7 +82,7 @@ public:
     }
 
     [[nodiscard]] std::unique_ptr<RecordValueIterator> value_iter() const override {
-        return std::make_unique<SingleValueIterator>(m_key_name, ValueType::INT64);
+        return std::make_unique<SingleValueIterator>(m_key_name, ValueType::Int64);
     }
 
 private:

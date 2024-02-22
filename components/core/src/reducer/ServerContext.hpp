@@ -41,7 +41,9 @@ public:
                 : clp::TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        char const* what() const noexcept override { return "ServerContext operation failed"; }
+        [[nodiscard]] char const* what() const noexcept override {
+            return "ServerContext operation failed";
+        }
     };
 
     // Constructors
@@ -58,17 +60,17 @@ public:
 
     boost::asio::ip::tcp::acceptor& get_tcp_acceptor() { return m_tcp_acceptor; }
 
-    int get_polling_interval() const { return m_polling_interval_ms; }
+    [[nodiscard]] int get_polling_interval() const { return m_polling_interval_ms; }
 
-    bool is_timeline_aggregation() const { return m_timeline_aggregation; }
+    [[nodiscard]] bool is_timeline_aggregation() const { return m_timeline_aggregation; }
 
-    std::string const& get_reducer_host() const { return m_reducer_host; }
+    [[nodiscard]] std::string const& get_reducer_host() const { return m_reducer_host; }
 
-    int get_reducer_port() const { return m_reducer_port; }
+    [[nodiscard]] int get_reducer_port() const { return m_reducer_port; }
 
-    int64_t get_job_id() const { return m_job_id; }
+    [[nodiscard]] int64_t get_job_id() const { return m_job_id; }
 
-    ServerStatus get_status() const { return m_status; }
+    [[nodiscard]] ServerStatus get_status() const { return m_status; }
 
     void set_status(ServerStatus new_status) { m_status = new_status; }
 

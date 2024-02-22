@@ -13,22 +13,20 @@ namespace reducer {
  */
 class CountOperator : public Operator {
 public:
-    CountOperator() : Operator() {}
+    [[nodiscard]] OperatorType get_type() const override { return OperatorType::Reduce; }
 
-    virtual OperatorType get_type() const { return OperatorType::REDUCE; }
-
-    virtual OperatorResultCardinality get_cardinality() const {
-        return OperatorResultCardinality::ONE;
+    [[nodiscard]] OperatorResultCardinality get_cardinality() const override {
+        return OperatorResultCardinality::One;
     }
 
-    virtual void push_intra_stage_record_group(RecordGroup const& record_group);
+    void push_intra_stage_record_group(RecordGroup const& record_group) override;
 
-    virtual void push_inter_stage_record_group(RecordGroup const& record_group);
+    void push_inter_stage_record_group(RecordGroup const& record_group) override;
 
-    virtual std::unique_ptr<RecordGroupIterator> get_stored_result_iterator();
-    virtual std::unique_ptr<RecordGroupIterator> get_stored_result_iterator(
+    std::unique_ptr<RecordGroupIterator> get_stored_result_iterator() override;
+    std::unique_ptr<RecordGroupIterator> get_stored_result_iterator(
             std::set<GroupTags> const& filtered_tags
-    );
+    ) override;
 
 private:
     std::map<GroupTags, int64_t> m_group_count;

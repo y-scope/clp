@@ -24,16 +24,16 @@ public:
  */
 class SingleRecordIterator : public RecordIterator {
 public:
-    SingleRecordIterator(Record const* record) : m_record(record) {}
+    explicit SingleRecordIterator(Record const* record) : m_record(record) {}
 
-    virtual Record const* get() { return m_record; }
+    Record const* get() override { return m_record; }
 
-    virtual void next() {
+    void next() override {
         m_done = true;
         m_record = nullptr;
     }
 
-    virtual bool done() { return m_done; }
+    bool done() override { return m_done; }
 
 private:
     Record const* m_record;
@@ -45,15 +45,15 @@ private:
  */
 class VectorRecordIterator : public RecordIterator {
 public:
-    VectorRecordIterator(std::vector<Record> const* records)
+    explicit VectorRecordIterator(std::vector<Record> const* records)
             : m_cur(records->cbegin()),
               m_end(records->cend()) {}
 
-    virtual Record const* get() { return m_cur != m_end ? &*m_cur : nullptr; }
+    Record const* get() override { return m_cur != m_end ? &*m_cur : nullptr; }
 
-    virtual void next() { ++m_cur; }
+    void next() override { ++m_cur; }
 
-    virtual bool done() { return m_cur == m_end; }
+    bool done() override { return m_cur == m_end; }
 
 private:
     std::vector<Record>::const_iterator m_cur;

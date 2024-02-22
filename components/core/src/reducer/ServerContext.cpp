@@ -60,7 +60,7 @@ void ServerContext::set_up_pipeline(nlohmann::json const& query_config) {
 
     // TODO: For now all pipelines only perform count. We will need to implement more
     // general pipeline initialization once more operators are implemented.
-    m_pipeline = std::make_unique<Pipeline>(PipelineInputMode::INTRA_STAGE);
+    m_pipeline = std::make_unique<Pipeline>(PipelineInputMode::IntraStage);
     m_pipeline->add_pipeline_stage(std::make_shared<CountOperator>());
 
     auto collection_name = std::to_string(m_job_id);
@@ -126,7 +126,7 @@ bool ServerContext::publish_pipeline_results() {
     }
 
     try {
-        if (result_documents.size() > 0) {
+        if (result_documents.empty() == false) {
             m_mongodb_results_collection.insert_many(result_documents);
         }
     } catch (mongocxx::bulk_write_exception const& e) {
