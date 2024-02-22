@@ -11,7 +11,6 @@
 #include "RecordIterator.hpp"
 
 namespace reducer {
-
 /**
  * Class describing a list of records which have been aggregated by some GroupTags. This is the
  * main unit of computation in our reducer framework.
@@ -19,8 +18,8 @@ namespace reducer {
 class RecordGroup {
 public:
     virtual ~RecordGroup() = default;
-    virtual std::unique_ptr<RecordIterator> record_it() const = 0;
-    virtual GroupTags const& get_tags() const = 0;
+    [[nodiscard]] virtual std::unique_ptr<RecordIterator> record_it() const = 0;
+    [[nodiscard]] virtual GroupTags const& get_tags() const = 0;
 };
 
 /**
@@ -37,11 +36,11 @@ public:
             : m_tags(tags),
               m_record(record) {}
 
-    virtual std::unique_ptr<RecordIterator> record_it() const {
+    [[nodiscard]] std::unique_ptr<RecordIterator> record_it() const override {
         return std::make_unique<SingleRecordIterator>(m_record);
     }
 
-    virtual GroupTags const& get_tags() const { return *m_tags; }
+    [[nodiscard]] GroupTags const& get_tags() const override { return *m_tags; }
 
     void set_tags(GroupTags const* tags) { m_tags = tags; }
 
@@ -66,11 +65,11 @@ public:
             : m_tags(tags),
               m_records(records) {}
 
-    virtual std::unique_ptr<RecordIterator> record_it() const {
+    [[nodiscard]] std::unique_ptr<RecordIterator> record_it() const override {
         return std::make_unique<VectorRecordIterator>(m_records);
     }
 
-    virtual GroupTags const& get_tags() const { return *m_tags; }
+    [[nodiscard]] GroupTags const& get_tags() const override { return *m_tags; }
 
     void set_tags(GroupTags const* tags) { m_tags = tags; }
 
