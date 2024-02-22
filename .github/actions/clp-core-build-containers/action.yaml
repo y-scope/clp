@@ -3,7 +3,7 @@ description: "Builds and publishes container images for CLP-core's dependencies"
 
 inputs:
   image_name:
-    description: "Name of the image to create (without registry or repository)"
+    description: "Name of the image (without registry or repository) to create"
     required: true
   os_name:
     description: "Name of container OS"

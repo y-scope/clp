@@ -3,7 +3,7 @@ description: "Builds CLP-core in the specified container"
 
 inputs:
   image_name:
-    description: "Name of the container image to use"
+    description: "Name of the container image (without registry or repository) to use"
     required: true
   os_name:
     description: "Name of container OS"
