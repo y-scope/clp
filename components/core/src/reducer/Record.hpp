@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <utility>
 #include <variant>
 
 #include "RecordValueIterator.hpp"
@@ -17,15 +18,20 @@ class Record {
 public:
     virtual ~Record() = default;
 
-    virtual std::string_view get_string_view(std::string_view key) const {
-        return std::string_view();
+    [[nodiscard]] virtual std::string_view get_string_view([[maybe_unused]] std::string_view key
+    ) const {
+        return {};
     }
 
-    virtual int64_t get_int64_value(std::string_view key) const { return 0.0; }
+    [[nodiscard]] virtual int64_t get_int64_value([[maybe_unused]] std::string_view key) const {
+        return 0;
+    }
 
-    virtual double get_double_value(std::string_view key) const { return 0; }
+    [[nodiscard]] virtual double get_double_value([[maybe_unused]] std::string_view key) const {
+        return 0.0;
+    }
 
-    virtual std::unique_ptr<RecordValueIterator> value_iter() const = 0;
+    [[nodiscard]] virtual std::unique_ptr<RecordValueIterator> value_iter() const = 0;
 };
 
 /**
@@ -36,18 +42,18 @@ public:
  */
 class StringRecordAdapter : public Record {
 public:
-    StringRecordAdapter(std::string key_name) : m_key_name(key_name) {}
+    explicit StringRecordAdapter(std::string key_name) : m_key_name(std::move(key_name)) {}
 
     void set_record_value(std::string_view value) { m_value = value; }
 
-    virtual std::string_view get_string_view(std::string_view key) const {
+    [[nodiscard]] std::string_view get_string_view(std::string_view key) const override {
         if (key == m_key_name) {
             return m_value;
         }
-        return std::string_view();
+        return {};
     }
 
-    virtual std::unique_ptr<RecordValueIterator> value_iter() const {
+    [[nodiscard]] std::unique_ptr<RecordValueIterator> value_iter() const override {
         return std::make_unique<SingleValueIterator>(m_key_name, ValueType::STRING);
     }
 
@@ -64,24 +70,24 @@ private:
  */
 class Int64RecordAdapter : public Record {
 public:
-    Int64RecordAdapter(std::string key_name) : m_key_name(key_name) {}
+    explicit Int64RecordAdapter(std::string key_name) : m_key_name(std::move(key_name)) {}
 
     void set_record_value(int64_t value) { m_value = value; }
 
-    virtual int64_t get_int64_value(std::string_view key) const {
+    [[nodiscard]] int64_t get_int64_value(std::string_view key) const override {
         if (key == m_key_name) {
             return m_value;
         }
         return 0;
     }
 
-    virtual std::unique_ptr<RecordValueIterator> value_iter() const {
+    [[nodiscard]] std::unique_ptr<RecordValueIterator> value_iter() const override {
         return std::make_unique<SingleValueIterator>(m_key_name, ValueType::INT64);
     }
 
 private:
     std::string m_key_name;
-    int64_t m_value;
+    int64_t m_value{};
 };
 
 /**
@@ -89,9 +95,7 @@ private:
  */
 class EmptyRecord : public Record {
 public:
-    EmptyRecord() {}
-
-    virtual std::unique_ptr<RecordValueIterator> value_iter() const {
+    [[nodiscard]] std::unique_ptr<RecordValueIterator> value_iter() const override {
         return std::make_unique<EmptyRecordValueIterator>();
     }
 };
