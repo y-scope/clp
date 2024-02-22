@@ -175,8 +175,11 @@ jobs:
         shell: "bash"
 
       - uses: "./.github/actions/clp-core-build"
+        env:
+          OS_NAME: "centos7.4"
         with:
-          os_name: "centos7.4"
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          os_name: "${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.centos74_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -204,6 +207,7 @@ jobs:
         env:
           OS_NAME: "ubuntu-focal"
         with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           os_name: "${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_focal_image_changed == 'false'
@@ -230,8 +234,11 @@ jobs:
         shell: "bash"
 
       - uses: "./.github/actions/clp-core-build"
+        env:
+          OS_NAME: "ubuntu-jammy"
         with:
-          os_name: "ubuntu-jammy"
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          os_name: "${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}

@@ -25,11 +25,6 @@ runs:
       working-directory: "./components/core"
       run: "./tools/scripts/deps-download/download-all.sh"
 
-    # TODO: Delete
-    - name: "Test printing variable"
-      run: "echo /tmp/${{inputs.image_name}}.tar"
-      shell: "bash"
-
     - if: "inputs.use_published_image == 'false'"
       uses: "actions/download-artifact@v4"
       with:
@@ -38,10 +33,7 @@ runs:
 
     - if: "inputs.use_published_image == 'false'"
       name: "Load image"
-      run: |-
-        # TODO: Delete
-        echo /tmp/${{inputs.image_name}}.tar
-        docker load --input '/tmp/${{inputs.image_name}}.tar'
+      run: "docker load --input '/tmp/${{inputs.image_name}}.tar'"
       shell: "bash"
 
     - id: "get_image_props"
