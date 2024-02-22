@@ -398,23 +398,21 @@ int main(int argc, char const* argv[]) {
     }
 
     // mongocxx instance must be created before and destroyed after all other mongocxx classes
-    mongocxx::instance inst;
+    mongocxx::instance mongo_instance;
 
     reducer::CommandLineArguments args("reducer-server");
     auto parsing_result = args.parse_arguments(argc, argv);
     if (clp::CommandLineArgumentsBase::ParsingResult::Failure == parsing_result) {
-        SPDLOG_CRITICAL("Failed to parse arguments for reducer");
         return 1;
     } else if (clp::CommandLineArgumentsBase::ParsingResult::InfoCommand == parsing_result) {
         return 0;
     }
 
     std::shared_ptr<reducer::ServerContext> ctx;
-
     try {
         ctx = std::make_shared<reducer::ServerContext>(args);
     } catch (reducer::ServerContext::OperationFailed& exception) {
-        SPDLOG_CRITICAL("Failed to initialize reducer on error {}", exception.what());
+        SPDLOG_CRITICAL("Failed to initialize reducer - {}", exception.what());
         return 1;
     }
 
@@ -422,14 +420,13 @@ int main(int argc, char const* argv[]) {
 
     // Job acquisition loop
     while (true) {
-        if (ctx->get_tcp_acceptor().is_open()) {
-            SPDLOG_INFO("Acceptor socket listening successfully");
-        } else {
+        if (false == ctx->get_tcp_acceptor().is_open()) {
             SPDLOG_CRITICAL("Failed to bind acceptor socket");
             return 1;
         }
+        SPDLOG_INFO("Acceptor socket listening successfully");
 
-        // connect to scheduler and register this reducer as available
+        // Connect to scheduler and register this reducer as available
         tcp::resolver resolver(ctx->get_io_context());
         auto endpoints = resolver.resolve(
                 args.get_scheduler_host(),
@@ -446,7 +443,7 @@ int main(int argc, char const* argv[]) {
 
         SPDLOG_INFO("Waiting for job...");
 
-        // Start running the event processing loop
+        // Run the event processing loop
         ctx->run();
 
         if (reducer::ServerStatus::ReceivedAllResults == ctx->get_status()) {
@@ -466,7 +463,7 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
 
-        // cleanup reducer state for next job
+        // Reset reducer state to prepare for next job
         ctx->reset();
     }
 }
