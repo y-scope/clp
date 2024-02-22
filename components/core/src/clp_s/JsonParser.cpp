@@ -151,7 +151,8 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
             case ondemand::json_type::string: {
                 // TODO (Rui): Take a look
                 auto raw_json_token = line.raw_json_token();
-                std::string value = std::string(raw_json_token.substr(1, raw_json_token.rfind('"') - 1));
+                std::string value
+                        = std::string(raw_json_token.substr(1, raw_json_token.rfind('"') - 1));
 
                 if (matches_timestamp) {
                     node_id = m_schema_tree->add_node(
