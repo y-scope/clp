@@ -5,9 +5,6 @@ inputs:
   image_name:
     description: "Name of the container image (without registry or repository) to use"
     required: true
-  os_name:
-    description: "Name of container OS"
-    required: true
   use_published_image:
     description: "Whether to use the published container image"
     required: true

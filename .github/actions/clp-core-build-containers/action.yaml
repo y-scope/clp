@@ -5,11 +5,11 @@ inputs:
   image_name:
     description: "Name of the image (without registry or repository) to create"
     required: true
-  os_name:
-    description: "Name of container OS"
+  docker_context:
+    description: "The context directory for Docker when building the image"
     required: true
-  clp_core_dir:
-    description: "CLP-core's component directory"
+  docker_file:
+    description: "The Dockerfile to use to build the image"
     required: true
   push_deps_image:
     description: "Whether to publish a container image containing CLP's dependencies"
@@ -60,9 +60,8 @@ runs:
 
     - uses: "docker/build-push-action@v5"
       with:
-        context: "${{inputs.clp_core_dir}}"
-        file: "${{inputs.clp_core_dir}}/tools/docker-images/clp-env-base-${{inputs.os_name}}\
-          /Dockerfile"
+        context: "${{inputs.docker_context}}"
+        file: "${{inputs.docker_file}}"
         labels: "${{steps.deps_image_meta.outputs.labels}}"
         tags: "${{steps.deps_image_meta.outputs.tags}}"
         outputs: "${{steps.get_image_props.outputs.output}}"

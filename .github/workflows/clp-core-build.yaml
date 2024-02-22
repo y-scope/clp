@@ -102,8 +102,9 @@ jobs:
           OS_NAME: "centos7.4"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          os_name: "${{env.OS_NAME}}"
-          clp_core_dir: "components/core"
+          docker_context: "components/core"
+          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
+            /Dockerfile"
           push_deps_image: >-
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
           token: "${{secrets.GITHUB_TOKEN}}"
@@ -126,8 +127,9 @@ jobs:
           OS_NAME: "ubuntu-focal"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          os_name: "${{env.OS_NAME}}"
-          clp_core_dir: "components/core"
+          docker_context: "components/core"
+          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
+            /Dockerfile"
           push_deps_image: >-
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
           token: "${{secrets.GITHUB_TOKEN}}"
@@ -150,8 +152,9 @@ jobs:
           OS_NAME: "ubuntu-jammy"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          os_name: "${{env.OS_NAME}}"
-          clp_core_dir: "components/core"
+          docker_context: "components/core"
+          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
+            /Dockerfile"
           push_deps_image: >-
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
           token: "${{secrets.GITHUB_TOKEN}}"
@@ -179,7 +182,6 @@ jobs:
           OS_NAME: "centos7.4"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          os_name: "${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.centos74_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -208,7 +210,6 @@ jobs:
           OS_NAME: "ubuntu-focal"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          os_name: "${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_focal_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -238,7 +239,6 @@ jobs:
           OS_NAME: "ubuntu-jammy"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          os_name: "${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
