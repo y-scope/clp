@@ -394,7 +394,7 @@ int main(int argc, char const* argv[]) {
         spdlog::set_pattern("%Y-%m-%dT%H:%M:%S.%e%z [%l] %v");
     } catch (std::exception& e) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
-        return -1;
+        return 1;
     }
 
     // mongocxx instance must be created before and destroyed after all other mongocxx classes
@@ -404,7 +404,7 @@ int main(int argc, char const* argv[]) {
     auto parsing_result = args.parse_arguments(argc, argv);
     if (clp::CommandLineArgumentsBase::ParsingResult::Failure == parsing_result) {
         SPDLOG_CRITICAL("Failed to parse arguments for reducer");
-        return -1;
+        return 1;
     } else if (clp::CommandLineArgumentsBase::ParsingResult::InfoCommand == parsing_result) {
         return 0;
     }
@@ -415,7 +415,7 @@ int main(int argc, char const* argv[]) {
         ctx = std::make_shared<reducer::ServerContext>(args);
     } catch (reducer::ServerContext::OperationFailed& exception) {
         SPDLOG_CRITICAL("Failed to initialize reducer on error {}", exception.what());
-        return -1;
+        return 1;
     }
 
     SPDLOG_INFO("Starting on host {} port {}", ctx->get_reducer_host(), ctx->get_reducer_port());
@@ -426,7 +426,7 @@ int main(int argc, char const* argv[]) {
             SPDLOG_INFO("Acceptor socket listening successfully");
         } else {
             SPDLOG_CRITICAL("Failed to bind acceptor socket");
-            return -1;
+            return 1;
         }
 
         // connect to scheduler and register this reducer as available
@@ -437,7 +437,7 @@ int main(int argc, char const* argv[]) {
         );
         if (false == ctx->register_with_scheduler(endpoints)) {
             SPDLOG_CRITICAL("Failed to communicate with scheduler");
-            return -1;
+            return 1;
         }
 
         // Queue up listening for scheduler updates, and tcp accepting
@@ -456,14 +456,14 @@ int main(int argc, char const* argv[]) {
             SPDLOG_ERROR("Job {} finished with a recoverable error", ctx->get_job_id());
         } else if ((reducer::ServerStatus::UnrecoverableFailure == ctx->get_status())) {
             SPDLOG_CRITICAL("Job {} finished with an unrecoverable error", ctx->get_job_id());
-            return -1;
+            return 1;
         } else {
             SPDLOG_CRITICAL(
                     "Job {} finished in unexpected state {}",
                     ctx->get_job_id(),
                     reducer::server_status_to_string(ctx->get_status())
             );
-            return -1;
+            return 1;
         }
 
         // cleanup reducer state for next job
