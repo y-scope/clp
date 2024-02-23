@@ -10,11 +10,25 @@ enum class ValueType : uint8_t {
     Double
 };
 
-// TODO: consider what changes (if any) are necessary for this structure, and for iterating over
-// record values in general once we start supporting nested objects.
-struct TypedRecordKey {
-    std::string_view key;
-    ValueType type;
+/**
+ * Class representing a record element's key and value type.
+ *
+ * TODO: Consider what changes (if any) are necessary for this structure, and for iterating over
+ * record values in general once we start supporting nested objects.
+ */
+class TypedRecordKey {
+public:
+    TypedRecordKey() = default;
+
+    TypedRecordKey(std::string_view key, ValueType type) : m_key{key}, m_type{type} {}
+
+    [[nodiscard]] std::string_view get_key() const { return m_key; }
+
+    [[nodiscard]] ValueType get_type() const { return m_type; }
+
+private:
+    std::string_view m_key;
+    ValueType m_type{ValueType::String};
 };
 
 /**

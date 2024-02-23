@@ -16,15 +16,16 @@ serialize(RecordGroup const& group, std::vector<uint8_t>(ser)(nlohmann::json con
         nlohmann::json record;
         for (auto vit = it->get()->value_iter(); !vit->done(); vit->next()) {
             TypedRecordKey tk = vit->get();
-            switch (tk.type) {
+            auto key = tk.get_key();
+            switch (tk.get_type()) {
                 case ValueType::Int64:
-                    record[tk.key] = it->get()->get_int64_value(tk.key);
+                    record[key] = it->get()->get_int64_value(key);
                     break;
                 case ValueType::String:
-                    record[tk.key] = it->get()->get_string_view(tk.key);
+                    record[key] = it->get()->get_string_view(key);
                     break;
                 case ValueType::Double:
-                    record[tk.key] = it->get()->get_double_value(tk.key);
+                    record[key] = it->get()->get_double_value(key);
                     break;
             }
         }
