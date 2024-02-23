@@ -12,7 +12,7 @@ serialize(RecordGroup const& group, std::vector<uint8_t>(ser)(nlohmann::json con
     json["group_tags"] = group.get_tags();
     auto records = nlohmann::json::array();
 
-    for (auto it = group.record_it(); !it->done(); it->next()) {
+    for (auto it = group.record_iter(); !it->done(); it->next()) {
         nlohmann::json record;
         for (auto typed_key_it = it->get()->typed_key_iter(); !typed_key_it->done();
              typed_key_it->next())
@@ -44,7 +44,7 @@ std::vector<uint8_t> serialize_timeline(RecordGroup const& group) {
     auto records = nlohmann::json::array();
 
     int64_t count = 0;
-    for (auto it = group.record_it(); !it->done(); it->next()) {
+    for (auto it = group.record_iter(); !it->done(); it->next()) {
         count = it->get()->get_int64_value("count");
     }
     json["count"] = count;
@@ -77,7 +77,7 @@ DeserializedRecordGroup::DeserializedRecordGroup(char* buf, size_t len)
     init_tags_from_json();
 }
 
-std::unique_ptr<RecordIterator> DeserializedRecordGroup::record_it() const {
+std::unique_ptr<RecordIterator> DeserializedRecordGroup::record_iter() const {
     return std::make_unique<DeserializedRecordIterator>(
             m_record_group["records"].template get<nlohmann::json::array_t>()
     );

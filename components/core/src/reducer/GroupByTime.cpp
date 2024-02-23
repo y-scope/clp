@@ -4,7 +4,7 @@
 
 namespace reducer {
 void GroupByTime::push_inter_stage_record_group(RecordGroup const& record_group) {
-    for (auto it = record_group.record_it(); !it->done(); it->next()) {
+    for (auto it = record_group.record_iter(); !it->done(); it->next()) {
         int64_t time = it->get()->get_int64_value("@time");
         time = time / m_bucket_size;
         time = time * m_bucket_size;

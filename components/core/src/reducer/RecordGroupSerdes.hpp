@@ -24,7 +24,7 @@ public:
     explicit DeserializedRecordGroup(std::vector<uint8_t>& serialized_data);
     DeserializedRecordGroup(char* buf, size_t len);
 
-    [[nodiscard]] std::unique_ptr<RecordIterator> record_it() const override;
+    [[nodiscard]] std::unique_ptr<RecordIterator> record_iter() const override;
 
     [[nodiscard]] GroupTags const& get_tags() const override;
 
