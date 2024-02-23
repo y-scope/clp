@@ -38,9 +38,6 @@ public:
 
     virtual ~Operator() = default;
 
-    [[nodiscard]] virtual OperatorType get_type() const = 0;
-    [[nodiscard]] virtual OperatorResultCardinality get_cardinality() const = 0;
-
     virtual void push_intra_stage_record_group(RecordGroup const& record_group) = 0;
     virtual void push_inter_stage_record_group(RecordGroup const& record_group) = 0;
 

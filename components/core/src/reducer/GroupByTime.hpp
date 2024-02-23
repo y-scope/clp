@@ -27,12 +27,6 @@ public:
         m_tags.emplace_back("0");
     }
 
-    [[nodiscard]] OperatorType get_type() const override { return OperatorType::GroupBy; }
-
-    [[nodiscard]] OperatorResultCardinality get_cardinality() const override {
-        return OperatorResultCardinality::Input;
-    }
-
     void push_intra_stage_record_group(RecordGroup const& record_group) override {
         push_inter_stage_record_group(record_group);
     }

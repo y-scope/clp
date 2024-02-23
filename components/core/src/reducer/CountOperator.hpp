@@ -13,12 +13,6 @@ namespace reducer {
  */
 class CountOperator : public Operator {
 public:
-    [[nodiscard]] OperatorType get_type() const override { return OperatorType::Reduce; }
-
-    [[nodiscard]] OperatorResultCardinality get_cardinality() const override {
-        return OperatorResultCardinality::One;
-    }
-
     void push_intra_stage_record_group(RecordGroup const& record_group) override;
 
     void push_inter_stage_record_group(RecordGroup const& record_group) override;
