@@ -79,11 +79,10 @@ def make_clp_s_command(
     return compression_cmd
 
 
-def update_tags(db_conn, db_cursor, table_prefix, archive_id, tags):
+def update_tags(db_conn, db_cursor, table_prefix, archive_id, tag_ids):
     db_cursor.executemany(
-        f"INSERT INTO {table_prefix}archive_tags (archive_id, tag_id) VALUES "
-        f"(%s, (SELECT tag_id FROM {table_prefix}tags WHERE tag_name = %s))",
-        [(archive_id, tag) for tag in tags],
+        f"INSERT INTO {table_prefix}archive_tags (archive_id, tag_id) VALUES (%s, %s)",
+        [(archive_id, tag_id) for tag_id in tag_ids],
     )
     db_conn.commit()
 
@@ -96,6 +95,7 @@ def run_clp(
     logs_dir: pathlib.Path,
     job_id: int,
     task_id: int,
+    tag_ids,
     paths_to_compress: PathsToCompress,
     clp_metadata_db_connection_config,
 ):
@@ -109,6 +109,7 @@ def run_clp(
     :param logs_dir:
     :param job_id:
     :param task_id:
+    :param tag_ids:
     :param paths_to_compress: PathToCompress
     :param clp_metadata_db_connection_config
     :return: tuple -- (whether compression was successful, output messages)
@@ -185,13 +186,13 @@ def run_clp(
                 # reported size to the total
                 total_uncompressed_size += last_archive_stats["uncompressed_size"]
                 total_compressed_size += last_archive_stats["size"]
-                if clp_config.output.tags:
+                if tag_ids is not None:
                     update_tags(
                         db_conn,
                         db_cursor,
                         clp_metadata_db_connection_config["table_prefix"],
                         last_archive_stats["id"],
-                        clp_config.output.tags,
+                        tag_ids,
                     )
             last_archive_stats = stats
         if last_archive_stats is not None:
@@ -204,7 +205,7 @@ def run_clp(
                     db_cursor,
                     clp_metadata_db_connection_config["table_prefix"],
                     last_archive_stats["id"],
-                    clp_config.output.tags,
+                    tag_ids,
                 )
 
     # Wait for compression to finish
@@ -237,6 +238,7 @@ def compress(
     self: Task,
     job_id: int,
     task_id: int,
+    tag_ids,
     clp_io_config_json: str,
     paths_to_compress_json: str,
     clp_metadata_db_connection_config,
@@ -259,6 +261,7 @@ def compress(
         pathlib.Path(logs_dir_str),
         job_id,
         task_id,
+        tag_ids,
         paths_to_compress,
         clp_metadata_db_connection_config,
     )

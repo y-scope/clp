@@ -120,7 +120,7 @@ def get_archives_for_search(
         filter_clauses.append(
             f"id IN (SELECT archive_id FROM {CLP_METADATA_TABLE_PREFIX}archive_tags WHERE "
             f"tag_id IN (SELECT tag_id FROM {CLP_METADATA_TABLE_PREFIX}tags WHERE tag_name IN "
-            f"(%s)))"
+            f"(%s)))" % ", ".join(["%s" for _ in search_config.tags])
         )
     if len(filter_clauses) > 0:
         query += " WHERE " + " AND ".join(filter_clauses)
@@ -128,8 +128,6 @@ def get_archives_for_search(
 
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
         if search_config.tags is not None:
-            tag_values = ", ".join(["%s" for _ in search_config.tags])
-            query = query % tag_values
             cursor.execute(query, tuple(search_config.tags))
         else:
             cursor.execute(query)

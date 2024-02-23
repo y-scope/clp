@@ -86,7 +86,7 @@ def create_and_monitor_job_in_db(
         path_filter=path_filter,
     )
     if tags:
-        tag_list = [tag.strip() for tag in tags.split(",") if tag]
+        tag_list = [tag.strip().lower() for tag in tags.split(",") if tag]
         if len(tag_list) > 0:
             search_config.tags = tag_list
 

@@ -173,11 +173,6 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
                 "start_time": start_time,
             },
         )
-        if clp_io_config.output.tags:
-            db_cursor.executemany(
-                f"INSERT IGNORE INTO {CLP_METADATA_TABLE_PREFIX}tags (tag_name) VALUES (%s)",
-                [(tag,) for tag in clp_io_config.output.tags],
-            )
         db_conn.commit()
 
         task_instances = []
@@ -190,9 +185,22 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
                 """,
                 (partition_info[task_idx]["clp_paths_to_compress"],),
             )
+            db_conn.commit()
             task["task_id"] = db_cursor.lastrowid
+            if clp_io_config.output.tags:
+                db_cursor.executemany(
+                    f"INSERT IGNORE INTO {CLP_METADATA_TABLE_PREFIX}tags (tag_name) VALUES (%s)",
+                    [(tag,) for tag in clp_io_config.output.tags],
+                )
+                db_conn.commit()
+                db_cursor.execute(
+                    f"SELECT tag_id FROM {CLP_METADATA_TABLE_PREFIX}tags WHERE tag_name IN (%s)"
+                    % ", ".join(["%s"] * len(clp_io_config.output.tags)),
+                    clp_io_config.output.tags,
+                )
+                task["tag_ids"] = [tags["tag_id"] for tags in db_cursor.fetchall()]
+                db_conn.commit()
             task_instances.append(compress.s(**task))
-        db_conn.commit()
         tasks_group = celery.group(task_instances)
 
         job = CompressionJob(

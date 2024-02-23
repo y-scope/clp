@@ -49,7 +49,7 @@ def main(argv):
         help="The path (e.g. x.y) for the field containing the log event's timestamp.",
     )
     args_parser.add_argument(
-        "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archive."
+        "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
