@@ -9,22 +9,36 @@
 
 namespace reducer {
 /**
- * Class which provides an iterator over Record objects in a RecordGroup.
+ * An iterator over Record objects in a RecordGroup.
  */
 class RecordIterator {
 public:
     virtual ~RecordIterator() = default;
+
+    /**
+     * NOTE: It is the caller's responsibility to ensure that the iterator hasn't been exhausted.
+     * @return The record pointed at by the iterator.
+     */
     virtual Record const* get() = 0;
+
+    /**
+     * Advances the iterator to the next record.
+     * NOTE: It is the caller's responsibility to ensure the iterator hasn't be exhausted.
+     */
     virtual void next() = 0;
+
+    /**
+     * @return Whether the iterator has been exhausted.
+     */
     virtual bool done() = 0;
 };
 
 /**
- * Class which provides a RecordIterator over a single record.
+ * A RecordIterator over a single record.
  */
 class SingleRecordIterator : public RecordIterator {
 public:
-    explicit SingleRecordIterator(Record const* record) : m_record(record) {}
+    explicit SingleRecordIterator(Record const* record) : m_record{record} {}
 
     Record const* get() override { return m_record; }
 
@@ -41,7 +55,7 @@ private:
 };
 
 /**
- * Class which provides a RecordIterator over a vector of Record objects.
+ * A RecordIterator over a vector of Record objects.
  */
 class VectorRecordIterator : public RecordIterator {
 public:
