@@ -209,6 +209,11 @@ bool search_archive(
                 command_line_arguments.get_batch_size(),
                 command_line_arguments.get_max_num_results()
         );
+    } else if (command_line_arguments.get_network_destination_enabled()) {
+        output_handler = std::make_unique<NetworkOutputHandler>(
+                command_line_arguments.get_host(),
+                command_line_arguments.get_port()
+        );
     } else {
         output_handler = std::make_unique<StandardOutputHandler>();
     }

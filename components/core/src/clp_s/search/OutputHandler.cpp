@@ -1,6 +1,54 @@
 #include "OutputHandler.hpp"
 
+#include <sstream>
+
+#include <spdlog/spdlog.h>
+
 namespace clp_s::search {
+NetworkOutputHandler::NetworkOutputHandler(
+        std::string const& host,
+        std::string const& port,
+        bool should_output_timestamp
+)
+        : OutputHandler(should_output_timestamp) {
+    struct addrinfo hints = {};
+    // Address can be IPv4 or IPV6
+    hints.ai_family = AF_UNSPEC;
+    // TCP socket
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = 0;
+    hints.ai_protocol = 0;
+    struct addrinfo* addresses_head = nullptr;
+    int error = getaddrinfo(host.c_str(), port.c_str(), &hints, &addresses_head);
+    if (0 != error) {
+        SPDLOG_ERROR("Failed to get address information for the server, error={}", error);
+        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
+    }
+
+    // Try each address until a socket can be created and connected to
+    for (auto curr = addresses_head; nullptr != curr; curr = curr->ai_next) {
+        // Create socket
+        m_socket_fd = socket(curr->ai_family, curr->ai_socktype, curr->ai_protocol);
+        if (-1 == m_socket_fd) {
+            continue;
+        }
+
+        // Connect to address
+        if (connect(m_socket_fd, curr->ai_addr, curr->ai_addrlen) != -1) {
+            break;
+        }
+
+        // Failed to connect, so close socket
+        close(m_socket_fd);
+        m_socket_fd = -1;
+    }
+    freeaddrinfo(addresses_head);
+    if (-1 == m_socket_fd) {
+        SPDLOG_ERROR("Failed to connect to the server, errno={}", errno);
+        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
+    }
+}
+
 ResultsCacheOutputHandler::ResultsCacheOutputHandler(
         std::string const& uri,
         std::string const& collection,

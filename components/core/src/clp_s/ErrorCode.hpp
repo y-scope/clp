@@ -24,7 +24,8 @@ typedef enum {
     ErrorCodeFailure,
     ErrorCodeFailureMetadataCorrupted,
     ErrorCodeMetadataCorrupted,
-    ErrorCodeFailureDbBulkWrite
+    ErrorCodeFailureDbBulkWrite,
+    ErrorCodeFailureNetwork,
 } ErrorCode;
 }  // namespace clp_s
 
