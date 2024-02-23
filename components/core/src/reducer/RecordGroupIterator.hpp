@@ -9,131 +9,145 @@
 
 namespace reducer {
 /**
- * Class that allows iterating over a list of RecordGroups.
+ * Iterator over a collection of RecordGroups.
  */
 class RecordGroupIterator {
 public:
     virtual ~RecordGroupIterator() = default;
+
+    /**
+     * NOTE: It is the caller's responsibility to ensure that the iterator hasn't been exhausted.
+     * @return The RecordGroup pointed at by the iterator.
+     */
     virtual RecordGroup const* get() = 0;
+
+    /**
+     * Advances the iterator to the next RecordGroup.
+     * NOTE: It is the caller's responsibility to ensure the iterator hasn't be exhausted.
+     */
     virtual void next() = 0;
+
+    /**
+     * @return Whether the iterator has been exhausted.
+     */
     virtual bool done() = 0;
 };
 
 /**
- * Class which adapts a map of GroupTags to int64_t values into a RecordGroupIterator.
+ * A RecordGroupIterator that exposes a map which maps GroupTags to int64_t values.
  */
 class Int64MapRecordGroupIterator : public RecordGroupIterator {
 public:
-    Int64MapRecordGroupIterator(std::map<GroupTags, int64_t> const& map, std::string key)
-            : m_it_cur(map.cbegin()),
-              m_it_end(map.cend()),
-              m_record(std::move(key)) {
+    Int64MapRecordGroupIterator(std::map<GroupTags, int64_t> const& elements, std::string key)
+            : m_elements_it{elements.cbegin()},
+              m_elements_end_it{elements.cend()},
+              m_record{std::move(key)} {
         m_group.set_record(&m_record);
     }
 
     RecordGroup const* get() override {
-        m_record.set_record_value(m_it_cur->second);
-        m_group.set_tags(&m_it_cur->first);
+        m_record.set_record_value(m_elements_it->second);
+        m_group.set_tags(&m_elements_it->first);
         return &m_group;
     }
 
-    void next() override { ++m_it_cur; }
+    void next() override { ++m_elements_it; }
 
-    bool done() override { return m_it_cur == m_it_end; }
+    bool done() override { return m_elements_it == m_elements_end_it; }
 
 private:
     SingleInt64RecordAdapter m_record;
     BasicSingleRecordGroup m_group;
-    std::map<GroupTags, int64_t>::const_iterator m_it_cur;
-    std::map<GroupTags, int64_t>::const_iterator m_it_end;
+    std::map<GroupTags, int64_t>::const_iterator m_elements_it;
+    std::map<GroupTags, int64_t>::const_iterator m_elements_end_it;
 };
 
 /**
- * Class which adapts a map of int64_t to int64_t values into a RecordGroupIterator.
+ * A RecordGroupIterator that exposes a map which maps int64_t keys to int64_t values.
  */
 class Int64Int64MapRecordGroupIterator : public RecordGroupIterator {
 public:
-    Int64Int64MapRecordGroupIterator(std::map<int64_t, int64_t> const& map, std::string key)
-            : m_it_cur(map.cbegin()),
-              m_it_end(map.cend()),
-              m_record(std::move(key)) {
+    Int64Int64MapRecordGroupIterator(std::map<int64_t, int64_t> const& elements, std::string key)
+            : m_elements_it{elements.cbegin()},
+              m_elements_end_it{elements.cend()},
+              m_record{std::move(key)} {
         m_group.set_record(&m_record);
     }
 
     RecordGroup const* get() override {
-        m_tags = {std::to_string(m_it_cur->first)};
-        m_record.set_record_value(m_it_cur->second);
+        m_tags = {std::to_string(m_elements_it->first)};
+        m_record.set_record_value(m_elements_it->second);
         m_group.set_tags(&m_tags);
         return &m_group;
     }
 
-    void next() override { ++m_it_cur; }
+    void next() override { ++m_elements_it; }
 
-    bool done() override { return m_it_cur == m_it_end; }
+    bool done() override { return m_elements_it == m_elements_end_it; }
 
 private:
     SingleInt64RecordAdapter m_record;
     BasicSingleRecordGroup m_group;
     GroupTags m_tags;
-    std::map<int64_t, int64_t>::const_iterator m_it_cur;
-    std::map<int64_t, int64_t>::const_iterator m_it_end;
+    std::map<int64_t, int64_t>::const_iterator m_elements_it;
+    std::map<int64_t, int64_t>::const_iterator m_elements_end_it;
 };
 
 /**
- * Class which adapts a map of GroupTags to int64_t values into a RecordGroupIterator, and provides
- * filtering on the output.
+ * A RecordGroupIterator that exposes a map which maps GroupTags keys to int64_t values, filtered
+ * by another set of GroupTags.
  */
 class FilteredInt64MapRecordGroupIterator : public RecordGroupIterator {
 public:
     FilteredInt64MapRecordGroupIterator(
-            std::map<GroupTags, int64_t> const& map,
+            std::map<GroupTags, int64_t> const& elements,
             std::set<GroupTags> const& filter,
             std::string key
     )
-            : m_results(map),
-              m_it_end(map.cend()),
-              m_it_cur(map.cend()),
-              m_filter_cur(filter.cbegin()),
-              m_filter_end(filter.cend()),
-              m_record(std::move(key)) {
+            : m_elements{elements},
+              m_elements_end_it{elements.cend()},
+              m_elements_it{elements.cend()},
+              m_filter_it{filter.cbegin()},
+              m_filter_end_it{filter.cend()},
+              m_record{std::move(key)} {
         m_group.set_record(&m_record);
         advance_to_next_filter();
     }
 
     RecordGroup const* get() override {
-        m_record.set_record_value(m_it_cur->second);
-        m_group.set_tags(&m_it_cur->first);
+        m_record.set_record_value(m_elements_it->second);
+        m_group.set_tags(&m_elements_it->first);
         return &m_group;
     }
 
     void next() override { advance_to_next_filter(); }
 
-    bool done() override { return m_it_cur == m_it_end; }
+    bool done() override { return m_elements_it == m_elements_end_it; }
 
 private:
     void advance_to_next_filter() {
-        if (m_filter_cur == m_filter_end) {
-            m_it_cur = m_it_end;
+        if (m_filter_it == m_filter_end_it) {
+            m_elements_it = m_elements_end_it;
             return;
         }
 
         do {
-            m_it_cur = m_results.find(*m_filter_cur);
-            ++m_filter_cur;
-        } while (m_it_cur == m_it_end && m_filter_cur != m_filter_end);
+            m_elements_it = m_elements.find(*m_filter_it);
+            ++m_filter_it;
+        } while (m_elements_it == m_elements_end_it && m_filter_it != m_filter_end_it);
     }
 
     SingleInt64RecordAdapter m_record;
     BasicSingleRecordGroup m_group;
-    std::map<GroupTags, int64_t> const& m_results;
-    std::map<GroupTags, int64_t>::const_iterator m_it_cur;
-    std::map<GroupTags, int64_t>::const_iterator m_it_end;
-    std::set<GroupTags>::const_iterator m_filter_cur;
-    std::set<GroupTags>::const_iterator m_filter_end;
+    std::map<GroupTags, int64_t> const& m_elements;
+    std::map<GroupTags, int64_t>::const_iterator m_elements_it;
+    std::map<GroupTags, int64_t>::const_iterator m_elements_end_it;
+    std::set<GroupTags>::const_iterator m_filter_it;
+    std::set<GroupTags>::const_iterator m_filter_end_it;
 };
 
 /**
- * Class which provides a RecordGroupIterator over an empty RecordGroup.
+ * A RecordGroupIterator over an empty RecordGroup.
  */
 class EmptyRecordGroupIterator : public RecordGroupIterator {
 public:
