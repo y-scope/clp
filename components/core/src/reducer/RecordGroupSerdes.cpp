@@ -15,7 +15,8 @@ serialize(RecordGroup const& group, std::vector<uint8_t>(ser)(nlohmann::json con
     for (auto it = group.record_it(); !it->done(); it->next()) {
         nlohmann::json record;
         for (auto typed_key_it = it->get()->typed_key_iter(); !typed_key_it->done();
-             typed_key_it->next()) {
+             typed_key_it->next())
+        {
             TypedRecordKey typed_key = typed_key_it->get();
             auto key = typed_key.get_key();
             switch (typed_key.get_type()) {
