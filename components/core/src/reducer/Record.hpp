@@ -7,7 +7,7 @@
 #include <utility>
 #include <variant>
 
-#include "RecordValueIterator.hpp"
+#include "RecordTypedKeyIterator.hpp"
 
 namespace reducer {
 /**
@@ -31,7 +31,7 @@ public:
         return 0.0;
     }
 
-    [[nodiscard]] virtual std::unique_ptr<RecordValueIterator> value_iter() const = 0;
+    [[nodiscard]] virtual std::unique_ptr<RecordTypedKeyIterator> typed_key_iter() const = 0;
 };
 
 /**
@@ -53,8 +53,8 @@ public:
         return {};
     }
 
-    [[nodiscard]] std::unique_ptr<RecordValueIterator> value_iter() const override {
-        return std::make_unique<SingleValueIterator>(m_key_name, ValueType::String);
+    [[nodiscard]] std::unique_ptr<RecordTypedKeyIterator> typed_key_iter() const override {
+        return std::make_unique<SingleTypedKeyIterator>(m_key_name, ValueType::String);
     }
 
 private:
@@ -81,8 +81,8 @@ public:
         return 0;
     }
 
-    [[nodiscard]] std::unique_ptr<RecordValueIterator> value_iter() const override {
-        return std::make_unique<SingleValueIterator>(m_key_name, ValueType::Int64);
+    [[nodiscard]] std::unique_ptr<RecordTypedKeyIterator> typed_key_iter() const override {
+        return std::make_unique<SingleTypedKeyIterator>(m_key_name, ValueType::Int64);
     }
 
 private:
@@ -95,8 +95,8 @@ private:
  */
 class EmptyRecord : public Record {
 public:
-    [[nodiscard]] std::unique_ptr<RecordValueIterator> value_iter() const override {
-        return std::make_unique<EmptyRecordValueIterator>();
+    [[nodiscard]] std::unique_ptr<RecordTypedKeyIterator> typed_key_iter() const override {
+        return std::make_unique<EmptyRecordTypedKeyIterator>();
     }
 };
 }  // namespace reducer

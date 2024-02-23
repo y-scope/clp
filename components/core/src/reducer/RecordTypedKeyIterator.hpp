@@ -4,6 +4,9 @@
 #include <string_view>
 
 namespace reducer {
+/**
+ * The type of a value of an element in a record.
+ */
 enum class ValueType : uint8_t {
     String,
     Int64,
@@ -11,7 +14,7 @@ enum class ValueType : uint8_t {
 };
 
 /**
- * Class representing a record element's key and value type.
+ * A record element's key and value type.
  *
  * TODO: Consider what changes (if any) are necessary for this structure, and for iterating over
  * record values in general once we start supporting nested objects.
@@ -32,20 +35,34 @@ private:
 };
 
 /**
- * Class which provides an iterator over all of the typed keys in a Record.
+ * An iterator over all of the typed keys in a Record.
  */
-class RecordValueIterator {
+class RecordTypedKeyIterator {
 public:
-    virtual ~RecordValueIterator() = default;
+    virtual ~RecordTypedKeyIterator() = default;
+
+    /**
+     * NOTE: It is the caller's responsibility to ensure that the iterator hasn't been exhausted.
+     * @return The element pointed at by the iterator.
+     */
     virtual TypedRecordKey get() = 0;
+
+    /**
+     * Advances the iterator to the next element.
+     * NOTE: It is the caller's responsibility to ensure the iterator hasn't be exhausted.
+     */
     virtual void next() = 0;
+
+    /**
+     * @return Whether the iterator has been exhausted.
+     */
     virtual bool done() = 0;
 };
 
 /**
- * Class which provides a RecordValueIterator over an empty Record.
+ * A RecordTypedKeyIterator over an empty Record.
  */
-class EmptyRecordValueIterator : public RecordValueIterator {
+class EmptyRecordTypedKeyIterator : public RecordTypedKeyIterator {
     TypedRecordKey get() override { return {}; }
 
     void next() override {}
@@ -54,11 +71,11 @@ class EmptyRecordValueIterator : public RecordValueIterator {
 };
 
 /**
- * Class which provides a RecordValueIterator over a Record with a single key-value pair.
+ * A RecordTypedKeyIterator over a Record with a single element.
  */
-class SingleValueIterator : public RecordValueIterator {
+class SingleTypedKeyIterator : public RecordTypedKeyIterator {
 public:
-    SingleValueIterator(std::string_view key, ValueType type) : m_key(key), m_type(type) {}
+    SingleTypedKeyIterator(std::string_view key, ValueType type) : m_key{key}, m_type{type} {}
 
     TypedRecordKey get() override { return {m_key, m_type}; }
 

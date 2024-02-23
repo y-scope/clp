@@ -29,7 +29,7 @@ set(
         RecordGroupSerdes.cpp
         RecordGroupSerdes.hpp
         RecordIterator.hpp
-        RecordValueIterator.hpp
+        RecordTypedKeyIterator.hpp
         ServerContext.cpp
         ServerContext.hpp
         reducer_server.cpp

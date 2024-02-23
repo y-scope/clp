@@ -14,10 +14,11 @@ serialize(RecordGroup const& group, std::vector<uint8_t>(ser)(nlohmann::json con
 
     for (auto it = group.record_it(); !it->done(); it->next()) {
         nlohmann::json record;
-        for (auto vit = it->get()->value_iter(); !vit->done(); vit->next()) {
-            TypedRecordKey tk = vit->get();
-            auto key = tk.get_key();
-            switch (tk.get_type()) {
+        for (auto typed_key_it = it->get()->typed_key_iter(); !typed_key_it->done();
+             typed_key_it->next()) {
+            TypedRecordKey typed_key = typed_key_it->get();
+            auto key = typed_key.get_key();
+            switch (typed_key.get_type()) {
                 case ValueType::Int64:
                     record[key] = it->get()->get_int64_value(key);
                     break;

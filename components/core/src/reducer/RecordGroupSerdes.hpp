@@ -10,7 +10,7 @@
 #include "Record.hpp"
 #include "RecordGroup.hpp"
 #include "RecordIterator.hpp"
-#include "RecordValueIterator.hpp"
+#include "RecordTypedKeyIterator.hpp"
 
 namespace reducer {
 /**
@@ -54,10 +54,10 @@ public:
         return (*m_record)[key].template get<double>();
     }
 
-    // FIXME: provide a real record value iterator
-    // fine to omit for now since it isn't used by any existing code
-    [[nodiscard]] std::unique_ptr<RecordValueIterator> value_iter() const override {
-        return std::make_unique<EmptyRecordValueIterator>();
+    // TODO: Provide a real iterator. This is fine to omit for now since it isn't used by any
+    //  existing code.
+    [[nodiscard]] std::unique_ptr<RecordTypedKeyIterator> typed_key_iter() const override {
+        return std::make_unique<EmptyRecordTypedKeyIterator>();
     }
 
 private:
