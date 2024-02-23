@@ -59,11 +59,11 @@ private:
  */
 class VectorRecordIterator : public RecordIterator {
 public:
-    explicit VectorRecordIterator(std::vector<Record> const* records)
-            : m_cur(records->cbegin()),
-              m_end(records->cend()) {}
+    explicit VectorRecordIterator(std::vector<Record> const& records)
+            : m_cur{records.cbegin()},
+              m_end{records.cend()} {}
 
-    Record const* get() override { return m_cur != m_end ? &*m_cur : nullptr; }
+    Record const* get() override { return m_cur != m_end ? &(*m_cur) : nullptr; }
 
     void next() override { ++m_cur; }
 

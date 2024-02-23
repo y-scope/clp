@@ -66,7 +66,7 @@ public:
               m_records(records) {}
 
     [[nodiscard]] std::unique_ptr<RecordIterator> record_it() const override {
-        return std::make_unique<VectorRecordIterator>(m_records);
+        return std::make_unique<VectorRecordIterator>(*m_records);
     }
 
     [[nodiscard]] GroupTags const& get_tags() const override { return *m_tags; }
