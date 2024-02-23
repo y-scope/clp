@@ -11,8 +11,8 @@
 
 namespace reducer {
 /**
- * Class which describes a single Record containing data which can be accessed via typed key-value
- * pairs.
+ * Base class for a record containing zero or more key-value pairs (elements). The value of each
+ * element can be accessed by key through a typed accessor.
  */
 class Record {
 public:
@@ -31,6 +31,9 @@ public:
         return 0.0;
     }
 
+    /**
+     * @return An iterator to the key and value type of each element in this record.
+     */
     [[nodiscard]] virtual std::unique_ptr<RecordTypedKeyIterator> typed_key_iter() const = 0;
 };
 
@@ -40,9 +43,9 @@ public:
  * The value associated with the key can be updated allowing this class to act as an adapter for a
  * larger set of data.
  */
-class StringRecordAdapter : public Record {
+class SingleStringRecordAdapter : public Record {
 public:
-    explicit StringRecordAdapter(std::string key_name) : m_key_name(std::move(key_name)) {}
+    explicit SingleStringRecordAdapter(std::string key_name) : m_key_name(std::move(key_name)) {}
 
     void set_record_value(std::string_view value) { m_value = value; }
 
@@ -63,14 +66,14 @@ private:
 };
 
 /**
- * Record implementation which exposes a single integer key-value pair.
+ * Record implementation which exposes a single 64-bit integer key-value pair.
  *
  * The value associated with the key can be updated allowing this class to act as an adapter for a
  * larger set of data.
  */
-class Int64RecordAdapter : public Record {
+class SingleInt64RecordAdapter : public Record {
 public:
-    explicit Int64RecordAdapter(std::string key_name) : m_key_name(std::move(key_name)) {}
+    explicit SingleInt64RecordAdapter(std::string key_name) : m_key_name(std::move(key_name)) {}
 
     void set_record_value(int64_t value) { m_value = value; }
 
@@ -91,7 +94,7 @@ private:
 };
 
 /**
- * Record implementation for an empty key-value pair.
+ * Record implementation for an empty record.
  */
 class EmptyRecord : public Record {
 public:

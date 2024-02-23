@@ -42,7 +42,7 @@ public:
     bool done() override { return m_it_cur == m_it_end; }
 
 private:
-    Int64RecordAdapter m_record;
+    SingleInt64RecordAdapter m_record;
     BasicSingleRecordGroup m_group;
     std::map<GroupTags, int64_t>::const_iterator m_it_cur;
     std::map<GroupTags, int64_t>::const_iterator m_it_end;
@@ -72,7 +72,7 @@ public:
     bool done() override { return m_it_cur == m_it_end; }
 
 private:
-    Int64RecordAdapter m_record;
+    SingleInt64RecordAdapter m_record;
     BasicSingleRecordGroup m_group;
     GroupTags m_tags;
     std::map<int64_t, int64_t>::const_iterator m_it_cur;
@@ -123,7 +123,7 @@ private:
         } while (m_it_cur == m_it_end && m_filter_cur != m_filter_end);
     }
 
-    Int64RecordAdapter m_record;
+    SingleInt64RecordAdapter m_record;
     BasicSingleRecordGroup m_group;
     std::map<GroupTags, int64_t> const& m_results;
     std::map<GroupTags, int64_t>::const_iterator m_it_cur;
