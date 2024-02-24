@@ -9,17 +9,17 @@
 
 namespace reducer {
 /**
- * An iterator over Record objects in a RecordGroup.
+ * A const iterator over Record objects in a RecordGroup.
  */
-class RecordIterator {
+class ConstRecordIterator {
 public:
-    virtual ~RecordIterator() = default;
+    virtual ~ConstRecordIterator() = default;
 
     /**
      * NOTE: It is the caller's responsibility to ensure that the iterator hasn't been exhausted.
-     * @return The record pointed at by the iterator.
+     * @return The record pointed to by the iterator.
      */
-    virtual Record const* get() = 0;
+    virtual Record const& get() const = 0;
 
     /**
      * Advances the iterator to the next record.
@@ -34,18 +34,15 @@ public:
 };
 
 /**
- * A RecordIterator over a single record.
+ * A ConstRecordIterator over a single record.
  */
-class SingleRecordIterator : public RecordIterator {
+class SingleRecordIterator : public ConstRecordIterator {
 public:
-    explicit SingleRecordIterator(Record const* record) : m_record{record} {}
+    explicit SingleRecordIterator(Record const& record) : m_record{&record} {}
 
-    Record const* get() override { return m_record; }
+    Record const& get() const override { return *m_record; }
 
-    void next() override {
-        m_done = true;
-        m_record = nullptr;
-    }
+    void next() override { m_done = true; }
 
     bool done() override { return m_done; }
 
@@ -55,15 +52,15 @@ private:
 };
 
 /**
- * A RecordIterator over a vector of Record objects.
+ * A ConstRecordIterator over a vector of Record objects.
  */
-class VectorRecordIterator : public RecordIterator {
+class VectorRecordIterator : public ConstRecordIterator {
 public:
     explicit VectorRecordIterator(std::vector<Record> const& records)
             : m_cur{records.cbegin()},
               m_end{records.cend()} {}
 
-    Record const* get() override { return m_cur != m_end ? &(*m_cur) : nullptr; }
+    Record const& get() const override { return *m_cur; }
 
     void next() override { ++m_cur; }
 
@@ -72,6 +69,21 @@ public:
 private:
     std::vector<Record>::const_iterator m_cur;
     std::vector<Record>::const_iterator m_end;
+};
+
+/**
+ * A stubbed out ConstRecordIterator with no records.
+ */
+class EmptyRecordIterator : public ConstRecordIterator {
+public:
+    Record const& get() const override { return m_record; }
+
+    void next() override {}
+
+    bool done() override { return true; }
+
+private:
+    EmptyRecord m_record;
 };
 }  // namespace reducer
 

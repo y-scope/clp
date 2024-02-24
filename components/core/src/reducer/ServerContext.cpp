@@ -88,8 +88,9 @@ bool ServerContext::upsert_timeline_results() {
     bool any_updates = false;
     std::vector<std::vector<uint8_t>> results;
     for (auto group_it = m_pipeline->finish(m_updated_tags); !group_it->done(); group_it->next()) {
-        int64_t timestamp = std::stoll(group_it->get()->get_tags()[0]);
-        results.push_back(serialize_timeline(*group_it->get()));
+        int64_t timestamp = std::stoll(group_it->get().get_tags()[0]);
+        auto& group = group_it->get();
+        results.push_back(serialize_timeline(group.get_tags(), group.record_iter()));
         std::vector<uint8_t>& encoded_result = results.back();
         mongocxx::model::replace_one replace_op(
                 bsoncxx::builder::basic::make_document(
@@ -118,7 +119,9 @@ bool ServerContext::publish_pipeline_results() {
     std::vector<std::vector<uint8_t>> results;
     std::vector<bsoncxx::document::view> result_documents;
     for (auto group_it = m_pipeline->finish(); !group_it->done(); group_it->next()) {
-        results.push_back(serialize(*group_it->get(), nlohmann::json::to_bson));
+        auto& group = group_it->get();
+        results.push_back(serialize(group.get_tags(), group.record_iter(), nlohmann::json::to_bson)
+        );
         std::vector<uint8_t>& encoded_result = results.back();
         result_documents.push_back(
                 bsoncxx::document::view(encoded_result.data(), encoded_result.size())

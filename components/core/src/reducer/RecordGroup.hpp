@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 
+#include "ConstRecordIterator.hpp"
 #include "GroupTags.hpp"
 #include "Record.hpp"
-#include "RecordIterator.hpp"
 
 namespace reducer {
 /**
@@ -19,7 +19,7 @@ class RecordGroup {
 public:
     virtual ~RecordGroup() = default;
     [[nodiscard]] virtual GroupTags const& get_tags() const = 0;
-    [[nodiscard]] virtual std::unique_ptr<RecordIterator> record_iter() const = 0;
+    [[nodiscard]] virtual ConstRecordIterator& record_iter() = 0;
 };
 
 /**
@@ -32,23 +32,21 @@ class BasicSingleRecordGroup : public RecordGroup {
 public:
     BasicSingleRecordGroup() = default;
 
-    BasicSingleRecordGroup(GroupTags const* tags, Record const* record)
+    BasicSingleRecordGroup(GroupTags const* tags, Record const& record)
             : m_tags(tags),
-              m_record(record) {}
+              m_iterator(record) {}
 
     [[nodiscard]] GroupTags const& get_tags() const override { return *m_tags; }
 
     void set_tags(GroupTags const* tags) { m_tags = tags; }
 
-    void set_record(Record const* record) { m_record = record; }
+    void set_record(Record const& record) { m_iterator = SingleRecordIterator(record); }
 
-    [[nodiscard]] std::unique_ptr<RecordIterator> record_iter() const override {
-        return std::make_unique<SingleRecordIterator>(m_record);
-    }
+    [[nodiscard]] ConstRecordIterator& record_iter() override { return m_iterator; }
 
 private:
+    SingleRecordIterator m_iterator;
     GroupTags const* m_tags{nullptr};
-    Record const* m_record{nullptr};
 };
 
 /**
@@ -61,23 +59,36 @@ class BasicMultiRecordGroup : public RecordGroup {
 public:
     BasicMultiRecordGroup() = default;
 
-    BasicMultiRecordGroup(GroupTags const* tags, std::vector<Record> const* records)
+    BasicMultiRecordGroup(GroupTags const* tags, std::vector<Record> const& records)
             : m_tags(tags),
-              m_records(records) {}
+              m_iterator(records) {}
 
     [[nodiscard]] GroupTags const& get_tags() const override { return *m_tags; }
 
     void set_tags(GroupTags const* tags) { m_tags = tags; }
 
-    void set_records(std::vector<Record> const* records) { m_records = records; }
-
-    [[nodiscard]] std::unique_ptr<RecordIterator> record_iter() const override {
-        return std::make_unique<VectorRecordIterator>(*m_records);
+    void set_records(std::vector<Record> const& records) {
+        m_iterator = VectorRecordIterator(records);
     }
+
+    [[nodiscard]] ConstRecordIterator& record_iter() override { return m_iterator; }
 
 private:
     GroupTags const* m_tags{nullptr};
-    std::vector<Record> const* m_records{nullptr};
+    VectorRecordIterator m_iterator;
+};
+
+/**
+ * Stubbed out RecordGroup with empty GroupTags and no records.
+ */
+class EmptyRecordGroup : public RecordGroup {
+    [[nodiscard]] GroupTags const& get_tags() const override { return m_tags; }
+
+    [[nodiscard]] ConstRecordIterator& record_iter() override { return m_record_it; }
+
+private:
+    GroupTags m_tags{};
+    EmptyRecordIterator m_record_it;
 };
 }  // namespace reducer
 

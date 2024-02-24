@@ -6,28 +6,31 @@
 #include <json/single_include/nlohmann/json.hpp>
 
 namespace reducer {
-std::vector<uint8_t>
-serialize(RecordGroup const& group, std::vector<uint8_t>(ser)(nlohmann::json const& j)) {
+std::vector<uint8_t> serialize(
+        GroupTags const& tags,
+        ConstRecordIterator& record_it,
+        std::vector<uint8_t>(ser)(nlohmann::json const& j)
+) {
     nlohmann::json json;
-    json["group_tags"] = group.get_tags();
+    json["group_tags"] = tags;
     auto records = nlohmann::json::array();
 
-    for (auto it = group.record_iter(); !it->done(); it->next()) {
+    for (; !record_it.done(); record_it.next()) {
         nlohmann::json record;
-        for (auto typed_key_it = it->get()->typed_key_iter(); !typed_key_it->done();
+        for (auto typed_key_it = record_it.get().typed_key_iter(); !typed_key_it->done();
              typed_key_it->next())
         {
             TypedRecordKey typed_key = typed_key_it->get();
             auto key = typed_key.get_key();
             switch (typed_key.get_type()) {
                 case ValueType::Int64:
-                    record[key] = it->get()->get_int64_value(key);
+                    record[key] = record_it.get().get_int64_value(key);
                     break;
                 case ValueType::String:
-                    record[key] = it->get()->get_string_view(key);
+                    record[key] = record_it.get().get_string_view(key);
                     break;
                 case ValueType::Double:
-                    record[key] = it->get()->get_double_value(key);
+                    record[key] = record_it.get().get_double_value(key);
                     break;
             }
         }
@@ -38,14 +41,14 @@ serialize(RecordGroup const& group, std::vector<uint8_t>(ser)(nlohmann::json con
     return std::move(ser(json));
 }
 
-std::vector<uint8_t> serialize_timeline(RecordGroup const& group) {
+std::vector<uint8_t> serialize_timeline(GroupTags const& tags, ConstRecordIterator& record_it) {
     nlohmann::json json;
-    json["timestamp"] = std::stoll(group.get_tags()[0]);
+    json["timestamp"] = std::stoll(tags[0]);
     auto records = nlohmann::json::array();
 
     int64_t count = 0;
-    for (auto it = group.record_iter(); !it->done(); it->next()) {
-        count = it->get()->get_int64_value("count");
+    for (; !record_it.done(); record_it.next()) {
+        count = record_it.get().get_int64_value("count");
     }
     json["count"] = count;
 
@@ -68,19 +71,19 @@ void DeserializedRecordGroup::init_tags_from_json() {
 }
 
 DeserializedRecordGroup::DeserializedRecordGroup(std::vector<uint8_t>& serialized_data)
-        : m_record_group(nlohmann::json::from_msgpack(serialized_data)) {
+        : m_record_group(nlohmann::json::from_msgpack(serialized_data)),
+          m_record_it(m_record_group["records"].template get<nlohmann::json::array_t>()) {
     init_tags_from_json();
 }
 
 DeserializedRecordGroup::DeserializedRecordGroup(char* buf, size_t len)
-        : m_record_group(nlohmann::json::from_msgpack(buf, buf + len)) {
+        : m_record_group(nlohmann::json::from_msgpack(buf, buf + len)),
+          m_record_it(m_record_group["records"].template get<nlohmann::json::array_t>()) {
     init_tags_from_json();
 }
 
-std::unique_ptr<RecordIterator> DeserializedRecordGroup::record_iter() const {
-    return std::make_unique<DeserializedRecordIterator>(
-            m_record_group["records"].template get<nlohmann::json::array_t>()
-    );
+ConstRecordIterator& DeserializedRecordGroup::record_iter() {
+    return m_record_it;
 }
 
 GroupTags const& DeserializedRecordGroup::get_tags() const {

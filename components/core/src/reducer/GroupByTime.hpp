@@ -27,18 +27,19 @@ public:
         m_tags.emplace_back("0");
     }
 
-    void push_intra_stage_record_group(RecordGroup const& record_group) override {
-        push_inter_stage_record_group(record_group);
+    void
+    push_intra_stage_record_group(GroupTags const& tags, ConstRecordIterator& record_it) override {
+        push_inter_stage_record_group(tags, record_it);
     }
 
-    void push_inter_stage_record_group(RecordGroup const& record_group) override;
+    void
+    push_inter_stage_record_group(GroupTags const& tags, ConstRecordIterator& record_it) override;
 
     std::unique_ptr<RecordGroupIterator> get_stored_result_iterator() override {
         return std::make_unique<EmptyRecordGroupIterator>();
     }
 
 private:
-    EmptyRecord m_empty;
     GroupTags m_tags;
     int64_t m_prev_time{-1};
     int64_t m_bucket_size;

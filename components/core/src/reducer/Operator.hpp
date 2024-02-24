@@ -38,8 +38,12 @@ public:
 
     virtual ~Operator() = default;
 
-    virtual void push_intra_stage_record_group(RecordGroup const& record_group) = 0;
-    virtual void push_inter_stage_record_group(RecordGroup const& record_group) = 0;
+    virtual void
+    push_intra_stage_record_group(GroupTags const& tags, ConstRecordIterator& record_it)
+            = 0;
+    virtual void
+    push_inter_stage_record_group(GroupTags const& tags, ConstRecordIterator& record_it)
+            = 0;
 
     void set_next_stage(std::shared_ptr<Operator> next_operator) {
         m_next_stage = std::move(next_operator);

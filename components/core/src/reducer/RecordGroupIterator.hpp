@@ -17,9 +17,9 @@ public:
 
     /**
      * NOTE: It is the caller's responsibility to ensure that the iterator hasn't been exhausted.
-     * @return The RecordGroup pointed at by the iterator.
+     * @return The RecordGroup pointed to by the iterator.
      */
-    virtual RecordGroup const* get() = 0;
+    virtual RecordGroup& get() = 0;
 
     /**
      * Advances the iterator to the next RecordGroup.
@@ -41,14 +41,13 @@ public:
     Int64MapRecordGroupIterator(std::map<GroupTags, int64_t> const& elements, std::string key)
             : m_elements_it{elements.cbegin()},
               m_elements_end_it{elements.cend()},
-              m_record{std::move(key)} {
-        m_group.set_record(&m_record);
-    }
+              m_record{std::move(key)},
+              m_group(nullptr, m_record) {}
 
-    RecordGroup const* get() override {
+    RecordGroup& get() override {
         m_record.set_record_value(m_elements_it->second);
         m_group.set_tags(&m_elements_it->first);
-        return &m_group;
+        return m_group;
     }
 
     void next() override { ++m_elements_it; }
@@ -70,15 +69,14 @@ public:
     Int64Int64MapRecordGroupIterator(std::map<int64_t, int64_t> const& elements, std::string key)
             : m_elements_it{elements.cbegin()},
               m_elements_end_it{elements.cend()},
-              m_record{std::move(key)} {
-        m_group.set_record(&m_record);
-    }
+              m_record{std::move(key)},
+              m_group(nullptr, m_record) {}
 
-    RecordGroup const* get() override {
+    RecordGroup& get() override {
         m_tags = {std::to_string(m_elements_it->first)};
         m_record.set_record_value(m_elements_it->second);
         m_group.set_tags(&m_tags);
-        return &m_group;
+        return m_group;
     }
 
     void next() override { ++m_elements_it; }
@@ -109,15 +107,15 @@ public:
               m_elements_it{elements.cend()},
               m_filter_it{filter.cbegin()},
               m_filter_end_it{filter.cend()},
-              m_record{std::move(key)} {
-        m_group.set_record(&m_record);
+              m_record{std::move(key)},
+              m_group(nullptr, m_record) {
         advance_to_next_filter();
     }
 
-    RecordGroup const* get() override {
+    RecordGroup& get() override {
         m_record.set_record_value(m_elements_it->second);
         m_group.set_tags(&m_elements_it->first);
-        return &m_group;
+        return m_group;
     }
 
     void next() override { advance_to_next_filter(); }
@@ -151,11 +149,14 @@ private:
  */
 class EmptyRecordGroupIterator : public RecordGroupIterator {
 public:
-    RecordGroup const* get() override { return nullptr; }
+    RecordGroup& get() override { return m_group; }
 
     void next() override {}
 
     bool done() override { return true; }
+
+private:
+    EmptyRecordGroup m_group;
 };
 }  // namespace reducer
 

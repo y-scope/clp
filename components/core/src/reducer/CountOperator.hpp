@@ -13,9 +13,11 @@ namespace reducer {
  */
 class CountOperator : public Operator {
 public:
-    void push_intra_stage_record_group(RecordGroup const& record_group) override;
+    void
+    push_intra_stage_record_group(GroupTags const& tags, ConstRecordIterator& record_it) override;
 
-    void push_inter_stage_record_group(RecordGroup const& record_group) override;
+    void
+    push_inter_stage_record_group(GroupTags const& tags, ConstRecordIterator& record_it) override;
 
     std::unique_ptr<RecordGroupIterator> get_stored_result_iterator() override;
     std::unique_ptr<RecordGroupIterator> get_stored_result_iterator(

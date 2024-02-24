@@ -3,19 +3,20 @@
 #include "RecordGroup.hpp"
 
 namespace reducer {
-void Pipeline::push_record_group(RecordGroup const& record_group) {
+void Pipeline::push_record_group(GroupTags const& tags, ConstRecordIterator& record_it) {
     if (m_pipeline.size() > 0) {
         if (m_input_mode == PipelineInputMode::InterStage) {
-            m_pipeline[0]->push_inter_stage_record_group(record_group);
+            m_pipeline[0]->push_inter_stage_record_group(tags, record_it);
         } else /*input_mode == PipelineInputMode::IntraStage*/ {
-            m_pipeline[0]->push_intra_stage_record_group(record_group);
+            m_pipeline[0]->push_intra_stage_record_group(tags, record_it);
         }
     }
     // else silently drop
 }
 
 void Pipeline::push_record(Record const& record) {
-    push_record_group(BasicSingleRecordGroup(&m_empty_group_tags, &record));
+    auto record_it = SingleRecordIterator(record);
+    push_record_group(m_empty_group_tags, record_it);
 }
 
 void Pipeline::add_pipeline_stage(std::shared_ptr<Operator> op) {

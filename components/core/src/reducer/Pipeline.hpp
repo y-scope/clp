@@ -25,7 +25,7 @@ public:
     explicit Pipeline(PipelineInputMode input_mode) : m_input_mode(input_mode){};
 
     void push_record(Record const& record);
-    void push_record_group(RecordGroup const& record_group);
+    void push_record_group(GroupTags const& tags, ConstRecordIterator& record_it);
 
     void add_pipeline_stage(std::shared_ptr<Operator> op);
 

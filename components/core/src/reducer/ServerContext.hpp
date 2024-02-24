@@ -113,14 +113,15 @@ public:
      * Pushes a group of records into the current local reducer pipeline. If this reducer
      * pipeline is periodically upserting results this function will also keep track of which
      * tags have been updated in the last period.
-     * @param record_group RecordGroup being pushed
+     * @param group_tags tags for the group being pushed
+     * @param record_it a const iterator over all records in the record group being pushed
      * @return
      */
-    void push_record_group(RecordGroup const& record_group) {
+    void push_record_group(GroupTags const& tags, ConstRecordIterator& record_it) {
         if (m_timeline_aggregation) {
-            m_updated_tags.insert(record_group.get_tags());
+            m_updated_tags.insert(tags);
         }
-        m_pipeline->push_record_group(record_group);
+        m_pipeline->push_record_group(tags, record_it);
     }
 
     /**

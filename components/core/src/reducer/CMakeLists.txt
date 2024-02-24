@@ -28,7 +28,7 @@ set(
         RecordGroupIterator.hpp
         RecordGroupSerdes.cpp
         RecordGroupSerdes.hpp
-        RecordIterator.hpp
+        ConstRecordIterator.hpp
         RecordTypedKeyIterator.hpp
         ServerContext.cpp
         ServerContext.hpp

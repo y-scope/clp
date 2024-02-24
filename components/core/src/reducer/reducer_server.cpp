@@ -115,7 +115,7 @@ struct ReceiveTask {
             if (bytes_remaining >= (record_size + sizeof(record_size))) {
                 buf_ptr += sizeof(record_size);
                 auto record_group = deserialize(buf_ptr, record_size);
-                rctx->ctx->push_record_group(record_group);
+                rctx->ctx->push_record_group(record_group.get_tags(), record_group.record_iter());
                 bytes_remaining -= (record_size + sizeof(record_size));
                 buf_ptr += record_size;
             } else {

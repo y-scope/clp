@@ -1,18 +1,24 @@
 #include "CountOperator.hpp"
 
 namespace reducer {
-void CountOperator::push_intra_stage_record_group(RecordGroup const& record_group) {
-    auto& count = m_group_count[record_group.get_tags()];
+void CountOperator::push_intra_stage_record_group(
+        GroupTags const& tags,
+        ConstRecordIterator& record_it
+) {
+    auto& count = m_group_count[tags];
 
-    for (auto it = record_group.record_iter(); !it->done(); it->next()) {
-        count += it->get()->get_int64_value("count");
+    for (; !record_it.done(); record_it.next()) {
+        count += record_it.get().get_int64_value("count");
     }
 }
 
-void CountOperator::push_inter_stage_record_group(RecordGroup const& record_group) {
-    auto& count = m_group_count[record_group.get_tags()];
+void CountOperator::push_inter_stage_record_group(
+        GroupTags const& tags,
+        ConstRecordIterator& record_it
+) {
+    auto& count = m_group_count[tags];
 
-    for (auto it = record_group.record_iter(); !it->done(); it->next()) {
+    for (; !record_it.done(); record_it.next()) {
         count += 1;
     }
 }

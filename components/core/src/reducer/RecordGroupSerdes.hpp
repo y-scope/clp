@@ -7,33 +7,12 @@
 
 #include <json/single_include/nlohmann/json.hpp>
 
+#include "ConstRecordIterator.hpp"
 #include "Record.hpp"
 #include "RecordGroup.hpp"
-#include "RecordIterator.hpp"
 #include "RecordTypedKeyIterator.hpp"
 
 namespace reducer {
-/**
- * Class which converts serialized data into a RecordGroup and exposes iterators to the underlying
- * data.
- *
- * The serialized data comes from the "serialize" function declared in this file.
- */
-class DeserializedRecordGroup : public RecordGroup {
-public:
-    explicit DeserializedRecordGroup(std::vector<uint8_t>& serialized_data);
-    DeserializedRecordGroup(char* buf, size_t len);
-
-    [[nodiscard]] std::unique_ptr<RecordIterator> record_iter() const override;
-
-    [[nodiscard]] GroupTags const& get_tags() const override;
-
-private:
-    void init_tags_from_json();
-    GroupTags m_tags;
-    nlohmann::json m_record_group;
-};
-
 /**
  * Class which exposes the Record interface on data which had been serialized by
  * the "serialize" function declared in this file.
@@ -65,10 +44,10 @@ private:
 };
 
 /**
- * Class which provides a RecordIterator over data serialized by the "serialize" function declared
- * in this file.
+ * Class which provides a ConstRecordIterator over data serialized by the "serialize" function
+ * declared in this file.
  */
-class DeserializedRecordIterator : public RecordIterator {
+class DeserializedRecordIterator : public ConstRecordIterator {
 public:
     explicit DeserializedRecordIterator(nlohmann::json::array_t jarray)
             : m_jarray(std::move(jarray)) {
@@ -77,7 +56,7 @@ public:
         m_record.set_record(&m_cur_json_record);
     }
 
-    Record const* get() override { return &m_record; }
+    Record const& get() const override { return m_record; }
 
     void next() override { ++m_it; }
 
@@ -90,12 +69,35 @@ private:
     nlohmann::json::array_t::iterator m_it;
 };
 
+/**
+ * Class which converts serialized data into a RecordGroup and exposes iterators to the underlying
+ * data.
+ *
+ * The serialized data comes from the "serialize" function declared in this file.
+ */
+class DeserializedRecordGroup : public RecordGroup {
+public:
+    explicit DeserializedRecordGroup(std::vector<uint8_t>& serialized_data);
+    DeserializedRecordGroup(char* buf, size_t len);
+
+    [[nodiscard]] ConstRecordIterator& record_iter() override;
+
+    [[nodiscard]] GroupTags const& get_tags() const override;
+
+private:
+    void init_tags_from_json();
+    GroupTags m_tags;
+    DeserializedRecordIterator m_record_it;
+    nlohmann::json m_record_group;
+};
+
 std::vector<uint8_t> serialize(
-        RecordGroup const& group,
+        GroupTags const& tags,
+        ConstRecordIterator& record_it,
         std::vector<uint8_t>(ser)(nlohmann::json const& j) = nlohmann::json::to_msgpack
 );
 
-std::vector<uint8_t> serialize_timeline(RecordGroup const& group);
+std::vector<uint8_t> serialize_timeline(GroupTags const& tags, ConstRecordIterator& record_it);
 
 DeserializedRecordGroup deserialize(std::vector<uint8_t>& data);
 
