@@ -199,7 +199,7 @@ def run_clp(
             # Add the last archive's last reported size
             total_uncompressed_size += last_archive_stats["uncompressed_size"]
             total_compressed_size += last_archive_stats["size"]
-            if clp_config.output.tags:
+            if tag_ids is not None:
                 update_tags(
                     db_conn,
                     db_cursor,

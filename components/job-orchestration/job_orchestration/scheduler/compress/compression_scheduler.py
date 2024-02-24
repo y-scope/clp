@@ -175,6 +175,21 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
         )
         db_conn.commit()
 
+        tag_ids = None
+        if clp_io_config.output.tags:
+            db_cursor.executemany(
+                f"INSERT IGNORE INTO {CLP_METADATA_TABLE_PREFIX}tags (tag_name) VALUES (%s)",
+                [(tag,) for tag in clp_io_config.output.tags],
+            )
+            db_conn.commit()
+            db_cursor.execute(
+                f"SELECT tag_id FROM {CLP_METADATA_TABLE_PREFIX}tags WHERE tag_name IN (%s)"
+                % ", ".join(["%s"] * len(clp_io_config.output.tags)),
+                clp_io_config.output.tags,
+            )
+            tag_ids = [tags["tag_id"] for tags in db_cursor.fetchall()]
+            db_conn.commit()
+
         task_instances = []
         for task_idx, task in enumerate(tasks):
             db_cursor.execute(
@@ -187,19 +202,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
             )
             db_conn.commit()
             task["task_id"] = db_cursor.lastrowid
-            if clp_io_config.output.tags:
-                db_cursor.executemany(
-                    f"INSERT IGNORE INTO {CLP_METADATA_TABLE_PREFIX}tags (tag_name) VALUES (%s)",
-                    [(tag,) for tag in clp_io_config.output.tags],
-                )
-                db_conn.commit()
-                db_cursor.execute(
-                    f"SELECT tag_id FROM {CLP_METADATA_TABLE_PREFIX}tags WHERE tag_name IN (%s)"
-                    % ", ".join(["%s"] * len(clp_io_config.output.tags)),
-                    clp_io_config.output.tags,
-                )
-                task["tag_ids"] = [tags["tag_id"] for tags in db_cursor.fetchall()]
-                db_conn.commit()
+            task["tag_ids"] = tag_ids
             task_instances.append(compress.s(**task))
         tasks_group = celery.group(task_instances)
 
