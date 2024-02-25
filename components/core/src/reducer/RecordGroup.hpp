@@ -30,8 +30,6 @@ public:
  */
 class BasicSingleRecordGroup : public RecordGroup {
 public:
-    BasicSingleRecordGroup() = default;
-
     BasicSingleRecordGroup(GroupTags const* tags, Record const& record)
             : m_tags(tags),
               m_iterator(record) {}
@@ -45,8 +43,8 @@ public:
     [[nodiscard]] ConstRecordIterator& record_iter() override { return m_iterator; }
 
 private:
-    SingleRecordIterator m_iterator;
     GroupTags const* m_tags{nullptr};
+    SingleRecordIterator m_iterator;
 };
 
 /**
@@ -57,8 +55,6 @@ private:
  */
 class BasicMultiRecordGroup : public RecordGroup {
 public:
-    BasicMultiRecordGroup() = default;
-
     BasicMultiRecordGroup(GroupTags const* tags, std::vector<Record> const& records)
             : m_tags(tags),
               m_iterator(records) {}
@@ -87,7 +83,7 @@ class EmptyRecordGroup : public RecordGroup {
     [[nodiscard]] ConstRecordIterator& record_iter() override { return m_record_it; }
 
 private:
-    GroupTags m_tags{};
+    GroupTags m_tags;
     EmptyRecordIterator m_record_it;
 };
 }  // namespace reducer

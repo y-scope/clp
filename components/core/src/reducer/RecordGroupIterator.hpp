@@ -16,14 +16,14 @@ public:
     virtual ~RecordGroupIterator() = default;
 
     /**
-     * NOTE: It is the caller's responsibility to ensure that the iterator hasn't been exhausted.
+     * NOTE: It's the caller's responsibility to ensure that the iterator hasn't been exhausted.
      * @return The RecordGroup pointed to by the iterator.
      */
     virtual RecordGroup& get() = 0;
 
     /**
      * Advances the iterator to the next RecordGroup.
-     * NOTE: It is the caller's responsibility to ensure the iterator hasn't be exhausted.
+     * NOTE: It's the caller's responsibility to ensure the iterator hasn't be exhausted.
      */
     virtual void next() = 0;
 
@@ -42,7 +42,7 @@ public:
             : m_elements_it{elements.cbegin()},
               m_elements_end_it{elements.cend()},
               m_record{std::move(key)},
-              m_group(nullptr, m_record) {}
+              m_group{nullptr, m_record} {}
 
     RecordGroup& get() override {
         m_record.set_record_value(m_elements_it->second);

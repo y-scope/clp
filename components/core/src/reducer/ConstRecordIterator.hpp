@@ -16,14 +16,14 @@ public:
     virtual ~ConstRecordIterator() = default;
 
     /**
-     * NOTE: It is the caller's responsibility to ensure that the iterator hasn't been exhausted.
+     * NOTE: It's the caller's responsibility to ensure that the iterator hasn't been exhausted.
      * @return The record pointed to by the iterator.
      */
-    virtual Record const& get() const = 0;
+    [[nodiscard]] virtual Record const& get() const = 0;
 
     /**
      * Advances the iterator to the next record.
-     * NOTE: It is the caller's responsibility to ensure the iterator hasn't be exhausted.
+     * NOTE: It's the caller's responsibility to ensure the iterator hasn't be exhausted.
      */
     virtual void next() = 0;
 
@@ -40,7 +40,7 @@ class SingleRecordIterator : public ConstRecordIterator {
 public:
     explicit SingleRecordIterator(Record const& record) : m_record{&record} {}
 
-    Record const& get() const override { return *m_record; }
+    [[nodiscard]] Record const& get() const override { return *m_record; }
 
     void next() override { m_done = true; }
 
@@ -60,7 +60,7 @@ public:
             : m_cur{records.cbegin()},
               m_end{records.cend()} {}
 
-    Record const& get() const override { return *m_cur; }
+    [[nodiscard]] Record const& get() const override { return *m_cur; }
 
     void next() override { ++m_cur; }
 
@@ -76,7 +76,7 @@ private:
  */
 class EmptyRecordIterator : public ConstRecordIterator {
 public:
-    Record const& get() const override { return m_record; }
+    [[nodiscard]] Record const& get() const override { return m_record; }
 
     void next() override {}
 
