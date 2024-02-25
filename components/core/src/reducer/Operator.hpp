@@ -22,20 +22,18 @@ enum class OperatorResultCardinality : uint8_t {
 };
 
 /**
- * Class implementing a generic Operator which operates on RecordGroup objects composed of GroupTags
- * and a list of Record objects.
+ * Class implementing a generic Operator that operates on RecordGroup objects.
  *
- * Operators implement methods to accept inter stage RecordGroups (operate on records from previous
- * pipeline stage i.e. a combiner) and intra stage RecordGroups (operate on pre-aggregated results
- * withing a pipeline stage i.e. a reducer).
+ * Operators implement methods to accept inter-stage RecordGroups and intra-stage RecordGroups.
+ * In the former case, the operator acts like a combiner, combining records from a previous pipeline
+ * stage. In the latter case, the operator acts like a reducer, reducing pre-aggregated results from
+ * within a pipeline stage.
  *
  * Operators can be of type GroupBy, Map, or Reduce, though currently no Map type Operators are
  * implemented.
  */
 class Operator {
 public:
-    Operator() : m_next_stage(nullptr) {}
-
     virtual ~Operator() = default;
 
     virtual void
@@ -49,7 +47,7 @@ public:
         m_next_stage = std::move(next_operator);
     }
 
-    // TODO: default implementation of finish
+    // TODO: Default implementation of finish
     void finish();
 
     virtual std::unique_ptr<RecordGroupIterator> get_stored_result_iterator() = 0;
@@ -57,10 +55,9 @@ public:
     virtual std::unique_ptr<RecordGroupIterator> get_stored_result_iterator(
             [[maybe_unused]] std::set<GroupTags> const& filtered_tags
     ) {
-        /** TODO: By default operators don't have to support filtering their output. We should
-         *  implement an iterator that wraps RecordGroupIterators and performs the filtering when
-         *  the underlying operator doesn't.
-         */
+        // TODO: By default operators don't have to support filtering their output. We should
+        // implement an iterator that wraps RecordGroupIterators and performs the filtering when the
+        // underlying operator doesn't.
         return get_stored_result_iterator();
     }
 
