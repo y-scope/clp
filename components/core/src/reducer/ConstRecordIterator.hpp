@@ -16,14 +16,16 @@ public:
     virtual ~ConstRecordIterator() = default;
 
     /**
-     * NOTE: It's the caller's responsibility to ensure that the iterator hasn't been exhausted.
+     * NOTE: It's the caller's responsibility to ensure that the iterator hasn't been exhausted
+     * before calling this method.
      * @return The record pointed to by the iterator.
      */
     [[nodiscard]] virtual Record const& get() const = 0;
 
     /**
      * Advances the iterator to the next record.
-     * NOTE: It's the caller's responsibility to ensure the iterator hasn't be exhausted.
+     * NOTE: It's the caller's responsibility to ensure the iterator hasn't be exhausted before
+     * calling this method.
      */
     virtual void next() = 0;
 

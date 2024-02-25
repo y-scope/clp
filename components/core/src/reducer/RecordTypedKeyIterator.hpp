@@ -42,14 +42,16 @@ public:
     virtual ~RecordTypedKeyIterator() = default;
 
     /**
-     * NOTE: It's the caller's responsibility to ensure that the iterator hasn't been exhausted.
+     * NOTE: It's the caller's responsibility to ensure that the iterator hasn't been exhausted
+     * before calling this method.
      * @return The element pointed to by the iterator.
      */
     virtual TypedRecordKey get() = 0;
 
     /**
      * Advances the iterator to the next element.
-     * NOTE: It's the caller's responsibility to ensure the iterator hasn't be exhausted.
+     * NOTE: It's the caller's responsibility to ensure the iterator hasn't be exhausted before
+     * calling this method.
      */
     virtual void next() = 0;
 

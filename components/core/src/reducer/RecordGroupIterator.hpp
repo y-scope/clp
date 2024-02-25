@@ -16,14 +16,16 @@ public:
     virtual ~RecordGroupIterator() = default;
 
     /**
-     * NOTE: It's the caller's responsibility to ensure that the iterator hasn't been exhausted.
+     * NOTE: It's the caller's responsibility to ensure that the iterator hasn't been exhausted
+     * before calling this method.
      * @return The RecordGroup pointed to by the iterator.
      */
     virtual RecordGroup& get() = 0;
 
     /**
      * Advances the iterator to the next RecordGroup.
-     * NOTE: It's the caller's responsibility to ensure the iterator hasn't be exhausted.
+     * NOTE: It's the caller's responsibility to ensure the iterator hasn't be exhausted before
+     * calling this method.
      */
     virtual void next() = 0;
 
