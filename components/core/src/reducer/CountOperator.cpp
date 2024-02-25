@@ -7,8 +7,8 @@ void CountOperator::push_intra_stage_record_group(
 ) {
     auto& count = m_group_count[tags];
 
-    for (; !record_it.done(); record_it.next()) {
-        count += record_it.get().get_int64_value("count");
+    for (; false == record_it.done(); record_it.next()) {
+        count += record_it.get().get_int64_value(static_cast<char const*>(cRecordElementKey));
     }
 }
 
@@ -18,13 +18,16 @@ void CountOperator::push_inter_stage_record_group(
 ) {
     auto& count = m_group_count[tags];
 
-    for (; !record_it.done(); record_it.next()) {
-        count += 1;
+    for (; false == record_it.done(); record_it.next()) {
+        ++count;
     }
 }
 
 std::unique_ptr<RecordGroupIterator> CountOperator::get_stored_result_iterator() {
-    return std::make_unique<Int64MapRecordGroupIterator>(m_group_count, "count");
+    return std::make_unique<Int64MapRecordGroupIterator>(
+            m_group_count,
+            static_cast<char const*>(cRecordElementKey)
+    );
 }
 
 std::unique_ptr<RecordGroupIterator> CountOperator::get_stored_result_iterator(
@@ -33,7 +36,7 @@ std::unique_ptr<RecordGroupIterator> CountOperator::get_stored_result_iterator(
     return std::make_unique<FilteredInt64MapRecordGroupIterator>(
             m_group_count,
             filtered_tags,
-            "count"
+            static_cast<char const*>(cRecordElementKey)
     );
 }
 }  // namespace reducer

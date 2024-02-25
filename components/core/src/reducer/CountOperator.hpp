@@ -9,10 +9,12 @@
 
 namespace reducer {
 /**
- * Basic count operator which will accumulate counts within different tagged groups.
+ * Count operator that accumulates a count per record group.
  */
 class CountOperator : public Operator {
 public:
+    static constexpr char cRecordElementKey[] = "count";
+
     void
     push_intra_stage_record_group(GroupTags const& tags, ConstRecordIterator& record_it) override;
 
