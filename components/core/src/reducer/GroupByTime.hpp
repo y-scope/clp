@@ -23,6 +23,11 @@ namespace reducer {
  */
 class GroupByTime : public Operator {
 public:
+    static constexpr char cRecordElementKey[] = "@time";
+
+    /**
+     * @param bucket_size Bucket size in milliseconds
+     */
     explicit GroupByTime(int64_t bucket_size = 5 * 60 * 1000) : m_bucket_size(bucket_size) {
         m_tags.emplace_back("0");
     }
