@@ -58,7 +58,7 @@ public:
 
 private:
     SingleInt64RecordAdapter m_record;
-    BasicSingleRecordGroup m_group;
+    SingleRecordGroup m_group;
     std::map<GroupTags, int64_t>::const_iterator m_elements_it;
     std::map<GroupTags, int64_t>::const_iterator m_elements_end_it;
 };
@@ -87,7 +87,7 @@ public:
 
 private:
     SingleInt64RecordAdapter m_record;
-    BasicSingleRecordGroup m_group;
+    SingleRecordGroup m_group;
     GroupTags m_tags;
     std::map<int64_t, int64_t>::const_iterator m_elements_it;
     std::map<int64_t, int64_t>::const_iterator m_elements_end_it;
@@ -138,7 +138,7 @@ private:
     }
 
     SingleInt64RecordAdapter m_record;
-    BasicSingleRecordGroup m_group;
+    SingleRecordGroup m_group;
     std::map<GroupTags, int64_t> const& m_elements;
     std::map<GroupTags, int64_t>::const_iterator m_elements_it;
     std::map<GroupTags, int64_t>::const_iterator m_elements_end_it;

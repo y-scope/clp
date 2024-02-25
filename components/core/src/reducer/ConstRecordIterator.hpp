@@ -54,11 +54,11 @@ private:
 };
 
 /**
- * A ConstRecordIterator over a vector of Record objects.
+ * A ConstRecordIterator over a collection of Record objects.
  */
-class VectorRecordIterator : public ConstRecordIterator {
+class MultiRecordIterator : public ConstRecordIterator {
 public:
-    explicit VectorRecordIterator(std::vector<Record> const& records)
+    explicit MultiRecordIterator(std::vector<Record> const& records)
             : m_cur{records.cbegin()},
               m_end{records.cend()} {}
 

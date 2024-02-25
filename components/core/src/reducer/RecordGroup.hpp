@@ -28,9 +28,9 @@ public:
  * The Record and GroupTags can be updated allowing this class to act as an adapter for a larger set
  * of data.
  */
-class BasicSingleRecordGroup : public RecordGroup {
+class SingleRecordGroup : public RecordGroup {
 public:
-    BasicSingleRecordGroup(GroupTags const* tags, Record const& record)
+    SingleRecordGroup(GroupTags const* tags, Record const& record)
             : m_tags(tags),
               m_iterator(record) {}
 
@@ -48,14 +48,14 @@ private:
 };
 
 /**
- * RecordGroup implementation that exposes a vector of Records with GroupTags.
+ * RecordGroup implementation that exposes a collection of Records with GroupTags.
  *
  * The Records and GroupTags can be updated allowing this class to act as an adapter for a larger
  * set of data.
  */
-class BasicMultiRecordGroup : public RecordGroup {
+class MultiRecordGroup : public RecordGroup {
 public:
-    BasicMultiRecordGroup(GroupTags const* tags, std::vector<Record> const& records)
+    MultiRecordGroup(GroupTags const* tags, std::vector<Record> const& records)
             : m_tags(tags),
               m_iterator(records) {}
 
@@ -64,14 +64,14 @@ public:
     void set_tags(GroupTags const* tags) { m_tags = tags; }
 
     void set_records(std::vector<Record> const& records) {
-        m_iterator = VectorRecordIterator(records);
+        m_iterator = MultiRecordIterator(records);
     }
 
     [[nodiscard]] ConstRecordIterator& record_iter() override { return m_iterator; }
 
 private:
     GroupTags const* m_tags{nullptr};
-    VectorRecordIterator m_iterator;
+    MultiRecordIterator m_iterator;
 };
 
 /**
