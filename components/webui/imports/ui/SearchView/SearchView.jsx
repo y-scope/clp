@@ -16,8 +16,7 @@ import {LOCAL_STORAGE_KEYS} from "../constants";
 import {changeTimezoneToUtcWithoutChangingTime, DEFAULT_TIME_RANGE} from "./datetime";
 
 import SearchControls from "./SearchControls.jsx";
-import SearchResults from "./SearchResults.jsx";
-import {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResultsTable.jsx";
+import SearchResults, {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResults.jsx";
 
 
 // for pseudo progress bar
@@ -106,10 +105,6 @@ const SearchView = () => {
     }, [localLastSearchSignal]);
 
     // Handlers
-    const resetVisibleResultSettings = () => {
-        setVisibleSearchResultsLimit(VISIBLE_RESULTS_LIMIT_INITIAL);
-    };
-
     const submitQuery = () => {
         if (INVALID_JOB_ID !== jobId) {
             // Clear result caches before starting a new query
@@ -118,7 +113,7 @@ const SearchView = () => {
 
         setOperationErrorMsg("");
         setLocalLastSearchSignal(SearchSignal.REQ_QUERYING);
-        resetVisibleResultSettings();
+        setVisibleSearchResultsLimit(VISIBLE_RESULTS_LIMIT_INITIAL);
 
         const timestampBeginMillis = changeTimezoneToUtcWithoutChangingTime(timeRange.begin)
             .getTime();
@@ -147,7 +142,7 @@ const SearchView = () => {
         setJobId(INVALID_JOB_ID);
         setOperationErrorMsg("");
         setLocalLastSearchSignal(SearchSignal.REQ_CLEARING);
-        resetVisibleResultSettings();
+        setVisibleSearchResultsLimit(VISIBLE_RESULTS_LIMIT_INITIAL);
 
         const args = {
             jobId: jobId,

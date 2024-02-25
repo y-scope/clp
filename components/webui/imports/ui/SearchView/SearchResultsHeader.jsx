@@ -12,7 +12,6 @@ import {
     Popover,
     Row,
 } from "react-bootstrap";
-import {SearchSignal} from "../../api/search/constants";
 
 import "./SearchResultsHeader.scss";
 
@@ -22,7 +21,6 @@ import "./SearchResultsHeader.scss";
  * found, and a control for setting the maximum number of lines per search result.
  *
  * @param {number} jobId of the search job
- * @param {Object} resultsMetadata which includes last request / response signal
  * @param {number} numResultsOnServer of the search job
  * @param {number} maxLinesPerResult to display
  * @param {function} setMaxLinesPerResult callback to set setMaxLinesPerResult
@@ -30,7 +28,6 @@ import "./SearchResultsHeader.scss";
  */
 const SearchResultsHeader = ({
     jobId,
-    resultsMetadata,
     numResultsOnServer,
     maxLinesPerResult,
     setMaxLinesPerResult,
@@ -42,17 +39,6 @@ const SearchResultsHeader = ({
             setMaxLinesPerResult(value);
         }
     };
-
-    let numResultsText = `Job ID ${jobId}: `;
-    if (0 === numResultsOnServer) {
-        numResultsText += SearchSignal.RESP_DONE !== resultsMetadata["lastSignal"] ?
-            "Query is running" :
-            "No results found";
-    } else if (1 === numResultsOnServer) {
-        numResultsText += "1 result found";
-    } else {
-        numResultsText += `${numResultsOnServer} results found`;
-    }
 
     return (<>
         <Container fluid={true}>

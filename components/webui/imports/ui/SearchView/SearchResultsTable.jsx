@@ -1,58 +1,82 @@
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useRef} from "react";
 
 import {faSort, faSortDown, faSortUp} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {Spinner, Table} from "react-bootstrap";
-import ReactVisibilitySensor from "react-visibility-sensor";
 
 import "./SearchResultsTable.scss";
 
 
 /**
- * The initial visible results limit.
+ * Senses if the user has requested to load more results by scrolling till this
+ * element becomes partially visible.
  *
- * @type {number}
- * @constant
+ * @param {boolean} hasMoreResults
+ * @param {function} onLoadMoreResults
+ * @returns {JSX.Element}
  */
-const VISIBLE_RESULTS_LIMIT_INITIAL = 10;
-/**
- * The increment value for the visible results limit.
- *
- * @type {number}
- * @constant
- */
-const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
+const SearchResultsLoadSensor = ({
+    hasMoreResults,
+    onLoadMoreResults
+}) => {
+    const loadingBlockRef = useRef(null);
+
+    useEffect(() => {
+        if (false === hasMoreResults) {
+            return;
+        }
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (
+                    (true === entries[0].isIntersecting) &&
+                    (true === hasMoreResults)
+                ) {
+                    onLoadMoreResults();
+                }
+            }
+        );
+
+        observer.observe(loadingBlockRef.current);
+
+        return () => {
+            observer.disconnect();
+        };
+    }, [hasMoreResults]);
+
+    return <div
+        ref={loadingBlockRef}
+        id={"search-results-load-sensor"}
+        style={{
+            visibility: (true === hasMoreResults) ?
+                "visible" :
+                "hidden",
+        }}
+    >
+        <Spinner animation="border" variant="primary" size="sm"/>
+        <span>Loading...</span>
+    </div>;
+};
 
 /**
  * Represents a table component to display search results.
  *
- * @param {Object} searchResults - The array of search results.
- * @param {number} maxLinesPerResult - The maximum number of lines to show per search result.
- * @param {Object} fieldToSortBy - The field to sort the search results by.
- * @param {function} setFieldToSortBy - The function to set the field to sort by.
- * @param {number} numResultsOnServer - The total number of search results on the server.
- * @param {number} visibleSearchResultsLimit - The number of search results currently visible.
- * @param {function} setVisibleSearchResultsLimit - The function to set the number of visible search results.
- * @returns {JSX.Element} - The rendered SearchResultsTable component.
+ * @param {Object} searchResults
+ * @param {number} maxLinesPerResult
+ * @param {Object} fieldToSortBy
+ * @param {function} setFieldToSortBy
+ * @param {boolean} hasMoreResults
+ * @param {function} onLoadMoreResults
+ * @returns {JSX.Element}
  */
 const SearchResultsTable = ({
     searchResults,
     maxLinesPerResult,
     fieldToSortBy,
     setFieldToSortBy,
-    numResultsOnServer,
-    visibleSearchResultsLimit,
-    setVisibleSearchResultsLimit,
+    hasMoreResults,
+    onLoadMoreResults,
 }) => {
-    const [visibilitySensorVisible, setVisibilitySensorVisible] = useState(false);
-
-    useEffect(() => {
-        if (true === visibilitySensorVisible && visibleSearchResultsLimit <= numResultsOnServer) {
-            setVisibleSearchResultsLimit(
-                visibleSearchResultsLimit + VISIBLE_RESULTS_LIMIT_INCREMENT);
-        }
-    }, [visibilitySensorVisible, numResultsOnServer]);
-
     const getSortIcon = (fieldToSortBy, fieldName) => {
         if (fieldToSortBy && fieldName === fieldToSortBy.name) {
             return (1 === fieldToSortBy.direction ? faSortDown : faSortUp);
@@ -123,25 +147,10 @@ const SearchResultsTable = ({
             {rows}
             </tbody>
         </Table>
-        <ReactVisibilitySensor
-            onChange={setVisibilitySensorVisible}
-            scrollCheck={true}
-            scrollDelay={200}
-            intervalCheck={true}
-            intervalDelay={200}
-            partialVisibility={true}
-            resizeCheck={true}
-        >
-            <div style={{
-                fontSize: "1.4em",
-                visibility: visibilitySensorVisible &&
-                (visibleSearchResultsLimit <= numResultsOnServer) ? "visible" : "hidden",
-            }}>
-                <Spinner animation="border" variant="primary" size="sm" style={{margin: "5px"}}/>
-                <span>Loading</span>
-            </div>
-        </ReactVisibilitySensor>
+        <SearchResultsLoadSensor
+            hasMoreResults={hasMoreResults}
+            onLoadMoreResults={onLoadMoreResults}/>
     </div>);
 };
 
-export {SearchResultsTable, VISIBLE_RESULTS_LIMIT_INITIAL};
+export default SearchResultsTable;
