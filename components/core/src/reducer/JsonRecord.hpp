@@ -34,6 +34,6 @@ public:
 private:
     nlohmann::json const* m_record{nullptr};
 };
-}
+}  // namespace reducer
 
 #endif  // REDUCER_JSONRECORD_HPP
