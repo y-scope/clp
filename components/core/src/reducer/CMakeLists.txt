@@ -33,6 +33,7 @@ set(
         ServerContext.cpp
         ServerContext.hpp
         reducer_server.cpp
+        JsonRecord.hpp
 )
 
 add_executable(reducer-server ${REDUCER_SOURCES})

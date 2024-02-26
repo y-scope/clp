@@ -8,41 +8,12 @@
 #include <json/single_include/nlohmann/json.hpp>
 
 #include "ConstRecordIterator.hpp"
+#include "JsonRecord.hpp"
 #include "Record.hpp"
 #include "RecordGroup.hpp"
 #include "RecordTypedKeyIterator.hpp"
 
 namespace reducer {
-/**
- * Class which exposes the Record interface on data which had been serialized by
- * the "serialize" function declared in this file.
- */
-class DeserializedRecord : public Record {
-public:
-    explicit DeserializedRecord(nlohmann::json const& record) : m_record{&record} {}
-
-    [[nodiscard]] std::string_view get_string_view(std::string_view key) const override {
-        return (*m_record)[key].template get<std::string_view>();
-    }
-
-    [[nodiscard]] int64_t get_int64_value(std::string_view key) const override {
-        return (*m_record)[key].template get<int64_t>();
-    }
-
-    [[nodiscard]] double get_double_value(std::string_view key) const override {
-        return (*m_record)[key].template get<double>();
-    }
-
-    // TODO: Provide a real iterator. This is fine to omit for now since it isn't used by any
-    // existing code.
-    [[nodiscard]] std::unique_ptr<RecordTypedKeyIterator> typed_key_iter() const override {
-        return std::make_unique<EmptyRecordTypedKeyIterator>();
-    }
-
-private:
-    nlohmann::json const* m_record{nullptr};
-};
-
 /**
  * A ConstRecordIterator over data serialized by the "serialize" function declared in this file.
  */
@@ -64,7 +35,7 @@ private:
     nlohmann::json::array_t m_json_records;
     nlohmann::json::array_t::iterator m_json_records_it;
     nlohmann::json m_cur_json_record;
-    DeserializedRecord m_record;
+    JsonRecord m_record;
 };
 
 /**
