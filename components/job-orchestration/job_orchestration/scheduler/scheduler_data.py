@@ -1,7 +1,8 @@
 import datetime
 import typing
 
-from job_orchestration.scheduler.constants import CompressionTaskStatus
+from job_orchestration.scheduler.constants import CompressionTaskStatus, SearchJobStatus
+from job_orchestration.scheduler.job_config import SearchConfig
 from pydantic import BaseModel, validator
 
 
@@ -34,9 +35,17 @@ class CompressionTaskSuccessResult(CompressionTaskResult):
     total_compressed_size: int
 
 
-class SearchJob(BaseModel):
+class SearchSubJob(BaseModel):
     async_task_result: typing.Any
-    max_num_results: int
+
+
+class SearchJob(BaseModel):
+    id: str
+    status: SearchJobStatus
+    search_config: SearchConfig
+    waiting_for_next_sub_job: bool
+    remaining_archives_for_search: typing.List[str]
+    current_sub_job: SearchSubJob
 
 
 class SearchTaskResult(BaseModel):

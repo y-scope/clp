@@ -20,7 +20,7 @@ from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.search.fs_search_task import search
 from job_orchestration.scheduler.constants import SearchJobStatus
 from job_orchestration.scheduler.job_config import SearchConfig
-from job_orchestration.scheduler.scheduler_data import SearchJob, SearchTaskResult
+from job_orchestration.scheduler.scheduler_data import SearchJob, SearchSubJob, SearchTaskResult
 from pydantic import ValidationError
 
 # Setup logging
@@ -28,9 +28,6 @@ logger = get_logger("search-job-handler")
 
 # Dictionary of active jobs indexed by job id
 active_jobs: Dict[str, SearchJob] = {}
-
-# Dictionary of archive search queues indexed by job_id
-archive_queue: Dict[str, List[str]] = {}
 
 
 def cancel_job(job_id):
@@ -51,8 +48,7 @@ def fetch_new_search_jobs(db_cursor) -> list:
         {SEARCH_JOBS_TABLE_NAME}.search_config,
         {SEARCH_JOBS_TABLE_NAME}.submission_time
         FROM {SEARCH_JOBS_TABLE_NAME}
-        WHERE {SEARCH_JOBS_TABLE_NAME}.status={SearchJobStatus.PENDING} OR 
-        {SEARCH_JOBS_TABLE_NAME}.status={SearchJobStatus.WAITING_FOR_BATCH}
+        WHERE {SEARCH_JOBS_TABLE_NAME}.status={SearchJobStatus.PENDING}
         """
     )
     return db_cursor.fetchall()
@@ -162,47 +158,61 @@ def dispatch_search_job(
     task_group = get_task_group_for_job(
         archives_for_search, job_id, search_config, results_cache_uri
     )
-    active_jobs[job_id] = SearchJob(
-        async_task_result=task_group.apply_async(),
-        max_num_results=search_config.max_num_results,
-    )
+    active_jobs[job_id].current_sub_job = SearchSubJob(async_task_result=task_group.apply_async())
 
 
 def handle_pending_search_jobs(
     db_conn, results_cache_uri: str, num_archives_to_search_per_batch: int
 ) -> None:
-    global archive_queue
-
+    global active_jobs
+    pending_job_ids = [
+        job_id for job_id in active_jobs if active_jobs[job_id].waiting_for_next_sub_job
+    ]
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
-        new_jobs = fetch_new_search_jobs(cursor)
+        for job in fetch_new_search_jobs(cursor):
+            job_id = str(job["job_id"])
+            job_status = job["job_status"]
+            search_config = SearchConfig.parse_obj(msgpack.unpackb(job["search_config"]))
+            archives_for_search = get_archives_for_search(db_conn, search_config)
+            if len(archives_for_search) == 0:
+                if set_job_status(
+                    db_conn,
+                    job_id,
+                    SearchJobStatus.NO_MATCHING_ARCHIVES,
+                    job_status,
+                ):
+                    logger.info(f"No matching archives, skipping job {job['job_id']}.")
+                continue
+            new_search_job = SearchJob(
+                id=job_id,
+                status=job_status,
+                search_config=search_config,
+                waiting_for_next_sub_job=True,
+                remaining_archives_for_search=get_archives_for_search(db_conn, search_config),
+                current_sub_job=None,
+            )
+            active_jobs[job_id] = new_search_job
+            pending_job_ids.append(job_id)
         db_conn.commit()
 
-    for job in new_jobs:
-        job_id = str(job["job_id"])
-        job_status = job["job_status"]
-        logger.debug(f"Got job {job_id} with status {job_status}.")
-        search_config_obj = SearchConfig.parse_obj(msgpack.unpackb(job["search_config"]))
-        archives_for_search = get_archives_for_search(db_conn, search_config_obj)
-        if len(archives_for_search) == 0:
-            if set_job_status(db_conn, job_id, SearchJobStatus.SUCCEEDED, job_status):
-                logger.info(f"No matching archives, skipping job {job_id}.")
-            continue
+    for job_id in pending_job_ids:
+        job = active_jobs[job_id]
+        job_status = job.status
 
-        if job_id not in archive_queue:
-            archive_queue[job_id] = archives_for_search
-
-        if len(archive_queue[job_id]) > num_archives_to_search_per_batch:
-            archives_for_search = archive_queue[job_id][:num_archives_to_search_per_batch]
-            archive_queue[job_id] = archive_queue[job_id][num_archives_to_search_per_batch:]
+        if len(job.archives_for_search) > num_archives_to_search_per_batch:
+            archives_for_search = job.archives_for_search[:num_archives_to_search_per_batch]
+            job.archives_for_search = job.archives_for_search[num_archives_to_search_per_batch:]
         else:
-            archives_for_search = archive_queue[job_id]
-            del archive_queue[job_id]
+            archives_for_search = job.archives_for_search
+            job.archives_for_search = []
 
-        dispatch_search_job(archives_for_search, job_id, search_config_obj, results_cache_uri)
+        job.waiting_for_next_sub_job = False
+        dispatch_search_job(archives_for_search, job_id, job.search_config, results_cache_uri)
         if set_job_status(db_conn, job_id, SearchJobStatus.RUNNING, job_status):
             logger.info(
                 f"Dispatched job {job_id} with {len(archives_for_search)} archives to search."
             )
+            job.status = SearchJobStatus.RUNNING
 
 
 def try_getting_task_result(async_task_result):
@@ -215,8 +225,9 @@ def check_job_status_and_update_db(db_conn, results_cache_uri):
     global active_jobs
 
     for job_id in list(active_jobs.keys()):
+        job = active_jobs[job_id]
         try:
-            returned_results = try_getting_task_result(active_jobs[job_id].async_task_result)
+            returned_results = try_getting_task_result(job.current_sub_job.async_task_result)
         except Exception as e:
             logger.error(f"Job `{job_id}` failed: {e}.")
             # clean up
@@ -225,7 +236,7 @@ def check_job_status_and_update_db(db_conn, results_cache_uri):
             continue
 
         if returned_results is not None:
-            new_job_status = SearchJobStatus.WAITING_FOR_BATCH
+            new_job_status = SearchJobStatus.RUNNING
             for task_result_obj in returned_results:
                 task_result = SearchTaskResult.parse_obj(task_result_obj)
                 if not task_result.success:
@@ -234,30 +245,37 @@ def check_job_status_and_update_db(db_conn, results_cache_uri):
                     logger.debug(f"Task {task_id} failed - result {task_result}.")
 
             if new_job_status != SearchJobStatus.FAILED:
+                max_num_results = job.search_config.max_num_results
                 # check if we have searched all archives
-                if job_id not in archive_queue:
+                if len(job.remaining_archives_for_search) == 0:
                     new_job_status = SearchJobStatus.SUCCEEDED
                 # check if we have reached max results
-                elif active_jobs[job_id].max_num_results > 0:
+                elif max_num_results > 0:
                     results_cache_client = pymongo.MongoClient(results_cache_uri)
                     results_cache_collection = results_cache_client.get_default_database()[job_id]
                     results_count = results_cache_collection.count_documents({})
-                    if results_count >= active_jobs[job_id].max_num_results:
+                    if results_count >= max_num_results:
                         result = list(
                             results_cache_collection.find()
                             .sort("timestamp", -1)
-                            .limit(active_jobs[job_id].max_num_results)
+                            .limit(max_num_results)
                         )
                         if result is not None:
                             min_timestamp_in_top_results = result[-1]["timestamp"]
                         else:
                             min_timestamp_in_top_results = 0
                         results_cache_client.close()
-                        max_timestamp_in_archive = archive_queue[job_id][0]["end_timestamp"]
+                        max_timestamp_in_archive = job.remaining_archives_for_search[0][
+                            "end_timestamp"
+                        ]
                         if max_timestamp_in_archive <= min_timestamp_in_top_results:
                             new_job_status = SearchJobStatus.SUCCEEDED
 
-            del active_jobs[job_id]
+            if new_job_status == SearchJobStatus.RUNNING:
+                job.waiting_for_next_sub_job = True
+                job.current_sub_job = None
+            else:
+                del active_jobs[job_id]
 
             if set_job_status(db_conn, job_id, new_job_status, SearchJobStatus.RUNNING):
                 if new_job_status == SearchJobStatus.SUCCEEDED:
