@@ -1,11 +1,29 @@
 #include "RecordGroupSerdes.hpp"
 
-#include <iostream>
 #include <string>
 
 #include <json/single_include/nlohmann/json.hpp>
 
 namespace reducer {
+DeserializedRecordGroup::DeserializedRecordGroup(std::vector<uint8_t>& serialized_data)
+        : m_record_group{nlohmann::json::from_msgpack(serialized_data)},
+          m_record_it{m_record_group["records"].template get<nlohmann::json::array_t>()} {
+    init_tags_from_json();
+}
+
+DeserializedRecordGroup::DeserializedRecordGroup(char* buf, size_t len)
+        : m_record_group{nlohmann::json::from_msgpack(buf, buf + len)},
+          m_record_it{m_record_group["records"].template get<nlohmann::json::array_t>()} {
+    init_tags_from_json();
+}
+
+void DeserializedRecordGroup::init_tags_from_json() {
+    auto jtags = m_record_group["group_tags"].template get<nlohmann::json::array_t>();
+    for (auto& jtag : jtags) {
+        m_tags.emplace_back(jtag.template get<std::string>());
+    }
+}
+
 std::vector<uint8_t> serialize(
         GroupTags const& tags,
         ConstRecordIterator& record_it,
@@ -56,37 +74,10 @@ std::vector<uint8_t> serialize_timeline(GroupTags const& tags, ConstRecordIterat
 }
 
 DeserializedRecordGroup deserialize(std::vector<uint8_t>& data) {
-    return DeserializedRecordGroup(data);
+    return DeserializedRecordGroup{data};
 }
 
 DeserializedRecordGroup deserialize(char* buf, size_t len) {
     return {buf, len};
-}
-
-void DeserializedRecordGroup::init_tags_from_json() {
-    auto jtags = m_record_group["group_tags"].template get<nlohmann::json::array_t>();
-    for (auto& jtag : jtags) {
-        m_tags.push_back(jtag.template get<std::string>());
-    }
-}
-
-DeserializedRecordGroup::DeserializedRecordGroup(std::vector<uint8_t>& serialized_data)
-        : m_record_group(nlohmann::json::from_msgpack(serialized_data)),
-          m_record_it(m_record_group["records"].template get<nlohmann::json::array_t>()) {
-    init_tags_from_json();
-}
-
-DeserializedRecordGroup::DeserializedRecordGroup(char* buf, size_t len)
-        : m_record_group(nlohmann::json::from_msgpack(buf, buf + len)),
-          m_record_it(m_record_group["records"].template get<nlohmann::json::array_t>()) {
-    init_tags_from_json();
-}
-
-ConstRecordIterator& DeserializedRecordGroup::record_iter() {
-    return m_record_it;
-}
-
-GroupTags const& DeserializedRecordGroup::get_tags() const {
-    return m_tags;
 }
 }  // namespace reducer

@@ -19,7 +19,7 @@ namespace reducer {
  */
 class DeserializedRecord : public Record {
 public:
-    void set_record(nlohmann::json const* record) { m_record = record; }
+    explicit DeserializedRecord(nlohmann::json const& record) : m_record{&record} {}
 
     [[nodiscard]] std::string_view get_string_view(std::string_view key) const override {
         return (*m_record)[key].template get<std::string_view>();
@@ -34,7 +34,7 @@ public:
     }
 
     // TODO: Provide a real iterator. This is fine to omit for now since it isn't used by any
-    //  existing code.
+    // existing code.
     [[nodiscard]] std::unique_ptr<RecordTypedKeyIterator> typed_key_iter() const override {
         return std::make_unique<EmptyRecordTypedKeyIterator>();
     }
@@ -44,29 +44,27 @@ private:
 };
 
 /**
- * Class which provides a ConstRecordIterator over data serialized by the "serialize" function
- * declared in this file.
+ * A ConstRecordIterator over data serialized by the "serialize" function declared in this file.
  */
 class DeserializedRecordIterator : public ConstRecordIterator {
 public:
-    explicit DeserializedRecordIterator(nlohmann::json::array_t jarray)
-            : m_jarray(std::move(jarray)) {
-        m_it = m_jarray.begin();
-        m_cur_json_record = *m_it;
-        m_record.set_record(&m_cur_json_record);
-    }
+    explicit DeserializedRecordIterator(nlohmann::json::array_t json_records)
+            : m_json_records{std::move(json_records)},
+              m_json_records_it{m_json_records.begin()},
+              m_cur_json_record{*m_json_records_it},
+              m_record{m_cur_json_record} {}
 
-    Record const& get() const override { return m_record; }
+    [[nodiscard]] Record const& get() const override { return m_record; }
 
-    void next() override { ++m_it; }
+    void next() override { ++m_json_records_it; }
 
-    bool done() override { return m_it == m_jarray.end(); }
+    bool done() override { return m_json_records_it == m_json_records.end(); }
 
 private:
+    nlohmann::json::array_t m_json_records;
+    nlohmann::json::array_t::iterator m_json_records_it;
     nlohmann::json m_cur_json_record;
     DeserializedRecord m_record;
-    nlohmann::json::array_t m_jarray;
-    nlohmann::json::array_t::iterator m_it;
 };
 
 /**
@@ -80,15 +78,20 @@ public:
     explicit DeserializedRecordGroup(std::vector<uint8_t>& serialized_data);
     DeserializedRecordGroup(char* buf, size_t len);
 
-    [[nodiscard]] ConstRecordIterator& record_iter() override;
+    [[nodiscard]] ConstRecordIterator& record_iter() override {
+        return m_record_it;
+    }
 
-    [[nodiscard]] GroupTags const& get_tags() const override;
+    [[nodiscard]] GroupTags const& get_tags() const override {
+        return m_tags;
+    }
 
 private:
     void init_tags_from_json();
+
     GroupTags m_tags;
-    DeserializedRecordIterator m_record_it;
     nlohmann::json m_record_group;
+    DeserializedRecordIterator m_record_it;
 };
 
 std::vector<uint8_t> serialize(
