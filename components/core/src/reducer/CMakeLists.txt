@@ -10,15 +10,20 @@ set(
         ../clp/ir/parsing.inc
         ../clp/ir/types.hpp
         ../clp/spdlog_with_specializations.hpp
-        #../clp/TraceableException.hpp
+        ../clp/TraceableException.hpp
         ../clp/type_utils.hpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
+        ConstRecordIterator.hpp
         CountOperator.cpp
         CountOperator.hpp
+        DeserializedRecordGroup.cpp
+        DeserializedRecordGroup.hpp
         GroupByTimeOperator.cpp
         GroupByTimeOperator.hpp
         GroupTags.hpp
+        JsonArrayRecordIterator.hpp
+        JsonRecord.hpp
         Operator.cpp
         Operator.hpp
         Pipeline.cpp
@@ -26,15 +31,10 @@ set(
         Record.hpp
         RecordGroup.hpp
         RecordGroupIterator.hpp
-        DeserializedRecordGroup.cpp
-        DeserializedRecordGroup.hpp
-        ConstRecordIterator.hpp
         RecordTypedKeyIterator.hpp
+        reducer_server.cpp
         ServerContext.cpp
         ServerContext.hpp
-        reducer_server.cpp
-        JsonRecord.hpp
-        JsonArrayRecordIterator.hpp
 )
 
 add_executable(reducer-server ${REDUCER_SOURCES})
