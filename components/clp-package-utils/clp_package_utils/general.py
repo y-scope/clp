@@ -109,7 +109,6 @@ def check_dependencies():
 
 
 def is_container_running(container_name):
-    # use -q to let the command return the container id
     # fmt: off
     cmd = [
         "docker", "ps",

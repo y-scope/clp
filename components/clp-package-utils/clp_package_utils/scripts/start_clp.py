@@ -343,7 +343,7 @@ def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path)
     cmd.append(str(config_file_path))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
-    logger.info(f"Started {REDIS_COMPONENT_NAME}.")
+    logger.info(f"Started {component_name}.")
 
 
 def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):

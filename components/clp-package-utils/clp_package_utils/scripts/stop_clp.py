@@ -39,7 +39,7 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def stop_running_container(container_name: str, exited_container: list[str], force: bool):
+def stop_running_container(container_name: str, already_exited_container: list[str], force: bool):
     if is_container_running(container_name):
         logger.info(f"Stopping {container_name}...")
         cmd = ["docker", "stop", container_name]
@@ -57,7 +57,7 @@ def stop_running_container(container_name: str, exited_container: list[str], for
             subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
             logger.info(f"Removed {container_name}...")
         else:
-            exited_container.append(container_name)
+            already_exited_container.append(container_name)
 
 
 def main(argv):
@@ -131,20 +131,20 @@ def main(argv):
         with open(instance_id_file_path, "r") as f:
             instance_id = f.readline()
 
-        exited_container = []
+        already_exited_container = []
         force = parsed_args.force
         if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, WEBUI_COMPONENT_NAME):
             container_name = f"clp-{WEBUI_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, exited_container, force)
+            stop_running_container(container_name, already_exited_container, force)
         if target in (ALL_TARGET_NAME, SEARCH_WORKER_COMPONENT_NAME):
             container_name = f"clp-{SEARCH_WORKER_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, exited_container, force)
+            stop_running_container(container_name, already_exited_container, force)
         if target in (ALL_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
             container_name = f"clp-{COMPRESSION_WORKER_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, exited_container, force)
+            stop_running_container(container_name, already_exited_container, force)
         if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, SEARCH_SCHEDULER_COMPONENT_NAME):
             container_name = f"clp-{SEARCH_SCHEDULER_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, exited_container, force)
+            stop_running_container(container_name, already_exited_container, force)
 
             container_config_file_path = logs_dir / f"{container_name}.yml"
             if container_config_file_path.exists():
@@ -155,35 +155,34 @@ def main(argv):
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
         ):
             container_name = f"clp-{COMPRESSION_SCHEDULER_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, exited_container, force)
+            stop_running_container(container_name, already_exited_container, force)
 
             container_config_file_path = logs_dir / f"{container_name}.yml"
             if container_config_file_path.exists():
                 container_config_file_path.unlink()
         if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, REDIS_COMPONENT_NAME):
             container_name = f"clp-{REDIS_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, exited_container, force)
+            stop_running_container(container_name, already_exited_container, force)
 
             redis_config_file_path = logs_dir / f"{container_name}.conf"
             if redis_config_file_path.exists():
                 redis_config_file_path.unlink()
         if target in (ALL_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
             container_name = f"clp-{RESULTS_CACHE_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, exited_container, force)
+            stop_running_container(container_name, already_exited_container, force)
         if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUEUE_COMPONENT_NAME):
             container_name = f"clp-{QUEUE_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, exited_container, force)
+            stop_running_container(container_name, already_exited_container, force)
 
             queue_config_file_path = logs_dir / f"{container_name}.conf"
             if queue_config_file_path.exists():
                 queue_config_file_path.unlink()
         if target in (ALL_TARGET_NAME, DB_COMPONENT_NAME):
-            stop_running_container(
-                f"clp-{DB_COMPONENT_NAME}-{instance_id}", exited_container, force
-            )
+            container_name = f"clp-{DB_COMPONENT_NAME}-{instance_id}"
+            stop_running_container(container_name, already_exited_container, force)
 
-        if exited_container:
-            container_list = " ".join(exited_container)
+        if already_exited_container:
+            container_list = " ".join(already_exited_container)
             logger.warning(
                 f"The following containers have already exited and were not removed:"
                 f" {container_list}"
