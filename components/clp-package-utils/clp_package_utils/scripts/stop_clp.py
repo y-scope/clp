@@ -186,7 +186,7 @@ def main(argv):
             logger.warning(
                 f"The following containers have exited and were not removed: {container_list}"
             )
-            logger.warning(f"Run docker rm {container_list} to manually remove them")
+            logger.warning(f"Run with --force to manually remove them")
         elif target in ALL_TARGET_NAME:
             # NOTE: We can only remove the instance ID file if all containers have been stopped.
             # Currently, we only remove the instance file when all containers are stopped at once.
