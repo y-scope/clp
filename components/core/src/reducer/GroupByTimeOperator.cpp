@@ -1,9 +1,9 @@
-#include "GroupByTime.hpp"
+#include "GroupByTimeOperator.hpp"
 
 #include "RecordGroup.hpp"
 
 namespace reducer {
-void GroupByTime::push_inter_stage_record_group(
+void GroupByTimeOperator::push_inter_stage_record_group(
         GroupTags const& tags,
         ConstRecordIterator& record_it
 ) {

@@ -16,8 +16,8 @@ set(
         CommandLineArguments.hpp
         CountOperator.cpp
         CountOperator.hpp
-        GroupByTime.cpp
-        GroupByTime.hpp
+        GroupByTimeOperator.cpp
+        GroupByTimeOperator.hpp
         GroupTags.hpp
         Operator.cpp
         Operator.hpp

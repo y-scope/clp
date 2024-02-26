@@ -21,14 +21,14 @@ namespace reducer {
  * is fine for now because we only need it for local in memory group by -> count, but this operator
  * should be generalized in the future.
  */
-class GroupByTime : public Operator {
+class GroupByTimeOperator : public Operator {
 public:
     static constexpr char cRecordElementKey[] = "@time";
 
     /**
      * @param bucket_size Bucket size in milliseconds
      */
-    explicit GroupByTime(int64_t bucket_size = 5 * 60 * 1000) : m_bucket_size(bucket_size) {
+    explicit GroupByTimeOperator(int64_t bucket_size = 5 * 60 * 1000) : m_bucket_size(bucket_size) {
         m_tags.emplace_back("0");
     }
 
