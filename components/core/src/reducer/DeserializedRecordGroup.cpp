@@ -1,4 +1,4 @@
-#include "RecordGroupSerdes.hpp"
+#include "DeserializedRecordGroup.hpp"
 
 #include <string>
 

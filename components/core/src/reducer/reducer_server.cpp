@@ -9,7 +9,7 @@
 
 #include "../clp/spdlog_with_specializations.hpp"
 #include "CommandLineArguments.hpp"
-#include "RecordGroupSerdes.hpp"
+#include "DeserializedRecordGroup.hpp"
 #include "ServerContext.hpp"
 
 using boost::asio::ip::tcp;

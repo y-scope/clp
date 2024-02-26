@@ -17,7 +17,7 @@
 #include "../clp/type_utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "CountOperator.hpp"
-#include "RecordGroupSerdes.hpp"
+#include "DeserializedRecordGroup.hpp"
 
 using boost::asio::ip::tcp;
 
