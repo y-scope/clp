@@ -72,10 +72,10 @@ public:
 
     /**
      * Opens a connection between this reducer and the scheduler.
-     * @param endpoint An endpoint that can be used to connect to the scheduler.
+     * @param endpoints A list of endpoints that can be used to connect to the scheduler.
      * @return Whether a connection was opened successfully.
      */
-    bool register_with_scheduler(boost::asio::ip::tcp::resolver::results_type const& endpoint);
+    bool register_with_scheduler(boost::asio::ip::tcp::resolver::results_type const& endpoints);
 
     /**
      * Synchronously sends a generic acknowledgement to the search scheduler.

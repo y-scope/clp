@@ -84,10 +84,10 @@ void ServerContext::stop_event_loop() {
 }
 
 bool ServerContext::register_with_scheduler(
-        boost::asio::ip::tcp::resolver::results_type const& endpoint
+        boost::asio::ip::tcp::resolver::results_type const& endpoints
 ) {
     try {
-        boost::asio::connect(m_scheduler_socket, endpoint);
+        boost::asio::connect(m_scheduler_socket, endpoints);
     } catch (boost::system::system_error& error) {
         SPDLOG_ERROR("Failed to connect to search scheduler - {}", error.what());
         return false;

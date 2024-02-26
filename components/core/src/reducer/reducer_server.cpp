@@ -1,6 +1,7 @@
 #include <cassert>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include <boost/asio.hpp>
 #include <mongocxx/instance.hpp>
@@ -37,7 +38,7 @@ std::string server_status_to_string(ServerStatus status) {
 }  // namespace
 
 struct RecordReceiverContext {
-    RecordReceiverContext(std::shared_ptr<ServerContext> ctx)
+    explicit RecordReceiverContext(std::shared_ptr<ServerContext> const& ctx)
             : ctx(ctx),
               socket(ctx->get_io_context()),
               buf_size(cDefaultBufSize),
@@ -54,7 +55,9 @@ struct RecordReceiverContext {
     RecordReceiverContext const& operator=(RecordReceiverContext const&) = delete;
     RecordReceiverContext const& operator=(RecordReceiverContext const&&) = delete;
 
-    static std::shared_ptr<RecordReceiverContext> new_receiver(std::shared_ptr<ServerContext> ctx) {
+    static std::shared_ptr<RecordReceiverContext> new_receiver(
+            std::shared_ptr<ServerContext> const& ctx
+    ) {
         // Note: we use shared instead of unique to make things work with boost::bind
         std::shared_ptr<RecordReceiverContext> receiver
                 = std::make_shared<RecordReceiverContext>(ctx);
@@ -74,16 +77,16 @@ struct RecordReceiverContext {
     size_t bytes_occupied{0};
 };
 
-void queue_accept_task(std::shared_ptr<ServerContext> ctx);
-void queue_receive_task(std::shared_ptr<RecordReceiverContext> rctx);
-void queue_validate_sender_task(std::shared_ptr<RecordReceiverContext> rctx);
+void queue_accept_task(std::shared_ptr<ServerContext> const& ctx);
+void queue_receive_task(std::shared_ptr<RecordReceiverContext> const& rctx);
+void queue_validate_sender_task(std::shared_ptr<RecordReceiverContext> const& rctx);
 void queue_scheduler_update_listener_task(
-        std::shared_ptr<ServerContext> ctx,
+        std::shared_ptr<ServerContext>& ctx,
         size_t current_buffer_occupancy
 );
 
 struct ReceiveTask {
-    ReceiveTask(std::shared_ptr<RecordReceiverContext> rctx) : rctx(rctx) {}
+    explicit ReceiveTask(std::shared_ptr<RecordReceiverContext> rctx) : rctx(std::move(rctx)) {}
 
     void operator()(boost::system::error_code const& error, size_t bytes_remaining) {
         size_t record_size = 0;
@@ -138,7 +141,7 @@ struct ReceiveTask {
 
         // only queue another receive if the connection is still open
         if (false == error.failed()) {
-            queue_receive_task(std::move(rctx));
+            queue_receive_task(rctx);
         } else {
             rctx->ctx->decrement_num_active_receiver_tasks();
         }
@@ -149,7 +152,7 @@ private:
     std::shared_ptr<RecordReceiverContext> rctx;
 };
 
-void queue_receive_task(std::shared_ptr<RecordReceiverContext> rctx) {
+void queue_receive_task(std::shared_ptr<RecordReceiverContext> const& rctx) {
     boost::asio::async_read(
             rctx->socket,
             boost::asio::buffer(
@@ -161,7 +164,8 @@ void queue_receive_task(std::shared_ptr<RecordReceiverContext> rctx) {
 }
 
 struct ValidateSenderTask {
-    ValidateSenderTask(std::shared_ptr<RecordReceiverContext> rctx) : rctx(rctx) {}
+    explicit ValidateSenderTask(std::shared_ptr<RecordReceiverContext> rctx)
+            : rctx(std::move(rctx)) {}
 
     void operator()(boost::system::error_code const& error, size_t bytes_remaining) {
         // if no new bytes terminate
@@ -196,7 +200,7 @@ struct ValidateSenderTask {
             rctx->bytes_occupied = 0;
             char const response = 'y';
             boost::system::error_code e;
-            int transferred
+            auto transferred
                     = boost::asio::write(rctx->socket, boost::asio::buffer(&response, 1), e);
             if (e || transferred < sizeof(response)) {
                 SPDLOG_ERROR("Rejecting connection because of connection error while attempting to "
@@ -205,10 +209,10 @@ struct ValidateSenderTask {
                 return;
             }
 
-            queue_receive_task(std::move(rctx));
+            queue_receive_task(rctx);
         } else {
             rctx->bytes_occupied = bytes_remaining;
-            queue_validate_sender_task(std::move(rctx));
+            queue_validate_sender_task(rctx);
         }
     }
 
@@ -216,7 +220,7 @@ private:
     std::shared_ptr<RecordReceiverContext> rctx;
 };
 
-void queue_validate_sender_task(std::shared_ptr<RecordReceiverContext> rctx) {
+void queue_validate_sender_task(std::shared_ptr<RecordReceiverContext> const& rctx) {
     rctx->ctx->increment_num_active_receiver_tasks();
     boost::asio::async_read(
             rctx->socket,
@@ -230,13 +234,13 @@ void queue_validate_sender_task(std::shared_ptr<RecordReceiverContext> rctx) {
 
 struct AcceptTask {
     AcceptTask(std::shared_ptr<ServerContext> ctx, std::shared_ptr<RecordReceiverContext> rctx)
-            : ctx(ctx),
-              rctx(rctx) {}
+            : ctx(std::move(ctx)),
+              rctx(std::move(rctx)) {}
 
     void operator()(boost::system::error_code const& error) {
         if (false == error.failed() && ServerStatus::Running == ctx->get_status()) {
-            queue_validate_sender_task(std::move(rctx));
-            queue_accept_task(std::move(ctx));
+            queue_validate_sender_task(rctx);
+            queue_accept_task(ctx);
         } else if (error.failed() && boost::system::errc::operation_canceled == error.value()) {
             SPDLOG_INFO("Accept task cancelled");
         } else if (error.failed()) {
@@ -250,7 +254,7 @@ struct AcceptTask {
                     "Rejecting connection while not in Running state, state={}",
                     server_status_to_string(ctx->get_status())
             );
-            queue_accept_task(std::move(ctx));
+            queue_accept_task(ctx);
         }
     }
 
@@ -259,14 +263,13 @@ private:
     std::shared_ptr<RecordReceiverContext> rctx;
 };
 
-void queue_accept_task(std::shared_ptr<ServerContext> ctx) {
+void queue_accept_task(std::shared_ptr<ServerContext> const& ctx) {
     auto rctx = RecordReceiverContext::new_receiver(ctx);
-
     ctx->get_tcp_acceptor().async_accept(rctx->socket, AcceptTask(ctx, rctx));
 }
 
 struct PeriodicUpsertTask {
-    PeriodicUpsertTask(std::shared_ptr<ServerContext> ctx) : ctx(ctx) {}
+    explicit PeriodicUpsertTask(std::shared_ptr<ServerContext> ctx) : ctx(std::move(ctx)) {}
 
     void operator()(boost::system::error_code const& e) {
         if (ServerStatus::Running == ctx->get_status()) {
@@ -288,7 +291,7 @@ private:
 
 struct SchedulerUpdateListenerTask {
     SchedulerUpdateListenerTask(std::shared_ptr<ServerContext> ctx, size_t current_buffer_occupancy)
-            : ctx(ctx),
+            : ctx(std::move(ctx)),
               current_buffer_occupancy(current_buffer_occupancy) {}
 
     void operator()(boost::system::error_code const& error, size_t bytes_read) {
@@ -303,7 +306,7 @@ struct SchedulerUpdateListenerTask {
         current_buffer_occupancy += bytes_read;
 
         // Try to read the message from the scheduler
-        size_t size_header;
+        size_t size_header{0};
         if (current_buffer_occupancy < sizeof(size_header)) {
             queue_scheduler_update_listener_task(ctx, current_buffer_occupancy);
             return;
@@ -374,13 +377,13 @@ private:
 };
 
 void queue_scheduler_update_listener_task(
-        std::shared_ptr<ServerContext> ctx,
+        std::shared_ptr<ServerContext>& ctx,
         size_t current_buffer_occupancy
 ) {
     boost::asio::async_read(
             ctx->get_scheduler_update_socket(),
             boost::asio::dynamic_buffer(ctx->get_scheduler_update_buffer()),
-            boost::asio::transfer_at_least(1),  // makes boost asio foreward results right away
+            boost::asio::transfer_at_least(1),  // Makes boost::asio forward results right away
             SchedulerUpdateListenerTask(ctx, current_buffer_occupancy)
     );
 }
@@ -400,7 +403,7 @@ int main(int argc, char const* argv[]) {
     // mongocxx instance must be created before and destroyed after all other mongocxx classes
     mongocxx::instance mongo_instance;
 
-    reducer::CommandLineArguments args("reducer-server");
+    reducer::CommandLineArguments args{"reducer-server"};
     auto parsing_result = args.parse_arguments(argc, argv);
     if (clp::CommandLineArgumentsBase::ParsingResult::Failure == parsing_result) {
         return 1;
@@ -412,7 +415,7 @@ int main(int argc, char const* argv[]) {
     try {
         ctx = std::make_shared<reducer::ServerContext>(args);
     } catch (reducer::ServerContext::OperationFailed& exception) {
-        SPDLOG_CRITICAL("Failed to initialize reducer - {}", exception.what());
+        SPDLOG_CRITICAL("Failed to initialize - {}", exception.what());
         return 1;
     }
 
