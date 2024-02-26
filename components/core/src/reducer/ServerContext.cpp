@@ -22,6 +22,25 @@
 using boost::asio::ip::tcp;
 
 namespace reducer {
+namespace {
+std::vector<uint8_t> serialize_timeline(GroupTags const& tags, ConstRecordIterator& record_it);
+
+std::vector<uint8_t> serialize_timeline(GroupTags const& tags, ConstRecordIterator& record_it) {
+    nlohmann::json json;
+    json["timestamp"] = std::stoll(tags.front());
+    auto records = nlohmann::json::array();
+
+    int64_t count = 0;
+    for (; false == record_it.done(); record_it.next()) {
+        count = record_it.get().get_int64_value(
+                static_cast<char const*>(CountOperator::cRecordElementKey)
+        );
+    }
+    json["count"] = count;
+
+    return nlohmann::json::to_bson(json);
+}
+}  // namespace
 
 // TODO: We should use tcp::v6 and set ip::v6_only to false. But this isn't
 // guaranteed to work, so for now, we use v4 to be safe.
