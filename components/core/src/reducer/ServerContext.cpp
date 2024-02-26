@@ -68,6 +68,78 @@ ServerContext::ServerContext(CommandLineArguments& args)
     m_mongodb_results_database = mongocxx::database(m_mongodb_client[mongodb_uri.database()]);
 }
 
+void ServerContext::reset() {
+    m_ioctx.reset();
+    m_pipeline.reset(nullptr);
+    m_status = ServerStatus::Idle;
+    m_job_id = -1;
+    m_is_timeline_aggregation = false;
+    m_updated_tags.clear();
+    m_num_active_receiver_tasks = 0;
+}
+
+void ServerContext::stop_event_loop() {
+    m_tcp_acceptor.cancel();
+    m_scheduler_socket.close();
+}
+
+bool ServerContext::register_with_scheduler(
+        boost::asio::ip::tcp::resolver::results_type const& endpoint
+) {
+    try {
+        boost::asio::connect(m_scheduler_socket, endpoint);
+    } catch (boost::system::system_error& error) {
+        SPDLOG_ERROR("Failed to connect to search scheduler - {}", error.what());
+        return false;
+    }
+
+    boost::system::error_code error;
+
+    nlohmann::json reducer_advertisement;
+    reducer_advertisement["host"] = m_reducer_host;
+    reducer_advertisement["port"] = m_reducer_port;
+    auto serialized_advertisement = nlohmann::json::to_msgpack(reducer_advertisement);
+    auto message_size = serialized_advertisement.size();
+
+    boost::asio::write(
+            m_scheduler_socket,
+            boost::asio::buffer(&message_size, sizeof(message_size)),
+            error
+    );
+    if (error) {
+        m_scheduler_socket.close();
+        return false;
+    }
+
+    boost::asio::write(m_scheduler_socket, boost::asio::buffer(serialized_advertisement), error);
+    if (error) {
+        m_scheduler_socket.close();
+        return false;
+    }
+
+    return true;
+}
+
+bool ServerContext::ack_search_scheduler() {
+    boost::system::error_code e;
+    char const scheduler_response = 'y';
+    boost::asio::write(m_scheduler_socket, boost::asio::buffer(&scheduler_response, 1), e);
+    if (e) {
+        SPDLOG_ERROR("Failed to notify search scheduler - {}", e.message());
+        return false;
+    }
+    return true;
+}
+
+void ServerContext::decrement_num_active_receiver_tasks() {
+    --m_num_active_receiver_tasks;
+    if (0 == m_num_active_receiver_tasks && ServerStatus::ReceivedAllResults == m_status) {
+        if (false == try_finalize_results()) {
+            m_status = ServerStatus::UnrecoverableFailure;
+        }
+    }
+}
+
 void ServerContext::set_up_pipeline(nlohmann::json const& query_config) {
     m_job_id = query_config[cJobAttributes::JobId];
 
@@ -86,15 +158,11 @@ void ServerContext::set_up_pipeline(nlohmann::json const& query_config) {
     m_mongodb_results_collection = m_mongodb_results_database[collection_name];
 }
 
-bool ServerContext::ack_search_scheduler() {
-    boost::system::error_code e;
-    char const scheduler_response = 'y';
-    boost::asio::write(m_scheduler_socket, boost::asio::buffer(&scheduler_response, 1), e);
-    if (e) {
-        SPDLOG_ERROR("Failed to notify search scheduler - {}", e.message());
-        return false;
+void ServerContext::push_record_group(GroupTags const& tags, ConstRecordIterator& record_it) {
+    if (m_is_timeline_aggregation) {
+        m_updated_tags.insert(tags);
     }
-    return true;
+    m_pipeline->push_record_group(tags, record_it);
 }
 
 bool ServerContext::upsert_timeline_results() {
@@ -183,73 +251,5 @@ bool ServerContext::try_finalize_results() {
 
     // Notify the search scheduler that the results have been pushed
     return ack_search_scheduler();
-}
-
-void ServerContext::push_record_group(GroupTags const& tags, ConstRecordIterator& record_it) {
-    if (m_is_timeline_aggregation) {
-        m_updated_tags.insert(tags);
-    }
-    m_pipeline->push_record_group(tags, record_it);
-}
-
-void ServerContext::reset() {
-    m_ioctx.reset();
-    m_pipeline.reset(nullptr);
-    m_status = ServerStatus::Idle;
-    m_job_id = -1;
-    m_is_timeline_aggregation = false;
-    m_updated_tags.clear();
-    m_num_active_receiver_tasks = 0;
-}
-
-void ServerContext::decrement_num_active_receiver_tasks() {
-    --m_num_active_receiver_tasks;
-    if (0 == m_num_active_receiver_tasks && ServerStatus::ReceivedAllResults == m_status) {
-        if (false == try_finalize_results()) {
-            m_status = ServerStatus::UnrecoverableFailure;
-        }
-    }
-}
-
-bool ServerContext::register_with_scheduler(
-        boost::asio::ip::tcp::resolver::results_type const& endpoint
-) {
-    try {
-        boost::asio::connect(m_scheduler_socket, endpoint);
-    } catch (boost::system::system_error& error) {
-        SPDLOG_ERROR("Failed to connect to search scheduler - {}", error.what());
-        return false;
-    }
-
-    boost::system::error_code error;
-
-    nlohmann::json reducer_advertisement;
-    reducer_advertisement["host"] = m_reducer_host;
-    reducer_advertisement["port"] = m_reducer_port;
-    auto serialized_advertisement = nlohmann::json::to_msgpack(reducer_advertisement);
-    auto message_size = serialized_advertisement.size();
-
-    boost::asio::write(
-            m_scheduler_socket,
-            boost::asio::buffer(&message_size, sizeof(message_size)),
-            error
-    );
-    if (error) {
-        m_scheduler_socket.close();
-        return false;
-    }
-
-    boost::asio::write(m_scheduler_socket, boost::asio::buffer(serialized_advertisement), error);
-    if (error) {
-        m_scheduler_socket.close();
-        return false;
-    }
-
-    return true;
-}
-
-void ServerContext::stop_event_loop() {
-    m_tcp_acceptor.cancel();
-    m_scheduler_socket.close();
 }
 }  // namespace reducer

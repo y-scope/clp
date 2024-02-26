@@ -51,27 +51,48 @@ public:
 
     // Methods
     /**
+     * Resets all state in the ServerContext. This method must be called between invocations of
+     * run().
+     */
+    void reset();
+
+    /**
      * Executes the server event loop until no tasks remain.
      */
     void run() { m_ioctx.run(); }
 
-    boost::asio::io_context& get_io_context() { return m_ioctx; }
+    /**
+     * Stops the event loop by closing the connection to the scheduler, and cancelling any ongoing
+     * operations on this server's listener socket.
+     *
+     * NOTE: There may be a short period where periodic tasks and results receivers keep running
+     * before the event loop exits.
+     */
+    void stop_event_loop();
 
-    boost::asio::ip::tcp::acceptor& get_tcp_acceptor() { return m_tcp_acceptor; }
+    /**
+     * Opens a connection between this reducer and the scheduler.
+     * @param endpoint An endpoint that can be used to connect to the scheduler.
+     * @return Whether a connection was opened successfully.
+     */
+    bool register_with_scheduler(boost::asio::ip::tcp::resolver::results_type const& endpoint);
 
-    [[nodiscard]] int get_polling_interval() const { return m_polling_interval_ms; }
+    /**
+     * Synchronously sends a generic acknowledgement to the search scheduler.
+     * @return Whether the acknowledgement was sent successfully.
+     */
+    bool ack_search_scheduler();
 
-    [[nodiscard]] bool is_timeline_aggregation() const { return m_is_timeline_aggregation; }
+    /**
+     * Increments the number of active receiver tasks which may receive some results.
+     */
+    void increment_num_active_receiver_tasks() { ++m_num_active_receiver_tasks; }
 
-    [[nodiscard]] std::string const& get_reducer_host() const { return m_reducer_host; }
-
-    [[nodiscard]] int get_reducer_port() const { return m_reducer_port; }
-
-    [[nodiscard]] int64_t get_job_id() const { return m_job_id; }
-
-    [[nodiscard]] ServerStatus get_status() const { return m_status; }
-
-    void set_status(ServerStatus new_status) { m_status = new_status; }
+    /**
+     * Decrements the number of active receiver tasks, and calls try_finalize_results if the server
+     * is in the state ReceivedAllResults and there are no remaining active receiver tasks.
+     */
+    void decrement_num_active_receiver_tasks();
 
     /**
      * Sets up an in-memory aggregation pipeline according to the given query config.
@@ -80,10 +101,11 @@ public:
     void set_up_pipeline(nlohmann::json const& query_config);
 
     /**
-     * Synchronously sends a generic acknowledgement to the search scheduler.
-     * @return Whether the acknowledgement was sent successfully.
+     * Pushes a record group into the reducer pipeline.
+     * @param group_tags The tags in the record group.
+     * @param record_it An iterator for the records in the record group.
      */
-    bool ack_search_scheduler();
+    void push_record_group(GroupTags const& tags, ConstRecordIterator& record_it);
 
     /**
      * Upserts the current set of timeline entries from the reducer pipeline to MongoDB and clears
@@ -108,61 +130,29 @@ public:
      */
     bool try_finalize_results();
 
-    /**
-     * Pushes a record group into the reducer pipeline.
-     * @param group_tags The tags in the record group.
-     * @param record_it An iterator for the records in the record group.
-     */
-    void push_record_group(GroupTags const& tags, ConstRecordIterator& record_it);
+    boost::asio::io_context& get_io_context() { return m_ioctx; }
 
-    /**
-     * Resets all state in the ServerContext. This method must be called between invocations of
-     * run().
-     */
-    void reset();
+    boost::asio::ip::tcp::acceptor& get_tcp_acceptor() { return m_tcp_acceptor; }
 
-    /**
-     * Increments the number of active receiver tasks which may receive some results.
-     */
-    void increment_num_active_receiver_tasks() { ++m_num_active_receiver_tasks; }
-
-    /**
-     * Decrements the number of active receiver tasks, and calls try_finalize_results if the server
-     * is in the state ReceivedAllResults and there are no remaining active receiver tasks.
-     */
-    void decrement_num_active_receiver_tasks();
-
-    /**
-     * Opens a connection between this reducer and the scheduler.
-     * @param endpoint An endpoint that can be used to connect to the scheduler.
-     * @return Whether a connection was opened successfully.
-     */
-    bool register_with_scheduler(boost::asio::ip::tcp::resolver::results_type const& endpoint);
-
-    /**
-     * @return A reference to the tcp socket used to communicate with the search scheduler.
-     */
     boost::asio::ip::tcp::socket& get_scheduler_update_socket() { return m_scheduler_socket; }
 
-    /**
-     * @return A reference to the buffer used to receive messages from the search scheduler.
-     */
     std::vector<char>& get_scheduler_update_buffer() { return m_scheduler_update_buffer; }
 
-    /**
-     * @return A reference to the timer object used to periodically upsert results to the results
-     * cache.
-     */
+    [[nodiscard]] std::string const& get_reducer_host() const { return m_reducer_host; }
+
+    [[nodiscard]] int get_reducer_port() const { return m_reducer_port; }
+
+    [[nodiscard]] ServerStatus get_status() const { return m_status; }
+
+    void set_status(ServerStatus new_status) { m_status = new_status; }
+
+    [[nodiscard]] int64_t get_job_id() const { return m_job_id; }
+
+    [[nodiscard]] bool is_timeline_aggregation() const { return m_is_timeline_aggregation; }
+
     boost::asio::steady_timer& get_upsert_timer() { return m_upsert_timer; }
 
-    /**
-     * Stops the event loop by closing the connection to the scheduler, and cancelling any ongoing
-     * operations on this server's listener socket.
-     *
-     * NOTE: There may be a short period where periodic tasks and results receivers keep running
-     * before the event loop exits.
-     */
-    void stop_event_loop();
+    [[nodiscard]] int get_polling_interval() const { return m_polling_interval_ms; }
 
 private:
     boost::asio::io_context m_ioctx;
