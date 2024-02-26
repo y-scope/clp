@@ -70,7 +70,7 @@ def container_exists(container_name):
         logger.info(f"{container_name} already running.")
         return True
     elif is_container_exited(container_name):
-        logger.info(f"{container_name} stopped but not removed.")
+        logger.info(f"{container_name} exited but not removed.")
         return True
     return False
 

@@ -109,6 +109,7 @@ def check_dependencies():
 
 
 def is_container_running(container_name):
+    # use -q to let the command return the container id
     cmd = ["docker", "ps", "-q", "-f", f"name={container_name}"]
     proc = subprocess.run(cmd, stdout=subprocess.PIPE)
     if proc.stdout.decode("utf-8"):
@@ -118,7 +119,7 @@ def is_container_running(container_name):
 
 
 def is_container_exited(container_name):
-    # use -a to list all containers including the stopped ones
+    # use -q to let the command return the container id
     cmd = ["docker", "ps", "-q", "-f", f"name={container_name}", "-f", f"status=exited"]
     proc = subprocess.run(cmd, stdout=subprocess.PIPE)
     if proc.stdout.decode("utf-8"):

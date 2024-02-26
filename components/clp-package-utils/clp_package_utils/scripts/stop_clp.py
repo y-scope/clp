@@ -51,7 +51,7 @@ def stop_running_container(container_name: str, exited_container: list, force: b
         logger.info(f"Stopped and Removed {container_name}.")
     elif is_container_exited(container_name):
         if force:
-            logger.info(f"Force removing failed {container_name}...")
+            logger.info(f"Force removing exited {container_name}...")
             cmd = ["docker", "rm", container_name]
             subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
             logger.info(f"Removed {container_name}...")
@@ -74,7 +74,7 @@ def main(argv):
         "--force",
         "-f",
         action="store_true",
-        help="Force remove failed containers",
+        help="Force remove exited containers",
     )
 
     component_args_parser = args_parser.add_subparsers(dest="target")
@@ -184,7 +184,7 @@ def main(argv):
         if exited_container:
             container_list = " ".join(exited_container)
             logger.warning(
-                f"The following containers potentially failed and were not removed: {container_list}"
+                f"The following containers have exited and were not removed: {container_list}"
             )
             logger.warning(f"Run docker rm {container_list} to manually remove them")
         elif target in ALL_TARGET_NAME:
