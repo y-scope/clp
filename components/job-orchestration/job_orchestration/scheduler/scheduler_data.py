@@ -42,6 +42,7 @@ class SearchSubJob(BaseModel):
 class SearchJob(BaseModel):
     id: str
     search_config: SearchConfig
+    waiting_for_next_sub_job: bool
     remaining_archives_for_search: typing.List[str]
     current_sub_job: SearchSubJob
 

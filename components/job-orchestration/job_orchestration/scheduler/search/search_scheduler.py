@@ -163,7 +163,9 @@ def handle_pending_search_jobs(
     db_conn, results_cache_uri: str, num_archives_to_search_per_batch: int
 ) -> None:
     global active_jobs
-    pending_job_ids = list(active_jobs.keys())
+    pending_job_ids = [
+        job_id for job_id in active_jobs if active_jobs[job_id].waiting_for_next_sub_job
+    ]
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
         for job in fetch_new_search_jobs(cursor):
             job_id = str(job["job_id"])
@@ -180,6 +182,7 @@ def handle_pending_search_jobs(
             new_search_job = SearchJob(
                 id=job_id,
                 search_config=search_config,
+                waiting_for_next_sub_job=True,
                 remaining_archives_for_search=get_archives_for_search(db_conn, search_config),
                 current_sub_job=None,
             )
@@ -206,6 +209,7 @@ def handle_pending_search_jobs(
             logger.info(
                 f"Dispatched job {job_id} with {len(archives_for_search)} archives to search."
             )
+        job.waiting_for_next_sub_job = False
 
 
 def try_getting_task_result(async_task_result):
@@ -267,16 +271,14 @@ def check_job_status_and_update_db(db_conn, results_cache_uri):
             if new_job_status == SearchJobStatus.RUNNING:
                 job.waiting_for_next_sub_job = True
                 job.current_sub_job = None
+                logger.info(f"Job {job_id} waiting for more archives to search.")
             else:
+                if set_job_status(db_conn, job_id, new_job_status, SearchJobStatus.RUNNING):
+                    if new_job_status == SearchJobStatus.SUCCEEDED:
+                        logger.info(f"Completed job {job_id}.")
+                    else:
+                        logger.info(f"Completed job {job_id} with failing tasks.")
                 del active_jobs[job_id]
-
-            if set_job_status(db_conn, job_id, new_job_status, SearchJobStatus.RUNNING):
-                if new_job_status == SearchJobStatus.SUCCEEDED:
-                    logger.info(f"Completed job {job_id}.")
-                elif new_job_status == SearchJobStatus.FAILED:
-                    logger.info(f"Completed job {job_id} with failing tasks.")
-                else:
-                    logger.info(f"Job {job_id} waiting for more archives to search.")
 
 
 def handle_jobs(
