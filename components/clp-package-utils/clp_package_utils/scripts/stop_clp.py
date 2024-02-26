@@ -187,7 +187,7 @@ def main(argv):
                 f"The following containers have already exited and were not removed:"
                 f" {container_list}"
             )
-            logger.warning(f"Run with --force to manually remove them")
+            logger.warning(f"Run with --force to remove them")
         elif target in ALL_TARGET_NAME:
             # NOTE: We can only remove the instance ID file if all containers have been stopped.
             # Currently, we only remove the instance file when all containers are stopped at once.
