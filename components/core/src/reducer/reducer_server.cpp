@@ -69,13 +69,102 @@ struct RecordReceiverContext {
         return receiver;
     }
 
+    /**
+     * Tries to read a connection initiation packet.
+     * @param num_bytes_read The number of new bytes read into the buffer.
+     * @return -1 If the sender sent too many bytes or the sender's job ID doesn't match the one
+     * currently being processed.
+     * @return 0 If the buffer doesn't contain enough data to read.
+     * @return 1 On success.
+     */
+    int try_read_connection_init_packet(size_t num_bytes_read);
+
+    /**
+     * Tries to read a packet containing record groups.
+     * @param num_bytes_read The number of new bytes read into the buffer.
+     * @return Whether the read was successful.
+     */
+    bool try_read_record_groups_packet(size_t num_bytes_read);
+
+    static constexpr size_t cMaxRecordSize = 16ULL * 1024 * 1024;
     static constexpr size_t cDefaultBufSize = 1024;
+
     std::shared_ptr<ServerContext> ctx;
     tcp::socket socket;
     char* buf;
     size_t buf_size;
     size_t bytes_occupied{0};
 };
+
+int RecordReceiverContext::try_read_connection_init_packet(size_t num_bytes_read) {
+    bytes_occupied += num_bytes_read;
+
+    int32_t job_id{0};
+
+    if (bytes_occupied > sizeof(job_id)) {
+        SPDLOG_ERROR("Rejecting connection because of invalid negotiation");
+        return -1;
+    }
+    if (bytes_occupied < sizeof(job_id)) {
+        return 0;
+    }
+
+    memcpy(&job_id, buf, sizeof(job_id));
+    if (job_id != ctx->get_job_id()) {
+        SPDLOG_ERROR(
+                "Rejecting connection from worker with job_id={} during processing of "
+                "job_id={}",
+                job_id,
+                ctx->get_job_id()
+        );
+        return -1;
+    }
+    bytes_occupied = 0;
+
+    return 1;
+}
+
+bool RecordReceiverContext::try_read_record_groups_packet(size_t num_bytes_read) {
+    bytes_occupied += num_bytes_read;
+
+    size_t record_size{0};
+    auto* read_head = buf;
+    while (bytes_occupied > 0) {
+        if (bytes_occupied < sizeof(record_size)) {
+            break;
+        }
+        memcpy(&record_size, read_head, sizeof(record_size));
+
+        // terminate if record group size is over 16MB
+        if (record_size >= cMaxRecordSize) {
+            SPDLOG_ERROR("Record too large: {}B", record_size);
+            return false;
+        }
+
+        if (bytes_occupied < record_size + sizeof(record_size)) {
+            break;
+        }
+        read_head += sizeof(record_size);
+
+        auto record_group = DeserializedRecordGroup{read_head, record_size};
+        ctx->push_record_group(record_group.get_tags(), record_group.record_iter());
+        bytes_occupied -= (record_size + sizeof(record_size));
+        read_head += record_size;
+    }
+
+    if (bytes_occupied > 0) {
+        if (buf_size < record_size + sizeof(record_size)) {
+            auto new_buf = new char[record_size + sizeof(record_size)];
+            memcpy(new_buf, read_head, bytes_occupied);
+            delete[] buf;
+            buf = new_buf;
+        } else {
+            memmove(buf, read_head, bytes_occupied);
+        }
+    }
+
+    return true;
+}
 
 void queue_accept_task(std::shared_ptr<ServerContext> const& ctx);
 void queue_receive_task(std::shared_ptr<RecordReceiverContext> const& rctx);
@@ -88,58 +177,19 @@ void queue_scheduler_update_listener_task(
 struct ReceiveTask {
     explicit ReceiveTask(std::shared_ptr<RecordReceiverContext> rctx) : rctx(std::move(rctx)) {}
 
-    void operator()(boost::system::error_code const& error, size_t bytes_remaining) {
-        size_t record_size = 0;
-        char* buf_ptr = rctx->buf;
-
+    void operator()(boost::system::error_code const& error, size_t num_bytes_read) {
         // if no new bytes terminate
-        if (0 == bytes_remaining || ServerStatus::Running != rctx->ctx->get_status()) {
+        if (0 == num_bytes_read || ServerStatus::Running != rctx->ctx->get_status()) {
             rctx->ctx->decrement_num_active_receiver_tasks();
             return;
         }
 
-        // account for leftover bytes from previous call
-        bytes_remaining += rctx->bytes_occupied;
-
-        while (bytes_remaining > 0) {
-            if (bytes_remaining >= sizeof(record_size)) {
-                memcpy(&record_size, buf_ptr, sizeof(record_size));
-            } else {
-                break;
-            }
-
-            // terminate if record group size is over 16MB
-            if (record_size >= cMaxRecordSize) {
-                SPDLOG_ERROR("Record too large: {}B", record_size);
-                rctx->ctx->decrement_num_active_receiver_tasks();
-                return;
-            }
-
-            if (bytes_remaining >= (record_size + sizeof(record_size))) {
-                buf_ptr += sizeof(record_size);
-                auto record_group = DeserializedRecordGroup{buf_ptr, record_size};
-                rctx->ctx->push_record_group(record_group.get_tags(), record_group.record_iter());
-                bytes_remaining -= (record_size + sizeof(record_size));
-                buf_ptr += record_size;
-            } else {
-                break;
-            }
+        if (false == rctx->try_read_record_groups_packet(num_bytes_read)) {
+            rctx->ctx->decrement_num_active_receiver_tasks();
+            return;
         }
 
-        if (bytes_remaining > 0) {
-            if (rctx->buf_size < (record_size + sizeof(record_size))) {
-                char* new_buf = new char[record_size + sizeof(record_size)];
-                memcpy(new_buf, buf_ptr, bytes_remaining);
-                delete[] rctx->buf;
-                rctx->buf = new_buf;
-                rctx->bytes_occupied = bytes_remaining;
-            } else {
-                memmove(rctx->buf, buf_ptr, bytes_remaining);
-                rctx->bytes_occupied = bytes_remaining;
-            }
-        }
-
-        // only queue another receive if the connection is still open
+        // Only queue another receive if the connection is still open
         if (false == error.failed()) {
             queue_receive_task(rctx);
         } else {
@@ -148,7 +198,6 @@ struct ReceiveTask {
     }
 
 private:
-    static constexpr size_t cMaxRecordSize = 16ULL * 1024 * 1024;
     std::shared_ptr<RecordReceiverContext> rctx;
 };
 
@@ -177,42 +226,25 @@ struct ValidateSenderTask {
             return;
         }
 
-        // account for leftover bytes from previous call
-        bytes_remaining += rctx->bytes_occupied;
-
-        if (bytes_remaining > sizeof(int32_t)) {
-            SPDLOG_ERROR("Rejecting connection because of invalid negotiation");
+        auto ret_val = rctx->try_read_connection_init_packet(bytes_remaining);
+        if (-1 == ret_val) {
             rctx->ctx->decrement_num_active_receiver_tasks();
             return;
-        } else if (bytes_remaining == sizeof(int32_t)) {
-            int32_t job_id = 0;
-            memcpy(&job_id, rctx->buf, sizeof(int32_t));
-            if (job_id != rctx->ctx->get_job_id()) {
-                SPDLOG_ERROR(
-                        "Rejecting connection from worker with job_id={} during processing of "
-                        "job_id={}",
-                        job_id,
-                        rctx->ctx->get_job_id()
-                );
-                rctx->ctx->decrement_num_active_receiver_tasks();
-                return;
-            }
-            rctx->bytes_occupied = 0;
+        } else if (0 == ret_val) {
+            queue_validate_sender_task(rctx);
+        } else {
             char const response = 'y';
             boost::system::error_code e;
             auto transferred
                     = boost::asio::write(rctx->socket, boost::asio::buffer(&response, 1), e);
             if (e || transferred < sizeof(response)) {
-                SPDLOG_ERROR("Rejecting connection because of connection error while attempting to "
-                             "send acceptance");
+                SPDLOG_ERROR("Rejecting connection due to connection error while attempting to send"
+                             " acceptance");
                 rctx->ctx->decrement_num_active_receiver_tasks();
                 return;
             }
 
             queue_receive_task(rctx);
-        } else {
-            rctx->bytes_occupied = bytes_remaining;
-            queue_validate_sender_task(rctx);
         }
     }
 
