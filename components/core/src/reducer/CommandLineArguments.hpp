@@ -16,8 +16,7 @@ public:
             : clp::CommandLineArgumentsBase(program_name) {}
 
     // Methods
-    clp::CommandLineArgumentsBase::ParsingResult
-    parse_arguments(int argc, char const* argv[]) override;
+    ParsingResult parse_arguments(int argc, char const* argv[]) override;
 
     [[nodiscard]] std::string const& get_reducer_host() const { return m_reducer_host; }
 

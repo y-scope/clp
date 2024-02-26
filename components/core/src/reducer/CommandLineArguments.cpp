@@ -76,12 +76,12 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     // Validate arguments. Note: mysql username and password are allowed to be the empty string.
     bool valid_arguments = true;
     if (m_reducer_host.empty()) {
-        SPDLOG_ERROR("Empty reducer-host argument");
+        SPDLOG_ERROR("reducer-host cannot be empty.");
         valid_arguments = false;
     }
 
     if (m_reducer_port <= 0) {
-        SPDLOG_ERROR("Invalid argument for reducer-port {}", m_reducer_port);
+        SPDLOG_ERROR("reducer-port cannot be <= 0.");
         valid_arguments = false;
     }
 
@@ -105,7 +105,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         valid_arguments = false;
     }
 
-    if (!valid_arguments) {
+    if (false == valid_arguments) {
         return clp::CommandLineArgumentsBase::ParsingResult::Failure;
     }
 
