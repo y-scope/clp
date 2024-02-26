@@ -15,19 +15,28 @@
 
 namespace reducer {
 /**
- * A ConstRecordIterator over data serialized by the "serialize" function declared in this file.
+ * A ConstRecordIterator over a JsonRecord.
  */
 class DeserializedRecordIterator : public ConstRecordIterator {
 public:
     explicit DeserializedRecordIterator(nlohmann::json::array_t json_records)
             : m_json_records{std::move(json_records)},
-              m_json_records_it{m_json_records.begin()},
-              m_cur_json_record{*m_json_records_it},
-              m_record{m_cur_json_record} {}
+              m_record{m_cur_json_record},
+              m_json_records_it{m_json_records.begin()} {
+        if (m_json_records_it != m_json_records.end()) {
+            m_cur_json_record = *m_json_records_it;
+            m_record = JsonRecord{m_cur_json_record};
+        }
+    }
 
-    [[nodiscard]] Record const& get() const override { return m_record; }
+    [[nodiscard]] Record const& get() const override {
+        return m_record;
+    }
 
-    void next() override { ++m_json_records_it; }
+    void next() override {
+        ++m_json_records_it;
+        m_record = JsonRecord{*m_json_records_it};
+    }
 
     bool done() override { return m_json_records_it == m_json_records.end(); }
 
