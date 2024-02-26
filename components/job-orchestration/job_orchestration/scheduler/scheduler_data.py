@@ -43,8 +43,8 @@ class SearchJob(BaseModel):
     id: str
     search_config: SearchConfig
     waiting_for_next_sub_job: bool
-    remaining_archives_for_search: typing.List[str]
-    current_sub_job: SearchSubJob
+    remaining_archives_for_search: typing.List[typing.Dict[str, typing.Any]]
+    current_sub_job: typing.Optional[SearchSubJob]
 
 
 class SearchTaskResult(BaseModel):

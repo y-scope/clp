@@ -44,7 +44,7 @@ def fetch_new_search_jobs(db_cursor) -> list:
     db_cursor.execute(
         f"""
         SELECT {SEARCH_JOBS_TABLE_NAME}.id as job_id,
-        {SEARCH_JOBS_TABLE_NAME}.search_config,
+        {SEARCH_JOBS_TABLE_NAME}.search_config
         FROM {SEARCH_JOBS_TABLE_NAME}
         WHERE {SEARCH_JOBS_TABLE_NAME}.status={SearchJobStatus.PENDING}
         """
@@ -193,7 +193,7 @@ def handle_pending_search_jobs(
     for job_id in pending_job_ids:
         job = active_jobs[job_id]
 
-        if len(job.archives_for_search) > num_archives_to_search_per_batch:
+        if len(job.remaining_archives_for_search) > num_archives_to_search_per_batch:
             archives_for_search = job.remaining_archives_for_search[
                 :num_archives_to_search_per_batch
             ]
