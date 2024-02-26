@@ -32,9 +32,9 @@ active_jobs: Dict[str, SearchJob] = {}
 
 def cancel_job(job_id):
     global active_jobs
-    active_jobs[job_id].async_task_result.revoke(terminate=True)
+    active_jobs[job_id].current_sub_job.async_task_result.revoke(terminate=True)
     try:
-        active_jobs[job_id].async_task_result.get()
+        active_jobs[job_id].current_sub_job.async_task_result.get()
     except Exception:
         pass
     del active_jobs[job_id]
@@ -44,9 +44,7 @@ def fetch_new_search_jobs(db_cursor) -> list:
     db_cursor.execute(
         f"""
         SELECT {SEARCH_JOBS_TABLE_NAME}.id as job_id,
-        {SEARCH_JOBS_TABLE_NAME}.status as job_status,
         {SEARCH_JOBS_TABLE_NAME}.search_config,
-        {SEARCH_JOBS_TABLE_NAME}.submission_time
         FROM {SEARCH_JOBS_TABLE_NAME}
         WHERE {SEARCH_JOBS_TABLE_NAME}.status={SearchJobStatus.PENDING}
         """
@@ -165,13 +163,10 @@ def handle_pending_search_jobs(
     db_conn, results_cache_uri: str, num_archives_to_search_per_batch: int
 ) -> None:
     global active_jobs
-    pending_job_ids = [
-        job_id for job_id in active_jobs if active_jobs[job_id].waiting_for_next_sub_job
-    ]
+    pending_job_ids = list(active_jobs.keys())
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
         for job in fetch_new_search_jobs(cursor):
             job_id = str(job["job_id"])
-            job_status = job["job_status"]
             search_config = SearchConfig.parse_obj(msgpack.unpackb(job["search_config"]))
             archives_for_search = get_archives_for_search(db_conn, search_config)
             if len(archives_for_search) == 0:
@@ -179,15 +174,12 @@ def handle_pending_search_jobs(
                     db_conn,
                     job_id,
                     SearchJobStatus.NO_MATCHING_ARCHIVES,
-                    job_status,
                 ):
                     logger.info(f"No matching archives, skipping job {job['job_id']}.")
                 continue
             new_search_job = SearchJob(
                 id=job_id,
-                status=job_status,
                 search_config=search_config,
-                waiting_for_next_sub_job=True,
                 remaining_archives_for_search=get_archives_for_search(db_conn, search_config),
                 current_sub_job=None,
             )
@@ -197,22 +189,23 @@ def handle_pending_search_jobs(
 
     for job_id in pending_job_ids:
         job = active_jobs[job_id]
-        job_status = job.status
 
         if len(job.archives_for_search) > num_archives_to_search_per_batch:
-            archives_for_search = job.archives_for_search[:num_archives_to_search_per_batch]
-            job.archives_for_search = job.archives_for_search[num_archives_to_search_per_batch:]
+            archives_for_search = job.remaining_archives_for_search[
+                :num_archives_to_search_per_batch
+            ]
+            job.remaining_archives_for_search = job.remaining_archives_for_search[
+                num_archives_to_search_per_batch:
+            ]
         else:
-            archives_for_search = job.archives_for_search
-            job.archives_for_search = []
+            archives_for_search = job.remaining_archives_for_search
+            job.remaining_archives_for_search = []
 
-        job.waiting_for_next_sub_job = False
         dispatch_search_job(archives_for_search, job_id, job.search_config, results_cache_uri)
-        if set_job_status(db_conn, job_id, SearchJobStatus.RUNNING, job_status):
+        if set_job_status(db_conn, job_id, SearchJobStatus.RUNNING):
             logger.info(
                 f"Dispatched job {job_id} with {len(archives_for_search)} archives to search."
             )
-            job.status = SearchJobStatus.RUNNING
 
 
 def try_getting_task_result(async_task_result):
