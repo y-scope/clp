@@ -41,10 +41,18 @@ private:
     JsonArrayRecordIterator m_record_it;
 };
 
+/**
+ * Converts a record group into a JSON object and then serializes it into a format that can be
+ * deserialized by DeserializedRecordGroup.
+ * @param tags The tags in the record group.
+ * @param record_it An iterator for the records in the record group.
+ * @param serializer The method to use for serializing the JSON object.
+ * @return The serialized data.
+ */
 std::vector<uint8_t> serialize(
         GroupTags const& tags,
         ConstRecordIterator& record_it,
-        std::vector<uint8_t>(ser)(nlohmann::json const& j) = nlohmann::json::to_msgpack
+        std::vector<uint8_t>(serializer)(nlohmann::json const& j) = nlohmann::json::to_msgpack
 );
 }  // namespace reducer
 

@@ -1,7 +1,6 @@
 #include "ServerContext.hpp"
 
 #include <bsoncxx/builder/stream/document.hpp>
-#include <fmt/core.h>
 #include <json/single_include/nlohmann/json.hpp>
 #include <mongocxx/bulk_write.hpp>
 #include <mongocxx/client.hpp>
@@ -11,30 +10,38 @@
 #include <mongocxx/model/replace_one.hpp>
 #include <mongocxx/uri.hpp>
 #include <msgpack.hpp>
-#include <string_utils/string_utils.hpp>
 
 #include "../clp/spdlog_with_specializations.hpp"
-#include "../clp/type_utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "CountOperator.hpp"
 #include "DeserializedRecordGroup.hpp"
 
 using boost::asio::ip::tcp;
+using std::vector;
 
 namespace reducer {
 namespace {
-std::vector<uint8_t> serialize_timeline(GroupTags const& tags, ConstRecordIterator& record_it);
+/**
+ * Serializes a record group representing a bucket of the timeline into a BSON object with two
+ * kv-pairs:
+ * - timestamp: The beginning of the bucket's time range as milliseconds since the UNIX epoch.
+ * - count: The number of records in the bucket.
+ * @param tags The tags in the record group which should contain a single tag representing the
+ * bucket's timestamp.
+ * @param record_it An iterator for the records in the record group which should point to a single
+ * record with a kv-pair, "count", indicating the bucket's count.
+ * @return The serialized data.
+ */
+vector<uint8_t> serialize_timeline_result(GroupTags const& tags, ConstRecordIterator& record_it);
 
-std::vector<uint8_t> serialize_timeline(GroupTags const& tags, ConstRecordIterator& record_it) {
+vector<uint8_t> serialize_timeline_result(GroupTags const& tags, ConstRecordIterator& record_it) {
     nlohmann::json json;
     json["timestamp"] = std::stoll(tags.front());
     auto records = nlohmann::json::array();
 
     int64_t count = 0;
     for (; false == record_it.done(); record_it.next()) {
-        count = record_it.get().get_int64_value(
-                static_cast<char const*>(CountOperator::cRecordElementKey)
-        );
+        count = record_it.get().get_int64_value("count");
     }
     json["count"] = count;
 
@@ -42,19 +49,15 @@ std::vector<uint8_t> serialize_timeline(GroupTags const& tags, ConstRecordIterat
 }
 }  // namespace
 
-// TODO: We should use tcp::v6 and set ip::v6_only to false. But this isn't
-// guaranteed to work, so for now, we use v4 to be safe.
+// TODO: We should use tcp::v6 and set ip::v6_only to false, but this isn't guaranteed to work; so
+// for now, we use v4 to be safe.
 ServerContext::ServerContext(CommandLineArguments& args)
-        : m_tcp_acceptor(m_ioctx, tcp::endpoint(tcp::v4(), args.get_reducer_port())),
-          m_scheduler_socket(m_ioctx),
-          m_upsert_timer(m_ioctx),
-          m_reducer_host(args.get_reducer_host()),
-          m_reducer_port(args.get_reducer_port()),
-          m_polling_interval_ms(args.get_polling_interval()),
-          m_pipeline(nullptr),
-          m_status(ServerStatus::Idle),
-          m_job_id(-1),
-          m_timeline_aggregation(false) {
+        : m_tcp_acceptor{m_ioctx, tcp::endpoint(tcp::v4(), args.get_reducer_port())},
+          m_scheduler_socket{m_ioctx},
+          m_upsert_timer{m_ioctx},
+          m_reducer_host{args.get_reducer_host()},
+          m_reducer_port{args.get_reducer_port()},
+          m_polling_interval_ms{args.get_polling_interval()} {
     mongocxx::uri mongodb_uri = mongocxx::uri(args.get_mongodb_uri());
     try {
         m_mongodb_client = mongocxx::client(mongodb_uri);
@@ -66,21 +69,18 @@ ServerContext::ServerContext(CommandLineArguments& args)
 }
 
 void ServerContext::set_up_pipeline(nlohmann::json const& query_config) {
-    m_job_id = query_config[JobAttributes::cJobId];
+    m_job_id = query_config[cJobAttributes::JobId];
 
-    SPDLOG_INFO("Taking job {}", m_job_id);
+    SPDLOG_INFO("Setting up pipeline for job {}", m_job_id);
 
-    // TODO: create a more robust method to specify reducer jobs and create pipelines
-    if (query_config.count(JobAttributes::cBucketSize)) {
-        m_timeline_aggregation = true;
-    } else {
-        m_timeline_aggregation = false;
-    }
-
-    // TODO: For now all pipelines only perform count. We will need to implement more
-    // general pipeline initialization once more operators are implemented.
+    // For now, all pipelines only perform count and optionally, group-by time and count for the
+    // timeline aggregation.
+    // TODO: We'll need to implement more general pipeline initialization once more operators are
+    // needed.
     m_pipeline = std::make_unique<Pipeline>(PipelineInputMode::IntraStage);
     m_pipeline->add_pipeline_stage(std::make_shared<CountOperator>());
+
+    m_is_timeline_aggregation = query_config.count(cJobAttributes::BucketSize) > 0;
 
     auto collection_name = std::to_string(m_job_id);
     m_mongodb_results_collection = m_mongodb_results_database[collection_name];
@@ -89,9 +89,9 @@ void ServerContext::set_up_pipeline(nlohmann::json const& query_config) {
 bool ServerContext::ack_search_scheduler() {
     boost::system::error_code e;
     char const scheduler_response = 'y';
-    m_scheduler_socket.write_some(boost::asio::buffer(&scheduler_response, 1), e);
+    boost::asio::write(m_scheduler_socket, boost::asio::buffer(&scheduler_response, 1), e);
     if (e) {
-        SPDLOG_INFO("Failed to notify search scheduler - {}", e.message());
+        SPDLOG_ERROR("Failed to notify search scheduler - {}", e.message());
         return false;
     }
     return true;
@@ -102,80 +102,94 @@ bool ServerContext::upsert_timeline_results() {
         return true;
     }
 
-    auto bulk_write = m_mongodb_results_collection.create_bulk_write();
-
     bool any_updates = false;
-    std::vector<std::vector<uint8_t>> results;
-    for (auto group_it = m_pipeline->finish(m_updated_tags); !group_it->done(); group_it->next()) {
-        int64_t timestamp = std::stoll(group_it->get().get_tags()[0]);
+    auto bulk_write = m_mongodb_results_collection.create_bulk_write();
+    vector<vector<uint8_t>> results;
+    for (auto group_it = m_pipeline->finish(m_updated_tags); false == group_it->done();
+         group_it->next())
+    {
+        int64_t timestamp{std::stoll(group_it->get().get_tags().front())};
+
         auto& group = group_it->get();
-        results.push_back(serialize_timeline(group.get_tags(), group.record_iter()));
-        std::vector<uint8_t>& encoded_result = results.back();
-        mongocxx::model::replace_one replace_op(
+        results.emplace_back(serialize_timeline_result(group.get_tags(), group.record_iter()));
+
+        auto& result = results.back();
+        mongocxx::model::replace_one replace_op{
                 bsoncxx::builder::basic::make_document(
                         bsoncxx::builder::basic::kvp("timestamp", timestamp)
                 ),
-                bsoncxx::document::view(encoded_result.data(), encoded_result.size())
-        );
+                bsoncxx::document::view{result.data(), result.size()}
+        };
         replace_op.upsert(true);
         bulk_write.append(replace_op);
+
         any_updates = true;
     }
-
     try {
         if (any_updates) {
             bulk_write.execute();
             m_updated_tags.clear();
         }
     } catch (mongocxx::bulk_write_exception const& e) {
-        SPDLOG_ERROR("MongoDB bulk write exception during upsert: {}", e.what());
+        SPDLOG_ERROR("Failed to upsert timeline results - {}", e.what());
         return false;
     }
+
     return true;
 }
 
 bool ServerContext::publish_pipeline_results() {
-    std::vector<std::vector<uint8_t>> results;
-    std::vector<bsoncxx::document::view> result_documents;
-    for (auto group_it = m_pipeline->finish(); !group_it->done(); group_it->next()) {
+    vector<vector<uint8_t>> results;
+    vector<bsoncxx::document::view> result_documents;
+    for (auto group_it = m_pipeline->finish(); false == group_it->done(); group_it->next()) {
         auto& group = group_it->get();
         results.push_back(serialize(group.get_tags(), group.record_iter(), nlohmann::json::to_bson)
         );
-        std::vector<uint8_t>& encoded_result = results.back();
-        result_documents.push_back(
-                bsoncxx::document::view(encoded_result.data(), encoded_result.size())
-        );
-    }
 
+        vector<uint8_t>& encoded_result = results.back();
+        result_documents.emplace_back(encoded_result.data(), encoded_result.size());
+    }
     try {
         if (result_documents.empty() == false) {
             m_mongodb_results_collection.insert_many(result_documents);
         }
     } catch (mongocxx::bulk_write_exception const& e) {
-        SPDLOG_ERROR("MongoDB bulk write exception during while dumping results: {}", e.what());
+        SPDLOG_ERROR("Failed to publish pipeline results - {}", e.what());
         return false;
     }
+
     return true;
 }
 
 bool ServerContext::try_finalize_results() {
-    if (ServerStatus::ReceivedAllResults == m_status && 0 == m_remaining_receiver_tasks) {
-        bool pushed_results_succesfully{false};
-        if (m_timeline_aggregation) {
-            pushed_results_succesfully = upsert_timeline_results();
-        } else {
-            pushed_results_succesfully = publish_pipeline_results();
-        }
-
-        if (false == pushed_results_succesfully) {
-            SPDLOG_ERROR("Failed to push results to results cache");
-            return false;
-        }
-
-        // notify the search scheduler that the results have been pushed
-        return ack_search_scheduler();
+    if (ServerStatus::Running == m_status) {
+        // The pipeline's still running
+        return true;
+    } else if (ServerStatus::ReceivedAllResults != m_status) {
+        // The pipeline isn't running
+        return false;
     }
-    return true;
+    if (m_num_active_receiver_tasks > 0) {
+        // We haven't received all results yet
+        return true;
+    }
+
+    bool published_results_successfully
+            = m_is_timeline_aggregation ? upsert_timeline_results() : publish_pipeline_results();
+    if (false == published_results_successfully) {
+        SPDLOG_ERROR("Failed to publish results to results cache.");
+        return false;
+    }
+
+    // Notify the search scheduler that the results have been pushed
+    return ack_search_scheduler();
+}
+
+void ServerContext::push_record_group(GroupTags const& tags, ConstRecordIterator& record_it) {
+    if (m_is_timeline_aggregation) {
+        m_updated_tags.insert(tags);
+    }
+    m_pipeline->push_record_group(tags, record_it);
 }
 
 void ServerContext::reset() {
@@ -183,13 +197,14 @@ void ServerContext::reset() {
     m_pipeline.reset(nullptr);
     m_status = ServerStatus::Idle;
     m_job_id = -1;
-    m_timeline_aggregation = false;
+    m_is_timeline_aggregation = false;
     m_updated_tags.clear();
-    m_remaining_receiver_tasks = 0;
+    m_num_active_receiver_tasks = 0;
 }
 
-void ServerContext::decrement_remaining_receiver_tasks() {
-    if (0 == --m_remaining_receiver_tasks && ServerStatus::ReceivedAllResults == m_status) {
+void ServerContext::decrement_num_active_receiver_tasks() {
+    --m_num_active_receiver_tasks;
+    if (0 == m_num_active_receiver_tasks && ServerStatus::ReceivedAllResults == m_status) {
         if (false == try_finalize_results()) {
             m_status = ServerStatus::UnrecoverableFailure;
         }
@@ -206,23 +221,30 @@ bool ServerContext::register_with_scheduler(
         return false;
     }
 
+    boost::system::error_code error;
+
     nlohmann::json reducer_advertisement;
     reducer_advertisement["host"] = m_reducer_host;
     reducer_advertisement["port"] = m_reducer_port;
     auto serialized_advertisement = nlohmann::json::to_msgpack(reducer_advertisement);
-    size_t message_size = serialized_advertisement.size();
-    boost::system::error_code error;
-    m_scheduler_socket.write_some(boost::asio::buffer(&message_size, sizeof(message_size)), error);
+    auto message_size = serialized_advertisement.size();
+
+    boost::asio::write(
+            m_scheduler_socket,
+            boost::asio::buffer(&message_size, sizeof(message_size)),
+            error
+    );
     if (error) {
         m_scheduler_socket.close();
         return false;
     }
 
-    m_scheduler_socket.write_some(boost::asio::buffer(serialized_advertisement), error);
+    boost::asio::write(m_scheduler_socket, boost::asio::buffer(serialized_advertisement), error);
     if (error) {
         m_scheduler_socket.close();
         return false;
     }
+
     return true;
 }
 

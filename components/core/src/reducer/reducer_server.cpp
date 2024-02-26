@@ -91,7 +91,7 @@ struct ReceiveTask {
 
         // if no new bytes terminate
         if (0 == bytes_remaining || ServerStatus::Running != rctx->ctx->get_status()) {
-            rctx->ctx->decrement_remaining_receiver_tasks();
+            rctx->ctx->decrement_num_active_receiver_tasks();
             return;
         }
 
@@ -108,7 +108,7 @@ struct ReceiveTask {
             // terminate if record group size is over 16MB
             if (record_size >= cMaxRecordSize) {
                 SPDLOG_ERROR("Record too large: {}B", record_size);
-                rctx->ctx->decrement_remaining_receiver_tasks();
+                rctx->ctx->decrement_num_active_receiver_tasks();
                 return;
             }
 
@@ -140,7 +140,7 @@ struct ReceiveTask {
         if (false == error.failed()) {
             queue_receive_task(std::move(rctx));
         } else {
-            rctx->ctx->decrement_remaining_receiver_tasks();
+            rctx->ctx->decrement_num_active_receiver_tasks();
         }
     }
 
@@ -169,7 +169,7 @@ struct ValidateSenderTask {
             || ServerStatus::Running != rctx->ctx->get_status())
         {
             SPDLOG_ERROR("Rejecting connection because of connection error");
-            rctx->ctx->decrement_remaining_receiver_tasks();
+            rctx->ctx->decrement_num_active_receiver_tasks();
             return;
         }
 
@@ -178,7 +178,7 @@ struct ValidateSenderTask {
 
         if (bytes_remaining > sizeof(int32_t)) {
             SPDLOG_ERROR("Rejecting connection because of invalid negotiation");
-            rctx->ctx->decrement_remaining_receiver_tasks();
+            rctx->ctx->decrement_num_active_receiver_tasks();
             return;
         } else if (bytes_remaining == sizeof(int32_t)) {
             int32_t job_id = 0;
@@ -190,7 +190,7 @@ struct ValidateSenderTask {
                         job_id,
                         rctx->ctx->get_job_id()
                 );
-                rctx->ctx->decrement_remaining_receiver_tasks();
+                rctx->ctx->decrement_num_active_receiver_tasks();
                 return;
             }
             rctx->bytes_occupied = 0;
@@ -201,7 +201,7 @@ struct ValidateSenderTask {
             if (e || transferred < sizeof(response)) {
                 SPDLOG_ERROR("Rejecting connection because of connection error while attempting to "
                              "send acceptance");
-                rctx->ctx->decrement_remaining_receiver_tasks();
+                rctx->ctx->decrement_num_active_receiver_tasks();
                 return;
             }
 
@@ -217,7 +217,7 @@ private:
 };
 
 void queue_validate_sender_task(std::shared_ptr<RecordReceiverContext> rctx) {
-    rctx->ctx->increment_remaining_receiver_tasks();
+    rctx->ctx->increment_num_active_receiver_tasks();
     boost::asio::async_read(
             rctx->socket,
             boost::asio::buffer(

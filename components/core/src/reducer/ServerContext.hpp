@@ -22,10 +22,10 @@ enum class ServerStatus : uint8_t {
     UnrecoverableFailure
 };
 
-namespace JobAttributes {
-char const cJobId[] = "job_id";
-char const cBucketSize[] = "bucket_size";
-}  // namespace JobAttributes
+namespace cJobAttributes {
+constexpr char JobId[] = "job_id";
+constexpr char BucketSize[] = "bucket_size";
+}  // namespace cJobAttributes
 
 /**
  * Class which manages interactions with the jobs database and result cache database. Also holds
@@ -51,8 +51,7 @@ public:
 
     // Methods
     /**
-     * Execute the server event loop until no tasks remain.
-     * @return
+     * Executes the server event loop until no tasks remain.
      */
     void run() { m_ioctx.run(); }
 
@@ -62,7 +61,7 @@ public:
 
     [[nodiscard]] int get_polling_interval() const { return m_polling_interval_ms; }
 
-    [[nodiscard]] bool is_timeline_aggregation() const { return m_timeline_aggregation; }
+    [[nodiscard]] bool is_timeline_aggregation() const { return m_is_timeline_aggregation; }
 
     [[nodiscard]] std::string const& get_reducer_host() const { return m_reducer_host; }
 
@@ -75,103 +74,93 @@ public:
     void set_status(ServerStatus new_status) { m_status = new_status; }
 
     /**
-     * Take in a query configuration and configure the in memory aggregation pipeline
+     * Sets up an in-memory aggregation pipeline according to the given query config.
+     * @param query_config
      */
     void set_up_pipeline(nlohmann::json const& query_config);
 
     /**
-     * Synchronously send a generic ack message to the search scheduler.
-     * @return true if the ack is sent succesfully
-     * @return false on any error
+     * Synchronously sends a generic acknowledgement to the search scheduler.
+     * @return Whether the acknowledgement was sent successfully.
      */
     bool ack_search_scheduler();
 
     /**
-     * Upsert the current set of results from the reducer pipeline to MongoDB and clear the tags
-     * updated in the last period.
-     * Executed repeatedly in the main polling loop while running a reduction pipeline that is set
-     * to periodically upsert results.
-     * @return true on success
-     * @return false on any error
+     * Upserts the current set of timeline entries from the reducer pipeline to MongoDB and clears
+     * the tags that were updated in the last period. This method is executed repeatedly in the main
+     * polling loop while running a reduction pipeline that is set to periodically upsert results.
+     * @return Whether the upsert succeeded (or was unnecessary).
      */
     bool upsert_timeline_results();
 
     /**
-     * Publish final reducer pipeline results to MongoDB.
-     * @return true if the insert succeeds, false on failure
+     * Publishes the reducer pipeline results to MongoDB.
+     * @return Whether the publication succeeded.
      */
     bool publish_pipeline_results();
 
     /**
-     * If all results have been received then this function tries to push results to the results
-     * cache and notify the search scheduler. If there are still results in flight then this
-     * function will succeed silently.
+     * If all results have been received then this function tries to publish the pipeline's results
+     * to the results cache and notify the search scheduler.
+     * @return true if not all results have been received yet, or the results were published
+     * successfully.
+     * @return false otherwise.
      */
     bool try_finalize_results();
 
     /**
-     * Pushes a group of records into the current local reducer pipeline. If this reducer
-     * pipeline is periodically upserting results this function will also keep track of which
-     * tags have been updated in the last period.
-     * @param group_tags tags for the group being pushed
-     * @param record_it a const iterator over all records in the record group being pushed
-     * @return
+     * Pushes a record group into the reducer pipeline.
+     * @param group_tags The tags in the record group.
+     * @param record_it An iterator for the records in the record group.
      */
-    void push_record_group(GroupTags const& tags, ConstRecordIterator& record_it) {
-        if (m_timeline_aggregation) {
-            m_updated_tags.insert(tags);
-        }
-        m_pipeline->push_record_group(tags, record_it);
-    }
+    void push_record_group(GroupTags const& tags, ConstRecordIterator& record_it);
 
     /**
-     * Reset all state in the ServerContext. Must be called between invocations
-     * of run().
-     * @return
+     * Resets all state in the ServerContext. This method must be called between invocations of
+     * run().
      */
     void reset();
 
     /**
-     * Increment the counter tracking the number of active receiver tasks which may possibly receive
-     * some results.
+     * Increments the number of active receiver tasks which may receive some results.
      */
-    void increment_remaining_receiver_tasks() { ++m_remaining_receiver_tasks; }
+    void increment_num_active_receiver_tasks() { ++m_num_active_receiver_tasks; }
 
     /**
-     * Decrement the counter tracking the number of active receiver tasks which may possibly receive
-     * some results. If the counter hits zero, and the server is in state ReceivedAllResults then
-     * the results of the aggregation are uploaded to the results cache, and the scheduler is
-     * notified of task completion.
+     * Decrements the number of active receiver tasks, and calls try_finalize_results if the server
+     * is in the state ReceivedAllResults and there are no remaining active receiver tasks.
      */
-    void decrement_remaining_receiver_tasks();
+    void decrement_num_active_receiver_tasks();
 
     /**
-     * Opens a connection between this reducer and the scheduler
-     * @param endpoint an endpoint that can be used to connect to the scheduler
-     * @return true if a connection is opened succesfully
+     * Opens a connection between this reducer and the scheduler.
+     * @param endpoint An endpoint that can be used to connect to the scheduler.
+     * @return Whether a connection was opened successfully.
      */
     bool register_with_scheduler(boost::asio::ip::tcp::resolver::results_type const& endpoint);
 
     /**
-     * @return a reference to the tcp socket used to communicate with the search scheduler
+     * @return A reference to the tcp socket used to communicate with the search scheduler.
      */
     boost::asio::ip::tcp::socket& get_scheduler_update_socket() { return m_scheduler_socket; }
 
     /**
-     * @return a reference to the buffer used to receive messages from the search scheduler
+     * @return A reference to the buffer used to receive messages from the search scheduler.
      */
     std::vector<char>& get_scheduler_update_buffer() { return m_scheduler_update_buffer; }
 
     /**
-     * @return a reference to the timer object used to periodically upsert results to the results
-     * cache
+     * @return A reference to the timer object used to periodically upsert results to the results
+     * cache.
      */
     boost::asio::steady_timer& get_upsert_timer() { return m_upsert_timer; }
 
     /**
-     * Stop the event loop by closing the connection with the scheduler, and cancelling any ongoing
-     * operations on this server's listener socket. There may be a short period where periodic tasks
-     * and results receivers keep running before the event loop exits.
+     * Stops the event loop by closing the connection to the scheduler, and cancelling any ongoing
+     * operations on this server's listener socket.
+     *
+     * NOTE: There may be a short period where periodic tasks and results receivers keep running
+     * before the event loop exits.
      */
     void stop_event_loop();
 
@@ -179,20 +168,25 @@ private:
     boost::asio::io_context m_ioctx;
     boost::asio::ip::tcp::acceptor m_tcp_acceptor;
     boost::asio::ip::tcp::socket m_scheduler_socket;
-    boost::asio::steady_timer m_upsert_timer;
     std::vector<char> m_scheduler_update_buffer;
-    std::unique_ptr<Pipeline> m_pipeline;
-    ServerStatus m_status;
-    int64_t m_job_id;
+
+    std::string m_reducer_host;
     int m_reducer_port;
+    int m_num_active_receiver_tasks{0};
+
+    ServerStatus m_status{ServerStatus::Idle};
+    int64_t m_job_id{-1};
+
+    std::unique_ptr<Pipeline> m_pipeline;
+    bool m_is_timeline_aggregation{false};
+    std::set<GroupTags> m_updated_tags;
+
+    boost::asio::steady_timer m_upsert_timer;
+    int m_polling_interval_ms;
+
     mongocxx::client m_mongodb_client;
     mongocxx::database m_mongodb_results_database;
     mongocxx::collection m_mongodb_results_collection;
-    std::string m_reducer_host;
-    bool m_timeline_aggregation;
-    std::set<GroupTags> m_updated_tags;
-    int m_polling_interval_ms;
-    int m_remaining_receiver_tasks{0};
 };
 
 }  // namespace reducer
