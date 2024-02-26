@@ -45,4 +45,4 @@ private:
 };
 }  // namespace reducer
 
-#endif  // CLP_CLP_COMMANDLINEARGUMENTS_HPP
+#endif  // REDUCER_COMMANDLINEARGUMENTS_HPP

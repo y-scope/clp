@@ -1,5 +1,5 @@
-#ifndef CLP_AGGREGATION_PIPELINE_HPP
-#define CLP_AGGREGATION_PIPELINE_HPP
+#ifndef REDUCER_PIPELINE_HPP
+#define REDUCER_PIPELINE_HPP
 
 #include <memory>
 #include <set>
@@ -38,4 +38,4 @@ private:
 };
 }  // namespace reducer
 
-#endif  // CLP_AGGREGATION_PIPELINE_HPP
+#endif  // REDUCER_PIPELINE_HPP

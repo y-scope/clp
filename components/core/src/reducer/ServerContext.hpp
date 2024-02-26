@@ -1,5 +1,5 @@
-#ifndef REDUCER_REDUCER_SERVER
-#define REDUCER_REDUCER_SERVER
+#ifndef REDUCER_SERVERCONTEXT_HPP
+#define REDUCER_SERVERCONTEXT_HPP
 
 #include <optional>
 #include <set>
@@ -181,4 +181,4 @@ private:
 
 }  // namespace reducer
 
-#endif  // REDUCER_REDUCER_SERVER
+#endif  // REDUCER_SERVERCONTEXT_HPP

@@ -1,5 +1,5 @@
-#ifndef CLP_AGGREGATION_RECORD_GROUP_SERDES_HPP
-#define CLP_AGGREGATION_RECORD_GROUP_SERDES_HPP
+#ifndef REDUCER_DESERIALIZEDRECORDGROUP_HPP
+#define REDUCER_DESERIALIZEDRECORDGROUP_HPP
 
 #include <iostream>
 #include <utility>
@@ -56,4 +56,4 @@ std::vector<uint8_t> serialize(
 );
 }  // namespace reducer
 
-#endif  // CLP_AGGREGATION_RECORD_GROUP_SERDES_HPP
+#endif  // REDUCER_DESERIALIZEDRECORDGROUP_HPP

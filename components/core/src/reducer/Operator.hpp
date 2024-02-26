@@ -1,5 +1,5 @@
-#ifndef CLP_AGGREGATION_OPERATOR_HPP
-#define CLP_AGGREGATION_OPERATOR_HPP
+#ifndef REDUCER_OPERATOR_HPP
+#define REDUCER_OPERATOR_HPP
 
 #include <memory>
 #include <set>
@@ -66,4 +66,4 @@ protected:
 };
 }  // namespace reducer
 
-#endif  // CLP_AGGREGATION_OPERATOR_HPP
+#endif  // REDUCER_OPERATOR_HPP

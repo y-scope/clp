@@ -1,5 +1,5 @@
-#ifndef CLP_AGGREGATION_RECORDIT_HPP
-#define CLP_AGGREGATION_RECORDIT_HPP
+#ifndef REDUCER_CONSTRECORDITERATOR_HPP
+#define REDUCER_CONSTRECORDITERATOR_HPP
 
 #include <map>
 #include <utility>
@@ -89,4 +89,4 @@ private:
 };
 }  // namespace reducer
 
-#endif  // CLP_AGGREGATION_RECORDIT_HPP
+#endif  // REDUCER_CONSTRECORDITERATOR_HPP

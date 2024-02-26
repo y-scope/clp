@@ -1,5 +1,5 @@
-#ifndef CLP_AGGREGATION_GROUPTAGS_HPP
-#define CLP_AGGREGATION_GROUPTAGS_HPP
+#ifndef REDUCER_GROUPTAGS_HPP
+#define REDUCER_GROUPTAGS_HPP
 
 #include <string>
 #include <vector>
@@ -9,4 +9,4 @@ namespace reducer {
 using GroupTags = std::vector<std::string>;
 }  // namespace reducer
 
-#endif  // CLP_AGGREGATION_GROUPTAGS_HPP
+#endif  // REDUCER_GROUPTAGS_HPP

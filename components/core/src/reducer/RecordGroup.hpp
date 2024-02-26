@@ -1,5 +1,5 @@
-#ifndef CLP_AGGREGATION_RECORDGROUP_HPP
-#define CLP_AGGREGATION_RECORDGROUP_HPP
+#ifndef REDUCER_RECORDGROUP_HPP
+#define REDUCER_RECORDGROUP_HPP
 
 #include <iostream>
 #include <memory>
@@ -88,4 +88,4 @@ private:
 };
 }  // namespace reducer
 
-#endif  // CLP_AGGREGATION_RECORDGROUP_HPP
+#endif  // REDUCER_RECORDGROUP_HPP

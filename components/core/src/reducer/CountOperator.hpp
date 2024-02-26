@@ -1,5 +1,5 @@
-#ifndef CLP_AGGREGATION_COUNT_OPERATOR_HPP
-#define CLP_AGGREGATION_COUNT_OPERATOR_HPP
+#ifndef REDUCER_COUNTOPERATOR_HPP
+#define REDUCER_COUNTOPERATOR_HPP
 
 #include <map>
 #include <string>
@@ -31,4 +31,4 @@ private:
 };
 }  // namespace reducer
 
-#endif  // CLP_AGGREGATION_COUNT_OPERATOR_HPP
+#endif  // REDUCER_COUNTOPERATOR_HPP

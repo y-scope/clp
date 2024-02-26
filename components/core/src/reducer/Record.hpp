@@ -1,5 +1,5 @@
-#ifndef CLP_AGGREGATION_RECORD_HPP
-#define CLP_AGGREGATION_RECORD_HPP
+#ifndef REDUCER_RECORD_HPP
+#define REDUCER_RECORD_HPP
 
 #include <cstdint>
 #include <memory>
@@ -104,4 +104,4 @@ public:
 };
 }  // namespace reducer
 
-#endif  // CLP_AGGREGATION_RECORD_HPP
+#endif  // REDUCER_RECORD_HPP
