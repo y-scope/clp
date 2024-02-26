@@ -39,7 +39,7 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def stop_running_container(container_name: str, exited_container: list, force: bool):
+def stop_running_container(container_name: str, exited_container: list[str], force: bool):
     if is_container_running(container_name):
         logger.info(f"Stopping {container_name}...")
         cmd = ["docker", "stop", container_name]
@@ -48,10 +48,11 @@ def stop_running_container(container_name: str, exited_container: list, force: b
         logger.info(f"Removing {container_name}...")
         cmd = ["docker", "rm", container_name]
         subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
-        logger.info(f"Stopped and Removed {container_name}.")
+
+        logger.info(f"Stopped and removed {container_name}.")
     elif is_container_exited(container_name):
         if force:
-            logger.info(f"Force removing exited {container_name}...")
+            logger.info(f"Forcibly removing exited {container_name}...")
             cmd = ["docker", "rm", container_name]
             subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
             logger.info(f"Removed {container_name}...")
@@ -74,7 +75,7 @@ def main(argv):
         "--force",
         "-f",
         action="store_true",
-        help="Force remove exited containers",
+        help="Forcibly remove exited containers",
     )
 
     component_args_parser = args_parser.add_subparsers(dest="target")
@@ -130,7 +131,7 @@ def main(argv):
         with open(instance_id_file_path, "r") as f:
             instance_id = f.readline()
 
-        exited_container = list()
+        exited_container = []
         force = parsed_args.force
         if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, WEBUI_COMPONENT_NAME):
             container_name = f"clp-{WEBUI_COMPONENT_NAME}-{instance_id}"
@@ -184,7 +185,8 @@ def main(argv):
         if exited_container:
             container_list = " ".join(exited_container)
             logger.warning(
-                f"The following containers have exited and were not removed: {container_list}"
+                f"The following containers have already exited and were not removed:"
+                f" {container_list}"
             )
             logger.warning(f"Run with --force to manually remove them")
         elif target in ALL_TARGET_NAME:
