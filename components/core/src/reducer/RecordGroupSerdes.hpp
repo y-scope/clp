@@ -8,45 +8,13 @@
 #include <json/single_include/nlohmann/json.hpp>
 
 #include "ConstRecordIterator.hpp"
+#include "JsonArrayRecordIterator.hpp"
 #include "JsonRecord.hpp"
 #include "Record.hpp"
 #include "RecordGroup.hpp"
 #include "RecordTypedKeyIterator.hpp"
 
 namespace reducer {
-/**
- * A ConstRecordIterator over a JsonRecord.
- */
-class DeserializedRecordIterator : public ConstRecordIterator {
-public:
-    explicit DeserializedRecordIterator(nlohmann::json::array_t json_records)
-            : m_json_records{std::move(json_records)},
-              m_record{m_cur_json_record},
-              m_json_records_it{m_json_records.begin()} {
-        if (m_json_records_it != m_json_records.end()) {
-            m_cur_json_record = *m_json_records_it;
-            m_record = JsonRecord{m_cur_json_record};
-        }
-    }
-
-    [[nodiscard]] Record const& get() const override {
-        return m_record;
-    }
-
-    void next() override {
-        ++m_json_records_it;
-        m_record = JsonRecord{*m_json_records_it};
-    }
-
-    bool done() override { return m_json_records_it == m_json_records.end(); }
-
-private:
-    nlohmann::json::array_t m_json_records;
-    nlohmann::json::array_t::iterator m_json_records_it;
-    nlohmann::json m_cur_json_record;
-    JsonRecord m_record;
-};
-
 /**
  * Class which converts serialized data into a RecordGroup and exposes iterators to the underlying
  * data.
@@ -71,7 +39,7 @@ private:
 
     GroupTags m_tags;
     nlohmann::json m_record_group;
-    DeserializedRecordIterator m_record_it;
+    JsonArrayRecordIterator m_record_it;
 };
 
 std::vector<uint8_t> serialize(
