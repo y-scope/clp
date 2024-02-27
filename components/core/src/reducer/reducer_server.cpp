@@ -44,9 +44,7 @@ struct RecordReceiverContext {
               socket(ctx->get_io_context()),
               buf(cMinBufSize) {}
 
-    ~RecordReceiverContext() {
-        socket.close();
-    }
+    ~RecordReceiverContext() { socket.close(); }
 
     // Disallow copy and move
     RecordReceiverContext(RecordReceiverContext const&) = delete;
