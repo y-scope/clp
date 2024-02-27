@@ -13,10 +13,12 @@ import uuid
 
 import yaml
 from clp_py_utils.clp_config import (
+    ALL_TARGET_NAME,
     CLP_METADATA_TABLE_PREFIX,
     CLPConfig,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
+    CONTROLLER_TARGET_NAME,
     DB_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
@@ -34,11 +36,12 @@ from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLPDockerMounts,
     CONTAINER_CLP_HOME,
-    container_exists,
     DockerMount,
     DockerMountType,
     generate_container_config,
     get_clp_home,
+    is_container_exited,
+    is_container_running,
     validate_and_load_config_file,
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file,
@@ -62,6 +65,16 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
+def container_exists(container_name):
+    if is_container_running(container_name):
+        logger.info(f"{container_name} already running.")
+        return True
+    elif is_container_exited(container_name):
+        logger.info(f"{container_name} exited but not removed.")
+        return True
+    return False
+
+
 def append_docker_port_settings_for_host_ips(
     hostname: str, host_port: int, container_port: int, cmd: [str]
 ):
@@ -71,43 +84,36 @@ def append_docker_port_settings_for_host_ips(
         cmd.append(f"{ip}:{host_port}:{container_port}")
 
 
-def wait_for_database_to_init(container_name: str, clp_config: CLPConfig, timeout: int):
-    # Try to connect to the database
+def wait_for_container_cmd(container_name: str, cmd_to_run: [str], timeout: int):
+    container_exec_cmd = ["docker", "exec", container_name]
+    cmd = container_exec_cmd + cmd_to_run
+
     begin_time = time.time()
-    container_exec_cmd = ["docker", "exec", "-it", container_name]
-    # fmt: off
-    mysqladmin_cmd = [
-        "mysqladmin", "ping",
-        "--silent",
-        "-h", "127.0.0.1",
-        "-u", str(clp_config.database.username),
-        f"--password={clp_config.database.password}",
-    ]
-    # fmt: on
-    cmd = container_exec_cmd + mysqladmin_cmd
+
     while True:
         try:
-            subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
             return True
         except subprocess.CalledProcessError:
             if time.time() - begin_time > timeout:
                 break
             time.sleep(1)
 
-    logger.error(f"Timeout while waiting for {DB_COMPONENT_NAME} to initialize.")
+    cmd_str = " ".join(cmd_to_run)
+    logger.error(f"Timeout while waiting for command {cmd_str} to run after {timeout} seconds")
     return False
 
 
 def start_db(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
-    logger.info(f"Starting {DB_COMPONENT_NAME}...")
+    component_name = DB_COMPONENT_NAME
+    logger.info(f"Starting {component_name}...")
 
-    container_name = f"clp-{DB_COMPONENT_NAME}-{instance_id}"
+    container_name = f"clp-{component_name}-{instance_id}"
     if container_exists(container_name):
-        logger.info(f"{DB_COMPONENT_NAME} already running.")
         return
 
-    db_data_dir = clp_config.data_directory / DB_COMPONENT_NAME
-    db_logs_dir = clp_config.logs_directory / DB_COMPONENT_NAME
+    db_data_dir = clp_config.data_directory / component_name
+    db_logs_dir = clp_config.logs_directory / component_name
 
     validate_db_config(clp_config, db_data_dir, db_logs_dir)
 
@@ -130,7 +136,6 @@ def start_db(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
     cmd = [
         "docker", "run",
         "-d",
-        "--rm",
         "--name", container_name,
         "-e", f"MYSQL_ROOT_PASSWORD={clp_config.database.password}",
         "-e", f"MYSQL_USER={clp_config.database.username}",
@@ -151,10 +156,20 @@ def start_db(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
         cmd.append("mariadb:10.6.4-focal")
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
-    if not wait_for_database_to_init(container_name, clp_config, 30):
-        raise EnvironmentError(f"{DB_COMPONENT_NAME} did not initialize in time")
+    # fmt: off
+    mysqladmin_cmd = [
+        "mysqladmin", "ping",
+        "--silent",
+        "-h", "127.0.0.1",
+        "-u", str(clp_config.database.username),
+        f"--password={clp_config.database.password}",
+    ]
+    # fmt: on
 
-    logger.info(f"Started {DB_COMPONENT_NAME}.")
+    if not wait_for_container_cmd(container_name, mysqladmin_cmd, 180):
+        raise EnvironmentError(f"{component_name} did not initialize in time")
+
+    logger.info(f"Started {component_name}.")
 
 
 def create_db_tables(
@@ -163,9 +178,10 @@ def create_db_tables(
     container_clp_config: CLPConfig,
     mounts: CLPDockerMounts,
 ):
-    logger.info(f"Creating {DB_COMPONENT_NAME} tables...")
+    component_name = DB_COMPONENT_NAME
+    logger.info(f"Creating {component_name} tables...")
 
-    container_name = f"clp-{DB_COMPONENT_NAME}-table-creator-{instance_id}"
+    container_name = f"clp-{component_name}-table-creator-{instance_id}"
 
     # Create database config file
     db_config_filename = f"{container_name}.yml"
@@ -208,18 +224,18 @@ def create_db_tables(
 
     db_config_file_path.unlink()
 
-    logger.info(f"Created {DB_COMPONENT_NAME} tables.")
+    logger.info(f"Created {component_name} tables.")
 
 
 def start_queue(instance_id: str, clp_config: CLPConfig):
-    logger.info(f"Starting {QUEUE_COMPONENT_NAME}...")
+    component_name = QUEUE_COMPONENT_NAME
+    logger.info(f"Starting {component_name}...")
 
-    container_name = f"clp-{QUEUE_COMPONENT_NAME}-{instance_id}"
+    container_name = f"clp-{component_name}-{instance_id}"
     if container_exists(container_name):
-        logger.info(f"{QUEUE_COMPONENT_NAME} already running.")
         return
 
-    queue_logs_dir = clp_config.logs_directory / QUEUE_COMPONENT_NAME
+    queue_logs_dir = clp_config.logs_directory / component_name
     validate_queue_config(clp_config, queue_logs_dir)
 
     log_filename = "rabbitmq.log"
@@ -251,7 +267,6 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
     cmd = [
         "docker", "run",
         "-d",
-        "--rm",
         "--name", container_name,
         # Override RABBITMQ_LOGS since the image sets it to *only* log to stdout
         "-e", f"RABBITMQ_LOGS={rabbitmq_logs_dir / log_filename}",
@@ -269,27 +284,23 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     # Wait for queue to start up
-    # fmt: off
-    cmd = [
-        "docker", "exec", "-it", container_name,
-        "rabbitmqctl", "wait", str(rabbitmq_pid_file_path),
-    ]
-    # fmt: on
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+    rabbitmq_cmd = ["rabbitmq-diagnostics", "check_running"]
+    if not wait_for_container_cmd(container_name, rabbitmq_cmd, 60):
+        raise EnvironmentError(f"{component_name} did not initialize in time")
 
-    logger.info(f"Started {QUEUE_COMPONENT_NAME}.")
+    logger.info(f"Started {component_name}.")
 
 
 def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
-    logger.info(f"Starting {REDIS_COMPONENT_NAME}...")
+    component_name = REDIS_COMPONENT_NAME
+    logger.info(f"Starting {component_name}...")
 
-    container_name = f"clp-{REDIS_COMPONENT_NAME}-{instance_id}"
+    container_name = f"clp-{component_name}-{instance_id}"
     if container_exists(container_name):
-        logger.info(f"{REDIS_COMPONENT_NAME} already running.")
         return
 
-    redis_logs_dir = clp_config.logs_directory / REDIS_COMPONENT_NAME
-    redis_data_dir = clp_config.data_directory / REDIS_COMPONENT_NAME
+    redis_logs_dir = clp_config.logs_directory / component_name
+    redis_data_dir = clp_config.data_directory / component_name
 
     base_config_file_path = conf_dir / "redis" / "redis.conf"
     validate_redis_config(clp_config, redis_data_dir, redis_logs_dir, base_config_file_path)
@@ -317,7 +328,6 @@ def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path)
     cmd = [
         "docker", "run",
         "-d",
-        "--rm",
         "--name", container_name,
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
@@ -333,19 +343,19 @@ def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path)
     cmd.append(str(config_file_path))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
-    logger.info(f"Started {REDIS_COMPONENT_NAME}.")
+    logger.info(f"Started {component_name}.")
 
 
 def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
-    logger.info(f"Starting {RESULTS_CACHE_COMPONENT_NAME}...")
+    component_name = RESULTS_CACHE_COMPONENT_NAME
+    logger.info(f"Starting {component_name}...")
 
-    container_name = f"clp-{RESULTS_CACHE_COMPONENT_NAME}-{instance_id}"
+    container_name = f"clp-{component_name}-{instance_id}"
     if container_exists(container_name):
-        logger.info(f"{RESULTS_CACHE_COMPONENT_NAME} already running.")
         return
 
-    data_dir = clp_config.data_directory / RESULTS_CACHE_COMPONENT_NAME
-    logs_dir = clp_config.logs_directory / RESULTS_CACHE_COMPONENT_NAME
+    data_dir = clp_config.data_directory / component_name
+    logs_dir = clp_config.logs_directory / component_name
 
     validate_results_cache_config(clp_config, data_dir, logs_dir)
 
@@ -363,7 +373,6 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
     cmd = [
         "docker", "run",
         "-d",
-        "--rm",
         "--name", container_name,
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
@@ -379,7 +388,7 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
     cmd.append(str(pathlib.Path("/") / "etc" / "mongo" / "mongod.conf"))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
-    logger.info(f"Started {RESULTS_CACHE_COMPONENT_NAME}.")
+    logger.info(f"Started {component_name}.")
 
 
 def start_compression_scheduler(
@@ -428,7 +437,6 @@ def generic_start_scheduler(
 
     container_name = f"clp-{component_name}-{instance_id}"
     if container_exists(container_name):
-        logger.info(f"{component_name} already running.")
         return
 
     container_config_filename = f"{container_name}.yml"
@@ -447,7 +455,6 @@ def generic_start_scheduler(
         "-di",
         "--network", "host",
         "-w", str(CONTAINER_CLP_HOME),
-        "--rm",
         "--name", container_name,
         "-e", f"PYTHONPATH={clp_site_packages_dir}",
         "-e", (
@@ -552,7 +559,6 @@ def generic_start_worker(
 
     container_name = f"clp-{component_name}-{instance_id}"
     if container_exists(container_name):
-        logger.info(f"{component_name} already running.")
         return
 
     validate_worker_config(clp_config)
@@ -571,7 +577,6 @@ def generic_start_worker(
         "-di",
         "--network", "host",
         "-w", str(CONTAINER_CLP_HOME),
-        "--rm",
         "--name", container_name,
         "-e", f"PYTHONPATH={clp_site_packages_dir}",
         "-e", (
@@ -652,14 +657,14 @@ def update_meteor_settings(
 
 
 def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts):
-    logger.info(f"Starting {WEBUI_COMPONENT_NAME}...")
+    component_name = WEBUI_COMPONENT_NAME
+    logger.info(f"Starting {component_name}...")
 
-    container_name = f"clp-{WEBUI_COMPONENT_NAME}-{instance_id}"
+    container_name = f"clp-{component_name}-{instance_id}"
     if container_exists(container_name):
-        logger.info(f"{WEBUI_COMPONENT_NAME} already running.")
         return
 
-    webui_logs_dir = clp_config.logs_directory / WEBUI_COMPONENT_NAME
+    webui_logs_dir = clp_config.logs_directory / component_name
     node_path = str(
         CONTAINER_CLP_HOME / "var" / "www" / "programs" / "server" / "npm" / "node_modules"
     )
@@ -670,7 +675,7 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
     # Create directories
     webui_logs_dir.mkdir(exist_ok=True, parents=True)
 
-    container_webui_logs_dir = pathlib.Path("/") / "var" / "log" / WEBUI_COMPONENT_NAME
+    container_webui_logs_dir = pathlib.Path("/") / "var" / "log" / component_name
     with open(settings_json_path, "r") as settings_json_file:
         meteor_settings = json.loads(settings_json_file.read())
     meteor_settings_updates = {
@@ -691,7 +696,6 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
         "docker", "run",
         "-d",
         "--network", "host",
-        "--rm",
         "--name", container_name,
         "-e", f"NODE_PATH={node_path}",
         "-e", f"MONGO_URL={clp_config.results_cache.get_uri()}",
@@ -723,7 +727,7 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
     cmd = container_cmd + node_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
-    logger.info(f"Started {WEBUI_COMPONENT_NAME}.")
+    logger.info(f"Started {component_name}.")
 
 
 def main(argv):
@@ -738,7 +742,8 @@ def main(argv):
         help="CLP package configuration file.",
     )
 
-    component_args_parser = args_parser.add_subparsers(dest="component_name")
+    component_args_parser = args_parser.add_subparsers(dest="target")
+    component_args_parser.add_parser(CONTROLLER_TARGET_NAME)
     component_args_parser.add_parser(DB_COMPONENT_NAME)
     component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
     component_args_parser.add_parser(REDIS_COMPONENT_NAME)
@@ -758,10 +763,10 @@ def main(argv):
 
     parsed_args = args_parser.parse_args(argv[1:])
 
-    if parsed_args.component_name:
-        component_name = parsed_args.component_name
+    if parsed_args.target:
+        target = parsed_args.target
     else:
-        component_name = ""
+        target = ALL_TARGET_NAME
 
     try:
         check_dependencies()
@@ -777,31 +782,34 @@ def main(argv):
         )
 
         # Validate and load necessary credentials
-        if component_name in [
-            "",
+        if target in (
+            ALL_TARGET_NAME,
+            CONTROLLER_TARGET_NAME,
             DB_COMPONENT_NAME,
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
             SEARCH_SCHEDULER_COMPONENT_NAME,
             WEBUI_COMPONENT_NAME,
-        ]:
+        ):
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
-        if component_name in [
-            "",
+        if target in (
+            ALL_TARGET_NAME,
+            CONTROLLER_TARGET_NAME,
             QUEUE_COMPONENT_NAME,
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
             SEARCH_SCHEDULER_COMPONENT_NAME,
             COMPRESSION_WORKER_COMPONENT_NAME,
             SEARCH_WORKER_COMPONENT_NAME,
-        ]:
+        ):
             validate_and_load_queue_credentials_file(clp_config, clp_home, True)
-        if component_name in [
-            "",
+        if target in (
+            ALL_TARGET_NAME,
+            CONTROLLER_TARGET_NAME,
             REDIS_COMPONENT_NAME,
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
             SEARCH_SCHEDULER_COMPONENT_NAME,
             COMPRESSION_WORKER_COMPONENT_NAME,
             SEARCH_WORKER_COMPONENT_NAME,
-        ]:
+        ):
             validate_and_load_redis_credentials_file(clp_config, clp_home, True)
 
         clp_config.validate_data_dir()
@@ -813,9 +821,9 @@ def main(argv):
     # Get the number of CPU cores to use
     num_cpus = multiprocessing.cpu_count() // 2
     if (
-        COMPRESSION_WORKER_COMPONENT_NAME == component_name
-        or SEARCH_WORKER_COMPONENT_NAME == component_name
-    ) and parsed_args.num_cpus != 0:
+        target in (COMPRESSION_WORKER_COMPONENT_NAME, SEARCH_WORKER_COMPONENT_NAME)
+        and parsed_args.num_cpus != 0
+    ):
         num_cpus = parsed_args.num_cpus
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
@@ -839,32 +847,34 @@ def main(argv):
         conf_dir = clp_home / "etc"
 
         # Start components
-        if "" == component_name or DB_COMPONENT_NAME == component_name:
+        if target in (ALL_TARGET_NAME, DB_COMPONENT_NAME):
             start_db(instance_id, clp_config, conf_dir)
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, DB_COMPONENT_NAME):
             create_db_tables(instance_id, clp_config, container_clp_config, mounts)
-        if "" == component_name or QUEUE_COMPONENT_NAME == component_name:
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUEUE_COMPONENT_NAME):
             start_queue(instance_id, clp_config)
-        if "" == component_name or REDIS_COMPONENT_NAME == component_name:
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, REDIS_COMPONENT_NAME):
             start_redis(instance_id, clp_config, conf_dir)
-        if "" == component_name or RESULTS_CACHE_COMPONENT_NAME == component_name:
+        if target in (ALL_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
             start_results_cache(instance_id, clp_config, conf_dir)
-        if "" == component_name or COMPRESSION_SCHEDULER_COMPONENT_NAME == component_name:
+        if target in (
+            ALL_TARGET_NAME,
+            CONTROLLER_TARGET_NAME,
+            COMPRESSION_SCHEDULER_COMPONENT_NAME,
+        ):
             start_compression_scheduler(instance_id, clp_config, container_clp_config, mounts)
-        if "" == component_name or SEARCH_SCHEDULER_COMPONENT_NAME == component_name:
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, SEARCH_SCHEDULER_COMPONENT_NAME):
             start_search_scheduler(instance_id, clp_config, container_clp_config, mounts)
-        if "" == component_name or COMPRESSION_WORKER_COMPONENT_NAME == component_name:
+        if target in (ALL_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
             start_compression_worker(
                 instance_id, clp_config, container_clp_config, num_cpus, mounts
             )
-        if "" == component_name or SEARCH_WORKER_COMPONENT_NAME == component_name:
+        if target in (ALL_TARGET_NAME, SEARCH_WORKER_COMPONENT_NAME):
             start_search_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
-        if "" == component_name or WEBUI_COMPONENT_NAME == component_name:
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, WEBUI_COMPONENT_NAME):
             start_webui(instance_id, clp_config, mounts)
 
     except Exception as ex:
-        # Stop CLP
-        subprocess.run([str(clp_home / "sbin" / "stop-clp.sh")], check=True)
-
         if type(ex) == ValueError:
             logger.error(f"Failed to start CLP: {ex}")
         else:

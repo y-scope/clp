@@ -3,6 +3,7 @@
 #include <iostream>
 #include <stack>
 
+#include "archive_constants.hpp"
 #include "JsonFileIterator.hpp"
 
 namespace clp_s {
@@ -30,12 +31,15 @@ JsonParser::JsonParser(JsonParserOption const& option)
     }
 
     m_schema_tree = std::make_shared<SchemaTree>();
-    m_schema_tree_path = m_archives_dir + "/schema_tree";
+    m_schema_tree_path = m_archives_dir + constants::cArchiveSchemaTreeFile;
 
     m_schema_map = std::make_shared<SchemaMap>(m_archives_dir, m_compression_level);
 
     m_timestamp_dictionary = std::make_shared<TimestampDictionaryWriter>();
-    m_timestamp_dictionary->open(m_archives_dir + "/timestamp.dict", option.compression_level);
+    m_timestamp_dictionary->open(
+            m_archives_dir + constants::cArchiveTimestampDictFile,
+            option.compression_level
+    );
 
     ArchiveWriterOption archive_writer_option;
     archive_writer_option.archives_dir = m_archives_dir;
@@ -145,10 +149,10 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 break;
             }
             case ondemand::json_type::string: {
-                // TODO (Rui): Take a look
-                std::string value = std::string(
-                        line.raw_json_token().substr(1, line.raw_json_token().size() - 2)
-                );
+                auto raw_json_token = line.raw_json_token();
+                std::string value
+                        = std::string(raw_json_token.substr(1, raw_json_token.rfind('"') - 1));
+
                 if (matches_timestamp) {
                     node_id = m_schema_tree->add_node(
                             node_id_stack.top(),

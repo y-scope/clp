@@ -3,14 +3,33 @@ These same steps are used by our Docker containers.
 
 # Installing dependencies
 
-Before you run any commands below, you should review the scripts to ensure they
-will not install any dependencies you don't expect.
+> [!WARNING]
+> Before you run any commands below, you should review the scripts to ensure they will not install
+> any dependencies or apply any configurations that you don't expect.
 
-* Install all dependencies:
+To install all dependencies, run:
 
-  ```bash
-  ./install-all.sh
-  ```
+```bash
+./install-all.sh
+```
+
+# Setup dependencies
+
+Enable GCC 10 as the default compiler by running:
+
+```bash
+update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 10
+update-alternatives --set gcc /usr/bin/gcc-10
+
+update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-10 20
+update-alternatives --set cc /usr/bin/gcc-10
+
+update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 10
+update-alternatives --set g++ /usr/bin/g++-10
+
+update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-10 20
+update-alternatives --set c++ /usr/bin/g++-10
+```
 
 # Building CLP
 

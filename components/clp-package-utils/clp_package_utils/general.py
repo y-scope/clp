@@ -108,12 +108,35 @@ def check_dependencies():
         raise EnvironmentError("docker cannot run without superuser privileges (sudo).")
 
 
-def container_exists(container_name):
-    cmd = ["docker", "ps", "-q", "-f", f"name={container_name}"]
+def is_container_running(container_name):
+    # fmt: off
+    cmd = [
+        "docker", "ps",
+        # Only return container IDs
+        "--quiet",
+        "--filter", f"name={container_name}"
+    ]
+    # fmt: on
     proc = subprocess.run(cmd, stdout=subprocess.PIPE)
-    for line in proc.stdout.decode("utf-8"):
-        if line != "":
-            return True
+    if proc.stdout.decode("utf-8"):
+        return True
+
+    return False
+
+
+def is_container_exited(container_name):
+    # fmt: off
+    cmd = [
+        "docker", "ps",
+        # Only return container IDs
+        "--quiet",
+        "--filter", f"name={container_name}",
+        "--filter", "status=exited"
+    ]
+    # fmt: on
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE)
+    if proc.stdout.decode("utf-8"):
+        return True
 
     return False
 

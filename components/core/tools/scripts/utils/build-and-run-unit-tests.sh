@@ -17,7 +17,7 @@ if [ "$#" -gt 2 ]; then
 fi
 
 cmake -S "$src_dir" -B "$build_dir"
-cmake --build "$build_dir"
+cmake --build "$build_dir" --parallel "$(nproc)"
 cd "$build_dir"
 if [ -z "${unit_tests_filter+x}" ]; then
     ./unitTest

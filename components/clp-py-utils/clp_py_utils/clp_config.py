@@ -25,6 +25,10 @@ COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 SEARCH_WORKER_COMPONENT_NAME = "search_worker"
 WEBUI_COMPONENT_NAME = "webui"
 
+# Target names
+ALL_TARGET_NAME = ""
+CONTROLLER_TARGET_NAME = "controller"
+
 SEARCH_JOBS_TABLE_NAME = "search_jobs"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
 COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"

@@ -43,28 +43,31 @@ public:
 
 class SchemaReader {
 public:
+    struct TableMetadata {
+        uint64_t num_messages;
+        size_t offset;
+    };
+
     // Constructor
-    explicit SchemaReader(std::shared_ptr<SchemaTree> schema_tree, int32_t schema_id)
-            : m_num_messages(0),
+    explicit SchemaReader(
+            std::shared_ptr<SchemaTree> schema_tree,
+            int32_t schema_id,
+            uint64_t num_messages
+    )
+            : m_schema_id(schema_id),
+              m_num_messages(num_messages),
               m_cur_message(0),
+              m_timestamp_column(nullptr),
               m_get_timestamp([]() -> epochtime_t { return 0; }),
               m_global_schema_tree(std::move(schema_tree)),
-              m_schema_id(schema_id),
-              m_json_serializer(std::make_shared<JsonSerializer>()) {}
+              m_local_schema_tree(std::make_unique<SchemaTree>()) {}
 
     // Destructor
-    ~SchemaReader() = default;
-
-    /**
-     * Opens the scheam file
-     * @param path
-     */
-    void open(std::string path);
-
-    /**
-     * Closes the schema file
-     */
-    void close();
+    ~SchemaReader() {
+        for (auto& i : m_columns) {
+            delete i;
+        }
+    }
 
     /**
      * Appends a column to the schema reader
@@ -80,8 +83,9 @@ public:
 
     /**
      * Loads the encoded messages
+     * @param decompressor
      */
-    void load();
+    void load(ZstdDecompressor& decompressor);
 
     /**
      * Gets next message
@@ -123,6 +127,8 @@ public:
      */
     void mark_column_as_timestamp(BaseColumnReader* column_reader);
 
+    int32_t get_schema_id() const { return m_schema_id; }
+
 private:
     /**
      * Generates a local schema tree
@@ -144,12 +150,8 @@ private:
     void generate_json_string();
 
     int32_t m_schema_id;
-    std::string m_path;
     uint64_t m_num_messages;
     uint64_t m_cur_message;
-
-    FileReader m_file_reader;
-    ZstdDecompressor m_decompressor;
 
     std::unordered_map<int32_t, BaseColumnReader*> m_column_map;
     std::vector<BaseColumnReader*> m_columns;
@@ -159,11 +161,11 @@ private:
     std::function<epochtime_t()> m_get_timestamp;
 
     std::shared_ptr<SchemaTree> m_global_schema_tree;
-    std::shared_ptr<SchemaTree> m_local_schema_tree;
+    std::unique_ptr<SchemaTree> m_local_schema_tree;
     std::unordered_map<int32_t, int32_t> m_global_id_to_local_id;
     std::unordered_map<int32_t, int32_t> m_local_id_to_global_id;
 
-    std::shared_ptr<JsonSerializer> m_json_serializer;
+    JsonSerializer m_json_serializer;
 
     std::map<int32_t, std::variant<int64_t, double, std::string, uint8_t>> m_extracted_values;
 };

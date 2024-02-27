@@ -61,15 +61,11 @@ JsonConstructor::JsonConstructor(JsonConstructorOption const& option)
 }
 
 void JsonConstructor::construct() {
-    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
-
     m_schema_tree = ReaderUtils::read_schema_tree(m_archives_dir);
     auto id_to_schema = ReaderUtils::read_schemas(m_archives_dir);
-
     auto timestamp_dict = ReaderUtils::read_timestamp_dictionary(m_archives_dir);
 
-    m_archive_reader
-            = std::make_unique<ArchiveReader>(m_schema_tree, *id_to_schema, timestamp_dict);
+    m_archive_reader = std::make_unique<ArchiveReader>(m_schema_tree, id_to_schema, timestamp_dict);
 }
 
 void JsonConstructor::store() {
@@ -77,9 +73,8 @@ void JsonConstructor::store() {
     writer.open(m_output_dir + "/original", FileWriter::OpenMode::CreateIfNonexistentForAppending);
 
     while (m_current_archive_index <= m_max_archive_index) {
-        ArchiveReaderOption option;
-        option.archive_path = m_archive_paths[m_current_archive_index];
-        m_archive_reader->open(option);
+        m_archive_reader->open(m_archive_paths[m_current_archive_index]);
+        m_archive_reader->read_dictionaries_and_metadata();
         m_archive_reader->store(writer);
         m_archive_reader->close();
         m_current_archive_index++;
@@ -88,7 +83,4 @@ void JsonConstructor::store() {
     writer.close();
 }
 
-void JsonConstructor::close() {
-    //    archive_reader_->Close();
-}
 }  // namespace clp_s
