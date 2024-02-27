@@ -304,26 +304,28 @@ void queue_accept_task(std::shared_ptr<ServerContext> const& ctx) {
 
 class PeriodicUpsertTask {
 public:
-    explicit PeriodicUpsertTask(std::shared_ptr<ServerContext> ctx) : m_ctx(std::move(ctx)) {}
+    explicit PeriodicUpsertTask(std::shared_ptr<ServerContext> ctx)
+            : m_server_ctx(std::move(ctx)) {}
 
     void operator()([[maybe_unused]] boost::system::error_code const& e) {
-        if (ServerStatus::Running != m_ctx->get_status()) {
+        if (ServerStatus::Running != m_server_ctx->get_status()) {
             return;
         }
 
-        if (false == m_ctx->upsert_timeline_results()) {
-            m_ctx->set_status(ServerStatus::UnrecoverableFailure);
-            m_ctx->stop_event_loop();
+        if (false == m_server_ctx->upsert_timeline_results()) {
+            m_server_ctx->set_status(ServerStatus::UnrecoverableFailure);
+            m_server_ctx->stop_event_loop();
             return;
         }
 
-        auto& upsert_timer = m_ctx->get_upsert_timer();
-        upsert_timer.expires_from_now(std::chrono::milliseconds(m_ctx->get_polling_interval()));
-        upsert_timer.async_wait(PeriodicUpsertTask(m_ctx));
+        auto& upsert_timer = m_server_ctx->get_upsert_timer();
+        upsert_timer.expires_from_now(std::chrono::milliseconds(m_server_ctx->get_polling_interval()
+        ));
+        upsert_timer.async_wait(PeriodicUpsertTask(m_server_ctx));
     }
 
 private:
-    std::shared_ptr<ServerContext> m_ctx;
+    std::shared_ptr<ServerContext> m_server_ctx;
 };
 
 struct SchedulerUpdateListenerTask {
