@@ -130,7 +130,7 @@ def is_container_exited(container_name):
         "docker", "ps",
         # Only return container IDs
         "--quiet",
-        "--filter", f"name={container_name}"
+        "--filter", f"name={container_name}",
         "--filter", "status=exited"
     ]
     # fmt: on
