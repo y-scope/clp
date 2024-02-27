@@ -71,26 +71,26 @@ struct RecordReceiverContext {
     }
 
     /**
-     * Tries to read a connection initiation packet.
+     * Reads a connection initiation packet.
      * @param num_bytes_read The number of new bytes read into the buffer.
      * @return false if there are an unexpected number of bytes in the buffer or the sender's job ID
      * doesn't match the one currently being processed.
      * @return true otherwise.
      */
-    bool try_read_connection_init_packet(size_t num_bytes_read);
+    bool read_connection_init_packet(size_t num_bytes_read);
 
     /**
-     * Tries to send a connection accept packet.
+     * Sends a connection accept packet.
      * @return Whether the acceptance was sent successfully.
      */
-    bool try_send_connection_accept_packet();
+    bool send_connection_accept_packet();
 
     /**
-     * Tries to read a packet containing record groups.
+     * Reads a packet containing record groups.
      * @param num_bytes_read The number of new bytes read into the buffer.
      * @return Whether the read was successful.
      */
-    bool try_read_record_groups_packet(size_t num_bytes_read);
+    bool read_record_groups_packet(size_t num_bytes_read);
 
     static constexpr size_t cMaxRecordSize = 16ULL * 1024 * 1024;
     static constexpr size_t cDefaultBufSize = 1024;
@@ -102,7 +102,7 @@ struct RecordReceiverContext {
     size_t bytes_occupied{0};
 };
 
-bool RecordReceiverContext::try_read_connection_init_packet(size_t num_bytes_read) {
+bool RecordReceiverContext::read_connection_init_packet(size_t num_bytes_read) {
     bytes_occupied += num_bytes_read;
 
     job_id_t job_id{0};
@@ -127,7 +127,7 @@ bool RecordReceiverContext::try_read_connection_init_packet(size_t num_bytes_rea
     return true;
 }
 
-bool RecordReceiverContext::try_send_connection_accept_packet() {
+bool RecordReceiverContext::send_connection_accept_packet() {
     char const response = 'y';
     boost::system::error_code e;
     auto transferred
@@ -140,7 +140,7 @@ bool RecordReceiverContext::try_send_connection_accept_packet() {
     return true;
 }
 
-bool RecordReceiverContext::try_read_record_groups_packet(size_t num_bytes_read) {
+bool RecordReceiverContext::read_record_groups_packet(size_t num_bytes_read) {
     bytes_occupied += num_bytes_read;
 
     size_t record_size{0};
@@ -200,7 +200,7 @@ struct ReceiveTask {
             return;
         }
 
-        if (false == rctx->try_read_record_groups_packet(num_bytes_read)) {
+        if (false == rctx->read_record_groups_packet(num_bytes_read)) {
             rctx->ctx->decrement_num_active_receiver_tasks();
             return;
         }
@@ -242,11 +242,11 @@ struct ValidateSenderTask {
             return;
         }
 
-        if (false == rctx->try_read_connection_init_packet(num_bytes_read)) {
+        if (false == rctx->read_connection_init_packet(num_bytes_read)) {
             rctx->ctx->decrement_num_active_receiver_tasks();
             return;
         }
-        if (false == rctx->try_send_connection_accept_packet()) {
+        if (false == rctx->send_connection_accept_packet()) {
             rctx->ctx->decrement_num_active_receiver_tasks();
             return;
         }
