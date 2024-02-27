@@ -267,35 +267,36 @@ void queue_validate_sender_task(std::shared_ptr<RecordReceiverContext> const& rc
     );
 }
 
-struct AcceptTask {
+class AcceptTask {
+public:
     AcceptTask(std::shared_ptr<ServerContext> ctx, std::shared_ptr<RecordReceiverContext> rctx)
-            : ctx(std::move(ctx)),
-              rctx(std::move(rctx)) {}
+            : m_ctx(std::move(ctx)),
+              m_rctx(std::move(rctx)) {}
 
     void operator()(boost::system::error_code const& error) {
-        if (false == error.failed() && ServerStatus::Running == ctx->get_status()) {
-            queue_validate_sender_task(rctx);
-            queue_accept_task(ctx);
+        if (false == error.failed() && ServerStatus::Running == m_ctx->get_status()) {
+            queue_validate_sender_task(m_rctx);
+            queue_accept_task(m_ctx);
         } else if (error.failed() && boost::system::errc::operation_canceled == error.value()) {
             SPDLOG_INFO("Accept task cancelled");
         } else if (error.failed()) {
             // tcp acceptor socket was closed -- don't re-queue accept task
             SPDLOG_ERROR("TCP acceptor socket closed");
-            if (ctx->get_tcp_acceptor().is_open()) {
-                ctx->get_tcp_acceptor().close();
+            if (m_ctx->get_tcp_acceptor().is_open()) {
+                m_ctx->get_tcp_acceptor().close();
             }
         } else {
             SPDLOG_WARN(
                     "Rejecting connection while not in Running state, state={}",
-                    server_status_to_string(ctx->get_status())
+                    server_status_to_string(m_ctx->get_status())
             );
-            queue_accept_task(ctx);
+            queue_accept_task(m_ctx);
         }
     }
 
 private:
-    std::shared_ptr<ServerContext> ctx;
-    std::shared_ptr<RecordReceiverContext> rctx;
+    std::shared_ptr<ServerContext> m_ctx;
+    std::shared_ptr<RecordReceiverContext> m_rctx;
 };
 
 void queue_accept_task(std::shared_ptr<ServerContext> const& ctx) {
