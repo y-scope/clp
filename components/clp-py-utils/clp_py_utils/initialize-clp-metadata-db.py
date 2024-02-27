@@ -55,6 +55,29 @@ def main(argv):
 
             metadata_db_cursor.execute(
                 f"""
+                CREATE TABLE IF NOT EXISTS `{table_prefix}tags` (
+                    `tag_id` INT unsigned NOT NULL AUTO_INCREMENT,
+                    `tag_name` VARCHAR(255) NOT NULL,
+                    UNIQUE KEY (`tag_name`) USING BTREE,
+                    PRIMARY KEY (`tag_id`)
+                )
+                """
+            )
+
+            metadata_db_cursor.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS `{table_prefix}archive_tags` (
+                    `archive_id` VARCHAR(64) NOT NULL,
+                    `tag_id` INT unsigned NOT NULL,
+                    PRIMARY KEY (`archive_id`,`tag_id`),
+                    FOREIGN KEY (`archive_id`) REFERENCES `{table_prefix}archives` (`id`),
+                    FOREIGN KEY (`tag_id`) REFERENCES `{table_prefix}tags` (`tag_id`)
+                )
+                """
+            )
+
+            metadata_db_cursor.execute(
+                f"""
                 CREATE TABLE IF NOT EXISTS `{table_prefix}files` (
                     `id` VARCHAR(64) NOT NULL,
                     `orig_file_id` VARCHAR(64) NOT NULL,

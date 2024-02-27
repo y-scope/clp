@@ -48,6 +48,9 @@ def main(argv):
         "--timestamp-key",
         help="The path (e.g. x.y) for the field containing the log event's timestamp.",
     )
+    args_parser.add_argument(
+        "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
+    )
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -104,6 +107,9 @@ def main(argv):
     if parsed_args.timestamp_key is not None:
         compress_cmd.append("--timestamp-key")
         compress_cmd.append(parsed_args.timestamp_key)
+    if parsed_args.tags is not None:
+        compress_cmd.append("--tags")
+        compress_cmd.append(parsed_args.tags)
     for path in parsed_args.paths:
         # Resolve path and prefix it with CONTAINER_INPUT_LOGS_ROOT_DIR
         resolved_path = pathlib.Path(path).resolve()

@@ -157,6 +157,9 @@ def main(argv):
         "--timestamp-key",
         help="The path (e.g. x.y) for the field containing the log event's timestamp.",
     )
+    args_parser.add_argument(
+        "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
+    )
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate some input paths were specified
@@ -205,9 +208,12 @@ def main(argv):
     )
     if parsed_args.remove_path_prefix:
         clp_input_config.path_prefix_to_remove = parsed_args.remove_path_prefix
-    clp_io_config = ClpIoConfig(
-        input=clp_input_config, output=OutputConfig.parse_obj(clp_config.archive_output)
-    )
+    clp_output_config = OutputConfig.parse_obj(clp_config.archive_output)
+    if parsed_args.tags:
+        tag_list = [tag.strip().lower() for tag in parsed_args.tags.split(",") if tag]
+        if len(tag_list) > 0:
+            clp_output_config.tags = tag_list
+    clp_io_config = ClpIoConfig(input=clp_input_config, output=clp_output_config)
 
     return handle_job(
         sql_adapter=mysql_adapter,

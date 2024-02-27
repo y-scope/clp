@@ -110,20 +110,27 @@ def get_archives_for_search(
     db_conn,
     search_config: SearchConfig,
 ):
-    query = f"""SELECT id as archive_id
-            FROM {CLP_METADATA_TABLE_PREFIX}archives
-            """
+    query = f"SELECT id as archive_id FROM {CLP_METADATA_TABLE_PREFIX}archives"
     filter_clauses = []
     if search_config.end_timestamp is not None:
         filter_clauses.append(f"begin_timestamp <= {search_config.end_timestamp}")
     if search_config.begin_timestamp is not None:
         filter_clauses.append(f"end_timestamp >= {search_config.begin_timestamp}")
+    if search_config.tags is not None:
+        filter_clauses.append(
+            f"id IN (SELECT archive_id FROM {CLP_METADATA_TABLE_PREFIX}archive_tags WHERE "
+            f"tag_id IN (SELECT tag_id FROM {CLP_METADATA_TABLE_PREFIX}tags WHERE tag_name IN "
+            f"(%s)))" % ", ".join(["%s" for _ in search_config.tags])
+        )
     if len(filter_clauses) > 0:
         query += " WHERE " + " AND ".join(filter_clauses)
     query += " ORDER BY end_timestamp DESC"
 
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
-        cursor.execute(query)
+        if search_config.tags is not None:
+            cursor.execute(query, tuple(search_config.tags))
+        else:
+            cursor.execute(query)
         archives_for_search = [archive["archive_id"] for archive in cursor.fetchall()]
         db_conn.commit()
     return archives_for_search
