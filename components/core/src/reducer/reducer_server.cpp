@@ -230,8 +230,7 @@ public:
             : m_record_recv_ctx(std::move(ctx)) {}
 
     void operator()(boost::system::error_code const& error, size_t num_bytes_read) {
-        // if no new bytes terminate
-        if ((0 == num_bytes_read && error.failed())
+        if (0 == num_bytes_read || error.failed()
             || ServerStatus::Running != m_record_recv_ctx->ctx->get_status())
         {
             SPDLOG_ERROR("Rejecting connection because of connection error");
