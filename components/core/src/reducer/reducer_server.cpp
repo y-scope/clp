@@ -80,6 +80,12 @@ struct RecordReceiverContext {
     int try_read_connection_init_packet(size_t num_bytes_read);
 
     /**
+     * Tries to send a connection accept packet.
+     * @return Whether the acceptance was sent successfully.
+     */
+    bool try_send_connection_accept_packet();
+
+    /**
      * Tries to read a packet containing record groups.
      * @param num_bytes_read The number of new bytes read into the buffer.
      * @return Whether the read was successful.
@@ -122,6 +128,19 @@ int RecordReceiverContext::try_read_connection_init_packet(size_t num_bytes_read
     bytes_occupied = 0;
 
     return 1;
+}
+
+bool RecordReceiverContext::try_send_connection_accept_packet() {
+    char const response = 'y';
+    boost::system::error_code e;
+    auto transferred
+            = boost::asio::write(socket, boost::asio::buffer(&response, sizeof(response)), e);
+    if (e || transferred < sizeof(response)) {
+        SPDLOG_ERROR("Rejecting connection due to failure to send acceptance - {}", e.message());
+        return false;
+    }
+
+    return true;
 }
 
 bool RecordReceiverContext::try_read_record_groups_packet(size_t num_bytes_read) {
@@ -233,13 +252,7 @@ struct ValidateSenderTask {
         } else if (0 == ret_val) {
             queue_validate_sender_task(rctx);
         } else {
-            char const response = 'y';
-            boost::system::error_code e;
-            auto transferred
-                    = boost::asio::write(rctx->socket, boost::asio::buffer(&response, 1), e);
-            if (e || transferred < sizeof(response)) {
-                SPDLOG_ERROR("Rejecting connection due to connection error while attempting to send"
-                             " acceptance");
+            if (false == rctx->try_send_connection_accept_packet()) {
                 rctx->ctx->decrement_num_active_receiver_tasks();
                 return;
             }
