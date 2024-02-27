@@ -42,7 +42,7 @@ struct RecordReceiverContext {
     explicit RecordReceiverContext(std::shared_ptr<ServerContext> const& ctx)
             : ctx(ctx),
               socket(ctx->get_io_context()),
-              m_buf(cMinBufSize) {}
+              buf(cMinBufSize) {}
 
     ~RecordReceiverContext() {
         socket.close();
@@ -95,7 +95,7 @@ struct RecordReceiverContext {
 
     std::shared_ptr<ServerContext> ctx;
     tcp::socket socket;
-    std::vector<char> m_buf;
+    std::vector<char> buf;
     size_t bytes_occupied{0};
 };
 
@@ -109,7 +109,7 @@ bool RecordReceiverContext::read_connection_init_packet(size_t num_bytes_read) {
         return false;
     }
 
-    memcpy(&job_id, m_buf.data(), sizeof(job_id));
+    memcpy(&job_id, buf.data(), sizeof(job_id));
     if (job_id != ctx->get_job_id()) {
         SPDLOG_ERROR(
                 "Rejecting connection from worker with job_id={} during processing of "
@@ -141,7 +141,7 @@ bool RecordReceiverContext::read_record_groups_packet(size_t num_bytes_read) {
     bytes_occupied += num_bytes_read;
 
     size_t record_size{0};
-    auto* read_head = m_buf.data();
+    auto* read_head = buf.data();
     while (bytes_occupied > 0) {
         if (bytes_occupied < sizeof(record_size)) {
             break;
@@ -166,12 +166,12 @@ bool RecordReceiverContext::read_record_groups_packet(size_t num_bytes_read) {
     }
 
     if (bytes_occupied > 0) {
-        if (m_buf.size() < record_size + sizeof(record_size)) {
+        if (buf.size() < record_size + sizeof(record_size)) {
             std::vector<char> new_buf(sizeof(record_size) + record_size);
-            std::copy(m_buf.begin(), m_buf.end(), new_buf.begin());
-            m_buf.swap(new_buf);
+            std::copy(buf.begin(), buf.end(), new_buf.begin());
+            buf.swap(new_buf);
         } else {
-            memmove(m_buf.data(), read_head, bytes_occupied);
+            memmove(buf.data(), read_head, bytes_occupied);
         }
     }
 
@@ -217,8 +217,8 @@ void queue_receive_task(std::shared_ptr<RecordReceiverContext> const& rctx) {
     boost::asio::async_read(
             rctx->socket,
             boost::asio::buffer(
-                    &rctx->m_buf[rctx->bytes_occupied],
-                    rctx->m_buf.size() - rctx->bytes_occupied
+                    &rctx->buf[rctx->bytes_occupied],
+                    rctx->buf.size() - rctx->bytes_occupied
             ),
             ReceiveTask(rctx)
     );
@@ -259,7 +259,7 @@ void queue_validate_sender_task(std::shared_ptr<RecordReceiverContext> const& rc
     static_assert(sizeof(job_id_t) <= RecordReceiverContext::cMinBufSize);
     boost::asio::async_read(
             rctx->socket,
-            boost::asio::buffer(rctx->m_buf, sizeof(job_id_t)),
+            boost::asio::buffer(rctx->buf, sizeof(job_id_t)),
             ValidateSenderTask(rctx)
     );
 }
