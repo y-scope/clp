@@ -73,12 +73,11 @@ struct RecordReceiverContext {
     /**
      * Tries to read a connection initiation packet.
      * @param num_bytes_read The number of new bytes read into the buffer.
-     * @return -1 If the sender sent too many bytes or the sender's job ID doesn't match the one
-     * currently being processed.
-     * @return 0 If the buffer doesn't contain enough data to read.
-     * @return 1 On success.
+     * @return false if there are an unexpected number of bytes in the buffer or the sender's job ID
+     * doesn't match the one currently being processed.
+     * @return true otherwise.
      */
-    int try_read_connection_init_packet(size_t num_bytes_read);
+    bool try_read_connection_init_packet(size_t num_bytes_read);
 
     /**
      * Tries to send a connection accept packet.
@@ -103,17 +102,14 @@ struct RecordReceiverContext {
     size_t bytes_occupied{0};
 };
 
-int RecordReceiverContext::try_read_connection_init_packet(size_t num_bytes_read) {
+bool RecordReceiverContext::try_read_connection_init_packet(size_t num_bytes_read) {
     bytes_occupied += num_bytes_read;
 
     job_id_t job_id{0};
 
-    if (bytes_occupied > sizeof(job_id)) {
-        SPDLOG_ERROR("Rejecting connection because of invalid negotiation");
-        return -1;
-    }
-    if (bytes_occupied < sizeof(job_id)) {
-        return 0;
+    if (bytes_occupied != sizeof(job_id)) {
+        SPDLOG_ERROR("Rejecting connection due to invalid negotiation");
+        return false;
     }
 
     memcpy(&job_id, buf, sizeof(job_id));
@@ -124,11 +120,11 @@ int RecordReceiverContext::try_read_connection_init_packet(size_t num_bytes_read
                 job_id,
                 ctx->get_job_id()
         );
-        return -1;
+        return false;
     }
     bytes_occupied = 0;
 
-    return 1;
+    return true;
 }
 
 bool RecordReceiverContext::try_send_connection_accept_packet() {
@@ -236,9 +232,9 @@ struct ValidateSenderTask {
     explicit ValidateSenderTask(std::shared_ptr<RecordReceiverContext> rctx)
             : rctx(std::move(rctx)) {}
 
-    void operator()(boost::system::error_code const& error, size_t bytes_remaining) {
+    void operator()(boost::system::error_code const& error, size_t num_bytes_read) {
         // if no new bytes terminate
-        if ((0 == bytes_remaining && error.failed())
+        if ((0 == num_bytes_read && error.failed())
             || ServerStatus::Running != rctx->ctx->get_status())
         {
             SPDLOG_ERROR("Rejecting connection because of connection error");
@@ -246,20 +242,16 @@ struct ValidateSenderTask {
             return;
         }
 
-        auto ret_val = rctx->try_read_connection_init_packet(bytes_remaining);
-        if (-1 == ret_val) {
+        if (false == rctx->try_read_connection_init_packet(num_bytes_read)) {
             rctx->ctx->decrement_num_active_receiver_tasks();
             return;
-        } else if (0 == ret_val) {
-            queue_validate_sender_task(rctx);
-        } else {
-            if (false == rctx->try_send_connection_accept_packet()) {
-                rctx->ctx->decrement_num_active_receiver_tasks();
-                return;
-            }
-
-            queue_receive_task(rctx);
         }
+        if (false == rctx->try_send_connection_accept_packet()) {
+            rctx->ctx->decrement_num_active_receiver_tasks();
+            return;
+        }
+
+        queue_receive_task(rctx);
     }
 
 private:
@@ -270,10 +262,7 @@ void queue_validate_sender_task(std::shared_ptr<RecordReceiverContext> const& rc
     rctx->ctx->increment_num_active_receiver_tasks();
     boost::asio::async_read(
             rctx->socket,
-            boost::asio::buffer(
-                    &rctx->buf[rctx->bytes_occupied],
-                    sizeof(job_id_t) - rctx->bytes_occupied
-            ),
+            boost::asio::buffer(rctx->buf, sizeof(job_id_t)),
             ValidateSenderTask(rctx)
     );
 }
