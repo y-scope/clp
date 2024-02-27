@@ -12,6 +12,7 @@
 #include "CommandLineArguments.hpp"
 #include "DeserializedRecordGroup.hpp"
 #include "ServerContext.hpp"
+#include "types.hpp"
 
 using boost::asio::ip::tcp;
 
@@ -105,7 +106,7 @@ struct RecordReceiverContext {
 int RecordReceiverContext::try_read_connection_init_packet(size_t num_bytes_read) {
     bytes_occupied += num_bytes_read;
 
-    int32_t job_id{0};
+    job_id_t job_id{0};
 
     if (bytes_occupied > sizeof(job_id)) {
         SPDLOG_ERROR("Rejecting connection because of invalid negotiation");
@@ -271,7 +272,7 @@ void queue_validate_sender_task(std::shared_ptr<RecordReceiverContext> const& rc
             rctx->socket,
             boost::asio::buffer(
                     &rctx->buf[rctx->bytes_occupied],
-                    sizeof(int32_t) - rctx->bytes_occupied
+                    sizeof(job_id_t) - rctx->bytes_occupied
             ),
             ValidateSenderTask(rctx)
     );

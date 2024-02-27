@@ -35,6 +35,7 @@ set(
         reducer_server.cpp
         ServerContext.cpp
         ServerContext.hpp
+        types.hpp
 )
 
 add_executable(reducer-server ${REDUCER_SOURCES})

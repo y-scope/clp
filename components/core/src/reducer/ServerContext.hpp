@@ -12,6 +12,7 @@
 #include "../clp/TraceableException.hpp"
 #include "CommandLineArguments.hpp"
 #include "Pipeline.hpp"
+#include "types.hpp"
 
 namespace reducer {
 enum class ServerStatus : uint8_t {
@@ -165,7 +166,7 @@ private:
     int m_num_active_receiver_tasks{0};
 
     ServerStatus m_status{ServerStatus::Idle};
-    int64_t m_job_id{-1};
+    job_id_t m_job_id{-1};
 
     std::unique_ptr<Pipeline> m_pipeline;
     bool m_is_timeline_aggregation{false};
