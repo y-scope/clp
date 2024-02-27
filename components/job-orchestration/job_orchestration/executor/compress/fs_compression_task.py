@@ -9,7 +9,6 @@ from contextlib import closing
 import yaml
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
-
 from clp_py_utils.clp_config import Database, StorageEngine
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.sql_adapter import SQL_Adapter
