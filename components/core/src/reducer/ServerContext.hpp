@@ -147,7 +147,7 @@ public:
 
     void set_status(ServerStatus new_status) { m_status = new_status; }
 
-    [[nodiscard]] int64_t get_job_id() const { return m_job_id; }
+    [[nodiscard]] job_id_t get_job_id() const { return m_job_id; }
 
     [[nodiscard]] bool is_timeline_aggregation() const { return m_is_timeline_aggregation; }
 
