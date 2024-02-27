@@ -185,32 +185,33 @@ void queue_scheduler_update_listener_task(
         size_t current_buffer_occupancy
 );
 
-struct ReceiveTask {
-    explicit ReceiveTask(std::shared_ptr<RecordReceiverContext> rctx) : rctx(std::move(rctx)) {}
+class ReceiveTask {
+public:
+    explicit ReceiveTask(std::shared_ptr<RecordReceiverContext> ctx)
+            : m_record_recv_ctx(std::move(ctx)) {}
 
     void operator()(boost::system::error_code const& error, size_t num_bytes_read) {
-        // if no new bytes terminate
-        if (0 == num_bytes_read || ServerStatus::Running != rctx->ctx->get_status()) {
-            rctx->ctx->decrement_num_active_receiver_tasks();
+        if (0 == num_bytes_read || ServerStatus::Running != m_record_recv_ctx->ctx->get_status()) {
+            m_record_recv_ctx->ctx->decrement_num_active_receiver_tasks();
             return;
         }
-        rctx->increment_buf_num_bytes_occupied(num_bytes_read);
+        m_record_recv_ctx->increment_buf_num_bytes_occupied(num_bytes_read);
 
-        if (false == rctx->read_record_groups_packet()) {
-            rctx->ctx->decrement_num_active_receiver_tasks();
+        if (false == m_record_recv_ctx->read_record_groups_packet()) {
+            m_record_recv_ctx->ctx->decrement_num_active_receiver_tasks();
             return;
         }
 
         // Only queue another receive if the connection is still open
         if (false == error.failed()) {
-            queue_receive_task(rctx);
+            queue_receive_task(m_record_recv_ctx);
         } else {
-            rctx->ctx->decrement_num_active_receiver_tasks();
+            m_record_recv_ctx->ctx->decrement_num_active_receiver_tasks();
         }
     }
 
 private:
-    std::shared_ptr<RecordReceiverContext> rctx;
+    std::shared_ptr<RecordReceiverContext> m_record_recv_ctx;
 };
 
 void queue_receive_task(std::shared_ptr<RecordReceiverContext> const& rctx) {
