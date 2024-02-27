@@ -68,12 +68,11 @@ struct RecordReceiverContext {
 
     /**
      * Reads a connection initiation packet.
-     * @param num_bytes_read The number of new bytes read into the buffer.
      * @return false if there are an unexpected number of bytes in the buffer or the sender's job ID
      * doesn't match the one currently being processed.
      * @return true otherwise.
      */
-    bool read_connection_init_packet(size_t num_bytes_read);
+    bool read_connection_init_packet();
 
     /**
      * Sends a connection accept packet.
@@ -83,10 +82,16 @@ struct RecordReceiverContext {
 
     /**
      * Reads a packet containing record groups.
-     * @param num_bytes_read The number of new bytes read into the buffer.
      * @return Whether the read was successful.
      */
-    bool read_record_groups_packet(size_t num_bytes_read);
+    bool read_record_groups_packet();
+
+    /**
+     * NOTE: This method should only be called from handles for boost::asio read tasks on the
+     * receiver's socket.
+     * @param num_bytes
+     */
+    void increment_buf_num_bytes_occupied(size_t num_bytes) { bytes_occupied += num_bytes; }
 
     static constexpr size_t cMaxRecordSize = 16ULL * 1024 * 1024;
     static constexpr size_t cMinBufSize = 1024;
@@ -97,9 +102,7 @@ struct RecordReceiverContext {
     size_t bytes_occupied{0};
 };
 
-bool RecordReceiverContext::read_connection_init_packet(size_t num_bytes_read) {
-    bytes_occupied += num_bytes_read;
-
+bool RecordReceiverContext::read_connection_init_packet() {
     job_id_t job_id{0};
 
     if (bytes_occupied != sizeof(job_id)) {
@@ -135,9 +138,7 @@ bool RecordReceiverContext::send_connection_accept_packet() {
     return true;
 }
 
-bool RecordReceiverContext::read_record_groups_packet(size_t num_bytes_read) {
-    bytes_occupied += num_bytes_read;
-
+bool RecordReceiverContext::read_record_groups_packet() {
     size_t record_size{0};
     auto* read_head = buf.data();
     while (bytes_occupied > 0) {
@@ -193,8 +194,9 @@ struct ReceiveTask {
             rctx->ctx->decrement_num_active_receiver_tasks();
             return;
         }
+        rctx->increment_buf_num_bytes_occupied(num_bytes_read);
 
-        if (false == rctx->read_record_groups_packet(num_bytes_read)) {
+        if (false == rctx->read_record_groups_packet()) {
             rctx->ctx->decrement_num_active_receiver_tasks();
             return;
         }
@@ -235,8 +237,9 @@ struct ValidateSenderTask {
             rctx->ctx->decrement_num_active_receiver_tasks();
             return;
         }
+        rctx->increment_buf_num_bytes_occupied(num_bytes_read);
 
-        if (false == rctx->read_connection_init_packet(num_bytes_read)) {
+        if (false == rctx->read_connection_init_packet()) {
             rctx->ctx->decrement_num_active_receiver_tasks();
             return;
         }
