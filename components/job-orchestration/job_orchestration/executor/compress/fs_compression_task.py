@@ -9,6 +9,7 @@ import yaml
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import StorageEngine
+from clp_py_utils.clp_logging import set_logging_level
 from job_orchestration.executor.compress.celery import app
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
@@ -213,6 +214,10 @@ def compress(
     data_dir_str = os.getenv("CLP_DATA_DIR")
     archive_output_dir_str = os.getenv("CLP_ARCHIVE_OUTPUT_DIR")
     logs_dir_str = os.getenv("CLP_LOGS_DIR")
+
+    # Set logging level
+    clp_logging_level = str(os.getenv("CLP_LOGGING_LEVEL"))
+    set_logging_level(logger, clp_logging_level)
 
     clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
     paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
