@@ -4,11 +4,14 @@ import logging
 import os
 import pathlib
 import subprocess
+from contextlib import closing
 
 import yaml
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
-from clp_py_utils.clp_config import StorageEngine
+from clp_py_utils.clp_config import Database, StorageEngine
+from clp_py_utils.clp_logging import set_logging_level
+from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.celery import app
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
@@ -64,7 +67,8 @@ def make_clp_s_command(
         str(clp_home / "bin" / "clp-s"),
         "c", str(archive_output_dir),
         "--print-archive-stats",
-        "--target-encoded-size", str(clp_config.output.target_segment_size + clp_config.output.target_dictionaries_size),
+        "--target-encoded-size",
+        str(clp_config.output.target_segment_size + clp_config.output.target_dictionaries_size),
         "--db-config-file", str(db_config_file_path),
     ]
     # fmt: on
@@ -76,6 +80,14 @@ def make_clp_s_command(
     return compression_cmd
 
 
+def update_tags(db_conn, db_cursor, table_prefix, archive_id, tag_ids):
+    db_cursor.executemany(
+        f"INSERT INTO {table_prefix}archive_tags (archive_id, tag_id) VALUES (%s, %s)",
+        [(archive_id, tag_id) for tag_id in tag_ids],
+    )
+    db_conn.commit()
+
+
 def run_clp(
     clp_config: ClpIoConfig,
     clp_home: pathlib.Path,
@@ -84,6 +96,7 @@ def run_clp(
     logs_dir: pathlib.Path,
     job_id: int,
     task_id: int,
+    tag_ids,
     paths_to_compress: PathsToCompress,
     clp_metadata_db_connection_config,
 ):
@@ -97,6 +110,7 @@ def run_clp(
     :param logs_dir:
     :param job_id:
     :param task_id:
+    :param tag_ids:
     :param paths_to_compress: PathToCompress
     :param clp_metadata_db_connection_config
     :return: tuple -- (whether compression was successful, output messages)
@@ -155,25 +169,45 @@ def run_clp(
     compression_successful = False
     proc = subprocess.Popen(compression_cmd, stdout=subprocess.PIPE, stderr=stderr_log_file)
 
-    # Compute the total amount of data compressed
-    last_archive_stats = None
-    total_uncompressed_size = 0
-    total_compressed_size = 0
-    while True:
-        line = proc.stdout.readline()
-        if not line:
-            break
-        stats = json.loads(line.decode("ascii"))
-        if last_archive_stats is not None and stats["id"] != last_archive_stats["id"]:
-            # We've started a new archive so add the previous archive's last
-            # reported size to the total
+    sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_connection_config))
+    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
+        db_conn.cursor(dictionary=True)
+    ) as db_cursor:
+        # Compute the total amount of data compressed
+        last_archive_stats = None
+        total_uncompressed_size = 0
+        total_compressed_size = 0
+        while True:
+            line = proc.stdout.readline()
+            if not line:
+                break
+            stats = json.loads(line.decode("ascii"))
+            if last_archive_stats is not None and stats["id"] != last_archive_stats["id"]:
+                # We've started a new archive so add the previous archive's last
+                # reported size to the total
+                total_uncompressed_size += last_archive_stats["uncompressed_size"]
+                total_compressed_size += last_archive_stats["size"]
+                if tag_ids is not None:
+                    update_tags(
+                        db_conn,
+                        db_cursor,
+                        clp_metadata_db_connection_config["table_prefix"],
+                        last_archive_stats["id"],
+                        tag_ids,
+                    )
+            last_archive_stats = stats
+        if last_archive_stats is not None:
+            # Add the last archive's last reported size
             total_uncompressed_size += last_archive_stats["uncompressed_size"]
             total_compressed_size += last_archive_stats["size"]
-        last_archive_stats = stats
-    if last_archive_stats is not None:
-        # Add the last archive's last reported size
-        total_uncompressed_size += last_archive_stats["uncompressed_size"]
-        total_compressed_size += last_archive_stats["size"]
+            if tag_ids is not None:
+                update_tags(
+                    db_conn,
+                    db_cursor,
+                    clp_metadata_db_connection_config["table_prefix"],
+                    last_archive_stats["id"],
+                    tag_ids,
+                )
 
     # Wait for compression to finish
     return_code = proc.wait()
@@ -205,6 +239,7 @@ def compress(
     self: Task,
     job_id: int,
     task_id: int,
+    tag_ids,
     clp_io_config_json: str,
     paths_to_compress_json: str,
     clp_metadata_db_connection_config,
@@ -213,6 +248,10 @@ def compress(
     data_dir_str = os.getenv("CLP_DATA_DIR")
     archive_output_dir_str = os.getenv("CLP_ARCHIVE_OUTPUT_DIR")
     logs_dir_str = os.getenv("CLP_LOGS_DIR")
+
+    # Set logging level
+    clp_logging_level = str(os.getenv("CLP_LOGGING_LEVEL"))
+    set_logging_level(logger, clp_logging_level)
 
     clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
     paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
@@ -227,6 +266,7 @@ def compress(
         pathlib.Path(logs_dir_str),
         job_id,
         task_id,
+        tag_ids,
         paths_to_compress,
         clp_metadata_db_connection_config,
     )

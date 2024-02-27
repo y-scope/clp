@@ -72,11 +72,12 @@ def create_and_monitor_job_in_db(
     db_config: Database,
     results_cache: ResultsCache,
     wildcard_query: str,
+    tags: str | None,
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
     max_num_results: int,
-    path_filter: str,
+    path_filter: str | None,
 ):
     search_config = SearchConfig(
         query_string=wildcard_query,
@@ -86,6 +87,10 @@ def create_and_monitor_job_in_db(
         max_num_results=max_num_results,
         path_filter=path_filter,
     )
+    if tags:
+        tag_list = [tag.strip().lower() for tag in tags.split(",") if tag]
+        if len(tag_list) > 0:
+            search_config.tags = tag_list
 
     sql_adapter = SQL_Adapter(db_config)
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
@@ -133,11 +138,12 @@ async def do_search(
     db_config: Database,
     results_cache: ResultsCache,
     wildcard_query: str,
+    tags: str | None,
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
     max_num_results: int,
-    path_filter: str,
+    path_filter: str | None,
 ):
     db_monitor_task = asyncio.ensure_future(
         run_function_in_process(
@@ -145,6 +151,7 @@ async def do_search(
             db_config,
             results_cache,
             wildcard_query,
+            tags,
             begin_timestamp,
             end_timestamp,
             ignore_case,
@@ -167,6 +174,9 @@ def main(argv):
     args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     args_parser.add_argument("wildcard_query", help="Wildcard query.")
+    args_parser.add_argument(
+        "-t", "--tags", help="Comma-separated list of tags of archives to search."
+    )
     args_parser.add_argument(
         "--begin-time",
         type=int,
@@ -215,6 +225,7 @@ def main(argv):
             clp_config.database,
             clp_config.results_cache,
             parsed_args.wildcard_query,
+            parsed_args.tags,
             parsed_args.begin_time,
             parsed_args.end_time,
             parsed_args.ignore_case,

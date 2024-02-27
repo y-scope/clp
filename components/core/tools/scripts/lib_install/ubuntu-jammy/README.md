@@ -3,14 +3,15 @@ These same steps are used by our Docker containers.
 
 # Installing dependencies
 
-Before you run any commands below, you should review the scripts to ensure they
-will not install any dependencies you don't expect.
+> [!WARNING]
+> Before you run any commands below, you should review the scripts to ensure they will not install
+> any dependencies or apply any configurations that you don't expect.
 
-* Install all dependencies:
+To install all dependencies, run:
 
-  ```bash
-  ./install-all.sh
-  ```
+```bash
+./install-all.sh
+```
 
 # Building CLP
 

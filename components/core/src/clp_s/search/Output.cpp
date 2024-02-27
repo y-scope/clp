@@ -3,6 +3,7 @@
 #include <regex>
 #include <stack>
 
+#include "../ArchiveReader.hpp"
 #include "../FileWriter.hpp"
 #include "../ReaderUtils.hpp"
 #include "../Utils.hpp"
@@ -20,11 +21,15 @@ namespace clp_s::search {
 void Output::filter() {
     auto top_level_expr = m_expr;
 
+    ArchiveReader archive_reader(m_schema_tree, m_schemas, m_timestamp_dict);
     for (auto const& archive : ReaderUtils::get_archives(m_archives_dir)) {
         std::vector<int32_t> matched_schemas;
         bool has_array = false;
         bool has_array_search = false;
-        for (int32_t schema_id : ReaderUtils::get_schemas(archive)) {
+
+        archive_reader.open(archive);
+        archive_reader.read_metadata();
+        for (auto schema_id : archive_reader.get_schema_ids()) {
             if (m_match.schema_matched(schema_id)) {
                 matched_schemas.push_back(schema_id);
                 if (m_match.has_array(schema_id)) {
@@ -39,29 +44,26 @@ void Output::filter() {
         // Skip decompressing segment if it contains no
         // relevant schemas
         if (matched_schemas.empty()) {
+            archive_reader.close();
             continue;
         }
 
         // Skip decompressing sub-archive if it won't match based on the timestamp
         // range index
-        EvaluateTimestampIndex timestamp_index(ReaderUtils::read_local_timestamp_dictionary(archive)
-        );
+        EvaluateTimestampIndex timestamp_index(archive_reader.read_timestamp_dictionary());
         if (timestamp_index.run(top_level_expr) == EvaluatedValue::False) {
+            archive_reader.close();
             continue;
         }
 
-        m_var_dict = ReaderUtils::get_variable_dictionary_reader(archive);
-        m_log_dict = ReaderUtils::get_log_type_dictionary_reader(archive);
-        //        array_dict_ = GetArrayDictionaryReader(archive);
-        m_var_dict->read_new_entries();
-        m_log_dict->read_new_entries();
+        m_var_dict = archive_reader.read_variable_dictionary();
+        m_log_dict = archive_reader.read_log_type_dictionary();
 
         if (has_array) {
-            m_array_dict = ReaderUtils::get_array_dictionary_reader(archive);
             if (has_array_search) {
-                m_array_dict->read_new_entries();
+                m_array_dict = archive_reader.read_array_dictionary();
             } else {
-                m_array_dict->read_new_entries(true);
+                m_array_dict = archive_reader.read_array_dictionary(true);
             }
         }
 
@@ -90,44 +92,26 @@ void Output::filter() {
 
             add_wildcard_columns_to_searched_columns();
 
-            SchemaReader reader(m_schema_tree, schema_id);
-            reader.open(archive + "/encoded_messages/" + std::to_string(schema_id));
-            ReaderUtils::append_reader_columns(
-                    &reader,
-                    (*m_schemas)[schema_id],
-                    m_schema_tree,
-                    m_var_dict,
-                    m_log_dict,
-                    m_array_dict,
-                    m_timestamp_dict,
+            auto reader = archive_reader.read_table(
+                    schema_id,
                     m_output_handler->should_output_timestamp()
             );
-            reader.load();
-
-            reader.initialize_filter(this);
+            reader->initialize_filter(this);
 
             if (m_output_handler->should_output_timestamp()) {
                 epochtime_t timestamp;
-                while (reader.get_next_message_with_timestamp(message, timestamp, this)) {
+                while (reader->get_next_message_with_timestamp(message, timestamp, this)) {
                     m_output_handler->write(message, timestamp);
                 }
             } else {
-                while (reader.get_next_message(message, this)) {
+                while (reader->get_next_message(message, this)) {
                     m_output_handler->write(message);
                 }
             }
-
-            reader.close();
         }
 
         m_output_handler->flush();
-
-        m_var_dict->close();
-        m_log_dict->close();
-
-        if (has_array) {
-            m_array_dict->close();
-        }
+        archive_reader.close();
     }
 }
 
@@ -347,6 +331,8 @@ bool Output::evaluate_wildcard_filter(
                         std::get<std::string>(extracted_values[column_id]),
                         literal
                 );
+                break;
+            default:
                 break;
         }
 

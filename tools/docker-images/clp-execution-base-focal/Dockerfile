@@ -1,4 +1,4 @@
-FROM ubuntu:focal
+FROM ubuntu:focal AS BASE
 
 WORKDIR /root
 
@@ -7,6 +7,10 @@ ADD ./tools/docker-images/clp-execution-base-focal/setup-scripts ./tools/docker-
 
 RUN ./tools/docker-images/clp-execution-base-focal/setup-scripts/install-prebuilt-packages.sh
 
-# Reset the working directory so that it's accessible by any user who runs the
-# container
-WORKDIR /
+# Remove cached files
+RUN apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Flatten the image
+FROM scratch
+COPY --from=BASE / /

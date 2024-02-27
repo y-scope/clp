@@ -19,6 +19,7 @@ class InputConfig(BaseModel):
 
 
 class OutputConfig(BaseModel):
+    tags: typing.Optional[typing.List[str]] = None
     target_archive_size: int
     target_dictionaries_size: int
     target_segment_size: int
@@ -33,6 +34,7 @@ class ClpIoConfig(BaseModel):
 class SearchConfig(BaseModel):
     query_string: str
     max_num_results: int
+    tags: typing.Optional[typing.List[str]] = None
     begin_timestamp: typing.Optional[int] = None
     end_timestamp: typing.Optional[int] = None
     ignore_case: bool = False

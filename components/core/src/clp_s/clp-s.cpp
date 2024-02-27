@@ -139,7 +139,6 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
     clp_s::JsonConstructor constructor(json_constructor_option);
     constructor.construct();
     constructor.store();
-    constructor.close();
 }
 
 bool search_archive(

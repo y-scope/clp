@@ -72,49 +72,11 @@ public:
     );
 
     /**
-     * Opens and gets the local timestamp dictionary reader for the given archive path
-     * @param archive_path
-     * @return the timestamp dictionary reader
-     */
-    static std::shared_ptr<TimestampDictionaryReader> read_local_timestamp_dictionary(
-            std::string const& archive_path
-    );
-
-    /**
      * Gets the list of archives in the given archive directory
      * @param archives_dir
      * @return the list of archives
      */
     static std::vector<std::string> get_archives(std::string const& archives_dir);
-
-    /**
-     * Gets the list of schemas in the given archive
-     * @param archive_path
-     * @return the list of schemas
-     */
-    static std::vector<int32_t> get_schemas(std::string const& archive_path);
-
-    /**
-     * Append a set of columns to the given schema reader
-     * @param reader
-     * @param columns
-     * @param schema_tree
-     * @param var_dict
-     * @param log_dict
-     * @param array_dict
-     * @param timestamp_dict
-     * @param extract_timestamp
-     */
-    static void append_reader_columns(
-            SchemaReader* reader,
-            Schema const& columns,
-            std::shared_ptr<SchemaTree> const& schema_tree,
-            std::shared_ptr<VariableDictionaryReader> const& var_dict,
-            std::shared_ptr<LogTypeDictionaryReader> const& log_dict,
-            std::shared_ptr<LogTypeDictionaryReader> const& array_dict,
-            std::shared_ptr<TimestampDictionaryReader> const& timestamp_dict,
-            bool extract_timestamp
-    );
 
 private:
     /**

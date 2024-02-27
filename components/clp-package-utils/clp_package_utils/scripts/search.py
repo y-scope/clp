@@ -41,6 +41,9 @@ def main(argv):
     )
     args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
+        "-t", "--tags", help="Comma-separated list of tags of archives to search."
+    )
+    args_parser.add_argument(
         "--begin-time",
         type=int,
         help="Time range filter lower-bound (inclusive) as milliseconds" " from the UNIX epoch.",
@@ -117,6 +120,9 @@ def main(argv):
         "--max-num-results", str(parsed_args.max_num_results),
     ]
     # fmt: on
+    if parsed_args.tags:
+        search_cmd.append("--tags")
+        search_cmd.append(parsed_args.tags)
     if parsed_args.begin_time is not None:
         search_cmd.append("--begin-time")
         search_cmd.append(str(parsed_args.begin_time))
