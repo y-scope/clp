@@ -63,17 +63,15 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             print_basic_usage();
             std::cerr << std::endl;
-            std::cerr << "Options can be specified on the command line or through a configuration "
-                      << "file." << std::endl;
             std::cerr << all_options << std::endl;
-            return clp::CommandLineArgumentsBase::ParsingResult::InfoCommand;
+            return ParsingResult::InfoCommand;
         }
     } catch (std::exception& e) {
         SPDLOG_ERROR("Failed to parse command line arguments - {}", e.what());
-        return clp::CommandLineArgumentsBase::ParsingResult::Failure;
+        return ParsingResult::Failure;
     }
 
-    // Validate arguments. Note: mysql username and password are allowed to be the empty string.
+    // Validate arguments
     bool valid_arguments = true;
     if (m_reducer_host.empty()) {
         SPDLOG_ERROR("reducer-host cannot be empty.");
@@ -106,10 +104,10 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     }
 
     if (false == valid_arguments) {
-        return clp::CommandLineArgumentsBase::ParsingResult::Failure;
+        return ParsingResult::Failure;
     }
 
-    return clp::CommandLineArgumentsBase::ParsingResult::Success;
+    return ParsingResult::Success;
 }
 
 void CommandLineArguments::print_basic_usage() const {
