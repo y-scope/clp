@@ -114,6 +114,15 @@ public:
         advance_to_next_filter();
     }
 
+    // Disable copy and move construction/assignment since m_map is a reference
+    FilteredInt64MapRecordGroupIterator(FilteredInt64MapRecordGroupIterator const&) = delete;
+    FilteredInt64MapRecordGroupIterator(FilteredInt64MapRecordGroupIterator const&&) = delete;
+    FilteredInt64MapRecordGroupIterator const& operator=(FilteredInt64MapRecordGroupIterator const&)
+            = delete;
+    FilteredInt64MapRecordGroupIterator const&
+    operator=(FilteredInt64MapRecordGroupIterator const&&)
+            = delete;
+
     RecordGroup& get() override {
         m_record.set_record_value(m_map_end_it->second);
         m_group.set_tags(&m_map_end_it->first);
