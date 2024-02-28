@@ -511,10 +511,21 @@ int main(int argc, char const* argv[]) {
 
         // Connect to scheduler and register this reducer as available
         tcp::resolver resolver(ctx->get_io_context());
+        boost::system::error_code e;
         auto endpoints = resolver.resolve(
                 args.get_scheduler_host(),
-                std::to_string(args.get_scheduler_port())
+                std::to_string(args.get_scheduler_port()),
+                e
         );
+        if (e) {
+            SPDLOG_CRITICAL(
+                    "Failed to resolve endpoints for {}:{} - {}",
+                    args.get_scheduler_host(),
+                    args.get_scheduler_port(),
+                    e.message()
+            );
+            return 1;
+        }
         if (false == ctx->register_with_scheduler(endpoints)) {
             SPDLOG_CRITICAL("Failed to communicate with scheduler");
             return 1;
