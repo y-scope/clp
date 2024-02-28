@@ -292,6 +292,8 @@ void queue_validate_sender_task(std::shared_ptr<RecordReceiverContext> const& ct
     boost::asio::async_read(
             ctx->get_socket(),
             boost::asio::buffer(ctx->get_buf_write_head(), sizeof(job_id_t)),
+            // transfer_at_least(1) helps us avoid hanging when a broken client sends fewer than
+            // sizeof(job_id_t) bytes
             boost::asio::transfer_at_least(1),
             ValidateSenderTask(ctx)
     );
