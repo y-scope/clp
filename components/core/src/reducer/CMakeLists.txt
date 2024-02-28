@@ -46,7 +46,6 @@ target_link_libraries(reducer-server
         Boost::program_options
         clp::string_utils
         fmt::fmt
-        MariaDBClient::MariaDBClient
         ${MONGOCXX_TARGET}
         msgpack-cxx
         spdlog::spdlog
