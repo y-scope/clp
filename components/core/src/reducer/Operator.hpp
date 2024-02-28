@@ -9,18 +9,6 @@
 #include "RecordGroupIterator.hpp"
 
 namespace reducer {
-enum class OperatorType : uint8_t {
-    Map,
-    GroupBy,
-    Reduce
-};
-
-enum class OperatorResultCardinality : uint8_t {
-    One,
-    Subset,
-    Input
-};
-
 /**
  * Class implementing a generic Operator that operates on RecordGroup objects.
  *
@@ -28,9 +16,6 @@ enum class OperatorResultCardinality : uint8_t {
  * In the former case, the operator acts like a combiner, combining records from a previous pipeline
  * stage. In the latter case, the operator acts like a reducer, reducing pre-aggregated results from
  * within a pipeline stage.
- *
- * Operators can be of type GroupBy, Map, or Reduce, though currently no Map type Operators are
- * implemented.
  */
 class Operator {
 public:
