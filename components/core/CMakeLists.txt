@@ -186,19 +186,6 @@ else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
 endif()
 
-# Find and setup mongocxx
-if(CLP_USE_STATIC_LIBS)
-    set(MONGOCXX_TARGET mongo::mongocxx_static)
-else()
-    set(MONGOCXX_TARGET mongo::mongocxx_shared)
-endif()
-find_package(mongocxx REQUIRED)
-if(mongocxx_FOUND)
-    message(STATUS "Found mongocxx ${mongocxx_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for mongocxx")
-endif()
-
 # sqlite dependencies
 set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
 include(cmake/Modules/FindLibraryDependencies.cmake)
