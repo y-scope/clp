@@ -72,39 +72,28 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     }
 
     // Validate arguments
-    bool valid_arguments = true;
     if (m_reducer_host.empty()) {
-        SPDLOG_ERROR("reducer-host cannot be empty.");
-        valid_arguments = false;
+        throw std::invalid_argument("reducer-host cannot be empty.");
     }
 
     if (m_reducer_port <= 0) {
-        SPDLOG_ERROR("reducer-port cannot be <= 0.");
-        valid_arguments = false;
+        throw std::invalid_argument("reducer-port cannot be <= 0.");
     }
 
     if (m_scheduler_host.empty()) {
-        SPDLOG_ERROR("Empty scheduler-host argument");
-        valid_arguments = false;
+        throw std::invalid_argument("Empty scheduler-host argument.");
     }
 
     if (m_scheduler_port <= 0) {
-        SPDLOG_ERROR("Invalid argument for scheduler-port {}", m_scheduler_port);
-        valid_arguments = false;
+        throw std::invalid_argument("scheduler-port cannot be <= 0.");
     }
 
     if (m_mongodb_uri.empty()) {
-        SPDLOG_ERROR("Empty mongodb-uri argument");
-        valid_arguments = false;
+        throw std::invalid_argument("Empty mongodb-uri argument.");
     }
 
     if (m_polling_interval_ms <= 0) {
-        SPDLOG_ERROR("Invalid argument for polling-interval-ms {}", m_polling_interval_ms);
-        valid_arguments = false;
-    }
-
-    if (false == valid_arguments) {
-        return ParsingResult::Failure;
+        throw std::invalid_argument("polling-interval-ms cannot be <= 0.");
     }
 
     return ParsingResult::Success;
