@@ -224,10 +224,21 @@ def try_getting_task_result(async_task_result):
     return async_task_result.get()
 
 
+def get_min_timestamp_in_top_results(results_cache_collection, max_num_results):
+    result = list(
+        results_cache_collection.find()
+        .sort("timestamp", -1)
+        .limit(max_num_results)
+        .sort("timestamp", 1)
+        .limit(1)
+    )
+    return 0 if len(result) == 0 else result[0]["timestamp"]
+
+
 def check_job_status_and_update_db(db_conn, results_cache_uri):
     global active_jobs
 
-    for job_id in active_jobs:
+    for job_id in list(active_jobs.keys()):
         job = active_jobs[job_id]
         try:
             returned_results = try_getting_task_result(job.current_sub_job_async_task_result)
@@ -258,20 +269,12 @@ def check_job_status_and_update_db(db_conn, results_cache_uri):
                     results_cache_collection = results_cache_client.get_default_database()[job_id]
                     results_count = results_cache_collection.count_documents({})
                     if results_count >= max_num_results:
-                        result = list(
-                            results_cache_collection.find()
-                            .sort("timestamp", -1)
-                            .limit(max_num_results)
-                            .sort("timestamp", 1)
-                            .limit(1)
-                        )
-                        min_timestamp_in_top_results = (
-                            0 if len(result) == 0 else result[0]["timestamp"]
-                        )
                         max_timestamp_in_archive = job.remaining_archives_for_search[0][
                             "end_timestamp"
                         ]
-                        if max_timestamp_in_archive <= min_timestamp_in_top_results:
+                        if max_timestamp_in_archive <= get_min_timestamp_in_top_results(
+                            results_cache_collection, max_num_results
+                        ):
                             new_job_status = SearchJobStatus.SUCCEEDED
                     results_cache_client.close()
             if new_job_status == SearchJobStatus.RUNNING:
