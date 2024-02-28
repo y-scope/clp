@@ -29,6 +29,8 @@ set(
         Record.hpp
         RecordGroup.hpp
         RecordGroupIterator.hpp
+        RecordReceiverContext.cpp
+        RecordReceiverContext.hpp
         RecordTypedKeyIterator.hpp
         reducer_server.cpp
         ServerContext.cpp
