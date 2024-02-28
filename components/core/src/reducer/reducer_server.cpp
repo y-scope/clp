@@ -366,46 +366,48 @@ struct SchedulerUpdateListenerTask {
 
         current_buffer_occupancy += bytes_read;
 
-        auto& buffer = ctx->get_scheduler_update_buffer();
+        auto& buf = ctx->get_scheduler_update_buffer();
+        auto buf_read_head = buf.data();
 
         // Try to read a message from the scheduler
-        size_t size_header{0};
-        if (current_buffer_occupancy < sizeof(size_header)) {
+        size_t header_size{0};
+        if (current_buffer_occupancy < sizeof(header_size)) {
             queue_scheduler_update_listener_task(ctx, current_buffer_occupancy);
             return;
         }
 
-        memcpy(&size_header, buffer.data(), sizeof(size_header));
-        if (size_header > cMaxMessageSize) {
-            SPDLOG_ERROR("Message from scheduler too large {}B", size_header);
+        memcpy(&header_size, buf_read_head, sizeof(header_size));
+        if (header_size > cMaxMessageSize) {
+            SPDLOG_ERROR("Message from scheduler too large {}B", header_size);
             ctx->set_status(ServerStatus::RecoverableFailure);
             ctx->stop_event_loop();
             return;
         }
+        buf_read_head += sizeof(header_size);
 
-        auto total_message_size = sizeof(size_header) + size_header;
-        if (current_buffer_occupancy < total_message_size) {
+        auto packet_size = sizeof(header_size) + header_size;
+        if (current_buffer_occupancy < packet_size) {
             queue_scheduler_update_listener_task(ctx, current_buffer_occupancy);
             return;
         }
 
         nlohmann::json message;
         try {
-            message = nlohmann::json::from_msgpack(
-                    buffer.data() + sizeof(size_header),
-                    buffer.data() + sizeof(size_header) + size_header
-            );
+            message = nlohmann::json::from_msgpack(buf_read_head, buf_read_head + header_size);
         } catch (nlohmann::json::parse_error const& e) {
             SPDLOG_ERROR("Failed to parse message from scheduler - {}", e.what());
             ctx->set_status(ServerStatus::RecoverableFailure);
             ctx->stop_event_loop();
             return;
         }
-        buffer.clear();
+        buf.clear();
+        current_buffer_occupancy = 0;
 
-        if (ServerStatus::Idle == ctx->get_status()) {
+        auto status = ctx->get_status();
+        if (ServerStatus::Idle == status) {
             ctx->set_up_pipeline(message);
             ctx->set_status(ServerStatus::Running);
+
             if (ctx->is_timeline_aggregation()) {
                 auto& upsert_timer = ctx->get_upsert_timer();
                 upsert_timer.expires_from_now(std::chrono::milliseconds(ctx->get_polling_interval())
@@ -419,13 +421,13 @@ struct SchedulerUpdateListenerTask {
                 ctx->stop_event_loop();
                 return;
             }
-        } else if (ServerStatus::Running == ctx->get_status()) {
-            // Assuming for now that if we receive a message while in running state we know that it
-            // is the "all results sent" message. No need to examine the contents.
+
+            queue_scheduler_update_listener_task(ctx, 0);
+        } else if (ServerStatus::Running == status) {
+            // For now, if we receive a message while in the running state, we assume it's the "all
+            // results sent" message without examining its contents.
             ctx->set_status(ServerStatus::ReceivedAllResults);
 
-            // If there are no results still in flight this function will submit the final results
-            // to the results cache and
             if (false == ctx->try_finalize_results()) {
                 ctx->set_status(ServerStatus::RecoverableFailure);
                 ctx->stop_event_loop();
@@ -433,10 +435,6 @@ struct SchedulerUpdateListenerTask {
             }
 
             ctx->get_tcp_acceptor().cancel();
-        }
-
-        if (ServerStatus::Running == ctx->get_status()) {
-            queue_scheduler_update_listener_task(ctx, 0);
         }
     }
 
