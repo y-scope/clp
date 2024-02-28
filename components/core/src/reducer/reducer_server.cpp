@@ -350,44 +350,45 @@ private:
     std::shared_ptr<ServerContext> m_server_ctx;
 };
 
-struct SchedulerUpdateListenerTask {
-    SchedulerUpdateListenerTask(std::shared_ptr<ServerContext> ctx, size_t current_buffer_occupancy)
-            : ctx(std::move(ctx)),
-              current_buffer_occupancy(current_buffer_occupancy) {}
+class SchedulerUpdateListenerTask {
+public:
+    SchedulerUpdateListenerTask(std::shared_ptr<ServerContext> ctx, size_t buf_num_bytes_occupied)
+            : m_server_ctx(std::move(ctx)),
+              m_buf_num_bytes_occupied(buf_num_bytes_occupied) {}
 
-    void operator()(boost::system::error_code const& error, size_t bytes_read) {
+    void operator()(boost::system::error_code const& error, size_t num_bytes_read) {
         // This can include the scheduler closing the connection because the job has been cancelled
-        if (0 == bytes_read || error.failed()) {
+        if (0 == num_bytes_read || error.failed()) {
             SPDLOG_ERROR("Closing connection with scheduler due to connection error or shutdown");
-            ctx->set_status(ServerStatus::RecoverableFailure);
-            ctx->stop_event_loop();
+            m_server_ctx->set_status(ServerStatus::RecoverableFailure);
+            m_server_ctx->stop_event_loop();
             return;
         }
 
-        current_buffer_occupancy += bytes_read;
+        m_buf_num_bytes_occupied += num_bytes_read;
 
-        auto& buf = ctx->get_scheduler_update_buffer();
+        auto& buf = m_server_ctx->get_scheduler_update_buffer();
         auto buf_read_head = buf.data();
 
         // Try to read a message from the scheduler
         size_t header_size{0};
-        if (current_buffer_occupancy < sizeof(header_size)) {
-            queue_scheduler_update_listener_task(ctx, current_buffer_occupancy);
+        if (m_buf_num_bytes_occupied < sizeof(header_size)) {
+            queue_scheduler_update_listener_task(m_server_ctx, m_buf_num_bytes_occupied);
             return;
         }
 
         memcpy(&header_size, buf_read_head, sizeof(header_size));
         if (header_size > cMaxMessageSize) {
             SPDLOG_ERROR("Message from scheduler too large {}B", header_size);
-            ctx->set_status(ServerStatus::RecoverableFailure);
-            ctx->stop_event_loop();
+            m_server_ctx->set_status(ServerStatus::RecoverableFailure);
+            m_server_ctx->stop_event_loop();
             return;
         }
         buf_read_head += sizeof(header_size);
 
         auto packet_size = sizeof(header_size) + header_size;
-        if (current_buffer_occupancy < packet_size) {
-            queue_scheduler_update_listener_task(ctx, current_buffer_occupancy);
+        if (m_buf_num_bytes_occupied < packet_size) {
+            queue_scheduler_update_listener_task(m_server_ctx, m_buf_num_bytes_occupied);
             return;
         }
 
@@ -396,52 +397,54 @@ struct SchedulerUpdateListenerTask {
             message = nlohmann::json::from_msgpack(buf_read_head, buf_read_head + header_size);
         } catch (nlohmann::json::parse_error const& e) {
             SPDLOG_ERROR("Failed to parse message from scheduler - {}", e.what());
-            ctx->set_status(ServerStatus::RecoverableFailure);
-            ctx->stop_event_loop();
+            m_server_ctx->set_status(ServerStatus::RecoverableFailure);
+            m_server_ctx->stop_event_loop();
             return;
         }
         buf.clear();
-        current_buffer_occupancy = 0;
+        m_buf_num_bytes_occupied = 0;
 
-        auto status = ctx->get_status();
+        auto status = m_server_ctx->get_status();
         if (ServerStatus::Idle == status) {
-            ctx->set_up_pipeline(message);
-            ctx->set_status(ServerStatus::Running);
+            m_server_ctx->set_up_pipeline(message);
+            m_server_ctx->set_status(ServerStatus::Running);
 
-            if (ctx->is_timeline_aggregation()) {
-                auto& upsert_timer = ctx->get_upsert_timer();
-                upsert_timer.expires_from_now(std::chrono::milliseconds(ctx->get_polling_interval())
+            if (m_server_ctx->is_timeline_aggregation()) {
+                auto& upsert_timer = m_server_ctx->get_upsert_timer();
+                upsert_timer.expires_from_now(
+                        std::chrono::milliseconds(m_server_ctx->get_polling_interval())
                 );
-                upsert_timer.async_wait(PeriodicUpsertTask(ctx));
+                upsert_timer.async_wait(PeriodicUpsertTask(m_server_ctx));
             }
 
             // Synchronously notify the scheduler that the reducer is ready
-            if (false == ctx->ack_search_scheduler()) {
-                ctx->set_status(ServerStatus::RecoverableFailure);
-                ctx->stop_event_loop();
+            if (false == m_server_ctx->ack_search_scheduler()) {
+                m_server_ctx->set_status(ServerStatus::RecoverableFailure);
+                m_server_ctx->stop_event_loop();
                 return;
             }
 
-            queue_scheduler_update_listener_task(ctx, 0);
+            queue_scheduler_update_listener_task(m_server_ctx, m_buf_num_bytes_occupied);
         } else if (ServerStatus::Running == status) {
             // For now, if we receive a message while in the running state, we assume it's the "all
             // results sent" message without examining its contents.
-            ctx->set_status(ServerStatus::ReceivedAllResults);
+            m_server_ctx->set_status(ServerStatus::ReceivedAllResults);
 
-            if (false == ctx->try_finalize_results()) {
-                ctx->set_status(ServerStatus::RecoverableFailure);
-                ctx->stop_event_loop();
+            if (false == m_server_ctx->try_finalize_results()) {
+                m_server_ctx->set_status(ServerStatus::RecoverableFailure);
+                m_server_ctx->stop_event_loop();
                 return;
             }
 
-            ctx->get_tcp_acceptor().cancel();
+            m_server_ctx->get_tcp_acceptor().cancel();
         }
     }
 
 private:
     static constexpr size_t cMaxMessageSize = 16ULL * 1024 * 1024;
-    std::shared_ptr<ServerContext> ctx;
-    size_t current_buffer_occupancy;
+
+    std::shared_ptr<ServerContext> m_server_ctx;
+    size_t m_buf_num_bytes_occupied;
 };
 
 void queue_scheduler_update_listener_task(
