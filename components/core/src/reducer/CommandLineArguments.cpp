@@ -72,28 +72,36 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     }
 
     // Validate arguments
-    if (m_reducer_host.empty()) {
-        throw std::invalid_argument("reducer-host cannot be empty.");
-    }
+    try {
+        if (m_reducer_host.empty()) {
+            throw std::invalid_argument("reducer-host cannot be empty.");
+        }
 
-    if (m_reducer_port <= 0) {
-        throw std::invalid_argument("reducer-port cannot be <= 0.");
-    }
+        if (m_reducer_port <= 0) {
+            throw std::invalid_argument("reducer-port cannot be <= 0.");
+        }
 
-    if (m_scheduler_host.empty()) {
-        throw std::invalid_argument("Empty scheduler-host argument.");
-    }
+        if (m_scheduler_host.empty()) {
+            throw std::invalid_argument("Empty scheduler-host argument.");
+        }
 
-    if (m_scheduler_port <= 0) {
-        throw std::invalid_argument("scheduler-port cannot be <= 0.");
-    }
+        if (m_scheduler_port <= 0) {
+            throw std::invalid_argument("scheduler-port cannot be <= 0.");
+        }
 
-    if (m_mongodb_uri.empty()) {
-        throw std::invalid_argument("Empty mongodb-uri argument.");
-    }
+        if (m_mongodb_uri.empty()) {
+            throw std::invalid_argument("Empty mongodb-uri argument.");
+        }
 
-    if (m_polling_interval_ms <= 0) {
-        throw std::invalid_argument("polling-interval-ms cannot be <= 0.");
+        if (m_polling_interval_ms <= 0) {
+            throw std::invalid_argument("polling-interval-ms cannot be <= 0.");
+        }
+    } catch (std::exception& e) {
+        SPDLOG_ERROR("Failed to validate command line arguments - {}", e.what());
+        print_basic_usage();
+        std::cerr << "Try " << get_program_name() << " --help for detailed usage instructions"
+                  << std::endl;
+        return ParsingResult::Failure;
     }
 
     return ParsingResult::Success;
