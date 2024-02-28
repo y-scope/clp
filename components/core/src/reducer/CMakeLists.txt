@@ -19,8 +19,6 @@ set(
         CountOperator.hpp
         DeserializedRecordGroup.cpp
         DeserializedRecordGroup.hpp
-        GroupByTimeOperator.cpp
-        GroupByTimeOperator.hpp
         GroupTags.hpp
         JsonArrayRecordIterator.hpp
         JsonRecord.hpp
