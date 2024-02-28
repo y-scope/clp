@@ -384,11 +384,19 @@ int main(int argc, char const* argv[]) {
         SPDLOG_INFO("Waiting for job...");
 
         // Run the event processing loop
-        ctx->run();
+        try {
+            ctx->run();
+        } catch (boost::system::system_error const& e) {
+            SPDLOG_CRITICAL("Failed to run event loop - {}", e.what());
+            return 1;
+        }
 
         if (reducer::ServerStatus::ReceivedAllResults == ctx->get_status()) {
             SPDLOG_INFO("Job {} finished successfully", ctx->get_job_id());
-            ctx->get_scheduler_update_socket().close();
+            (void)ctx->get_scheduler_update_socket().close(e);
+            if (e) {
+                SPDLOG_WARN("Error when closing connection to scheduler - {}", e.message());
+            }
         } else if (reducer::ServerStatus::RecoverableFailure == ctx->get_status()) {
             SPDLOG_ERROR("Job {} finished with a recoverable error", ctx->get_job_id());
         } else if ((reducer::ServerStatus::UnrecoverableFailure == ctx->get_status())) {
