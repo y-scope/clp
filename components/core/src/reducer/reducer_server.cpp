@@ -4,6 +4,7 @@
 #include <utility>
 
 #include <boost/asio.hpp>
+#include <json/single_include/nlohmann/json.hpp>
 #include <mongocxx/instance.hpp>
 #include <msgpack.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
@@ -356,7 +357,7 @@ struct SchedulerUpdateListenerTask {
 
     void operator()(boost::system::error_code const& error, size_t bytes_read) {
         // This can include the scheduler closing the connection because the job has been cancelled
-        if (0 == bytes_read && error.failed()) {
+        if (0 == bytes_read || error.failed()) {
             SPDLOG_ERROR("Closing connection with scheduler due to connection error or shutdown");
             ctx->set_status(ServerStatus::RecoverableFailure);
             ctx->stop_event_loop();
@@ -365,15 +366,16 @@ struct SchedulerUpdateListenerTask {
 
         current_buffer_occupancy += bytes_read;
 
-        // Try to read the message from the scheduler
+        auto& buffer = ctx->get_scheduler_update_buffer();
+
+        // Try to read a message from the scheduler
         size_t size_header{0};
         if (current_buffer_occupancy < sizeof(size_header)) {
             queue_scheduler_update_listener_task(ctx, current_buffer_occupancy);
             return;
         }
-        auto& buffer = ctx->get_scheduler_update_buffer();
-        memcpy(&size_header, buffer.data(), sizeof(size_header));
 
+        memcpy(&size_header, buffer.data(), sizeof(size_header));
         if (size_header > cMaxMessageSize) {
             SPDLOG_ERROR("Message from scheduler too large {}B", size_header);
             ctx->set_status(ServerStatus::RecoverableFailure);
@@ -381,16 +383,24 @@ struct SchedulerUpdateListenerTask {
             return;
         }
 
-        size_t total_message_size = sizeof(size_header) + size_header;
+        auto total_message_size = sizeof(size_header) + size_header;
         if (current_buffer_occupancy < total_message_size) {
             queue_scheduler_update_listener_task(ctx, current_buffer_occupancy);
             return;
         }
 
-        nlohmann::json message = nlohmann::json::from_msgpack(
-                buffer.data() + sizeof(size_header),
-                buffer.data() + sizeof(size_header) + size_header
-        );
+        nlohmann::json message;
+        try {
+            message = nlohmann::json::from_msgpack(
+                    buffer.data() + sizeof(size_header),
+                    buffer.data() + sizeof(size_header) + size_header
+            );
+        } catch (nlohmann::json::parse_error const& e) {
+            SPDLOG_ERROR("Failed to parse message from scheduler - {}", e.what());
+            ctx->set_status(ServerStatus::RecoverableFailure);
+            ctx->stop_event_loop();
+            return;
+        }
         buffer.clear();
 
         if (ServerStatus::Idle == ctx->get_status()) {
