@@ -13,12 +13,11 @@ namespace reducer {
 class JsonArrayRecordIterator : public ConstRecordIterator {
 public:
     explicit JsonArrayRecordIterator(nlohmann::json::array_t json_records)
-            : m_json_records{std::move(json_records)},
+            : m_json_records(std::move(json_records)),
               m_record{m_cur_json_record},
               m_json_records_it{m_json_records.begin()} {
         if (m_json_records_it != m_json_records.end()) {
             m_cur_json_record = *m_json_records_it;
-            m_record = JsonRecord{m_cur_json_record};
         }
     }
 
@@ -26,7 +25,9 @@ public:
 
     void next() override {
         ++m_json_records_it;
-        m_record = JsonRecord{*m_json_records_it};
+        if (m_json_records_it != m_json_records.end()) {
+            m_cur_json_record = *m_json_records_it;
+        }
     }
 
     bool done() override { return m_json_records_it == m_json_records.end(); }
