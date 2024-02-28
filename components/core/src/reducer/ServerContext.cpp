@@ -69,7 +69,7 @@ ServerContext::ServerContext(CommandLineArguments& args)
 }
 
 void ServerContext::reset() {
-    m_ioctx.reset();
+    m_ioctx.restart();
     m_pipeline.reset(nullptr);
     m_status = ServerStatus::Idle;
     m_job_id = -1;
