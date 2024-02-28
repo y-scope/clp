@@ -45,7 +45,7 @@ public:
  */
 class SingleStringRecordAdapter : public Record {
 public:
-    explicit SingleStringRecordAdapter(std::string key_name) : m_key_name(std::move(key_name)) {}
+    explicit SingleStringRecordAdapter(std::string key_name) : m_key_name{std::move(key_name)} {}
 
     void set_record_value(std::string_view value) { m_value = value; }
 
@@ -73,7 +73,7 @@ private:
  */
 class SingleInt64RecordAdapter : public Record {
 public:
-    explicit SingleInt64RecordAdapter(std::string key_name) : m_key_name(std::move(key_name)) {}
+    explicit SingleInt64RecordAdapter(std::string key_name) : m_key_name{std::move(key_name)} {}
 
     void set_record_value(int64_t value) { m_value = value; }
 

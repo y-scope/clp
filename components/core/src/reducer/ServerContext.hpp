@@ -39,11 +39,11 @@ public:
     public:
         // Constructors
         OperationFailed(clp::ErrorCode error_code, char const* filename, int line_number)
-                : clp::TraceableException(error_code, filename, line_number) {}
+                : clp::TraceableException{error_code, filename, line_number} {}
 
         // Methods
         [[nodiscard]] char const* what() const noexcept override {
-            return "ServerContext operation failed";
+            return "reducer::ServerContext operation failed";
         }
     };
 

@@ -20,8 +20,8 @@ using boost::asio::ip::tcp;
 namespace reducer { namespace {
 class AcceptTask {
 public:
-    explicit AcceptTask(std::shared_ptr<RecordReceiverContext> rctx)
-            : m_record_recv_ctx(std::move(rctx)) {}
+    explicit AcceptTask(std::shared_ptr<RecordReceiverContext> ctx)
+            : m_record_recv_ctx{std::move(ctx)} {}
 
     void operator()(boost::system::error_code const& error);
 
@@ -32,7 +32,7 @@ private:
 class PeriodicUpsertTask {
 public:
     explicit PeriodicUpsertTask(std::shared_ptr<ServerContext> ctx)
-            : m_server_ctx(std::move(ctx)) {}
+            : m_server_ctx{std::move(ctx)} {}
 
     void operator()(boost::system::error_code const& e);
 
@@ -43,7 +43,7 @@ private:
 class ReceiveTask {
 public:
     explicit ReceiveTask(std::shared_ptr<RecordReceiverContext> ctx)
-            : m_record_recv_ctx(std::move(ctx)) {}
+            : m_record_recv_ctx{std::move(ctx)} {}
 
     void operator()(boost::system::error_code const& error, size_t num_bytes_read);
 
@@ -54,8 +54,8 @@ private:
 class SchedulerUpdateListenerTask {
 public:
     SchedulerUpdateListenerTask(std::shared_ptr<ServerContext> ctx, size_t buf_num_bytes_occupied)
-            : m_server_ctx(std::move(ctx)),
-              m_buf_num_bytes_occupied(buf_num_bytes_occupied) {}
+            : m_server_ctx{std::move(ctx)},
+              m_buf_num_bytes_occupied{buf_num_bytes_occupied} {}
 
     void operator()(boost::system::error_code const& error, size_t num_bytes_read);
 
@@ -69,7 +69,7 @@ private:
 class ValidateSenderTask {
 public:
     explicit ValidateSenderTask(std::shared_ptr<RecordReceiverContext> ctx)
-            : m_record_recv_ctx(std::move(ctx)) {}
+            : m_record_recv_ctx{std::move(ctx)} {}
 
     void operator()(boost::system::error_code const& error, size_t num_bytes_read);
 

@@ -14,8 +14,8 @@ public:
     static constexpr size_t cMinBufSize = 1024;
 
     explicit RecordReceiverContext(std::shared_ptr<ServerContext> const& ctx)
-            : m_server_ctx(ctx),
-              m_socket(ctx->get_io_context()),
+            : m_server_ctx{ctx},
+              m_socket{ctx->get_io_context()},
               m_buf(cMinBufSize) {}
 
     ~RecordReceiverContext() { m_socket.close(); }

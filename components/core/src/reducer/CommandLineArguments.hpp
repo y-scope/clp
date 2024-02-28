@@ -13,7 +13,7 @@ class CommandLineArguments : public clp::CommandLineArgumentsBase {
 public:
     // Constructors
     explicit CommandLineArguments(std::string const& program_name)
-            : clp::CommandLineArgumentsBase(program_name) {}
+            : clp::CommandLineArgumentsBase{program_name} {}
 
     // Methods
     ParsingResult parse_arguments(int argc, char const* argv[]) override;

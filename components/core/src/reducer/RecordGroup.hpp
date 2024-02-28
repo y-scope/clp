@@ -31,8 +31,8 @@ public:
 class SingleRecordGroup : public RecordGroup {
 public:
     SingleRecordGroup(GroupTags const* tags, Record const& record)
-            : m_tags(tags),
-              m_iterator(record) {}
+            : m_tags{tags},
+              m_iterator{record} {}
 
     [[nodiscard]] GroupTags const& get_tags() const override { return *m_tags; }
 
@@ -56,8 +56,8 @@ private:
 class MultiRecordGroup : public RecordGroup {
 public:
     MultiRecordGroup(GroupTags const* tags, std::vector<Record> const& records)
-            : m_tags(tags),
-              m_iterator(records) {}
+            : m_tags{tags},
+              m_iterator{records} {}
 
     [[nodiscard]] GroupTags const& get_tags() const override { return *m_tags; }
 
