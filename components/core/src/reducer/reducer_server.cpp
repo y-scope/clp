@@ -38,13 +38,16 @@ std::string server_status_to_string(ServerStatus status) {
 }
 }  // namespace
 
-struct RecordReceiverContext {
-    explicit RecordReceiverContext(std::shared_ptr<ServerContext> const& ctx)
-            : ctx(ctx),
-              socket(ctx->get_io_context()),
-              buf(cMinBufSize) {}
+class RecordReceiverContext {
+public:
+    static constexpr size_t cMinBufSize = 1024;
 
-    ~RecordReceiverContext() { socket.close(); }
+    explicit RecordReceiverContext(std::shared_ptr<ServerContext> const& ctx)
+            : m_server_ctx(ctx),
+              m_socket(ctx->get_io_context()),
+              m_buf(cMinBufSize) {}
+
+    ~RecordReceiverContext() { m_socket.close(); }
 
     // Disallow copy and move
     RecordReceiverContext(RecordReceiverContext const&) = delete;
@@ -55,13 +58,12 @@ struct RecordReceiverContext {
     static std::shared_ptr<RecordReceiverContext> new_receiver(
             std::shared_ptr<ServerContext> const& ctx
     ) {
-        // Note: we use shared instead of unique to make things work with boost::bind
-        std::shared_ptr<RecordReceiverContext> receiver
-                = std::make_shared<RecordReceiverContext>(ctx);
-        // clear the v6_only flag to allow ipv4 and ipv6 connections
-        // note this is linux-only -- for full portability need separate v4 and v6 acceptors
+        auto receiver = std::make_shared<RecordReceiverContext>(ctx);
+
+        // Clear the v6_only flag to allow ipv4 and ipv6 connections, but only on Linux. For full
+        // portability, we need separate v4 and v6 acceptors.
         // boost::asio::ip::v6_only option(false);
-        // receiver->socket.set_option(option);
+        // receiver->m_socket.set_option(option);
 
         return receiver;
     }
@@ -87,40 +89,53 @@ struct RecordReceiverContext {
     bool read_record_groups_packet();
 
     /**
-     * NOTE: This method should only be called from handles for boost::asio read tasks on the
+     * NOTE: This method should only be called from handlers for boost::asio read tasks on the
      * receiver's socket.
      * @param num_bytes
      */
-    void increment_buf_num_bytes_occupied(size_t num_bytes) { bytes_occupied += num_bytes; }
+    void increment_buf_num_bytes_occupied(size_t num_bytes) {
+        m_buf_num_bytes_occupied += num_bytes;
+    }
 
+    std::shared_ptr<ServerContext>& get_server_ctx() { return m_server_ctx; }
+
+    tcp::socket& get_socket() { return m_socket; }
+
+    /**
+     * @return A pointer to the next writable byte in the buffer.
+     */
+    char* get_buf_write_head() { return &m_buf[m_buf_num_bytes_occupied]; }
+
+    size_t get_buf_num_bytes_avail() { return m_buf.size() - m_buf_num_bytes_occupied; }
+
+private:
     static constexpr size_t cMaxRecordSize = 16ULL * 1024 * 1024;
-    static constexpr size_t cMinBufSize = 1024;
 
-    std::shared_ptr<ServerContext> ctx;
-    tcp::socket socket;
-    std::vector<char> buf;
-    size_t bytes_occupied{0};
+    std::shared_ptr<ServerContext> m_server_ctx;
+    tcp::socket m_socket;
+    std::vector<char> m_buf;
+    size_t m_buf_num_bytes_occupied{0};
 };
 
 bool RecordReceiverContext::read_connection_init_packet() {
     job_id_t job_id{0};
 
-    if (bytes_occupied != sizeof(job_id)) {
+    if (m_buf_num_bytes_occupied != sizeof(job_id)) {
         SPDLOG_ERROR("Rejecting connection due to invalid negotiation");
         return false;
     }
 
-    memcpy(&job_id, buf.data(), sizeof(job_id));
-    if (job_id != ctx->get_job_id()) {
+    memcpy(&job_id, m_buf.data(), sizeof(job_id));
+    if (job_id != m_server_ctx->get_job_id()) {
         SPDLOG_ERROR(
                 "Rejecting connection from worker with job_id={} during processing of "
                 "job_id={}",
                 job_id,
-                ctx->get_job_id()
+                m_server_ctx->get_job_id()
         );
         return false;
     }
-    bytes_occupied = 0;
+    m_buf_num_bytes_occupied = 0;
 
     return true;
 }
@@ -129,7 +144,7 @@ bool RecordReceiverContext::send_connection_accept_packet() {
     char const response = 'y';
     boost::system::error_code e;
     auto transferred
-            = boost::asio::write(socket, boost::asio::buffer(&response, sizeof(response)), e);
+            = boost::asio::write(m_socket, boost::asio::buffer(&response, sizeof(response)), e);
     if (e || transferred < sizeof(response)) {
         SPDLOG_ERROR("Rejecting connection due to failure to send acceptance - {}", e.message());
         return false;
@@ -140,9 +155,9 @@ bool RecordReceiverContext::send_connection_accept_packet() {
 
 bool RecordReceiverContext::read_record_groups_packet() {
     size_t record_size{0};
-    auto* read_head = buf.data();
-    while (bytes_occupied > 0) {
-        if (bytes_occupied < sizeof(record_size)) {
+    auto* read_head = m_buf.data();
+    while (m_buf_num_bytes_occupied > 0) {
+        if (m_buf_num_bytes_occupied < sizeof(record_size)) {
             break;
         }
         memcpy(&record_size, read_head, sizeof(record_size));
@@ -153,24 +168,24 @@ bool RecordReceiverContext::read_record_groups_packet() {
             return false;
         }
 
-        if (bytes_occupied < record_size + sizeof(record_size)) {
+        if (m_buf_num_bytes_occupied < record_size + sizeof(record_size)) {
             break;
         }
         read_head += sizeof(record_size);
 
         auto record_group = DeserializedRecordGroup{read_head, record_size};
-        ctx->push_record_group(record_group.get_tags(), record_group.record_iter());
-        bytes_occupied -= (record_size + sizeof(record_size));
+        m_server_ctx->push_record_group(record_group.get_tags(), record_group.record_iter());
+        m_buf_num_bytes_occupied -= (record_size + sizeof(record_size));
         read_head += record_size;
     }
 
-    if (bytes_occupied > 0) {
-        if (buf.size() < record_size + sizeof(record_size)) {
+    if (m_buf_num_bytes_occupied > 0) {
+        if (m_buf.size() < record_size + sizeof(record_size)) {
             std::vector<char> new_buf(sizeof(record_size) + record_size);
-            std::copy(buf.begin(), buf.end(), new_buf.begin());
-            buf.swap(new_buf);
+            std::copy(m_buf.begin(), m_buf.end(), new_buf.begin());
+            m_buf.swap(new_buf);
         } else {
-            memmove(buf.data(), read_head, bytes_occupied);
+            memmove(m_buf.data(), read_head, m_buf_num_bytes_occupied);
         }
     }
 
@@ -191,14 +206,16 @@ public:
             : m_record_recv_ctx(std::move(ctx)) {}
 
     void operator()(boost::system::error_code const& error, size_t num_bytes_read) {
-        if (0 == num_bytes_read || ServerStatus::Running != m_record_recv_ctx->ctx->get_status()) {
-            m_record_recv_ctx->ctx->decrement_num_active_receiver_tasks();
+        auto& server_ctx = m_record_recv_ctx->get_server_ctx();
+
+        if (0 == num_bytes_read || ServerStatus::Running != server_ctx->get_status()) {
+            server_ctx->decrement_num_active_receiver_tasks();
             return;
         }
         m_record_recv_ctx->increment_buf_num_bytes_occupied(num_bytes_read);
 
         if (false == m_record_recv_ctx->read_record_groups_packet()) {
-            m_record_recv_ctx->ctx->decrement_num_active_receiver_tasks();
+            server_ctx->decrement_num_active_receiver_tasks();
             return;
         }
 
@@ -206,7 +223,7 @@ public:
         if (false == error.failed()) {
             queue_receive_task(m_record_recv_ctx);
         } else {
-            m_record_recv_ctx->ctx->decrement_num_active_receiver_tasks();
+            server_ctx->decrement_num_active_receiver_tasks();
         }
     }
 
@@ -216,11 +233,8 @@ private:
 
 void queue_receive_task(std::shared_ptr<RecordReceiverContext> const& rctx) {
     boost::asio::async_read(
-            rctx->socket,
-            boost::asio::buffer(
-                    &rctx->buf[rctx->bytes_occupied],
-                    rctx->buf.size() - rctx->bytes_occupied
-            ),
+            rctx->get_socket(),
+            boost::asio::buffer(rctx->get_buf_write_head(), rctx->get_buf_num_bytes_avail()),
             ReceiveTask(rctx)
     );
 }
@@ -231,21 +245,27 @@ public:
             : m_record_recv_ctx(std::move(ctx)) {}
 
     void operator()(boost::system::error_code const& error, size_t num_bytes_read) {
+        auto& server_ctx = m_record_recv_ctx->get_server_ctx();
+
         if (0 == num_bytes_read || error.failed()
-            || ServerStatus::Running != m_record_recv_ctx->ctx->get_status())
+            || ServerStatus::Running != server_ctx->get_status())
         {
-            SPDLOG_ERROR("Rejecting connection because of connection error");
-            m_record_recv_ctx->ctx->decrement_num_active_receiver_tasks();
+            if (error.failed()) {
+                SPDLOG_ERROR("Rejecting connection due to connection error - {}", error.message());
+            } else {
+                SPDLOG_ERROR("Rejecting connection due to empty read");
+            }
+            server_ctx->decrement_num_active_receiver_tasks();
             return;
         }
         m_record_recv_ctx->increment_buf_num_bytes_occupied(num_bytes_read);
 
         if (false == m_record_recv_ctx->read_connection_init_packet()) {
-            m_record_recv_ctx->ctx->decrement_num_active_receiver_tasks();
+            server_ctx->decrement_num_active_receiver_tasks();
             return;
         }
         if (false == m_record_recv_ctx->send_connection_accept_packet()) {
-            m_record_recv_ctx->ctx->decrement_num_active_receiver_tasks();
+            server_ctx->decrement_num_active_receiver_tasks();
             return;
         }
 
@@ -257,11 +277,11 @@ private:
 };
 
 void queue_validate_sender_task(std::shared_ptr<RecordReceiverContext> const& rctx) {
-    rctx->ctx->increment_num_active_receiver_tasks();
+    rctx->get_server_ctx()->increment_num_active_receiver_tasks();
     static_assert(sizeof(job_id_t) <= RecordReceiverContext::cMinBufSize);
     boost::asio::async_read(
-            rctx->socket,
-            boost::asio::buffer(rctx->buf, sizeof(job_id_t)),
+            rctx->get_socket(),
+            boost::asio::buffer(rctx->get_buf_write_head(), sizeof(job_id_t)),
             ValidateSenderTask(rctx)
     );
 }
@@ -272,25 +292,25 @@ public:
             : m_record_recv_ctx(std::move(rctx)) {}
 
     void operator()(boost::system::error_code const& error) {
-        if (false == error.failed()
-            && ServerStatus::Running == m_record_recv_ctx->ctx->get_status())
-        {
+        auto& server_ctx = m_record_recv_ctx->get_server_ctx();
+
+        if (false == error.failed() && ServerStatus::Running == server_ctx->get_status()) {
             queue_validate_sender_task(m_record_recv_ctx);
-            queue_accept_task(m_record_recv_ctx->ctx);
+            queue_accept_task(server_ctx);
         } else if (error.failed() && boost::system::errc::operation_canceled == error.value()) {
             SPDLOG_INFO("Accept task cancelled");
         } else if (error.failed()) {
             // tcp acceptor socket was closed -- don't re-queue accept task
-            SPDLOG_ERROR("TCP acceptor socket closed");
-            if (m_record_recv_ctx->ctx->get_tcp_acceptor().is_open()) {
-                m_record_recv_ctx->ctx->get_tcp_acceptor().close();
+            SPDLOG_ERROR("TCP acceptor socket closed - {}", error.message());
+            if (server_ctx->get_tcp_acceptor().is_open()) {
+                server_ctx->get_tcp_acceptor().close();
             }
         } else {
             SPDLOG_WARN(
                     "Rejecting connection while not in Running state, state={}",
-                    server_status_to_string(m_record_recv_ctx->ctx->get_status())
+                    server_status_to_string(server_ctx->get_status())
             );
-            queue_accept_task(m_record_recv_ctx->ctx);
+            queue_accept_task(server_ctx);
         }
     }
 
@@ -300,7 +320,7 @@ private:
 
 void queue_accept_task(std::shared_ptr<ServerContext> const& ctx) {
     auto rctx = RecordReceiverContext::new_receiver(ctx);
-    ctx->get_tcp_acceptor().async_accept(rctx->socket, AcceptTask(rctx));
+    ctx->get_tcp_acceptor().async_accept(rctx->get_socket(), AcceptTask(rctx));
 }
 
 class PeriodicUpsertTask {
