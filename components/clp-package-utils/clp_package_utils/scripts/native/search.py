@@ -125,13 +125,13 @@ def create_and_monitor_job_in_db(
         with pymongo.MongoClient(results_cache.get_uri()) as client:
             search_results_collection = client[results_cache.db_name][str(job_id)]
             if max_num_results <= 0:
-                for document in search_results_collection.find():
-                    print(f"{document['original_path']}: {document['message']}", end="")
+                cursor = search_results_collection.find()
             else:
-                for document in (
+                cursor = (
                     search_results_collection.find().sort("timestamp", -1).limit(max_num_results)
-                ):
-                    print(f"{document['original_path']}: {document['message']}", end="")
+                )
+            for document in cursor:
+                print(f"{document['original_path']}: {document['message']}", end="")
 
 
 async def do_search(

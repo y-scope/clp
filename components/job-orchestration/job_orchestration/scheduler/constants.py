@@ -36,7 +36,6 @@ class SearchJobStatus(IntEnum):
     PENDING = 0
     RUNNING = auto()
     SUCCEEDED = auto()
-    NO_MATCHING_ARCHIVES = auto()
     FAILED = auto()
     CANCELLING = auto()
     CANCELLED = auto()
