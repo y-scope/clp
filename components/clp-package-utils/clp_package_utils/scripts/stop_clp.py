@@ -3,6 +3,7 @@ import logging
 import pathlib
 import subprocess
 import sys
+from typing import List
 
 from clp_py_utils.clp_config import (
     ALL_TARGET_NAME,
@@ -39,7 +40,7 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def stop_running_container(container_name: str, already_exited_containers: list[str], force: bool):
+def stop_running_container(container_name: str, already_exited_containers: List[str], force: bool):
     if is_container_running(container_name):
         logger.info(f"Stopping {container_name}...")
         cmd = ["docker", "stop", container_name]
