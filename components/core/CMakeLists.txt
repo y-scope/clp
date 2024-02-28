@@ -199,6 +199,7 @@ add_subdirectory(src/clp/clp)
 add_subdirectory(src/glt/glt)
 add_subdirectory(src/clp/make_dictionaries_readable)
 add_subdirectory(src/clp_s)
+add_subdirectory(src/reducer)
 
 set(SOURCE_FILES_unitTest
         src/clp/BufferedFileReader.cpp

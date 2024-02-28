@@ -1,9 +1,9 @@
 {
-  "url": "https://github.com/nlohmann/json/archive/refs/tags/v3.10.4.zip",
+  "url": "https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.zip",
   "unzip": true,
   "targets": [
     {
-      "source": "json-3.10.4",
+      "source": "json-3.11.3",
       "destination": "submodules/json"
     }
   ]
