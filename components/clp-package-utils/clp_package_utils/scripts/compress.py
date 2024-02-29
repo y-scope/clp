@@ -123,24 +123,13 @@ def main(argv):
             if not output_list_path.exists():
                 break
 
-        try:
-            with open(output_list_path, "w") as output_list:
-                # Validate all paths in input list
-                all_paths_valid = True
-                with open(parsed_args.input_list, "r") as f:
-                    for line in f:
-                        resolved_path = pathlib.Path(line.rstrip()).resolve()
-                        if not resolved_path.is_absolute():
-                            logger.error(f"Invalid relative path in input list: {resolved_path}")
-                            all_paths_valid = False
-                        path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
-                            resolved_path.anchor
-                        )
-                        output_list.write(f"{path}\n")
-                if not all_paths_valid:
-                    raise ValueError("--input-list must only contain absolute paths")
-        finally:
-            output_list_path.unlink()
+        with open(parsed_args.input_list, 'r') as input_list_file:
+            with open(output_list_path, 'w') as output_list_file:
+                for line in input_list_file:
+                    resolved_path = pathlib.Path(line.rstrip()).resolve()
+                    path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
+                        resolved_path.anchor)
+                    output_list_file.write(f'{path}\n')
 
         compress_cmd.append("--input-list")
         compress_cmd.append(container_clp_config.logs_directory / output_list_filename)
