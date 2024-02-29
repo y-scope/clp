@@ -30,23 +30,13 @@ JsonParser::JsonParser(JsonParserOption const& option)
         FileUtils::find_all_files(file_path, m_file_paths);
     }
 
-    m_schema_tree = std::make_shared<SchemaTree>();
-    m_schema_tree_path = m_archives_dir + constants::cArchiveSchemaTreeFile;
-
-    m_schema_map = std::make_shared<SchemaMap>(m_archives_dir, m_compression_level);
-
-    m_timestamp_dictionary = std::make_shared<TimestampDictionaryWriter>();
-    m_timestamp_dictionary->open(
-            m_archives_dir + constants::cArchiveTimestampDictFile,
-            option.compression_level
-    );
-
     ArchiveWriterOption archive_writer_option;
     archive_writer_option.archives_dir = m_archives_dir;
     archive_writer_option.id = m_generator();
     archive_writer_option.compression_level = option.compression_level;
+    archive_writer_option.print_archive_stats = option.print_archive_stats;
 
-    m_archive_writer = std::make_unique<ArchiveWriter>(m_schema_tree, m_timestamp_dictionary);
+    m_archive_writer = std::make_unique<ArchiveWriter>();
     m_archive_writer->open(archive_writer_option);
 }
 
@@ -90,7 +80,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
 
         switch (line.type()) {
             case ondemand::json_type::object: {
-                node_id = m_schema_tree->add_node(node_id_stack.top(), NodeType::OBJECT, cur_key);
+                node_id = m_archive_writer->add_node(node_id_stack.top(), NodeType::OBJECT, cur_key);
                 object_stack.push(std::move(line.get_object()));
                 auto objref = object_stack.top();
                 auto it = ondemand::object_iterator(objref.begin());

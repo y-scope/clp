@@ -1,5 +1,7 @@
 #include "ArchiveWriter.hpp"
 
+#include <json/single_include/nlohmann/json.hpp>
+
 #include "archive_constants.hpp"
 #include "SchemaTree.hpp"
 
@@ -7,6 +9,7 @@ namespace clp_s {
 void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_id = option.id;
     m_compression_level = option.compression_level;
+    m_print_archive_stats = option.print_archive_stats;
     auto archive_path
             = boost::filesystem::path(option.archives_dir) / boost::uuids::to_string(m_id);
 
@@ -44,6 +47,8 @@ size_t ArchiveWriter::close() {
     compressed_size += m_log_dict->close();
     compressed_size += m_array_dict->close();
     compressed_size += m_timestamp_dict->close_local();
+    compressed_size += m_schema_tree.store(m_archive_path, m_compression_level);
+    compressed_size += m_schema_map.store(m_archive_path, m_compression_level);
 
     m_tables_file_writer.open(
             m_archive_path + constants::cArchiveTablesFile,
@@ -74,7 +79,10 @@ size_t ArchiveWriter::close() {
     m_tables_file_writer.close();
 
     m_id_to_schema_writer.clear();
+    m_schema_tree.clear();
+    m_schema_map.clear();
     m_encoded_message_size = 0UL;
+
     return compressed_size;
 }
 
@@ -103,7 +111,7 @@ size_t ArchiveWriter::get_data_size() {
 
 void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const& schema) {
     for (int32_t id : schema) {
-        auto node = m_schema_tree->get_node(id);
+        auto node = m_schema_tree.get_node(id);
         switch (node->get_type()) {
             case NodeType::INTEGER:
                 writer->append_column(new Int64ColumnWriter(id));
@@ -131,6 +139,25 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
             case NodeType::UNKNOWN:
                 break;
         }
+    }
+}
+
+void ArchiveWriter::update_metadata() {
+    m_local_metadata->set_dynamic_uncompressed_size(0);
+    m_local_metadata->set_dynamic_compressed_size(get_dynamic_compressed_size());
+    // Rewrite (overwrite) the metadata file
+    m_metadata_file_writer.seek_from_begin(0);
+    m_local_metadata->write_to_file(m_metadata_file_writer);
+
+    m_global_metadata_db->update_archive_metadata(m_id_as_string, *m_local_metadata);
+
+    if (m_print_archive_stats) {
+        nlohmann::json json_msg;
+        json_msg["id"] = m_id_as_string;
+        json_msg["uncompressed_size"] = m_local_metadata->get_uncompressed_size_bytes();
+        json_msg["size"] = m_local_metadata->get_compressed_size_bytes();
+        std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
+                  << std::endl;
     }
 }
 }  // namespace clp_s

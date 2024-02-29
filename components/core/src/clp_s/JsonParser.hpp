@@ -31,6 +31,7 @@ struct JsonParserOption {
     std::string archives_dir;
     size_t target_encoded_size;
     int compression_level;
+    bool print_archive_stats;
 };
 
 class JsonParser {
@@ -102,11 +103,7 @@ private:
     std::string m_schema_tree_path;
 
     Schema m_current_schema;
-    std::shared_ptr<SchemaMap> m_schema_map;
-
-    std::shared_ptr<SchemaTree> m_schema_tree;
     ParsedMessage m_current_parsed_message;
-    std::shared_ptr<TimestampDictionaryWriter> m_timestamp_dictionary;
 
     std::string m_timestamp_key;
     std::vector<std::string> m_timestamp_column;

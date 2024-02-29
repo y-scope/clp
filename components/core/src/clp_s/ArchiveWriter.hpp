@@ -9,6 +9,7 @@
 
 #include "DictionaryWriter.hpp"
 #include "Schema.hpp"
+#include "SchemaMap.hpp"
 #include "SchemaTree.hpp"
 #include "SchemaWriter.hpp"
 #include "TimestampDictionaryWriter.hpp"
@@ -18,6 +19,7 @@ struct ArchiveWriterOption {
     boost::uuids::uuid id;
     std::string archives_dir;
     int compression_level;
+    bool print_archive_stats;
 };
 
 class ArchiveWriter {
@@ -29,17 +31,8 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    // Delete default constructor
-    ArchiveWriter() = delete;
-
     // Constructor
-    explicit ArchiveWriter(
-            std::shared_ptr<SchemaTree> schema_tree,
-            std::shared_ptr<TimestampDictionaryWriter> timestamp_dict
-    )
-            : m_encoded_message_size(0UL),
-              m_schema_tree(std::move(schema_tree)),
-              m_timestamp_dict(std::move(timestamp_dict)) {}
+    ArchiveWriter() : m_encoded_message_size(0UL) {}
 
     /**
      * Opens the archive writer
@@ -74,6 +67,11 @@ private:
      */
     void initialize_schema_writer(SchemaWriter* writer, Schema const& schema);
 
+    /**
+     * Updates the archive's metadata
+     */
+    void update_metadata();
+
     size_t m_encoded_message_size;
 
     boost::uuids::uuid m_id{};
@@ -86,8 +84,11 @@ private:
     std::shared_ptr<LogTypeDictionaryWriter> m_array_dict;  // log type dictionary for arrays
     std::shared_ptr<TimestampDictionaryWriter> m_timestamp_dict;
     int m_compression_level{};
+    bool m_print_archive_stats{};
 
-    std::shared_ptr<SchemaTree> m_schema_tree;
+    SchemaMap m_schema_map;
+    SchemaTree m_schema_tree;
+
     std::map<int32_t, SchemaWriter*> m_id_to_schema_writer;
 
     FileWriter m_tables_file_writer;
