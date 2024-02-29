@@ -210,12 +210,8 @@ def handle_pending_search_jobs(
             job.remaining_archives_for_search = []
 
         dispatch_search_job(job, archives_for_search, results_cache_uri)
-        if set_job_status(
-            db_conn, job_id, SearchJobStatus.RUNNING, SearchJobStatus.PENDING
-        ) or set_job_status(db_conn, job_id, SearchJobStatus.RUNNING, SearchJobStatus.RUNNING):
-            logger.info(
-                f"Dispatched job {job_id} with {len(archives_for_search)} archives to search."
-            )
+        logger.info(f"Dispatched job {job_id} with {len(archives_for_search)} archives to search.")
+        set_job_status(db_conn, job_id, SearchJobStatus.RUNNING, SearchJobStatus.PENDING)
 
 
 def try_getting_task_result(async_task_result):
@@ -224,15 +220,29 @@ def try_getting_task_result(async_task_result):
     return async_task_result.get()
 
 
-def get_min_timestamp_in_top_results(results_cache_collection, max_num_results):
-    result = list(
-        results_cache_collection.find()
-        .sort("timestamp", -1)
-        .limit(max_num_results)
-        .sort("timestamp", 1)
-        .limit(1)
-    )
-    return 0 if len(result) == 0 else result[0]["timestamp"]
+def found_max_num_latest_results(
+    results_cache_uri: str,
+    job_id: str,
+    max_num_results: int,
+    max_timestamp_in_remaining_archives: int,
+) -> bool:
+    with pymongo.MongoClient(results_cache_uri) as results_cache_client:
+        results_cache_collection = results_cache_client.get_default_database()[job_id]
+        results_count = results_cache_collection.count_documents({})
+        if results_count < max_num_results:
+            return False
+
+        results = list(
+            results_cache_collection.find(
+                projection=["timestamp"],
+                sort=[("timestamp", pymongo.DESCENDING)],
+                limit=max_num_results,
+            )
+            .sort("timestamp", pymongo.ASCENDING)
+            .limit(1)
+        )
+        min_timestamp_in_top_results = 0 if len(results) == 0 else results[0]["timestamp"]
+        return max_timestamp_in_remaining_archives <= min_timestamp_in_top_results
 
 
 def check_job_status_and_update_db(db_conn, results_cache_uri):
@@ -265,18 +275,13 @@ def check_job_status_and_update_db(db_conn, results_cache_uri):
                     new_job_status = SearchJobStatus.SUCCEEDED
                 # Check if we've reached max results
                 elif max_num_results > 0:
-                    results_cache_client = pymongo.MongoClient(results_cache_uri)
-                    results_cache_collection = results_cache_client.get_default_database()[job_id]
-                    results_count = results_cache_collection.count_documents({})
-                    if results_count >= max_num_results:
-                        max_timestamp_in_archive = job.remaining_archives_for_search[0][
-                            "end_timestamp"
-                        ]
-                        if max_timestamp_in_archive <= get_min_timestamp_in_top_results(
-                            results_cache_collection, max_num_results
-                        ):
-                            new_job_status = SearchJobStatus.SUCCEEDED
-                    results_cache_client.close()
+                    if found_max_num_latest_results(
+                        results_cache_uri,
+                        job_id,
+                        max_num_results,
+                        job.remaining_archives_for_search[0]["end_timestamp"],
+                    ):
+                        new_job_status = SearchJobStatus.SUCCEEDED
             if new_job_status == SearchJobStatus.RUNNING:
                 job.current_sub_job_async_task_result = None
                 logger.info(f"Job {job_id} waiting for more archives to search.")
