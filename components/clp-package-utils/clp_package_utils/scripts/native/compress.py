@@ -143,7 +143,7 @@ def main(argv):
     )
     args_parser.add_argument("paths", metavar="PATH", nargs="*", help="Paths to compress.")
     args_parser.add_argument(
-        "-f", "--input-list", dest="input_list", help="A file listing all paths to compress."
+        "-f", "--path-list", dest="path_list", help="A file listing all paths to compress."
     )
     args_parser.add_argument(
         "--remove-path-prefix",
@@ -161,15 +161,15 @@ def main(argv):
         "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
     )
     parsed_args = args_parser.parse_args(argv[1:])
-    compression_paths = parsed_args.paths
-    compression_input_list = parsed_args.input_list
+    compress_paths_arg = parsed_args.paths
+    compress_path_list_arg = parsed_args.path_list
 
     # Validate some input paths were specified
-    if compression_input_list is None and len(compression_paths) == 0:
+    if compress_path_list_arg is None and len(compress_paths_arg) == 0:
         args_parser.error("No paths specified.")
 
     # Validate paths were specified using only one method
-    if len(compression_paths) > 0 and compression_input_list is not None:
+    if len(compress_paths_arg) > 0 and compress_path_list_arg is not None:
         args_parser.error("Paths cannot be specified on the command line AND through a file.")
 
     # Validate and load config file
@@ -187,29 +187,31 @@ def main(argv):
     comp_jobs_dir = clp_config.logs_directory / "comp-jobs"
     comp_jobs_dir.mkdir(parents=True, exist_ok=True)
 
-    list_path = []
-    if len(compression_paths) > 0:
-        for path in compression_paths:
+    paths_to_compress = []
+    if len(compress_paths_arg) > 0:
+        for path in compress_paths_arg:
             stripped_path = path.strip()
             if "" == stripped_path:
                 # Skip empty paths
                 continue
             resolved_path_str = str(pathlib.Path(stripped_path).resolve())
-            list_path.append(resolved_path_str)
+            paths_to_compress.append(resolved_path_str)
     else:
         # Read paths from the input file
-        log_list_path = pathlib.Path(compression_input_list).resolve()
-        with open(log_list_path, "r") as f:
+        log_paths_to_compress = pathlib.Path(compress_path_list_arg).resolve()
+        with open(log_paths_to_compress, "r") as f:
             for path in f:
                 stripped_path = path.strip()
                 if "" == stripped_path:
                     # Skip empty paths
                     continue
                 resolved_path_str = str(pathlib.Path(stripped_path).resolve())
-                list_path.append(resolved_path_str)
+                paths_to_compress.append(resolved_path_str)
 
     mysql_adapter = SQL_Adapter(clp_config.database)
-    clp_input_config = InputConfig(list_path=list_path, timestamp_key=parsed_args.timestamp_key)
+    clp_input_config = InputConfig(
+        paths_to_compress=paths_to_compress, timestamp_key=parsed_args.timestamp_key
+    )
     if parsed_args.remove_path_prefix:
         clp_input_config.path_prefix_to_remove = parsed_args.remove_path_prefix
     clp_output_config = OutputConfig.parse_obj(clp_config.archive_output)

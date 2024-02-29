@@ -106,7 +106,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
             clp_metadata_db_connection_config=clp_metadata_db_connection_config,
         )
 
-        for path_idx, path in enumerate(clp_io_config.input.list_path, start=1):
+        for path_idx, path in enumerate(clp_io_config.input.paths_to_compress, start=1):
             path = Path(path)
 
             try:

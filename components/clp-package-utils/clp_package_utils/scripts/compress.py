@@ -42,7 +42,7 @@ def main(argv):
     )
     args_parser.add_argument("paths", metavar="PATH", nargs="*", help="Paths to compress.")
     args_parser.add_argument(
-        "-f", "--input-list", dest="input_list", help="A file listing all paths to compress."
+        "-f", "--path-list", dest="path_list", help="A file listing all paths to compress."
     )
     args_parser.add_argument(
         "--timestamp-key",
@@ -115,25 +115,25 @@ def main(argv):
         resolved_path = pathlib.Path(path).resolve()
         path = str(CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(resolved_path.anchor))
         compress_cmd.append(path)
-    if parsed_args.input_list is not None:
+    if parsed_args.path_list is not None:
         # Get unused output path
         while True:
-            output_list_filename = f"{uuid.uuid4()}.txt"
-            output_list_path = clp_config.logs_directory / output_list_filename
-            if not output_list_path.exists():
+            container_path_list_filename = f"{uuid.uuid4()}.txt"
+            container_path_list = clp_config.logs_directory / container_path_list_filename
+            if not container_path_list.exists():
                 break
 
-        with open(parsed_args.input_list, "r") as input_list_file:
-            with open(output_list_path, "w") as output_list_file:
-                for line in input_list_file:
+        with open(parsed_args.path_list, "r") as path_list_file:
+            with open(container_path_list, "w") as container_path_list_file:
+                for line in path_list_file:
                     resolved_path = pathlib.Path(line.rstrip()).resolve()
                     path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
                         resolved_path.anchor
                     )
-                    output_list_file.write(f"{path}\n")
+                    container_path_list_file.write(f"{path}\n")
 
-        compress_cmd.append("--input-list")
-        compress_cmd.append(container_clp_config.logs_directory / output_list_filename)
+        compress_cmd.append("--path-list")
+        compress_cmd.append(container_clp_config.logs_directory / container_path_list_filename)
 
     cmd = container_start_cmd + compress_cmd
     subprocess.run(cmd, check=True)
