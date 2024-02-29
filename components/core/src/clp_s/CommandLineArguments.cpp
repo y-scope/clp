@@ -358,13 +358,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format on
             search_options.add(match_options);
 
-            po::positional_options_description positional_options;
-            positional_options.add("archives-dir", 1);
-            positional_options.add("query", 1);
-
-            po::options_description output_options("Output Options");
+            po::options_description results_cache_output_options("Results Cache Output Options");
             // clang-format off
-            output_options.add_options()(
+            results_cache_output_options.add_options()(
                     "mongodb-uri",
                     po::value<std::string>(&m_mongodb_uri)->value_name("MONGODB_URI"),
                     "MongoDB URI to connect to"
@@ -384,7 +380,25 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "The maximum number of results to output"
             );
             // clang-format on
-            search_options.add(output_options);
+            search_options.add(results_cache_output_options);
+
+            po::options_description network_output_options("Network Output Options");
+            // clang-format off
+            network_output_options.add_options()(
+                    "host",
+                    po::value<std::string>(&m_host)->value_name("HOST"),
+                    "The host to send the results to"
+            )(
+                    "port",
+                    po::value<std::string>(&m_port)->value_name("PORT"),
+                    "The port to send the results to"
+            );
+            // clang-format on
+            search_options.add(network_output_options);
+
+            po::positional_options_description positional_options;
+            positional_options.add("archives-dir", 1);
+            positional_options.add("query", 1);
 
             std::vector<std::string> unrecognized_options
                     = po::collect_unrecognized(parsed.options, po::include_positional);
@@ -422,7 +436,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 visible_options.add(general_options);
                 visible_options.add(input_options);
                 visible_options.add(match_options);
-                visible_options.add(output_options);
+                visible_options.add(results_cache_output_options);
+                visible_options.add(network_output_options);
                 std::cerr << visible_options << '\n';
                 return ParsingResult::InfoCommand;
             }
@@ -465,6 +480,19 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             if (m_query.empty()) {
                 throw std::invalid_argument("No query specified");
+            }
+
+            if (false == m_host.empty() && false == m_port.empty()) {
+                if (m_host.empty() || m_port.empty()) {
+                    throw std::invalid_argument("Host and port must be specified together");
+                }
+                m_network_destination_enabled = true;
+            }
+
+            if (m_mongodb_enabled && m_network_destination_enabled) {
+                throw std::invalid_argument(
+                        "MongoDB and network destination cannot be specified together"
+                );
             }
         }
 

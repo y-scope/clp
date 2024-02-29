@@ -58,6 +58,12 @@ public:
 
     uint64_t get_max_num_results() const { return m_max_num_results; }
 
+    bool get_network_destination_enabled() const { return m_network_destination_enabled; }
+
+    std::string const& get_host() const { return m_host; }
+
+    std::string const& get_port() const { return m_port; }
+
     std::string const& get_query() const { return m_query; }
 
     std::optional<epochtime_t> get_search_begin_ts() const { return m_search_begin_ts; }
@@ -104,6 +110,11 @@ private:
     std::string m_mongodb_collection;
     uint64_t m_batch_size{1000};
     uint64_t m_max_num_results{1000};
+
+    // Network configuration variables
+    bool m_network_destination_enabled{false};
+    std::string m_host;
+    std::string m_port;
 
     // Search variables
     std::string m_query;
