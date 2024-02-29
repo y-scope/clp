@@ -123,13 +123,14 @@ def main(argv):
             if not output_list_path.exists():
                 break
 
-        with open(parsed_args.input_list, 'r') as input_list_file:
-            with open(output_list_path, 'w') as output_list_file:
+        with open(parsed_args.input_list, "r") as input_list_file:
+            with open(output_list_path, "w") as output_list_file:
                 for line in input_list_file:
                     resolved_path = pathlib.Path(line.rstrip()).resolve()
                     path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
-                        resolved_path.anchor)
-                    output_list_file.write(f'{path}\n')
+                        resolved_path.anchor
+                    )
+                    output_list_file.write(f"{path}\n")
 
         compress_cmd.append("--input-list")
         compress_cmd.append(container_clp_config.logs_directory / output_list_filename)
