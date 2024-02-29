@@ -160,6 +160,7 @@ class CompressionScheduler(BaseModel):
 
 class SearchScheduler(BaseModel):
     jobs_poll_delay: float = 0.1  # seconds
+    num_archives_to_search_per_sub_job: int = 16
     logging_level: str = "INFO"
 
     @validator("logging_level")

@@ -95,6 +95,7 @@ Meteor.methods({
             query_string: queryString,
             begin_timestamp: timestampBegin,
             end_timestamp: timestampEnd,
+            max_num_results: 1000,
             ignore_case: ignoreCase,
         };
         logger.info("search.submitQuery args =", args);

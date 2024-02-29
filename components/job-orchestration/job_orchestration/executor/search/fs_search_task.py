@@ -45,6 +45,9 @@ def make_clo_command(
     if search_config.path_filter is not None:
         search_cmd.append(search_config.path_filter)
 
+    search_cmd.append("--max-num-results")
+    search_cmd.append(str(search_config.max_num_results))
+
     return search_cmd
 
 
@@ -76,6 +79,9 @@ def make_clp_s_command(
         search_cmd.append(str(search_config.end_timestamp))
     if search_config.ignore_case:
         search_cmd.append("--ignore-case")
+
+    search_cmd.append("--max-num-results")
+    search_cmd.append(str(search_config.max_num_results))
 
     return search_cmd
 
