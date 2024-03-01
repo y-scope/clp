@@ -39,9 +39,13 @@ public:
      * Get const iterators into the schema map
      * @return const it to the schema map
      */
-    [[nodiscard]] schema_map_t::const_iterator schema_map_begin() const { return m_schema_map.cbegin(); }
+    [[nodiscard]] schema_map_t::const_iterator schema_map_begin() const {
+        return m_schema_map.cbegin();
+    }
 
-    [[nodiscard]] schema_map_t::const_iterator schema_map_end() const { return m_schema_map.cend(); }
+    [[nodiscard]] schema_map_t::const_iterator schema_map_end() const {
+        return m_schema_map.cend();
+    }
 
 private:
     int32_t m_current_schema_id;

@@ -80,7 +80,8 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
 
         switch (line.type()) {
             case ondemand::json_type::object: {
-                node_id = m_archive_writer->add_node(node_id_stack.top(), NodeType::OBJECT, cur_key);
+                node_id = m_archive_writer
+                                  ->add_node(node_id_stack.top(), NodeType::OBJECT, cur_key);
                 object_stack.push(std::move(line.get_object()));
                 auto objref = object_stack.top();
                 auto it = ondemand::object_iterator(objref.begin());
