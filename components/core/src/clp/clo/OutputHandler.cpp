@@ -1,6 +1,10 @@
-#include "ResultsCacheClient.hpp"
+#include "OutputHandler.hpp"
 
 #include <vector>
+
+#include "../../reducer/CountOperator.hpp"
+#include "../../reducer/Record.hpp"
+#include "../../reducer/ReducerNetworkUtils.hpp"
 
 namespace clp::clo {
 ResultsCacheClient::ResultsCacheClient(
@@ -66,5 +70,23 @@ void ResultsCacheClient::add_result(
         m_latest_results.pop();
         m_latest_results.emplace(std::make_unique<QueryResult>(original_path, message, timestamp));
     }
+}
+
+CountOutputHandler::CountOutputHandler(int socket_fd)
+        : m_socket_fd(socket_fd),
+          m_pipeline(reducer::PipelineInputMode::InterStage) {
+    m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
+}
+
+void CountOutputHandler::add_result(
+        std::string const& original_path,
+        std::string const& message,
+        epochtime_t timestamp
+) {
+    m_pipeline.push_record(reducer::EmptyRecord());
+}
+
+void CountOutputHandler::flush() {
+    reducer::send_pipeline_results(m_socket_fd, std::move(m_pipeline.finish()));
 }
 }  // namespace clp::clo

@@ -9,14 +9,56 @@
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/uri.hpp>
 
+#include "../../reducer/Pipeline.hpp"
 #include "../Defs.h"
+#include "../streaming_archive/MetadataDB.hpp"
 #include "../TraceableException.hpp"
 
 namespace clp::clo {
+
+/**
+ * Abstract class for handling output from the search command.
+ */
+class OutputHandler {
+public:
+    // Constructors
+    explicit OutputHandler(){};
+
+    // Destructor
+    virtual ~OutputHandler() = default;
+
+    // Methods
+    /**
+     * Adds a result to the batch.
+     * @param original_path The original path of the log event.
+     * @param message The content of the log event.
+     * @param timestamp The timestamp of the log event.
+     */
+    virtual void
+    add_result(std::string const& original_path, std::string const& message, epochtime_t timestamp)
+            = 0;
+
+    /**
+     * Flushes the batch. Called one time at the end of search.
+     */
+    virtual void flush() = 0;
+
+    /**
+     * @param it
+     * @return whether a file can be skipped based on the current state of the output handler, and
+     * metadata about the file
+     */
+    [[nodiscard]] virtual bool can_skip_file(
+            clp::streaming_archive::MetadataDB::FileIterator const& it
+    ) {
+        return false;
+    }
+};
+
 /**
  * Class encapsulating a MongoDB client used to send query results to the results cache.
  */
-class ResultsCacheClient {
+class ResultsCacheClient : public OutputHandler {
 public:
     // Types
     struct QueryResult {
@@ -65,13 +107,16 @@ public:
      * @param message The content of the log event.
      * @param timestamp The timestamp of the log event.
      */
-    void
-    add_result(std::string const& original_path, std::string const& message, epochtime_t timestamp);
+    void add_result(
+            std::string const& original_path,
+            std::string const& message,
+            epochtime_t timestamp
+    ) override;
 
     /**
-     * Flushes the batch.
+     * Flushes the batch. Called one time at the end of search.
      */
-    void flush();
+    void flush() override;
 
     /**
      * @return The earliest (smallest) timestamp in the heap of latest results
@@ -89,6 +134,11 @@ public:
         return m_latest_results.size() >= m_max_num_results;
     }
 
+    [[nodiscard]] bool can_skip_file(clp::streaming_archive::MetadataDB::FileIterator const& it
+    ) override {
+        return is_latest_results_full() && get_smallest_timestamp() > it.get_end_ts();
+    }
+
 private:
     mongocxx::client m_client;
     mongocxx::collection m_collection;
@@ -102,6 +152,26 @@ private:
             QueryResultGreaterTimestampComparator>
             m_latest_results;
 };
+
+class CountOutputHandler : public OutputHandler {
+public:
+    // Constructor
+    CountOutputHandler(int socket_fd);
+
+    // Methods inherited from OutputHandler
+    void add_result(
+            std::string const& original_path,
+            std::string const& message,
+            epochtime_t timestamp
+    ) override;
+
+    void flush() override;
+
+private:
+    int m_socket_fd;
+    reducer::Pipeline m_pipeline;
+};
+
 }  // namespace clp::clo
 
 #endif  // CLP_CLO_MONGODBCLIENT_HPP

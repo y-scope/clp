@@ -4,13 +4,17 @@
 
 #include <spdlog/spdlog.h>
 
+#include "../../reducer/CountOperator.hpp"
+#include "../../reducer/Record.hpp"
+#include "../../reducer/ReducerNetworkUtils.hpp"
+
 namespace clp_s::search {
 NetworkOutputHandler::NetworkOutputHandler(
         std::string const& host,
         std::string const& port,
         bool should_output_timestamp
 )
-        : OutputHandler(should_output_timestamp) {
+        : OutputHandler(should_output_timestamp, true) {
     struct addrinfo hints = {};
     // Address can be IPv4 or IPV6
     hints.ai_family = AF_UNSPEC;
@@ -56,7 +60,7 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
         uint64_t max_num_results,
         bool should_output_timestamp
 )
-        : OutputHandler(should_output_timestamp),
+        : OutputHandler(should_output_timestamp, true),
           m_batch_size(batch_size),
           m_max_num_results(max_num_results) {
     try {
@@ -110,5 +114,25 @@ void ResultsCacheOutputHandler::write(std::string const& message, epochtime_t ti
         m_latest_results.pop();
         m_latest_results.emplace(std::make_unique<QueryResult>("", message, timestamp));
     }
+}
+
+void ReducerOutputHandler::finish() {
+    if (false == send_results()) {
+        SPDLOG_ERROR("Failed to send aggregated results to reducer");
+    }
+}
+
+CountOutputHandler::CountOutputHandler(int socket_fd)
+        : ReducerOutputHandler(socket_fd, false, false),
+          m_pipeline(reducer::PipelineInputMode::InterStage) {
+    m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
+}
+
+void CountOutputHandler::write(std::string const& message) {
+    m_pipeline.push_record(reducer::EmptyRecord());
+}
+
+bool CountOutputHandler::send_results() {
+    return reducer::send_pipeline_results(m_socket_fd, std::move(m_pipeline.finish()));
 }
 }  // namespace clp_s::search

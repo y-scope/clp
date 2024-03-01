@@ -113,6 +113,7 @@ void Output::filter() {
         m_output_handler->flush();
         archive_reader.close();
     }
+    m_output_handler->finish();
 }
 
 void Output::init(

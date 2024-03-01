@@ -15,6 +15,7 @@
 
 #include "../clp/GlobalMySQLMetadataDB.hpp"
 #include "../clp/streaming_archive/ArchiveMetadata.hpp"
+#include "../reducer/ReducerNetworkUtils.hpp"
 #include "CommandLineArguments.hpp"
 #include "Defs.hpp"
 #include "JsonConstructor.hpp"
@@ -144,7 +145,8 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::string const& archive_dir,
-        std::shared_ptr<Expression> expr
+        std::shared_ptr<Expression> expr,
+        int reducer_socket_fd
 ) {
     auto const& query = command_line_arguments.get_query();
 
@@ -202,7 +204,9 @@ bool search_archive(
     }
 
     std::unique_ptr<OutputHandler> output_handler;
-    if (command_line_arguments.get_mongodb_enabled()) {
+    if (command_line_arguments.get_count()) {
+        output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
+    } else if (command_line_arguments.get_mongodb_enabled()) {
         output_handler = std::make_unique<ResultsCacheOutputHandler>(
                 command_line_arguments.get_mongodb_uri(),
                 command_line_arguments.get_mongodb_collection(),
@@ -296,7 +300,6 @@ int main(int argc, char const* argv[]) {
         mongocxx::instance const mongocxx_instance{};
 
         auto const& query = command_line_arguments.get_query();
-
         auto query_stream = std::istringstream(query);
         auto expr = kql::parse_kql_expression(query_stream);
         if (nullptr == expr) {
@@ -314,11 +317,26 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
 
+        int reducer_socket_fd = -1;
+        if (command_line_arguments.get_count()) {
+            reducer_socket_fd = reducer::connect_to_reducer(
+                    command_line_arguments.get_reducer_host(),
+                    command_line_arguments.get_reducer_port(),
+                    command_line_arguments.get_job_id()
+            );
+            if (-1 == reducer_socket_fd) {
+                SPDLOG_ERROR("Failed to connect to reducer");
+                return 1;
+            }
+        }
+
         auto const& archive_id = command_line_arguments.get_archive_id();
         if (false == archive_id.empty()) {
             std::filesystem::path const archives_dir_path{archives_dir};
             std::string const archive_path{archives_dir_path / archive_id};
-            if (false == search_archive(command_line_arguments, archive_path, expr)) {
+            if (false
+                == search_archive(command_line_arguments, archive_path, expr, reducer_socket_fd))
+            {
                 return 1;
             }
         } else {
@@ -328,7 +346,14 @@ int main(int argc, char const* argv[]) {
                     continue;
                 }
 
-                if (false == search_archive(command_line_arguments, entry.path(), expr->copy())) {
+                if (false
+                    == search_archive(
+                            command_line_arguments,
+                            entry.path(),
+                            expr->copy(),
+                            reducer_socket_fd
+                    ))
+                {
                     return 1;
                 }
             }

@@ -44,6 +44,14 @@ public:
 
     uint64_t get_max_num_results() const { return m_max_num_results; }
 
+    std::string const& get_reducer_host() const { return m_reducer_host; }
+
+    int get_reducer_port() const { return m_reducer_port; }
+
+    int32_t get_job_id() const { return m_job_id; }
+
+    bool get_count() const { return m_count; }
+
 private:
     // Methods
     void print_basic_usage() const override;
@@ -58,6 +66,12 @@ private:
     std::string m_file_path;
     epochtime_t m_search_begin_ts, m_search_end_ts;
     uint64_t m_max_num_results;
+
+    // Search aggregation variables
+    bool m_count{false};
+    std::string m_reducer_host{""};
+    int m_reducer_port{-1};
+    int32_t m_job_id{-1};
 };
 }  // namespace clp::clo
 

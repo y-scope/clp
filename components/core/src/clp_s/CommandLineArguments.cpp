@@ -329,6 +329,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "query,q",
                     po::value<std::string>(&m_query),
                     "Query to perform"
+            )(
+                    "count",
+                    po::bool_switch(&m_count),
+                    "Perform the query and count the number of results"
             );
             // clang-format on
 
@@ -378,6 +382,21 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<uint64_t>(&m_max_num_results)->value_name("MAX_NUM_RESULTS")->
                         default_value(m_max_num_results),
                     "The maximum number of results to output"
+            )(
+                    "reducer-host",
+                    po::value<std::string>(&m_reducer_host)->value_name("REDUCER_HOST")->
+                        default_value(m_reducer_host),
+                    "Host the reducer server is running on"
+            )(
+                    "reducer-port",
+                    po::value<int>(&m_reducer_port)->value_name("REDUCER_PORT")->
+                        default_value(m_reducer_port),
+                    "Port the reducer server is listening on"
+            )(
+                    "job-id",
+                    po::value<int32_t>(&m_job_id)->value_name("JOB_ID")->
+                        default_value(m_job_id),
+                    "The Job ID of this aggregation operation"
             );
             // clang-format on
             search_options.add(results_cache_output_options);
@@ -494,8 +513,25 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                         "MongoDB and network destination cannot be specified together"
                 );
             }
-        }
 
+            if (m_count) {
+                if (m_reducer_host.empty()) {
+                    throw std::invalid_argument(
+                            "Reducer host must be specified for aggregation jobs"
+                    );
+                }
+
+                if (m_reducer_port <= 0) {
+                    throw std::invalid_argument(
+                            "Reducer port must be specified for aggregation jobs"
+                    );
+                }
+
+                if (m_job_id <= 0) {
+                    throw std::invalid_argument("Job ID must be specified for aggregation jobs");
+                }
+            }
+        }
     } catch (std::exception& e) {
         SPDLOG_ERROR("{}", e.what());
         print_basic_usage();

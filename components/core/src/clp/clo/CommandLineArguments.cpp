@@ -127,11 +127,36 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     positional_options_description.add("wildcard-string", 1);
     positional_options_description.add("file-path", 1);
 
+    po::options_description options_aggregation;
+    // clang-format off
+    options_aggregation.add_options()(
+            "reducer-host",
+            po::value<std::string>(&m_reducer_host)->value_name("REDUCER_HOST")->
+                default_value(m_reducer_host),
+            "Host the reducer server is running on"
+    )(
+            "reducer-port",
+            po::value<int>(&m_reducer_port)->value_name("REDUCER_PORT")->
+                default_value(m_reducer_port),
+            "Port the reducer server is listening on"
+    )(
+            "job-id",
+            po::value<int32_t>(&m_job_id)->value_name("JOB_ID")->
+                default_value(m_job_id),
+            "The Job ID of this aggregation operation"
+    )(
+            "count",
+            po::bool_switch(&m_count),
+            "Perform the query and count the number of results"
+    );
+    // clang-format on
+
     // Aggregate all options
     po::options_description all_options;
     all_options.add(options_general);
     all_options.add(options_match_control);
     all_options.add(options_output_control);
+    all_options.add(options_aggregation);
     all_options.add(hidden_positional_options);
 
     // Parse options
@@ -272,6 +297,20 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         // Validate max number of results
         if (m_max_num_results == 0) {
             throw invalid_argument("Max number of results cannot be 0.");
+        }
+
+        if (m_count) {
+            if (m_reducer_host.empty()) {
+                throw invalid_argument("Reducer host must be specified for aggregation jobs");
+            }
+
+            if (m_reducer_port <= 0) {
+                throw invalid_argument("Reducer port must be specified for aggregation jobs");
+            }
+
+            if (m_job_id <= 0) {
+                throw invalid_argument("Job ID must be specified for aggregation jobs");
+            }
         }
     } catch (exception& e) {
         SPDLOG_ERROR("{}", e.what());

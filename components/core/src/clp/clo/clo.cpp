@@ -5,6 +5,7 @@
 #include <mongocxx/instance.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
+#include "../../reducer/ReducerNetworkUtils.hpp"
 #include "../Defs.h"
 #include "../Grep.hpp"
 #include "../Profiler.hpp"
@@ -12,9 +13,11 @@
 #include "../streaming_archive/Constants.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
-#include "ResultsCacheClient.hpp"
+#include "OutputHandler.hpp"
 
 using clp::clo::CommandLineArguments;
+using clp::clo::CountOutputHandler;
+using clp::clo::OutputHandler;
 using clp::clo::ResultsCacheClient;
 using clp::CommandLineArgumentsBase;
 using clp::epochtime_t;
@@ -49,7 +52,7 @@ enum class SearchFilesResult {
  * @param query
  * @param archive
  * @param file_metadata_ix
- * @param results_cache_client
+ * @param output_handler
  * @param segments_to_search
  * @return SearchFilesResult::OpenFailure on failure to open a compressed file
  * @return SearchFilesResult::ResultSendFailure on failure to send a result
@@ -59,27 +62,27 @@ static SearchFilesResult search_files(
         Query& query,
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
-        ResultsCacheClient& results_cache_client,
+        std::unique_ptr<OutputHandler>& output_handler,
         std::set<clp::segment_id_t> const& segments_to_search
 );
 /**
  * Searches an archive with the given path
  * @param command_line_args
  * @param archive_path
- * @param results_cache_client
+ * @param output_handler
  * @return true on success, false otherwise
  */
 static bool search_archive(
         CommandLineArguments const& command_line_args,
         boost::filesystem::path const& archive_path,
-        ResultsCacheClient& results_cache_client
+        std::unique_ptr<OutputHandler> output_handler
 );
 
 static SearchFilesResult search_files(
         Query& query,
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
-        ResultsCacheClient& results_cache_client,
+        std::unique_ptr<OutputHandler>& output_handler,
         std::set<clp::segment_id_t> const& segments_to_search
 ) {
     SearchFilesResult result = SearchFilesResult::Success;
@@ -93,9 +96,7 @@ static SearchFilesResult search_files(
         if (segments_to_search.count(file_metadata_ix.get_segment_id()) == 0) {
             continue;
         }
-        if (results_cache_client.is_latest_results_full()
-            && results_cache_client.get_smallest_timestamp() > file_metadata_ix.get_end_ts())
-        {
+        if (output_handler->can_skip_file(file_metadata_ix)) {
             continue;
         }
 
@@ -121,7 +122,7 @@ static SearchFilesResult search_files(
                 decompressed_message
         ))
         {
-            results_cache_client.add_result(
+            output_handler->add_result(
                     compressed_file.get_orig_path(),
                     decompressed_message,
                     compressed_message.get_ts_in_milli()
@@ -137,7 +138,7 @@ static SearchFilesResult search_files(
 static bool search_archive(
         CommandLineArguments const& command_line_args,
         boost::filesystem::path const& archive_path,
-        ResultsCacheClient& results_cache_client
+        std::unique_ptr<OutputHandler> output_handler
 ) {
     if (false == boost::filesystem::exists(archive_path)) {
         SPDLOG_ERROR("Archive '{}' does not exist.", archive_path.c_str());
@@ -211,12 +212,12 @@ static bool search_archive(
             query,
             archive_reader,
             file_metadata_ix,
-            results_cache_client,
+            output_handler,
             ids_of_segments_to_search
     );
     file_metadata_ix_ptr.reset(nullptr);
 
-    results_cache_client.flush();
+    output_handler->flush();
     archive_reader.close();
 
     return true;
@@ -247,19 +248,37 @@ int main(int argc, char const* argv[]) {
             break;
     }
 
+    int reducer_socket_fd = -1;
+    if (command_line_args.get_count()) {
+        reducer_socket_fd = reducer::connect_to_reducer(
+                command_line_args.get_reducer_host(),
+                command_line_args.get_reducer_port(),
+                command_line_args.get_job_id()
+        );
+        if (-1 == reducer_socket_fd) {
+            SPDLOG_ERROR("Failed to connect to reducer");
+            return -1;
+        }
+    }
+
     mongocxx::instance mongocxx_instance{};
-    ResultsCacheClient results_cache_client(
-            command_line_args.get_mongodb_uri(),
-            command_line_args.get_mongodb_collection(),
-            command_line_args.get_batch_size(),
-            command_line_args.get_max_num_results()
-    );
+    std::unique_ptr<OutputHandler> output_handler;
+    if (command_line_args.get_count()) {
+        output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
+    } else {
+        output_handler = std::make_unique<ResultsCacheClient>(
+                command_line_args.get_mongodb_uri(),
+                command_line_args.get_mongodb_collection(),
+                command_line_args.get_batch_size(),
+                command_line_args.get_max_num_results()
+        );
+    }
 
     auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());
 
     int return_value = 0;
     try {
-        if (false == search_archive(command_line_args, archive_path, results_cache_client)) {
+        if (false == search_archive(command_line_args, archive_path, std::move(output_handler))) {
             return_value = -1;
         }
     } catch (TraceableException& e) {

@@ -1,4 +1,24 @@
 set(
+        REDUCER_SOURCES
+        ../../reducer/ConstRecordIterator.hpp
+        ../../reducer/CountOperator.cpp
+        ../../reducer/CountOperator.hpp
+        ../../reducer/DeserializedRecordGroup.cpp
+        ../../reducer/DeserializedRecordGroup.hpp
+        ../../reducer/GroupTags.hpp
+        ../../reducer/Operator.cpp
+        ../../reducer/Operator.hpp
+        ../../reducer/Pipeline.cpp
+        ../../reducer/Pipeline.hpp
+        ../../reducer/Record.hpp
+        ../../reducer/RecordGroup.hpp
+        ../../reducer/RecordGroupIterator.hpp
+        ../../reducer/RecordTypedKeyIterator.hpp
+        ../../reducer/ReducerNetworkUtils.cpp
+        ../../reducer/ReducerNetworkUtils.hpp
+)
+
+set(
         CLO_SOURCES
         ../BufferReader.cpp
         ../BufferReader.hpp
@@ -108,11 +128,11 @@ set(
         clo.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
-        ResultsCacheClient.cpp
-        ResultsCacheClient.hpp
+        OutputHandler.cpp
+        OutputHandler.hpp
 )
 
-add_executable(clo ${CLO_SOURCES})
+add_executable(clo ${CLO_SOURCES} ${REDUCER_SOURCES})
 target_compile_features(clo PRIVATE cxx_std_17)
 target_include_directories(clo PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 target_link_libraries(clo
