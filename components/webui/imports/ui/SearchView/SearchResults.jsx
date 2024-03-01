@@ -1,4 +1,4 @@
-import React, {useCallback} from "react";
+import React from "react";
 
 import SearchResultsHeader from "./SearchResultsHeader.jsx";
 import SearchResultsTable from "./SearchResultsTable.jsx";

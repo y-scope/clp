@@ -8,8 +8,8 @@ import "./SearchResultsTable.scss";
 
 
 /**
- * Senses if the user has requested to load more results by scrolling till this
- * element becomes partially visible.
+ * Senses if the user has requested to load more results by scrolling until
+ * this element becomes partially visible.
  *
  * @param {boolean} hasMoreResults
  * @param {function} onLoadMoreResults
@@ -28,10 +28,7 @@ const SearchResultsLoadSensor = ({
 
         const observer = new IntersectionObserver(
             (entries) => {
-                if (
-                    (true === entries[0].isIntersecting) &&
-                    (true === hasMoreResults)
-                ) {
+                if (entries[0].isIntersecting && hasMoreResults) {
                     onLoadMoreResults();
                 }
             }
