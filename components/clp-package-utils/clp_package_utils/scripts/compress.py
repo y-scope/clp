@@ -119,12 +119,12 @@ def main(argv):
         # Get unused output path
         while True:
             container_path_list_filename = f"{uuid.uuid4()}.txt"
-            container_path_list = clp_config.logs_directory / container_path_list_filename
-            if not container_path_list.exists():
+            container_path_list_path = clp_config.logs_directory / container_path_list_filename
+            if not container_path_list_path.exists():
                 break
 
         with open(parsed_args.path_list, "r") as path_list_file:
-            with open(container_path_list, "w") as container_path_list_file:
+            with open(container_path_list_path, "w") as container_path_list_file:
                 for line in path_list_file:
                     resolved_path = pathlib.Path(line.rstrip()).resolve()
                     path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(

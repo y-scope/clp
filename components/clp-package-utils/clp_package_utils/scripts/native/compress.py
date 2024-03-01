@@ -198,8 +198,8 @@ def main(argv):
             paths_to_compress.append(resolved_path_str)
     else:
         # Read paths from the input file
-        log_paths_to_compress = pathlib.Path(compress_path_list_arg).resolve()
-        with open(log_paths_to_compress, "r") as f:
+        compress_path_list_path = pathlib.Path(compress_path_list_arg).resolve()
+        with open(compress_path_list_path, "r") as f:
             for path in f:
                 stripped_path = path.strip()
                 if "" == stripped_path:
