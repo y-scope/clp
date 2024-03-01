@@ -13,7 +13,7 @@ class PathsToCompress(BaseModel):
 
 
 class InputConfig(BaseModel):
-    list_path: str
+    paths_to_compress: typing.List[str]
     path_prefix_to_remove: str = None
     timestamp_key: typing.Optional[str] = None
 
