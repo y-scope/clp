@@ -78,6 +78,7 @@ def create_and_monitor_job_in_db(
     ignore_case: bool,
     max_num_results: int,
     path_filter: str | None,
+    count: bool | None,
 ):
     search_config = SearchConfig(
         query_string=wildcard_query,
@@ -86,6 +87,7 @@ def create_and_monitor_job_in_db(
         ignore_case=ignore_case,
         max_num_results=max_num_results,
         path_filter=path_filter,
+        count=count,
     )
     if tags:
         tag_list = [tag.strip().lower() for tag in tags.split(",") if tag]
@@ -124,14 +126,21 @@ def create_and_monitor_job_in_db(
 
         with pymongo.MongoClient(results_cache.get_uri()) as client:
             search_results_collection = client[results_cache.db_name][str(job_id)]
-            if max_num_results <= 0:
+            if max_num_results <= 0 or count is not None:
                 cursor = search_results_collection.find()
             else:
                 cursor = (
                     search_results_collection.find().sort("timestamp", -1).limit(max_num_results)
                 )
-            for document in cursor:
-                print(f"{document['original_path']}: {document['message']}", end="")
+
+            if count is not None:
+                for document in cursor:
+                    print(
+                        f"tags: {document['group_tags']} count: {document['records'][0]['count']}"
+                    )
+            else:
+                for document in cursor:
+                    print(f"{document['original_path']}: {document['message']}", end="")
 
 
 async def do_search(
@@ -144,6 +153,7 @@ async def do_search(
     ignore_case: bool,
     max_num_results: int,
     path_filter: str | None,
+    count: bool | None,
 ):
     db_monitor_task = asyncio.ensure_future(
         run_function_in_process(
@@ -157,6 +167,7 @@ async def do_search(
             ignore_case,
             max_num_results,
             path_filter,
+            count,
         )
     )
 
@@ -200,6 +211,12 @@ def main(argv):
         help="Maximum number of latest results to return.",
     )
     args_parser.add_argument("--file-path", help="File to search.")
+    args_parser.add_argument(
+        "--count",
+        action="store_const",
+        help="Perform the query and count the number of results.",
+        const=True,
+    )
     parsed_args = args_parser.parse_args(argv[1:])
 
     if (
@@ -231,6 +248,7 @@ def main(argv):
             parsed_args.ignore_case,
             parsed_args.max_num_results,
             parsed_args.file_path,
+            parsed_args.count,
         )
     )
 

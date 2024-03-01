@@ -39,3 +39,7 @@ class SearchConfig(BaseModel):
     end_timestamp: typing.Optional[int] = None
     ignore_case: bool = False
     path_filter: typing.Optional[str] = None
+    job_id: typing.Optional[int] = None
+    reducer_host: typing.Optional[str] = None
+    reducer_port: typing.Optional[int] = None
+    count: typing.Optional[bool] = None

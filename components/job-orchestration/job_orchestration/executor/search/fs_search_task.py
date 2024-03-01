@@ -45,8 +45,17 @@ def make_clo_command(
     if search_config.path_filter is not None:
         search_cmd.append(search_config.path_filter)
 
-    search_cmd.append("--max-num-results")
-    search_cmd.append(str(search_config.max_num_results))
+    if search_config.count is not None:
+        search_cmd.append("--reducer-host")
+        search_cmd.append(search_config.reducer_host)
+        search_cmd.append("--reducer-port")
+        search_cmd.append(str(search_config.reducer_port))
+        search_cmd.append("--job-id")
+        search_cmd.append(str(search_config.job_id))
+        search_cmd.append("--count")
+    else:
+        search_cmd.append("--max-num-results")
+        search_cmd.append(str(search_config.max_num_results))
 
     return search_cmd
 
@@ -80,8 +89,17 @@ def make_clp_s_command(
     if search_config.ignore_case:
         search_cmd.append("--ignore-case")
 
-    search_cmd.append("--max-num-results")
-    search_cmd.append(str(search_config.max_num_results))
+    if search_config.count is not None:
+        search_cmd.append("--reducer-host")
+        search_cmd.append(search_config.reducer_host)
+        search_cmd.append("--reducer-port")
+        search_cmd.append(str(search_config.reducer_port))
+        search_cmd.append("--job-id")
+        search_cmd.append(str(search_config.job_id))
+        search_cmd.append("--count")
+    else:
+        search_cmd.append("--max-num-results")
+        search_cmd.append(str(search_config.max_num_results))
 
     return search_cmd
 
