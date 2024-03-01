@@ -25,7 +25,6 @@
     "react-dom": "^17.0.2",
     "react-router": "^5.3.4",
     "react-router-dom": "^5.3.4",
-    "react-visibility-sensor": "^5.1.1",
     "uuid": "^9.0.1",
     "winston": "^3.11.0",
     "winston-daily-rotate-file": "^4.7.1"

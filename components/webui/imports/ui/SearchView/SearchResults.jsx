@@ -1,8 +1,24 @@
 import React from "react";
 
 import SearchResultsHeader from "./SearchResultsHeader.jsx";
-import {SearchResultsTable} from "./SearchResultsTable.jsx";
+import SearchResultsTable from "./SearchResultsTable.jsx";
 
+
+/**
+ * The initial visible results limit.
+ *
+ * @type {number}
+ * @constant
+ */
+const VISIBLE_RESULTS_LIMIT_INITIAL = 10;
+
+/**
+ * The increment value for the visible results limit.
+ *
+ * @type {number}
+ * @constant
+ */
+const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
 
 /**
  * Renders the search results, which includes the search results header and the search results
@@ -31,12 +47,17 @@ const SearchResults = ({
     setMaxLinesPerResult,
 }) => {
     const numResultsOnServer = resultsMetadata["numTotalResults"] || searchResults.length;
+    const hasMoreResults = visibleSearchResultsLimit < numResultsOnServer;
+
+    const handleLoadMoreResults = () => {
+        setVisibleSearchResultsLimit((v) =>
+            (v + VISIBLE_RESULTS_LIMIT_INCREMENT));
+    };
 
     return <>
         <div className={"flex-column"}>
             <SearchResultsHeader
                 jobId={jobId}
-                resultsMetadata={resultsMetadata}
                 numResultsOnServer={numResultsOnServer}
                 maxLinesPerResult={maxLinesPerResult}
                 setMaxLinesPerResult={setMaxLinesPerResult}
@@ -49,12 +70,12 @@ const SearchResults = ({
                 setMaxLinesPerResult={setMaxLinesPerResult}
                 fieldToSortBy={fieldToSortBy}
                 setFieldToSortBy={setFieldToSortBy}
-                numResultsOnServer={numResultsOnServer}
-                visibleSearchResultsLimit={visibleSearchResultsLimit}
-                setVisibleSearchResultsLimit={setVisibleSearchResultsLimit}
+                hasMoreResults={hasMoreResults}
+                onLoadMoreResults={handleLoadMoreResults}
             />
         </div>}
     </>;
 };
 
 export default SearchResults;
+export {VISIBLE_RESULTS_LIMIT_INITIAL};
