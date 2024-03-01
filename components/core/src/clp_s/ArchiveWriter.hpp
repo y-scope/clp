@@ -7,6 +7,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
+#include "../clp/GlobalMySQLMetadataDB.hpp"
 #include "DictionaryWriter.hpp"
 #include "Schema.hpp"
 #include "SchemaMap.hpp"
@@ -32,7 +33,8 @@ public:
     };
 
     // Constructor
-    ArchiveWriter() : m_encoded_message_size(0UL) {}
+    explicit ArchiveWriter(std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db)
+            : m_metadata_db(std::move(metadata_db)){};
 
     /**
      * Opens the archive writer
@@ -42,9 +44,8 @@ public:
 
     /**
      * Closes the archive writer
-     * @return the compressed size of the archive in bytes
      */
-    [[nodiscard]] size_t close();
+    void close();
 
     /**
      * Appends a message to the archive writer
@@ -53,6 +54,62 @@ public:
      * @param message
      */
     void append_message(int32_t schema_id, Schema const& schema, ParsedMessage& message);
+
+    /**
+     * Adds a node to the schema tree
+     * @param parent_node_id
+     * @param type
+     * @param key
+     * @return the node id
+     */
+    int32_t add_node(int parent_node_id, NodeType type, std::string const& key) {
+        return m_schema_tree.add_node(parent_node_id, type, key);
+    }
+
+    /**
+     * Return a schema's Id and add the schema to the
+     * schema map if it does not already exist.
+     * @param schema
+     * @return the Id of the schema
+     */
+    int32_t add_schema(Schema const& schema) { return m_schema_map.add_schema(schema); }
+
+    /**
+     * Ingests a timestamp entry
+     * @param key
+     * @param node_id
+     * @param timestamp
+     * @param pattern_id
+     * @return the epoch time corresponding to the string timestamp
+     */
+    epochtime_t ingest_entry(
+            std::string const& key,
+            int32_t node_id,
+            std::string const& timestamp,
+            uint64_t& pattern_id
+    ) {
+        return m_timestamp_dict->ingest_entry(key, node_id, timestamp, pattern_id);
+    };
+
+    /**
+     * Ingests a timestamp entry
+     * @param column_key
+     * @param node_id
+     * @param timestamp
+     */
+    void ingest_entry(std::string const& key, int32_t node_id, double timestamp) {
+        m_timestamp_dict->ingest_entry(key, node_id, timestamp);
+    };
+
+    void ingest_entry(std::string const& key, int32_t node_id, int64_t timestamp) {
+        m_timestamp_dict->ingest_entry(key, node_id, timestamp);
+    }
+
+    /**
+     * Increments the size of the compressed data written to the archive
+     * @param size
+     */
+    void increment_uncompressed_size(size_t size) { m_uncompressed_size += size; }
 
     /**
      * @return Size of the uncompressed data written to the archive
@@ -68,13 +125,21 @@ private:
     void initialize_schema_writer(SchemaWriter* writer, Schema const& schema);
 
     /**
+     * Stores the tables
+     * @return Size of the compressed data in bytes
+     */
+    size_t store_tables();
+
+    /**
      * Updates the archive's metadata
      */
     void update_metadata();
 
-    size_t m_encoded_message_size;
+    size_t m_encoded_message_size{};
+    size_t m_uncompressed_size{};
+    size_t m_compressed_size{};
 
-    boost::uuids::uuid m_id{};
+    std::string m_id;
 
     std::string m_archive_path;
     std::string m_encoded_messages_dir;
@@ -83,6 +148,7 @@ private:
     std::shared_ptr<LogTypeDictionaryWriter> m_log_dict;
     std::shared_ptr<LogTypeDictionaryWriter> m_array_dict;  // log type dictionary for arrays
     std::shared_ptr<TimestampDictionaryWriter> m_timestamp_dict;
+    std::shared_ptr<clp::GlobalMySQLMetadataDB> m_metadata_db;
     int m_compression_level{};
     bool m_print_archive_stats{};
 

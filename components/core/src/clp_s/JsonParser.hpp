@@ -9,6 +9,7 @@
 #include <boost/uuid/random_generator.hpp>
 #include <simdjson.h>
 
+#include "../clp/GlobalMySQLMetadataDB.hpp"
 #include "ArchiveWriter.hpp"
 #include "DictionaryWriter.hpp"
 #include "FileReader.hpp"
@@ -32,6 +33,7 @@ struct JsonParserOption {
     size_t target_encoded_size;
     int compression_level;
     bool print_archive_stats;
+    std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db;
 };
 
 class JsonParser {
@@ -58,29 +60,6 @@ public:
      * Writes the metadata and archive data to disk.
      */
     void store();
-
-    /**
-     * Closes the archive and clean up.
-     */
-    void close();
-
-    /**
-     * @return the size of the input data before compression in bytes
-     */
-    [[nodiscard]] size_t get_uncompressed_size() { return m_uncompressed_size; }
-
-    /**
-     * @return the size of the compressed data in bytes
-     */
-    [[nodiscard]] size_t get_compressed_size() { return m_compressed_size; }
-
-    [[nodiscard]] epochtime_t get_begin_timestamp() {
-        return m_timestamp_dictionary->get_begin_timestamp();
-    }
-
-    [[nodiscard]] epochtime_t get_end_timestamp() {
-        return m_timestamp_dictionary->get_end_timestamp();
-    }
 
 private:
     /**
@@ -111,9 +90,6 @@ private:
     boost::uuids::random_generator m_generator;
     std::unique_ptr<ArchiveWriter> m_archive_writer;
     size_t m_target_encoded_size;
-
-    size_t m_uncompressed_size{0};
-    size_t m_compressed_size{0};
 };
 }  // namespace clp_s
 

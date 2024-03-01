@@ -7,11 +7,10 @@
 
 namespace clp_s {
 void ArchiveWriter::open(ArchiveWriterOption const& option) {
-    m_id = option.id;
+    m_id = boost::uuids::to_string(option.id);
     m_compression_level = option.compression_level;
     m_print_archive_stats = option.print_archive_stats;
-    auto archive_path
-            = boost::filesystem::path(option.archives_dir) / boost::uuids::to_string(m_id);
+    auto archive_path = boost::filesystem::path(option.archives_dir) / m_id;
 
     boost::system::error_code boost_error_code;
     bool path_exists = boost::filesystem::exists(archive_path, boost_error_code);
@@ -37,53 +36,34 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_array_dict = std::make_shared<LogTypeDictionaryWriter>();
     m_array_dict->open(array_dict_path, m_compression_level, UINT64_MAX);
 
-    std::string timestamp_local_dict_path = m_archive_path + constants::cArchiveTimestampDictFile;
-    m_timestamp_dict->open_local(timestamp_local_dict_path, m_compression_level);
+    std::string timestamp_dict_path = m_archive_path + constants::cArchiveTimestampDictFile;
+    m_timestamp_dict->open(timestamp_dict_path, m_compression_level);
+
+    if (m_metadata_db) {
+        m_metadata_db->open();
+    }
 }
 
-size_t ArchiveWriter::close() {
-    size_t compressed_size{0};
-    compressed_size += m_var_dict->close();
-    compressed_size += m_log_dict->close();
-    compressed_size += m_array_dict->close();
-    compressed_size += m_timestamp_dict->close_local();
-    compressed_size += m_schema_tree.store(m_archive_path, m_compression_level);
-    compressed_size += m_schema_map.store(m_archive_path, m_compression_level);
+void ArchiveWriter::close() {
+    m_compressed_size += m_var_dict->close();
+    m_compressed_size += m_log_dict->close();
+    m_compressed_size += m_array_dict->close();
+    m_compressed_size += m_timestamp_dict->close();
+    m_compressed_size += m_schema_tree.store(m_archive_path, m_compression_level);
+    m_compressed_size += m_schema_map.store(m_archive_path, m_compression_level);
+    m_compressed_size += store_tables();
 
-    m_tables_file_writer.open(
-            m_archive_path + constants::cArchiveTablesFile,
-            FileWriter::OpenMode::CreateForWriting
-    );
-    m_table_metadata_file_writer.open(
-            m_archive_path + constants::cArchiveTableMetadataFile,
-            FileWriter::OpenMode::CreateForWriting
-    );
-    m_table_metadata_compressor.open(m_table_metadata_file_writer, m_compression_level);
-    m_table_metadata_compressor.write_numeric_value(m_id_to_schema_writer.size());
-    for (auto& i : m_id_to_schema_writer) {
-        m_table_metadata_compressor.write_numeric_value(i.first);
-        m_table_metadata_compressor.write_numeric_value(i.second->get_num_messages());
-        m_table_metadata_compressor.write_numeric_value(m_tables_file_writer.get_pos());
+    update_metadata();
 
-        m_tables_compressor.open(m_tables_file_writer, m_compression_level);
-        i.second->store(m_tables_compressor);
-        m_tables_compressor.close();
-        delete i.second;
+    if (m_metadata_db) {
+        m_metadata_db->close();
     }
-    m_table_metadata_compressor.close();
-
-    compressed_size += m_table_metadata_file_writer.get_pos();
-    compressed_size += m_tables_file_writer.get_pos();
-
-    m_table_metadata_file_writer.close();
-    m_tables_file_writer.close();
-
     m_id_to_schema_writer.clear();
     m_schema_tree.clear();
     m_schema_map.clear();
     m_encoded_message_size = 0UL;
-
-    return compressed_size;
+    m_uncompressed_size = 0UL;
+    m_compressed_size = 0UL;
 }
 
 void ArchiveWriter::append_message(
@@ -142,20 +122,62 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
     }
 }
 
-void ArchiveWriter::update_metadata() {
-    m_local_metadata->set_dynamic_uncompressed_size(0);
-    m_local_metadata->set_dynamic_compressed_size(get_dynamic_compressed_size());
-    // Rewrite (overwrite) the metadata file
-    m_metadata_file_writer.seek_from_begin(0);
-    m_local_metadata->write_to_file(m_metadata_file_writer);
+size_t ArchiveWriter::store_tables() {
+    size_t compressed_size = 0;
+    m_tables_file_writer.open(
+            m_archive_path + constants::cArchiveTablesFile,
+            FileWriter::OpenMode::CreateForWriting
+    );
+    m_table_metadata_file_writer.open(
+            m_archive_path + constants::cArchiveTableMetadataFile,
+            FileWriter::OpenMode::CreateForWriting
+    );
+    m_table_metadata_compressor.open(m_table_metadata_file_writer, m_compression_level);
+    m_table_metadata_compressor.write_numeric_value(m_id_to_schema_writer.size());
+    for (auto& i : m_id_to_schema_writer) {
+        m_table_metadata_compressor.write_numeric_value(i.first);
+        m_table_metadata_compressor.write_numeric_value(i.second->get_num_messages());
+        m_table_metadata_compressor.write_numeric_value(m_tables_file_writer.get_pos());
 
-    m_global_metadata_db->update_archive_metadata(m_id_as_string, *m_local_metadata);
+        m_tables_compressor.open(m_tables_file_writer, m_compression_level);
+        i.second->store(m_tables_compressor);
+        m_tables_compressor.close();
+        delete i.second;
+    }
+    m_table_metadata_compressor.close();
+
+    compressed_size += m_table_metadata_file_writer.get_pos();
+    compressed_size += m_tables_file_writer.get_pos();
+
+    m_table_metadata_file_writer.close();
+    m_tables_file_writer.close();
+
+    return compressed_size;
+}
+
+void ArchiveWriter::update_metadata() {
+    if (m_metadata_db) {
+        clp::streaming_archive::ArchiveMetadata metadata(
+                cArchiveFormatDevelopmentVersionFlag,
+                "",
+                0ULL
+        );
+        metadata.increment_static_compressed_size(m_compressed_size);
+        metadata.increment_static_uncompressed_size(m_uncompressed_size);
+        metadata.expand_time_range(
+                m_timestamp_dict->get_begin_timestamp(),
+                m_timestamp_dict->get_end_timestamp()
+        );
+
+        m_metadata_db->add_archive(m_id, metadata);
+        m_metadata_db->close();
+    }
 
     if (m_print_archive_stats) {
         nlohmann::json json_msg;
-        json_msg["id"] = m_id_as_string;
-        json_msg["uncompressed_size"] = m_local_metadata->get_uncompressed_size_bytes();
-        json_msg["size"] = m_local_metadata->get_compressed_size_bytes();
+        json_msg["id"] = m_id;
+        json_msg["uncompressed_size"] = m_compressed_size;
+        json_msg["size"] = m_compressed_size;
         std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
                   << std::endl;
     }
