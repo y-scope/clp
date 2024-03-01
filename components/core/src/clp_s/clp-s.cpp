@@ -90,7 +90,7 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     auto const& db_config_container = command_line_arguments.get_metadata_db_config();
     if (db_config_container.has_value()) {
         auto const& db_config = db_config_container.value();
-        auto metadata_db = std::shared_ptr<clp::GlobalMySQLMetadataDB>(
+        auto metadata_db = std::make_shared<clp::GlobalMySQLMetadataDB>(
                 db_config.get_metadata_db_host(),
                 db_config.get_metadata_db_port(),
                 db_config.get_metadata_db_username(),
