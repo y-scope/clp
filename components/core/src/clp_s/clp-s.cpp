@@ -204,22 +204,27 @@ bool search_archive(
     }
 
     std::unique_ptr<OutputHandler> output_handler;
-    if (command_line_arguments.get_count()) {
-        output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
-    } else if (command_line_arguments.get_mongodb_enabled()) {
-        output_handler = std::make_unique<ResultsCacheOutputHandler>(
-                command_line_arguments.get_mongodb_uri(),
-                command_line_arguments.get_mongodb_collection(),
-                command_line_arguments.get_batch_size(),
-                command_line_arguments.get_max_num_results()
-        );
-    } else if (command_line_arguments.get_network_destination_enabled()) {
-        output_handler = std::make_unique<NetworkOutputHandler>(
-                command_line_arguments.get_host(),
-                command_line_arguments.get_port()
-        );
-    } else {
-        output_handler = std::make_unique<StandardOutputHandler>();
+    try {
+        if (command_line_arguments.get_count()) {
+            output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
+        } else if (command_line_arguments.get_mongodb_enabled()) {
+            output_handler = std::make_unique<ResultsCacheOutputHandler>(
+                    command_line_arguments.get_mongodb_uri(),
+                    command_line_arguments.get_mongodb_collection(),
+                    command_line_arguments.get_batch_size(),
+                    command_line_arguments.get_max_num_results()
+            );
+        } else if (command_line_arguments.get_network_destination_enabled()) {
+            output_handler = std::make_unique<NetworkOutputHandler>(
+                    command_line_arguments.get_host(),
+                    command_line_arguments.get_port()
+            );
+        } else {
+            output_handler = std::make_unique<StandardOutputHandler>();
+        }
+    } catch (clp_s::TraceableException& e) {
+        SPDLOG_ERROR("Failed to create output handler - {}", e.what());
+        return false;
     }
 
     // output result

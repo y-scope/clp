@@ -263,15 +263,20 @@ int main(int argc, char const* argv[]) {
 
     mongocxx::instance mongocxx_instance{};
     std::unique_ptr<OutputHandler> output_handler;
-    if (command_line_args.get_count()) {
-        output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
-    } else {
-        output_handler = std::make_unique<ResultsCacheClient>(
-                command_line_args.get_mongodb_uri(),
-                command_line_args.get_mongodb_collection(),
-                command_line_args.get_batch_size(),
-                command_line_args.get_max_num_results()
-        );
+    try {
+        if (command_line_args.get_count()) {
+            output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
+        } else {
+            output_handler = std::make_unique<ResultsCacheClient>(
+                    command_line_args.get_mongodb_uri(),
+                    command_line_args.get_mongodb_collection(),
+                    command_line_args.get_batch_size(),
+                    command_line_args.get_max_num_results()
+            );
+        }
+    } catch (clp::TraceableException& e) {
+        SPDLOG_ERROR("Failed to create output handler - {}", e.what());
+        return -1;
     }
 
     auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());
