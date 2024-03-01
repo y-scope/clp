@@ -93,6 +93,7 @@ tasks:
         "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
         "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
         "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
+        "{{.CORE_COMPONENT_BUILD_DIR}}/reducer-server"
         "{{.NODEJS_BIN_DIR}}/node"
         "{{.OUTPUT_DIR}}/bin/"
       - "mkdir -p '{{.OUTPUT_DIR}}/var/www/'"
@@ -115,6 +116,7 @@ tasks:
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/reducer-server"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
@@ -134,7 +136,8 @@ tasks:
     cmds:
       - "mkdir -p '{{.CORE_COMPONENT_BUILD_DIR}}'"
       - "cmake -S '{{.SRC_DIR}}' -B '{{.CORE_COMPONENT_BUILD_DIR}}'"
-      - "cmake --build '{{.CORE_COMPONENT_BUILD_DIR}}' --parallel --target clg clo clp clp-s"
+      - "cmake --build '{{.CORE_COMPONENT_BUILD_DIR}}' --parallel --target clg clo clp clp-s \
+        reducer-server"
     sources:
       - "{{.BUILD_DIR}}/core-submodules.md5"
       - "{{.SRC_DIR}}/cmake/**/*"
@@ -146,6 +149,7 @@ tasks:
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/reducer-server"
 
   clp-package-utils:
     - task: "python-component"

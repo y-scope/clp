@@ -18,6 +18,7 @@ from .core import (
 DB_COMPONENT_NAME = "database"
 QUEUE_COMPONENT_NAME = "queue"
 REDIS_COMPONENT_NAME = "redis"
+REDUCER_COMPONENT_NAME = "reducer"
 RESULTS_CACHE_COMPONENT_NAME = "results_cache"
 COMPRESSION_SCHEDULER_COMPONENT_NAME = "compression_scheduler"
 SEARCH_SCHEDULER_COMPONENT_NAME = "search_scheduler"
@@ -162,10 +163,18 @@ class SearchScheduler(BaseModel):
     jobs_poll_delay: float = 0.1  # seconds
     num_archives_to_search_per_sub_job: int = 16
     logging_level: str = "INFO"
+    host = "localhost"
+    port = 7000
 
     @validator("logging_level")
     def validate_logging_level(cls, field):
         _validate_logging_level(cls, field)
+        return field
+
+    @validator("host")
+    def validate_host(cls, field):
+        if "" == field:
+            raise ValueError(f"{SEARCH_SCHEDULER_COMPONENT_NAME}.host cannot be empty.")
         return field
 
 
@@ -199,6 +208,29 @@ class Redis(BaseModel):
     def validate_host(cls, field):
         if "" == field:
             raise ValueError(f"{REDIS_COMPONENT_NAME}.host cannot be empty.")
+        return field
+
+
+class Reducer(BaseModel):
+    logging_level: str = "INFO"
+    base_port: int = 14009
+    polling_interval: int = 100
+
+    @validator("logging_level")
+    def validate_logging_level(cls, field):
+        _validate_logging_level(cls, field)
+        return field
+
+    @validator("base_port")
+    def validate_base_port(cls, field):
+        if not field > 0:
+            raise ValueError(f"{cls.__name__}: base port {field} is not a valid value")
+        return field
+
+    @validator("polling_interval")
+    def validate_polling_interval(cls, field):
+        if not field > 0:
+            raise ValueError(f"{cls.__name__}: polling interval {field} must be greater than zero")
         return field
 
 
@@ -309,6 +341,7 @@ class CLPConfig(BaseModel):
     database: Database = Database()
     queue: Queue = Queue()
     redis: Redis = Redis()
+    reducer: Reducer() = Reducer()
     results_cache: ResultsCache = ResultsCache()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
     search_scheduler: SearchScheduler = SearchScheduler()
