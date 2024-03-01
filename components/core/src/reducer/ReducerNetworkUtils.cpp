@@ -1,9 +1,5 @@
 #include "ReducerNetworkUtils.hpp"
 
-#include <netdb.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 #include <cstring>
@@ -13,49 +9,6 @@
 
 namespace reducer {
 namespace {
-/**
- * Connect to a server listening on a given host and port
- * @return an open socket file descriptor on success
- * @return -1 on any error
- */
-int connect_to_server(std::string const& host, std::string const& port) {
-    // Get address info for reducer
-    struct addrinfo hints = {};
-    // Address can be IPv4 or IPV6
-    hints.ai_family = AF_UNSPEC;
-    // TCP socket
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = 0;
-    hints.ai_protocol = 0;
-    struct addrinfo* addresses_head = nullptr;
-    int error = getaddrinfo(host.c_str(), port.c_str(), &hints, &addresses_head);
-    if (0 != error) {
-        return -1;
-    }
-
-    // Try each address until a socket can be created and connected to
-    int socket_fd = -1;
-    for (auto curr = addresses_head; nullptr != curr; curr = curr->ai_next) {
-        // Create socket
-        socket_fd = socket(curr->ai_family, curr->ai_socktype, curr->ai_protocol);
-        if (-1 == socket_fd) {
-            continue;
-        }
-
-        // Connect to address
-        if (connect(socket_fd, curr->ai_addr, curr->ai_addrlen) != -1) {
-            break;
-        }
-
-        // Failed to connect, so close socket
-        close(socket_fd);
-        socket_fd = -1;
-    }
-    freeaddrinfo(addresses_head);
-
-    return socket_fd;
-}
-
 /**
  * Append data to a buffer, and flush the buffer to socket_fd if the buffer becomes full.
  * @param socket_fd
@@ -106,7 +59,7 @@ bool append_to_bufffer_and_send(
 }  // namespace
 
 int connect_to_reducer(std::string const& host, int port, int64_t job_id) {
-    int socket_fd = connect_to_server(host, std::to_string(port));
+    int socket_fd = clp::networking::connect_to_server(host, std::to_string(port));
     if (-1 == socket_fd) {
         return -1;
     }
@@ -175,5 +128,4 @@ bool send_pipeline_results(int socket_fd, std::unique_ptr<RecordGroupIterator> r
 
     return true;
 }
-
 }  // namespace reducer
