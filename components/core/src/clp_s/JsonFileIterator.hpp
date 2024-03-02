@@ -74,7 +74,7 @@ private:
     bool m_eof{false};
     bool m_first_read{true};
     simdjson::ondemand::document_stream::iterator m_doc_it;
-    simdjson::error_code m_error_code;
+    simdjson::error_code m_error_code{simdjson::error_code::SUCCESS};
 };
 }  // namespace clp_s
 
