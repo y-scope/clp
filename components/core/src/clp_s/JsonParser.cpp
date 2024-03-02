@@ -245,7 +245,17 @@ bool JsonParser::parse() {
         while (json_file_iterator.get_json(json_it)) {
             m_current_schema.clear();
 
-            parse_line((*json_it).value(), -1, "root");
+            auto ref = *json_it;
+            auto is_scalar_result = ref.is_scalar();
+            // If you don't check the error on is_scalar it will sometimes throw TAPE_ERROR when
+            // converting to bool. The error being TAPE_ERROR or is_scalar() being true both mean
+            // that this isn't a valid JSON document but they get set in different situations so we
+            // need to check both here.
+            if (is_scalar_result.error() || true == is_scalar_result.value()) {
+                SPDLOG_ERROR("Encountered non-json-object while trying to parse {}", file_path);
+                return false;
+            }
+            parse_line(ref.value(), -1, "root");
             m_num_messages++;
 
             int32_t current_schema_id = m_schema_map->add_schema(m_current_schema);
