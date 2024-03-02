@@ -31,49 +31,50 @@ public:
      * @param it an iterator to the JSON object that gets returned
      * @return true if the iterator is valid, false otherwise
      */
-    bool get_json(simdjson::ondemand::document_stream::iterator& it);
+    [[nodiscard]] bool get_json(simdjson::ondemand::document_stream::iterator& it);
 
     /**
      * Checks if the file is open
      * @return true if the file opened successfully
      */
-    bool is_open() { return m_reader.is_open(); }
+    [[nodiscard]] bool is_open() const { return m_reader.is_open(); }
 
     /**
      * @return number of truncated bytes after json documents
      */
-    size_t truncated_bytes() {
-        if (m_stream.size_in_bytes() != 0) {
-            return m_stream.truncated_bytes();
-        }
-        return 0;
-    }
+    [[nodiscard]] size_t truncated_bytes() const { return m_truncated_bytes; }
 
     /**
      * @return total number of bytes read from the file
      */
-    [[nodiscard]] size_t get_num_bytes_read() { return m_bytes_read; }
+    [[nodiscard]] size_t get_num_bytes_read() const { return m_bytes_read; }
+
+    /**
+     * @return the last error code encountered when iterating over the json file
+     */
+    [[nodiscard]] simdjson::error_code get_error() const { return m_error_code; }
 
 private:
     /**
      * Reads new JSON into the buffer and initializes iterators into the data.
      * If the buffer is not large enough to contain the JSON its size is doubled.
-     * @param truncated_bytes length of incomplete JSON at end of buffer in bytes
+     * @return whether reading the new JSON was successful or not
      */
-    void read_new_json(size_t truncated_bytes);
+    bool read_new_json();
 
-    size_t reverse_search_newline_truncated_bytes(size_t start);
-
-    size_t m_bytes_read;
-    size_t m_buf_size;
-    size_t m_buf_occupied;
-    char* m_buf;
+    size_t m_truncated_bytes{0};
+    size_t m_next_document_position{0};
+    size_t m_bytes_read{0};
+    size_t m_buf_size{0};
+    size_t m_buf_occupied{0};
+    char* m_buf{nullptr};
     FileReader m_reader;
     simdjson::ondemand::parser m_parser;
     simdjson::ondemand::document_stream m_stream;
-    bool m_eof;
-    bool m_first_read;
+    bool m_eof{false};
+    bool m_first_read{true};
     simdjson::ondemand::document_stream::iterator m_doc_it;
+    simdjson::error_code m_error_code;
 };
 }  // namespace clp_s
 

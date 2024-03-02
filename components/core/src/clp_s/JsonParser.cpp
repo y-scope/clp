@@ -3,6 +3,9 @@
 #include <iostream>
 #include <stack>
 
+#include <simdjson.h>
+#include <spdlog/spdlog.h>
+
 #include "archive_constants.hpp"
 #include "JsonFileIterator.hpp"
 
@@ -219,11 +222,20 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
     while (!object_stack.empty());
 }
 
-void JsonParser::parse() {
+bool JsonParser::parse() {
     for (auto& file_path : m_file_paths) {
         JsonFileIterator json_file_iterator(file_path);
         if (false == json_file_iterator.is_open()) {
-            return;
+            return false;
+        }
+
+        if (simdjson::error_code::SUCCESS != json_file_iterator.get_error()) {
+            SPDLOG_ERROR(
+                    "Encountered error - {} - while trying to parse {}",
+                    simdjson::error_message(json_file_iterator.get_error()),
+                    file_path
+            );
+            return false;
         }
 
         simdjson::ondemand::document_stream::iterator json_it;
@@ -250,14 +262,23 @@ void JsonParser::parse() {
 
         m_uncompressed_size += json_file_iterator.get_num_bytes_read();
 
-        if (json_file_iterator.truncated_bytes() > 0) {
+        if (simdjson::error_code::SUCCESS != json_file_iterator.get_error()) {
             SPDLOG_ERROR(
+                    "Encountered error - {} - while trying to parse {}",
+                    simdjson::error_message(json_file_iterator.get_error()),
+                    file_path
+            );
+            return false;
+        } else if (json_file_iterator.truncated_bytes() > 0) {
+            // currently don't treat truncated bytes at the end of the file as an error
+            SPDLOG_WARN(
                     "Truncated JSON  ({} bytes) at end of file {}",
                     json_file_iterator.truncated_bytes(),
                     file_path.c_str()
             );
         }
     }
+    return true;
 }
 
 void JsonParser::store() {

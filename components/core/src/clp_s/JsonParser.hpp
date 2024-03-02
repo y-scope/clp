@@ -50,8 +50,9 @@ public:
 
     /**
      * Parses the JSON log messages and store the parsed data in the archive.
+     * @return whether the JSON was parsed succesfully
      */
-    void parse();
+    [[nodiscard]] bool parse();
 
     /**
      * Writes the metadata and archive data to disk.

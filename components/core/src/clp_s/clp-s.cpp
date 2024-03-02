@@ -94,7 +94,10 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.timestamp_key = command_line_arguments.get_timestamp_key();
 
     clp_s::JsonParser parser(option);
-    parser.parse();
+    if (false == parser.parse()) {
+        SPDLOG_ERROR("Encountered error while parsing input");
+        return false;
+    }
     parser.store();
     parser.close();
 
