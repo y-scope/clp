@@ -1,7 +1,10 @@
 import msgpack from "@msgpack/msgpack";
 
 import {sleep} from "../../../utils/misc";
-import {JOB_STATUS_WAITING_STATES, JobStatus} from "../constants";
+import {
+    JOB_STATUS_WAITING_STATES,
+    SearchJobStatus,
+} from "../constants";
 
 
 const SEARCH_JOBS_TABLE_COLUMN_NAMES = {
@@ -52,7 +55,7 @@ class SearchJobsDbManager {
     async submitQueryCancellation(jobId) {
         await this.#sqlDbConnection.query(
             `UPDATE ${this.#searchJobsTableName}
-             SET ${SEARCH_JOBS_TABLE_COLUMN_NAMES.STATUS} = ${JobStatus.CANCELLING}
+             SET ${SEARCH_JOBS_TABLE_COLUMN_NAMES.STATUS} = ${SearchJobStatus.CANCELLING}
              WHERE ${SEARCH_JOBS_TABLE_COLUMN_NAMES.ID} = ?`,
             jobId,
         );
@@ -85,11 +88,11 @@ class SearchJobsDbManager {
             const status = rows[0][SEARCH_JOBS_TABLE_COLUMN_NAMES.STATUS];
 
             if (false === JOB_STATUS_WAITING_STATES.includes(status)) {
-                if (JobStatus.CANCELLED === status) {
+                if (SearchJobStatus.CANCELLED === status) {
                     throw new Error(`Job ${jobId} was cancelled.`);
-                } else if (JobStatus.SUCCEEDED !== status) {
+                } else if (SearchJobStatus.SUCCEEDED !== status) {
                     throw new Error(`Job ${jobId} exited with unexpected status=${status}: `
-                        + `${Object.keys(JobStatus)[status]}.`);
+                        + `${Object.keys(SearchJobStatus)[status]}.`);
                 }
                 break;
             }

@@ -37,7 +37,7 @@ let enumJobStatus;
  *
  * @type {Object}
  */
-const JobStatus = Object.freeze({
+const SearchJobStatus = Object.freeze({
     PENDING: (enumJobStatus = 0),
     RUNNING: ++enumJobStatus,
     SUCCEEDED: ++enumJobStatus,
@@ -49,9 +49,9 @@ const JobStatus = Object.freeze({
 
 
 const JOB_STATUS_WAITING_STATES = [
-    JobStatus.PENDING,
-    JobStatus.RUNNING,
-    JobStatus.CANCELLING,
+    SearchJobStatus.PENDING,
+    SearchJobStatus.RUNNING,
+    SearchJobStatus.CANCELLING,
 ];
 
 const INVALID_JOB_ID = -1;
@@ -64,7 +64,7 @@ export {
     isSearchSignalReq,
     isSearchSignalResp,
     JOB_STATUS_WAITING_STATES,
-    JobStatus,
     SEARCH_MAX_NUM_RESULTS,
+    SearchJobStatus,
     SearchSignal,
 };
