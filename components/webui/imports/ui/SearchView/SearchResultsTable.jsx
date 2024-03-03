@@ -75,11 +75,13 @@ const SearchResultsTable = ({
     onLoadMoreResults,
 }) => {
     const getSortIcon = (fieldToSortBy, fieldName) => {
-        if (fieldToSortBy && fieldName === fieldToSortBy.name) {
-            return (1 === fieldToSortBy.direction ? faSortDown : faSortUp);
-        } else {
-            return faSort;
+        if ((null !== fieldToSortBy) && (fieldName === fieldToSortBy.name)) {
+            return (("asc" === fieldToSortBy.direction) ?
+                faSortUp :
+                faSortDown);
         }
+
+        return faSort;
     };
 
     const toggleSortDirection = (event) => {
@@ -87,15 +89,15 @@ const SearchResultsTable = ({
         if (null === fieldToSortBy || fieldToSortBy.name !== columnName) {
             setFieldToSortBy({
                 name: columnName,
-                direction: 1,
+                direction: "asc",
             });
-        } else if (1 === fieldToSortBy.direction) {
+        } else if ("asc" === fieldToSortBy.direction) {
             // Switch to descending
             setFieldToSortBy({
                 name: columnName,
-                direction: -1,
+                direction: "desc",
             });
-        } else if (-1 === fieldToSortBy.direction) {
+        } else if ("desc" === fieldToSortBy.direction) {
             // Switch to unsorted
             setFieldToSortBy(null);
         }

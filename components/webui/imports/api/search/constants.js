@@ -29,6 +29,7 @@ const isSearchSignalQuerying = (s) => (
     ].includes(s)
 );
 
+/* eslint-disable sort-keys */
 let enumJobStatus;
 /**
  * Enum of job statuses, matching the `SearchJobStatus` class in
@@ -39,11 +40,13 @@ let enumJobStatus;
 const JobStatus = Object.freeze({
     PENDING: (enumJobStatus = 0),
     RUNNING: ++enumJobStatus,
-    SUCCESS: ++enumJobStatus,
+    SUCCEEDED: ++enumJobStatus,
     FAILED: ++enumJobStatus,
     CANCELLING: ++enumJobStatus,
     CANCELLED: ++enumJobStatus,
 });
+/* eslint-enable sort-keys */
+
 
 const JOB_STATUS_WAITING_STATES = [
     JobStatus.PENDING,
@@ -53,12 +56,15 @@ const JOB_STATUS_WAITING_STATES = [
 
 const INVALID_JOB_ID = -1;
 
+const SEARCH_MAX_NUM_RESULTS = 1000;
+
 export {
-    SearchSignal,
+    INVALID_JOB_ID,
+    isSearchSignalQuerying,
     isSearchSignalReq,
     isSearchSignalResp,
-    isSearchSignalQuerying,
-    JobStatus,
     JOB_STATUS_WAITING_STATES,
-    INVALID_JOB_ID,
+    JobStatus,
+    SEARCH_MAX_NUM_RESULTS,
+    SearchSignal,
 };

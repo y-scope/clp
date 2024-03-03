@@ -6,11 +6,12 @@ import {Meteor} from "meteor/meteor";
 import {useTracker} from "meteor/react-meteor-data";
 import {ProgressBar} from "react-bootstrap";
 
+import {SearchResultsMetadataCollection} from "../../api/search/collections";
 import {
-    addSortToMongoFindOptions,
-    SearchResultsMetadataCollection,
-} from "../../api/search/collections";
-import {INVALID_JOB_ID, isSearchSignalQuerying, SearchSignal} from "../../api/search/constants";
+    INVALID_JOB_ID,
+    SearchSignal,
+    isSearchSignalQuerying,
+} from "../../api/search/constants";
 import SearchJobCollectionsManager from "../../api/search/SearchJobCollectionsManager";
 import {LOCAL_STORAGE_KEYS} from "../constants";
 import {changeTimezoneToUtcWithoutChangingTime, DEFAULT_TIME_RANGE} from "./datetime";
@@ -46,7 +47,7 @@ const SearchView = () => {
         VISIBLE_RESULTS_LIMIT_INITIAL);
     const [fieldToSortBy, setFieldToSortBy] = useState({
         name: "timestamp",
-        direction: -1,
+        direction: "desc",
     });
 
     // Visuals
@@ -79,12 +80,24 @@ const SearchView = () => {
 
         Meteor.subscribe(Meteor.settings.public.SearchResultsCollectionName, {
             jobId: jobId,
-            fieldToSortBy: fieldToSortBy,
-            visibleSearchResultsLimit: visibleSearchResultsLimit,
         });
 
-        const findOptions = {};
-        addSortToMongoFindOptions(fieldToSortBy, findOptions);
+        const findOptions = {
+            limit: visibleSearchResultsLimit,
+        };
+
+        if (null !== fieldToSortBy) {
+            findOptions.sort = [
+                [
+                    fieldToSortBy.name,
+                    fieldToSortBy.direction,
+                ],
+                [
+                    "_id",
+                    fieldToSortBy.direction,
+                ],
+            ];
+        }
 
         // NOTE: Although we publish and subscribe using the name
         // `Meteor.settings.public.SearchResultsCollectionName`, the rows are still returned in the

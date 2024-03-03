@@ -87,7 +87,7 @@ class SearchJobsDbManager {
             if (false === JOB_STATUS_WAITING_STATES.includes(status)) {
                 if (JobStatus.CANCELLED === status) {
                     throw new Error(`Job ${jobId} was cancelled.`);
-                } else if (JobStatus.SUCCESS !== status) {
+                } else if (JobStatus.SUCCEEDED !== status) {
                     throw new Error(`Job ${jobId} exited with unexpected status=${status}: `
                         + `${Object.keys(JobStatus)[status]}.`);
                 }

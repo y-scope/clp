@@ -1,7 +1,10 @@
 import {logger} from "/imports/utils/logger";
 import {Meteor} from "meteor/meteor";
 import {SearchResultsMetadataCollection} from "../collections";
-import {SearchSignal} from "../constants";
+import {
+    SEARCH_MAX_NUM_RESULTS,
+    SearchSignal
+} from "../constants";
 import {searchJobCollectionsManager} from "./collections";
 import SearchJobsDbManager from "./SearchJobsDbManager";
 
@@ -33,15 +36,21 @@ const updateSearchEventWhenJobFinishes = async (jobId) => {
     } catch (e) {
         errorMsg = e.message;
     }
+
     const filter = {
         _id: jobId.toString(),
     };
+    const countedNumTotalResults = await searchJobCollectionsManager
+        .getOrCreateCollection(jobId)
+        .countDocuments();
     const modifier = {
         $set: {
             lastSignal: SearchSignal.RESP_DONE,
             errorMsg: errorMsg,
-            numTotalResults:
-                await searchJobCollectionsManager.getOrCreateCollection(jobId).countDocuments(),
+            numTotalResults: Math.min(
+                countedNumTotalResults,
+                SEARCH_MAX_NUM_RESULTS
+            ),
         },
     };
 
@@ -95,7 +104,7 @@ Meteor.methods({
             query_string: queryString,
             begin_timestamp: timestampBegin,
             end_timestamp: timestampEnd,
-            max_num_results: 1000,
+            max_num_results: SEARCH_MAX_NUM_RESULTS,
             ignore_case: ignoreCase,
         };
         logger.info("search.submitQuery args =", args);
