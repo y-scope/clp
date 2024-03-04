@@ -187,6 +187,7 @@ void ArchiveReader::close() {
     m_table_metadata_file_reader.close();
 
     m_id_to_table_metadata.clear();
+    m_schema_ids.clear();
 }
 
 }  // namespace clp_s
