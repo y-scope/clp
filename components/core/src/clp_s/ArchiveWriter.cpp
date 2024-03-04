@@ -37,6 +37,7 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_array_dict->open(array_dict_path, m_compression_level, UINT64_MAX);
 
     std::string timestamp_dict_path = m_archive_path + constants::cArchiveTimestampDictFile;
+    m_timestamp_dict = std::make_shared<TimestampDictionaryWriter>();
     m_timestamp_dict->open(timestamp_dict_path, m_compression_level);
 
     if (m_metadata_db) {
@@ -176,7 +177,7 @@ void ArchiveWriter::update_metadata() {
     if (m_print_archive_stats) {
         nlohmann::json json_msg;
         json_msg["id"] = m_id;
-        json_msg["uncompressed_size"] = m_compressed_size;
+        json_msg["uncompressed_size"] = m_uncompressed_size;
         json_msg["size"] = m_compressed_size;
         std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
                   << std::endl;

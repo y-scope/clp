@@ -13,11 +13,6 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_compression_level(option.compression_level),
           m_target_encoded_size(option.target_encoded_size),
           m_timestamp_key(option.timestamp_key) {
-    if (false == boost::filesystem::create_directory(m_archives_dir)) {
-        SPDLOG_ERROR("The output directory '{}' already exists", m_archives_dir);
-        exit(1);
-    }
-
     if (false == FileUtils::validate_path(option.file_paths)) {
         exit(1);
     }
@@ -229,6 +224,8 @@ void JsonParser::parse() {
 
             int32_t current_schema_id = m_archive_writer->add_schema(m_current_schema);
             m_current_parsed_message.set_id(current_schema_id);
+            m_archive_writer
+                    ->append_message(current_schema_id, m_current_schema, m_current_parsed_message);
 
             if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
                 m_archive_writer->increment_uncompressed_size(json_file_iterator.get_num_bytes_read(
@@ -236,8 +233,6 @@ void JsonParser::parse() {
                 split_archive();
             }
 
-            m_archive_writer
-                    ->append_message(current_schema_id, m_current_schema, m_current_parsed_message);
             m_current_parsed_message.clear();
         }
 
