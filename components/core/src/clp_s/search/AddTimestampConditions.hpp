@@ -1,5 +1,5 @@
-#ifndef CLP_S_ADD_TIMESTAMP_CONDITIONS_HPP
-#define CLP_S_ADD_TIMESTAMP_CONDITIONS_HPP
+#ifndef CLP_S_SEARCH_ADDTIMESTAMPCONDITIONS_HPP
+#define CLP_S_SEARCH_ADDTIMESTAMPCONDITIONS_HPP
 
 #include <optional>
 #include <string>
@@ -44,4 +44,4 @@ private:
 };
 }  // namespace clp_s::search
 
-#endif  // CLP_S_ADD_TIMESTAMP_CONDITIONS_HPP
+#endif  // CLP_S_SEARCH_ADDTIMESTAMPCONDITIONS_HPP

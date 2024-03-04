@@ -1,5 +1,5 @@
-#ifndef CLP_LOG_SURGEON_READER_HPP
-#define CLP_LOG_SURGEON_READER_HPP
+#ifndef CLP_LOGSURGEONREADER_HPP
+#define CLP_LOGSURGEONREADER_HPP
 
 #include <log_surgeon/Reader.hpp>
 
@@ -18,4 +18,4 @@ private:
 };
 }  // namespace clp
 
-#endif  // CLP_LOG_SURGEON_READER_HPP
+#endif  // CLP_LOGSURGEONREADER_HPP

@@ -1,5 +1,5 @@
-#ifndef MATH_UTILS_HPP
-#define MATH_UTILS_HPP
+#ifndef CLP_MATH_UTILS_HPP
+#define CLP_MATH_UTILS_HPP
 
 #include <type_traits>
 
@@ -17,4 +17,4 @@ auto int_round_up_to_multiple(unsigned_t val, unsigned_t factor) -> unsigned_t {
     return ((val + factor - 1) / factor) * factor;
 }
 
-#endif  // MATH_UTILS_HPP
+#endif  // CLP_MATH_UTILS_HPP

@@ -1,5 +1,5 @@
-#ifndef STREAMING_ARCHIVE_METADATADB_HPP
-#define STREAMING_ARCHIVE_METADATADB_HPP
+#ifndef GLT_STREAMING_ARCHIVE_METADATADB_HPP
+#define GLT_STREAMING_ARCHIVE_METADATADB_HPP
 
 #include <memory>
 #include <string>
@@ -165,4 +165,4 @@ private:
 };
 }  // namespace glt::streaming_archive
 
-#endif  // STREAMING_ARCHIVE_METADATADB_HPP
+#endif  // GLT_STREAMING_ARCHIVE_METADATADB_HPP

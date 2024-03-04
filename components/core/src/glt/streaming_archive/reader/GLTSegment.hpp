@@ -1,5 +1,5 @@
-#ifndef STREAMING_ARCHIVE_READER_GLT_SEGMENT_HPP
-#define STREAMING_ARCHIVE_READER_GLT_SEGMENT_HPP
+#ifndef GLT_STREAMING_ARCHIVE_READER_GLTSEGMENT_HPP
+#define GLT_STREAMING_ARCHIVE_READER_GLTSEGMENT_HPP
 
 #include "MultiLogtypeTablesManager.hpp"
 #include "Segment.hpp"
@@ -19,4 +19,4 @@ private:
 };
 }  // namespace glt::streaming_archive::reader
 
-#endif  // STREAMING_ARCHIVE_READER_GLT_SEGMENT_HPP
+#endif  // GLT_STREAMING_ARCHIVE_READER_GLTSEGMENT_HPP

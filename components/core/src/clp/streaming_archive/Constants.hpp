@@ -1,5 +1,5 @@
-#ifndef STREAMING_ARCHIVE_CONSTANTS_HPP
-#define STREAMING_ARCHIVE_CONSTANTS_HPP
+#ifndef CLP_STREAMING_ARCHIVE_CONSTANTS_HPP
+#define CLP_STREAMING_ARCHIVE_CONSTANTS_HPP
 
 #include "../Defs.h"
 
@@ -55,4 +55,4 @@ constexpr char Path[] = "path";
 }  // namespace cMetadataDB
 }  // namespace clp::streaming_archive
 
-#endif  // STREAMING_ARCHIVE_CONSTANTS_HPP
+#endif  // CLP_STREAMING_ARCHIVE_CONSTANTS_HPP
