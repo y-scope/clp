@@ -20,7 +20,7 @@
 namespace clp_s::search {
 void Output::filter() {
     auto top_level_expr = m_expr;
-    
+
     std::vector<int32_t> matched_schemas;
     bool has_array = false;
     bool has_array_search = false;
@@ -88,8 +88,10 @@ void Output::filter() {
 
         add_wildcard_columns_to_searched_columns();
 
-        auto reader
-                = m_archive_reader->read_table(schema_id, m_output_handler->should_output_timestamp());
+        auto reader = m_archive_reader->read_table(
+                schema_id,
+                m_output_handler->should_output_timestamp()
+        );
         reader->initialize_filter(this);
 
         if (m_output_handler->should_output_timestamp()) {

@@ -13,7 +13,7 @@
 namespace clp_s {
 JsonConstructor::JsonConstructor(JsonConstructorOption const& option)
         : m_output_dir(option.output_dir),
-          m_archives_dir(option.archives_dir){
+          m_archives_dir(option.archives_dir) {
     std::error_code error_code;
     if (false == std::filesystem::create_directory(option.output_dir, error_code) && error_code) {
         throw OperationFailed(
