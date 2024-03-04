@@ -71,10 +71,8 @@ bool JsonFileIterator::read_new_json() {
         }
 
         m_doc_it = m_stream.begin();
-        // only implements != so this is equivalent to
-        // if no json available from buffer and we haven't hit eof
-        // then retry reading the json with a larger buffer up to eof
-        if (false == (m_doc_it != m_stream.end()) && false == m_eof) {
+        // only implements != so this is equivalent to "if no JSON is available from the buffer"
+        if (false == (m_doc_it != m_stream.end())) {
             m_truncated_bytes = m_buf_occupied;
         } else {
             return true;
