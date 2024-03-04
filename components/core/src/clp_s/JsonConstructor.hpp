@@ -58,11 +58,6 @@ private:
     std::string m_output_dir;
 
     std::unique_ptr<ArchiveReader> m_archive_reader;
-    std::vector<std::string> m_archive_paths;
-    size_t m_current_archive_index;
-    size_t m_max_archive_index;
-
-    std::shared_ptr<SchemaTree> m_schema_tree;
 };
 }  // namespace clp_s
 

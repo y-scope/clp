@@ -29,6 +29,13 @@ public:
     static std::shared_ptr<SchemaTree> read_schema_tree(std::string const& archives_dir);
 
     /**
+     * Reads the schema map from the given archive directory
+     * @param archive_dir
+     * @return the schema map
+     */
+    static std::shared_ptr<SchemaMap> read_schemas(std::string const& archives_dir);
+
+    /**
      * Opens and gets the variable dictionary reader for the given archive path
      * @param archive_path
      * @return the variable dictionary reader
@@ -55,20 +62,8 @@ public:
             std::string const& archive_path
     );
 
-    /**
-     * Reads the schema map from the given archive directory
-     * @param archive_path
-     * @return the schema map
-     */
-    static std::shared_ptr<SchemaMap> read_schemas(std::string const& archives_dir);
-
-    /**
-     * Opens and gets the timestamp dictionary reader for the given archive path
-     * @param archive_path
-     * @return the timestamp dictionary reader
-     */
-    static std::shared_ptr<TimestampDictionaryReader> read_timestamp_dictionary(
-            std::string const& archives_dir
+    static std::shared_ptr<TimestampDictionaryReader> get_timestamp_dictionary_reader(
+            std::string const& archive_path
     );
 
     /**

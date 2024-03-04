@@ -77,8 +77,16 @@ std::shared_ptr<LogTypeDictionaryReader> ReaderUtils::get_array_dictionary_reade
     return reader;
 }
 
+std::shared_ptr<TimestampDictionaryReader> ReaderUtils::get_timestamp_dictionary_reader(
+        std::string const& archive_path
+) {
+    auto reader = std::make_shared<TimestampDictionaryReader>();
+    reader->open(archive_path + constants::cArchiveTimestampDictFile);
+    return reader;
+}
+
 std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(std::string const& archives_dir) {
-    auto schemas_pointer = std::make_shared<SchemaMap>();
+    auto schemas_pointer = std::make_unique<SchemaMap>();
     SchemaMap& schemas = *schemas_pointer;
     FileReader schema_id_reader;
     ZstdDecompressor schema_id_decompressor;
@@ -124,17 +132,6 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(std::string co
     schema_id_reader.close();
 
     return schemas_pointer;
-}
-
-std::shared_ptr<TimestampDictionaryReader> ReaderUtils::read_timestamp_dictionary(
-        std::string const& archives_dir
-) {
-    auto reader = std::make_shared<TimestampDictionaryReader>();
-    reader->open(archives_dir + constants::cArchiveTimestampDictFile);
-    reader->read_new_entries();
-    reader->close();
-
-    return reader;
 }
 
 std::vector<std::string> ReaderUtils::get_archives(std::string const& archives_dir) {

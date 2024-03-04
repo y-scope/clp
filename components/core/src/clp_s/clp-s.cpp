@@ -55,13 +55,13 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
 /**
  * Searches the given archive.
  * @param command_line_arguments
- * @param archive_dir
+ * @param archive_reader
  * @param expr A copy of the search AST which may be modified
  * @return Whether the search succeeded
  */
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
-        std::string const& archive_dir,
+        std::shared_ptr<clp_s::ArchiveReader> archive_reader,
         std::shared_ptr<Expression> expr
 );
 
@@ -118,12 +118,12 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
 
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
-        std::string const& archive_dir,
+        std::shared_ptr<clp_s::ArchiveReader> archive_reader,
         std::shared_ptr<Expression> expr
 ) {
     auto const& query = command_line_arguments.get_query();
 
-    auto timestamp_dict = clp_s::ReaderUtils::read_timestamp_dictionary(archive_dir);
+    auto timestamp_dict = archive_reader->read_timestamp_dictionary();
     AddTimestampConditions add_timestamp_conditions(
             timestamp_dict->get_authoritative_timestamp_tokenized_column(),
             command_line_arguments.get_search_begin_ts(),
@@ -166,11 +166,8 @@ bool search_archive(
         return true;
     }
 
-    auto schema_tree = clp_s::ReaderUtils::read_schema_tree(archive_dir);
-    auto schemas = clp_s::ReaderUtils::read_schemas(archive_dir);
-
     // Narrow against schemas
-    SchemaMatch match_pass(schema_tree, schemas);
+    SchemaMatch match_pass(archive_reader->get_schema_tree(), archive_reader->get_schema_map());
     if (expr = match_pass.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
         SPDLOG_INFO("No matching schemas for query '{}'", query);
         return true;
@@ -195,11 +192,9 @@ bool search_archive(
 
     // output result
     Output output(
-            schema_tree,
-            schemas,
             match_pass,
             expr,
-            archive_dir,
+            archive_reader,
             timestamp_dict,
             std::move(output_handler),
             command_line_arguments.get_ignore_case()
@@ -290,12 +285,16 @@ int main(int argc, char const* argv[]) {
         }
 
         auto const& archive_id = command_line_arguments.get_archive_id();
+        auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
         if (false == archive_id.empty()) {
             std::filesystem::path const archives_dir_path{archives_dir};
             std::string const archive_path{archives_dir_path / archive_id};
-            if (false == search_archive(command_line_arguments, archive_path, expr)) {
+
+            archive_reader->open(archive_path);
+            if (false == search_archive(command_line_arguments, archive_reader, expr)) {
                 return 1;
             }
+            archive_reader->close();
         } else {
             for (auto const& entry : std::filesystem::directory_iterator(archives_dir)) {
                 if (false == entry.is_directory()) {
@@ -303,9 +302,11 @@ int main(int argc, char const* argv[]) {
                     continue;
                 }
 
-                if (false == search_archive(command_line_arguments, entry.path(), expr->copy())) {
+                archive_reader->open(entry.path());
+                if (false == search_archive(command_line_arguments, archive_reader, expr->copy())) {
                     return 1;
                 }
+                archive_reader->close();
             }
         }
     }
