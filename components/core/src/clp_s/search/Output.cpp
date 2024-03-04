@@ -46,7 +46,7 @@ void Output::filter() {
 
     // Skip decompressing sub-archive if it won't match based on the timestamp
     // range index
-    EvaluateTimestampIndex timestamp_index(m_archive_reader->read_timestamp_dictionary());
+    EvaluateTimestampIndex timestamp_index(m_archive_reader->get_timestamp_dictionary());
     if (timestamp_index.run(top_level_expr) == EvaluatedValue::False) {
         m_archive_reader->close();
         return;

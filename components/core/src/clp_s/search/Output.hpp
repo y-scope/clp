@@ -32,8 +32,8 @@ public:
            std::unique_ptr<OutputHandler> output_handler,
            bool ignore_case)
             : m_archive_reader(std::move(archive_reader)),
-              m_schema_tree(archive_reader->get_schema_tree()),
-              m_schemas(archive_reader->get_schema_map()),
+              m_schema_tree(m_archive_reader->get_schema_tree()),
+              m_schemas(m_archive_reader->get_schema_map()),
               m_match(match),
               m_expr(std::move(expr)),
               m_timestamp_dict(std::move(timestamp_dict)),
