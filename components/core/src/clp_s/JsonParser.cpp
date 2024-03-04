@@ -215,7 +215,7 @@ void JsonParser::parse() {
         simdjson::ondemand::document_stream::iterator json_it;
 
         m_num_messages = 0;
-
+        size_t last_num_bytes_read = 0;
         while (json_file_iterator.get_json(json_it)) {
             m_current_schema.clear();
 
@@ -228,15 +228,18 @@ void JsonParser::parse() {
                     ->append_message(current_schema_id, m_current_schema, m_current_parsed_message);
 
             if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
-                m_archive_writer->increment_uncompressed_size(json_file_iterator.get_num_bytes_read(
-                ));
+                size_t num_bytes_read = json_file_iterator.get_num_bytes_read();
+                m_archive_writer->increment_uncompressed_size(num_bytes_read - last_num_bytes_read);
+                last_num_bytes_read = num_bytes_read;
                 split_archive();
             }
 
             m_current_parsed_message.clear();
         }
 
-        m_archive_writer->increment_uncompressed_size(json_file_iterator.get_num_bytes_read());
+        m_archive_writer->increment_uncompressed_size(
+                json_file_iterator.get_num_bytes_read() - last_num_bytes_read
+        );
 
         if (json_file_iterator.truncated_bytes() > 0) {
             SPDLOG_ERROR(
