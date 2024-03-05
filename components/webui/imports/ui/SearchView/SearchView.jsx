@@ -11,7 +11,7 @@ import {
     INVALID_JOB_ID,
     MONGO_SORT_ORDER,
     SEARCH_RESULTS_FIELDS,
-    SearchSignal,
+    SEARCH_SIGNAL,
     isSearchSignalQuerying,
 } from "../../api/search/constants";
 import SearchJobCollectionsManager from "../../api/search/SearchJobCollectionsManager";
@@ -35,7 +35,7 @@ const SearchView = () => {
     // Query states
     const [jobId, setJobId] = useState(INVALID_JOB_ID);
     const [operationErrorMsg, setOperationErrorMsg] = useState("");
-    const [localLastSearchSignal, setLocalLastSearchSignal] = useState(SearchSignal.NONE);
+    const [localLastSearchSignal, setLocalLastSearchSignal] = useState(SEARCH_SIGNAL.NONE);
     const dbRef = useRef(new SearchJobCollectionsManager());
     // gets updated as soon as localLastSearchSignal is updated
     // to avoid reading old localLastSearchSignal value from Closures
@@ -127,7 +127,7 @@ const SearchView = () => {
         }
 
         setOperationErrorMsg("");
-        setLocalLastSearchSignal(SearchSignal.REQ_QUERYING);
+        setLocalLastSearchSignal(SEARCH_SIGNAL.REQ_QUERYING);
         setVisibleSearchResultsLimit(VISIBLE_RESULTS_LIMIT_INITIAL);
 
         const timestampBeginMillis = changeTimezoneToUtcWithoutChangingTime(timeRange.begin)
@@ -156,7 +156,7 @@ const SearchView = () => {
 
         setJobId(INVALID_JOB_ID);
         setOperationErrorMsg("");
-        setLocalLastSearchSignal(SearchSignal.REQ_CLEARING);
+        setLocalLastSearchSignal(SEARCH_SIGNAL.REQ_CLEARING);
         setVisibleSearchResultsLimit(VISIBLE_RESULTS_LIMIT_INITIAL);
 
         const args = {
@@ -168,17 +168,17 @@ const SearchView = () => {
                 return;
             }
 
-            if (SearchSignal.REQ_CLEARING === localLastSearchSignalRef.current) {
+            if (SEARCH_SIGNAL.REQ_CLEARING === localLastSearchSignalRef.current) {
                 // The check prevents clearing `localLastSearchSignal = SearchSignal.REQ_QUERYING`
                 // when `handleClearResults` is called by submitQuery.
-                setLocalLastSearchSignal(SearchSignal.NONE);
+                setLocalLastSearchSignal(SEARCH_SIGNAL.NONE);
             }
         });
     };
 
     const cancelOperation = () => {
         setOperationErrorMsg("");
-        setLocalLastSearchSignal(SearchSignal.REQ_CANCELLING);
+        setLocalLastSearchSignal(SEARCH_SIGNAL.REQ_CANCELLING);
 
         const args = {
             jobId: jobId,
@@ -265,10 +265,10 @@ const SearchStatus = ({
     } else {
         let message = null;
         switch (resultsMetadata["lastSignal"]) {
-            case SearchSignal.NONE:
+            case SEARCH_SIGNAL.NONE:
                 message = "Ready";
                 break;
-            case SearchSignal.REQ_CLEARING:
+            case SEARCH_SIGNAL.REQ_CLEARING:
                 message = "Clearing...";
                 break;
             default:

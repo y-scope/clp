@@ -3,7 +3,7 @@ import {Meteor} from "meteor/meteor";
 import {SearchResultsMetadataCollection} from "../collections";
 import {
     SEARCH_MAX_NUM_RESULTS,
-    SearchSignal
+    SEARCH_SIGNAL,
 } from "../constants";
 import {searchJobCollectionsManager} from "./collections";
 import SearchJobsDbManager from "./SearchJobsDbManager";
@@ -45,7 +45,7 @@ const updateSearchEventWhenJobFinishes = async (jobId) => {
         .countDocuments();
     const modifier = {
         $set: {
-            lastSignal: SearchSignal.RESP_DONE,
+            lastSignal: SEARCH_SIGNAL.RESP_DONE,
             errorMsg: errorMsg,
             numTotalResults: Math.min(
                 numResultsInCollection,
@@ -120,7 +120,7 @@ Meteor.methods({
 
         SearchResultsMetadataCollection.insert({
             _id: jobId.toString(),
-            lastSignal: SearchSignal.RESP_QUERYING,
+            lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
             errorMsg: null,
         });
 

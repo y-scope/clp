@@ -7,7 +7,7 @@ let enumSearchSignal;
  *
  * @type {Object}
  */
-const SearchSignal = Object.freeze({
+const SEARCH_SIGNAL = Object.freeze({
     NONE: (enumSearchSignal = 0),
 
     REQ_MASK: (enumSearchSignal = 0x10000000),
@@ -20,12 +20,12 @@ const SearchSignal = Object.freeze({
     RESP_QUERYING: ++enumSearchSignal,
 });
 
-const isSearchSignalReq = (s) => (0 !== (SearchSignal.REQ_MASK & s));
-const isSearchSignalResp = (s) => (0 !== (SearchSignal.RESP_MASK & s));
+const isSearchSignalReq = (s) => (0 !== (SEARCH_SIGNAL.REQ_MASK & s));
+const isSearchSignalResp = (s) => (0 !== (SEARCH_SIGNAL.RESP_MASK & s));
 const isSearchSignalQuerying = (s) => (
     [
-        SearchSignal.REQ_QUERYING,
-        SearchSignal.RESP_QUERYING,
+        SEARCH_SIGNAL.REQ_QUERYING,
+        SEARCH_SIGNAL.RESP_QUERYING,
     ].includes(s)
 );
 
@@ -80,6 +80,9 @@ const SEARCH_RESULTS_FIELDS = Object.freeze({
 
 const INVALID_JOB_ID = -1;
 
+/**
+ * The maximum number of results to retrieve for a search.
+ */
 const SEARCH_MAX_NUM_RESULTS = 1000;
 
 export {
@@ -92,5 +95,5 @@ export {
     SEARCH_MAX_NUM_RESULTS,
     SEARCH_RESULTS_FIELDS,
     SearchJobStatus,
-    SearchSignal,
+    SEARCH_SIGNAL,
 };

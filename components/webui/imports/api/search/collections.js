@@ -1,5 +1,8 @@
 import {Mongo} from "meteor/mongo";
-import {INVALID_JOB_ID, SearchSignal} from "./constants";
+import {
+    INVALID_JOB_ID,
+    SEARCH_SIGNAL
+} from "./constants";
 
 
 /**
@@ -17,7 +20,7 @@ const initSearchEventCollection = () => {
     if (SearchResultsMetadataCollection.countDocuments() === 0) {
         SearchResultsMetadataCollection.insert({
             _id: INVALID_JOB_ID.toString(),
-            lastEvent: SearchSignal.NONE,
+            lastEvent: SEARCH_SIGNAL.NONE,
             errorMsg: null,
             numTotalResults: -1,
         });
