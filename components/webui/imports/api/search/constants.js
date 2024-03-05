@@ -38,7 +38,7 @@ let enumSearchJobStatus;
  * @readonly
  * @enum {number}
  */
-const SearchJobStatus = Object.freeze({
+const SEARCH_JOB_STATUS = Object.freeze({
     PENDING: (enumSearchJobStatus = 0),
     RUNNING: ++enumSearchJobStatus,
     SUCCEEDED: ++enumSearchJobStatus,
@@ -50,9 +50,9 @@ const SearchJobStatus = Object.freeze({
 
 
 const JOB_STATUS_WAITING_STATES = [
-    SearchJobStatus.PENDING,
-    SearchJobStatus.RUNNING,
-    SearchJobStatus.CANCELLING,
+    SEARCH_JOB_STATUS.PENDING,
+    SEARCH_JOB_STATUS.RUNNING,
+    SEARCH_JOB_STATUS.CANCELLING,
 ];
 
 /**
@@ -92,8 +92,8 @@ export {
     isSearchSignalResp,
     JOB_STATUS_WAITING_STATES,
     MONGO_SORT_ORDER,
+    SEARCH_JOB_STATUS,
     SEARCH_MAX_NUM_RESULTS,
     SEARCH_RESULTS_FIELDS,
-    SearchJobStatus,
     SEARCH_SIGNAL,
 };
