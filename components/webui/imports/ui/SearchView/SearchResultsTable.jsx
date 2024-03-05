@@ -8,6 +8,11 @@ import "./SearchResultsTable.scss";
 
 
 /**
+ * The interval, in milliseconds, at which the search results load sensor should poll for updates.
+ */
+const SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MS = 200;
+
+/**
  * Senses if the user has requested to load more results by scrolling until
  * this element becomes partially visible.
  *
@@ -17,7 +22,7 @@ import "./SearchResultsTable.scss";
  */
 const SearchResultsLoadSensor = ({
     hasMoreResults,
-    onLoadMoreResults
+    onLoadMoreResults,
 }) => {
     const loadingBlockRef = useRef(null);
 
@@ -26,18 +31,20 @@ const SearchResultsLoadSensor = ({
             return;
         }
 
-        const observer = new IntersectionObserver(
-            (entries) => {
+        let observer = null;
+        setInterval(() => {
+            observer?.disconnect();
+
+            observer = new IntersectionObserver((entries) => {
                 if (entries[0].isIntersecting && hasMoreResults) {
                     onLoadMoreResults();
                 }
-            }
-        );
-
-        observer.observe(loadingBlockRef.current);
+            });
+            observer.observe(loadingBlockRef.current);
+        }, SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MS);
 
         return () => {
-            observer.disconnect();
+            observer?.disconnect();
         };
     }, [hasMoreResults]);
 
