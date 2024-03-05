@@ -40,7 +40,7 @@ const updateSearchEventWhenJobFinishes = async (jobId) => {
     const filter = {
         _id: jobId.toString(),
     };
-    const countedNumTotalResults = await searchJobCollectionsManager
+    const numResultsInCollection = await searchJobCollectionsManager
         .getOrCreateCollection(jobId)
         .countDocuments();
     const modifier = {
@@ -48,7 +48,7 @@ const updateSearchEventWhenJobFinishes = async (jobId) => {
             lastSignal: SearchSignal.RESP_DONE,
             errorMsg: errorMsg,
             numTotalResults: Math.min(
-                countedNumTotalResults,
+                numResultsInCollection,
                 SEARCH_MAX_NUM_RESULTS
             ),
         },

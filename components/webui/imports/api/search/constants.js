@@ -30,20 +30,21 @@ const isSearchSignalQuerying = (s) => (
 );
 
 /* eslint-disable sort-keys */
-let enumJobStatus;
+let enumSearchJobStatus;
 /**
  * Enum of job statuses, matching the `SearchJobStatus` class in
  * `job_orchestration.search_scheduler.constants`.
  *
- * @type {Object}
+ * @readonly
+ * @enum {number}
  */
 const SearchJobStatus = Object.freeze({
-    PENDING: (enumJobStatus = 0),
-    RUNNING: ++enumJobStatus,
-    SUCCEEDED: ++enumJobStatus,
-    FAILED: ++enumJobStatus,
-    CANCELLING: ++enumJobStatus,
-    CANCELLED: ++enumJobStatus,
+    PENDING: (enumSearchJobStatus = 0),
+    RUNNING: ++enumSearchJobStatus,
+    SUCCEEDED: ++enumSearchJobStatus,
+    FAILED: ++enumSearchJobStatus,
+    CANCELLING: ++enumSearchJobStatus,
+    CANCELLED: ++enumSearchJobStatus,
 });
 /* eslint-enable sort-keys */
 
@@ -53,6 +54,29 @@ const JOB_STATUS_WAITING_STATES = [
     SearchJobStatus.RUNNING,
     SearchJobStatus.CANCELLING,
 ];
+
+/**
+ * Enum of Mongo Collection sort orders.
+ *
+ * @readonly
+ * @enum {string}
+ */
+const MONGO_SORT_ORDER = Object.freeze({
+    ASCENDING: "asc",
+    DESCENDING: "desc",
+});
+
+/**
+ * Enum of search results cache fields.
+ *
+ * @readonly
+ * @enum {string}
+ */
+const SEARCH_RESULTS_FIELDS = Object.freeze({
+    ID: "_id",
+    TIMESTAMP: "timestamp",
+});
+
 
 const INVALID_JOB_ID = -1;
 
@@ -64,7 +88,9 @@ export {
     isSearchSignalReq,
     isSearchSignalResp,
     JOB_STATUS_WAITING_STATES,
+    MONGO_SORT_ORDER,
     SEARCH_MAX_NUM_RESULTS,
+    SEARCH_RESULTS_FIELDS,
     SearchJobStatus,
     SearchSignal,
 };

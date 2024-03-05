@@ -9,6 +9,8 @@ import {ProgressBar} from "react-bootstrap";
 import {SearchResultsMetadataCollection} from "../../api/search/collections";
 import {
     INVALID_JOB_ID,
+    MONGO_SORT_ORDER,
+    SEARCH_RESULTS_FIELDS,
     SearchSignal,
     isSearchSignalQuerying,
 } from "../../api/search/constants";
@@ -46,8 +48,8 @@ const SearchView = () => {
     const [visibleSearchResultsLimit, setVisibleSearchResultsLimit] = useState(
         VISIBLE_RESULTS_LIMIT_INITIAL);
     const [fieldToSortBy, setFieldToSortBy] = useState({
-        name: "timestamp",
-        direction: "desc",
+        name: SEARCH_RESULTS_FIELDS.TIMESTAMP,
+        direction: MONGO_SORT_ORDER.DESCENDING,
     });
 
     // Visuals

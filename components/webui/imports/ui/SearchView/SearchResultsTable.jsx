@@ -5,6 +5,10 @@ import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {Spinner, Table} from "react-bootstrap";
 
 import "./SearchResultsTable.scss";
+import {
+    MONGO_SORT_ORDER,
+    SEARCH_RESULTS_FIELDS,
+} from "../../api/search/constants";
 
 
 /**
@@ -76,7 +80,7 @@ const SearchResultsTable = ({
 }) => {
     const getSortIcon = (fieldToSortBy, fieldName) => {
         if ((null !== fieldToSortBy) && (fieldName === fieldToSortBy.name)) {
-            return (("asc" === fieldToSortBy.direction) ?
+            return ((MONGO_SORT_ORDER.ASCENDING === fieldToSortBy.direction) ?
                 faSortUp :
                 faSortDown);
         }
@@ -89,15 +93,15 @@ const SearchResultsTable = ({
         if (null === fieldToSortBy || fieldToSortBy.name !== columnName) {
             setFieldToSortBy({
                 name: columnName,
-                direction: "asc",
+                direction: MONGO_SORT_ORDER.ASCENDING,
             });
-        } else if ("asc" === fieldToSortBy.direction) {
+        } else if (MONGO_SORT_ORDER.ASCENDING === fieldToSortBy.direction) {
             // Switch to descending
             setFieldToSortBy({
                 name: columnName,
-                direction: "desc",
+                direction: MONGO_SORT_ORDER.DESCENDING,
             });
-        } else if ("desc" === fieldToSortBy.direction) {
+        } else if (MONGO_SORT_ORDER.DESCENDING === fieldToSortBy.direction) {
             // Switch to unsorted
             setFieldToSortBy(null);
         }
@@ -127,12 +131,12 @@ const SearchResultsTable = ({
             <tr>
                 <th style={{"width": "144px"}}
                     className={"search-results-th search-results-th-sortable"}
-                    data-column-name={"timestamp"}
-                    key={"timestamp"}
+                    data-column-name={SEARCH_RESULTS_FIELDS.TIMESTAMP}
+                    key={SEARCH_RESULTS_FIELDS.TIMESTAMP}
                     onClick={toggleSortDirection}
                 >
                     <div className={"search-results-table-header"}>
-                        <FontAwesomeIcon icon={getSortIcon(fieldToSortBy, "timestamp")}/> Timestamp
+                        <FontAwesomeIcon icon={getSortIcon(fieldToSortBy, SEARCH_RESULTS_FIELDS.TIMESTAMP)}/> Timestamp
                     </div>
                 </th>
                 <th className={"search-results-th"} key={"message"}>

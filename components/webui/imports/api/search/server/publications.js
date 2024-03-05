@@ -2,7 +2,11 @@ import {logger} from "/imports/utils/logger";
 import {Meteor} from "meteor/meteor";
 
 import {SearchResultsMetadataCollection} from "../collections";
-import {SEARCH_MAX_NUM_RESULTS} from "../constants";
+import {
+    MONGO_SORT_ORDER,
+    SEARCH_MAX_NUM_RESULTS,
+    SEARCH_RESULTS_FIELDS,
+} from "../constants";
 import {searchJobCollectionsManager} from "./collections";
 
 
@@ -44,7 +48,8 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
 
     const findOptions = {
         sort: [
-            ["timestamp", "desc"],
+            [SEARCH_RESULTS_FIELDS.TIMESTAMP, MONGO_SORT_ORDER.DESCENDING],
+            [SEARCH_RESULTS_FIELDS.ID, MONGO_SORT_ORDER.DESCENDING],
         ],
         limit: SEARCH_MAX_NUM_RESULTS,
         disableOplog: true,
