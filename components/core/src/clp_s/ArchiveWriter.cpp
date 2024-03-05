@@ -171,7 +171,6 @@ void ArchiveWriter::update_metadata() {
         );
 
         m_metadata_db->add_archive(m_id, metadata);
-        m_metadata_db->close();
     }
 
     if (m_print_archive_stats) {
