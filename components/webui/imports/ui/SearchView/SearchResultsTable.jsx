@@ -12,6 +12,11 @@ import {
 
 
 /**
+ * The interval, in milliseconds, at which the search results load sensor should poll for updates.
+ */
+const SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MS = 200;
+
+/**
  * Senses if the user has requested to load more results by scrolling until
  * this element becomes partially visible.
  *
@@ -21,33 +26,38 @@ import {
  */
 const SearchResultsLoadSensor = ({
     hasMoreResults,
-    onLoadMoreResults
+    onLoadMoreResults,
 }) => {
     const loadingBlockRef = useRef(null);
+    const loadIntervalRef = useRef(null);
 
     useEffect(() => {
-        if (false === hasMoreResults) {
-            return;
-        }
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries[0].isIntersecting && hasMoreResults) {
-                    onLoadMoreResults();
-                }
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                loadIntervalRef.current = setInterval(
+                    onLoadMoreResults,
+                    SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MS,
+                );
+            } else if (null !== loadIntervalRef.current) {
+                clearInterval(loadIntervalRef.current);
+                loadIntervalRef.current = null;
             }
-        );
+        });
 
         observer.observe(loadingBlockRef.current);
 
         return () => {
+            if (null !== loadIntervalRef.current) {
+                clearInterval(loadIntervalRef.current);
+                loadIntervalRef.current = null;
+            }
             observer.disconnect();
         };
-    }, [hasMoreResults]);
+    }, [onLoadMoreResults]);
 
     return <div
-        ref={loadingBlockRef}
         id={"search-results-load-sensor"}
+        ref={loadingBlockRef}
         style={{
             visibility: (true === hasMoreResults) ?
                 "visible" :
