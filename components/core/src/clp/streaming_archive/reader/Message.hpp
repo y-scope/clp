@@ -1,5 +1,5 @@
-#ifndef STREAMING_ARCHIVE_READER_MESSAGE_HPP
-#define STREAMING_ARCHIVE_READER_MESSAGE_HPP
+#ifndef CLP_STREAMING_ARCHIVE_READER_MESSAGE_HPP
+#define CLP_STREAMING_ARCHIVE_READER_MESSAGE_HPP
 
 #include <cstddef>
 #include <vector>
@@ -33,4 +33,4 @@ private:
 };
 }  // namespace clp::streaming_archive::reader
 
-#endif  // STREAMING_ARCHIVE_READER_MESSAGE_HPP
+#endif  // CLP_STREAMING_ARCHIVE_READER_MESSAGE_HPP

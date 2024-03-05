@@ -1,5 +1,5 @@
-#ifndef STREAMING_ARCHIVE_WRITER_UTILS_HPP
-#define STREAMING_ARCHIVE_WRITER_UTILS_HPP
+#ifndef CLP_STREAMING_ARCHIVE_WRITER_UTILS_HPP
+#define CLP_STREAMING_ARCHIVE_WRITER_UTILS_HPP
 
 #include <string>
 
@@ -52,4 +52,4 @@ auto split_file_and_archive(
 auto close_file_and_append_to_segment(Archive& archive) -> void;
 }  // namespace clp::streaming_archive::writer
 
-#endif  // STREAMING_ARCHIVE_WRITER_UTILS_HPP
+#endif  // CLP_STREAMING_ARCHIVE_WRITER_UTILS_HPP

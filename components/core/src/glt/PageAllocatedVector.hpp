@@ -1,5 +1,5 @@
-#ifndef PAGEALLOCATEDVECTOR_HPP
-#define PAGEALLOCATEDVECTOR_HPP
+#ifndef GLT_PAGEALLOCATEDVECTOR_HPP
+#define GLT_PAGEALLOCATEDVECTOR_HPP
 
 #include <errno.h>
 #include <sys/mman.h>
@@ -285,4 +285,4 @@ void PageAllocatedVector<ValueType>::increase_capacity(size_t required_capacity)
 }
 }  // namespace glt
 
-#endif  // PAGEALLOCATEDVECTOR_HPP
+#endif  // GLT_PAGEALLOCATEDVECTOR_HPP
