@@ -12,7 +12,7 @@ import {
     MONGO_SORT_ORDER,
     SEARCH_RESULTS_FIELDS,
     SEARCH_SIGNAL,
-    isSearchSignalQuerying,
+    isSearchSignalQuerying, SEARCH_MAX_NUM_RESULTS,
 } from "../../api/search/constants";
 import SearchJobCollectionsManager from "../../api/search/SearchJobCollectionsManager";
 import {LOCAL_STORAGE_KEYS} from "../constants";
@@ -40,6 +40,7 @@ const SearchView = () => {
     // gets updated as soon as localLastSearchSignal is updated
     // to avoid reading old localLastSearchSignal value from Closures
     const localLastSearchSignalRef = useRef(localLastSearchSignal);
+    const [estimatedNumResults, setEstimatedNumResults] = useState(null);
 
     // Query options
     const [queryString, setQueryString] = useState("");
@@ -80,6 +81,8 @@ const SearchView = () => {
             return [];
         }
 
+        const resultsCollection = dbRef.current.getOrCreateCollection(jobId);
+
         Meteor.subscribe(Meteor.settings.public.SearchResultsCollectionName, {
             jobId: jobId,
         });
@@ -101,13 +104,22 @@ const SearchView = () => {
             ];
         }
 
+        resultsCollection.estimatedDocumentCount()
+            .then((count) => {
+                setEstimatedNumResults(
+                    (count > SEARCH_MAX_NUM_RESULTS) ?
+                        SEARCH_MAX_NUM_RESULTS :
+                        count
+                );
+            });
+
         // NOTE: Although we publish and subscribe using the name
         // `Meteor.settings.public.SearchResultsCollectionName`, the rows are still returned in the
         // job-specific collection (e.g., "1"); this is because on the server, we're returning a
         // cursor from the job-specific collection and Meteor creates a collection with the same
         // name on the client rather than returning the rows in a collection with the published
         // name.
-        return dbRef.current.getOrCreateCollection(jobId).find({}, findOptions).fetch();
+        return resultsCollection.find({}, findOptions).fetch();
     }, [jobId, fieldToSortBy, visibleSearchResultsLimit]);
 
     // State transitions
@@ -191,6 +203,8 @@ const SearchView = () => {
     };
 
     const showSearchResults = INVALID_JOB_ID !== jobId;
+    const numResultsOnServer = resultsMetadata.numTotalResults || estimatedNumResults || searchResults.length;
+
     return (<div className="d-flex flex-column h-100">
         <div className={"flex-column"}>
             <SearchControls
@@ -215,15 +229,15 @@ const SearchView = () => {
         </div>
 
         {showSearchResults && <SearchResults
-            jobId={jobId}
-            searchResults={searchResults}
-            resultsMetadata={resultsMetadata}
             fieldToSortBy={fieldToSortBy}
-            setFieldToSortBy={setFieldToSortBy}
-            visibleSearchResultsLimit={visibleSearchResultsLimit}
-            setVisibleSearchResultsLimit={setVisibleSearchResultsLimit}
+            jobId={jobId}
             maxLinesPerResult={maxLinesPerResult}
+            numResultsOnServer={numResultsOnServer}
+            searchResults={searchResults}
+            setFieldToSortBy={setFieldToSortBy}
             setMaxLinesPerResult={setMaxLinesPerResult}
+            setVisibleSearchResultsLimit={setVisibleSearchResultsLimit}
+            visibleSearchResultsLimit={visibleSearchResultsLimit}
         />}
     </div>);
 };
