@@ -1,5 +1,5 @@
-#ifndef STREAMING_ARCHIVE_WRITER_SEGMENT_HPP
-#define STREAMING_ARCHIVE_WRITER_SEGMENT_HPP
+#ifndef CLP_STREAMING_ARCHIVE_WRITER_SEGMENT_HPP
+#define CLP_STREAMING_ARCHIVE_WRITER_SEGMENT_HPP
 
 #include <memory>
 #include <string>
@@ -96,4 +96,4 @@ private:
 };
 }  // namespace clp::streaming_archive::writer
 
-#endif  // STREAMING_ARCHIVE_WRITER_SEGMENT_HPP
+#endif  // CLP_STREAMING_ARCHIVE_WRITER_SEGMENT_HPP

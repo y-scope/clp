@@ -13,7 +13,11 @@ import {
     Row,
 } from "react-bootstrap";
 import DatePicker from "react-datepicker";
-import {isSearchSignalQuerying, isSearchSignalReq, SearchSignal} from "../../api/search/constants";
+import {
+    SEARCH_SIGNAL,
+    isSearchSignalQuerying,
+    isSearchSignalReq,
+} from "../../api/search/constants";
 
 import {computeTimeRange, TIME_RANGE_PRESET_LABEL} from "./datetime";
 import {LOCAL_STORAGE_KEYS} from "../constants";
@@ -293,7 +297,7 @@ const SearchControls = ({
                         onChange={queryChangeHandler}
                     />
                     {
-                        (SearchSignal.RESP_DONE === resultsMetadata["lastSignal"]) &&
+                        (SEARCH_SIGNAL.RESP_DONE === resultsMetadata["lastSignal"]) &&
                         <Button
                             className={"border-top-0 border-bottom-0 rounded-0"}
                             disabled={true === isSearchSignalReq(resultsMetadata["lastSignal"])}
@@ -304,7 +308,7 @@ const SearchControls = ({
                         </Button>
                     }
                     {
-                        (SearchSignal.RESP_QUERYING === resultsMetadata["lastSignal"]) ?
+                        (SEARCH_SIGNAL.RESP_QUERYING === resultsMetadata["lastSignal"]) ?
                             <Button
                                 className={"border-top-0 border-bottom-0 rounded-0"}
                                 disabled={true === canceling}

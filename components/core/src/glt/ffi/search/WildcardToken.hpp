@@ -1,5 +1,5 @@
-#ifndef GLT_FFI_WILDCARDTOKEN_HPP
-#define GLT_FFI_WILDCARDTOKEN_HPP
+#ifndef GLT_FFI_SEARCH_WILDCARDTOKEN_HPP
+#define GLT_FFI_SEARCH_WILDCARDTOKEN_HPP
 
 #include <vector>
 
@@ -76,4 +76,4 @@ private:
 };
 }  // namespace glt::ffi::search
 
-#endif  // GLT_FFI_WILDCARDTOKEN_HPP
+#endif  // GLT_FFI_SEARCH_WILDCARDTOKEN_HPP

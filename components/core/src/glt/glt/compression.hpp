@@ -1,5 +1,5 @@
-#ifndef COMPRESSION_HPP
-#define COMPRESSION_HPP
+#ifndef GLT_GLT_COMPRESSION_HPP
+#define GLT_GLT_COMPRESSION_HPP
 
 #include <string>
 #include <vector>
@@ -43,4 +43,4 @@ bool read_and_validate_grouped_file_list(
 );
 }  // namespace glt::glt
 
-#endif  // COMPRESSION_HPP
+#endif  // GLT_GLT_COMPRESSION_HPP

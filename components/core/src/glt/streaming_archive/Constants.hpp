@@ -1,5 +1,5 @@
-#ifndef STREAMING_ARCHIVE_CONSTANTS_HPP
-#define STREAMING_ARCHIVE_CONSTANTS_HPP
+#ifndef GLT_STREAMING_ARCHIVE_CONSTANTS_HPP
+#define GLT_STREAMING_ARCHIVE_CONSTANTS_HPP
 
 #include "../Defs.h"
 
@@ -65,4 +65,4 @@ constexpr uint64_t Combined = 1;
 }  // namespace LogtypeTableType
 }  // namespace glt::streaming_archive
 
-#endif  // STREAMING_ARCHIVE_CONSTANTS_HPP
+#endif  // GLT_STREAMING_ARCHIVE_CONSTANTS_HPP

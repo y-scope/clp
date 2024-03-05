@@ -1,5 +1,5 @@
-#ifndef STREAMING_ARCHIVE_WRITER_FILE_HPP
-#define STREAMING_ARCHIVE_WRITER_FILE_HPP
+#ifndef CLP_STREAMING_ARCHIVE_WRITER_FILE_HPP
+#define CLP_STREAMING_ARCHIVE_WRITER_FILE_HPP
 
 #include <unordered_set>
 #include <vector>
@@ -253,4 +253,4 @@ private:
 };
 }  // namespace clp::streaming_archive::writer
 
-#endif  // STREAMING_ARCHIVE_WRITER_FILE_HPP
+#endif  // CLP_STREAMING_ARCHIVE_WRITER_FILE_HPP

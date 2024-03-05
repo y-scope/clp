@@ -7,7 +7,7 @@ let enumSearchSignal;
  *
  * @type {Object}
  */
-const SearchSignal = Object.freeze({
+const SEARCH_SIGNAL = Object.freeze({
     NONE: (enumSearchSignal = 0),
 
     REQ_MASK: (enumSearchSignal = 0x10000000),
@@ -20,45 +20,80 @@ const SearchSignal = Object.freeze({
     RESP_QUERYING: ++enumSearchSignal,
 });
 
-const isSearchSignalReq = (s) => (0 !== (SearchSignal.REQ_MASK & s));
-const isSearchSignalResp = (s) => (0 !== (SearchSignal.RESP_MASK & s));
+const isSearchSignalReq = (s) => (0 !== (SEARCH_SIGNAL.REQ_MASK & s));
+const isSearchSignalResp = (s) => (0 !== (SEARCH_SIGNAL.RESP_MASK & s));
 const isSearchSignalQuerying = (s) => (
     [
-        SearchSignal.REQ_QUERYING,
-        SearchSignal.RESP_QUERYING,
+        SEARCH_SIGNAL.REQ_QUERYING,
+        SEARCH_SIGNAL.RESP_QUERYING,
     ].includes(s)
 );
 
-let enumJobStatus;
+/* eslint-disable sort-keys */
+let enumSearchJobStatus;
 /**
  * Enum of job statuses, matching the `SearchJobStatus` class in
  * `job_orchestration.search_scheduler.constants`.
  *
- * @type {Object}
+ * @readonly
+ * @enum {number}
  */
-const JobStatus = Object.freeze({
-    PENDING: (enumJobStatus = 0),
-    RUNNING: ++enumJobStatus,
-    SUCCESS: ++enumJobStatus,
-    FAILED: ++enumJobStatus,
-    CANCELLING: ++enumJobStatus,
-    CANCELLED: ++enumJobStatus,
+const SEARCH_JOB_STATUS = Object.freeze({
+    PENDING: (enumSearchJobStatus = 0),
+    RUNNING: ++enumSearchJobStatus,
+    SUCCEEDED: ++enumSearchJobStatus,
+    FAILED: ++enumSearchJobStatus,
+    CANCELLING: ++enumSearchJobStatus,
+    CANCELLED: ++enumSearchJobStatus,
 });
+/* eslint-enable sort-keys */
+
 
 const JOB_STATUS_WAITING_STATES = [
-    JobStatus.PENDING,
-    JobStatus.RUNNING,
-    JobStatus.CANCELLING,
+    SEARCH_JOB_STATUS.PENDING,
+    SEARCH_JOB_STATUS.RUNNING,
+    SEARCH_JOB_STATUS.CANCELLING,
 ];
+
+/**
+ * Enum of Mongo Collection sort orders.
+ *
+ * @readonly
+ * @enum {string}
+ */
+const MONGO_SORT_ORDER = Object.freeze({
+    ASCENDING: "asc",
+    DESCENDING: "desc",
+});
+
+/**
+ * Enum of search results cache fields.
+ *
+ * @readonly
+ * @enum {string}
+ */
+const SEARCH_RESULTS_FIELDS = Object.freeze({
+    ID: "_id",
+    TIMESTAMP: "timestamp",
+});
+
 
 const INVALID_JOB_ID = -1;
 
+/**
+ * The maximum number of results to retrieve for a search.
+ */
+const SEARCH_MAX_NUM_RESULTS = 1000;
+
 export {
-    SearchSignal,
+    INVALID_JOB_ID,
+    isSearchSignalQuerying,
     isSearchSignalReq,
     isSearchSignalResp,
-    isSearchSignalQuerying,
-    JobStatus,
     JOB_STATUS_WAITING_STATES,
-    INVALID_JOB_ID,
+    MONGO_SORT_ORDER,
+    SEARCH_JOB_STATUS,
+    SEARCH_MAX_NUM_RESULTS,
+    SEARCH_RESULTS_FIELDS,
+    SEARCH_SIGNAL,
 };
