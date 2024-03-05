@@ -78,32 +78,32 @@ const SearchResultsTable = ({
     hasMoreResults,
     onLoadMoreResults,
 }) => {
-    const getSortIcon = (fieldToSortBy, fieldName) => {
-        if ((null !== fieldToSortBy) && (fieldName === fieldToSortBy.name)) {
-            return ((MONGO_SORT_ORDER.ASCENDING === fieldToSortBy.direction) ?
+    const getSortIcon = (fieldName) => {
+        if (fieldName === fieldToSortBy.name) {
+            return (MONGO_SORT_ORDER.ASCENDING === fieldToSortBy.direction) ?
                 faSortUp :
-                faSortDown);
+                faSortDown;
         }
 
         return faSort;
     };
 
     const toggleSortDirection = (event) => {
-        const columnName = event.currentTarget.dataset.columnName;
-        if (null === fieldToSortBy || fieldToSortBy.name !== columnName) {
+        const {columnName} = event.currentTarget.dataset;
+        if (fieldToSortBy.name !== columnName) {
             setFieldToSortBy({
                 name: columnName,
-                direction: MONGO_SORT_ORDER.ASCENDING,
+                direction: (SEARCH_RESULTS_FIELDS.TIMESTAMP === columnName) ?
+                    MONGO_SORT_ORDER.DESCENDING :
+                    MONGO_SORT_ORDER.ASCENDING,
             });
-        } else if (MONGO_SORT_ORDER.ASCENDING === fieldToSortBy.direction) {
-            // Switch to descending
+        } else {
             setFieldToSortBy({
                 name: columnName,
-                direction: MONGO_SORT_ORDER.DESCENDING,
+                direction: (MONGO_SORT_ORDER.ASCENDING === fieldToSortBy.direction) ?
+                    MONGO_SORT_ORDER.DESCENDING :
+                    MONGO_SORT_ORDER.ASCENDING,
             });
-        } else if (MONGO_SORT_ORDER.DESCENDING === fieldToSortBy.direction) {
-            // Switch to unsorted
-            setFieldToSortBy(null);
         }
     };
 
@@ -137,7 +137,7 @@ const SearchResultsTable = ({
                 >
                     <div className={"search-results-table-header"}>
                         <FontAwesomeIcon
-                            icon={getSortIcon(fieldToSortBy, SEARCH_RESULTS_FIELDS.TIMESTAMP)}/>
+                            icon={getSortIcon(SEARCH_RESULTS_FIELDS.TIMESTAMP)}/>
                         <span> Timestamp</span>
                     </div>
                 </th>
