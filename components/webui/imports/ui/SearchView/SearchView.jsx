@@ -86,10 +86,7 @@ const SearchView = () => {
 
         const findOptions = {
             limit: visibleSearchResultsLimit,
-        };
-
-        if (null !== fieldToSortBy) {
-            findOptions.sort = [
+            sort: [
                 [
                     fieldToSortBy.name,
                     fieldToSortBy.direction,
@@ -98,8 +95,8 @@ const SearchView = () => {
                     SEARCH_RESULTS_FIELDS.ID,
                     fieldToSortBy.direction,
                 ],
-            ];
-        }
+            ],
+        };
 
         // NOTE: Although we publish and subscribe using the name
         // `Meteor.settings.public.SearchResultsCollectionName`, the rows are still returned in the
