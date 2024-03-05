@@ -29,32 +29,35 @@ const SearchResultsLoadSensor = ({
     onLoadMoreResults,
 }) => {
     const loadingBlockRef = useRef(null);
+    const loadIntervalRef = useRef(null);
 
     useEffect(() => {
-        if (false === hasMoreResults) {
-            return;
-        }
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                loadIntervalRef.current = setInterval(
+                    onLoadMoreResults,
+                    SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MS,
+                );
+            } else if (null !== loadIntervalRef.current) {
+                clearInterval(loadIntervalRef.current);
+                loadIntervalRef.current = null;
+            }
+        });
 
-        let observer = null;
-        setInterval(() => {
-            observer?.disconnect();
-
-            observer = new IntersectionObserver((entries) => {
-                if (entries[0].isIntersecting && hasMoreResults) {
-                    onLoadMoreResults();
-                }
-            });
-            observer.observe(loadingBlockRef.current);
-        }, SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MS);
+        observer.observe(loadingBlockRef.current);
 
         return () => {
-            observer?.disconnect();
+            if (null !== loadIntervalRef.current) {
+                clearInterval(loadIntervalRef.current);
+                loadIntervalRef.current = null;
+            }
+            observer.disconnect();
         };
-    }, [hasMoreResults]);
+    }, [onLoadMoreResults]);
 
     return <div
-        ref={loadingBlockRef}
         id={"search-results-load-sensor"}
+        ref={loadingBlockRef}
         style={{
             visibility: (true === hasMoreResults) ?
                 "visible" :
