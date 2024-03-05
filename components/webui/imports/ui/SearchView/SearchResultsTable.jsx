@@ -136,7 +136,9 @@ const SearchResultsTable = ({
                     onClick={toggleSortDirection}
                 >
                     <div className={"search-results-table-header"}>
-                        <FontAwesomeIcon icon={getSortIcon(fieldToSortBy, SEARCH_RESULTS_FIELDS.TIMESTAMP)}/> Timestamp
+                        <FontAwesomeIcon
+                            icon={getSortIcon(fieldToSortBy, SEARCH_RESULTS_FIELDS.TIMESTAMP)}/>
+                        <span> Timestamp</span>
                     </div>
                 </th>
                 <th className={"search-results-th"} key={"message"}>

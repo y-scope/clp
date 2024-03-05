@@ -95,7 +95,7 @@ const SearchView = () => {
                     fieldToSortBy.direction,
                 ],
                 [
-                    "_id",
+                    SEARCH_RESULTS_FIELDS.ID,
                     fieldToSortBy.direction,
                 ],
             ];
@@ -169,7 +169,7 @@ const SearchView = () => {
             }
 
             if (SEARCH_SIGNAL.REQ_CLEARING === localLastSearchSignalRef.current) {
-                // The check prevents clearing `localLastSearchSignal = SearchSignal.REQ_QUERYING`
+                // The check prevents clearing `localLastSearchSignal = SEARCH_SIGNAL.REQ_QUERYING`
                 // when `handleClearResults` is called by submitQuery.
                 setLocalLastSearchSignal(SEARCH_SIGNAL.NONE);
             }
