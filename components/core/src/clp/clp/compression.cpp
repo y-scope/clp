@@ -36,19 +36,19 @@ static bool file_group_id_comparator(FileToCompress const& lhs, FileToCompress c
  * Comparator to sort files based on their last write time
  * @param lhs
  * @param rhs
- * @return true if lhs' last write time is less than rhs' last write time, false otherwise
+ * @return true if lhs' last write time is greater than rhs' last write time, false otherwise
  */
 static bool
-file_lt_last_write_time_comparator(FileToCompress const& lhs, FileToCompress const& rhs);
+file_gt_last_write_time_comparator(FileToCompress const& lhs, FileToCompress const& rhs);
 
 static bool file_group_id_comparator(FileToCompress const& lhs, FileToCompress const& rhs) {
     return lhs.get_group_id() < rhs.get_group_id();
 }
 
 static bool
-file_lt_last_write_time_comparator(FileToCompress const& lhs, FileToCompress const& rhs) {
+file_gt_last_write_time_comparator(FileToCompress const& lhs, FileToCompress const& rhs) {
     return boost::filesystem::last_write_time(lhs.get_path())
-           < boost::filesystem::last_write_time(rhs.get_path());
+           > boost::filesystem::last_write_time(rhs.get_path());
 }
 
 bool compress(
@@ -128,10 +128,10 @@ bool compress(
         num_files_to_compress = files_to_compress.size() + grouped_files_to_compress.size();
     }
     if (command_line_args.sort_input_files()) {
-        sort(files_to_compress.begin(), files_to_compress.end(), file_lt_last_write_time_comparator
+        sort(files_to_compress.begin(), files_to_compress.end(), file_gt_last_write_time_comparator
         );
     }
-    for (auto rit = files_to_compress.crbegin(); rit != files_to_compress.crend(); ++rit) {
+    for (auto it = files_to_compress.cbegin(); it != files_to_compress.cend(); ++it) {
         if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dictionaries) {
             split_archive(archive_user_config, archive_writer);
         }
@@ -140,7 +140,7 @@ bool compress(
                     target_data_size_of_dictionaries,
                     archive_user_config,
                     target_encoded_file_size,
-                    *rit,
+                    *it,
                     archive_writer,
                     use_heuristic
             ))

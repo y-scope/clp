@@ -321,6 +321,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
                 po::options_description visible_options;
                 visible_options.add(options_general);
+                visible_options.add(options_functional);
                 visible_options.add(options_compression);
                 cerr << visible_options << endl;
                 return ParsingResult::InfoCommand;
