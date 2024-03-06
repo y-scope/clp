@@ -108,8 +108,8 @@ const SearchView = () => {
         };
 
         if (SEARCH_SIGNAL.RESP_DONE !== resultsMetadata.lastSignal) {
-            // avoid getting estimatedDocumentCount after job is DONE
-            // since the count is already available in
+            // avoid refreshing estimatedNumResults after job is DONE
+            // since the count would have been already available in
             // `resultsMetadata.numTotalResults`
             resultsCollection.estimatedDocumentCount()
                 .then((count) => {
