@@ -37,11 +37,11 @@ const SearchView = () => {
     const [jobId, setJobId] = useState(INVALID_JOB_ID);
     const [operationErrorMsg, setOperationErrorMsg] = useState("");
     const [localLastSearchSignal, setLocalLastSearchSignal] = useState(SEARCH_SIGNAL.NONE);
+    const [estimatedNumResults, setEstimatedNumResults] = useState(null);
     const dbRef = useRef(new SearchJobCollectionsManager());
     // gets updated as soon as localLastSearchSignal is updated
     // to avoid reading old localLastSearchSignal value from Closures
     const localLastSearchSignalRef = useRef(localLastSearchSignal);
-    const [estimatedNumResults, setEstimatedNumResults] = useState(null);
 
     // Query options
     const [queryString, setQueryString] = useState("");
@@ -107,12 +107,17 @@ const SearchView = () => {
             ],
         };
 
-        resultsCollection.estimatedDocumentCount()
-            .then((count) => {
-                setEstimatedNumResults(
-                    Math.min(count, SEARCH_MAX_NUM_RESULTS)
-                );
-            });
+        if (SEARCH_SIGNAL.RESP_DONE !== resultsMetadata.lastSignal) {
+            // avoid getting estimatedDocumentCount after job is DONE
+            // since the count is already available in
+            // `resultsMetadata.numTotalResults`
+            resultsCollection.estimatedDocumentCount()
+                .then((count) => {
+                    setEstimatedNumResults(
+                        Math.min(count, SEARCH_MAX_NUM_RESULTS)
+                    );
+                });
+        }
 
         return resultsCollection.find({}, findOptions).fetch();
     }, [jobId, fieldToSortBy, visibleSearchResultsLimit]);
@@ -164,6 +169,7 @@ const SearchView = () => {
         setJobId(INVALID_JOB_ID);
         setOperationErrorMsg("");
         setLocalLastSearchSignal(SEARCH_SIGNAL.REQ_CLEARING);
+        setEstimatedNumResults(null);
         setVisibleSearchResultsLimit(VISIBLE_RESULTS_LIMIT_INITIAL);
 
         const args = {
