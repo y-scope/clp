@@ -371,7 +371,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     );
                 }
             }
-
         }
 
         // Validate an output directory was specified
