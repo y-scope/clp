@@ -10,9 +10,10 @@ import {SearchResultsMetadataCollection} from "../../api/search/collections";
 import {
     INVALID_JOB_ID,
     MONGO_SORT_ORDER,
+    SEARCH_MAX_NUM_RESULTS,
     SEARCH_RESULTS_FIELDS,
     SEARCH_SIGNAL,
-    isSearchSignalQuerying, SEARCH_MAX_NUM_RESULTS,
+    isSearchSignalQuerying,
 } from "../../api/search/constants";
 import SearchJobCollectionsManager from "../../api/search/SearchJobCollectionsManager";
 import {LOCAL_STORAGE_KEYS} from "../constants";
