@@ -108,9 +108,7 @@ const SearchView = () => {
         resultsCollection.estimatedDocumentCount()
             .then((count) => {
                 setEstimatedNumResults(
-                    (count > SEARCH_MAX_NUM_RESULTS) ?
-                        SEARCH_MAX_NUM_RESULTS :
-                        count
+                    Math.min(count, SEARCH_MAX_NUM_RESULTS)
                 );
             });
 
