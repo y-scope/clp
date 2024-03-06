@@ -95,10 +95,7 @@ const SearchView = () => {
         const resultsCollection = dbRef.current.getOrCreateCollection(jobId);
         const findOptions = {
             limit: visibleSearchResultsLimit,
-        };
-
-        if (null !== fieldToSortBy) {
-            findOptions.sort = [
+            sort: [
                 [
                     fieldToSortBy.name,
                     fieldToSortBy.direction,
@@ -107,8 +104,8 @@ const SearchView = () => {
                     SEARCH_RESULTS_FIELDS.ID,
                     fieldToSortBy.direction,
                 ],
-            ];
-        }
+            ],
+        };
 
         resultsCollection.estimatedDocumentCount()
             .then((count) => {

@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useCallback} from "react";
 
 import SearchResultsHeader from "./SearchResultsHeader.jsx";
 import SearchResultsTable from "./SearchResultsTable.jsx";
@@ -48,10 +48,11 @@ const SearchResults = ({
 }) => {
     const hasMoreResults = visibleSearchResultsLimit < numResultsOnServer;
 
-    const handleLoadMoreResults = () => {
-        setVisibleSearchResultsLimit((v) =>
-            (v + VISIBLE_RESULTS_LIMIT_INCREMENT));
-    };
+    const handleLoadMoreResults = useCallback(() => {
+        setVisibleSearchResultsLimit(
+            (v) => (v + VISIBLE_RESULTS_LIMIT_INCREMENT)
+        );
+    }, []);
 
     return <>
         <div className={"flex-column"}>
