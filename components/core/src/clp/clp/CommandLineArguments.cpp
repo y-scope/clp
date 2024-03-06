@@ -237,6 +237,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             // Define compression-specific options
             po::options_description options_compression("Compression Options");
+            // boost::program_options doesn't support boolean flags. Parse the string by
+            // ourselves
+            std::string sort_input_flag_str = "true";
             options_compression.add_options()(
                     "remove-path-prefix",
                     po::value<string>(&m_path_prefix_to_remove)
@@ -282,6 +285,12 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                             ->default_value(m_schema_file_path),
                     "Path to a schema file. If not specified, heuristics are used to determine "
                     "dictionary variables. See README-Schema.md for details."
+            )(
+                    "sort-input-files",
+                    po::value<string>(&sort_input_flag_str)
+                            ->value_name("VALUE")
+                            ->default_value(sort_input_flag_str),
+                    "whether to sort input files based on their last modified time"
             );
 
             po::options_description all_compression_options;
@@ -354,6 +363,15 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                             + "' is not a regular file."
                     );
                 }
+            }
+
+            if (sort_input_flag_str != "true" && sort_input_flag_str != "false") {
+                throw invalid_argument(
+                        "value of --sort-input-files must be either \"true\" or \"false\""
+                );
+            }
+            if ("false" == sort_input_flag_str) {
+                m_sort_input_files = false;
             }
         }
 
