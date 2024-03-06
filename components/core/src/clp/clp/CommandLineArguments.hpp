@@ -77,10 +77,10 @@ private:
     // Variables
     std::string m_path_list_path;
     std::string m_path_prefix_to_remove;
+    bool m_sort_input_files;
     std::string m_output_dir;
     std::string m_schema_file_path;
     bool m_show_progress;
-    bool m_sort_input_files;
     bool m_print_archive_stats_progress;
     size_t m_target_encoded_file_size;
     size_t m_target_segment_uncompressed_size;
