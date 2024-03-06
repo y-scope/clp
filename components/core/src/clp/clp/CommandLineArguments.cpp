@@ -237,12 +237,22 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             // Define compression-specific options
             po::options_description options_compression("Compression Options");
+            // boost::program_options doesn't support boolean flags which can be set to false, so
+            // we use a string argument to set the flag manually.
+            string sort_input_files_str = "true";
             options_compression.add_options()(
                     "remove-path-prefix",
                     po::value<string>(&m_path_prefix_to_remove)
                             ->value_name("DIR")
                             ->default_value(m_path_prefix_to_remove),
                     "Remove the given path prefix from each compressed file/dir."
+            )(
+                    "sort-input-files",
+                    po::value<string>(&sort_input_files_str)
+                            ->value_name("BOOL")
+                            ->default_value(sort_input_files_str),
+                    "Whether to compress input files in descending order of their last modified"
+                    " time"
             )(
                     "target-encoded-file-size",
                     po::value<size_t>(&m_target_encoded_file_size)
@@ -312,6 +322,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
                 po::options_description visible_options;
                 visible_options.add(options_general);
+                visible_options.add(options_functional);
                 visible_options.add(options_compression);
                 cerr << visible_options << endl;
                 return ParsingResult::InfoCommand;
@@ -343,6 +354,11 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     throw invalid_argument("Specified prefix to remove is not a directory.");
                 }
             }
+
+            if (sort_input_files_str != "true" && sort_input_files_str != "false") {
+                throw invalid_argument(R"(sort-input-files must be either "true" or "false")");
+            }
+            m_sort_input_files = "true" == sort_input_files_str;
 
             if (false == m_schema_file_path.empty()) {
                 if (false == boost::filesystem::exists(m_schema_file_path)) {
