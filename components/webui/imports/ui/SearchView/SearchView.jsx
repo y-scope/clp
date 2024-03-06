@@ -82,12 +82,17 @@ const SearchView = () => {
             return [];
         }
 
-        const resultsCollection = dbRef.current.getOrCreateCollection(jobId);
-
         Meteor.subscribe(Meteor.settings.public.SearchResultsCollectionName, {
             jobId: jobId,
         });
 
+        // NOTE: Although we publish and subscribe using the name
+        // `Meteor.settings.public.SearchResultsCollectionName`, the rows are still returned in the
+        // job-specific collection (e.g., "1"); this is because on the server, we're returning a
+        // cursor from the job-specific collection and Meteor creates a collection with the same
+        // name on the client rather than returning the rows in a collection with the published
+        // name.
+        const resultsCollection = dbRef.current.getOrCreateCollection(jobId);
         const findOptions = {
             limit: visibleSearchResultsLimit,
         };
@@ -112,12 +117,6 @@ const SearchView = () => {
                 );
             });
 
-        // NOTE: Although we publish and subscribe using the name
-        // `Meteor.settings.public.SearchResultsCollectionName`, the rows are still returned in the
-        // job-specific collection (e.g., "1"); this is because on the server, we're returning a
-        // cursor from the job-specific collection and Meteor creates a collection with the same
-        // name on the client rather than returning the rows in a collection with the published
-        // name.
         return resultsCollection.find({}, findOptions).fetch();
     }, [jobId, fieldToSortBy, visibleSearchResultsLimit]);
 
