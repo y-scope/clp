@@ -200,8 +200,11 @@ const SearchView = () => {
         });
     };
 
-    const showSearchResults = INVALID_JOB_ID !== jobId;
-    const numResultsOnServer = resultsMetadata.numTotalResults || estimatedNumResults || searchResults.length;
+    const showSearchResults = (INVALID_JOB_ID !== jobId);
+    const numResultsOnServer =
+        resultsMetadata.numTotalResults ||
+        estimatedNumResults ||
+        searchResults.length;
 
     return (<div className="d-flex flex-column h-100">
         <div className={"flex-column"}>
