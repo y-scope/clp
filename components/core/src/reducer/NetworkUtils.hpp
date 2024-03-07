@@ -1,5 +1,5 @@
-#ifndef REDUCER_REDUCER_NETWORK_UTILS_HPP
-#define REDUCER_REDUCER_NETWORK_UTILS_HPP
+#ifndef REDUCER_NETWORK_UTILS_HPP
+#define REDUCER_NETWORK_UTILS_HPP
 
 #include <memory>
 #include <string>
@@ -26,4 +26,4 @@ int connect_to_reducer(std::string const& host, int port, job_id_t job_id);
 bool send_pipeline_results(int socket_fd, std::unique_ptr<RecordGroupIterator> results);
 }  // namespace reducer
 
-#endif  // REDUCER_REDUCER_NETWORK_UTILS_HPP
+#endif  // REDUCER_NETWORK_UTILS_HPP

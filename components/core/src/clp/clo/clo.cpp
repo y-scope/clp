@@ -5,7 +5,7 @@
 #include <mongocxx/instance.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
-#include "../../reducer/ReducerNetworkUtils.hpp"
+#include "../../reducer/NetworkUtils.hpp"
 #include "../Defs.h"
 #include "../Grep.hpp"
 #include "../Profiler.hpp"

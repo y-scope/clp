@@ -6,8 +6,8 @@
 
 #include "../../clp/networking/socket_utils.hpp"
 #include "../../reducer/CountOperator.hpp"
+#include "../../reducer/NetworkUtils.hpp"
 #include "../../reducer/Record.hpp"
-#include "../../reducer/ReducerNetworkUtils.hpp"
 
 namespace clp_s::search {
 NetworkOutputHandler::NetworkOutputHandler(

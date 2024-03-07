@@ -4,9 +4,9 @@
 #include <vector>
 
 #include "../../reducer/CountOperator.hpp"
-#include "../../reducer/Record.hpp"
+#include "../../reducer/NetworkUtils.hpp"
 #include "../../reducer/Pipeline.hpp"
-#include "../../reducer/ReducerNetworkUtils.hpp"
+#include "../../reducer/Record.hpp"
 
 namespace clp::clo {
 ResultsCacheClient::ResultsCacheClient(
