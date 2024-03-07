@@ -106,6 +106,14 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             po::value<reducer::job_id_t>(&m_job_id)->value_name("ID")->
                 default_value(m_job_id),
             "The Job ID of this aggregation operation"
+    )(
+            "mongodb-uri",
+            po::value<string>(&m_mongodb_uri),
+            "MongoDB URI to connect to"
+    )(
+            "mongodb-collection",
+            po::value<string>(&m_mongodb_collection),
+            "MongoDB collection to output to"
     );
     // clang-format on
 
@@ -129,12 +137,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     po::options_description hidden_positional_options;
     // clang-format off
     hidden_positional_options.add_options()(
-            "mongodb-uri",
-            po::value<string>(&m_mongodb_uri)
-    )(
-            "mongodb-collection",
-            po::value<string>(&m_mongodb_collection)
-    )(
             "archive-path",
             po::value<string>(&m_archive_path)
     )(

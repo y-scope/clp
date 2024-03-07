@@ -27,8 +27,6 @@ def make_clo_command(
     # fmt: off
     search_cmd = [
         str(clp_home / "bin" / "clo"),
-        results_cache_uri,
-        results_collection,
         str(archive_path),
         search_config.query_string,
     ]
@@ -54,6 +52,10 @@ def make_clo_command(
         search_cmd.append(str(search_config.job_id))
         search_cmd.append("--count")
     else:
+        search_cmd.append("--mongodb-uri")
+        search_cmd.append(results_cache_uri)
+        search_cmd.append("--mongodb-collection")
+        search_cmd.append(results_collection)
         search_cmd.append("--max-num-results")
         search_cmd.append(str(search_config.max_num_results))
 
@@ -75,8 +77,6 @@ def make_clp_s_command(
         str(archives_dir),
         "--archive-id", archive_id,
         search_config.query_string,
-        "--mongodb-uri", results_cache_uri,
-        "--mongodb-collection", results_collection,
     ]
     # fmt: on
 
@@ -98,6 +98,10 @@ def make_clp_s_command(
         search_cmd.append(str(search_config.job_id))
         search_cmd.append("--count")
     else:
+        search_cmd.append("--mongodb-uri")
+        search_cmd.append(results_cache_uri)
+        search_cmd.append("--mongodb-collection")
+        search_cmd.append(results_collection)
         search_cmd.append("--max-num-results")
         search_cmd.append(str(search_config.max_num_results))
 
