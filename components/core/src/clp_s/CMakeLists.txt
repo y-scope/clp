@@ -8,8 +8,8 @@ set(
         ../reducer/DeserializedRecordGroup.cpp
         ../reducer/DeserializedRecordGroup.hpp
         ../reducer/GroupTags.hpp
-        ../reducer/NetworkUtils.cpp
-        ../reducer/NetworkUtils.hpp
+        ../reducer/network_utils.cpp
+        ../reducer/network_utils.hpp
         ../reducer/Operator.cpp
         ../reducer/Operator.hpp
         ../reducer/Pipeline.cpp
@@ -18,6 +18,7 @@ set(
         ../reducer/RecordGroup.hpp
         ../reducer/RecordGroupIterator.hpp
         ../reducer/RecordTypedKeyIterator.hpp
+        ../reducer/types.hpp
 )
 
 set(

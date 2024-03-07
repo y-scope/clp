@@ -5,6 +5,7 @@
 #include <string>
 
 #include "RecordGroupIterator.hpp"
+#include "types.hpp"
 
 namespace reducer {
 /**

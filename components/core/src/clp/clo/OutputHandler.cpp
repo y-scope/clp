@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "../../reducer/CountOperator.hpp"
-#include "../../reducer/NetworkUtils.hpp"
+#include "../../reducer/network_utils.hpp"
 #include "../../reducer/Pipeline.hpp"
 #include "../../reducer/Record.hpp"
 

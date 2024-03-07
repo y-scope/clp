@@ -6,7 +6,7 @@
 
 #include "../../clp/networking/socket_utils.hpp"
 #include "../../reducer/CountOperator.hpp"
-#include "../../reducer/NetworkUtils.hpp"
+#include "../../reducer/network_utils.hpp"
 #include "../../reducer/Record.hpp"
 
 namespace clp_s::search {
