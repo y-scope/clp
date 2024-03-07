@@ -91,6 +91,30 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             po::value<uint64_t>(&m_max_num_results)->value_name("NUM")->
                 default_value(m_max_num_results),
             "The maximum number of results to output"
+    )(
+            "reducer-host",
+            po::value<std::string>(&m_reducer_host)->value_name("HOST")->
+                default_value(m_reducer_host),
+            "Host the reducer is running on"
+    )(
+            "reducer-port",
+            po::value<int>(&m_reducer_port)->value_name("PORT")->
+                default_value(m_reducer_port),
+            "Port the reducer is listening on"
+    )(
+            "job-id",
+            po::value<reducer::job_id_t>(&m_job_id)->value_name("ID")->
+                default_value(m_job_id),
+            "The Job ID of this aggregation operation"
+    );
+    // clang-format on
+
+    po::options_description options_aggregation("Aggregation Options");
+    // clang-format off
+    options_aggregation.add_options()(
+            "count",
+            po::bool_switch(&m_count),
+            "Perform a count aggregation (count the number of results)"
     );
     // clang-format on
 
@@ -99,6 +123,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     visible_options.add(options_general);
     visible_options.add(options_match_control);
     visible_options.add(options_output_control);
+    visible_options.add(options_aggregation);
 
     // Define hidden positional options (not shown in Boost's program options help message)
     po::options_description hidden_positional_options;
@@ -126,30 +151,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     positional_options_description.add("archive-path", 1);
     positional_options_description.add("wildcard-string", 1);
     positional_options_description.add("file-path", 1);
-
-    po::options_description options_aggregation("Aggregation Options");
-    // clang-format off
-    options_aggregation.add_options()(
-            "reducer-host",
-            po::value<std::string>(&m_reducer_host)->value_name("HOST")->
-                default_value(m_reducer_host),
-            "Host the reducer is running on"
-    )(
-            "reducer-port",
-            po::value<int>(&m_reducer_port)->value_name("PORT")->
-                default_value(m_reducer_port),
-            "Port the reducer is listening on"
-    )(
-            "job-id",
-            po::value<reducer::job_id_t>(&m_job_id)->value_name("ID")->
-                default_value(m_job_id),
-            "The Job ID of this aggregation operation"
-    )(
-            "count",
-            po::bool_switch(&m_count),
-            "Perform a count aggregation (count the number of results)"
-    );
-    // clang-format on
 
     // Aggregate all options
     po::options_description all_options;
@@ -299,16 +300,28 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             throw invalid_argument("Max number of results cannot be 0.");
         }
 
-        if (m_count) {
-            if (m_reducer_host.empty()) {
+        if (parsed_command_line_options.count("reducer-host") && m_reducer_host.empty()) {
+            throw invalid_argument("Reducer host can not be an empty string");
+        }
+
+        if (parsed_command_line_options.count("reducer-port") && m_reducer_port <= 0) {
+            throw invalid_argument("Reducer port must be greater than zero");
+        }
+
+        if (parsed_command_line_options.count("job-id") && m_job_id < 0) {
+            throw invalid_argument("Job ID must be non-negative");
+        }
+
+        if (parsed_command_line_options.count("count")) {
+            if (0 == parsed_command_line_options.count("reducer-host")) {
                 throw invalid_argument("Reducer host must be specified for aggregation jobs");
             }
 
-            if (m_reducer_port <= 0) {
+            if (0 == parsed_command_line_options.count("reducer-port")) {
                 throw invalid_argument("Reducer port must be specified for aggregation jobs");
             }
 
-            if (m_job_id <= 0) {
+            if (0 == parsed_command_line_options.count("job-id")) {
                 throw invalid_argument("Job ID must be specified for aggregation jobs");
             }
         }

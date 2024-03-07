@@ -362,9 +362,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format on
             search_options.add(match_options);
 
-            po::options_description results_cache_output_options("Results Cache Output Options");
+            po::options_description output_options("Output Options");
             // clang-format off
-            results_cache_output_options.add_options()(
+            output_options.add_options()(
                     "mongodb-uri",
                     po::value<std::string>(&m_mongodb_uri)->value_name("MONGODB_URI"),
                     "MongoDB URI to connect to"
@@ -399,7 +399,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "The Job ID of this aggregation operation"
             );
             // clang-format on
-            search_options.add(results_cache_output_options);
+            search_options.add(output_options);
 
             po::options_description network_output_options("Network Output Options");
             // clang-format off
@@ -455,7 +455,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 visible_options.add(general_options);
                 visible_options.add(input_options);
                 visible_options.add(match_options);
-                visible_options.add(results_cache_output_options);
+                visible_options.add(output_options);
                 visible_options.add(network_output_options);
                 std::cerr << visible_options << '\n';
                 return ParsingResult::InfoCommand;
@@ -514,20 +514,32 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 );
             }
 
-            if (m_count) {
-                if (m_reducer_host.empty()) {
+            if (parsed_command_line_options.count("reducer-host") && m_reducer_host.empty()) {
+                throw std::invalid_argument("Reducer host can not be an empty string");
+            }
+
+            if (parsed_command_line_options.count("reducer-port") && m_reducer_port <= 0) {
+                throw std::invalid_argument("Reducer port must be greater than zero");
+            }
+
+            if (parsed_command_line_options.count("job-id") && m_job_id < 0) {
+                throw std::invalid_argument("Job ID must be non-negative");
+            }
+
+            if (parsed_command_line_options.count("count")) {
+                if (0 == parsed_command_line_options.count("reducer-host")) {
                     throw std::invalid_argument(
                             "Reducer host must be specified for aggregation jobs"
                     );
                 }
 
-                if (m_reducer_port <= 0) {
+                if (0 == parsed_command_line_options.count("reducer-port")) {
                     throw std::invalid_argument(
                             "Reducer port must be specified for aggregation jobs"
                     );
                 }
 
-                if (m_job_id <= 0) {
+                if (0 == parsed_command_line_options.count("job-id")) {
                     throw std::invalid_argument("Job ID must be specified for aggregation jobs");
                 }
             }
