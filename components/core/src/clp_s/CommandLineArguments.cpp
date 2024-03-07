@@ -477,6 +477,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 );
             }
 
+            std::vector<std::string> enabled_output_options;
             if (false == m_mongodb_uri.empty() || false == m_mongodb_collection.empty()) {
                 if (m_mongodb_uri.empty() || m_mongodb_collection.empty()) {
                     throw std::invalid_argument(
@@ -491,6 +492,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 }
 
                 m_mongodb_enabled = true;
+                enabled_output_options.push_back("Results Cache");
             }
 
             if (m_archives_dir.empty()) {
@@ -506,12 +508,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     throw std::invalid_argument("Host and port must be specified together");
                 }
                 m_network_destination_enabled = true;
-            }
-
-            if (m_mongodb_enabled && m_network_destination_enabled) {
-                throw std::invalid_argument(
-                        "MongoDB and network destination cannot be specified together"
-                );
+                enabled_output_options.push_back("Network Destination");
             }
 
             if (parsed_command_line_options.count("reducer-host") && m_reducer_host.empty()) {
@@ -542,6 +539,19 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 if (0 == parsed_command_line_options.count("job-id")) {
                     throw std::invalid_argument("Job ID must be specified for aggregation jobs");
                 }
+
+                enabled_output_options.push_back("Aggregation");
+            }
+
+            if (enabled_output_options.size() > 1) {
+                std::string output_options_list = enabled_output_options[0];
+                for (size_t i = 1; i < enabled_output_options.size(); ++i) {
+                    output_options_list += ", " + enabled_output_options[i];
+                }
+                throw std::invalid_argument(
+                        "Expected a single set of output options but received output options for "
+                        + output_options_list
+                );
             }
         }
     } catch (std::exception& e) {

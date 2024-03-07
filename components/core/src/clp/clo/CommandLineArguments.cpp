@@ -312,6 +312,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             throw invalid_argument("Job ID must be non-negative");
         }
 
+        std::vector<std::string> enabled_output_options;
         if (parsed_command_line_options.count("count")) {
             if (0 == parsed_command_line_options.count("reducer-host")) {
                 throw invalid_argument("Reducer host must be specified for aggregation jobs");
@@ -324,6 +325,22 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             if (0 == parsed_command_line_options.count("job-id")) {
                 throw invalid_argument("Job ID must be specified for aggregation jobs");
             }
+            enabled_output_options.push_back("Aggregation");
+        }
+
+        if (parsed_command_line_options.count("mongodb-uri")) {
+            enabled_output_options.push_back("Results Cache");
+        }
+
+        if (enabled_output_options.size() > 1) {
+            std::string output_options_list = enabled_output_options[0];
+            for (size_t i = 1; i < enabled_output_options.size(); ++i) {
+                output_options_list += ", " + enabled_output_options[i];
+            }
+            throw invalid_argument(
+                    "Expected a single set of output options but received output options for "
+                    + output_options_list
+            );
         }
     } catch (exception& e) {
         SPDLOG_ERROR("{}", e.what());
