@@ -730,6 +730,15 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
     logger.info(f"Started {component_name}.")
 
 
+def add_num_workers_argument(parser):
+    parser.add_argument(
+        "--num-workers",
+        type=int,
+        default=multiprocessing.cpu_count(),
+        help="Number of workers to run in parallel",
+    )
+
+
 def main(argv):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
@@ -750,16 +759,11 @@ def main(argv):
     component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
     component_args_parser.add_parser(COMPRESSION_SCHEDULER_COMPONENT_NAME)
     component_args_parser.add_parser(SEARCH_SCHEDULER_COMPONENT_NAME)
-    component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
-    component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
+    compression_worker_parser = component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
+    add_num_workers_argument(compression_worker_parser)
+    search_worker_parser = component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
+    add_num_workers_argument(search_worker_parser)
     component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
-
-    args_parser.add_argument(
-        "--num-cpus",
-        type=int,
-        default=0,
-        help="Number of logical CPU cores to use for compression and search",
-    )
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -818,13 +822,10 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    # Get the number of CPU cores to use
-    num_cpus = multiprocessing.cpu_count() // 2
-    if (
-        target in (COMPRESSION_WORKER_COMPONENT_NAME, SEARCH_WORKER_COMPONENT_NAME)
-        and parsed_args.num_cpus != 0
-    ):
-        num_cpus = parsed_args.num_cpus
+    if target in (COMPRESSION_WORKER_COMPONENT_NAME, SEARCH_WORKER_COMPONENT_NAME):
+        num_workers = parsed_args.num_workers
+    else:
+        num_workers = multiprocessing.cpu_count() // 2
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
 
@@ -867,10 +868,10 @@ def main(argv):
             start_search_scheduler(instance_id, clp_config, container_clp_config, mounts)
         if target in (ALL_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
             start_compression_worker(
-                instance_id, clp_config, container_clp_config, num_cpus, mounts
+                instance_id, clp_config, container_clp_config, num_workers, mounts
             )
         if target in (ALL_TARGET_NAME, SEARCH_WORKER_COMPONENT_NAME):
-            start_search_worker(instance_id, clp_config, container_clp_config, num_cpus, mounts)
+            start_search_worker(instance_id, clp_config, container_clp_config, num_workers, mounts)
         if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, WEBUI_COMPONENT_NAME):
             start_webui(instance_id, clp_config, mounts)
 
