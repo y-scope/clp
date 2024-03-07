@@ -520,7 +520,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument("Job ID must be non-negative");
             }
 
-            if (parsed_command_line_options.count("count")) {
+            if (m_count) {
                 if (0 == parsed_command_line_options.count("reducer-host")) {
                     throw std::invalid_argument(
                             "Reducer host must be specified for aggregation jobs"

@@ -310,7 +310,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         }
 
         std::vector<std::string> enabled_output_options;
-        if (parsed_command_line_options.count("count")) {
+        if (m_count) {
             if (0 == parsed_command_line_options.count("reducer-host")) {
                 throw invalid_argument("Reducer host must be specified for aggregation jobs");
             }
