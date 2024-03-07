@@ -1,7 +1,12 @@
 import {logger} from "/imports/utils/logger";
 import {Meteor} from "meteor/meteor";
 
-import {addSortToMongoFindOptions, SearchResultsMetadataCollection} from "../collections";
+import {SearchResultsMetadataCollection} from "../collections";
+import {
+    MONGO_SORT_ORDER,
+    SEARCH_MAX_NUM_RESULTS,
+    SEARCH_RESULTS_FIELDS,
+} from "../constants";
 import {searchJobCollectionsManager} from "./collections";
 
 
@@ -29,28 +34,27 @@ Meteor.publish(Meteor.settings.public.SearchResultsMetadataCollectionName, ({job
  *
  * @param {string} publicationName
  * @param {string} jobId of the search operation
- * @param {Object} [fieldToSortBy] used for sorting results
- * @param {number} visibleSearchResultsLimit limit of visible search results
- *
  * @returns {Mongo.Cursor} cursor that provides access to the search results
  */
 Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
     jobId,
-    fieldToSortBy,
-    visibleSearchResultsLimit,
 }) => {
-    logger.debug(`Subscription '${Meteor.settings.public.SearchResultsCollectionName}'`,
-        `jobId=${jobId}, fieldToSortBy=${fieldToSortBy}, ` +
-        `visibleSearchResultsLimit=${visibleSearchResultsLimit}`);
+    logger.debug(
+        `Subscription '${Meteor.settings.public.SearchResultsCollectionName}'`,
+        `jobId=${jobId}`
+    );
 
     const collection = searchJobCollectionsManager.getOrCreateCollection(jobId);
 
     const findOptions = {
-        limit: visibleSearchResultsLimit,
+        sort: [
+            [SEARCH_RESULTS_FIELDS.TIMESTAMP, MONGO_SORT_ORDER.DESCENDING],
+            [SEARCH_RESULTS_FIELDS.ID, MONGO_SORT_ORDER.DESCENDING],
+        ],
+        limit: SEARCH_MAX_NUM_RESULTS,
         disableOplog: true,
         pollingIntervalMs: 250,
     };
-    addSortToMongoFindOptions(fieldToSortBy, findOptions);
 
     return collection.find({}, findOptions);
 });

@@ -1,5 +1,5 @@
-#ifndef PAGEALLOCATEDVECTOR_HPP
-#define PAGEALLOCATEDVECTOR_HPP
+#ifndef CLP_PAGEALLOCATEDVECTOR_HPP
+#define CLP_PAGEALLOCATEDVECTOR_HPP
 
 #include <errno.h>
 #include <sys/mman.h>
@@ -286,4 +286,4 @@ void PageAllocatedVector<ValueType>::increase_capacity(size_t required_capacity)
 }
 }  // namespace clp
 
-#endif  // PAGEALLOCATEDVECTOR_HPP
+#endif  // CLP_PAGEALLOCATEDVECTOR_HPP

@@ -1,5 +1,5 @@
-#ifndef STREAMING_ARCHIVE_READER_SEGMENT_HPP
-#define STREAMING_ARCHIVE_READER_SEGMENT_HPP
+#ifndef GLT_STREAMING_ARCHIVE_READER_SEGMENT_HPP
+#define GLT_STREAMING_ARCHIVE_READER_SEGMENT_HPP
 
 #include <memory>
 #include <string>
@@ -65,4 +65,4 @@ private:
 };
 }  // namespace glt::streaming_archive::reader
 
-#endif  // STREAMING_ARCHIVE_READER_SEGMENT_HPP
+#endif  // GLT_STREAMING_ARCHIVE_READER_SEGMENT_HPP

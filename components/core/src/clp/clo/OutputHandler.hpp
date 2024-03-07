@@ -1,5 +1,5 @@
-#ifndef CLP_CLO_MONGODBCLIENT_HPP
-#define CLP_CLO_MONGODBCLIENT_HPP
+#ifndef CLP_CLO_RESULTSCACHECLIENT_HPP
+#define CLP_CLO_RESULTSCACHECLIENT_HPP
 
 #include <queue>
 #include <string>
@@ -159,4 +159,4 @@ private:
 
 }  // namespace clp::clo
 
-#endif  // CLP_CLO_MONGODBCLIENT_HPP
+#endif  // CLP_CLO_RESULTSCACHECLIENT_HPP

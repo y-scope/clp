@@ -106,44 +106,39 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
             clp_metadata_db_connection_config=clp_metadata_db_connection_config,
         )
 
-        with open(Path(clp_io_config.input.list_path).resolve(), "r") as f:
-            for path_idx, path in enumerate(f, start=1):
-                stripped_path = path.strip()
-                if "" == stripped_path:
-                    # Skip empty paths
-                    continue
-                path = Path(stripped_path)
+        for path_idx, path in enumerate(clp_io_config.input.paths_to_compress, start=1):
+            path = Path(path)
 
-                try:
-                    file, empty_directory = validate_path_and_get_info(
-                        CONTAINER_INPUT_LOGS_ROOT_DIR, path
-                    )
-                except ValueError as ex:
-                    logger.error(str(ex))
-                    continue
+            try:
+                file, empty_directory = validate_path_and_get_info(
+                    CONTAINER_INPUT_LOGS_ROOT_DIR, path
+                )
+            except ValueError as ex:
+                logger.error(str(ex))
+                continue
 
-                if file:
-                    paths_to_compress_buffer.add_file(file)
-                elif empty_directory:
-                    paths_to_compress_buffer.add_empty_directory(empty_directory)
+            if file:
+                paths_to_compress_buffer.add_file(file)
+            elif empty_directory:
+                paths_to_compress_buffer.add_empty_directory(empty_directory)
 
-                if path.is_dir():
-                    for internal_path in path.rglob("*"):
-                        try:
-                            file, empty_directory = validate_path_and_get_info(
-                                CONTAINER_INPUT_LOGS_ROOT_DIR, internal_path
-                            )
-                        except ValueError as ex:
-                            logger.error(str(ex))
-                            continue
+            if path.is_dir():
+                for internal_path in path.rglob("*"):
+                    try:
+                        file, empty_directory = validate_path_and_get_info(
+                            CONTAINER_INPUT_LOGS_ROOT_DIR, internal_path
+                        )
+                    except ValueError as ex:
+                        logger.error(str(ex))
+                        continue
 
-                        if file:
-                            paths_to_compress_buffer.add_file(file)
-                        elif empty_directory:
-                            paths_to_compress_buffer.add_empty_directory(empty_directory)
+                    if file:
+                        paths_to_compress_buffer.add_file(file)
+                    elif empty_directory:
+                        paths_to_compress_buffer.add_empty_directory(empty_directory)
 
-                if path_idx % 10000 == 0:
-                    db_conn.commit()
+            if path_idx % 10000 == 0:
+                db_conn.commit()
 
         paths_to_compress_buffer.flush()
         tasks = paths_to_compress_buffer.get_tasks()

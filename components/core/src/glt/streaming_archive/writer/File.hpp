@@ -1,5 +1,5 @@
-#ifndef STREAMING_ARCHIVE_WRITER_FILE_HPP
-#define STREAMING_ARCHIVE_WRITER_FILE_HPP
+#ifndef GLT_STREAMING_ARCHIVE_WRITER_FILE_HPP
+#define GLT_STREAMING_ARCHIVE_WRITER_FILE_HPP
 
 #include <unordered_set>
 #include <vector>
@@ -223,4 +223,4 @@ private:
 };
 }  // namespace glt::streaming_archive::writer
 
-#endif  // STREAMING_ARCHIVE_WRITER_FILE_HPP
+#endif  // GLT_STREAMING_ARCHIVE_WRITER_FILE_HPP

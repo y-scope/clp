@@ -1,5 +1,5 @@
-#ifndef GLT_STRING_UTILS_HPP
-#define GLT_STRING_UTILS_HPP
+#ifndef GLT_STRING_UTILS_STRING_UTILS_HPP
+#define GLT_STRING_UTILS_STRING_UTILS_HPP
 
 #include <charconv>
 #include <string>
@@ -136,4 +136,4 @@ bool convert_string_to_int(std::string_view raw, integer_t& converted) {
 }
 }  // namespace clp::string_utils
 
-#endif  // GLT_STRING_UTILS_HPP
+#endif  // GLT_STRING_UTILS_STRING_UTILS_HPP
