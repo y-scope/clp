@@ -114,6 +114,8 @@ set(
 
 set(
         REDUCER_SOURCES
+        ../../reducer/BufferedSocketWriter.cpp
+        ../../reducer/BufferedSocketWriter.hpp
         ../../reducer/ConstRecordIterator.hpp
         ../../reducer/CountOperator.cpp
         ../../reducer/CountOperator.hpp

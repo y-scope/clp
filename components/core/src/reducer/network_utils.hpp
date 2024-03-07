@@ -8,10 +8,6 @@
 #include "types.hpp"
 
 namespace reducer {
-namespace constants {
-constexpr char cConnectionAcceptedResponse = 'y';
-}  // namespace constants
-
 /**
  * Tries to connect to the reducer and negotiate a connection for the given job ID.
  * @param host
