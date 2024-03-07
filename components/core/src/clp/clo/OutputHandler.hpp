@@ -98,30 +98,11 @@ public:
 
     // Methods
     /**
-     * Adds a result to the batch.
-     * @param original_path The original path of the log event.
-     * @param message The content of the log event.
-     * @param timestamp The timestamp of the log event.
-     */
-    void add_result(
-            std::string const& original_path,
-            std::string const& message,
-            epochtime_t timestamp
-    ) override;
-
-    /**
-     * Flushes the batch. Called one time at the end of search.
-     */
-    void flush() override;
-
-    /**
      * @return The earliest (smallest) timestamp in the heap of latest results
      */
     [[nodiscard]] epochtime_t get_smallest_timestamp() const {
         return m_latest_results.empty() ? cEpochTimeMin : m_latest_results.top()->timestamp;
     }
-
-    [[nodiscard]] uint64_t get_max_num_results() const { return m_max_num_results; }
 
     /**
      * @return Whether the heap of latest results is full.
@@ -129,6 +110,14 @@ public:
     [[nodiscard]] bool is_latest_results_full() const {
         return m_latest_results.size() >= m_max_num_results;
     }
+
+    void add_result(
+            std::string const& original_path,
+            std::string const& message,
+            epochtime_t timestamp
+    ) override;
+
+    void flush() override;
 
     [[nodiscard]] bool can_skip_file(clp::streaming_archive::MetadataDB::FileIterator const& it
     ) override {
@@ -164,7 +153,7 @@ public:
     void flush() override;
 
 private:
-    int m_socket_fd;
+    int m_reducer_socket_fd;
     reducer::Pipeline m_pipeline;
 };
 

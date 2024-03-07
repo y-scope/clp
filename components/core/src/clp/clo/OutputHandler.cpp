@@ -75,7 +75,7 @@ void ResultsCacheClient::add_result(
 }
 
 CountOutputHandler::CountOutputHandler(int socket_fd)
-        : m_socket_fd{socket_fd},
+        : m_reducer_socket_fd{socket_fd},
           m_pipeline{reducer::PipelineInputMode::InterStage} {
     m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
 }
@@ -89,6 +89,6 @@ void CountOutputHandler::add_result(
 }
 
 void CountOutputHandler::flush() {
-    reducer::send_pipeline_results(m_socket_fd, std::move(m_pipeline.finish()));
+    reducer::send_pipeline_results(m_reducer_socket_fd, std::move(m_pipeline.finish()));
 }
 }  // namespace clp::clo
