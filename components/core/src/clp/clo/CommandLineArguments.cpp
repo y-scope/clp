@@ -148,8 +148,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     );
     // clang-format on
     po::positional_options_description positional_options_description;
-    positional_options_description.add("mongodb-uri", 1);
-    positional_options_description.add("mongodb-collection", 1);
     positional_options_description.add("archive-path", 1);
     positional_options_description.add("wildcard-string", 1);
     positional_options_description.add("file-path", 1);
@@ -207,8 +205,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     R"(mongodb://127.0.0.1:27017/test "result" collection )"
                  << endl;
             cerr << "  " << get_program_name()
-                 << R"(mongodb://127.0.0.1:27017/test result )"
-                    R"(ARCHIVE_PATH " ERROR ")"
+                 << R"(ARCHIVE_PATH " ERROR ")"
+                    R"(--mongodb-uri mongodb://127.0.0.1:27017/test --mongodb-collection result )"
                  << endl;
             cerr << endl;
 
@@ -355,7 +353,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 }
 
 void CommandLineArguments::print_basic_usage() const {
-    cerr << "Usage: " << get_program_name() << " [OPTIONS] MONGODB_URI MONGODB_COLLECTION "
+    cerr << "Usage: " << get_program_name() << " [OPTIONS] "
          << R"(ARCHIVE_PATH "WILDCARD STRING" [FILE])" << endl;
 }
 }  // namespace clp::clo
