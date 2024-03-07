@@ -384,18 +384,15 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "The maximum number of results to output"
             )(
                     "reducer-host",
-                    po::value<std::string>(&m_reducer_host)->value_name("REDUCER_HOST")->
-                        default_value(m_reducer_host),
+                    po::value<std::string>(&m_reducer_host)->value_name("REDUCER_HOST"),
                     "Host the reducer server is running on"
             )(
                     "reducer-port",
-                    po::value<int>(&m_reducer_port)->value_name("REDUCER_PORT")->
-                        default_value(m_reducer_port),
+                    po::value<int>(&m_reducer_port)->value_name("REDUCER_PORT"),
                     "Port the reducer server is listening on"
             )(
                     "job-id",
-                    po::value<reducer::job_id_t>(&m_job_id)->value_name("JOB_ID")->
-                        default_value(m_job_id),
+                    po::value<reducer::job_id_t>(&m_job_id)->value_name("JOB_ID"),
                     "The Job ID of this aggregation operation"
             );
             // clang-format on
