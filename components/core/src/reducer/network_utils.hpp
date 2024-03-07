@@ -8,6 +8,10 @@
 #include "types.hpp"
 
 namespace reducer {
+namespace constants {
+constexpr char cConnectionAcceptedResponse = 'y';
+}  // namespace constants
+
 /**
  * Tries to connect to the reducer and negotiate a connection for the given job ID.
  * @param host
@@ -20,11 +24,11 @@ int connect_to_reducer(std::string const& host, int port, job_id_t job_id);
 
 /**
  * Sends results to the reducer.
- * @param socket_fd
+ * @param reducer_socket_fd
  * @param results
  * @return Whether the results were sent successfully.
  */
-bool send_pipeline_results(int socket_fd, std::unique_ptr<RecordGroupIterator> results);
+bool send_pipeline_results(int reducer_socket_fd, std::unique_ptr<RecordGroupIterator> results);
 }  // namespace reducer
 
 #endif  // REDUCER_NETWORK_UTILS_HPP
