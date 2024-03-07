@@ -735,7 +735,7 @@ def add_num_workers_argument(parser):
         "--num-workers",
         type=int,
         default=multiprocessing.cpu_count(),
-        help="Number of workers to run in parallel",
+        help="Number of workers to start",
     )
 
 
