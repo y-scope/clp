@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "../clp/GlobalMetadataDBConfig.hpp"
+#include "../reducer/types.hpp"
 #include "Defs.hpp"
 
 namespace clp_s {
@@ -82,7 +83,7 @@ public:
 
     int get_reducer_port() const { return m_reducer_port; }
 
-    int32_t get_job_id() const { return m_job_id; }
+    reducer::job_id_t get_job_id() const { return m_job_id; }
 
     bool get_count() const { return m_count; }
 
@@ -137,7 +138,7 @@ private:
     bool m_count{false};
     std::string m_reducer_host{""};
     int m_reducer_port{-1};
-    int32_t m_job_id{-1};
+    reducer::job_id_t m_job_id{-1};
 };
 }  // namespace clp_s
 

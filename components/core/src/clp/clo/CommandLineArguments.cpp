@@ -141,7 +141,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             "Port the reducer is listening on"
     )(
             "job-id",
-            po::value<int32_t>(&m_job_id)->value_name("ID")->
+            po::value<reducer::job_id_t>(&m_job_id)->value_name("ID")->
                 default_value(m_job_id),
             "The Job ID of this aggregation operation"
     )(

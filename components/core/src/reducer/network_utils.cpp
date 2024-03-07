@@ -9,7 +9,7 @@
 #include "DeserializedRecordGroup.hpp"
 
 namespace reducer {
-int connect_to_reducer(std::string const& host, int port, int64_t job_id) {
+int connect_to_reducer(std::string const& host, int port, job_id_t job_id) {
     constexpr char cConnectionAcceptedResponse = 'y';
     auto reducer_socket_fd = clp::networking::connect_to_server(host, std::to_string(port));
     if (-1 == reducer_socket_fd) {
