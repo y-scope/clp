@@ -86,23 +86,22 @@ void ResultsCacheOutputHandler::write(std::string const& message, epochtime_t ti
     }
 }
 
-void ReducerOutputHandler::finish() {
-    if (false == send_results()) {
-        SPDLOG_ERROR("Failed to send aggregated results to reducer");
-    }
-}
-
-CountOutputHandler::CountOutputHandler(int socket_fd)
-        : ReducerOutputHandler(socket_fd, false, false),
+CountOutputHandler::CountOutputHandler(int reducer_socket_fd)
+        : OutputHandler(false, false),
+          m_reducer_socket_fd(reducer_socket_fd),
           m_pipeline(reducer::PipelineInputMode::InterStage) {
     m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
 }
 
 void CountOutputHandler::write(std::string const& message) {
-    m_pipeline.push_record(reducer::EmptyRecord());
+    m_pipeline.push_record(reducer::EmptyRecord{});
 }
 
-bool CountOutputHandler::send_results() {
-    return reducer::send_pipeline_results(m_socket_fd, std::move(m_pipeline.finish()));
+void CountOutputHandler::finish() {
+    if (false
+        == reducer::send_pipeline_results(m_reducer_socket_fd, std::move(m_pipeline.finish())))
+    {
+        SPDLOG_ERROR("Failed to send aggregated results to reducer");
+    }
 }
 }  // namespace clp_s::search

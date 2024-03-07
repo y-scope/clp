@@ -199,46 +199,24 @@ private:
 };
 
 /**
- * Output handler that performs an aggregation operation and can send the results to a reducer
+ * Output handler that performs a count aggregation and sends the results to a reducer.
  */
-class ReducerOutputHandler : public OutputHandler {
+class CountOutputHandler : public OutputHandler {
 public:
     // Constructor
-    ReducerOutputHandler(int socket_fd, bool should_output_timestamp, bool should_marshal_records)
-            : OutputHandler(should_output_timestamp, should_marshal_records),
-              m_socket_fd(socket_fd) {}
+    CountOutputHandler(int reducer_socket_fd);
 
     // Methods inherited from OutputHandler
-    // Instead of flushing after every table we call SendResults after all records have been
-    // aggregated
     void flush() override {}
-
-    void write(std::string const& message, epochtime_t timestamp) override = 0;
-
-    void write(std::string const& message) override = 0;
-
-    void finish() override;
-
-    virtual bool send_results() = 0;
-
-protected:
-    int m_socket_fd;
-};
-
-class CountOutputHandler : public ReducerOutputHandler {
-public:
-    // Constructor
-    CountOutputHandler(int socket_fd);
-
-    // Methods inherited from ReducerOutputHandler
 
     void write(std::string const& message, epochtime_t timestamp) override {}
 
     void write(std::string const& message) override;
 
-    bool send_results() override;
+    void finish() override;
 
 private:
+    int m_reducer_socket_fd;
     reducer::Pipeline m_pipeline;
 };
 }  // namespace clp_s::search
