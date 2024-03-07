@@ -322,7 +322,7 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
 
-        int reducer_socket_fd = -1;
+        int reducer_socket_fd{-1};
         if (command_line_arguments.get_count()) {
             reducer_socket_fd = reducer::connect_to_reducer(
                     command_line_arguments.get_reducer_host(),

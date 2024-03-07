@@ -52,7 +52,7 @@ public:
     virtual void flush() = 0;
 
     /**
-     * Perform any final operations after all tables have been searched.
+     * Performs any final operations after all tables have been searched.
      */
     virtual void finish() {}
 

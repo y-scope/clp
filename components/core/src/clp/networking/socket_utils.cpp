@@ -5,13 +5,14 @@
 #include <unistd.h>
 
 #include <cstdio>
+#include <string>
 
 #include "../Defs.h"
 #include "SocketOperationFailed.hpp"
 
 namespace clp::networking {
 int connect_to_server(std::string const& host, std::string const& port) {
-    // Get address info for reducer
+    // Get address info
     struct addrinfo hints = {};
     // Address can be IPv4 or IPV6
     hints.ai_family = AF_UNSPEC;
@@ -20,7 +21,7 @@ int connect_to_server(std::string const& host, std::string const& port) {
     hints.ai_flags = 0;
     hints.ai_protocol = 0;
     struct addrinfo* addresses_head = nullptr;
-    int error = getaddrinfo(host.c_str(), port.c_str(), &hints, &addresses_head);
+    auto error = getaddrinfo(host.c_str(), port.c_str(), &hints, &addresses_head);
     if (0 != error) {
         return -1;
     }

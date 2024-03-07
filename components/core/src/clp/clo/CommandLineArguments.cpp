@@ -127,27 +127,27 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     positional_options_description.add("wildcard-string", 1);
     positional_options_description.add("file-path", 1);
 
-    po::options_description options_aggregation;
+    po::options_description options_aggregation("Aggregation Options");
     // clang-format off
     options_aggregation.add_options()(
             "reducer-host",
-            po::value<std::string>(&m_reducer_host)->value_name("REDUCER_HOST")->
+            po::value<std::string>(&m_reducer_host)->value_name("HOST")->
                 default_value(m_reducer_host),
-            "Host the reducer server is running on"
+            "Host the reducer is running on"
     )(
             "reducer-port",
-            po::value<int>(&m_reducer_port)->value_name("REDUCER_PORT")->
+            po::value<int>(&m_reducer_port)->value_name("PORT")->
                 default_value(m_reducer_port),
-            "Port the reducer server is listening on"
+            "Port the reducer is listening on"
     )(
             "job-id",
-            po::value<int32_t>(&m_job_id)->value_name("JOB_ID")->
+            po::value<int32_t>(&m_job_id)->value_name("ID")->
                 default_value(m_job_id),
             "The Job ID of this aggregation operation"
     )(
             "count",
             po::bool_switch(&m_count),
-            "Perform the query and count the number of results"
+            "Perform a count aggregation (count the number of results)"
     );
     // clang-format on
 

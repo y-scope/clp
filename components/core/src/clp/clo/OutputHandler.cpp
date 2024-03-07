@@ -1,9 +1,11 @@
 #include "OutputHandler.hpp"
 
+#include <memory>
 #include <vector>
 
 #include "../../reducer/CountOperator.hpp"
 #include "../../reducer/Record.hpp"
+#include "../../reducer/Pipeline.hpp"
 #include "../../reducer/ReducerNetworkUtils.hpp"
 
 namespace clp::clo {
@@ -73,17 +75,17 @@ void ResultsCacheClient::add_result(
 }
 
 CountOutputHandler::CountOutputHandler(int socket_fd)
-        : m_socket_fd(socket_fd),
-          m_pipeline(reducer::PipelineInputMode::InterStage) {
+        : m_socket_fd{socket_fd},
+          m_pipeline{reducer::PipelineInputMode::InterStage} {
     m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
 }
 
 void CountOutputHandler::add_result(
-        std::string const& original_path,
-        std::string const& message,
-        epochtime_t timestamp
+        [[maybe_unused]] std::string const& original_path,
+        [[maybe_unused]] std::string const& message,
+        [[maybe_unused]] epochtime_t timestamp
 ) {
-    m_pipeline.push_record(reducer::EmptyRecord());
+    m_pipeline.push_record(reducer::EmptyRecord{});
 }
 
 void CountOutputHandler::flush() {

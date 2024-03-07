@@ -69,7 +69,7 @@ private:
 
     // Search aggregation variables
     bool m_count{false};
-    std::string m_reducer_host{""};
+    std::string m_reducer_host;
     int m_reducer_port{-1};
     int32_t m_job_id{-1};
 };

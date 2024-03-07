@@ -59,18 +59,22 @@ bool append_to_bufffer_and_send(
 }  // namespace
 
 int connect_to_reducer(std::string const& host, int port, int64_t job_id) {
-    int socket_fd = clp::networking::connect_to_server(host, std::to_string(port));
+    auto socket_fd = clp::networking::connect_to_server(host, std::to_string(port));
     if (-1 == socket_fd) {
         return -1;
     }
 
-    auto ecode = clp::networking::try_send(socket_fd, (char const*)&job_id, sizeof(job_id));
+    auto ecode = clp::networking::try_send(
+            socket_fd,
+            reinterpret_cast<char const*>(&job_id),
+            sizeof(job_id)
+    );
     if (clp::ErrorCode::ErrorCode_Success != ecode) {
         close(socket_fd);
         return -1;
     }
 
-    char ret = 'n';
+    char ret{0};
     size_t bytes_received = 0;
     ecode = clp::networking::try_receive(socket_fd, &ret, sizeof(ret), bytes_received);
     if (clp::ErrorCode::ErrorCode_Success != ecode || bytes_received != sizeof(ret) || ret != 'y') {
@@ -86,12 +90,12 @@ bool send_pipeline_results(int socket_fd, std::unique_ptr<RecordGroupIterator> r
     size_t bytes_occupied = 0;
     char buf[buf_size];
 
-    for (; !results->done(); results->next()) {
+    for (; false == results->done(); results->next()) {
         auto& group = results->get();
         auto serialized_result = serialize(group.get_tags(), group.record_iter());
         size_t ser_size = serialized_result.size();
 
-        // send size header
+        // Send size
         if (false
             == append_to_bufffer_and_send(
                     socket_fd,
@@ -105,7 +109,7 @@ bool send_pipeline_results(int socket_fd, std::unique_ptr<RecordGroupIterator> r
             return false;
         }
 
-        // send serialized RecordGroup
+        // Send data
         if (false
             == append_to_bufffer_and_send(
                     socket_fd,
@@ -120,7 +124,7 @@ bool send_pipeline_results(int socket_fd, std::unique_ptr<RecordGroupIterator> r
         }
     }
 
-    // send any leftover bytes in the buffer
+    // Send any leftover bytes in the buffer
     if (bytes_occupied > 0) {
         return clp::ErrorCode::ErrorCode_Success
                == clp::networking::try_send(socket_fd, buf, bytes_occupied);

@@ -15,21 +15,17 @@
 #include "../TraceableException.hpp"
 
 namespace clp::clo {
-
 /**
- * Abstract class for handling output from the search command.
+ * Abstract class for handling output from a search.
  */
 class OutputHandler {
 public:
-    // Constructors
-    explicit OutputHandler(){};
-
     // Destructor
     virtual ~OutputHandler() = default;
 
     // Methods
     /**
-     * Adds a result to the batch.
+     * Adds a result.
      * @param original_path The original path of the log event.
      * @param message The content of the log event.
      * @param timestamp The timestamp of the log event.
@@ -39,17 +35,17 @@ public:
             = 0;
 
     /**
-     * Flushes the batch. Called one time at the end of search.
+     * Flushes any buffered output. Called once at the end of search.
      */
     virtual void flush() = 0;
 
     /**
      * @param it
-     * @return whether a file can be skipped based on the current state of the output handler, and
+     * @return Whether a file can be skipped based on the current state of the output handler, and
      * metadata about the file
      */
     [[nodiscard]] virtual bool can_skip_file(
-            clp::streaming_archive::MetadataDB::FileIterator const& it
+            [[maybe_unused]] clp::streaming_archive::MetadataDB::FileIterator const& it
     ) {
         return false;
     }
@@ -156,7 +152,7 @@ private:
 class CountOutputHandler : public OutputHandler {
 public:
     // Constructor
-    CountOutputHandler(int socket_fd);
+    explicit CountOutputHandler(int socket_fd);
 
     // Methods inherited from OutputHandler
     void add_result(
