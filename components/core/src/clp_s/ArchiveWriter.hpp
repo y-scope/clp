@@ -34,7 +34,18 @@ public:
 
     // Constructor
     explicit ArchiveWriter(std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db)
-            : m_metadata_db(std::move(metadata_db)){};
+            : m_metadata_db(std::move(metadata_db)) {
+        if (m_metadata_db) {
+            m_metadata_db->open();
+        }
+    }
+
+    // Destructor
+    ~ArchiveWriter() {
+        if (m_metadata_db) {
+            m_metadata_db->close();
+        }
+    }
 
     /**
      * Opens the archive writer

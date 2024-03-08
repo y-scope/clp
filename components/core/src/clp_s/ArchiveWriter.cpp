@@ -39,10 +39,6 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     std::string timestamp_dict_path = m_archive_path + constants::cArchiveTimestampDictFile;
     m_timestamp_dict = std::make_shared<TimestampDictionaryWriter>();
     m_timestamp_dict->open(timestamp_dict_path, m_compression_level);
-
-    if (m_metadata_db) {
-        m_metadata_db->open();
-    }
 }
 
 void ArchiveWriter::close() {
@@ -56,9 +52,6 @@ void ArchiveWriter::close() {
 
     update_metadata();
 
-    if (m_metadata_db) {
-        m_metadata_db->close();
-    }
     m_id_to_schema_writer.clear();
     m_schema_tree.clear();
     m_schema_map.clear();
