@@ -61,7 +61,7 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
  */
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
-        std::shared_ptr<clp_s::ArchiveReader> archive_reader,
+        const std::shared_ptr<clp_s::ArchiveReader>& archive_reader,
         std::shared_ptr<Expression> expr
 );
 
@@ -119,7 +119,7 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
 
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
-        std::shared_ptr<clp_s::ArchiveReader> archive_reader,
+        const std::shared_ptr<clp_s::ArchiveReader>& archive_reader,
         std::shared_ptr<Expression> expr
 ) {
     auto const& query = command_line_arguments.get_query();
