@@ -220,13 +220,14 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         }
 
         // Validate mongodb uri was specified
-        if (m_mongodb_uri.empty()) {
-            throw invalid_argument("MONGODB_URI not specified or empty.");
+        if (parsed_command_line_options.count("mongodb-uri") && m_mongodb_uri.empty()) {
+            throw invalid_argument("mongodb-uri can not be an empty string.");
         }
 
         // Validate mongodb collection was specified
-        if (m_mongodb_collection.empty()) {
-            throw invalid_argument("MONGODB_COLLECTION not specified or empty.");
+        if (parsed_command_line_options.count("mongodb-collection") && m_mongodb_collection.empty())
+        {
+            throw invalid_argument("mongodb-collection can not be an empty string.");
         }
 
         // Validate archive path was specified
