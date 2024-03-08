@@ -108,13 +108,19 @@ const SearchView = () => {
         };
 
         if (SEARCH_SIGNAL.RESP_DONE !== resultsMetadata.lastSignal) {
-            // avoid refreshing estimatedNumResults after job is DONE
-            // since the count would have been already available in
+            // Only refresh estimatedNumResults if the job isn't DONE;
+            // otherwise the count would already be available in
             // `resultsMetadata.numTotalResults`
             resultsCollection.estimatedDocumentCount()
                 .then((count) => {
                     setEstimatedNumResults(
                         Math.min(count, SEARCH_MAX_NUM_RESULTS)
+                    );
+                })
+                .catch((e) => {
+                    console.log(
+                        `Error occurs in resultsCollection<${jobId}>.estimatedDocumentCount()`,
+                        e,
                     );
                 });
         }
@@ -204,6 +210,16 @@ const SearchView = () => {
     };
 
     const showSearchResults = (INVALID_JOB_ID !== jobId);
+
+    /**
+     * @param {number|null} resultsMetadata.numTotalResults
+     * The total count in the results cache when the job finishes.
+     * @param {number|null} estimatedNumResults
+     * The `estimatedDocumentCount()` from the results cache Mongo collection metadata.
+     * @param {number} searchResults.length
+     * The length of the array containing visible results.
+     * @return {number}
+     */
     const numResultsOnServer =
         resultsMetadata.numTotalResults ||
         estimatedNumResults ||
