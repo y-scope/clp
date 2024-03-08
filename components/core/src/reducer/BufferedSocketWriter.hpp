@@ -1,6 +1,7 @@
 #ifndef REDUCER_BUFFERED_SOCKET_WRITER_HPP
 #define REDUCER_BUFFERED_SOCKET_WRITER_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <type_traits>
 #include <vector>
