@@ -4,14 +4,14 @@ on:
   pull_request:
     paths:
       - ".github/actions/**"
-      - ".github/workflows/clp-core-clp-execution-image-build.yaml"
+      - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
       - "!components/core/tools/scripts/lib_install/macos-12/**"
   push:
     paths:
       - ".github/actions/**"
-      - ".github/workflows/clp-core-clp-execution-image-build.yaml"
+      - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
       - "!components/core/tools/scripts/lib_install/macos-12/**"
@@ -57,25 +57,25 @@ jobs:
           filters: |
             centos74_image:
               - ".github/actions/**"
-              - ".github/workflows/clp-core-build.yml"
+              - ".github/workflows/clp-core-build.yaml"
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/docker-images/clp-env-base-centos7.4/**"
               - "components/core/tools/scripts/lib_install/centos7.4/**"
             ubuntu_focal_image:
               - ".github/actions/**"
-              - ".github/workflows/clp-core-build.yml"
+              - ".github/workflows/clp-core-build.yaml"
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/docker-images/clp-env-base-ubuntu-focal/**"
               - "components/core/tools/scripts/lib_install/ubuntu-focal/**"
             ubuntu_jammy_image:
               - ".github/actions/**"
-              - ".github/workflows/clp-core-build.yml"
+              - ".github/workflows/clp-core-build.yaml"
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/docker-images/clp-env-base-ubuntu-jammy/**"
               - "components/core/tools/scripts/lib_install/ubuntu-jammy/**"
             clp:
               - ".github/actions/**"
-              - ".github/workflows/clp-core-build.yml"
+              - ".github/workflows/clp-core-build.yaml"
               - ".gitmodules"
               - "components/core/cmake/**"
               - "components/core/CMakeLists.txt"
