@@ -3,14 +3,14 @@ name: "clp-execution-image-ubuntu-focal"
 on:
   pull_request:
     paths:
-      - ".github/workflows/clp-execution-image-build.yml"
-      - ".github/workflows/clp-execution-image-ubuntu-focal.yml"
+      - ".github/workflows/clp-execution-image-build.yaml"
+      - ".github/workflows/clp-execution-image-ubuntu-focal.yaml"
       - "components/core/tools/scripts/lib_install/*"
       - "tools/docker-images/clp-execution-base-ubuntu-focal/**"
   push:
     paths:
-      - ".github/workflows/clp-execution-image-build.yml"
-      - ".github/workflows/clp-execution-image-ubuntu-focal.yml"
+      - ".github/workflows/clp-execution-image-build.yaml"
+      - ".github/workflows/clp-execution-image-ubuntu-focal.yaml"
       - "components/core/tools/scripts/lib_install/*"
       - "tools/docker-images/clp-execution-base-ubuntu-focal/**"
   workflow_dispatch:
@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   build:
-    uses: "./.github/workflows/clp-execution-image-build.yml"
+    uses: "./.github/workflows/clp-execution-image-build.yaml"
     with:
       dockerfilePath: "./tools/docker-images/clp-execution-base-ubuntu-focal/Dockerfile"
       platformId: "ubuntu"

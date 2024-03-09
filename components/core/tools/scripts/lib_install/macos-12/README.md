@@ -1,6 +1,6 @@
 To install the dependencies required to build clp-core, follow the steps below.
 These same steps are used by our 
-[GitHub workflow](../../../../../../.github/workflows/clp-core-build.yml).
+[GitHub workflow](../../../../../../.github/workflows/clp-core-build.yaml).
 
 # Installing dependencies
 

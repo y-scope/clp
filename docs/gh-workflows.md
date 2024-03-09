@@ -3,7 +3,7 @@
 The CLP repo includes several GitHub workflows for automating container image builds, artifact
 builds, testing, and linting. We briefly describe each workflow below.
 
-## [clp-core-build](../.github/workflows/clp-core-build.yml)
+## [clp-core-build](../.github/workflows/clp-core-build.yaml)
 
 This workflow is responsible for:
 
@@ -65,14 +65,14 @@ need it for one OS since users can use the container on any OS.
 
 This workflow builds CLP-core on macOS and runs its unit tests.
 
-## [clp-execution-image-build](../.github/workflows/clp-execution-image-build.yml)
+## [clp-execution-image-build](../.github/workflows/clp-execution-image-build.yaml)
 
 This reusable workflow builds a container image that contains the dependencies necessary to run the
 CLP package on a specific platform.
 
 ## [clp-execution-image-ubuntu-jammy](../.github/workflows/clp-excution-image-ubuntu-jammy.yaml)
 
-This workflow calls [clp-execution-image/build](../.github/workflows/clp-execution-image-build.yml)
+This workflow calls [clp-execution-image/build](../.github/workflows/clp-execution-image-build.yaml)
 to build a container image that contains the dependencies necessary to run the CLP package on Ubuntu
 22.04 (Jammy).
 
