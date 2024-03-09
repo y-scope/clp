@@ -4,9 +4,17 @@ to run the CLP package."
 
 inputs:
   containerImageRegistry:
+    default: "ghcr.io"
     description: "Container Image Registry"
     required: false
-    default: "ghcr.io"
+  containerImageRegistryUsername:
+    default: "${{github.actor}}"
+    description: "Container Image Registry Username"
+    required: false
+  containerImageRegistryPassword:
+    default: ""
+    description: "Container Image Registry Password"
+    required: false
   platformId:
     description: "Platform ID of the container. e.g., ubuntu."
     required: true
@@ -21,8 +29,8 @@ runs:
     - uses: "docker/login-action@v3"
       with:
         registry: "${{inputs.containerImageRegistry}}"
-        username: "${{github.actor}}"
-        password: "${{secrets.GITHUB_TOKEN}}"
+        username: "${{inputs.containerImageRegistryUsername}}"
+        password: "${{inputs.containerImageRegistryPassword}}"
 
     - id: "sanitization"
       shell: "bash"
