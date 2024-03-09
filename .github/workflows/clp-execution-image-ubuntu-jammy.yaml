@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   build:
-    uses: ".github/actions/clp-execution-image-build/action.yaml"
+    uses: ".github/actions/clp-execution-image-build"
     with:
       dockerfilePath: "./tools/docker-images/clp-execution-base-ubuntu-jammy/Dockerfile"
       platformId: "ubuntu"
