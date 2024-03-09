@@ -24,6 +24,6 @@ jobs:
   build:
     uses: "./.github/workflows/clp-execution-image/build.yml"
     with:
-      dockerfilePath: './tools/docker-images/clp-execution-base-ubuntu-jammy/Dockerfile'
-      platformId: 'ubuntu'
-      platformVersionId: 'jammy'
+      dockerfilePath: "./tools/docker-images/clp-execution-base-ubuntu-jammy/Dockerfile"
+      platformId: "ubuntu"
+      platformVersionId: "jammy"

@@ -24,6 +24,6 @@ jobs:
   build:
     uses: "./.github/workflows/clp-execution-image/build.yml"
     with:
-      dockerfilePath: './tools/docker-images/clp-execution-base-ubuntu-focal/Dockerfile'
-      platformId: 'ubuntu'
-      platformVersionId: 'focal'
+      dockerfilePath: "./tools/docker-images/clp-execution-base-ubuntu-focal/Dockerfile"
+      platformId: "ubuntu"
+      platformVersionId: "focal"

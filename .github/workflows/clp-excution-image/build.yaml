@@ -5,13 +5,13 @@ on:
     inputs:
       dockerfilePath:
         required: true
-        type: string
+        type: "string"
       platformId:
         required: true
-        type: string
+        type: "string"
       platformVersionId:
         required: true
-        type: string
+        type: "string"
 
 env:
   CONTAINER_IMAGE_REGISTRY: "ghcr.io"
@@ -51,7 +51,8 @@ jobs:
         uses: "docker/build-push-action@v5"
         with:
           context: "./"
-          file: "./tools/docker-images/clp-execution-base-${{inputs.platformId}}-${{inputs.platformVersionId}}/Dockerfile"
+          file: "./tools/docker-images/\
+            clp-execution-base-${{inputs.platformId}}-${{inputs.platformVersionId}}/Dockerfile"
           push: true
           tags: "${{steps.meta.outputs.tags}}"
           labels: "${{steps.meta.outputs.labels}}"
