@@ -1,0 +1,29 @@
+name: "clp-execution-image/ubuntu-jammy"
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/clp-execution-image/build.yaml"
+      - ".github/workflows/clp-execution-image/ubuntu-jammy.yaml"
+      - "components/core/tools/scripts/lib_install/*"
+      - "tools/docker-images/clp-execution-base-ubuntu-jammy/**"
+  push:
+    paths:
+      - ".github/workflows/build.yaml"
+      - ".github/workflows/clp-execution-image/ubuntu-jammy.yaml"
+      - "components/core/tools/scripts/lib_install/*"
+      - "tools/docker-images/clp-execution-base-ubuntu-jammy/**"
+  workflow_dispatch:
+
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+  # Cancel in-progress jobs for efficiency
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: "./.github/workflows/clp-execution-image/build.yml"
+    with:
+      dockerfilePath: './tools/docker-images/clp-execution-base-ubuntu-jammy/Dockerfile'
+      platformId: 'ubuntu'
+      platformVersionId: 'jammy'

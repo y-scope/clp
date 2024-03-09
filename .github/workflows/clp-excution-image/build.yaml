@@ -1,17 +1,17 @@
-name: "clp-execution-image-build"
+name: "clp-execution-image/build"
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/clp-execution-image-build.yaml"
-      - "components/core/tools/scripts/lib_install/*"
-      - "tools/docker-images/clp-execution-base-focal/**"
-  push:
-    paths:
-      - ".github/workflows/clp-execution-image-build.yaml"
-      - "components/core/tools/scripts/lib_install/*"
-      - "tools/docker-images/clp-execution-base-focal/**"
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      dockerfilePath:
+        required: true
+        type: string
+      platformId:
+        required: true
+        type: string
+      platformVersionId:
+        required: true
+        type: string
 
 env:
   CONTAINER_IMAGE_REGISTRY: "ghcr.io"
@@ -45,13 +45,13 @@ jobs:
         uses: "docker/metadata-action@v5"
         with:
           images: "${{env.CONTAINER_IMAGE_REGISTRY}}/${{steps.sanitization.outputs.REPOSITORY}}\
-            /clp-execution-x86-ubuntu-focal"
+            /clp-execution-x86-${{inputs.platformId}}-${{inputs.platformVersionId}}"
 
       - if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
         uses: "docker/build-push-action@v5"
         with:
           context: "./"
-          file: "./tools/docker-images/clp-execution-base-focal/Dockerfile"
+          file: "./tools/docker-images/clp-execution-base-${{inputs.platformId}}-${{inputs.platformVersionId}}/Dockerfile"
           push: true
           tags: "${{steps.meta.outputs.tags}}"
           labels: "${{steps.meta.outputs.labels}}"
