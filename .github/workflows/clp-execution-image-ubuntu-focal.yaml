@@ -22,8 +22,17 @@ concurrency:
 
 jobs:
   build:
-    uses: ".github/actions/clp-execution-image-build"
-    with:
-      dockerfilePath: "./tools/docker-images/clp-execution-base-ubuntu-focal/Dockerfile"
-      platformId: "ubuntu"
-      platformVersionId: "focal"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: "actions/checkout@v3"
+        with:
+          submodules: "recursive"
+
+      - name: "Workaround actions/runner-images/issues/6775"
+        shell: "bash"
+        run: "chown $(id -u):$(id -g) -R ."
+
+      - uses: ".github/actions/clp-execution-image-build"
+        with:
+          platformId: "ubuntu"
+          platformVersionId: "focal"
