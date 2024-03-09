@@ -1,16 +1,16 @@
-name: "clp-execution-image/ubuntu-jammy"
+name: "clp-execution-image-ubuntu-jammy"
 
 on:
   pull_request:
     paths:
-      - ".github/workflows/clp-execution-image-build.yaml"
-      - ".github/workflows/clp-execution-image-ubuntu-jammy.yaml"
+      - ".github/workflows/clp-execution-image-build.yml"
+      - ".github/workflows/clp-execution-image-ubuntu-jammy.yml"
       - "components/core/tools/scripts/lib_install/*"
       - "tools/docker-images/clp-execution-base-ubuntu-jammy/**"
   push:
     paths:
-      - ".github/workflows/clp-execution-image-build.yaml"
-      - ".github/workflows/clp-execution-image-ubuntu-jammy.yaml"
+      - ".github/workflows/clp-execution-image-build.yml"
+      - ".github/workflows/clp-execution-image-ubuntu-jammy.yml"
       - "components/core/tools/scripts/lib_install/*"
       - "tools/docker-images/clp-execution-base-ubuntu-jammy/**"
   workflow_dispatch:
