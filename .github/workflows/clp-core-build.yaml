@@ -4,14 +4,14 @@ on:
   pull_request:
     paths:
       - ".github/actions/**"
-      - ".github/workflows/clp-core-build.yaml"
+      - ".github/workflows/clp-core-clp-execution-image-build.yaml"
       - ".gitmodules"
       - "components/core/**"
       - "!components/core/tools/scripts/lib_install/macos-12/**"
   push:
     paths:
       - ".github/actions/**"
-      - ".github/workflows/clp-core-build.yaml"
+      - ".github/workflows/clp-core-clp-execution-image-build.yaml"
       - ".gitmodules"
       - "components/core/**"
       - "!components/core/tools/scripts/lib_install/macos-12/**"
