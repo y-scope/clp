@@ -785,6 +785,8 @@ def main(argv):
             config_file_path, default_config_file_path, clp_home
         )
 
+        clp_config.load_execution_container_name()
+
         # Validate and load necessary credentials
         if target in (
             ALL_TARGET_NAME,

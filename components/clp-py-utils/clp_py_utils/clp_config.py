@@ -33,6 +33,8 @@ SEARCH_JOBS_TABLE_NAME = "search_jobs"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
 COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
 
+OS_RELEASE_FILE_PATH = pathlib.Path("etc") / "os-release"
+
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
 CLP_METADATA_TABLE_PREFIX = "clp_"
 
@@ -301,7 +303,8 @@ class WebUi(BaseModel):
 
 
 class CLPConfig(BaseModel):
-    execution_container: str = "ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-focal:main"
+    execution_container: typing.Optional[str]
+    os_release_file_path: pathlib.Path = OS_RELEASE_FILE_PATH
 
     input_logs_directory: pathlib.Path = pathlib.Path("/")
 
@@ -322,6 +325,7 @@ class CLPConfig(BaseModel):
     logs_directory: pathlib.Path = pathlib.Path("var") / "log"
 
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
+        self.os_release_file_path = make_config_path_absolute(clp_home, self.os_release_file_path)
         self.input_logs_directory = make_config_path_absolute(clp_home, self.input_logs_directory)
         self.credentials_file_path = make_config_path_absolute(clp_home, self.credentials_file_path)
         self.archive_output.make_config_paths_absolute(clp_home)
@@ -354,6 +358,23 @@ class CLPConfig(BaseModel):
             validate_path_could_be_dir(self.logs_directory)
         except ValueError as ex:
             raise ValueError(f"logs_directory is invalid: {ex}")
+
+    def load_execution_container_name(self):
+        if self.execution_container is not None:
+            # Accept configured value in clp-config.yml for debug purposes
+            return
+
+        with open(self.os_release_file_path) as os_release_file:
+            parsed = {}
+            for line in os_release_file:
+                var, val = line.strip().split("=")
+                parsed[var] = val
+
+            self.execution_container = "ghcr.io/y-scope/clp/"
+            if "ubuntu" == parsed["ID"]:
+                self.execution_container += f"clp-execution-x86-{parsed['ID']}-{parsed['VERSION_CODENAME']}:main"
+            else:
+                raise NotImplementedError(f"Unsupported OS {parsed['ID']} in {OS_RELEASE_FILE_PATH}")
 
     def load_database_credentials_from_file(self):
         config = read_yaml_config_file(self.credentials_file_path)
@@ -394,6 +415,7 @@ class CLPConfig(BaseModel):
         d = self.dict()
         d["archive_output"] = self.archive_output.dump_to_primitive_dict()
         # Turn paths into primitive strings
+        d["os_release_file_path"] = str(self.os_release_file_path)
         d["input_logs_directory"] = str(self.input_logs_directory)
         d["credentials_file_path"] = str(self.credentials_file_path)
         d["data_directory"] = str(self.data_directory)
