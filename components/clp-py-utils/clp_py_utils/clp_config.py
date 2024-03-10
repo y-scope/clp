@@ -372,9 +372,13 @@ class CLPConfig(BaseModel):
 
             self.execution_container = "ghcr.io/y-scope/clp/"
             if "ubuntu" == parsed["ID"]:
-                self.execution_container += f"clp-execution-x86-{parsed['ID']}-{parsed['VERSION_CODENAME']}:main"
+                self.execution_container += (
+                    f"clp-execution-x86-{parsed['ID']}-{parsed['VERSION_CODENAME']}:main"
+                )
             else:
-                raise NotImplementedError(f"Unsupported OS {parsed['ID']} in {OS_RELEASE_FILE_PATH}")
+                raise NotImplementedError(
+                    f"Unsupported OS {parsed['ID']} in {OS_RELEASE_FILE_PATH}"
+                )
 
     def load_database_credentials_from_file(self):
         config = read_yaml_config_file(self.credentials_file_path)
