@@ -8,7 +8,7 @@ YScope's Compressed Log Processor (CLP) compresses your logs, and allows you to 
 compressed logs without decompression. CLP supports both JSON logs and unstructured (i.e., free
 text) logs. It also supports real-time log compression within several logging libraries. CLP also
 includes purpose-built web interfaces for searching and viewing the compressed logs. To learn more
-about it, you can read our [paper][8].
+about it, you can read our [paper][9].
 
 # Benchmarks
 
@@ -27,7 +27,7 @@ index-less design, so for a fair comparison, we disabled MongoDB and PostgreSQL'
 left them enabled, MongoDB and PostgreSQL's compression ratio would be worse. We didn't disable
 indexing for Elasticsearch or Splunk since these tools are fundamentally index-based (i.e., logs
 cannot be searched without indexes). More details about our experimental methodology can be found in
-the [CLP paper][8].
+the [CLP paper][9].
 
 # System Overview
 
@@ -42,25 +42,25 @@ features:
   (intermediate representation) produced by CLP's logging libraries.
 
 - **Real-time Compression with CLP Logging Libraries**: CLP provides logging libraries for
-  [Python][9] and Java ([Log4j][10] and [Logback][11]). The logging libraries compress logs in
+  [Python][10] and Java ([Log4j][11] and [Logback][12]). The logging libraries compress logs in
   real-time, so only compressed logs are written to disk or transmitted over the network. The
   compressed logs use CLP's intermediate representation (IR) format which achieves a higher
   compression ratio than general purpose compressors like Zstandard. Compressing IR into archives
   can further double the compression ratio and enable global search, but this requires more memory
   usage as it needs to buffer enough logs. More details on IR versus archives can be found in this
-  [Uber Engineering Blog][12].
+  [Uber Engineering Blog][13].
 
-- **[Log Viewer][13]**: the compressed IR can be viewed in a web-based log viewer. Compared to
+- **[Log Viewer][14]**: the compressed IR can be viewed in a web-based log viewer. Compared to
   viewing the logs in an editor, CLP's log viewer supports advanced features like filtering logs
   based on log level verbosity (e.g., only displaying logs with log level equal or higher than
   ERROR). These features are possible because CLP's logging libraries parse the logs before
   compressing them into IR.
 
-- **IR Analytics Libraries**: we also provide a [Python library][14] and a [Go library][15] that can
+- **IR Analytics Libraries**: we also provide a [Python library][15] and a [Go library][16] that can
   analyze compressed IR.
 
-- **[Log parser][16]**: CLP also includes a custom pushdown-automata-based log parser that is 3x
-  faster than state-of-the-art regular expression engines like [RE2][17]. The log parser is
+- **[Log parser][17]**: CLP also includes a custom pushdown-automata-based log parser that is 3x
+  faster than state-of-the-art regular expression engines like [RE2][18]. The log parser is
   available as a library that can be used by other applications.
 
 # Getting Started
@@ -110,7 +110,8 @@ useful for building and running CLP:
 | `ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main` | The dependencies necessary to build CLP core in an Ubuntu Focal x86 environment.                     | [↗][3] |
 | `ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-jammy:main` | The dependencies necessary to build CLP core in an Ubuntu Jammy x86 environment.                     | [↗][4] |
 | `ghcr.io/y-scope/clp/clp-core-x86-ubuntu-focal:main`              | The CLP core binaries (`clg`, `clp`, `clp-s`, `glt`, etc.) built in an Ubuntu Focal x86 environment. | [↗][5] |
-| `ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-focal:main`         | The dependencies necessary to run the CLP package in an x86 environment.                             | [↗][6] |
+| `ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-focal:main`         | The dependencies necessary to run the CLP package in an Ubuntu Focal x86 environment.                | [↗][6] |
+| `ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-jammy:main`         | The dependencies necessary to run the CLP package in an Ubuntu Jammy x86 environment.                | [↗][7] |
 
 # Next Steps
 
@@ -124,7 +125,7 @@ Have an issue you want to fix or a feature you'd like to implement? We'd love to
 ## Linting
 
 Before submitting a PR, ensure you've run our linting tools and either fixed any violations or
-suppressed the warning. To run our linting workflows locally, you'll need [Task][7]. Alternatively,
+suppressed the warning. To run our linting workflows locally, you'll need [Task][8]. Alternatively,
 you can run the [clp-lint](.github/workflows/clp-lint.yaml) workflow in your fork.
 
 To perform the linting checks:
@@ -145,14 +146,15 @@ task lint:fix
 [4]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-ubuntu-jammy
 [5]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-x86-ubuntu-focal
 [6]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-execution-x86-ubuntu-focal
-[7]: https://taskfile.dev/
-[8]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
-[9]: https://github.com/y-scope/clp-loglib-py
-[10]: https://github.com/y-scope/log4j1-appenders
-[11]: https://github.com/y-scope/logback-appenders
-[12]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp
-[13]: https://github.com/y-scope/yscope-log-viewer
-[14]: https://github.com/y-scope/clp-ffi-py
-[15]: https://github.com/y-scope/clp-ffi-go
-[16]: https://github.com/y-scope/log-surgeon
-[17]: https://github.com/google/re2
+[7]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-execution-x86-ubuntu-jammy
+[8]: https://taskfile.dev/
+[9]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
+[10]: https://github.com/y-scope/clp-loglib-py
+[11]: https://github.com/y-scope/log4j1-appenders
+[12]: https://github.com/y-scope/logback-appenders
+[13]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp
+[14]: https://github.com/y-scope/yscope-log-viewer
+[15]: https://github.com/y-scope/clp-ffi-py
+[16]: https://github.com/y-scope/clp-ffi-go
+[17]: https://github.com/y-scope/log-surgeon
+[18]: https://github.com/google/re2
