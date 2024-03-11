@@ -58,7 +58,6 @@ tasks:
     sources:
       - "{{.BUILD_DIR}}/package.md5"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
-      - "/etc/os-release"
     generates:
       - "{{.VERSIONED_PACKAGE_NAME}}.tar.gz"
 
@@ -79,7 +78,7 @@ tasks:
       - task: "clean-package"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
       - "rsync -a components/package-template/src/ '{{.OUTPUT_DIR}}'"
-      - "rsync -L /etc/os-release '{{.OUTPUT_DIR}}'/etc/os-release"
+      - "rsync --copy-links /etc/os-release '{{.OUTPUT_DIR}}/etc/os-release'"
       - "mkdir -p '{{.OUTPUT_DIR}}/lib/python3/site-packages'"
       - |-
         . "{{.PACKAGE_VENV_DIR}}/bin/activate"
@@ -118,11 +117,11 @@ tasks:
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "/etc/os-release"
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
       - "components/package-template/src/**/*"
-      - "/etc/os-release"
     status:
       - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
@@ -249,9 +248,9 @@ tasks:
         tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "/etc/os-release"
       - ".gitmodules"
       - "tools/scripts/deps-download/**/*"
-      - "/etc/os-release"
     status:
       - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
@@ -312,8 +311,8 @@ tasks:
       - "{{.PACKAGE}}/**/*"
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
-      - "pyproject.toml"
       - "/etc/os-release"
+      - "pyproject.toml"
     generates:
       - "dist/*.whl"
 
@@ -338,8 +337,8 @@ tasks:
     sources:
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
-      - "pyproject.toml"
       - "/etc/os-release"
+      - "pyproject.toml"
     status:
       - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
