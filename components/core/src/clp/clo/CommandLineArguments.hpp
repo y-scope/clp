@@ -13,6 +13,12 @@
 namespace clp::clo {
 class CommandLineArguments : public CommandLineArgumentsBase {
 public:
+    // Types
+    enum class OutputHandler : char {
+        Reducer = 0,
+        ResultsCache,
+    };
+
     // Constructors
     explicit CommandLineArguments(std::string const& program_name)
             : CommandLineArgumentsBase(program_name),
@@ -51,7 +57,7 @@ public:
 
     reducer::job_id_t get_job_id() const { return m_job_id; }
 
-    bool get_count() const { return m_count; }
+    bool do_count_aggregation() const { return m_do_count_aggregation; }
 
 private:
     // Methods
@@ -69,10 +75,12 @@ private:
     uint64_t m_max_num_results;
 
     // Search aggregation variables
-    bool m_count{false};
     std::string m_reducer_host;
     int m_reducer_port{-1};
     reducer::job_id_t m_job_id{-1};
+    bool m_do_count_aggregation{false};
+
+    OutputHandler m_output_handler{OutputHandler::ResultsCache};
 };
 }  // namespace clp::clo
 

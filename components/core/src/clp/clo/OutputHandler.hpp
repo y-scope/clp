@@ -141,7 +141,7 @@ private:
 class CountOutputHandler : public OutputHandler {
 public:
     // Constructor
-    explicit CountOutputHandler(int socket_fd);
+    explicit CountOutputHandler(int reducer_socket_fd);
 
     // Methods inherited from OutputHandler
     void add_result(

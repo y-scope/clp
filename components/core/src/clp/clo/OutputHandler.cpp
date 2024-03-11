@@ -27,6 +27,19 @@ ResultsCacheClient::ResultsCacheClient(
     }
 }
 
+void ResultsCacheClient::add_result(
+        std::string const& original_path,
+        std::string const& message,
+        epochtime_t timestamp
+) {
+    if (m_latest_results.size() < m_max_num_results) {
+        m_latest_results.emplace(std::make_unique<QueryResult>(original_path, message, timestamp));
+    } else if (m_latest_results.top()->timestamp < timestamp) {
+        m_latest_results.pop();
+        m_latest_results.emplace(std::make_unique<QueryResult>(original_path, message, timestamp));
+    }
+}
+
 void ResultsCacheClient::flush() {
     size_t count = 0;
     while (false == m_latest_results.empty()) {
@@ -61,21 +74,8 @@ void ResultsCacheClient::flush() {
     }
 }
 
-void ResultsCacheClient::add_result(
-        std::string const& original_path,
-        std::string const& message,
-        epochtime_t timestamp
-) {
-    if (m_latest_results.size() < m_max_num_results) {
-        m_latest_results.emplace(std::make_unique<QueryResult>(original_path, message, timestamp));
-    } else if (m_latest_results.top()->timestamp < timestamp) {
-        m_latest_results.pop();
-        m_latest_results.emplace(std::make_unique<QueryResult>(original_path, message, timestamp));
-    }
-}
-
-CountOutputHandler::CountOutputHandler(int socket_fd)
-        : m_reducer_socket_fd{socket_fd},
+CountOutputHandler::CountOutputHandler(int reducer_socket_fd)
+        : m_reducer_socket_fd{reducer_socket_fd},
           m_pipeline{reducer::PipelineInputMode::InterStage} {
     m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
 }

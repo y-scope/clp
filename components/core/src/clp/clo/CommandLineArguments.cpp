@@ -2,9 +2,11 @@
 
 #include <fstream>
 #include <iostream>
+#include <vector>
 
 #include <boost/program_options.hpp>
 
+#include "../reducer/types.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../version.hpp"
 
@@ -78,31 +80,34 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             "ignore-case,i",
             po::bool_switch(&m_ignore_case),
             "Ignore case distinctions in both WILDCARD STRING and the input files"
+    )(
+            "file-path",
+            po::value<string>(&m_file_path)->value_name("PATH"),
+            "Limit search to files with the path PATH"
     );
 
-    po::options_description options_output_control("Output Controls");
+    po::options_description options_aggregation("Aggregation Options");
     // clang-format off
-    options_output_control.add_options()(
+    options_aggregation.add_options()(
+            "count",
+            po::bool_switch(&m_do_count_aggregation),
+            "Perform a count aggregation (count the number of results)"
+    );
+    // clang-format on
+
+    po::options_description options_results_cache_output_handler(
+            "Results Cache Output Handler Options"
+    );
+    // clang-format off
+    options_results_cache_output_handler.add_options()(
             "batch-size,b",
             po::value<uint64_t>(&m_batch_size)->value_name("SIZE")->default_value(m_batch_size),
-            "The number of documents to insert into MongoDB in a batch"
+            "The number of documents to insert into MongoDB per batch"
     )(
             "max-num-results,m",
             po::value<uint64_t>(&m_max_num_results)->value_name("NUM")->
-                default_value(m_max_num_results),
+                    default_value(m_max_num_results),
             "The maximum number of results to output"
-    )(
-            "reducer-host",
-            po::value<std::string>(&m_reducer_host)->value_name("HOST"),
-            "Host the reducer is running on"
-    )(
-            "reducer-port",
-            po::value<int>(&m_reducer_port)->value_name("PORT"),
-            "Port the reducer is listening on"
-    )(
-            "job-id",
-            po::value<reducer::job_id_t>(&m_job_id)->value_name("ID"),
-            "The Job ID of this aggregation operation"
     )(
             "mongodb-uri",
             po::value<string>(&m_mongodb_uri),
@@ -114,24 +119,32 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     );
     // clang-format on
 
-    po::options_description options_aggregation("Aggregation Options");
-    // clang-format off
-    options_aggregation.add_options()(
-            "count",
-            po::bool_switch(&m_count),
-            "Perform a count aggregation (count the number of results)"
+    po::options_description options_reducer_output_handler("Reducer Output Handler Options");
+    options_reducer_output_handler.add_options()(
+            "reducer-host",
+            po::value<string>(&m_reducer_host)->value_name("HOST"),
+            "Host the reducer is running on"
+    )(
+            "reducer-port",
+            po::value<int>(&m_reducer_port)->value_name("PORT"),
+            "Port the reducer is listening on"
+    )(
+            "job-id",
+            po::value<reducer::job_id_t>(&m_job_id)->value_name("ID"),
+            "Job ID for the requested aggregation operation"
     );
-    // clang-format on
 
     // Define visible options
     po::options_description visible_options;
     visible_options.add(options_general);
     visible_options.add(options_match_control);
-    visible_options.add(options_output_control);
     visible_options.add(options_aggregation);
+    visible_options.add(options_results_cache_output_handler);
+    visible_options.add(options_reducer_output_handler);
 
     // Define hidden positional options (not shown in Boost's program options help message)
     po::options_description hidden_positional_options;
+    string output_handler_name;
     // clang-format off
     hidden_positional_options.add_options()(
             "archive-path",
@@ -140,20 +153,23 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             "wildcard-string",
             po::value<string>(&m_search_string)
     )(
-            "file-path",
-            po::value<string>(&m_file_path)
+            "output-handler",
+            po::value<string>(&output_handler_name)
+    )(
+            "output-handler-args",
+            po::value<vector<string>>()
     );
     // clang-format on
     po::positional_options_description positional_options_description;
     positional_options_description.add("archive-path", 1);
     positional_options_description.add("wildcard-string", 1);
-    positional_options_description.add("file-path", 1);
+    positional_options_description.add("output-handler", 1);
+    positional_options_description.add("output-handler-args", -1);
 
     // Aggregate all options
     po::options_description all_options;
     all_options.add(options_general);
     all_options.add(options_match_control);
-    all_options.add(options_output_control);
     all_options.add(options_aggregation);
     all_options.add(hidden_positional_options);
 
@@ -163,6 +179,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         po::parsed_options parsed = po::command_line_parser(argc, argv)
                                             .options(all_options)
                                             .positional(positional_options_description)
+                                            .allow_unregistered()
                                             .run();
         po::variables_map parsed_command_line_options;
         store(parsed, parsed_command_line_options);
@@ -195,15 +212,18 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             }
 
             print_basic_usage();
+            cerr << "OUTPUT_HANDLER is one of:" << endl;
+            cerr << "  results-cache - Output to the results cache" << endl;
+            cerr << "  reducer - Output to the reducer" << endl;
             cerr << endl;
 
             cerr << "Examples:" << endl;
-            cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to )"
-                    R"(mongodb://127.0.0.1:27017/test "result" collection )"
+            cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to)"
+                    R"( mongodb://127.0.0.1:27017/test "result" collection )"
                  << endl;
             cerr << "  " << get_program_name()
-                 << R"(ARCHIVE_PATH " ERROR ")"
-                    R"(--mongodb-uri mongodb://127.0.0.1:27017/test --mongodb-collection result )"
+                 << R"( ARCHIVE_PATH " ERROR " results-cache)"
+                    R"( --mongodb-uri mongodb://127.0.0.1:27017/test --mongodb-collection result)"
                  << endl;
             cerr << endl;
 
@@ -217,17 +237,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         if (parsed_command_line_options.count("version")) {
             cerr << cVersion << endl;
             return ParsingResult::InfoCommand;
-        }
-
-        // Validate mongodb uri was specified
-        if (parsed_command_line_options.count("mongodb-uri") && m_mongodb_uri.empty()) {
-            throw invalid_argument("mongodb-uri can not be an empty string.");
-        }
-
-        // Validate mongodb collection was specified
-        if (parsed_command_line_options.count("mongodb-collection") && m_mongodb_collection.empty())
-        {
-            throw invalid_argument("mongodb-collection can not be an empty string.");
         }
 
         // Validate archive path was specified
@@ -288,56 +297,102 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             }
         }
 
-        // Validate batch size
-        if (m_batch_size == 0) {
-            throw invalid_argument("Batch size cannot be 0.");
+        // Validate file-path
+        if (parsed_command_line_options.count("file-path") > 0 && m_file_path.empty()) {
+            throw invalid_argument("file-path cannot be an empty string.");
         }
 
-        // Validate max number of results
-        if (m_max_num_results == 0) {
-            throw invalid_argument("Max number of results cannot be 0.");
+        // Validate output-handler
+        if (parsed_command_line_options.count("output-handler") == 0) {
+            throw invalid_argument("OUTPUT_HANDLER not specified.");
+        }
+        if ("results-cache" == output_handler_name) {
+            m_output_handler = OutputHandler::ResultsCache;
+        } else if ("reducer" == output_handler_name) {
+            m_output_handler = OutputHandler::Reducer;
+        } else if (output_handler_name.empty()) {
+            throw invalid_argument("OUTPUT_HANDLER cannot be an empty string.");
+        } else {
+            throw invalid_argument("Unknown OUTPUT_HANDLER: " + output_handler_name);
         }
 
-        if (parsed_command_line_options.count("reducer-host") && m_reducer_host.empty()) {
-            throw invalid_argument("Reducer host can not be an empty string");
-        }
+        if (OutputHandler::ResultsCache == m_output_handler) {
+            auto unrecognized_options
+                    = po::collect_unrecognized(parsed.options, po::include_positional);
+            unrecognized_options.erase(unrecognized_options.begin());
 
-        if (parsed_command_line_options.count("reducer-port") && m_reducer_port <= 0) {
-            throw invalid_argument("Reducer port must be greater than zero");
-        }
+            po::store(
+                    po::command_line_parser(unrecognized_options)
+                            .options(options_results_cache_output_handler)
+                            .run(),
+                    parsed_command_line_options
+            );
 
-        if (parsed_command_line_options.count("job-id") && m_job_id < 0) {
-            throw invalid_argument("Job ID must be non-negative");
-        }
+            notify(parsed_command_line_options);
 
-        std::vector<std::string> enabled_output_options;
-        if (m_count) {
-            if (0 == parsed_command_line_options.count("reducer-host")) {
-                throw invalid_argument("Reducer host must be specified for aggregation jobs");
+            // Validate batch size
+            if (m_batch_size == 0) {
+                throw invalid_argument("Batch size cannot be 0.");
             }
 
-            if (0 == parsed_command_line_options.count("reducer-port")) {
-                throw invalid_argument("Reducer port must be specified for aggregation jobs");
+            // Validate max number of results
+            if (m_max_num_results == 0) {
+                throw invalid_argument("Max number of results cannot be 0.");
             }
 
-            if (0 == parsed_command_line_options.count("job-id")) {
-                throw invalid_argument("Job ID must be specified for aggregation jobs");
+            // Validate mongodb uri was specified
+            if (parsed_command_line_options.count("mongodb-uri") == 0) {
+                throw invalid_argument("mongodb-uri must be specified.");
             }
-            enabled_output_options.push_back("Aggregation");
+            if (m_mongodb_uri.empty()) {
+                throw invalid_argument("mongodb-uri cannot be an empty string.");
+            }
+
+            // Validate mongodb collection was specified
+            if (parsed_command_line_options.count("mongodb-collection") == 0) {
+                throw invalid_argument("mongodb-collection must be specified.");
+            }
+            if (m_mongodb_collection.empty()) {
+                throw invalid_argument("mongodb-collection cannot be an empty string.");
+            }
+        } else if (OutputHandler::Reducer == m_output_handler) {
+            auto unrecognized_options
+                    = po::collect_unrecognized(parsed.options, po::include_positional);
+            unrecognized_options.erase(unrecognized_options.begin());
+            po::store(
+                    po::command_line_parser(unrecognized_options)
+                            .options(options_reducer_output_handler)
+                            .run(),
+                    parsed_command_line_options
+            );
+
+            notify(parsed_command_line_options);
+
+            if (parsed_command_line_options.count("reducer-host") == 0) {
+                throw invalid_argument("reducer-host must be specified.");
+            }
+            if (m_reducer_host.empty()) {
+                throw invalid_argument("reducer-host cannot be an empty string.");
+            }
+
+            if (parsed_command_line_options.count("reducer-port") == 0) {
+                throw invalid_argument("reducer-port must be specified.");
+            }
+            if (m_reducer_port <= 0) {
+                throw invalid_argument("reducer-port must be greater than zero.");
+            }
+
+            if (parsed_command_line_options.count("job-id") == 0) {
+                throw invalid_argument("job-id must be specified.");
+            }
+            if (m_job_id < 0) {
+                throw invalid_argument("job-id cannot be negative.");
+            }
         }
 
-        if (parsed_command_line_options.count("mongodb-uri")) {
-            enabled_output_options.push_back("Results Cache");
-        }
-
-        if (enabled_output_options.size() > 1) {
-            std::string output_options_list = enabled_output_options[0];
-            for (size_t i = 1; i < enabled_output_options.size(); ++i) {
-                output_options_list += ", " + enabled_output_options[i];
-            }
+        if (m_do_count_aggregation && OutputHandler::Reducer != m_output_handler) {
             throw invalid_argument(
-                    "Expected a single set of output options but received output options for "
-                    + output_options_list
+                    "Aggregations are only supported with the reducer output handler."
             );
         }
     } catch (exception& e) {
@@ -351,7 +406,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 }
 
 void CommandLineArguments::print_basic_usage() const {
-    cerr << "Usage: " << get_program_name() << " [OPTIONS] "
-         << R"(ARCHIVE_PATH "WILDCARD STRING" [FILE])" << endl;
+    cerr << "Usage: " << get_program_name() << " [OPTIONS]"
+         << R"( ARCHIVE_PATH "WILDCARD STRING" OUTPUT_HANDLER [OUTPUT_HANDLER_OPTIONS])" << endl;
 }
 }  // namespace clp::clo

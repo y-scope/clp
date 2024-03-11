@@ -248,23 +248,20 @@ int main(int argc, char const* argv[]) {
             break;
     }
 
-    int reducer_socket_fd = -1;
-    if (command_line_args.get_count()) {
-        reducer_socket_fd = reducer::connect_to_reducer(
-                command_line_args.get_reducer_host(),
-                command_line_args.get_reducer_port(),
-                command_line_args.get_job_id()
-        );
-        if (-1 == reducer_socket_fd) {
-            SPDLOG_ERROR("Failed to connect to reducer");
-            return -1;
-        }
-    }
-
     mongocxx::instance mongocxx_instance{};
     std::unique_ptr<OutputHandler> output_handler;
     try {
-        if (command_line_args.get_count()) {
+        if (command_line_args.do_count_aggregation()) {
+            auto reducer_socket_fd = reducer::connect_to_reducer(
+                    command_line_args.get_reducer_host(),
+                    command_line_args.get_reducer_port(),
+                    command_line_args.get_job_id()
+            );
+            if (-1 == reducer_socket_fd) {
+                SPDLOG_ERROR("Failed to connect to reducer");
+                return -1;
+            }
+
             output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
         } else {
             output_handler = std::make_unique<ResultsCacheClient>(
