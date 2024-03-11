@@ -119,7 +119,7 @@ const SearchView = () => {
                 })
                 .catch((e) => {
                     console.log(
-                        `Error occurs in resultsCollection<${jobId}>.estimatedDocumentCount()`,
+                        `Error occurred in resultsCollection<${jobId}>.estimatedDocumentCount()`,
                         e,
                     );
                 });
@@ -211,15 +211,11 @@ const SearchView = () => {
 
     const showSearchResults = (INVALID_JOB_ID !== jobId);
 
-    /**
-     * @param {number|null} resultsMetadata.numTotalResults
-     * The total count in the results cache when the job finishes.
-     * @param {number|null} estimatedNumResults
-     * The `estimatedDocumentCount()` from the results cache Mongo collection metadata.
-     * @param {number} searchResults.length
-     * The length of the array containing visible results.
-     * @return {number}
-     */
+    // The number of results on the server is available in different variables at different times:
+    // - when the query ends, it will be in resultsMetadata.numTotalResults.
+    // - while the query is in progress, it will be in estimatedNumResults.
+    // - when the query starts, the other two variables will be null, so searchResults.length is the
+    //   best estimate.
     const numResultsOnServer =
         resultsMetadata.numTotalResults ||
         estimatedNumResults ||
