@@ -248,7 +248,6 @@ tasks:
         tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
-      - "/etc/os-release"
       - ".gitmodules"
       - "tools/scripts/deps-download/**/*"
     status:
