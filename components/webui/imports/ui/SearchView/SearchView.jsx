@@ -10,6 +10,7 @@ import {SearchResultsMetadataCollection} from "../../api/search/collections";
 import {
     INVALID_JOB_ID,
     MONGO_SORT_ORDER,
+    SEARCH_MAX_NUM_RESULTS,
     SEARCH_RESULTS_FIELDS,
     SEARCH_SIGNAL,
     isSearchSignalQuerying,
@@ -36,6 +37,7 @@ const SearchView = () => {
     const [jobId, setJobId] = useState(INVALID_JOB_ID);
     const [operationErrorMsg, setOperationErrorMsg] = useState("");
     const [localLastSearchSignal, setLocalLastSearchSignal] = useState(SEARCH_SIGNAL.NONE);
+    const [estimatedNumResults, setEstimatedNumResults] = useState(null);
     const dbRef = useRef(new SearchJobCollectionsManager());
     // gets updated as soon as localLastSearchSignal is updated
     // to avoid reading old localLastSearchSignal value from Closures
@@ -84,6 +86,13 @@ const SearchView = () => {
             jobId: jobId,
         });
 
+        // NOTE: Although we publish and subscribe using the name
+        // `Meteor.settings.public.SearchResultsCollectionName`, the rows are still returned in the
+        // job-specific collection (e.g., "1"); this is because on the server, we're returning a
+        // cursor from the job-specific collection and Meteor creates a collection with the same
+        // name on the client rather than returning the rows in a collection with the published
+        // name.
+        const resultsCollection = dbRef.current.getOrCreateCollection(jobId);
         const findOptions = {
             limit: visibleSearchResultsLimit,
             sort: [
@@ -98,13 +107,25 @@ const SearchView = () => {
             ],
         };
 
-        // NOTE: Although we publish and subscribe using the name
-        // `Meteor.settings.public.SearchResultsCollectionName`, the rows are still returned in the
-        // job-specific collection (e.g., "1"); this is because on the server, we're returning a
-        // cursor from the job-specific collection and Meteor creates a collection with the same
-        // name on the client rather than returning the rows in a collection with the published
-        // name.
-        return dbRef.current.getOrCreateCollection(jobId).find({}, findOptions).fetch();
+        if (SEARCH_SIGNAL.RESP_DONE !== resultsMetadata.lastSignal) {
+            // Only refresh estimatedNumResults if the job isn't DONE;
+            // otherwise the count would already be available in
+            // `resultsMetadata.numTotalResults`
+            resultsCollection.estimatedDocumentCount()
+                .then((count) => {
+                    setEstimatedNumResults(
+                        Math.min(count, SEARCH_MAX_NUM_RESULTS)
+                    );
+                })
+                .catch((e) => {
+                    console.log(
+                        `Error occurred in resultsCollection<${jobId}>.estimatedDocumentCount()`,
+                        e,
+                    );
+                });
+        }
+
+        return resultsCollection.find({}, findOptions).fetch();
     }, [jobId, fieldToSortBy, visibleSearchResultsLimit]);
 
     // State transitions
@@ -154,6 +175,7 @@ const SearchView = () => {
         setJobId(INVALID_JOB_ID);
         setOperationErrorMsg("");
         setLocalLastSearchSignal(SEARCH_SIGNAL.REQ_CLEARING);
+        setEstimatedNumResults(null);
         setVisibleSearchResultsLimit(VISIBLE_RESULTS_LIMIT_INITIAL);
 
         const args = {
@@ -187,7 +209,18 @@ const SearchView = () => {
         });
     };
 
-    const showSearchResults = INVALID_JOB_ID !== jobId;
+    const showSearchResults = (INVALID_JOB_ID !== jobId);
+
+    // The number of results on the server is available in different variables at different times:
+    // - when the query ends, it will be in resultsMetadata.numTotalResults.
+    // - while the query is in progress, it will be in estimatedNumResults.
+    // - when the query starts, the other two variables will be null, so searchResults.length is the
+    //   best estimate.
+    const numResultsOnServer =
+        resultsMetadata.numTotalResults ||
+        estimatedNumResults ||
+        searchResults.length;
+
     return (<div className="d-flex flex-column h-100">
         <div className={"flex-column"}>
             <SearchControls
@@ -212,15 +245,15 @@ const SearchView = () => {
         </div>
 
         {showSearchResults && <SearchResults
-            jobId={jobId}
-            searchResults={searchResults}
-            resultsMetadata={resultsMetadata}
             fieldToSortBy={fieldToSortBy}
-            setFieldToSortBy={setFieldToSortBy}
-            visibleSearchResultsLimit={visibleSearchResultsLimit}
-            setVisibleSearchResultsLimit={setVisibleSearchResultsLimit}
+            jobId={jobId}
             maxLinesPerResult={maxLinesPerResult}
+            numResultsOnServer={numResultsOnServer}
+            searchResults={searchResults}
+            setFieldToSortBy={setFieldToSortBy}
             setMaxLinesPerResult={setMaxLinesPerResult}
+            setVisibleSearchResultsLimit={setVisibleSearchResultsLimit}
+            visibleSearchResultsLimit={visibleSearchResultsLimit}
         />}
     </div>);
 };
