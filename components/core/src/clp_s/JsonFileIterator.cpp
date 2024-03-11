@@ -1,5 +1,6 @@
 #include "JsonFileIterator.hpp"
 
+#include <cctype>
 #include <cstring>
 
 #include <spdlog/spdlog.h>
@@ -55,6 +56,7 @@ bool JsonFileIterator::read_new_json() {
         if (ErrorCodeEndOfFile == file_error) {
             m_eof = true;
         } else if (ErrorCodeSuccess != file_error) {
+            m_error_code = simdjson::error_code::IO_ERROR;
             return false;
         }
 
@@ -81,6 +83,14 @@ bool JsonFileIterator::read_new_json() {
     return true;
 }
 
+size_t JsonFileIterator::skip_whitespace_and_get_truncated_bytes() {
+    for (;
+         m_next_document_position < m_buf_occupied && std::isspace(m_buf[m_next_document_position]);
+         ++m_next_document_position)
+    {}
+    return m_buf_occupied - m_next_document_position;
+}
+
 bool JsonFileIterator::get_json(simdjson::ondemand::document_stream::iterator& it) {
     if (false == m_first_read) {
         ++m_doc_it;
@@ -88,51 +98,52 @@ bool JsonFileIterator::get_json(simdjson::ondemand::document_stream::iterator& i
         m_first_read = false;
     }
 
-    if (m_doc_it != m_stream.end()) {
-        if (simdjson::error_code::SUCCESS == m_doc_it.error()) {
-            it = m_doc_it;
-
-            // there is a bug in simdjson where when invalid UTF8 is encountered at the end of the
-            // stream truncated bytes isn't set correctly. To work around this limitation we keep
-            // track of the start of the next document. The bytes after the last valid document are
-            // naturally the truncated bytes for the stream.
-            m_next_document_position = m_doc_it.current_index() + m_doc_it.source().size();
-            return true;
-        } else if (m_doc_it.error() == simdjson::error_code::UTF8_ERROR) {
-            m_truncated_bytes = m_buf_occupied - m_next_document_position;
-        } else {
-            m_error_code = m_doc_it.error();
-            return false;
-        }
-    } else if (m_eof) {
-        // if we iterate to the end of the stream without error after hitting eof it should be safe
-        // to ask the stream iterator for number of truncated bytes
-        m_truncated_bytes = m_stream.truncated_bytes();
-        return false;
-    } else {
-        m_truncated_bytes = m_stream.truncated_bytes();
-    }
-
-    if (m_truncated_bytes > 0) {
-        ++m_doc_it;
-        // UTF8 error wasn't at the end of the stream -- terminate
+    do {
+        bool maybe_utf8_edge_case{false};
         if (m_doc_it != m_stream.end()) {
-            m_error_code = simdjson::error_code::UTF8_ERROR;
-            return false;
+            if (simdjson::error_code::SUCCESS == m_doc_it.error()) {
+                it = m_doc_it;
+
+                // There is a bug in simdjson where truncated bytes isn't set correctly when a UTF8
+                // character is cut off at the end of the buffer. To work around this limitation we
+                // always keep track of the start of the next document ourselves. The bytes after
+                // the last valid document and before the end of the buffer are naturally the
+                // truncated bytes for the current buffer.
+                m_next_document_position = m_doc_it.current_index() + m_doc_it.source().size();
+                return true;
+            } else if (m_doc_it.error() == simdjson::error_code::UTF8_ERROR) {
+                maybe_utf8_edge_case = true;
+            } else {
+                m_error_code = m_doc_it.error();
+                return false;
+            }
+        } else {
+            m_truncated_bytes = skip_whitespace_and_get_truncated_bytes();
+            // If we have reached the end of the file and the end of the document stream there are
+            // no more documents to iterate over
+            if (m_eof) {
+                return false;
+            }
         }
-    }
 
-    if (false == read_new_json()) {
-        return false;
-    }
+        if (maybe_utf8_edge_case) {
+            // Check if this is the UTF-8 edge case by advancing the iterator and checking if this
+            // is really the end of the stream.
+            ++m_doc_it;
+            if (m_doc_it != m_stream.end()) {
+                // Regular UTF-8 error in the middle of the document stream.
+                m_error_code = simdjson::error_code::UTF8_ERROR;
+                return false;
+            } else {
+                m_truncated_bytes = skip_whitespace_and_get_truncated_bytes();
+            }
 
-    if (m_doc_it != m_stream.end()) {
-        if (simdjson::error_code::SUCCESS == m_doc_it.error()) {
-            it = m_doc_it;
-            return true;
+            if (m_eof) {
+                // UTF-8 error at end of stream. Treat this case as document truncation.
+                return false;
+            }
         }
-    }
-
+    } while (read_new_json());
     return false;
 }
 }  // namespace clp_s

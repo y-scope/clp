@@ -62,6 +62,13 @@ private:
      */
     bool read_new_json();
 
+    /**
+     * Advance the m_next_document_position pointer past any whitespace then return the number of
+     * truncated bytes in the buffer.
+     * @return the number of truncated bytes in the buffer
+     */
+    [[nodiscard]] size_t skip_whitespace_and_get_truncated_bytes();
+
     size_t m_truncated_bytes{0};
     size_t m_next_document_position{0};
     size_t m_bytes_read{0};
