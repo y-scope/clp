@@ -3,24 +3,24 @@ description: "Builds a container image that contains the dependencies necessary
 to run the CLP package."
 
 inputs:
-  containerImageRegistry:
+  image_registry:
     default: "ghcr.io"
-    description: "Container Image Registry"
+    description: "Container image registry."
     required: false
-  containerImageRegistryUsername:
+  image_registry_username:
     default: "${{github.actor}}"
-    description: "Container Image Registry Username"
+    description: "Container image registry username."
     required: false
-  containerImageRegistryPassword:
+  image_registry_password:
     default: ""
-    description: "Container Image Registry Password"
+    description: "Container image registry password."
     required: false
-  platformId:
-    description: "Platform ID of the container. e.g., ubuntu."
+  platform_id:
+    description: "Platform ID of the container (e.g. ubuntu)"
     required: true
-  platformVersionId:
-    description: "Platform VERSION_ID / VERSION_CODENAME of the container.
-      e.g., jammy, focal."
+  platform_version_id:
+    description: "Platform VERSION_ID / VERSION_CODENAME of the container
+      (e.g. jammy, focal, etc.)"
     required: true
 
 runs:
@@ -28,9 +28,9 @@ runs:
   steps:
     - uses: "docker/login-action@v3"
       with:
-        registry: "${{inputs.containerImageRegistry}}"
-        username: "${{inputs.containerImageRegistryUsername}}"
-        password: "${{inputs.containerImageRegistryPassword}}"
+        registry: "${{inputs.image_registry}}"
+        username: "${{inputs.image_registry_username}}"
+        password: "${{inputs.image_registry_password}}"
 
     - id: "sanitization"
       shell: "bash"
@@ -43,15 +43,15 @@ runs:
     - id: "meta"
       uses: "docker/metadata-action@v5"
       with:
-        images: "${{inputs.containerImageRegistry}}/${{steps.sanitization.outputs.REPOSITORY}}\
-          /clp-execution-x86-${{inputs.platformId}}-${{inputs.platformVersionId}}"
+        images: "${{inputs.image_registry}}/${{steps.sanitization.outputs.REPOSITORY}}\
+          /clp-execution-x86-${{inputs.platform_id}}-${{inputs.platform_version_id}}"
 
     - if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
       uses: "docker/build-push-action@v5"
       with:
         context: "./"
         file: "./tools/docker-images/\
-          clp-execution-base-${{inputs.platformId}}-${{inputs.platformVersionId}}/Dockerfile"
+          clp-execution-base-${{inputs.platform_id}}-${{inputs.platform_version_id}}/Dockerfile"
         push: true
         tags: "${{steps.meta.outputs.tags}}"
         labels: "${{steps.meta.outputs.labels}}"

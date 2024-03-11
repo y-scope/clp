@@ -65,19 +65,10 @@ need it for one OS since users can use the container on any OS.
 
 This workflow builds CLP-core on macOS and runs its unit tests.
 
-## [clp-execution-image-ubuntu-jammy](../.github/workflows/clp-excution-image-ubuntu-jammy.yaml)
+## [clp-execution-image-build](../.github/workflows/clp-execution-image-build.yaml)
 
-This workflow calls
-[clp-execution-image-build](../.github/workflows/actions/clp-execution-image-build/action.yaml)
-to build a container image that contains the dependencies necessary to run the CLP package on Ubuntu
-22.04 (Jammy).
-
-## [clp-execution-image-ubuntu-focal](../.github/workflows/clp-excution-image-ubuntu-focal.yaml)
-
-Similar to 
-[clp-execution-image-ubuntu-jammy](../.github/workflows/clp-excution-image-ubuntu-jammy.yaml), this
-workflow builds a container image that contains the dependencies necessary to run the CLP package on Ubuntu
-20.04 (Focal).
+This workflow builds a container image that contains the dependencies necessary to run the CLP
+package.
 
 ## [clp-lint](../.github/workflows/clp-lint.yaml)
 

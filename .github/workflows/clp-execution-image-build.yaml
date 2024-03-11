@@ -1,0 +1,78 @@
+name: "clp-execution-image-build"
+
+on:
+  pull_request:
+    paths:
+      - ".github/actions/clp-execution-image-build/action.yaml"
+      - ".github/workflows/clp-execution-image-build.yaml"
+      - "tools/docker-images/**"
+  push:
+    paths:
+      - ".github/actions/clp-execution-image-build/action.yaml"
+      - ".github/workflows/clp-execution-image-build.yaml"
+      - "tools/docker-images/**"
+  workflow_dispatch:
+
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+  # Cancel in-progress jobs for efficiency
+  cancel-in-progress: true
+
+jobs:
+  filter-relevant-changes:
+    runs-on: "ubuntu-latest"
+    outputs:
+      ubuntu_focal_image_changed: "${{steps.filter.outputs.ubuntu_focal_image}}"
+      ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
+    steps:
+      - uses: "actions/checkout@v3"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - name: "Filter relevant changes"
+        uses: "dorny/paths-filter@v2"
+        id: "filter"
+        with:
+          base: "main"
+          filters: |
+            ubuntu_focal_image:
+              - ".github/actions/**"
+              - ".github/workflows/clp-execution-image-build.yaml"
+              - "tools/docker-images/clp-execution-base-ubuntu-focal/**"
+            ubuntu_jammy_image:
+              - ".github/actions/**"
+              - ".github/workflows/clp-execution-image-build.yaml"
+              - "tools/docker-images/clp-execution-base-ubuntu-jammy/**"
+
+  build-image:
+    needs: "filter-relevant-changes"
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        include:
+          - platform_version_id: "focal"
+            condition: "needs.filter-relevant-changes.outputs.ubuntu_focal_image_changed"
+          - platform_version_id: "jammy"
+            condition: "needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed"
+    steps:
+      - uses: "actions/checkout@v3"
+        with:
+          submodules: "recursive"
+
+      - name: "Workaround actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - name: "Build and Push Docker Image"
+        if: "'true' == matrix.condition"
+        uses: "./.github/actions/clp-execution-image-build"
+        with:
+          image_registry: "ghcr.io"
+          image_registry_username: "${{github.actor}}"
+          image_registry_password: "${{secrets.GITHUB_TOKEN}}"
+          platform_id: "ubuntu"
+          platform_version_id: "${{matrix.platform_version_id}}"
