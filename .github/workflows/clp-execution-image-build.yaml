@@ -42,11 +42,11 @@ jobs:
             ubuntu_focal_image:
               - ".github/actions/clp-execution-image-build/action.yaml"
               - ".github/workflows/clp-execution-image-build.yaml"
-              - "tools/docker-images/clp-execution-base-ubuntu-focal/**"
+              - "tools/docker-images/clp-execution-base-ubuntu-focal/**/*"
             ubuntu_jammy_image:
               - ".github/actions/clp-execution-image-build/action.yaml"
               - ".github/workflows/clp-execution-image-build.yaml"
-              - "tools/docker-images/clp-execution-base-ubuntu-jammy/**"
+              - "tools/docker-images/clp-execution-base-ubuntu-jammy/**/*"
 
   ubuntu_focal_execution_image:
     if: "'true' == needs.filter-relevant-changes.outputs.ubuntu_focal_image_changed"
