@@ -40,11 +40,11 @@ jobs:
           base: "main"
           filters: |
             ubuntu_focal_image:
-              - ".github/actions/**"
+              - ".github/actions/clp-execution-image-build/action.yaml"
               - ".github/workflows/clp-execution-image-build.yaml"
               - "tools/docker-images/clp-execution-base-ubuntu-focal/**"
             ubuntu_jammy_image:
-              - ".github/actions/**"
+              - ".github/actions/clp-execution-image-build/action.yaml"
               - ".github/workflows/clp-execution-image-build.yaml"
               - "tools/docker-images/clp-execution-base-ubuntu-jammy/**"
 
