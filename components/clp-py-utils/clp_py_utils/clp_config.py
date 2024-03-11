@@ -2,7 +2,7 @@ import pathlib
 import typing
 from enum import auto
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, PrivateAttr, validator
 from strenum import KebabCaseStrEnum
 
 from .clp_logging import get_valid_logging_level, is_valid_logging_level
@@ -304,7 +304,7 @@ class WebUi(BaseModel):
 
 class CLPConfig(BaseModel):
     execution_container: typing.Optional[str]
-    os_release_file_path: pathlib.Path = OS_RELEASE_FILE_PATH
+    _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
 
     input_logs_directory: pathlib.Path = pathlib.Path("/")
 
@@ -325,7 +325,7 @@ class CLPConfig(BaseModel):
     logs_directory: pathlib.Path = pathlib.Path("var") / "log"
 
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
-        self.os_release_file_path = make_config_path_absolute(clp_home, self.os_release_file_path)
+        self._os_release_file_path = make_config_path_absolute(clp_home, self._os_release_file_path)
         self.input_logs_directory = make_config_path_absolute(clp_home, self.input_logs_directory)
         self.credentials_file_path = make_config_path_absolute(clp_home, self.credentials_file_path)
         self.archive_output.make_config_paths_absolute(clp_home)
@@ -361,10 +361,10 @@ class CLPConfig(BaseModel):
 
     def load_execution_container_name(self):
         if self.execution_container is not None:
-            # Accept configured value in clp-config.yml for debug purposes
+            # Accept configured value for debug purposes
             return
 
-        with open(self.os_release_file_path) as os_release_file:
+        with open(self._os_release_file_path) as os_release_file:
             parsed = {}
             for line in os_release_file:
                 var, val = line.strip().split("=")
@@ -419,7 +419,7 @@ class CLPConfig(BaseModel):
         d = self.dict()
         d["archive_output"] = self.archive_output.dump_to_primitive_dict()
         # Turn paths into primitive strings
-        d["os_release_file_path"] = str(self.os_release_file_path)
+        d["os_release_file_path"] = str(self._os_release_file_path)
         d["input_logs_directory"] = str(self.input_logs_directory)
         d["credentials_file_path"] = str(self.credentials_file_path)
         d["data_directory"] = str(self.data_directory)
