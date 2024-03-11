@@ -105,11 +105,11 @@ set(
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.c"
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.h"
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3ext.h"
+        Client.cpp
+        Client.hpp
         clo.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
-        ResultsCacheClient.cpp
-        ResultsCacheClient.hpp
 )
 
 add_executable(clo ${CLO_SOURCES})
@@ -120,6 +120,7 @@ target_link_libraries(clo
         Boost::filesystem Boost::iostreams Boost::program_options
         fmt::fmt
         log_surgeon::log_surgeon
+        msgpack-cxx
         ${MONGOCXX_TARGET}
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}

@@ -2,11 +2,19 @@
 #define CLP_NETWORKING_SOCKET_UTILS_HPP
 
 #include <cstddef>
+#include <string>
 
 #include "../ErrorCode.hpp"
 
 namespace clp::networking {
 // Methods
+/**
+ * Connects to a server
+ * @param host
+ * @param port
+ * @return A file descriptor of the socket if successful, -1 otherwise
+ */
+int connect_to_server(std::string const& host, std::string const& port);
 /**
  * Tries to send a buffer of data over the socket
  * @param fd

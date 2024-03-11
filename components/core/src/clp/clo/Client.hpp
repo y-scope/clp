@@ -1,6 +1,8 @@
 #ifndef CLP_CLO_RESULTSCACHECLIENT_HPP
 #define CLP_CLO_RESULTSCACHECLIENT_HPP
 
+#include <unistd.h>
+
 #include <queue>
 #include <string>
 
@@ -13,10 +15,59 @@
 #include "../TraceableException.hpp"
 
 namespace clp::clo {
+class Client {
+public:
+    virtual ~Client() = default;
+    /**
+     * Adds a query result to a batch or sends it to the destination.
+     * @param original_path The original path of the log event.
+     * @param message The content of the log event.
+     * @param timestamp The timestamp of the log event.
+     * @return ErrorCode_Success if the result was added successfully, an error code otherwise.
+     */
+    virtual ErrorCode
+    add_result(std::string const& original_path, std::string const& message, epochtime_t timestamp)
+            = 0;
+
+    /**
+     * Flushes the results.
+     */
+    virtual void flush() = 0;
+};
+
+class NetworkClient : public Client {
+public:
+    // Types
+    class OperationFailed : public TraceableException {
+    public:
+        // Constructors
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
+
+        // Methods
+        char const* what() const noexcept override { return "NetworkClient operation failed"; }
+    };
+
+    // Constructors
+    NetworkClient(std::string const& host, std::string const& port);
+
+    // Methods inherited from Client
+    ErrorCode add_result(
+            std::string const& original_path,
+            std::string const& message,
+            epochtime_t timestamp
+    ) override;
+
+    void flush() override { close(m_socket_fd); }
+
+private:
+    int m_socket_fd;
+};
+
 /**
  * Class encapsulating a MongoDB client used to send query results to the results cache.
  */
-class ResultsCacheClient {
+class ResultsCacheClient : public Client {
 public:
     // Types
     struct QueryResult {
@@ -60,20 +111,6 @@ public:
 
     // Methods
     /**
-     * Adds a result to the batch.
-     * @param original_path The original path of the log event.
-     * @param message The content of the log event.
-     * @param timestamp The timestamp of the log event.
-     */
-    void
-    add_result(std::string const& original_path, std::string const& message, epochtime_t timestamp);
-
-    /**
-     * Flushes the batch.
-     */
-    void flush();
-
-    /**
      * @return The earliest (smallest) timestamp in the heap of latest results
      */
     [[nodiscard]] epochtime_t get_smallest_timestamp() const {
@@ -88,6 +125,15 @@ public:
     [[nodiscard]] bool is_latest_results_full() const {
         return m_latest_results.size() >= m_max_num_results;
     }
+
+    // Methods inherited from Client
+    ErrorCode add_result(
+            std::string const& original_path,
+            std::string const& message,
+            epochtime_t timestamp
+    ) override;
+
+    void flush() override;
 
 private:
     mongocxx::client m_client;

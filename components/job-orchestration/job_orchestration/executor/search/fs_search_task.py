@@ -27,8 +27,8 @@ def make_clo_command(
     # fmt: off
     search_cmd = [
         str(clp_home / "bin" / "clo"),
-        results_cache_uri,
-        results_collection,
+        "--mongodb-uri", results_cache_uri,
+        "--mongodb-collection", results_collection,
         str(archive_path),
         search_config.query_string,
     ]

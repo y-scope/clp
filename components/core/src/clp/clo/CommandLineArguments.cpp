@@ -80,9 +80,17 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             "Ignore case distinctions in both WILDCARD STRING and the input files"
     );
 
-    po::options_description options_output_control("Output Controls");
+    po::options_description options_results_cache_output_control("Results Cache Output Controls");
     // clang-format off
-    options_output_control.add_options()(
+    options_results_cache_output_control.add_options()(
+            "mongodb-uri",
+            po::value<string>(&m_mongodb_uri)->value_name("MONGODB_URI"),
+            "The URI of the MongoDB server to send the results to"
+    )(
+            "mongodb-collection",
+            po::value<string>(&m_mongodb_collection)->value_name("MONGODB_COLLECTION"),
+            "The name of the collection in the MongoDB database to insert the results to"
+    )(
             "batch-size,b",
             po::value<uint64_t>(&m_batch_size)->value_name("SIZE")->default_value(m_batch_size),
             "The number of documents to insert into MongoDB in a batch"
@@ -94,22 +102,30 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     );
     // clang-format on
 
+    po::options_description options_network_output_control("Network Output Controls");
+    // clang-format off
+    options_network_output_control.add_options()(
+            "host",
+            po::value<string>(&m_host)->value_name("HOST"),
+            "The host to send the results to"
+    )(
+            "port",
+            po::value<string>(&m_port)->value_name("PORT"),
+            "The port to send the results to"
+    );
+    // clang-format on
+
     // Define visible options
     po::options_description visible_options;
     visible_options.add(options_general);
     visible_options.add(options_match_control);
-    visible_options.add(options_output_control);
+    visible_options.add(options_results_cache_output_control);
+    visible_options.add(options_network_output_control);
 
     // Define hidden positional options (not shown in Boost's program options help message)
     po::options_description hidden_positional_options;
     // clang-format off
     hidden_positional_options.add_options()(
-            "mongodb-uri",
-            po::value<string>(&m_mongodb_uri)
-    )(
-            "mongodb-collection",
-            po::value<string>(&m_mongodb_collection)
-    )(
             "archive-path",
             po::value<string>(&m_archive_path)
     )(
@@ -121,8 +137,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     );
     // clang-format on
     po::positional_options_description positional_options_description;
-    positional_options_description.add("mongodb-uri", 1);
-    positional_options_description.add("mongodb-collection", 1);
     positional_options_description.add("archive-path", 1);
     positional_options_description.add("wildcard-string", 1);
     positional_options_description.add("file-path", 1);
@@ -131,7 +145,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     po::options_description all_options;
     all_options.add(options_general);
     all_options.add(options_match_control);
-    all_options.add(options_output_control);
+    all_options.add(options_results_cache_output_control);
+    all_options.add(options_network_output_control);
     all_options.add(hidden_positional_options);
 
     // Parse options
@@ -196,16 +211,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             return ParsingResult::InfoCommand;
         }
 
-        // Validate mongodb uri was specified
-        if (m_mongodb_uri.empty()) {
-            throw invalid_argument("MONGODB_URI not specified or empty.");
-        }
-
-        // Validate mongodb collection was specified
-        if (m_mongodb_collection.empty()) {
-            throw invalid_argument("MONGODB_COLLECTION not specified or empty.");
-        }
-
         // Validate archive path was specified
         if (m_archive_path.empty()) {
             throw invalid_argument("ARCHIVE_PATH not specified or empty.");
@@ -264,15 +269,44 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             }
         }
 
-        // Validate batch size
-        if (m_batch_size == 0) {
-            throw invalid_argument("Batch size cannot be 0.");
+        // Validate mongodb output configuration
+        if (false == m_mongodb_uri.empty() || false == m_mongodb_collection.empty()) {
+            if (m_mongodb_uri.empty() || m_mongodb_collection.empty()) {
+                throw invalid_argument(
+                        "MONGODB_URI and MONGODB_COLLECTION must be specified together"
+                );
+            }
+
+            // Validate batch size
+            if (m_batch_size == 0) {
+                throw invalid_argument("Batch size cannot be 0.");
+            }
+
+            // Validate max number of results
+            if (m_max_num_results == 0) {
+                throw invalid_argument("Max number of results cannot be 0.");
+            }
+            m_results_cache_output_enabled = true;
         }
 
-        // Validate max number of results
-        if (m_max_num_results == 0) {
-            throw invalid_argument("Max number of results cannot be 0.");
+        // Validate network output configuration
+        if (false == m_host.empty() || false == m_port.empty()) {
+            if (m_host.empty() || m_port.empty()) {
+                throw invalid_argument("HOST and PORT must be specified together");
+            }
+            m_network_output_enabled = true;
         }
+
+        if (m_results_cache_output_enabled && m_network_output_enabled) {
+            throw invalid_argument(
+                    "Results cache and network output cannot be specified at the same time"
+            );
+        }
+
+        if (false == m_results_cache_output_enabled && false == m_network_output_enabled) {
+            throw invalid_argument("Results cache or network output must be specified");
+        }
+
     } catch (exception& e) {
         SPDLOG_ERROR("{}", e.what());
         print_basic_usage();

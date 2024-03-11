@@ -11,11 +11,11 @@
 #include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/Constants.hpp"
 #include "../Utils.hpp"
+#include "Client.hpp"
 #include "CommandLineArguments.hpp"
-#include "ResultsCacheClient.hpp"
 
+using clp::clo::Client;
 using clp::clo::CommandLineArguments;
-using clp::clo::ResultsCacheClient;
 using clp::CommandLineArgumentsBase;
 using clp::epochtime_t;
 using clp::ErrorCode;
@@ -59,7 +59,7 @@ static SearchFilesResult search_files(
         Query& query,
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
-        ResultsCacheClient& results_cache_client,
+        std::unique_ptr<Client>& client,
         std::set<clp::segment_id_t> const& segments_to_search
 );
 /**
@@ -71,15 +71,14 @@ static SearchFilesResult search_files(
  */
 static bool search_archive(
         CommandLineArguments const& command_line_args,
-        boost::filesystem::path const& archive_path,
-        ResultsCacheClient& results_cache_client
+        boost::filesystem::path const& archive_path
 );
 
 static SearchFilesResult search_files(
         Query& query,
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
-        ResultsCacheClient& results_cache_client,
+        std::unique_ptr<Client>& client,
         std::set<clp::segment_id_t> const& segments_to_search
 ) {
     SearchFilesResult result = SearchFilesResult::Success;
@@ -93,8 +92,9 @@ static SearchFilesResult search_files(
         if (segments_to_search.count(file_metadata_ix.get_segment_id()) == 0) {
             continue;
         }
-        if (results_cache_client.is_latest_results_full()
-            && results_cache_client.get_smallest_timestamp() > file_metadata_ix.get_end_ts())
+        if (auto results_cache_client = dynamic_cast<clp::clo::ResultsCacheClient*>(client.get());
+            results_cache_client && results_cache_client->is_latest_results_full()
+            && results_cache_client->get_smallest_timestamp() > file_metadata_ix.get_end_ts())
         {
             continue;
         }
@@ -121,14 +121,23 @@ static SearchFilesResult search_files(
                 decompressed_message
         ))
         {
-            results_cache_client.add_result(
-                    compressed_file.get_orig_path(),
-                    decompressed_message,
-                    compressed_message.get_ts_in_milli()
-            );
+            if (ErrorCode_Success
+                != client->add_result(
+                        compressed_file.get_orig_path(),
+                        decompressed_message,
+                        compressed_message.get_ts_in_milli()
+                ))
+            {
+                result = SearchFilesResult::ResultSendFailure;
+                break;
+            }
         }
 
         archive.close_file(compressed_file);
+
+        if (SearchFilesResult::ResultSendFailure == result) {
+            break;
+        }
     }
 
     return result;
@@ -136,8 +145,7 @@ static SearchFilesResult search_files(
 
 static bool search_archive(
         CommandLineArguments const& command_line_args,
-        boost::filesystem::path const& archive_path,
-        ResultsCacheClient& results_cache_client
+        boost::filesystem::path const& archive_path
 ) {
     if (false == boost::filesystem::exists(archive_path)) {
         SPDLOG_ERROR("Archive '{}' does not exist.", archive_path.c_str());
@@ -207,16 +215,27 @@ static bool search_archive(
             true
     );
     auto& file_metadata_ix = *file_metadata_ix_ptr;
-    search_files(
-            query,
-            archive_reader,
-            file_metadata_ix,
-            results_cache_client,
-            ids_of_segments_to_search
-    );
+
+    std::unique_ptr<clp::clo::Client> client;
+    mongocxx::instance mongocxx_instance{};
+    if (command_line_args.is_results_cache_output_enabled()) {
+        client = std::make_unique<clp::clo::ResultsCacheClient>(
+                command_line_args.get_mongodb_uri(),
+                command_line_args.get_mongodb_collection(),
+                command_line_args.get_batch_size(),
+                command_line_args.get_max_num_results()
+        );
+    } else {
+        client = std::make_unique<clp::clo::NetworkClient>(
+                command_line_args.get_host(),
+                command_line_args.get_port()
+        );
+    }
+
+    search_files(query, archive_reader, file_metadata_ix, client, ids_of_segments_to_search);
     file_metadata_ix_ptr.reset(nullptr);
 
-    results_cache_client.flush();
+    client->flush();
     archive_reader.close();
 
     return true;
@@ -247,19 +266,11 @@ int main(int argc, char const* argv[]) {
             break;
     }
 
-    mongocxx::instance mongocxx_instance{};
-    ResultsCacheClient results_cache_client(
-            command_line_args.get_mongodb_uri(),
-            command_line_args.get_mongodb_collection(),
-            command_line_args.get_batch_size(),
-            command_line_args.get_max_num_results()
-    );
-
     auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());
 
     int return_value = 0;
     try {
-        if (false == search_archive(command_line_args, archive_path, results_cache_client)) {
+        if (false == search_archive(command_line_args, archive_path)) {
             return_value = -1;
         }
     } catch (TraceableException& e) {
