@@ -49,7 +49,7 @@ jobs:
               - "tools/docker-images/clp-execution-base-ubuntu-jammy/**"
 
   ubuntu_focal_execution_image:
-    if: "'true' == needs.filter-relevant-changes.outputs.ubuntu_focal_image_changed"
+    if: "needs.filter-relevant-changes.outputs.ubuntu_focal_image_changed == 'true'"
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v3"
@@ -69,7 +69,7 @@ jobs:
           platform_version_id: "focal"
 
   ubuntu_jammy_execution_image:
-    if: "'true' == needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed"
+    if: "needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'true'"
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v3"
