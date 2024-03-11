@@ -58,7 +58,7 @@ private:
     /**
      * Reads new JSON into the buffer and initializes iterators into the data.
      * If the buffer is not large enough to contain the JSON its size is doubled.
-     * @return whether reading the new JSON was successful or not
+     * @return true if the new JSON was read successfully, false otherwise
      */
     bool read_new_json();
 
