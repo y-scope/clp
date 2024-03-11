@@ -57,7 +57,7 @@ public:
 
     reducer::job_id_t get_job_id() const { return m_job_id; }
 
-    bool do_count_aggregation() const { return m_do_count_aggregation; }
+    bool do_count_results_aggregation() const { return m_do_count_results_aggregation; }
 
 private:
     // Methods
@@ -78,7 +78,7 @@ private:
     std::string m_reducer_host;
     int m_reducer_port{-1};
     reducer::job_id_t m_job_id{-1};
-    bool m_do_count_aggregation{false};
+    bool m_do_count_results_aggregation{false};
 
     OutputHandler m_output_handler{OutputHandler::ResultsCache};
 };

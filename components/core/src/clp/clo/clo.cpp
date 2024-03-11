@@ -251,7 +251,7 @@ int main(int argc, char const* argv[]) {
     mongocxx::instance mongocxx_instance{};
     std::unique_ptr<OutputHandler> output_handler;
     try {
-        if (command_line_args.do_count_aggregation()) {
+        if (command_line_args.do_count_results_aggregation()) {
             auto reducer_socket_fd = reducer::connect_to_reducer(
                     command_line_args.get_reducer_host(),
                     command_line_args.get_reducer_port(),

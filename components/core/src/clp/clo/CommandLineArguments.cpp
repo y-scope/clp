@@ -90,7 +90,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     // clang-format off
     options_aggregation.add_options()(
             "count",
-            po::bool_switch(&m_do_count_aggregation),
+            po::bool_switch(&m_do_count_results_aggregation),
             "Perform a count aggregation (count the number of results)"
     );
     // clang-format on
@@ -390,7 +390,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             }
         }
 
-        if (m_do_count_aggregation && OutputHandler::Reducer != m_output_handler) {
+        if (m_do_count_results_aggregation && OutputHandler::Reducer != m_output_handler) {
             throw invalid_argument(
                     "Aggregations are only supported with the reducer output handler."
             );
