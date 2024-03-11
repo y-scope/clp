@@ -7,8 +7,8 @@ import time
 import uuid
 from contextlib import closing
 
+import brotli
 import msgpack
-import zstandard as zstd
 from clp_py_utils.clp_config import COMPRESSION_JOBS_TABLE_NAME
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -103,13 +103,11 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
 
 
 def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress_reporting: bool):
-    zstd_cctx = zstd.ZstdCompressor(level=3)
-
     with closing(sql_adapter.create_connection(True)) as db, closing(
         db.cursor(dictionary=True)
     ) as db_cursor:
         try:
-            compressed_clp_io_config = zstd_cctx.compress(
+            compressed_clp_io_config = brotli.compress(
                 msgpack.packb(clp_io_config.dict(exclude_none=True, exclude_unset=True))
             )
             db_cursor.execute(

@@ -7,9 +7,9 @@ import time
 from contextlib import closing
 from pathlib import Path
 
+import brotli
 import celery
 import msgpack
-import zstandard
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
     CLP_METADATA_TABLE_PREFIX,
@@ -85,23 +85,19 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
 
     logger.debug("Search and schedule new tasks")
 
-    zstd_dctx = zstandard.ZstdDecompressor()
-    zstd_cctx = zstandard.ZstdCompressor(level=3)
-
     # Poll for new compression jobs
     jobs = fetch_new_jobs(db_cursor)
     db_conn.commit()
     for job_row in jobs:
         job_id = job_row["id"]
         clp_io_config = ClpIoConfig.parse_obj(
-            msgpack.unpackb(zstd_dctx.decompress(job_row["clp_config"]))
+            msgpack.unpackb(brotli.decompress(job_row["clp_config"]))
         )
 
         paths_to_compress_buffer = PathsToCompressBuffer(
             maintain_file_ordering=False,
             empty_directories_allowed=True,
             scheduling_job_id=job_id,
-            zstd_cctx=zstd_cctx,
             clp_io_config=clp_io_config,
             clp_metadata_db_connection_config=clp_metadata_db_connection_config,
         )
