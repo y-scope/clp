@@ -5,12 +5,12 @@ on:
     paths:
       - ".github/actions/clp-execution-image-build/action.yaml"
       - ".github/workflows/clp-execution-image-build.yaml"
-      - "tools/docker-images/**"
+      - "tools/docker-images/**/*"
   push:
     paths:
       - ".github/actions/clp-execution-image-build/action.yaml"
       - ".github/workflows/clp-execution-image-build.yaml"
-      - "tools/docker-images/**"
+      - "tools/docker-images/**/*"
   workflow_dispatch:
 
 concurrency:
