@@ -1,29 +1,6 @@
 add_subdirectory(search/kql)
 
 set(
-        REDUCER_SOURCES
-        ../reducer/BufferedSocketWriter.cpp
-        ../reducer/BufferedSocketWriter.hpp
-        ../reducer/ConstRecordIterator.hpp
-        ../reducer/CountOperator.cpp
-        ../reducer/CountOperator.hpp
-        ../reducer/DeserializedRecordGroup.cpp
-        ../reducer/DeserializedRecordGroup.hpp
-        ../reducer/GroupTags.hpp
-        ../reducer/network_utils.cpp
-        ../reducer/network_utils.hpp
-        ../reducer/Operator.cpp
-        ../reducer/Operator.hpp
-        ../reducer/Pipeline.cpp
-        ../reducer/Pipeline.hpp
-        ../reducer/Record.hpp
-        ../reducer/RecordGroup.hpp
-        ../reducer/RecordGroupIterator.hpp
-        ../reducer/RecordTypedKeyIterator.hpp
-        ../reducer/types.hpp
-)
-
-set(
         CLP_SOURCES
         ../clp/database_utils.cpp
         ../clp/database_utils.hpp
@@ -173,6 +150,29 @@ set(
         search/StringLiteral.hpp
         search/Transformation.hpp
         search/Value.hpp
+)
+
+set(
+        REDUCER_SOURCES
+        ../reducer/BufferedSocketWriter.cpp
+        ../reducer/BufferedSocketWriter.hpp
+        ../reducer/ConstRecordIterator.hpp
+        ../reducer/CountOperator.cpp
+        ../reducer/CountOperator.hpp
+        ../reducer/DeserializedRecordGroup.cpp
+        ../reducer/DeserializedRecordGroup.hpp
+        ../reducer/GroupTags.hpp
+        ../reducer/network_utils.cpp
+        ../reducer/network_utils.hpp
+        ../reducer/Operator.cpp
+        ../reducer/Operator.hpp
+        ../reducer/Pipeline.cpp
+        ../reducer/Pipeline.hpp
+        ../reducer/Record.hpp
+        ../reducer/RecordGroup.hpp
+        ../reducer/RecordGroupIterator.hpp
+        ../reducer/RecordTypedKeyIterator.hpp
+        ../reducer/types.hpp
 )
 
 add_executable(
