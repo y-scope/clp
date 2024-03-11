@@ -2,6 +2,7 @@ import pathlib
 import typing
 from enum import auto
 
+from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, validator
 from strenum import KebabCaseStrEnum
 
@@ -364,21 +365,17 @@ class CLPConfig(BaseModel):
             # Accept configured value for debug purposes
             return
 
-        with open(self._os_release_file_path) as os_release_file:
-            parsed = {}
-            for line in os_release_file:
-                var, val = line.strip().split("=")
-                parsed[var] = val
+        os_release = dotenv_values(self._os_release_file_path)
+        if "ubuntu" == os_release["ID"]:
+            self.execution_container = (
+                f"clp-execution-x86-{os_release['ID']}-{os_release['VERSION_CODENAME']}:main"
+            )
+        else:
+            raise NotImplementedError(
+                f"Unsupported OS {os_release['ID']} in {OS_RELEASE_FILE_PATH}"
+            )
 
-            self.execution_container = "ghcr.io/y-scope/clp/"
-            if "ubuntu" == parsed["ID"]:
-                self.execution_container += (
-                    f"clp-execution-x86-{parsed['ID']}-{parsed['VERSION_CODENAME']}:main"
-                )
-            else:
-                raise NotImplementedError(
-                    f"Unsupported OS {parsed['ID']} in {OS_RELEASE_FILE_PATH}"
-                )
+        self.execution_container = "ghcr.io/y-scope/clp/" + self.execution_container
 
     def load_database_credentials_from_file(self):
         config = read_yaml_config_file(self.credentials_file_path)
