@@ -136,8 +136,11 @@ tasks:
     cmds:
       - "mkdir -p '{{.CORE_COMPONENT_BUILD_DIR}}'"
       - "cmake -S '{{.SRC_DIR}}' -B '{{.CORE_COMPONENT_BUILD_DIR}}'"
-      - "cmake --build '{{.CORE_COMPONENT_BUILD_DIR}}' --parallel --target clg clo clp clp-s \
-        reducer-server"
+      - >-
+        cmake
+        --build "{{.CORE_COMPONENT_BUILD_DIR}}"
+        --parallel
+        --target clg clo clp clp-s reducer-server
     sources:
       - "{{.BUILD_DIR}}/core-submodules.md5"
       - "{{.SRC_DIR}}/cmake/**/*"
