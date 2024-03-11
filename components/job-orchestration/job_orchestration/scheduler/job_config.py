@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 
 class PathsToCompress(BaseModel):
@@ -46,4 +46,10 @@ class SearchConfig(BaseModel):
     end_timestamp: typing.Optional[int] = None
     ignore_case: bool = False
     path_filter: typing.Optional[str] = None
+    network_address: typing.Optional[typing.Tuple[str, str]] = None
     aggregation_config: typing.Optional[AggregationConfig] = None
+
+    @validator("network_address")
+    def validate_network_address(cls, field):
+        if field is not None and (field[1] < 0 or field[1] > 65535):
+            raise ValueError("Invalid port number")

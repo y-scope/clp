@@ -17,59 +17,8 @@ from job_orchestration.scheduler.scheduler_data import SearchTaskResult
 logger = get_task_logger(__name__)
 
 
-def make_clo_command(
-    clp_home: Path,
-    archive_path: Path,
-    search_config: SearchConfig,
-    results_cache_uri: str,
-    results_collection: str,
-):
-    # fmt: off
-    search_cmd = [
-        str(clp_home / "bin" / "clo"),
-        str(archive_path),
-        search_config.query_string,
-    ]
-    # fmt: on
-
-    if search_config.begin_timestamp is not None:
-        search_cmd.append("--tge")
-        search_cmd.append(str(search_config.begin_timestamp))
-    if search_config.end_timestamp is not None:
-        search_cmd.append("--tle")
-        search_cmd.append(str(search_config.end_timestamp))
-    if search_config.ignore_case:
-        search_cmd.append("--ignore-case")
-    if search_config.path_filter is not None:
-        search_cmd.append("--file-path")
-        search_cmd.append(search_config.path_filter)
-
-    if search_config.aggregation_config is not None:
-        aggregation_config = search_config.aggregation_config
-
-        if aggregation_config.do_count_aggregation is not None:
-            search_cmd.append("--count")
-
-        search_cmd.append("reducer")
-        search_cmd.append("--host")
-        search_cmd.append(aggregation_config.reducer_host)
-        search_cmd.append("--port")
-        search_cmd.append(str(aggregation_config.reducer_port))
-        search_cmd.append("--job-id")
-        search_cmd.append(str(aggregation_config.job_id))
-    else:
-        search_cmd.append("results-cache")
-        search_cmd.append("--uri")
-        search_cmd.append(results_cache_uri)
-        search_cmd.append("--collection")
-        search_cmd.append(results_collection)
-        search_cmd.append("--max-num-results")
-        search_cmd.append(str(search_config.max_num_results))
-
-    return search_cmd
-
-
-def make_clp_s_command(
+def make_command(
+    storage_engine: str,
     clp_home: Path,
     archives_dir: Path,
     archive_id: str,
@@ -77,48 +26,61 @@ def make_clp_s_command(
     results_cache_uri: str,
     results_collection: str,
 ):
-    # fmt: off
-    search_cmd = [
-        str(clp_home / "bin" / "clp-s"),
-        "s",
-        str(archives_dir),
-        "--archive-id", archive_id,
-        search_config.query_string,
-    ]
-    # fmt: on
+    if StorageEngine.CLP == storage_engine:
+        command = [str(clp_home / "bin" / "clo"), str(archives_dir / archive_id)]
+        if search_config.path_filter is not None:
+            command.append("--file-path")
+            command.append(search_config.path_filter)
+    elif StorageEngine.CLP_S == storage_engine:
+        command = [
+            str(clp_home / "bin" / "clp-s"),
+            "s",
+            str(archives_dir),
+            "--archive-id",
+            archive_id,
+        ]
+    else:
+        return []
 
+    command.append(search_config.query_string)
     if search_config.begin_timestamp is not None:
-        search_cmd.append("--tge")
-        search_cmd.append(str(search_config.begin_timestamp))
+        command.append("--tge")
+        command.append(str(search_config.begin_timestamp))
     if search_config.end_timestamp is not None:
-        search_cmd.append("--tle")
-        search_cmd.append(str(search_config.end_timestamp))
+        command.append("--tle")
+        command.append(str(search_config.end_timestamp))
     if search_config.ignore_case:
-        search_cmd.append("--ignore-case")
+        command.append("--ignore-case")
 
     if search_config.aggregation_config is not None:
         aggregation_config = search_config.aggregation_config
 
         if aggregation_config.do_count_aggregation is not None:
-            search_cmd.append("--count")
+            command.append("--count")
 
-        search_cmd.append("reducer")
-        search_cmd.append("--host")
-        search_cmd.append(aggregation_config.reducer_host)
-        search_cmd.append("--port")
-        search_cmd.append(str(aggregation_config.reducer_port))
-        search_cmd.append("--job-id")
-        search_cmd.append(str(aggregation_config.job_id))
+        command.append("reducer")
+        command.append("--host")
+        command.append(aggregation_config.reducer_host)
+        command.append("--port")
+        command.append(str(aggregation_config.reducer_port))
+        command.append("--job-id")
+        command.append(str(aggregation_config.job_id))
+    elif search_config.network_address is not None:
+        command.append("network")
+        command.append("--host")
+        command.append(search_config.network_address[0])
+        command.append("--port")
+        command.append(str(search_config.network_address[1]))
     else:
-        search_cmd.append("results-cache")
-        search_cmd.append("--uri")
-        search_cmd.append(results_cache_uri)
-        search_cmd.append("--collection")
-        search_cmd.append(results_collection)
-        search_cmd.append("--max-num-results")
-        search_cmd.append(str(search_config.max_num_results))
+        command.append("results-cache")
+        command.append("--uri")
+        command.append(results_cache_uri)
+        command.append("--collection")
+        command.append(results_collection)
+        command.append("--max-num-results")
+        command.append(str(search_config.max_num_results))
 
-    return search_cmd
+    return command
 
 
 @app.task(bind=True)
@@ -146,36 +108,28 @@ def search(
     logger.info(f"Started task for job {job_id}")
 
     search_config = SearchConfig.parse_obj(search_config_obj)
-    archive_path = archive_directory / archive_id
 
-    if StorageEngine.CLP == clp_storage_engine:
-        search_cmd = make_clo_command(
-            clp_home=clp_home,
-            archive_path=archive_path,
-            search_config=search_config,
-            results_cache_uri=results_cache_uri,
-            results_collection=job_id,
-        )
-    elif StorageEngine.CLP_S == clp_storage_engine:
-        search_cmd = make_clp_s_command(
-            clp_home=clp_home,
-            archives_dir=archive_directory,
-            archive_id=archive_id,
-            search_config=search_config,
-            results_cache_uri=results_cache_uri,
-            results_collection=job_id,
-        )
-    else:
+    search_command = make_command(
+        storage_engine=clp_storage_engine,
+        clp_home=clp_home,
+        archives_dir=archive_directory,
+        archive_id=archive_id,
+        search_config=search_config,
+        results_cache_uri=results_cache_uri,
+        results_collection=job_id,
+    )
+
+    if len(search_command) == 0:
         logger.error(f"Unsupported storage engine {clp_storage_engine}")
         return SearchTaskResult(
             success=False,
             task_id=task_id,
         ).dict()
 
-    logger.info(f'Running: {" ".join(search_cmd)}')
+    logger.info(f'Running: {" ".join(search_command)}')
     search_successful = False
     search_proc = subprocess.Popen(
-        search_cmd,
+        search_command,
         preexec_fn=os.setpgrp,
         close_fds=True,
         stdout=clo_log_file,

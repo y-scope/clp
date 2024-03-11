@@ -296,7 +296,10 @@ def handle_pending_search_jobs(
     for job in pending_jobs:
         job_id = job.id
 
-        if len(job.remaining_archives_for_search) > num_archives_to_search_per_sub_job:
+        if (
+            job.search_config.network_address is None
+            and len(job.remaining_archives_for_search) > num_archives_to_search_per_sub_job
+        ):
             archives_for_search = job.remaining_archives_for_search[
                 :num_archives_to_search_per_sub_job
             ]

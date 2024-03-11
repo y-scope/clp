@@ -5,6 +5,7 @@ import asyncio
 import logging
 import multiprocessing
 import pathlib
+import socket
 import sys
 import time
 from contextlib import closing
@@ -76,8 +77,8 @@ def create_and_monitor_job_in_db(
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
-    max_num_results: int,
     path_filter: str | None,
+    network_address: tuple[str, int],
     do_count_aggregation: bool | None,
 ):
     search_config = SearchConfig(
@@ -85,8 +86,9 @@ def create_and_monitor_job_in_db(
         begin_timestamp=begin_timestamp,
         end_timestamp=end_timestamp,
         ignore_case=ignore_case,
-        max_num_results=max_num_results,
+        max_num_results=0,  # unlimited number of results
         path_filter=path_filter,
+        network_address=network_address,
     )
     if do_count_aggregation is not None:
         search_config.aggregation_config = AggregationConfig(
@@ -127,23 +129,33 @@ def create_and_monitor_job_in_db(
 
             time.sleep(0.5)
 
-        with pymongo.MongoClient(results_cache.get_uri()) as client:
-            search_results_collection = client[results_cache.db_name][str(job_id)]
-            if max_num_results <= 0 or do_count_aggregation is not None:
-                cursor = search_results_collection.find()
-            else:
-                cursor = (
-                    search_results_collection.find().sort("timestamp", -1).limit(max_num_results)
-                )
-
-            if do_count_aggregation is not None:
-                for document in cursor:
+        if do_count_aggregation is not None:
+            with pymongo.MongoClient(results_cache.get_uri()) as client:
+                search_results_collection = client[results_cache.db_name][str(job_id)]
+                for document in search_results_collection.find():
                     print(
                         f"tags: {document['group_tags']} count: {document['records'][0]['count']}"
                     )
-            else:
-                for document in cursor:
-                    print(f"{document['original_path']}: {document['message']}", end="")
+
+
+async def worker_connection_handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+    try:
+        unpacker = msgpack.Unpacker()
+        while True:
+            # Read some data from the worker and feed it to msgpack
+            buf = await reader.read(1024)
+            if b"" == buf:
+                # Worker closed
+                return
+            unpacker.feed(buf)
+
+            # Print out any messages we can decode
+            for unpacked in unpacker:
+                print(f"{unpacked[0]}: {unpacked[2]}", end="")
+    except asyncio.CancelledError:
+        return
+    finally:
+        writer.close()
 
 
 async def do_search(
@@ -154,10 +166,30 @@ async def do_search(
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
-    max_num_results: int,
     path_filter: str | None,
     do_count_aggregation: bool | None,
 ):
+    host = None
+    for ip in set(socket.gethostbyname_ex(socket.gethostname())[2]):
+        host = ip
+        break
+    if host is None:
+        logger.error("Could not determine IP of local machine.")
+        return -1
+    try:
+        server = await asyncio.start_server(
+            client_connected_cb=worker_connection_handler,
+            host=host,
+            port=0,
+            family=socket.AF_INET,
+        )
+    except asyncio.CancelledError:
+        # Search cancelled
+        return
+    port = int(server.sockets[0].getsockname()[1])
+
+    server_task = asyncio.ensure_future(server.serve_forever())
+
     db_monitor_task = asyncio.ensure_future(
         run_function_in_process(
             create_and_monitor_job_in_db,
@@ -168,17 +200,27 @@ async def do_search(
             begin_timestamp,
             end_timestamp,
             ignore_case,
-            max_num_results,
             path_filter,
+            (host, port),
             do_count_aggregation,
         )
     )
 
     # Wait for the job to complete or an error to occur
+    pending = [server_task, db_monitor_task]
     try:
-        await db_monitor_task
+        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+        if db_monitor_task in done:
+            server.close()
+            await server.wait_closed()
+        else:
+            logger.error("server task unexpectedly returned")
+            db_monitor_task.cancel()
+            await db_monitor_task
     except asyncio.CancelledError:
-        pass
+        server.close()
+        await server.wait_closed()
+        await db_monitor_task
 
 
 def main(argv):
@@ -205,13 +247,6 @@ def main(argv):
         "--ignore-case",
         action="store_true",
         help="Ignore case distinctions between values in the query and the compressed data.",
-    )
-    args_parser.add_argument(
-        "--max-num-results",
-        "-m",
-        type=int,
-        default=1000,
-        help="Maximum number of latest results to return.",
     )
     args_parser.add_argument("--file-path", help="File to search.")
     args_parser.add_argument(
@@ -249,7 +284,6 @@ def main(argv):
             parsed_args.begin_time,
             parsed_args.end_time,
             parsed_args.ignore_case,
-            parsed_args.max_num_results,
             parsed_args.file_path,
             parsed_args.count,
         )
