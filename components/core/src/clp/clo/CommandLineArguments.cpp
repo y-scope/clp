@@ -219,9 +219,10 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             print_basic_usage();
             cerr << "OUTPUT_HANDLER is one of:" << endl;
-            cerr << "  " << cResultsCacheOutputHandlerName << " - Output to the results cache"
-                 << endl;
-            cerr << "  " << cReducerOutputHandlerName << " - Output to the reducer" << endl;
+            cerr << "  " << static_cast<char const*>(cResultsCacheOutputHandlerName)
+                 << " - Output to the results cache" << endl;
+            cerr << "  " << static_cast<char const*>(cReducerOutputHandlerName)
+                 << " - Output to the reducer" << endl;
             cerr << endl;
 
             cerr << "Examples:" << endl;
@@ -229,7 +230,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     R"( mongodb://127.0.0.1:27017/test "result" collection )"
                  << endl;
             cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
-                 << " " << cResultsCacheOutputHandlerName
+                 << " " << static_cast<char const*>(cResultsCacheOutputHandlerName)
                  << R"( --uri mongodb://127.0.0.1:27017/test --collection result)" << endl;
             cerr << endl;
 
@@ -312,9 +313,10 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         if (parsed_command_line_options.count("output-handler") == 0) {
             throw invalid_argument("OUTPUT_HANDLER not specified.");
         }
-        if (cReducerOutputHandlerName == output_handler_name) {
+        if (static_cast<char const*>(cReducerOutputHandlerName) == output_handler_name) {
             m_output_handler_type = OutputHandlerType::Reducer;
-        } else if (cResultsCacheOutputHandlerName == output_handler_name) {
+        } else if (static_cast<char const*>(cResultsCacheOutputHandlerName) == output_handler_name)
+        {
             m_output_handler_type = OutputHandlerType::ResultsCache;
         } else if (output_handler_name.empty()) {
             throw invalid_argument("OUTPUT_HANDLER cannot be an empty string.");
