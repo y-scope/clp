@@ -2,6 +2,8 @@ set(
         CLO_SOURCES
         ../BufferReader.cpp
         ../BufferReader.hpp
+        ../cli_utils.cpp
+        ../cli_utils.hpp
         ../database_utils.cpp
         ../database_utils.hpp
         ../Defs.h

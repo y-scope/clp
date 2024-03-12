@@ -2,13 +2,16 @@
 
 #include <fstream>
 #include <iostream>
+#include <string>
 #include <vector>
 
 #include <boost/program_options.hpp>
 
+#include "../cli_utils.hpp"
 #include "../reducer/types.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../version.hpp"
+#include "type_utils.hpp"
 
 namespace po = boost::program_options;
 using std::cerr;
@@ -95,11 +98,34 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     );
     // clang-format on
 
+    po::options_description options_reducer_output_handler("Reducer Output Handler Options");
+    options_reducer_output_handler.add_options()(
+            "host",
+            po::value<string>(&m_reducer_host)->value_name("HOST"),
+            "Host the reducer is running on"
+    )(
+            "port",
+            po::value<int>(&m_reducer_port)->value_name("PORT"),
+            "Port the reducer is listening on"
+    )(
+            "job-id",
+            po::value<reducer::job_id_t>(&m_job_id)->value_name("ID"),
+            "Job ID for the requested aggregation operation"
+    );
+
     po::options_description options_results_cache_output_handler(
             "Results Cache Output Handler Options"
     );
     // clang-format off
     options_results_cache_output_handler.add_options()(
+            "uri",
+            po::value<string>(&m_mongodb_uri),
+            "MongoDB URI for the results cache"
+    )(
+            "collection",
+            po::value<string>(&m_mongodb_collection),
+            "MongoDB collection to output to"
+    )(
             "batch-size,b",
             po::value<uint64_t>(&m_batch_size)->value_name("SIZE")->default_value(m_batch_size),
             "The number of documents to insert into MongoDB per batch"
@@ -108,31 +134,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             po::value<uint64_t>(&m_max_num_results)->value_name("NUM")->
                     default_value(m_max_num_results),
             "The maximum number of results to output"
-    )(
-            "mongodb-uri",
-            po::value<string>(&m_mongodb_uri),
-            "MongoDB URI to connect to"
-    )(
-            "mongodb-collection",
-            po::value<string>(&m_mongodb_collection),
-            "MongoDB collection to output to"
     );
     // clang-format on
-
-    po::options_description options_reducer_output_handler("Reducer Output Handler Options");
-    options_reducer_output_handler.add_options()(
-            "reducer-host",
-            po::value<string>(&m_reducer_host)->value_name("HOST"),
-            "Host the reducer is running on"
-    )(
-            "reducer-port",
-            po::value<int>(&m_reducer_port)->value_name("PORT"),
-            "Port the reducer is listening on"
-    )(
-            "job-id",
-            po::value<reducer::job_id_t>(&m_job_id)->value_name("ID"),
-            "Job ID for the requested aggregation operation"
-    );
 
     // Define visible options
     po::options_description visible_options;
@@ -223,7 +226,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                  << endl;
             cerr << "  " << get_program_name()
                  << R"( ARCHIVE_PATH " ERROR " results-cache)"
-                    R"( --mongodb-uri mongodb://127.0.0.1:27017/test --mongodb-collection result)"
+                    R"( --uri mongodb://127.0.0.1:27017/test --collection result)"
                  << endl;
             cerr << endl;
 
@@ -306,88 +309,36 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         if (parsed_command_line_options.count("output-handler") == 0) {
             throw invalid_argument("OUTPUT_HANDLER not specified.");
         }
-        if ("results-cache" == output_handler_name) {
-            m_output_handler = OutputHandler::ResultsCache;
-        } else if ("reducer" == output_handler_name) {
+        if ("reducer" == output_handler_name) {
             m_output_handler = OutputHandler::Reducer;
+        } else if ("results-cache" == output_handler_name) {
+            m_output_handler = OutputHandler::ResultsCache;
         } else if (output_handler_name.empty()) {
             throw invalid_argument("OUTPUT_HANDLER cannot be an empty string.");
         } else {
             throw invalid_argument("Unknown OUTPUT_HANDLER: " + output_handler_name);
         }
 
-        if (OutputHandler::ResultsCache == m_output_handler) {
-            auto unrecognized_options
-                    = po::collect_unrecognized(parsed.options, po::include_positional);
-            unrecognized_options.erase(unrecognized_options.begin());
-
-            po::store(
-                    po::command_line_parser(unrecognized_options)
-                            .options(options_results_cache_output_handler)
-                            .run(),
-                    parsed_command_line_options
-            );
-
-            notify(parsed_command_line_options);
-
-            // Validate batch size
-            if (m_batch_size == 0) {
-                throw invalid_argument("Batch size cannot be 0.");
-            }
-
-            // Validate max number of results
-            if (m_max_num_results == 0) {
-                throw invalid_argument("Max number of results cannot be 0.");
-            }
-
-            // Validate mongodb uri was specified
-            if (parsed_command_line_options.count("mongodb-uri") == 0) {
-                throw invalid_argument("mongodb-uri must be specified.");
-            }
-            if (m_mongodb_uri.empty()) {
-                throw invalid_argument("mongodb-uri cannot be an empty string.");
-            }
-
-            // Validate mongodb collection was specified
-            if (parsed_command_line_options.count("mongodb-collection") == 0) {
-                throw invalid_argument("mongodb-collection must be specified.");
-            }
-            if (m_mongodb_collection.empty()) {
-                throw invalid_argument("mongodb-collection cannot be an empty string.");
-            }
-        } else if (OutputHandler::Reducer == m_output_handler) {
-            auto unrecognized_options
-                    = po::collect_unrecognized(parsed.options, po::include_positional);
-            unrecognized_options.erase(unrecognized_options.begin());
-            po::store(
-                    po::command_line_parser(unrecognized_options)
-                            .options(options_reducer_output_handler)
-                            .run(),
-                    parsed_command_line_options
-            );
-
-            notify(parsed_command_line_options);
-
-            if (parsed_command_line_options.count("reducer-host") == 0) {
-                throw invalid_argument("reducer-host must be specified.");
-            }
-            if (m_reducer_host.empty()) {
-                throw invalid_argument("reducer-host cannot be an empty string.");
-            }
-
-            if (parsed_command_line_options.count("reducer-port") == 0) {
-                throw invalid_argument("reducer-port must be specified.");
-            }
-            if (m_reducer_port <= 0) {
-                throw invalid_argument("reducer-port must be greater than zero.");
-            }
-
-            if (parsed_command_line_options.count("job-id") == 0) {
-                throw invalid_argument("job-id must be specified.");
-            }
-            if (m_job_id < 0) {
-                throw invalid_argument("job-id cannot be negative.");
-            }
+        switch (m_output_handler) {
+            case OutputHandler::Reducer:
+                parse_reducer_output_handler_options(
+                        options_reducer_output_handler,
+                        parsed.options,
+                        parsed_command_line_options
+                );
+                break;
+            case OutputHandler::ResultsCache:
+                parse_results_cache_output_handler_options(
+                        options_results_cache_output_handler,
+                        parsed.options,
+                        parsed_command_line_options
+                );
+                break;
+            default:
+                throw invalid_argument(
+                        "Unhandled OutputHandlerType="
+                        + std::to_string(enum_to_underlying_type(m_output_handler))
+                );
         }
 
         if (m_do_count_results_aggregation && OutputHandler::Reducer != m_output_handler) {
@@ -403,6 +354,67 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     }
 
     return ParsingResult::Success;
+}
+
+void CommandLineArguments::parse_reducer_output_handler_options(
+        po::options_description const& options_description,
+        vector<po::option> const& options,
+        po::variables_map& parsed_options
+) {
+    parse_unrecognized_options(options_description, options, parsed_options);
+
+    if (parsed_options.count("host") == 0) {
+        throw invalid_argument("host must be specified.");
+    }
+    if (m_reducer_host.empty()) {
+        throw invalid_argument("host cannot be an empty string.");
+    }
+
+    if (parsed_options.count("port") == 0) {
+        throw invalid_argument("port must be specified.");
+    }
+    if (m_reducer_port <= 0) {
+        throw invalid_argument("port must be greater than zero.");
+    }
+
+    if (parsed_options.count("job-id") == 0) {
+        throw invalid_argument("job-id must be specified.");
+    }
+    if (m_job_id < 0) {
+        throw invalid_argument("job-id cannot be negative.");
+    }
+}
+
+void CommandLineArguments::parse_results_cache_output_handler_options(
+        po::options_description const& options_description,
+        vector<po::option> const& options,
+        po::variables_map& parsed_options
+) {
+    parse_unrecognized_options(options_description, options, parsed_options);
+
+    // Validate mongodb uri was specified
+    if (parsed_options.count("uri") == 0) {
+        throw invalid_argument("uri must be specified.");
+    }
+    if (m_mongodb_uri.empty()) {
+        throw invalid_argument("uri cannot be an empty string.");
+    }
+
+    // Validate mongodb collection was specified
+    if (parsed_options.count("collection") == 0) {
+        throw invalid_argument("collection must be specified.");
+    }
+    if (m_mongodb_collection.empty()) {
+        throw invalid_argument("collection cannot be an empty string.");
+    }
+
+    if (0 == m_batch_size) {
+        throw invalid_argument("batch-size cannot be 0.");
+    }
+
+    if (0 == m_max_num_results) {
+        throw invalid_argument("max-num-results cannot be 0.");
+    }
 }
 
 void CommandLineArguments::print_basic_usage() const {
