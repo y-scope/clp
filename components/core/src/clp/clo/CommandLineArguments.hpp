@@ -18,7 +18,7 @@ namespace clp::clo {
 class CommandLineArguments : public CommandLineArgumentsBase {
 public:
     // Types
-    enum class OutputHandler : uint8_t {
+    enum class OutputHandlerType : uint8_t {
         Reducer = 0,
         ResultsCache,
     };
@@ -108,7 +108,7 @@ private:
     reducer::job_id_t m_job_id{-1};
     bool m_do_count_results_aggregation{false};
 
-    OutputHandler m_output_handler{OutputHandler::ResultsCache};
+    OutputHandlerType m_output_handler_type{OutputHandlerType::ResultsCache};
 };
 }  // namespace clp::clo
 

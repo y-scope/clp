@@ -310,24 +310,24 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             throw invalid_argument("OUTPUT_HANDLER not specified.");
         }
         if ("reducer" == output_handler_name) {
-            m_output_handler = OutputHandler::Reducer;
+            m_output_handler_type = OutputHandlerType::Reducer;
         } else if ("results-cache" == output_handler_name) {
-            m_output_handler = OutputHandler::ResultsCache;
+            m_output_handler_type = OutputHandlerType::ResultsCache;
         } else if (output_handler_name.empty()) {
             throw invalid_argument("OUTPUT_HANDLER cannot be an empty string.");
         } else {
             throw invalid_argument("Unknown OUTPUT_HANDLER: " + output_handler_name);
         }
 
-        switch (m_output_handler) {
-            case OutputHandler::Reducer:
+        switch (m_output_handler_type) {
+            case OutputHandlerType::Reducer:
                 parse_reducer_output_handler_options(
                         options_reducer_output_handler,
                         parsed.options,
                         parsed_command_line_options
                 );
                 break;
-            case OutputHandler::ResultsCache:
+            case OutputHandlerType::ResultsCache:
                 parse_results_cache_output_handler_options(
                         options_results_cache_output_handler,
                         parsed.options,
@@ -337,16 +337,16 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             default:
                 throw invalid_argument(
                         "Unhandled OutputHandlerType="
-                        + std::to_string(enum_to_underlying_type(m_output_handler))
+                        + std::to_string(enum_to_underlying_type(m_output_handler_type))
                 );
         }
 
-        if (m_do_count_results_aggregation && OutputHandler::Reducer != m_output_handler) {
+        if (m_do_count_results_aggregation && OutputHandlerType::Reducer != m_output_handler_type) {
             throw invalid_argument(
                     "Aggregations are only supported with the reducer output handler."
             );
         } else if ((false == m_do_count_results_aggregation
-                    && OutputHandler::Reducer == m_output_handler))
+                    && OutputHandlerType::Reducer == m_output_handler_type))
         {
             throw invalid_argument(
                     "The reducer output handler currently only supports the count aggregation."
