@@ -203,7 +203,7 @@ private:
  */
 class CountOutputHandler : public OutputHandler {
 public:
-    // Constructor
+    // Constructors
     CountOutputHandler(int reducer_socket_fd);
 
     // Methods inherited from OutputHandler
