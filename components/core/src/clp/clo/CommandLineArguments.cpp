@@ -345,6 +345,12 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             throw invalid_argument(
                     "Aggregations are only supported with the reducer output handler."
             );
+        } else if ((false == m_do_count_results_aggregation
+                    && OutputHandler::Reducer == m_output_handler))
+        {
+            throw invalid_argument(
+                    "The reducer output handler currently only supports the count aggregation."
+            );
         }
     } catch (exception& e) {
         SPDLOG_ERROR("{}", e.what());

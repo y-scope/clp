@@ -1,6 +1,7 @@
 #ifndef CLP_CLO_COMMANDLINEARGUMENTS_HPP
 #define CLP_CLO_COMMANDLINEARGUMENTS_HPP
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -17,7 +18,7 @@ namespace clp::clo {
 class CommandLineArguments : public CommandLineArgumentsBase {
 public:
     // Types
-    enum class OutputHandler : char {
+    enum class OutputHandler : uint8_t {
         Reducer = 0,
         ResultsCache,
     };

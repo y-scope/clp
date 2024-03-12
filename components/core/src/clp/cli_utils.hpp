@@ -20,6 +20,6 @@ void parse_unrecognized_options(
         std::vector<boost::program_options::option> const& options,
         boost::program_options::variables_map& parsed_options
 );
-}
+}  // namespace clp
 
 #endif  // CLP_CLI_UTILS_HPP
