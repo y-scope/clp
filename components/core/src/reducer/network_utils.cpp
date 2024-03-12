@@ -2,11 +2,16 @@
 
 #include <unistd.h>
 
-#include <cstring>
+#include <cstddef>
+#include <memory>
+#include <string>
 
+#include "../clp/ErrorCode.hpp"
 #include "../clp/networking/socket_utils.hpp"
 #include "BufferedSocketWriter.hpp"
 #include "DeserializedRecordGroup.hpp"
+#include "RecordGroupIterator.hpp"
+#include "types.hpp"
 
 namespace reducer {
 int connect_to_reducer(std::string const& host, int port, job_id_t job_id) {
@@ -27,7 +32,7 @@ int connect_to_reducer(std::string const& host, int port, job_id_t job_id) {
     }
 
     char ret{0};
-    size_t bytes_received = 0;
+    size_t bytes_received{0};
     ecode = clp::networking::try_receive(reducer_socket_fd, &ret, sizeof(ret), bytes_received);
     if (clp::ErrorCode::ErrorCode_Success != ecode || sizeof(ret) != bytes_received
         || cConnectionAcceptedResponse != ret)
@@ -40,13 +45,13 @@ int connect_to_reducer(std::string const& host, int port, job_id_t job_id) {
 }
 
 bool send_pipeline_results(int reducer_socket_fd, std::unique_ptr<RecordGroupIterator> results) {
-    constexpr int buf_size = 1024;
-    BufferedSocketWriter buffered_writer(reducer_socket_fd, buf_size);
+    constexpr int cBufSize = 1024;
+    BufferedSocketWriter buffered_writer{reducer_socket_fd, cBufSize};
 
     for (; false == results->done(); results->next()) {
         auto& group = results->get();
         auto serialized_result = serialize(group.get_tags(), group.record_iter());
-        size_t serialized_result_size = serialized_result.size();
+        auto serialized_result_size = serialized_result.size();
 
         // Send size
         if (false

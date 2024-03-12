@@ -13,7 +13,7 @@ namespace reducer {
  * @param host
  * @param port
  * @param job_id
- * @return socket fd for the reducer on success
+ * @return Socket file descriptor for the reducer on success
  * @return -1 on any error
  */
 int connect_to_reducer(std::string const& host, int port, job_id_t job_id);
