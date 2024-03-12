@@ -305,7 +305,6 @@ class WebUi(BaseModel):
 
 class CLPConfig(BaseModel):
     execution_container: typing.Optional[str]
-    _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
 
     input_logs_directory: pathlib.Path = pathlib.Path("/")
 
@@ -325,13 +324,15 @@ class CLPConfig(BaseModel):
     data_directory: pathlib.Path = pathlib.Path("var") / "data"
     logs_directory: pathlib.Path = pathlib.Path("var") / "log"
 
+    _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
+
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
-        self._os_release_file_path = make_config_path_absolute(clp_home, self._os_release_file_path)
         self.input_logs_directory = make_config_path_absolute(clp_home, self.input_logs_directory)
         self.credentials_file_path = make_config_path_absolute(clp_home, self.credentials_file_path)
         self.archive_output.make_config_paths_absolute(clp_home)
         self.data_directory = make_config_path_absolute(clp_home, self.data_directory)
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
+        self._os_release_file_path = make_config_path_absolute(clp_home, self._os_release_file_path)
 
     def validate_input_logs_dir(self):
         # NOTE: This can't be a pydantic validator since input_logs_dir might be a package-relative
@@ -416,7 +417,6 @@ class CLPConfig(BaseModel):
         d = self.dict()
         d["archive_output"] = self.archive_output.dump_to_primitive_dict()
         # Turn paths into primitive strings
-        d["os_release_file_path"] = str(self._os_release_file_path)
         d["input_logs_directory"] = str(self.input_logs_directory)
         d["credentials_file_path"] = str(self.credentials_file_path)
         d["data_directory"] = str(self.data_directory)
