@@ -63,6 +63,8 @@ public:
 
     bool do_count_results_aggregation() const { return m_do_count_results_aggregation; }
 
+    OutputHandlerType get_output_handler_type() const { return m_output_handler_type; }
+
 private:
     // Methods
     /**

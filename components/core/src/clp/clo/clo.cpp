@@ -251,25 +251,38 @@ int main(int argc, char const* argv[]) {
     mongocxx::instance mongocxx_instance{};
     std::unique_ptr<OutputHandler> output_handler;
     try {
-        if (command_line_args.do_count_results_aggregation()) {
-            auto reducer_socket_fd = reducer::connect_to_reducer(
-                    command_line_args.get_reducer_host(),
-                    command_line_args.get_reducer_port(),
-                    command_line_args.get_job_id()
-            );
-            if (-1 == reducer_socket_fd) {
-                SPDLOG_ERROR("Failed to connect to reducer");
-                return -1;
-            }
+        switch (command_line_args.get_output_handler_type()) {
+            case CommandLineArguments::OutputHandlerType::Reducer: {
+                auto reducer_socket_fd = reducer::connect_to_reducer(
+                        command_line_args.get_reducer_host(),
+                        command_line_args.get_reducer_port(),
+                        command_line_args.get_job_id()
+                );
+                if (-1 == reducer_socket_fd) {
+                    SPDLOG_ERROR("Failed to connect to reducer");
+                    return -1;
+                }
 
-            output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
-        } else {
-            output_handler = std::make_unique<ResultsCacheClient>(
-                    command_line_args.get_mongodb_uri(),
-                    command_line_args.get_mongodb_collection(),
-                    command_line_args.get_batch_size(),
-                    command_line_args.get_max_num_results()
-            );
+                if (command_line_args.do_count_results_aggregation()) {
+                    output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
+                } else {
+                    SPDLOG_ERROR("Unhandled aggregation type.");
+                    return -1;
+                }
+
+                break;
+            }
+            case CommandLineArguments::OutputHandlerType::ResultsCache:
+                output_handler = std::make_unique<ResultsCacheClient>(
+                        command_line_args.get_mongodb_uri(),
+                        command_line_args.get_mongodb_collection(),
+                        command_line_args.get_batch_size(),
+                        command_line_args.get_max_num_results()
+                );
+                break;
+            default:
+                SPDLOG_ERROR("Unhandled OutputHandlerType.");
+                return -1;
         }
     } catch (clp::TraceableException& e) {
         SPDLOG_ERROR("Failed to create output handler - {}", e.what());
