@@ -93,17 +93,20 @@ def make_clp_s_command(
         search_cmd.append("--ignore-case")
 
     if search_config.count is not None:
-        search_cmd.append("--reducer-host")
+        search_cmd.append("--count")
+
+        search_cmd.append("reducer")
+        search_cmd.append("--host")
         search_cmd.append(search_config.reducer_host)
-        search_cmd.append("--reducer-port")
+        search_cmd.append("--port")
         search_cmd.append(str(search_config.reducer_port))
         search_cmd.append("--job-id")
         search_cmd.append(str(search_config.job_id))
-        search_cmd.append("--count")
     else:
-        search_cmd.append("--mongodb-uri")
+        search_cmd.append("results-cache")
+        search_cmd.append("--uri")
         search_cmd.append(results_cache_uri)
-        search_cmd.append("--mongodb-collection")
+        search_cmd.append("--collection")
         search_cmd.append(results_collection)
         search_cmd.append("--max-num-results")
         search_cmd.append(str(search_config.max_num_results))

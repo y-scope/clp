@@ -61,12 +61,14 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
  * @param command_line_arguments
  * @param archive_dir
  * @param expr A copy of the search AST which may be modified
+ * @param reducer_socket_fd
  * @return Whether the search succeeded
  */
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::string const& archive_dir,
-        std::shared_ptr<Expression> expr
+        std::shared_ptr<Expression> expr,
+        int reducer_socket_fd
 );
 
 bool compress(CommandLineArguments const& command_line_arguments) {
@@ -205,22 +207,35 @@ bool search_archive(
 
     std::unique_ptr<OutputHandler> output_handler;
     try {
-        if (command_line_arguments.get_count()) {
-            output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
-        } else if (command_line_arguments.get_mongodb_enabled()) {
-            output_handler = std::make_unique<ResultsCacheOutputHandler>(
-                    command_line_arguments.get_mongodb_uri(),
-                    command_line_arguments.get_mongodb_collection(),
-                    command_line_arguments.get_batch_size(),
-                    command_line_arguments.get_max_num_results()
-            );
-        } else if (command_line_arguments.get_network_destination_enabled()) {
-            output_handler = std::make_unique<NetworkOutputHandler>(
-                    command_line_arguments.get_host(),
-                    command_line_arguments.get_port()
-            );
-        } else {
-            output_handler = std::make_unique<StandardOutputHandler>();
+        switch (command_line_arguments.get_output_handler_type()) {
+            case CommandLineArguments::OutputHandlerType::Network:
+                output_handler = std::make_unique<NetworkOutputHandler>(
+                        command_line_arguments.get_network_dest_host(),
+                        std::to_string(command_line_arguments.get_network_dest_port())
+                );
+                break;
+            case CommandLineArguments::OutputHandlerType::Reducer:
+                if (command_line_arguments.do_count_results_aggregation()) {
+                    output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
+                } else {
+                    SPDLOG_ERROR("Unhandled aggregation type.");
+                    return false;
+                }
+                break;
+            case CommandLineArguments::OutputHandlerType::ResultsCache:
+                output_handler = std::make_unique<ResultsCacheOutputHandler>(
+                        command_line_arguments.get_mongodb_uri(),
+                        command_line_arguments.get_mongodb_collection(),
+                        command_line_arguments.get_batch_size(),
+                        command_line_arguments.get_max_num_results()
+                );
+                break;
+            case CommandLineArguments::OutputHandlerType::Stdout:
+                output_handler = std::make_unique<StandardOutputHandler>();
+                break;
+            default:
+                SPDLOG_ERROR("Unhandled OutputHandlerType.");
+                return false;
         }
     } catch (clp_s::TraceableException& e) {
         SPDLOG_ERROR("Failed to create output handler - {}", e.what());
@@ -323,7 +338,9 @@ int main(int argc, char const* argv[]) {
         }
 
         int reducer_socket_fd{-1};
-        if (command_line_arguments.get_count()) {
+        if (command_line_arguments.get_output_handler_type()
+            == CommandLineArguments::OutputHandlerType::Reducer)
+        {
             reducer_socket_fd = reducer::connect_to_reducer(
                     command_line_arguments.get_reducer_host(),
                     command_line_arguments.get_reducer_port(),

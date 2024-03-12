@@ -2,6 +2,8 @@ add_subdirectory(search/kql)
 
 set(
         CLP_SOURCES
+        ../clp/cli_utils.cpp
+        ../clp/cli_utils.hpp
         ../clp/database_utils.cpp
         ../clp/database_utils.hpp
         ../clp/Defs.h
