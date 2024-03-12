@@ -160,11 +160,11 @@ class CompressionScheduler(BaseModel):
 
 
 class SearchScheduler(BaseModel):
+    host = "localhost"
+    port = 7000
     jobs_poll_delay: float = 0.1  # seconds
     num_archives_to_search_per_sub_job: int = 16
     logging_level: str = "INFO"
-    host = "localhost"
-    port = 7000
 
     @validator("logging_level")
     def validate_logging_level(cls, field):
@@ -174,7 +174,13 @@ class SearchScheduler(BaseModel):
     @validator("host")
     def validate_host(cls, field):
         if "" == field:
-            raise ValueError(f"{SEARCH_SCHEDULER_COMPONENT_NAME}.host cannot be empty.")
+            raise ValueError(f"Cannot be empty.")
+        return field
+
+    @validator("port")
+    def validate_port(cls, field):
+        if not field > 0:
+            raise ValueError(f"{field} is not greater than zero")
         return field
 
 
@@ -212,9 +218,9 @@ class Redis(BaseModel):
 
 
 class Reducer(BaseModel):
-    logging_level: str = "INFO"
     base_port: int = 14009
-    polling_interval: int = 100
+    logging_level: str = "INFO"
+    polling_interval: int = 100  # milliseconds
 
     @validator("logging_level")
     def validate_logging_level(cls, field):
@@ -224,13 +230,13 @@ class Reducer(BaseModel):
     @validator("base_port")
     def validate_base_port(cls, field):
         if not field > 0:
-            raise ValueError(f"{cls.__name__}: base port {field} is not a valid value")
+            raise ValueError(f"{field} is not greater than zero")
         return field
 
     @validator("polling_interval")
     def validate_polling_interval(cls, field):
         if not field > 0:
-            raise ValueError(f"{cls.__name__}: polling interval {field} must be greater than zero")
+            raise ValueError(f"{field} is not greater than zero")
         return field
 
 
