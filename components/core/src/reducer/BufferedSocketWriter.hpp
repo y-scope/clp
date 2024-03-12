@@ -1,5 +1,5 @@
-#ifndef REDUCER_BUFFERED_SOCKET_WRITER_HPP
-#define REDUCER_BUFFERED_SOCKET_WRITER_HPP
+#ifndef REDUCER_BUFFEREDSOCKETWRITER_HPP
+#define REDUCER_BUFFEREDSOCKETWRITER_HPP
 
 #include <cstddef>
 #include <cstdint>
@@ -19,14 +19,14 @@ public:
     /**
      * Appends data to an internal buffer and writes the contents of the buffer to the network
      * socket whenever the buffer becomes full.
-     * @param data the data being written
-     * @return whether the write was successful or not
+     * @param data The data to write
+     * @return Whether the write was successful
      */
     template <
             typename T,
             typename = std::enable_if_t<
-                    std::is_pod<T>::value && std::is_trivially_copyable<T>::value
-                    && sizeof(T) == sizeof(char)>>
+                    std::is_pod<T>::value
+                    && std::is_trivially_copyable_v<T> && sizeof(T) == sizeof(char)>>
     bool write(std::vector<T> const& data) {
         return write(reinterpret_cast<char const*>(data.data()), data.size());
     }
@@ -34,21 +34,28 @@ public:
     /**
      * Appends data to an internal buffer and writes the contents of the buffer to the network
      * socket whenever the buffer becomes full.
-     * @param data the data being written
-     * @param size the size of the data being written in bytes
-     * @return whether the write was successful or not
+     * @param data The data to write
+     * @param size The size, in bytes, of the data to write
+     * @return Whether the write was successful
      */
     bool write(char const* data, size_t size);
 
     /**
-     * Flushes the contents of the interal buffer to the network socket.
-     * @return whether the flush was successful or not
+     * Flushes the contents of the internal buffer to the network socket.
+     * @return Whether the flush was successful
      */
     bool flush();
 
 private:
+    /**
+     * Flushes the contents of the internal buffer to the network socket, but without checking if
+     * the buffer has data to flush.
+     * @return Whether the flush was successful
+     */
+    bool flush_unsafe();
+
     int m_socket_fd;
     std::vector<uint8_t> m_buffer;
 };
 }  // namespace reducer
-#endif  // REDUCER_BUFFERED_SOCKET_WRITER_HPP
+#endif  // REDUCER_BUFFEREDSOCKETWRITER_HPP

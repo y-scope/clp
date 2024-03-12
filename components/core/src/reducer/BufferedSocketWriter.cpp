@@ -1,5 +1,8 @@
 #include "BufferedSocketWriter.hpp"
 
+#include <cstddef>
+
+#include "../clp/ErrorCode.hpp"
 #include "../clp/networking/socket_utils.hpp"
 
 namespace reducer {
@@ -16,15 +19,10 @@ bool BufferedSocketWriter::write(char const* data, size_t size) {
             data += space_left;
             size -= space_left;
         }
-        auto ecode = clp::networking::try_send(
-                m_socket_fd,
-                reinterpret_cast<char const*>(m_buffer.data()),
-                m_buffer.size()
-        );
-        if (clp::ErrorCode::ErrorCode_Success != ecode) {
+        auto retval = flush_unsafe();
+        if (false == retval) {
             return false;
         }
-        m_buffer.clear();
     } while (size > m_buffer.capacity());
 
     if (size > 0) {
@@ -38,6 +36,10 @@ bool BufferedSocketWriter::flush() {
         return true;
     }
 
+    return flush_unsafe();
+}
+
+bool BufferedSocketWriter::flush_unsafe() {
     auto ecode = clp::networking::try_send(
             m_socket_fd,
             reinterpret_cast<char const*>(m_buffer.data()),
