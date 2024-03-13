@@ -13,17 +13,19 @@ from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logg
 from clp_py_utils.core import read_yaml_config_file
 from pydantic import ValidationError
 
-# Setup logging
 logger = get_logger("reducer")
 
 
 def main(argv: List[str]) -> int:
-    # fmt: off
     args_parser = argparse.ArgumentParser(description="Spin up reducers.")
-    args_parser.add_argument('--config', '-c', required=True, help='CLP configuration file.')
-    args_parser.add_argument('--host', required=True, help='Host ip this container is running on')
-    args_parser.add_argument('--concurrency', required=True, help='Number of reducer servers to run')
-    args_parser.add_argument('--polling-interval-ms', required=True, help='Database polling interval in ms')
+    args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
+    args_parser.add_argument("--host", required=True, help="Host that the reducers should bind to")
+    args_parser.add_argument(
+        "--concurrency", required=True, help="Number of reducer servers to run"
+    )
+    args_parser.add_argument(
+        "--polling-interval-ms", required=True, help="Database polling interval in ms"
+    )
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -35,8 +37,7 @@ def main(argv: List[str]) -> int:
     logger.addHandler(logging_file_handler)
 
     # Update logging level based on config
-    logging_level_str = os.getenv("CLP_LOGGING_LEVEL")
-    set_logging_level(logger, logging_level_str)
+    set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
 
     # Load configuration
     config_path = Path(parsed_args.config)
@@ -44,13 +45,13 @@ def main(argv: List[str]) -> int:
         clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
     except ValidationError as err:
         logger.error(err)
-        return -1
+        return 1
     except Exception as ex:
         logger.error(ex)
-        # read_yaml_config_file already logs the parsing error inside
-        return -1
+        return 1
 
     clp_home = Path(os.getenv("CLP_HOME"))
+    # fmt: off
     reducer_cmd = [
         str(clp_home / "bin" / "reducer-server"),
         "--scheduler-host", clp_config.search_scheduler.host,
@@ -60,6 +61,7 @@ def main(argv: List[str]) -> int:
         "--reducer-host", parsed_args.host,
         "--reducer-port",
     ]
+    # fmt: on
 
     reducers = []
     concurrency = max(int(parsed_args.concurrency), 1)
@@ -67,7 +69,7 @@ def main(argv: List[str]) -> int:
         reducer_instance_cmd = reducer_cmd + [str(clp_config.reducer.base_port + i)]
 
         log_file_path = logs_dir / ("reducer-" + str(i) + ".log")
-        log_file = open(log_file_path, 'a')
+        log_file = open(log_file_path, "a")
 
         reducers.append(
             subprocess.Popen(
@@ -78,13 +80,18 @@ def main(argv: List[str]) -> int:
             )
         )
 
-    logger.info("reducers started.")
-    logger.info(f"Host={parsed_args.host} Base port={clp_config.reducer.base_port} Concurrency={concurrency} Polling Interval={parsed_args.polling_interval_ms}")
-    for i in range(len(reducers)):
-        reducers[i].communicate()
-        logger.info(f"reducer-{i} exited with returncode={reducers[i].returncode}")
+    logger.info("Reducers started.")
+    logger.info(
+        f"Host={parsed_args.host}"
+        f" Base port={clp_config.reducer.base_port}"
+        f" Concurrency={concurrency}"
+        f" Polling Interval={parsed_args.polling_interval_ms}"
+    )
+    for i, reducer in enumerate(reducers):
+        reducer.communicate()
+        logger.info(f"reducer-{i} exited with returncode={reducer.returncode}")
 
-    logger.error("all reducers terminated")
+    logger.error("All reducers terminated")
 
     logger.removeHandler(logging_file_handler)
     logging_file_handler.close()
