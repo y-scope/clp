@@ -84,10 +84,11 @@ bool JsonFileIterator::read_new_json() {
 }
 
 size_t JsonFileIterator::skip_whitespace_and_get_truncated_bytes() {
-    for (;
-         m_next_document_position < m_buf_occupied && std::isspace(m_buf[m_next_document_position]);
-         ++m_next_document_position)
-    {}
+    while (m_next_document_position < m_buf_occupied
+           && std::isspace(m_buf[m_next_document_position]))
+    {
+        ++m_next_document_position;
+    }
     return m_buf_occupied - m_next_document_position;
 }
 
