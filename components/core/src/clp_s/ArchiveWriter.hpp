@@ -86,14 +86,14 @@ public:
     int32_t add_schema(Schema const& schema) { return m_schema_map.add_schema(schema); }
 
     /**
-     * Ingests a timestamp entry
+     * Ingests a timestamp entry from a string
      * @param key
      * @param node_id
      * @param timestamp
      * @param pattern_id
      * @return the epoch time corresponding to the string timestamp
      */
-    epochtime_t ingest_entry(
+    epochtime_t ingest_timestamp_entry(
             std::string const& key,
             int32_t node_id,
             std::string const& timestamp,
@@ -103,16 +103,16 @@ public:
     }
 
     /**
-     * Ingests a timestamp entry
+     * Ingests a timestamp entry from a number
      * @param column_key
      * @param node_id
      * @param timestamp
      */
-    void ingest_entry(std::string const& key, int32_t node_id, double timestamp) {
+    void ingest_timestamp_entry(std::string const& key, int32_t node_id, double timestamp) {
         m_timestamp_dict->ingest_entry(key, node_id, timestamp);
     }
 
-    void ingest_entry(std::string const& key, int32_t node_id, int64_t timestamp) {
+    void ingest_timestamp_entry(std::string const& key, int32_t node_id, int64_t timestamp) {
         m_timestamp_dict->ingest_entry(key, node_id, timestamp);
     }
 
@@ -139,12 +139,17 @@ private:
      * Stores the tables
      * @return Size of the compressed data in bytes
      */
-    size_t store_tables();
+    [[nodiscard]] size_t store_tables();
 
     /**
-     * Updates the archive's metadata
+     * Updates the metadata db with the archive's metadata (id, size, timestamp ranges, etc.)
      */
-    void update_metadata();
+    void update_metadata_db();
+
+    /**
+     * Prints the archive's statistics (id, uncompressed size, compressed size, etc.)
+     */
+    void print_archive_stats();
 
     size_t m_encoded_message_size{};
     size_t m_uncompressed_size{};

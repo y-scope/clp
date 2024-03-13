@@ -119,14 +119,16 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
 
                     m_current_parsed_message.add_value(node_id, i64_value);
                     if (matches_timestamp) {
-                        m_archive_writer->ingest_entry(m_timestamp_key, node_id, i64_value);
+                        m_archive_writer
+                                ->ingest_timestamp_entry(m_timestamp_key, node_id, i64_value);
                         matches_timestamp = may_match_timestamp = can_match_timestamp = false;
                     }
                 } else {
                     double double_value = line.get_double();
                     m_current_parsed_message.add_value(node_id, double_value);
                     if (matches_timestamp) {
-                        m_archive_writer->ingest_entry(m_timestamp_key, node_id, double_value);
+                        m_archive_writer
+                                ->ingest_timestamp_entry(m_timestamp_key, node_id, double_value);
                         matches_timestamp = may_match_timestamp = can_match_timestamp = false;
                     }
                 }
@@ -145,9 +147,12 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                             cur_key
                     );
                     uint64_t encoding_id{0};
-                    epochtime_t timestamp
-                            = m_archive_writer
-                                      ->ingest_entry(m_timestamp_key, node_id, value, encoding_id);
+                    epochtime_t timestamp = m_archive_writer->ingest_timestamp_entry(
+                            m_timestamp_key,
+                            node_id,
+                            value,
+                            encoding_id
+                    );
                     m_current_parsed_message.add_value(node_id, encoding_id, timestamp);
                     matches_timestamp = may_match_timestamp = can_match_timestamp = false;
                 } else if (value.find(' ') != std::string::npos) {

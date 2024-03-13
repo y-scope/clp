@@ -96,7 +96,7 @@ public:
      * @param compression_level
      * @return the compressed size of the SchemaTree in bytes
      */
-    size_t store(std::string const& archives_dir, int compression_level);
+    [[nodiscard]] size_t store(std::string const& archives_dir, int compression_level);
 
     /**
      * Clear the schema tree

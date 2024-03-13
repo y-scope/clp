@@ -26,20 +26,20 @@ public:
     TimestampDictionaryWriter() : m_is_open(false) {}
 
     /**
-     * Opens the global timestamp dictionary for writing
+     * Opens the timestamp dictionary for writing
      * @param dictionary_path
      * @param compression_level
      */
     void open(std::string const& dictionary_path, int compression_level);
 
     /**
-     * Closes the global timestamp dictionary
+     * Closes the timestamp dictionary
      * @return the compressed size of the global timestamp dictionary in bytes
      */
     [[nodiscard]] size_t close();
 
     /**
-     * Writes the global timestamp dictionary to disk
+     * Writes the timestamp dictionary to disk
      */
     void write_and_flush_to_disk();
 
@@ -93,12 +93,12 @@ public:
 
 private:
     /**
-     * Merges the timestamp ranges with the same key name
+     * Merges timestamp ranges with the same key name
      */
     void merge_range();
 
     /**
-     * Writes the timestamp entries to the disk
+     * Writes timestamp entries to the disk
      * @param ranges
      * @param compressor
      */

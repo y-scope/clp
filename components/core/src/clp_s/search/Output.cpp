@@ -38,13 +38,13 @@ void Output::filter() {
         }
     }
 
-    // Skip decompressing segment if it contains no
+    // Skip decompressing archive if it contains no
     // relevant schemas
     if (matched_schemas.empty()) {
         return;
     }
 
-    // Skip decompressing sub-archive if it won't match based on the timestamp
+    // Skip decompressing archive if it won't match based on the timestamp
     // range index
     EvaluateTimestampIndex timestamp_index(m_archive_reader->get_timestamp_dictionary());
     if (timestamp_index.run(top_level_expr) == EvaluatedValue::False) {
@@ -63,8 +63,6 @@ void Output::filter() {
         }
     }
 
-    m_string_query_map.clear();
-    m_string_var_match_map.clear();
     populate_string_queries(top_level_expr);
 
     std::string message;
