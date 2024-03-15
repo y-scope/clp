@@ -227,6 +227,7 @@ bool JsonParser::parse() {
     for (auto& file_path : m_file_paths) {
         JsonFileIterator json_file_iterator(file_path, m_max_document_size);
         if (false == json_file_iterator.is_open()) {
+            m_archive_writer->close();
             return false;
         }
 
@@ -236,6 +237,7 @@ bool JsonParser::parse() {
                     simdjson::error_message(json_file_iterator.get_error()),
                     file_path
             );
+            m_archive_writer->close();
             return false;
         }
 
@@ -254,6 +256,7 @@ bool JsonParser::parse() {
             // need to check both here.
             if (is_scalar_result.error() || true == is_scalar_result.value()) {
                 SPDLOG_ERROR("Encountered non-json-object while trying to parse {}", file_path);
+                m_archive_writer->close();
                 return false;
             }
             parse_line(ref.value(), -1, "root");
@@ -279,6 +282,7 @@ bool JsonParser::parse() {
                     simdjson::error_message(json_file_iterator.get_error()),
                     file_path
             );
+            m_archive_writer->close();
             return false;
         } else if (json_file_iterator.truncated_bytes() > 0) {
             // currently don't treat truncated bytes at the end of the file as an error
