@@ -91,7 +91,7 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     auto const& db_config_container = command_line_arguments.get_metadata_db_config();
     if (db_config_container.has_value()) {
         auto const& db_config = db_config_container.value();
-        auto metadata_db = std::make_shared<clp::GlobalMySQLMetadataDB>(
+        option.metadata_db = std::make_shared<clp::GlobalMySQLMetadataDB>(
                 db_config.get_metadata_db_host(),
                 db_config.get_metadata_db_port(),
                 db_config.get_metadata_db_username(),
@@ -99,9 +99,6 @@ bool compress(CommandLineArguments const& command_line_arguments) {
                 db_config.get_metadata_db_name(),
                 db_config.get_metadata_table_prefix()
         );
-        option.metadata_db = std::move(metadata_db);
-    } else {
-        option.metadata_db = nullptr;
     }
 
     clp_s::JsonParser parser(option);
@@ -113,7 +110,6 @@ bool compress(CommandLineArguments const& command_line_arguments) {
 
 void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_option) {
     clp_s::JsonConstructor constructor(json_constructor_option);
-    constructor.construct();
     constructor.store();
 }
 

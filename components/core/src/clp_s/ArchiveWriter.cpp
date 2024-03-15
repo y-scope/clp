@@ -3,6 +3,7 @@
 #include <json/single_include/nlohmann/json.hpp>
 
 #include "archive_constants.hpp"
+#include "Defs.hpp"
 #include "SchemaTree.hpp"
 
 namespace clp_s {
@@ -51,7 +52,9 @@ void ArchiveWriter::close() {
     m_compressed_size += store_tables();
 
     if (m_metadata_db) {
+        m_metadata_db->open();
         update_metadata_db();
+        m_metadata_db->close();
     }
 
     if (m_print_archive_stats) {

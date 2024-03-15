@@ -38,14 +38,11 @@ JsonConstructor::JsonConstructor(JsonConstructorOption const& option)
     }
 }
 
-void JsonConstructor::construct() {
-    m_archive_reader = std::make_unique<ArchiveReader>();
-}
-
 void JsonConstructor::store() {
     FileWriter writer;
     writer.open(m_output_dir + "/original", FileWriter::OpenMode::CreateIfNonexistentForAppending);
 
+    m_archive_reader = std::make_unique<ArchiveReader>();
     m_archive_reader->open(m_archives_dir);
     m_archive_reader->read_dictionaries_and_metadata();
     m_archive_reader->store(writer);

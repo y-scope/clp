@@ -44,11 +44,6 @@ public:
     explicit JsonConstructor(JsonConstructorOption const& option);
 
     /**
-     * Reads the schema information
-     */
-    void construct();
-
-    /**
      * Decompresses each archive and stores the decompressed files in the output directory
      */
     void store();
