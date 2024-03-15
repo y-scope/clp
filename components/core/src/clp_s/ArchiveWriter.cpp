@@ -52,9 +52,7 @@ void ArchiveWriter::close() {
     m_compressed_size += store_tables();
 
     if (m_metadata_db) {
-        m_metadata_db->open();
         update_metadata_db();
-        m_metadata_db->close();
     }
 
     if (m_print_archive_stats) {
@@ -159,6 +157,7 @@ size_t ArchiveWriter::store_tables() {
 }
 
 void ArchiveWriter::update_metadata_db() {
+    m_metadata_db->open();
     clp::streaming_archive::ArchiveMetadata metadata(
             cArchiveFormatDevelopmentVersionFlag,
             "",
@@ -172,6 +171,7 @@ void ArchiveWriter::update_metadata_db() {
     );
 
     m_metadata_db->add_archive(m_id, metadata);
+    m_metadata_db->close();
 }
 
 void ArchiveWriter::print_archive_stats() {

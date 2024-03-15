@@ -37,11 +37,7 @@ public:
             : m_metadata_db(std::move(metadata_db)) {}
 
     // Destructor
-    ~ArchiveWriter() {
-        if (m_metadata_db) {
-            m_metadata_db->close();
-        }
-    }
+    ~ArchiveWriter() = default;
 
     /**
      * Opens the archive writer
