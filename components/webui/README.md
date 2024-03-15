@@ -25,7 +25,7 @@ package:
 3. Stop the webui instance started by the package: `<clp-package>/sbin/stop-clp.sh webui`
 4. Start the webui using meteor (refer to `<clp-package>/etc/clp-config.yml` for the config values):
    ```shell
-   MONGO_URL="mongodb://localhost:<results_cache.port>/<results_cache.db_name>" \
+   MONGO_URL="mongodb://<results_cache.host>:<results_cache.port>/<results_cache.db_name>" \
    ROOT_URL="http://<webui.host>:<webui.port>"                                  \
    CLP_DB_USER="<database.user>"                                                \
    CLP_DB_PASS="<database.password>"                                            \
