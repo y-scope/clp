@@ -89,9 +89,11 @@ public:
      * Reads a table from the archive.
      * @param schema_id
      * @param should_extract_timestamp
+     * @param should_marshal_records
      * @return the schema reader
      */
-    std::unique_ptr<SchemaReader> read_table(int32_t schema_id, bool should_extract_timestamp);
+    std::unique_ptr<SchemaReader>
+    read_table(int32_t schema_id, bool should_extract_timestamp, bool should_marshal_records);
 
     /**
      * Writes decoded messages to a file.
@@ -114,10 +116,14 @@ private:
     /**
      * Creates a schema reader for a given schema.
      * @param schema_id
-     * @param extract_timestamp
+     * @param should_extract_timestamp
+     * @param should_marshal_records
      */
-    std::unique_ptr<SchemaReader>
-    create_schema_reader(int32_t schema_id, bool should_extract_timestamp);
+    std::unique_ptr<SchemaReader> create_schema_reader(
+            int32_t schema_id,
+            bool should_extract_timestamp,
+            bool should_marshal_records
+    );
 
     /**
      * Appends a column to the schema reader.

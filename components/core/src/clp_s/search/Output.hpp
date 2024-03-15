@@ -39,7 +39,8 @@ public:
               m_archives_dir(std::move(archives_dir)),
               m_timestamp_dict(std::move(timestamp_dict)),
               m_output_handler(std::move(output_handler)),
-              m_ignore_case(ignore_case) {}
+              m_ignore_case(ignore_case),
+              m_should_marshal_records(output_handler->should_marshal_records()) {}
 
     /**
      * Filters messages from all archives
@@ -52,6 +53,7 @@ private:
     std::string m_archives_dir;
     std::unique_ptr<OutputHandler> m_output_handler;
     bool m_ignore_case;
+    bool m_should_marshal_records{true};
 
     // variables for the current schema being filtered
     std::vector<BaseColumnReader*> m_searched_columns;
