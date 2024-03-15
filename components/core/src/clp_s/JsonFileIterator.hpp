@@ -18,10 +18,12 @@ public:
      * The buffer is padded to be SIMDJSON_PADDING bytes larger than the specified size.
 
      * @param file_name the file containing JSON
+     * @param max_document_size the maximum allowed size of a single document
      * @param buf_size the initial buffer size
      */
     explicit JsonFileIterator(
             std::string const& file_name,
+            size_t max_document_size,
             size_t buf_size = 1024 * 1024 /*1MB default*/
     );
     ~JsonFileIterator();
@@ -74,12 +76,14 @@ private:
     size_t m_bytes_read{0};
     size_t m_buf_size{0};
     size_t m_buf_occupied{0};
+    size_t m_max_document_size{0};
     char* m_buf{nullptr};
     FileReader m_reader;
     simdjson::ondemand::parser m_parser;
     simdjson::ondemand::document_stream m_stream;
     bool m_eof{false};
     bool m_first_read{true};
+    bool m_first_doc_in_buffer{false};
     simdjson::ondemand::document_stream::iterator m_doc_it;
     simdjson::error_code m_error_code{simdjson::error_code::SUCCESS};
 };

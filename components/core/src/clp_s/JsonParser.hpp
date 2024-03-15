@@ -30,6 +30,7 @@ struct JsonParserOption {
     std::string timestamp_key;
     std::string archives_dir;
     size_t target_encoded_size;
+    size_t max_document_size;
     int compression_level;
 };
 
@@ -115,6 +116,7 @@ private:
     boost::uuids::random_generator m_generator;
     std::unique_ptr<ArchiveWriter> m_archive_writer;
     size_t m_target_encoded_size;
+    size_t m_max_document_size;
 
     size_t m_uncompressed_size{0};
     size_t m_compressed_size{0};

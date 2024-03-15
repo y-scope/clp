@@ -6,8 +6,13 @@
 #include <spdlog/spdlog.h>
 
 namespace clp_s {
-JsonFileIterator::JsonFileIterator(std::string const& file_name, size_t buf_size)
+JsonFileIterator::JsonFileIterator(
+        std::string const& file_name,
+        size_t max_document_size,
+        size_t buf_size
+)
         : m_buf_size(buf_size),
+          m_max_document_size(max_document_size),
           m_buf(new char[buf_size + simdjson::SIMDJSON_PADDING]) {
     try {
         m_reader.open(file_name);
@@ -27,6 +32,7 @@ JsonFileIterator::~JsonFileIterator() {
 }
 
 bool JsonFileIterator::read_new_json() {
+    m_first_doc_in_buffer = true;
     do {
         if (m_truncated_bytes == m_buf_size) {
             // double buffer size to attempt to capture long json object
@@ -73,8 +79,14 @@ bool JsonFileIterator::read_new_json() {
         }
 
         m_doc_it = m_stream.begin();
-        // only implements != so this is equivalent to "if no JSON is available from the buffer"
+        // Only implements != so this is equivalent to "if no JSON is available from the buffer"
         if (false == (m_doc_it != m_stream.end())) {
+            // Only allow documents to be up to a certain size so we can conserve memory in
+            // exceptional circumstances
+            if (m_buf_occupied > m_max_document_size) {
+                m_error_code = simdjson::error_code::CAPACITY;
+                return false;
+            }
             m_truncated_bytes = m_buf_occupied;
         } else {
             return true;
@@ -111,6 +123,7 @@ bool JsonFileIterator::get_json(simdjson::ondemand::document_stream::iterator& i
                 // the last valid document and before the end of the buffer are naturally the
                 // truncated bytes for the current buffer.
                 m_next_document_position = m_doc_it.current_index() + m_doc_it.source().size();
+                m_first_doc_in_buffer = false;
                 return true;
             } else if (m_doc_it.error() == simdjson::error_code::UTF8_ERROR) {
                 maybe_utf8_edge_case = true;
@@ -127,22 +140,18 @@ bool JsonFileIterator::get_json(simdjson::ondemand::document_stream::iterator& i
             }
         }
 
-        if (maybe_utf8_edge_case) {
-            // Check if this is the UTF-8 edge case by advancing the iterator and checking if this
-            // is really the end of the stream.
-            ++m_doc_it;
-            if (m_doc_it != m_stream.end()) {
-                // Regular UTF-8 error in the middle of the document stream.
-                m_error_code = simdjson::error_code::UTF8_ERROR;
-                return false;
-            } else {
-                m_truncated_bytes = skip_whitespace_and_get_truncated_bytes();
-            }
-
-            if (m_eof) {
-                // UTF-8 error at end of stream. Treat this case as document truncation.
-                return false;
-            }
+        if (maybe_utf8_edge_case && m_first_doc_in_buffer
+            && (m_buf_occupied > m_max_document_size || m_eof))
+        {
+            // If we hit a UTF-8 error and either we have reached eof or the buffer occupancy is
+            // greater than the maximum document size we assume that the UTF-8 error must have been
+            // in the middle of the stream. Note: it is possible that the UTF-8 error is at the end
+            // of the stream and that this is actualy a truncation error. Unfortunately the only way
+            // to check is to parse it ourselves, so we rely on this heuristic for now.
+            m_error_code = simdjson::error_code::UTF8_ERROR;
+            return false;
+        } else if (maybe_utf8_edge_case) {
+            m_truncated_bytes = skip_whitespace_and_get_truncated_bytes();
         }
     } while (read_new_json());
     return false;

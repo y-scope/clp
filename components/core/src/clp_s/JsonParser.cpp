@@ -15,6 +15,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_num_messages(0),
           m_compression_level(option.compression_level),
           m_target_encoded_size(option.target_encoded_size),
+          m_max_document_size(option.max_document_size),
           m_timestamp_key(option.timestamp_key) {
     if (false == boost::filesystem::create_directory(m_archives_dir)) {
         SPDLOG_ERROR("The output directory '{}' already exists", m_archives_dir);
@@ -224,7 +225,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
 
 bool JsonParser::parse() {
     for (auto& file_path : m_file_paths) {
-        JsonFileIterator json_file_iterator(file_path);
+        JsonFileIterator json_file_iterator(file_path, m_max_document_size);
         if (false == json_file_iterator.is_open()) {
             return false;
         }

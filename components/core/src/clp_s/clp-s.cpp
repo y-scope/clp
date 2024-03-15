@@ -86,10 +86,11 @@ bool compress(CommandLineArguments const& command_line_arguments) {
         return false;
     }
 
-    clp_s::JsonParserOption option;
+    clp_s::JsonParserOption option{};
     option.file_paths = command_line_arguments.get_file_paths();
     option.archives_dir = archive_path.string();
     option.target_encoded_size = command_line_arguments.get_target_encoded_size();
+    option.max_document_size = command_line_arguments.get_max_document_size();
     option.compression_level = command_line_arguments.get_compression_level();
     option.timestamp_key = command_line_arguments.get_timestamp_key();
 
