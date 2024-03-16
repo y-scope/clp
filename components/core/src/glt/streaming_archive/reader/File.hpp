@@ -1,5 +1,5 @@
-#ifndef STREAMING_ARCHIVE_READER_FILE_HPP
-#define STREAMING_ARCHIVE_READER_FILE_HPP
+#ifndef GLT_STREAMING_ARCHIVE_READER_FILE_HPP
+#define GLT_STREAMING_ARCHIVE_READER_FILE_HPP
 
 #include <list>
 #include <set>
@@ -166,4 +166,4 @@ private:
 };
 }  // namespace glt::streaming_archive::reader
 
-#endif  // STREAMING_ARCHIVE_READER_FILE_HPP
+#endif  // GLT_STREAMING_ARCHIVE_READER_FILE_HPP

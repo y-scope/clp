@@ -23,43 +23,25 @@ public:
     };
 
     // Constructors
-    TimestampDictionaryWriter() : m_is_open(false), m_is_open_local(false) {}
+    TimestampDictionaryWriter() : m_is_open(false) {}
 
     /**
-     * Opens the global timestamp dictionary for writing
+     * Opens the timestamp dictionary for writing
      * @param dictionary_path
      * @param compression_level
      */
     void open(std::string const& dictionary_path, int compression_level);
 
     /**
-     * Opens a local timestamp dictionary for writing
-     * @param dictionary_path
-     * @param compression_level
-     */
-    void open_local(std::string const& dictionary_path, int compression_level);
-
-    /**
-     * Closes the global timestamp dictionary
+     * Closes the timestamp dictionary
      * @return the compressed size of the global timestamp dictionary in bytes
      */
     [[nodiscard]] size_t close();
 
     /**
-     * Closes the local timestamp dictionary
-     * @return the compressed size of the local timestamp dictionary in bytes
-     */
-    [[nodiscard]] size_t close_local();
-
-    /**
-     * Writes the global timestamp dictionary to disk
+     * Writes the timestamp dictionary to disk
      */
     void write_and_flush_to_disk();
-
-    /**
-     * Writes the local timestamp dictionary to disk
-     */
-    void write_local_and_flush_to_disk();
 
     /**
      * Gets the pattern id for a given pattern
@@ -111,16 +93,16 @@ public:
 
 private:
     /**
-     * Merges the local timestamp ranges into the global timestamp ranges
+     * Merges timestamp ranges with the same key name
      */
-    void merge_local_range();
+    void merge_range();
 
     /**
-     * Writes the timestamp entries to the disk
+     * Writes timestamp entries to the disk
      * @param ranges
      * @param compressor
      */
-    void write_timestamp_entries(
+    static void write_timestamp_entries(
             std::map<std::string, TimestampEntry> const& ranges,
             ZstdCompressor& compressor
     );
@@ -129,7 +111,6 @@ private:
 
     // Variables
     bool m_is_open;
-    bool m_is_open_local;
 
     // Variables related to on-disk storage
     FileWriter m_dictionary_file_writer;
@@ -140,9 +121,8 @@ private:
     pattern_to_id_t m_pattern_to_id;
     uint64_t m_next_id{};
 
-    std::map<std::string, TimestampEntry> m_global_column_key_to_range;
-    std::map<std::string, TimestampEntry> m_local_column_key_to_range;
-    std::unordered_map<int32_t, TimestampEntry> m_local_column_id_to_range;
+    std::map<std::string, TimestampEntry> m_column_key_to_range;
+    std::unordered_map<int32_t, TimestampEntry> m_column_id_to_range;
 };
 }  // namespace clp_s
 

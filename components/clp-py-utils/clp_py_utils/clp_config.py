@@ -2,7 +2,8 @@ import pathlib
 import typing
 from enum import auto
 
-from pydantic import BaseModel, validator
+from dotenv import dotenv_values
+from pydantic import BaseModel, PrivateAttr, validator
 from strenum import KebabCaseStrEnum
 
 from .clp_logging import get_valid_logging_level, is_valid_logging_level
@@ -32,6 +33,8 @@ CONTROLLER_TARGET_NAME = "controller"
 SEARCH_JOBS_TABLE_NAME = "search_jobs"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
 COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
+
+OS_RELEASE_FILE_PATH = pathlib.Path("etc") / "os-release"
 
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
 CLP_METADATA_TABLE_PREFIX = "clp_"
@@ -301,7 +304,7 @@ class WebUi(BaseModel):
 
 
 class CLPConfig(BaseModel):
-    execution_container: str = "ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-focal:main"
+    execution_container: typing.Optional[str]
 
     input_logs_directory: pathlib.Path = pathlib.Path("/")
 
@@ -321,12 +324,15 @@ class CLPConfig(BaseModel):
     data_directory: pathlib.Path = pathlib.Path("var") / "data"
     logs_directory: pathlib.Path = pathlib.Path("var") / "log"
 
+    _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
+
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         self.input_logs_directory = make_config_path_absolute(clp_home, self.input_logs_directory)
         self.credentials_file_path = make_config_path_absolute(clp_home, self.credentials_file_path)
         self.archive_output.make_config_paths_absolute(clp_home)
         self.data_directory = make_config_path_absolute(clp_home, self.data_directory)
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
+        self._os_release_file_path = make_config_path_absolute(clp_home, self._os_release_file_path)
 
     def validate_input_logs_dir(self):
         # NOTE: This can't be a pydantic validator since input_logs_dir might be a package-relative
@@ -354,6 +360,23 @@ class CLPConfig(BaseModel):
             validate_path_could_be_dir(self.logs_directory)
         except ValueError as ex:
             raise ValueError(f"logs_directory is invalid: {ex}")
+
+    def load_execution_container_name(self):
+        if self.execution_container is not None:
+            # Accept configured value for debug purposes
+            return
+
+        os_release = dotenv_values(self._os_release_file_path)
+        if "ubuntu" == os_release["ID"]:
+            self.execution_container = (
+                f"clp-execution-x86-{os_release['ID']}-{os_release['VERSION_CODENAME']}:main"
+            )
+        else:
+            raise NotImplementedError(
+                f"Unsupported OS {os_release['ID']} in {OS_RELEASE_FILE_PATH}"
+            )
+
+        self.execution_container = "ghcr.io/y-scope/clp/" + self.execution_container
 
     def load_database_credentials_from_file(self):
         config = read_yaml_config_file(self.credentials_file_path)

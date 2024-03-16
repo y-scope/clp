@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useCallback} from "react";
 
 import SearchResultsHeader from "./SearchResultsHeader.jsx";
 import SearchResultsTable from "./SearchResultsTable.jsx";
@@ -25,20 +25,20 @@ const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
  * table.
  *
  * @param {number} jobId of the search job
- * @param {Object[]} searchResults results to display
- * @param {Object} resultsMetadata which includes total results count and last request / response signal
- * @param {Object} fieldToSortBy used for sorting results
- * @param {function} setFieldToSortBy callback to set fieldToSortBy
- * @param {number} visibleSearchResultsLimit limit of visible search results
- * @param {function} setVisibleSearchResultsLimit callback to set visibleSearchResultsLimit
- * @param {number} maxLinesPerResult to display
- * @param {function} setMaxLinesPerResult callback to set maxLinesPerResult
+ * @param {Object[]} searchResults
+ * @param {number} numResultsOnServer
+ * @param {Object} fieldToSortBy
+ * @param {function} setFieldToSortBy
+ * @param {number} visibleSearchResultsLimit
+ * @param {function} setVisibleSearchResultsLimit
+ * @param {number} maxLinesPerResult
+ * @param {function} setMaxLinesPerResult
  * @returns {JSX.Element}
  */
 const SearchResults = ({
     jobId,
+    numResultsOnServer,
     searchResults,
-    resultsMetadata,
     fieldToSortBy,
     setFieldToSortBy,
     visibleSearchResultsLimit,
@@ -46,13 +46,13 @@ const SearchResults = ({
     maxLinesPerResult,
     setMaxLinesPerResult,
 }) => {
-    const numResultsOnServer = resultsMetadata["numTotalResults"] || searchResults.length;
     const hasMoreResults = visibleSearchResultsLimit < numResultsOnServer;
 
-    const handleLoadMoreResults = () => {
-        setVisibleSearchResultsLimit((v) =>
-            (v + VISIBLE_RESULTS_LIMIT_INCREMENT));
-    };
+    const handleLoadMoreResults = useCallback(() => {
+        setVisibleSearchResultsLimit(
+            (v) => (v + VISIBLE_RESULTS_LIMIT_INCREMENT)
+        );
+    }, []);
 
     return <>
         <div className={"flex-column"}>

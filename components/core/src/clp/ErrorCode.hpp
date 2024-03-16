@@ -26,4 +26,4 @@ typedef enum {
 } ErrorCode;
 }  // namespace clp
 
-#endif  // CLP_ERROR_CODE_HPP
+#endif  // CLP_ERRORCODE_HPP

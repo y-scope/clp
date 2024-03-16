@@ -78,6 +78,7 @@ tasks:
       - task: "clean-package"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
       - "rsync -a components/package-template/src/ '{{.OUTPUT_DIR}}'"
+      - "rsync --copy-links /etc/os-release '{{.OUTPUT_DIR}}/etc/os-release'"
       - "mkdir -p '{{.OUTPUT_DIR}}/lib/python3/site-packages'"
       - |-
         . "{{.PACKAGE_VENV_DIR}}/bin/activate"
@@ -116,6 +117,7 @@ tasks:
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "/etc/os-release"
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
@@ -141,6 +143,7 @@ tasks:
       - "{{.SRC_DIR}}/CMakeLists.txt"
       - "{{.SRC_DIR}}/src/**/*"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "/etc/os-release"
     generates:
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
@@ -272,6 +275,7 @@ tasks:
     sources:
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "/etc/os-release"
     status:
       - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
@@ -306,6 +310,7 @@ tasks:
       - "{{.PACKAGE}}/**/*"
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "/etc/os-release"
       - "pyproject.toml"
     generates:
       - "dist/*.whl"
@@ -331,6 +336,7 @@ tasks:
     sources:
       - "{{.TASKFILE_DIR}}/requirements.txt"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "/etc/os-release"
       - "pyproject.toml"
     status:
       - "test -f '{{.CHECKSUM_FILE}}'"

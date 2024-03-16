@@ -3,14 +3,16 @@ name: "clp-core-build"
 on:
   pull_request:
     paths:
-      - ".github/actions/**"
+      - ".github/actions/clp-core-build/action.yaml"
+      - ".github/actions/clp-core-build-containers/action.yaml"
       - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
       - "!components/core/tools/scripts/lib_install/macos-12/**"
   push:
     paths:
-      - ".github/actions/**"
+      - ".github/actions/clp-core-build/action.yaml"
+      - ".github/actions/clp-core-build-containers/action.yaml"
       - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"

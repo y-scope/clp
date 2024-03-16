@@ -6,11 +6,15 @@ import {Meteor} from "meteor/meteor";
 import {useTracker} from "meteor/react-meteor-data";
 import {ProgressBar} from "react-bootstrap";
 
+import {SearchResultsMetadataCollection} from "../../api/search/collections";
 import {
-    addSortToMongoFindOptions,
-    SearchResultsMetadataCollection,
-} from "../../api/search/collections";
-import {INVALID_JOB_ID, isSearchSignalQuerying, SearchSignal} from "../../api/search/constants";
+    INVALID_JOB_ID,
+    MONGO_SORT_ORDER,
+    SEARCH_MAX_NUM_RESULTS,
+    SEARCH_RESULTS_FIELDS,
+    SEARCH_SIGNAL,
+    isSearchSignalQuerying,
+} from "../../api/search/constants";
 import SearchJobCollectionsManager from "../../api/search/SearchJobCollectionsManager";
 import {LOCAL_STORAGE_KEYS} from "../constants";
 import {changeTimezoneToUtcWithoutChangingTime, DEFAULT_TIME_RANGE} from "./datetime";
@@ -32,7 +36,8 @@ const SearchView = () => {
     // Query states
     const [jobId, setJobId] = useState(INVALID_JOB_ID);
     const [operationErrorMsg, setOperationErrorMsg] = useState("");
-    const [localLastSearchSignal, setLocalLastSearchSignal] = useState(SearchSignal.NONE);
+    const [localLastSearchSignal, setLocalLastSearchSignal] = useState(SEARCH_SIGNAL.NONE);
+    const [estimatedNumResults, setEstimatedNumResults] = useState(null);
     const dbRef = useRef(new SearchJobCollectionsManager());
     // gets updated as soon as localLastSearchSignal is updated
     // to avoid reading old localLastSearchSignal value from Closures
@@ -45,8 +50,8 @@ const SearchView = () => {
     const [visibleSearchResultsLimit, setVisibleSearchResultsLimit] = useState(
         VISIBLE_RESULTS_LIMIT_INITIAL);
     const [fieldToSortBy, setFieldToSortBy] = useState({
-        name: "timestamp",
-        direction: -1,
+        name: SEARCH_RESULTS_FIELDS.TIMESTAMP,
+        direction: MONGO_SORT_ORDER.DESCENDING,
     });
 
     // Visuals
@@ -79,12 +84,7 @@ const SearchView = () => {
 
         Meteor.subscribe(Meteor.settings.public.SearchResultsCollectionName, {
             jobId: jobId,
-            fieldToSortBy: fieldToSortBy,
-            visibleSearchResultsLimit: visibleSearchResultsLimit,
         });
-
-        const findOptions = {};
-        addSortToMongoFindOptions(fieldToSortBy, findOptions);
 
         // NOTE: Although we publish and subscribe using the name
         // `Meteor.settings.public.SearchResultsCollectionName`, the rows are still returned in the
@@ -92,7 +92,40 @@ const SearchView = () => {
         // cursor from the job-specific collection and Meteor creates a collection with the same
         // name on the client rather than returning the rows in a collection with the published
         // name.
-        return dbRef.current.getOrCreateCollection(jobId).find({}, findOptions).fetch();
+        const resultsCollection = dbRef.current.getOrCreateCollection(jobId);
+        const findOptions = {
+            limit: visibleSearchResultsLimit,
+            sort: [
+                [
+                    fieldToSortBy.name,
+                    fieldToSortBy.direction,
+                ],
+                [
+                    SEARCH_RESULTS_FIELDS.ID,
+                    fieldToSortBy.direction,
+                ],
+            ],
+        };
+
+        if (SEARCH_SIGNAL.RESP_DONE !== resultsMetadata.lastSignal) {
+            // Only refresh estimatedNumResults if the job isn't DONE;
+            // otherwise the count would already be available in
+            // `resultsMetadata.numTotalResults`
+            resultsCollection.estimatedDocumentCount()
+                .then((count) => {
+                    setEstimatedNumResults(
+                        Math.min(count, SEARCH_MAX_NUM_RESULTS)
+                    );
+                })
+                .catch((e) => {
+                    console.log(
+                        `Error occurred in resultsCollection<${jobId}>.estimatedDocumentCount()`,
+                        e,
+                    );
+                });
+        }
+
+        return resultsCollection.find({}, findOptions).fetch();
     }, [jobId, fieldToSortBy, visibleSearchResultsLimit]);
 
     // State transitions
@@ -112,7 +145,7 @@ const SearchView = () => {
         }
 
         setOperationErrorMsg("");
-        setLocalLastSearchSignal(SearchSignal.REQ_QUERYING);
+        setLocalLastSearchSignal(SEARCH_SIGNAL.REQ_QUERYING);
         setVisibleSearchResultsLimit(VISIBLE_RESULTS_LIMIT_INITIAL);
 
         const timestampBeginMillis = changeTimezoneToUtcWithoutChangingTime(timeRange.begin)
@@ -141,7 +174,8 @@ const SearchView = () => {
 
         setJobId(INVALID_JOB_ID);
         setOperationErrorMsg("");
-        setLocalLastSearchSignal(SearchSignal.REQ_CLEARING);
+        setLocalLastSearchSignal(SEARCH_SIGNAL.REQ_CLEARING);
+        setEstimatedNumResults(null);
         setVisibleSearchResultsLimit(VISIBLE_RESULTS_LIMIT_INITIAL);
 
         const args = {
@@ -153,17 +187,17 @@ const SearchView = () => {
                 return;
             }
 
-            if (SearchSignal.REQ_CLEARING === localLastSearchSignalRef.current) {
-                // The check prevents clearing `localLastSearchSignal = SearchSignal.REQ_QUERYING`
+            if (SEARCH_SIGNAL.REQ_CLEARING === localLastSearchSignalRef.current) {
+                // The check prevents clearing `localLastSearchSignal = SEARCH_SIGNAL.REQ_QUERYING`
                 // when `handleClearResults` is called by submitQuery.
-                setLocalLastSearchSignal(SearchSignal.NONE);
+                setLocalLastSearchSignal(SEARCH_SIGNAL.NONE);
             }
         });
     };
 
     const cancelOperation = () => {
         setOperationErrorMsg("");
-        setLocalLastSearchSignal(SearchSignal.REQ_CANCELLING);
+        setLocalLastSearchSignal(SEARCH_SIGNAL.REQ_CANCELLING);
 
         const args = {
             jobId: jobId,
@@ -175,7 +209,18 @@ const SearchView = () => {
         });
     };
 
-    const showSearchResults = INVALID_JOB_ID !== jobId;
+    const showSearchResults = (INVALID_JOB_ID !== jobId);
+
+    // The number of results on the server is available in different variables at different times:
+    // - when the query ends, it will be in resultsMetadata.numTotalResults.
+    // - while the query is in progress, it will be in estimatedNumResults.
+    // - when the query starts, the other two variables will be null, so searchResults.length is the
+    //   best estimate.
+    const numResultsOnServer =
+        resultsMetadata.numTotalResults ||
+        estimatedNumResults ||
+        searchResults.length;
+
     return (<div className="d-flex flex-column h-100">
         <div className={"flex-column"}>
             <SearchControls
@@ -200,15 +245,15 @@ const SearchView = () => {
         </div>
 
         {showSearchResults && <SearchResults
-            jobId={jobId}
-            searchResults={searchResults}
-            resultsMetadata={resultsMetadata}
             fieldToSortBy={fieldToSortBy}
-            setFieldToSortBy={setFieldToSortBy}
-            visibleSearchResultsLimit={visibleSearchResultsLimit}
-            setVisibleSearchResultsLimit={setVisibleSearchResultsLimit}
+            jobId={jobId}
             maxLinesPerResult={maxLinesPerResult}
+            numResultsOnServer={numResultsOnServer}
+            searchResults={searchResults}
+            setFieldToSortBy={setFieldToSortBy}
             setMaxLinesPerResult={setMaxLinesPerResult}
+            setVisibleSearchResultsLimit={setVisibleSearchResultsLimit}
+            visibleSearchResultsLimit={visibleSearchResultsLimit}
         />}
     </div>);
 };
@@ -250,10 +295,10 @@ const SearchStatus = ({
     } else {
         let message = null;
         switch (resultsMetadata["lastSignal"]) {
-            case SearchSignal.NONE:
+            case SEARCH_SIGNAL.NONE:
                 message = "Ready";
                 break;
-            case SearchSignal.REQ_CLEARING:
+            case SEARCH_SIGNAL.REQ_CLEARING:
                 message = "Clearing...";
                 break;
             default:

@@ -250,6 +250,7 @@ def validate_and_load_config_file(
         clp_config = CLPConfig()
 
     clp_config.make_config_paths_absolute(clp_home)
+    clp_config.load_execution_container_name()
 
     # Make data and logs directories node-specific
     hostname = socket.gethostname()

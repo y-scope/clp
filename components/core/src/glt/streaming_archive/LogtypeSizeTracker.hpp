@@ -1,5 +1,5 @@
-#ifndef STREAMING_ARCHIVE_LOGTYPESIZETRACKER_HPP
-#define STREAMING_ARCHIVE_LOGTYPESIZETRACKER_HPP
+#ifndef GLT_STREAMING_ARCHIVE_LOGTYPESIZETRACKER_HPP
+#define GLT_STREAMING_ARCHIVE_LOGTYPESIZETRACKER_HPP
 
 // C++ standard libraries
 #include <cstring>
@@ -61,4 +61,4 @@ private:
     logtype_dictionary_id_t m_logtype_id;
 };
 }  // namespace glt::streaming_archive
-#endif  // STREAMING_ARCHIVE_LOGTYPESIZETRACKER_HPP
+#endif  // GLT_STREAMING_ARCHIVE_LOGTYPESIZETRACKER_HPP

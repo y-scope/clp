@@ -5,7 +5,16 @@ import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {Spinner, Table} from "react-bootstrap";
 
 import "./SearchResultsTable.scss";
+import {
+    MONGO_SORT_ORDER,
+    SEARCH_RESULTS_FIELDS,
+} from "../../api/search/constants";
 
+
+/**
+ * The interval, in milliseconds, at which the search results load sensor should poll for updates.
+ */
+const SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MS = 200;
 
 /**
  * Senses if the user has requested to load more results by scrolling until
@@ -17,33 +26,38 @@ import "./SearchResultsTable.scss";
  */
 const SearchResultsLoadSensor = ({
     hasMoreResults,
-    onLoadMoreResults
+    onLoadMoreResults,
 }) => {
     const loadingBlockRef = useRef(null);
+    const loadIntervalRef = useRef(null);
 
     useEffect(() => {
-        if (false === hasMoreResults) {
-            return;
-        }
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries[0].isIntersecting && hasMoreResults) {
-                    onLoadMoreResults();
-                }
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                loadIntervalRef.current = setInterval(
+                    onLoadMoreResults,
+                    SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MS,
+                );
+            } else if (null !== loadIntervalRef.current) {
+                clearInterval(loadIntervalRef.current);
+                loadIntervalRef.current = null;
             }
-        );
+        });
 
         observer.observe(loadingBlockRef.current);
 
         return () => {
+            if (null !== loadIntervalRef.current) {
+                clearInterval(loadIntervalRef.current);
+                loadIntervalRef.current = null;
+            }
             observer.disconnect();
         };
-    }, [hasMoreResults]);
+    }, [onLoadMoreResults]);
 
     return <div
-        ref={loadingBlockRef}
         id={"search-results-load-sensor"}
+        ref={loadingBlockRef}
         style={{
             visibility: (true === hasMoreResults) ?
                 "visible" :
@@ -74,30 +88,32 @@ const SearchResultsTable = ({
     hasMoreResults,
     onLoadMoreResults,
 }) => {
-    const getSortIcon = (fieldToSortBy, fieldName) => {
-        if (fieldToSortBy && fieldName === fieldToSortBy.name) {
-            return (1 === fieldToSortBy.direction ? faSortDown : faSortUp);
-        } else {
-            return faSort;
+    const getSortIcon = (fieldName) => {
+        if (fieldName === fieldToSortBy.name) {
+            return (MONGO_SORT_ORDER.ASCENDING === fieldToSortBy.direction) ?
+                faSortUp :
+                faSortDown;
         }
+
+        return faSort;
     };
 
     const toggleSortDirection = (event) => {
-        const columnName = event.currentTarget.dataset.columnName;
-        if (null === fieldToSortBy || fieldToSortBy.name !== columnName) {
+        const {columnName} = event.currentTarget.dataset;
+        if (fieldToSortBy.name !== columnName) {
             setFieldToSortBy({
                 name: columnName,
-                direction: 1,
+                direction: (SEARCH_RESULTS_FIELDS.TIMESTAMP === columnName) ?
+                    MONGO_SORT_ORDER.DESCENDING :
+                    MONGO_SORT_ORDER.ASCENDING,
             });
-        } else if (1 === fieldToSortBy.direction) {
-            // Switch to descending
+        } else {
             setFieldToSortBy({
                 name: columnName,
-                direction: -1,
+                direction: (MONGO_SORT_ORDER.ASCENDING === fieldToSortBy.direction) ?
+                    MONGO_SORT_ORDER.DESCENDING :
+                    MONGO_SORT_ORDER.ASCENDING,
             });
-        } else if (-1 === fieldToSortBy.direction) {
-            // Switch to unsorted
-            setFieldToSortBy(null);
         }
     };
 
@@ -125,12 +141,14 @@ const SearchResultsTable = ({
             <tr>
                 <th style={{"width": "144px"}}
                     className={"search-results-th search-results-th-sortable"}
-                    data-column-name={"timestamp"}
-                    key={"timestamp"}
+                    data-column-name={SEARCH_RESULTS_FIELDS.TIMESTAMP}
+                    key={SEARCH_RESULTS_FIELDS.TIMESTAMP}
                     onClick={toggleSortDirection}
                 >
                     <div className={"search-results-table-header"}>
-                        <FontAwesomeIcon icon={getSortIcon(fieldToSortBy, "timestamp")}/> Timestamp
+                        <FontAwesomeIcon
+                            icon={getSortIcon(SEARCH_RESULTS_FIELDS.TIMESTAMP)}/>
+                        <span> Timestamp</span>
                     </div>
                 </th>
                 <th className={"search-results-th"} key={"message"}>
