@@ -23,15 +23,7 @@ public:
     };
 
     // Constructor
-    ArchiveReader(
-            std::shared_ptr<SchemaTree> schema_tree,
-            std::shared_ptr<ReaderUtils::SchemaMap> schema_map,
-            std::shared_ptr<TimestampDictionaryReader> timestamp_dict
-    )
-            : m_is_open(false),
-              m_schema_tree(std::move(schema_tree)),
-              m_schema_map(std::move(schema_map)),
-              m_timestamp_dict(std::move(timestamp_dict)) {}
+    ArchiveReader() : m_is_open(false) {}
 
     /**
      * Opens an archive for reading.
@@ -83,7 +75,10 @@ public:
      * Reads the local timestamp dictionary from the archive.
      * @return the timestamp dictionary reader
      */
-    std::shared_ptr<TimestampDictionaryReader> read_timestamp_dictionary();
+    std::shared_ptr<TimestampDictionaryReader> read_timestamp_dictionary() {
+        m_timestamp_dict->read_new_entries();
+        return m_timestamp_dict;
+    }
 
     /**
      * Reads a table from the archive.
@@ -92,6 +87,20 @@ public:
      * @return the schema reader
      */
     std::unique_ptr<SchemaReader> read_table(int32_t schema_id, bool should_extract_timestamp);
+
+    std::shared_ptr<VariableDictionaryReader> get_variable_dictionary() { return m_var_dict; }
+
+    std::shared_ptr<LogTypeDictionaryReader> get_log_type_dictionary() { return m_log_dict; }
+
+    std::shared_ptr<LogTypeDictionaryReader> get_array_dictionary() { return m_array_dict; }
+
+    std::shared_ptr<TimestampDictionaryReader> get_timestamp_dictionary() {
+        return m_timestamp_dict;
+    }
+
+    std::shared_ptr<SchemaTree> get_schema_tree() { return m_schema_tree; }
+
+    std::shared_ptr<ReaderUtils::SchemaMap> get_schema_map() { return m_schema_map; }
 
     /**
      * Writes decoded messages to a file.

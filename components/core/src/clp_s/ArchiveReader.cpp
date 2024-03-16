@@ -14,6 +14,10 @@ void ArchiveReader::open(std::string const& archive_path) {
     m_var_dict = ReaderUtils::get_variable_dictionary_reader(m_archive_path);
     m_log_dict = ReaderUtils::get_log_type_dictionary_reader(m_archive_path);
     m_array_dict = ReaderUtils::get_array_dictionary_reader(m_archive_path);
+    m_timestamp_dict = ReaderUtils::get_timestamp_dictionary_reader(m_archive_path);
+
+    m_schema_tree = ReaderUtils::read_schema_tree(m_archive_path);
+    m_schema_map = ReaderUtils::read_schemas(m_archive_path);
 
     m_tables_file_reader.open(m_archive_path + constants::cArchiveTablesFile);
     m_table_metadata_file_reader.open(m_archive_path + constants::cArchiveTableMetadataFile);
@@ -63,9 +67,10 @@ void ArchiveReader::read_metadata() {
 }
 
 void ArchiveReader::read_dictionaries_and_metadata() {
-    read_variable_dictionary();
-    read_log_type_dictionary();
-    read_array_dictionary();
+    m_var_dict->read_new_entries();
+    m_log_dict->read_new_entries();
+    m_array_dict->read_new_entries();
+    m_timestamp_dict->read_new_entries();
     read_metadata();
 }
 
@@ -84,15 +89,6 @@ ArchiveReader::read_table(int32_t schema_id, bool should_extract_timestamp) {
     schema_reader->load(m_tables_decompressor);
     m_tables_decompressor.close();
     return schema_reader;
-}
-
-std::shared_ptr<TimestampDictionaryReader> ArchiveReader::read_timestamp_dictionary() {
-    auto reader = std::make_shared<TimestampDictionaryReader>();
-    reader->open(m_archive_path + constants::cArchiveTimestampDictFile);
-    reader->read_local_entries();
-    reader->close();
-
-    return reader;
 }
 
 BaseColumnReader*
@@ -182,6 +178,7 @@ void ArchiveReader::close() {
     m_var_dict->close();
     m_log_dict->close();
     m_array_dict->close();
+    m_timestamp_dict->close();
 
     m_tables_file_reader.close();
     m_table_metadata_file_reader.close();
