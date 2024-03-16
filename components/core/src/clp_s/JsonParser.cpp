@@ -3,6 +3,9 @@
 #include <iostream>
 #include <stack>
 
+#include <simdjson.h>
+#include <spdlog/spdlog.h>
+
 #include "archive_constants.hpp"
 #include "JsonFileIterator.hpp"
 
@@ -12,6 +15,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_num_messages(0),
           m_compression_level(option.compression_level),
           m_target_encoded_size(option.target_encoded_size),
+          m_max_document_size(option.max_document_size),
           m_timestamp_key(option.timestamp_key) {
     if (false == FileUtils::validate_path(option.file_paths)) {
         exit(1);
@@ -210,11 +214,22 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
     while (!object_stack.empty());
 }
 
-void JsonParser::parse() {
+bool JsonParser::parse() {
     for (auto& file_path : m_file_paths) {
-        JsonFileIterator json_file_iterator(file_path);
+        JsonFileIterator json_file_iterator(file_path, m_max_document_size);
         if (false == json_file_iterator.is_open()) {
-            return;
+            m_archive_writer->close();
+            return false;
+        }
+
+        if (simdjson::error_code::SUCCESS != json_file_iterator.get_error()) {
+            SPDLOG_ERROR(
+                    "Encountered error - {} - while trying to parse {}",
+                    simdjson::error_message(json_file_iterator.get_error()),
+                    file_path
+            );
+            m_archive_writer->close();
+            return false;
         }
 
         simdjson::ondemand::document_stream::iterator json_it;
@@ -224,7 +239,18 @@ void JsonParser::parse() {
         while (json_file_iterator.get_json(json_it)) {
             m_current_schema.clear();
 
-            parse_line((*json_it).value(), -1, "root");
+            auto ref = *json_it;
+            auto is_scalar_result = ref.is_scalar();
+            // If you don't check the error on is_scalar it will sometimes throw TAPE_ERROR when
+            // converting to bool. The error being TAPE_ERROR or is_scalar() being true both mean
+            // that this isn't a valid JSON document but they get set in different situations so we
+            // need to check both here.
+            if (is_scalar_result.error() || true == is_scalar_result.value()) {
+                SPDLOG_ERROR("Encountered non-json-object while trying to parse {}", file_path);
+                m_archive_writer->close();
+                return false;
+            }
+            parse_line(ref.value(), -1, "root");
             m_num_messages++;
 
             int32_t current_schema_id = m_archive_writer->add_schema(m_current_schema);
@@ -246,14 +272,24 @@ void JsonParser::parse() {
                 json_file_iterator.get_num_bytes_read() - last_num_bytes_read
         );
 
-        if (json_file_iterator.truncated_bytes() > 0) {
+        if (simdjson::error_code::SUCCESS != json_file_iterator.get_error()) {
             SPDLOG_ERROR(
+                    "Encountered error - {} - while trying to parse {}",
+                    simdjson::error_message(json_file_iterator.get_error()),
+                    file_path
+            );
+            m_archive_writer->close();
+            return false;
+        } else if (json_file_iterator.truncated_bytes() > 0) {
+            // currently don't treat truncated bytes at the end of the file as an error
+            SPDLOG_WARN(
                     "Truncated JSON  ({} bytes) at end of file {}",
                     json_file_iterator.truncated_bytes(),
                     file_path.c_str()
             );
         }
     }
+    return true;
 }
 
 void JsonParser::store() {

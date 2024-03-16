@@ -80,10 +80,11 @@ bool compress(CommandLineArguments const& command_line_arguments) {
         return false;
     }
 
-    clp_s::JsonParserOption option;
+    clp_s::JsonParserOption option{};
     option.file_paths = command_line_arguments.get_file_paths();
     option.archives_dir = archives_dir.string();
     option.target_encoded_size = command_line_arguments.get_target_encoded_size();
+    option.max_document_size = command_line_arguments.get_max_document_size();
     option.compression_level = command_line_arguments.get_compression_level();
     option.timestamp_key = command_line_arguments.get_timestamp_key();
     option.print_archive_stats = command_line_arguments.print_archive_stats();
@@ -102,9 +103,11 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     }
 
     clp_s::JsonParser parser(option);
-    parser.parse();
+    if (false == parser.parse()) {
+        SPDLOG_ERROR("Encountered error while parsing input");
+        return false;
+    }
     parser.store();
-
     return true;
 }
 

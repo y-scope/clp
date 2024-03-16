@@ -31,6 +31,7 @@ struct JsonParserOption {
     std::string timestamp_key;
     std::string archives_dir;
     size_t target_encoded_size;
+    size_t max_document_size;
     int compression_level;
     bool print_archive_stats;
     std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db;
@@ -53,8 +54,9 @@ public:
 
     /**
      * Parses the JSON log messages and store the parsed data in the archive.
+     * @return whether the JSON was parsed succesfully
      */
-    void parse();
+    [[nodiscard]] bool parse();
 
     /**
      * Writes the metadata and archive data to disk.
@@ -90,6 +92,7 @@ private:
     boost::uuids::random_generator m_generator;
     std::unique_ptr<ArchiveWriter> m_archive_writer;
     size_t m_target_encoded_size;
+    size_t m_max_document_size;
 };
 }  // namespace clp_s
 
