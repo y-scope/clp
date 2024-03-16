@@ -40,7 +40,7 @@ public:
               m_timestamp_dict(std::move(timestamp_dict)),
               m_output_handler(std::move(output_handler)),
               m_ignore_case(ignore_case),
-              m_should_marshal_records(output_handler->should_marshal_records()) {}
+              m_should_marshal_records(m_output_handler->should_marshal_records()) {}
 
     /**
      * Filters messages from all archives
