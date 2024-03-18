@@ -58,6 +58,8 @@ public:
 
     size_t get_target_encoded_size() const { return m_target_encoded_size; }
 
+    size_t get_max_document_size() const { return m_max_document_size; }
+
     [[nodiscard]] bool print_archive_stats() const { return m_print_archive_stats; }
 
     std::string const& get_mongodb_uri() const { return m_mongodb_uri; }
@@ -154,6 +156,7 @@ private:
     int m_compression_level{3};
     size_t m_target_encoded_size{8ULL * 1024 * 1024 * 1024};  // 8 GiB
     bool m_print_archive_stats{false};
+    size_t m_max_document_size{512ULL * 1024 * 1024};  // 512 MB
 
     // Metadata db variables
     std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;

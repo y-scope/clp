@@ -27,11 +27,7 @@ void TimestampDictionaryReader::close() {
     m_dictionary_file_reader.close();
 }
 
-void TimestampDictionaryReader::read_local_entries() {
-    read_new_entries(/*local=*/true);
-}
-
-void TimestampDictionaryReader::read_new_entries(bool local) {
+void TimestampDictionaryReader::read_new_entries() {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCodeNotInit, __FILENAME__, __LINE__);
     }
@@ -61,12 +57,6 @@ void TimestampDictionaryReader::read_new_entries(bool local) {
         }
 
         m_tokenized_column_to_range.emplace_back(std::move(tokens), &m_entries.back());
-    }
-
-    // Local timestamp dictionaries only contain range indices, and
-    // not patterns. Exit early here.
-    if (local) {
-        return;
     }
 
     uint64_t num_patterns;

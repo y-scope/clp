@@ -161,6 +161,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "Target size (B) for the dictionaries and encoded messages before a new "
                     "archive is created."
             )(
+                    "max-document-size",
+                    po::value<size_t>(&m_max_document_size)->value_name("DOC_SIZE")->
+                        default_value(m_max_document_size),
+                    "Maximum allowed size (B) for a single document before compression fails."
+            )(
                     "timestamp-key",
                     po::value<std::string>(&m_timestamp_key)->value_name("TIMESTAMP_COLUMN_KEY")->
                         default_value(m_timestamp_key),

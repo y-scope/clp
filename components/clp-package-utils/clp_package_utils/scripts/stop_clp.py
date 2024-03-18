@@ -136,7 +136,7 @@ def main(argv):
 
         already_exited_containers = []
         force = parsed_args.force
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, WEBUI_COMPONENT_NAME):
+        if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME):
             container_name = f"clp-{WEBUI_COMPONENT_NAME}-{instance_id}"
             stop_running_container(container_name, already_exited_containers, force)
         if target in (ALL_TARGET_NAME, REDUCER_COMPONENT_NAME):

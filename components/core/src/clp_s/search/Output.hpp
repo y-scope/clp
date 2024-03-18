@@ -9,6 +9,7 @@
 
 #include <simdjson.h>
 
+#include "../ArchiveReader.hpp"
 #include "../SchemaReader.hpp"
 #include "../Utils.hpp"
 #include "clp_search/Query.hpp"
@@ -24,19 +25,17 @@ using namespace clp_s::search::clp_search;
 namespace clp_s::search {
 class Output : public FilterClass {
 public:
-    Output(std::shared_ptr<SchemaTree> tree,
-           std::shared_ptr<ReaderUtils::SchemaMap> schemas,
-           SchemaMatch& match,
+    Output(SchemaMatch& match,
            std::shared_ptr<Expression> expr,
-           std::string archives_dir,
+           std::shared_ptr<ArchiveReader> archive_reader,
            std::shared_ptr<TimestampDictionaryReader> timestamp_dict,
            std::unique_ptr<OutputHandler> output_handler,
            bool ignore_case)
-            : m_schema_tree(std::move(tree)),
-              m_schemas(std::move(schemas)),
+            : m_archive_reader(std::move(archive_reader)),
+              m_schema_tree(m_archive_reader->get_schema_tree()),
+              m_schemas(m_archive_reader->get_schema_map()),
               m_match(match),
               m_expr(std::move(expr)),
-              m_archives_dir(std::move(archives_dir)),
               m_timestamp_dict(std::move(timestamp_dict)),
               m_output_handler(std::move(output_handler)),
               m_ignore_case(ignore_case),
@@ -48,9 +47,9 @@ public:
     void filter();
 
 private:
-    SchemaMatch& m_match;
+    std::shared_ptr<ArchiveReader> m_archive_reader;
     std::shared_ptr<Expression> m_expr;
-    std::string m_archives_dir;
+    SchemaMatch& m_match;
     std::unique_ptr<OutputHandler> m_output_handler;
     bool m_ignore_case;
     bool m_should_marshal_records{true};

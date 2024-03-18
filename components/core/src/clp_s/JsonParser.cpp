@@ -3,6 +3,9 @@
 #include <iostream>
 #include <stack>
 
+#include <simdjson.h>
+#include <spdlog/spdlog.h>
+
 #include "archive_constants.hpp"
 #include "JsonFileIterator.hpp"
 
@@ -12,12 +15,8 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_num_messages(0),
           m_compression_level(option.compression_level),
           m_target_encoded_size(option.target_encoded_size),
+          m_max_document_size(option.max_document_size),
           m_timestamp_key(option.timestamp_key) {
-    if (false == boost::filesystem::create_directory(m_archives_dir)) {
-        SPDLOG_ERROR("The output directory '{}' already exists", m_archives_dir);
-        exit(1);
-    }
-
     if (false == FileUtils::validate_path(option.file_paths)) {
         exit(1);
     }
@@ -30,23 +29,13 @@ JsonParser::JsonParser(JsonParserOption const& option)
         FileUtils::find_all_files(file_path, m_file_paths);
     }
 
-    m_schema_tree = std::make_shared<SchemaTree>();
-    m_schema_tree_path = m_archives_dir + constants::cArchiveSchemaTreeFile;
-
-    m_schema_map = std::make_shared<SchemaMap>(m_archives_dir, m_compression_level);
-
-    m_timestamp_dictionary = std::make_shared<TimestampDictionaryWriter>();
-    m_timestamp_dictionary->open(
-            m_archives_dir + constants::cArchiveTimestampDictFile,
-            option.compression_level
-    );
-
     ArchiveWriterOption archive_writer_option;
     archive_writer_option.archives_dir = m_archives_dir;
     archive_writer_option.id = m_generator();
     archive_writer_option.compression_level = option.compression_level;
+    archive_writer_option.print_archive_stats = option.print_archive_stats;
 
-    m_archive_writer = std::make_unique<ArchiveWriter>(m_schema_tree, m_timestamp_dictionary);
+    m_archive_writer = std::make_unique<ArchiveWriter>(option.metadata_db);
     m_archive_writer->open(archive_writer_option);
 }
 
@@ -90,7 +79,8 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
 
         switch (line.type()) {
             case ondemand::json_type::object: {
-                node_id = m_schema_tree->add_node(node_id_stack.top(), NodeType::OBJECT, cur_key);
+                node_id = m_archive_writer
+                                  ->add_node(node_id_stack.top(), NodeType::OBJECT, cur_key);
                 object_stack.push(std::move(line.get_object()));
                 auto objref = object_stack.top();
                 auto it = ondemand::object_iterator(objref.begin());
@@ -106,7 +96,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
             }
             case ondemand::json_type::array: {
                 std::string value = std::string(std::string_view(simdjson::to_json_string(line)));
-                node_id = m_schema_tree->add_node(node_id_stack.top(), NodeType::ARRAY, cur_key);
+                node_id = m_archive_writer->add_node(node_id_stack.top(), NodeType::ARRAY, cur_key);
                 m_current_parsed_message.add_value(node_id, value);
                 m_current_schema.insert_ordered(node_id);
                 break;
@@ -121,7 +111,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 } else {
                     type = NodeType::FLOAT;
                 }
-                node_id = m_schema_tree->add_node(node_id_stack.top(), type, cur_key);
+                node_id = m_archive_writer->add_node(node_id_stack.top(), type, cur_key);
 
                 if (type == NodeType::INTEGER) {
                     int64_t i64_value;
@@ -133,15 +123,16 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
 
                     m_current_parsed_message.add_value(node_id, i64_value);
                     if (matches_timestamp) {
-                        m_timestamp_dictionary->ingest_entry(m_timestamp_key, node_id, i64_value);
+                        m_archive_writer
+                                ->ingest_timestamp_entry(m_timestamp_key, node_id, i64_value);
                         matches_timestamp = may_match_timestamp = can_match_timestamp = false;
                     }
                 } else {
                     double double_value = line.get_double();
                     m_current_parsed_message.add_value(node_id, double_value);
                     if (matches_timestamp) {
-                        m_timestamp_dictionary
-                                ->ingest_entry(m_timestamp_key, node_id, double_value);
+                        m_archive_writer
+                                ->ingest_timestamp_entry(m_timestamp_key, node_id, double_value);
                         matches_timestamp = may_match_timestamp = can_match_timestamp = false;
                     }
                 }
@@ -154,23 +145,26 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                         = std::string(raw_json_token.substr(1, raw_json_token.rfind('"') - 1));
 
                 if (matches_timestamp) {
-                    node_id = m_schema_tree->add_node(
+                    node_id = m_archive_writer->add_node(
                             node_id_stack.top(),
                             NodeType::DATESTRING,
                             cur_key
                     );
                     uint64_t encoding_id{0};
-                    epochtime_t timestamp
-                            = m_timestamp_dictionary
-                                      ->ingest_entry(m_timestamp_key, node_id, value, encoding_id);
+                    epochtime_t timestamp = m_archive_writer->ingest_timestamp_entry(
+                            m_timestamp_key,
+                            node_id,
+                            value,
+                            encoding_id
+                    );
                     m_current_parsed_message.add_value(node_id, encoding_id, timestamp);
                     matches_timestamp = may_match_timestamp = can_match_timestamp = false;
                 } else if (value.find(' ') != std::string::npos) {
-                    node_id = m_schema_tree
+                    node_id = m_archive_writer
                                       ->add_node(node_id_stack.top(), NodeType::CLPSTRING, cur_key);
                     m_current_parsed_message.add_value(node_id, value);
                 } else {
-                    node_id = m_schema_tree
+                    node_id = m_archive_writer
                                       ->add_node(node_id_stack.top(), NodeType::VARSTRING, cur_key);
                     m_current_parsed_message.add_value(node_id, value);
                 }
@@ -180,14 +174,15 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
             }
             case ondemand::json_type::boolean: {
                 bool value = line.get_bool();
-                node_id = m_schema_tree->add_node(node_id_stack.top(), NodeType::BOOLEAN, cur_key);
+                node_id = m_archive_writer
+                                  ->add_node(node_id_stack.top(), NodeType::BOOLEAN, cur_key);
 
                 m_current_parsed_message.add_value(node_id, value);
                 m_current_schema.insert_ordered(node_id);
                 break;
             }
             case ondemand::json_type::null: {
-                node_id = m_schema_tree
+                node_id = m_archive_writer
                                   ->add_node(node_id_stack.top(), NodeType::NULLVALUE, cur_key);
                 m_current_schema.insert_ordered(node_id);
                 break;
@@ -219,76 +214,90 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
     while (!object_stack.empty());
 }
 
-void JsonParser::parse() {
+bool JsonParser::parse() {
     for (auto& file_path : m_file_paths) {
-        JsonFileIterator json_file_iterator(file_path);
+        JsonFileIterator json_file_iterator(file_path, m_max_document_size);
         if (false == json_file_iterator.is_open()) {
-            return;
+            m_archive_writer->close();
+            return false;
+        }
+
+        if (simdjson::error_code::SUCCESS != json_file_iterator.get_error()) {
+            SPDLOG_ERROR(
+                    "Encountered error - {} - while trying to parse {}",
+                    simdjson::error_message(json_file_iterator.get_error()),
+                    file_path
+            );
+            m_archive_writer->close();
+            return false;
         }
 
         simdjson::ondemand::document_stream::iterator json_it;
 
         m_num_messages = 0;
-
+        size_t last_num_bytes_read = 0;
         while (json_file_iterator.get_json(json_it)) {
             m_current_schema.clear();
 
-            parse_line((*json_it).value(), -1, "root");
+            auto ref = *json_it;
+            auto is_scalar_result = ref.is_scalar();
+            // If you don't check the error on is_scalar it will sometimes throw TAPE_ERROR when
+            // converting to bool. The error being TAPE_ERROR or is_scalar() being true both mean
+            // that this isn't a valid JSON document but they get set in different situations so we
+            // need to check both here.
+            if (is_scalar_result.error() || true == is_scalar_result.value()) {
+                SPDLOG_ERROR("Encountered non-json-object while trying to parse {}", file_path);
+                m_archive_writer->close();
+                return false;
+            }
+            parse_line(ref.value(), -1, "root");
             m_num_messages++;
 
-            int32_t current_schema_id = m_schema_map->add_schema(m_current_schema);
+            int32_t current_schema_id = m_archive_writer->add_schema(m_current_schema);
             m_current_parsed_message.set_id(current_schema_id);
+            m_archive_writer
+                    ->append_message(current_schema_id, m_current_schema, m_current_parsed_message);
 
             if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
+                size_t num_bytes_read = json_file_iterator.get_num_bytes_read();
+                m_archive_writer->increment_uncompressed_size(num_bytes_read - last_num_bytes_read);
+                last_num_bytes_read = num_bytes_read;
                 split_archive();
             }
 
-            m_archive_writer
-                    ->append_message(current_schema_id, m_current_schema, m_current_parsed_message);
             m_current_parsed_message.clear();
         }
 
-        m_uncompressed_size += json_file_iterator.get_num_bytes_read();
+        m_archive_writer->increment_uncompressed_size(
+                json_file_iterator.get_num_bytes_read() - last_num_bytes_read
+        );
 
-        if (json_file_iterator.truncated_bytes() > 0) {
+        if (simdjson::error_code::SUCCESS != json_file_iterator.get_error()) {
             SPDLOG_ERROR(
+                    "Encountered error - {} - while trying to parse {}",
+                    simdjson::error_message(json_file_iterator.get_error()),
+                    file_path
+            );
+            m_archive_writer->close();
+            return false;
+        } else if (json_file_iterator.truncated_bytes() > 0) {
+            // currently don't treat truncated bytes at the end of the file as an error
+            SPDLOG_WARN(
                     "Truncated JSON  ({} bytes) at end of file {}",
                     json_file_iterator.truncated_bytes(),
                     file_path.c_str()
             );
         }
     }
+    return true;
 }
 
 void JsonParser::store() {
-    FileWriter schema_tree_writer;
-    ZstdCompressor schema_tree_compressor;
-
-    schema_tree_writer.open(m_schema_tree_path, FileWriter::OpenMode::CreateForWriting);
-    schema_tree_compressor.open(schema_tree_writer, m_compression_level);
-
-    auto nodes = m_schema_tree->get_nodes();
-    schema_tree_compressor.write_numeric_value(nodes.size());
-    for (auto const& node : nodes) {
-        schema_tree_compressor.write_numeric_value(node->get_parent_id());
-
-        std::string const& key = node->get_key_name();
-        schema_tree_compressor.write_numeric_value(key.size());
-        schema_tree_compressor.write_string(key);
-        schema_tree_compressor.write_numeric_value(node->get_type());
-    }
-
-    schema_tree_compressor.close();
-    m_compressed_size += schema_tree_writer.get_pos();
-    schema_tree_writer.close();
-
-    m_compressed_size += m_schema_map->store();
-
-    m_compressed_size += m_timestamp_dictionary->close();
+    m_archive_writer->close();
 }
 
 void JsonParser::split_archive() {
-    m_compressed_size += m_archive_writer->close();
+    m_archive_writer->close();
 
     ArchiveWriterOption archive_writer_option;
     archive_writer_option.archives_dir = m_archives_dir;
@@ -298,7 +307,4 @@ void JsonParser::split_archive() {
     m_archive_writer->open(archive_writer_option);
 }
 
-void JsonParser::close() {
-    m_compressed_size += m_archive_writer->close();
-}
 }  // namespace clp_s

@@ -9,6 +9,7 @@
 #include <boost/uuid/random_generator.hpp>
 #include <simdjson.h>
 
+#include "../clp/GlobalMySQLMetadataDB.hpp"
 #include "ArchiveWriter.hpp"
 #include "DictionaryWriter.hpp"
 #include "FileReader.hpp"
@@ -30,7 +31,10 @@ struct JsonParserOption {
     std::string timestamp_key;
     std::string archives_dir;
     size_t target_encoded_size;
+    size_t max_document_size;
     int compression_level;
+    bool print_archive_stats;
+    std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db;
 };
 
 class JsonParser {
@@ -50,36 +54,14 @@ public:
 
     /**
      * Parses the JSON log messages and store the parsed data in the archive.
+     * @return whether the JSON was parsed succesfully
      */
-    void parse();
+    [[nodiscard]] bool parse();
 
     /**
      * Writes the metadata and archive data to disk.
      */
     void store();
-
-    /**
-     * Closes the archive and clean up.
-     */
-    void close();
-
-    /**
-     * @return the size of the input data before compression in bytes
-     */
-    [[nodiscard]] size_t get_uncompressed_size() { return m_uncompressed_size; }
-
-    /**
-     * @return the size of the compressed data in bytes
-     */
-    [[nodiscard]] size_t get_compressed_size() { return m_compressed_size; }
-
-    [[nodiscard]] epochtime_t get_begin_timestamp() {
-        return m_timestamp_dictionary->get_begin_timestamp();
-    }
-
-    [[nodiscard]] epochtime_t get_end_timestamp() {
-        return m_timestamp_dictionary->get_end_timestamp();
-    }
 
 private:
     /**
@@ -102,11 +84,7 @@ private:
     std::string m_schema_tree_path;
 
     Schema m_current_schema;
-    std::shared_ptr<SchemaMap> m_schema_map;
-
-    std::shared_ptr<SchemaTree> m_schema_tree;
     ParsedMessage m_current_parsed_message;
-    std::shared_ptr<TimestampDictionaryWriter> m_timestamp_dictionary;
 
     std::string m_timestamp_key;
     std::vector<std::string> m_timestamp_column;
@@ -114,9 +92,7 @@ private:
     boost::uuids::random_generator m_generator;
     std::unique_ptr<ArchiveWriter> m_archive_writer;
     size_t m_target_encoded_size;
-
-    size_t m_uncompressed_size{0};
-    size_t m_compressed_size{0};
+    size_t m_max_document_size;
 };
 }  // namespace clp_s
 

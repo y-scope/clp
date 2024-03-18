@@ -21,98 +21,89 @@ namespace clp_s::search {
 void Output::filter() {
     auto top_level_expr = m_expr;
 
-    ArchiveReader archive_reader(m_schema_tree, m_schemas, m_timestamp_dict);
-    for (auto const& archive : ReaderUtils::get_archives(m_archives_dir)) {
-        std::vector<int32_t> matched_schemas;
-        bool has_array = false;
-        bool has_array_search = false;
+    std::vector<int32_t> matched_schemas;
+    bool has_array = false;
+    bool has_array_search = false;
 
-        archive_reader.open(archive);
-        archive_reader.read_metadata();
-        for (auto schema_id : archive_reader.get_schema_ids()) {
-            if (m_match.schema_matched(schema_id)) {
-                matched_schemas.push_back(schema_id);
-                if (m_match.has_array(schema_id)) {
-                    has_array = true;
-                }
-                if (m_match.has_array_search(schema_id)) {
-                    has_array_search = true;
-                }
+    m_archive_reader->read_metadata();
+    for (auto schema_id : m_archive_reader->get_schema_ids()) {
+        if (m_match.schema_matched(schema_id)) {
+            matched_schemas.push_back(schema_id);
+            if (m_match.has_array(schema_id)) {
+                has_array = true;
+            }
+            if (m_match.has_array_search(schema_id)) {
+                has_array_search = true;
             }
         }
+    }
 
-        // Skip decompressing segment if it contains no
-        // relevant schemas
-        if (matched_schemas.empty()) {
-            archive_reader.close();
+    // Skip decompressing archive if it contains no
+    // relevant schemas
+    if (matched_schemas.empty()) {
+        return;
+    }
+
+    // Skip decompressing archive if it won't match based on the timestamp
+    // range index
+    EvaluateTimestampIndex timestamp_index(m_archive_reader->get_timestamp_dictionary());
+    if (timestamp_index.run(top_level_expr) == EvaluatedValue::False) {
+        m_archive_reader->close();
+        return;
+    }
+
+    m_var_dict = m_archive_reader->read_variable_dictionary();
+    m_log_dict = m_archive_reader->read_log_type_dictionary();
+
+    if (has_array) {
+        if (has_array_search) {
+            m_array_dict = m_archive_reader->read_array_dictionary();
+        } else {
+            m_array_dict = m_archive_reader->read_array_dictionary(true);
+        }
+    }
+
+    populate_string_queries(top_level_expr);
+
+    std::string message;
+    for (int32_t schema_id : matched_schemas) {
+        m_expr_clp_query.clear();
+        m_expr_var_match_map.clear();
+        m_expr = m_match.get_query_for_schema(schema_id)->copy();
+        m_wildcard_to_searched_columns.clear();
+        m_wildcard_to_searched_clpstrings.clear();
+        m_wildcard_to_searched_varstrings.clear();
+        m_wildcard_to_searched_datestrings.clear();
+        m_schema = schema_id;
+
+        populate_searched_wildcard_columns(m_expr);
+
+        m_expression_value = constant_propagate(m_expr, schema_id);
+
+        if (m_expression_value == EvaluatedValue::False) {
             continue;
         }
 
-        // Skip decompressing sub-archive if it won't match based on the timestamp
-        // range index
-        EvaluateTimestampIndex timestamp_index(archive_reader.read_timestamp_dictionary());
-        if (timestamp_index.run(top_level_expr) == EvaluatedValue::False) {
-            archive_reader.close();
-            continue;
-        }
+        add_wildcard_columns_to_searched_columns();
 
-        m_var_dict = archive_reader.read_variable_dictionary();
-        m_log_dict = archive_reader.read_log_type_dictionary();
+        auto reader = archive_reader.read_table(
+                schema_id,
+                m_output_handler->should_output_timestamp(),
+                m_should_marshal_records
+        );
+        reader->initialize_filter(this);
 
-        if (has_array) {
-            if (has_array_search) {
-                m_array_dict = archive_reader.read_array_dictionary();
-            } else {
-                m_array_dict = archive_reader.read_array_dictionary(true);
+        if (m_output_handler->should_output_timestamp()) {
+            epochtime_t timestamp;
+            while (reader->get_next_message_with_timestamp(message, timestamp, this)) {
+                m_output_handler->write(message, timestamp);
+            }
+        } else {
+            while (reader->get_next_message(message, this)) {
+                m_output_handler->write(message);
             }
         }
-
-        m_string_query_map.clear();
-        m_string_var_match_map.clear();
-        populate_string_queries(top_level_expr);
-
-        std::string message;
-        for (int32_t schema_id : matched_schemas) {
-            m_expr_clp_query.clear();
-            m_expr_var_match_map.clear();
-            m_expr = m_match.get_query_for_schema(schema_id)->copy();
-            m_wildcard_to_searched_columns.clear();
-            m_wildcard_to_searched_clpstrings.clear();
-            m_wildcard_to_searched_varstrings.clear();
-            m_wildcard_to_searched_datestrings.clear();
-            m_schema = schema_id;
-
-            populate_searched_wildcard_columns(m_expr);
-
-            m_expression_value = constant_propagate(m_expr, schema_id);
-
-            if (m_expression_value == EvaluatedValue::False) {
-                continue;
-            }
-
-            add_wildcard_columns_to_searched_columns();
-
-            auto reader = archive_reader.read_table(
-                    schema_id,
-                    m_output_handler->should_output_timestamp(),
-                    m_should_marshal_records
-            );
-            reader->initialize_filter(this);
-
-            if (m_output_handler->should_output_timestamp()) {
-                epochtime_t timestamp;
-                while (reader->get_next_message_with_timestamp(message, timestamp, this)) {
-                    m_output_handler->write(message, timestamp);
-                }
-            } else {
-                while (reader->get_next_message(message, this)) {
-                    m_output_handler->write(message);
-                }
-            }
-        }
-
         m_output_handler->flush();
-        archive_reader.close();
     }
     m_output_handler->finish();
 }

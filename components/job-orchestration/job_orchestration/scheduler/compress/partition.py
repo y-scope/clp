@@ -3,6 +3,7 @@ import json
 import pathlib
 import typing
 
+import brotli
 import msgpack
 from clp_py_utils.compression import (
     FileMetadata,
@@ -18,7 +19,6 @@ class PathsToCompressBuffer:
         maintain_file_ordering: bool,
         empty_directories_allowed: bool,
         scheduling_job_id: int,
-        zstd_cctx,
         clp_io_config: ClpIoConfig,
         clp_metadata_db_connection_config: dict,
     ):
@@ -33,7 +33,6 @@ class PathsToCompressBuffer:
         self.__total_file_size: int = 0
         self.__target_archive_size: int = clp_io_config.output.target_archive_size
         self.__file_size_to_trigger_compression: int = clp_io_config.output.target_archive_size * 2
-        self.__zstd_cctx = zstd_cctx
 
         self.num_tasks = 0
         self.__task_arguments = {
@@ -84,8 +83,8 @@ class PathsToCompressBuffer:
         self.__partition_info.append(
             {
                 "partition_original_size": str(sum(st_sizes)),
-                "clp_paths_to_compress": self.__zstd_cctx.compress(
-                    msgpack.packb(paths_to_compress.dict(exclude_none=True))
+                "clp_paths_to_compress": brotli.compress(
+                    msgpack.packb(paths_to_compress.dict(exclude_none=True)), quality=4
                 ),
             }
         )
