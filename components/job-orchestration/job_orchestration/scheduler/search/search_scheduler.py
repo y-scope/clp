@@ -20,7 +20,7 @@ from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.search.fs_search_task import search
 from job_orchestration.scheduler.constants import SearchJobStatus
 from job_orchestration.scheduler.job_config import SearchConfig
-from job_orchestration.scheduler.scheduler_data import SearchJob, SearchTaskResult
+from job_orchestration.scheduler.scheduler_data import InternalJobState, SearchJob, SearchTaskResult
 from pydantic import ValidationError
 
 # Setup logging
@@ -34,11 +34,15 @@ reducer_connection_queue = None
 
 async def cancel_job(job_id):
     global active_jobs
-    active_jobs[job_id].current_sub_job_async_task_result.revoke(terminate=True)
-    try:
-        active_jobs[job_id].current_sub_job_async_task_result.get()
-    except Exception:
-        pass
+    if InternalJobState.RUNNING == active_jobs[job_id].state:
+        active_jobs[job_id].current_sub_job_async_task_result.revoke(terminate=True)
+        try:
+            active_jobs[job_id].current_sub_job_async_task_result.get()
+        except Exception:
+            pass
+    elif InternalJobState.WAITING_FOR_REDUCER == active_jobs[job_id].state:
+        active_jobs[job_id].reducer_acquisition_task.cancel()
+
     if active_jobs[job_id].reducer_send_handle is not None:
         await active_jobs[job_id].reducer_send_handle.put(False)
     del active_jobs[job_id]
@@ -99,10 +103,7 @@ async def handle_cancelling_search_jobs(db_conn) -> None:
 
     for job in cancelling_jobs:
         job_id = job["job_id"]
-        if (
-            job_id in active_jobs
-            and active_jobs[job_id].current_sub_job_async_task_result is not None
-        ):
+        if job_id in active_jobs:
             await cancel_job(job_id)
         else:
             continue
@@ -174,79 +175,96 @@ def dispatch_search_job(
         archives_for_search, job.id, job.search_config, results_cache_uri
     )
     job.current_sub_job_async_task_result = task_group.apply_async()
+    job.state = InternalJobState.RUNNING
 
 
-async def handle_pending_search_jobs(
-    db_conn, results_cache_uri: str, num_archives_to_search_per_sub_job: int, jobs_poll_delay: float
-) -> None:
+async def acquire_reducer_for_job(job_id: str):
+    job = active_jobs[job_id]
+    reducer_host = None
+    reducer_port = None
+    reducer_recv_handle = None
+    reducer_send_handle = None
+    while True:
+        reducer_host, reducer_port, reducer_recv_handle, reducer_send_handle = (
+            await reducer_connection_queue.get()
+        )
+        await reducer_send_handle.put(job.search_config)
+        if True == await reducer_recv_handle.get():
+            break
+
+    job.reducer_recv_handle = reducer_recv_handle
+    job.reducer_send_handle = reducer_send_handle
+    job.search_config.reducer_host = reducer_host
+    job.search_config.reducer_port = reducer_port
+    job.state = InternalJobState.WAITING_FOR_DISPATCH
+    job.reducer_acquisition_task = None
+
+    logger.info(f"Got reducer for job {job_id} at {reducer_host}:{reducer_port}")
+
+
+def handle_pending_search_jobs(
+    db_conn, results_cache_uri: str, num_archives_to_search_per_sub_job: int
+) -> List[asyncio.Task]:
     global active_jobs
 
-    while True:
-        pending_jobs = [
-            job for job in active_jobs.values() if job.current_sub_job_async_task_result is None
-        ]
-        with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
-            for job in fetch_new_search_jobs(cursor):
-                job_id = str(job["job_id"])
-                search_config = SearchConfig.parse_obj(msgpack.unpackb(job["search_config"]))
-                archives_for_search = get_archives_for_search(db_conn, search_config)
-                if len(archives_for_search) == 0:
-                    if set_job_status(
-                        db_conn, job_id, SearchJobStatus.SUCCEEDED, SearchJobStatus.PENDING
-                    ):
-                        logger.info(f"No matching archives, skipping job {job['job_id']}.")
-                    continue
+    reducer_acquisition_tasks = []
+    pending_jobs = [
+        job for job in active_jobs.values() if InternalJobState.WAITING_FOR_DISPATCH == job.state
+    ]
+    with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
+        for job in fetch_new_search_jobs(cursor):
+            job_id = str(job["job_id"])
 
-                reducer_recv_handle = None
-                reducer_send_handle = None
-                if search_config.count is not None:
-                    search_config.job_id = job["job_id"]
-                    # Get a reducer and wait for it to be ready
-                    while True:
-                        reducer_host, reducer_port, reducer_recv_handle, reducer_send_handle = (
-                            await reducer_connection_queue.get()
-                        )
-                        await reducer_send_handle.put(search_config)
-                        if True == await reducer_recv_handle.get():
-                            break
+            # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
+            if job_id in active_jobs:
+                continue
 
-                    search_config.reducer_host = reducer_host
-                    search_config.reducer_port = reducer_port
-                    logger.info(f"Got reducer for job {job_id} at {reducer_host}:{reducer_port}")
+            search_config = SearchConfig.parse_obj(msgpack.unpackb(job["search_config"]))
+            archives_for_search = get_archives_for_search(db_conn, search_config)
+            if len(archives_for_search) == 0:
+                if set_job_status(
+                    db_conn, job_id, SearchJobStatus.SUCCEEDED, SearchJobStatus.PENDING
+                ):
+                    logger.info(f"No matching archives, skipping job {job['job_id']}.")
+                continue
 
-                new_search_job = SearchJob(
-                    id=job_id,
-                    search_config=search_config,
-                    remaining_archives_for_search=archives_for_search,
-                    current_sub_job_async_task_result=None,
-                    reducer_recv_handle=reducer_recv_handle,
-                    reducer_send_handle=reducer_send_handle,
-                )
-                active_jobs[job_id] = new_search_job
-                pending_jobs.append(new_search_job)
-            db_conn.commit()
-
-        for job in pending_jobs:
-            job_id = job.id
-
-            if len(job.remaining_archives_for_search) > num_archives_to_search_per_sub_job:
-                archives_for_search = job.remaining_archives_for_search[
-                    :num_archives_to_search_per_sub_job
-                ]
-                job.remaining_archives_for_search = job.remaining_archives_for_search[
-                    num_archives_to_search_per_sub_job:
-                ]
-            else:
-                archives_for_search = job.remaining_archives_for_search
-                job.remaining_archives_for_search = []
-
-            dispatch_search_job(job, archives_for_search, results_cache_uri)
-            logger.info(
-                f"Dispatched job {job_id} with {len(archives_for_search)} archives to search."
+            search_config.job_id = job["job_id"]
+            new_search_job = SearchJob(
+                id=job_id,
+                search_config=search_config,
+                state=InternalJobState.WAITING_FOR_DISPATCH,
+                remaining_archives_for_search=archives_for_search,
             )
-            set_job_status(db_conn, job_id, SearchJobStatus.RUNNING, SearchJobStatus.PENDING)
 
-        await asyncio.sleep(jobs_poll_delay)
+            if search_config.count is not None:
+                new_search_job.state = InternalJobState.WAITING_FOR_REDUCER
+                new_search_job.reducer_acquisition_task = asyncio.create_task(
+                    acquire_reducer_for_job(job_id)
+                )
+                reducer_acquisition_tasks.append(new_search_job.reducer_acquisition_task)
+            else:
+                pending_jobs.append(new_search_job)
+            active_jobs[job_id] = new_search_job
+        db_conn.commit()
+
+    for job in pending_jobs:
+        job_id = job.id
+
+        if len(job.remaining_archives_for_search) > num_archives_to_search_per_sub_job:
+            archives_for_search = job.remaining_archives_for_search[
+                :num_archives_to_search_per_sub_job
+            ]
+            job.remaining_archives_for_search = job.remaining_archives_for_search[
+                num_archives_to_search_per_sub_job:
+            ]
+        else:
+            archives_for_search = job.remaining_archives_for_search
+            job.remaining_archives_for_search = []
+
+        dispatch_search_job(job, archives_for_search, results_cache_uri)
+        logger.info(f"Dispatched job {job_id} with {len(archives_for_search)} archives to search.")
+        set_job_status(db_conn, job_id, SearchJobStatus.RUNNING, SearchJobStatus.PENDING)
+    return reducer_acquisition_tasks
 
 
 def try_getting_task_result(async_task_result):
@@ -283,9 +301,7 @@ def found_max_num_latest_results(
 async def check_job_status_and_update_db(db_conn, results_cache_uri):
     global active_jobs
 
-    for job_id in [
-        id for id, job in active_jobs.items() if job.current_sub_job_async_task_result is not None
-    ]:
+    for job_id in [id for id, job in active_jobs.items() if InternalJobState.RUNNING == job.state]:
         job = active_jobs[job_id]
         try:
             returned_results = try_getting_task_result(job.current_sub_job_async_task_result)
@@ -324,8 +340,9 @@ async def check_job_status_and_update_db(db_conn, results_cache_uri):
                         new_job_status = SearchJobStatus.SUCCEEDED
             if new_job_status == SearchJobStatus.RUNNING:
                 job.current_sub_job_async_task_result = None
+                job.state = InternalJobState.WAITING_FOR_DISPATCH
                 logger.info(f"Job {job_id} waiting for more archives to search.")
-                return
+                continue
 
             reducer_failed = False
             if active_jobs[job_id].reducer_send_handle is not None:
@@ -359,105 +376,118 @@ async def handle_jobs(
     jobs_poll_delay: float,
     num_archives_to_search_per_sub_job: int,
 ) -> None:
-    handle_pending_task = asyncio.create_task(
-        handle_pending_search_jobs(
-            db_conn_job_fetcher,
-            results_cache_uri,
-            num_archives_to_search_per_sub_job,
-            jobs_poll_delay,
-        )
-    )
     handle_updating_task = asyncio.create_task(
         handle_job_updates(db_conn_job_updater, results_cache_uri, jobs_poll_delay)
     )
-    await asyncio.wait(
-        [handle_pending_task, handle_updating_task], return_when=asyncio.FIRST_COMPLETED
-    )
+
+    tasks = [handle_updating_task]
+    while True:
+        new_aggregation_jobs = handle_pending_search_jobs(
+            db_conn_job_fetcher, results_cache_uri, num_archives_to_search_per_sub_job
+        )
+        if 0 == len(new_aggregation_jobs):
+            tasks.append(asyncio.sleep(jobs_poll_delay))
+        else:
+            tasks.extend(new_aggregation_jobs)
+
+        try:
+            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            if handle_updating_task in done:
+                logger.error("Job update handler task finished unexpectedly.")
+                return
+            tasks = list(pending)
+        except asyncio.CancelledError:
+            tasks = [task for task in tasks if False == task.cancelled()]
 
 
 async def handle_reducer_connection(reader, writer):
     global reducer_connection_queue
-    size_header_bytes = await reader.read(8)
-    if not size_header_bytes:
-        writer.close()
-        await writer.wait_closed()
-        return
-    size_header = int.from_bytes(size_header_bytes, byteorder="little")
+    try:
+        size_header_bytes = await reader.read(8)
+        if not size_header_bytes:
+            writer.close()
+            await writer.wait_closed()
+            return
+        size_header = int.from_bytes(size_header_bytes, byteorder="little")
 
-    message_bytes = await reader.read(size_header)
-    if not message_bytes:
-        writer.close()
-        await writer.wait_closed()
-        return
-    message = msgpack.unpackb(message_bytes)
+        message_bytes = await reader.read(size_header)
+        if not message_bytes:
+            writer.close()
+            await writer.wait_closed()
+            return
+        message = msgpack.unpackb(message_bytes)
 
-    reducer_recv_queue = asyncio.Queue(1)  # send messages from reducer to scheduler here
-    reducer_send_queue = asyncio.Queue(1)  # listen here for messages from scheduler to reducer
-    await reducer_connection_queue.put(
-        (message["host"], message["port"], reducer_recv_queue, reducer_send_queue)
-    )
+        reducer_recv_queue = asyncio.Queue(1)  # send messages from reducer to scheduler here
+        reducer_send_queue = asyncio.Queue(1)  # listen here for messages from scheduler to reducer
+        await reducer_connection_queue.put(
+            (message["host"], message["port"], reducer_recv_queue, reducer_send_queue)
+        )
 
-    wait_for_ack = asyncio.create_task(reader.read(1))
-    wait_for_job = asyncio.create_task(reducer_send_queue.get())
-    done, pending = await asyncio.wait(
-        [wait_for_ack, wait_for_job], return_when=asyncio.FIRST_COMPLETED
-    )
+        wait_for_ack = asyncio.create_task(reader.read(1))
+        wait_for_job = asyncio.create_task(reducer_send_queue.get())
+        done, pending = await asyncio.wait(
+            [wait_for_ack, wait_for_job], return_when=asyncio.FIRST_COMPLETED
+        )
 
-    job_config = None
-    if wait_for_job in done:
-        job_config = wait_for_job.result()
+        job_config = None
+        if wait_for_job in done:
+            job_config = wait_for_job.result()
 
-    if wait_for_ack in done:
-        await reducer_recv_queue.put(False)
-        writer.close()
-        await writer.wait_closed()
-        return
+        if wait_for_ack in done:
+            await reducer_recv_queue.put(False)
+            writer.close()
+            await writer.wait_closed()
+            return
 
-    job_config_bytes = msgpack.packb(job_config.dict())
-    size_header_bytes = (len(job_config_bytes)).to_bytes(8, byteorder="little")
-    writer.write(size_header_bytes)
-    writer.write(job_config_bytes)
-    await writer.drain()
+        job_config_bytes = msgpack.packb(job_config.dict())
+        size_header_bytes = (len(job_config_bytes)).to_bytes(8, byteorder="little")
+        writer.write(size_header_bytes)
+        writer.write(job_config_bytes)
+        await writer.drain()
 
-    ack = await wait_for_ack
-    if not ack:
-        await reducer_recv_queue.put(False)
-        writer.close()
-        await writer.wait_closed()
-        return
-    await reducer_recv_queue.put(True)
-
-    wait_for_ack = asyncio.create_task(reader.read(1))
-    wait_for_job_done = asyncio.create_task(reducer_send_queue.get())
-
-    done, pending = await asyncio.wait(
-        [wait_for_ack, wait_for_job_done], return_when=asyncio.FIRST_COMPLETED
-    )
-
-    if wait_for_job_done in done and False == wait_for_job_done.result():
-        writer.close()
-        await writer.wait_closed()
-        return
-
-    if wait_for_ack in done:
-        await reducer_recv_queue.put(False)
-        writer.close()
-        await writer.wait_closed()
-        return
-
-    job_done_bytes = msgpack.packb({"done": True})
-    size_header_bytes = (len(job_done_bytes)).to_bytes(8, byteorder="little")
-    writer.write(size_header_bytes)
-    writer.write(job_done_bytes)
-    await writer.drain()
-
-    ack = await wait_for_ack
-    if not ack:
-        await reducer_recv_queue.put(False)
-    else:
+        ack = await wait_for_ack
+        if not ack:
+            await reducer_recv_queue.put(False)
+            writer.close()
+            await writer.wait_closed()
+            return
         await reducer_recv_queue.put(True)
-    writer.close()
-    await writer.wait_closed()
+
+        wait_for_ack = asyncio.create_task(reader.read(1))
+        wait_for_job_done = asyncio.create_task(reducer_send_queue.get())
+
+        done, pending = await asyncio.wait(
+            [wait_for_ack, wait_for_job_done], return_when=asyncio.FIRST_COMPLETED
+        )
+
+        if wait_for_job_done in done and False == wait_for_job_done.result():
+            writer.close()
+            await writer.wait_closed()
+            return
+
+        if wait_for_ack in done:
+            await reducer_recv_queue.put(False)
+            writer.close()
+            await writer.wait_closed()
+            return
+
+        job_done_bytes = msgpack.packb({"done": True})
+        size_header_bytes = (len(job_done_bytes)).to_bytes(8, byteorder="little")
+        writer.write(size_header_bytes)
+        writer.write(job_done_bytes)
+        await writer.drain()
+
+        ack = await wait_for_ack
+        if not ack:
+            await reducer_recv_queue.put(False)
+        else:
+            await reducer_recv_queue.put(True)
+        writer.close()
+        await writer.wait_closed()
+    except asyncio.CancelledError:
+        writer.close()
+        await writer.wait_closed()
+        raise
 
 
 async def main(argv: List[str]) -> int:

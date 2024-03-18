@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+from enum import auto, Enum
 from typing import Any, Dict, List, Optional
 
 from job_orchestration.scheduler.constants import CompressionTaskStatus
@@ -40,15 +41,23 @@ def is_valid_queue(queue: Optional[asyncio.Queue]):
     return queue is None or isinstance(queue, asyncio.Queue)
 
 
+class InternalJobState(Enum):
+    WAITING_FOR_REDUCER = auto()
+    WAITING_FOR_DISPATCH = auto()
+    RUNNING = auto()
+
+
 class SearchJob(BaseModel):
     id: str
     search_config: SearchConfig
+    state: InternalJobState
     remaining_archives_for_search: List[Dict[str, Any]]
     current_sub_job_async_task_result: Optional[Any]
+    reducer_acquisition_task: Optional[asyncio.Task]
     reducer_recv_handle: Optional[asyncio.Queue]
     reducer_send_handle: Optional[asyncio.Queue]
 
-    class Config:  # To allow asyncio.Queue
+    class Config:  # To allow asyncio.Task and asyncio.Queue
         arbitrary_types_allowed = True
 
 
