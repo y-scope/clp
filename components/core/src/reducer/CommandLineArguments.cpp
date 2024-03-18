@@ -42,10 +42,10 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 ->default_value(m_mongodb_uri),
             "URI pointing to MongoDB database"
         )(
-            "polling-interval-ms",
-            po::value<int>(&m_polling_interval_ms)
-                ->default_value(m_polling_interval_ms),
-            "Polling interval for the jobs table in milliseconds"
+            "upsert-interval",
+            po::value<int>(&m_upsert_interval)
+                ->default_value(m_upsert_interval),
+            "Interval for upserting timeline aggregation results (ms)"
         );
 
         po::options_description all_options;
@@ -93,8 +93,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             throw std::invalid_argument("Empty mongodb-uri argument.");
         }
 
-        if (m_polling_interval_ms <= 0) {
-            throw std::invalid_argument("polling-interval-ms cannot be <= 0.");
+        if (m_upsert_interval <= 0) {
+            throw std::invalid_argument("upsert-interval cannot be <= 0.");
         }
     } catch (std::exception& e) {
         SPDLOG_ERROR("Failed to validate command line arguments - {}", e.what());

@@ -24,7 +24,9 @@ def main(argv: List[str]) -> int:
         "--concurrency", required=True, help="Number of reducer servers to run"
     )
     args_parser.add_argument(
-        "--polling-interval-ms", required=True, help="Database polling interval in ms"
+        "--upsert-interval",
+        required=True,
+        help="Interval for upserting timeline aggregation results (ms)",
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
@@ -57,7 +59,7 @@ def main(argv: List[str]) -> int:
         "--scheduler-host", clp_config.search_scheduler.host,
         "--scheduler-port", str(clp_config.search_scheduler.port),
         "--mongodb-uri", clp_config.results_cache.get_uri(),
-        "--polling-interval-ms", str(parsed_args.polling_interval_ms),
+        "--upsert-interval", str(parsed_args.upsert_interval),
         "--reducer-host", parsed_args.host,
         "--reducer-port",
     ]

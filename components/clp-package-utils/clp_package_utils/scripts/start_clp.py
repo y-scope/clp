@@ -785,7 +785,7 @@ def start_reducer(
         '--config', str(container_clp_config.logs_directory / container_config_filename),
         '--host', clp_config.reducer.host,
         "--concurrency", str(num_cpus),
-        "--polling-interval-ms", str(clp_config.reducer.polling_interval),
+        "--upsert-interval", str(clp_config.reducer.upsert_interval),
     ]
 
     cmd = container_start_cmd + reducer_cmd

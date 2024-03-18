@@ -221,7 +221,7 @@ class Reducer(BaseModel):
     host: str = "localhost"
     base_port: int = 14009
     logging_level: str = "INFO"
-    polling_interval: int = 100  # milliseconds
+    upsert_interval: int = 100  # milliseconds
 
     @validator("host")
     def validate_host(cls, field):
@@ -240,8 +240,8 @@ class Reducer(BaseModel):
             raise ValueError(f"{field} is not greater than zero")
         return field
 
-    @validator("polling_interval")
-    def validate_polling_interval(cls, field):
+    @validator("upsert_interval")
+    def validate_upsert_interval(cls, field):
         if not field > 0:
             raise ValueError(f"{field} is not greater than zero")
         return field

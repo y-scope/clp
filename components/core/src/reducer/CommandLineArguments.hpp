@@ -28,7 +28,7 @@ public:
 
     [[nodiscard]] std::string const& get_mongodb_uri() const { return m_mongodb_uri; }
 
-    [[nodiscard]] int get_polling_interval() const { return m_polling_interval_ms; }
+    [[nodiscard]] int get_upsert_interval() const { return m_upsert_interval; }
 
 private:
     // Methods
@@ -40,7 +40,7 @@ private:
     std::string m_scheduler_host{"127.0.0.1"};
     int m_scheduler_port{7000};
     std::string m_mongodb_uri{"mongodb://localhost:27017/clp-search"};
-    int m_polling_interval_ms{100};
+    int m_upsert_interval{100};
 };
 }  // namespace reducer
 
