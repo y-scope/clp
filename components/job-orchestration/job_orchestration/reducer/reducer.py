@@ -87,7 +87,7 @@ def main(argv: List[str]) -> int:
         f"Host={parsed_args.host}"
         f" Base port={clp_config.reducer.base_port}"
         f" Concurrency={concurrency}"
-        f" Polling Interval={parsed_args.polling_interval_ms}"
+        f" Upsert Interval={parsed_args.upsert_interval}"
     )
     for i, reducer in enumerate(reducers):
         reducer.communicate()
