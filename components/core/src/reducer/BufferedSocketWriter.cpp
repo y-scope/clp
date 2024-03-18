@@ -7,13 +7,13 @@
 
 namespace reducer {
 bool BufferedSocketWriter::write(char const* data, size_t size) {
-    if ((m_buffer.size() + size) <= m_buffer.capacity()) {
+    if ((m_buffer.size() + size) <= m_buffer_capacity) {
         m_buffer.insert(m_buffer.end(), data, data + size);
         return true;
     }
 
     do {
-        size_t space_left = m_buffer.capacity() - m_buffer.size();
+        size_t space_left = m_buffer_capacity - m_buffer.size();
         if (space_left > 0) {
             m_buffer.insert(m_buffer.end(), data, data + space_left);
             data += space_left;
@@ -23,7 +23,7 @@ bool BufferedSocketWriter::write(char const* data, size_t size) {
         if (false == retval) {
             return false;
         }
-    } while (size > m_buffer.capacity());
+    } while (size > m_buffer_capacity);
 
     if (size > 0) {
         m_buffer.insert(m_buffer.end(), data, data + size);

@@ -12,7 +12,9 @@ namespace reducer {
  */
 class BufferedSocketWriter {
 public:
-    BufferedSocketWriter(int socket_fd, size_t buffer_size) : m_socket_fd{socket_fd} {
+    BufferedSocketWriter(int socket_fd, size_t buffer_size)
+            : m_socket_fd{socket_fd},
+              m_buffer_capacity(buffer_size) {
         m_buffer.reserve(buffer_size);
     }
 
@@ -56,6 +58,7 @@ private:
 
     int m_socket_fd;
     std::vector<uint8_t> m_buffer;
+    size_t m_buffer_capacity;
 };
 }  // namespace reducer
 #endif  // REDUCER_BUFFEREDSOCKETWRITER_HPP
