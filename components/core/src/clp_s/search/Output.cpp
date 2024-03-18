@@ -86,7 +86,7 @@ void Output::filter() {
 
         add_wildcard_columns_to_searched_columns();
 
-        auto reader = archive_reader.read_table(
+        auto reader = m_archive_reader->read_table(
                 schema_id,
                 m_output_handler->should_output_timestamp(),
                 m_should_marshal_records
