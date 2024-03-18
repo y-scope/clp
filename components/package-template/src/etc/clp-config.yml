@@ -37,6 +37,7 @@
 #  search_backend_database: 0
 #
 #reducer:
+#  host: "localhost"
 #  base_port: 14009
 #  logging_level: "INFO"
 #  polling_interval: 100  # milliseconds

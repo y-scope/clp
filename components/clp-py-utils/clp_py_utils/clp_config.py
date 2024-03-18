@@ -218,9 +218,16 @@ class Redis(BaseModel):
 
 
 class Reducer(BaseModel):
+    host: str = "localhost"
     base_port: int = 14009
     logging_level: str = "INFO"
     polling_interval: int = 100  # milliseconds
+
+    @validator("host")
+    def validate_host(cls, field):
+        if "" == field:
+            raise ValueError(f"{REDUCER_COMPONENT_NAME}.host cannot be empty.")
+        return field
 
     @validator("logging_level")
     def validate_logging_level(cls, field):

@@ -731,20 +731,6 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
     logger.info(f"Started {component_name}.")
 
 
-def get_host_ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.settimeout(0)
-    try:
-        # doesn't even have to be reachable
-        s.connect(("10.254.254.254", 1))
-        ip = s.getsockname()[0]
-    except Exception:
-        ip = "127.0.0.1"
-    finally:
-        s.close()
-    return ip
-
-
 def start_reducer(
     instance_id: str,
     clp_config: CLPConfig,
@@ -797,7 +783,7 @@ def start_reducer(
         'python3', '-u', '-m',
         'job_orchestration.reducer.reducer',
         '--config', str(container_clp_config.logs_directory / container_config_filename),
-        '--host', get_host_ip(),
+        '--host', clp_config.reducer.host,
         "--concurrency", str(num_cpus),
         "--polling-interval-ms", str(clp_config.reducer.polling_interval),
     ]
