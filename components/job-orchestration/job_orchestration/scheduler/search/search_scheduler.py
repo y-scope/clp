@@ -29,7 +29,7 @@ logger = get_logger("search-job-handler")
 # Dictionary of active jobs indexed by job id
 active_jobs: Dict[str, SearchJob] = {}
 
-reducer_connection_queue = None
+reducer_connection_queue: Optional[asyncio.Queue] = None
 
 
 async def cancel_job(job_id):
@@ -400,31 +400,49 @@ async def handle_jobs(
             tasks = [task for task in tasks if False == task.cancelled()]
 
 
-async def handle_reducer_connection(reader, writer):
+async def recv_msg_from_reducer(reader: asyncio.StreamReader) -> bytes:
+    """
+    Receives and deserializes a message from the connected reducer
+    :param reader: StreamReader connected to a reducer
+    :return: The received message
+    """
+    msg_size_bytes = await reader.readexactly(8)
+    msg_size = int.from_bytes(msg_size_bytes, byteorder="little")
+    return await reader.readexactly(msg_size)
+
+
+async def send_msg_to_reducer(msg: bytes, writer: asyncio.StreamWriter):
+    """
+    Serializes and sends a message to the connected reducer
+    :param msg:
+    :param writer: StreamWriter connected to a reducer
+    """
+    msg_size_bytes = (len(msg)).to_bytes(8, byteorder="little")
+    writer.write(msg_size_bytes)
+    writer.write(msg)
+    await writer.drain()
+
+
+async def handle_reducer_connection(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
     global reducer_connection_queue
+    handler_to_sched_msg_queue = None
     try:
-        size_header_bytes = await reader.read(8)
-        if not size_header_bytes:
-            writer.close()
-            await writer.wait_closed()
-            return
-        size_header = int.from_bytes(size_header_bytes, byteorder="little")
+        message_bytes = await recv_msg_from_reducer(reader)
+        reducer_addr_info = msgpack.unpackb(message_bytes)
 
-        message_bytes = await reader.read(size_header)
-        if not message_bytes:
-            writer.close()
-            await writer.wait_closed()
-            return
-        message = msgpack.unpackb(message_bytes)
-
-        reducer_recv_queue = asyncio.Queue(1)  # send messages from reducer to scheduler here
-        reducer_send_queue = asyncio.Queue(1)  # listen here for messages from scheduler to reducer
+        handler_to_sched_msg_queue = asyncio.Queue(1)
+        sched_to_handler_msg_queue = asyncio.Queue(1)
         await reducer_connection_queue.put(
-            (message["host"], message["port"], reducer_recv_queue, reducer_send_queue)
+            (
+                reducer_addr_info["host"],
+                reducer_addr_info["port"],
+                handler_to_sched_msg_queue,
+                sched_to_handler_msg_queue,
+            )
         )
 
-        wait_for_ack = asyncio.create_task(reader.read(1))
-        wait_for_job = asyncio.create_task(reducer_send_queue.get())
+        wait_for_ack = asyncio.create_task(reader.readexactly(1))
+        wait_for_job = asyncio.create_task(sched_to_handler_msg_queue.get())
         done, pending = await asyncio.wait(
             [wait_for_ack, wait_for_job], return_when=asyncio.FIRST_COMPLETED
         )
@@ -434,64 +452,47 @@ async def handle_reducer_connection(reader, writer):
             job_config = wait_for_job.result()
 
         if wait_for_ack in done:
-            await reducer_recv_queue.put(False)
-            writer.close()
-            await writer.wait_closed()
+            # Unexpected ACK
+            await handler_to_sched_msg_queue.put(False)
             return
 
-        job_config_bytes = msgpack.packb(job_config.dict())
-        size_header_bytes = (len(job_config_bytes)).to_bytes(8, byteorder="little")
-        writer.write(size_header_bytes)
-        writer.write(job_config_bytes)
-        await writer.drain()
+        await send_msg_to_reducer(msgpack.packb(job_config.dict()), writer)
 
-        ack = await wait_for_ack
-        if not ack:
-            await reducer_recv_queue.put(False)
-            writer.close()
-            await writer.wait_closed()
-            return
-        await reducer_recv_queue.put(True)
+        await wait_for_ack
+        await handler_to_sched_msg_queue.put(True)
 
-        wait_for_ack = asyncio.create_task(reader.read(1))
-        wait_for_job_done = asyncio.create_task(reducer_send_queue.get())
+        wait_for_ack = asyncio.create_task(reader.readexactly(1))
+        wait_for_job_done = asyncio.create_task(sched_to_handler_msg_queue.get())
 
         done, pending = await asyncio.wait(
             [wait_for_ack, wait_for_job_done], return_when=asyncio.FIRST_COMPLETED
         )
 
         if wait_for_job_done in done and False == wait_for_job_done.result():
-            writer.close()
-            await writer.wait_closed()
+            # Job failed
             return
 
         if wait_for_ack in done:
-            await reducer_recv_queue.put(False)
-            writer.close()
-            await writer.wait_closed()
+            # Unexpected ACK
+            await handler_to_sched_msg_queue.put(False)
             return
 
-        job_done_bytes = msgpack.packb({"done": True})
-        size_header_bytes = (len(job_done_bytes)).to_bytes(8, byteorder="little")
-        writer.write(size_header_bytes)
-        writer.write(job_done_bytes)
-        await writer.drain()
+        await send_msg_to_reducer(msgpack.packb({"done": True}), writer)
 
-        ack = await wait_for_ack
-        if not ack:
-            await reducer_recv_queue.put(False)
-        else:
-            await reducer_recv_queue.put(True)
-        writer.close()
-        await writer.wait_closed()
+        await wait_for_ack
+        await handler_to_sched_msg_queue.put(True)
     except asyncio.CancelledError:
+        if handler_to_sched_msg_queue is not None:
+            await handler_to_sched_msg_queue.put(False)
+        raise
+    finally:
         writer.close()
         await writer.wait_closed()
-        raise
 
 
 async def main(argv: List[str]) -> int:
     global reducer_connection_queue
+
     args_parser = argparse.ArgumentParser(description="Wait for and run search jobs.")
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
 
