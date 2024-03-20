@@ -47,20 +47,33 @@ active_jobs: Dict[str, SearchJob] = {}
 reducer_connection_queue: Optional[asyncio.Queue] = None
 
 
-async def cancel_job(job_id):
-    global active_jobs
-    if InternalJobState.RUNNING == active_jobs[job_id].state:
-        active_jobs[job_id].current_sub_job_async_task_result.revoke(terminate=True)
+def cancel_job_except_reducer(job: SearchJob):
+    """
+    Cancels the job apart from releasing the reducer since that requires an async call.
+    NOTE: By keeping this method synchronous, the caller can cancel most of the job atomically,
+    making it easier to avoid using locks in concurrent tasks.
+    :param job:
+    """
+
+    if InternalJobState.RUNNING == job.state:
+        job.current_sub_job_async_task_result.revoke(terminate=True)
         try:
-            active_jobs[job_id].current_sub_job_async_task_result.get()
+            job.current_sub_job_async_task_result.get()
         except Exception:
             pass
-    elif InternalJobState.WAITING_FOR_REDUCER == active_jobs[job_id].state:
-        active_jobs[job_id].reducer_acquisition_task.cancel()
+    elif InternalJobState.WAITING_FOR_REDUCER == job.state:
+        job.reducer_acquisition_task.cancel()
 
-    if active_jobs[job_id].reducer_send_handle is not None:
-        await active_jobs[job_id].reducer_send_handle.put(False)
-    del active_jobs[job_id]
+
+async def release_reducer_for_job(job: SearchJob):
+    """
+    Releases the reducer assigned to the given job
+    :param job:
+    """
+
+    if job.reducer_send_handle is not None:
+        # Signal the reducer to cancel the job
+        await job.reducer_send_handle.put(False)
 
 
 def fetch_new_search_jobs(db_cursor) -> list:
@@ -119,7 +132,11 @@ async def handle_cancelling_search_jobs(db_conn) -> None:
     for job in cancelling_jobs:
         job_id = job["job_id"]
         if job_id in active_jobs:
-            await cancel_job(job_id)
+            job = active_jobs.pop(job_id)
+            cancel_job_except_reducer(job)
+            # Perform any async tasks last so that it's easier to reason about synchronization
+            # issues between concurrent tasks
+            await release_reducer_for_job(job)
         else:
             continue
         if set_job_status(
@@ -193,8 +210,7 @@ def dispatch_search_job(
     job.state = InternalJobState.RUNNING
 
 
-async def acquire_reducer_for_job(job_id: str):
-    job = active_jobs[job_id]
+async def acquire_reducer_for_job(job: SearchJob):
     reducer_host = None
     reducer_port = None
     reducer_recv_handle = None
@@ -229,7 +245,7 @@ async def acquire_reducer_for_job(job_id: str):
     job.state = InternalJobState.WAITING_FOR_DISPATCH
     job.reducer_acquisition_task = None
 
-    logger.info(f"Got reducer for job {job_id} at {reducer_host}:{reducer_port}")
+    logger.info(f"Got reducer for job {job.id} at {reducer_host}:{reducer_port}")
 
 
 def handle_pending_search_jobs(
@@ -269,7 +285,7 @@ def handle_pending_search_jobs(
             if search_config.count is not None:
                 new_search_job.state = InternalJobState.WAITING_FOR_REDUCER
                 new_search_job.reducer_acquisition_task = asyncio.create_task(
-                    acquire_reducer_for_job(job_id)
+                    acquire_reducer_for_job(new_search_job)
                 )
                 reducer_acquisition_tasks.append(new_search_job.reducer_acquisition_task)
             else:
