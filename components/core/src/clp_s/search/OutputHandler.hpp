@@ -60,7 +60,7 @@ public:
 
     [[nodiscard]] bool should_marshal_records() const { return m_should_marshal_records; }
 
-protected:
+private:
     bool m_should_output_timestamp;
     bool m_should_marshal_records;
 };

@@ -229,7 +229,7 @@ class Reducer(BaseModel):
     @validator("host")
     def validate_host(cls, field):
         if "" == field:
-            raise ValueError(f"{REDUCER_COMPONENT_NAME}.host cannot be empty.")
+            raise ValueError(f"{field} cannot be empty")
         return field
 
     @validator("logging_level")
