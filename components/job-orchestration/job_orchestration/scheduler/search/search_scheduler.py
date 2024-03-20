@@ -440,14 +440,11 @@ async def handle_jobs(
         else:
             tasks.extend(reducer_acquisition_tasks)
 
-        try:
-            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-            if handle_updating_task in done:
-                logger.error("Job update handler task finished unexpectedly.")
-                return
-            tasks = list(pending)
-        except asyncio.CancelledError:
-            tasks = [task for task in tasks if False == task.cancelled()]
+        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        if handle_updating_task in done:
+            logger.error("handle_job_updates completed unexpectedly.")
+            return
+        tasks = list(pending)
 
 
 async def recv_msg_from_reducer(reader: asyncio.StreamReader) -> bytes:
