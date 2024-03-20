@@ -362,7 +362,9 @@ def validate_reducer_config(clp_config: CLPConfig, logs_dir: pathlib.Path, num_w
 
     for i in range(0, num_workers):
         validate_port(
-            f"{REDUCER_COMPONENT_NAME}.port", clp_config.reducer.host, clp_config.reducer.base_port + i
+            f"{REDUCER_COMPONENT_NAME}.port",
+            clp_config.reducer.host,
+            clp_config.reducer.base_port + i,
         )
 
 
