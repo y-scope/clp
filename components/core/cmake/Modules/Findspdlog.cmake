@@ -20,7 +20,6 @@ find_package(PkgConfig)
 pkg_check_modules(spdlog_PKGCONF QUIET spdlog)
 
 # Set include directory
-unset(spdlog_INCLUDE_DIR CACHE) # unset the variable so it can be set by `find_path`
 find_path(spdlog_INCLUDE_DIR spdlog.h
         HINTS ${spdlog_PKGCONF_INCLUDEDIR}
         PATH_SUFFIXES spdlog
@@ -52,8 +51,12 @@ if(spdlog_USE_STATIC_LIBS)
     # Restore original value of CMAKE_FIND_LIBRARY_SUFFIXES
     set(CMAKE_FIND_LIBRARY_SUFFIXES ${spdlog_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
     unset(spdlog_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
+else()
+    # Add dependencies manually since spdlog's pkgconfig doesn't include it
+    list(APPEND spdlog_DYNAMIC_LIBS "fmt")
 endif()
 
+list(APPEND spdlog_DYNAMIC_LIBS "pthread")
 FindDynamicLibraryDependencies(spdlog "${spdlog_DYNAMIC_LIBS}")
 
 # Set version
@@ -71,9 +74,8 @@ if(NOT TARGET spdlog::spdlog)
         if (spdlog_USE_STATIC_LIBS)
             add_library(spdlog::spdlog STATIC IMPORTED)
         else()
-            # NOTE: We use UNKNOWN so that if the user doesn't have the SHARED
-            # libraries installed, we can still use the STATIC libraries
-            add_library(spdlog::spdlog UNKNOWN IMPORTED)
+            # NOTE: libspdlog is only available as a static library or a dynamic one.
+            add_library(spdlog::spdlog SHARED IMPORTED)
         endif()
     endif()
 
