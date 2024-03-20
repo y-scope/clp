@@ -37,10 +37,6 @@ class CompressionTaskSuccessResult(CompressionTaskResult):
     total_compressed_size: int
 
 
-def is_valid_queue(queue: Optional[asyncio.Queue]):
-    return queue is None or isinstance(queue, asyncio.Queue)
-
-
 class InternalJobState(Enum):
     WAITING_FOR_REDUCER = auto()
     WAITING_FOR_DISPATCH = auto()
