@@ -14,7 +14,7 @@ class BufferedSocketWriter {
 public:
     BufferedSocketWriter(int socket_fd, size_t buffer_size)
             : m_socket_fd{socket_fd},
-              m_buffer_capacity(buffer_size) {
+              m_buffer_capacity{buffer_size} {
         m_buffer.reserve(buffer_size);
     }
 

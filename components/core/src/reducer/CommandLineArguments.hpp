@@ -40,7 +40,7 @@ private:
     std::string m_scheduler_host{"127.0.0.1"};
     int m_scheduler_port{7000};
     std::string m_mongodb_uri{"mongodb://localhost:27017/clp-search"};
-    int m_upsert_interval{100};
+    int m_upsert_interval{100};  // Milliseconds
 };
 }  // namespace reducer
 
