@@ -254,6 +254,7 @@ def handle_pending_search_jobs(
     global active_jobs
 
     reducer_acquisition_tasks = []
+
     pending_jobs = [
         job for job in active_jobs.values() if InternalJobState.WAITING_FOR_DISPATCH == job.state
     ]
@@ -310,6 +311,7 @@ def handle_pending_search_jobs(
         dispatch_search_job(job, archives_for_search, results_cache_uri)
         logger.info(f"Dispatched job {job_id} with {len(archives_for_search)} archives to search.")
         set_job_status(db_conn, job_id, SearchJobStatus.RUNNING, SearchJobStatus.PENDING)
+
     return reducer_acquisition_tasks
 
 
@@ -353,59 +355,61 @@ async def check_job_status_and_update_db(db_conn, results_cache_uri):
             returned_results = try_getting_task_result(job.current_sub_job_async_task_result)
         except Exception as e:
             logger.error(f"Job `{job_id}` failed: {e}.")
-            # clean up
-            if active_jobs[job_id].reducer_send_handle is not None:
-                await active_jobs[job_id].reducer_send_handle.put(False)
+            # Clean up
+            if job.reducer_send_handle is not None:
+                await job.reducer_send_handle.put(False)
             del active_jobs[job_id]
             set_job_status(db_conn, job_id, SearchJobStatus.FAILED, SearchJobStatus.RUNNING)
             continue
 
-        if returned_results is not None:
-            is_reducer_job = active_jobs[job_id].reducer_send_handle is not None
-            new_job_status = SearchJobStatus.RUNNING
-            for task_result_obj in returned_results:
-                task_result = SearchTaskResult.parse_obj(task_result_obj)
-                if not task_result.success:
-                    task_id = task_result.task_id
-                    new_job_status = SearchJobStatus.FAILED
-                    logger.debug(f"Task {task_id} failed - result {task_result}.")
+        if returned_results is None:
+            continue
 
-            if new_job_status != SearchJobStatus.FAILED:
-                max_num_results = job.search_config.max_num_results
-                # Check if we've searched all archives
-                if len(job.remaining_archives_for_search) == 0:
+        is_reducer_job = job.reducer_send_handle is not None
+        new_job_status = SearchJobStatus.RUNNING
+        for task_result_obj in returned_results:
+            task_result = SearchTaskResult.parse_obj(task_result_obj)
+            if not task_result.success:
+                task_id = task_result.task_id
+                new_job_status = SearchJobStatus.FAILED
+                logger.debug(f"Task {task_id} failed - result {task_result}.")
+
+        if new_job_status != SearchJobStatus.FAILED:
+            max_num_results = job.search_config.max_num_results
+            # Check if we've searched all archives
+            if len(job.remaining_archives_for_search) == 0:
+                new_job_status = SearchJobStatus.SUCCEEDED
+            # Check if we've reached max results
+            elif False == is_reducer_job and max_num_results > 0:
+                if found_max_num_latest_results(
+                    results_cache_uri,
+                    job_id,
+                    max_num_results,
+                    job.remaining_archives_for_search[0]["end_timestamp"],
+                ):
                     new_job_status = SearchJobStatus.SUCCEEDED
-                # Check if we've reached max results
-                elif False == is_reducer_job and max_num_results > 0:
-                    if found_max_num_latest_results(
-                        results_cache_uri,
-                        job_id,
-                        max_num_results,
-                        job.remaining_archives_for_search[0]["end_timestamp"],
-                    ):
-                        new_job_status = SearchJobStatus.SUCCEEDED
-            if new_job_status == SearchJobStatus.RUNNING:
-                job.current_sub_job_async_task_result = None
-                job.state = InternalJobState.WAITING_FOR_DISPATCH
-                logger.info(f"Job {job_id} waiting for more archives to search.")
-                continue
+        if new_job_status == SearchJobStatus.RUNNING:
+            job.current_sub_job_async_task_result = None
+            job.state = InternalJobState.WAITING_FOR_DISPATCH
+            logger.info(f"Job {job_id} waiting for more archives to search.")
+            continue
 
-            reducer_failed = False
-            if active_jobs[job_id].reducer_send_handle is not None:
-                # Notify reducer that it should have received all of the results
-                await active_jobs[job_id].reducer_send_handle.put(True)
-                if False == await active_jobs[job_id].reducer_recv_handle.get():
-                    reducer_failed = True
-                    new_job_status = SearchJobStatus.FAILED
+        reducer_failed = False
+        if is_reducer_job:
+            # Notify reducer that it should have received all results
+            await job.reducer_send_handle.put(True)
+            if False == await job.reducer_recv_handle.get():
+                reducer_failed = True
+                new_job_status = SearchJobStatus.FAILED
 
-            if set_job_status(db_conn, job_id, new_job_status, SearchJobStatus.RUNNING):
-                if new_job_status == SearchJobStatus.SUCCEEDED:
-                    logger.info(f"Completed job {job_id}.")
-                elif reducer_failed:
-                    logger.error(f"Completed job {job_id} with failing reducer.")
-                else:
-                    logger.info(f"Completed job {job_id} with failing tasks.")
-            del active_jobs[job_id]
+        if set_job_status(db_conn, job_id, new_job_status, SearchJobStatus.RUNNING):
+            if new_job_status == SearchJobStatus.SUCCEEDED:
+                logger.info(f"Completed job {job_id}.")
+            elif reducer_failed:
+                logger.error(f"Completed job {job_id} with failing reducer.")
+            else:
+                logger.info(f"Completed job {job_id} with failing tasks.")
+        del active_jobs[job_id]
 
 
 async def handle_job_updates(db_conn, results_cache_uri: str, jobs_poll_delay: float):
@@ -428,13 +432,13 @@ async def handle_jobs(
 
     tasks = [handle_updating_task]
     while True:
-        new_aggregation_jobs = handle_pending_search_jobs(
+        reducer_acquisition_tasks = handle_pending_search_jobs(
             db_conn_job_fetcher, results_cache_uri, num_archives_to_search_per_sub_job
         )
-        if 0 == len(new_aggregation_jobs):
+        if 0 == len(reducer_acquisition_tasks):
             tasks.append(asyncio.sleep(jobs_poll_delay))
         else:
-            tasks.extend(new_aggregation_jobs)
+            tasks.extend(reducer_acquisition_tasks)
 
         try:
             done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
@@ -472,14 +476,14 @@ async def send_msg_to_reducer(msg: bytes, writer: asyncio.StreamWriter):
 async def handle_unexpected_msg_from_reducer(
     state: ReducerHandlerWaitState, handler_to_sched_msg_queue: asyncio.Queue
 ):
-    logger.error(f"[{state.name}] Unexpected message from reducer.")
+    logger.error(f"[ReducerHandleWaitState.{state.name}] Unexpected message from reducer.")
     await handler_to_sched_msg_queue.put(False)
 
 
 async def handle_unexpected_msg_from_scheduler(
     state: ReducerHandlerWaitState, handler_to_sched_msg_queue: asyncio.Queue
 ):
-    logger.error(f"[{state.name}] Unexpected message from scheduler.")
+    logger.error(f"[ReducerHandleWaitState.{state.name}] Unexpected message from scheduler.")
     await handler_to_sched_msg_queue.put(False)
 
 
@@ -503,7 +507,7 @@ async def handle_reducer_connection(reader: asyncio.StreamReader, writer: asynci
 
         """
         In the state handling loop below, the logic only expects one of the two tasks to finish when
-        in a given state. This allows us to write the logic in the form of:
+        in a given state. This allows us to write the logic for each case in the form of:
         if unexpected_task in done:
             # Handle unexpected_task
             return
@@ -621,7 +625,7 @@ async def main(argv: List[str]) -> int:
 
     logger.debug(f"Job polling interval {clp_config.search_scheduler.jobs_poll_delay} seconds.")
     try:
-        server = await asyncio.start_server(
+        reducer_handler = await asyncio.start_server(
             handle_reducer_connection,
             clp_config.search_scheduler.host,
             clp_config.search_scheduler.port,
@@ -635,7 +639,6 @@ async def main(argv: List[str]) -> int:
                 f"Connected to archive database"
                 f" {clp_config.database.host}:{clp_config.database.port}."
             )
-            server = server.serve_forever()
             logger.info("Search scheduler started.")
             batch_size = clp_config.search_scheduler.num_archives_to_search_per_sub_job
             job_handler = asyncio.create_task(
@@ -647,9 +650,14 @@ async def main(argv: List[str]) -> int:
                     num_archives_to_search_per_sub_job=batch_size,
                 )
             )
+            reducer_handler = asyncio.create_task(reducer_handler.serve_forever())
             done, pending = await asyncio.wait(
-                [server, job_handler], return_when=asyncio.FIRST_COMPLETED
+                [job_handler, reducer_handler], return_when=asyncio.FIRST_COMPLETED
             )
+            if reducer_handler in done:
+                logger.error("reducer_handler completed unexpectedly.")
+            if job_handler in done:
+                logger.error("job_handler completed unexpectedly.")
     except Exception:
         logger.exception(f"Uncaught exception in job handling loop.")
 
