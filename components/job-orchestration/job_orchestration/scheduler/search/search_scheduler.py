@@ -71,9 +71,9 @@ async def release_reducer_for_job(job: SearchJob):
     :param job:
     """
 
-    if job.reducer_send_handle is not None:
+    if job.sched_to_handler_msg_queue is not None:
         # Signal the reducer to cancel the job
-        await job.reducer_send_handle.put(False)
+        await job.sched_to_handler_msg_queue.put(False)
 
 
 def fetch_new_search_jobs(db_cursor) -> list:
@@ -213,10 +213,10 @@ def dispatch_search_job(
 async def acquire_reducer_for_job(job: SearchJob):
     reducer_host = None
     reducer_port = None
-    reducer_recv_handle = None
-    reducer_send_handle = None
+    handler_to_sched_msg_queue = None
+    sched_to_handler_msg_queue = None
     while True:
-        reducer_host, reducer_port, reducer_recv_handle, reducer_send_handle = (
+        reducer_host, reducer_port, handler_to_sched_msg_queue, sched_to_handler_msg_queue = (
             await reducer_connection_queue.get()
         )
         """
@@ -231,15 +231,15 @@ async def acquire_reducer_for_job(job: SearchJob):
         use option (2), so we use option (2) in both cases.
         """
         try:
-            await reducer_send_handle.put(job.search_config)
-            if await reducer_recv_handle.get():
+            await sched_to_handler_msg_queue.put(job.search_config)
+            if await handler_to_sched_msg_queue.get():
                 break
         except asyncio.CancelledError:
-            await reducer_send_handle.put(False)
+            await sched_to_handler_msg_queue.put(False)
             raise
 
-    job.reducer_recv_handle = reducer_recv_handle
-    job.reducer_send_handle = reducer_send_handle
+    job.handler_to_sched_msg_queue = handler_to_sched_msg_queue
+    job.sched_to_handler_msg_queue = sched_to_handler_msg_queue
     job.search_config.reducer_host = reducer_host
     job.search_config.reducer_port = reducer_port
     job.state = InternalJobState.WAITING_FOR_DISPATCH
@@ -356,8 +356,8 @@ async def check_job_status_and_update_db(db_conn, results_cache_uri):
         except Exception as e:
             logger.error(f"Job `{job_id}` failed: {e}.")
             # Clean up
-            if job.reducer_send_handle is not None:
-                await job.reducer_send_handle.put(False)
+            if job.sched_to_handler_msg_queue is not None:
+                await job.sched_to_handler_msg_queue.put(False)
             del active_jobs[job_id]
             set_job_status(db_conn, job_id, SearchJobStatus.FAILED, SearchJobStatus.RUNNING)
             continue
@@ -365,7 +365,7 @@ async def check_job_status_and_update_db(db_conn, results_cache_uri):
         if returned_results is None:
             continue
 
-        is_reducer_job = job.reducer_send_handle is not None
+        is_reducer_job = job.sched_to_handler_msg_queue is not None
         new_job_status = SearchJobStatus.RUNNING
         for task_result_obj in returned_results:
             task_result = SearchTaskResult.parse_obj(task_result_obj)
@@ -397,8 +397,8 @@ async def check_job_status_and_update_db(db_conn, results_cache_uri):
         reducer_failed = False
         if is_reducer_job:
             # Notify reducer that it should have received all results
-            await job.reducer_send_handle.put(True)
-            if False == await job.reducer_recv_handle.get():
+            await job.sched_to_handler_msg_queue.put(True)
+            if False == await job.handler_to_sched_msg_queue.get():
                 reducer_failed = True
                 new_job_status = SearchJobStatus.FAILED
 

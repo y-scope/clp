@@ -50,8 +50,8 @@ class SearchJob(BaseModel):
     remaining_archives_for_search: List[Dict[str, Any]]
     current_sub_job_async_task_result: Optional[Any]
     reducer_acquisition_task: Optional[asyncio.Task]
-    reducer_recv_handle: Optional[asyncio.Queue]
-    reducer_send_handle: Optional[asyncio.Queue]
+    handler_to_sched_msg_queue: Optional[asyncio.Queue]
+    sched_to_handler_msg_queue: Optional[asyncio.Queue]
 
     class Config:  # To allow asyncio.Task and asyncio.Queue
         arbitrary_types_allowed = True
