@@ -3,10 +3,12 @@
 import argparse
 import asyncio
 import contextlib
+import enum
 import logging
 import os
 import pathlib
 import sys
+from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -22,6 +24,19 @@ from job_orchestration.scheduler.constants import SearchJobStatus
 from job_orchestration.scheduler.job_config import SearchConfig
 from job_orchestration.scheduler.scheduler_data import InternalJobState, SearchJob, SearchTaskResult
 from pydantic import ValidationError
+
+
+class ReducerHandlerWaitState(Enum):
+    """
+    An enum representing the different states the handler can be in. Each state is named
+    according to the item the handler is waiting for.
+    """
+
+    JOB_CONFIG = enum.auto()
+    JOB_CONFIG_ACK = enum.auto()
+    SEARCH_WORKERS_DONE = enum.auto()
+    REDUCER_DONE = enum.auto()
+
 
 # Setup logging
 logger = get_logger("search-job-handler")
@@ -188,9 +203,24 @@ async def acquire_reducer_for_job(job_id: str):
         reducer_host, reducer_port, reducer_recv_handle, reducer_send_handle = (
             await reducer_connection_queue.get()
         )
-        await reducer_send_handle.put(job.search_config)
-        if True == await reducer_recv_handle.get():
-            break
+        """
+        Below, the task can either be cancelled before sending the job config to the reducer or
+        before the reducer acknowledges the job. If the task is cancelled before we send the job
+        config to the reducer, then we have two options:
+
+        1. Put the reducer's connection info back in the queue for another job to pick up.
+        2. Tell the reducer to restart its job handling loop.
+
+        If the task is cancelled after we've sent the job config to the reducer, then we have to
+        use option (2), so we use option (2) in both cases.
+        """
+        try:
+            await reducer_send_handle.put(job.search_config)
+            if await reducer_recv_handle.get():
+                break
+        except asyncio.CancelledError:
+            reducer_send_handle.put(False)
+            raise
 
     job.reducer_recv_handle = reducer_recv_handle
     job.reducer_send_handle = reducer_send_handle
@@ -423,9 +453,23 @@ async def send_msg_to_reducer(msg: bytes, writer: asyncio.StreamWriter):
     await writer.drain()
 
 
+async def handle_unexpected_msg_from_reducer(
+    state: ReducerHandlerWaitState, handler_to_sched_msg_queue: asyncio.Queue
+):
+    logger.error(f"[{state.name}] Unexpected message from reducer.")
+    await handler_to_sched_msg_queue.put(False)
+
+
+async def handle_unexpected_msg_from_scheduler(
+    state: ReducerHandlerWaitState, handler_to_sched_msg_queue: asyncio.Queue
+):
+    logger.error(f"[{state.name}] Unexpected message from scheduler.")
+    await handler_to_sched_msg_queue.put(False)
+
+
 async def handle_reducer_connection(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
     global reducer_connection_queue
-    handler_to_sched_msg_queue = None
+
     try:
         message_bytes = await recv_msg_from_reducer(reader)
         reducer_addr_info = msgpack.unpackb(message_bytes)
@@ -441,50 +485,87 @@ async def handle_reducer_connection(reader: asyncio.StreamReader, writer: asynci
             )
         )
 
-        wait_for_ack = asyncio.create_task(reader.readexactly(1))
-        wait_for_job = asyncio.create_task(sched_to_handler_msg_queue.get())
-        done, pending = await asyncio.wait(
-            [wait_for_ack, wait_for_job], return_when=asyncio.FIRST_COMPLETED
+        """
+        In the state handling loop below, the logic only expects one of the two tasks to finish when
+        in a given state. This allows us to write the logic in the form of:
+        if unexpected_task in done:
+            # Handle unexpected_task
+            return
+        
+        # Handle expected_task
+        # Reschedule expected_task
+        # Transition to next state
+        """
+        current_wait_state: ReducerHandlerWaitState = ReducerHandlerWaitState.JOB_CONFIG
+        recv_scheduler_msg_task: Optional[asyncio.Task] = asyncio.create_task(
+            sched_to_handler_msg_queue.get()
         )
+        recv_reducer_msg_task: Optional[asyncio.Task] = asyncio.create_task(reader.readexactly(1))
+        while True:
+            pending = [recv_scheduler_msg_task, recv_reducer_msg_task]
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
 
-        job_config = None
-        if wait_for_job in done:
-            job_config = wait_for_job.result()
+            if ReducerHandlerWaitState.JOB_CONFIG == current_wait_state:
+                if recv_reducer_msg_task in done:
+                    await handle_unexpected_msg_from_reducer(
+                        current_wait_state, handler_to_sched_msg_queue
+                    )
+                    return
 
-        if wait_for_ack in done:
-            # Unexpected ACK
-            await handler_to_sched_msg_queue.put(False)
-            return
+                # Get the job config from the scheduler and send it to the reducer
+                job_config = recv_scheduler_msg_task.result()
+                await send_msg_to_reducer(msgpack.packb(job_config.dict()), writer)
 
-        await send_msg_to_reducer(msgpack.packb(job_config.dict()), writer)
+                recv_scheduler_msg_task = asyncio.create_task(sched_to_handler_msg_queue.get())
+                current_wait_state = ReducerHandlerWaitState.JOB_CONFIG_ACK
+            elif ReducerHandlerWaitState.JOB_CONFIG_ACK == current_wait_state:
+                if recv_scheduler_msg_task in done:
+                    msg = recv_scheduler_msg_task.result()
+                    if False == msg:
+                        # Scheduler requested cancellation
+                        return
+                    else:
+                        await handle_unexpected_msg_from_scheduler(
+                            current_wait_state, handler_to_sched_msg_queue
+                        )
+                        return
 
-        await wait_for_ack
-        await handler_to_sched_msg_queue.put(True)
+                # Tell the scheduler the reducer ACKed the job
+                await handler_to_sched_msg_queue.put(True)
 
-        wait_for_ack = asyncio.create_task(reader.readexactly(1))
-        wait_for_job_done = asyncio.create_task(sched_to_handler_msg_queue.get())
+                recv_reducer_msg_task = asyncio.create_task(reader.readexactly(1))
+                current_wait_state = ReducerHandlerWaitState.SEARCH_WORKERS_DONE
+            elif ReducerHandlerWaitState.SEARCH_WORKERS_DONE == current_wait_state:
+                if recv_reducer_msg_task in done:
+                    await handle_unexpected_msg_from_reducer(
+                        current_wait_state, handler_to_sched_msg_queue
+                    )
+                    return
 
-        done, pending = await asyncio.wait(
-            [wait_for_ack, wait_for_job_done], return_when=asyncio.FIRST_COMPLETED
-        )
+                msg = recv_scheduler_msg_task.result()
+                if False == msg:
+                    # Scheduler requested cancellation
+                    return
 
-        if wait_for_job_done in done and False == wait_for_job_done.result():
-            # Job failed
-            return
+                # Tell the reducer the search workers are done
+                await send_msg_to_reducer(msgpack.packb({"done": True}), writer)
 
-        if wait_for_ack in done:
-            # Unexpected ACK
-            await handler_to_sched_msg_queue.put(False)
-            return
+                recv_scheduler_msg_task = asyncio.create_task(sched_to_handler_msg_queue.get())
+                current_wait_state = ReducerHandlerWaitState.REDUCER_DONE
+            elif ReducerHandlerWaitState.REDUCER_DONE == current_wait_state:
+                if recv_scheduler_msg_task in done:
+                    msg = recv_scheduler_msg_task.result()
+                    if False == msg:
+                        # Scheduler requested cancellation
+                        return
+                    else:
+                        await handle_unexpected_msg_from_scheduler(
+                            current_wait_state, handler_to_sched_msg_queue
+                        )
+                        return
 
-        await send_msg_to_reducer(msgpack.packb({"done": True}), writer)
-
-        await wait_for_ack
-        await handler_to_sched_msg_queue.put(True)
-    except asyncio.CancelledError:
-        if handler_to_sched_msg_queue is not None:
-            await handler_to_sched_msg_queue.put(False)
-        raise
+                await handler_to_sched_msg_queue.put(True)
+                break
     finally:
         writer.close()
         await writer.wait_closed()
