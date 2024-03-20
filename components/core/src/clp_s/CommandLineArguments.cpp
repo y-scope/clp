@@ -485,6 +485,26 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                           << " --uri mongodb://127.0.0.1:27017/test"
                              " --collection test"
                           << std::endl;
+                std::cerr << std::endl;
+
+                std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
+                             R"( "level: INFO" and output to a network destination)"
+                          << std::endl;
+                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
+                          << " " << cNetworkOutputHandlerName
+                          << " --host localhost"
+                             " --port 18000"
+                          << std::endl;
+                std::cerr << std::endl;
+
+                std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
+                             R"( "level: INFO" and output perform a count aggregation)"
+                          << std::endl;
+                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
+                          << " " << cReducerOutputHandlerName << " --count"
+                          << " --host localhost"
+                          << " --port 14009"
+                          << " --job-id 1" << std::endl;
 
                 po::options_description visible_options;
                 visible_options.add(general_options);

@@ -101,6 +101,7 @@ public:
 private:
     // Methods
     /**
+     * Validates output options related to the Netowkr Destination output handler.
      * @param options_description
      * @param options Vector of options previously parsed by boost::program_options and which may
      * contain options that have the unrecognized flag set
@@ -113,6 +114,7 @@ private:
     );
 
     /**
+     * Validates output options related to the Reducer output handler.
      * @param options_description
      * @param options Vector of options previously parsed by boost::program_options and which may
      * contain options that have the unrecognized flag set
@@ -125,6 +127,7 @@ private:
     );
 
     /**
+     * Validates output options related to the Results Cache output handler.
      * @param options_description
      * @param options Vector of options previously parsed by boost::program_options and which may
      * contain options that have the unrecognized flag set
