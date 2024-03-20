@@ -235,7 +235,7 @@ async def acquire_reducer_for_job(job: SearchJob):
             if await reducer_recv_handle.get():
                 break
         except asyncio.CancelledError:
-            reducer_send_handle.put(False)
+            await reducer_send_handle.put(False)
             raise
 
     job.reducer_recv_handle = reducer_recv_handle
