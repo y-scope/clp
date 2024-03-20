@@ -19,7 +19,6 @@ logger = get_logger("reducer")
 def main(argv: List[str]) -> int:
     args_parser = argparse.ArgumentParser(description="Spin up reducers.")
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
-    args_parser.add_argument("--host", required=True, help="Host that the reducers should bind to")
     args_parser.add_argument(
         "--concurrency", required=True, help="Number of reducer servers to run"
     )
@@ -60,7 +59,7 @@ def main(argv: List[str]) -> int:
         "--scheduler-port", str(clp_config.search_scheduler.port),
         "--mongodb-uri", clp_config.results_cache.get_uri(),
         "--upsert-interval", str(parsed_args.upsert_interval),
-        "--reducer-host", parsed_args.host,
+        "--reducer-host", clp_config.reducer.host,
         "--reducer-port",
     ]
     # fmt: on
@@ -84,7 +83,7 @@ def main(argv: List[str]) -> int:
 
     logger.info("Reducers started.")
     logger.info(
-        f"Host={parsed_args.host}"
+        f"Host={clp_config.reducer.host}"
         f" Base port={clp_config.reducer.base_port}"
         f" Concurrency={concurrency}"
         f" Upsert Interval={parsed_args.upsert_interval}"

@@ -14,6 +14,7 @@ from clp_py_utils.clp_config import (
     DB_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
+    REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
     WEBUI_COMPONENT_NAME,
 )
@@ -351,6 +352,18 @@ def validate_redis_config(
         )
 
     validate_port(f"{REDIS_COMPONENT_NAME}.port", clp_config.redis.host, clp_config.redis.port)
+
+
+def validate_reducer_config(clp_config: CLPConfig, logs_dir: pathlib.Path, num_workers: int):
+    try:
+        validate_path_could_be_dir(logs_dir)
+    except ValueError as ex:
+        raise ValueError(f"{REDUCER_COMPONENT_NAME} logs directory is invalid: {ex}")
+
+    for i in range(0, num_workers):
+        validate_port(
+            f"{REDUCER_COMPONENT_NAME}.port", clp_config.reducer.host, clp_config.reducer.base_port + i
+        )
 
 
 def validate_results_cache_config(
