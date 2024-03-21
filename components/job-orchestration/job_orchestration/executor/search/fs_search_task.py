@@ -44,7 +44,7 @@ def make_clo_command(
         search_cmd.append("--file-path")
         search_cmd.append(search_config.path_filter)
 
-    if search_config.count is not None:
+    if search_config.do_count_aggregation is not None:
         search_cmd.append("reducer")
         search_cmd.append("--host")
         search_cmd.append(search_config.reducer_host)
@@ -92,7 +92,7 @@ def make_clp_s_command(
     if search_config.ignore_case:
         search_cmd.append("--ignore-case")
 
-    if search_config.count is not None:
+    if search_config.do_count_aggregation is not None:
         search_cmd.append("--count")
 
         search_cmd.append("reducer")

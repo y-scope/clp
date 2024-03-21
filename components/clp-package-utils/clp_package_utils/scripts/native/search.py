@@ -78,7 +78,7 @@ def create_and_monitor_job_in_db(
     ignore_case: bool,
     max_num_results: int,
     path_filter: str | None,
-    count: bool | None,
+    do_count_aggregation: bool | None,
 ):
     search_config = SearchConfig(
         query_string=wildcard_query,
@@ -87,7 +87,7 @@ def create_and_monitor_job_in_db(
         ignore_case=ignore_case,
         max_num_results=max_num_results,
         path_filter=path_filter,
-        count=count,
+        do_count_aggregation=do_count_aggregation,
     )
     if tags:
         tag_list = [tag.strip().lower() for tag in tags.split(",") if tag]
@@ -126,14 +126,14 @@ def create_and_monitor_job_in_db(
 
         with pymongo.MongoClient(results_cache.get_uri()) as client:
             search_results_collection = client[results_cache.db_name][str(job_id)]
-            if max_num_results <= 0 or count is not None:
+            if max_num_results <= 0 or do_count_aggregation is not None:
                 cursor = search_results_collection.find()
             else:
                 cursor = (
                     search_results_collection.find().sort("timestamp", -1).limit(max_num_results)
                 )
 
-            if count is not None:
+            if do_count_aggregation is not None:
                 for document in cursor:
                     print(
                         f"tags: {document['group_tags']} count: {document['records'][0]['count']}"
@@ -153,7 +153,7 @@ async def do_search(
     ignore_case: bool,
     max_num_results: int,
     path_filter: str | None,
-    count: bool | None,
+    do_count_aggregation: bool | None,
 ):
     db_monitor_task = asyncio.ensure_future(
         run_function_in_process(
@@ -167,7 +167,7 @@ async def do_search(
             ignore_case,
             max_num_results,
             path_filter,
-            count,
+            do_count_aggregation,
         )
     )
 

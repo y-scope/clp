@@ -283,7 +283,7 @@ def handle_pending_search_jobs(
                 remaining_archives_for_search=archives_for_search,
             )
 
-            if search_config.count is not None:
+            if search_config.do_count_aggregation is not None:
                 new_search_job.state = InternalJobState.WAITING_FOR_REDUCER
                 new_search_job.reducer_acquisition_task = asyncio.create_task(
                     acquire_reducer_for_job(new_search_job)

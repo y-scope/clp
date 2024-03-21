@@ -42,4 +42,4 @@ class SearchConfig(BaseModel):
     job_id: typing.Optional[int] = None
     reducer_host: typing.Optional[str] = None
     reducer_port: typing.Optional[int] = None
-    count: typing.Optional[bool] = None
+    do_count_aggregation: typing.Optional[bool] = None
