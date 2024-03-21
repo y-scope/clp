@@ -21,7 +21,7 @@ from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.search.fs_search_task import search
 from job_orchestration.scheduler.constants import SearchJobStatus
-from job_orchestration.scheduler.job_config import SearchConfig
+from job_orchestration.scheduler.job_config import AggregationConfig, SearchConfig
 from job_orchestration.scheduler.scheduler_data import InternalJobState, SearchJob, SearchTaskResult
 from pydantic import ValidationError
 
@@ -231,7 +231,7 @@ async def acquire_reducer_for_job(job: SearchJob):
         use option (2), so we use option (2) in both cases.
         """
         try:
-            await sched_to_handler_msg_queue.put(job.search_config)
+            await sched_to_handler_msg_queue.put(job.search_config.aggregation_config)
             if await handler_to_sched_msg_queue.get():
                 break
         except asyncio.CancelledError:
@@ -240,8 +240,8 @@ async def acquire_reducer_for_job(job: SearchJob):
 
     job.handler_to_sched_msg_queue = handler_to_sched_msg_queue
     job.sched_to_handler_msg_queue = sched_to_handler_msg_queue
-    job.search_config.reducer_host = reducer_host
-    job.search_config.reducer_port = reducer_port
+    job.search_config.aggregation_config.reducer_host = reducer_host
+    job.search_config.aggregation_config.reducer_port = reducer_port
     job.state = InternalJobState.WAITING_FOR_DISPATCH
     job.reducer_acquisition_task = None
 
@@ -275,7 +275,6 @@ def handle_pending_search_jobs(
                     logger.info(f"No matching archives, skipping job {job['job_id']}.")
                 continue
 
-            search_config.job_id = job["job_id"]
             new_search_job = SearchJob(
                 id=job_id,
                 search_config=search_config,
@@ -283,7 +282,8 @@ def handle_pending_search_jobs(
                 remaining_archives_for_search=archives_for_search,
             )
 
-            if search_config.do_count_aggregation is not None:
+            if search_config.aggregation_config is not None:
+                new_search_job.search_config.aggregation_config.job_id = job["job_id"]
                 new_search_job.state = InternalJobState.WAITING_FOR_REDUCER
                 new_search_job.reducer_acquisition_task = asyncio.create_task(
                     acquire_reducer_for_job(new_search_job)
@@ -529,9 +529,12 @@ async def handle_reducer_connection(reader: asyncio.StreamReader, writer: asynci
                     )
                     return
 
-                # Get the job config from the scheduler and send it to the reducer
-                job_config = recv_scheduler_msg_task.result()
-                await send_msg_to_reducer(msgpack.packb(job_config.dict()), writer)
+                # Get the aggregation config from the scheduler and send the necessary info to the
+                # reducer
+                aggregation_config: AggregationConfig = recv_scheduler_msg_task.result()
+                await send_msg_to_reducer(
+                    msgpack.packb({"job_id": aggregation_config.job_id}), writer
+                )
 
                 recv_scheduler_msg_task = asyncio.create_task(sched_to_handler_msg_queue.get())
                 current_wait_state = ReducerHandlerWaitState.JOB_CONFIG_ACK

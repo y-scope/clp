@@ -44,15 +44,19 @@ def make_clo_command(
         search_cmd.append("--file-path")
         search_cmd.append(search_config.path_filter)
 
-    if search_config.do_count_aggregation is not None:
+    if search_config.aggregation_config is not None:
+        aggregation_config = search_config.aggregation_config
+
+        if aggregation_config.do_count_aggregation is not None:
+            search_cmd.append("--count")
+
         search_cmd.append("reducer")
         search_cmd.append("--host")
-        search_cmd.append(search_config.reducer_host)
+        search_cmd.append(aggregation_config.reducer_host)
         search_cmd.append("--port")
-        search_cmd.append(str(search_config.reducer_port))
+        search_cmd.append(str(aggregation_config.reducer_port))
         search_cmd.append("--job-id")
-        search_cmd.append(str(search_config.job_id))
-        search_cmd.append("--count")
+        search_cmd.append(str(aggregation_config.job_id))
     else:
         search_cmd.append("results-cache")
         search_cmd.append("--uri")
@@ -92,16 +96,19 @@ def make_clp_s_command(
     if search_config.ignore_case:
         search_cmd.append("--ignore-case")
 
-    if search_config.do_count_aggregation is not None:
-        search_cmd.append("--count")
+    if search_config.aggregation_config is not None:
+        aggregation_config = search_config.aggregation_config
+
+        if aggregation_config.do_count_aggregation is not None:
+            search_cmd.append("--count")
 
         search_cmd.append("reducer")
         search_cmd.append("--host")
-        search_cmd.append(search_config.reducer_host)
+        search_cmd.append(aggregation_config.reducer_host)
         search_cmd.append("--port")
-        search_cmd.append(str(search_config.reducer_port))
+        search_cmd.append(str(aggregation_config.reducer_port))
         search_cmd.append("--job-id")
-        search_cmd.append(str(search_config.job_id))
+        search_cmd.append(str(aggregation_config.job_id))
     else:
         search_cmd.append("results-cache")
         search_cmd.append("--uri")

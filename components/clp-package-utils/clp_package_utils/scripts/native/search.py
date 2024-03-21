@@ -14,7 +14,7 @@ import pymongo
 from clp_py_utils.clp_config import Database, ResultsCache, SEARCH_JOBS_TABLE_NAME
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.constants import SearchJobStatus
-from job_orchestration.scheduler.job_config import SearchConfig
+from job_orchestration.scheduler.job_config import AggregationConfig, SearchConfig
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -87,8 +87,11 @@ def create_and_monitor_job_in_db(
         ignore_case=ignore_case,
         max_num_results=max_num_results,
         path_filter=path_filter,
-        do_count_aggregation=do_count_aggregation,
     )
+    if do_count_aggregation is not None:
+        search_config.aggregation_config = AggregationConfig(
+            do_count_aggregation=do_count_aggregation
+        )
     if tags:
         tag_list = [tag.strip().lower() for tag in tags.split(",") if tag]
         if len(tag_list) > 0:
