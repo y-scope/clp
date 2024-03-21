@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import SearchConfig
+from job_orchestration.scheduler.search.reducer_handler import ReducerHandlerMessageQueues
 from pydantic import BaseModel, validator
 
 
@@ -50,8 +51,7 @@ class SearchJob(BaseModel):
     remaining_archives_for_search: List[Dict[str, Any]]
     current_sub_job_async_task_result: Optional[Any]
     reducer_acquisition_task: Optional[asyncio.Task]
-    handler_to_sched_msg_queue: Optional[asyncio.Queue]
-    sched_to_handler_msg_queue: Optional[asyncio.Queue]
+    reducer_handler_msg_queues: Optional[ReducerHandlerMessageQueues]
 
     class Config:  # To allow asyncio.Task and asyncio.Queue
         arbitrary_types_allowed = True

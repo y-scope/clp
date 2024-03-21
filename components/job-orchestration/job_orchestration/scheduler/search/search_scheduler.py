@@ -23,6 +23,11 @@ from job_orchestration.executor.search.fs_search_task import search
 from job_orchestration.scheduler.constants import SearchJobStatus
 from job_orchestration.scheduler.job_config import AggregationConfig, SearchConfig
 from job_orchestration.scheduler.scheduler_data import InternalJobState, SearchJob, SearchTaskResult
+from job_orchestration.scheduler.search.reducer_handler import (
+    ReducerHandlerMessage,
+    ReducerHandlerMessageQueues,
+    ReducerHandlerMessageType,
+)
 from pydantic import ValidationError
 
 
@@ -71,9 +76,10 @@ async def release_reducer_for_job(job: SearchJob):
     :param job:
     """
 
-    if job.sched_to_handler_msg_queue is not None:
+    if job.reducer_handler_msg_queues is not None:
         # Signal the reducer to cancel the job
-        await job.sched_to_handler_msg_queue.put(False)
+        msg = ReducerHandlerMessage(ReducerHandlerMessageType.FAILURE)
+        await job.reducer_handler_msg_queues.put_to_handler(msg)
 
 
 def fetch_new_search_jobs(db_cursor) -> list:
@@ -211,12 +217,11 @@ def dispatch_search_job(
 
 
 async def acquire_reducer_for_job(job: SearchJob):
-    reducer_host = None
-    reducer_port = None
-    handler_to_sched_msg_queue = None
-    sched_to_handler_msg_queue = None
+    reducer_host: Optional[str] = None
+    reducer_port: Optional[int] = None
+    reducer_handler_msg_queues: Optional[ReducerHandlerMessageQueues] = None
     while True:
-        reducer_host, reducer_port, handler_to_sched_msg_queue, sched_to_handler_msg_queue = (
+        reducer_host, reducer_port, reducer_handler_msg_queues = (
             await reducer_connection_queue.get()
         )
         """
@@ -231,15 +236,23 @@ async def acquire_reducer_for_job(job: SearchJob):
         use option (2), so we use option (2) in both cases.
         """
         try:
-            await sched_to_handler_msg_queue.put(job.search_config.aggregation_config)
-            if await handler_to_sched_msg_queue.get():
+            msg = ReducerHandlerMessage(
+                ReducerHandlerMessageType.AGGREGATION_CONFIG, job.search_config.aggregation_config
+            )
+            await reducer_handler_msg_queues.put_to_handler(msg)
+
+            msg = await reducer_handler_msg_queues.get_from_handler()
+            if msg.msg_type == ReducerHandlerMessageType.SUCCESS:
                 break
+            elif msg.msg_type != ReducerHandlerMessageType.FAILURE:
+                error_msg = f"Unexpected msg_type: {msg.msg_type.name}"
+                raise NotImplementedError(error_msg)
         except asyncio.CancelledError:
-            await sched_to_handler_msg_queue.put(False)
+            msg = ReducerHandlerMessage(ReducerHandlerMessageType.FAILURE)
+            await reducer_handler_msg_queues.put_to_handler(msg)
             raise
 
-    job.handler_to_sched_msg_queue = handler_to_sched_msg_queue
-    job.sched_to_handler_msg_queue = sched_to_handler_msg_queue
+    job.reducer_handler_msg_queues = reducer_handler_msg_queues
     job.search_config.aggregation_config.reducer_host = reducer_host
     job.search_config.aggregation_config.reducer_port = reducer_port
     job.state = InternalJobState.WAITING_FOR_DISPATCH
@@ -351,13 +364,16 @@ async def check_job_status_and_update_db(db_conn, results_cache_uri):
 
     for job_id in [id for id, job in active_jobs.items() if InternalJobState.RUNNING == job.state]:
         job = active_jobs[job_id]
+        is_reducer_job = job.reducer_handler_msg_queues is not None
+
         try:
             returned_results = try_getting_task_result(job.current_sub_job_async_task_result)
         except Exception as e:
             logger.error(f"Job `{job_id}` failed: {e}.")
             # Clean up
-            if job.sched_to_handler_msg_queue is not None:
-                await job.sched_to_handler_msg_queue.put(False)
+            if is_reducer_job:
+                msg = ReducerHandlerMessage(ReducerHandlerMessageType.FAILURE)
+                await job.reducer_handler_msg_queues.put_to_handler(msg)
             del active_jobs[job_id]
             set_job_status(db_conn, job_id, SearchJobStatus.FAILED, SearchJobStatus.RUNNING)
             continue
@@ -365,7 +381,6 @@ async def check_job_status_and_update_db(db_conn, results_cache_uri):
         if returned_results is None:
             continue
 
-        is_reducer_job = job.sched_to_handler_msg_queue is not None
         new_job_status = SearchJobStatus.RUNNING
         for task_result_obj in returned_results:
             task_result = SearchTaskResult.parse_obj(task_result_obj)
@@ -397,10 +412,16 @@ async def check_job_status_and_update_db(db_conn, results_cache_uri):
         reducer_failed = False
         if is_reducer_job:
             # Notify reducer that it should have received all results
-            await job.sched_to_handler_msg_queue.put(True)
-            if False == await job.handler_to_sched_msg_queue.get():
+            msg = ReducerHandlerMessage(ReducerHandlerMessageType.SUCCESS)
+            await job.reducer_handler_msg_queues.put_to_handler(msg)
+
+            msg = await job.reducer_handler_msg_queues.get_from_handler()
+            if ReducerHandlerMessageType.FAILURE == msg.msg_type:
                 reducer_failed = True
                 new_job_status = SearchJobStatus.FAILED
+            elif ReducerHandlerMessageType.SUCCESS != msg.msg_type:
+                error_msg = f"Unexpected msg_type: {msg.msg_type.name}"
+                raise NotImplementedError(error_msg)
 
         if set_job_status(db_conn, job_id, new_job_status, SearchJobStatus.RUNNING):
             if new_job_status == SearchJobStatus.SUCCEEDED:
@@ -475,17 +496,24 @@ async def send_msg_to_reducer(msg: bytes, writer: asyncio.StreamWriter):
 
 
 async def handle_unexpected_msg_from_reducer(
-    state: ReducerHandlerWaitState, handler_to_sched_msg_queue: asyncio.Queue
+    state: ReducerHandlerWaitState, msg_queues: ReducerHandlerMessageQueues
 ):
     logger.error(f"[ReducerHandleWaitState.{state.name}] Unexpected message from reducer.")
-    await handler_to_sched_msg_queue.put(False)
+    msg = ReducerHandlerMessage(ReducerHandlerMessageType.FAILURE)
+    await msg_queues.put_to_listeners(msg)
 
 
 async def handle_unexpected_msg_from_scheduler(
-    state: ReducerHandlerWaitState, handler_to_sched_msg_queue: asyncio.Queue
+    state: ReducerHandlerWaitState,
+    msg_type: ReducerHandlerMessageType,
+    msg_queues: ReducerHandlerMessageQueues,
 ):
-    logger.error(f"[ReducerHandleWaitState.{state.name}] Unexpected message from scheduler.")
-    await handler_to_sched_msg_queue.put(False)
+    logger.error(
+        f"[ReducerHandleWaitState.{state.name}] Unexpected message type {msg_type.name} from"
+        f" scheduler."
+    )
+    msg = ReducerHandlerMessage(ReducerHandlerMessageType.FAILURE)
+    await msg_queues.put_to_listeners(msg)
 
 
 async def handle_reducer_connection(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
@@ -495,15 +523,9 @@ async def handle_reducer_connection(reader: asyncio.StreamReader, writer: asynci
         message_bytes = await recv_msg_from_reducer(reader)
         reducer_addr_info = msgpack.unpackb(message_bytes)
 
-        handler_to_sched_msg_queue = asyncio.Queue(1)
-        sched_to_handler_msg_queue = asyncio.Queue(1)
+        msg_queues = ReducerHandlerMessageQueues()
         await reducer_connection_queue.put(
-            (
-                reducer_addr_info["host"],
-                reducer_addr_info["port"],
-                handler_to_sched_msg_queue,
-                sched_to_handler_msg_queue,
-            )
+            (reducer_addr_info["host"], reducer_addr_info["port"], msg_queues)
         )
 
         """
@@ -519,7 +541,7 @@ async def handle_reducer_connection(reader: asyncio.StreamReader, writer: asynci
         """
         current_wait_state: ReducerHandlerWaitState = ReducerHandlerWaitState.JOB_CONFIG
         recv_scheduler_msg_task: Optional[asyncio.Task] = asyncio.create_task(
-            sched_to_handler_msg_queue.get()
+            msg_queues.get_from_listeners()
         )
         recv_reducer_msg_task: Optional[asyncio.Task] = asyncio.create_task(reader.readexactly(1))
         while True:
@@ -528,67 +550,75 @@ async def handle_reducer_connection(reader: asyncio.StreamReader, writer: asynci
 
             if ReducerHandlerWaitState.JOB_CONFIG == current_wait_state:
                 if recv_reducer_msg_task in done:
-                    await handle_unexpected_msg_from_reducer(
-                        current_wait_state, handler_to_sched_msg_queue
-                    )
+                    await handle_unexpected_msg_from_reducer(current_wait_state, msg_queues)
                     return
 
                 # Get the aggregation config from the scheduler and send the necessary info to the
                 # reducer
-                aggregation_config: AggregationConfig = recv_scheduler_msg_task.result()
+                msg: ReducerHandlerMessage = recv_scheduler_msg_task.result()
+                if ReducerHandlerMessageType.AGGREGATION_CONFIG != msg.msg_type:
+                    await handle_unexpected_msg_from_scheduler(
+                        current_wait_state, msg.msg_type, msg_queues
+                    )
+                aggregation_config: AggregationConfig = msg.payload
                 await send_msg_to_reducer(
                     msgpack.packb({"job_id": aggregation_config.job_id}), writer
                 )
 
-                recv_scheduler_msg_task = asyncio.create_task(sched_to_handler_msg_queue.get())
+                recv_scheduler_msg_task = asyncio.create_task(msg_queues.get_from_listeners())
                 current_wait_state = ReducerHandlerWaitState.JOB_CONFIG_ACK
             elif ReducerHandlerWaitState.JOB_CONFIG_ACK == current_wait_state:
                 if recv_scheduler_msg_task in done:
-                    msg = recv_scheduler_msg_task.result()
-                    if False == msg:
+                    msg: ReducerHandlerMessage = recv_scheduler_msg_task.result()
+                    if ReducerHandlerMessageType.FAILURE == msg.msg_type:
                         # Scheduler requested cancellation
                         return
                     else:
                         await handle_unexpected_msg_from_scheduler(
-                            current_wait_state, handler_to_sched_msg_queue
+                            current_wait_state, msg.msg_type, msg_queues
                         )
                         return
 
                 # Tell the scheduler the reducer ACKed the job
-                await handler_to_sched_msg_queue.put(True)
+                msg = ReducerHandlerMessage(ReducerHandlerMessageType.SUCCESS)
+                await msg_queues.put_to_listeners(msg)
 
                 recv_reducer_msg_task = asyncio.create_task(reader.readexactly(1))
                 current_wait_state = ReducerHandlerWaitState.SEARCH_WORKERS_DONE
             elif ReducerHandlerWaitState.SEARCH_WORKERS_DONE == current_wait_state:
                 if recv_reducer_msg_task in done:
-                    await handle_unexpected_msg_from_reducer(
-                        current_wait_state, handler_to_sched_msg_queue
-                    )
+                    await handle_unexpected_msg_from_reducer(current_wait_state, msg_queues)
                     return
 
-                msg = recv_scheduler_msg_task.result()
-                if False == msg:
+                msg: ReducerHandlerMessage = recv_scheduler_msg_task.result()
+                if ReducerHandlerMessageType.FAILURE == msg.msg_type:
                     # Scheduler requested cancellation
+                    return
+                elif ReducerHandlerMessageType.SUCCESS != msg.msg_type:
+                    await handle_unexpected_msg_from_scheduler(
+                        current_wait_state, msg.msg_type, msg_queues
+                    )
                     return
 
                 # Tell the reducer the search workers are done
                 await send_msg_to_reducer(msgpack.packb({"done": True}), writer)
 
-                recv_scheduler_msg_task = asyncio.create_task(sched_to_handler_msg_queue.get())
+                recv_scheduler_msg_task = asyncio.create_task(msg_queues.get_from_listeners())
                 current_wait_state = ReducerHandlerWaitState.REDUCER_DONE
             elif ReducerHandlerWaitState.REDUCER_DONE == current_wait_state:
                 if recv_scheduler_msg_task in done:
-                    msg = recv_scheduler_msg_task.result()
-                    if False == msg:
+                    msg: ReducerHandlerMessage = recv_scheduler_msg_task.result()
+                    if ReducerHandlerMessageType.FAILURE == msg.msg_type:
                         # Scheduler requested cancellation
                         return
                     else:
                         await handle_unexpected_msg_from_scheduler(
-                            current_wait_state, handler_to_sched_msg_queue
+                            current_wait_state, msg.msg_type, msg_queues
                         )
                         return
 
-                await handler_to_sched_msg_queue.put(True)
+                msg = ReducerHandlerMessage(ReducerHandlerMessageType.SUCCESS)
+                await msg_queues.put_to_listeners(msg)
                 break
     finally:
         writer.close()
