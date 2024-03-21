@@ -88,7 +88,8 @@ void Output::filter() {
 
         auto reader = m_archive_reader->read_table(
                 schema_id,
-                m_output_handler->should_output_timestamp()
+                m_output_handler->should_output_timestamp(),
+                m_should_marshal_records
         );
         reader->initialize_filter(this);
 
@@ -102,9 +103,9 @@ void Output::filter() {
                 m_output_handler->write(message);
             }
         }
+        m_output_handler->flush();
     }
-
-    m_output_handler->flush();
+    m_output_handler->finish();
 }
 
 void Output::init(
@@ -157,9 +158,14 @@ bool Output::filter(
         return false;
     }
 
-    for (auto* column : m_other_columns) {
-        if (m_cached_string_columns.find(column->get_id()) == m_cached_string_columns.end()) {
-            extracted_values[column->get_id()] = column->extract_value(cur_message);
+    // We only need to extract all columns if we're actually marshalling records into JSON strings.
+    // TODO: consider getting rid of extracted_values entirely and just accessing the underlying
+    // columns directly once we have time to clean up search.
+    if (m_should_marshal_records) {
+        for (auto* column : m_other_columns) {
+            if (m_cached_string_columns.find(column->get_id()) == m_cached_string_columns.end()) {
+                extracted_values[column->get_id()] = column->extract_value(cur_message);
+            }
         }
     }
 

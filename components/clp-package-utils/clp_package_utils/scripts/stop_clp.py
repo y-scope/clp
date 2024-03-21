@@ -13,6 +13,7 @@ from clp_py_utils.clp_config import (
     DB_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
+    REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
     SEARCH_SCHEDULER_COMPONENT_NAME,
     SEARCH_WORKER_COMPONENT_NAME,
@@ -84,6 +85,7 @@ def main(argv):
     component_args_parser.add_parser(DB_COMPONENT_NAME)
     component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
     component_args_parser.add_parser(REDIS_COMPONENT_NAME)
+    component_args_parser.add_parser(REDUCER_COMPONENT_NAME)
     component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
     component_args_parser.add_parser(COMPRESSION_SCHEDULER_COMPONENT_NAME)
     component_args_parser.add_parser(SEARCH_SCHEDULER_COMPONENT_NAME)
@@ -137,6 +139,13 @@ def main(argv):
         if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME):
             container_name = f"clp-{WEBUI_COMPONENT_NAME}-{instance_id}"
             stop_running_container(container_name, already_exited_containers, force)
+        if target in (ALL_TARGET_NAME, REDUCER_COMPONENT_NAME):
+            container_name = f"clp-{REDUCER_COMPONENT_NAME}-{instance_id}"
+            stop_running_container(container_name, already_exited_containers, force)
+
+            container_config_file_path = logs_dir / f"{container_name}.yml"
+            if container_config_file_path.exists():
+                container_config_file_path.unlink()
         if target in (ALL_TARGET_NAME, SEARCH_WORKER_COMPONENT_NAME):
             container_name = f"clp-{SEARCH_WORKER_COMPONENT_NAME}-{instance_id}"
             stop_running_container(container_name, already_exited_containers, force)

@@ -4,7 +4,10 @@ namespace clp_s {
 void SchemaReader::append_column(BaseColumnReader* column_reader) {
     m_column_map[column_reader->get_id()] = column_reader;
     m_columns.push_back(column_reader);
-    generate_local_tree(column_reader->get_id());
+    // The local schema tree is only necessary for generating the JSON template to marshal records.
+    if (m_should_marshal_records) {
+        generate_local_tree(column_reader->get_id());
+    }
 }
 
 void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
@@ -16,19 +19,24 @@ void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
         };
     } else if (m_timestamp_column->get_type() == NodeType::INTEGER) {
         m_get_timestamp = [this]() {
-            return std::get<epochtime_t>(m_extracted_values[m_timestamp_column->get_id()]);
+            return std::get<int64_t>(static_cast<Int64ColumnReader*>(m_timestamp_column)
+                                             ->extract_value(m_cur_message));
         };
     } else if (m_timestamp_column->get_type() == NodeType::FLOAT) {
         m_get_timestamp = [this]() {
             return static_cast<epochtime_t>(
-                    std::get<double>(m_extracted_values[m_timestamp_column->get_id()])
+                    std::get<double>(static_cast<FloatColumnReader*>(m_timestamp_column)
+                                             ->extract_value(m_cur_message))
             );
         };
     }
 }
 
 void SchemaReader::append_column(int32_t id) {
-    generate_local_tree(id);
+    // The local schema tree is only necessary for generating the JSON template to marshal records.
+    if (m_should_marshal_records) {
+        generate_local_tree(id);
+    }
 }
 
 void SchemaReader::load(ZstdDecompressor& decompressor) {
@@ -36,7 +44,9 @@ void SchemaReader::load(ZstdDecompressor& decompressor) {
         reader->load(decompressor, m_num_messages);
     }
 
-    generate_json_template(0);
+    if (m_should_marshal_records) {
+        generate_json_template(0);
+    }
 }
 
 void SchemaReader::generate_json_string() {
@@ -131,11 +141,13 @@ bool SchemaReader::get_next_message(std::string& message, FilterClass* filter) {
             continue;
         }
 
-        generate_json_string();
-        message = m_json_serializer.get_serialized_string();
+        if (m_should_marshal_records) {
+            generate_json_string();
+            message = m_json_serializer.get_serialized_string();
 
-        if (message.back() != '\n') {
-            message += '\n';
+            if (message.back() != '\n') {
+                message += '\n';
+            }
         }
 
         m_cur_message++;
@@ -158,11 +170,13 @@ bool SchemaReader::get_next_message_with_timestamp(
             continue;
         }
 
-        generate_json_string();
-        message = m_json_serializer.get_serialized_string();
+        if (m_should_marshal_records) {
+            generate_json_string();
+            message = m_json_serializer.get_serialized_string();
 
-        if (message.back() != '\n') {
-            message += '\n';
+            if (message.back() != '\n') {
+                message += '\n';
+            }
         }
 
         timestamp = m_get_timestamp();

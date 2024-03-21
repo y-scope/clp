@@ -21,6 +21,8 @@
 #  logging_level: "INFO"
 #
 #search_scheduler:
+#  host: "localhost"
+#  port: 7000
 #  jobs_poll_delay: 0.1  # seconds
 #  num_archives_to_search_per_sub_job: 16
 #  logging_level: "INFO"
@@ -33,6 +35,12 @@
 #  host: "localhost"
 #  port: 6379
 #  search_backend_database: 0
+#
+#reducer:
+#  host: "localhost"
+#  base_port: 14009
+#  logging_level: "INFO"
+#  upsert_interval: 100  # milliseconds
 #
 #results_cache:
 #  host: "localhost"

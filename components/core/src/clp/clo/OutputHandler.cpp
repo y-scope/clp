@@ -1,6 +1,12 @@
-#include "ResultsCacheClient.hpp"
+#include "OutputHandler.hpp"
 
+#include <memory>
 #include <vector>
+
+#include "../../reducer/CountOperator.hpp"
+#include "../../reducer/network_utils.hpp"
+#include "../../reducer/Pipeline.hpp"
+#include "../../reducer/Record.hpp"
 
 namespace clp::clo {
 ResultsCacheClient::ResultsCacheClient(
@@ -18,6 +24,19 @@ ResultsCacheClient::ResultsCacheClient(
         m_results.reserve(m_batch_size);
     } catch (mongocxx::exception const& e) {
         throw OperationFailed(ErrorCode::ErrorCode_BadParam_DB_URI, __FILE__, __LINE__);
+    }
+}
+
+void ResultsCacheClient::add_result(
+        std::string const& original_path,
+        std::string const& message,
+        epochtime_t timestamp
+) {
+    if (m_latest_results.size() < m_max_num_results) {
+        m_latest_results.emplace(std::make_unique<QueryResult>(original_path, message, timestamp));
+    } else if (m_latest_results.top()->timestamp < timestamp) {
+        m_latest_results.pop();
+        m_latest_results.emplace(std::make_unique<QueryResult>(original_path, message, timestamp));
     }
 }
 
@@ -55,16 +74,21 @@ void ResultsCacheClient::flush() {
     }
 }
 
-void ResultsCacheClient::add_result(
-        std::string const& original_path,
-        std::string const& message,
-        epochtime_t timestamp
+CountOutputHandler::CountOutputHandler(int reducer_socket_fd)
+        : m_reducer_socket_fd{reducer_socket_fd},
+          m_pipeline{reducer::PipelineInputMode::InterStage} {
+    m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
+}
+
+void CountOutputHandler::add_result(
+        [[maybe_unused]] std::string const& original_path,
+        [[maybe_unused]] std::string const& message,
+        [[maybe_unused]] epochtime_t timestamp
 ) {
-    if (m_latest_results.size() < m_max_num_results) {
-        m_latest_results.emplace(std::make_unique<QueryResult>(original_path, message, timestamp));
-    } else if (m_latest_results.top()->timestamp < timestamp) {
-        m_latest_results.pop();
-        m_latest_results.emplace(std::make_unique<QueryResult>(original_path, message, timestamp));
-    }
+    m_pipeline.push_record(reducer::EmptyRecord{});
+}
+
+void CountOutputHandler::flush() {
+    reducer::send_pipeline_results(m_reducer_socket_fd, std::move(m_pipeline.finish()));
 }
 }  // namespace clp::clo

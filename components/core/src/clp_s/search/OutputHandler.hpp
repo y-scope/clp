@@ -14,6 +14,7 @@
 #include <mongocxx/instance.hpp>
 #include <mongocxx/uri.hpp>
 
+#include "../../reducer/Pipeline.hpp"
 #include "../Defs.hpp"
 #include "../TraceableException.hpp"
 
@@ -24,8 +25,9 @@ namespace clp_s::search {
 class OutputHandler {
 public:
     // Constructors
-    explicit OutputHandler(bool should_output_timestamp)
-            : m_should_output_timestamp(should_output_timestamp){};
+    explicit OutputHandler(bool should_output_timestamp, bool should_marshal_records)
+            : m_should_output_timestamp(should_output_timestamp),
+              m_should_marshal_records(should_marshal_records){};
 
     // Destructor
     virtual ~OutputHandler() = default;
@@ -45,14 +47,22 @@ public:
     virtual void write(std::string const& message) = 0;
 
     /**
-     * Flushes the output handler.
+     * Flushes the output handler after each table that gets searched.
      */
     virtual void flush() = 0;
 
+    /**
+     * Performs any final operations after all tables have been searched.
+     */
+    virtual void finish() {}
+
     [[nodiscard]] bool should_output_timestamp() const { return m_should_output_timestamp; }
 
-protected:
+    [[nodiscard]] bool should_marshal_records() const { return m_should_marshal_records; }
+
+private:
     bool m_should_output_timestamp;
+    bool m_should_marshal_records;
 };
 
 /**
@@ -62,7 +72,7 @@ class StandardOutputHandler : public OutputHandler {
 public:
     // Constructors
     explicit StandardOutputHandler(bool should_output_timestamp = false)
-            : OutputHandler(should_output_timestamp) {}
+            : OutputHandler(should_output_timestamp, true) {}
 
     // Methods inherited from OutputHandler
     void write(std::string const& message, epochtime_t timestamp) override {
@@ -186,6 +196,28 @@ private:
             std::vector<std::unique_ptr<QueryResult>>,
             QueryResultGreaterTimestampComparator>
             m_latest_results;
+};
+
+/**
+ * Output handler that performs a count aggregation and sends the results to a reducer.
+ */
+class CountOutputHandler : public OutputHandler {
+public:
+    // Constructors
+    CountOutputHandler(int reducer_socket_fd);
+
+    // Methods inherited from OutputHandler
+    void flush() override {}
+
+    void write(std::string const& message, epochtime_t timestamp) override {}
+
+    void write(std::string const& message) override;
+
+    void finish() override;
+
+private:
+    int m_reducer_socket_fd;
+    reducer::Pipeline m_pipeline;
 };
 }  // namespace clp_s::search
 

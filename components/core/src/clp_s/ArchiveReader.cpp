@@ -74,15 +74,19 @@ void ArchiveReader::read_dictionaries_and_metadata() {
     read_metadata();
 }
 
-std::unique_ptr<SchemaReader>
-ArchiveReader::read_table(int32_t schema_id, bool should_extract_timestamp) {
+std::unique_ptr<SchemaReader> ArchiveReader::read_table(
+        int32_t schema_id,
+        bool should_extract_timestamp,
+        bool should_marshal_records
+) {
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 
     if (m_id_to_table_metadata.count(schema_id) == 0) {
         throw OperationFailed(ErrorCodeFileNotFound, __FILENAME__, __LINE__);
     }
 
-    auto schema_reader = create_schema_reader(schema_id, should_extract_timestamp);
+    auto schema_reader
+            = create_schema_reader(schema_id, should_extract_timestamp, should_marshal_records);
 
     m_tables_file_reader.try_seek_from_begin(m_id_to_table_metadata[schema_id].offset);
     m_tables_decompressor.open(m_tables_file_reader, cDecompressorFileReadBufferCapacity);
@@ -138,12 +142,16 @@ ArchiveReader::append_reader_column(std::unique_ptr<SchemaReader>& reader, int32
     return column_reader;
 }
 
-std::unique_ptr<SchemaReader>
-ArchiveReader::create_schema_reader(int32_t schema_id, bool should_extract_timestamp) {
+std::unique_ptr<SchemaReader> ArchiveReader::create_schema_reader(
+        int32_t schema_id,
+        bool should_extract_timestamp,
+        bool should_marshal_records
+) {
     auto reader = std::make_unique<SchemaReader>(
             m_schema_tree,
             schema_id,
-            m_id_to_table_metadata[schema_id].num_messages
+            m_id_to_table_metadata[schema_id].num_messages,
+            should_marshal_records
     );
     auto timestamp_column_ids = m_timestamp_dict->get_authoritative_timestamp_column_ids();
 
@@ -162,7 +170,7 @@ void ArchiveReader::store(FileWriter& writer) {
     std::string message;
 
     for (auto& [id, table_metadata] : m_id_to_table_metadata) {
-        auto schema_reader = read_table(id, false);
+        auto schema_reader = read_table(id, false, true);
         while (schema_reader->get_next_message(message)) {
             writer.write(message.c_str(), message.length());
         }

@@ -66,6 +66,9 @@ def main(argv):
         help="Maximum number of latest results to return.",
     )
     args_parser.add_argument("--file-path", help="File to search.")
+    args_parser.add_argument(
+        "--count", action="store_true", help="Perform the query and count the number of results."
+    )
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate and load config file
@@ -134,6 +137,8 @@ def main(argv):
     if parsed_args.file_path:
         search_cmd.append("--file-path")
         search_cmd.append(parsed_args.file_path)
+    if parsed_args.count:
+        search_cmd.append("--count")
     cmd = container_start_cmd + search_cmd
     subprocess.run(cmd, check=True)
 
