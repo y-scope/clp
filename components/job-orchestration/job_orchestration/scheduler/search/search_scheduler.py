@@ -443,6 +443,10 @@ async def handle_jobs(
         done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
         if handle_updating_task in done:
             logger.error("handle_job_updates completed unexpectedly.")
+            try:
+                handle_updating_task
+            except Exception:
+                logger.exception("handle_job_updates failed.")
             return
         tasks = list(pending)
 
@@ -656,8 +660,16 @@ async def main(argv: List[str]) -> int:
             )
             if reducer_handler in done:
                 logger.error("reducer_handler completed unexpectedly.")
+                try:
+                    reducer_handler.result()
+                except Exception:
+                    logger.exception("reducer_handler failed.")
             if job_handler in done:
                 logger.error("job_handler completed unexpectedly.")
+                try:
+                    job_handler.result()
+                except Exception:
+                    logger.exception("job_handler failed.")
     except Exception:
         logger.exception(f"Uncaught exception in job handling loop.")
 
