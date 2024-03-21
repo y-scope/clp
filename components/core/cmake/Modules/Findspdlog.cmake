@@ -80,31 +80,31 @@ if(NOT TARGET spdlog::spdlog)
     endif()
 
     # Set include directories for library
-    if(EXISTS "${spdlog_INCLUDE_DIR}")
-        set_target_properties(spdlog::spdlog
-                PROPERTIES
-                INTERFACE_INCLUDE_DIRECTORIES "${spdlog_INCLUDE_DIR}"
-                )
-    else()
+    if (NOT EXISTS "${spdlog_INCLUDE_DIR}")
         set(spdlog_FOUND OFF)
+    else()
+        set_target_properties(spdlog::spdlog
+            PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${spdlog_INCLUDE_DIR}"
+        )
     endif()
 
     # Set location of library
-    if(EXISTS "${spdlog_LIBRARY}")
+    if(NOT EXISTS "${spdlog_LIBRARY}")
+        set(spdlog_FOUND OFF)
+    else()
         set_target_properties(spdlog::spdlog
-                PROPERTIES
-                IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                IMPORTED_LOCATION "${spdlog_LIBRARY}"
-                )
+            PROPERTIES
+            IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+            IMPORTED_LOCATION "${spdlog_LIBRARY}"
+        )
 
         # Add component's dependencies for linking
         if(spdlog_LIBRARY_DEPENDENCIES)
             set_target_properties(spdlog::spdlog
-                    PROPERTIES
-                    INTERFACE_LINK_LIBRARIES "${spdlog_LIBRARY_DEPENDENCIES}"
-                    )
+                PROPERTIES
+                INTERFACE_LINK_LIBRARIES "${spdlog_LIBRARY_DEPENDENCIES}"
+            )
         endif()
-    else()
-        set(spdlog_FOUND OFF)
     endif()
 endif()
