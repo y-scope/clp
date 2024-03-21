@@ -451,7 +451,7 @@ async def handle_jobs(
         if handle_updating_task in done:
             logger.error("handle_job_updates completed unexpectedly.")
             try:
-                handle_updating_task
+                handle_updating_task.result()
             except Exception:
                 logger.exception("handle_job_updates failed.")
             return
