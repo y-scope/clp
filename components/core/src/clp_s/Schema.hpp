@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <stack>
 #include <vector>
 
 namespace clp_s {
@@ -94,6 +95,7 @@ public:
 private:
     std::vector<int32_t> m_schema;
     size_t m_num_ordered{0};
+    std::stack<std::pair<int32_t, size_t>> m_obj_stack;
 };
 }  // namespace clp_s
 

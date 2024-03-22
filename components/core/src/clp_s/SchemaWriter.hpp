@@ -55,6 +55,7 @@ private:
     uint64_t m_num_messages;
 
     std::vector<BaseColumnWriter*> m_columns;
+    std::vector<BaseColumnWriter*> m_unordered_columns;
 };
 }  // namespace clp_s
 
