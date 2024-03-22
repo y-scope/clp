@@ -69,6 +69,11 @@ def main(argv):
     args_parser.add_argument(
         "--count", action="store_true", help="Perform the query and count the number of results."
     )
+    args_parser.add_argument(
+        "--time-bucket-size",
+        type=int,
+        help="Optional time bucket size (ms) for count aggregations.",
+    )
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate and load config file
@@ -139,6 +144,9 @@ def main(argv):
         search_cmd.append(parsed_args.file_path)
     if parsed_args.count:
         search_cmd.append("--count")
+    if parsed_args.time_bucket_size is not None:
+        search_cmd.append("--time-bucket-size")
+        search_cmd.append(str(parsed_args.time_bucket_size))
     cmd = container_start_cmd + search_cmd
     subprocess.run(cmd, check=True)
 

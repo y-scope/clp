@@ -149,7 +149,13 @@ async def handle_reducer_connection(
                     )
                 aggregation_config: AggregationConfig = msg.payload
                 await _send_msg_to_reducer(
-                    msgpack.packb({"job_id": aggregation_config.job_id}), writer
+                    msgpack.packb(
+                        {
+                            "job_id": aggregation_config.job_id,
+                            "time_bucket_size": aggregation_config.time_bucket_size,
+                        }
+                    ),
+                    writer,
                 )
 
                 recv_listener_msg_task = asyncio.create_task(msg_queues.get_from_listeners())

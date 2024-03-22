@@ -104,4 +104,19 @@ void CountOutputHandler::finish() {
         SPDLOG_ERROR("Failed to send aggregated results to reducer");
     }
 }
+
+void BucketOutputHandler::finish() {
+    if (false
+        == reducer::send_pipeline_results(
+                m_reducer_socket_fd,
+                std::make_unique<reducer::Int64Int64MapRecordGroupIterator>(
+                        m_bucket_counts,
+                        "count"
+                )
+        ))
+    {
+        SPDLOG_ERROR("Failed to send results to reducer");
+    }
+}
+
 }  // namespace clp_s::search

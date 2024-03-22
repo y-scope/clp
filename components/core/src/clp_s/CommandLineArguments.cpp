@@ -380,6 +380,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "count",
                     po::bool_switch(&m_do_count_results_aggregation),
                     "Perform a count aggregation (count the number of results)"
+            )(
+                    "time-bucket-size",
+                    po::value<int64_t>(&m_time_bucket_size),
+                    "Optional time bucket size (ms) for count aggregations"
             );
             // clang-format on
             search_options.add(aggregation_options);
@@ -541,6 +545,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 );
             }
 
+            if (parsed_command_line_options.count("time-bucket-size") && m_time_bucket_size <= 0) {
+                throw std::invalid_argument("Bucket size argument must be greater than zero.");
+            }
+
             if (parsed_command_line_options.count("output-handler") > 0) {
                 if (static_cast<char const*>(cNetworkOutputHandlerName) == output_handler_name) {
                     m_output_handler_type = OutputHandlerType::Network;
@@ -599,6 +607,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             {
                 throw std::invalid_argument(
                         "The reducer output handler currently only supports the count aggregation."
+                );
+            }
+
+            if (parsed_command_line_options.count("time-bucket-size")
+                && false == m_do_count_results_aggregation)
+            {
+                throw std::invalid_argument(
+                        "The --time-bucket-size argument must be used with the --count argument."
                 );
             }
         }

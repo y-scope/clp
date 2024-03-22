@@ -79,6 +79,7 @@ def create_and_monitor_job_in_db(
     max_num_results: int,
     path_filter: str | None,
     do_count_aggregation: bool | None,
+    time_bucket_size: int | None,
 ):
     search_config = SearchConfig(
         query_string=wildcard_query,
@@ -92,6 +93,8 @@ def create_and_monitor_job_in_db(
         search_config.aggregation_config = AggregationConfig(
             do_count_aggregation=do_count_aggregation
         )
+        if time_bucket_size is not None:
+            search_config.aggregation_config.time_bucket_size = time_bucket_size
     if tags:
         tag_list = [tag.strip().lower() for tag in tags.split(",") if tag]
         if len(tag_list) > 0:
@@ -136,7 +139,10 @@ def create_and_monitor_job_in_db(
                     search_results_collection.find().sort("timestamp", -1).limit(max_num_results)
                 )
 
-            if do_count_aggregation is not None:
+            if do_count_aggregation is not None and time_bucket_size is not None:
+                for document in cursor:
+                    print(f"timestamp: {document['timestamp']} count: {document['count']}")
+            elif do_count_aggregation is not None:
                 for document in cursor:
                     print(
                         f"tags: {document['group_tags']} count: {document['records'][0]['count']}"
@@ -157,6 +163,7 @@ async def do_search(
     max_num_results: int,
     path_filter: str | None,
     do_count_aggregation: bool | None,
+    time_bucket_size: int | None,
 ):
     db_monitor_task = asyncio.ensure_future(
         run_function_in_process(
@@ -171,6 +178,7 @@ async def do_search(
             max_num_results,
             path_filter,
             do_count_aggregation,
+            time_bucket_size,
         )
     )
 
@@ -220,6 +228,11 @@ def main(argv):
         help="Perform the query and count the number of results.",
         const=True,
     )
+    args_parser.add_argument(
+        "--time-bucket-size",
+        type=int,
+        help="Optional time bucket size (ms) for count aggregations.",
+    )
     parsed_args = args_parser.parse_args(argv[1:])
 
     if (
@@ -252,6 +265,7 @@ def main(argv):
             parsed_args.max_num_results,
             parsed_args.file_path,
             parsed_args.count,
+            parsed_args.time_bucket_size,
         )
     )
 

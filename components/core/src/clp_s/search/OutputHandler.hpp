@@ -13,8 +13,10 @@
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/instance.hpp>
 #include <mongocxx/uri.hpp>
+#include <spdlog/spdlog.h>
 
 #include "../../reducer/Pipeline.hpp"
+#include "../../reducer/RecordGroupIterator.hpp"
 #include "../Defs.hpp"
 #include "../TraceableException.hpp"
 
@@ -218,6 +220,36 @@ public:
 private:
     int m_reducer_socket_fd;
     reducer::Pipeline m_pipeline;
+};
+
+/**
+ * Output handler that performs a count aggregation bucketed by time and sends the results to a
+ * reducer.
+ */
+class BucketOutputHandler : public OutputHandler {
+public:
+    // Constructors
+    BucketOutputHandler(int reducer_socket_fd, int64_t time_bucket_size)
+            : OutputHandler{true, false},
+              m_reducer_socket_fd{reducer_socket_fd},
+              m_time_bucket_size{time_bucket_size} {}
+
+    // Methods inherited from OutputHandler
+    void flush() override {}
+
+    void write(std::string const& message, epochtime_t timestamp) override {
+        int64_t bucket = (timestamp / m_time_bucket_size) * m_time_bucket_size;
+        m_bucket_counts[bucket] += 1;
+    }
+
+    void write(std::string const& message) override {}
+
+    void finish() override;
+
+private:
+    int m_reducer_socket_fd;
+    std::map<int64_t, int64_t> m_bucket_counts;
+    int64_t m_time_bucket_size;
 };
 }  // namespace clp_s::search
 
