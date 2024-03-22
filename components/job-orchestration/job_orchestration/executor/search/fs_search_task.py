@@ -27,8 +27,6 @@ def make_clo_command(
     # fmt: off
     search_cmd = [
         str(clp_home / "bin" / "clo"),
-        "--mongodb-uri", results_cache_uri,
-        "--mongodb-collection", results_collection,
         str(archive_path),
         search_config.query_string,
     ]
@@ -43,10 +41,30 @@ def make_clo_command(
     if search_config.ignore_case:
         search_cmd.append("--ignore-case")
     if search_config.path_filter is not None:
+        search_cmd.append("--file-path")
         search_cmd.append(search_config.path_filter)
 
-    search_cmd.append("--max-num-results")
-    search_cmd.append(str(search_config.max_num_results))
+    if search_config.aggregation_config is not None:
+        aggregation_config = search_config.aggregation_config
+
+        if aggregation_config.do_count_aggregation is not None:
+            search_cmd.append("--count")
+
+        search_cmd.append("reducer")
+        search_cmd.append("--host")
+        search_cmd.append(aggregation_config.reducer_host)
+        search_cmd.append("--port")
+        search_cmd.append(str(aggregation_config.reducer_port))
+        search_cmd.append("--job-id")
+        search_cmd.append(str(aggregation_config.job_id))
+    else:
+        search_cmd.append("results-cache")
+        search_cmd.append("--uri")
+        search_cmd.append(results_cache_uri)
+        search_cmd.append("--collection")
+        search_cmd.append(results_collection)
+        search_cmd.append("--max-num-results")
+        search_cmd.append(str(search_config.max_num_results))
 
     return search_cmd
 
@@ -66,8 +84,6 @@ def make_clp_s_command(
         str(archives_dir),
         "--archive-id", archive_id,
         search_config.query_string,
-        "--mongodb-uri", results_cache_uri,
-        "--mongodb-collection", results_collection,
     ]
     # fmt: on
 
@@ -80,8 +96,27 @@ def make_clp_s_command(
     if search_config.ignore_case:
         search_cmd.append("--ignore-case")
 
-    search_cmd.append("--max-num-results")
-    search_cmd.append(str(search_config.max_num_results))
+    if search_config.aggregation_config is not None:
+        aggregation_config = search_config.aggregation_config
+
+        if aggregation_config.do_count_aggregation is not None:
+            search_cmd.append("--count")
+
+        search_cmd.append("reducer")
+        search_cmd.append("--host")
+        search_cmd.append(aggregation_config.reducer_host)
+        search_cmd.append("--port")
+        search_cmd.append(str(aggregation_config.reducer_port))
+        search_cmd.append("--job-id")
+        search_cmd.append(str(aggregation_config.job_id))
+    else:
+        search_cmd.append("results-cache")
+        search_cmd.append("--uri")
+        search_cmd.append(results_cache_uri)
+        search_cmd.append("--collection")
+        search_cmd.append(results_collection)
+        search_cmd.append("--max-num-results")
+        search_cmd.append(str(search_config.max_num_results))
 
     return search_cmd
 

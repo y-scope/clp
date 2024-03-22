@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include <cstdio>
+#include <string>
 
 #include "../Defs.h"
 #include "SocketOperationFailed.hpp"

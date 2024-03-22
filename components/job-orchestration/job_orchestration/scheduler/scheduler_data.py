@@ -1,15 +1,18 @@
+import asyncio
 import datetime
-import typing
+from enum import auto, Enum
+from typing import Any, Dict, List, Optional
 
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import SearchConfig
+from job_orchestration.scheduler.search.reducer_handler import ReducerHandlerMessageQueues
 from pydantic import BaseModel, validator
 
 
 class CompressionJob(BaseModel):
     id: int
     start_time: datetime.datetime
-    async_task_result: typing.Any
+    async_task_result: Any
 
 
 class CompressionTaskResult(BaseModel):
@@ -35,11 +38,23 @@ class CompressionTaskSuccessResult(CompressionTaskResult):
     total_compressed_size: int
 
 
+class InternalJobState(Enum):
+    WAITING_FOR_REDUCER = auto()
+    WAITING_FOR_DISPATCH = auto()
+    RUNNING = auto()
+
+
 class SearchJob(BaseModel):
     id: str
     search_config: SearchConfig
-    remaining_archives_for_search: typing.List[typing.Dict[str, typing.Any]]
-    current_sub_job_async_task_result: typing.Optional[typing.Any]
+    state: InternalJobState
+    remaining_archives_for_search: List[Dict[str, Any]]
+    current_sub_job_async_task_result: Optional[Any]
+    reducer_acquisition_task: Optional[asyncio.Task]
+    reducer_handler_msg_queues: Optional[ReducerHandlerMessageQueues]
+
+    class Config:  # To allow asyncio.Task and asyncio.Queue
+        arbitrary_types_allowed = True
 
 
 class SearchTaskResult(BaseModel):

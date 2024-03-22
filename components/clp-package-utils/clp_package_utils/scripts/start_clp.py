@@ -22,6 +22,7 @@ from clp_py_utils.clp_config import (
     DB_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
+    REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
     SEARCH_JOBS_TABLE_NAME,
     SEARCH_SCHEDULER_COMPONENT_NAME,
@@ -49,6 +50,7 @@ from clp_package_utils.general import (
     validate_db_config,
     validate_queue_config,
     validate_redis_config,
+    validate_reducer_config,
     validate_results_cache_config,
     validate_webui_config,
     validate_worker_config,
@@ -730,6 +732,71 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
     logger.info(f"Started {component_name}.")
 
 
+def start_reducer(
+    instance_id: str,
+    clp_config: CLPConfig,
+    container_clp_config: CLPConfig,
+    num_workers: int,
+    mounts: CLPDockerMounts,
+):
+    component_name = REDUCER_COMPONENT_NAME
+    logger.info(f"Starting {component_name}...")
+
+    container_name = f"clp-{component_name}-{instance_id}"
+    if container_exists(container_name):
+        return
+
+    container_config_filename = f"{container_name}.yml"
+    container_config_file_path = clp_config.logs_directory / container_config_filename
+    with open(container_config_file_path, "w") as f:
+        yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
+
+    logs_dir = clp_config.logs_directory / component_name
+    validate_reducer_config(clp_config, logs_dir, num_workers)
+
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    container_logs_dir = container_clp_config.logs_directory / component_name
+
+    clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
+    # fmt: off
+    container_start_cmd = [
+        "docker", "run",
+        "-di",
+        "--network", "host",
+        "-w", str(CONTAINER_CLP_HOME),
+        "--name", container_name,
+        "-e", f"PYTHONPATH={clp_site_packages_dir}",
+        "-e", f"CLP_LOGS_DIR={container_logs_dir}",
+        "-e", f"CLP_LOGGING_LEVEL={clp_config.reducer.logging_level}",
+        "-e", f"CLP_HOME={CONTAINER_CLP_HOME}",
+        "-u", f"{os.getuid()}:{os.getgid()}",
+        "--mount", str(mounts.clp_home),
+    ]
+    # fmt: on
+    necessary_mounts = [
+        mounts.logs_dir,
+    ]
+    for mount in necessary_mounts:
+        if mount:
+            container_start_cmd.append("--mount")
+            container_start_cmd.append(str(mount))
+    container_start_cmd.append(clp_config.execution_container)
+
+    # fmt: off
+    reducer_cmd = [
+        "python3", "-u",
+        "-m", "job_orchestration.reducer.reducer",
+        "--config", str(container_clp_config.logs_directory / container_config_filename),
+        "--concurrency", str(num_workers),
+        "--upsert-interval", str(clp_config.reducer.upsert_interval),
+    ]
+    # fmt: on
+    cmd = container_start_cmd + reducer_cmd
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+
+    logger.info(f"Started {component_name}.")
+
+
 def add_num_workers_argument(parser):
     parser.add_argument(
         "--num-workers",
@@ -763,6 +830,8 @@ def main(argv):
     add_num_workers_argument(compression_worker_parser)
     search_worker_parser = component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
     add_num_workers_argument(search_worker_parser)
+    reducer_server_parser = component_args_parser.add_parser(REDUCER_COMPONENT_NAME)
+    add_num_workers_argument(reducer_server_parser)
     component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
@@ -822,7 +891,11 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    if target in (COMPRESSION_WORKER_COMPONENT_NAME, SEARCH_WORKER_COMPONENT_NAME):
+    if target in (
+        COMPRESSION_WORKER_COMPONENT_NAME,
+        REDUCER_COMPONENT_NAME,
+        SEARCH_WORKER_COMPONENT_NAME,
+    ):
         num_workers = parsed_args.num_workers
     else:
         num_workers = multiprocessing.cpu_count() // 2
@@ -872,6 +945,8 @@ def main(argv):
             )
         if target in (ALL_TARGET_NAME, SEARCH_WORKER_COMPONENT_NAME):
             start_search_worker(instance_id, clp_config, container_clp_config, num_workers, mounts)
+        if target in (ALL_TARGET_NAME, REDUCER_COMPONENT_NAME):
+            start_reducer(instance_id, clp_config, container_clp_config, num_workers, mounts)
         if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME):
             start_webui(instance_id, clp_config, mounts)
 

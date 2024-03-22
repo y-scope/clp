@@ -57,7 +57,7 @@ ServerContext::ServerContext(CommandLineArguments& args)
           m_upsert_timer{m_ioctx},
           m_reducer_host{args.get_reducer_host()},
           m_reducer_port{args.get_reducer_port()},
-          m_polling_interval_ms{args.get_polling_interval()} {
+          m_upsert_interval{args.get_upsert_interval()} {
     mongocxx::uri mongodb_uri = mongocxx::uri(args.get_mongodb_uri());
     try {
         m_mongodb_client = mongocxx::client(mongodb_uri);

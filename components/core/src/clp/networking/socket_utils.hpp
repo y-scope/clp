@@ -9,10 +9,9 @@
 namespace clp::networking {
 // Methods
 /**
- * Connects to a server
- * @param host
- * @param port
- * @return A file descriptor of the socket if successful, -1 otherwise
+ * Opens a TCP connection to a server listening on the given host and port.
+ * @return An open socket file descriptor on success
+ * @return -1 on any error
  */
 int connect_to_server(std::string const& host, std::string const& port);
 /**

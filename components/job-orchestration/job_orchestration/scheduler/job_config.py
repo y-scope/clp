@@ -31,6 +31,13 @@ class ClpIoConfig(BaseModel):
     output: OutputConfig
 
 
+class AggregationConfig(BaseModel):
+    job_id: typing.Optional[int] = None
+    reducer_host: typing.Optional[str] = None
+    reducer_port: typing.Optional[int] = None
+    do_count_aggregation: typing.Optional[bool] = None
+
+
 class SearchConfig(BaseModel):
     query_string: str
     max_num_results: int
@@ -39,3 +46,4 @@ class SearchConfig(BaseModel):
     end_timestamp: typing.Optional[int] = None
     ignore_case: bool = False
     path_filter: typing.Optional[str] = None
+    aggregation_config: typing.Optional[AggregationConfig] = None

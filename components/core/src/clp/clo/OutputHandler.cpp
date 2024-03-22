@@ -1,15 +1,17 @@
-#include "Client.hpp"
+#include "OutputHandler.hpp"
 
+#include <memory>
 #include <vector>
 
 #include <msgpack.hpp>
 #include <spdlog/spdlog.h>
 
+#include "../../reducer/CountOperator.hpp"
+#include "../../reducer/network_utils.hpp"
 #include "../networking/socket_utils.hpp"
 
 namespace clp::clo {
-
-NetworkClient::NetworkClient(std::string const& host, std::string const& port) {
+NetworkOutputHandler::NetworkOutputHandler(std::string const& host, std::string const& port) {
     m_socket_fd = clp::networking::connect_to_server(host, port);
     if (-1 == m_socket_fd) {
         SPDLOG_ERROR("Failed to connect to the server");
@@ -17,7 +19,7 @@ NetworkClient::NetworkClient(std::string const& host, std::string const& port) {
     }
 }
 
-ErrorCode NetworkClient::add_result(
+ErrorCode NetworkOutputHandler::add_result(
         std::string const& original_path,
         std::string const& message,
         epochtime_t timestamp
@@ -32,7 +34,7 @@ ErrorCode NetworkClient::add_result(
     return networking::try_send(m_socket_fd, m.data(), m.size());
 }
 
-ResultsCacheClient::ResultsCacheClient(
+ResultsCacheOutputHandler::ResultsCacheOutputHandler(
         std::string const& uri,
         std::string const& collection,
         uint64_t batch_size,
@@ -50,7 +52,22 @@ ResultsCacheClient::ResultsCacheClient(
     }
 }
 
-void ResultsCacheClient::flush() {
+ErrorCode ResultsCacheOutputHandler::add_result(
+        std::string const& original_path,
+        std::string const& message,
+        epochtime_t timestamp
+) {
+    if (m_latest_results.size() < m_max_num_results) {
+        m_latest_results.emplace(std::make_unique<QueryResult>(original_path, message, timestamp));
+    } else if (m_latest_results.top()->timestamp < timestamp) {
+        m_latest_results.pop();
+        m_latest_results.emplace(std::make_unique<QueryResult>(original_path, message, timestamp));
+    }
+
+    return ErrorCode_Success;
+}
+
+void ResultsCacheOutputHandler::flush() {
     size_t count = 0;
     while (false == m_latest_results.empty()) {
         auto result = std::move(*m_latest_results.top());
@@ -84,19 +101,22 @@ void ResultsCacheClient::flush() {
     }
 }
 
-ErrorCode ResultsCacheClient::add_result(
-        std::string const& original_path,
-        std::string const& message,
-        epochtime_t timestamp
-) {
-    if (m_latest_results.size() < m_max_num_results) {
-        m_latest_results.emplace(std::make_unique<QueryResult>(original_path, message, timestamp));
-    } else if (m_latest_results.top()->timestamp < timestamp) {
-        m_latest_results.pop();
-        m_latest_results.emplace(std::make_unique<QueryResult>(original_path, message, timestamp));
-    }
+CountOutputHandler::CountOutputHandler(int reducer_socket_fd)
+        : m_reducer_socket_fd{reducer_socket_fd},
+          m_pipeline{reducer::PipelineInputMode::InterStage} {
+    m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
+}
 
+ErrorCode CountOutputHandler::add_result(
+        [[maybe_unused]] std::string const& original_path,
+        [[maybe_unused]] std::string const& message,
+        [[maybe_unused]] epochtime_t timestamp
+) {
+    m_pipeline.push_record(reducer::EmptyRecord{});
     return ErrorCode_Success;
 }
 
+void CountOutputHandler::flush() {
+    reducer::send_pipeline_results(m_reducer_socket_fd, std::move(m_pipeline.finish()));
+}
 }  // namespace clp::clo

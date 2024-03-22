@@ -4,45 +4,19 @@
 
 #include <spdlog/spdlog.h>
 
+#include "../../clp/networking/socket_utils.hpp"
+#include "../../reducer/CountOperator.hpp"
+#include "../../reducer/network_utils.hpp"
+#include "../../reducer/Record.hpp"
+
 namespace clp_s::search {
 NetworkOutputHandler::NetworkOutputHandler(
         std::string const& host,
         std::string const& port,
         bool should_output_timestamp
 )
-        : OutputHandler(should_output_timestamp) {
-    struct addrinfo hints = {};
-    // Address can be IPv4 or IPV6
-    hints.ai_family = AF_UNSPEC;
-    // TCP socket
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = 0;
-    hints.ai_protocol = 0;
-    struct addrinfo* addresses_head = nullptr;
-    int error = getaddrinfo(host.c_str(), port.c_str(), &hints, &addresses_head);
-    if (0 != error) {
-        SPDLOG_ERROR("Failed to get address information for the server, error={}", error);
-        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
-    }
-
-    // Try each address until a socket can be created and connected to
-    for (auto curr = addresses_head; nullptr != curr; curr = curr->ai_next) {
-        // Create socket
-        m_socket_fd = socket(curr->ai_family, curr->ai_socktype, curr->ai_protocol);
-        if (-1 == m_socket_fd) {
-            continue;
-        }
-
-        // Connect to address
-        if (connect(m_socket_fd, curr->ai_addr, curr->ai_addrlen) != -1) {
-            break;
-        }
-
-        // Failed to connect, so close socket
-        close(m_socket_fd);
-        m_socket_fd = -1;
-    }
-    freeaddrinfo(addresses_head);
+        : OutputHandler(should_output_timestamp, true) {
+    m_socket_fd = clp::networking::connect_to_server(host, port);
     if (-1 == m_socket_fd) {
         SPDLOG_ERROR("Failed to connect to the server, errno={}", errno);
         throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
@@ -56,7 +30,7 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
         uint64_t max_num_results,
         bool should_output_timestamp
 )
-        : OutputHandler(should_output_timestamp),
+        : OutputHandler(should_output_timestamp, true),
           m_batch_size(batch_size),
           m_max_num_results(max_num_results) {
     try {
@@ -109,6 +83,25 @@ void ResultsCacheOutputHandler::write(std::string const& message, epochtime_t ti
     } else if (m_latest_results.top()->timestamp < timestamp) {
         m_latest_results.pop();
         m_latest_results.emplace(std::make_unique<QueryResult>("", message, timestamp));
+    }
+}
+
+CountOutputHandler::CountOutputHandler(int reducer_socket_fd)
+        : OutputHandler(false, false),
+          m_reducer_socket_fd(reducer_socket_fd),
+          m_pipeline(reducer::PipelineInputMode::InterStage) {
+    m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
+}
+
+void CountOutputHandler::write(std::string const& message) {
+    m_pipeline.push_record(reducer::EmptyRecord{});
+}
+
+void CountOutputHandler::finish() {
+    if (false
+        == reducer::send_pipeline_results(m_reducer_socket_fd, std::move(m_pipeline.finish())))
+    {
+        SPDLOG_ERROR("Failed to send aggregated results to reducer");
     }
 }
 }  // namespace clp_s::search

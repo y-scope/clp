@@ -52,7 +52,8 @@ public:
     explicit SchemaReader(
             std::shared_ptr<SchemaTree> schema_tree,
             int32_t schema_id,
-            uint64_t num_messages
+            uint64_t num_messages,
+            bool should_marshal_records
     )
             : m_schema_id(schema_id),
               m_num_messages(num_messages),
@@ -60,7 +61,8 @@ public:
               m_timestamp_column(nullptr),
               m_get_timestamp([]() -> epochtime_t { return 0; }),
               m_global_schema_tree(std::move(schema_tree)),
-              m_local_schema_tree(std::make_unique<SchemaTree>()) {}
+              m_local_schema_tree(std::make_unique<SchemaTree>()),
+              m_should_marshal_records(should_marshal_records) {}
 
     // Destructor
     ~SchemaReader() {
@@ -166,6 +168,7 @@ private:
     std::unordered_map<int32_t, int32_t> m_local_id_to_global_id;
 
     JsonSerializer m_json_serializer;
+    bool m_should_marshal_records{true};
 
     std::map<int32_t, std::variant<int64_t, double, std::string, uint8_t>> m_extracted_values;
 };

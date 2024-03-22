@@ -2,6 +2,8 @@ set(
         CLO_SOURCES
         ../BufferReader.cpp
         ../BufferReader.hpp
+        ../cli_utils.cpp
+        ../cli_utils.hpp
         ../database_utils.cpp
         ../database_utils.hpp
         ../Defs.h
@@ -105,14 +107,37 @@ set(
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.c"
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.h"
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3ext.h"
-        Client.cpp
-        Client.hpp
         clo.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
+        OutputHandler.cpp
+        OutputHandler.hpp
 )
 
-add_executable(clo ${CLO_SOURCES})
+set(
+        REDUCER_SOURCES
+        ../../reducer/BufferedSocketWriter.cpp
+        ../../reducer/BufferedSocketWriter.hpp
+        ../../reducer/ConstRecordIterator.hpp
+        ../../reducer/CountOperator.cpp
+        ../../reducer/CountOperator.hpp
+        ../../reducer/DeserializedRecordGroup.cpp
+        ../../reducer/DeserializedRecordGroup.hpp
+        ../../reducer/GroupTags.hpp
+        ../../reducer/network_utils.cpp
+        ../../reducer/network_utils.hpp
+        ../../reducer/Operator.cpp
+        ../../reducer/Operator.hpp
+        ../../reducer/Pipeline.cpp
+        ../../reducer/Pipeline.hpp
+        ../../reducer/Record.hpp
+        ../../reducer/RecordGroup.hpp
+        ../../reducer/RecordGroupIterator.hpp
+        ../../reducer/RecordTypedKeyIterator.hpp
+        ../../reducer/types.hpp
+)
+
+add_executable(clo ${CLO_SOURCES} ${REDUCER_SOURCES})
 target_compile_features(clo PRIVATE cxx_std_17)
 target_include_directories(clo PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 target_link_libraries(clo

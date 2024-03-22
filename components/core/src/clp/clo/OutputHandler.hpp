@@ -1,5 +1,5 @@
-#ifndef CLP_CLO_RESULTSCACHECLIENT_HPP
-#define CLP_CLO_RESULTSCACHECLIENT_HPP
+#ifndef CLP_CLO_OUTPUTHANDLER_HPP
+#define CLP_CLO_OUTPUTHANDLER_HPP
 
 #include <unistd.h>
 
@@ -11,13 +11,21 @@
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/uri.hpp>
 
+#include "../../reducer/Pipeline.hpp"
 #include "../Defs.h"
+#include "../streaming_archive/MetadataDB.hpp"
 #include "../TraceableException.hpp"
 
 namespace clp::clo {
-class Client {
+/**
+ * Abstract class for handling output from a search.
+ */
+class OutputHandler {
 public:
-    virtual ~Client() = default;
+    // Destructor
+    virtual ~OutputHandler() = default;
+
+    // Methods
     /**
      * Adds a query result to a batch or sends it to the destination.
      * @param original_path The original path of the log event.
@@ -30,12 +38,23 @@ public:
             = 0;
 
     /**
-     * Flushes the results.
+     * Flushes any buffered output. Called once at the end of search.
      */
     virtual void flush() = 0;
+
+    /**
+     * @param it
+     * @return Whether a file can be skipped based on the current state of the output handler, and
+     * metadata about the file
+     */
+    [[nodiscard]] virtual bool can_skip_file(
+            [[maybe_unused]] clp::streaming_archive::MetadataDB::FileIterator const& it
+    ) {
+        return false;
+    }
 };
 
-class NetworkClient : public Client {
+class NetworkOutputHandler : public OutputHandler {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -49,7 +68,7 @@ public:
     };
 
     // Constructors
-    NetworkClient(std::string const& host, std::string const& port);
+    NetworkOutputHandler(std::string const& host, std::string const& port);
 
     // Methods inherited from Client
     ErrorCode add_result(
@@ -67,7 +86,7 @@ private:
 /**
  * Class encapsulating a MongoDB client used to send query results to the results cache.
  */
-class ResultsCacheClient : public Client {
+class ResultsCacheOutputHandler : public OutputHandler {
 public:
     // Types
     struct QueryResult {
@@ -98,35 +117,20 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        char const* what() const noexcept override { return "ResultsCacheClient operation failed"; }
+        char const* what() const noexcept override {
+            return "ResultsCacheOutputHandler operation failed";
+        }
     };
 
     // Constructors
-    ResultsCacheClient(
+    ResultsCacheOutputHandler(
             std::string const& uri,
             std::string const& collection,
             uint64_t batch_size,
             uint64_t max_num_results
     );
 
-    // Methods
-    /**
-     * @return The earliest (smallest) timestamp in the heap of latest results
-     */
-    [[nodiscard]] epochtime_t get_smallest_timestamp() const {
-        return m_latest_results.empty() ? cEpochTimeMin : m_latest_results.top()->timestamp;
-    }
-
-    [[nodiscard]] uint64_t get_max_num_results() const { return m_max_num_results; }
-
-    /**
-     * @return Whether the heap of latest results is full.
-     */
-    [[nodiscard]] bool is_latest_results_full() const {
-        return m_latest_results.size() >= m_max_num_results;
-    }
-
-    // Methods inherited from Client
+    // Methods inherited from OutputHandler
     ErrorCode add_result(
             std::string const& original_path,
             std::string const& message,
@@ -135,7 +139,26 @@ public:
 
     void flush() override;
 
+    [[nodiscard]] bool can_skip_file(clp::streaming_archive::MetadataDB::FileIterator const& it
+    ) override {
+        return is_latest_results_full() && get_smallest_timestamp() > it.get_end_ts();
+    }
+
 private:
+    /**
+     * @return The earliest (smallest) timestamp in the heap of latest results
+     */
+    [[nodiscard]] epochtime_t get_smallest_timestamp() const {
+        return m_latest_results.empty() ? cEpochTimeMin : m_latest_results.top()->timestamp;
+    }
+
+    /**
+     * @return Whether the heap of latest results is full.
+     */
+    [[nodiscard]] bool is_latest_results_full() const {
+        return m_latest_results.size() >= m_max_num_results;
+    }
+
     mongocxx::client m_client;
     mongocxx::collection m_collection;
     std::vector<bsoncxx::document::value> m_results;
@@ -148,6 +171,29 @@ private:
             QueryResultGreaterTimestampComparator>
             m_latest_results;
 };
+
+/**
+ * Class encapsulating a reducer client used to send count aggregation results to the reducer.
+ */
+class CountOutputHandler : public OutputHandler {
+public:
+    // Constructor
+    explicit CountOutputHandler(int reducer_socket_fd);
+
+    // Methods inherited from OutputHandler
+    ErrorCode add_result(
+            std::string const& original_path,
+            std::string const& message,
+            epochtime_t timestamp
+    ) override;
+
+    void flush() override;
+
+private:
+    int m_reducer_socket_fd;
+    reducer::Pipeline m_pipeline;
+};
+
 }  // namespace clp::clo
 
-#endif  // CLP_CLO_RESULTSCACHECLIENT_HPP
+#endif  // CLP_CLO_OUTPUTHANDLER_HPP

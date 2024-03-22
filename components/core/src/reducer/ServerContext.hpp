@@ -153,7 +153,7 @@ public:
 
     boost::asio::steady_timer& get_upsert_timer() { return m_upsert_timer; }
 
-    [[nodiscard]] int get_polling_interval() const { return m_polling_interval_ms; }
+    [[nodiscard]] int get_upsert_interval() const { return m_upsert_interval; }
 
 private:
     boost::asio::io_context m_ioctx;
@@ -173,7 +173,7 @@ private:
     std::set<GroupTags> m_updated_tags;
 
     boost::asio::steady_timer m_upsert_timer;
-    int m_polling_interval_ms;
+    int m_upsert_interval;
 
     mongocxx::client m_mongodb_client;
     mongocxx::database m_mongodb_results_database;
