@@ -14,6 +14,7 @@ namespace clp::networking {
  * @return -1 on any error
  */
 int connect_to_server(std::string const& host, std::string const& port);
+
 /**
  * Tries to send a buffer of data over the socket
  * @param fd

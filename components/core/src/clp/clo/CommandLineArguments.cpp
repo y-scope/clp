@@ -8,10 +8,8 @@
 #include <boost/program_options.hpp>
 
 #include "../cli_utils.hpp"
-#include "../reducer/types.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../version.hpp"
-#include "type_utils.hpp"
 
 namespace po = boost::program_options;
 using std::cerr;
@@ -234,29 +232,36 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             print_basic_usage();
             cerr << "OUTPUT_HANDLER is one of:" << endl;
-            cerr << "  " << static_cast<char const*>(cNetworkOutputHandlerName)
-                 << " - Output to a network destination" << std::endl;
-            cerr << "  " << static_cast<char const*>(cResultsCacheOutputHandlerName)
-                 << " - Output to the results cache" << endl;
-            cerr << "  " << static_cast<char const*>(cReducerOutputHandlerName)
-                 << " - Output to the reducer" << endl;
+            cerr << "  " << cNetworkOutputHandlerName << " - Output to a network destination"
+                 << endl;
+            cerr << "  " << cResultsCacheOutputHandlerName << " - Output to the results cache"
+                 << endl;
+            cerr << "  " << cReducerOutputHandlerName << " - Output to the reducer" << endl;
             cerr << endl;
 
             cerr << "Examples:" << endl;
-            cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to)"
-                    R"( mongodb://127.0.0.1:27017/test "result" collection )"
-                 << endl;
-            cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
-                 << " " << static_cast<char const*>(cResultsCacheOutputHandlerName)
-                 << R"( --uri mongodb://127.0.0.1:27017/test --collection result)" << endl;
-            cerr << endl;
-
             cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to )"
                     "a network destination"
                  << endl;
             cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
                  << " " << cNetworkOutputHandlerName << " --host localhost --port 18000" << endl;
-            cerr << std::endl;
+            cerr << endl;
+
+            cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to)"
+                    R"( mongodb://127.0.0.1:27017/test "result" collection )"
+                 << endl;
+            cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
+                 << " " << cResultsCacheOutputHandlerName
+                 << R"( --uri mongodb://127.0.0.1:27017/test --collection result)" << endl;
+            cerr << endl;
+
+            cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and output the results )"
+                    "by performing a count aggregation"
+                 << endl;
+            cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
+                 << " " << cReducerOutputHandlerName << " --count"
+                 << " --host localhost --port 14009 --job-id 1" << endl;
+            cerr << endl;
 
             cerr << "Options can be specified on the command line or through a configuration file."
                  << endl;
@@ -339,10 +344,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         }
         if (cNetworkOutputHandlerName == output_handler_name) {
             m_output_handler_type = OutputHandlerType::Network;
-        } else if (static_cast<char const*>(cReducerOutputHandlerName) == output_handler_name) {
+        } else if (cReducerOutputHandlerName == output_handler_name) {
             m_output_handler_type = OutputHandlerType::Reducer;
-        } else if (static_cast<char const*>(cResultsCacheOutputHandlerName) == output_handler_name)
-        {
+        } else if (cResultsCacheOutputHandlerName == output_handler_name) {
             m_output_handler_type = OutputHandlerType::ResultsCache;
         } else if (output_handler_name.empty()) {
             throw invalid_argument("OUTPUT_HANDLER cannot be an empty string.");

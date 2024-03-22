@@ -287,7 +287,7 @@ int main(int argc, char const* argv[]) {
                 break;
             }
             case CommandLineArguments::OutputHandlerType::ResultsCache:
-                output_handler = std::make_unique<clp::clo::ResultsCacheOutputHandler>(
+                output_handler = std::make_unique<ResultsCacheOutputHandler>(
                         command_line_args.get_mongodb_uri(),
                         command_line_args.get_mongodb_collection(),
                         command_line_args.get_batch_size(),
