@@ -111,7 +111,7 @@ void CountByTimeOutputHandler::finish() {
                 m_reducer_socket_fd,
                 std::make_unique<reducer::Int64Int64MapRecordGroupIterator>(
                         m_bucket_counts,
-                        "count"
+                        reducer::CountOperator::cRecordElementKey
                 )
         ))
     {

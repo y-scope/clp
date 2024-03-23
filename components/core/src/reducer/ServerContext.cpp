@@ -41,9 +41,9 @@ vector<uint8_t> serialize_timeline_result(GroupTags const& tags, ConstRecordIter
 
     int64_t count = 0;
     for (; false == record_it.done(); record_it.next()) {
-        count = record_it.get().get_int64_value("count");
+        count = record_it.get().get_int64_value(CountOperator::cRecordElementKey);
     }
-    json["count"] = count;
+    json[CountOperator::cRecordElementKey] = count;
 
     return nlohmann::json::to_bson(json);
 }
