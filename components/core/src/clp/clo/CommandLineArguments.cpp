@@ -96,7 +96,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     );
     // clang-format on
 
-    po::options_description options_network_output_handler("Network Output Controls");
+    po::options_description options_network_output_handler("Network Output Handler Options");
     // clang-format off
     options_network_output_handler.add_options()(
             "host",
@@ -247,20 +247,20 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                  << " " << cNetworkOutputHandlerName << " --host localhost --port 18000" << endl;
             cerr << endl;
 
-            cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to)"
-                    R"( mongodb://127.0.0.1:27017/test "result" collection )"
-                 << endl;
-            cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
-                 << " " << cResultsCacheOutputHandlerName
-                 << R"( --uri mongodb://127.0.0.1:27017/test --collection result)" << endl;
-            cerr << endl;
-
             cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and output the results )"
                     "by performing a count aggregation"
                  << endl;
             cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
                  << " " << cReducerOutputHandlerName << " --count"
                  << " --host localhost --port 14009 --job-id 1" << endl;
+            cerr << endl;
+
+            cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to)"
+                    R"( mongodb://127.0.0.1:27017/test "result" collection )"
+                 << endl;
+            cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
+                 << " " << cResultsCacheOutputHandlerName
+                 << R"( --uri mongodb://127.0.0.1:27017/test --collection result)" << endl;
             cerr << endl;
 
             cerr << "Options can be specified on the command line or through a configuration file."
@@ -387,7 +387,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             throw invalid_argument(
                     "Aggregations are only supported with the reducer output handler."
             );
-        } else if (false == m_do_count_results_aggregation && OutputHandlerType::Reducer == m_output_handler_type)
+        } else if ((false == m_do_count_results_aggregation
+                    && OutputHandlerType::Reducer == m_output_handler_type))
         {
             throw invalid_argument(
                     "The reducer output handler currently only supports the count aggregation."

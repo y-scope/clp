@@ -120,17 +120,17 @@ private:
     std::string m_file_path;
     epochtime_t m_search_begin_ts, m_search_end_ts;
 
+    // Network output variables
+    std::string m_network_dest_host;
+    int m_network_dest_port{-1};
+
     // Results cache output variables
     std::string m_mongodb_uri;
     std::string m_mongodb_collection;
     uint64_t m_batch_size;
     uint64_t m_max_num_results;
 
-    // Network output variables
-    std::string m_network_dest_host;
-    int m_network_dest_port{-1};
-
-    // Aggregation output variables
+    // Reducer output variables
     std::string m_reducer_host;
     int m_reducer_port{-1};
     reducer::job_id_t m_job_id{-1};

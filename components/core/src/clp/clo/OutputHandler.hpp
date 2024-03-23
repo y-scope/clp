@@ -54,6 +54,9 @@ public:
     }
 };
 
+/**
+ * Class encapsulating a network client used to send query results to a network destination.
+ */
 class NetworkOutputHandler : public OutputHandler {
 public:
     // Types
@@ -64,13 +67,25 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        char const* what() const noexcept override { return "NetworkClient operation failed"; }
+        char const* what() const noexcept override {
+            return "NetworkOutputHandler operation failed";
+        }
     };
 
     // Constructors
     NetworkOutputHandler(std::string const& host, std::string const& port);
 
+    // Destructor
+    ~NetworkOutputHandler() override { close(m_socket_fd); }
+
     // Methods inherited from Client
+    /**
+     * Sends a result to the network destination.
+     * @param original_path
+     * @param message
+     * @param timestamp
+     * @return Same as networking::try_send
+     */
     ErrorCode add_result(
             std::string const& original_path,
             std::string const& message,
@@ -131,6 +146,13 @@ public:
     );
 
     // Methods inherited from OutputHandler
+    /**
+     * Adds a result to the batch.
+     * @param original_path
+     * @param message
+     * @param timestamp
+     * @return ErrorCode_Success
+     */
     ErrorCode add_result(
             std::string const& original_path,
             std::string const& message,
@@ -181,6 +203,13 @@ public:
     explicit CountOutputHandler(int reducer_socket_fd);
 
     // Methods inherited from OutputHandler
+    /**
+     * Adds a result.
+     * @param original_path
+     * @param message
+     * @param timestamp
+     * @return ErrorCode_Success
+     */
     ErrorCode add_result(
             std::string const& original_path,
             std::string const& message,
