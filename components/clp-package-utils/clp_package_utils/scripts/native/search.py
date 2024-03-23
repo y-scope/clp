@@ -93,8 +93,10 @@ def create_and_monitor_job_in_db(
         search_config.aggregation_config = AggregationConfig(
             do_count_aggregation=do_count_aggregation
         )
-        if count_by_time_bucket_size is not None:
-            search_config.aggregation_config.count_by_time_bucket_size = count_by_time_bucket_size
+    if count_by_time_bucket_size is not None:
+        search_config.aggregation_config = AggregationConfig(
+            count_by_time_bucket_size=count_by_time_bucket_size
+        )
     if tags:
         tag_list = [tag.strip().lower() for tag in tags.split(",") if tag]
         if len(tag_list) > 0:
@@ -139,7 +141,7 @@ def create_and_monitor_job_in_db(
                     search_results_collection.find().sort("timestamp", -1).limit(max_num_results)
                 )
 
-            if do_count_aggregation is not None and count_by_time_bucket_size is not None:
+            if count_by_time_bucket_size is not None:
                 for document in cursor:
                     print(f"timestamp: {document['timestamp']} count: {document['count']}")
             elif do_count_aggregation is not None:
@@ -265,7 +267,7 @@ def main(argv):
             parsed_args.max_num_results,
             parsed_args.file_path,
             parsed_args.count,
-            parsed_args.count_by_time_bucket_size,
+            parsed_args.count_by_time,
         )
     )
 

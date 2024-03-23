@@ -546,7 +546,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
 
             if (parsed_command_line_options.count("count-by-time")) {
-                m_do_count_by_time_bucket_aggregation = true;
+                m_do_count_by_time_aggregation = true;
                 if (m_count_by_time_bucket_size <= 0) {
                     throw std::invalid_argument("Bucket size argument must be greater than zero.");
                 }
@@ -599,23 +599,20 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 );
             }
 
-            if (m_do_count_results_aggregation
-                && OutputHandlerType::Reducer != m_output_handler_type)
-            {
+            bool aggregtion_was_specified
+                    = m_do_count_by_time_aggregation || m_do_count_results_aggregation;
+            if (aggregtion_was_specified && OutputHandlerType::Reducer != m_output_handler_type) {
                 throw std::invalid_argument(
                         "Aggregations are only supported with the reducer output handler."
                 );
-            } else if ((false == m_do_count_results_aggregation
+            } else if ((false == aggregtion_was_specified
                         && OutputHandlerType::Reducer == m_output_handler_type))
             {
-                throw std::invalid_argument(
-                        "The reducer output handler currently only supports the count aggregation."
-                );
+                throw std::invalid_argument("The reducer output handler currently only supports "
+                                            "count and count-by-time aggregations.");
             }
 
-            if (parsed_command_line_options.count("count-by-time")
-                && parsed_command_line_options.count("count"))
-            {
+            if (m_do_count_by_time_aggregation && m_do_count_results_aggregation) {
                 throw std::invalid_argument(
                         "The --count-by-time and --count arguments are mutually exclusive."
                 );

@@ -63,7 +63,7 @@ public:
 
     bool do_count_results_aggregation() const { return m_do_count_results_aggregation; }
 
-    bool do_count_by_time_aggregation() const { return m_do_count_by_time_bucket_aggregation; }
+    bool do_count_by_time_aggregation() const { return m_do_count_by_time_aggregation; }
 
     int64_t get_count_by_time_bucket_size() const { return m_count_by_time_bucket_size; }
 
@@ -113,7 +113,7 @@ private:
     int m_reducer_port{-1};
     reducer::job_id_t m_job_id{-1};
     bool m_do_count_results_aggregation{false};
-    bool m_do_count_by_time_bucket_aggregation{false};
+    bool m_do_count_by_time_aggregation{false};
     int64_t m_count_by_time_bucket_size{0};
 
     OutputHandlerType m_output_handler_type{OutputHandlerType::ResultsCache};
