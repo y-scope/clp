@@ -96,9 +96,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             po::bool_switch(&m_do_count_results_aggregation),
             "Perform a count aggregation (count the number of results)"
     )(
-            "time-bucket-size",
-            po::value<int64_t>(&m_time_bucket_size),
-            "Optional time bucket size (ms) for count aggregations"
+            "count-by-time",
+            po::value<int64_t>(&m_count_by_time_bucket_size),
+            "Perform the query and count the number of results in each time bucket (ms)"
     );
     // clang-format on
 
@@ -260,11 +260,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             throw invalid_argument("Wildcard string not specified or empty.");
         }
 
-        // Validate bucket size
-        if (parsed_command_line_options.count("time-bucket-size") && m_time_bucket_size <= 0) {
-            throw std::invalid_argument("Bucket size argument must be greater than zero.");
-        }
-
         // Validate timestamp range and compute m_search_begin_ts and m_search_end_ts
         if (parsed_command_line_options.count("teq")) {
             if (parsed_command_line_options.count("tgt") + parsed_command_line_options.count("tge")
@@ -318,6 +313,14 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             throw invalid_argument("file-path cannot be an empty string.");
         }
 
+        // Validate count by time bucket size
+        if (parsed_command_line_options.count("count-by-time")) {
+            m_do_count_by_time_bucket_aggregation = true;
+            if (m_count_by_time_bucket_size <= 0) {
+                throw std::invalid_argument("Count by time argument must be greater than zero.");
+            }
+        }
+
         // Validate output-handler
         if (parsed_command_line_options.count("output-handler") == 0) {
             throw invalid_argument("OUTPUT_HANDLER not specified.");
@@ -367,11 +370,11 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             );
         }
 
-        if (parsed_command_line_options.count("time-bucket-size")
-            && false == m_do_count_results_aggregation)
+        if (parsed_command_line_options.count("count-by-time")
+            && parsed_command_line_options.count("count"))
         {
             throw std::invalid_argument(
-                    "The --time-bucket-size argument must be used with the --count argument."
+                    "The --count-by-time and --count arguments are mutually exclusive."
             );
         }
     } catch (exception& e) {

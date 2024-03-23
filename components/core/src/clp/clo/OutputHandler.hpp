@@ -161,12 +161,12 @@ private:
  * Output handler that performs a count aggregation bucketed by time and sends the results to a
  * reducer.
  */
-class BucketOutputHandler : public OutputHandler {
+class CountByTimeOutputHandler : public OutputHandler {
 public:
     // Constructors
-    BucketOutputHandler(int reducer_socket_fd, int64_t time_bucket_size)
+    CountByTimeOutputHandler(int reducer_socket_fd, int64_t count_by_time_bucket_size)
             : m_reducer_socket_fd{reducer_socket_fd},
-              m_time_bucket_size{time_bucket_size} {}
+              m_count_by_time_bucket_size{count_by_time_bucket_size} {}
 
     // Methods inherited from OutputHandler
     void add_result(
@@ -174,7 +174,7 @@ public:
             std::string const& message,
             epochtime_t timestamp
     ) override {
-        int64_t bucket = (timestamp / m_time_bucket_size) * m_time_bucket_size;
+        int64_t bucket = (timestamp / m_count_by_time_bucket_size) * m_count_by_time_bucket_size;
         m_bucket_counts[bucket] += 1;
     }
 
@@ -183,7 +183,7 @@ public:
 private:
     int m_reducer_socket_fd;
     std::map<int64_t, int64_t> m_bucket_counts;
-    int64_t m_time_bucket_size;
+    int64_t m_count_by_time_bucket_size;
 };
 }  // namespace clp::clo
 

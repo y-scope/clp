@@ -92,7 +92,7 @@ void CountOutputHandler::flush() {
     reducer::send_pipeline_results(m_reducer_socket_fd, std::move(m_pipeline.finish()));
 }
 
-void BucketOutputHandler::flush() {
+void CountByTimeOutputHandler::flush() {
     if (false
         == reducer::send_pipeline_results(
                 m_reducer_socket_fd,

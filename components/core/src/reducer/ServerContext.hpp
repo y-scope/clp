@@ -25,7 +25,7 @@ enum class ServerStatus : uint8_t {
 
 namespace cJobAttributes {
 constexpr char JobId[] = "job_id";
-constexpr char TimeBucketSize[] = "time_bucket_size";
+constexpr char TimeBucketSize[] = "count_by_time_bucket_size";
 }  // namespace cJobAttributes
 
 /**

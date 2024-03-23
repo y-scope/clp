@@ -189,15 +189,12 @@ bool search_archive(
                 break;
             case CommandLineArguments::OutputHandlerType::Reducer:
                 if (command_line_arguments.do_count_results_aggregation()) {
-                    int64_t time_bucket_size = command_line_arguments.get_time_bucket_size();
-                    if (time_bucket_size > 0) {
-                        output_handler = std::make_unique<BucketOutputHandler>(
-                                reducer_socket_fd,
-                                time_bucket_size
-                        );
-                    } else {
-                        output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
-                    }
+                    output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
+                } else if (command_line_arguments.do_count_by_time_aggregation()) {
+                    output_handler = std::make_unique<CountByTimeOutputHandler>(
+                            reducer_socket_fd,
+                            command_line_arguments.get_count_by_time_bucket_size()
+                    );
                 } else {
                     SPDLOG_ERROR("Unhandled aggregation type.");
                     return false;

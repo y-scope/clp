@@ -105,7 +105,7 @@ void CountOutputHandler::finish() {
     }
 }
 
-void BucketOutputHandler::finish() {
+void CountByTimeOutputHandler::finish() {
     if (false
         == reducer::send_pipeline_results(
                 m_reducer_socket_fd,

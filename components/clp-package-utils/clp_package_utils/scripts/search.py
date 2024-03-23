@@ -70,9 +70,9 @@ def main(argv):
         "--count", action="store_true", help="Perform the query and count the number of results."
     )
     args_parser.add_argument(
-        "--time-bucket-size",
+        "--count-by-time",
         type=int,
-        help="Optional time bucket size (ms) for count aggregations.",
+        help="Perform the query and count the number of results in each time bucket (ms).",
     )
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -144,9 +144,9 @@ def main(argv):
         search_cmd.append(parsed_args.file_path)
     if parsed_args.count:
         search_cmd.append("--count")
-    if parsed_args.time_bucket_size is not None:
-        search_cmd.append("--time-bucket-size")
-        search_cmd.append(str(parsed_args.time_bucket_size))
+    if parsed_args.count_by_time is not None:
+        search_cmd.append("--count-by-time")
+        search_cmd.append(str(parsed_args.count_by_time))
     cmd = container_start_cmd + search_cmd
     subprocess.run(cmd, check=True)
 

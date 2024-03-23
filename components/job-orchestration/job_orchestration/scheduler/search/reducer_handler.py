@@ -152,7 +152,7 @@ async def handle_reducer_connection(
                     msgpack.packb(
                         {
                             "job_id": aggregation_config.job_id,
-                            "time_bucket_size": aggregation_config.time_bucket_size,
+                            "count_by_time_bucket_size": aggregation_config.count_by_time_bucket_size,
                         }
                     ),
                     writer,
