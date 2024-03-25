@@ -36,8 +36,9 @@ public:
 
     /**
      * Flushes any buffered output. Called once at the end of search.
+     * @return ErrorCode_Success on success or relevant error code on error
      */
-    virtual void flush() = 0;
+    virtual ErrorCode flush() = 0;
 
     /**
      * @param it
@@ -117,7 +118,7 @@ public:
             epochtime_t timestamp
     ) override;
 
-    void flush() override;
+    ErrorCode flush() override;
 
     [[nodiscard]] bool can_skip_file(clp::streaming_archive::MetadataDB::FileIterator const& it
     ) override {
@@ -150,7 +151,7 @@ public:
             epochtime_t timestamp
     ) override;
 
-    void flush() override;
+    ErrorCode flush() override;
 
 private:
     int m_reducer_socket_fd;
@@ -178,7 +179,7 @@ public:
         m_bucket_counts[bucket] += 1;
     }
 
-    void flush() override;
+    ErrorCode flush() override;
 
 private:
     int m_reducer_socket_fd;

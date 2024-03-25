@@ -40,7 +40,7 @@ void ResultsCacheClient::add_result(
     }
 }
 
-void ResultsCacheClient::flush() {
+ErrorCode ResultsCacheClient::flush() {
     size_t count = 0;
     while (false == m_latest_results.empty()) {
         auto result = std::move(*m_latest_results.top());
@@ -60,7 +60,7 @@ void ResultsCacheClient::flush() {
                 count = 0;
             }
         } catch (mongocxx::exception const& e) {
-            throw OperationFailed(ErrorCode::ErrorCode_Failure_DB_Bulk_Write, __FILE__, __LINE__);
+            return ErrorCode::ErrorCode_Failure_DB_Bulk_Write;
         }
     }
 
@@ -70,8 +70,9 @@ void ResultsCacheClient::flush() {
             m_results.clear();
         }
     } catch (mongocxx::exception const& e) {
-        throw OperationFailed(ErrorCode::ErrorCode_Failure_DB_Bulk_Write, __FILE__, __LINE__);
+        return ErrorCode::ErrorCode_Failure_DB_Bulk_Write;
     }
+    return ErrorCode::ErrorCode_Success;
 }
 
 CountOutputHandler::CountOutputHandler(int reducer_socket_fd)
@@ -88,11 +89,16 @@ void CountOutputHandler::add_result(
     m_pipeline.push_record(reducer::EmptyRecord{});
 }
 
-void CountOutputHandler::flush() {
-    reducer::send_pipeline_results(m_reducer_socket_fd, std::move(m_pipeline.finish()));
+ErrorCode CountOutputHandler::flush() {
+    if (false
+        == reducer::send_pipeline_results(m_reducer_socket_fd, std::move(m_pipeline.finish())))
+    {
+        return ErrorCode::ErrorCode_NetworkError;
+    }
+    return ErrorCode::ErrorCode_Success;
 }
 
-void CountByTimeOutputHandler::flush() {
+ErrorCode CountByTimeOutputHandler::flush() {
     if (false
         == reducer::send_pipeline_results(
                 m_reducer_socket_fd,
@@ -102,7 +108,8 @@ void CountByTimeOutputHandler::flush() {
                 )
         ))
     {
-        SPDLOG_ERROR("Failed to send results to reducer");
+        return ErrorCode::ErrorCode_NetworkError;
     }
+    return ErrorCode::ErrorCode_Success;
 }
 }  // namespace clp::clo

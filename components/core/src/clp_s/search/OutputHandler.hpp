@@ -50,13 +50,15 @@ public:
 
     /**
      * Flushes the output handler after each table that gets searched.
+     * @return ErrorCodeSuccess on success or relevant error code on error
      */
-    virtual void flush() = 0;
+    virtual ErrorCode flush() { return ErrorCode::ErrorCodeSuccess; }
 
     /**
      * Performs any final operations after all tables have been searched.
+     * @return ErrorCodeSuccess on success or relevant error code on error
      */
-    virtual void finish() {}
+    virtual ErrorCode finish() { return ErrorCode::ErrorCodeSuccess; }
 
     [[nodiscard]] bool should_output_timestamp() const { return m_should_output_timestamp; }
 
@@ -82,8 +84,6 @@ public:
     }
 
     void write(std::string const& message) override { printf("%s", message.c_str()); }
-
-    void flush() override {}
 };
 
 /**
@@ -128,8 +128,6 @@ public:
             throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
         }
     }
-
-    void flush() override{};
 
 private:
     std::string m_host;
@@ -181,7 +179,7 @@ public:
     );
 
     // Methods inherited from OutputHandler
-    void flush() override;
+    ErrorCode flush() override;
 
     void write(std::string const& message, epochtime_t timestamp) override;
 
@@ -209,13 +207,11 @@ public:
     CountOutputHandler(int reducer_socket_fd);
 
     // Methods inherited from OutputHandler
-    void flush() override {}
-
     void write(std::string const& message, epochtime_t timestamp) override {}
 
     void write(std::string const& message) override;
 
-    void finish() override;
+    ErrorCode finish() override;
 
 private:
     int m_reducer_socket_fd;
@@ -235,8 +231,6 @@ public:
               m_count_by_time_bucket_size{count_by_time_bucket_size} {}
 
     // Methods inherited from OutputHandler
-    void flush() override {}
-
     void write(std::string const& message, epochtime_t timestamp) override {
         int64_t bucket = (timestamp / m_count_by_time_bucket_size) * m_count_by_time_bucket_size;
         m_bucket_counts[bucket] += 1;
@@ -244,7 +238,7 @@ public:
 
     void write(std::string const& message) override {}
 
-    void finish() override;
+    ErrorCode finish() override;
 
 private:
     int m_reducer_socket_fd;

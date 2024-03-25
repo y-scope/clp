@@ -43,7 +43,7 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
     }
 }
 
-void ResultsCacheOutputHandler::flush() {
+ErrorCode ResultsCacheOutputHandler::flush() {
     size_t count = 0;
     while (false == m_latest_results.empty()) {
         auto result = std::move(*m_latest_results.top());
@@ -63,7 +63,7 @@ void ResultsCacheOutputHandler::flush() {
                 count = 0;
             }
         } catch (mongocxx::exception const& e) {
-            throw OperationFailed(ErrorCode::ErrorCodeFailureDbBulkWrite, __FILE__, __LINE__);
+            return ErrorCode::ErrorCodeFailureDbBulkWrite;
         }
     }
 
@@ -73,8 +73,9 @@ void ResultsCacheOutputHandler::flush() {
             m_results.clear();
         }
     } catch (mongocxx::exception const& e) {
-        throw OperationFailed(ErrorCode::ErrorCodeFailureDbBulkWrite, __FILE__, __LINE__);
+        return ErrorCode::ErrorCodeFailureDbBulkWrite;
     }
+    return ErrorCode::ErrorCodeSuccess;
 }
 
 void ResultsCacheOutputHandler::write(std::string const& message, epochtime_t timestamp) {
@@ -97,15 +98,16 @@ void CountOutputHandler::write(std::string const& message) {
     m_pipeline.push_record(reducer::EmptyRecord{});
 }
 
-void CountOutputHandler::finish() {
+ErrorCode CountOutputHandler::finish() {
     if (false
         == reducer::send_pipeline_results(m_reducer_socket_fd, std::move(m_pipeline.finish())))
     {
-        SPDLOG_ERROR("Failed to send aggregated results to reducer");
+        return ErrorCode::ErrorCodeFailureNetwork;
     }
+    return ErrorCode::ErrorCodeSuccess;
 }
 
-void CountByTimeOutputHandler::finish() {
+ErrorCode CountByTimeOutputHandler::finish() {
     if (false
         == reducer::send_pipeline_results(
                 m_reducer_socket_fd,
@@ -115,8 +117,9 @@ void CountByTimeOutputHandler::finish() {
                 )
         ))
     {
-        SPDLOG_ERROR("Failed to send results to reducer");
+        return ErrorCode::ErrorCodeFailureNetwork;
     }
+    return ErrorCode::ErrorCodeSuccess;
 }
 
 }  // namespace clp_s::search

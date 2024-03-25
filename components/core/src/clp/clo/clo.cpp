@@ -218,9 +218,16 @@ static bool search_archive(
     );
     file_metadata_ix_ptr.reset(nullptr);
 
-    output_handler->flush();
     archive_reader.close();
 
+    auto ecode = output_handler->flush();
+    if (ErrorCode::ErrorCode_Success != ecode) {
+        SPDLOG_ERROR(
+                "Encoutered error '{}' while trying to flush output handler.",
+                clp::enum_to_underlying_type(ecode)
+        );
+        return false;
+    }
     return true;
 }
 

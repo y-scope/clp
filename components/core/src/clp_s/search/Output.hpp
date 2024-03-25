@@ -43,8 +43,9 @@ public:
 
     /**
      * Filters messages from all archives
+     * @return whether the filter was performed succesfully
      */
-    void filter();
+    bool filter();
 
 private:
     std::shared_ptr<ArchiveReader> m_archive_reader;

@@ -229,9 +229,7 @@ bool search_archive(
             std::move(output_handler),
             command_line_arguments.get_ignore_case()
     );
-    output.filter();
-
-    return true;
+    return output.filter();
 }
 }  // namespace
 
