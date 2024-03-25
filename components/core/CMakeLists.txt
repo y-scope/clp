@@ -108,8 +108,8 @@ endif()
 
 # Find and setup spdlog
 if(CLP_USE_STATIC_LIBS)
-    # NOTE: some Linux distribution (e.g. Ubuntu) spdlog packages only contains a dynamic library.
-    # If below `find_package(spdlog)` fails, re-run
+    # NOTE: On some Linux distribution (e.g. Ubuntu), the spdlog package only contains a dynamic
+    # library. If the `find_package(spdlog)` call below fails, re-run
     # `tools/scripts/lib_install/<dist_name>/install-packages-from-source.sh` to build spdlog from
     # source.
     set(spdlog_USE_STATIC_LIBS ON)

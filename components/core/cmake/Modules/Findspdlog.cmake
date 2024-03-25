@@ -17,13 +17,15 @@ include(cmake/Modules/FindLibraryDependencies.cmake)
 
 # Run pkg-config
 find_package(PkgConfig)
-pkg_check_modules(spdlog_PKGCONF QUIET spdlog)
+pkg_check_modules(spdlog_PKGCONF QUIET ${spdlog_LIBNAME})
 
 # Set include directory
-find_path(spdlog_INCLUDE_DIR spdlog.h
+find_path(
+        spdlog_INCLUDE_DIR
+        spdlog.h
         HINTS ${spdlog_PKGCONF_INCLUDEDIR}
         PATH_SUFFIXES spdlog
-        )
+)
 
 # Handle static libraries
 if(spdlog_USE_STATIC_LIBS)
@@ -35,11 +37,12 @@ if(spdlog_USE_STATIC_LIBS)
 endif()
 
 # Find library
-find_library(spdlog_LIBRARY
-        NAMES spdlog
+find_library(
+        spdlog_LIBRARY
+        NAMES ${spdlog_LIBNAME}
         HINTS ${spdlog_PKGCONF_LIBDIR}
         PATH_SUFFIXES lib
-        )
+)
 if (spdlog_LIBRARY)
     # NOTE: This must be set for find_package_handle_standard_args to work
     set(spdlog_FOUND ON)
@@ -63,10 +66,11 @@ FindDynamicLibraryDependencies(spdlog "${spdlog_DYNAMIC_LIBS}")
 set(spdlog_VERSION ${spdlog_PKGCONF_VERSION})
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(spdlog
+find_package_handle_standard_args(
+        spdlog
         REQUIRED_VARS spdlog_INCLUDE_DIR
         VERSION_VAR spdlog_VERSION
-        )
+)
 
 if(NOT TARGET spdlog::spdlog)
     # Add library to build
@@ -74,7 +78,7 @@ if(NOT TARGET spdlog::spdlog)
         if (spdlog_USE_STATIC_LIBS)
             add_library(spdlog::spdlog STATIC IMPORTED)
         else()
-            # NOTE: libspdlog is only available as a static library or a dynamic one.
+            # NOTE: spdlog is only available as a static library or a dynamic one.
             add_library(spdlog::spdlog SHARED IMPORTED)
         endif()
     endif()
@@ -83,9 +87,10 @@ if(NOT TARGET spdlog::spdlog)
     if (NOT EXISTS "${spdlog_INCLUDE_DIR}")
         set(spdlog_FOUND OFF)
     else()
-        set_target_properties(spdlog::spdlog
-            PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES "${spdlog_INCLUDE_DIR}"
+        set_target_properties(
+                spdlog::spdlog
+                PROPERTIES
+                INTERFACE_INCLUDE_DIRECTORIES "${spdlog_INCLUDE_DIR}"
         )
     endif()
 
@@ -93,17 +98,19 @@ if(NOT TARGET spdlog::spdlog)
     if(NOT EXISTS "${spdlog_LIBRARY}")
         set(spdlog_FOUND OFF)
     else()
-        set_target_properties(spdlog::spdlog
-            PROPERTIES
-            IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-            IMPORTED_LOCATION "${spdlog_LIBRARY}"
+        set_target_properties(
+                spdlog::spdlog
+                PROPERTIES
+                IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+                IMPORTED_LOCATION "${spdlog_LIBRARY}"
         )
 
         # Add component's dependencies for linking
         if(spdlog_LIBRARY_DEPENDENCIES)
-            set_target_properties(spdlog::spdlog
-                PROPERTIES
-                INTERFACE_LINK_LIBRARIES "${spdlog_LIBRARY_DEPENDENCIES}"
+            set_target_properties(
+                    spdlog::spdlog
+                    PROPERTIES
+                    INTERFACE_LINK_LIBRARIES "${spdlog_LIBRARY_DEPENDENCIES}"
             )
         endif()
     endif()

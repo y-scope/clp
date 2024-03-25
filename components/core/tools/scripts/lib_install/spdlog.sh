@@ -29,10 +29,10 @@ fi
 
 # Check if already installed
 set +e
-pkg-config --modversion "spdlog = 1.9.2" >/dev/null 2>&1
+pkg-config --exact-version="${version}" "spdlog"
 pkg_found=$?
 if [ $pkg_found -eq 0 ] ; then
-  find /usr/lib/ /usr/local/lib/ -name 'libspdlog.a' | grep . >/dev/null 2>&1
+  find /usr/lib/ /usr/local/lib/ -name "libspdlog.a" | grep -q "."
   static_lib_found=$?
 fi
 if [ $static_lib_found -eq 0 ] ; then
