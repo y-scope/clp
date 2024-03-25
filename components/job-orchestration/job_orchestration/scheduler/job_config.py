@@ -46,7 +46,7 @@ class SearchConfig(BaseModel):
     end_timestamp: typing.Optional[int] = None
     ignore_case: bool = False
     path_filter: typing.Optional[str] = None
-    network_address: typing.Optional[typing.Tuple[str, str]] = None
+    network_address: typing.Optional[typing.Tuple[str, int]] = None
     aggregation_config: typing.Optional[AggregationConfig] = None
 
     @validator("network_address")
