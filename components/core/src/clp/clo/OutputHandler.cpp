@@ -11,8 +11,8 @@
 #include "../networking/socket_utils.hpp"
 
 namespace clp::clo {
-NetworkOutputHandler::NetworkOutputHandler(std::string const& host, std::string const& port) {
-    m_socket_fd = clp::networking::connect_to_server(host, port);
+NetworkOutputHandler::NetworkOutputHandler(std::string const& host, int port) {
+    m_socket_fd = clp::networking::connect_to_server(host, std::to_string(port));
     if (-1 == m_socket_fd) {
         SPDLOG_ERROR("Failed to connect to the server");
         throw OperationFailed(ErrorCode_Failure_Network, __FILE__, __LINE__);

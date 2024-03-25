@@ -73,7 +73,7 @@ public:
     };
 
     // Constructors
-    NetworkOutputHandler(std::string const& host, std::string const& port);
+    NetworkOutputHandler(std::string const& host, int port);
 
     // Destructor
     ~NetworkOutputHandler() override { close(m_socket_fd); }

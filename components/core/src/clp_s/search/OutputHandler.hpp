@@ -100,7 +100,7 @@ public:
     // Constructors
     explicit NetworkOutputHandler(
             std::string const& host,
-            std::string const& port,
+            int port,
             bool should_output_timestamp = false
     );
 

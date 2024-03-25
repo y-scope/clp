@@ -263,7 +263,7 @@ int main(int argc, char const* argv[]) {
             case CommandLineArguments::OutputHandlerType::Network:
                 output_handler = std::make_unique<NetworkOutputHandler>(
                         command_line_args.get_network_dest_host(),
-                        std::to_string(command_line_args.get_network_dest_port())
+                        command_line_args.get_network_dest_port()
                 );
                 break;
             case CommandLineArguments::OutputHandlerType::Reducer: {
