@@ -9,6 +9,7 @@
 #include "../Defs.h"
 #include "../Grep.hpp"
 #include "../Profiler.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "CommandLineArguments.hpp"
 #include "OutputHandler.hpp"
 

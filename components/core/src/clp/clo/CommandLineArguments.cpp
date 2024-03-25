@@ -8,6 +8,7 @@
 #include <boost/program_options.hpp>
 
 #include "../cli_utils.hpp"
+#include "../reducer/types.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../version.hpp"
 
@@ -40,7 +41,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         config_file_path = home_environment_var_value;
         config_file_path += '/';
     }
-    config_file_path += cDefaultConfigFilename;
+    config_file_path += static_cast<char const*>(cDefaultConfigFilename);
     string global_metadata_db_config_file_path;
     // clang-format off
     options_general.add_options()
@@ -232,11 +233,12 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             print_basic_usage();
             cerr << "OUTPUT_HANDLER is one of:" << endl;
-            cerr << "  " << cNetworkOutputHandlerName << " - Output to a network destination"
-                 << endl;
-            cerr << "  " << cResultsCacheOutputHandlerName << " - Output to the results cache"
-                 << endl;
-            cerr << "  " << cReducerOutputHandlerName << " - Output to the reducer" << endl;
+            cerr << "  " << static_cast<char const*>(cNetworkOutputHandlerName)
+                 << " - Output to a network destination" << endl;
+            cerr << "  " << static_cast<char const*>(cResultsCacheOutputHandlerName)
+                 << " - Output to the results cache" << endl;
+            cerr << "  " << static_cast<char const*>(cReducerOutputHandlerName)
+                 << " - Output to the reducer" << endl;
             cerr << endl;
 
             cerr << "Examples:" << endl;
@@ -244,14 +246,15 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     "a network destination"
                  << endl;
             cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
-                 << " " << cNetworkOutputHandlerName << " --host localhost --port 18000" << endl;
+                 << " " << static_cast<char const*>(cNetworkOutputHandlerName)
+                 << " --host localhost --port 18000" << endl;
             cerr << endl;
 
             cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and output the results )"
                     "by performing a count aggregation"
                  << endl;
             cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
-                 << " " << cReducerOutputHandlerName << " --count"
+                 << " " << static_cast<char const*>(cReducerOutputHandlerName) << " --count"
                  << " --host localhost --port 14009 --job-id 1" << endl;
             cerr << endl;
 
@@ -259,7 +262,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     R"( mongodb://127.0.0.1:27017/test "result" collection )"
                  << endl;
             cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
-                 << " " << cResultsCacheOutputHandlerName
+                 << " " << static_cast<char const*>(cResultsCacheOutputHandlerName)
                  << R"( --uri mongodb://127.0.0.1:27017/test --collection result)" << endl;
             cerr << endl;
 
@@ -271,7 +274,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
         // Handle --version
         if (parsed_command_line_options.count("version")) {
-            cerr << cVersion << endl;
+            cerr << static_cast<char const*>(cVersion) << endl;
             return ParsingResult::InfoCommand;
         }
 
@@ -342,11 +345,12 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         if (parsed_command_line_options.count("output-handler") == 0) {
             throw invalid_argument("OUTPUT_HANDLER not specified.");
         }
-        if (cNetworkOutputHandlerName == output_handler_name) {
+        if (static_cast<char const*>(cNetworkOutputHandlerName) == output_handler_name) {
             m_output_handler_type = OutputHandlerType::Network;
-        } else if (cReducerOutputHandlerName == output_handler_name) {
+        } else if (static_cast<char const*>(cReducerOutputHandlerName) == output_handler_name) {
             m_output_handler_type = OutputHandlerType::Reducer;
-        } else if (cResultsCacheOutputHandlerName == output_handler_name) {
+        } else if (static_cast<char const*>(cResultsCacheOutputHandlerName) == output_handler_name)
+        {
             m_output_handler_type = OutputHandlerType::ResultsCache;
         } else if (output_handler_name.empty()) {
             throw invalid_argument("OUTPUT_HANDLER cannot be an empty string.");
@@ -387,8 +391,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             throw invalid_argument(
                     "Aggregations are only supported with the reducer output handler."
             );
-        } else if ((false == m_do_count_results_aggregation
-                    && OutputHandlerType::Reducer == m_output_handler_type))
+        }
+        if ((false == m_do_count_results_aggregation
+             && OutputHandlerType::Reducer == m_output_handler_type))
         {
             throw invalid_argument(
                     "The reducer output handler currently only supports the count aggregation."
