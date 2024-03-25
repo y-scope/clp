@@ -12,11 +12,11 @@
 namespace clp_s::search {
 NetworkOutputHandler::NetworkOutputHandler(
         std::string const& host,
-        std::string const& port,
+        int port,
         bool should_output_timestamp
 )
         : OutputHandler(should_output_timestamp, true) {
-    m_socket_fd = clp::networking::connect_to_server(host, port);
+    m_socket_fd = clp::networking::connect_to_server(host, std::to_string(port));
     if (-1 == m_socket_fd) {
         SPDLOG_ERROR("Failed to connect to the server, errno={}", errno);
         throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);

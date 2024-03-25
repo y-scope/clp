@@ -1,6 +1,8 @@
 #ifndef CLP_CLO_OUTPUTHANDLER_HPP
 #define CLP_CLO_OUTPUTHANDLER_HPP
 
+#include <unistd.h>
+
 #include <queue>
 #include <string>
 
@@ -25,12 +27,13 @@ public:
 
     // Methods
     /**
-     * Adds a result.
+     * Adds a query result to a batch or sends it to the destination.
      * @param original_path The original path of the log event.
      * @param message The content of the log event.
      * @param timestamp The timestamp of the log event.
+     * @return ErrorCode_Success if the result was added successfully, an error code otherwise.
      */
-    virtual void
+    virtual ErrorCode
     add_result(std::string const& original_path, std::string const& message, epochtime_t timestamp)
             = 0;
 
@@ -53,9 +56,56 @@ public:
 };
 
 /**
+ * Class encapsulating a network client used to send query results to a network destination.
+ */
+class NetworkOutputHandler : public OutputHandler {
+public:
+    // Types
+    class OperationFailed : public TraceableException {
+    public:
+        // Constructors
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
+
+        // Methods
+        char const* what() const noexcept override {
+            return "NetworkOutputHandler operation failed";
+        }
+    };
+
+    // Constructors
+    NetworkOutputHandler(std::string const& host, int port);
+
+    // Destructor
+    ~NetworkOutputHandler() override { close(m_socket_fd); }
+
+    // Methods inherited from Client
+    /**
+     * Sends a result to the network destination.
+     * @param original_path
+     * @param message
+     * @param timestamp
+     * @return Same as networking::try_send
+     */
+    ErrorCode add_result(
+            std::string const& original_path,
+            std::string const& message,
+            epochtime_t timestamp
+    ) override;
+
+    ErrorCode flush() override {
+        close(m_socket_fd);
+        return ErrorCode::ErrorCode_Success;
+    }
+
+private:
+    int m_socket_fd;
+};
+
+/**
  * Class encapsulating a MongoDB client used to send query results to the results cache.
  */
-class ResultsCacheClient : public OutputHandler {
+class ResultsCacheOutputHandler : public OutputHandler {
 public:
     // Types
     struct QueryResult {
@@ -86,18 +136,41 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        char const* what() const noexcept override { return "ResultsCacheClient operation failed"; }
+        char const* what() const noexcept override {
+            return "ResultsCacheOutputHandler operation failed";
+        }
     };
 
     // Constructors
-    ResultsCacheClient(
+    ResultsCacheOutputHandler(
             std::string const& uri,
             std::string const& collection,
             uint64_t batch_size,
             uint64_t max_num_results
     );
 
-    // Methods
+    // Methods inherited from OutputHandler
+    /**
+     * Adds a result to the batch.
+     * @param original_path
+     * @param message
+     * @param timestamp
+     * @return ErrorCode_Success
+     */
+    ErrorCode add_result(
+            std::string const& original_path,
+            std::string const& message,
+            epochtime_t timestamp
+    ) override;
+
+    ErrorCode flush() override;
+
+    [[nodiscard]] bool can_skip_file(clp::streaming_archive::MetadataDB::FileIterator const& it
+    ) override {
+        return is_latest_results_full() && get_smallest_timestamp() > it.get_end_ts();
+    }
+
+private:
     /**
      * @return The earliest (smallest) timestamp in the heap of latest results
      */
@@ -112,20 +185,6 @@ public:
         return m_latest_results.size() >= m_max_num_results;
     }
 
-    void add_result(
-            std::string const& original_path,
-            std::string const& message,
-            epochtime_t timestamp
-    ) override;
-
-    ErrorCode flush() override;
-
-    [[nodiscard]] bool can_skip_file(clp::streaming_archive::MetadataDB::FileIterator const& it
-    ) override {
-        return is_latest_results_full() && get_smallest_timestamp() > it.get_end_ts();
-    }
-
-private:
     mongocxx::client m_client;
     mongocxx::collection m_collection;
     std::vector<bsoncxx::document::value> m_results;
@@ -139,13 +198,23 @@ private:
             m_latest_results;
 };
 
+/**
+ * Class encapsulating a reducer client used to send count aggregation results to the reducer.
+ */
 class CountOutputHandler : public OutputHandler {
 public:
     // Constructor
     explicit CountOutputHandler(int reducer_socket_fd);
 
     // Methods inherited from OutputHandler
-    void add_result(
+    /**
+     * Adds a result.
+     * @param original_path
+     * @param message
+     * @param timestamp
+     * @return ErrorCode_Success
+     */
+    ErrorCode add_result(
             std::string const& original_path,
             std::string const& message,
             epochtime_t timestamp
@@ -170,13 +239,14 @@ public:
               m_count_by_time_bucket_size{count_by_time_bucket_size} {}
 
     // Methods inherited from OutputHandler
-    void add_result(
+    ErrorCode add_result(
             std::string const& original_path,
             std::string const& message,
             epochtime_t timestamp
     ) override {
         int64_t bucket = (timestamp / m_count_by_time_bucket_size) * m_count_by_time_bucket_size;
         m_bucket_counts[bucket] += 1;
+        return ErrorCode::ErrorCode_Success;
     }
 
     ErrorCode flush() override;

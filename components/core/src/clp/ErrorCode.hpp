@@ -23,7 +23,7 @@ typedef enum {
     ErrorCode_Failure_Metadata_Corrupted,
     ErrorCode_MetadataCorrupted,
     ErrorCode_Failure_DB_Bulk_Write,
-    ErrorCode_NetworkError
+    ErrorCode_Failure_Network,
 } ErrorCode;
 }  // namespace clp
 
