@@ -10,15 +10,14 @@
 #include "../Grep.hpp"
 #include "../Profiler.hpp"
 #include "../spdlog_with_specializations.hpp"
-#include "../streaming_archive/Constants.hpp"
-#include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "OutputHandler.hpp"
 
 using clp::clo::CommandLineArguments;
 using clp::clo::CountOutputHandler;
+using clp::clo::NetworkOutputHandler;
 using clp::clo::OutputHandler;
-using clp::clo::ResultsCacheClient;
+using clp::clo::ResultsCacheOutputHandler;
 using clp::CommandLineArgumentsBase;
 using clp::epochtime_t;
 using clp::ErrorCode;
@@ -96,6 +95,7 @@ static SearchFilesResult search_files(
         if (segments_to_search.count(file_metadata_ix.get_segment_id()) == 0) {
             continue;
         }
+
         if (output_handler->can_skip_file(file_metadata_ix)) {
             continue;
         }
@@ -122,14 +122,23 @@ static SearchFilesResult search_files(
                 decompressed_message
         ))
         {
-            output_handler->add_result(
-                    compressed_file.get_orig_path(),
-                    decompressed_message,
-                    compressed_message.get_ts_in_milli()
-            );
+            if (ErrorCode_Success
+                != output_handler->add_result(
+                        compressed_file.get_orig_path(),
+                        decompressed_message,
+                        compressed_message.get_ts_in_milli()
+                ))
+            {
+                result = SearchFilesResult::ResultSendFailure;
+                break;
+            }
         }
 
         archive.close_file(compressed_file);
+
+        if (SearchFilesResult::ResultSendFailure == result) {
+            break;
+        }
     }
 
     return result;
@@ -252,6 +261,12 @@ int main(int argc, char const* argv[]) {
     std::unique_ptr<OutputHandler> output_handler;
     try {
         switch (command_line_args.get_output_handler_type()) {
+            case CommandLineArguments::OutputHandlerType::Network:
+                output_handler = std::make_unique<NetworkOutputHandler>(
+                        command_line_args.get_network_dest_host(),
+                        command_line_args.get_network_dest_port()
+                );
+                break;
             case CommandLineArguments::OutputHandlerType::Reducer: {
                 auto reducer_socket_fd = reducer::connect_to_reducer(
                         command_line_args.get_reducer_host(),
@@ -273,7 +288,7 @@ int main(int argc, char const* argv[]) {
                 break;
             }
             case CommandLineArguments::OutputHandlerType::ResultsCache:
-                output_handler = std::make_unique<ResultsCacheClient>(
+                output_handler = std::make_unique<ResultsCacheOutputHandler>(
                         command_line_args.get_mongodb_uri(),
                         command_line_args.get_mongodb_collection(),
                         command_line_args.get_batch_size(),

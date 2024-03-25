@@ -11,7 +11,6 @@
 #include "../reducer/types.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../version.hpp"
-#include "type_utils.hpp"
 
 namespace po = boost::program_options;
 using std::cerr;
@@ -42,7 +41,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         config_file_path = home_environment_var_value;
         config_file_path += '/';
     }
-    config_file_path += cDefaultConfigFilename;
+    config_file_path += static_cast<char const*>(cDefaultConfigFilename);
     string global_metadata_db_config_file_path;
     // clang-format off
     options_general.add_options()
@@ -98,6 +97,19 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     );
     // clang-format on
 
+    po::options_description options_network_output_handler("Network Output Handler Options");
+    // clang-format off
+    options_network_output_handler.add_options()(
+            "host",
+            po::value<string>(&m_network_dest_host)->value_name("HOST"),
+            "The host to send the results to"
+    )(
+            "port",
+            po::value<int>(&m_network_dest_port)->value_name("PORT"),
+            "The port to send the results to"
+    );
+    // clang-format on
+
     po::options_description options_reducer_output_handler("Reducer Output Handler Options");
     options_reducer_output_handler.add_options()(
             "host",
@@ -142,6 +154,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     visible_options.add(options_general);
     visible_options.add(options_match_control);
     visible_options.add(options_aggregation);
+    visible_options.add(options_network_output_handler);
     visible_options.add(options_results_cache_output_handler);
     visible_options.add(options_reducer_output_handler);
 
@@ -208,6 +221,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
         notify(parsed_command_line_options);
 
+        constexpr char cNetworkOutputHandlerName[] = "network";
         constexpr char cReducerOutputHandlerName[] = "reducer";
         constexpr char cResultsCacheOutputHandlerName[] = "results-cache";
 
@@ -219,6 +233,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             print_basic_usage();
             cerr << "OUTPUT_HANDLER is one of:" << endl;
+            cerr << "  " << static_cast<char const*>(cNetworkOutputHandlerName)
+                 << " - Output to a network destination" << endl;
             cerr << "  " << static_cast<char const*>(cResultsCacheOutputHandlerName)
                  << " - Output to the results cache" << endl;
             cerr << "  " << static_cast<char const*>(cReducerOutputHandlerName)
@@ -226,6 +242,22 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             cerr << endl;
 
             cerr << "Examples:" << endl;
+            cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to )"
+                    "a network destination"
+                 << endl;
+            cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
+                 << " " << static_cast<char const*>(cNetworkOutputHandlerName)
+                 << " --host localhost --port 18000" << endl;
+            cerr << endl;
+
+            cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and output the results )"
+                    "by performing a count aggregation"
+                 << endl;
+            cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
+                 << " " << static_cast<char const*>(cReducerOutputHandlerName) << " --count"
+                 << " --host localhost --port 14009 --job-id 1" << endl;
+            cerr << endl;
+
             cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to)"
                     R"( mongodb://127.0.0.1:27017/test "result" collection )"
                  << endl;
@@ -242,7 +274,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
         // Handle --version
         if (parsed_command_line_options.count("version")) {
-            cerr << cVersion << endl;
+            cerr << static_cast<char const*>(cVersion) << endl;
             return ParsingResult::InfoCommand;
         }
 
@@ -313,7 +345,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         if (parsed_command_line_options.count("output-handler") == 0) {
             throw invalid_argument("OUTPUT_HANDLER not specified.");
         }
-        if (static_cast<char const*>(cReducerOutputHandlerName) == output_handler_name) {
+        if (static_cast<char const*>(cNetworkOutputHandlerName) == output_handler_name) {
+            m_output_handler_type = OutputHandlerType::Network;
+        } else if (static_cast<char const*>(cReducerOutputHandlerName) == output_handler_name) {
             m_output_handler_type = OutputHandlerType::Reducer;
         } else if (static_cast<char const*>(cResultsCacheOutputHandlerName) == output_handler_name)
         {
@@ -325,6 +359,13 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         }
 
         switch (m_output_handler_type) {
+            case OutputHandlerType::Network:
+                parse_network_dest_output_handler_options(
+                        options_network_output_handler,
+                        parsed.options,
+                        parsed_command_line_options
+                );
+                break;
             case OutputHandlerType::Reducer:
                 parse_reducer_output_handler_options(
                         options_reducer_output_handler,
@@ -350,8 +391,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             throw invalid_argument(
                     "Aggregations are only supported with the reducer output handler."
             );
-        } else if ((false == m_do_count_results_aggregation
-                    && OutputHandlerType::Reducer == m_output_handler_type))
+        }
+        if ((false == m_do_count_results_aggregation
+             && OutputHandlerType::Reducer == m_output_handler_type))
         {
             throw invalid_argument(
                     "The reducer output handler currently only supports the count aggregation."
@@ -365,6 +407,28 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     }
 
     return ParsingResult::Success;
+}
+
+void CommandLineArguments::parse_network_dest_output_handler_options(
+        po::options_description const& options_description,
+        std::vector<po::option> const& options,
+        po::variables_map& parsed_options
+) {
+    clp::parse_unrecognized_options(options_description, options, parsed_options);
+
+    if (parsed_options.count("host") == 0) {
+        throw std::invalid_argument("host must be specified.");
+    }
+    if (m_network_dest_host.empty()) {
+        throw std::invalid_argument("host cannot be an empty string.");
+    }
+
+    if (parsed_options.count("port") == 0) {
+        throw std::invalid_argument("port must be specified.");
+    }
+    if (m_network_dest_port <= 0) {
+        throw std::invalid_argument("port must be greater than zero.");
+    }
 }
 
 void CommandLineArguments::parse_reducer_output_handler_options(

@@ -146,6 +146,7 @@ target_link_libraries(clo
         fmt::fmt
         log_surgeon::log_surgeon
         ${MONGOCXX_TARGET}
+        msgpack-cxx
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
