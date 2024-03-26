@@ -93,11 +93,11 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     options_aggregation.add_options()(
             "count",
             po::bool_switch(&m_do_count_results_aggregation),
-            "Perform a count aggregation (count the number of results)"
+            "Count the number of results"
     )(
             "count-by-time",
             po::value<int64_t>(&m_count_by_time_bucket_size)->value_name("SIZE"),
-            "Perform the query and count the number of results in each time bucket (ms)"
+            "Count the number of results in each time span of the given size (ms)"
     );
     // clang-format on
 

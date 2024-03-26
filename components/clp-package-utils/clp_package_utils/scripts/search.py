@@ -66,13 +66,11 @@ def main(argv):
         help="Maximum number of latest results to return.",
     )
     args_parser.add_argument("--file-path", help="File to search.")
-    args_parser.add_argument(
-        "--count", action="store_true", help="Perform the query and count the number of results."
-    )
+    args_parser.add_argument("--count", action="store_true", help="Count the number of results.")
     args_parser.add_argument(
         "--count-by-time",
         type=int,
-        help="Perform the query and count the number of results in each time bucket (ms).",
+        help="Count the number of results in each time span of the given size (ms).",
     )
     parsed_args = args_parser.parse_args(argv[1:])
 
