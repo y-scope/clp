@@ -399,13 +399,13 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 );
         }
 
-        bool aggregtion_was_specified
+        bool aggregation_was_specified
                 = m_do_count_by_time_aggregation || m_do_count_results_aggregation;
-        if (aggregtion_was_specified && OutputHandlerType::Reducer != m_output_handler_type) {
+        if (aggregation_was_specified && OutputHandlerType::Reducer != m_output_handler_type) {
             throw invalid_argument(
                     "Aggregations are only supported with the reducer output handler."
             );
-        } else if ((false == aggregtion_was_specified
+        } else if ((false == aggregation_was_specified
                     && OutputHandlerType::Reducer == m_output_handler_type))
         {
             throw invalid_argument("The reducer output handler currently only supports count and "
