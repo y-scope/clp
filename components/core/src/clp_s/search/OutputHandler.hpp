@@ -13,6 +13,7 @@
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/instance.hpp>
 #include <mongocxx/uri.hpp>
+#include <msgpack.hpp>
 
 #include "../../reducer/Pipeline.hpp"
 #include "../Defs.hpp"
@@ -113,16 +114,21 @@ public:
 
     // Methods inherited from OutputHandler
     void write(std::string const& message, epochtime_t timestamp) override {
-        std::string message_with_timestamp(std::to_string(timestamp) + " " + message);
-        if (-1
-            == send(m_socket_fd, message_with_timestamp.c_str(), message_with_timestamp.size(), 0))
-        {
+        msgpack::type::tuple<std::string, epochtime_t, std::string> src("", timestamp, message);
+        msgpack::sbuffer m;
+        msgpack::pack(m, src);
+
+        if (-1 == send(m_socket_fd, m.data(), m.size(), 0)) {
             throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
         }
     }
 
     void write(std::string const& message) override {
-        if (-1 == send(m_socket_fd, message.c_str(), message.size(), 0)) {
+        msgpack::type::tuple<std::string, epochtime_t, std::string> src("", 0, message);
+        msgpack::sbuffer m;
+        msgpack::pack(m, src);
+
+        if (-1 == send(m_socket_fd, m.data(), m.size(), 0)) {
             throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
         }
     }

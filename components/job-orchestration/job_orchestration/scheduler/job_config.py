@@ -53,3 +53,5 @@ class SearchConfig(BaseModel):
     def validate_network_address(cls, field):
         if field is not None and (field[1] < 0 or field[1] > 65535):
             raise ValueError("Invalid port number")
+
+        return field
