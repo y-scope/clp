@@ -148,11 +148,13 @@ async def handle_reducer_connection(
                         current_wait_state, msg.msg_type, msg_queues
                     )
                 aggregation_config: AggregationConfig = msg.payload
+                job_id = aggregation_config.job_id
+                time_bucket_size = aggregation_config.count_by_time_bucket_size
                 await _send_msg_to_reducer(
                     msgpack.packb(
                         {
-                            "job_id": aggregation_config.job_id,
-                            "count_by_time_bucket_size": aggregation_config.count_by_time_bucket_size,
+                            "job_id": job_id,
+                            "count_by_time_bucket_size": time_bucket_size,
                         }
                     ),
                     writer,
