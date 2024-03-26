@@ -54,9 +54,11 @@ def make_command(
 
     if search_config.aggregation_config is not None:
         aggregation_config = search_config.aggregation_config
-
         if aggregation_config.do_count_aggregation is not None:
             command.append("--count")
+        if aggregation_config.count_by_time_bucket_size is not None:
+            command.append("--count-by-time")
+            command.append(str(aggregation_config.count_by_time_bucket_size))
 
         command.append("reducer")
         command.append("--host")

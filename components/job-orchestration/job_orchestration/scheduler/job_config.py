@@ -36,6 +36,7 @@ class AggregationConfig(BaseModel):
     reducer_host: typing.Optional[str] = None
     reducer_port: typing.Optional[int] = None
     do_count_aggregation: typing.Optional[bool] = None
+    count_by_time_bucket_size: typing.Optional[int] = None  # Milliseconds
 
 
 class SearchConfig(BaseModel):

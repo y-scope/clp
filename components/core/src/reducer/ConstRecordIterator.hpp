@@ -48,6 +48,8 @@ public:
 
     bool done() override { return m_done; }
 
+    void reset() { m_done = false; }
+
 private:
     Record const* m_record;
     bool m_done{false};

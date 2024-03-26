@@ -190,6 +190,11 @@ bool search_archive(
             case CommandLineArguments::OutputHandlerType::Reducer:
                 if (command_line_arguments.do_count_results_aggregation()) {
                     output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
+                } else if (command_line_arguments.do_count_by_time_aggregation()) {
+                    output_handler = std::make_unique<CountByTimeOutputHandler>(
+                            reducer_socket_fd,
+                            command_line_arguments.get_count_by_time_bucket_size()
+                    );
                 } else {
                     SPDLOG_ERROR("Unhandled aggregation type.");
                     return false;
@@ -224,9 +229,7 @@ bool search_archive(
             std::move(output_handler),
             command_line_arguments.get_ignore_case()
     );
-    output.filter();
-
-    return true;
+    return output.filter();
 }
 }  // namespace
 

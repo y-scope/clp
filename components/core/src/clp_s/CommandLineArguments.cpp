@@ -379,7 +379,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             aggregation_options.add_options()(
                     "count",
                     po::bool_switch(&m_do_count_results_aggregation),
-                    "Perform a count aggregation (count the number of results)"
+                    "Count the number of results"
+            )(
+                    "count-by-time",
+                    po::value<int64_t>(&m_count_by_time_bucket_size)->value_name("SIZE"),
+                    "Count the number of results in each time span of the given size (ms)"
             );
             // clang-format on
             search_options.add(aggregation_options);
@@ -541,6 +545,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 );
             }
 
+            if (parsed_command_line_options.count("count-by-time") > 0) {
+                m_do_count_by_time_aggregation = true;
+                if (m_count_by_time_bucket_size <= 0) {
+                    throw std::invalid_argument("Value for count-by-time must be greater than zero."
+                    );
+                }
+            }
+
             if (parsed_command_line_options.count("output-handler") > 0) {
                 if (static_cast<char const*>(cNetworkOutputHandlerName) == output_handler_name) {
                     m_output_handler_type = OutputHandlerType::Network;
@@ -588,17 +600,22 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 );
             }
 
-            if (m_do_count_results_aggregation
-                && OutputHandlerType::Reducer != m_output_handler_type)
-            {
+            bool aggregation_was_specified
+                    = m_do_count_by_time_aggregation || m_do_count_results_aggregation;
+            if (aggregation_was_specified && OutputHandlerType::Reducer != m_output_handler_type) {
                 throw std::invalid_argument(
                         "Aggregations are only supported with the reducer output handler."
                 );
-            } else if ((false == m_do_count_results_aggregation
+            } else if ((false == aggregation_was_specified
                         && OutputHandlerType::Reducer == m_output_handler_type))
             {
+                throw std::invalid_argument("The reducer output handler currently only supports "
+                                            "count and count-by-time aggregations.");
+            }
+
+            if (m_do_count_by_time_aggregation && m_do_count_results_aggregation) {
                 throw std::invalid_argument(
-                        "The reducer output handler currently only supports the count aggregation."
+                        "The --count-by-time and --count options are mutually exclusive."
                 );
             }
         }

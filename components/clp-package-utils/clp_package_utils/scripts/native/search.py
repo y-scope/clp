@@ -80,6 +80,7 @@ def create_and_monitor_job_in_db(
     path_filter: str | None,
     network_address: tuple[str, int] | None,
     do_count_aggregation: bool | None,
+    count_by_time_bucket_size: int | None,
 ):
     search_config = SearchConfig(
         query_string=wildcard_query,
@@ -93,6 +94,10 @@ def create_and_monitor_job_in_db(
     if do_count_aggregation is not None:
         search_config.aggregation_config = AggregationConfig(
             do_count_aggregation=do_count_aggregation
+        )
+    if count_by_time_bucket_size is not None:
+        search_config.aggregation_config = AggregationConfig(
+            count_by_time_bucket_size=count_by_time_bucket_size
         )
     if tags:
         tag_list = [tag.strip().lower() for tag in tags.split(",") if tag]
@@ -168,6 +173,7 @@ async def do_search(
     ignore_case: bool,
     path_filter: str | None,
     do_count_aggregation: bool | None,
+    count_by_time_bucket_size: int | None,
 ):
     if do_count_aggregation is None:
         host = None
@@ -188,7 +194,6 @@ async def do_search(
             # Search cancelled
             return
         port = int(server.sockets[0].getsockname()[1])
-
         server_task = asyncio.ensure_future(server.serve_forever())
 
         db_monitor_task = asyncio.ensure_future(
@@ -273,8 +278,13 @@ def main(argv):
     args_parser.add_argument(
         "--count",
         action="store_const",
-        help="Perform the query and count the number of results.",
+        help="Count the number of results.",
         const=True,
+    )
+    args_parser.add_argument(
+        "--count-by-time",
+        type=int,
+        help="Count the number of results in each time span of the given size (ms).",
     )
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -307,6 +317,7 @@ def main(argv):
             parsed_args.ignore_case,
             parsed_args.file_path,
             parsed_args.count,
+            parsed_args.count_by_time,
         )
     )
 

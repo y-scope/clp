@@ -40,6 +40,8 @@ public:
 
     void set_record(Record const& record) { m_iterator = SingleRecordIterator(record); }
 
+    void reset_record_iterator() { m_iterator.reset(); }
+
     [[nodiscard]] ConstRecordIterator& record_iter() override { return m_iterator; }
 
 private:

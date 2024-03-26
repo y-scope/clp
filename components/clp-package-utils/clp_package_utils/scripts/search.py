@@ -59,8 +59,11 @@ def main(argv):
         help="Ignore case distinctions between values in the query and the compressed data.",
     )
     args_parser.add_argument("--file-path", help="File to search.")
+    args_parser.add_argument("--count", action="store_true", help="Count the number of results.")
     args_parser.add_argument(
-        "--count", action="store_true", help="Perform the query and count the number of results."
+        "--count-by-time",
+        type=int,
+        help="Count the number of results in each time span of the given size (ms).",
     )
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -131,6 +134,9 @@ def main(argv):
         search_cmd.append(parsed_args.file_path)
     if parsed_args.count:
         search_cmd.append("--count")
+    if parsed_args.count_by_time is not None:
+        search_cmd.append("--count-by-time")
+        search_cmd.append(str(parsed_args.count_by_time))
     cmd = container_start_cmd + search_cmd
     subprocess.run(cmd, check=True)
 

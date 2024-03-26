@@ -14,6 +14,7 @@
 #include "OutputHandler.hpp"
 
 using clp::clo::CommandLineArguments;
+using clp::clo::CountByTimeOutputHandler;
 using clp::clo::CountOutputHandler;
 using clp::clo::NetworkOutputHandler;
 using clp::clo::OutputHandler;
@@ -226,9 +227,16 @@ static bool search_archive(
     );
     file_metadata_ix_ptr.reset(nullptr);
 
-    output_handler->flush();
     archive_reader.close();
 
+    auto ecode = output_handler->flush();
+    if (ErrorCode::ErrorCode_Success != ecode) {
+        SPDLOG_ERROR(
+                "Failed to flush output handler, error={}",
+                clp::enum_to_underlying_type(ecode)
+        );
+        return false;
+    }
     return true;
 }
 
@@ -280,6 +288,11 @@ int main(int argc, char const* argv[]) {
 
                 if (command_line_args.do_count_results_aggregation()) {
                     output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
+                } else if (command_line_args.do_count_by_time_aggregation()) {
+                    output_handler = std::make_unique<CountByTimeOutputHandler>(
+                            reducer_socket_fd,
+                            command_line_args.get_count_by_time_bucket_size()
+                    );
                 } else {
                     SPDLOG_ERROR("Unhandled aggregation type.");
                     return -1;
