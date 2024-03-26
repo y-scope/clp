@@ -49,7 +49,7 @@ public:
     RecordGroup& get() override {
         m_record.set_record_value(m_map_it->second);
         m_group.set_tags(&m_map_it->first);
-        m_group.set_record(m_record);
+        m_group.reset_record_iterator();
         return m_group;
     }
 
@@ -79,7 +79,7 @@ public:
         m_tags = {std::to_string(m_map_it->first)};
         m_record.set_record_value(m_map_it->second);
         m_group.set_tags(&m_tags);
-        m_group.set_record(m_record);
+        m_group.reset_record_iterator();
         return m_group;
     }
 
@@ -128,7 +128,7 @@ public:
     RecordGroup& get() override {
         m_record.set_record_value(m_map_end_it->second);
         m_group.set_tags(&m_map_end_it->first);
-        m_group.set_record(m_record);
+        m_group.reset_record_iterator();
         return m_group;
     }
 
