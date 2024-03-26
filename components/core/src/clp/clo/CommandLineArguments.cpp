@@ -96,7 +96,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             "Perform a count aggregation (count the number of results)"
     )(
             "count-by-time",
-            po::value<int64_t>(&m_count_by_time_bucket_size),
+            po::value<int64_t>(&m_count_by_time_bucket_size)->value_name("SIZE"),
             "Perform the query and count the number of results in each time bucket (ms)"
     );
     // clang-format on
@@ -346,10 +346,10 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         }
 
         // Validate count by time bucket size
-        if (parsed_command_line_options.count("count-by-time")) {
+        if (parsed_command_line_options.count("count-by-time") > 0) {
             m_do_count_by_time_aggregation = true;
             if (m_count_by_time_bucket_size <= 0) {
-                throw std::invalid_argument("Count by time argument must be greater than zero.");
+                throw std::invalid_argument("Value for count-by-time must be greater than zero.");
             }
         }
 
@@ -414,7 +414,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
         if (m_do_count_by_time_aggregation && m_do_count_results_aggregation) {
             throw std::invalid_argument(
-                    "The --count-by-time and --count arguments are mutually exclusive."
+                    "The --count-by-time and --count options are mutually exclusive."
             );
         }
     } catch (exception& e) {

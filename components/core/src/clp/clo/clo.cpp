@@ -232,7 +232,7 @@ static bool search_archive(
     auto ecode = output_handler->flush();
     if (ErrorCode::ErrorCode_Success != ecode) {
         SPDLOG_ERROR(
-                "Encoutered error '{}' while trying to flush output handler.",
+                "Failed to flush output handler, error={}",
                 clp::enum_to_underlying_type(ecode)
         );
         return false;

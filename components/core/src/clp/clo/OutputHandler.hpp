@@ -93,6 +93,10 @@ public:
             epochtime_t timestamp
     ) override;
 
+    /**
+     * Closes the connection.
+     * @return ErrorCode_Success
+     */
     ErrorCode flush() override {
         close(m_socket_fd);
         return ErrorCode::ErrorCode_Success;
@@ -163,6 +167,11 @@ public:
             epochtime_t timestamp
     ) override;
 
+    /**
+     * Flushes any buffered output.
+     * @return ErrorCode_Success on success
+     * @return ErrorCode_Failure_DB_Bulk_Write on failure to write results to the results cache
+     */
     ErrorCode flush() override;
 
     [[nodiscard]] bool can_skip_file(clp::streaming_archive::MetadataDB::FileIterator const& it
@@ -220,6 +229,11 @@ public:
             epochtime_t timestamp
     ) override;
 
+    /**
+     * Flushes the count.
+     * @return ErrorCode_Success on success
+     * @return ErrorCode_Failure_Network on network error
+     */
     ErrorCode flush() override;
 
 private:
@@ -249,6 +263,11 @@ public:
         return ErrorCode::ErrorCode_Success;
     }
 
+    /**
+     * Flushes the counts.
+     * @return ErrorCode_Success on success
+     * @return ErrorCode_Failure_Network on network error
+     */
     ErrorCode flush() override;
 
 private:

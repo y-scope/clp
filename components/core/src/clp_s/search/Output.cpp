@@ -107,7 +107,7 @@ bool Output::filter() {
         auto ecode = m_output_handler->flush();
         if (ErrorCode::ErrorCodeSuccess != ecode) {
             SPDLOG_ERROR(
-                    "Encoutered error '{}' while trying to flush output handler.",
+                    "Failed to flush output handler, error={}.",
                     clp::enum_to_underlying_type(ecode)
             );
             return false;
@@ -116,7 +116,7 @@ bool Output::filter() {
     auto ecode = m_output_handler->finish();
     if (ErrorCode::ErrorCodeSuccess != ecode) {
         SPDLOG_ERROR(
-                "Encoutered error '{}' while trying to finish output handler.",
+                "Failed to flush output handler, error={}.",
                 clp::enum_to_underlying_type(ecode)
         );
         return false;

@@ -227,13 +227,13 @@ def main(argv):
     args_parser.add_argument(
         "--count",
         action="store_const",
-        help="Perform the query and count the number of results.",
+        help="Count the number of results.",
         const=True,
     )
     args_parser.add_argument(
         "--count-by-time",
         type=int,
-        help="Perform the query and count the number of results in each time bucket (ms).",
+        help="Count the number of results in each time span of the given size (ms).",
     )
     parsed_args = args_parser.parse_args(argv[1:])
 

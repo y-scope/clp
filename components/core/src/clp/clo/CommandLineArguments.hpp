@@ -140,7 +140,7 @@ private:
     reducer::job_id_t m_job_id{-1};
     bool m_do_count_results_aggregation{false};
     bool m_do_count_by_time_aggregation{false};
-    int64_t m_count_by_time_bucket_size{0};
+    int64_t m_count_by_time_bucket_size{0};  // Milliseconds
 
     OutputHandlerType m_output_handler_type{OutputHandlerType::ResultsCache};
 };

@@ -43,7 +43,7 @@ public:
 
     /**
      * Filters messages from all archives
-     * @return whether the filter was performed succesfully
+     * @return Whether the filter was performed successfully
      */
     bool filter();
 

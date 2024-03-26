@@ -179,6 +179,11 @@ public:
     );
 
     // Methods inherited from OutputHandler
+    /**
+     * Flushes the output handler after each table that gets searched.
+     * @return ErrorCodeSuccess on success
+     * @return ErrorCodeFailureDbBulkWrite on failure to write results to the results cache
+     */
     ErrorCode flush() override;
 
     void write(std::string const& message, epochtime_t timestamp) override;
@@ -211,6 +216,11 @@ public:
 
     void write(std::string const& message) override;
 
+    /**
+     * Flushes the count.
+     * @return ErrorCodeSuccess on success
+     * @return ErrorCodeFailureNetwork on network error
+     */
     ErrorCode finish() override;
 
 private:
@@ -238,6 +248,11 @@ public:
 
     void write(std::string const& message) override {}
 
+    /**
+     * Flushes the counts.
+     * @return ErrorCodeSuccess on success
+     * @return ErrorCodeFailureNetwork on network error
+     */
     ErrorCode finish() override;
 
 private:
