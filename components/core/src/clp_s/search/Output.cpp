@@ -3,6 +3,7 @@
 #include <regex>
 #include <stack>
 
+#include "../../clp/type_utils.hpp"
 #include "../ArchiveReader.hpp"
 #include "../FileWriter.hpp"
 #include "../ReaderUtils.hpp"
@@ -18,7 +19,7 @@
 #define eval(op, a, b) (((op) == FilterOperation::EQ) ? ((a) == (b)) : ((a) != (b)))
 
 namespace clp_s::search {
-void Output::filter() {
+bool Output::filter() {
     auto top_level_expr = m_expr;
 
     std::vector<int32_t> matched_schemas;
@@ -41,7 +42,7 @@ void Output::filter() {
     // Skip decompressing archive if it contains no
     // relevant schemas
     if (matched_schemas.empty()) {
-        return;
+        return true;
     }
 
     // Skip decompressing archive if it won't match based on the timestamp
@@ -49,7 +50,7 @@ void Output::filter() {
     EvaluateTimestampIndex timestamp_index(m_archive_reader->get_timestamp_dictionary());
     if (timestamp_index.run(top_level_expr) == EvaluatedValue::False) {
         m_archive_reader->close();
-        return;
+        return true;
     }
 
     m_var_dict = m_archive_reader->read_variable_dictionary();
@@ -103,9 +104,24 @@ void Output::filter() {
                 m_output_handler->write(message);
             }
         }
-        m_output_handler->flush();
+        auto ecode = m_output_handler->flush();
+        if (ErrorCode::ErrorCodeSuccess != ecode) {
+            SPDLOG_ERROR(
+                    "Failed to flush output handler, error={}.",
+                    clp::enum_to_underlying_type(ecode)
+            );
+            return false;
+        }
     }
-    m_output_handler->finish();
+    auto ecode = m_output_handler->finish();
+    if (ErrorCode::ErrorCodeSuccess != ecode) {
+        SPDLOG_ERROR(
+                "Failed to flush output handler, error={}.",
+                clp::enum_to_underlying_type(ecode)
+        );
+        return false;
+    }
+    return true;
 }
 
 void Output::init(

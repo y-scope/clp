@@ -41,9 +41,9 @@ vector<uint8_t> serialize_timeline_result(GroupTags const& tags, ConstRecordIter
 
     int64_t count = 0;
     for (; false == record_it.done(); record_it.next()) {
-        count = record_it.get().get_int64_value("count");
+        count = record_it.get().get_int64_value(CountOperator::cRecordElementKey);
     }
-    json["count"] = count;
+    json[CountOperator::cRecordElementKey] = count;
 
     return nlohmann::json::to_bson(json);
 }
@@ -152,7 +152,11 @@ void ServerContext::set_up_pipeline(nlohmann::json const& query_config) {
     m_pipeline = std::make_unique<Pipeline>(PipelineInputMode::IntraStage);
     m_pipeline->add_pipeline_stage(std::make_shared<CountOperator>());
 
-    m_is_timeline_aggregation = query_config.count(cJobAttributes::BucketSize) > 0;
+    if (query_config.count(cJobAttributes::TimeBucketSize) > 0
+        && false == query_config[cJobAttributes::TimeBucketSize].is_null())
+    {
+        m_is_timeline_aggregation = true;
+    }
 
     auto collection_name = std::to_string(m_job_id);
     m_mongodb_results_collection = m_mongodb_results_database[collection_name];

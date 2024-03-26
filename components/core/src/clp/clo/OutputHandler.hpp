@@ -39,8 +39,9 @@ public:
 
     /**
      * Flushes any buffered output. Called once at the end of search.
+     * @return ErrorCode_Success on success or relevant error code on error
      */
-    virtual void flush() = 0;
+    virtual ErrorCode flush() = 0;
 
     /**
      * @param it
@@ -92,7 +93,14 @@ public:
             epochtime_t timestamp
     ) override;
 
-    void flush() override { close(m_socket_fd); }
+    /**
+     * Closes the connection.
+     * @return ErrorCode_Success
+     */
+    ErrorCode flush() override {
+        close(m_socket_fd);
+        return ErrorCode::ErrorCode_Success;
+    }
 
 private:
     int m_socket_fd;
@@ -159,7 +167,12 @@ public:
             epochtime_t timestamp
     ) override;
 
-    void flush() override;
+    /**
+     * Flushes any buffered output.
+     * @return ErrorCode_Success on success
+     * @return ErrorCode_Failure_DB_Bulk_Write on failure to write results to the results cache
+     */
+    ErrorCode flush() override;
 
     [[nodiscard]] bool can_skip_file(clp::streaming_archive::MetadataDB::FileIterator const& it
     ) override {
@@ -216,13 +229,52 @@ public:
             epochtime_t timestamp
     ) override;
 
-    void flush() override;
+    /**
+     * Flushes the count.
+     * @return ErrorCode_Success on success
+     * @return ErrorCode_Failure_Network on network error
+     */
+    ErrorCode flush() override;
 
 private:
     int m_reducer_socket_fd;
     reducer::Pipeline m_pipeline;
 };
 
+/**
+ * Output handler that performs a count aggregation bucketed by time and sends the results to a
+ * reducer.
+ */
+class CountByTimeOutputHandler : public OutputHandler {
+public:
+    // Constructors
+    CountByTimeOutputHandler(int reducer_socket_fd, int64_t count_by_time_bucket_size)
+            : m_reducer_socket_fd{reducer_socket_fd},
+              m_count_by_time_bucket_size{count_by_time_bucket_size} {}
+
+    // Methods inherited from OutputHandler
+    ErrorCode add_result(
+            std::string const& original_path,
+            std::string const& message,
+            epochtime_t timestamp
+    ) override {
+        int64_t bucket = (timestamp / m_count_by_time_bucket_size) * m_count_by_time_bucket_size;
+        m_bucket_counts[bucket] += 1;
+        return ErrorCode::ErrorCode_Success;
+    }
+
+    /**
+     * Flushes the counts.
+     * @return ErrorCode_Success on success
+     * @return ErrorCode_Failure_Network on network error
+     */
+    ErrorCode flush() override;
+
+private:
+    int m_reducer_socket_fd;
+    std::map<int64_t, int64_t> m_bucket_counts;
+    int64_t m_count_by_time_bucket_size;
+};
 }  // namespace clp::clo
 
 #endif  // CLP_CLO_OUTPUTHANDLER_HPP

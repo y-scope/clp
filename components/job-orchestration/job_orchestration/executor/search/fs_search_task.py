@@ -49,6 +49,9 @@ def make_clo_command(
 
         if aggregation_config.do_count_aggregation is not None:
             search_cmd.append("--count")
+        if aggregation_config.count_by_time_bucket_size is not None:
+            search_cmd.append("--count-by-time")
+            search_cmd.append(str(aggregation_config.count_by_time_bucket_size))
 
         search_cmd.append("reducer")
         search_cmd.append("--host")
@@ -101,6 +104,9 @@ def make_clp_s_command(
 
         if aggregation_config.do_count_aggregation is not None:
             search_cmd.append("--count")
+        if aggregation_config.count_by_time_bucket_size is not None:
+            search_cmd.append("--count-by-time")
+            search_cmd.append(str(aggregation_config.count_by_time_bucket_size))
 
         search_cmd.append("reducer")
         search_cmd.append("--host")
