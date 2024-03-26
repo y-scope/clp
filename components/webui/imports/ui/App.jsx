@@ -60,7 +60,7 @@ const App = () => {
         </div>
     </div>;
 
-    const Routes = () => <Switch>
+    const routeSwitch = <Switch>
         <Route exact path="/">
             <Redirect to="/ingest"/>
         </Route>
@@ -86,7 +86,7 @@ const App = () => {
             minWidth: 0,
         }}>
             <div style={{height: "100%"}}>
-                {!loggedIn ? <Spinner/> : <Routes/>}
+                {!loggedIn ? <Spinner/> : routeSwitch}
             </div>
         </div>
     </div>);
