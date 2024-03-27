@@ -32,11 +32,6 @@ const App = () => {
         "true" === localStorage.getItem(LOCAL_STORAGE_KEYS.IS_SIDEBAR_COLLAPSED),
     );
 
-    React.useEffect(async () => {
-        const result = await login();
-        setLoggedIn(result);
-    }, []);
-
     React.useEffect(() => {
         localStorage.setItem(LOCAL_STORAGE_KEYS.IS_SIDEBAR_COLLAPSED,
             isSidebarCollapsed.toString());
