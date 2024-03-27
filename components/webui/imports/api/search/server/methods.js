@@ -25,11 +25,30 @@ const initSearchJobsDbManager = (sqlDbConnection, {searchJobsTableName}) => {
 };
 
 /**
- * Updates the search event when the specified job finishes.
+ * Modifies the search results metadata for a given job ID.
+ *
+ * @param {number} jobId
+ * @param {object} fields - The fields to be updated in the search results metadata.
+ */
+const updateSearchResultsMeta = (jobId, fields) => {
+    const filter = {
+        _id: jobId.toString(),
+    };
+
+    const modifier = {
+        $set: fields,
+    };
+
+    logger.debug("SearchResultsMetadataCollection modifier = ", modifier);
+    SearchResultsMetadataCollection.update(filter, modifier);
+};
+
+/**
+ * Updates the search signal when the specified job finishes.
  *
  * @param {number} jobId of the job to monitor
  */
-const updateSearchEventWhenJobFinishes = async (jobId) => {
+const updateSearchSignalWhenJobFinishes = async (jobId) => {
     let errorMsg;
     try {
         await searchJobsDbManager.awaitJobCompletion(jobId);
@@ -37,25 +56,18 @@ const updateSearchEventWhenJobFinishes = async (jobId) => {
         errorMsg = e.message;
     }
 
-    const filter = {
-        _id: jobId.toString(),
-    };
     const numResultsInCollection = await searchJobCollectionsManager
         .getOrCreateCollection(jobId)
         .countDocuments();
-    const modifier = {
-        $set: {
-            lastSignal: SEARCH_SIGNAL.RESP_DONE,
-            errorMsg: errorMsg,
-            numTotalResults: Math.min(
-                numResultsInCollection,
-                SEARCH_MAX_NUM_RESULTS
-            ),
-        },
-    };
 
-    logger.debug("modifier = ", modifier);
-    SearchResultsMetadataCollection.update(filter, modifier);
+    updateSearchResultsMeta(jobId, {
+        lastSignal: SEARCH_SIGNAL.RESP_DONE,
+        errorMsg: errorMsg,
+        numTotalResults: Math.min(
+            numResultsInCollection,
+            SEARCH_MAX_NUM_RESULTS
+        ),
+    });
 };
 
 /**
@@ -100,6 +112,8 @@ Meteor.methods({
         timestampEnd,
         ignoreCase,
     }) {
+        this.unblock();
+
         const args = {
             query_string: queryString,
             begin_timestamp: timestampBegin,
@@ -125,7 +139,7 @@ Meteor.methods({
         });
 
         Meteor.defer(async () => {
-            await updateSearchEventWhenJobFinishes(jobId);
+            await updateSearchSignalWhenJobFinishes(jobId);
         });
 
         await createMongoIndexes(jobId);
@@ -141,6 +155,8 @@ Meteor.methods({
     async "search.clearResults"({
         jobId,
     }) {
+        this.unblock();
+
         logger.info("search.clearResults jobId =", jobId);
 
         try {
@@ -163,10 +179,17 @@ Meteor.methods({
     async "search.cancelOperation"({
         jobId,
     }) {
+        this.unblock();
+
         logger.info("search.cancelOperation jobId =", jobId);
 
         try {
             await searchJobsDbManager.submitQueryCancellation(jobId);
+
+            updateSearchResultsMeta(jobId, {
+                lastSignal: SEARCH_SIGNAL.RESP_DONE,
+                errorMsg: "The search results are inconclusive because the user cancelled the job."
+            });
         } catch (e) {
             const errorMsg = `Failed to submit cancel request for job ${jobId}.`;
             logger.error(errorMsg, e.toString());
