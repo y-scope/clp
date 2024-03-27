@@ -5,10 +5,14 @@ import {deinitStatsDbManager, initStatsDbManager} from "../api/ingestion/server/
 import {initSearchJobsDbManager} from "../api/search/server/methods";
 
 
+const DB_CONNECTION_LIMIT = 2;
+const DB_MAX_IDLE = DB_CONNECTION_LIMIT;
+const DB_IDLE_TIMEOUT_IN_MS = 10000;
+
 /**
- * @type {mysql.Connection|null}
+ * @type {mysql.Pool|null}
  */
-let dbConnection = null;
+let dbPool = null;
 
 /**
  * Creates a new database connection and initializes DB managers with it.
@@ -39,13 +43,12 @@ const initDbManagers = async ({
     clpArchivesTableName,
     clpFilesTableName,
 }) => {
-    if (null !== dbConnection) {
-        logger.error("This method should not be called twice.");
-        return;
+    if (null !== dbPool) {
+        throw Error("This method should not be called twice.");
     }
 
     try {
-        dbConnection = await mysql.createConnection({
+        dbPool = await mysql.createPool({
             host: dbHost,
             port: dbPort,
             database: dbName,
@@ -53,18 +56,21 @@ const initDbManagers = async ({
             password: dbPassword,
             bigNumberStrings: true,
             supportBigNumbers: true,
+            enableKeepAlive: true,
+            connectionLimit: DB_CONNECTION_LIMIT,
+            maxIdle: DB_MAX_IDLE,
+            idleTimeout: DB_IDLE_TIMEOUT_IN_MS
         });
-        await dbConnection.connect();
 
-        initSearchJobsDbManager(dbConnection, {
+        initSearchJobsDbManager(dbPool, {
             searchJobsTableName,
         });
-        initStatsDbManager(dbConnection, {
+        initStatsDbManager(dbPool, {
             clpArchivesTableName,
             clpFilesTableName,
         });
     } catch (e) {
-        logger.error("Unable to create MySQL / mariadb connection.", e.toString());
+        logger.error("Unable to create MySQL / mariadb connection pool.", e.toString());
         throw e;
     }
 };
@@ -77,7 +83,7 @@ const initDbManagers = async ({
 const deinitDbManagers = async () => {
     deinitStatsDbManager();
 
-    await dbConnection.end();
+    await dbPool.end();
 };
 
 export {initDbManagers, deinitDbManagers};
