@@ -10,7 +10,7 @@ const DB_MAX_IDLE = DB_CONNECTION_LIMIT;
 const DB_IDLE_TIMEOUT_IN_MS = 10000;
 
 /**
- * @type {mysql.Pool|null}
+ * @type {import("mysql2/promise").Pool|null}
  */
 let dbPool = null;
 

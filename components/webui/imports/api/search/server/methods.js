@@ -15,7 +15,7 @@ import SearchJobsDbManager from "./SearchJobsDbManager";
 let searchJobsDbManager = null;
 
 /**
- * @param {mysql.Pool} sqlDbPool
+ * @param {import("mysql2/promise").Pool} sqlDbPool
  * @param {object} tableNames
  * @param {string} tableNames.searchJobsTableName
  * @throws {Error} on error.
