@@ -94,27 +94,59 @@ public:
      */
     bool operator==(Schema const& rhs) const { return m_schema == rhs.m_schema; }
 
+    /**
+     * Starts an unordered object of a given NodeType.
+     *
+     * Unordered objects must be closed by calling the `end_unordered_object` method with the start
+     * position returned by this method.
+     * @param object_type
+     * @return the start position of the unordered object
+     */
     size_t start_unordered_object(NodeType object_type) {
         insert_unordered(encode_node_type_as_schema_entry(object_type));
         return m_schema.size();
     }
 
+    /**
+     * Ends an unordered object which was started by calling `start_unordered_object`.
+     * @param start_position
+     */
     void end_unordered_object(size_t start_position) {
         m_schema[start_position - 1] |= static_cast<int32_t>(m_schema.size() - start_position);
     }
 
+    /**
+     * Encodes a NodeType as a schema entry to delimit an unordered object using bithacks.
+     * @param node_type
+     * @return The NodeType encoded as a schema entry
+     */
     static int32_t encode_node_type_as_schema_entry(NodeType node_type) {
         return static_cast<int32_t>(node_type) << cEncodedTypeOffset;
     }
 
+    /**
+     * Checks if a schema entry is the delimeter for an unordered object.
+     * @param schema_entry
+     * @return Whether the schema_entry is the delimeter for an unordered object or not
+     */
     static int32_t schema_entry_is_unordered_object(int32_t schema_entry) {
         return 0 != (schema_entry & cEncodedTypeBitmask);
     }
 
+    /**
+     * Extracts the NodeType from an unordered object delimeter.
+     * @param schema_entry
+     * @return The extracted NodeType
+     */
     static NodeType get_unordered_object_type(int32_t schema_entry) {
         return static_cast<NodeType>(static_cast<uint32_t>(schema_entry) >> cEncodedTypeOffset);
     }
 
+    /**
+     * Extracts the unordered object length from an unordered object delimeter.
+     * @param schema_entry
+     * @return The extracted NodeType
+     */
     static int32_t get_unordered_object_length(int32_t schema_entry) {
         return schema_entry & cEncodedTypeLengthBitmask;
     }
