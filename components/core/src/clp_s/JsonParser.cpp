@@ -55,7 +55,7 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
     object_stack.push(std::move(line));
     object_it_stack.push(std::move(it));
 
-    m_current_schema.insert_unordered(-2);
+    size_t object_start = m_current_schema.start_unordered_object(NodeType::Object);
     ondemand::field cur_field;
     ondemand::value cur_value;
     std::string cur_key;
@@ -71,7 +71,7 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
         }
 
         if (object_stack.empty()) {
-            m_current_schema.insert_unordered(-2);
+            m_current_schema.end_unordered_object(object_start);
             return;
         }
 
@@ -167,7 +167,7 @@ void JsonParser::parse_array_obj(ondemand::array array, int32_t parent_node_id) 
         return;
     }
 
-    m_current_schema.insert_unordered(-1);
+    size_t array_start = m_current_schema.start_unordered_object(NodeType::StructuredArray);
     ondemand::value cur_value;
     int32_t node_id;
     for (; it != array.end(); ++it) {
@@ -230,7 +230,7 @@ void JsonParser::parse_array_obj(ondemand::array array, int32_t parent_node_id) 
             }
         }
     }
-    m_current_schema.insert_unordered(-1);
+    m_current_schema.end_unordered_object(array_start);
 }
 
 void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::string const& key) {

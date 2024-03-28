@@ -6,6 +6,8 @@
 #include <stack>
 #include <vector>
 
+#include "SchemaTree.hpp"
+
 namespace clp_s {
 /**
  * Class representing a schema made up of MST nodes.
@@ -92,7 +94,36 @@ public:
      */
     bool operator==(Schema const& rhs) const { return m_schema == rhs.m_schema; }
 
+    size_t start_unordered_object(NodeType object_type) {
+        insert_unordered(encode_node_type_as_schema_entry(object_type));
+        return m_schema.size();
+    }
+
+    void end_unordered_object(size_t start_position) {
+        m_schema[start_position - 1] |= static_cast<int32_t>(m_schema.size() - start_position);
+    }
+
+    static int32_t encode_node_type_as_schema_entry(NodeType node_type) {
+        return static_cast<int32_t>(node_type) << cEncodedTypeOffset;
+    }
+
+    static int32_t schema_entry_is_unordered_object(int32_t schema_entry) {
+        return 0 != (schema_entry & cEncodedTypeBitmask);
+    }
+
+    static NodeType get_unordered_object_type(int32_t schema_entry) {
+        return static_cast<NodeType>(static_cast<uint32_t>(schema_entry) >> cEncodedTypeOffset);
+    }
+
+    static int32_t get_unordered_object_length(int32_t schema_entry) {
+        return schema_entry & cEncodedTypeLengthBitmask;
+    }
+
 private:
+    static constexpr size_t cEncodedTypeOffset = (sizeof(int32_t) - 1) * 8;
+    static constexpr int32_t cEncodedTypeBitmask = 0xFF00'0000;
+    static constexpr int32_t cEncodedTypeLengthBitmask = ~cEncodedTypeBitmask;
+
     std::vector<int32_t> m_schema;
     size_t m_num_ordered{0};
     std::stack<std::pair<int32_t, size_t>> m_obj_stack;

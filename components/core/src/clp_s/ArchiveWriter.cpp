@@ -92,7 +92,7 @@ size_t ArchiveWriter::get_data_size() {
 
 void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const& schema) {
     for (int32_t id : schema) {
-        if (id == -1 || id == -2) {
+        if (Schema::schema_entry_is_unordered_object(id)) {
             continue;
         }
         auto node = m_schema_tree.get_node(id);
