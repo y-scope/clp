@@ -15,13 +15,13 @@ import SearchJobsDbManager from "./SearchJobsDbManager";
 let searchJobsDbManager = null;
 
 /**
- * @param {import("mysql2/promise").Pool} sqlDbPool
+ * @param {import("mysql2/promise").Pool} sqlDbConnPool
  * @param {object} tableNames
  * @param {string} tableNames.searchJobsTableName
  * @throws {Error} on error.
  */
-const initSearchJobsDbManager = (sqlDbPool, {searchJobsTableName}) => {
-    searchJobsDbManager = new SearchJobsDbManager(sqlDbPool, {searchJobsTableName});
+const initSearchJobsDbManager = (sqlDbConnPool, {searchJobsTableName}) => {
+    searchJobsDbManager = new SearchJobsDbManager(sqlDbConnPool, {searchJobsTableName});
 };
 
 /**
