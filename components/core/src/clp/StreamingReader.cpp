@@ -139,13 +139,13 @@ auto StreamingReader::open(std::string_view src_url, size_t offset, bool disable
         throw OperationFailed(ErrorCode_NotReady, __FILE__, __LINE__);
     }
     m_src_url = src_url;
+    set_status_code(StatusCode::InProgress);
     m_transfer_thread = std::make_unique<std::thread>(
             transfer_thread_entry,
             std::ref(*this),
             offset,
             disable_caching
     );
-    set_status_code(StatusCode::InProgress);
     m_transfer_thread->detach();
 }
 
