@@ -49,10 +49,15 @@ const SearchResults = ({
     const hasMoreResults = visibleSearchResultsLimit < numResultsOnServer;
 
     const handleLoadMoreResults = useCallback(() => {
-        setVisibleSearchResultsLimit(
-            (v) => (v + VISIBLE_RESULTS_LIMIT_INCREMENT)
-        );
-    }, []);
+        if (hasMoreResults) {
+            setVisibleSearchResultsLimit(
+                visibleSearchResultsLimit + VISIBLE_RESULTS_LIMIT_INCREMENT
+            );
+        }
+    }, [
+        hasMoreResults,
+        visibleSearchResultsLimit,
+    ]);
 
     return <>
         <div className={"flex-column"}>
