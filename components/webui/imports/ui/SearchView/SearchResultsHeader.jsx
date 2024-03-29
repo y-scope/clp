@@ -66,11 +66,13 @@ const SearchResultsHeader = ({
                                 </InputGroup>
                             </Form>
                         </Popover>}>
-                        {(0 < numResultsOnServer) ? <Button type={"button"}
-                                                            variant={"light"}
-                                                            title={"Display Settings"}>
+                        <Button
+                            title={"Display Settings"}
+                            type={"button"}
+                            variant={"light"}
+                        >
                             <FontAwesomeIcon icon={faCog}/>
-                        </Button> : <></>}
+                        </Button>
                     </OverlayTrigger>
                 </Col>
             </Row>

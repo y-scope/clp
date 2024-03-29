@@ -2,6 +2,7 @@ import React, {useCallback} from "react";
 
 import SearchResultsHeader from "./SearchResultsHeader.jsx";
 import SearchResultsTable from "./SearchResultsTable.jsx";
+import SearchResultsTimeline from "./SearchResultsTimeline.jsx";
 
 
 /**
@@ -33,6 +34,9 @@ const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
  * @param {function} setVisibleSearchResultsLimit
  * @param {number} maxLinesPerResult
  * @param {function} setMaxLinesPerResult
+ * @param {object} timelineConfig
+ * @param {object[]} timelineBuckets
+ * @param {function} obSubmitQuery
  * @returns {JSX.Element}
  */
 const SearchResults = ({
@@ -45,6 +49,9 @@ const SearchResults = ({
     setVisibleSearchResultsLimit,
     maxLinesPerResult,
     setMaxLinesPerResult,
+    timelineConfig,
+    timelineBuckets,
+    obSubmitQuery,
 }) => {
     const hasMoreResults = visibleSearchResultsLimit < numResultsOnServer;
 
@@ -62,6 +69,10 @@ const SearchResults = ({
                 maxLinesPerResult={maxLinesPerResult}
                 setMaxLinesPerResult={setMaxLinesPerResult}
             />
+            <SearchResultsTimeline
+                timelineBuckets={timelineBuckets}
+                timelineConfig={timelineConfig}
+                onSubmitQuery={obSubmitQuery}/>
         </div>
         {(0 < searchResults.length) && <div className="flex-column overflow-auto">
             <SearchResultsTable

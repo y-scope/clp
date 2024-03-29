@@ -28,11 +28,13 @@ const initSearchJobsDbManager = (sqlDbConnection, {searchJobsTableName}) => {
  * Updates the search event when the specified job finishes.
  *
  * @param {number} jobId of the job to monitor
+ * @param {number} aggregationJobId of the job to monitor
  */
-const updateSearchEventWhenJobFinishes = async (jobId) => {
+const updateSearchEventWhenJobFinishes = async (jobId, aggregationJobId) => {
     let errorMsg;
     try {
         await searchJobsDbManager.awaitJobCompletion(jobId);
+        await searchJobsDbManager.awaitJobCompletion(aggregationJobId);
     } catch (e) {
         errorMsg = e.message;
     }
@@ -92,13 +94,17 @@ Meteor.methods({
      * @param {number} timestampBegin
      * @param {number} timestampEnd
      * @param {boolean} ignoreCase
-     * @returns {Object} containing {jobId} of the submitted search job
+     * @param {number} timeRangeBucketSizeMs
+     * @return {Object}
+     * @property {number} jobId of the submitted query
+     * @property {number} aggregationJobId of the submitted query
      */
-    async "search.submitQuery"({
+    async "search.submitQuery" ({
         queryString,
         timestampBegin,
         timestampEnd,
         ignoreCase,
+        timeRangeBucketSizeMs,
     }) {
         const args = {
             query_string: queryString,
@@ -110,8 +116,10 @@ Meteor.methods({
         logger.info("search.submitQuery args =", args);
 
         let jobId;
+        let aggregationJobId;
         try {
             jobId = await searchJobsDbManager.submitQuery(args);
+            aggregationJobId = await searchJobsDbManager.submitAggregationJob(args, timeRangeBucketSizeMs);
         } catch (e) {
             const errorMsg = "Unable to submit search job to the SQL database.";
             logger.error(errorMsg, e.toString());
@@ -125,12 +133,12 @@ Meteor.methods({
         });
 
         Meteor.defer(async () => {
-            await updateSearchEventWhenJobFinishes(jobId);
+            await updateSearchEventWhenJobFinishes(jobId, aggregationJobId);
         });
 
         await createMongoIndexes(jobId);
 
-        return {jobId};
+        return {jobId, aggregationJobId};
     },
 
     /**
@@ -138,18 +146,22 @@ Meteor.methods({
      *
      * @param {number} jobId of the search results to clear
      */
-    async "search.clearResults"({
+    async "search.clearResults" ({
         jobId,
+        aggregationJobId,
     }) {
-        logger.info("search.clearResults jobId =", jobId);
+        logger.info(`search.clearResults jobId=${jobId}, aggregationJobId=${aggregationJobId}`);
 
         try {
             const resultsCollection = searchJobCollectionsManager.getOrCreateCollection(jobId);
             await resultsCollection.dropCollectionAsync();
 
-            searchJobCollectionsManager.removeCollection(jobId);
+            const resultsAggregationCollection =
+                searchJobCollectionsManager.getOrCreateCollection(aggregationJobId);
+            await resultsAggregationCollection.dropCollectionAsync();
         } catch (e) {
-            const errorMsg = `Failed to clear search results for jobId ${jobId}.`;
+            const errorMsg = `Failed to clear search results for jobId=${jobId}, ` +
+                `aggregationJobId=${aggregationJobId}`;
             logger.error(errorMsg, e.toString());
             throw new Meteor.Error("clear-results-error", errorMsg);
         }
@@ -158,17 +170,22 @@ Meteor.methods({
     /**
      * Cancels an ongoing search operation identified by jobId.
      *
-     * @param {number} jobId of the search operation to cancel
+     * @param {number} jobId
+     * @param {number} aggregationJobId
      */
-    async "search.cancelOperation"({
+    async "search.cancelOperation" ({
         jobId,
+        aggregationJobId,
     }) {
-        logger.info("search.cancelOperation jobId =", jobId);
+        logger.info(`search.cancelOperation jobId=${jobId}, aggregationJobId=${aggregationJobId}`);
 
         try {
             await searchJobsDbManager.submitQueryCancellation(jobId);
+            await searchJobsDbManager.submitQueryCancellation(aggregationJobId);
         } catch (e) {
-            const errorMsg = `Failed to submit cancel request for job ${jobId}.`;
+            const errorMsg = `Failed to submit cancel request for jobId=${jobId},` +
+                `aggregationJobId=${aggregationJobId}.`;
+
             logger.error(errorMsg, e.toString());
             throw new Meteor.Error("query-cancel-error", errorMsg);
         }

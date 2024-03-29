@@ -5,7 +5,10 @@
 class SearchJobCollectionsManager {
     #collections;
 
-    constructor() {
+    constructor () {
+        // NOTE: do not remove inserted collections because we need to check for duplicated
+        // Collection before constructing a new one, or Meteor would complain.
+        // TODO: revisit: memory leak?
         this.#collections = new Map();
     }
 
@@ -15,21 +18,12 @@ class SearchJobCollectionsManager {
      * @param {number} jobId
      * @returns {Mongo.Collection}
      */
-    getOrCreateCollection(jobId) {
+    getOrCreateCollection (jobId) {
         const name = jobId.toString();
         if (undefined === this.#collections.get(name)) {
             this.#collections.set(name, new Mongo.Collection(name));
         }
         return this.#collections.get(name);
-    }
-
-    /**
-     * Removes the MongoDB collection with the given job ID.
-     *
-     * @param {number} jobId
-     */
-    removeCollection(jobId) {
-        this.#collections.delete(jobId.toString());
     }
 }
 

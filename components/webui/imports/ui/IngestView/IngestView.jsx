@@ -1,8 +1,8 @@
+import dayjs from "dayjs";
 import React from "react";
 
 import {faChartBar, faClock, faEnvelope, faFileAlt, faHdd} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {DateTime} from "luxon";
 import {useTracker} from "meteor/react-meteor-data";
 import {Col, Container, ProgressBar, Row} from "react-bootstrap";
 
@@ -108,7 +108,7 @@ const Details = ({stats}) => {
 
     let timeRangeRow = null;
     if (null !== endTimestamp) {
-        let timestampFormat = "kkkk-MMM-dd HH:mm";
+        let timestampFormat = "YYYY-MMM-DD HH:mm";
         timeRangeRow = (
             <div className="ingest-stats-details-row">
                 <div className="ingest-stats-details-icon-container">
@@ -116,9 +116,9 @@ const Details = ({stats}) => {
                 </div>
                 <div className="ingest-stats-details-text-container">
                     <span className="ingest-stats-detail">
-                        {DateTime.fromMillis(Number(beginTimestamp)).toFormat(timestampFormat)}
+                        {dayjs.utc(Number(beginTimestamp)).format(timestampFormat)}
                         <span className="ingest-desc-text"> to </span>
-                        {DateTime.fromMillis(Number(endTimestamp)).toFormat(timestampFormat)}
+                        {dayjs.utc(Number(endTimestamp)).format(timestampFormat)}
                     </span>
                     <span className="ingest-desc-text">time range</span>
                 </div>

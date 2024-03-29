@@ -31,6 +31,33 @@ class SearchJobsDbManager {
     }
 
     /**
+     * Submits an aggregation job to the SQL database.
+     *
+     * @param {Object} searchConfig The arguments for the query.
+     * @param {number} timeRangeBucketSizeMs
+     * @return {Promise<number>} The aggregation job's ID.
+     * @throws {Error} on error.
+     */
+    async submitAggregationJob (searchConfig, timeRangeBucketSizeMs) {
+        const searchAggregationConfig = {
+            ...searchConfig,
+            aggregation_config: {
+                do_count_aggregation: null,
+                count_by_time_bucket_size: timeRangeBucketSizeMs,
+            },
+        };
+
+        const [aggregationInsertResults] = await this.#sqlDbConnection.query(
+            `INSERT INTO ${this.#searchJobsTableName} 
+                 (${SEARCH_JOBS_TABLE_COLUMN_NAMES.SEARCH_CONFIG})
+             VALUES (?)`,
+            [Buffer.from(msgpack.encode(searchAggregationConfig))],
+        );
+
+        return aggregationInsertResults.insertId;
+    }
+
+    /**
      * Submits a query job to the database.
      * @param {Object} searchConfig The arguments for the query.
      * @returns {Promise<number>} The job's ID.

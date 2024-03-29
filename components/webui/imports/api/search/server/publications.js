@@ -58,3 +58,21 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
 
     return collection.find({}, findOptions);
 });
+
+Meteor.publish(Meteor.settings.public.SearchResultsAggregationCollectionName, ({
+    aggregationJobId,
+}) => {
+    const collection = searchJobCollectionsManager.getOrCreateCollection(aggregationJobId);
+    const findOptions = {
+        disableOplog: true,
+        pollingIntervalMs: 250,
+        sort: [
+            /* eslint-disable @stylistic/js/array-element-newline */
+            [SEARCH_RESULTS_FIELDS.TIMESTAMP, MONGO_SORT_ORDER.DESCENDING],
+            [SEARCH_RESULTS_FIELDS.ID, MONGO_SORT_ORDER.DESCENDING],
+            /* eslint-enable @stylistic/js/array-element-newline */
+        ],
+    };
+
+    return collection.find({}, findOptions);
+});

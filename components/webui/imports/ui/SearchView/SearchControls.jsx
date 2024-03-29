@@ -19,7 +19,12 @@ import {
     isSearchSignalReq,
 } from "../../api/search/constants";
 
-import {computeTimeRange, TIME_RANGE_PRESET_LABEL} from "./datetime";
+import {
+    computeTimeRange,
+    convertLocalToSameUtcDatetime,
+    convertUtcToSameLocalDate,
+    TIME_RANGE_PRESET_LABEL,
+} from "./datetime";
 import {LOCAL_STORAGE_KEYS} from "../constants";
 
 import "react-datepicker/dist/react-datepicker.css";
@@ -89,24 +94,31 @@ const SearchFilterControlsDrawer = ({
     ignoreCase,
     setIgnoreCase,
 }) => {
-    const updateBeginTimestamp = (date) => {
-        if (date.getTime() > timeRange.end.getTime()) {
+    const updateBeginTimestamp = (localDateBegin) => {
+        const utcDatetime = convertLocalToSameUtcDatetime(localDateBegin)
+
+        if (localDateBegin > timeRange.end) {
             setTimeRange({
-                begin: date,
-                end: date,
+                begin: utcDatetime,
+                end: utcDatetime
             });
         } else {
-            setTimeRange({
-                begin: date,
-                end: timeRange.end,
-            });
+            setTimeRange((v)=>({
+                ...v,
+                begin: utcDatetime
+            }));
         }
     };
-    const updateEndTimestamp = (date) => {
-        setTimeRange({
-            begin: timeRange.begin,
-            end: date,
-        });
+
+    const updateEndTimestamp = (localDateEnd) => {
+        const utcDatetime = convertLocalToSameUtcDatetime(localDateEnd)
+
+        setTimeRange(
+            (v)=>({
+                ...v,
+                end: utcDatetime,
+            })
+        );
     };
 
     const handleTimeRangePresetSelection = (event) => {
@@ -137,12 +149,9 @@ const SearchFilterControlsDrawer = ({
     // Compute range of end timestamp so that it's after the begin timestamp
     let timestampEndMin = null;
     let timestampEndMax = null;
-    if (timeRange.begin.getFullYear() === timeRange.end.getFullYear() &&
-        timeRange.begin.getMonth() === timeRange.end.getMonth() &&
-        timeRange.begin.getDate() === timeRange.end.getDate()) {
-        timestampEndMin = new Date(timeRange.begin);
-        // TODO This doesn't handle leap seconds
-        timestampEndMax = new Date(timeRange.end).setHours(23, 59, 59, 999);
+    if (timeRange.begin.isSame(timeRange.end, 'day')) {
+        timestampEndMin = timeRange.begin;
+        timestampEndMax = timeRange.end.endOf('day');
     }
 
     return (<div className={"search-filter-controls-drawer border-bottom px-2 py-3 w-100"}>
@@ -154,7 +163,6 @@ const SearchFilterControlsDrawer = ({
                 <Col>
                     <InputGroup size={"sm"}>
                         <DropdownButton
-                            id={"time_range_preset_button"}
                             variant={"primary"}
                             size={"sm"}
                             title={"Presets"}
@@ -164,24 +172,23 @@ const SearchFilterControlsDrawer = ({
                         <SearchControlsDatePicker
                             id="begin_timestamp_picker"
                             selectsStart={true}
-                            startDate={timeRange.begin}
-                            endDate={timeRange.end}
-                            selected={timeRange.begin}
+                            startDate={convertUtcToSameLocalDate(timeRange.begin)}
+                            endDate={convertUtcToSameLocalDate(timeRange.end)}
+                            selected={convertUtcToSameLocalDate(timeRange.begin)}
                             onChange={updateBeginTimestamp}
                         />
                         <InputGroup.Text className="border-left-0 rounded-0">
                             to
                         </InputGroup.Text>
                         <SearchControlsDatePicker
-                            id="end_timestamp_picker"
                             selectsEnd={true}
-                            minTime={timestampEndMin}
-                            maxTime={timestampEndMax}
-                            startDate={timeRange.begin}
-                            endDate={timeRange.end}
-                            selected={timeRange.end}
+                            minTime={convertUtcToSameLocalDate(timestampEndMin)}
+                            maxTime={convertUtcToSameLocalDate(timestampEndMax)}
+                            startDate={convertUtcToSameLocalDate(timeRange.begin)}
+                            endDate={convertUtcToSameLocalDate(timeRange.end)}
+                            selected={convertUtcToSameLocalDate(timeRange.end)}
                             onChange={updateEndTimestamp}
-                            minDate={timeRange.begin}
+                            minDate={convertUtcToSameLocalDate(timeRange.begin)}
                         />
                     </InputGroup>
                 </Col>
@@ -237,7 +244,6 @@ const SearchControls = ({
 }) => {
     const [drawerOpen, setDrawerOpen] = useState(
         "true" === localStorage.getItem(LOCAL_STORAGE_KEYS.SEARCH_CONTROLS_VISIBLE));
-    const [canceling, setCanceling] = useState(false);
     const inputRef = useRef(null);
 
     const isInputDisabled =
@@ -265,13 +271,7 @@ const SearchControls = ({
     const handleQuerySubmission = (e) => {
         e.preventDefault();
 
-        setCanceling(false);
         onSubmitQuery();
-    };
-
-    const handleCancelOperation = () => {
-        setCanceling(true);
-        onCancelOperation();
     };
 
     return <>
@@ -311,9 +311,9 @@ const SearchControls = ({
                         (SEARCH_SIGNAL.RESP_QUERYING === resultsMetadata["lastSignal"]) ?
                             <Button
                                 className={"border-top-0 border-bottom-0 rounded-0"}
-                                disabled={true === canceling}
+                                disabled={SEARCH_SIGNAL.REQ_CANCELLING === resultsMetadata["lastSignal"]}
                                 variant={"danger"}
-                                onClick={handleCancelOperation}
+                                onClick={onCancelOperation}
                             >
                                 <FontAwesomeIcon icon={faTimes} fixedWidth={true}/>
                             </Button> :

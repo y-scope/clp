@@ -10,6 +10,7 @@
   "public": {
     "SearchResultsCollectionName": "results",
     "SearchResultsMetadataCollectionName": "results-metadata",
+    "SearchResultsAggregationCollectionName": "results-aggregation",
     "StatsCollectionName": "stats"
   }
 }
