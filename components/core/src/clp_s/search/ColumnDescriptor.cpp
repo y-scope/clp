@@ -87,4 +87,11 @@ void ColumnDescriptor::print() {
 void ColumnDescriptor::add_unresolved_tokens(DescriptorList::iterator it) {
     m_unresolved_tokens.assign(it, descriptor_end());
 }
+
+bool ColumnDescriptor::operator==(ColumnDescriptor const& rhs) const {
+    return m_descriptors == rhs.m_descriptors && m_unresolved_tokens == rhs.m_unresolved_tokens
+           && m_flags == rhs.m_flags && m_id == rhs.m_id
+           && m_unresolved_descriptors == rhs.m_unresolved_descriptors
+           && m_pure_wildcard == rhs.m_pure_wildcard;
+}
 }  // namespace clp_s::search

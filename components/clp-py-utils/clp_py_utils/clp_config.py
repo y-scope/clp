@@ -2,7 +2,8 @@ import pathlib
 import typing
 from enum import auto
 
-from pydantic import BaseModel, validator
+from dotenv import dotenv_values
+from pydantic import BaseModel, PrivateAttr, validator
 from strenum import KebabCaseStrEnum
 
 from .clp_logging import get_valid_logging_level, is_valid_logging_level
@@ -18,6 +19,7 @@ from .core import (
 DB_COMPONENT_NAME = "database"
 QUEUE_COMPONENT_NAME = "queue"
 REDIS_COMPONENT_NAME = "redis"
+REDUCER_COMPONENT_NAME = "reducer"
 RESULTS_CACHE_COMPONENT_NAME = "results_cache"
 COMPRESSION_SCHEDULER_COMPONENT_NAME = "compression_scheduler"
 SEARCH_SCHEDULER_COMPONENT_NAME = "search_scheduler"
@@ -25,9 +27,15 @@ COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 SEARCH_WORKER_COMPONENT_NAME = "search_worker"
 WEBUI_COMPONENT_NAME = "webui"
 
+# Target names
+ALL_TARGET_NAME = ""
+CONTROLLER_TARGET_NAME = "controller"
+
 SEARCH_JOBS_TABLE_NAME = "search_jobs"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
 COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
+
+OS_RELEASE_FILE_PATH = pathlib.Path("etc") / "os-release"
 
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
 CLP_METADATA_TABLE_PREFIX = "clp_"
@@ -155,12 +163,27 @@ class CompressionScheduler(BaseModel):
 
 
 class SearchScheduler(BaseModel):
+    host = "localhost"
+    port = 7000
     jobs_poll_delay: float = 0.1  # seconds
+    num_archives_to_search_per_sub_job: int = 16
     logging_level: str = "INFO"
 
     @validator("logging_level")
     def validate_logging_level(cls, field):
         _validate_logging_level(cls, field)
+        return field
+
+    @validator("host")
+    def validate_host(cls, field):
+        if "" == field:
+            raise ValueError(f"Cannot be empty.")
+        return field
+
+    @validator("port")
+    def validate_port(cls, field):
+        if not field > 0:
+            raise ValueError(f"{field} is not greater than zero")
         return field
 
 
@@ -194,6 +217,36 @@ class Redis(BaseModel):
     def validate_host(cls, field):
         if "" == field:
             raise ValueError(f"{REDIS_COMPONENT_NAME}.host cannot be empty.")
+        return field
+
+
+class Reducer(BaseModel):
+    host: str = "localhost"
+    base_port: int = 14009
+    logging_level: str = "INFO"
+    upsert_interval: int = 100  # milliseconds
+
+    @validator("host")
+    def validate_host(cls, field):
+        if "" == field:
+            raise ValueError(f"{field} cannot be empty")
+        return field
+
+    @validator("logging_level")
+    def validate_logging_level(cls, field):
+        _validate_logging_level(cls, field)
+        return field
+
+    @validator("base_port")
+    def validate_base_port(cls, field):
+        if not field > 0:
+            raise ValueError(f"{field} is not greater than zero")
+        return field
+
+    @validator("upsert_interval")
+    def validate_upsert_interval(cls, field):
+        if not field > 0:
+            raise ValueError(f"{field} is not greater than zero")
         return field
 
 
@@ -296,7 +349,7 @@ class WebUi(BaseModel):
 
 
 class CLPConfig(BaseModel):
-    execution_container: str = "ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-focal:main"
+    execution_container: typing.Optional[str]
 
     input_logs_directory: pathlib.Path = pathlib.Path("/")
 
@@ -304,6 +357,7 @@ class CLPConfig(BaseModel):
     database: Database = Database()
     queue: Queue = Queue()
     redis: Redis = Redis()
+    reducer: Reducer() = Reducer()
     results_cache: ResultsCache = ResultsCache()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
     search_scheduler: SearchScheduler = SearchScheduler()
@@ -316,12 +370,15 @@ class CLPConfig(BaseModel):
     data_directory: pathlib.Path = pathlib.Path("var") / "data"
     logs_directory: pathlib.Path = pathlib.Path("var") / "log"
 
+    _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
+
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         self.input_logs_directory = make_config_path_absolute(clp_home, self.input_logs_directory)
         self.credentials_file_path = make_config_path_absolute(clp_home, self.credentials_file_path)
         self.archive_output.make_config_paths_absolute(clp_home)
         self.data_directory = make_config_path_absolute(clp_home, self.data_directory)
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
+        self._os_release_file_path = make_config_path_absolute(clp_home, self._os_release_file_path)
 
     def validate_input_logs_dir(self):
         # NOTE: This can't be a pydantic validator since input_logs_dir might be a package-relative
@@ -349,6 +406,23 @@ class CLPConfig(BaseModel):
             validate_path_could_be_dir(self.logs_directory)
         except ValueError as ex:
             raise ValueError(f"logs_directory is invalid: {ex}")
+
+    def load_execution_container_name(self):
+        if self.execution_container is not None:
+            # Accept configured value for debug purposes
+            return
+
+        os_release = dotenv_values(self._os_release_file_path)
+        if "ubuntu" == os_release["ID"]:
+            self.execution_container = (
+                f"clp-execution-x86-{os_release['ID']}-{os_release['VERSION_CODENAME']}:main"
+            )
+        else:
+            raise NotImplementedError(
+                f"Unsupported OS {os_release['ID']} in {OS_RELEASE_FILE_PATH}"
+            )
+
+        self.execution_container = "ghcr.io/y-scope/clp/" + self.execution_container
 
     def load_database_credentials_from_file(self):
         config = read_yaml_config_file(self.credentials_file_path)

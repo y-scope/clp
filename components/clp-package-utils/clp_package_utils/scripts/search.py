@@ -41,6 +41,9 @@ def main(argv):
     )
     args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
+        "-t", "--tags", help="Comma-separated list of tags of archives to search."
+    )
+    args_parser.add_argument(
         "--begin-time",
         type=int,
         help="Time range filter lower-bound (inclusive) as milliseconds" " from the UNIX epoch.",
@@ -50,7 +53,25 @@ def main(argv):
         type=int,
         help="Time range filter upper-bound (inclusive) as milliseconds" " from the UNIX epoch.",
     )
+    args_parser.add_argument(
+        "--ignore-case",
+        action="store_true",
+        help="Ignore case distinctions between values in the query and the compressed data.",
+    )
+    args_parser.add_argument(
+        "--max-num-results",
+        "-m",
+        type=int,
+        default=1000,
+        help="Maximum number of latest results to return.",
+    )
     args_parser.add_argument("--file-path", help="File to search.")
+    args_parser.add_argument("--count", action="store_true", help="Count the number of results.")
+    args_parser.add_argument(
+        "--count-by-time",
+        type=int,
+        help="Count the number of results in each time span of the given size (ms).",
+    )
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate and load config file
@@ -89,10 +110,7 @@ def main(argv):
         "--mount", str(mounts.clp_home),
     ]
     # fmt: on
-    necessary_mounts = [
-        mounts.logs_dir,
-        mounts.archives_output_dir,
-    ]
+    necessary_mounts = [mounts.logs_dir]
     for mount in necessary_mounts:
         if mount:
             container_start_cmd.append("--mount")
@@ -105,17 +123,28 @@ def main(argv):
         "-m", "clp_package_utils.scripts.native.search",
         "--config", str(container_clp_config.logs_directory / container_config_filename),
         parsed_args.wildcard_query,
+        "--max-num-results", str(parsed_args.max_num_results),
     ]
     # fmt: on
+    if parsed_args.tags:
+        search_cmd.append("--tags")
+        search_cmd.append(parsed_args.tags)
     if parsed_args.begin_time is not None:
         search_cmd.append("--begin-time")
         search_cmd.append(str(parsed_args.begin_time))
     if parsed_args.end_time is not None:
         search_cmd.append("--end-time")
         search_cmd.append(str(parsed_args.end_time))
+    if parsed_args.ignore_case:
+        search_cmd.append("--ignore-case")
     if parsed_args.file_path:
         search_cmd.append("--file-path")
         search_cmd.append(parsed_args.file_path)
+    if parsed_args.count:
+        search_cmd.append("--count")
+    if parsed_args.count_by_time is not None:
+        search_cmd.append("--count-by-time")
+        search_cmd.append(str(parsed_args.count_by_time))
     cmd = container_start_cmd + search_cmd
     subprocess.run(cmd, check=True)
 

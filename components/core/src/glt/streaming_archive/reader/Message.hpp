@@ -1,5 +1,5 @@
-#ifndef STREAMING_ARCHIVE_READER_MESSAGE_HPP
-#define STREAMING_ARCHIVE_READER_MESSAGE_HPP
+#ifndef GLT_STREAMING_ARCHIVE_READER_MESSAGE_HPP
+#define GLT_STREAMING_ARCHIVE_READER_MESSAGE_HPP
 
 #include <cstddef>
 #include <vector>
@@ -43,4 +43,4 @@ private:
 };
 }  // namespace glt::streaming_archive::reader
 
-#endif  // STREAMING_ARCHIVE_READER_MESSAGE_HPP
+#endif  // GLT_STREAMING_ARCHIVE_READER_MESSAGE_HPP

@@ -1,5 +1,5 @@
-#ifndef STREAMING_ARCHIVE_WRITER_ARCHIVE_HPP
-#define STREAMING_ARCHIVE_WRITER_ARCHIVE_HPP
+#ifndef GLT_STREAMING_ARCHIVE_WRITER_ARCHIVE_HPP
+#define GLT_STREAMING_ARCHIVE_WRITER_ARCHIVE_HPP
 
 #include <filesystem>
 #include <memory>
@@ -333,4 +333,4 @@ private:
 };
 }  // namespace glt::streaming_archive::writer
 
-#endif  // STREAMING_ARCHIVE_WRITER_ARCHIVE_HPP
+#endif  // GLT_STREAMING_ARCHIVE_WRITER_ARCHIVE_HPP

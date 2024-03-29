@@ -7,11 +7,12 @@ import time
 from contextlib import closing
 from pathlib import Path
 
+import brotli
 import celery
 import msgpack
-import zstandard
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
+    CLP_METADATA_TABLE_PREFIX,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
@@ -84,65 +85,56 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
 
     logger.debug("Search and schedule new tasks")
 
-    zstd_dctx = zstandard.ZstdDecompressor()
-    zstd_cctx = zstandard.ZstdCompressor(level=3)
-
     # Poll for new compression jobs
     jobs = fetch_new_jobs(db_cursor)
     db_conn.commit()
     for job_row in jobs:
         job_id = job_row["id"]
         clp_io_config = ClpIoConfig.parse_obj(
-            msgpack.unpackb(zstd_dctx.decompress(job_row["clp_config"]))
+            msgpack.unpackb(brotli.decompress(job_row["clp_config"]))
         )
 
         paths_to_compress_buffer = PathsToCompressBuffer(
             maintain_file_ordering=False,
             empty_directories_allowed=True,
             scheduling_job_id=job_id,
-            zstd_cctx=zstd_cctx,
             clp_io_config=clp_io_config,
             clp_metadata_db_connection_config=clp_metadata_db_connection_config,
         )
 
-        with open(Path(clp_io_config.input.list_path).resolve(), "r") as f:
-            for path_idx, path in enumerate(f, start=1):
-                stripped_path = path.strip()
-                if "" == stripped_path:
-                    # Skip empty paths
-                    continue
-                path = Path(stripped_path)
+        for path_idx, path in enumerate(clp_io_config.input.paths_to_compress, start=1):
+            path = Path(path)
 
-                try:
-                    file, empty_directory = validate_path_and_get_info(
-                        CONTAINER_INPUT_LOGS_ROOT_DIR, path
-                    )
-                except ValueError as ex:
-                    logger.error(str(ex))
-                    continue
+            try:
+                file, empty_directory = validate_path_and_get_info(
+                    CONTAINER_INPUT_LOGS_ROOT_DIR, path
+                )
+            except ValueError as ex:
+                logger.error(str(ex))
+                continue
 
-                if file:
-                    paths_to_compress_buffer.add_file(file)
-                elif empty_directory:
-                    paths_to_compress_buffer.add_empty_directory(empty_directory)
+            if file:
+                paths_to_compress_buffer.add_file(file)
+            elif empty_directory:
+                paths_to_compress_buffer.add_empty_directory(empty_directory)
 
-                if path.is_dir():
-                    for internal_path in path.rglob("*"):
-                        try:
-                            file, empty_directory = validate_path_and_get_info(
-                                CONTAINER_INPUT_LOGS_ROOT_DIR, internal_path
-                            )
-                        except ValueError as ex:
-                            logger.error(str(ex))
-                            continue
+            if path.is_dir():
+                for internal_path in path.rglob("*"):
+                    try:
+                        file, empty_directory = validate_path_and_get_info(
+                            CONTAINER_INPUT_LOGS_ROOT_DIR, internal_path
+                        )
+                    except ValueError as ex:
+                        logger.error(str(ex))
+                        continue
 
-                        if file:
-                            paths_to_compress_buffer.add_file(file)
-                        elif empty_directory:
-                            paths_to_compress_buffer.add_empty_directory(empty_directory)
+                    if file:
+                        paths_to_compress_buffer.add_file(file)
+                    elif empty_directory:
+                        paths_to_compress_buffer.add_empty_directory(empty_directory)
 
-                if path_idx % 10000 == 0:
-                    db_conn.commit()
+            if path_idx % 10000 == 0:
+                db_conn.commit()
 
         paths_to_compress_buffer.flush()
         tasks = paths_to_compress_buffer.get_tasks()
@@ -174,6 +166,21 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
         )
         db_conn.commit()
 
+        tag_ids = None
+        if clp_io_config.output.tags:
+            db_cursor.executemany(
+                f"INSERT IGNORE INTO {CLP_METADATA_TABLE_PREFIX}tags (tag_name) VALUES (%s)",
+                [(tag,) for tag in clp_io_config.output.tags],
+            )
+            db_conn.commit()
+            db_cursor.execute(
+                f"SELECT tag_id FROM {CLP_METADATA_TABLE_PREFIX}tags WHERE tag_name IN (%s)"
+                % ", ".join(["%s"] * len(clp_io_config.output.tags)),
+                clp_io_config.output.tags,
+            )
+            tag_ids = [tags["tag_id"] for tags in db_cursor.fetchall()]
+            db_conn.commit()
+
         task_instances = []
         for task_idx, task in enumerate(tasks):
             db_cursor.execute(
@@ -184,9 +191,10 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
                 """,
                 (partition_info[task_idx]["clp_paths_to_compress"],),
             )
+            db_conn.commit()
             task["task_id"] = db_cursor.lastrowid
+            task["tag_ids"] = tag_ids
             task_instances.append(compress.s(**task))
-        db_conn.commit()
         tasks_group = celery.group(task_instances)
 
         job = CompressionJob(

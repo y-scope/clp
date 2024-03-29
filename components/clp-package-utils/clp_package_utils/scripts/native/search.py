@@ -14,7 +14,7 @@ import pymongo
 from clp_py_utils.clp_config import Database, ResultsCache, SEARCH_JOBS_TABLE_NAME
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.constants import SearchJobStatus
-from job_orchestration.scheduler.job_config import SearchConfig
+from job_orchestration.scheduler.job_config import AggregationConfig, SearchConfig
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -72,16 +72,35 @@ def create_and_monitor_job_in_db(
     db_config: Database,
     results_cache: ResultsCache,
     wildcard_query: str,
+    tags: str | None,
     begin_timestamp: int | None,
     end_timestamp: int | None,
-    path_filter: str,
+    ignore_case: bool,
+    max_num_results: int,
+    path_filter: str | None,
+    do_count_aggregation: bool | None,
+    count_by_time_bucket_size: int | None,
 ):
     search_config = SearchConfig(
         query_string=wildcard_query,
         begin_timestamp=begin_timestamp,
         end_timestamp=end_timestamp,
+        ignore_case=ignore_case,
+        max_num_results=max_num_results,
         path_filter=path_filter,
     )
+    if do_count_aggregation is not None:
+        search_config.aggregation_config = AggregationConfig(
+            do_count_aggregation=do_count_aggregation
+        )
+    if count_by_time_bucket_size is not None:
+        search_config.aggregation_config = AggregationConfig(
+            count_by_time_bucket_size=count_by_time_bucket_size
+        )
+    if tags:
+        tag_list = [tag.strip().lower() for tag in tags.split(",") if tag]
+        if len(tag_list) > 0:
+            search_config.tags = tag_list
 
     sql_adapter = SQL_Adapter(db_config)
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
@@ -115,17 +134,38 @@ def create_and_monitor_job_in_db(
 
         with pymongo.MongoClient(results_cache.get_uri()) as client:
             search_results_collection = client[results_cache.db_name][str(job_id)]
-            for document in search_results_collection.find():
-                print(f"{document['original_path']}: {document['message']}", end="")
+            if max_num_results <= 0 or do_count_aggregation is not None:
+                cursor = search_results_collection.find()
+            else:
+                cursor = (
+                    search_results_collection.find().sort("timestamp", -1).limit(max_num_results)
+                )
+
+            if count_by_time_bucket_size is not None:
+                for document in cursor:
+                    print(f"timestamp: {document['timestamp']} count: {document['count']}")
+            elif do_count_aggregation is not None:
+                for document in cursor:
+                    print(
+                        f"tags: {document['group_tags']} count: {document['records'][0]['count']}"
+                    )
+            else:
+                for document in cursor:
+                    print(f"{document['original_path']}: {document['message']}", end="")
 
 
 async def do_search(
     db_config: Database,
     results_cache: ResultsCache,
     wildcard_query: str,
+    tags: str | None,
     begin_timestamp: int | None,
     end_timestamp: int | None,
-    path_filter: str,
+    ignore_case: bool,
+    max_num_results: int,
+    path_filter: str | None,
+    do_count_aggregation: bool | None,
+    count_by_time_bucket_size: int | None,
 ):
     db_monitor_task = asyncio.ensure_future(
         run_function_in_process(
@@ -133,9 +173,14 @@ async def do_search(
             db_config,
             results_cache,
             wildcard_query,
+            tags,
             begin_timestamp,
             end_timestamp,
+            ignore_case,
+            max_num_results,
             path_filter,
+            do_count_aggregation,
+            count_by_time_bucket_size,
         )
     )
 
@@ -154,6 +199,9 @@ def main(argv):
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
+        "-t", "--tags", help="Comma-separated list of tags of archives to search."
+    )
+    args_parser.add_argument(
         "--begin-time",
         type=int,
         help="Time range filter lower-bound (inclusive) as milliseconds" " from the UNIX epoch.",
@@ -163,7 +211,30 @@ def main(argv):
         type=int,
         help="Time range filter upper-bound (inclusive) as milliseconds" " from the UNIX epoch.",
     )
+    args_parser.add_argument(
+        "--ignore-case",
+        action="store_true",
+        help="Ignore case distinctions between values in the query and the compressed data.",
+    )
+    args_parser.add_argument(
+        "--max-num-results",
+        "-m",
+        type=int,
+        default=1000,
+        help="Maximum number of latest results to return.",
+    )
     args_parser.add_argument("--file-path", help="File to search.")
+    args_parser.add_argument(
+        "--count",
+        action="store_const",
+        help="Count the number of results.",
+        const=True,
+    )
+    args_parser.add_argument(
+        "--count-by-time",
+        type=int,
+        help="Count the number of results in each time span of the given size (ms).",
+    )
     parsed_args = args_parser.parse_args(argv[1:])
 
     if (
@@ -189,9 +260,14 @@ def main(argv):
             clp_config.database,
             clp_config.results_cache,
             parsed_args.wildcard_query,
+            parsed_args.tags,
             parsed_args.begin_time,
             parsed_args.end_time,
+            parsed_args.ignore_case,
+            parsed_args.max_num_results,
             parsed_args.file_path,
+            parsed_args.count,
+            parsed_args.count_by_time,
         )
     )
 

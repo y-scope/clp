@@ -78,7 +78,7 @@ const deinitStatsDbManager = () => {
  * @returns {Mongo.Cursor}
  */
 Meteor.publish(Meteor.settings.public.StatsCollectionName, async () => {
-    logger.debug(`Subscription '${Meteor.settings.public.SearchResultsCollectionName}'`);
+    logger.debug(`Subscription '${Meteor.settings.public.StatsCollectionName}'`);
 
     await refreshCompressionStats();
 

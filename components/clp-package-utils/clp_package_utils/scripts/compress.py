@@ -42,11 +42,14 @@ def main(argv):
     )
     args_parser.add_argument("paths", metavar="PATH", nargs="*", help="Paths to compress.")
     args_parser.add_argument(
-        "-f", "--input-list", dest="input_list", help="A file listing all paths to compress."
+        "-f", "--path-list", dest="path_list", help="A file listing all paths to compress."
     )
     args_parser.add_argument(
         "--timestamp-key",
         help="The path (e.g. x.y) for the field containing the log event's timestamp.",
+    )
+    args_parser.add_argument(
+        "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
@@ -86,12 +89,7 @@ def main(argv):
         "--mount", str(mounts.clp_home),
     ]
     # fmt: on
-    necessary_mounts = [
-        mounts.input_logs_dir,
-        mounts.data_dir,
-        mounts.logs_dir,
-        mounts.archives_output_dir,
-    ]
+    necessary_mounts = [mounts.input_logs_dir, mounts.data_dir, mounts.logs_dir]
     for mount in necessary_mounts:
         if mount:
             container_start_cmd.append("--mount")
@@ -109,40 +107,33 @@ def main(argv):
     if parsed_args.timestamp_key is not None:
         compress_cmd.append("--timestamp-key")
         compress_cmd.append(parsed_args.timestamp_key)
+    if parsed_args.tags is not None:
+        compress_cmd.append("--tags")
+        compress_cmd.append(parsed_args.tags)
     for path in parsed_args.paths:
         # Resolve path and prefix it with CONTAINER_INPUT_LOGS_ROOT_DIR
         resolved_path = pathlib.Path(path).resolve()
         path = str(CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(resolved_path.anchor))
         compress_cmd.append(path)
-    if parsed_args.input_list is not None:
+    if parsed_args.path_list is not None:
         # Get unused output path
         while True:
-            output_list_filename = f"{uuid.uuid4()}.txt"
-            output_list_path = clp_config.logs_directory / output_list_filename
-            if not output_list_path.exists():
+            container_path_list_filename = f"{uuid.uuid4()}.txt"
+            container_path_list_path = clp_config.logs_directory / container_path_list_filename
+            if not container_path_list_path.exists():
                 break
 
-        try:
-            with open(output_list_path, "w") as output_list:
-                # Validate all paths in input list
-                all_paths_valid = True
-                with open(parsed_args.input_list, "r") as f:
-                    for line in f:
-                        resolved_path = pathlib.Path(line.rstrip()).resolve()
-                        if not resolved_path.is_absolute():
-                            logger.error(f"Invalid relative path in input list: {resolved_path}")
-                            all_paths_valid = False
-                        path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
-                            resolved_path.anchor
-                        )
-                        output_list.write(f"{path}\n")
-                if not all_paths_valid:
-                    raise ValueError("--input-list must only contain absolute paths")
-        finally:
-            output_list_path.unlink()
+        with open(parsed_args.path_list, "r") as path_list_file:
+            with open(container_path_list_path, "w") as container_path_list_file:
+                for line in path_list_file:
+                    resolved_path = pathlib.Path(line.rstrip()).resolve()
+                    path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
+                        resolved_path.anchor
+                    )
+                    container_path_list_file.write(f"{path}\n")
 
-        compress_cmd.append("--input-list")
-        compress_cmd.append(container_clp_config.logs_directory / output_list_filename)
+        compress_cmd.append("--path-list")
+        compress_cmd.append(container_clp_config.logs_directory / container_path_list_filename)
 
     cmd = container_start_cmd + compress_cmd
     subprocess.run(cmd, check=True)

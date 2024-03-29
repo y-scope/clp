@@ -1,5 +1,5 @@
-#ifndef STREAMING_ARCHIVE_METADATADB_HPP
-#define STREAMING_ARCHIVE_METADATADB_HPP
+#ifndef CLP_STREAMING_ARCHIVE_METADATADB_HPP
+#define CLP_STREAMING_ARCHIVE_METADATADB_HPP
 
 #include <memory>
 #include <string>
@@ -167,4 +167,4 @@ private:
 };
 }  // namespace clp::streaming_archive
 
-#endif  // STREAMING_ARCHIVE_METADATADB_HPP
+#endif  // CLP_STREAMING_ARCHIVE_METADATADB_HPP

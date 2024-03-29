@@ -26,4 +26,4 @@ typedef enum {
 } ErrorCode;
 }  // namespace glt
 
-#endif  // GLT_ERROR_CODE_HPP
+#endif  // GLT_ERRORCODE_HPP

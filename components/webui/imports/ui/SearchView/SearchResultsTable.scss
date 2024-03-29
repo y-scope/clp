@@ -32,3 +32,12 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+#search-results-load-sensor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-inline: 10px;
+  padding-bottom: 12px;
+  font-size: 1.3rem;
+}

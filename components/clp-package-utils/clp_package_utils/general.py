@@ -14,6 +14,7 @@ from clp_py_utils.clp_config import (
     DB_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
+    REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
     WEBUI_COMPONENT_NAME,
 )
@@ -108,12 +109,35 @@ def check_dependencies():
         raise EnvironmentError("docker cannot run without superuser privileges (sudo).")
 
 
-def container_exists(container_name):
-    cmd = ["docker", "ps", "-q", "-f", f"name={container_name}"]
+def is_container_running(container_name):
+    # fmt: off
+    cmd = [
+        "docker", "ps",
+        # Only return container IDs
+        "--quiet",
+        "--filter", f"name={container_name}"
+    ]
+    # fmt: on
     proc = subprocess.run(cmd, stdout=subprocess.PIPE)
-    for line in proc.stdout.decode("utf-8"):
-        if line != "":
-            return True
+    if proc.stdout.decode("utf-8"):
+        return True
+
+    return False
+
+
+def is_container_exited(container_name):
+    # fmt: off
+    cmd = [
+        "docker", "ps",
+        # Only return container IDs
+        "--quiet",
+        "--filter", f"name={container_name}",
+        "--filter", "status=exited"
+    ]
+    # fmt: on
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE)
+    if proc.stdout.decode("utf-8"):
+        return True
 
     return False
 
@@ -227,6 +251,7 @@ def validate_and_load_config_file(
         clp_config = CLPConfig()
 
     clp_config.make_config_paths_absolute(clp_home)
+    clp_config.load_execution_container_name()
 
     # Make data and logs directories node-specific
     hostname = socket.gethostname()
@@ -327,6 +352,20 @@ def validate_redis_config(
         )
 
     validate_port(f"{REDIS_COMPONENT_NAME}.port", clp_config.redis.host, clp_config.redis.port)
+
+
+def validate_reducer_config(clp_config: CLPConfig, logs_dir: pathlib.Path, num_workers: int):
+    try:
+        validate_path_could_be_dir(logs_dir)
+    except ValueError as ex:
+        raise ValueError(f"{REDUCER_COMPONENT_NAME} logs directory is invalid: {ex}")
+
+    for i in range(0, num_workers):
+        validate_port(
+            f"{REDUCER_COMPONENT_NAME}.port",
+            clp_config.reducer.host,
+            clp_config.reducer.base_port + i,
+        )
 
 
 def validate_results_cache_config(

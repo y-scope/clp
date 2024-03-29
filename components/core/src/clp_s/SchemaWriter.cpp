@@ -3,24 +3,6 @@
 #include <utility>
 
 namespace clp_s {
-void SchemaWriter::open(std::string path, int compression_level) {
-    m_path = std::move(path);
-    m_compression_level = compression_level;
-}
-
-size_t SchemaWriter::close() {
-    m_compressor.close();
-    size_t compressed_size = m_file_writer.get_pos();
-    m_file_writer.close();
-
-    for (auto i : m_columns) {
-        delete i;
-    }
-
-    m_columns.clear();
-    return compressed_size;
-}
-
 void SchemaWriter::append_column(BaseColumnWriter* column_writer) {
     m_columns.push_back(column_writer);
 }
@@ -39,14 +21,9 @@ size_t SchemaWriter::append_message(ParsedMessage& message) {
     return total_size;
 }
 
-void SchemaWriter::store() {
-    m_file_writer.open(m_path, FileWriter::OpenMode::CreateForWriting);
-    m_file_writer.write_numeric_value(m_num_messages);
-    m_compressor.open(m_file_writer, m_compression_level);
-
+void SchemaWriter::store(ZstdCompressor& compressor) {
     for (auto& writer : m_columns) {
-        writer->store(m_compressor);
-        //        compressor_.Write(writer->GetData(), writer->GetSize());
+        writer->store(compressor);
     }
 }
 

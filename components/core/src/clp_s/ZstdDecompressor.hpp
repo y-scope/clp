@@ -135,11 +135,7 @@ private:
 
 template <typename ValueType>
 ErrorCode ZstdDecompressor::try_read_numeric_value(ValueType& value) {
-    ErrorCode error_code = try_read_exact_length(reinterpret_cast<char*>(&value), sizeof(value));
-    if (ErrorCodeSuccess != error_code) {
-        return error_code;
-    }
-    return ErrorCodeSuccess;
+    return try_read_exact_length(reinterpret_cast<char*>(&value), sizeof(value));
 }
 }  // namespace clp_s
 

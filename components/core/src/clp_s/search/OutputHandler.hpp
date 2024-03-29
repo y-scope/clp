@@ -1,6 +1,10 @@
 #ifndef CLP_S_SEARCH_OUTPUTHANDLER_HPP
 #define CLP_S_SEARCH_OUTPUTHANDLER_HPP
 
+#include <netdb.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
 #include <queue>
 #include <string>
 
@@ -9,7 +13,10 @@
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/instance.hpp>
 #include <mongocxx/uri.hpp>
+#include <spdlog/spdlog.h>
 
+#include "../../reducer/Pipeline.hpp"
+#include "../../reducer/RecordGroupIterator.hpp"
 #include "../Defs.hpp"
 #include "../TraceableException.hpp"
 
@@ -20,8 +27,9 @@ namespace clp_s::search {
 class OutputHandler {
 public:
     // Constructors
-    explicit OutputHandler(bool should_output_timestamp)
-            : m_should_output_timestamp(should_output_timestamp){};
+    explicit OutputHandler(bool should_output_timestamp, bool should_marshal_records)
+            : m_should_output_timestamp(should_output_timestamp),
+              m_should_marshal_records(should_marshal_records){};
 
     // Destructor
     virtual ~OutputHandler() = default;
@@ -41,14 +49,24 @@ public:
     virtual void write(std::string const& message) = 0;
 
     /**
-     * Flushes the output handler.
+     * Flushes the output handler after each table that gets searched.
+     * @return ErrorCodeSuccess on success or relevant error code on error
      */
-    virtual void flush() = 0;
+    virtual ErrorCode flush() { return ErrorCode::ErrorCodeSuccess; }
+
+    /**
+     * Performs any final operations after all tables have been searched.
+     * @return ErrorCodeSuccess on success or relevant error code on error
+     */
+    virtual ErrorCode finish() { return ErrorCode::ErrorCodeSuccess; }
 
     [[nodiscard]] bool should_output_timestamp() const { return m_should_output_timestamp; }
 
-protected:
+    [[nodiscard]] bool should_marshal_records() const { return m_should_marshal_records; }
+
+private:
     bool m_should_output_timestamp;
+    bool m_should_marshal_records;
 };
 
 /**
@@ -58,7 +76,7 @@ class StandardOutputHandler : public OutputHandler {
 public:
     // Constructors
     explicit StandardOutputHandler(bool should_output_timestamp = false)
-            : OutputHandler(should_output_timestamp) {}
+            : OutputHandler(should_output_timestamp, true) {}
 
     // Methods inherited from OutputHandler
     void write(std::string const& message, epochtime_t timestamp) override {
@@ -66,8 +84,55 @@ public:
     }
 
     void write(std::string const& message) override { printf("%s", message.c_str()); }
+};
 
-    void flush() override {}
+/**
+ * Output handler that writes to a network destination.
+ */
+class NetworkOutputHandler : public OutputHandler {
+public:
+    // Types
+    class OperationFailed : public TraceableException {
+    public:
+        // Constructors
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
+    };
+
+    // Constructors
+    explicit NetworkOutputHandler(
+            std::string const& host,
+            int port,
+            bool should_output_timestamp = false
+    );
+
+    // Destructor
+    ~NetworkOutputHandler() override {
+        if (-1 != m_socket_fd) {
+            close(m_socket_fd);
+        }
+    }
+
+    // Methods inherited from OutputHandler
+    void write(std::string const& message, epochtime_t timestamp) override {
+        std::string message_with_timestamp(std::to_string(timestamp) + " " + message);
+        if (-1
+            == send(m_socket_fd, message_with_timestamp.c_str(), message_with_timestamp.size(), 0))
+        {
+            throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
+        }
+    }
+
+    void write(std::string const& message) override {
+        if (-1 == send(m_socket_fd, message.c_str(), message.size(), 0)) {
+            throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
+        }
+    }
+
+private:
+    std::string m_host;
+    std::string m_port;
+    int m_socket_fd;
 };
 
 /**
@@ -114,7 +179,12 @@ public:
     );
 
     // Methods inherited from OutputHandler
-    void flush() override;
+    /**
+     * Flushes the output handler after each table that gets searched.
+     * @return ErrorCodeSuccess on success
+     * @return ErrorCodeFailureDbBulkWrite on failure to write results to the results cache
+     */
+    ErrorCode flush() override;
 
     void write(std::string const& message, epochtime_t timestamp) override;
 
@@ -131,6 +201,64 @@ private:
             std::vector<std::unique_ptr<QueryResult>>,
             QueryResultGreaterTimestampComparator>
             m_latest_results;
+};
+
+/**
+ * Output handler that performs a count aggregation and sends the results to a reducer.
+ */
+class CountOutputHandler : public OutputHandler {
+public:
+    // Constructors
+    CountOutputHandler(int reducer_socket_fd);
+
+    // Methods inherited from OutputHandler
+    void write(std::string const& message, epochtime_t timestamp) override {}
+
+    void write(std::string const& message) override;
+
+    /**
+     * Flushes the count.
+     * @return ErrorCodeSuccess on success
+     * @return ErrorCodeFailureNetwork on network error
+     */
+    ErrorCode finish() override;
+
+private:
+    int m_reducer_socket_fd;
+    reducer::Pipeline m_pipeline;
+};
+
+/**
+ * Output handler that performs a count aggregation bucketed by time and sends the results to a
+ * reducer.
+ */
+class CountByTimeOutputHandler : public OutputHandler {
+public:
+    // Constructors
+    CountByTimeOutputHandler(int reducer_socket_fd, int64_t count_by_time_bucket_size)
+            : OutputHandler{true, false},
+              m_reducer_socket_fd{reducer_socket_fd},
+              m_count_by_time_bucket_size{count_by_time_bucket_size} {}
+
+    // Methods inherited from OutputHandler
+    void write(std::string const& message, epochtime_t timestamp) override {
+        int64_t bucket = (timestamp / m_count_by_time_bucket_size) * m_count_by_time_bucket_size;
+        m_bucket_counts[bucket] += 1;
+    }
+
+    void write(std::string const& message) override {}
+
+    /**
+     * Flushes the counts.
+     * @return ErrorCodeSuccess on success
+     * @return ErrorCodeFailureNetwork on network error
+     */
+    ErrorCode finish() override;
+
+private:
+    int m_reducer_socket_fd;
+    std::map<int64_t, int64_t> m_bucket_counts;
+    int64_t m_count_by_time_bucket_size;
 };
 }  // namespace clp_s::search
 

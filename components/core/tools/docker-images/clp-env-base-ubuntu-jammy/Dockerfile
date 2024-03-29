@@ -1,4 +1,4 @@
-FROM ubuntu:jammy
+FROM ubuntu:jammy AS BASE
 
 WORKDIR /root
 
@@ -7,6 +7,10 @@ ADD ./tools/scripts/lib_install ./tools/scripts/lib_install
 
 RUN ./tools/scripts/lib_install/ubuntu-jammy/install-all.sh
 
-# Reset the working directory so that it's accessible by any user who runs the
-# container
-WORKDIR /
+# Remove cached files
+RUN apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Flatten the image
+FROM scratch
+COPY --from=BASE / /

@@ -1,6 +1,28 @@
 #include "OutputHandler.hpp"
 
+#include <sstream>
+
+#include <spdlog/spdlog.h>
+
+#include "../../clp/networking/socket_utils.hpp"
+#include "../../reducer/CountOperator.hpp"
+#include "../../reducer/network_utils.hpp"
+#include "../../reducer/Record.hpp"
+
 namespace clp_s::search {
+NetworkOutputHandler::NetworkOutputHandler(
+        std::string const& host,
+        int port,
+        bool should_output_timestamp
+)
+        : OutputHandler(should_output_timestamp, true) {
+    m_socket_fd = clp::networking::connect_to_server(host, std::to_string(port));
+    if (-1 == m_socket_fd) {
+        SPDLOG_ERROR("Failed to connect to the server, errno={}", errno);
+        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
+    }
+}
+
 ResultsCacheOutputHandler::ResultsCacheOutputHandler(
         std::string const& uri,
         std::string const& collection,
@@ -8,7 +30,7 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
         uint64_t max_num_results,
         bool should_output_timestamp
 )
-        : OutputHandler(should_output_timestamp),
+        : OutputHandler(should_output_timestamp, true),
           m_batch_size(batch_size),
           m_max_num_results(max_num_results) {
     try {
@@ -21,7 +43,7 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
     }
 }
 
-void ResultsCacheOutputHandler::flush() {
+ErrorCode ResultsCacheOutputHandler::flush() {
     size_t count = 0;
     while (false == m_latest_results.empty()) {
         auto result = std::move(*m_latest_results.top());
@@ -41,7 +63,7 @@ void ResultsCacheOutputHandler::flush() {
                 count = 0;
             }
         } catch (mongocxx::exception const& e) {
-            throw OperationFailed(ErrorCode::ErrorCodeFailureDbBulkWrite, __FILE__, __LINE__);
+            return ErrorCode::ErrorCodeFailureDbBulkWrite;
         }
     }
 
@@ -51,8 +73,9 @@ void ResultsCacheOutputHandler::flush() {
             m_results.clear();
         }
     } catch (mongocxx::exception const& e) {
-        throw OperationFailed(ErrorCode::ErrorCodeFailureDbBulkWrite, __FILE__, __LINE__);
+        return ErrorCode::ErrorCodeFailureDbBulkWrite;
     }
+    return ErrorCode::ErrorCodeSuccess;
 }
 
 void ResultsCacheOutputHandler::write(std::string const& message, epochtime_t timestamp) {
@@ -63,4 +86,40 @@ void ResultsCacheOutputHandler::write(std::string const& message, epochtime_t ti
         m_latest_results.emplace(std::make_unique<QueryResult>("", message, timestamp));
     }
 }
+
+CountOutputHandler::CountOutputHandler(int reducer_socket_fd)
+        : OutputHandler(false, false),
+          m_reducer_socket_fd(reducer_socket_fd),
+          m_pipeline(reducer::PipelineInputMode::InterStage) {
+    m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
+}
+
+void CountOutputHandler::write(std::string const& message) {
+    m_pipeline.push_record(reducer::EmptyRecord{});
+}
+
+ErrorCode CountOutputHandler::finish() {
+    if (false
+        == reducer::send_pipeline_results(m_reducer_socket_fd, std::move(m_pipeline.finish())))
+    {
+        return ErrorCode::ErrorCodeFailureNetwork;
+    }
+    return ErrorCode::ErrorCodeSuccess;
+}
+
+ErrorCode CountByTimeOutputHandler::finish() {
+    if (false
+        == reducer::send_pipeline_results(
+                m_reducer_socket_fd,
+                std::make_unique<reducer::Int64Int64MapRecordGroupIterator>(
+                        m_bucket_counts,
+                        reducer::CountOperator::cRecordElementKey
+                )
+        ))
+    {
+        return ErrorCode::ErrorCodeFailureNetwork;
+    }
+    return ErrorCode::ErrorCodeSuccess;
+}
+
 }  // namespace clp_s::search

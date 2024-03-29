@@ -2,14 +2,13 @@
   &-controls-drawer {
     background-color: #efefef;
 
-    padding: 1rem 0 0.5rem 0;
     position: relative;
-
-    width: 100%;
   }
 
   &-control-label {
     color: #666;
+
+    min-width: 9rem;
   }
 }
 

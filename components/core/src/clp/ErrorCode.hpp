@@ -22,8 +22,9 @@ typedef enum {
     ErrorCode_Failure,
     ErrorCode_Failure_Metadata_Corrupted,
     ErrorCode_MetadataCorrupted,
-    ErrorCode_Failure_DB_Bulk_Write
+    ErrorCode_Failure_DB_Bulk_Write,
+    ErrorCode_Failure_Network,
 } ErrorCode;
 }  // namespace clp
 
-#endif  // CLP_ERROR_CODE_HPP
+#endif  // CLP_ERRORCODE_HPP

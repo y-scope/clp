@@ -1,13 +1,17 @@
 #include "ArchiveWriter.hpp"
 
+#include <json/single_include/nlohmann/json.hpp>
+
+#include "archive_constants.hpp"
+#include "Defs.hpp"
 #include "SchemaTree.hpp"
 
 namespace clp_s {
 void ArchiveWriter::open(ArchiveWriterOption const& option) {
-    m_id = option.id;
+    m_id = boost::uuids::to_string(option.id);
     m_compression_level = option.compression_level;
-    auto archive_path
-            = boost::filesystem::path(option.archives_dir) / boost::uuids::to_string(m_id);
+    m_print_archive_stats = option.print_archive_stats;
+    auto archive_path = boost::filesystem::path(option.archives_dir) / m_id;
 
     boost::system::error_code boost_error_code;
     bool path_exists = boost::filesystem::exists(archive_path, boost_error_code);
@@ -21,43 +25,46 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
         throw OperationFailed(ErrorCodeErrno, __FILENAME__, __LINE__);
     }
 
-    m_encoded_messages_dir = m_archive_path + "/encoded_messages";
-    if (false == boost::filesystem::create_directory(m_encoded_messages_dir)) {
-        throw OperationFailed(ErrorCodeErrno, __FILENAME__, __LINE__);
-    }
-
-    std::string var_dict_path = m_archive_path + "/var.dict";
+    std::string var_dict_path = m_archive_path + constants::cArchiveVarDictFile;
     m_var_dict = std::make_shared<VariableDictionaryWriter>();
     m_var_dict->open(var_dict_path, m_compression_level, UINT64_MAX);
 
-    std::string log_dict_path = m_archive_path + "/log.dict";
+    std::string log_dict_path = m_archive_path + constants::cArchiveLogDictFile;
     m_log_dict = std::make_shared<LogTypeDictionaryWriter>();
     m_log_dict->open(log_dict_path, m_compression_level, UINT64_MAX);
 
-    std::string array_dict_path = m_archive_path + "/array.dict";
+    std::string array_dict_path = m_archive_path + constants::cArchiveArrayDictFile;
     m_array_dict = std::make_shared<LogTypeDictionaryWriter>();
     m_array_dict->open(array_dict_path, m_compression_level, UINT64_MAX);
 
-    std::string timestamp_local_dict_path = m_archive_path + "/timestamp.dict";
-    m_timestamp_dict->open_local(timestamp_local_dict_path, m_compression_level);
+    std::string timestamp_dict_path = m_archive_path + constants::cArchiveTimestampDictFile;
+    m_timestamp_dict = std::make_shared<TimestampDictionaryWriter>();
+    m_timestamp_dict->open(timestamp_dict_path, m_compression_level);
 }
 
-size_t ArchiveWriter::close() {
-    size_t compressed_size{0};
-    compressed_size += m_var_dict->close();
-    compressed_size += m_log_dict->close();
-    compressed_size += m_array_dict->close();
-    compressed_size += m_timestamp_dict->close_local();
+void ArchiveWriter::close() {
+    m_compressed_size += m_var_dict->close();
+    m_compressed_size += m_log_dict->close();
+    m_compressed_size += m_array_dict->close();
+    m_compressed_size += m_timestamp_dict->close();
+    m_compressed_size += m_schema_tree.store(m_archive_path, m_compression_level);
+    m_compressed_size += m_schema_map.store(m_archive_path, m_compression_level);
+    m_compressed_size += store_tables();
 
-    for (auto& i : m_schema_id_to_writer) {
-        i.second->store();
-        compressed_size += i.second->close();
-        delete i.second;
+    if (m_metadata_db) {
+        update_metadata_db();
     }
 
-    m_schema_id_to_writer.clear();
+    if (m_print_archive_stats) {
+        print_archive_stats();
+    }
+
+    m_id_to_schema_writer.clear();
+    m_schema_tree.clear();
+    m_schema_map.clear();
     m_encoded_message_size = 0UL;
-    return compressed_size;
+    m_uncompressed_size = 0UL;
+    m_compressed_size = 0UL;
 }
 
 void ArchiveWriter::append_message(
@@ -66,17 +73,13 @@ void ArchiveWriter::append_message(
         ParsedMessage& message
 ) {
     SchemaWriter* schema_writer;
-    auto it = m_schema_id_to_writer.find(schema_id);
-    if (it != m_schema_id_to_writer.end()) {
+    auto it = m_id_to_schema_writer.find(schema_id);
+    if (it != m_id_to_schema_writer.end()) {
         schema_writer = it->second;
     } else {
         schema_writer = new SchemaWriter();
-        schema_writer->open(
-                m_encoded_messages_dir + "/" + std::to_string(schema_id),
-                m_compression_level
-        );
         initialize_schema_writer(schema_writer, schema);
-        m_schema_id_to_writer[schema_id] = schema_writer;
+        m_id_to_schema_writer[schema_id] = schema_writer;
     }
 
     m_encoded_message_size += schema_writer->append_message(message);
@@ -89,7 +92,7 @@ size_t ArchiveWriter::get_data_size() {
 
 void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const& schema) {
     for (int32_t id : schema) {
-        auto node = m_schema_tree->get_node(id);
+        auto node = m_schema_tree.get_node(id);
         switch (node->get_type()) {
             case NodeType::INTEGER:
                 writer->append_column(new Int64ColumnWriter(id));
@@ -114,8 +117,68 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
                 break;
             case NodeType::OBJECT:
             case NodeType::NULLVALUE:
+            case NodeType::UNKNOWN:
                 break;
         }
     }
+}
+
+size_t ArchiveWriter::store_tables() {
+    size_t compressed_size = 0;
+    m_tables_file_writer.open(
+            m_archive_path + constants::cArchiveTablesFile,
+            FileWriter::OpenMode::CreateForWriting
+    );
+    m_table_metadata_file_writer.open(
+            m_archive_path + constants::cArchiveTableMetadataFile,
+            FileWriter::OpenMode::CreateForWriting
+    );
+    m_table_metadata_compressor.open(m_table_metadata_file_writer, m_compression_level);
+    m_table_metadata_compressor.write_numeric_value(m_id_to_schema_writer.size());
+    for (auto& i : m_id_to_schema_writer) {
+        m_table_metadata_compressor.write_numeric_value(i.first);
+        m_table_metadata_compressor.write_numeric_value(i.second->get_num_messages());
+        m_table_metadata_compressor.write_numeric_value(m_tables_file_writer.get_pos());
+
+        m_tables_compressor.open(m_tables_file_writer, m_compression_level);
+        i.second->store(m_tables_compressor);
+        m_tables_compressor.close();
+        delete i.second;
+    }
+    m_table_metadata_compressor.close();
+
+    compressed_size += m_table_metadata_file_writer.get_pos();
+    compressed_size += m_tables_file_writer.get_pos();
+
+    m_table_metadata_file_writer.close();
+    m_tables_file_writer.close();
+
+    return compressed_size;
+}
+
+void ArchiveWriter::update_metadata_db() {
+    m_metadata_db->open();
+    clp::streaming_archive::ArchiveMetadata metadata(
+            cArchiveFormatDevelopmentVersionFlag,
+            "",
+            0ULL
+    );
+    metadata.increment_static_compressed_size(m_compressed_size);
+    metadata.increment_static_uncompressed_size(m_uncompressed_size);
+    metadata.expand_time_range(
+            m_timestamp_dict->get_begin_timestamp(),
+            m_timestamp_dict->get_end_timestamp()
+    );
+
+    m_metadata_db->add_archive(m_id, metadata);
+    m_metadata_db->close();
+}
+
+void ArchiveWriter::print_archive_stats() {
+    nlohmann::json json_msg;
+    json_msg["id"] = m_id;
+    json_msg["uncompressed_size"] = m_uncompressed_size;
+    json_msg["size"] = m_compressed_size;
+    std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore) << std::endl;
 }
 }  // namespace clp_s

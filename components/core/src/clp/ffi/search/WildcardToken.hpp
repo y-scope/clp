@@ -1,5 +1,5 @@
-#ifndef CLP_FFI_WILDCARDTOKEN_HPP
-#define CLP_FFI_WILDCARDTOKEN_HPP
+#ifndef CLP_FFI_SEARCH_WILDCARDTOKEN_HPP
+#define CLP_FFI_SEARCH_WILDCARDTOKEN_HPP
 
 #include <vector>
 
@@ -76,4 +76,4 @@ private:
 };
 }  // namespace clp::ffi::search
 
-#endif  // CLP_FFI_WILDCARDTOKEN_HPP
+#endif  // CLP_FFI_SEARCH_WILDCARDTOKEN_HPP

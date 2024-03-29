@@ -39,15 +39,7 @@ public:
     /**
      * Reads any new entries from disk
      */
-    void read_new_entries(bool local = false);
-
-    /**
-     * Reads new entries from a *local* timestamp dictionary
-     *
-     * Local timestamp dictionaries contain only range indices,
-     * and have no timestamp pattern mappings
-     */
-    void read_local_entries();
+    void read_new_entries();
 
     /**
      * Gets the string encoding for a given epoch and format ID

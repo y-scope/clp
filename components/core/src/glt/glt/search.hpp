@@ -1,5 +1,5 @@
-#ifndef GLT_SEARCH_HPP
-#define GLT_SEARCH_HPP
+#ifndef GLT_GLT_SEARCH_HPP
+#define GLT_GLT_SEARCH_HPP
 
 #include "CommandLineArguments.hpp"
 
@@ -12,4 +12,4 @@ namespace glt::glt {
 bool search(CommandLineArguments& command_line_args);
 }  // namespace glt::glt
 
-#endif  // GLT_SEARCH_HPP
+#endif  // GLT_GLT_SEARCH_HPP

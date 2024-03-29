@@ -1,82 +1,119 @@
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useRef} from "react";
 
 import {faSort, faSortDown, faSortUp} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {Spinner, Table} from "react-bootstrap";
-import ReactVisibilitySensor from "react-visibility-sensor";
 
 import "./SearchResultsTable.scss";
+import {
+    MONGO_SORT_ORDER,
+    SEARCH_RESULTS_FIELDS,
+} from "../../api/search/constants";
 
 
 /**
- * The initial visible results limit.
- *
- * @type {number}
- * @constant
+ * The interval, in milliseconds, at which the search results load sensor should poll for updates.
  */
-const VISIBLE_RESULTS_LIMIT_INITIAL = 10;
+const SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MS = 200;
+
 /**
- * The increment value for the visible results limit.
+ * Senses if the user has requested to load more results by scrolling until
+ * this element becomes partially visible.
  *
- * @type {number}
- * @constant
+ * @param {boolean} hasMoreResults
+ * @param {function} onLoadMoreResults
+ * @returns {JSX.Element}
  */
-const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
+const SearchResultsLoadSensor = ({
+    hasMoreResults,
+    onLoadMoreResults,
+}) => {
+    const loadingBlockRef = useRef(null);
+    const loadIntervalRef = useRef(null);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                loadIntervalRef.current = setInterval(
+                    onLoadMoreResults,
+                    SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MS,
+                );
+            } else if (null !== loadIntervalRef.current) {
+                clearInterval(loadIntervalRef.current);
+                loadIntervalRef.current = null;
+            }
+        });
+
+        observer.observe(loadingBlockRef.current);
+
+        return () => {
+            if (null !== loadIntervalRef.current) {
+                clearInterval(loadIntervalRef.current);
+                loadIntervalRef.current = null;
+            }
+            observer.disconnect();
+        };
+    }, [onLoadMoreResults]);
+
+    return <div
+        id={"search-results-load-sensor"}
+        ref={loadingBlockRef}
+        style={{
+            visibility: (true === hasMoreResults) ?
+                "visible" :
+                "hidden",
+        }}
+    >
+        <Spinner animation="border" variant="primary" size="sm"/>
+        <span>Loading...</span>
+    </div>;
+};
 
 /**
  * Represents a table component to display search results.
  *
- * @param {Object} searchResults - The array of search results.
- * @param {number} maxLinesPerResult - The maximum number of lines to show per search result.
- * @param {Object} fieldToSortBy - The field to sort the search results by.
- * @param {function} setFieldToSortBy - The function to set the field to sort by.
- * @param {number} numResultsOnServer - The total number of search results on the server.
- * @param {number} visibleSearchResultsLimit - The number of search results currently visible.
- * @param {function} setVisibleSearchResultsLimit - The function to set the number of visible search results.
- * @returns {JSX.Element} - The rendered SearchResultsTable component.
+ * @param {Object} searchResults
+ * @param {number} maxLinesPerResult
+ * @param {Object} fieldToSortBy
+ * @param {function} setFieldToSortBy
+ * @param {boolean} hasMoreResults
+ * @param {function} onLoadMoreResults
+ * @returns {JSX.Element}
  */
 const SearchResultsTable = ({
     searchResults,
     maxLinesPerResult,
     fieldToSortBy,
     setFieldToSortBy,
-    numResultsOnServer,
-    visibleSearchResultsLimit,
-    setVisibleSearchResultsLimit,
+    hasMoreResults,
+    onLoadMoreResults,
 }) => {
-    const [visibilitySensorVisible, setVisibilitySensorVisible] = useState(false);
-
-    useEffect(() => {
-        if (true === visibilitySensorVisible && visibleSearchResultsLimit <= numResultsOnServer) {
-            setVisibleSearchResultsLimit(
-                visibleSearchResultsLimit + VISIBLE_RESULTS_LIMIT_INCREMENT);
+    const getSortIcon = (fieldName) => {
+        if (fieldName === fieldToSortBy.name) {
+            return (MONGO_SORT_ORDER.ASCENDING === fieldToSortBy.direction) ?
+                faSortUp :
+                faSortDown;
         }
-    }, [visibilitySensorVisible, numResultsOnServer]);
 
-    const getSortIcon = (fieldToSortBy, fieldName) => {
-        if (fieldToSortBy && fieldName === fieldToSortBy.name) {
-            return (1 === fieldToSortBy.direction ? faSortDown : faSortUp);
-        } else {
-            return faSort;
-        }
+        return faSort;
     };
 
     const toggleSortDirection = (event) => {
-        const columnName = event.currentTarget.dataset.columnName;
-        if (null === fieldToSortBy || fieldToSortBy.name !== columnName) {
+        const {columnName} = event.currentTarget.dataset;
+        if (fieldToSortBy.name !== columnName) {
             setFieldToSortBy({
                 name: columnName,
-                direction: 1,
+                direction: (SEARCH_RESULTS_FIELDS.TIMESTAMP === columnName) ?
+                    MONGO_SORT_ORDER.DESCENDING :
+                    MONGO_SORT_ORDER.ASCENDING,
             });
-        } else if (1 === fieldToSortBy.direction) {
-            // Switch to descending
+        } else {
             setFieldToSortBy({
                 name: columnName,
-                direction: -1,
+                direction: (MONGO_SORT_ORDER.ASCENDING === fieldToSortBy.direction) ?
+                    MONGO_SORT_ORDER.DESCENDING :
+                    MONGO_SORT_ORDER.ASCENDING,
             });
-        } else if (-1 === fieldToSortBy.direction) {
-            // Switch to unsorted
-            setFieldToSortBy(null);
         }
     };
 
@@ -104,12 +141,14 @@ const SearchResultsTable = ({
             <tr>
                 <th style={{"width": "144px"}}
                     className={"search-results-th search-results-th-sortable"}
-                    data-column-name={"timestamp"}
-                    key={"timestamp"}
+                    data-column-name={SEARCH_RESULTS_FIELDS.TIMESTAMP}
+                    key={SEARCH_RESULTS_FIELDS.TIMESTAMP}
                     onClick={toggleSortDirection}
                 >
                     <div className={"search-results-table-header"}>
-                        <FontAwesomeIcon icon={getSortIcon(fieldToSortBy, "timestamp")}/> Timestamp
+                        <FontAwesomeIcon
+                            icon={getSortIcon(SEARCH_RESULTS_FIELDS.TIMESTAMP)}/>
+                        <span> Timestamp</span>
                     </div>
                 </th>
                 <th className={"search-results-th"} key={"message"}>
@@ -123,25 +162,10 @@ const SearchResultsTable = ({
             {rows}
             </tbody>
         </Table>
-        <ReactVisibilitySensor
-            onChange={setVisibilitySensorVisible}
-            scrollCheck={true}
-            scrollDelay={200}
-            intervalCheck={true}
-            intervalDelay={200}
-            partialVisibility={true}
-            resizeCheck={true}
-        >
-            <div style={{
-                fontSize: "1.4em",
-                visibility: visibilitySensorVisible &&
-                (visibleSearchResultsLimit <= numResultsOnServer) ? "visible" : "hidden",
-            }}>
-                <Spinner animation="border" variant="primary" size="sm" style={{margin: "5px"}}/>
-                <span>Loading</span>
-            </div>
-        </ReactVisibilitySensor>
+        <SearchResultsLoadSensor
+            hasMoreResults={hasMoreResults}
+            onLoadMoreResults={onLoadMoreResults}/>
     </div>);
 };
 
-export {SearchResultsTable, VISIBLE_RESULTS_LIMIT_INITIAL};
+export default SearchResultsTable;

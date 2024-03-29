@@ -6,8 +6,6 @@
 #include <string>
 #include <utility>
 
-#include <boost/uuid/random_generator.hpp>
-#include <boost/uuid/uuid_io.hpp>
 #include <json/single_include/nlohmann/json.hpp>
 #include <mongocxx/instance.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
@@ -15,6 +13,7 @@
 
 #include "../clp/GlobalMySQLMetadataDB.hpp"
 #include "../clp/streaming_archive/ArchiveMetadata.hpp"
+#include "../reducer/network_utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "Defs.hpp"
 #include "JsonConstructor.hpp"
@@ -58,21 +57,20 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
 /**
  * Searches the given archive.
  * @param command_line_arguments
- * @param archive_dir
+ * @param archive_reader
  * @param expr A copy of the search AST which may be modified
+ * @param reducer_socket_fd
  * @return Whether the search succeeded
  */
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
-        std::string const& archive_dir,
-        std::shared_ptr<Expression> expr
+        std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
+        std::shared_ptr<Expression> expr,
+        int reducer_socket_fd
 );
 
 bool compress(CommandLineArguments const& command_line_arguments) {
-    boost::uuids::random_generator generator;
-    auto archive_id = boost::uuids::to_string(generator());
     auto archives_dir = std::filesystem::path(command_line_arguments.get_archives_dir());
-    auto archive_path = archives_dir / archive_id;
 
     // Create output directory in case it doesn't exist
     try {
@@ -86,31 +84,19 @@ bool compress(CommandLineArguments const& command_line_arguments) {
         return false;
     }
 
-    clp_s::JsonParserOption option;
+    clp_s::JsonParserOption option{};
     option.file_paths = command_line_arguments.get_file_paths();
-    option.archives_dir = archive_path.string();
+    option.archives_dir = archives_dir.string();
     option.target_encoded_size = command_line_arguments.get_target_encoded_size();
+    option.max_document_size = command_line_arguments.get_max_document_size();
     option.compression_level = command_line_arguments.get_compression_level();
     option.timestamp_key = command_line_arguments.get_timestamp_key();
-
-    clp_s::JsonParser parser(option);
-    parser.parse();
-    parser.store();
-    parser.close();
-
-    if (command_line_arguments.print_archive_stats()) {
-        nlohmann::json json_msg;
-        json_msg["id"] = archive_id;
-        json_msg["uncompressed_size"] = parser.get_uncompressed_size();
-        json_msg["size"] = parser.get_compressed_size();
-        std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
-                  << std::endl;
-    }
+    option.print_archive_stats = command_line_arguments.print_archive_stats();
 
     auto const& db_config_container = command_line_arguments.get_metadata_db_config();
     if (db_config_container.has_value()) {
         auto const& db_config = db_config_container.value();
-        clp::GlobalMySQLMetadataDB metadata_db(
+        option.metadata_db = std::make_shared<clp::GlobalMySQLMetadataDB>(
                 db_config.get_metadata_db_host(),
                 db_config.get_metadata_db_port(),
                 db_config.get_metadata_db_username(),
@@ -118,38 +104,31 @@ bool compress(CommandLineArguments const& command_line_arguments) {
                 db_config.get_metadata_db_name(),
                 db_config.get_metadata_table_prefix()
         );
-
-        clp::streaming_archive::ArchiveMetadata metadata(
-                cArchiveFormatDevelopmentVersionFlag,
-                "",
-                0ULL
-        );
-        metadata.increment_static_compressed_size(parser.get_compressed_size());
-        metadata.increment_static_uncompressed_size(parser.get_uncompressed_size());
-        metadata.expand_time_range(parser.get_begin_timestamp(), parser.get_end_timestamp());
-        metadata_db.open();
-        metadata_db.add_archive(archive_id, metadata);
-        metadata_db.close();
     }
 
+    clp_s::JsonParser parser(option);
+    if (false == parser.parse()) {
+        SPDLOG_ERROR("Encountered error while parsing input");
+        return false;
+    }
+    parser.store();
     return true;
 }
 
 void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_option) {
     clp_s::JsonConstructor constructor(json_constructor_option);
-    constructor.construct();
     constructor.store();
-    constructor.close();
 }
 
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
-        std::string const& archive_dir,
-        std::shared_ptr<Expression> expr
+        std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
+        std::shared_ptr<Expression> expr,
+        int reducer_socket_fd
 ) {
     auto const& query = command_line_arguments.get_query();
 
-    auto timestamp_dict = clp_s::ReaderUtils::read_timestamp_dictionary(archive_dir);
+    auto timestamp_dict = archive_reader->read_timestamp_dictionary();
     AddTimestampConditions add_timestamp_conditions(
             timestamp_dict->get_authoritative_timestamp_tokenized_column(),
             command_line_arguments.get_search_begin_ts(),
@@ -192,41 +171,65 @@ bool search_archive(
         return true;
     }
 
-    auto schema_tree = clp_s::ReaderUtils::read_schema_tree(archive_dir);
-    auto schemas = clp_s::ReaderUtils::read_schemas(archive_dir);
-
     // Narrow against schemas
-    SchemaMatch match_pass(schema_tree, schemas);
+    SchemaMatch match_pass(archive_reader->get_schema_tree(), archive_reader->get_schema_map());
     if (expr = match_pass.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
         SPDLOG_INFO("No matching schemas for query '{}'", query);
         return true;
     }
 
     std::unique_ptr<OutputHandler> output_handler;
-    if (command_line_arguments.get_mongodb_enabled()) {
-        output_handler = std::make_unique<ResultsCacheOutputHandler>(
-                command_line_arguments.get_mongodb_uri(),
-                command_line_arguments.get_mongodb_collection(),
-                command_line_arguments.get_batch_size(),
-                command_line_arguments.get_max_num_results()
-        );
-    } else {
-        output_handler = std::make_unique<StandardOutputHandler>();
+    try {
+        switch (command_line_arguments.get_output_handler_type()) {
+            case CommandLineArguments::OutputHandlerType::Network:
+                output_handler = std::make_unique<NetworkOutputHandler>(
+                        command_line_arguments.get_network_dest_host(),
+                        command_line_arguments.get_network_dest_port()
+                );
+                break;
+            case CommandLineArguments::OutputHandlerType::Reducer:
+                if (command_line_arguments.do_count_results_aggregation()) {
+                    output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
+                } else if (command_line_arguments.do_count_by_time_aggregation()) {
+                    output_handler = std::make_unique<CountByTimeOutputHandler>(
+                            reducer_socket_fd,
+                            command_line_arguments.get_count_by_time_bucket_size()
+                    );
+                } else {
+                    SPDLOG_ERROR("Unhandled aggregation type.");
+                    return false;
+                }
+                break;
+            case CommandLineArguments::OutputHandlerType::ResultsCache:
+                output_handler = std::make_unique<ResultsCacheOutputHandler>(
+                        command_line_arguments.get_mongodb_uri(),
+                        command_line_arguments.get_mongodb_collection(),
+                        command_line_arguments.get_batch_size(),
+                        command_line_arguments.get_max_num_results()
+                );
+                break;
+            case CommandLineArguments::OutputHandlerType::Stdout:
+                output_handler = std::make_unique<StandardOutputHandler>();
+                break;
+            default:
+                SPDLOG_ERROR("Unhandled OutputHandlerType.");
+                return false;
+        }
+    } catch (clp_s::TraceableException& e) {
+        SPDLOG_ERROR("Failed to create output handler - {}", e.what());
+        return false;
     }
 
     // output result
     Output output(
-            schema_tree,
-            schemas,
             match_pass,
             expr,
-            archive_dir,
+            archive_reader,
             timestamp_dict,
-            std::move(output_handler)
+            std::move(output_handler),
+            command_line_arguments.get_ignore_case()
     );
-    output.filter();
-
-    return true;
+    return output.filter();
 }
 }  // namespace
 
@@ -291,7 +294,6 @@ int main(int argc, char const* argv[]) {
         mongocxx::instance const mongocxx_instance{};
 
         auto const& query = command_line_arguments.get_query();
-
         auto query_stream = std::istringstream(query);
         auto expr = kql::parse_kql_expression(query_stream);
         if (nullptr == expr) {
@@ -309,13 +311,34 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
 
+        int reducer_socket_fd{-1};
+        if (command_line_arguments.get_output_handler_type()
+            == CommandLineArguments::OutputHandlerType::Reducer)
+        {
+            reducer_socket_fd = reducer::connect_to_reducer(
+                    command_line_arguments.get_reducer_host(),
+                    command_line_arguments.get_reducer_port(),
+                    command_line_arguments.get_job_id()
+            );
+            if (-1 == reducer_socket_fd) {
+                SPDLOG_ERROR("Failed to connect to reducer");
+                return 1;
+            }
+        }
+
         auto const& archive_id = command_line_arguments.get_archive_id();
+        auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
         if (false == archive_id.empty()) {
             std::filesystem::path const archives_dir_path{archives_dir};
             std::string const archive_path{archives_dir_path / archive_id};
-            if (false == search_archive(command_line_arguments, archive_path, expr)) {
+
+            archive_reader->open(archive_path);
+            if (false
+                == search_archive(command_line_arguments, archive_reader, expr, reducer_socket_fd))
+            {
                 return 1;
             }
+            archive_reader->close();
         } else {
             for (auto const& entry : std::filesystem::directory_iterator(archives_dir)) {
                 if (false == entry.is_directory()) {
@@ -323,9 +346,18 @@ int main(int argc, char const* argv[]) {
                     continue;
                 }
 
-                if (false == search_archive(command_line_arguments, entry.path(), expr->copy())) {
+                archive_reader->open(entry.path());
+                if (false
+                    == search_archive(
+                            command_line_arguments,
+                            archive_reader,
+                            expr->copy(),
+                            reducer_socket_fd
+                    ))
+                {
                     return 1;
                 }
+                archive_reader->close();
             }
         }
     }

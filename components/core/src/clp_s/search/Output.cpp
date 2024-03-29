@@ -3,6 +3,8 @@
 #include <regex>
 #include <stack>
 
+#include "../../clp/type_utils.hpp"
+#include "../ArchiveReader.hpp"
 #include "../FileWriter.hpp"
 #include "../ReaderUtils.hpp"
 #include "../Utils.hpp"
@@ -17,118 +19,109 @@
 #define eval(op, a, b) (((op) == FilterOperation::EQ) ? ((a) == (b)) : ((a) != (b)))
 
 namespace clp_s::search {
-void Output::filter() {
+bool Output::filter() {
     auto top_level_expr = m_expr;
 
-    for (auto const& archive : ReaderUtils::get_archives(m_archives_dir)) {
-        std::vector<int32_t> matched_schemas;
-        bool has_array = false;
-        bool has_array_search = false;
-        for (int32_t schema_id : ReaderUtils::get_schemas(archive)) {
-            if (m_match.schema_matched(schema_id)) {
-                matched_schemas.push_back(schema_id);
-                if (m_match.has_array(schema_id)) {
-                    has_array = true;
-                }
-                if (m_match.has_array_search(schema_id)) {
-                    has_array_search = true;
-                }
+    std::vector<int32_t> matched_schemas;
+    bool has_array = false;
+    bool has_array_search = false;
+
+    m_archive_reader->read_metadata();
+    for (auto schema_id : m_archive_reader->get_schema_ids()) {
+        if (m_match.schema_matched(schema_id)) {
+            matched_schemas.push_back(schema_id);
+            if (m_match.has_array(schema_id)) {
+                has_array = true;
             }
-        }
-
-        // Skip decompressing segment if it contains no
-        // relevant schemas
-        if (matched_schemas.empty()) {
-            continue;
-        }
-
-        // Skip decompressing sub-archive if it won't match based on the timestamp
-        // range index
-        EvaluateTimestampIndex timestamp_index(ReaderUtils::read_local_timestamp_dictionary(archive)
-        );
-        if (timestamp_index.run(top_level_expr) == EvaluatedValue::False) {
-            continue;
-        }
-
-        m_var_dict = ReaderUtils::get_variable_dictionary_reader(archive);
-        m_log_dict = ReaderUtils::get_log_type_dictionary_reader(archive);
-        //        array_dict_ = GetArrayDictionaryReader(archive);
-        m_var_dict->read_new_entries();
-        m_log_dict->read_new_entries();
-
-        if (has_array) {
-            m_array_dict = ReaderUtils::get_array_dictionary_reader(archive);
-            if (has_array_search) {
-                m_array_dict->read_new_entries();
-            } else {
-                m_array_dict->read_new_entries(true);
+            if (m_match.has_array_search(schema_id)) {
+                has_array_search = true;
             }
-        }
-
-        m_string_query_map.clear();
-        m_string_var_match_map.clear();
-        populate_string_queries(top_level_expr);
-
-        std::string message;
-        for (int32_t schema_id : matched_schemas) {
-            m_expr_clp_query.clear();
-            m_expr_var_match_map.clear();
-            m_expr = m_match.get_query_for_schema(schema_id)->copy();
-            m_wildcard_to_searched_columns.clear();
-            m_wildcard_to_searched_clpstrings.clear();
-            m_wildcard_to_searched_varstrings.clear();
-            m_wildcard_to_searched_datestrings.clear();
-            m_schema = schema_id;
-
-            populate_searched_wildcard_columns(m_expr);
-
-            m_expression_value = constant_propagate(m_expr, schema_id);
-
-            if (m_expression_value == EvaluatedValue::False) {
-                continue;
-            }
-
-            add_wildcard_columns_to_searched_columns();
-
-            SchemaReader reader(m_schema_tree, schema_id);
-            reader.open(archive + "/encoded_messages/" + std::to_string(schema_id));
-            ReaderUtils::append_reader_columns(
-                    &reader,
-                    (*m_schemas)[schema_id],
-                    m_schema_tree,
-                    m_var_dict,
-                    m_log_dict,
-                    m_array_dict,
-                    m_timestamp_dict,
-                    m_output_handler->should_output_timestamp()
-            );
-            reader.load();
-
-            reader.initialize_filter(this);
-
-            if (m_output_handler->should_output_timestamp()) {
-                epochtime_t timestamp;
-                while (reader.get_next_message_with_timestamp(message, timestamp, this)) {
-                    m_output_handler->write(message, timestamp);
-                }
-            } else {
-                while (reader.get_next_message(message, this)) {
-                    m_output_handler->write(message);
-                }
-            }
-
-            reader.close();
-        }
-
-        m_output_handler->flush();
-
-        m_var_dict->close();
-        m_log_dict->close();
-
-        if (has_array) {
-            m_array_dict->close();
         }
     }
+
+    // Skip decompressing archive if it contains no
+    // relevant schemas
+    if (matched_schemas.empty()) {
+        return true;
+    }
+
+    // Skip decompressing archive if it won't match based on the timestamp
+    // range index
+    EvaluateTimestampIndex timestamp_index(m_archive_reader->get_timestamp_dictionary());
+    if (timestamp_index.run(top_level_expr) == EvaluatedValue::False) {
+        m_archive_reader->close();
+        return true;
+    }
+
+    m_var_dict = m_archive_reader->read_variable_dictionary();
+    m_log_dict = m_archive_reader->read_log_type_dictionary();
+
+    if (has_array) {
+        if (has_array_search) {
+            m_array_dict = m_archive_reader->read_array_dictionary();
+        } else {
+            m_array_dict = m_archive_reader->read_array_dictionary(true);
+        }
+    }
+
+    populate_string_queries(top_level_expr);
+
+    std::string message;
+    for (int32_t schema_id : matched_schemas) {
+        m_expr_clp_query.clear();
+        m_expr_var_match_map.clear();
+        m_expr = m_match.get_query_for_schema(schema_id)->copy();
+        m_wildcard_to_searched_columns.clear();
+        m_wildcard_to_searched_clpstrings.clear();
+        m_wildcard_to_searched_varstrings.clear();
+        m_wildcard_to_searched_datestrings.clear();
+        m_schema = schema_id;
+
+        populate_searched_wildcard_columns(m_expr);
+
+        m_expression_value = constant_propagate(m_expr, schema_id);
+
+        if (m_expression_value == EvaluatedValue::False) {
+            continue;
+        }
+
+        add_wildcard_columns_to_searched_columns();
+
+        auto reader = m_archive_reader->read_table(
+                schema_id,
+                m_output_handler->should_output_timestamp(),
+                m_should_marshal_records
+        );
+        reader->initialize_filter(this);
+
+        if (m_output_handler->should_output_timestamp()) {
+            epochtime_t timestamp;
+            while (reader->get_next_message_with_timestamp(message, timestamp, this)) {
+                m_output_handler->write(message, timestamp);
+            }
+        } else {
+            while (reader->get_next_message(message, this)) {
+                m_output_handler->write(message);
+            }
+        }
+        auto ecode = m_output_handler->flush();
+        if (ErrorCode::ErrorCodeSuccess != ecode) {
+            SPDLOG_ERROR(
+                    "Failed to flush output handler, error={}.",
+                    clp::enum_to_underlying_type(ecode)
+            );
+            return false;
+        }
+    }
+    auto ecode = m_output_handler->finish();
+    if (ErrorCode::ErrorCodeSuccess != ecode) {
+        SPDLOG_ERROR(
+                "Failed to flush output handler, error={}.",
+                clp::enum_to_underlying_type(ecode)
+        );
+        return false;
+    }
+    return true;
 }
 
 void Output::init(
@@ -181,9 +174,14 @@ bool Output::filter(
         return false;
     }
 
-    for (auto* column : m_other_columns) {
-        if (m_cached_string_columns.find(column->get_id()) == m_cached_string_columns.end()) {
-            extracted_values[column->get_id()] = column->extract_value(cur_message);
+    // We only need to extract all columns if we're actually marshalling records into JSON strings.
+    // TODO: consider getting rid of extracted_values entirely and just accessing the underlying
+    // columns directly once we have time to clean up search.
+    if (m_should_marshal_records) {
+        for (auto* column : m_other_columns) {
+            if (m_cached_string_columns.find(column->get_id()) == m_cached_string_columns.end()) {
+                extracted_values[column->get_id()] = column->extract_value(cur_message);
+            }
         }
     }
 
@@ -347,6 +345,8 @@ bool Output::evaluate_wildcard_filter(
                         std::get<std::string>(extracted_values[column_id]),
                         literal
                 );
+                break;
+            default:
                 break;
         }
 
@@ -926,9 +926,16 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
                 // if it matches VarStringT then it contains no space, so we
                 // don't't add more wildcards. Likewise if it already contains some wildcards
                 // we do not add more
-                Grep::process_raw_query(m_log_dict, m_var_dict, query_string, false, q, false);
+                Grep::process_raw_query(
+                        m_log_dict,
+                        m_var_dict,
+                        query_string,
+                        m_ignore_case,
+                        q,
+                        false
+                );
             } else {
-                Grep::process_raw_query(m_log_dict, m_var_dict, query_string, false, q);
+                Grep::process_raw_query(m_log_dict, m_var_dict, query_string, m_ignore_case, q);
             }
         }
         SubQuery sub_query;
@@ -941,7 +948,7 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
 
             std::unordered_set<int64_t>& matching_vars = m_string_var_match_map[query_string];
             if (query_string.find('*') == std::string::npos) {
-                auto entry = m_var_dict->get_entry_matching_value(query_string, false);
+                auto entry = m_var_dict->get_entry_matching_value(query_string, m_ignore_case);
 
                 if (entry != nullptr) {
                     matching_vars.insert(entry->get_id());
@@ -950,7 +957,7 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
                                wildcard_search_dictionary_and_get_encoded_matches(
                                        query_string,
                                        *m_var_dict,
-                                       false,
+                                       m_ignore_case,
                                        sub_query
                                ))
             {

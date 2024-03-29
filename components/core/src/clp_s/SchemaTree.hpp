@@ -90,6 +90,22 @@ public:
 
     std::vector<std::shared_ptr<SchemaNode>> get_nodes() { return m_nodes; }
 
+    /**
+     * Write the contents of the SchemaTree to the schema tree file
+     * @param archives_dir
+     * @param compression_level
+     * @return the compressed size of the SchemaTree in bytes
+     */
+    [[nodiscard]] size_t store(std::string const& archives_dir, int compression_level);
+
+    /**
+     * Clear the schema tree
+     */
+    void clear() {
+        m_nodes.clear();
+        m_node_map.clear();
+    }
+
 private:
     std::vector<std::shared_ptr<SchemaNode>> m_nodes;
     absl::flat_hash_map<std::tuple<int32_t, std::string, NodeType>, int32_t> m_node_map;
