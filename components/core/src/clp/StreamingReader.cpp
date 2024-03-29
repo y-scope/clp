@@ -118,7 +118,8 @@ auto StreamingReader::write_callback(char* ptr, size_t size, size_t nmemb, void*
             }
             auto const num_bytes_to_fetch{
                     num_bytes_left > fetching_buffer.size() ? fetching_buffer.size()
-                                                            : num_bytes_left};
+                                                            : num_bytes_left
+            };
             memcpy(fetching_buffer.data(), input_buffer.data(), num_bytes_to_fetch);
             input_buffer = input_buffer.last(num_bytes_left - num_bytes_to_fetch);
             reader->commit_fetching(num_bytes_to_fetch);
@@ -335,7 +336,8 @@ auto StreamingReader::read_from_fetched_buffers(
             return ErrorCode_EndOfFile;
         }
         auto const num_bytes_to_consume_from_buffer{
-                num_bytes_to_read > reading_buffer_size ? reading_buffer_size : num_bytes_to_read};
+                num_bytes_to_read > reading_buffer_size ? reading_buffer_size : num_bytes_to_read
+        };
         if (dst_view.has_value()) {
             memcpy(dst_view.value().last(num_bytes_to_read).data(),
                    reading_buffer.data(),
