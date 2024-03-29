@@ -12,7 +12,7 @@ const DB_IDLE_TIMEOUT_IN_MS = 10000;
 /**
  * @type {import("mysql2/promise").Pool|null}
  */
-let dbPool = null;
+let dbConnPool = null;
 
 /**
  * Creates a new database connection and initializes DB managers with it.
@@ -43,12 +43,12 @@ const initDbManagers = async ({
     clpArchivesTableName,
     clpFilesTableName,
 }) => {
-    if (null !== dbPool) {
+    if (null !== dbConnPool) {
         throw Error("This method should not be called twice.");
     }
 
     try {
-        dbPool = await mysql.createPool({
+        dbConnPool = await mysql.createPool({
             host: dbHost,
             port: dbPort,
             database: dbName,
@@ -62,10 +62,10 @@ const initDbManagers = async ({
             idleTimeout: DB_IDLE_TIMEOUT_IN_MS
         });
 
-        initSearchJobsDbManager(dbPool, {
+        initSearchJobsDbManager(dbConnPool, {
             searchJobsTableName,
         });
-        initStatsDbManager(dbPool, {
+        initStatsDbManager(dbConnPool, {
             clpArchivesTableName,
             clpFilesTableName,
         });
@@ -83,7 +83,7 @@ const initDbManagers = async ({
 const deinitDbManagers = async () => {
     deinitStatsDbManager();
 
-    await dbPool.end();
+    await dbConnPool.end();
 };
 
 export {initDbManagers, deinitDbManagers};
