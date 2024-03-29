@@ -1,5 +1,5 @@
-#ifndef CLP_S3_STREAMING_READER_HPP
-#define CLP_S3_STREAMING_READER_HPP
+#ifndef CLP_STREAMING_READER_HPP
+#define CLP_STREAMING_READER_HPP
 
 #include <condition_variable>
 #include <mutex>
