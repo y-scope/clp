@@ -9,8 +9,6 @@
 #include "../src/clp/ReaderInterface.hpp"
 #include "../src/clp/StreamingReader.hpp"
 
-using clp::StreamingReader;
-
 namespace {
 /**
  * @return The src url that the StreamingReader will stream from.

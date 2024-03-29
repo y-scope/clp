@@ -30,6 +30,20 @@ class StreamingReader : public ReaderInterface {
 public:
     using BufferView = std::span<char>;
 
+    // Types
+    /**
+     * This class defines the exception thrown by the streaming reader.
+     */
+    class OperationFailed : public TraceableException {
+    public:
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
+
+        [[nodiscard]] auto what() const noexcept -> char const* override {
+            return "StreamingReader operation failed.";
+        }
+    };
+
     /**
      * This enum defines the states of the reader.
      * NotInit: The reader is not initialized with a source URL.
@@ -51,7 +65,7 @@ public:
     static constexpr size_t cDefaultBufferSize{4096};
 
     /**
-     * These static members defines the the minimum allowed buffer size and the number of pools.
+     * These static members defines the minimum allowed buffer size and the number of pools.
      */
     static constexpr size_t cMinimalBufferSize{512};
     static constexpr size_t cMinimalBufferPoolSize{2};
@@ -66,19 +80,6 @@ public:
     static constexpr uint32_t cDefaultOperationTimeout{45};
 
     /**
-     * This class defines the exception thrown by the streaming reader.
-     */
-    class OperationFailed : public TraceableException {
-    public:
-        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
-
-        [[nodiscard]] auto what() const noexcept -> char const* override {
-            return "StreamingReader operation failed.";
-        }
-    };
-
-    /**
      * Initializes the underlying libcurl functionalities globally. It should be called before
      * opening a source URL for data fetching.
      * @return ErrorCode_Success on success.
@@ -87,14 +88,13 @@ public:
     [[nodiscard]] static auto global_init() -> ErrorCode;
 
     /**
-     * Cleanups the globally initialized curl states.
+     * Releases the globally initialized libcurl resources.
      */
     static auto global_cleanup() -> void;
 
     /**
      * Constructor.
-     * @param buffer_pool_size Total number of buffers can be used for fetched
-     * data buffering.
+     * @param buffer_pool_size Total number of buffers available for fetching.
      * @param buffer_size The size of each data buffer.
      */
     StreamingReader(
@@ -119,7 +119,7 @@ public:
      * Destructor.
      */
     virtual ~StreamingReader() {
-        if (StatusCode::NotInit == m_status_code) {
+        if (StatusCode::NotInit == get_status_code()) {
             return;
         }
         // We must ensure the transfer has been terminated before we cleanup the allocated
@@ -136,49 +136,7 @@ public:
     auto operator=(StreamingReader const&) -> StreamingReader& = delete;
     auto operator=(StreamingReader&&) -> StreamingReader& = delete;
 
-    /**
-     * Opens a new connection to streaming data from the given url with a given offset.
-     * TODO: the current implementation doesn't handle the case when the given offset is out of
-     * range. The file_pos will be set to an invalid state if this happens, which can be
-     * problematic if the other part of the program depends on this position. It can be fixed by
-     * capturing the error code 416 in the response header.
-     * @param src_url
-     * @param offset The offset of the starting byte used for data fetching.
-     * @param disable_caching Whether to disable the caching.
-     */
-    auto open(std::string_view src_url, size_t offset = 0, bool disable_caching = false) -> void;
-
-    /**
-     * Closes the current data transfer and reset the buffer state.
-     */
-    auto close() -> void {
-        if (StatusCode::NotInit == m_status_code) {
-            return;
-        }
-        terminate_current_transfer();
-        reset();
-    }
-
-    /**
-     * Sets the connection timeout in seconds. This value will be used when trying to build the
-     * connections. The default value is set to `cDefaultConnectionTimeout`.
-     * Doc: https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
-     * @param connection_timeout_in_sec
-     */
-    auto set_connection_timeout(uint32_t connection_timeout_in_sec) -> void {
-        m_connection_timeout = connection_timeout_in_sec;
-    }
-
-    /**
-     * Sets the operation timeout in seconds. This values determines the maximum time a transfer
-     * can take. The default value is set to `cDefaultOperationTimeout`.
-     * Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
-     * @param operation_timeout_in_sec
-     */
-    auto set_operation_timeout(uint32_t operation_timeout_in_sec) -> void {
-        m_operation_timeout = operation_timeout_in_sec;
-    }
-
+    // Methods implementing `ReaderInterface`
     /**
      * Tries to read up to a given number of bytes from the buffer.
      * @param buf
@@ -227,13 +185,57 @@ public:
         return ErrorCode_Success;
     }
 
+    // Methods
     /**
-     * @return Whether the transfer has been killed.
+     * Opens a new connection to stream data from the given url with a given offset.
+     * TODO: the current implementation doesn't handle the case when the given offset is out of
+     * range. The file_pos will be set to an invalid state if this happens, which can be
+     * problematic if the other part of the program depends on this position. It can be fixed by
+     * capturing the error code 416 in the response header.
+     * @param src_url
+     * @param offset The offset of the starting byte used for data fetching.
+     * @param disable_caching Whether to disable the caching.
+     */
+    auto open(std::string_view src_url, size_t offset = 0, bool disable_caching = false) -> void;
+
+    /**
+     * Closes the current data transfer and resets the buffer state.
+     */
+    auto close() -> void {
+        if (StatusCode::NotInit == get_status_code()) {
+            return;
+        }
+        terminate_current_transfer();
+        reset();
+    }
+
+    /**
+     * Sets the connection timeout in seconds. This value will be used when trying to build the
+     * connections. The default value is set to `cDefaultConnectionTimeout`.
+     * Doc: https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
+     * @param connection_timeout_in_sec
+     */
+    auto set_connection_timeout(uint32_t connection_timeout_in_sec) -> void {
+        m_connection_timeout = connection_timeout_in_sec;
+    }
+
+    /**
+     * Sets the operation timeout in seconds. This values determines the maximum time a transfer
+     * can take. The default value is set to `cDefaultOperationTimeout`.
+     * Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
+     * @param operation_timeout_in_sec
+     */
+    auto set_operation_timeout(uint32_t operation_timeout_in_sec) -> void {
+        m_operation_timeout = operation_timeout_in_sec;
+    }
+
+    /**
+     * @return true if the transfer has been killed, false otherwise.
      */
     [[nodiscard]] auto is_transfer_aborted() const -> bool { return m_transfer_aborted.load(); }
 
     /**
-     * @return Whether the transfer has terminated.
+     * @return true the transfer has terminated, false otherwise.
      */
     [[nodiscard]] auto is_transfer_terminated() const -> bool {
         return m_transfer_terminated.load();
@@ -372,6 +374,10 @@ private:
     read_from_fetched_buffers(size_t num_bytes_to_read, size_t& num_bytes_read, char* dst)
             -> ErrorCode;
 
+    auto set_status_code(StatusCode code) -> void { m_status_code.store(code); }
+
+    [[nodiscard]] auto get_status_code() -> StatusCode { return m_status_code.load(); }
+
     std::string m_src_url;
     size_t m_file_pos{0};
 
@@ -397,7 +403,7 @@ private:
     std::unique_ptr<std::thread> m_transfer_thread{nullptr};
     std::atomic<bool> m_transfer_aborted{false};
     std::atomic<bool> m_transfer_terminated{false};
-    StatusCode m_status_code{StatusCode::NotInit};
+    std::atomic<StatusCode> m_status_code{StatusCode::NotInit};
     std::optional<CURLcode> m_curl_return_code{std::nullopt};
 };
 }  // namespace clp

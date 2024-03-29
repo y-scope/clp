@@ -44,7 +44,7 @@ auto StreamingReader::transfer_thread_entry(
 ) -> void {
     CURL* curl_handle{curl_easy_init()};
     if (nullptr == curl_handle) {
-        reader.m_status_code = StatusCode::Failed;
+        reader.set_status_code(StatusCode::Failed);
         reader.m_transfer_terminated.store(true);
         return;
     }
@@ -86,7 +86,7 @@ auto StreamingReader::transfer_thread_entry(
 
     auto const retval{curl_easy_perform(curl_handle)};
     reader.commit_fetching_buffer();
-    reader.m_status_code = (0 != retval) ? StatusCode::Failed : StatusCode::Finished;
+    reader.set_status_code((0 != retval) ? StatusCode::Failed : StatusCode::Finished);
     reader.m_curl_return_code = retval;
 
     curl_easy_cleanup(curl_handle);
@@ -118,8 +118,7 @@ auto StreamingReader::write_callback(char* ptr, size_t size, size_t nmemb, void*
             }
             auto const num_bytes_to_fetch{
                     num_bytes_left > fetching_buffer.size() ? fetching_buffer.size()
-                                                            : num_bytes_left
-            };
+                                                            : num_bytes_left};
             memcpy(fetching_buffer.data(), input_buffer.data(), num_bytes_to_fetch);
             input_buffer = input_buffer.last(num_bytes_left - num_bytes_to_fetch);
             reader->commit_fetching(num_bytes_to_fetch);
@@ -135,7 +134,7 @@ auto StreamingReader::open(std::string_view src_url, size_t offset, bool disable
     if (false == m_initialized) {
         throw OperationFailed(ErrorCode_NotReady, __FILE__, __LINE__);
     }
-    if (StatusCode::NotInit != m_status_code) {
+    if (StatusCode::NotInit != get_status_code()) {
         throw OperationFailed(ErrorCode_NotReady, __FILE__, __LINE__);
     }
     m_src_url = src_url;
@@ -145,12 +144,12 @@ auto StreamingReader::open(std::string_view src_url, size_t offset, bool disable
             offset,
             disable_caching
     );
-    m_status_code = StatusCode::InProgress;
+    set_status_code(StatusCode::InProgress);
     m_transfer_thread->detach();
 }
 
 auto StreamingReader::terminate_current_transfer() -> void {
-    if (StatusCode::InProgress != m_status_code) {
+    if (StatusCode::InProgress != get_status_code()) {
         while (false == is_transfer_terminated()) {
         }
         return;
@@ -289,7 +288,7 @@ auto StreamingReader::get_buffer_to_fetch(BufferView& fetching_buffer) -> bool {
 }
 
 auto StreamingReader::reset() -> void {
-    if (StatusCode::NotInit == m_status_code) {
+    if (StatusCode::NotInit == get_status_code()) {
         return;
     }
 
@@ -310,7 +309,7 @@ auto StreamingReader::reset() -> void {
     m_transfer_thread.reset();
     m_transfer_aborted.store(false);
     m_transfer_terminated.store(false);
-    m_status_code = StatusCode::NotInit;
+    set_status_code(StatusCode::NotInit);
     m_curl_return_code.reset();
 }
 
@@ -336,8 +335,7 @@ auto StreamingReader::read_from_fetched_buffers(
             return ErrorCode_EndOfFile;
         }
         auto const num_bytes_to_consume_from_buffer{
-                num_bytes_to_read > reading_buffer_size ? reading_buffer_size : num_bytes_to_read
-        };
+                num_bytes_to_read > reading_buffer_size ? reading_buffer_size : num_bytes_to_read};
         if (dst_view.has_value()) {
             memcpy(dst_view.value().last(num_bytes_to_read).data(),
                    reading_buffer.data(),
