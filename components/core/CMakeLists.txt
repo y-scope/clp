@@ -115,8 +115,6 @@ if(CLP_USE_STATIC_LIBS)
     set(spdlog_USE_STATIC_LIBS ON)
 endif()
 find_package(spdlog 1.9.2 REQUIRED)
-# Don't use spdlog's internal fmtlib since it will conflict with the external fmtlib
-add_definitions(-DSPDLOG_FMT_EXTERNAL=1)
 if(spdlog_FOUND)
     message(STATUS "Found spdlog ${spdlog_VERSION}")
 else()
