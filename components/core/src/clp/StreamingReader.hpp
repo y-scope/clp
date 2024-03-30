@@ -1,5 +1,5 @@
-#ifndef CLP_STREAMING_READER_HPP
-#define CLP_STREAMING_READER_HPP
+#ifndef CLP_STREAMINGREADER_HPP
+#define CLP_STREAMINGREADER_HPP
 
 #include <condition_variable>
 #include <mutex>
@@ -97,7 +97,7 @@ public:
      * @param buffer_pool_size Total number of buffers available for fetching.
      * @param buffer_size The size of each data buffer.
      */
-    StreamingReader(
+    explicit StreamingReader(
             size_t buffer_pool_size = cDefaultBufferPoolSize,
             size_t buffer_size = cDefaultBufferSize
     )
@@ -408,4 +408,4 @@ private:
 };
 }  // namespace clp
 
-#endif
+#endif  // CLP_STREAMINGREADER_HPP
