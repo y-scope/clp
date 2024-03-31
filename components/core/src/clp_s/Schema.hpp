@@ -15,9 +15,9 @@ namespace clp_s {
  * Internally, the schema is represented by a vector where the first m_num_ordered entries are
  * ordered by MST node ID, and the following entries are allowed to have arbitrary order.
  *
- * In the current implementation of clp-s, MST node IDs in a schema must be unique, so the caller
- * is responsible for not inserting duplicate MST nodes into a schema. Future versions of clp-s will
- * likely relax this requirement.
+ * In the current implementation of clp-s, MST node IDs must be unique in the ordered region of a
+ * schema, but can be repeated in the unordered region. The caller is responsible for not inserting
+ * duplicate MST nodes into the ordered region of a schema.
  */
 class Schema {
 public:
@@ -44,6 +44,18 @@ public:
         m_schema.clear();
         m_num_ordered = 0;
     }
+
+    /**
+     * Sets the number of ordered nodes present in the schema. This method is used during
+     * decompression to help initialize this object.
+     * @param num_ordered
+     */
+    void set_num_ordered(size_t num_ordered) { m_num_ordered = num_ordered; }
+
+    /**
+     * @return the number of ordered elements in the underlying schema
+     */
+    size_t num_ordered() const { return m_num_ordered; }
 
     /**
      * @return the number of elements in the underlying schema

@@ -210,6 +210,11 @@ void SchemaReader::generate_local_tree(int32_t global_id) {
     m_local_id_to_global_id[local_id] = global_id;
 }
 
+// we need to reorder columns according to local schema tree to handle the edge cases where
+// we get some other random mst node ids in the middle of an object because of the order they
+// appear in the underlying data for the first time. How do I keep that fixed and extend to the
+// structured array case? Maybe separate handling for the ordered/unordered regions for generating
+// this template?
 void SchemaReader::generate_json_template(int32_t id) {
     auto node = m_local_schema_tree->get_node(id);
     auto children_ids = node->get_children_ids();
