@@ -107,14 +107,23 @@ else()
 endif()
 
 # Find and setup spdlog
-# NOTE: spdlog only builds a static library
+if(CLP_USE_STATIC_LIBS)
+    # NOTE: On some Linux distributions (e.g. Ubuntu), the spdlog package only contains a dynamic
+    # library. If the `find_package(spdlog)` call below fails, re-run
+    # `tools/scripts/lib_install/<dist_name>/install-packages-from-source.sh` to build spdlog from
+    # source.
+    set(spdlog_USE_STATIC_LIBS ON)
+endif()
 find_package(spdlog 1.9.2 REQUIRED)
-# Don't use spdlog's internal fmtlib since it will conflict with the external fmtlib
-add_definitions(-DSPDLOG_FMT_EXTERNAL=1)
 if(spdlog_FOUND)
     message(STATUS "Found spdlog ${spdlog_VERSION}")
 else()
-    message(FATAL_ERROR "Could not find static libraries for spdlog")
+    if (CLP_USE_STATIC_LIBS)
+        message(FATAL_ERROR "Could not find static libraries for spdlog. You may want to re-run
+            `components/core/tools/scripts/lib_install/<dist>/install-packages-from-source.sh`")
+    else()
+        message(FATAL_ERROR "Could not find libraries for spdlog.")
+    endif()
 endif()
 
 # Find and setup libarchive
