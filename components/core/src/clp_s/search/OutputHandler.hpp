@@ -115,25 +115,9 @@ public:
     }
 
     // Methods inherited from OutputHandler
-    void write(std::string const& message, epochtime_t timestamp) override {
-        msgpack::type::tuple<std::string, epochtime_t, std::string> src("", timestamp, message);
-        msgpack::sbuffer m;
-        msgpack::pack(m, src);
+    void write(std::string const& message, epochtime_t timestamp) override;
 
-        if (-1 == send(m_socket_fd, m.data(), m.size(), 0)) {
-            throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
-        }
-    }
-
-    void write(std::string const& message) override {
-        msgpack::type::tuple<std::string, epochtime_t, std::string> src("", 0, message);
-        msgpack::sbuffer m;
-        msgpack::pack(m, src);
-
-        if (-1 == send(m_socket_fd, m.data(), m.size(), 0)) {
-            throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
-        }
-    }
+    void write(std::string const& message) override;
 
 private:
     std::string m_host;

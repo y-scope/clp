@@ -40,7 +40,7 @@ def make_command(
             archive_id,
         ]
     else:
-        return []
+        raise ValueError(f"Unsupported storage engine {storage_engine}")
 
     command.append(search_config.query_string)
     if search_config.begin_timestamp is not None:
@@ -60,27 +60,31 @@ def make_command(
             command.append("--count-by-time")
             command.append(str(aggregation_config.count_by_time_bucket_size))
 
-        command.append("reducer")
-        command.append("--host")
-        command.append(aggregation_config.reducer_host)
-        command.append("--port")
-        command.append(str(aggregation_config.reducer_port))
-        command.append("--job-id")
-        command.append(str(aggregation_config.job_id))
+        # fmt: off
+        command.extend([
+             "reducer",
+             "--host", aggregation_config.reducer_host,
+             "--port", str(aggregation_config.reducer_port),
+             "--job-id", str(aggregation_config.job_id)
+        ])
+        # fmt: on
     elif search_config.network_address is not None:
-        command.append("network")
-        command.append("--host")
-        command.append(search_config.network_address[0])
-        command.append("--port")
-        command.append(str(search_config.network_address[1]))
+        # fmt: off
+        command.extend([
+            "network",
+            "--host", search_config.network_address[0],
+            "--port", str(search_config.network_address[1])
+        ])
+        # fmt: on
     else:
-        command.append("results-cache")
-        command.append("--uri")
-        command.append(results_cache_uri)
-        command.append("--collection")
-        command.append(results_collection)
-        command.append("--max-num-results")
-        command.append(str(search_config.max_num_results))
+        # fmt: off
+        command.extend([
+            "results-cache",
+            "--uri", results_cache_uri,
+            "--collection", results_collection,
+            "--max-num-results", str(search_config.max_num_results)
+        ])
+        # fmt: on
 
     return command
 
@@ -111,18 +115,18 @@ def search(
 
     search_config = SearchConfig.parse_obj(search_config_obj)
 
-    search_command = make_command(
-        storage_engine=clp_storage_engine,
-        clp_home=clp_home,
-        archives_dir=archive_directory,
-        archive_id=archive_id,
-        search_config=search_config,
-        results_cache_uri=results_cache_uri,
-        results_collection=job_id,
-    )
-
-    if len(search_command) == 0:
-        logger.error(f"Unsupported storage engine {clp_storage_engine}")
+    try:
+        search_command = make_command(
+            storage_engine=clp_storage_engine,
+            clp_home=clp_home,
+            archives_dir=archive_directory,
+            archive_id=archive_id,
+            search_config=search_config,
+            results_cache_uri=results_cache_uri,
+            results_collection=job_id,
+        )
+    except ValueError as e:
+        logger.error(f"Error creating search command: {e}")
         return SearchTaskResult(
             success=False,
             task_id=task_id,

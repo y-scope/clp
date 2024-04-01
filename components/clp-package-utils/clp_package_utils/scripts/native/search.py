@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import ipaddress
 import logging
 import multiprocessing
 import pathlib
@@ -134,13 +135,18 @@ def create_and_monitor_job_in_db(
 
             time.sleep(0.5)
 
-        if do_count_aggregation is not None:
-            with pymongo.MongoClient(results_cache.get_uri()) as client:
-                search_results_collection = client[results_cache.db_name][str(job_id)]
+        if do_count_aggregation is None and count_by_time_bucket_size is None:
+            return
+        with pymongo.MongoClient(results_cache.get_uri()) as client:
+            search_results_collection = client[results_cache.db_name][str(job_id)]
+            if do_count_aggregation is not None:
                 for document in search_results_collection.find():
                     print(
                         f"tags: {document['group_tags']} count: {document['records'][0]['count']}"
                     )
+            elif count_by_time_bucket_size is not None:
+                for document in search_results_collection.find():
+                    print(f"timestamp: {document['timestamp']} count: {document['count']}")
 
 
 async def worker_connection_handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
@@ -163,6 +169,72 @@ async def worker_connection_handler(reader: asyncio.StreamReader, writer: asynci
         writer.close()
 
 
+async def do_search_without_aggregation(
+    db_config: Database,
+    results_cache: ResultsCache,
+    wildcard_query: str,
+    tags: str | None,
+    begin_timestamp: int | None,
+    end_timestamp: int | None,
+    ignore_case: bool,
+    path_filter: str | None,
+):
+    ip_list = socket.gethostbyname_ex(socket.gethostname())[2]
+    if len(ip_list) == 0:
+        logger.error("Couldn't determine the current host's IP.")
+        return
+
+    host = ip_list[0]
+    for ip in ip_list:
+        if ipaddress.ip_address(ip) not in ipaddress.IPv4Network("127.0.0.0/8"):
+            host = ip
+            break
+
+    server = await asyncio.start_server(
+        client_connected_cb=worker_connection_handler,
+        host=host,
+        port=0,
+        family=socket.AF_INET,
+    )
+
+    port = int(server.sockets[0].getsockname()[1])
+    server_task = asyncio.ensure_future(server.serve_forever())
+
+    db_monitor_task = asyncio.ensure_future(
+        run_function_in_process(
+            create_and_monitor_job_in_db,
+            db_config,
+            results_cache,
+            wildcard_query,
+            tags,
+            begin_timestamp,
+            end_timestamp,
+            ignore_case,
+            path_filter,
+            (host, port),
+            None,
+            None,
+        )
+    )
+
+    # Wait for the job to complete or an error to occur
+    pending = [server_task, db_monitor_task]
+    try:
+        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+        if db_monitor_task in done:
+            server.close()
+            await server.wait_closed()
+        else:
+            logger.error("server_task completed unexpectedly.")
+            db_monitor_task.cancel()
+            await db_monitor_task
+    except asyncio.CancelledError:
+        server.close()
+        await server.wait_closed()
+        await db_monitor_task
+        raise
+
+
 async def do_search(
     db_config: Database,
     results_cache: ResultsCache,
@@ -175,60 +247,19 @@ async def do_search(
     do_count_aggregation: bool | None,
     count_by_time_bucket_size: int | None,
 ):
-    if do_count_aggregation is None:
-        host = None
-        for ip in set(socket.gethostbyname_ex(socket.gethostname())[2]):
-            host = ip
-            break
-        if host is None:
-            logger.error("Could not determine IP of local machine.")
-            return -1
-        try:
-            server = await asyncio.start_server(
-                client_connected_cb=worker_connection_handler,
-                host=host,
-                port=0,
-                family=socket.AF_INET,
-            )
-        except asyncio.CancelledError:
-            # Search cancelled
-            return
-        port = int(server.sockets[0].getsockname()[1])
-        server_task = asyncio.ensure_future(server.serve_forever())
-
-        db_monitor_task = asyncio.ensure_future(
-            run_function_in_process(
-                create_and_monitor_job_in_db,
-                db_config,
-                results_cache,
-                wildcard_query,
-                tags,
-                begin_timestamp,
-                end_timestamp,
-                ignore_case,
-                path_filter,
-                (host, port),
-                do_count_aggregation,
-            )
+    if do_count_aggregation is None and count_by_time_bucket_size is None:
+        await do_search_without_aggregation(
+            db_config,
+            results_cache,
+            wildcard_query,
+            tags,
+            begin_timestamp,
+            end_timestamp,
+            ignore_case,
+            path_filter,
         )
-
-        # Wait for the job to complete or an error to occur
-        pending = [server_task, db_monitor_task]
-        try:
-            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
-            if db_monitor_task in done:
-                server.close()
-                await server.wait_closed()
-            else:
-                logger.error("server task unexpectedly returned")
-                db_monitor_task.cancel()
-                await db_monitor_task
-        except asyncio.CancelledError:
-            server.close()
-            await server.wait_closed()
-            await db_monitor_task
     else:
-        db_monitor_task = asyncio.ensure_future(
+        await asyncio.ensure_future(
             run_function_in_process(
                 create_and_monitor_job_in_db,
                 db_config,
@@ -241,12 +272,9 @@ async def do_search(
                 path_filter,
                 None,
                 do_count_aggregation,
+                count_by_time_bucket_size,
             )
         )
-        try:
-            await db_monitor_task
-        except asyncio.CancelledError:
-            pass
 
 
 def main(argv):
@@ -306,20 +334,24 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    asyncio.run(
-        do_search(
-            clp_config.database,
-            clp_config.results_cache,
-            parsed_args.wildcard_query,
-            parsed_args.tags,
-            parsed_args.begin_time,
-            parsed_args.end_time,
-            parsed_args.ignore_case,
-            parsed_args.file_path,
-            parsed_args.count,
-            parsed_args.count_by_time,
+    try:
+        asyncio.run(
+            do_search(
+                clp_config.database,
+                clp_config.results_cache,
+                parsed_args.wildcard_query,
+                parsed_args.tags,
+                parsed_args.begin_time,
+                parsed_args.end_time,
+                parsed_args.ignore_case,
+                parsed_args.file_path,
+                parsed_args.count,
+                parsed_args.count_by_time,
+            )
         )
-    )
+    except asyncio.CancelledError:
+        logger.error("Search cancelled.")
+        return -1
 
     return 0
 
