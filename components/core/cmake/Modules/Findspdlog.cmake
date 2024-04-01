@@ -29,7 +29,7 @@ find_path(
 )
 
 # Handle static libraries
-if(SPDLOG_USE_STATIC_LIBS)
+if(spdlog_USE_STATIC_LIBS)
     # Save current value of CMAKE_FIND_LIBRARY_SUFFIXES
     set(SPDLOG_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
 
@@ -49,7 +49,7 @@ if (SPDLOG_LIBRARY)
     set(spdlog_FOUND ON)
 endif()
 
-if(SPDLOG_USE_STATIC_LIBS)
+if(spdlog_USE_STATIC_LIBS)
     FindStaticLibraryDependencies(${SPDLOG_LIBNAME} SPDLOG "${SPDLOG_PKGCONF_STATIC_LIBRARIES}")
 
     # Restore original value of CMAKE_FIND_LIBRARY_SUFFIXES
@@ -72,12 +72,12 @@ find_package_handle_standard_args(
 if(NOT TARGET ${SPDLOG_TARGET_NAME})
     # Add library to build
     if (spdlog_FOUND)
-        if (SPDLOG_USE_STATIC_LIBS)
+        if (spdlog_USE_STATIC_LIBS)
             add_library(${SPDLOG_TARGET_NAME} STATIC IMPORTED)
             set_target_properties(
                 ${SPDLOG_TARGET_NAME}
                 PROPERTIES
-                COMPILE_FLAGS "${SPDLOG_PKGCONF_CFLAGS}"
+                COMPILE_FLAGS "${SPDLOG_PKGCONF_STATIC_CFLAGS}"
             )
         else()
             # NOTE: We use UNKNOWN so that if the user doesn't have the SHARED
@@ -86,7 +86,7 @@ if(NOT TARGET ${SPDLOG_TARGET_NAME})
             set_target_properties(
                 ${SPDLOG_TARGET_NAME}
                 PROPERTIES
-                COMPILE_FLAGS "${SPDLOG_PKGCONF_STATIC_CFLAGS}"
+                COMPILE_FLAGS "${SPDLOG_PKGCONF_CFLAGS}"
             )
         endif()
     endif()
