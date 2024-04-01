@@ -17,7 +17,7 @@ import dayjs from "dayjs";
  * @param {object[]} timelineBuckets
  * @return {object[]}
  */
-const getChartJsDateFrom = (timelineBuckets) => {
+const getChartJsDataFrom = (timelineBuckets) => {
     return timelineBuckets.map(({timestamp, count}) => ({
         x: Number(timestamp),
         y: count,
@@ -48,7 +48,7 @@ const SearchResultsTimeline = ({
                 barPercentage: 1.2,
                 borderColor: "#007380",
                 borderWidth: 2,
-                data: getChartJsDateFrom(timelineBuckets),
+                data: getChartJsDataFrom(timelineBuckets),
             },
         ],
     };

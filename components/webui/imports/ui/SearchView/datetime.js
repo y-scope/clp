@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 
 const DATETIME_FORMAT_TEMPLATE = "MMM DD, YYYY, HH:mm:ss";
+const MAX_DATA_POINTS_PER_TIMELINE = 40;
 
 const TIME_UNIT = Object.freeze({
     ALL: "all",
@@ -50,7 +51,7 @@ const computeTimeRange = (token) => () => {
     let begin;
 
     if (TIME_UNIT.ALL === unit) {
-        end = dayjs.utc().add(1, "year");
+        end = dayjs.utc().add(1, TIME_UNIT.YEAR);
         begin = dayjs.utc(0);
     } else {
         const isEndingNow = [
@@ -68,7 +69,6 @@ const computeTimeRange = (token) => () => {
             dayjs.utc() :
             dayjs.utc().subtract(amount, unit)
                 .endOf(unit);
-        console.log(end);
         begin = (true === isBeginStartOfUnit) ?
             end.startOf(unit) :
             end.subtract(amount, unit);
@@ -162,8 +162,7 @@ const clipTimeRangeToTimelineBucket = (bucketDuration, {
  */
 const computeTimelineConfig = (timestampBeginUnixMs, timestampEndUnixMs) => {
     const timeRangeMs = timestampEndUnixMs - timestampBeginUnixMs;
-    const maxDataPointsPerTimeline = 40;
-    const exactTimelineBucketMs = timeRangeMs / maxDataPointsPerTimeline;
+    const exactTimelineBucketMs = timeRangeMs / MAX_DATA_POINTS_PER_TIMELINE;
 
     const durationSelections = [
         /* eslint-disable @stylistic/js/array-element-newline, no-magic-numbers */
@@ -188,8 +187,8 @@ const computeTimelineConfig = (timestampBeginUnixMs, timestampEndUnixMs) => {
             (duration) => (exactTimelineBucketMs <= duration.asMilliseconds()),
         ) ||
         dayjs.duration(
-            Math.ceil(exactTimelineBucketMs / dayjs.duration(1, "year").asMilliseconds()),
-            "year",
+            Math.ceil(exactTimelineBucketMs / dayjs.duration(1, TIME_UNIT.YEAR).asMilliseconds()),
+            TIME_UNIT.YEAR,
         );
 
     return {
