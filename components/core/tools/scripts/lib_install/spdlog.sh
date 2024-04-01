@@ -39,7 +39,7 @@ fi
 installed=$((pkg_found | static_lib_found))
 set -e
 if [ $installed -eq 0 ] ; then
-  echo "Found library ${lib_name}=${version} ."
+  echo "Found ${lib_name}=${version}."
   # Nothing to do
   exit
 fi
