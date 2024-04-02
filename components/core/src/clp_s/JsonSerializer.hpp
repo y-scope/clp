@@ -15,6 +15,8 @@ public:
         AddStringField,
         AddArrayField,
         AddNullField,
+        BeginArray,
+        EndArray,
     };
 
     static int64_t const cReservedLength = 4096;
@@ -59,6 +61,18 @@ public:
             m_json_string.pop_back();
         }
         m_json_string += "},";
+    }
+
+    void begin_array() {
+        append_key();
+        m_json_string += "[";
+    }
+
+    void end_array() {
+        if (m_op_list[m_op_list_index - 2] != BeginArray) {
+            m_json_string.pop_back();
+        }
+        m_json_string += "],";
     }
 
     void append_key() { append_key(m_special_keys[m_special_keys_index++]); }

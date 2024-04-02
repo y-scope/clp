@@ -11,6 +11,7 @@
 #include "ReaderUtils.hpp"
 #include "SchemaReader.hpp"
 #include "TimestampDictionaryReader.hpp"
+#include "Utils.hpp"
 
 namespace clp_s {
 class ArchiveReader {
@@ -141,6 +142,19 @@ private:
      */
     BaseColumnReader*
     append_reader_column(std::unique_ptr<SchemaReader>& reader, int32_t column_id);
+
+    /**
+     * Appends columns for the entire schema of an unordered object.
+     * @param reader
+     * @param column_id
+     * @param should_marshal_records
+     */
+    void append_unordered_reader_columns(
+            std::unique_ptr<SchemaReader>& reader,
+            NodeType unordered_object_type,
+            Span<int32_t> schema_ids,
+            bool should_marshal_records
+    );
 
     bool m_is_open;
     std::string m_archive_path;

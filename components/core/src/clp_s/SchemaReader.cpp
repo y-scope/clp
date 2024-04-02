@@ -1,13 +1,23 @@
 #include "SchemaReader.hpp"
 
+#include <stack>
+
 namespace clp_s {
 void SchemaReader::append_column(BaseColumnReader* column_reader) {
     m_column_map[column_reader->get_id()] = column_reader;
     m_columns.push_back(column_reader);
     // The local schema tree is only necessary for generating the JSON template to marshal records.
     if (m_should_marshal_records) {
-        generate_local_tree(column_reader->get_id());
+        generate_local_tree(column_reader->get_id(), NodeType::Unknown);
     }
+}
+
+int32_t SchemaReader::append_unordered_column(BaseColumnReader* column_reader, NodeType node_type) {
+    m_columns.push_back(column_reader);
+    if (m_should_marshal_records) {
+        return generate_local_tree(column_reader->get_id(), node_type);
+    }
+    return column_reader->get_id();
 }
 
 void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
@@ -35,8 +45,12 @@ void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
 void SchemaReader::append_column(int32_t id) {
     // The local schema tree is only necessary for generating the JSON template to marshal records.
     if (m_should_marshal_records) {
-        generate_local_tree(id);
+        generate_local_tree(id, NodeType::Unknown);
     }
+}
+
+int32_t SchemaReader::append_unordered_column(int32_t id, NodeType node_type) {
+    return generate_local_tree(id, node_type);
 }
 
 void SchemaReader::load(ZstdDecompressor& decompressor) {
@@ -63,6 +77,14 @@ void SchemaReader::generate_json_string() {
             }
             case JsonSerializer::Op::EndObject: {
                 m_json_serializer.end_object();
+                break;
+            }
+            case JsonSerializer::Op::BeginArray: {
+                m_json_serializer.begin_array();
+                break;
+            }
+            case JsonSerializer::Op::EndArray: {
+                m_json_serializer.end_array();
                 break;
             }
             case JsonSerializer::Op::AddIntField: {
@@ -192,29 +214,64 @@ void SchemaReader::initialize_filter(FilterClass* filter) {
     filter->init(this, m_schema_id, m_column_map);
 }
 
-void SchemaReader::generate_local_tree(int32_t global_id) {
-    auto node = m_global_schema_tree->get_node(global_id);
-    int32_t parent_id = node->get_parent_id();
-
-    if (parent_id != -1 && m_global_id_to_local_id.find(parent_id) == m_global_id_to_local_id.end())
-    {
-        generate_local_tree(parent_id);
+int32_t SchemaReader::generate_local_tree(int32_t global_id, NodeType node_type) {
+    auto it = m_global_id_to_local_id.find(global_id);
+    if (m_global_id_to_local_id.end() != it) {
+        return INT32_MAX;
     }
+    std::stack<int32_t> global_id_stack;
+    global_id_stack.emplace(global_id);
+    int32_t smallest_matching_mst_node_id = INT32_MAX;
+    do {
+        auto node = m_global_schema_tree->get_node(global_id_stack.top());
+        int32_t parent_id = node->get_parent_id();
 
-    int32_t local_id = m_local_schema_tree->add_node(
-            parent_id == -1 ? -1 : m_global_id_to_local_id[parent_id],
-            node->get_type(),
-            node->get_key_name()
-    );
-    m_global_id_to_local_id[global_id] = local_id;
-    m_local_id_to_global_id[local_id] = global_id;
+        auto it = m_global_id_to_local_id.find(parent_id);
+        if (-1 != parent_id && it == m_global_id_to_local_id.end()) {
+            global_id_stack.emplace(parent_id);
+            continue;
+        }
+
+        int32_t local_id = m_local_schema_tree->add_node(
+                parent_id == -1 ? -1 : m_global_id_to_local_id[parent_id],
+                node->get_type(),
+                node->get_key_name()
+        );
+        if (node->get_type() == node_type && local_id < smallest_matching_mst_node_id) {
+            smallest_matching_mst_node_id = local_id;
+        }
+        m_global_id_to_local_id[global_id_stack.top()] = local_id;
+        m_local_id_to_global_id[local_id] = global_id_stack.top();
+        global_id_stack.pop();
+    } while (false == global_id_stack.empty());
+    return smallest_matching_mst_node_id;
 }
 
-// we need to reorder columns according to local schema tree to handle the edge cases where
-// we get some other random mst node ids in the middle of an object because of the order they
-// appear in the underlying data for the first time. How do I keep that fixed and extend to the
-// structured array case? Maybe separate handling for the ordered/unordered regions for generating
-// this template?
+void SchemaReader::mark_unordered_object(
+        size_t column_reader_start,
+        int32_t mst_subtree_root,
+        Span<int32_t> schema
+) {
+    m_local_id_to_unordered_object.emplace(
+            mst_subtree_root,
+            std::make_pair(column_reader_start, schema)
+    );
+}
+
+void SchemaReader::generate_structured_array_template(int32_t id) {
+    /*auto object_info = m_local_id_to_unordered_object.find(id);
+    size_t column_start = object_info->second.first;
+    Span<int32_t> schema = object_info->second.second;
+    for (int32_t column_id : schema) {
+        auto node = m_local_schema_tree->get_node(column_id);
+
+    }*/
+    auto node = m_local_schema_tree->get_node(id);
+    m_json_serializer.add_op(JsonSerializer::Op::BeginArray);
+    m_json_serializer.add_special_key(node->get_key_name());
+    m_json_serializer.add_op(JsonSerializer::Op::EndArray);
+}
+
 void SchemaReader::generate_json_template(int32_t id) {
     auto node = m_local_schema_tree->get_node(id);
     auto children_ids = node->get_children_ids();
@@ -234,6 +291,10 @@ void SchemaReader::generate_json_template(int32_t id) {
             case NodeType::UnstructuredArray: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddArrayField);
                 m_reordered_columns.push_back(m_column_map[child_global_id]);
+                break;
+            }
+            case NodeType::StructuredArray: {
+                // generate_structured_array_template(child_id);
                 break;
             }
             case NodeType::Integer: {
