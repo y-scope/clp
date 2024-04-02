@@ -226,6 +226,10 @@ async def do_search_without_aggregation(
             await server.wait_closed()
         else:
             logger.error("server_task completed unexpectedly.")
+            try:
+                server_task.result()
+            except Exception:
+                logger.exception("server_task failed.")
             db_monitor_task.cancel()
             await db_monitor_task
     except asyncio.CancelledError:
@@ -259,21 +263,19 @@ async def do_search(
             path_filter,
         )
     else:
-        await asyncio.ensure_future(
-            run_function_in_process(
-                create_and_monitor_job_in_db,
-                db_config,
-                results_cache,
-                wildcard_query,
-                tags,
-                begin_timestamp,
-                end_timestamp,
-                ignore_case,
-                path_filter,
-                None,
-                do_count_aggregation,
-                count_by_time_bucket_size,
-            )
+        await run_function_in_process(
+            create_and_monitor_job_in_db,
+            db_config,
+            results_cache,
+            wildcard_query,
+            tags,
+            begin_timestamp,
+            end_timestamp,
+            ignore_case,
+            path_filter,
+            None,
+            do_count_aggregation,
+            count_by_time_bucket_size,
         )
 
 

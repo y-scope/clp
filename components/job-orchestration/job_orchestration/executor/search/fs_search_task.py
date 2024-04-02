@@ -61,29 +61,29 @@ def make_command(
             command.append(str(aggregation_config.count_by_time_bucket_size))
 
         # fmt: off
-        command.extend([
+        command.extend((
              "reducer",
              "--host", aggregation_config.reducer_host,
              "--port", str(aggregation_config.reducer_port),
              "--job-id", str(aggregation_config.job_id)
-        ])
+        ))
         # fmt: on
     elif search_config.network_address is not None:
         # fmt: off
-        command.extend([
+        command.extend((
             "network",
             "--host", search_config.network_address[0],
             "--port", str(search_config.network_address[1])
-        ])
+        ))
         # fmt: on
     else:
         # fmt: off
-        command.extend([
+        command.extend((
             "results-cache",
             "--uri", results_cache_uri,
             "--collection", results_collection,
             "--max-num-results", str(search_config.max_num_results)
-        ])
+        ))
         # fmt: on
 
     return command
