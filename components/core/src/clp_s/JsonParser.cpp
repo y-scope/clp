@@ -131,10 +131,10 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
                 );
                 if (value.find(' ') != std::string::npos) {
                     node_id = m_archive_writer
-                                      ->add_node(node_id_stack.top(), NodeType::ClpString, "");
+                                      ->add_node(node_id_stack.top(), NodeType::ClpString, cur_key);
                 } else {
                     node_id = m_archive_writer
-                                      ->add_node(node_id_stack.top(), NodeType::VarString, "");
+                                      ->add_node(node_id_stack.top(), NodeType::VarString, cur_key);
                 }
                 m_current_parsed_message.add_unordered_value(value);
                 m_current_schema.insert_unordered(node_id);
