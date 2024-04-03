@@ -228,7 +228,7 @@ std::unique_ptr<SchemaReader> ArchiveReader::create_schema_reader(
             append_unordered_reader_columns(
                     reader,
                     Schema::get_unordered_object_type(column_id),
-                    Span<int32_t>(it.base(), remaining_structured_object_entries),
+                    Span<int32_t>(it.base() + 1, remaining_structured_object_entries),
                     should_marshal_records
             );
             continue;

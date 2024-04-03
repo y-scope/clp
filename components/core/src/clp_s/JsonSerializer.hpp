@@ -15,8 +15,11 @@ public:
         AddStringField,
         AddArrayField,
         AddNullField,
+        AddNullValue,
         BeginArray,
         EndArray,
+        BeginDocument,
+        BeginArrayDocument,
     };
 
     static int64_t const cReservedLength = 4096;
@@ -62,6 +65,8 @@ public:
         }
         m_json_string += "},";
     }
+
+    void begin_array_document() { m_json_string += "["; }
 
     void begin_array() {
         append_key();

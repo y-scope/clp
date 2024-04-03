@@ -187,6 +187,14 @@ private:
     void generate_structured_array_template(int32_t id);
 
     /**
+     * Generates the prefix keys for an object in a structured array, and returns the number
+     * of closing brackets required at the end of the object.
+     * @param id the id of the first column in the object
+     * @return the number of closing brackets required after reaching the end of the object
+     */
+    std::pair<size_t, int32_t> generate_unordered_prefix(int32_t id, int32_t root_id);
+
+    /**
      * Generates a json string from the extracted values
      */
     void generate_json_string();
