@@ -146,6 +146,7 @@ private:
     );
 
     // Variables
+    size_t const m_utf_max_validation_len = 4096;
     boost::uuids::random_generator& m_uuid_generator;
     BufferedFileReader m_file_reader;
     LibarchiveReader m_libarchive_reader;

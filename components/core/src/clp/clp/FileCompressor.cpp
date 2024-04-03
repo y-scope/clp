@@ -142,9 +142,10 @@ bool FileCompressor::compress_file(
         return false;
     }
     char const* utf8_validation_buf{nullptr};
-    size_t utf8_validation_buf_len{0};
-    m_file_reader.peek_buffered_data(utf8_validation_buf, utf8_validation_buf_len);
+    size_t peek_size{0};
+    m_file_reader.peek_buffered_data(utf8_validation_buf, peek_size);
     bool succeeded = true;
+    size_t utf8_validation_buf_len = std::min(peek_size, m_utf_max_validation_len);
     if (is_utf8_sequence(utf8_validation_buf_len, utf8_validation_buf)) {
         if (use_heuristic) {
             parse_and_encode_with_heuristic(
@@ -355,9 +356,10 @@ bool FileCompressor::try_compressing_as_archive(
             continue;
         }
         char const* utf8_validation_buf{nullptr};
-        size_t utf8_validation_buf_len{0};
-        m_libarchive_file_reader.peek_buffered_data(utf8_validation_buf, utf8_validation_buf_len);
+        size_t peek_size{0};
+        m_libarchive_file_reader.peek_buffered_data(utf8_validation_buf, peek_size);
         string file_path{m_libarchive_reader.get_path()};
+        size_t utf8_validation_buf_len = std::min(peek_size, m_utf_max_validation_len);
         if (is_utf8_sequence(utf8_validation_buf_len, utf8_validation_buf)) {
             auto boost_path_for_compression = parent_boost_path / file_path;
             if (use_heuristic) {
@@ -381,7 +383,7 @@ bool FileCompressor::try_compressing_as_archive(
                         m_libarchive_file_reader
                 );
             }
-        } else if (has_ir_stream_magic_number({utf8_validation_buf, utf8_validation_buf_len})) {
+        } else if (has_ir_stream_magic_number({utf8_validation_buf, peek_size})) {
             // Remove .clp suffix if found
             static constexpr char cIrStreamExtension[] = ".clp";
             if (boost::iends_with(file_path, cIrStreamExtension)) {
