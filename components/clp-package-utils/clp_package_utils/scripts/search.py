@@ -58,13 +58,6 @@ def main(argv):
         action="store_true",
         help="Ignore case distinctions between values in the query and the compressed data.",
     )
-    args_parser.add_argument(
-        "--max-num-results",
-        "-m",
-        type=int,
-        default=1000,
-        help="Maximum number of latest results to return.",
-    )
     args_parser.add_argument("--file-path", help="File to search.")
     args_parser.add_argument("--count", action="store_true", help="Count the number of results.")
     args_parser.add_argument(
@@ -123,7 +116,6 @@ def main(argv):
         "-m", "clp_package_utils.scripts.native.search",
         "--config", str(container_clp_config.logs_directory / container_config_filename),
         parsed_args.wildcard_query,
-        "--max-num-results", str(parsed_args.max_num_results),
     ]
     # fmt: on
     if parsed_args.tags:

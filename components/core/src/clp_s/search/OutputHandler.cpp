@@ -23,6 +23,26 @@ NetworkOutputHandler::NetworkOutputHandler(
     }
 }
 
+void NetworkOutputHandler::write(std::string const& message, epochtime_t timestamp) {
+    msgpack::type::tuple<std::string, epochtime_t, std::string> src("", timestamp, message);
+    msgpack::sbuffer m;
+    msgpack::pack(m, src);
+
+    if (-1 == send(m_socket_fd, m.data(), m.size(), 0)) {
+        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
+    }
+}
+
+void NetworkOutputHandler::write(std::string const& message) {
+    msgpack::type::tuple<std::string, epochtime_t, std::string> src("", 0, message);
+    msgpack::sbuffer m;
+    msgpack::pack(m, src);
+
+    if (-1 == send(m_socket_fd, m.data(), m.size(), 0)) {
+        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
+    }
+}
+
 ResultsCacheOutputHandler::ResultsCacheOutputHandler(
         std::string const& uri,
         std::string const& collection,
