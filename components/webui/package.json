@@ -20,7 +20,7 @@
     "chartjs-plugin-zoom": "^2.0.1",
     "dayjs": "^1.11.10",
     "json5": "^2.2.3",
-    "meteor-node-stubs": "^1.2.7",
+    "meteor-node-stubs": "^1.2.9",
     "mysql2": "^3.9.1",
     "react": "^17.0.2",
     "react-bootstrap": "^2.10.0",

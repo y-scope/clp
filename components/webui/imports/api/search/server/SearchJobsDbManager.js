@@ -17,16 +17,16 @@ const SEARCH_JOBS_TABLE_COLUMN_NAMES = {
  * Class for submitting and monitoring search jobs in the database.
  */
 class SearchJobsDbManager {
-    #sqlDbConnection;
+    #sqlDbConnPool;
     #searchJobsTableName;
 
     /**
-     * @param {mysql.Connection} sqlDbConnection
+     * @param {import("mysql2/promise").Pool} sqlDbConnPool
      * @param {object} tableNames
      * @param {string} tableNames.searchJobsTableName
      */
-    constructor(sqlDbConnection, {searchJobsTableName}) {
-        this.#sqlDbConnection = sqlDbConnection;
+    constructor(sqlDbConnPool, {searchJobsTableName}) {
+        this.#sqlDbConnPool = sqlDbConnPool;
         this.#searchJobsTableName = searchJobsTableName;
     }
 
@@ -64,7 +64,7 @@ class SearchJobsDbManager {
      * @throws {Error} on error.
      */
     async submitQuery(searchConfig) {
-        const [queryInsertResults] = await this.#sqlDbConnection.query(
+        const [queryInsertResults] = await this.#sqlDbConnPool.query(
             `INSERT INTO ${this.#searchJobsTableName}
                  (${SEARCH_JOBS_TABLE_COLUMN_NAMES.SEARCH_CONFIG})
              VALUES (?)`,
@@ -80,7 +80,7 @@ class SearchJobsDbManager {
      * @throws {Error} on error.
      */
     async submitQueryCancellation(jobId) {
-        await this.#sqlDbConnection.query(
+        await this.#sqlDbConnPool.query(
             `UPDATE ${this.#searchJobsTableName}
              SET ${SEARCH_JOBS_TABLE_COLUMN_NAMES.STATUS} = ${SEARCH_JOB_STATUS.CANCELLING}
              WHERE ${SEARCH_JOBS_TABLE_COLUMN_NAMES.ID} = ?`,
@@ -99,7 +99,7 @@ class SearchJobsDbManager {
         while (true) {
             let rows;
             try {
-                const [queryRows, _] = await this.#sqlDbConnection.query(
+                const [queryRows, _] = await this.#sqlDbConnPool.query(
                     `SELECT ${SEARCH_JOBS_TABLE_COLUMN_NAMES.STATUS}
                      FROM ${this.#searchJobsTableName}
                      WHERE ${SEARCH_JOBS_TABLE_COLUMN_NAMES.ID} = ?`,

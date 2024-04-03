@@ -40,11 +40,9 @@ ChartJS.register(
 Meteor.startup(() => {
     const routes = (
         <Router history={createBrowserHistory()}>
-            <Switch>
-                <App/>
-            </Switch>
+            <App/>
         </Router>
     );
 
-    render(routes, document.getElementById("react-target"));
+    render(routes, document.getElementById("root"));
 });
