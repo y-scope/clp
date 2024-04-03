@@ -202,6 +202,7 @@ void LibarchiveFileReader::close() {
     m_data_block = nullptr;
     m_reached_eof = false;
 
+    m_data_block_pos_in_file = 0;
     m_pos_in_file = 0;
 }
 
@@ -252,6 +253,7 @@ ErrorCode LibarchiveFileReader::read_next_data_block() {
             &m_data_block_pos_in_file
     );
     if (ARCHIVE_OK != return_value) {
+        m_pos_in_data_block = m_data_block_length;
         if (ARCHIVE_EOF == return_value) {
             m_reached_eof = true;
             m_data_block = nullptr;
