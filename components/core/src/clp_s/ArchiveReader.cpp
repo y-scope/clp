@@ -132,6 +132,7 @@ ArchiveReader::append_reader_column(std::unique_ptr<SchemaReader>& reader, int32
             break;
         case NodeType::Object:
         case NodeType::NullValue:
+        case NodeType::StructuredArray:
             reader->append_column(column_id);
             break;
         case NodeType::Unknown:

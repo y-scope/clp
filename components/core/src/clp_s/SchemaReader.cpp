@@ -294,7 +294,7 @@ void SchemaReader::generate_json_template(int32_t id) {
                 break;
             }
             case NodeType::StructuredArray: {
-                // generate_structured_array_template(child_id);
+                generate_structured_array_template(child_id);
                 break;
             }
             case NodeType::Integer: {
