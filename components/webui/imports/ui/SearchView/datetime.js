@@ -67,7 +67,8 @@ const computeTimeRange = (token) => () => {
 
         end = (true === isEndingNow) ?
             dayjs.utc() :
-            dayjs.utc().subtract(amount, unit)
+            dayjs.utc()
+                .subtract(amount, unit)
                 .endOf(unit);
         begin = (true === isBeginStartOfUnit) ?
             end.startOf(unit) :
