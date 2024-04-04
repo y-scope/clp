@@ -38,6 +38,7 @@ const SearchResultsLoadSensor = ({
 
         const observer = new IntersectionObserver((entries) => {
             if (entries[0].isIntersecting) {
+                onLoadMoreResults();
                 loadIntervalRef.current = setInterval(
                     onLoadMoreResults,
                     SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MS,
