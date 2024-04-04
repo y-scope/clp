@@ -50,13 +50,11 @@ const SearchResults = ({
 
     const handleLoadMoreResults = useCallback(() => {
         if (hasMoreResults) {
-            setVisibleSearchResultsLimit(
-                visibleSearchResultsLimit + VISIBLE_RESULTS_LIMIT_INCREMENT
-            );
+            setVisibleSearchResultsLimit((v) => v + VISIBLE_RESULTS_LIMIT_INCREMENT);
         }
     }, [
         hasMoreResults,
-        visibleSearchResultsLimit,
+        setVisibleSearchResultsLimit,
     ]);
 
     return <>
