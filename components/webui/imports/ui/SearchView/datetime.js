@@ -41,7 +41,7 @@ const TIME_RANGE_PRESET_LABEL = Object.freeze({
  * Computes a time range based on a token.
  *
  * @param {string} token representing the time range to compute; format: `unit_modifier_amount`
- * @returns {Object} containing Date objects representing the computed begin and end time range
+ * @returns {TimeRange} containing Date objects representing the computed begin and end time range
  */
 const computeTimeRange = (token) => () => {
     const [unit,
@@ -130,8 +130,8 @@ const convertLocalUnixMsToSameUtcDatetime = (localTimeStampUnixMs) => {
  * Expand the time range so that both extremes are multiples of the given duration.
  *
  * @param {dayjs.Duration} duration
- * @param {{begin: dayjs.Dayjs, end: dayjs.Dayjs}} timeRange - The time range to be clipped.
- * @return {{begin: dayjs.Dayjs, end: dayjs.Dayjs}} - The expanded time range.
+ * @param {TimeRange} timeRange - The time range to be clipped.
+ * @return {TimeRange} - The expanded time range.
  */
 const expandTimeRangeToDurationMultiple = (duration, {
     begin,
@@ -147,14 +147,6 @@ const expandTimeRangeToDurationMultiple = (duration, {
 
     return {begin: dayjs.utc(adjustedBegin), end: dayjs.utc(adjustedEnd)};
 };
-
-/**
- * @typedef {object} TimelineConfig
- * @property {plugin.Duration} bucketDuration
- * @property {object} range
- * @property {dayjs.Dayjs} range.begin
- * @property {dayjs.Dayjs} range.end
- */
 
 /**
  * Computes timeline configuration based on the given timestamp range. By determining an

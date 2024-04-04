@@ -83,7 +83,7 @@ const SearchControlsCaseSensitivityCheck = (props) => (
  * Renders the controls for filtering search results by time range, including a date picker and
  * preset time range options.
  *
- * @param {Object} timeRange
+ * @param {TimeRange} timeRange
  * @param {function} setTimeRange
  * @param {boolean} ignoreCase
  * @param {function} setIgnoreCase
