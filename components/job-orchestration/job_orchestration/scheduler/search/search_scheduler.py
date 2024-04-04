@@ -69,28 +69,30 @@ async def release_reducer_for_job(job: SearchJob):
 
 
 @exception_default_value(default=[])
-def fetch_new_search_jobs(db_cursor) -> list:
-    db_cursor.execute(
-        f"""
-        SELECT {SEARCH_JOBS_TABLE_NAME}.id as job_id,
-        {SEARCH_JOBS_TABLE_NAME}.search_config
-        FROM {SEARCH_JOBS_TABLE_NAME}
-        WHERE {SEARCH_JOBS_TABLE_NAME}.status={SearchJobStatus.PENDING}
-        """
-    )
-    return db_cursor.fetchall()
+def fetch_new_search_jobs(db_conn) -> list:
+    with contextlib.closing(db_conn.cursor(dictionary=True)) as db_cursor:
+        db_cursor.execute(
+            f"""
+            SELECT {SEARCH_JOBS_TABLE_NAME}.id as job_id,
+            {SEARCH_JOBS_TABLE_NAME}.search_config
+            FROM {SEARCH_JOBS_TABLE_NAME}
+            WHERE {SEARCH_JOBS_TABLE_NAME}.status={SearchJobStatus.PENDING}
+            """
+        )
+        return db_cursor.fetchall()
 
 
 @exception_default_value(default=[])
-def fetch_cancelling_search_jobs(db_cursor) -> list:
-    db_cursor.execute(
-        f"""
-        SELECT {SEARCH_JOBS_TABLE_NAME}.id as job_id
-        FROM {SEARCH_JOBS_TABLE_NAME}
-        WHERE {SEARCH_JOBS_TABLE_NAME}.status={SearchJobStatus.CANCELLING}
-        """
-    )
-    return db_cursor.fetchall()
+def fetch_cancelling_search_jobs(db_conn) -> list:
+    with contextlib.closing(db_conn.cursor(dictionary=True)) as db_cursor:
+        db_cursor.execute(
+            f"""
+            SELECT {SEARCH_JOBS_TABLE_NAME}.id as job_id
+            FROM {SEARCH_JOBS_TABLE_NAME}
+            WHERE {SEARCH_JOBS_TABLE_NAME}.status={SearchJobStatus.CANCELLING}
+            """
+        )
+        return db_cursor.fetchall()
 
 
 @exception_default_value(default=False)
@@ -126,11 +128,7 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
         logger.exception("Failed to acquire database connection.")
         db_conn = None
 
-    cancelling_jobs = []
-    if db_conn is not None:
-        with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
-            cancelling_jobs = fetch_cancelling_search_jobs(cursor)
-        # db_conn.commit()
+    cancelling_jobs = fetch_cancelling_search_jobs(db_conn)
 
     for job in cancelling_jobs:
         job_id = job["job_id"]
@@ -279,42 +277,39 @@ def handle_pending_search_jobs(
         logger.exception("Failed to acquire database connection.")
         db_conn = None
 
-    if db_conn is not None:
-        with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
-            for job in fetch_new_search_jobs(cursor):
-                job_id = str(job["job_id"])
+    for job in fetch_new_search_jobs(db_conn):
+        job_id = str(job["job_id"])
 
-                # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
-                if job_id in active_jobs:
-                    continue
+        # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
+        if job_id in active_jobs:
+            continue
 
-                search_config = SearchConfig.parse_obj(msgpack.unpackb(job["search_config"]))
-                archives_for_search = get_archives_for_search(db_conn, search_config)
-                if len(archives_for_search) == 0:
-                    if set_job_status(
-                        db_conn, job_id, SearchJobStatus.SUCCEEDED, SearchJobStatus.PENDING
-                    ):
-                        logger.info(f"No matching archives, skipping job {job['job_id']}.")
-                    continue
+        search_config = SearchConfig.parse_obj(msgpack.unpackb(job["search_config"]))
+        archives_for_search = get_archives_for_search(db_conn, search_config)
+        if len(archives_for_search) == 0:
+            if set_job_status(
+                db_conn, job_id, SearchJobStatus.SUCCEEDED, SearchJobStatus.PENDING
+            ):
+                logger.info(f"No matching archives, skipping job {job['job_id']}.")
+            continue
 
-                new_search_job = SearchJob(
-                    id=job_id,
-                    search_config=search_config,
-                    state=InternalJobState.WAITING_FOR_DISPATCH,
-                    remaining_archives_for_search=archives_for_search,
-                )
+        new_search_job = SearchJob(
+            id=job_id,
+            search_config=search_config,
+            state=InternalJobState.WAITING_FOR_DISPATCH,
+            remaining_archives_for_search=archives_for_search,
+        )
 
-                if search_config.aggregation_config is not None:
-                    new_search_job.search_config.aggregation_config.job_id = job["job_id"]
-                    new_search_job.state = InternalJobState.WAITING_FOR_REDUCER
-                    new_search_job.reducer_acquisition_task = asyncio.create_task(
-                        acquire_reducer_for_job(new_search_job)
-                    )
-                    reducer_acquisition_tasks.append(new_search_job.reducer_acquisition_task)
-                else:
-                    pending_jobs.append(new_search_job)
-                active_jobs[job_id] = new_search_job
-            # db_conn.commit()
+        if search_config.aggregation_config is not None:
+            new_search_job.search_config.aggregation_config.job_id = job["job_id"]
+            new_search_job.state = InternalJobState.WAITING_FOR_REDUCER
+            new_search_job.reducer_acquisition_task = asyncio.create_task(
+                acquire_reducer_for_job(new_search_job)
+            )
+            reducer_acquisition_tasks.append(new_search_job.reducer_acquisition_task)
+        else:
+            pending_jobs.append(new_search_job)
+        active_jobs[job_id] = new_search_job
 
     for job in pending_jobs:
         job_id = job.id
