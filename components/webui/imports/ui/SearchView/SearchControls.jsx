@@ -15,18 +15,19 @@ import {
 import DatePicker from "react-datepicker";
 
 import {
-    isSearchSignalQuerying,
-    isSearchSignalReq,
-    SEARCH_SIGNAL,
-} from "../../api/search/constants";
-import {LOCAL_STORAGE_KEYS} from "../constants";
-import {
     computeTimeRange,
     convertLocalToSameUtcDatetime,
     convertUtcToSameLocalDate,
     TIME_RANGE_PRESET_LABEL,
     TIME_UNIT,
-} from "./datetime";
+} from "/imports/utils/datetime";
+
+import {
+    isSearchSignalQuerying,
+    isSearchSignalReq,
+    SEARCH_SIGNAL,
+} from "../../api/search/constants";
+import {LOCAL_STORAGE_KEYS} from "../constants";
 
 import "react-datepicker/dist/react-datepicker.css";
 import "./SearchControls.scss";

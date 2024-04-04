@@ -11,13 +11,11 @@ import {
 import zoomPlugin from "chartjs-plugin-zoom";
 import dayjs from "dayjs";
 
-import {convertLocalUnixMsToSameUtcDatetime} from "./datetime";
+import {convertLocalUnixMsToSameUtcDatetime} from "/imports/utils/datetime";
 
 import "chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm";
 import "./SearchResultsTimeline.scss";
 
-
-const DATETIME_FORMAT_TEMPLATE = "YYYY-MMM-DD HH:mm:ss";
 
 ChartJs.register(
     TimeScale,

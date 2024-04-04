@@ -16,11 +16,13 @@ import {
 } from "../../api/search/constants";
 import SearchJobCollectionsManager from "../../api/search/SearchJobCollectionsManager";
 import {LOCAL_STORAGE_KEYS} from "../constants";
+
 import {
     computeTimelineConfig,
     DEFAULT_TIME_RANGE,
     expandTimeRangeToDurationMultiple,
-} from "./datetime";
+} from "/imports/utils/datetime";
+
 import SearchControls from "./SearchControls.jsx";
 import SearchResults, {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResults.jsx";
 

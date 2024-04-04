@@ -1,6 +1,13 @@
 import dayjs from "dayjs";
+import Duration from "dayjs/plugin/duration";
+import Timezone from "dayjs/plugin/timezone";
+import Utc from "dayjs/plugin/utc";
 
+dayjs.extend(Utc);
+dayjs.extend(Timezone);
+dayjs.extend(Duration);
 
+const DATETIME_FORMAT_TEMPLATE = "YYYY-MMM-DD HH:mm:ss";
 const MAX_DATA_POINTS_PER_TIMELINE = 40;
 
 const TIME_UNIT = Object.freeze({
@@ -41,9 +48,11 @@ const TIME_RANGE_PRESET_LABEL = Object.freeze({
  * Computes a time range based on a token.
  *
  * @param {string} token representing the time range to compute; format: `unit_modifier_amount`
- * @returns {TimeRange} containing Date objects representing the computed begin and end time range
+ * @return {TimeRange} containing Date objects representing the computed begin and end
+ * time
+ * range
  */
-const computeTimeRange = (token) => () => {
+const computeTimeRange = (token)  => {
     const [unit,
         modifier,
         amount] = token.split("_");
@@ -206,6 +215,7 @@ export {
     convertLocalToSameUtcDatetime,
     convertLocalUnixMsToSameUtcDatetime,
     convertUtcToSameLocalDate,
+    DATETIME_FORMAT_TEMPLATE,
     DEFAULT_TIME_RANGE,
     expandTimeRangeToDurationMultiple,
     TIME_RANGE_PRESET_LABEL,
