@@ -2,7 +2,9 @@ import logging
 
 import mariadb
 import mysql.connector
+import sqlalchemy.pool as pool
 from mysql.connector import errorcode
+from sqlalchemy.dialects.mysql import mariadbconnector, mysqlconnector
 
 from clp_py_utils.clp_config import Database
 
@@ -53,3 +55,17 @@ class SQL_Adapter:
             return self.create_mariadb_connection(disable_localhost_socket_connection)
         else:
             raise NotImplementedError
+
+    def create_connection_pool(
+        self, pool_size=2, disable_localhost_socket_connection: bool = False
+    ):
+        def create_connection():
+            return self.create_connection(disable_localhost_socket_connection)
+
+        if "mysql" == self.database_config.type:
+            dialect = mysqlconnector.dialect
+        elif "mariadb" == self.database_config.type:
+            dialect = mariadbconnector.dialect
+        return pool.QueuePool(
+            create_connection, pool_size=pool_size, dialect=dialect, max_overflow=0, pre_ping=True
+        )

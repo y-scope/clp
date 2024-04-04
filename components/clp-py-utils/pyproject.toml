@@ -19,6 +19,7 @@ python-dotenv = "^1.0.1"
 python-Levenshtein = "~0.22"
 PyYAML = "^6.0.1"
 StrEnum = "^0.4.15"
+sqlalchemy = "~2.0"
 
 [build-system]
 requires = ["poetry-core"]
