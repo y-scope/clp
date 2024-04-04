@@ -1,5 +1,5 @@
 .search-results-container {
-  position: relative;
+  overflow-y: auto;
 }
 
 // NOTE: We use a hierarchical selector to override Bootstrap's hierarchical selector (classes can't override hierarchical selectors without !important)
