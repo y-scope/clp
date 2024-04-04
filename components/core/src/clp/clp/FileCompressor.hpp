@@ -50,6 +50,9 @@ public:
     );
 
 private:
+    // Constants
+    static constexpr size_t m_utf_max_validation_len = 4;
+
     // Methods
     /**
      * Parses and encodes content from the given reader into the given archive_writer
@@ -144,9 +147,7 @@ private:
             streaming_archive::writer::Archive& archive,
             ir::LogEventDeserializer<encoded_variable_t>& log_event_deserializer
     );
-
     // Variables
-    size_t const m_utf_max_validation_len = 4096;
     boost::uuids::random_generator& m_uuid_generator;
     BufferedFileReader m_file_reader;
     LibarchiveReader m_libarchive_reader;
