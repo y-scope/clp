@@ -188,7 +188,7 @@ Meteor.methods({
 
             updateSearchResultsMeta(jobId, {
                 lastSignal: SEARCH_SIGNAL.RESP_DONE,
-                errorMsg: "The search results are inconclusive because the user cancelled the job."
+                errorMsg: "Query cancelled before it could be completed."
             });
         } catch (e) {
             const errorMsg = `Failed to submit cancel request for job ${jobId}.`;
