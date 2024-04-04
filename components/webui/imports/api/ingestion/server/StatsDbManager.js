@@ -14,21 +14,21 @@ const CLP_FILES_TABLE_COLUMN_NAMES = {
  * Class for retrieving compression stats from the database.
  */
 class StatsDbManager {
-    #sqlDbConnection;
+    #sqlDbConnPool;
     #clpArchivesTableName;
     #clpFilesTableName;
 
     /**
-     * @param {mysql.Connection} sqlDbConnection
+     * @param {import("mysql2/promise").Pool} sqlDbConnPool
      * @param {object} tableNames
      * @param {string} tableNames.clpArchivesTableName
      * @param {string} tableNames.clpFilesTableName
      */
-    constructor(sqlDbConnection, {
+    constructor(sqlDbConnPool, {
         clpArchivesTableName,
         clpFilesTableName,
     }) {
-        this.#sqlDbConnection = sqlDbConnection;
+        this.#sqlDbConnPool = sqlDbConnPool;
 
         this.#clpArchivesTableName = clpArchivesTableName;
         this.#clpFilesTableName = clpFilesTableName;
@@ -50,7 +50,7 @@ class StatsDbManager {
      * @throws {Error} on error.
      */
     async getCompressionStats() {
-        const [queryStats] = await this.#sqlDbConnection.query(
+        const [queryStats] = await this.#sqlDbConnPool.query(
             `SELECT a.begin_timestamp         AS begin_timestamp,
                     a.end_timestamp           AS end_timestamp,
                     a.total_uncompressed_size AS total_uncompressed_size,

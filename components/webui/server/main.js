@@ -7,7 +7,6 @@ import "/imports/api/ingestion/server/publications";
 import "/imports/api/search/server/collections";
 import "/imports/api/search/server/methods";
 import "/imports/api/search/server/publications";
-import "/imports/api/user/server/methods";
 import {deinitDbManagers, initDbManagers} from "../imports/utils/DbManager";
 
 

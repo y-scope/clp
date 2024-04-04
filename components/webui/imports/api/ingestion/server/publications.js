@@ -45,17 +45,17 @@ const refreshCompressionStats = async () => {
 };
 
 /**
- * @param {mysql.Connection} sqlDbConnection
+ * @param {import("mysql2/promise").Pool} sqlDbConnPool
  * @param {object} tableNames
  * @param {string} tableNames.clpArchivesTableName
  * @param {string} tableNames.clpFilesTableName
  * @throws {Error} on error.
  */
-const initStatsDbManager = (sqlDbConnection, {
+const initStatsDbManager = (sqlDbConnPool, {
     clpArchivesTableName,
     clpFilesTableName,
 }) => {
-    statsDbManager = new StatsDbManager(sqlDbConnection, {
+    statsDbManager = new StatsDbManager(sqlDbConnPool, {
         clpArchivesTableName,
         clpFilesTableName,
     });
