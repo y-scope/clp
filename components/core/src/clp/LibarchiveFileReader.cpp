@@ -227,8 +227,10 @@ void LibarchiveFileReader::peek_buffered_data(char const*& buf, size_t& buf_size
     if (nullptr == m_archive_entry) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
-
-    if (m_pos_in_file < m_data_block_pos_in_file) {
+    if (nullptr == m_data_block) {
+        buf_size = 0;
+        buf = nullptr;
+    } else if (m_pos_in_file < m_data_block_pos_in_file) {
         // Position in the file is before the current data block, so we return nulls corresponding
         // to the sparse bytes before the data block
         // NOTE: We don't return ALL sparse bytes before the data block since that might require
@@ -253,10 +255,9 @@ ErrorCode LibarchiveFileReader::read_next_data_block() {
             &m_data_block_pos_in_file
     );
     if (ARCHIVE_OK != return_value) {
-        m_pos_in_data_block = m_data_block_length;
+        m_data_block = nullptr;
         if (ARCHIVE_EOF == return_value) {
             m_reached_eof = true;
-            m_data_block = nullptr;
             return ErrorCode_EndOfFile;
         } else {
             SPDLOG_DEBUG(
