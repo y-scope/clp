@@ -304,11 +304,12 @@ void SchemaReader::generate_structured_array_template(int32_t id) {
     size_t column_start = object_info_it->second.first;
     Span<int32_t> schema = object_info_it->second.second;
     for (size_t i = 0; i < schema.size(); ++i) {
-        int32_t column_id = schema[i];
-        if (Schema::schema_entry_is_unordered_object(column_id)) {
+        int32_t global_column_id = schema[i];
+        if (Schema::schema_entry_is_unordered_object(global_column_id)) {
             running_object_prefix.push_back(i);
             continue;
         }
+        int32_t column_id = m_global_id_to_local_id[global_column_id];
 
         while (false == state.empty() && i > state.top().end_pos) {
             for (size_t i = 0; i < state.top().repetitions; ++i) {
