@@ -120,7 +120,8 @@ const convertLocalToSameUtcDatetime = (localDate) => {
 const convertLocalUnixMsToSameUtcDatetime = (localTimeStampUnixMs) => {
     const localTz = dayjs.tz.guess();
 
-    return dayjs(localTimeStampUnixMs).tz(localTz)
+    return dayjs(localTimeStampUnixMs)
+        .tz(localTz)
         .utc(true)
         .tz(localTz)
         .utc(true);
@@ -137,12 +138,10 @@ const expandTimeRangeToDurationMultiple = (duration, {
     begin,
     end,
 }) => {
-    const adjustedBegin =
-        begin - (begin % duration.asMilliseconds());
+    const adjustedBegin = begin - (begin % duration.asMilliseconds());
     const adjustedEnd =
         Math.floor(
-            (end + duration.asMilliseconds() - 1) /
-            duration.asMilliseconds()
+            (end + duration.asMilliseconds() - 1) / duration.asMilliseconds()
         ) * duration.asMilliseconds();
 
     return {begin: dayjs.utc(adjustedBegin), end: dayjs.utc(adjustedEnd)};
