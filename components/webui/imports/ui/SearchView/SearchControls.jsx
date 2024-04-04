@@ -237,7 +237,7 @@ const SearchFilterControlsDrawer = ({
  *
  * @param {string} queryString
  * @param {function} setQueryString
- * @param {Object} timeRange
+ * @param {TimeRange} timeRange
  * @param {function} setTimeRange
  * @param {boolean} ignoreCase
  * @param {function} setIgnoreCase

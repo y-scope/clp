@@ -30,8 +30,8 @@ ChartJs.register(
 /**
  * Converts an array of timeline buckets into an array of objects compatible with Chart.js.
  *
- * @param {{timestamp: number, count: number}[]} timelineBuckets
- * @return {{x: number, y: number}[]}
+ * @param {TimelineBucket[]} timelineBuckets
+ * @return {ChartJsDatasetItem[]}
  */
 const adaptTimelineBucketsForChartJs = (timelineBuckets) => (
     timelineBuckets.map(
@@ -49,7 +49,7 @@ const adaptTimelineBucketsForChartJs = (timelineBuckets) => (
  * Displays a timeline of search results.
  *
  * @param {TimelineConfig} timelineConfig
- * @param {object[]} timelineBuckets
+ * @param {TimelineBucket[]} timelineBuckets
  * @param {function} onTimelineZoom
  * @return {JSX.Element}
  */

@@ -10,3 +10,14 @@
  * @property {TimeRange} range
  */
 
+/**
+ * @typedef {object} TimelineBucket
+ * @property {number} timestamp
+ * @property {number} count
+ */
+
+/**
+ * @typedef {object} ChartJsDatasetItem
+ * @property {number} x
+ * @property {number} y
+ */
