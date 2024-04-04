@@ -1,3 +1,4 @@
+import functools
 import logging
 
 import mariadb
@@ -7,6 +8,21 @@ from mysql.connector import errorcode
 from sqlalchemy.dialects.mysql import mariadbconnector, mysqlconnector
 
 from clp_py_utils.clp_config import Database
+
+
+def exception_default_value(default):
+    def _exception_default_value(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except:
+                logging.error("ERROR")
+                return default
+
+        return wrapper
+
+    return _exception_default_value
 
 
 class SQL_Adapter:
@@ -67,5 +83,9 @@ class SQL_Adapter:
         elif "mariadb" == self.database_config.type:
             dialect = mariadbconnector.dialect
         return pool.QueuePool(
-            create_connection, pool_size=pool_size, dialect=dialect, max_overflow=0, pre_ping=True
+            create_connection,
+            pool_size=pool_size,
+            dialect=dialect,
+            max_overflow=0,
+            pre_ping=True,
         )

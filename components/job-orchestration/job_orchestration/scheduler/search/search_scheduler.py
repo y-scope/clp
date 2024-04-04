@@ -16,7 +16,7 @@ import pymongo
 from clp_py_utils.clp_config import CLP_METADATA_TABLE_PREFIX, CLPConfig, SEARCH_JOBS_TABLE_NAME
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import exception_default_value, SQL_Adapter
 from job_orchestration.executor.search.fs_search_task import search
 from job_orchestration.scheduler.constants import SearchJobStatus
 from job_orchestration.scheduler.job_config import SearchConfig
@@ -68,6 +68,7 @@ async def release_reducer_for_job(job: SearchJob):
         await job.reducer_handler_msg_queues.put_to_handler(msg)
 
 
+@exception_default_value(default=[])
 def fetch_new_search_jobs(db_cursor) -> list:
     db_cursor.execute(
         f"""
@@ -80,6 +81,7 @@ def fetch_new_search_jobs(db_cursor) -> list:
     return db_cursor.fetchall()
 
 
+@exception_default_value(default=[])
 def fetch_cancelling_search_jobs(db_cursor) -> list:
     db_cursor.execute(
         f"""
@@ -91,6 +93,7 @@ def fetch_cancelling_search_jobs(db_cursor) -> list:
     return db_cursor.fetchall()
 
 
+@exception_default_value(default=False)
 def set_job_status(
     db_conn,
     job_id: str,
@@ -117,29 +120,40 @@ def set_job_status(
 async def handle_cancelling_search_jobs(db_conn_pool) -> None:
     global active_jobs
 
-    with contextlib.closing(db_conn_pool.connect()) as db_conn:
+    try:
+        db_conn = db_conn_pool.connect()
+    except:
+        logger.exception("Failed to acquire database connection.")
+        db_conn = None
+
+    cancelling_jobs = []
+    if db_conn is not None:
         with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
             cancelling_jobs = fetch_cancelling_search_jobs(cursor)
-            db_conn.commit()
+        # db_conn.commit()
 
-        for job in cancelling_jobs:
-            job_id = job["job_id"]
-            if job_id in active_jobs:
-                job = active_jobs.pop(job_id)
-                cancel_job_except_reducer(job)
-                # Perform any async tasks last so that it's easier to reason about synchronization
-                # issues between concurrent tasks
-                await release_reducer_for_job(job)
-            else:
-                continue
-            if set_job_status(
-                db_conn, job_id, SearchJobStatus.CANCELLED, prev_status=SearchJobStatus.CANCELLING
-            ):
-                logger.info(f"Cancelled job {job_id}.")
-            else:
-                logger.error(f"Failed to cancel job {job_id}.")
+    for job in cancelling_jobs:
+        job_id = job["job_id"]
+        if job_id in active_jobs:
+            job = active_jobs.pop(job_id)
+            cancel_job_except_reducer(job)
+            # Perform any async tasks last so that it's easier to reason about synchronization
+            # issues between concurrent tasks
+            await release_reducer_for_job(job)
+        else:
+            continue
+        if set_job_status(
+            db_conn, job_id, SearchJobStatus.CANCELLED, prev_status=SearchJobStatus.CANCELLING
+        ):
+            logger.info(f"Cancelled job {job_id}.")
+        else:
+            logger.error(f"Failed to cancel job {job_id}.")
+
+    if db_conn is not None:
+        db_conn.close()
 
 
+@exception_default_value(default=[])
 def get_archives_for_search(
     db_conn,
     search_config: SearchConfig,
@@ -168,7 +182,7 @@ def get_archives_for_search(
         else:
             cursor.execute(query)
         archives_for_search = list(cursor.fetchall())
-        db_conn.commit()
+        # db_conn.commit()
     return archives_for_search
 
 
@@ -258,67 +272,72 @@ def handle_pending_search_jobs(
     pending_jobs = [
         job for job in active_jobs.values() if InternalJobState.WAITING_FOR_DISPATCH == job.state
     ]
-    with contextlib.closing(db_conn_pool.connect()) as db_conn, contextlib.closing(
-        db_conn.cursor(dictionary=True)
-    ) as cursor:
-        for job in fetch_new_search_jobs(cursor):
-            job_id = str(job["job_id"])
 
-            # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
-            if job_id in active_jobs:
-                continue
+    try:
+        db_conn = db_conn_pool.connect()
+    except:
+        logger.exception("Failed to acquire database connection.")
+        db_conn = None
 
-            search_config = SearchConfig.parse_obj(msgpack.unpackb(job["search_config"]))
-            archives_for_search = get_archives_for_search(db_conn, search_config)
-            if len(archives_for_search) == 0:
-                if set_job_status(
-                    db_conn, job_id, SearchJobStatus.SUCCEEDED, SearchJobStatus.PENDING
-                ):
-                    logger.info(f"No matching archives, skipping job {job['job_id']}.")
-                continue
+    if db_conn is not None:
+        with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
+            for job in fetch_new_search_jobs(cursor):
+                job_id = str(job["job_id"])
 
-            new_search_job = SearchJob(
-                id=job_id,
-                search_config=search_config,
-                state=InternalJobState.WAITING_FOR_DISPATCH,
-                remaining_archives_for_search=archives_for_search,
-            )
+                # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
+                if job_id in active_jobs:
+                    continue
 
-            if search_config.aggregation_config is not None:
-                new_search_job.search_config.aggregation_config.job_id = job["job_id"]
-                new_search_job.state = InternalJobState.WAITING_FOR_REDUCER
-                new_search_job.reducer_acquisition_task = asyncio.create_task(
-                    acquire_reducer_for_job(new_search_job)
+                search_config = SearchConfig.parse_obj(msgpack.unpackb(job["search_config"]))
+                archives_for_search = get_archives_for_search(db_conn, search_config)
+                if len(archives_for_search) == 0:
+                    if set_job_status(
+                        db_conn, job_id, SearchJobStatus.SUCCEEDED, SearchJobStatus.PENDING
+                    ):
+                        logger.info(f"No matching archives, skipping job {job['job_id']}.")
+                    continue
+
+                new_search_job = SearchJob(
+                    id=job_id,
+                    search_config=search_config,
+                    state=InternalJobState.WAITING_FOR_DISPATCH,
+                    remaining_archives_for_search=archives_for_search,
                 )
-                reducer_acquisition_tasks.append(new_search_job.reducer_acquisition_task)
-            else:
-                pending_jobs.append(new_search_job)
-            active_jobs[job_id] = new_search_job
-        db_conn.commit()
 
-    with contextlib.closing(db_conn_pool.connect()) as db_conn:
-        for job in pending_jobs:
-            job_id = job.id
+                if search_config.aggregation_config is not None:
+                    new_search_job.search_config.aggregation_config.job_id = job["job_id"]
+                    new_search_job.state = InternalJobState.WAITING_FOR_REDUCER
+                    new_search_job.reducer_acquisition_task = asyncio.create_task(
+                        acquire_reducer_for_job(new_search_job)
+                    )
+                    reducer_acquisition_tasks.append(new_search_job.reducer_acquisition_task)
+                else:
+                    pending_jobs.append(new_search_job)
+                active_jobs[job_id] = new_search_job
+            # db_conn.commit()
 
-            if (
-                job.search_config.network_address is None
-                and len(job.remaining_archives_for_search) > num_archives_to_search_per_sub_job
-            ):
-                archives_for_search = job.remaining_archives_for_search[
-                    :num_archives_to_search_per_sub_job
-                ]
-                job.remaining_archives_for_search = job.remaining_archives_for_search[
-                    num_archives_to_search_per_sub_job:
-                ]
-            else:
-                archives_for_search = job.remaining_archives_for_search
-                job.remaining_archives_for_search = []
+    for job in pending_jobs:
+        job_id = job.id
 
-            dispatch_search_job(job, archives_for_search, results_cache_uri)
-            logger.info(
-                f"Dispatched job {job_id} with {len(archives_for_search)} archives to search."
-            )
-            set_job_status(db_conn, job_id, SearchJobStatus.RUNNING, SearchJobStatus.PENDING)
+        if (
+            job.search_config.network_address is None
+            and len(job.remaining_archives_for_search) > num_archives_to_search_per_sub_job
+        ):
+            archives_for_search = job.remaining_archives_for_search[
+                :num_archives_to_search_per_sub_job
+            ]
+            job.remaining_archives_for_search = job.remaining_archives_for_search[
+                num_archives_to_search_per_sub_job:
+            ]
+        else:
+            archives_for_search = job.remaining_archives_for_search
+            job.remaining_archives_for_search = []
+
+        dispatch_search_job(job, archives_for_search, results_cache_uri)
+        logger.info(f"Dispatched job {job_id} with {len(archives_for_search)} archives to search.")
+        set_job_status(db_conn, job_id, SearchJobStatus.RUNNING, SearchJobStatus.PENDING)
+    if db_conn is not None:
+        db_conn.close()
 
     return reducer_acquisition_tasks
 
@@ -357,6 +376,12 @@ def found_max_num_latest_results(
 async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
     global active_jobs
 
+    try:
+        db_conn = db_conn_pool.connect()
+    except:
+        logger.exception("Failed to acquire database connection.")
+        db_conn = None
+
     for job_id in [id for id, job in active_jobs.items() if InternalJobState.RUNNING == job.state]:
         job = active_jobs[job_id]
         is_reducer_job = job.reducer_handler_msg_queues is not None
@@ -370,8 +395,7 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                 msg = ReducerHandlerMessage(ReducerHandlerMessageType.FAILURE)
                 await job.reducer_handler_msg_queues.put_to_handler(msg)
             del active_jobs[job_id]
-            with contextlib.closing(db_conn_pool.connect()) as db_conn:
-                set_job_status(db_conn, job_id, SearchJobStatus.FAILED, SearchJobStatus.RUNNING)
+            set_job_status(db_conn, job_id, SearchJobStatus.FAILED, SearchJobStatus.RUNNING)
             continue
 
         if returned_results is None:
@@ -419,15 +443,16 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                 error_msg = f"Unexpected msg_type: {msg.msg_type.name}"
                 raise NotImplementedError(error_msg)
 
-        with contextlib.closing(db_conn_pool.connect()) as db_conn:
-            if set_job_status(db_conn, job_id, new_job_status, SearchJobStatus.RUNNING):
-                if new_job_status == SearchJobStatus.SUCCEEDED:
-                    logger.info(f"Completed job {job_id}.")
-                elif reducer_failed:
-                    logger.error(f"Completed job {job_id} with failing reducer.")
-                else:
-                    logger.info(f"Completed job {job_id} with failing tasks.")
+        if set_job_status(db_conn, job_id, new_job_status, SearchJobStatus.RUNNING):
+            if new_job_status == SearchJobStatus.SUCCEEDED:
+                logger.info(f"Completed job {job_id}.")
+            elif reducer_failed:
+                logger.error(f"Completed job {job_id} with failing reducer.")
+            else:
+                logger.info(f"Completed job {job_id} with failing tasks.")
         del active_jobs[job_id]
+    if db_conn is not None:
+        db_conn.close()
 
 
 async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_delay: float):
