@@ -149,13 +149,21 @@ const expandTimeRangeToDurationMultiple = (duration, {
 };
 
 /**
+ * @typedef {object} TimelineConfig
+ * @property {plugin.Duration} bucketDuration
+ * @property {object} range
+ * @property {dayjs.Dayjs} range.begin
+ * @property {dayjs.Dayjs} range.end
+ */
+
+/**
  * Computes timeline configuration based on the given timestamp range. By determining an
  * appropriate "bucket duration" to group data points, the function returns an object
  * containing this bucket duration and a time range adjusted to fit neatly into these buckets.
  *
  * @param {dayjs.Dayjs} timestampBeginUnixMs
  * @param {dayjs.Dayjs} timestampEndUnixMs
- * @return {{bucketDuration: plugin.Duration, range: {end: dayjs.Dayjs, begin: dayjs.Dayjs}}}
+ * @return {TimelineConfig}
  */
 const computeTimelineConfig = (timestampBeginUnixMs, timestampEndUnixMs) => {
     const timeRangeMs = timestampEndUnixMs - timestampBeginUnixMs;

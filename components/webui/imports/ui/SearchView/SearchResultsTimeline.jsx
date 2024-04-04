@@ -48,7 +48,7 @@ const adaptTimelineBucketsForChartJs = (timelineBuckets) => (
 /**
  * Displays a timeline of search results.
  *
- * @param {object} timelineConfig
+ * @param {TimelineConfig} timelineConfig
  * @param {object[]} timelineBuckets
  * @param {function} onTimelineZoom
  * @return {JSX.Element}

@@ -36,7 +36,7 @@ const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
  * @param {function} setVisibleSearchResultsLimit
  * @param {number} maxLinesPerResult
  * @param {function} setMaxLinesPerResult
- * @param {object} timelineConfig
+ * @param {TimelineConfig} timelineConfig
  * @param {object[]} timelineBuckets
  * @param {function} onTimelineZoom
  * @returns {JSX.Element}
