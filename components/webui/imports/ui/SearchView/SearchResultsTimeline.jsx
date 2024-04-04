@@ -1,14 +1,31 @@
 import React from "react";
 import {Bar} from "react-chartjs-2";
 
+import {
+    BarElement,
+    Chart as ChartJs,
+    LinearScale,
+    TimeScale,
+    Tooltip,
+} from "chart.js";
+import zoomPlugin from "chartjs-plugin-zoom";
 import dayjs from "dayjs";
 
 import {convertLocalUnixMsToSameUtcDatetime} from "./datetime";
 
+import "chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm";
 import "./SearchResultsTimeline.scss";
 
 
 const DATETIME_FORMAT_TEMPLATE = "YYYY-MMM-DD HH:mm:ss";
+
+ChartJs.register(
+    TimeScale,
+    LinearScale,
+    BarElement,
+    Tooltip,
+    zoomPlugin
+);
 
 /**
  * Converts an array of timeline buckets into an array of objects compatible with Chart.js.
@@ -52,6 +69,8 @@ const SearchResultsTimeline = ({
                 barPercentage: 1.2,
                 borderColor: "#007380",
                 borderWidth: 2,
+                minBarLength: 5,
+
                 data: adaptTimelineBucketsForChartJs(timelineBuckets),
             },
         ],
@@ -117,8 +136,13 @@ const SearchResultsTimeline = ({
                         return `${bucketStartTime.format(DATETIME_FORMAT_TEMPLATE)} to\n` +
                             `${bucketEndTime.format(DATETIME_FORMAT_TEMPLATE)}`;
                     },
-
                 },
+
+                caretSize: 0,
+                intersect: false,
+                mode: "x",
+                xAlign: "left",
+                yAlign: "bottom",
             },
             zoom: {
                 zoom: {
