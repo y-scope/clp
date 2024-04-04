@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 
-const DATETIME_FORMAT_TEMPLATE = "MMM DD, YYYY, HH:mm:ss";
+
 const MAX_DATA_POINTS_PER_TIMELINE = 40;
 
 const TIME_UNIT = Object.freeze({
@@ -87,17 +87,16 @@ const DEFAULT_TIME_RANGE = computeTimeRange(
 // TODO: Switch date pickers so we don't have to do this hack
 /**
  * Converts a Dayjs object in UTC, to a JavaScript Date object that represents the same date and
- * time, but aligned with the local timezone.
- * This is achieved without altering the original timestamp values (year, month, day, hour,
- * minute, second, and millisecond).
+ * time, but aligned with the local timezone. This is achieved without altering the original
+ * timestamp values (year, month, day, hour, minute, second, and millisecond).
  *
  * @param {dayjs.Dayjs} utcDatetime
- * @return {Date | undefined} The corresponding Date object, or `undefined` when `utcDatetime`
+ * @return {Date} The corresponding Date object, or `undefined` when `utcDatetime`
  * is `undefined`.
  */
 const convertUtcToSameLocalDate = (utcDatetime) => {
     const localTz = dayjs.tz.guess();
-    return utcDatetime?.tz(localTz, true).toDate();
+    return utcDatetime.tz(localTz, true).toDate();
 };
 
 /**
@@ -108,12 +107,12 @@ const convertUtcToSameLocalDate = (utcDatetime) => {
  * @return {dayjs.Dayjs} The corresponding Dayjs object
  */
 const convertLocalToSameUtcDatetime = (localDate) => {
-    return dayjs(localDate)?.utc(true);
+    return dayjs(localDate).utc(true);
 };
 
 /**
  * Converts a Unix milliseconds timestamp of a JavaScript Date object in local timezone, to a Dayjs
- * object that represents the same date and time, but aligned with the UTC.
+ * object that represents the same date and time, but aligned with UTC.
  *
  * @param {number} localTimeStampUnixMs
  * @return {dayjs.Dayjs} The corresponding Dayjs object
@@ -121,49 +120,50 @@ const convertLocalToSameUtcDatetime = (localDate) => {
 const convertLocalUnixMsToSameUtcDatetime = (localTimeStampUnixMs) => {
     const localTz = dayjs.tz.guess();
 
-    return dayjs(localTimeStampUnixMs)?.tz(localTz)
+    return dayjs(localTimeStampUnixMs).tz(localTz)
         .utc(true)
         .tz(localTz)
         .utc(true);
 };
 
 /**
- * Clip the time range to the nearest timeline bucket.
+ * Expand the time range so that both extremes are multiples of the given duration.
  *
- * @param {dayjs.Duration} bucketDuration - The `dayjs.Duration` of each timeline bucket.
- * @param {Object} timeRange - The time range to be clipped.
- * @param {dayjs.Dayjs} timeRange.begin
- * @param {dayjs.Dayjs} timeRange.end
- * @return {Object} - The clipped time range.
- * @property {dayjs.Dayjs} begin
- * @property {dayjs.Dayjs} end
+ * @param {dayjs.Duration} duration
+ * @param {{begin: dayjs.Dayjs, end: dayjs.Dayjs}} timeRange - The time range to be clipped.
+ * @return {{begin: dayjs.Dayjs, end: dayjs.Dayjs}} - The expanded time range.
  */
-const clipTimeRangeToTimelineBucket = (bucketDuration, {
+const expandTimeRangeToDurationMultiple = (duration, {
     begin,
     end,
 }) => {
     const adjustedBegin =
-        begin - (begin % bucketDuration.asMilliseconds());
+        begin - (begin % duration.asMilliseconds());
     const adjustedEnd =
         Math.floor(
-            (end + bucketDuration.asMilliseconds() - 1) /
-            bucketDuration.asMilliseconds()
-        ) * bucketDuration.asMilliseconds();
+            (end + duration.asMilliseconds() - 1) /
+            duration.asMilliseconds()
+        ) * duration.asMilliseconds();
 
     return {begin: dayjs.utc(adjustedBegin), end: dayjs.utc(adjustedEnd)};
 };
 
 /**
- * Computes timeline configuration based on the given timestamp range.
+ * Computes timeline configuration based on the given timestamp range. By determining an
+ * appropriate "bucket duration" to group data points, the function returns an object
+ * containing this bucket duration and a time range adjusted to fit neatly into these buckets.
  *
  * @param {dayjs.Dayjs} timestampBeginUnixMs
  * @param {dayjs.Dayjs} timestampEndUnixMs
- * @return {Object} - The computed timeline configuration.
+ * @return {{bucketDuration: plugin.Duration, range: {end: dayjs.Dayjs, begin: dayjs.Dayjs}}}
  */
 const computeTimelineConfig = (timestampBeginUnixMs, timestampEndUnixMs) => {
     const timeRangeMs = timestampEndUnixMs - timestampBeginUnixMs;
     const exactTimelineBucketMs = timeRangeMs / MAX_DATA_POINTS_PER_TIMELINE;
 
+    // A list of predefined bucket durations, ordered from least to greatest so that the
+    // `durationSelections.find()` below can find the smallest bucket containing
+    // `exactTimelineBucketMs`.
     const durationSelections = [
         /* eslint-disable @stylistic/js/array-element-newline, no-magic-numbers */
         {unit: "second", values: [1, 2, 5, 10, 15, 30]},
@@ -192,7 +192,7 @@ const computeTimelineConfig = (timestampBeginUnixMs, timestampEndUnixMs) => {
         );
 
     return {
-        range: clipTimeRangeToTimelineBucket(bucketDuration, {
+        range: expandTimeRangeToDurationMultiple(bucketDuration, {
             begin: dayjs.utc(timestampBeginUnixMs),
             end: dayjs.utc(timestampEndUnixMs),
         }),
@@ -201,13 +201,13 @@ const computeTimelineConfig = (timestampBeginUnixMs, timestampEndUnixMs) => {
 };
 
 export {
-    clipTimeRangeToTimelineBucket,
     computeTimelineConfig,
     computeTimeRange,
     convertLocalToSameUtcDatetime,
     convertLocalUnixMsToSameUtcDatetime,
     convertUtcToSameLocalDate,
-    DATETIME_FORMAT_TEMPLATE,
     DEFAULT_TIME_RANGE,
+    expandTimeRangeToDurationMultiple,
     TIME_RANGE_PRESET_LABEL,
+    TIME_UNIT,
 };

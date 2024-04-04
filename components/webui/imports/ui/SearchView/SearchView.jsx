@@ -16,7 +16,11 @@ import {
 } from "../../api/search/constants";
 import SearchJobCollectionsManager from "../../api/search/SearchJobCollectionsManager";
 import {LOCAL_STORAGE_KEYS} from "../constants";
-import {computeTimelineConfig, DEFAULT_TIME_RANGE} from "./datetime";
+import {
+    computeTimelineConfig,
+    DEFAULT_TIME_RANGE,
+    expandTimeRangeToDurationMultiple,
+} from "./datetime";
 import SearchControls from "./SearchControls.jsx";
 import SearchResults, {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResults.jsx";
 
@@ -32,7 +36,7 @@ const DEFAULT_IGNORE_CASE_SETTING = true;
  */
 const SearchView = () => {
     // Query states
-    const [jobId, setJobId] = useState(INVALID_JOB_ID);
+    const [searchJobId, setSearchJobId] = useState(INVALID_JOB_ID);
     const [aggregationJobId, setAggregationJobId] = useState(INVALID_JOB_ID);
     const [operationErrorMsg, setOperationErrorMsg] = useState("");
     const [localLastSearchSignal, setLocalLastSearchSignal] = useState(SEARCH_SIGNAL.NONE);
@@ -62,8 +66,8 @@ const SearchView = () => {
     const resultsMetadata = useTracker(() => {
         let result = {lastSignal: localLastSearchSignal};
 
-        if (INVALID_JOB_ID !== jobId) {
-            const args = {jobId};
+        if (INVALID_JOB_ID !== searchJobId) {
+            const args = {searchJobId};
             const subscription = Meteor.subscribe(
                 Meteor.settings.public.SearchResultsMetadataCollectionName, args);
             const doc = SearchResultsMetadataCollection.findOne();
@@ -75,15 +79,18 @@ const SearchView = () => {
         }
 
         return result;
-    }, [jobId, localLastSearchSignal]);
+    }, [
+        searchJobId,
+        localLastSearchSignal
+    ]);
 
     const searchResults = useTracker(() => {
-        if (INVALID_JOB_ID === jobId) {
+        if (INVALID_JOB_ID === searchJobId) {
             return [];
         }
 
         Meteor.subscribe(Meteor.settings.public.SearchResultsCollectionName, {
-            jobId: jobId,
+            searchJobId,
         });
 
         // NOTE: Although we publish and subscribe using the name
@@ -92,7 +99,7 @@ const SearchView = () => {
         // cursor from the job-specific collection and Meteor creates a collection with the same
         // name on the client rather than returning the rows in a collection with the published
         // name.
-        const resultsCollection = dbRef.current.getOrCreateCollection(jobId);
+        const resultsCollection = dbRef.current.getOrCreateCollection(searchJobId);
         const findOptions = {
             limit: visibleSearchResultsLimit,
             sort: [
@@ -119,21 +126,26 @@ const SearchView = () => {
                 })
                 .catch((e) => {
                     console.log(
-                        `Error occurred in resultsCollection<${jobId}>.estimatedDocumentCount()`,
+                        "Error occurred in " +
+                        `resultsCollection<${searchJobId}>.estimatedDocumentCount()`,
                         e,
                     );
                 });
         }
 
         return resultsCollection.find({}, findOptions).fetch();
-    }, [jobId, fieldToSortBy, visibleSearchResultsLimit]);
+    }, [
+        searchJobId,
+        fieldToSortBy,
+        visibleSearchResultsLimit
+    ]);
 
     const timelineBuckets = useTracker(() => {
         if (INVALID_JOB_ID === aggregationJobId) {
             return null;
         }
 
-        Meteor.subscribe(Meteor.settings.public.SearchResultsAggregationCollectionName, {
+        Meteor.subscribe(Meteor.settings.public.AggregationResultsCollectionName, {
             aggregationJobId: aggregationJobId,
         });
         const collection = dbRef.current.getOrCreateCollection(aggregationJobId);
@@ -152,7 +164,7 @@ const SearchView = () => {
 
     // Handlers
     const handleClearResults = () => {
-        setJobId(INVALID_JOB_ID);
+        setSearchJobId(INVALID_JOB_ID);
         setAggregationJobId(INVALID_JOB_ID);
         setOperationErrorMsg("");
         setLocalLastSearchSignal(SEARCH_SIGNAL.REQ_CLEARING);
@@ -160,25 +172,27 @@ const SearchView = () => {
         setVisibleSearchResultsLimit(VISIBLE_RESULTS_LIMIT_INITIAL);
 
         const args = {
-            jobId: jobId,
-            aggregationJobId: aggregationJobId,
+            searchJobId,
+            aggregationJobId,
         };
+
         Meteor.call("search.clearResults", args, (error) => {
             if (error) {
                 setOperationErrorMsg(error.reason);
+
                 return;
             }
 
             if (SEARCH_SIGNAL.REQ_CLEARING === localLastSearchSignalRef.current) {
                 // The check prevents clearing `localLastSearchSignal = SEARCH_SIGNAL.REQ_QUERYING`
-                // when `handleClearResults` is called by submitQuery.
+                // when `handleClearResults` is called by handleQuerySubmit.
                 setLocalLastSearchSignal(SEARCH_SIGNAL.NONE);
             }
         });
     };
 
-    const submitQuery = (newArgs) => {
-        if (INVALID_JOB_ID !== jobId) {
+    const handleQuerySubmit = (newArgs) => {
+        if (INVALID_JOB_ID !== searchJobId) {
             // Clear result caches before starting a new query
             handleClearResults();
         }
@@ -198,11 +212,11 @@ const SearchView = () => {
             setTimeRange(queryTimeRange);
         }
 
-        const timestampBeginUnixMs = queryTimeRange.begin.valueOf();
-        const timestampEndUnixMs = queryTimeRange.end.valueOf();
+        const timestampBeginUnixMillis = queryTimeRange.begin;
+        const timestampEndUnixMillis = queryTimeRange.end;
         const newTimelineConfig = computeTimelineConfig(
-            timestampBeginUnixMs,
-            timestampEndUnixMs
+            timestampBeginUnixMillis,
+            timestampEndUnixMillis
         );
 
         setTimelineConfig(newTimelineConfig);
@@ -210,32 +224,32 @@ const SearchView = () => {
         const args = {
             ignoreCase: ignoreCase,
             queryString: queryString,
-            timeRangeBucketSizeMs: newTimelineConfig.bucketDuration.asMilliseconds(),
-            timestampBegin: timestampBeginUnixMs,
-            timestampEnd: timestampEndUnixMs,
+            timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
+            timestampBegin: timestampBeginUnixMillis.valueOf(),
+            timestampEnd: timestampEndUnixMillis.valueOf(),
         };
 
         Meteor.call("search.submitQuery", args, (error, result) => {
             if (error) {
-                handleClearResults();
                 setOperationErrorMsg(error.reason);
 
                 return;
             }
 
-            setJobId(result.jobId);
+            setSearchJobId(result.searchJobId);
             setAggregationJobId(result.aggregationJobId);
         });
     };
 
-    const cancelOperation = () => {
+    const handleCancelOperation = () => {
         setOperationErrorMsg("");
         setLocalLastSearchSignal(SEARCH_SIGNAL.REQ_CANCELLING);
 
         const args = {
-            jobId: jobId,
-            aggregationJobId: aggregationJobId,
+            searchJobId,
+            aggregationJobId,
         };
+
         Meteor.call("search.cancelOperation", args, (error) => {
             if (error) {
                 setOperationErrorMsg(error.reason);
@@ -243,7 +257,19 @@ const SearchView = () => {
         });
     };
 
-    const showSearchResults = (INVALID_JOB_ID !== jobId);
+    const handleTimelineZoom = (newTimeRange) => {
+        // Expand the time range to the granularity of buckets so if the user
+        // pans across at least one bar in the graph, we will zoom into a region
+        // that still contains log events.
+        const expandedTimeRange = expandTimeRangeToDurationMultiple(
+            timelineConfig.bucketDuration,
+            newTimeRange
+        );
+
+        handleQuerySubmit(expandedTimeRange);
+    };
+
+    const showSearchResults = (INVALID_JOB_ID !== searchJobId);
 
     // The number of results on the server is available in different variables at different times:
     // - when the query ends, it will be in resultsMetadata.numTotalResults.
@@ -265,9 +291,9 @@ const SearchView = () => {
                 ignoreCase={ignoreCase}
                 setIgnoreCase={setIgnoreCase}
                 resultsMetadata={resultsMetadata}
-                onSubmitQuery={submitQuery}
+                onSubmitQuery={handleQuerySubmit}
                 onClearResults={handleClearResults}
-                onCancelOperation={cancelOperation}
+                onCancelOperation={handleCancelOperation}
             />
 
             <SearchStatus
@@ -280,10 +306,10 @@ const SearchView = () => {
 
         {showSearchResults && <SearchResults
             fieldToSortBy={fieldToSortBy}
-            jobId={jobId}
             maxLinesPerResult={maxLinesPerResult}
             numResultsOnServer={numResultsOnServer}
-            obSubmitQuery={submitQuery}
+            onTimelineZoom={handleTimelineZoom}
+            searchJobId={searchJobId}
             searchResults={searchResults}
             setFieldToSortBy={setFieldToSortBy}
             setMaxLinesPerResult={setMaxLinesPerResult}

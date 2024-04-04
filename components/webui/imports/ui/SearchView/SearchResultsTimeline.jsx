@@ -1,41 +1,45 @@
 import React from "react";
 import {Bar} from "react-chartjs-2";
 
-import {
-    clipTimeRangeToTimelineBucket,
-    convertLocalUnixMsToSameUtcDatetime,
-    DATETIME_FORMAT_TEMPLATE,
-} from "./datetime";
-
-import "./SearchResultsTimeline.scss";
 import dayjs from "dayjs";
 
+import {convertLocalUnixMsToSameUtcDatetime} from "./datetime";
+
+import "./SearchResultsTimeline.scss";
+
+
+const DATETIME_FORMAT_TEMPLATE = "YYYY-MMM-DD HH:mm:ss";
 
 /**
  * Converts an array of timeline buckets into an array of objects compatible with Chart.js.
  *
- * @param {object[]} timelineBuckets
- * @return {object[]}
+ * @param {{timestamp: number, count: number}[]} timelineBuckets
+ * @return {{x: number, y: number}[]}
  */
-const getChartJsDataFrom = (timelineBuckets) => {
-    return timelineBuckets.map(({timestamp, count}) => ({
-        x: Number(timestamp),
-        y: count,
-    }));
-};
+const adaptTimelineBucketsForChartJs = (timelineBuckets) => (
+    timelineBuckets.map(
+        ({
+            timestamp,
+            count,
+        }) => ({
+            x: timestamp,
+            y: count,
+        })
+    )
+);
 
 /**
  * Displays a timeline of search results.
  *
  * @param {object} timelineConfig
  * @param {object[]} timelineBuckets
- * @param {function} onSubmitQuery
+ * @param {function} onTimelineZoom
  * @return {JSX.Element}
  */
 const SearchResultsTimeline = ({
     timelineConfig,
     timelineBuckets,
-    onSubmitQuery,
+    onTimelineZoom,
 }) => {
     if (null === timelineBuckets) {
         return <></>;
@@ -48,7 +52,7 @@ const SearchResultsTimeline = ({
                 barPercentage: 1.2,
                 borderColor: "#007380",
                 borderWidth: 2,
-                data: getChartJsDataFrom(timelineBuckets),
+                data: adaptTimelineBucketsForChartJs(timelineBuckets),
             },
         ],
     };
@@ -110,8 +114,8 @@ const SearchResultsTimeline = ({
                         const bucketEndTime = bucketStartTime
                             .add(timelineConfig.bucketDuration);
 
-                        return `  ${bucketStartTime.format(DATETIME_FORMAT_TEMPLATE)}\n` +
-                            `- ${bucketEndTime.format(DATETIME_FORMAT_TEMPLATE)}`;
+                        return `${bucketStartTime.format(DATETIME_FORMAT_TEMPLATE)} to\n` +
+                            `${bucketEndTime.format(DATETIME_FORMAT_TEMPLATE)}`;
                     },
 
                 },
@@ -130,10 +134,7 @@ const SearchResultsTimeline = ({
                             end: convertLocalUnixMsToSameUtcDatetime(parseInt(max, 10)),
                         };
 
-                        onSubmitQuery(clipTimeRangeToTimelineBucket(
-                            timelineConfig.bucketDuration,
-                            newTimeRange
-                        ));
+                        onTimelineZoom(newTimeRange);
                     },
                 },
             },
@@ -141,15 +142,10 @@ const SearchResultsTimeline = ({
     };
 
     return (
-        <>
-            <Bar
-                data={data}
-                id={"timeline-chart"}
-                options={options}/>
-            <div id={"timeline-timestamp-begin-text"}>
-                {dayjs.utc(timelineConfig.range.begin).format(DATETIME_FORMAT_TEMPLATE)}
-            </div>
-        </>
+        <Bar
+            data={data}
+            id={"timeline-chart"}
+            options={options}/>
     );
 };
 

@@ -1,4 +1,6 @@
 import React, {useCallback} from "react";
+import Container from "react-bootstrap/Container";
+import Row from "react-bootstrap/Row";
 
 import SearchResultsHeader from "./SearchResultsHeader.jsx";
 import SearchResultsTable from "./SearchResultsTable.jsx";
@@ -25,7 +27,7 @@ const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
  * Renders the search results, which includes the search results header and the search results
  * table.
  *
- * @param {number} jobId of the search job
+ * @param {number} searchJobId of the search job
  * @param {Object[]} searchResults
  * @param {number} numResultsOnServer
  * @param {Object} fieldToSortBy
@@ -36,11 +38,11 @@ const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
  * @param {function} setMaxLinesPerResult
  * @param {object} timelineConfig
  * @param {object[]} timelineBuckets
- * @param {function} obSubmitQuery
+ * @param {function} onTimelineZoom
  * @returns {JSX.Element}
  */
 const SearchResults = ({
-    jobId,
+    searchJobId,
     numResultsOnServer,
     searchResults,
     fieldToSortBy,
@@ -51,7 +53,7 @@ const SearchResults = ({
     setMaxLinesPerResult,
     timelineConfig,
     timelineBuckets,
-    obSubmitQuery,
+    onTimelineZoom,
 }) => {
     const hasMoreResults = visibleSearchResultsLimit < numResultsOnServer;
 
@@ -61,31 +63,37 @@ const SearchResults = ({
         );
     }, []);
 
-    return <>
-        <div className={"flex-column"}>
-            <SearchResultsHeader
-                jobId={jobId}
-                numResultsOnServer={numResultsOnServer}
-                maxLinesPerResult={maxLinesPerResult}
-                setMaxLinesPerResult={setMaxLinesPerResult}
-            />
-            <SearchResultsTimeline
-                timelineBuckets={timelineBuckets}
-                timelineConfig={timelineConfig}
-                onSubmitQuery={obSubmitQuery}/>
-        </div>
-        {(0 < searchResults.length) && <div className="flex-column overflow-auto">
-            <SearchResultsTable
-                searchResults={searchResults}
-                maxLinesPerResult={maxLinesPerResult}
-                setMaxLinesPerResult={setMaxLinesPerResult}
-                fieldToSortBy={fieldToSortBy}
-                setFieldToSortBy={setFieldToSortBy}
-                hasMoreResults={hasMoreResults}
-                onLoadMoreResults={handleLoadMoreResults}
-            />
-        </div>}
-    </>;
+    return (
+        <>
+            <Container
+                className={"py-2"}
+                fluid={true}
+            >
+                <Row>
+                    <SearchResultsHeader
+                        maxLinesPerResult={maxLinesPerResult}
+                        numResultsOnServer={numResultsOnServer}
+                        searchJobId={searchJobId}
+                        setMaxLinesPerResult={setMaxLinesPerResult}/>
+                </Row>
+                <Row>
+                    <SearchResultsTimeline
+                        timelineBuckets={timelineBuckets}
+                        timelineConfig={timelineConfig}
+                        onTimelineZoom={onTimelineZoom}/>
+                </Row>
+            </Container>
+            {0 < searchResults.length &&
+                <SearchResultsTable
+                    fieldToSortBy={fieldToSortBy}
+                    hasMoreResults={hasMoreResults}
+                    maxLinesPerResult={maxLinesPerResult}
+                    searchResults={searchResults}
+                    setFieldToSortBy={setFieldToSortBy}
+                    setMaxLinesPerResult={setMaxLinesPerResult}
+                    onLoadMoreResults={handleLoadMoreResults}/>}
+        </>
+    );
 };
 
 export default SearchResults;

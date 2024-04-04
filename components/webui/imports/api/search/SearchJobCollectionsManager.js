@@ -1,3 +1,5 @@
+const ERROR_NAME_COLLECTION_DROPPED = "collection-dropped";
+
 /**
  * Class to keep track of MongoDB collections created for search jobs, ensuring all collections have
  * unique names.
@@ -6,9 +8,6 @@ class SearchJobCollectionsManager {
     #collections;
 
     constructor () {
-        // NOTE: do not remove inserted collections because we need to check for duplicated
-        // Collection before constructing a new one, or Meteor would complain.
-        // TODO: revisit: memory leak?
         this.#collections = new Map();
     }
 
@@ -22,9 +21,29 @@ class SearchJobCollectionsManager {
         const name = jobId.toString();
         if (undefined === this.#collections.get(name)) {
             this.#collections.set(name, new Mongo.Collection(name));
+        } else if (null === this.#collections.get(name)) {
+            throw new Meteor.Error(
+                ERROR_NAME_COLLECTION_DROPPED,
+                `Collection ${name} has been dropped.`
+            );
         }
+
         return this.#collections.get(name);
+    }
+
+    /**
+     * Drops the MongoDB collection with the given job ID.
+     *
+     * @param {number} jobId
+     */
+    async dropCollection (jobId) {
+        const name = jobId.toString();
+        const collection = this.#collections.get(name);
+
+        await collection.dropCollectionAsync();
+        this.#collections.set(jobId.toString(), null);
     }
 }
 
 export default SearchJobCollectionsManager;
+export {ERROR_NAME_COLLECTION_DROPPED};

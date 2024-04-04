@@ -1,35 +1,34 @@
-import React from "react";
-
-import {createBrowserHistory} from "history";
 import {Meteor} from "meteor/meteor";
+import React from "react";
 import {render} from "react-dom";
-import {Router, Switch} from "react-router";
-
-import {App} from "/imports/ui/App.jsx";
-
-import "chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm";
-
-import dayjs from "dayjs";
-import Duration from "dayjs/plugin/duration";
-import RelativeTime from "dayjs/plugin/relativeTime";
-import Timezone from "dayjs/plugin/timezone";
-import Utc from "dayjs/plugin/utc";
+import {Router} from "react-router";
 
 import {
     BarElement,
-    Chart as ChartJS,
+    Chart as ChartJs,
     LinearScale,
     TimeScale,
     Tooltip,
 } from "chart.js";
 import zoomPlugin from "chartjs-plugin-zoom";
+import dayjs from "dayjs";
+import Duration from "dayjs/plugin/duration";
+import RelativeTime from "dayjs/plugin/relativeTime";
+import Timezone from "dayjs/plugin/timezone";
+import Utc from "dayjs/plugin/utc";
+import {createBrowserHistory} from "history";
+
+import {App} from "/imports/ui/App.jsx";
+
+import "chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm";
+
 
 dayjs.extend(Utc);
 dayjs.extend(Timezone);
 dayjs.extend(Duration);
 dayjs.extend(RelativeTime);
 
-ChartJS.register(
+ChartJs.register(
     TimeScale,
     LinearScale,
     BarElement,

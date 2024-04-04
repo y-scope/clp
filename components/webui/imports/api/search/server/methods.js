@@ -1,10 +1,13 @@
-import {logger} from "/imports/utils/logger";
 import {Meteor} from "meteor/meteor";
+
+import {logger} from "/imports/utils/logger";
+
 import {SearchResultsMetadataCollection} from "../collections";
 import {
     SEARCH_MAX_NUM_RESULTS,
     SEARCH_SIGNAL,
 } from "../constants";
+import {ERROR_NAME_COLLECTION_DROPPED} from "../SearchJobCollectionsManager";
 import {searchJobCollectionsManager} from "./collections";
 import SearchJobsDbManager from "./SearchJobsDbManager";
 
@@ -27,24 +30,38 @@ const initSearchJobsDbManager = (sqlDbConnPool, {searchJobsTableName}) => {
 /**
  * Updates the search event when the specified job finishes.
  *
- * @param {number} jobId of the job to monitor
+ * @param {number} searchJobId of the job to monitor
  * @param {number} aggregationJobId of the job to monitor
  */
-const updateSearchEventWhenJobFinishes = async (jobId, aggregationJobId) => {
+const updateSearchEventWhenJobsFinish = async ({
+    searchJobId,
+    aggregationJobId,
+}) => {
     let errorMsg;
     try {
-        await searchJobsDbManager.awaitJobCompletion(jobId);
+        await searchJobsDbManager.awaitJobCompletion(searchJobId);
         await searchJobsDbManager.awaitJobCompletion(aggregationJobId);
     } catch (e) {
         errorMsg = e.message;
     }
 
     const filter = {
-        _id: jobId.toString(),
+        _id: searchJobId.toString(),
     };
-    const numResultsInCollection = await searchJobCollectionsManager
-        .getOrCreateCollection(jobId)
-        .countDocuments();
+
+    let numResultsInCollection = -1;
+    try {
+        numResultsInCollection = await searchJobCollectionsManager
+            .getOrCreateCollection(searchJobId)
+            .countDocuments();
+    } catch (e) {
+        if (e.error === ERROR_NAME_COLLECTION_DROPPED) {
+            logger.warn(`Collection ${searchJobId} has been dropped.`);
+        } else {
+            throw e;
+        }
+    }
+
     const modifier = {
         $set: {
             lastSignal: SEARCH_SIGNAL.RESP_DONE,
@@ -63,9 +80,9 @@ const updateSearchEventWhenJobFinishes = async (jobId, aggregationJobId) => {
 /**
  * Creates MongoDB indexes for a specific job's collection.
  *
- * @param {number} jobId used to identify the Mongo Collection to add indexes
+ * @param {number} searchJobId used to identify the Mongo Collection to add indexes
  */
-const createMongoIndexes = async (jobId) => {
+const createMongoIndexes = async (searchJobId) => {
     const timestampAscendingIndex = {
         key: {
             timestamp: 1,
@@ -81,7 +98,7 @@ const createMongoIndexes = async (jobId) => {
         name: "timestamp-descending",
     };
 
-    const queryJobCollection = searchJobCollectionsManager.getOrCreateCollection(jobId);
+    const queryJobCollection = searchJobCollectionsManager.getOrCreateCollection(searchJobId);
     const queryJobRawCollection = queryJobCollection.rawCollection();
     await queryJobRawCollection.createIndexes([timestampAscendingIndex, timestampDescendingIndex]);
 };
@@ -94,9 +111,9 @@ Meteor.methods({
      * @param {number} timestampBegin
      * @param {number} timestampEnd
      * @param {boolean} ignoreCase
-     * @param {number} timeRangeBucketSizeMs
+     * @param {number} timeRangeBucketSizeMillis
      * @return {Object}
-     * @property {number} jobId of the submitted query
+     * @property {number} searchJobId of the submitted query
      * @property {number} aggregationJobId of the submitted query
      */
     async "search.submitQuery" ({
@@ -104,7 +121,7 @@ Meteor.methods({
         timestampBegin,
         timestampEnd,
         ignoreCase,
-        timeRangeBucketSizeMs,
+        timeRangeBucketSizeMillis,
     }) {
         const args = {
             query_string: queryString,
@@ -115,53 +132,56 @@ Meteor.methods({
         };
         logger.info("search.submitQuery args =", args);
 
-        let jobId;
+        let searchJobId;
         let aggregationJobId;
         try {
-            jobId = await searchJobsDbManager.submitQuery(args);
-            aggregationJobId = await searchJobsDbManager.submitAggregationJob(args, timeRangeBucketSizeMs);
+            searchJobId = await searchJobsDbManager.submitSearchJob(args);
+            aggregationJobId =
+                await searchJobsDbManager.submitAggregationJob(args, timeRangeBucketSizeMillis);
         } catch (e) {
-            const errorMsg = "Unable to submit search job to the SQL database.";
+            const errorMsg = "Unable to submit search/aggregation job to the SQL database.";
             logger.error(errorMsg, e.toString());
             throw new Meteor.Error("query-submit-error", errorMsg);
         }
 
         SearchResultsMetadataCollection.insert({
-            _id: jobId.toString(),
+            _id: searchJobId.toString(),
             lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
             errorMsg: null,
         });
 
         Meteor.defer(async () => {
-            await updateSearchEventWhenJobFinishes(jobId, aggregationJobId);
+            await updateSearchEventWhenJobsFinish({
+                searchJobId,
+                aggregationJobId,
+            });
         });
 
-        await createMongoIndexes(jobId);
+        await createMongoIndexes(searchJobId);
 
-        return {jobId, aggregationJobId};
+        return {searchJobId, aggregationJobId};
     },
 
     /**
      * Clears the results of a search operation identified by jobId.
      *
-     * @param {number} jobId of the search results to clear
+     * @param {number} searchJobId of the search results to clear
+     * @param {number} aggregationJobId of the search results to clear
      */
     async "search.clearResults" ({
-        jobId,
+        searchJobId,
         aggregationJobId,
     }) {
-        logger.info(`search.clearResults jobId=${jobId}, aggregationJobId=${aggregationJobId}`);
+        logger.info(`search.clearResults searchJobId=${searchJobId}, ` +
+            `aggregationJobId=${aggregationJobId}`);
 
         try {
-            const resultsCollection = searchJobCollectionsManager.getOrCreateCollection(jobId);
-            await resultsCollection.dropCollectionAsync();
-
-            const resultsAggregationCollection =
-                searchJobCollectionsManager.getOrCreateCollection(aggregationJobId);
-            await resultsAggregationCollection.dropCollectionAsync();
+            await searchJobCollectionsManager.dropCollection(searchJobId);
+            await searchJobCollectionsManager.dropCollection(aggregationJobId);
         } catch (e) {
-            const errorMsg = `Failed to clear search results for jobId=${jobId}, ` +
+            const errorMsg = `Failed to clear search results for searchJobId=${searchJobId}, ` +
                 `aggregationJobId=${aggregationJobId}`;
+
             logger.error(errorMsg, e.toString());
             throw new Meteor.Error("clear-results-error", errorMsg);
         }
@@ -170,20 +190,24 @@ Meteor.methods({
     /**
      * Cancels an ongoing search operation identified by jobId.
      *
-     * @param {number} jobId
+     * @param {number} searchJobId
      * @param {number} aggregationJobId
      */
     async "search.cancelOperation" ({
-        jobId,
+        searchJobId,
         aggregationJobId,
     }) {
-        logger.info(`search.cancelOperation jobId=${jobId}, aggregationJobId=${aggregationJobId}`);
+        logger.info(`search.cancelOperation searchJobId=${searchJobId}, ` +
+            `aggregationJobId=${aggregationJobId}`);
 
         try {
-            await searchJobsDbManager.submitQueryCancellation(jobId);
+            await searchJobsDbManager.submitQueryCancellation(searchJobId);
             await searchJobsDbManager.submitQueryCancellation(aggregationJobId);
+
+            await searchJobCollectionsManager.dropCollection(searchJobId);
+            await searchJobCollectionsManager.dropCollection(aggregationJobId);
         } catch (e) {
-            const errorMsg = `Failed to submit cancel request for jobId=${jobId},` +
+            const errorMsg = `Failed to submit cancel request for searchJobId=${searchJobId},` +
                 `aggregationJobId=${aggregationJobId}.`;
 
             logger.error(errorMsg, e.toString());
