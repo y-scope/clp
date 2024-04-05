@@ -11,9 +11,9 @@ describe("misc", function () {
         // Single-quoted string
         assert.strictEqual(unquoteString("'abc'", "'", '\\'), "abc");
         // With escaped characters
-        assert.strictEqual(unquoteString("a\\\\b\\\"c\\*\\?", '"', '\\'), "a\\b\"c\\*\\?");
+        assert.strictEqual(unquoteString("a\\\\b\\\"c\\*\\?", '"', '\\'), "a\\\\b\"c\\*\\?");
         // Double-quoted with escaped characters
-        assert.strictEqual(unquoteString("\"a\\\\b\\\"c\\*\\?\"", '"', '\\'), "a\\b\"c\\*\\?");
+        assert.strictEqual(unquoteString("\"a\\\\b\\\"c\\*\\?\"", '"', '\\'), "a\\\\b\"c\\*\\?");
 
         // With one of the quotes missing
         assert.throws(() => {

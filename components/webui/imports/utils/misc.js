@@ -24,9 +24,10 @@ const computeHumanSize = (num) => {
 };
 
 /**
- * Removes wrapping quotes from the given string, if it's quoted. This method also handles
- * un-escaping quotes (and escape characters) from within the quoted string. Ex: `"abc\"def"` would
- * become `abc"def`. Other escaped characters are left unchanged.
+ * Removes wrapping quotes from the given string, if it's quoted, and unescapes quotes from within
+ * the quoted string.
+ * NOTE: This method does *not* unescape non-quote characters, unlike most methods which handle
+ * unescaping quotes.
  * @param str
  * @param quoteChar
  * @param escapeChar
@@ -47,9 +48,8 @@ function unquoteString(str, quoteChar, escapeChar) {
         const c = chars[i];
         if (isEscaped) {
             isEscaped = false;
-            if (c === quoteChar || c === escapeChar) {
-                // We only remove the escape characters that escape quotes and other escape
-                // characters
+            if (c === quoteChar) {
+                // We only remove the escape characters that escape quotes
                 positionOfCharsToRemove.push(i - 1);
             }
         } else if (c === escapeChar) {
