@@ -8,6 +8,7 @@
     "SqlDbClpFilesTableName": "clp_files"
   },
   "public": {
+    "ClpStorageEngine": "clp",
     "SearchResultsCollectionName": "results",
     "SearchResultsMetadataCollectionName": "results-metadata",
     "StatsCollectionName": "stats"

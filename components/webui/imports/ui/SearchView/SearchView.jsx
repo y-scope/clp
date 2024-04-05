@@ -6,6 +6,7 @@ import {Meteor} from "meteor/meteor";
 import {useTracker} from "meteor/react-meteor-data";
 import {ProgressBar} from "react-bootstrap";
 
+import {CLP_STORAGE_ENGINES} from "../../api/constants";
 import {SearchResultsMetadataCollection} from "../../api/search/collections";
 import {
     INVALID_JOB_ID,
@@ -146,14 +147,18 @@ const SearchView = () => {
         }
 
         let processedQueryString;
-        try {
-            processedQueryString = unquoteString(queryString, '"', '\\');
-            if ("" === processedQueryString) {
-                throw new Error("Cannot be empty.");
+        if (CLP_STORAGE_ENGINES.CLP_S === Meteor.settings.public.ClpStorageEngine) {
+            processedQueryString = queryString;
+        } else {
+            try {
+                processedQueryString = unquoteString(queryString, '"', '\\');
+                if ("" === processedQueryString) {
+                    throw new Error("Cannot be empty.");
+                }
+            } catch (e) {
+                setOperationErrorMsg(`Invalid query: ${e.message}`);
+                return;
             }
-        } catch (e) {
-            setOperationErrorMsg(`Invalid query: ${e.message}`);
-            return;
         }
 
         setOperationErrorMsg("");
