@@ -35,6 +35,7 @@ public:
               m_archive_entry(nullptr),
               m_data_block(nullptr),
               m_reached_eof(false),
+              m_data_block_pos_in_file(0),
               m_pos_in_file(0) {}
 
     // Methods implementing the ReaderInterface

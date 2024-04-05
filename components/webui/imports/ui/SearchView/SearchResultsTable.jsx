@@ -32,8 +32,13 @@ const SearchResultsLoadSensor = ({
     const loadIntervalRef = useRef(null);
 
     useEffect(() => {
+        if (false === hasMoreResults) {
+            return () => null;
+        }
+
         const observer = new IntersectionObserver((entries) => {
             if (entries[0].isIntersecting) {
+                onLoadMoreResults();
                 loadIntervalRef.current = setInterval(
                     onLoadMoreResults,
                     SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MS,
@@ -53,7 +58,10 @@ const SearchResultsLoadSensor = ({
             }
             observer.disconnect();
         };
-    }, [onLoadMoreResults]);
+    }, [
+        hasMoreResults,
+        onLoadMoreResults,
+    ]);
 
     return <div
         id={"search-results-load-sensor"}
