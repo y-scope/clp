@@ -27,12 +27,21 @@ const initSearchJobsDbManager = (sqlDbConnPool, {searchJobsTableName}) => {
 /**
  * Modifies the search results metadata for a given job ID.
  *
- * @param {number} jobId
+ * @param {object} filter
+ * @param {number} filter.jobId
+ * @param {string} filter.lastSignal
  * @param {object} fields - The fields to be updated in the search results metadata.
  */
-const updateSearchResultsMeta = (jobId, fields) => {
+const updateSearchResultsMeta = (
+    {
+        jobId,
+        lastSignal,
+    },
+    fields,
+) => {
     const filter = {
         _id: jobId.toString(),
+        lastSignal: lastSignal,
     };
 
     const modifier = {
@@ -60,7 +69,10 @@ const updateSearchSignalWhenJobFinishes = async (jobId) => {
         .getOrCreateCollection(jobId)
         .countDocuments();
 
-    updateSearchResultsMeta(jobId, {
+    updateSearchResultsMeta({
+        jobId,
+        lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
+    }, {
         lastSignal: SEARCH_SIGNAL.RESP_DONE,
         errorMsg: errorMsg,
         numTotalResults: Math.min(
@@ -186,7 +198,10 @@ Meteor.methods({
         try {
             await searchJobsDbManager.submitQueryCancellation(jobId);
 
-            updateSearchResultsMeta(jobId, {
+            updateSearchResultsMeta({
+                jobId: jobId,
+                lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
+            }, {
                 lastSignal: SEARCH_SIGNAL.RESP_DONE,
                 errorMsg: "Query cancelled before it could be completed."
             });
