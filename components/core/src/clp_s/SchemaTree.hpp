@@ -29,12 +29,13 @@ public:
     // Constructor
     SchemaNode() : m_parent_id(-1), m_id(-1), m_type(NodeType::Integer), m_count(0) {}
 
-    SchemaNode(int32_t parent_id, int32_t id, std::string key_name, NodeType type)
+    SchemaNode(int32_t parent_id, int32_t id, std::string key_name, NodeType type, int32_t depth)
             : m_parent_id(parent_id),
               m_id(id),
               m_key_name(std::move(key_name)),
               m_type(type),
-              m_count(0) {}
+              m_count(0),
+              m_depth(depth) {}
 
     /**
      * Getters
@@ -50,6 +51,10 @@ public:
     std::string const& get_key_name() const { return m_key_name; }
 
     int32_t get_count() const { return m_count; }
+
+    int32_t get_depth() const { return m_depth; }
+
+    void set_depth(int32_t depth) { m_depth = depth; }
 
     /**
      * Increases the count of this node by 1
@@ -69,6 +74,7 @@ private:
     std::string m_key_name;
     NodeType m_type;
     int32_t m_count;
+    int32_t m_depth{0};
 };
 
 class SchemaTree {

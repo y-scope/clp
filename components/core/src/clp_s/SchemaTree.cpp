@@ -14,12 +14,13 @@ int32_t SchemaTree::add_node(int32_t parent_node_id, NodeType type, std::string 
         return node_id;
     }
 
-    auto node = std::make_shared<SchemaNode>(parent_node_id, m_nodes.size(), key, type);
+    auto node = std::make_shared<SchemaNode>(parent_node_id, m_nodes.size(), key, type, 0);
     node->increase_count();
     m_nodes.push_back(node);
     int32_t node_id = node->get_id();
     if (parent_node_id >= 0) {
         auto parent_node = m_nodes[parent_node_id];
+        node->set_depth(parent_node->get_depth() + 1);
         parent_node->add_child(node_id);
     }
     m_node_map[node_key] = node_id;
