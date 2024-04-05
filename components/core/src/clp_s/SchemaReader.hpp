@@ -41,6 +41,12 @@ public:
     ) = 0;
 };
 
+struct InternalGeneratorState {
+    size_t end_pos;
+    size_t repetitions;
+    JsonSerializer::Op operation;
+};
+
 class SchemaReader {
 public:
     struct TableMetadata {
@@ -184,15 +190,23 @@ private:
      * Generates a json template for a structured array
      * @param id
      */
-    void generate_structured_array_template(int32_t id);
+    size_t
+    generate_structured_array_template(int32_t id, size_t column_start, Span<int32_t> schema);
 
     /**
-     * Generates the prefix keys for an object in a structured array, and returns the number
-     * of closing brackets required at the end of the object.
-     * @param id the id of the first column in the object
-     * @return the number of closing brackets required after reaching the end of the object
+     * Generates a json template for a structured object
+     * @param id
      */
-    std::pair<size_t, int32_t> generate_unordered_prefix(int32_t id, int32_t root_id);
+    size_t
+    generate_structured_object_template(int32_t id, size_t column_start, Span<int32_t> schema);
+
+    int32_t find_constrained_root(int32_t const subtree_root, Span<int32_t> schema, NodeType type);
+
+    void find_intersection_and_fix_brackets(
+            int32_t cur_root,
+            int32_t next_root,
+            std::vector<int32_t>& path_to_intersection
+    );
 
     /**
      * Generates a json string from the extracted values

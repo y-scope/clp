@@ -177,6 +177,7 @@ void ArchiveReader::append_unordered_reader_columns(
             case NodeType::Boolean:
                 column_reader = new BooleanColumnReader(key_name, column_id);
                 break;
+            case NodeType::StructuredArray:
             case NodeType::Object:
             case NodeType::NullValue: {
                 int32_t id = reader->append_unordered_column(column_id, unordered_object_type);
