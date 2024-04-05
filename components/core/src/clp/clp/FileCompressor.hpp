@@ -50,6 +50,9 @@ public:
     );
 
 private:
+    // Constants
+    static constexpr size_t cUtfMaxValidationLen = 4096;
+
     // Methods
     /**
      * Parses and encodes content from the given reader into the given archive_writer
