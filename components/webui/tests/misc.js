@@ -4,6 +4,8 @@ import {unquoteString} from "/imports/utils/misc";
 
 describe("misc", function () {
     it("unquoteString", function () {
+        // Empty string
+        assert.strictEqual(unquoteString("", '"', '\\'), "");
         // Unquoted string
         assert.strictEqual(unquoteString("abc", '"', '\\'), "abc");
         // Double-quoted string
