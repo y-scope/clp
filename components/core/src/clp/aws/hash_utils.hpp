@@ -1,12 +1,11 @@
 #ifndef CLP_AWS_HASH_UTILS_HPP
 #define CLP_AWS_HASH_UTILS_HPP
 
-#include <openssl/hmac.h>
-#include <openssl/sha.h>
-
 #include <string>
 
 #include <fmt/format.h>
+#include <openssl/hmac.h>
+#include <openssl/sha.h>
 
 namespace clp::aws {
 /**
@@ -27,7 +26,7 @@ inline std::string char_array_to_string(unsigned char const* a, size_t size) {
  * Gets the HMAC-SHA256 hash
  * @param key
  * @param value
- * @param hex_output
+ * @param hex_output Whether to output the hash as a hex string
  * @return The HMAC SHA256 hash
  */
 inline std::string
@@ -42,11 +41,11 @@ get_hmac_sha256_hash(std::string const& key, std::string const& value, bool hex_
 
     if (hex_output) {
         return char_array_to_string(hash, SHA256_DIGEST_LENGTH);
-    } else {
-        std::string result;
-        result.assign(reinterpret_cast<char*>(hash), SHA256_DIGEST_LENGTH);
-        return result;
     }
+
+    std::string result;
+    result.assign(reinterpret_cast<char*>(hash), SHA256_DIGEST_LENGTH);
+    return result;
 }
 
 /**

@@ -21,13 +21,13 @@ public:
     S3Url() = delete;
 
     // Methods
-    std::string& get_host() { return m_host; }
+    [[nodiscard]] std::string& get_host() { return m_host; }
 
-    std::string& get_bucket() { return m_bucket; }
+    [[nodiscard]] std::string& get_bucket() { return m_bucket; }
 
-    std::string& get_region() { return m_region; }
+    [[nodiscard]] std::string& get_region() { return m_region; }
 
-    std::string& get_path() { return m_path; }
+    [[nodiscard]] std::string& get_path() { return m_path; }
 
 private:
     std::string m_host;
@@ -90,7 +90,8 @@ public:
      * @param method HTTP method
      * @return The generated presigned URL
      */
-    std::string generate_presigned_url(S3Url& s3_url, HttpMethod method = HttpMethod::GET);
+    [[nodiscard]] std::string
+    generate_presigned_url(S3Url& s3_url, HttpMethod method = HttpMethod::GET);
 
 private:
     /**
@@ -98,7 +99,7 @@ private:
      * @param method HTTP method
      * @return The converted string
      */
-    static std::string get_method_string(HttpMethod method) {
+    [[nodiscard]] static std::string get_method_string(HttpMethod method) {
         switch (method) {
             case HttpMethod::GET:
                 return "GET";
@@ -120,7 +121,7 @@ private:
      * @param canonical_request
      * @return String to sign
      */
-    static std::string get_string_to_sign(
+    [[nodiscard]] static std::string get_string_to_sign(
             std::string& scope,
             std::string& timestamp_string,
             std::string const& canonical_request
@@ -141,7 +142,7 @@ private:
      * @param query_string Query string
      * @return Canonical request
      */
-    static std::string
+    [[nodiscard]] static std::string
     get_canonical_request(HttpMethod method, S3Url& url, std::string const& query_string) {
         return fmt::format(
                 "{}\n{}\n{}\n{}:{}\n\n{}\n{}",
@@ -161,7 +162,8 @@ private:
      * @param encode_slash
      * @return The encoded URI
      */
-    static std::string get_encoded_uri(std::string const& value, bool encode_slash = true) {
+    [[nodiscard]] static std::string
+    get_encoded_uri(std::string const& value, bool encode_slash = true) {
         std::string encoded_uri;
 
         for (char c : value) {
@@ -187,7 +189,8 @@ private:
      * @param region
      * @return The scope
      */
-    static std::string get_scope(std::string& date_string, std::string const& region) {
+    [[nodiscard]] static std::string
+    get_scope(std::string& date_string, std::string const& region) {
         return fmt::format("{}/{}/{}/{}", date_string, region, cS3Service, cAws4Request);
     }
 
@@ -196,7 +199,7 @@ private:
      * @param timestamp
      * @return The timestamp string
      */
-    static std::string get_timestamp_string(TimePoint& timestamp) {
+    [[nodiscard]] static std::string get_timestamp_string(TimePoint& timestamp) {
         return fmt::format("{:%Y%m%dT%H%M%SZ}", timestamp);
     }
 
@@ -205,7 +208,7 @@ private:
      * @param timestamp
      * @return The date string
      */
-    static std::string get_date_string(TimePoint& timestamp) {
+    [[nodiscard]] static std::string get_date_string(TimePoint& timestamp) {
         return fmt::format("{:%Y%m%d}", timestamp);
     }
 
@@ -215,7 +218,8 @@ private:
      * @param timestamp_string
      * @return
      */
-    std::string get_default_query_string(std::string& scope, std::string& timestamp_string) {
+    [[nodiscard]] std::string
+    get_default_query_string(std::string& scope, std::string& timestamp_string) {
         return fmt::format(
                 "{}={}&{}={}&{}={}&{}={}&{}={}",
                 cXAmzAlgorithm,
@@ -237,7 +241,8 @@ private:
      * @param date_string
      * @return
      */
-    std::string get_signature_key(std::string const& region, std::string const& date_string) {
+    [[nodiscard]] std::string
+    get_signature_key(std::string const& region, std::string const& date_string) {
         std::string date_key = get_hmac_sha256_hash(cAws4 + m_secret_access_key, date_string);
         std::string date_region_key = get_hmac_sha256_hash(date_key, region);
         std::string date_region_service_key = get_hmac_sha256_hash(date_region_key, cS3Service);
@@ -250,7 +255,7 @@ private:
      * @param string_to_sign
      * @return
      */
-    static std::string
+    [[nodiscard]] static std::string
     get_signature(std::string const& signature_key, std::string const& string_to_sign) {
         return get_hmac_sha256_hash(signature_key, string_to_sign, true);
     }
