@@ -16,6 +16,7 @@ import {
     isSearchSignalQuerying,
 } from "../../api/search/constants";
 import SearchJobCollectionsManager from "../../api/search/SearchJobCollectionsManager";
+import {unquoteString} from "../../utils/misc";
 import {LOCAL_STORAGE_KEYS} from "../constants";
 import {changeTimezoneToUtcWithoutChangingTime, DEFAULT_TIME_RANGE} from "./datetime";
 
@@ -144,6 +145,17 @@ const SearchView = () => {
             handleClearResults();
         }
 
+        let processedQueryString;
+        try {
+            processedQueryString = unquoteString(queryString, '"', '\\');
+            if ("" === processedQueryString) {
+                throw new Error("Cannot be empty.");
+            }
+        } catch (e) {
+            setOperationErrorMsg(`Invalid query: ${e.message}`);
+            return;
+        }
+
         setOperationErrorMsg("");
         setLocalLastSearchSignal(SEARCH_SIGNAL.REQ_QUERYING);
         setVisibleSearchResultsLimit(VISIBLE_RESULTS_LIMIT_INITIAL);
@@ -153,7 +165,7 @@ const SearchView = () => {
         const timestampEndMillis = changeTimezoneToUtcWithoutChangingTime(timeRange.end).getTime();
 
         const args = {
-            queryString: queryString,
+            queryString: processedQueryString,
             timestampBegin: timestampBeginMillis,
             timestampEnd: timestampEndMillis,
             ignoreCase: ignoreCase

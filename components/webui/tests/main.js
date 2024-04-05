@@ -1,5 +1,7 @@
 import assert from "assert";
 
+import "./misc.js";
+
 describe("webui", function () {
   it("package.json has correct name", async function () {
     const { name } = await import("../package.json");
