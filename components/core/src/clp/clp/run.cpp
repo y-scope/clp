@@ -63,37 +63,45 @@ int run(int argc, char const* argv[]) {
             reader_parser = std::make_unique<log_surgeon::ReaderParser>(schema_file_path);
         }
 
-        boost::filesystem::path path_prefix_to_remove(command_line_args.get_path_prefix_to_remove()
-        );
-
-        // Validate input paths exist
-        if (false == validate_paths_exist(input_paths)) {
-            return -1;
-        }
-
         // Get paths of all files we need to compress
         vector<FileToCompress> files_to_compress;
+        vector<FileToCompress> grouped_files_to_compress;
         vector<string> empty_directory_paths;
-        for (auto const& input_path : input_paths) {
-            if (false
-                == find_all_files_and_empty_directories(
-                        path_prefix_to_remove,
-                        input_path,
-                        files_to_compress,
-                        empty_directory_paths
-                ))
-            {
+        if (CommandLineArguments::InputSource::S3 == command_line_args.get_input_source()) {
+            for (auto const& input_path : input_paths) {
+                files_to_compress.emplace_back(input_path, input_path, 0);
+            }
+        } else if ((CommandLineArguments::InputSource::Filesystem
+                    == command_line_args.get_input_source()))
+        {
+            boost::filesystem::path path_prefix_to_remove(
+                    command_line_args.get_path_prefix_to_remove()
+            );
+
+            // Validate input paths exist
+            if (false == validate_paths_exist(input_paths)) {
                 return -1;
             }
-        }
 
-        vector<FileToCompress> grouped_files_to_compress;
+            for (auto const& input_path : input_paths) {
+                if (false
+                    == find_all_files_and_empty_directories(
+                            path_prefix_to_remove,
+                            input_path,
+                            files_to_compress,
+                            empty_directory_paths
+                    ))
+                {
+                    return -1;
+                }
+            }
 
-        if (files_to_compress.empty() && empty_directory_paths.empty()
-            && grouped_files_to_compress.empty())
-        {
-            SPDLOG_ERROR("No files/directories to compress.");
-            return -1;
+            if (files_to_compress.empty() && empty_directory_paths.empty()
+                && grouped_files_to_compress.empty())
+            {
+                SPDLOG_ERROR("No files/directories to compress.");
+                return -1;
+            }
         }
 
         bool compression_successful;

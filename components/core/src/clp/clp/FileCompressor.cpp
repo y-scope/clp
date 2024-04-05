@@ -116,38 +116,16 @@ bool FileCompressor::compress_file(
         streaming_archive::writer::Archive& archive_writer,
         bool use_heuristic
 ) {
-    std::string file_name = std::filesystem::canonical(file_to_compress.get_path()).string();
-
-    PROFILER_SPDLOG_INFO("Start parsing {}", file_name)
-    Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
-
-    m_file_reader.open(file_to_compress.get_path());
-
-    // Check that file is UTF-8 encoded
-    if (auto error_code = m_file_reader.try_refill_buffer_if_empty();
-        ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code)
-    {
-        if (ErrorCode_errno == error_code) {
-            SPDLOG_ERROR(
-                    "Failed to read {} into buffer, errno={}",
-                    file_to_compress.get_path(),
-                    errno
-            );
-        } else {
-            SPDLOG_ERROR(
-                    "Failed to read {} into buffer, error={}",
-                    file_to_compress.get_path(),
-                    error_code
-            );
-        }
-        return false;
-    }
-    char const* utf8_validation_buf{nullptr};
-    size_t peek_size{0};
-    m_file_reader.peek_buffered_data(utf8_validation_buf, peek_size);
     bool succeeded = true;
-    auto const utf8_validation_buf_len = std::min(peek_size, cUtfMaxValidationLen);
-    if (is_utf8_encoded({utf8_validation_buf, utf8_validation_buf_len})) {
+    std::string file_name;
+    if (CommandLineArguments::InputSource::S3 == m_input_source) {
+        aws::S3Url s3_url(file_to_compress.get_path());
+        file_name = s3_url.get_path().substr(1);
+
+        PROFILER_SPDLOG_INFO("Start parsing {}", file_name)
+        Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>(
+        );
+        NetworkReader network_reader(m_aws_auth_signer.value().generate_presigned_url(s3_url));
         if (use_heuristic) {
             parse_and_encode_with_heuristic(
                     target_data_size_of_dicts,
@@ -156,7 +134,7 @@ bool FileCompressor::compress_file(
                     file_to_compress.get_path_for_compression(),
                     file_to_compress.get_group_id(),
                     archive_writer,
-                    m_file_reader
+                    network_reader
             );
         } else {
             parse_and_encode_with_library(
@@ -166,25 +144,78 @@ bool FileCompressor::compress_file(
                     file_to_compress.get_path_for_compression(),
                     file_to_compress.get_group_id(),
                     archive_writer,
-                    m_file_reader
+                    network_reader
             );
         }
-    } else {
-        if (false
-            == try_compressing_as_archive(
-                    target_data_size_of_dicts,
-                    archive_user_config,
-                    target_encoded_file_size,
-                    file_to_compress,
-                    archive_writer,
-                    use_heuristic
-            ))
-        {
-            succeeded = false;
-        }
-    }
+    } else if (CommandLineArguments::InputSource::Filesystem == m_input_source) {
+        file_name = std::filesystem::canonical(file_to_compress.get_path()).string();
+        PROFILER_SPDLOG_INFO("Start parsing {}", file_name)
+        Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
 
-    m_file_reader.close();
+        m_file_reader.open(file_to_compress.get_path());
+
+        // Check that file is UTF-8 encoded
+        if (auto error_code = m_file_reader.try_refill_buffer_if_empty();
+                ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code)
+        {
+            if (ErrorCode_errno == error_code) {
+                SPDLOG_ERROR(
+                        "Failed to read {} into buffer, errno={}",
+                        file_to_compress.get_path(),
+                        errno
+                );
+            } else {
+                SPDLOG_ERROR(
+                        "Failed to read {} into buffer, error={}",
+                        file_to_compress.get_path(),
+                        error_code
+                );
+            }
+            return false;
+        }
+        char const* utf8_validation_buf{nullptr};
+        size_t peek_size{0};
+        m_file_reader.peek_buffered_data(utf8_validation_buf, peek_size);
+        auto const utf8_validation_buf_len = std::min(peek_size, cUtfMaxValidationLen);
+        if (is_utf8_encoded({utf8_validation_buf, utf8_validation_buf_len})) {
+            if (use_heuristic) {
+                parse_and_encode_with_heuristic(
+                        target_data_size_of_dicts,
+                        archive_user_config,
+                        target_encoded_file_size,
+                        file_to_compress.get_path_for_compression(),
+                        file_to_compress.get_group_id(),
+                        archive_writer,
+                        m_file_reader
+                );
+            } else {
+                parse_and_encode_with_library(
+                        target_data_size_of_dicts,
+                        archive_user_config,
+                        target_encoded_file_size,
+                        file_to_compress.get_path_for_compression(),
+                        file_to_compress.get_group_id(),
+                        archive_writer,
+                        m_file_reader
+                );
+            }
+        } else {
+            if (false
+                == try_compressing_as_archive(
+                        target_data_size_of_dicts,
+                        archive_user_config,
+                        target_encoded_file_size,
+                        file_to_compress,
+                        archive_writer,
+                        use_heuristic
+                ))
+            {
+                succeeded = false;
+            }
+        }
+
+        m_file_reader.close();
+    }
 
     Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
     LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::ParseLogFile)

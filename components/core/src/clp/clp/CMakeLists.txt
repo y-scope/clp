@@ -9,6 +9,11 @@ set(
         ../BufferedFileReader.hpp
         ../BufferReader.cpp
         ../BufferReader.hpp
+        ../CurlDownloadHandler.cpp
+        ../CurlDownloadHandler.hpp
+        ../CurlEasyHandle.hpp
+        ../CurlOperationFailed.hpp
+        ../CurlStringList.hpp
         ../database_utils.cpp
         ../database_utils.hpp
         ../Defs.h
@@ -130,8 +135,12 @@ set(
         ../streaming_compression/zstd/Constants.hpp
         ../streaming_compression/zstd/Decompressor.cpp
         ../streaming_compression/zstd/Decompressor.hpp
+        ../NetworkReader.cpp
+        ../NetworkReader.hpp
         ../StringReader.cpp
         ../StringReader.hpp
+        ../Thread.cpp
+        ../Thread.hpp
         ../time_types.hpp
         ../TimestampPattern.cpp
         ../TimestampPattern.hpp
@@ -174,6 +183,7 @@ target_include_directories(clp PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 target_link_libraries(clp
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
+        ${CURL_LIBRARIES}
         fmt::fmt
         log_surgeon::log_surgeon
         spdlog::spdlog

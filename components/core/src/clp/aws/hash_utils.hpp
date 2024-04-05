@@ -3,17 +3,19 @@
 
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
-#include <fmt/format.h>
 
 #include <string>
 
+#include <fmt/format.h>
+
+namespace clp::aws {
 /**
  * Converts a char array to a string
  * @param a
  * @param size
  * @return The converted string
  */
-static std::string char_array_to_string(unsigned char const* a, size_t size) {
+inline std::string char_array_to_string(unsigned char const* a, size_t size) {
     std::string hex_string;
     for (size_t i = 0; i < size; i++) {
         hex_string += fmt::format("{:02x}", static_cast<int>(a[i]));
@@ -28,7 +30,7 @@ static std::string char_array_to_string(unsigned char const* a, size_t size) {
  * @param hex_output
  * @return The HMAC SHA256 hash
  */
-static std::string
+inline std::string
 get_hmac_sha256_hash(std::string const& key, std::string const& value, bool hex_output = false) {
     unsigned char hash[SHA256_DIGEST_LENGTH];
     HMAC_CTX* hmac = HMAC_CTX_new();
@@ -52,7 +54,7 @@ get_hmac_sha256_hash(std::string const& key, std::string const& value, bool hex_
  * @param input
  * @return The SHA256 hash
  */
-static std::string get_sha256_hash(std::string const& input) {
+inline std::string get_sha256_hash(std::string const& input) {
     unsigned char hash[SHA256_DIGEST_LENGTH];
     SHA256_CTX sha256;
     SHA256_Init(&sha256);
@@ -62,22 +64,35 @@ static std::string get_sha256_hash(std::string const& input) {
     return char_array_to_string(hash, SHA256_DIGEST_LENGTH);
 }
 
-// Init SHA256 hash
-void init_sha256_hash(SHA256_CTX* sha256) {
+/**
+ * Initializes SHA256 hash
+ * @param sha256
+ */
+inline void init_sha256_hash(SHA256_CTX* sha256) {
     SHA256_Init(sha256);
 }
 
-// Update SHA256 hash
-void update_sha256_hash(SHA256_CTX* sha256, void* input, size_t length) {
+/**
+ * Updates SHA256 hash
+ * @param sha256
+ * @param input
+ * @param length
+ */
+inline void update_sha256_hash(SHA256_CTX* sha256, void* input, size_t length) {
     SHA256_Update(sha256, input, length);
 }
 
-// Finalize SHA256 hash
-std::string finalize_sha256_hash(SHA256_CTX* sha256) {
+/**
+ * Finalizes SHA256 hash
+ * @param sha256
+ * @return The SHA256 hash
+ */
+inline std::string finalize_sha256_hash(SHA256_CTX* sha256) {
     unsigned char hash[SHA256_DIGEST_LENGTH];
     SHA256_Final(hash, sha256);
 
     return char_array_to_string(hash, SHA256_DIGEST_LENGTH);
 }
 
+}  // namespace clp::aws
 #endif  // CLP_AWS_HASH_UTILS_HPP

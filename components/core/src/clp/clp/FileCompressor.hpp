@@ -14,6 +14,9 @@
 #include "../MessageParser.hpp"
 #include "../ParsedMessage.hpp"
 #include "../streaming_archive/writer/Archive.hpp"
+#include "../NetworkReader.hpp"
+#include "aws/AwsAuthenticationSigner.hpp"
+#include "CommandLineArguments.hpp"
 #include "FileToCompress.hpp"
 
 namespace clp::clp {
@@ -24,11 +27,27 @@ class FileCompressor {
 public:
     // Constructors
     FileCompressor(
+            CommandLineArguments::InputSource input_source,
             boost::uuids::random_generator& uuid_generator,
             std::unique_ptr<log_surgeon::ReaderParser> reader_parser
     )
-            : m_uuid_generator(uuid_generator),
-              m_reader_parser(std::move(reader_parser)) {}
+            : m_input_source(input_source),
+              m_uuid_generator(uuid_generator),
+              m_reader_parser(std::move(reader_parser)) {
+        if (CommandLineArguments::InputSource::S3 == input_source) {
+            m_aws_auth_signer.emplace();
+            if (ErrorCode_Success != NetworkReader::init()) {
+                SPDLOG_ERROR("Failed to initialize streaming reader");
+                throw std::runtime_error("Failed to initialize streaming reader");
+            }
+        }
+    }
+
+    ~FileCompressor() {
+        if (CommandLineArguments::InputSource::S3 == m_input_source) {
+            NetworkReader::deinit();
+        }
+    }
 
     // Methods
     /**
@@ -149,10 +168,12 @@ private:
     );
 
     // Variables
+    CommandLineArguments::InputSource m_input_source;
     boost::uuids::random_generator& m_uuid_generator;
     BufferedFileReader m_file_reader;
     LibarchiveReader m_libarchive_reader;
     LibarchiveFileReader m_libarchive_file_reader;
+    std::optional<aws::AwsAuthenticationSigner> m_aws_auth_signer;
     MessageParser m_message_parser;
     ParsedMessage m_parsed_message;
     std::unique_ptr<log_surgeon::ReaderParser> m_reader_parser;

@@ -16,7 +16,7 @@ constexpr char const* const cAws4 = "AWS4";
 constexpr char const* const cAws4Request = "aws4_request";
 constexpr char const* const cAws4HmacSha256 = "AWS4-HMAC-SHA256";
 constexpr char const* const cDefaultSignedHeaders = "host";
-constexpr char const* const cDefaultRegion "us-east-1";
+constexpr char const* const cDefaultRegion = "us-east-1";
 constexpr char const* const cEmptyStringSha256
         = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 constexpr char const* const cS3Service = "s3";

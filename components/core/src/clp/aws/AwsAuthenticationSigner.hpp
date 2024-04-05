@@ -41,7 +41,7 @@ private:
  */
 class AwsAuthenticationSigner {
 public:
-    using time_point = std::chrono::system_clock::time_point;
+    using TimePoint = std::chrono::system_clock::time_point;
 
     // Default expire time of presigned URL in seconds
     static constexpr int const cDefaultExpireTime = 86'400;  // 24 hours
@@ -72,10 +72,9 @@ public:
         }
     }
 
-    AwsAuthenticationSigner() {
-        m_access_key_id = getenv("AWS_ACCESS_KEY_ID");
-        m_secret_access_key = getenv("AWS_SECRET_ACCESS_KEY");
-
+    AwsAuthenticationSigner()
+            : m_access_key_id(getenv("AWS_ACCESS_KEY_ID")),
+              m_secret_access_key(getenv("AWS_SECRET_ACCESS_KEY")) {
         if (m_access_key_id.empty()) {
             throw std::invalid_argument("AWS_ACCESS_KEY_ID environment variable is not set");
         }
@@ -87,11 +86,11 @@ public:
     // Methods
     /**
      * Generates a presigned URL using AWS Signature Version 4
-     * @param url URL
+     * @param s3_url S3 URL
      * @param method HTTP method
      * @return The generated presigned URL
      */
-    std::string generate_presigned_url(std::string const& url, HttpMethod method);
+    std::string generate_presigned_url(S3Url& s3_url, HttpMethod method = HttpMethod::GET);
 
 private:
     /**
@@ -197,7 +196,7 @@ private:
      * @param timestamp
      * @return The timestamp string
      */
-    static std::string get_timestamp_string(time_point& timestamp) {
+    static std::string get_timestamp_string(TimePoint& timestamp) {
         return fmt::format("{:%Y%m%dT%H%M%SZ}", timestamp);
     }
 
@@ -206,7 +205,7 @@ private:
      * @param timestamp
      * @return The date string
      */
-    static std::string get_date_string(time_point& timestamp) {
+    static std::string get_date_string(TimePoint& timestamp) {
         return fmt::format("{:%Y%m%d}", timestamp);
     }
 

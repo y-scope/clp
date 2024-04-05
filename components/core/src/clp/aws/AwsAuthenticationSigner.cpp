@@ -5,9 +5,11 @@
 namespace clp::aws {
 S3Url::S3Url(std::string const& url) {
     // Regular expression to match virtual host-style HTTP URL format
-    std::regex regex1(R"(https://([a-z0-9.-]+)\.s3(\.([a-z0-9-]+))?\.amazonaws\.com(/.*?)$)");
+//    std::regex regex1(R"(https://([a-z0-9.-]+)\.s3(\.([a-z0-9-]+))?\.amazonaws\.com(/.*?)$)");
+    std::regex regex1(R"(https://([a-z0-9.-]+)\.s3(\.([a-z0-9-]+))?\.amazonaws\.com(/[^?]+).*)");
     // Regular expression to match path-style HTTP URL format
-    std::regex regex2(R"(https://s3(\.([a-z0-9-]+))?\.amazonaws\.com/([a-z0-9.-]+)(/.*?)$)");
+//    std::regex regex2(R"(https://s3(\.([a-z0-9-]+))?\.amazonaws\.com/([a-z0-9.-]+)(/.*?)$)");
+    std::regex regex2(R"(https://s3(\.([a-z0-9-]+))?\.amazonaws\.com/([a-z0-9.-]+)(/[^?]+).*)");
 
     std::smatch match;
     if (std::regex_match(url, match, regex1)) {
@@ -28,12 +30,11 @@ S3Url::S3Url(std::string const& url) {
     m_host = fmt::format("{}.s3.{}.amazonaws.com", m_bucket, m_region);
 }
 
-std::string AwsAuthenticationSigner::generate_presigned_url(std::string const& url, HttpMethod method) {
+std::string AwsAuthenticationSigner::generate_presigned_url(S3Url &s3_url, HttpMethod method) {
     if (HttpMethod::GET != method) {
         throw std::runtime_error("Unsupported HTTP method!");
     }
 
-    S3Url s3_url(url);
     auto s3_region = s3_url.get_region();
 
     // Gets current time
