@@ -51,7 +51,7 @@ public:
 
 private:
     // Constants
-    static constexpr size_t m_utf_max_validation_len = 4;
+    static constexpr size_t cUtfMaxValidationLen = 4096;
 
     // Methods
     /**
@@ -147,6 +147,7 @@ private:
             streaming_archive::writer::Archive& archive,
             ir::LogEventDeserializer<encoded_variable_t>& log_event_deserializer
     );
+
     // Variables
     boost::uuids::random_generator& m_uuid_generator;
     BufferedFileReader m_file_reader;
