@@ -35,8 +35,8 @@ const computeHumanSize = (num) => {
  * @throws Error if the quoted string has a quote within it (rather than at its ends) or it's
  * missing one of it's begin/end quotes.
  */
-function unquoteString(str, quoteChar, escapeChar) {
-    if (str.length === 0) {
+const unquoteString = (str, quoteChar, escapeChar) => {
+    if (0 === str.length) {
         return str;
     }
 
@@ -66,8 +66,7 @@ function unquoteString(str, quoteChar, escapeChar) {
     // Ensure any unescaped quotes are only at the beginning and end of the string
     let foundBeginQuote = false;
     let foundEndQuote = false;
-    for (let i = 0; i < positionOfCharsToRemove.length; ++i) {
-        const pos = positionOfCharsToRemove[i];
+    positionOfCharsToRemove.forEach((pos) => {
         const char = chars[pos];
         if (quoteChar === char) {
             if (0 === pos) {
@@ -78,7 +77,7 @@ function unquoteString(str, quoteChar, escapeChar) {
                 throw new Error(`Found unescaped quote character (${quoteChar}) within.`);
             }
         }
-    }
+    });
     if (foundBeginQuote ^ foundEndQuote) {
         throw new Error("Begin/end quote is missing.");
     }

@@ -146,10 +146,8 @@ const SearchView = () => {
             handleClearResults();
         }
 
-        let processedQueryString;
-        if (CLP_STORAGE_ENGINES.CLP_S === Meteor.settings.public.ClpStorageEngine) {
-            processedQueryString = queryString;
-        } else {
+        let processedQueryString = queryString;
+        if (CLP_STORAGE_ENGINES.CLP === Meteor.settings.public.ClpStorageEngine) {
             try {
                 processedQueryString = unquoteString(queryString, '"', '\\');
                 if ("" === processedQueryString) {
