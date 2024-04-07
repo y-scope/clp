@@ -3,37 +3,24 @@ import React from "react";
 import {
     Col,
     Container,
-    OverlayTrigger,
     ProgressBar,
-    Row, Spinner,
-    Table,
-    Tooltip,
+    Row,
 } from "react-bootstrap";
 
 import {DateTime} from "luxon";
 
 import {
-    faBarsProgress,
     faChartBar,
-    faCheck,
     faClock,
     faEnvelope,
-    faExclamation,
     faFileAlt,
     faHdd,
 } from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 
-import {
-    CompressionJobsCollection,
-    StatsCollection,
-} from "/imports/api/ingestion/collections";
-import {
-    COMPRESSION_JOB_STATUS,
-    COMPRESSION_JOB_STATUS_NAMES,
-} from "/imports/api/ingestion/constants";
+import {StatsCollection} from "/imports/api/ingestion/collections";
+
 import {computeHumanSize} from "/imports/utils/misc";
-import {MONGO_SORT_BY_ID} from "/imports/utils/mongo";
 
 import CompressionJobTable from "./CompressionJobTable";
 
