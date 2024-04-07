@@ -686,7 +686,6 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
             "SqlDbHost": clp_config.database.host,
             "SqlDbPort": clp_config.database.port,
             "SqlDbName": clp_config.database.name,
-
             "SqlDbClpArchivesTableName": f"{CLP_METADATA_TABLE_PREFIX}archives",
             "SqlDbClpFilesTableName": f"{CLP_METADATA_TABLE_PREFIX}files",
             "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
