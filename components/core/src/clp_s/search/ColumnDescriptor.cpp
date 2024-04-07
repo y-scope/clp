@@ -26,18 +26,27 @@ ColumnDescriptor::ColumnDescriptor(std::string const& descriptor) {
     m_flags = cAllTypes;
     m_descriptors.emplace_back(descriptor);
     check_and_set_unresolved_descriptor_flag();
+    if (is_unresolved_descriptor()) {
+        simplify_descriptor_wildcards();
+    }
 }
 
 ColumnDescriptor::ColumnDescriptor(std::vector<std::string> const& descriptors) {
     m_flags = cAllTypes;
     m_descriptors = std::move(tokenize_descriptor(descriptors));
     check_and_set_unresolved_descriptor_flag();
+    if (is_unresolved_descriptor()) {
+        simplify_descriptor_wildcards();
+    }
 }
 
 ColumnDescriptor::ColumnDescriptor(DescriptorList const& descriptors) {
     m_flags = cAllTypes;
     m_descriptors = descriptors;
     check_and_set_unresolved_descriptor_flag();
+    if (is_unresolved_descriptor()) {
+        simplify_descriptor_wildcards();
+    }
 }
 
 std::shared_ptr<ColumnDescriptor> ColumnDescriptor::create(std::string const& descriptor) {
@@ -94,4 +103,18 @@ bool ColumnDescriptor::operator==(ColumnDescriptor const& rhs) const {
            && m_unresolved_descriptors == rhs.m_unresolved_descriptors
            && m_pure_wildcard == rhs.m_pure_wildcard;
 }
+
+void ColumnDescriptor::simplify_descriptor_wildcards() {
+    DescriptorList new_descriptor_list;
+    bool prev_was_wildcard = false;
+    for (auto& token : m_descriptors) {
+        if (prev_was_wildcard && token.wildcard()) {
+            continue;
+        }
+        prev_was_wildcard = token.wildcard();
+        new_descriptor_list.push_back(std::move(token));
+    }
+    m_descriptors = std::move(new_descriptor_list);
+}
+
 }  // namespace clp_s::search
