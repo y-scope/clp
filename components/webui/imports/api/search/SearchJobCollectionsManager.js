@@ -41,7 +41,7 @@ class SearchJobCollectionsManager {
         const collection = this.#collections.get(name);
 
         await collection.dropCollectionAsync();
-        this.#collections.set(jobId.toString(), null);
+        this.#collections.set(name, null);
     }
 }
 

@@ -99,7 +99,7 @@ const SearchFilterControlsDrawer = ({
     /**
      * Updates the `begin` timestamp of the time range.
      *
-     * @param {Date} localDateBegin - The local date to be used for updating the begin timestamp.
+     * @param {Date} localDateBegin The local date to be used for updating the begin timestamp.
      */
     const updateBeginTimestamp = (localDateBegin) => {
         const utcDatetime = convertLocalToSameUtcDatetime(localDateBegin);
@@ -120,7 +120,7 @@ const SearchFilterControlsDrawer = ({
     /**
      * Updates the `end` timestamp of the time range.
      *
-     * @param {Date} localDateEnd - The local date to be used for updating the end timestamp.
+     * @param {Date} localDateEnd The local date to be used for updating the end timestamp.
      */
     const updateEndTimestamp = (localDateEnd) => {
         const utcDatetime = convertLocalToSameUtcDatetime(localDateEnd);

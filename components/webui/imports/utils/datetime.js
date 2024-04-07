@@ -48,9 +48,7 @@ const TIME_RANGE_PRESET_LABEL = Object.freeze({
  * Computes a time range based on a token.
  *
  * @param {string} token representing the time range to compute; format: `unit_modifier_amount`
- * @return {TimeRange} containing Date objects representing the computed begin and end
- * time
- * range
+ * @return {TimeRange} The computed time range
  */
 const computeTimeRange = (token)  => {
     const [unit,
@@ -96,13 +94,12 @@ const DEFAULT_TIME_RANGE = computeTimeRange(
 
 // TODO: Switch date pickers so we don't have to do this hack
 /**
- * Converts a Dayjs object in UTC, to a JavaScript Date object that represents the same date and
- * time, but aligned with the local timezone. This is achieved without altering the original
- * timestamp values (year, month, day, hour, minute, second, and millisecond).
+ * Converts a UTC Dayjs object to a local-timezone JavaScript Date object that represents the same
+ * date and time. In other words, the original year, month, day, hour, minute, second, and
+ * millisecond appear unchanged.
  *
  * @param {dayjs.Dayjs} utcDatetime
- * @return {Date} The corresponding Date object, or `undefined` when `utcDatetime`
- * is `undefined`.
+ * @return {Date} The corresponding Date object
  */
 const convertUtcToSameLocalDate = (utcDatetime) => {
     const localTz = dayjs.tz.guess();
@@ -110,8 +107,9 @@ const convertUtcToSameLocalDate = (utcDatetime) => {
 };
 
 /**
- * Converts a JavaScript Date object in local timezone, to a Dayjs object that represents the same
- * date and time, but aligned with the UTC.
+ * Converts a local-timezone JavaScript Date object to a UTC Dayjs object that represents the same
+ * date and time. In other words, the original year, month, day, hour, minute, second, and
+ * millisecond appear unchanged.
  *
  * @param {Date} localDate
  * @return {dayjs.Dayjs} The corresponding Dayjs object
@@ -138,11 +136,11 @@ const convertLocalUnixMsToSameUtcDatetime = (localTimeStampUnixMs) => {
 };
 
 /**
- * Expand the time range so that both extremes are multiples of the given duration.
+ * Expands the time range so that both extremes are multiples of the given duration.
  *
  * @param {dayjs.Duration} duration
- * @param {TimeRange} timeRange - The time range to be clipped.
- * @return {TimeRange} - The expanded time range.
+ * @param {TimeRange} timeRange The time range to be expanded.
+ * @return {TimeRange} The expanded time range.
  */
 const expandTimeRangeToDurationMultiple = (duration, {
     begin,

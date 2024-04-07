@@ -12,7 +12,7 @@
 
 /**
  * @typedef {object} TimelineBucket
- * @property {number} timestamp
+ * @property {number} timestamp Timestamp as milliseconds since the Unix epoch.
  * @property {number} count
  */
 

@@ -14,7 +14,7 @@ import {searchJobCollectionsManager} from "./collections";
 /**
  * The interval, in milliseconds, at which the Meteor Mongo collection is polled.
  */
-const COLLECTION_POLL_INTERVAL_MS = 250;
+const COLLECTION_POLL_INTERVAL_MILLIS = 250;
 
 /**
  * Publishes search results metadata for a specific job.

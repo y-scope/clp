@@ -48,7 +48,7 @@ class SearchJobsDbManager {
     }
 
     /**
-     * Submits an search aggregation job to the database.
+     * Submits an aggregation job to the database.
      *
      * @param {Object} searchConfig The arguments for the query.
      * @param {number} timeRangeBucketSizeMillis
