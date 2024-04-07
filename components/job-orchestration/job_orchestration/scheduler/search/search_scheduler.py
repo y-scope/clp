@@ -70,6 +70,10 @@ async def release_reducer_for_job(job: SearchJob):
 
 @exception_default_value(default=[])
 def fetch_new_search_jobs(db_conn) -> list:
+    """
+    Fetches and returns new PENDING jobs from the database. If an exception occurs while interacting
+    with the database this function will return an empty list.
+    """
     with contextlib.closing(db_conn.cursor(dictionary=True)) as db_cursor:
         db_cursor.execute(
             f"""
@@ -84,6 +88,10 @@ def fetch_new_search_jobs(db_conn) -> list:
 
 @exception_default_value(default=[])
 def fetch_cancelling_search_jobs(db_conn) -> list:
+    """
+    Fetches and returns jobs with CANCELLING status from the database. If an exception occurs while
+    interacting with the database this function will return an empty list.
+    """
     with contextlib.closing(db_conn.cursor(dictionary=True)) as db_cursor:
         db_cursor.execute(
             f"""
@@ -103,6 +111,14 @@ def set_job_status(
     prev_status: Optional[SearchJobStatus] = None,
     **kwargs,
 ) -> bool:
+    """
+    Sets the job status and any other fields specified by the kwargs for some job. Optionally, the
+    update can be made conditional on the current status of the job in the database matching
+    the value of `prev_status`.
+
+    This function returns True if the update is succesful, and False if the update fails or if an
+    exception occurs while interacting with the database.
+    """
     field_set_expressions = [f'{k}="{v}"' for k, v in kwargs.items()]
     field_set_expressions.append(f"status={status}")
     update = (
@@ -172,7 +188,6 @@ def get_archives_for_search(
         else:
             cursor.execute(query)
         archives_for_search = list(cursor.fetchall())
-        # db_conn.commit()
     return archives_for_search
 
 
@@ -520,6 +535,7 @@ async def main(argv: List[str]) -> int:
                 f"Failed to connect to archive database "
                 f"{clp_config.database.host}:{clp_config.database.port}."
             )
+            return -1
 
         logger.info(
             f"Connected to archive database"

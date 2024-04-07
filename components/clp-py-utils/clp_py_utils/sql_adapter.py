@@ -13,6 +13,12 @@ from clp_py_utils.clp_config import Database
 
 
 def exception_default_value(default):
+    """
+    This decorator wraps a function and returns the value specified by `default` whenever an
+    uncaught exception occurs in the function being wrapped. If no exception occurs this decorator
+    just forwards the return value of the function being wrapped.
+    """
+
     def _exception_default_value(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
