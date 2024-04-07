@@ -103,11 +103,11 @@ const deinitStatsDbManager = () => {
  * @returns {Promise<void>}
  */
 const refreshCompressionJobs = async () => {
-    if (null === compressionJobsRefreshTimeout) {
+    if (null !== compressionJobsRefreshTimeout) {
         Meteor.clearTimeout(compressionJobsRefreshTimeout);
         compressionJobsRefreshTimeout = null;
     }
-    if (0 !== Meteor.server.stream_server.all_sockets().length) {
+    if (0 === Meteor.server.stream_server.all_sockets().length) {
         compressionJobsRefreshTimeout = Meteor.setTimeout(
             refreshCompressionJobs,
             COMPRESSION_JOBS_REFRESH_INTERVAL_MS
@@ -202,6 +202,8 @@ Meteor.publish(Meteor.settings.public.StatsCollectionName, async () => {
  */
 Meteor.publish(Meteor.settings.public.CompressionJobsCollectionName, async () => {
     logger.debug(`Subscription '${Meteor.settings.public.CompressionJobsCollectionName}'`);
+
+    await refreshCompressionJobs();
 
     const findOptions = {
         sort: [MONGO_SORT_BY_ID],
