@@ -141,7 +141,9 @@ const refreshCompressionJobs = async () => {
         },
     }));
 
-    await CompressionJobsCollection.rawCollection().bulkWrite(operations);
+    if (0 !== operations.length) {
+        await CompressionJobsCollection.rawCollection().bulkWrite(operations);
+    }
     compressionJobsRefreshTimeout = Meteor.setTimeout(
         refreshCompressionJobs,
         COMPRESSION_JOBS_REFRESH_INTERVAL_MS
