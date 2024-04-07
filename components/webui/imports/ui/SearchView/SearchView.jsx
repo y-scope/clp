@@ -1,24 +1,34 @@
-import React, {useEffect, useRef, useState} from "react";
+import {Meteor} from "meteor/meteor";
+import {useTracker} from "meteor/react-meteor-data";
+import React, {
+    useEffect,
+    useRef,
+    useState,
+} from "react";
+import {ProgressBar} from "react-bootstrap";
 
 import {faExclamationCircle} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {Meteor} from "meteor/meteor";
-import {useTracker} from "meteor/react-meteor-data";
-import {ProgressBar} from "react-bootstrap";
+
+import {
+    MONGO_SORT_BY_ID,
+    MONGO_SORT_ORDER,
+} from "/imports/utils/mongo";
 
 import {SearchResultsMetadataCollection} from "../../api/search/collections";
 import {
     INVALID_JOB_ID,
-    MONGO_SORT_ORDER,
+    isSearchSignalQuerying,
     SEARCH_MAX_NUM_RESULTS,
     SEARCH_RESULTS_FIELDS,
     SEARCH_SIGNAL,
-    isSearchSignalQuerying,
 } from "../../api/search/constants";
 import SearchJobCollectionsManager from "../../api/search/SearchJobCollectionsManager";
 import {LOCAL_STORAGE_KEYS} from "../constants";
-import {changeTimezoneToUtcWithoutChangingTime, DEFAULT_TIME_RANGE} from "./datetime";
-
+import {
+    changeTimezoneToUtcWithoutChangingTime,
+    DEFAULT_TIME_RANGE,
+} from "./datetime";
 import SearchControls from "./SearchControls.jsx";
 import SearchResults, {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResults.jsx";
 
@@ -39,6 +49,7 @@ const SearchView = () => {
     const [localLastSearchSignal, setLocalLastSearchSignal] = useState(SEARCH_SIGNAL.NONE);
     const [estimatedNumResults, setEstimatedNumResults] = useState(null);
     const dbRef = useRef(new SearchJobCollectionsManager());
+
     // gets updated as soon as localLastSearchSignal is updated
     // to avoid reading old localLastSearchSignal value from Closures
     const localLastSearchSignalRef = useRef(localLastSearchSignal);
@@ -48,7 +59,8 @@ const SearchView = () => {
     const [timeRange, setTimeRange] = useState(DEFAULT_TIME_RANGE);
     const [ignoreCase, setIgnoreCase] = useState(DEFAULT_IGNORE_CASE_SETTING);
     const [visibleSearchResultsLimit, setVisibleSearchResultsLimit] = useState(
-        VISIBLE_RESULTS_LIMIT_INITIAL);
+        VISIBLE_RESULTS_LIMIT_INITIAL
+    );
     const [fieldToSortBy, setFieldToSortBy] = useState({
         name: SEARCH_RESULTS_FIELDS.TIMESTAMP,
         direction: MONGO_SORT_ORDER.DESCENDING,
@@ -56,7 +68,8 @@ const SearchView = () => {
 
     // Visuals
     const [maxLinesPerResult, setMaxLinesPerResult] = useState(
-        Number(localStorage.getItem(LOCAL_STORAGE_KEYS.MAX_LINES_PER_RESULT) || 2));
+        Number(localStorage.getItem(LOCAL_STORAGE_KEYS.MAX_LINES_PER_RESULT) || 2)
+    );
 
     // Subscriptions
     const resultsMetadata = useTracker(() => {
@@ -64,8 +77,7 @@ const SearchView = () => {
 
         if (INVALID_JOB_ID !== jobId) {
             const args = {jobId};
-            const subscription = Meteor.subscribe(
-                Meteor.settings.public.SearchResultsMetadataCollectionName, args);
+            const subscription = Meteor.subscribe(Meteor.settings.public.SearchResultsMetadataCollectionName, args);
             const doc = SearchResultsMetadataCollection.findOne();
 
             const isReady = subscription.ready();
@@ -75,7 +87,8 @@ const SearchView = () => {
         }
 
         return result;
-    }, [jobId, localLastSearchSignal]);
+    }, [jobId,
+        localLastSearchSignal]);
 
     const searchResults = useTracker(() => {
         if (INVALID_JOB_ID === jobId) {
@@ -100,10 +113,7 @@ const SearchView = () => {
                     fieldToSortBy.name,
                     fieldToSortBy.direction,
                 ],
-                [
-                    SEARCH_RESULTS_FIELDS.ID,
-                    fieldToSortBy.direction,
-                ],
+                MONGO_SORT_BY_ID,
             ],
         };
 
@@ -126,7 +136,9 @@ const SearchView = () => {
         }
 
         return resultsCollection.find({}, findOptions).fetch();
-    }, [jobId, fieldToSortBy, visibleSearchResultsLimit]);
+    }, [jobId,
+        fieldToSortBy,
+        visibleSearchResultsLimit]);
 
     // State transitions
     useEffect(() => {
@@ -156,16 +168,18 @@ const SearchView = () => {
             queryString: queryString,
             timestampBegin: timestampBeginMillis,
             timestampEnd: timestampEndMillis,
-            ignoreCase: ignoreCase
+            ignoreCase: ignoreCase,
         };
+
         Meteor.call("search.submitQuery", args, (error, result) => {
             if (error) {
                 setJobId(INVALID_JOB_ID);
                 setOperationErrorMsg(error.reason);
+
                 return;
             }
 
-            setJobId(result["jobId"]);
+            setJobId(result.jobId);
         });
     };
 
@@ -181,9 +195,11 @@ const SearchView = () => {
         const args = {
             jobId: jobId,
         };
+
         Meteor.call("search.clearResults", args, (error) => {
             if (error) {
                 setOperationErrorMsg(error.reason);
+
                 return;
             }
 
@@ -202,6 +218,7 @@ const SearchView = () => {
         const args = {
             jobId: jobId,
         };
+
         Meteor.call("search.cancelOperation", args, (error) => {
             if (error) {
                 setOperationErrorMsg(error.reason);
@@ -221,41 +238,40 @@ const SearchView = () => {
         estimatedNumResults ||
         searchResults.length;
 
-    return (<div className="d-flex flex-column h-100">
-        <div className={"flex-column"}>
-            <SearchControls
-                queryString={queryString}
-                setQueryString={setQueryString}
-                timeRange={timeRange}
-                setTimeRange={setTimeRange}
-                ignoreCase={ignoreCase}
-                setIgnoreCase={setIgnoreCase}
-                resultsMetadata={resultsMetadata}
-                onSubmitQuery={submitQuery}
-                onClearResults={handleClearResults}
-                onCancelOperation={cancelOperation}
-            />
+    return (
+        <div className={"d-flex flex-column h-100"}>
+            <div className={"flex-column"}>
+                <SearchControls
+                    ignoreCase={ignoreCase}
+                    queryString={queryString}
+                    resultsMetadata={resultsMetadata}
+                    setIgnoreCase={setIgnoreCase}
+                    setQueryString={setQueryString}
+                    setTimeRange={setTimeRange}
+                    timeRange={timeRange}
+                    onCancelOperation={cancelOperation}
+                    onClearResults={handleClearResults}
+                    onSubmitQuery={submitQuery}/>
 
-            <SearchStatus
-                resultsMetadata={resultsMetadata}
-                errorMsg={("" !== operationErrorMsg) ?
-                    operationErrorMsg :
-                    resultsMetadata["errorMsg"]}
-            />
+                <SearchStatus
+                    resultsMetadata={resultsMetadata}
+                    errorMsg={("" !== operationErrorMsg) ?
+                        operationErrorMsg :
+                        resultsMetadata.errorMsg}/>
+            </div>
+
+            {showSearchResults && <SearchResults
+                fieldToSortBy={fieldToSortBy}
+                jobId={jobId}
+                maxLinesPerResult={maxLinesPerResult}
+                numResultsOnServer={numResultsOnServer}
+                searchResults={searchResults}
+                setFieldToSortBy={setFieldToSortBy}
+                setMaxLinesPerResult={setMaxLinesPerResult}
+                setVisibleSearchResultsLimit={setVisibleSearchResultsLimit}
+                visibleSearchResultsLimit={visibleSearchResultsLimit}/>}
         </div>
-
-        {showSearchResults && <SearchResults
-            fieldToSortBy={fieldToSortBy}
-            jobId={jobId}
-            maxLinesPerResult={maxLinesPerResult}
-            numResultsOnServer={numResultsOnServer}
-            searchResults={searchResults}
-            setFieldToSortBy={setFieldToSortBy}
-            setMaxLinesPerResult={setMaxLinesPerResult}
-            setVisibleSearchResultsLimit={setVisibleSearchResultsLimit}
-            visibleSearchResultsLimit={visibleSearchResultsLimit}
-        />}
-    </div>);
+    );
 };
 
 /**
@@ -274,7 +290,7 @@ const SearchStatus = ({
     const timerIntervalRef = useRef(null);
 
     useEffect(() => {
-        if (true === isSearchSignalQuerying(resultsMetadata["lastSignal"])) {
+        if (true === isSearchSignalQuerying(resultsMetadata.lastSignal)) {
             timerIntervalRef.current = timerIntervalRef.current ?? setInterval(() => {
                 setProgress((progress) => (progress + PROGRESS_INCREMENT));
             }, PROGRESS_INTERVAL_MS);
@@ -285,39 +301,47 @@ const SearchStatus = ({
             }
             setProgress(0);
         }
-    }, [resultsMetadata["lastSignal"]]);
+    }, [resultsMetadata.lastSignal]);
 
     if ("" !== errorMsg && null !== errorMsg && undefined !== errorMsg) {
-        return (<div className={"search-error"}>
-            <FontAwesomeIcon className="search-error-icon" icon={faExclamationCircle}/>
-            {errorMsg}
-        </div>);
-    } else {
-        let message = null;
-        switch (resultsMetadata["lastSignal"]) {
-            case SEARCH_SIGNAL.NONE:
-                message = "Ready";
-                break;
-            case SEARCH_SIGNAL.REQ_CLEARING:
-                message = "Clearing...";
-                break;
-            default:
-                break;
-        }
+        return (
+            <div className={"search-error"}>
+                <FontAwesomeIcon
+                    className={"search-error-icon"}
+                    icon={faExclamationCircle}/>
+                {errorMsg}
+            </div>
+        );
+    }
+    let message = null;
+    switch (resultsMetadata.lastSignal) {
+        case SEARCH_SIGNAL.NONE:
+            message = "Ready";
+            break;
+        case SEARCH_SIGNAL.REQ_CLEARING:
+            message = "Clearing...";
+            break;
+        default:
+            break;
+    }
 
-        return <>
+    return (
+        <>
             <ProgressBar
-                style={{visibility: (0 === progress) ? "hidden" : "visible"}}
                 animated={true}
                 className={"search-progress-bar rounded-0 border-bottom"}
-                striped={true}
                 now={progress}
+                striped={true}
                 variant={"primary"}
-            />
+                style={{visibility: (0 === progress) ?
+                    "hidden" :
+                    "visible"}}/>
             {null !== message &&
-                <div className={"search-no-results-status"}>{message}</div>}
-        </>;
-    }
+            <div className={"search-no-results-status"}>
+                {message}
+            </div>}
+        </>
+    );
 };
 
 export default SearchView;

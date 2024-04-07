@@ -1,9 +1,13 @@
-import {logger} from "/imports/utils/logger";
 import {Meteor} from "meteor/meteor";
+
+import {logger} from "/imports/utils/logger";
+import {
+    MONGO_SORT_BY_ID,
+    MONGO_SORT_ORDER,
+} from "/imports/utils/mongo";
 
 import {SearchResultsMetadataCollection} from "../collections";
 import {
-    MONGO_SORT_ORDER,
     SEARCH_MAX_NUM_RESULTS,
     SEARCH_RESULTS_FIELDS,
 } from "../constants";
@@ -19,8 +23,10 @@ import {searchJobCollectionsManager} from "./collections";
  * @returns {Mongo.Cursor} cursor that provides access to the search results metadata
  */
 Meteor.publish(Meteor.settings.public.SearchResultsMetadataCollectionName, ({jobId}) => {
-    logger.debug(`Subscription '${Meteor.settings.public.SearchResultsMetadataCollectionName}'`,
-        `jobId=${jobId}`);
+    logger.debug(
+        `Subscription '${Meteor.settings.public.SearchResultsMetadataCollectionName}'`,
+        `jobId=${jobId}`
+    );
 
     const filter = {
         _id: jobId.toString(),
@@ -48,8 +54,9 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
 
     const findOptions = {
         sort: [
-            [SEARCH_RESULTS_FIELDS.TIMESTAMP, MONGO_SORT_ORDER.DESCENDING],
-            [SEARCH_RESULTS_FIELDS.ID, MONGO_SORT_ORDER.DESCENDING],
+            [SEARCH_RESULTS_FIELDS.TIMESTAMP,
+                MONGO_SORT_ORDER.DESCENDING],
+            MONGO_SORT_BY_ID,
         ],
         limit: SEARCH_MAX_NUM_RESULTS,
         disableOplog: true,

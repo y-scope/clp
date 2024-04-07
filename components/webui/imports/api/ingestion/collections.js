@@ -5,4 +5,12 @@ const StatsCollection = new Mongo.Collection(Meteor.settings.public.StatsCollect
 
 const STATS_COLLECTION_ID_COMPRESSION = "compression_stats";
 
-export {StatsCollection, STATS_COLLECTION_ID_COMPRESSION};
+const CompressionJobsCollection = new Mongo.Collection(
+    Meteor.settings.public.CompressionJobsCollectionName
+);
+
+export {
+    CompressionJobsCollection,
+    STATS_COLLECTION_ID_COMPRESSION,
+    StatsCollection,
+};

@@ -1,14 +1,23 @@
-import React, {useEffect, useRef} from "react";
+import React, {
+    useEffect,
+    useRef,
+} from "react";
+import {
+    Spinner,
+    Table,
+} from "react-bootstrap";
 
-import {faSort, faSortDown, faSortUp} from "@fortawesome/free-solid-svg-icons";
+import {
+    faSort,
+    faSortDown,
+    faSortUp,
+} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {Spinner, Table} from "react-bootstrap";
+
+import {SEARCH_RESULTS_FIELDS} from "/imports/api/search/constants";
+import {MONGO_SORT_ORDER} from "/imports/utils/mongo";
 
 import "./SearchResultsTable.scss";
-import {
-    MONGO_SORT_ORDER,
-    SEARCH_RESULTS_FIELDS,
-} from "../../api/search/constants";
 
 
 /**
@@ -63,18 +72,23 @@ const SearchResultsLoadSensor = ({
         onLoadMoreResults,
     ]);
 
-    return <div
-        id={"search-results-load-sensor"}
-        ref={loadingBlockRef}
-        style={{
-            visibility: (true === hasMoreResults) ?
-                "visible" :
-                "hidden",
-        }}
-    >
-        <Spinner animation="border" variant="primary" size="sm"/>
-        <span>Loading...</span>
-    </div>;
+    return (
+        <div
+            id={"search-results-load-sensor"}
+            ref={loadingBlockRef}
+            style={{
+                visibility: (true === hasMoreResults) ?
+                    "visible" :
+                    "hidden",
+            }}
+        >
+            <Spinner
+                animation={"border"}
+                size={"sm"}
+                variant={"primary"}/>
+            <span>Loading...</span>
+        </div>
+    );
 };
 
 /**
@@ -125,55 +139,72 @@ const SearchResultsTable = ({
         }
     };
 
-    let rows = [];
+    const rows = [];
 
     // Construct rows
     for (let i = 0; i < searchResults.length; ++i) {
-        let searchResult = searchResults[i];
+        const searchResult = searchResults[i];
         rows.push(<tr key={searchResult._id}>
-            <td>{searchResult.timestamp ? new Date(searchResult.timestamp).toISOString().
-                slice(0, 19).
-                replace("T", " ") : "N/A"}</td>
             <td>
-                <pre className="search-results-message"
-                     style={{maxHeight: (maxLinesPerResult * 1.4) + "rem"}}>
+                {searchResult.timestamp ?
+                    new Date(searchResult.timestamp).toISOString()
+                        .slice(0, 19)
+                        .replace("T", " ") :
+                    "N/A"}
+            </td>
+            <td>
+                <pre
+                    className={"search-results-message"}
+                    style={{maxHeight: `${maxLinesPerResult * 1.4}rem`}}
+                >
                     {searchResult.message}
                 </pre>
             </td>
         </tr>);
     }
 
-    return (<div className={"search-results-container"}>
-        <Table striped hover responsive="sm" className={"border-bottom search-results"}>
-            <thead>
-            <tr>
-                <th style={{"width": "144px"}}
-                    className={"search-results-th search-results-th-sortable"}
-                    data-column-name={SEARCH_RESULTS_FIELDS.TIMESTAMP}
-                    key={SEARCH_RESULTS_FIELDS.TIMESTAMP}
-                    onClick={toggleSortDirection}
-                >
-                    <div className={"search-results-table-header"}>
-                        <FontAwesomeIcon
-                            icon={getSortIcon(SEARCH_RESULTS_FIELDS.TIMESTAMP)}/>
-                        <span> Timestamp</span>
-                    </div>
-                </th>
-                <th className={"search-results-th"} key={"message"}>
-                    <div className={"search-results-table-header"}>
-                        Log message
-                    </div>
-                </th>
-            </tr>
-            </thead>
-            <tbody>
-            {rows}
-            </tbody>
-        </Table>
-        <SearchResultsLoadSensor
-            hasMoreResults={hasMoreResults}
-            onLoadMoreResults={onLoadMoreResults}/>
-    </div>);
+    return (
+        <div className={"search-results-container"}>
+            <Table
+                className={"border-bottom search-results"}
+                hover={true}
+                responsive={"sm"}
+                striped={true}
+            >
+                <thead>
+                    <tr>
+                        <th
+                            className={"search-results-th search-results-th-sortable"}
+                            data-column-name={SEARCH_RESULTS_FIELDS.TIMESTAMP}
+                            key={SEARCH_RESULTS_FIELDS.TIMESTAMP}
+                            style={{width: "144px"}}
+                            onClick={toggleSortDirection}
+                        >
+                            <div className={"search-results-table-header"}>
+                                <FontAwesomeIcon
+                                    icon={getSortIcon(SEARCH_RESULTS_FIELDS.TIMESTAMP)}/>
+                                <span> Timestamp</span>
+                            </div>
+                        </th>
+                        <th
+                            className={"search-results-th"}
+                            key={"message"}
+                        >
+                            <div className={"search-results-table-header"}>
+                                Log message
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows}
+                </tbody>
+            </Table>
+            <SearchResultsLoadSensor
+                hasMoreResults={hasMoreResults}
+                onLoadMoreResults={onLoadMoreResults}/>
+        </div>
+    );
 };
 
 export default SearchResultsTable;

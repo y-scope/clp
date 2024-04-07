@@ -1,17 +1,23 @@
-import {initSearchEventCollection} from "/imports/api/search/collections";
-import {initLogger} from "/imports/utils/logger";
 import {Meteor} from "meteor/meteor";
+
+import {initSearchEventCollection} from "/imports/api/search/collections";
+import {
+    deinitDbManagers,
+    initDbManagers,
+} from "/imports/utils/DbManager";
+import {initLogger} from "/imports/utils/logger";
 
 import "/imports/api/ingestion/collections";
 import "/imports/api/ingestion/server/publications";
 import "/imports/api/search/server/collections";
 import "/imports/api/search/server/methods";
 import "/imports/api/search/server/publications";
-import {deinitDbManagers, initDbManagers} from "../imports/utils/DbManager";
 
 
 const DEFAULT_LOGS_DIR = ".";
-const DEFAULT_LOGGING_LEVEL = Meteor.isDevelopment ? "DEBUG" : "INFO";
+const DEFAULT_LOGGING_LEVEL = Meteor.isDevelopment ?
+    "DEBUG" :
+    "INFO";
 
 /**
  * Parses environment variables into config values for the application.
@@ -22,16 +28,17 @@ const DEFAULT_LOGGING_LEVEL = Meteor.isDevelopment ? "DEBUG" : "INFO";
  *                 error.
  */
 const parseEnvVars = () => {
-    const CLP_DB_USER = process.env["CLP_DB_USER"];
-    const CLP_DB_PASS = process.env["CLP_DB_PASS"];
+    const {CLP_DB_USER} = process.env;
+    const {CLP_DB_PASS} = process.env;
 
-    if ([CLP_DB_USER, CLP_DB_PASS].includes(undefined)) {
+    if ([CLP_DB_USER,
+        CLP_DB_PASS].includes(undefined)) {
         console.error("Environment variables CLP_DB_USER and CLP_DB_PASS must be defined");
         process.exit(1);
     }
 
-    const WEBUI_LOGS_DIR = process.env["WEBUI_LOGS_DIR"] || DEFAULT_LOGS_DIR;
-    const WEBUI_LOGGING_LEVEL = process.env["WEBUI_LOGGING_LEVEL"] || DEFAULT_LOGGING_LEVEL;
+    const WEBUI_LOGS_DIR = process.env.WEBUI_LOGS_DIR || DEFAULT_LOGS_DIR;
+    const WEBUI_LOGGING_LEVEL = process.env.WEBUI_LOGGING_LEVEL || DEFAULT_LOGGING_LEVEL;
 
     return {
         CLP_DB_USER,
@@ -47,17 +54,17 @@ Meteor.startup(async () => {
     initLogger(envVars.WEBUI_LOGS_DIR, envVars.WEBUI_LOGGING_LEVEL, Meteor.isDevelopment);
 
     await initDbManagers({
-            dbHost: Meteor.settings.private.SqlDbHost,
-            dbPort: Meteor.settings.private.SqlDbPort,
-            dbName: Meteor.settings.private.SqlDbName,
-            dbUser: envVars.CLP_DB_USER,
-            dbPassword: envVars.CLP_DB_PASS,
-        }, {
-            searchJobsTableName: Meteor.settings.private.SqlDbSearchJobsTableName,
-            clpArchivesTableName: Meteor.settings.private.SqlDbClpArchivesTableName,
-            clpFilesTableName: Meteor.settings.private.SqlDbClpFilesTableName,
-        },
-    );
+        dbHost: Meteor.settings.private.SqlDbHost,
+        dbPort: Meteor.settings.private.SqlDbPort,
+        dbName: Meteor.settings.private.SqlDbName,
+        dbUser: envVars.CLP_DB_USER,
+        dbPassword: envVars.CLP_DB_PASS,
+    }, {
+        clpArchivesTableName: Meteor.settings.private.SqlDbClpArchivesTableName,
+        clpFilesTableName: Meteor.settings.private.SqlDbClpFilesTableName,
+        compressionJobsTableName: Meteor.settings.private.SqlDbCompressionJobsTableName,
+        searchJobsTableName: Meteor.settings.private.SqlDbSearchJobsTableName,
+    });
 
     initSearchEventCollection();
 });

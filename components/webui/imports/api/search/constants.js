@@ -56,17 +56,6 @@ const JOB_STATUS_WAITING_STATES = [
 ];
 
 /**
- * Enum of Mongo Collection sort orders.
- *
- * @readonly
- * @enum {string}
- */
-const MONGO_SORT_ORDER = Object.freeze({
-    ASCENDING: "asc",
-    DESCENDING: "desc",
-});
-
-/**
  * Enum of search results cache fields.
  *
  * @readonly
@@ -91,7 +80,6 @@ export {
     isSearchSignalReq,
     isSearchSignalResp,
     JOB_STATUS_WAITING_STATES,
-    MONGO_SORT_ORDER,
     SEARCH_JOB_STATUS,
     SEARCH_MAX_NUM_RESULTS,
     SEARCH_RESULTS_FIELDS,

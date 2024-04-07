@@ -1,8 +1,13 @@
-import {logger} from "/imports/utils/logger";
 import mysql from "mysql2/promise";
 
-import {deinitStatsDbManager, initStatsDbManager} from "../api/ingestion/server/publications";
-import {initSearchJobsDbManager} from "../api/search/server/methods";
+import {
+    deinitCompressionDbManager,
+    deinitStatsDbManager,
+    initCompressionDbManager,
+    initStatsDbManager,
+} from "/imports/api/ingestion/server/publications";
+import {initSearchJobsDbManager} from "/imports/api/search/server/methods";
+import {logger} from "/imports/utils/logger";
 
 
 const DB_CONNECTION_LIMIT = 2;
@@ -25,9 +30,10 @@ let dbConnPool = null;
  * @param {string} dbConfig.dbPassword
  *
  * @param {object} tableNames
- * @param {string} tableNames.searchJobsTableName
  * @param {string} tableNames.clpArchivesTableName
  * @param {string} tableNames.clpFilesTableName
+ * @param {string} tableNames.compressionJobsTableName
+ * @param {string} tableNames.searchJobsTableName
  *
  * @returns {Promise<void>}
  * @throws {Error} on error.
@@ -39,9 +45,10 @@ const initDbManagers = async ({
     dbUser,
     dbPassword,
 }, {
-    searchJobsTableName,
     clpArchivesTableName,
     clpFilesTableName,
+    compressionJobsTableName,
+    searchJobsTableName,
 }) => {
     if (null !== dbConnPool) {
         throw Error("This method should not be called twice.");
@@ -59,15 +66,19 @@ const initDbManagers = async ({
             enableKeepAlive: true,
             connectionLimit: DB_CONNECTION_LIMIT,
             maxIdle: DB_MAX_IDLE,
-            idleTimeout: DB_IDLE_TIMEOUT_IN_MS
+            idleTimeout: DB_IDLE_TIMEOUT_IN_MS,
+            timezone: "Z",
         });
 
-        initSearchJobsDbManager(dbConnPool, {
-            searchJobsTableName,
-        });
         initStatsDbManager(dbConnPool, {
             clpArchivesTableName,
             clpFilesTableName,
+        });
+        initCompressionDbManager(dbConnPool, {
+            compressionJobsTableName,
+        });
+        initSearchJobsDbManager(dbConnPool, {
+            searchJobsTableName,
         });
     } catch (e) {
         logger.error("Unable to create MySQL / mariadb connection pool.", e.toString());
@@ -82,8 +93,12 @@ const initDbManagers = async ({
  */
 const deinitDbManagers = async () => {
     deinitStatsDbManager();
+    deinitCompressionDbManager();
 
     await dbConnPool.end();
 };
 
-export {initDbManagers, deinitDbManagers};
+export {
+    deinitDbManagers,
+    initDbManagers,
+};

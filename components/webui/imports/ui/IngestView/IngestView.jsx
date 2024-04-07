@@ -1,13 +1,41 @@
-import React from "react";
-
-import {faChartBar, faClock, faEnvelope, faFileAlt, faHdd} from "@fortawesome/free-solid-svg-icons";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {DateTime} from "luxon";
 import {useTracker} from "meteor/react-meteor-data";
-import {Col, Container, ProgressBar, Row} from "react-bootstrap";
+import React from "react";
+import {
+    Col,
+    Container,
+    OverlayTrigger,
+    ProgressBar,
+    Row, Spinner,
+    Table,
+    Tooltip,
+} from "react-bootstrap";
 
-import {StatsCollection} from "../../api/ingestion/collections";
-import {computeHumanSize} from "../../utils/misc";
+import {DateTime} from "luxon";
+
+import {
+    faBarsProgress,
+    faChartBar,
+    faCheck,
+    faClock,
+    faEnvelope,
+    faExclamation,
+    faFileAlt,
+    faHdd,
+} from "@fortawesome/free-solid-svg-icons";
+import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+
+import {
+    CompressionJobsCollection,
+    StatsCollection,
+} from "/imports/api/ingestion/collections";
+import {
+    COMPRESSION_JOB_STATUS,
+    COMPRESSION_JOB_STATUS_NAMES,
+} from "/imports/api/ingestion/constants";
+import {computeHumanSize} from "/imports/utils/misc";
+import {MONGO_SORT_BY_ID} from "/imports/utils/mongo";
+
+import CompressionJobTable from "./CompressionJobTable";
 
 
 /**
@@ -22,18 +50,35 @@ const IngestView = () => {
     }, []);
 
     return (
-        <Container fluid={true} className="ingest-container">
+        <Container
+            className={"ingest-container"}
+            fluid={true}
+        >
             <Row>
-                <Col xs={12} xl={6}>
-                    {stats ? (<Row>
-                        <Col sm={12} md={6}>
-                            <SpaceSavings stats={stats}/>
-                        </Col>
-                        <Col sm={12} md={6}>
-                            <Details stats={stats}/>
-                        </Col>
-                    </Row>) : (<></>)}
+                <Col
+                    xl={6}
+                    xs={12}
+                >
+                    {stats ?
+                        (<Row>
+                            <Col
+                                md={6}
+                                sm={12}
+                            >
+                                <SpaceSavings stats={stats}/>
+                            </Col>
+                            <Col
+                                md={6}
+                                sm={12}
+                            >
+                                <Details stats={stats}/>
+                            </Col>
+                        </Row>) :
+                        (<></>)}
                 </Col>
+            </Row>
+            <Row>
+                <CompressionJobTable/>
             </Row>
         </Container>
     );
@@ -50,37 +95,55 @@ const IngestView = () => {
 const SpaceSavings = ({stats}) => {
     const logsUncompressedSize = parseInt(stats.total_uncompressed_size) || 0;
     const logsCompressedSize = parseInt(stats.total_compressed_size) || 0;
-    const spaceSavings = logsUncompressedSize > 0 ?
+    const spaceSavings = 0 < logsUncompressedSize ?
         100 * (1 - logsCompressedSize / logsUncompressedSize) :
         0;
 
     return (
-        <div className="panel">
+        <div className={"panel"}>
             <Row>
-                <Col><h1 className="panel-h1">Space Savings</h1></Col>
-                <Col xs="auto"><FontAwesomeIcon className="panel-icon" icon={faHdd}/></Col>
+                <Col>
+                    <h1 className={"panel-h1"}>Space Savings</h1>
+                </Col>
+                <Col xs={"auto"}>
+                    <FontAwesomeIcon
+                        className={"panel-icon"}
+                        icon={faHdd}/>
+                </Col>
             </Row>
             <Row>
                 <Col>
-                    <svg viewBox="0 0 48 12">
-                        <text x="0" y="10">{spaceSavings.toFixed(2) + "%"}</text>
+                    <svg viewBox={"0 0 48 12"}>
+                        <text
+                            x={"0"}
+                            y={"10"}
+                        >
+                            {`${spaceSavings.toFixed(2)}%`}
+                        </text>
                     </svg>
                 </Col>
             </Row>
             <Row>
                 <Col>
                     <div className={"mb-2"}>
-                        {computeHumanSize(logsUncompressedSize)} before compression
-                        <ProgressBar now={100} className="ingest-stat-bar"/>
+                        {computeHumanSize(logsUncompressedSize)}
+                        {" "}
+                        before compression
+                        <ProgressBar
+                            className={"ingest-stat-bar"}
+                            now={100}/>
                     </div>
                 </Col>
             </Row>
             <Row>
                 <Col>
                     <div className={"mb-2"}>
-                        {computeHumanSize(logsCompressedSize)} after compression
-                        <ProgressBar now={100 - Math.round(spaceSavings)}
-                                     className="ingest-stat-bar"/>
+                        {computeHumanSize(logsCompressedSize)}
+                        {" "}
+                        after compression
+                        <ProgressBar
+                            className={"ingest-stat-bar"}
+                            now={100 - Math.round(spaceSavings)}/>
                     </div>
                 </Col>
             </Row>
@@ -108,19 +171,19 @@ const Details = ({stats}) => {
 
     let timeRangeRow = null;
     if (null !== endTimestamp) {
-        let timestampFormat = "kkkk-MMM-dd HH:mm";
+        const timestampFormat = "kkkk-MMM-dd HH:mm";
         timeRangeRow = (
-            <div className="ingest-stats-details-row">
-                <div className="ingest-stats-details-icon-container">
+            <div className={"ingest-stats-details-row"}>
+                <div className={"ingest-stats-details-icon-container"}>
                     <FontAwesomeIcon icon={faClock}/>
                 </div>
-                <div className="ingest-stats-details-text-container">
-                    <span className="ingest-stats-detail">
+                <div className={"ingest-stats-details-text-container"}>
+                    <span className={"ingest-stats-detail"}>
                         {DateTime.fromMillis(Number(beginTimestamp)).toFormat(timestampFormat)}
-                        <span className="ingest-desc-text"> to </span>
+                        <span className={"ingest-desc-text"}> to </span>
                         {DateTime.fromMillis(Number(endTimestamp)).toFormat(timestampFormat)}
                     </span>
-                    <span className="ingest-desc-text">time range</span>
+                    <span className={"ingest-desc-text"}>time range</span>
                 </div>
             </div>
         );
@@ -129,13 +192,15 @@ const Details = ({stats}) => {
     let numFilesRow = null;
     if (null !== numFiles) {
         numFilesRow = (
-            <div className="ingest-stats-details-row">
-                <div className="ingest-stats-details-icon-container">
+            <div className={"ingest-stats-details-row"}>
+                <div className={"ingest-stats-details-icon-container"}>
                     <FontAwesomeIcon icon={faFileAlt}/>
                 </div>
-                <div className="ingest-stats-details-text-container">
-                    <span className="ingest-stats-detail">{Number(numFiles).toLocaleString()}</span>
-                    <span className="ingest-desc-text">files</span>
+                <div className={"ingest-stats-details-text-container"}>
+                    <span className={"ingest-stats-detail"}>
+                        {Number(numFiles).toLocaleString()}
+                    </span>
+                    <span className={"ingest-desc-text"}>files</span>
                 </div>
             </div>
         );
@@ -144,15 +209,17 @@ const Details = ({stats}) => {
     let numMessagesRow = null;
     if (null !== numMessages) {
         numMessagesRow = (
-            <div className="ingest-stats-details-row">
-                <div className="ingest-stats-details-icon-container">
+            <div className={"ingest-stats-details-row"}>
+                <div className={"ingest-stats-details-icon-container"}>
                     <FontAwesomeIcon icon={faEnvelope}/>
                 </div>
-                <div className="ingest-stats-details-text-container">
+                <div className={"ingest-stats-details-text-container"}>
                     <span
-                        className="ingest-stats-detail"
-                    >{Number(numMessages).toLocaleString()}</span>
-                    <span className="ingest-desc-text">messages</span>
+                        className={"ingest-stats-detail"}
+                    >
+                        {Number(numMessages).toLocaleString()}
+                    </span>
+                    <span className={"ingest-desc-text"}>messages</span>
                 </div>
             </div>
         );
@@ -164,10 +231,16 @@ const Details = ({stats}) => {
     }
 
     return (
-        <div className="panel">
+        <div className={"panel"}>
             <Row>
-                <Col><h1 className="panel-h1">Details</h1></Col>
-                <Col xs="auto"><FontAwesomeIcon className="panel-icon" icon={faChartBar}/></Col>
+                <Col>
+                    <h1 className={"panel-h1"}>Details</h1>
+                </Col>
+                <Col xs={"auto"}>
+                    <FontAwesomeIcon
+                        className={"panel-icon"}
+                        icon={faChartBar}/>
+                </Col>
             </Row>
             <Row>
                 <Col>

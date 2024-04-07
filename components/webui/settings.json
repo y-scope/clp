@@ -3,11 +3,14 @@
     "SqlDbHost": "localhost",
     "SqlDbPort": 3306,
     "SqlDbName": "clp-db",
-    "SqlDbSearchJobsTableName": "search_jobs",
+
     "SqlDbClpArchivesTableName": "clp_archives",
-    "SqlDbClpFilesTableName": "clp_files"
+    "SqlDbClpFilesTableName": "clp_files",
+    "SqlDbCompressionJobsTableName": "compression_jobs",
+    "SqlDbSearchJobsTableName": "search_jobs"
   },
   "public": {
+    "CompressionJobsCollectionName": "compression-jobs",
     "SearchResultsCollectionName": "results",
     "SearchResultsMetadataCollectionName": "results-metadata",
     "StatsCollectionName": "stats"
