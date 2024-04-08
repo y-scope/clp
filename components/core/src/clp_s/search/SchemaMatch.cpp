@@ -191,6 +191,14 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column, int32_t node
         if (NodeType::UnstructuredArray == cur_node->get_type()
             && false == column->is_unresolved_descriptor())
         {
+            /**
+             * TODO: This doesn't work in general, but it had the same limitation in the previous
+             * implementation, so I will leave it broken for now.
+             *
+             * E.g. breaks for a query like `a.b.c:d` on the collection of objects
+             * {"a": [{"b": {"c": "d"}}]}
+             * {"a": {"b": [{"c": "d"}]}}
+             */
             column->add_unresolved_tokens(next_it);
             m_column_to_descriptor[cur_node_id].insert(column);
             matched = true;
