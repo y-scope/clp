@@ -203,9 +203,6 @@ Meteor.methods({
         try {
             await searchJobsDbManager.submitQueryCancellation(searchJobId);
             await searchJobsDbManager.submitQueryCancellation(aggregationJobId);
-
-            await searchJobCollectionsManager.dropCollection(searchJobId);
-            await searchJobCollectionsManager.dropCollection(aggregationJobId);
         } catch (e) {
             const errorMsg = `Failed to submit cancel request for searchJobId=${searchJobId},` +
                 `aggregationJobId=${aggregationJobId}.`;
