@@ -23,7 +23,7 @@ import {
 } from "/imports/utils/datetime";
 
 import {
-    isDisablingUserInput,
+    isOperationInProgress,
     isSearchSignalReq,
     SEARCH_SIGNAL,
 } from "../../api/search/constants";
@@ -271,7 +271,7 @@ const SearchControls = ({
     );
     const inputRef = useRef(null);
 
-    const isInputDisabled = isDisablingUserInput(resultsMetadata.lastSignal);
+    const isInputDisabled = isOperationInProgress(resultsMetadata.lastSignal);
 
     useEffect(() => {
         if (false === isInputDisabled) {

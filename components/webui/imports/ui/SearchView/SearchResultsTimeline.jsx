@@ -14,7 +14,7 @@ import zoomPlugin from "chartjs-plugin-zoom";
 import dayjs from "dayjs";
 import React from "react";
 import {Bar} from "react-chartjs-2";
-import {isDisablingUserInput} from "../../api/search/constants";
+import {isOperationInProgress} from "../../api/search/constants";
 
 
 ChartJs.register(
@@ -139,7 +139,7 @@ const SearchResultsTimeline = ({
         return <></>;
     }
 
-    const isInputDisabled = isDisablingUserInput(resultsMetadata.lastSignal);
+    const isInputDisabled = isOperationInProgress(resultsMetadata.lastSignal);
 
     const data = {
         datasets: [
