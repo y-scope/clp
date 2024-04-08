@@ -1,5 +1,6 @@
 import {
     convertLocalUnixMsToSameUtcDatetime,
+    convertUtcDatetimeToSameLocalDate,
     DATETIME_FORMAT_TEMPLATE,
     expandTimeRangeToDurationMultiple,
     TIME_UNIT,
@@ -163,11 +164,9 @@ const SearchResultsTimeline = ({
                         minute: "HH:mm",
                         hour: "HH:mm",
                     },
-                    parser: (date) => {
-                        return dayjs.utc(date)
-                            .tz(dayjs.tz.guess(), true)
-                            .format();
-                    },
+                    parser: (date) => convertUtcDatetimeToSameLocalDate(
+                        dayjs.utc(date)
+                    ),
                 },
             },
             y: {
