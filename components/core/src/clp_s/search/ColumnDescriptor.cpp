@@ -115,6 +115,9 @@ void ColumnDescriptor::simplify_descriptor_wildcards() {
         new_descriptor_list.push_back(std::move(token));
     }
     m_descriptors = std::move(new_descriptor_list);
+    if (1 == m_descriptors.size()) {
+        m_pure_wildcard = true;
+    }
 }
 
 }  // namespace clp_s::search
