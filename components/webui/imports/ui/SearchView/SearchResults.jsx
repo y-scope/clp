@@ -27,33 +27,35 @@ const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
  * Renders the search results, which includes the search results header and the search results
  * table.
  *
+ * @param {Object} fieldToSortBy
+ * @param {number} maxLinesPerResult
+ * @param {number} numResultsOnServer
+ * @param {function} onTimelineZoom
+ * @param {object} resultsMetadata
  * @param {number} searchJobId of the search job
  * @param {Object[]} searchResults
- * @param {number} numResultsOnServer
- * @param {Object} fieldToSortBy
  * @param {function} setFieldToSortBy
- * @param {number} visibleSearchResultsLimit
- * @param {function} setVisibleSearchResultsLimit
- * @param {number} maxLinesPerResult
  * @param {function} setMaxLinesPerResult
- * @param {TimelineConfig} timelineConfig
+ * @param {function} setVisibleSearchResultsLimit
  * @param {TimelineBucket[]} timelineBuckets
- * @param {function} onTimelineZoom
+ * @param {TimelineConfig} timelineConfig
+ * @param {number} visibleSearchResultsLimit
  * @returns {JSX.Element}
  */
 const SearchResults = ({
-    searchJobId,
-    numResultsOnServer,
-    searchResults,
     fieldToSortBy,
-    setFieldToSortBy,
-    visibleSearchResultsLimit,
-    setVisibleSearchResultsLimit,
     maxLinesPerResult,
-    setMaxLinesPerResult,
-    timelineConfig,
-    timelineBuckets,
+    numResultsOnServer,
     onTimelineZoom,
+    resultsMetadata,
+    searchJobId,
+    searchResults,
+    setFieldToSortBy,
+    setMaxLinesPerResult,
+    setVisibleSearchResultsLimit,
+    timelineBuckets,
+    timelineConfig,
+    visibleSearchResultsLimit,
 }) => {
     const hasMoreResults = visibleSearchResultsLimit < numResultsOnServer;
 
@@ -78,6 +80,7 @@ const SearchResults = ({
                 </Row>
                 <Row>
                     <SearchResultsTimeline
+                        resultsMetadata={resultsMetadata}
                         timelineBuckets={timelineBuckets}
                         timelineConfig={timelineConfig}
                         onTimelineZoom={onTimelineZoom}/>

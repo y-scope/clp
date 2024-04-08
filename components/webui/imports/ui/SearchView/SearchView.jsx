@@ -311,6 +311,7 @@ const SearchView = () => {
             maxLinesPerResult={maxLinesPerResult}
             numResultsOnServer={numResultsOnServer}
             onTimelineZoom={handleTimelineZoom}
+            resultsMetadata={resultsMetadata}
             searchJobId={searchJobId}
             searchResults={searchResults}
             setFieldToSortBy={setFieldToSortBy}

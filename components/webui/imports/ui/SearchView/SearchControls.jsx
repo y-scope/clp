@@ -23,7 +23,7 @@ import {
 } from "/imports/utils/datetime";
 
 import {
-    isSearchSignalQuerying,
+    isDisablingUserInput,
     isSearchSignalReq,
     SEARCH_SIGNAL,
 } from "../../api/search/constants";
@@ -265,9 +265,7 @@ const SearchControls = ({
     );
     const inputRef = useRef(null);
 
-    const isInputDisabled =
-        (true === isSearchSignalReq(resultsMetadata.lastSignal)) ||
-        (true === isSearchSignalQuerying(resultsMetadata.lastSignal));
+    const isInputDisabled = isDisablingUserInput(resultsMetadata.lastSignal);
 
     useEffect(() => {
         if (false === isInputDisabled) {
@@ -330,7 +328,8 @@ const SearchControls = ({
                         (SEARCH_SIGNAL.RESP_QUERYING === resultsMetadata["lastSignal"]) ?
                             <Button
                                 className={"border-top-0 border-bottom-0 rounded-0"}
-                                disabled={SEARCH_SIGNAL.REQ_CANCELLING === resultsMetadata["lastSignal"]}
+                                disabled={SEARCH_SIGNAL.REQ_CANCELLING ===
+                                    resultsMetadata["lastSignal"]}
                                 variant={"danger"}
                                 onClick={onCancelOperation}
                             >

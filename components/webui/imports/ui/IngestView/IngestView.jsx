@@ -116,8 +116,13 @@ const Details = ({stats}) => {
                 </div>
                 <div className="ingest-stats-details-text-container">
                     <span className="ingest-stats-detail">
-                        <div>{dayjs.utc(Number(beginTimestamp)).format(DATETIME_FORMAT_TEMPLATE)} to</div>
-                        <div>{dayjs.utc(Number(endTimestamp)).format(DATETIME_FORMAT_TEMPLATE)}</div>
+                        <div>
+                            {dayjs.utc(Number(beginTimestamp)).format(DATETIME_FORMAT_TEMPLATE)}
+                            {" to"}
+                        </div>
+                        <div>
+                            {dayjs.utc(Number(endTimestamp)).format(DATETIME_FORMAT_TEMPLATE)}
+                        </div>
                     </span>
                     <span className="ingest-desc-text">time range</span>
                 </div>

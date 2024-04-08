@@ -18,6 +18,7 @@ import {
 
 import "chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm";
 import "./SearchResultsTimeline.scss";
+import {isDisablingUserInput} from "../../api/search/constants";
 
 
 ChartJs.register(
@@ -49,12 +50,14 @@ const adaptTimelineBucketsForChartJs = (timelineBuckets) => (
 /**
  * Displays a timeline of search results.
  *
+ * @param {object} resultsMetadata
  * @param {TimelineConfig} timelineConfig
  * @param {TimelineBucket[]} timelineBuckets
  * @param {function} onTimelineZoom
  * @return {JSX.Element}
  */
 const SearchResultsTimeline = ({
+    resultsMetadata,
     timelineConfig,
     timelineBuckets,
     onTimelineZoom,
@@ -62,6 +65,8 @@ const SearchResultsTimeline = ({
     if (null === timelineBuckets) {
         return <></>;
     }
+
+    const isInputDisabled = isDisablingUserInput(resultsMetadata.lastSignal);
 
     const data = {
         datasets: [
@@ -130,11 +135,11 @@ const SearchResultsTimeline = ({
                 callbacks: {
                     title: (tooltipItems) => {
                         const [{raw: {x}}] = tooltipItems;
-                        const bucketStartTime = dayjs.utc(x);
-                        const bucketEndTime = bucketStartTime
+                        const bucketBeginTime = dayjs.utc(x);
+                        const bucketEndTime = bucketBeginTime
                             .add(timelineConfig.bucketDuration);
 
-                        return `${bucketStartTime.format(DATETIME_FORMAT_TEMPLATE)} to\n` +
+                        return `${bucketBeginTime.format(DATETIME_FORMAT_TEMPLATE)} to\n` +
                             `${bucketEndTime.format(DATETIME_FORMAT_TEMPLATE)}`;
                     },
                 },
@@ -148,7 +153,7 @@ const SearchResultsTimeline = ({
             zoom: {
                 zoom: {
                     drag: {
-                        enabled: true,
+                        enabled: !isInputDisabled,
                     },
                     mode: "x",
                     onZoom: ({chart}) => {
@@ -168,6 +173,9 @@ const SearchResultsTimeline = ({
 
     return (
         <Bar
+            className={isInputDisabled ?
+                "timeline-chart-cursor-disabled" :
+                ""}
             data={data}
             id={"timeline-chart"}
             options={options}/>
