@@ -200,9 +200,15 @@ const SearchFilterControlsDrawer = ({
                             </InputGroup.Text>
                             <SearchControlsDatePicker
                                 endDate={convertUtcDatetimeToSameLocalDate(timeRange.end)}
-                                maxTime={datepickerEndMax && convertUtcDatetimeToSameLocalDate(datepickerEndMax)}
+                                maxTime={
+                                    datepickerEndMax
+                                    && convertUtcDatetimeToSameLocalDate(datepickerEndMax)
+                                }
                                 minDate={convertUtcDatetimeToSameLocalDate(timeRange.begin)}
-                                minTime={datepickerEndMin && convertUtcDatetimeToSameLocalDate(datepickerEndMin)}
+                                minTime={
+                                    datepickerEndMin
+                                    && convertUtcDatetimeToSameLocalDate(datepickerEndMin)
+                                }
                                 selected={convertUtcDatetimeToSameLocalDate(timeRange.end)}
                                 selectsEnd={true}
                                 startDate={convertUtcDatetimeToSameLocalDate(timeRange.begin)}

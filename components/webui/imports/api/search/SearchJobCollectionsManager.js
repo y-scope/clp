@@ -15,7 +15,8 @@ class SearchJobCollectionsManager {
      * Gets, or if it doesn't exist, creates a MongoDB collection named with the given job ID.
      *
      * @param {number} jobId
-     * @throws {Meteor.Error} if the collection has been dropped.
+     * @throws {Meteor.Error} with ERROR_NAME_COLLECTION_DROPPED if the collection was already
+     * dropped.
      * @return {Mongo.Collection}
      */
     getOrCreateCollection (jobId) {

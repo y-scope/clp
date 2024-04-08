@@ -46,9 +46,13 @@ const adaptTimelineBucketsForChartJs = (timelineBuckets) => (
 );
 
 /**
- * Converts a Chart.js timescale timestamp in Unix milliseconds to a UTC Dayjs object.
- * Due to the Chart.js timescale operating in the local timezone and the zoom plugin not
- * accounting for the effect of the parser during zoom operations, double reversions are required.
+ * Converts the timestamp from Chart.js' zoom plugin to a UTC Dayjs object.
+ * NOTE: The Chart.js timescale operates in the local timezone, but we want to the timeline to
+ * appear as if it's in UTC, so we apply the negative offset of the local timezone to all timestamps
+ * before passing them to Chart.js. However, the zoom plugin thinks that Chart.js is displaying
+ * timestamps in the local timezone, so it also applies the negative offset of the local timezone
+ * before passing them to onZoom. So to get the original UTC timestamp, this method needs to apply
+ * the local timezone offset twice.
  *
  * @param {number} timestampUnixMillis
  * @return {dayjs.Dayjs} The corresponding Dayjs object
@@ -102,7 +106,8 @@ const computeTimelineConfig = (timestampBeginUnixMillis, timestampEndUnixMillis)
             (duration) => (exactTimelineBucketMillis <= duration.asMilliseconds()),
         ) ||
         dayjs.duration(
-            Math.ceil(exactTimelineBucketMillis / dayjs.duration(1, TIME_UNIT.YEAR).asMilliseconds()),
+            Math.ceil(exactTimelineBucketMillis
+                / dayjs.duration(1, TIME_UNIT.YEAR).asMilliseconds()),
             TIME_UNIT.YEAR,
         );
 
@@ -219,7 +224,7 @@ const SearchResultsTimeline = ({
             zoom: {
                 zoom: {
                     drag: {
-                        enabled: !isInputDisabled,
+                        enabled: false === isInputDisabled,
                         backgroundColor: "rgba(64,150,160,0.3)",
                     },
                     mode: "x",
