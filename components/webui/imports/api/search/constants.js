@@ -1,33 +1,25 @@
-let enumSearchSignal;
 /**
  * Enum of search-related signals.
  *
  * This includes request and response signals for various search operations and their respective
  * states.
  *
- * @type {Object}
+ * @enum {string}
  */
 const SEARCH_SIGNAL = Object.freeze({
-    NONE: (enumSearchSignal = 0),
+    NONE: "none",
 
-    REQ_MASK: (enumSearchSignal = 0x10000000),
-    REQ_CLEARING: ++enumSearchSignal,
-    REQ_CANCELLING: ++enumSearchSignal,
-    REQ_QUERYING: ++enumSearchSignal,
+    REQ_CLEARING: "req-clearing",
+    REQ_CANCELLING: "req-cancelling",
+    REQ_QUERYING: "req-querying",
 
-    RESP_MASK: (enumSearchSignal = 0x20000000),
-    RESP_DONE: ++enumSearchSignal,
-    RESP_QUERYING: ++enumSearchSignal,
+    RESP_DONE: "resp-done",
+    RESP_QUERYING: "resp-querying",
 });
 
-const isSearchSignalReq = (s) => (0 !== (SEARCH_SIGNAL.REQ_MASK & s));
-const isSearchSignalResp = (s) => (0 !== (SEARCH_SIGNAL.RESP_MASK & s));
-const isSearchSignalQuerying = (s) => (
-    [
-        SEARCH_SIGNAL.REQ_QUERYING,
-        SEARCH_SIGNAL.RESP_QUERYING,
-    ].includes(s)
-);
+const isSearchSignalReq = (s) => s.startsWith("req-");
+const isSearchSignalResp = (s) => s.startsWith("resp-");
+const isSearchSignalQuerying = (s) => s.endsWith("-querying");
 const isOperationInProgress = (s) => (
     (true === isSearchSignalReq(s)) ||
     (true === isSearchSignalQuerying(s))

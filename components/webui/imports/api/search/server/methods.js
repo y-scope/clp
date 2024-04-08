@@ -28,12 +28,37 @@ const initSearchJobsDbManager = (sqlDbConnPool, {searchJobsTableName}) => {
 };
 
 /**
- * Updates the search event when the specified job finishes.
+ * Modifies the search results metadata for a given job ID.
+ *
+ * @param {object} filter
+ * @param {number} filter.jobId
+ * @param {string} filter.lastSignal
+ * @param {object} fields The fields to be updated in the search results metadata.
+ */
+const updateSearchResultsMeta = ({
+    jobId,
+    lastSignal,
+}, fields) => {
+    const filter = {
+        _id: jobId.toString(),
+        lastSignal: lastSignal,
+    };
+
+    const modifier = {
+        $set: fields,
+    };
+
+    logger.debug("SearchResultsMetadataCollection modifier = ", modifier);
+    SearchResultsMetadataCollection.update(filter, modifier);
+};
+
+/**
+ * Updates the search signal when the specified job finishes.
  *
  * @param {number} searchJobId of the job to monitor
  * @param {number} aggregationJobId of the job to monitor
  */
-const updateSearchEventWhenJobsFinish = async ({
+const updateSearchSignalWhenJobsFinish = async ({
     searchJobId,
     aggregationJobId,
 }) => {
@@ -44,10 +69,6 @@ const updateSearchEventWhenJobsFinish = async ({
     } catch (e) {
         errorMsg = e.message;
     }
-
-    const filter = {
-        _id: searchJobId.toString(),
-    };
 
     let numResultsInCollection = -1;
     try {
@@ -64,19 +85,17 @@ const updateSearchEventWhenJobsFinish = async ({
         }
     }
 
-    const modifier = {
-        $set: {
-            lastSignal: SEARCH_SIGNAL.RESP_DONE,
-            errorMsg: errorMsg,
-            numTotalResults: Math.min(
-                numResultsInCollection,
-                SEARCH_MAX_NUM_RESULTS
-            ),
-        },
-    };
-
-    logger.debug("modifier = ", modifier);
-    SearchResultsMetadataCollection.update(filter, modifier);
+    updateSearchResultsMeta({
+        jobId: searchJobId,
+        lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
+    }, {
+        lastSignal: SEARCH_SIGNAL.RESP_DONE,
+        errorMsg: errorMsg,
+        numTotalResults: Math.min(
+            numResultsInCollection,
+            SEARCH_MAX_NUM_RESULTS
+        ),
+    });
 };
 
 /**
@@ -125,6 +144,8 @@ Meteor.methods({
         ignoreCase,
         timeRangeBucketSizeMillis,
     }) {
+        this.unblock();
+
         const args = {
             query_string: queryString,
             begin_timestamp: timestampBegin,
@@ -153,7 +174,7 @@ Meteor.methods({
         });
 
         Meteor.defer(async () => {
-            await updateSearchEventWhenJobsFinish({
+            await updateSearchSignalWhenJobsFinish({
                 searchJobId,
                 aggregationJobId,
             });
@@ -174,6 +195,8 @@ Meteor.methods({
         searchJobId,
         aggregationJobId,
     }) {
+        this.unblock();
+
         logger.info(`search.clearResults searchJobId=${searchJobId}, ` +
             `aggregationJobId=${aggregationJobId}`);
 
@@ -199,12 +222,21 @@ Meteor.methods({
         searchJobId,
         aggregationJobId,
     }) {
+        this.unblock();
+
         logger.info(`search.cancelOperation searchJobId=${searchJobId}, ` +
             `aggregationJobId=${aggregationJobId}`);
 
         try {
             await searchJobsDbManager.submitQueryCancellation(searchJobId);
             await searchJobsDbManager.submitQueryCancellation(aggregationJobId);
+            updateSearchResultsMeta({
+                jobId: searchJobId,
+                lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
+            }, {
+                lastSignal: SEARCH_SIGNAL.RESP_DONE,
+                errorMsg: "Query cancelled before it could be completed."
+            });
         } catch (e) {
             const errorMsg = `Failed to submit cancel request for searchJobId=${searchJobId},` +
                 `aggregationJobId=${aggregationJobId}.`;
