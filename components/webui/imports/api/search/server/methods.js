@@ -57,6 +57,8 @@ const updateSearchEventWhenJobsFinish = async ({
     } catch (e) {
         if (e.error === ERROR_NAME_COLLECTION_DROPPED) {
             logger.warn(`Collection ${searchJobId} has been dropped.`);
+
+            return;
         } else {
             throw e;
         }
