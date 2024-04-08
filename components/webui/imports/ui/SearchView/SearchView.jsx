@@ -5,6 +5,7 @@ import {useTracker} from "meteor/react-meteor-data";
 import React, {useEffect, useRef, useState} from "react";
 import {ProgressBar} from "react-bootstrap";
 
+import {CLP_STORAGE_ENGINES} from "../../api/constants";
 import {SearchResultsMetadataCollection} from "../../api/search/collections";
 import {
     INVALID_JOB_ID,
@@ -15,6 +16,7 @@ import {
     SEARCH_SIGNAL,
 } from "../../api/search/constants";
 import SearchJobCollectionsManager from "../../api/search/SearchJobCollectionsManager";
+import {unquoteString} from "../../utils/misc";
 import {LOCAL_STORAGE_KEYS} from "../constants";
 
 import {
@@ -199,6 +201,19 @@ const SearchView = () => {
             handleClearResults();
         }
 
+        let processedQueryString = queryString;
+        if (CLP_STORAGE_ENGINES.CLP === Meteor.settings.public.ClpStorageEngine) {
+            try {
+                processedQueryString = unquoteString(queryString, '"', '\\');
+                if ("" === processedQueryString) {
+                    throw new Error("Cannot be empty.");
+                }
+            } catch (e) {
+                setOperationErrorMsg(`Invalid query: ${e.message}`);
+                return;
+            }
+        }
+
         setOperationErrorMsg("");
         setLocalLastSearchSignal(SEARCH_SIGNAL.REQ_QUERYING);
         setVisibleSearchResultsLimit(VISIBLE_RESULTS_LIMIT_INITIAL);
@@ -225,7 +240,7 @@ const SearchView = () => {
 
         const args = {
             ignoreCase: ignoreCase,
-            queryString: queryString,
+            queryString: processedQueryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
             timestampBegin: timestampBeginUnixMillis.valueOf(),
             timestampEnd: timestampEndUnixMillis.valueOf(),

@@ -9,6 +9,7 @@
   },
   "public": {
     "AggregationResultsCollectionName": "aggregation-results",
+    "ClpStorageEngine": "clp",
     "SearchResultsCollectionName": "search-results",
     "SearchResultsMetadataCollectionName": "results-metadata",
     "StatsCollectionName": "stats"
