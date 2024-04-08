@@ -1,5 +1,5 @@
 import {
-    convertLocalUnixMsToSameUtcDatetime,
+    convertLocalDateToSameUtcDatetime,
     convertUtcDatetimeToSameLocalDate,
     DATETIME_FORMAT_TEMPLATE,
     expandTimeRangeToDurationMultiple,
@@ -44,6 +44,25 @@ const adaptTimelineBucketsForChartJs = (timelineBuckets) => (
         })
     )
 );
+
+/**
+ * Converts a Chart.js timescale timestamp in Unix milliseconds to a UTC Dayjs object.
+ * Due to the Chart.js timescale operating in the local timezone and the zoom plugin not
+ * accounting for the effect of the parser during zoom operations, double reversions are required.
+ *
+ * @param {number} timestampUnixMillis
+ * @return {dayjs.Dayjs} The corresponding Dayjs object
+ */
+const convertZoomTimestampToUtcDatetime = (timestampUnixMillis) => {
+    // Create a Date object with given timestamp, which contains local timezone information.
+    const initialDate = new Date(timestampUnixMillis);
+
+    // Reverse local timezone offset
+    const intermediateDateTime = convertLocalDateToSameUtcDatetime(initialDate);
+
+    // Reverse local timezone offset again
+    return convertLocalDateToSameUtcDatetime(intermediateDateTime.toDate());
+}
 
 /**
  * Computes the timestamp range and bucket duration necessary to render the bars in the timeline
@@ -208,8 +227,8 @@ const SearchResultsTimeline = ({
                         const xAxis = chart.scales.x;
                         const {min, max} = xAxis;
                         const newTimeRange = {
-                            begin: convertLocalUnixMsToSameUtcDatetime(parseInt(min, 10)),
-                            end: convertLocalUnixMsToSameUtcDatetime(parseInt(max, 10)),
+                            begin: convertZoomTimestampToUtcDatetime(parseInt(min, 10)),
+                            end: convertZoomTimestampToUtcDatetime(parseInt(max, 10)),
                         };
 
                         onTimelineZoom(newTimeRange);

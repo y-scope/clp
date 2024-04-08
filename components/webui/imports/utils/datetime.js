@@ -118,23 +118,6 @@ const convertLocalDateToSameUtcDatetime = (localDate) => {
 };
 
 /**
- * Converts a Unix milliseconds timestamp of a JavaScript Date object in local timezone, to a Dayjs
- * object that represents the same date and time, but aligned with UTC.
- *
- * @param {number} localTimeStampUnixMs
- * @return {dayjs.Dayjs} The corresponding Dayjs object
- */
-const convertLocalUnixMsToSameUtcDatetime = (localTimeStampUnixMs) => {
-    const localTz = dayjs.tz.guess();
-
-    return dayjs(localTimeStampUnixMs)
-        .tz(localTz)
-        .utc(true)
-        .tz(localTz)
-        .utc(true);
-};
-
-/**
  * Expands the time range so that both extremes are multiples of the given duration.
  *
  * @param {dayjs.Duration} duration
@@ -157,7 +140,6 @@ const expandTimeRangeToDurationMultiple = (duration, {
 export {
     computeTimeRange,
     convertLocalDateToSameUtcDatetime,
-    convertLocalUnixMsToSameUtcDatetime,
     convertUtcDatetimeToSameLocalDate,
     DATETIME_FORMAT_TEMPLATE,
     DEFAULT_TIME_RANGE,
