@@ -16,8 +16,8 @@ import DatePicker from "react-datepicker";
 
 import {
     computeTimeRange,
-    convertLocalToSameUtcDatetime,
-    convertUtcToSameLocalDate,
+    convertLocalDateToSameUtcDatetime,
+    convertUtcDatetimeToSameLocalDate,
     TIME_RANGE_PRESET_LABEL,
     TIME_UNIT,
 } from "/imports/utils/datetime";
@@ -102,7 +102,7 @@ const SearchFilterControlsDrawer = ({
      * @param {Date} localDateBegin The local date to be used for updating the begin timestamp.
      */
     const updateBeginTimestamp = (localDateBegin) => {
-        const utcDatetime = convertLocalToSameUtcDatetime(localDateBegin);
+        const utcDatetime = convertLocalDateToSameUtcDatetime(localDateBegin);
 
         if (utcDatetime > timeRange.end) {
             setTimeRange({
@@ -123,7 +123,7 @@ const SearchFilterControlsDrawer = ({
      * @param {Date} localDateEnd The local date to be used for updating the end timestamp.
      */
     const updateEndTimestamp = (localDateEnd) => {
-        const utcDatetime = convertLocalToSameUtcDatetime(localDateEnd);
+        const utcDatetime = convertLocalDateToSameUtcDatetime(localDateEnd);
 
         setTimeRange(
             (v) => ({
@@ -190,22 +190,22 @@ const SearchFilterControlsDrawer = ({
                                 {timeRangePresetItems}
                             </DropdownButton>
                             <SearchControlsDatePicker
-                                endDate={convertUtcToSameLocalDate(timeRange.end)}
-                                selected={convertUtcToSameLocalDate(timeRange.begin)}
+                                endDate={convertUtcDatetimeToSameLocalDate(timeRange.end)}
+                                selected={convertUtcDatetimeToSameLocalDate(timeRange.begin)}
                                 selectsStart={true}
-                                startDate={convertUtcToSameLocalDate(timeRange.begin)}
+                                startDate={convertUtcDatetimeToSameLocalDate(timeRange.begin)}
                                 onChange={updateBeginTimestamp}/>
                             <InputGroup.Text className={"border-left-0 rounded-0"}>
                                 to
                             </InputGroup.Text>
                             <SearchControlsDatePicker
-                                endDate={convertUtcToSameLocalDate(timeRange.end)}
-                                maxTime={datepickerEndMax && convertUtcToSameLocalDate(datepickerEndMax)}
-                                minDate={convertUtcToSameLocalDate(timeRange.begin)}
-                                minTime={datepickerEndMin && convertUtcToSameLocalDate(datepickerEndMin)}
-                                selected={convertUtcToSameLocalDate(timeRange.end)}
+                                endDate={convertUtcDatetimeToSameLocalDate(timeRange.end)}
+                                maxTime={datepickerEndMax && convertUtcDatetimeToSameLocalDate(datepickerEndMax)}
+                                minDate={convertUtcDatetimeToSameLocalDate(timeRange.begin)}
+                                minTime={datepickerEndMin && convertUtcDatetimeToSameLocalDate(datepickerEndMin)}
+                                selected={convertUtcDatetimeToSameLocalDate(timeRange.end)}
                                 selectsEnd={true}
-                                startDate={convertUtcToSameLocalDate(timeRange.begin)}
+                                startDate={convertUtcDatetimeToSameLocalDate(timeRange.begin)}
                                 onChange={updateEndTimestamp}/>
                         </InputGroup>
                     </Col>

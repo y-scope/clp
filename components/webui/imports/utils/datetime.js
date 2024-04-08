@@ -8,7 +8,6 @@ dayjs.extend(Timezone);
 dayjs.extend(Duration);
 
 const DATETIME_FORMAT_TEMPLATE = "YYYY-MMM-DD HH:mm:ss";
-const MAX_DATA_POINTS_PER_TIMELINE = 40;
 
 const TIME_UNIT = Object.freeze({
     ALL: "all",
@@ -101,7 +100,7 @@ const DEFAULT_TIME_RANGE = computeTimeRange(
  * @param {dayjs.Dayjs} utcDatetime
  * @return {Date} The corresponding Date object
  */
-const convertUtcToSameLocalDate = (utcDatetime) => {
+const convertUtcDatetimeToSameLocalDate = (utcDatetime) => {
     const localTz = dayjs.tz.guess();
     return utcDatetime.tz(localTz, true).toDate();
 };
@@ -114,7 +113,7 @@ const convertUtcToSameLocalDate = (utcDatetime) => {
  * @param {Date} localDate
  * @return {dayjs.Dayjs} The corresponding Dayjs object
  */
-const convertLocalToSameUtcDatetime = (localDate) => {
+const convertLocalDateToSameUtcDatetime = (localDate) => {
     return dayjs(localDate).utc(true);
 };
 
@@ -155,64 +154,11 @@ const expandTimeRangeToDurationMultiple = (duration, {
     return {begin: dayjs.utc(adjustedBegin), end: dayjs.utc(adjustedEnd)};
 };
 
-/**
- * Computes timeline configuration based on the given timestamp range. By determining an
- * appropriate "bucket duration" to group data points, the function returns an object
- * containing this bucket duration and a time range adjusted to fit neatly into these buckets.
- *
- * @param {dayjs.Dayjs} timestampBeginUnixMs
- * @param {dayjs.Dayjs} timestampEndUnixMs
- * @return {TimelineConfig}
- */
-const computeTimelineConfig = (timestampBeginUnixMs, timestampEndUnixMs) => {
-    const timeRangeMs = timestampEndUnixMs - timestampBeginUnixMs;
-    const exactTimelineBucketMs = timeRangeMs / MAX_DATA_POINTS_PER_TIMELINE;
-
-    // A list of predefined bucket durations, ordered from least to greatest so that the
-    // `durationSelections.find()` below can find the smallest bucket containing
-    // `exactTimelineBucketMs`.
-    const durationSelections = [
-        /* eslint-disable @stylistic/js/array-element-newline, no-magic-numbers */
-        {unit: "second", values: [1, 2, 5, 10, 15, 30]},
-        {unit: "minute", values: [1, 2, 5, 10, 15, 20, 30]},
-        {unit: "hour", values: [1, 2, 3, 4, 8, 12]},
-        {unit: "day", values: [1, 2, 5, 15]},
-        {unit: "month", values: [1, 2, 3, 4, 6]},
-        {unit: "year", values: [1]},
-        /* eslint-enable @stylistic/js/array-element-newline, no-magic-numbers */
-    ].flatMap(
-        ({
-            unit,
-            values,
-        }) => values.map(
-            (value) => dayjs.duration(value, unit),
-        ),
-    );
-
-    const bucketDuration =
-        durationSelections.find(
-            (duration) => (exactTimelineBucketMs <= duration.asMilliseconds()),
-        ) ||
-        dayjs.duration(
-            Math.ceil(exactTimelineBucketMs / dayjs.duration(1, TIME_UNIT.YEAR).asMilliseconds()),
-            TIME_UNIT.YEAR,
-        );
-
-    return {
-        range: expandTimeRangeToDurationMultiple(bucketDuration, {
-            begin: dayjs.utc(timestampBeginUnixMs),
-            end: dayjs.utc(timestampEndUnixMs),
-        }),
-        bucketDuration: bucketDuration,
-    };
-};
-
 export {
-    computeTimelineConfig,
     computeTimeRange,
-    convertLocalToSameUtcDatetime,
+    convertLocalDateToSameUtcDatetime,
     convertLocalUnixMsToSameUtcDatetime,
-    convertUtcToSameLocalDate,
+    convertUtcDatetimeToSameLocalDate,
     DATETIME_FORMAT_TEMPLATE,
     DEFAULT_TIME_RANGE,
     expandTimeRangeToDurationMultiple,

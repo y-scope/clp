@@ -1,23 +1,18 @@
-import React from "react";
-import {Bar} from "react-chartjs-2";
-
-import {
-    BarElement,
-    Chart as ChartJs,
-    LinearScale,
-    TimeScale,
-    Tooltip,
-} from "chart.js";
-import zoomPlugin from "chartjs-plugin-zoom";
-import dayjs from "dayjs";
-
 import {
     convertLocalUnixMsToSameUtcDatetime,
     DATETIME_FORMAT_TEMPLATE,
+    expandTimeRangeToDurationMultiple,
+    TIME_UNIT,
 } from "/imports/utils/datetime";
 
 import "chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm";
 import "./SearchResultsTimeline.scss";
+
+import {BarElement, Chart as ChartJs, LinearScale, TimeScale, Tooltip} from "chart.js";
+import zoomPlugin from "chartjs-plugin-zoom";
+import dayjs from "dayjs";
+import React from "react";
+import {Bar} from "react-chartjs-2";
 import {isDisablingUserInput} from "../../api/search/constants";
 
 
@@ -28,6 +23,8 @@ ChartJs.register(
     Tooltip,
     zoomPlugin
 );
+
+const MAX_DATA_POINTS_PER_TIMELINE = 40;
 
 /**
  * Converts an array of timeline buckets into an array of objects compatible with Chart.js.
@@ -46,6 +43,57 @@ const adaptTimelineBucketsForChartJs = (timelineBuckets) => (
         })
     )
 );
+
+/**
+ * Computes the timestamp range and bucket duration necessary to render the bars in the timeline
+ * chart.
+ *
+ * @param {dayjs.Dayjs} timestampBeginUnixMillis
+ * @param {dayjs.Dayjs} timestampEndUnixMillis
+ * @return {TimelineConfig}
+ */
+const computeTimelineConfig = (timestampBeginUnixMillis, timestampEndUnixMillis) => {
+    const timeRangeMillis = timestampEndUnixMillis - timestampBeginUnixMillis;
+    const exactTimelineBucketMillis = timeRangeMillis / MAX_DATA_POINTS_PER_TIMELINE;
+
+    // A list of predefined bucket durations, ordered from least to greatest so that the
+    // `durationSelections.find()` below can find the smallest bucket containing
+    // `exactTimelineBucketMillis`.
+    const durationSelections = [
+        /* eslint-disable @stylistic/js/array-element-newline, no-magic-numbers */
+        {unit: "second", values: [1, 2, 5, 10, 15, 30]},
+        {unit: "minute", values: [1, 2, 5, 10, 15, 20, 30]},
+        {unit: "hour", values: [1, 2, 3, 4, 8, 12]},
+        {unit: "day", values: [1, 2, 5, 15]},
+        {unit: "month", values: [1, 2, 3, 4, 6]},
+        {unit: "year", values: [1]},
+        /* eslint-enable @stylistic/js/array-element-newline, no-magic-numbers */
+    ].flatMap(
+        ({
+            unit,
+            values,
+        }) => values.map(
+            (value) => dayjs.duration(value, unit),
+        ),
+    );
+
+    const bucketDuration =
+        durationSelections.find(
+            (duration) => (exactTimelineBucketMillis <= duration.asMilliseconds()),
+        ) ||
+        dayjs.duration(
+            Math.ceil(exactTimelineBucketMillis / dayjs.duration(1, TIME_UNIT.YEAR).asMilliseconds()),
+            TIME_UNIT.YEAR,
+        );
+
+    return {
+        range: expandTimeRangeToDurationMultiple(bucketDuration, {
+            begin: dayjs.utc(timestampBeginUnixMillis),
+            end: dayjs.utc(timestampEndUnixMillis),
+        }),
+        bucketDuration: bucketDuration,
+    };
+};
 
 /**
  * Displays a timeline of search results.
@@ -183,3 +231,4 @@ const SearchResultsTimeline = ({
 };
 
 export default SearchResultsTimeline;
+export {computeTimelineConfig};
