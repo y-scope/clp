@@ -17,25 +17,25 @@ import "./SearchResultsHeader.scss";
 
 
 /**
- * Renders the header for the search results, which includes the job ID, the number of results
- * found, and a control for setting the maximum number of lines per search result.
+ * Renders the header for the search results, which includes the search job ID, the number of
+ * results found, and a control for setting the maximum number of lines per search result.
  *
- * @param {number} jobId of the search job
+ * @param {number} searchJobId of the search job
  * @param {number} numResultsOnServer of the search job
  * @param {number} maxLinesPerResult to display
  * @param {function} setMaxLinesPerResult callback to set setMaxLinesPerResult
  * @returns {JSX.Element}
  */
 const SearchResultsHeader = ({
-    jobId,
+    searchJobId,
     numResultsOnServer,
     maxLinesPerResult,
     setMaxLinesPerResult,
 }) => {
     const handleMaxLinesPerResultSubmission = (e) => {
         e.preventDefault();
-        const value = parseInt(e.target.elements["maxLinesPerResult"].value);
-        if (value > 0) {
+        const value = parseInt(e.target.elements.maxLinesPerResult.value);
+        if (0 < value) {
             setMaxLinesPerResult(value);
         }
     };
@@ -45,7 +45,7 @@ const SearchResultsHeader = ({
             <Row className={"search-results-title-bar"}>
                 <Col>
                     <span className={"search-results-count"}>
-                        Job ID {jobId} | Results count: {numResultsOnServer}
+                        Job ID {searchJobId} | Results count: {numResultsOnServer}
                     </span>
                 </Col>
                 <Col xs={"auto"}>
@@ -66,11 +66,13 @@ const SearchResultsHeader = ({
                                 </InputGroup>
                             </Form>
                         </Popover>}>
-                        {(0 < numResultsOnServer) ? <Button type={"button"}
-                                                            variant={"light"}
-                                                            title={"Display Settings"}>
+                        <Button
+                            title={"Display Settings"}
+                            type={"button"}
+                            variant={"light"}
+                        >
                             <FontAwesomeIcon icon={faCog}/>
-                        </Button> : <></>}
+                        </Button>
                     </OverlayTrigger>
                 </Col>
             </Row>

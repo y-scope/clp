@@ -1,13 +1,14 @@
+import dayjs from "dayjs";
 import React from "react";
 
 import {faChartBar, faClock, faEnvelope, faFileAlt, faHdd} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {DateTime} from "luxon";
 import {useTracker} from "meteor/react-meteor-data";
 import {Col, Container, ProgressBar, Row} from "react-bootstrap";
 
-import {StatsCollection} from "../../api/ingestion/collections";
-import {computeHumanSize} from "../../utils/misc";
+import {StatsCollection} from "/imports/api/ingestion/collections";
+import {DATETIME_FORMAT_TEMPLATE} from "/imports/utils/datetime";
+import {computeHumanSize} from "/imports/utils/misc";
 
 
 /**
@@ -108,7 +109,6 @@ const Details = ({stats}) => {
 
     let timeRangeRow = null;
     if (null !== endTimestamp) {
-        let timestampFormat = "kkkk-MMM-dd HH:mm";
         timeRangeRow = (
             <div className="ingest-stats-details-row">
                 <div className="ingest-stats-details-icon-container">
@@ -116,9 +116,13 @@ const Details = ({stats}) => {
                 </div>
                 <div className="ingest-stats-details-text-container">
                     <span className="ingest-stats-detail">
-                        {DateTime.fromMillis(Number(beginTimestamp)).toFormat(timestampFormat)}
-                        <span className="ingest-desc-text"> to </span>
-                        {DateTime.fromMillis(Number(endTimestamp)).toFormat(timestampFormat)}
+                        <div>
+                            {dayjs.utc(Number(beginTimestamp)).format(DATETIME_FORMAT_TEMPLATE)}
+                            {" to"}
+                        </div>
+                        <div>
+                            {dayjs.utc(Number(endTimestamp)).format(DATETIME_FORMAT_TEMPLATE)}
+                        </div>
                     </span>
                     <span className="ingest-desc-text">time range</span>
                 </div>

@@ -28,6 +28,10 @@ const isSearchSignalQuerying = (s) => (
         SEARCH_SIGNAL.RESP_QUERYING,
     ].includes(s)
 );
+const isOperationInProgress = (s) => (
+    (true === isSearchSignalReq(s)) ||
+    (true === isSearchSignalQuerying(s))
+);
 
 /* eslint-disable sort-keys */
 let enumSearchJobStatus;
@@ -87,6 +91,7 @@ const SEARCH_MAX_NUM_RESULTS = 1000;
 
 export {
     INVALID_JOB_ID,
+    isOperationInProgress,
     isSearchSignalQuerying,
     isSearchSignalReq,
     isSearchSignalResp,
