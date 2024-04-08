@@ -71,8 +71,10 @@ async def release_reducer_for_job(job: SearchJob):
 @exception_default_value(default=[])
 def fetch_new_search_jobs(db_conn) -> list:
     """
-    Fetches and returns new PENDING jobs from the database. If an exception occurs while interacting
-    with the database this function will return an empty list.
+    Fetches search jobs with status=PENDING from the database.
+    :param db_conn:
+    :return: The pending search jobs on success. An empty list if an exception occurs while
+    interacting with the database.
     """
     with contextlib.closing(db_conn.cursor(dictionary=True)) as db_cursor:
         db_cursor.execute(
@@ -89,8 +91,10 @@ def fetch_new_search_jobs(db_conn) -> list:
 @exception_default_value(default=[])
 def fetch_cancelling_search_jobs(db_conn) -> list:
     """
-    Fetches and returns jobs with CANCELLING status from the database. If an exception occurs while
-    interacting with the database this function will return an empty list.
+    Fetches search jobs with status=CANCELLING from the database.
+    :param db_conn:
+    :return: The cancelling search jobs on success. An empty list if an exception occurs while
+    interacting with the database.
     """
     with contextlib.closing(db_conn.cursor(dictionary=True)) as db_cursor:
         db_cursor.execute(
@@ -112,12 +116,16 @@ def set_job_status(
     **kwargs,
 ) -> bool:
     """
-    Sets the job status and any other fields specified by the kwargs for some job. Optionally, the
-    update can be made conditional on the current status of the job in the database matching
-    the value of `prev_status`.
-
-    This function returns True if the update is succesful, and False if the update fails or if an
-    exception occurs while interacting with the database.
+    Sets the status of the job identified by `job_id` to `status`. If `prev_status` is specified,
+    the update is conditional on the job's current status matching `prev_status`. If `kwargs` are
+    specified, the fields identified by the args are also updated.
+    :param db_conn:
+    :param job_id:
+    :param status:
+    :param prev_status:
+    :param kwargs:
+    :return: True on success, False if the update fails or an exception occurs while interacting
+    with the database.
     """
     field_set_expressions = [f'{k}="{v}"' for k, v in kwargs.items()]
     field_set_expressions.append(f"status={status}")

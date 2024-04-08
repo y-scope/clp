@@ -14,9 +14,8 @@ from clp_py_utils.clp_config import Database
 
 def exception_default_value(default):
     """
-    This decorator wraps a function and returns the value specified by `default` whenever an
-    uncaught exception occurs in the function being wrapped. If no exception occurs this decorator
-    just forwards the return value of the function being wrapped.
+    A function decorator that returns the value specified by `default` when an uncaught exception
+    occurs in the decorated function. Otherwise, the decorated function's return value is returned.
     """
 
     def _exception_default_value(func):
@@ -39,8 +38,8 @@ class DummyCloseableObject:
 
 class ConnectionPoolWrapper:
     """
-    This class implements a wrapper around an sqlalchemy connection pool in order to simplify error
-    handling, and prevent log spew when the database is down.
+    A wrapper around a sqlalchemy connection pool in order to simplify error handling, and prevent
+    log spew when the database is down.
     """
 
     def __init__(self, pool: pool.QueuePool, logger: logging.Logger):
@@ -51,13 +50,14 @@ class ConnectionPoolWrapper:
 
     def connect(self):
         """
-        Check out a connection from the connection pool and return it. On error return a dummy
-        object which implements close, and periodically log the error so long as a connection error
-        has not occurred within the past interval.
+        Checks out a connection from the pool.
+        :return: On success, a connection from the pool. On error, a DummyCloseableObject.
         """
         try:
             return self.pool.connect()
-        except:
+        except (mariadb.Error, mysql.connector.Error):
+            # Periodically log the error so long as a connection error hasn't occurred within the
+            # past interval.
             current_time = time.time()
             if (
                 self.last_exception_logging_time is None
@@ -65,7 +65,7 @@ class ConnectionPoolWrapper:
             ):
                 self.last_exception_logging_time = current_time
                 self.logger.exception(
-                    f"Failed to connect to database. Surpressing further connection error logs for "
+                    f"Failed to connect to database. Suppressing further connection error logs for "
                     f"{self.error_reporting_interval} seconds."
                 )
             return DummyCloseableObject()
@@ -125,7 +125,7 @@ class SQL_Adapter:
             raise NotImplementedError
 
     def create_connection_pool(
-        self, logger: logging.Logger, pool_size=2, disable_localhost_socket_connection: bool = False
+        self, logger: logging.Logger, pool_size: int, disable_localhost_socket_connection: bool = False
     ):
         def create_connection():
             return self.create_connection(disable_localhost_socket_connection)
@@ -134,6 +134,8 @@ class SQL_Adapter:
             dialect = mysqlconnector.dialect
         elif "mariadb" == self.database_config.type:
             dialect = mariadbconnector.dialect
+        else:
+            raise NotImplementedError
         return ConnectionPoolWrapper(
             pool.QueuePool(
                 create_connection,
