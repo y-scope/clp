@@ -184,7 +184,7 @@ bool SchemaReader::get_next_message(std::string& message) {
 
 bool SchemaReader::get_next_message(std::string& message, FilterClass* filter) {
     while (m_cur_message < m_num_messages) {
-        if (false == filter->filter(m_cur_message, m_extracted_values)) {
+        if (false == filter->filter(m_cur_message)) {
             m_cur_message++;
             continue;
         }
@@ -213,7 +213,7 @@ bool SchemaReader::get_next_message_with_timestamp(
     // TODO: If we already get max_num_results messages, we can skip messages
     // with the timestamp less than the smallest timestamp in the priority queue
     while (m_cur_message < m_num_messages) {
-        if (false == filter->filter(m_cur_message, m_extracted_values)) {
+        if (false == filter->filter(m_cur_message)) {
             m_cur_message++;
             continue;
         }
@@ -237,7 +237,7 @@ bool SchemaReader::get_next_message_with_timestamp(
 }
 
 void SchemaReader::initialize_filter(FilterClass* filter) {
-    filter->init(this, m_schema_id, m_column_map);
+    filter->init(this, m_schema_id, m_columns);
 }
 
 int32_t SchemaReader::generate_local_tree(int32_t global_id, NodeType node_type) {

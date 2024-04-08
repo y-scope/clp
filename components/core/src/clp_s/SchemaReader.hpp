@@ -26,19 +26,15 @@ public:
     virtual void init(
             SchemaReader* reader,
             int32_t schema_id,
-            std::unordered_map<int32_t, BaseColumnReader*>& columns
+            std::vector<BaseColumnReader*> const& column_readers
     ) = 0;
 
     /**
      * Filters the message
      * @param cur_message
-     * @param extracted_values
      * @return true if the message is accepted
      */
-    virtual bool filter(
-            uint64_t cur_message,
-            std::map<int32_t, std::variant<int64_t, double, std::string, uint8_t>>& extracted_values
-    ) = 0;
+    virtual bool filter(uint64_t cur_message) = 0;
 };
 
 struct InternalGeneratorState {
@@ -232,7 +228,6 @@ private:
     JsonSerializer m_json_serializer;
     bool m_should_marshal_records{true};
 
-    std::map<int32_t, std::variant<int64_t, double, std::string, uint8_t>> m_extracted_values;
     std::map<int32_t, std::pair<size_t, Span<int32_t>>> m_local_id_to_unordered_object;
 };
 }  // namespace clp_s
