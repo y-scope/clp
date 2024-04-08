@@ -31,19 +31,39 @@ class SearchJobsDbManager {
     }
 
     /**
-     * Submits a query job to the database.
+     * Submits a search job to the database.
      * @param {Object} searchConfig The arguments for the query.
      * @returns {Promise<number>} The job's ID.
      * @throws {Error} on error.
      */
-    async submitQuery(searchConfig) {
+    async submitSearchJob (searchConfig) {
         const [queryInsertResults] = await this.#sqlDbConnPool.query(
             `INSERT INTO ${this.#searchJobsTableName}
                  (${SEARCH_JOBS_TABLE_COLUMN_NAMES.SEARCH_CONFIG})
              VALUES (?)`,
             [Buffer.from(msgpack.encode(searchConfig))],
         );
+
         return queryInsertResults.insertId;
+    }
+
+    /**
+     * Submits an aggregation job to the database.
+     *
+     * @param {Object} searchConfig The arguments for the query.
+     * @param {number} timeRangeBucketSizeMillis
+     * @return {Promise<number>} The aggregation job's ID.
+     * @throws {Error} on error.
+     */
+    async submitAggregationJob (searchConfig, timeRangeBucketSizeMillis) {
+        const searchAggregationConfig = {
+            ...searchConfig,
+            aggregation_config: {
+                count_by_time_bucket_size: timeRangeBucketSizeMillis,
+            },
+        };
+
+        return await this.submitSearchJob(searchAggregationConfig);
     }
 
     /**

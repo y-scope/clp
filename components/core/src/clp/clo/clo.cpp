@@ -48,17 +48,30 @@ enum class SearchFilesResult {
 };
 
 /**
+ * Searches a file referenced by a given database cursor
+ * @param query
+ * @param archive
+ * @param file_metadata_ix
+ * @param output_handler
+ * @return SearchFilesResult::OpenFailure on failure to open a compressed file
+ * @return SearchFilesResult::ResultSendFailure on failure to send a result
+ * @return SearchFilesResult::Success otherwise
+ */
+static SearchFilesResult search_file(
+        Query& query,
+        Archive& archive,
+        MetadataDB::FileIterator& file_metadata_ix,
+        std::unique_ptr<OutputHandler>& output_handler
+);
+/**
  * Searches all files referenced by a given database cursor
  * @param query
  * @param archive
  * @param file_metadata_ix
  * @param output_handler
  * @param segments_to_search
- * @return SearchFilesResult::OpenFailure on failure to open a compressed file
- * @return SearchFilesResult::ResultSendFailure on failure to send a result
- * @return SearchFilesResult::Success otherwise
  */
-static SearchFilesResult search_files(
+static void search_files(
         Query& query,
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
@@ -78,71 +91,94 @@ static bool search_archive(
         std::unique_ptr<OutputHandler> output_handler
 );
 
-static SearchFilesResult search_files(
+static SearchFilesResult search_file(
+        Query& query,
+        Archive& archive,
+        MetadataDB::FileIterator& file_metadata_ix,
+        std::unique_ptr<OutputHandler>& output_handler
+) {
+    File compressed_file;
+    Message compressed_message;
+    string decompressed_message;
+
+    ErrorCode error_code = archive.open_file(compressed_file, file_metadata_ix);
+    if (ErrorCode_Success != error_code) {
+        string orig_path;
+        file_metadata_ix.get_path(orig_path);
+        if (ErrorCode_errno == error_code) {
+            SPDLOG_ERROR("Failed to open {}, errno={}", orig_path.c_str(), errno);
+        } else {
+            SPDLOG_ERROR("Failed to open {}, error={}", orig_path.c_str(), error_code);
+        }
+        return SearchFilesResult::OpenFailure;
+    }
+
+    SearchFilesResult result = SearchFilesResult::Success;
+    query.make_sub_queries_relevant_to_segment(compressed_file.get_segment_id());
+    while (Grep::search_and_decompress(
+            query,
+            archive,
+            compressed_file,
+            compressed_message,
+            decompressed_message
+    ))
+    {
+        if (ErrorCode_Success
+            != output_handler->add_result(
+                    compressed_file.get_orig_path(),
+                    decompressed_message,
+                    compressed_message.get_ts_in_milli()
+            ))
+        {
+            result = SearchFilesResult::ResultSendFailure;
+            break;
+        }
+    }
+
+    archive.close_file(compressed_file);
+    return result;
+}
+
+void search_files(
         Query& query,
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
         std::unique_ptr<OutputHandler>& output_handler,
         std::set<clp::segment_id_t> const& segments_to_search
 ) {
-    SearchFilesResult result = SearchFilesResult::Success;
-
-    File compressed_file;
-    Message compressed_message;
-    string decompressed_message;
-
-    // Run query on each file
-    for (; file_metadata_ix.has_next(); file_metadata_ix.next()) {
-        if (segments_to_search.count(file_metadata_ix.get_segment_id()) == 0) {
-            continue;
-        }
-
-        if (output_handler->can_skip_file(file_metadata_ix)) {
-            continue;
-        }
-
-        ErrorCode error_code = archive.open_file(compressed_file, file_metadata_ix);
-        if (ErrorCode_Success != error_code) {
-            string orig_path;
-            file_metadata_ix.get_path(orig_path);
-            if (ErrorCode_errno == error_code) {
-                SPDLOG_ERROR("Failed to open {}, errno={}", orig_path.c_str(), errno);
-            } else {
-                SPDLOG_ERROR("Failed to open {}, error={}", orig_path.c_str(), error_code);
+    if (query.contains_sub_queries()) {
+        for (; file_metadata_ix.has_next(); file_metadata_ix.next()) {
+            if (segments_to_search.count(file_metadata_ix.get_segment_id()) == 0) {
+                continue;
             }
-            result = SearchFilesResult::OpenFailure;
-            continue;
-        }
 
-        query.make_sub_queries_relevant_to_segment(compressed_file.get_segment_id());
-        while (Grep::search_and_decompress(
-                query,
-                archive,
-                compressed_file,
-                compressed_message,
-                decompressed_message
-        ))
-        {
-            if (ErrorCode_Success
-                != output_handler->add_result(
-                        compressed_file.get_orig_path(),
-                        decompressed_message,
-                        compressed_message.get_ts_in_milli()
-                ))
-            {
-                result = SearchFilesResult::ResultSendFailure;
+            if (output_handler->can_skip_file(file_metadata_ix)) {
+                continue;
+            }
+
+            auto result = search_file(query, archive, file_metadata_ix, output_handler);
+            if (SearchFilesResult::OpenFailure == result) {
+                continue;
+            }
+            if (SearchFilesResult::ResultSendFailure == result) {
                 break;
             }
         }
+    } else {
+        for (; file_metadata_ix.has_next(); file_metadata_ix.next()) {
+            if (output_handler->can_skip_file(file_metadata_ix)) {
+                continue;
+            }
 
-        archive.close_file(compressed_file);
-
-        if (SearchFilesResult::ResultSendFailure == result) {
-            break;
+            auto result = search_file(query, archive, file_metadata_ix, output_handler);
+            if (SearchFilesResult::OpenFailure == result) {
+                continue;
+            }
+            if (SearchFilesResult::ResultSendFailure == result) {
+                break;
+            }
         }
     }
-
-    return result;
 }
 
 static bool search_archive(

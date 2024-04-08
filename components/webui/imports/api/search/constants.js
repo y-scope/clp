@@ -20,6 +20,10 @@ const SEARCH_SIGNAL = Object.freeze({
 const isSearchSignalReq = (s) => s.startsWith("req-");
 const isSearchSignalResp = (s) => s.startsWith("resp-");
 const isSearchSignalQuerying = (s) => s.endsWith("-querying");
+const isOperationInProgress = (s) => (
+    (true === isSearchSignalReq(s)) ||
+    (true === isSearchSignalQuerying(s))
+);
 
 /* eslint-disable sort-keys */
 let enumSearchJobStatus;
@@ -79,6 +83,7 @@ const SEARCH_MAX_NUM_RESULTS = 1000;
 
 export {
     INVALID_JOB_ID,
+    isOperationInProgress,
     isSearchSignalQuerying,
     isSearchSignalReq,
     isSearchSignalResp,

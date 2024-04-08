@@ -1,7 +1,10 @@
 import React, {useCallback} from "react";
+import Container from "react-bootstrap/Container";
+import Row from "react-bootstrap/Row";
 
 import SearchResultsHeader from "./SearchResultsHeader.jsx";
 import SearchResultsTable from "./SearchResultsTable.jsx";
+import SearchResultsTimeline from "./SearchResultsTimeline.jsx";
 
 
 /**
@@ -24,27 +27,35 @@ const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
  * Renders the search results, which includes the search results header and the search results
  * table.
  *
- * @param {number} jobId of the search job
- * @param {Object[]} searchResults
- * @param {number} numResultsOnServer
  * @param {Object} fieldToSortBy
- * @param {function} setFieldToSortBy
- * @param {number} visibleSearchResultsLimit
- * @param {function} setVisibleSearchResultsLimit
  * @param {number} maxLinesPerResult
+ * @param {number} numResultsOnServer
+ * @param {function} onTimelineZoom
+ * @param {object} resultsMetadata
+ * @param {number} searchJobId of the search job
+ * @param {Object[]} searchResults
+ * @param {function} setFieldToSortBy
  * @param {function} setMaxLinesPerResult
+ * @param {function} setVisibleSearchResultsLimit
+ * @param {TimelineBucket[]} timelineBuckets
+ * @param {TimelineConfig} timelineConfig
+ * @param {number} visibleSearchResultsLimit
  * @returns {JSX.Element}
  */
 const SearchResults = ({
-    jobId,
-    numResultsOnServer,
-    searchResults,
     fieldToSortBy,
-    setFieldToSortBy,
-    visibleSearchResultsLimit,
-    setVisibleSearchResultsLimit,
     maxLinesPerResult,
+    numResultsOnServer,
+    onTimelineZoom,
+    resultsMetadata,
+    searchJobId,
+    searchResults,
+    setFieldToSortBy,
     setMaxLinesPerResult,
+    setVisibleSearchResultsLimit,
+    timelineBuckets,
+    timelineConfig,
+    visibleSearchResultsLimit,
 }) => {
     const hasMoreResults = visibleSearchResultsLimit < numResultsOnServer;
 
@@ -57,27 +68,38 @@ const SearchResults = ({
         setVisibleSearchResultsLimit,
     ]);
 
-    return <>
-        <div className={"flex-column"}>
-            <SearchResultsHeader
-                jobId={jobId}
-                numResultsOnServer={numResultsOnServer}
-                maxLinesPerResult={maxLinesPerResult}
-                setMaxLinesPerResult={setMaxLinesPerResult}
-            />
-        </div>
-        {(0 < searchResults.length) && <div className="flex-column overflow-auto">
-            <SearchResultsTable
-                searchResults={searchResults}
-                maxLinesPerResult={maxLinesPerResult}
-                setMaxLinesPerResult={setMaxLinesPerResult}
-                fieldToSortBy={fieldToSortBy}
-                setFieldToSortBy={setFieldToSortBy}
-                hasMoreResults={hasMoreResults}
-                onLoadMoreResults={handleLoadMoreResults}
-            />
-        </div>}
-    </>;
+    return (
+        <>
+            <Container
+                className={"py-2"}
+                fluid={true}
+            >
+                <Row>
+                    <SearchResultsHeader
+                        maxLinesPerResult={maxLinesPerResult}
+                        numResultsOnServer={numResultsOnServer}
+                        searchJobId={searchJobId}
+                        setMaxLinesPerResult={setMaxLinesPerResult}/>
+                </Row>
+                <Row>
+                    <SearchResultsTimeline
+                        resultsMetadata={resultsMetadata}
+                        timelineBuckets={timelineBuckets}
+                        timelineConfig={timelineConfig}
+                        onTimelineZoom={onTimelineZoom}/>
+                </Row>
+            </Container>
+            {0 < searchResults.length &&
+                <SearchResultsTable
+                    fieldToSortBy={fieldToSortBy}
+                    hasMoreResults={hasMoreResults}
+                    maxLinesPerResult={maxLinesPerResult}
+                    searchResults={searchResults}
+                    setFieldToSortBy={setFieldToSortBy}
+                    setMaxLinesPerResult={setMaxLinesPerResult}
+                    onLoadMoreResults={handleLoadMoreResults}/>}
+        </>
+    );
 };
 
 export default SearchResults;
