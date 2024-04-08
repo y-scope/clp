@@ -86,7 +86,7 @@ const updateSearchSignalWhenJobsFinish = async ({
     }
 
     updateSearchResultsMeta({
-        searchJobId,
+        jobId: searchJobId,
         lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
     }, {
         lastSignal: SEARCH_SIGNAL.RESP_DONE,
