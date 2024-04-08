@@ -57,10 +57,10 @@ const convertZoomTimestampToUtcDatetime = (timestampUnixMillis) => {
     // Create a Date object with given timestamp, which contains local timezone information.
     const initialDate = new Date(timestampUnixMillis);
 
-    // Reverse local timezone offset
+    // Reverse local timezone offset.
     const intermediateDateTime = convertLocalDateToSameUtcDatetime(initialDate);
 
-    // Reverse local timezone offset again
+    // Reverse local timezone offset again.
     return convertLocalDateToSameUtcDatetime(intermediateDateTime.toDate());
 }
 
