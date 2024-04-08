@@ -12,7 +12,6 @@ import "./SearchResultsTimeline.scss";
 import {BarElement, Chart as ChartJs, LinearScale, TimeScale, Tooltip} from "chart.js";
 import zoomPlugin from "chartjs-plugin-zoom";
 import dayjs from "dayjs";
-import React from "react";
 import {Bar} from "react-chartjs-2";
 import {isOperationInProgress} from "../../api/search/constants";
 

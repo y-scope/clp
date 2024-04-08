@@ -9,7 +9,8 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@babel/runtime": "^7.23.9",
+    "@babel/runtime": "^7.24.4",
+    "@babel/plugin-transform-react-jsx": "^7.23.4",
     "@fortawesome/fontawesome-svg-core": "^6.5.1",
     "@fortawesome/free-solid-svg-icons": "^6.5.1",
     "@fortawesome/react-fontawesome": "^0.2.0",
@@ -22,11 +23,11 @@
     "json5": "^2.2.3",
     "meteor-node-stubs": "^1.2.9",
     "mysql2": "^3.9.1",
-    "react": "^17.0.2",
-    "react-bootstrap": "^2.10.0",
+    "react": "^18.2.0",
+    "react-bootstrap": "^2.10.2",
     "react-chartjs-2": "^5.2.0",
     "react-datepicker": "^4.25.0",
-    "react-dom": "^17.0.2",
+    "react-dom": "^18.2.0",
     "react-router": "^5.3.4",
     "react-router-dom": "^5.3.4",
     "uuid": "^9.0.1",
@@ -34,7 +35,13 @@
     "winston-daily-rotate-file": "^4.7.1"
   },
   "devDependencies": {
-    "jsdoc": "^4.0.2"
+    "jsdoc": "^4.0.2",
+    "eslint-config-yscope": "^0.0.15"
+  },
+  "eslintConfig": {
+    "extends": [
+      "yscope/meteor"
+    ]
   },
   "meteor": {
     "mainModule": {
@@ -42,5 +49,15 @@
       "server": "server/main.js"
     },
     "testModule": "tests/main.js"
+  },
+  "babel": {
+    "plugins": [
+      [
+        "@babel/plugin-transform-react-jsx",
+        {
+          "runtime": "automatic"
+        }
+      ]
+    ]
   }
 }

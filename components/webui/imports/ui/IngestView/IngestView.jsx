@@ -1,5 +1,4 @@
 import dayjs from "dayjs";
-import React from "react";
 
 import {faChartBar, faClock, faEnvelope, faFileAlt, faHdd} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";

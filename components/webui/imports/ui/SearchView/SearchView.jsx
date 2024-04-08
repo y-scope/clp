@@ -2,7 +2,7 @@ import {faExclamationCircle} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {Meteor} from "meteor/meteor";
 import {useTracker} from "meteor/react-meteor-data";
-import React, {useEffect, useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {ProgressBar} from "react-bootstrap";
 
 import {CLP_STORAGE_ENGINES} from "../../api/constants";

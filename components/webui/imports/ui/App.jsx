@@ -1,6 +1,5 @@
-import React from "react";
-
 import {faFileUpload, faSearch} from "@fortawesome/free-solid-svg-icons";
+import {useEffect, useState} from "react";
 import {Redirect, Route, Switch} from "react-router";
 
 import {LOCAL_STORAGE_KEYS} from "./constants";
@@ -28,11 +27,11 @@ const ROUTES = [
 ];
 
 const App = () => {
-    const [isSidebarCollapsed, setSidebarStateCollapsed] = React.useState(
+    const [isSidebarCollapsed, setSidebarStateCollapsed] = useState(
         "true" === localStorage.getItem(LOCAL_STORAGE_KEYS.IS_SIDEBAR_COLLAPSED),
     );
 
-    React.useEffect(() => {
+    useEffect(() => {
         localStorage.setItem(LOCAL_STORAGE_KEYS.IS_SIDEBAR_COLLAPSED,
             isSidebarCollapsed.toString());
     }, [isSidebarCollapsed]);
