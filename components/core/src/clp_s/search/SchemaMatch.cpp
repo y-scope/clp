@@ -123,9 +123,8 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column) {
 
 bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column, int32_t node_id) {
     /**
-     * This function is the core of column resolution. The general idea is to recursively walk down
-     * different branches of the mst while advancing an iterator over the column descriptor in
-     * step.
+     * This function is the core of Column Resolution. The general idea is to walk down different
+     * branches of the mst while advancing an iterator over the column descriptor in step.
      *
      * There are a few notable edge cases we handle here namely
      * 	1) wildcard tokens must be allowed to match any number of mst nodes including zero
@@ -199,9 +198,9 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column, int32_t node
         } else if (next_at_descriptor_list_end && column->matches_type(node_to_literal_type(cur_node->get_type())))
         {
             if (false == column->is_unresolved_descriptor()) {
-                m_column_to_descriptor[node_id].insert(column);
+                m_column_to_descriptor[cur_node_id].insert(column);
             } else {
-                m_unresolved_descriptor_to_descriptor[column].insert(node_id);
+                m_unresolved_descriptor_to_descriptor[column].insert(cur_node_id);
             }
             matched = true;
             continue;
