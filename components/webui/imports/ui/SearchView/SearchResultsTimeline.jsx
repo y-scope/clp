@@ -201,6 +201,7 @@ const SearchResultsTimeline = ({
                 zoom: {
                     drag: {
                         enabled: !isInputDisabled,
+                        backgroundColor: "rgba(64,150,160,0.3)",
                     },
                     mode: "x",
                     onZoom: ({chart}) => {
