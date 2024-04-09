@@ -27,7 +27,7 @@ import {
 import {unquoteString} from "/imports/utils/misc";
 
 import {LOCAL_STORAGE_KEYS} from "../constants";
-import SearchControls from "./SearchControls.jsx";
+import SearchControls from "./SearchControls/SearchControls.jsx";
 import SearchResults, {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResults.jsx";
 import {computeTimelineConfig} from "./SearchResultsTimeline.jsx";
 
