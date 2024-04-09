@@ -3,6 +3,7 @@ import Duration from "dayjs/plugin/duration";
 import Timezone from "dayjs/plugin/timezone";
 import Utc from "dayjs/plugin/utc";
 
+
 dayjs.extend(Utc);
 dayjs.extend(Timezone);
 dayjs.extend(Duration);
@@ -27,6 +28,11 @@ const TIME_RANGE_MODIFIER = Object.freeze({
     TO_DATE: "to-date",
 });
 
+/**
+ * Time range presets.
+ *
+ * @type {{[key: string]: string}}
+ */
 const TIME_RANGE_PRESET_LABEL = Object.freeze({
     [`${TIME_UNIT.MINUTE}_${TIME_RANGE_MODIFIER.LAST}_15`]: "Last 15 Minutes",
     [`${TIME_UNIT.MINUTE}_${TIME_RANGE_MODIFIER.LAST}_60`]: "Last 60 Minutes",
@@ -49,7 +55,7 @@ const TIME_RANGE_PRESET_LABEL = Object.freeze({
  * @param {string} token representing the time range to compute; format: `unit_modifier_amount`
  * @return {TimeRange} The computed time range
  */
-const computeTimeRange = (token)  => {
+const computeTimeRange = (token) => {
     const [unit,
         modifier,
         amount] = token.split("_");

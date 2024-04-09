@@ -1,5 +1,11 @@
 import {
-    Col, Container, Dropdown, DropdownButton, Form, InputGroup, Row,
+    Col,
+    Container,
+    Dropdown,
+    DropdownButton,
+    Form,
+    InputGroup,
+    Row,
 } from "react-bootstrap";
 
 import {
@@ -15,28 +21,23 @@ import SearchControlsFilterLabel from "./SearchControlsFilterLabel";
 
 
 /**
- * Renders the controls for filtering search results by time range, including a date picker and
- * preset time range options.
+ * Represents a component for selecting a time range.
  *
  * @param {object} props
- * @param {boolean} props.ignoreCase
- * @param {Function} props.setIgnoreCase
+ * @param {object} props.timeRange
  * @param {Function} props.setTimeRange
- * @param {TimeRange} props.timeRange
  * @return {React.ReactElement}
  */
-const SearchFilterControlsDrawer = ({
-    ignoreCase,
-    setIgnoreCase,
-    setTimeRange,
+const SearchControlsTimeRangeInput = ({
     timeRange,
+    setTimeRange,
 }) => {
     /**
      * Updates the `begin` timestamp of the time range.
      *
-     * @param {Date} localDateBegin The local date to be used for updating the begin timestamp.
+     * @param {Date} localDateBegin The local date to be used for updating the beginning timestamp.
      */
-    const updateBeginTimestamp = (localDateBegin) => {
+    const handleBeginDateChange = (localDateBegin) => {
         const utcDatetime = convertLocalDateToSameUtcDatetime(localDateBegin);
 
         if (utcDatetime > timeRange.end) {
@@ -55,9 +56,9 @@ const SearchFilterControlsDrawer = ({
     /**
      * Updates the `end` timestamp of the time range.
      *
-     * @param {Date} localDateEnd The local date to be used for updating the end timestamp.
+     * @param {Date} localDateEnd The local date to be used for updating the ending timestamp.
      */
-    const updateEndTimestamp = (localDateEnd) => {
+    const handleEndDateChange = (localDateEnd) => {
         const utcDatetime = convertLocalDateToSameUtcDatetime(localDateEnd);
 
         setTimeRange(
@@ -77,14 +78,13 @@ const SearchFilterControlsDrawer = ({
         setTimeRange(newTimeRange);
     };
 
-    /**
-     * Handles case sensitivity change.
-     *
-     * @param {InputEvent} event
-     */
-    const handleCaseSensitivityChange = (event) => {
-        setIgnoreCase("true" === event.target.value);
-    };
+    // Compute range of end timestamp so that it's after the beginning timestamp
+    let datepickerEndMin = null;
+    let datepickerEndMax = null;
+    if (timeRange.begin.isSame(timeRange.end, TIME_UNIT.DAY)) {
+        datepickerEndMin = timeRange.begin;
+        datepickerEndMax = timeRange.end.endOf(TIME_UNIT.DAY);
+    }
 
     const timeRangePresetItems = Object.entries(TIME_RANGE_PRESET_LABEL).map(([token, label]) => (
         <Dropdown.Item
@@ -96,83 +96,120 @@ const SearchFilterControlsDrawer = ({
         </Dropdown.Item>
     ));
 
-    // Compute range of end timestamp so that it's after the begin timestamp
-    let datepickerEndMin = null;
-    let datepickerEndMax = null;
-    if (timeRange.begin.isSame(timeRange.end, TIME_UNIT.DAY)) {
-        datepickerEndMin = timeRange.begin;
-        datepickerEndMax = timeRange.end.endOf(TIME_UNIT.DAY);
-    }
+    return (
+        <Form.Group
+            as={Row}
+            className={"mb-2"}
+        >
+            <SearchControlsFilterLabel>
+                Time range
+            </SearchControlsFilterLabel>
+            <Col>
+                <InputGroup size={"sm"}>
+                    <DropdownButton
+                        size={"sm"}
+                        title={"Presets"}
+                        variant={"primary"}
+                    >
+                        {timeRangePresetItems}
+                    </DropdownButton>
+                    <SearchControlsDatePicker
+                        endDate={convertUtcDatetimeToSameLocalDate(timeRange.end)}
+                        selected={convertUtcDatetimeToSameLocalDate(timeRange.begin)}
+                        selectsStart={true}
+                        startDate={convertUtcDatetimeToSameLocalDate(timeRange.begin)}
+                        onChange={handleBeginDateChange}/>
+                    <InputGroup.Text className={"border-left-0 rounded-0"}>
+                        to
+                    </InputGroup.Text>
+                    <SearchControlsDatePicker
+                        endDate={convertUtcDatetimeToSameLocalDate(timeRange.end)}
+                        minDate={convertUtcDatetimeToSameLocalDate(timeRange.begin)}
+                        selected={convertUtcDatetimeToSameLocalDate(timeRange.end)}
+                        selectsEnd={true}
+                        startDate={convertUtcDatetimeToSameLocalDate(timeRange.begin)}
+                        maxTime={datepickerEndMax &&
+                    convertUtcDatetimeToSameLocalDate(datepickerEndMax)}
+                        minTime={datepickerEndMin &&
+                    convertUtcDatetimeToSameLocalDate(datepickerEndMin)}
+                        onChange={handleEndDateChange}/>
+                </InputGroup>
+            </Col>
+        </Form.Group>
+    );
+};
+
+/**
+ * Represents a component for selecting case sensitivity.
+ *
+ * @param {object} props
+ * @param {boolean} props.ignoreCase
+ * @param {Function} props.setIgnoreCase
+ * @return {React.ReactElement}
+ */
+const SearchControlsCaseSensitivity = ({
+    ignoreCase,
+    setIgnoreCase,
+}) => {
+    /**
+     * Handles case sensitivity change.
+     *
+     * @param {InputEvent} event
+     */
+    const handleCaseSensitivityChange = (event) => {
+        setIgnoreCase("true" === event.target.value);
+    };
 
     return (
-        <div className={"search-filter-controls-drawer border-bottom px-2 py-3 w-100"}>
-            <Container
-                className={"mx-0"}
-                fluid={"sm"}
-            >
-                <Form.Group
-                    as={Row}
-                    className={"mb-2"}
-                >
-                    <SearchControlsFilterLabel>
-                        Time range
-                    </SearchControlsFilterLabel>
-                    <Col>
-                        <InputGroup size={"sm"}>
-                            <DropdownButton
-                                size={"sm"}
-                                style={{display: "inline"}}
-                                title={"Presets"}
-                                variant={"primary"}
-                            >
-                                {timeRangePresetItems}
-                            </DropdownButton>
-                            <SearchControlsDatePicker
-                                endDate={convertUtcDatetimeToSameLocalDate(timeRange.end)}
-                                selected={convertUtcDatetimeToSameLocalDate(timeRange.begin)}
-                                selectsStart={true}
-                                startDate={convertUtcDatetimeToSameLocalDate(timeRange.begin)}
-                                onChange={updateBeginTimestamp}/>
-                            <InputGroup.Text className={"border-left-0 rounded-0"}>
-                                to
-                            </InputGroup.Text>
-                            <SearchControlsDatePicker
-                                endDate={convertUtcDatetimeToSameLocalDate(timeRange.end)}
-                                minDate={convertUtcDatetimeToSameLocalDate(timeRange.begin)}
-                                selected={convertUtcDatetimeToSameLocalDate(timeRange.end)}
-                                selectsEnd={true}
-                                startDate={convertUtcDatetimeToSameLocalDate(timeRange.begin)}
-                                maxTime={
-                                    datepickerEndMax &&
-                                    convertUtcDatetimeToSameLocalDate(datepickerEndMax)
-                                }
-                                minTime={
-                                    datepickerEndMin &&
-                                    convertUtcDatetimeToSameLocalDate(datepickerEndMin)
-                                }
-                                onChange={updateEndTimestamp}/>
-                        </InputGroup>
-                    </Col>
-                </Form.Group>
-                <Form.Group as={Row}>
-                    <SearchControlsFilterLabel>
-                        Case sensitivity
-                    </SearchControlsFilterLabel>
-                    <Col className={"mt-1"}>
-                        <SearchControlsCaseSensitivityCheck
-                            checked={true === ignoreCase}
-                            label={"Insensitive"}
-                            value={true}
-                            onChange={handleCaseSensitivityChange}/>
-                        <SearchControlsCaseSensitivityCheck
-                            checked={false === ignoreCase}
-                            label={"Sensitive"}
-                            value={false}
-                            onChange={handleCaseSensitivityChange}/>
-                    </Col>
-                </Form.Group>
-            </Container>
-        </div>
+        <Form.Group as={Row}>
+            <SearchControlsFilterLabel>
+                Case sensitivity
+            </SearchControlsFilterLabel>
+            <Col>
+                <SearchControlsCaseSensitivityCheck
+                    checked={true === ignoreCase}
+                    label={"Insensitive"}
+                    value={true}
+                    onChange={handleCaseSensitivityChange}/>
+                <SearchControlsCaseSensitivityCheck
+                    checked={false === ignoreCase}
+                    label={"Sensitive"}
+                    value={false}
+                    onChange={handleCaseSensitivityChange}/>
+            </Col>
+        </Form.Group>
+    );
+};
+
+/**
+ * Renders the controls for filtering search results by time range, including a date picker and
+ * preset time range options.
+ *
+ * @param {object} props
+ * @param {boolean} props.ignoreCase
+ * @param {Function} props.setIgnoreCase
+ * @param {Function} props.setTimeRange
+ * @param {TimeRange} props.timeRange
+ * @return {React.ReactElement}
+ */
+const SearchFilterControlsDrawer = ({
+    ignoreCase,
+    setIgnoreCase,
+    setTimeRange,
+    timeRange,
+}) => {
+    return (
+        <Container
+            className={"search-filter-controls-drawer px-3 py-3 border-bottom"}
+            fluid={true}
+        >
+            <SearchControlsTimeRangeInput
+                setTimeRange={setTimeRange}
+                timeRange={timeRange}/>
+            <SearchControlsCaseSensitivity
+                ignoreCase={ignoreCase}
+                setIgnoreCase={setIgnoreCase}/>
+        </Container>
     );
 };
 export default SearchFilterControlsDrawer;
