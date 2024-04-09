@@ -1,3 +1,4 @@
+/* eslint-disable max-lines, max-lines-per-function, max-statements */
 import {Meteor} from "meteor/meteor";
 import {useTracker} from "meteor/react-meteor-data";
 import {
@@ -5,15 +6,10 @@ import {
     useRef,
     useState,
 } from "react";
-import ProgressBar from "react-bootstrap/ProgressBar";
-
-import {faExclamationCircle} from "@fortawesome/free-solid-svg-icons";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 
 import {CLP_STORAGE_ENGINES} from "/imports/api/constants";
 import {SearchResultsMetadataCollection} from "/imports/api/search/collections";
 import {
-    isSearchSignalQuerying,
     MONGO_SORT_ORDER,
     SEARCH_MAX_NUM_RESULTS,
     SEARCH_RESULTS_FIELDS,
@@ -30,11 +26,8 @@ import {LOCAL_STORAGE_KEYS} from "../constants";
 import SearchControls from "./SearchControls/SearchControls";
 import SearchResults, {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResults/SearchResults";
 import {computeTimelineConfig} from "./SearchResults/SearchResultsTimeline";
+import SearchStatus from "./SearchStatus";
 
-
-// for pseudo progress bar
-const PROGRESS_INCREMENT = 5;
-const PROGRESS_INTERVAL_MS = 100;
 
 const DEFAULT_IGNORE_CASE_SETTING = true;
 
@@ -75,12 +68,18 @@ const SearchView = () => {
     );
 
     // Subscriptions
+    /**
+     * @type {SearchResultsMetadata}
+     */
     const resultsMetadata = useTracker(() => {
         let result = {lastSignal: localLastSearchSignal};
 
         if (null !== searchJobId) {
             const args = {searchJobId};
-            const subscription = Meteor.subscribe(Meteor.settings.public.SearchResultsMetadataCollectionName, args);
+            const subscription = Meteor.subscribe(
+                Meteor.settings.public.SearchResultsMetadataCollectionName,
+                args
+            );
             const doc = SearchResultsMetadataCollection.findOne();
 
             const isReady = subscription.ready();
@@ -151,6 +150,9 @@ const SearchView = () => {
         visibleSearchResultsLimit,
     ]);
 
+    /**
+     * @type {TimelineBucket[]}
+     */
     const timelineBuckets = useTracker(() => {
         if (null === aggregationJobId) {
             return null;
@@ -231,7 +233,7 @@ const SearchView = () => {
             end: timeRange.end,
         };
 
-        if (undefined !== newArgs) {
+        if ("undefined" !== typeof newArgs) {
             queryTimeRange.begin = newArgs.begin;
             queryTimeRange.end = newArgs.end;
             setTimeRange(queryTimeRange);
@@ -294,8 +296,6 @@ const SearchView = () => {
         handleQuerySubmit(expandedTimeRange);
     };
 
-    const showSearchResults = (null !== searchJobId);
-
     // The number of results on the server is available in different variables at different times:
     // - when the query ends, it will be in resultsMetadata.numTotalResults.
     // - while the query is in progress, it will be in estimatedNumResults.
@@ -328,7 +328,7 @@ const SearchView = () => {
                         resultsMetadata.errorMsg}/>
             </div>
 
-            {showSearchResults && <SearchResults
+            {(null !== searchJobId) && <SearchResults
                 fieldToSortBy={fieldToSortBy}
                 maxLinesPerResult={maxLinesPerResult}
                 numResultsOnServer={numResultsOnServer}
@@ -346,75 +346,6 @@ const SearchView = () => {
     );
 };
 
-/**
- * Displays the status of a search operation, which shows error messages if any, and otherwise
- * displays the current status of the search.
- *
- * @param {object} props
- * @param {object} props.resultsMetadata including the last search signal
- * @param {string} props.errorMsg if there is an error
- * @return {React.ReactElement}
- */
-const SearchStatus = ({
-    resultsMetadata,
-    errorMsg,
-}) => {
-    const [progress, setProgress] = useState(0);
-    const timerIntervalRef = useRef(null);
-
-    useEffect(() => {
-        if (true === isSearchSignalQuerying(resultsMetadata.lastSignal)) {
-            timerIntervalRef.current = timerIntervalRef.current ?? setInterval(() => {
-                setProgress((progress) => (progress + PROGRESS_INCREMENT));
-            }, PROGRESS_INTERVAL_MS);
-        } else {
-            if (null !== timerIntervalRef.current) {
-                clearInterval(timerIntervalRef.current);
-                timerIntervalRef.current = null;
-            }
-            setProgress(0);
-        }
-    }, [resultsMetadata.lastSignal]);
-
-    if ("" !== errorMsg && null !== errorMsg && undefined !== errorMsg) {
-        return (
-            <div className={"search-error"}>
-                <FontAwesomeIcon
-                    className={"search-error-icon"}
-                    icon={faExclamationCircle}/>
-                {errorMsg}
-            </div>
-        );
-    }
-    let message = null;
-    switch (resultsMetadata.lastSignal) {
-        case SEARCH_SIGNAL.NONE:
-            message = "Ready";
-            break;
-        case SEARCH_SIGNAL.REQ_CLEARING:
-            message = "Clearing...";
-            break;
-        default:
-            break;
-    }
-
-    return (
-        <>
-            <ProgressBar
-                animated={true}
-                className={"search-progress-bar rounded-0 border-bottom"}
-                now={progress}
-                striped={true}
-                variant={"primary"}
-                style={{visibility: (0 === progress) ?
-                    "hidden" :
-                    "visible"}}/>
-            {null !== message &&
-            <div className={"search-no-results-status"}>
-                {message}
-            </div>}
-        </>
-    );
-};
-
 export default SearchView;
+
+/* eslint-enable max-lines, max-lines-per-function, max-statements */

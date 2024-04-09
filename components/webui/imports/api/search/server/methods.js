@@ -35,7 +35,7 @@ const initSearchJobsDbManager = (sqlDbConnPool, {searchJobsTableName}) => {
  * @param {object} filter
  * @param {number} filter.jobId
  * @param {string} filter.lastSignal
- * @param {object} fields The fields to be updated in the search results metadata.
+ * @param {SearchResultsMetadata} fields The fields to be updated in the search results metadata.
  */
 const updateSearchResultsMeta = ({
     jobId,

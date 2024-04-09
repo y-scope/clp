@@ -32,7 +32,7 @@ const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
  * @param {number} props.maxLinesPerResult
  * @param {number} props.numResultsOnServer
  * @param {Function} props.onTimelineZoom
- * @param {object} props.resultsMetadata
+ * @param {SearchResultsMetadata} props.resultsMetadata
  * @param {number} props.searchJobId
  * @param {object[]} props.searchResults
  * @param {Function} props.setFieldToSortBy

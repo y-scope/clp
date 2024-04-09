@@ -1,10 +1,13 @@
 /**
+ * @typedef {string} SearchSignal
+ */
+/**
  * Enum of search-related signals.
  *
  * This includes request and response signals for various search operations and their respective
  * states.
  *
- * @enum {string}
+ * @enum {SearchSignal}
  */
 const SEARCH_SIGNAL = Object.freeze({
     NONE: "none",

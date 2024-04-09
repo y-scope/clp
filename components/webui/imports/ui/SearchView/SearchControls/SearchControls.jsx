@@ -34,7 +34,7 @@ import "./SearchControls.scss";
  * @param {Function} props.onClearResults
  * @param {Function} props.onSubmitQuery
  * @param {string} props.queryString
- * @param {object} props.resultsMetadata
+ * @param {SearchResultsMetadata} props.resultsMetadata
  * @param {Function} props.setIgnoreCase
  * @param {Function} props.setQueryString
  * @param {Function} props.setTimeRange
@@ -106,8 +106,7 @@ const SearchControls = ({
                             type={"text"}
                             value={queryString}
                             onChange={queryChangeHandler}/>
-                        {
-                            (SEARCH_SIGNAL.RESP_DONE === resultsMetadata.lastSignal) &&
+                        {(SEARCH_SIGNAL.RESP_DONE === resultsMetadata.lastSignal) &&
                             <Button
                                 className={"border-top-0 border-bottom-0 rounded-0"}
                                 disabled={true === isSearchSignalReq(resultsMetadata.lastSignal)}
@@ -118,32 +117,29 @@ const SearchControls = ({
                                 <FontAwesomeIcon
                                     fixedWidth={true}
                                     icon={faTrash}/>
-                            </Button>
-                        }
-                        {
-                            (SEARCH_SIGNAL.RESP_QUERYING === resultsMetadata.lastSignal) ?
-                                <Button
-                                    className={"border-top-0 border-bottom-0 rounded-0"}
-                                    variant={"danger"}
-                                    disabled={SEARCH_SIGNAL.REQ_CANCELLING ===
+                            </Button>}
+                        {(SEARCH_SIGNAL.RESP_QUERYING === resultsMetadata.lastSignal) ?
+                            <Button
+                                className={"border-top-0 border-bottom-0 rounded-0"}
+                                variant={"danger"}
+                                disabled={SEARCH_SIGNAL.REQ_CANCELLING ===
                                     resultsMetadata.lastSignal}
-                                    onClick={onCancelOperation}
-                                >
-                                    <FontAwesomeIcon
-                                        fixedWidth={true}
-                                        icon={faTimes}/>
-                                </Button> :
-                                <Button
-                                    className={"border-top-0 border-bottom-0 rounded-0"}
-                                    disabled={isInputDisabled || "" === queryString}
-                                    type={"submit"}
-                                    variant={"primary"}
-                                >
-                                    <FontAwesomeIcon
-                                        fixedWidth={true}
-                                        icon={faSearch}/>
-                                </Button>
-                        }
+                                onClick={onCancelOperation}
+                            >
+                                <FontAwesomeIcon
+                                    fixedWidth={true}
+                                    icon={faTimes}/>
+                            </Button> :
+                            <Button
+                                className={"border-top-0 border-bottom-0 rounded-0"}
+                                disabled={isInputDisabled || "" === queryString}
+                                type={"submit"}
+                                variant={"primary"}
+                            >
+                                <FontAwesomeIcon
+                                    fixedWidth={true}
+                                    icon={faSearch}/>
+                            </Button>}
                     </InputGroup>
                 </Form.Group>
             </Form>
