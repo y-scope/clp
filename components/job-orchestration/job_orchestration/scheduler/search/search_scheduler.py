@@ -1,4 +1,17 @@
-#!/usr/bin/env python3
+"""
+A scheduler for scheduling search jobs in the CLP package.
+
+NOTE: This scheduler currently only has partial handling for failures of the database. Specifically,
+in the event that the database is unreachable, the scheduler will continue running as if reads from
+the database return no records and writes to the database always fail. Failed writes are currently
+silently ignored, in which case the state of the database won't match the scheduler's internal
+state. If the database comes back up, the scheduler will eventually reconnect to it and reads/writes
+will function as normal again. However, the mismatched state may lead to unexpected behaviour like
+jobs seemingly being stuck in the "RUNNING" state or jobs being repeated, which in turn will create
+duplicated search results in the results cache, possibly long after the results had already been
+cleared from the cache. Unfortunately, these effects will require manual intervention to clean-up.
+TODO Address this limitation.
+"""
 
 import argparse
 import asyncio
