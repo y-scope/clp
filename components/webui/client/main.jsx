@@ -5,7 +5,7 @@ import {Router} from "react-router";
 
 import {createBrowserHistory} from "history";
 
-import {App} from "/imports/ui/App.jsx";
+import {App} from "/imports/ui/App";
 
 
 Meteor.startup(() => {

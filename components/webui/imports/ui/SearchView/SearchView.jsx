@@ -27,9 +27,9 @@ import {
 import {unquoteString} from "/imports/utils/misc";
 
 import {LOCAL_STORAGE_KEYS} from "../constants";
-import SearchControls from "./SearchControls/SearchControls.jsx";
-import SearchResults, {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResults/SearchResults.jsx";
-import {computeTimelineConfig} from "./SearchResults/SearchResultsTimeline.jsx";
+import SearchControls from "./SearchControls/SearchControls";
+import SearchResults, {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResults/SearchResults";
+import {computeTimelineConfig} from "./SearchResults/SearchResultsTimeline";
 
 
 // for pseudo progress bar

@@ -2,9 +2,9 @@ import {useCallback} from "react";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 
-import SearchResultsHeader from "./SearchResultsHeader.jsx";
-import SearchResultsTable from "./SearchResultsTable.jsx";
-import SearchResultsTimeline from "./SearchResultsTimeline.jsx";
+import SearchResultsHeader from "./SearchResultsHeader";
+import SearchResultsTable from "./SearchResultsTable";
+import SearchResultsTimeline from "./SearchResultsTimeline";
 
 
 /**
