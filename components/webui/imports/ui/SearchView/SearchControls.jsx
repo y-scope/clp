@@ -82,18 +82,14 @@ const SearchControlsFilterLabel = (props) => (
  * @param {object} props.rest
  * @return {React.ReactElement}
  */
-const SearchControlsCaseSensitivityCheck = ({label, ...rest}) => {
-    console.log(rest, label);
-
-    return (
-        <Form.Check
-            {...rest}
-            inline={true}
-            label={label}
-            name={"case-sensitivity"}
-            type={"radio"}/>
-    );
-};
+const SearchControlsCaseSensitivityCheck = ({label, ...rest}) => (
+    <Form.Check
+        {...rest}
+        inline={true}
+        label={label}
+        name={"case-sensitivity"}
+        type={"radio"}/>
+);
 
 /**
  * Renders the controls for filtering search results by time range, including a date picker and
