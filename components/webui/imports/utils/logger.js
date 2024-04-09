@@ -1,5 +1,6 @@
 import JSON5 from "json5";
 import winston from "winston";
+
 import "winston-daily-rotate-file";
 
 
@@ -22,8 +23,8 @@ const webuiLoggingLevelToWinstonMap = {
 /**
  * Retrieves information about the calling function's stack trace.
  *
- * @returns {Object|null} an object containing method, filePath, and line information,
- *                        or null if the information couldn't be extracted
+ * @return {object | null} an object containing method, filePath, and line information,
+ * or null if the information couldn't be extracted
  */
 const getStackInfo = () => {
     let info = null;
@@ -33,7 +34,7 @@ const getStackInfo = () => {
     const stackRegex = /at\s+(.*)\s+\((.*):(\d+):(\d+)\)/i;
     const stackMatch = stackRegex.exec(stackInfo);
 
-    if (null !== stackMatch && stackMatch.length === 5) {
+    if (null !== stackMatch && 5 === stackMatch.length) {
         info = {
             method: stackMatch[1],
             filePath: stackMatch[2],
@@ -60,14 +61,16 @@ const getStackInfo = () => {
  * @param {...any} args message or data to be logged
  */
 const fileLineFuncLog = (level, ...args) => {
-    let logMessage = `${args.map(a => ("string" === typeof a) ? a : JSON5.stringify(a)).join(" ")}`;
+    let logMessage = `${args.map((a) => (("string" === typeof a) ?
+        a :
+        JSON5.stringify(a))).join(" ")}`;
     let logLabel = "";
 
     if (true === isTraceEnabled) {
         const stackInfo = getStackInfo();
 
         if (null !== stackInfo) {
-            logMessage = `[${stackInfo.filePath}:${stackInfo.line}] ` + logMessage;
+            logMessage = `[${stackInfo.filePath}:${stackInfo.line}] ${logMessage}`;
             logLabel = stackInfo.method;
         }
     }
@@ -79,7 +82,7 @@ const fileLineFuncLog = (level, ...args) => {
     });
 };
 
-let logger = Object.freeze({
+const logger = Object.freeze({
     error: (...args) => (fileLineFuncLog("error", ...args)),
     warn: (...args) => (fileLineFuncLog("warn", ...args)),
     help: (...args) => (fileLineFuncLog("help", ...args)),
@@ -97,7 +100,7 @@ let logger = Object.freeze({
  *
  * @param {string} logsDir where log files will be stored.
  * @param {string} webuiLoggingLevel messages higher than this level will be logged
- * @param {boolean} [_isTraceEnabled=false] whether to log function & file names and line numbers
+ * @param {boolean} [_isTraceEnabled] whether to log function & file names and line numbers
  */
 const initLogger = (logsDir, webuiLoggingLevel, _isTraceEnabled = false) => {
     isTraceEnabled = _isTraceEnabled;
@@ -130,4 +133,6 @@ const initLogger = (logsDir, webuiLoggingLevel, _isTraceEnabled = false) => {
     logger.info("logger has been initialized");
 };
 
-export {logger, initLogger};
+export {
+    initLogger, logger,
+};

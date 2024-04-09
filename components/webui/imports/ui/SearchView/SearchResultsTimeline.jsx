@@ -129,21 +129,18 @@ const computeTimelineConfig = (timestampBeginUnixMillis, timestampEndUnixMillis)
 /**
  * Displays a timeline of search results.
  *
- * @param resultsMetadata.resultsMetadata
- * @param {object} resultsMetadata
- * @param {TimelineConfig} timelineConfig
- * @param {TimelineBucket[]} timelineBuckets
- * @param {Function} onTimelineZoom
- * @param resultsMetadata.timelineConfig
- * @param resultsMetadata.timelineBuckets
- * @param resultsMetadata.onTimelineZoom
+ * @param {object} props
+ * @param {Function} props.onTimelineZoom
+ * @param {object} props.resultsMetadata
+ * @param {TimelineBucket[]} props.timelineBuckets
+ * @param {TimelineConfig} props.timelineConfig
  * @return {JSX.Element}
  */
 const SearchResultsTimeline = ({
-    resultsMetadata,
-    timelineConfig,
-    timelineBuckets,
     onTimelineZoom,
+    resultsMetadata,
+    timelineBuckets,
+    timelineConfig,
 }) => {
     if (null === timelineBuckets) {
         return <></>;
@@ -176,8 +173,8 @@ const SearchResultsTimeline = ({
             x: {
                 type: "time",
 
-                min: timelineConfig.range.begin.valueOf(),
                 max: timelineConfig.range.end.valueOf(),
+                min: timelineConfig.range.begin.valueOf(),
                 offset: false,
 
                 grid: {

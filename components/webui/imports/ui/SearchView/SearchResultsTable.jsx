@@ -30,8 +30,9 @@ const SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MS = 200;
  * Senses if the user has requested to load more results by scrolling until
  * this element becomes partially visible.
  *
- * @param {boolean} hasMoreResults
- * @param {Function} onLoadMoreResults
+ * @param {object} props
+ * @param {boolean} props.hasMoreResults
+ * @param {Function} props.onLoadMoreResults
  * @return {JSX.Element}
  */
 const SearchResultsLoadSensor = ({
@@ -95,27 +96,22 @@ const SearchResultsLoadSensor = ({
 /**
  * Represents a table component to display search results.
  *
- * @param searchResults.searchResults
- * @param {object} searchResults
- * @param {number} maxLinesPerResult
- * @param {object} fieldToSortBy
- * @param {Function} setFieldToSortBy
- * @param {boolean} hasMoreResults
- * @param {Function} onLoadMoreResults
- * @param searchResults.maxLinesPerResult
- * @param searchResults.fieldToSortBy
- * @param searchResults.setFieldToSortBy
- * @param searchResults.hasMoreResults
- * @param searchResults.onLoadMoreResults
+ * @param {object} props
+ * @param {object} props.fieldToSortBy
+ * @param {boolean} props.hasMoreResults
+ * @param {number} props.maxLinesPerResult
+ * @param {Function} props.onLoadMoreResults
+ * @param {object} props.searchResults
+ * @param {Function} props.setFieldToSortBy
  * @return {JSX.Element}
  */
 const SearchResultsTable = ({
-    searchResults,
-    maxLinesPerResult,
     fieldToSortBy,
-    setFieldToSortBy,
     hasMoreResults,
+    maxLinesPerResult,
     onLoadMoreResults,
+    searchResults,
+    setFieldToSortBy,
 }) => {
     const getSortIcon = (fieldName) => {
         if (fieldName === fieldToSortBy.name) {

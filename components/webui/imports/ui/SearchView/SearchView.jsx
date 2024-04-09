@@ -40,6 +40,8 @@ const DEFAULT_IGNORE_CASE_SETTING = true;
 
 /**
  * Provides a search interface, which searches queries and visualizes search results.
+ *
+ * @return {JSX.Element}
  */
 const SearchView = () => {
     // Query states
@@ -348,10 +350,9 @@ const SearchView = () => {
  * Displays the status of a search operation, which shows error messages if any, and otherwise
  * displays the current status of the search.
  *
- * @param resultsMetadata.resultsMetadata
- * @param {object} resultsMetadata including the last search signal
- * @param {string} [errorMsg] message if there is an error
- * @param resultsMetadata.errorMsg
+ * @param {object} props
+ * @param {object} props.resultsMetadata including the last search signal
+ * @param {string} props.errorMsg if there is an error
  * @return {JSX.Element}
  */
 const SearchStatus = ({

@@ -19,7 +19,8 @@ import {DATETIME_FORMAT_TEMPLATE} from "/imports/utils/datetime";
 /**
  * Presents details from the given statistics.
  *
- * @param {CompressionStats} stats
+ * @param {object} props
+ * @param {CompressionStats} props.stats
  * @return {JSX.Element}
  */
 const Details = ({stats}) => {

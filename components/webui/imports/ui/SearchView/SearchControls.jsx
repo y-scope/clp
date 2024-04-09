@@ -45,7 +45,7 @@ import "./SearchControls.scss";
 /**
  * Renders a date picker control for selecting date and time.
  *
- * @param {object} props to be passed to the DatePicker component
+ * @param {object} props
  * @return {JSX.Element}
  */
 const SearchControlsDatePicker = (props) => (
@@ -79,32 +79,38 @@ const SearchControlsFilterLabel = (props) => (
  *
  * @param {object} props
  * @param {string} props.label
+ * @param {object} props.rest
  * @return {JSX.Element}
  */
-const SearchControlsCaseSensitivityCheck = (props) => (
-    <Form.Check
-        {...props}
-        id={props.label}
-        inline={true}
-        name={"case-sensitivity"}
-        type={"radio"}/>
-);
+const SearchControlsCaseSensitivityCheck = ({label, ...rest}) => {
+    console.log(rest, label);
+
+    return (
+        <Form.Check
+            {...rest}
+            inline={true}
+            label={label}
+            name={"case-sensitivity"}
+            type={"radio"}/>
+    );
+};
 
 /**
  * Renders the controls for filtering search results by time range, including a date picker and
  * preset time range options.
  *
- * @param {TimeRange} timeRange
- * @param {Function} setTimeRange
- * @param {boolean} ignoreCase
- * @param {Function} setIgnoreCase
+ * @param {object} props
+ * @param {boolean} props.ignoreCase
+ * @param {Function} props.setIgnoreCase
+ * @param {Function} props.setTimeRange
+ * @param {TimeRange} props.timeRange
  * @return {JSX.Element}
  */
 const SearchFilterControlsDrawer = ({
-    timeRange,
-    setTimeRange,
     ignoreCase,
     setIgnoreCase,
+    setTimeRange,
+    timeRange,
 }) => {
     /**
      * Updates the `begin` timestamp of the time range.
@@ -255,29 +261,30 @@ const SearchFilterControlsDrawer = ({
  * Renders the search controls including query input, filter drawer toggle, and operation buttons
  * like submit, clear, and cancel. It also manages the state of the drawer.
  *
- * @param {string} queryString
- * @param {Function} setQueryString
- * @param {TimeRange} timeRange
- * @param {Function} setTimeRange
- * @param {boolean} ignoreCase
- * @param {Function} setIgnoreCase
- * @param {object} resultsMetadata
- * @param {Function} onSubmitQuery
- * @param {Function} onClearResults
- * @param {Function} onCancelOperation
+ * @param {object} props
+ * @param {boolean} props.ignoreCase
+ * @param {Function} props.onCancelOperation
+ * @param {Function} props.onClearResults
+ * @param {Function} props.onSubmitQuery
+ * @param {string} props.queryString
+ * @param {object} props.resultsMetadata
+ * @param {Function} props.setIgnoreCase
+ * @param {Function} props.setQueryString
+ * @param {Function} props.setTimeRange
+ * @param {TimeRange} props.timeRange
  * @return {JSX.Element}
  */
 const SearchControls = ({
-    queryString,
-    setQueryString,
-    timeRange,
-    setTimeRange,
     ignoreCase,
-    setIgnoreCase,
-    resultsMetadata,
-    onSubmitQuery,
-    onClearResults,
     onCancelOperation,
+    onClearResults,
+    onSubmitQuery,
+    queryString,
+    resultsMetadata,
+    setIgnoreCase,
+    setQueryString,
+    setTimeRange,
+    timeRange,
 }) => {
     const [drawerOpen, setDrawerOpen] = useState(
         "true" === localStorage.getItem(LOCAL_STORAGE_KEYS.SEARCH_CONTROLS_VISIBLE)

@@ -27,20 +27,21 @@ const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
  * Renders the search results, which includes the search results header and the search results
  * table.
  *
- * @param {Object} fieldToSortBy
- * @param {number} maxLinesPerResult
- * @param {number} numResultsOnServer
- * @param {function} onTimelineZoom
- * @param {object} resultsMetadata
- * @param {number} searchJobId of the search job
- * @param {Object[]} searchResults
- * @param {function} setFieldToSortBy
- * @param {function} setMaxLinesPerResult
- * @param {function} setVisibleSearchResultsLimit
- * @param {TimelineBucket[]} timelineBuckets
- * @param {TimelineConfig} timelineConfig
- * @param {number} visibleSearchResultsLimit
- * @returns {JSX.Element}
+ * @param {object} props
+ * @param {object} props.fieldToSortBy
+ * @param {number} props.maxLinesPerResult
+ * @param {number} props.numResultsOnServer
+ * @param {Function} props.onTimelineZoom
+ * @param {object} props.resultsMetadata
+ * @param {number} props.searchJobId
+ * @param {object[]} props.searchResults
+ * @param {Function} props.setFieldToSortBy
+ * @param {Function} props.setMaxLinesPerResult
+ * @param {Function} props.setVisibleSearchResultsLimit
+ * @param {TimelineBucket[]} props.timelineBuckets
+ * @param {TimelineConfig} props.timelineConfig
+ * @param {number} props.visibleSearchResultsLimit
+ * @return {JSX.Element}
  */
 const SearchResults = ({
     fieldToSortBy,

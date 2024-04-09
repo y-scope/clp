@@ -13,7 +13,8 @@ import {computeHumanSize} from "/imports/utils/misc";
 /**
  * Presents space savings from the given statistics.
  *
- * @param {CompressionStats} stats
+ * @param {object} props
+ * @param {CompressionStats} props.stats
  * @return {JSX.Element}
  */
 const SpaceSavings = ({stats}) => {

@@ -1,7 +1,11 @@
-import {logger} from "/imports/utils/logger";
 import mysql from "mysql2/promise";
 
-import {deinitStatsDbManager, initStatsDbManager} from "../api/ingestion/server/publications";
+import {logger} from "/imports/utils/logger";
+
+import {
+    deinitStatsDbManager,
+    initStatsDbManager,
+} from "../api/ingestion/server/publications";
 import {initSearchJobsDbManager} from "../api/search/server/methods";
 
 
@@ -18,26 +22,24 @@ let dbConnPool = null;
  * Creates a new database connection and initializes DB managers with it.
  *
  * @param {object} dbConfig
+ * @param {string} dbConfig.dbName
  * @param {string} dbConfig.dbHost
  * @param {number} dbConfig.dbPort
- * @param {string} dbConfig.dbName
- * @param {string} dbConfig.dbUser
  * @param {string} dbConfig.dbPassword
- *
+ * @param {string} dbConfig.dbUser
  * @param {object} tableNames
  * @param {string} tableNames.searchJobsTableName
  * @param {string} tableNames.clpArchivesTableName
  * @param {string} tableNames.clpFilesTableName
- *
- * @returns {Promise<void>}
+ * @return {Promise<void>}
  * @throws {Error} on error.
  */
 const initDbManagers = async ({
+    dbName,
     dbHost,
     dbPort,
-    dbName,
-    dbUser,
     dbPassword,
+    dbUser,
 }, {
     searchJobsTableName,
     clpArchivesTableName,
@@ -49,17 +51,20 @@ const initDbManagers = async ({
 
     try {
         dbConnPool = await mysql.createPool({
+            database: dbName,
             host: dbHost,
             port: dbPort,
-            database: dbName,
-            user: dbUser,
+
             password: dbPassword,
+            user: dbUser,
+
             bigNumberStrings: true,
             supportBigNumbers: true,
-            enableKeepAlive: true,
+
             connectionLimit: DB_CONNECTION_LIMIT,
+            enableKeepAlive: true,
+            idleTimeout: DB_IDLE_TIMEOUT_IN_MS,
             maxIdle: DB_MAX_IDLE,
-            idleTimeout: DB_IDLE_TIMEOUT_IN_MS
         });
 
         initSearchJobsDbManager(dbConnPool, {
@@ -77,7 +82,8 @@ const initDbManagers = async ({
 
 /**
  * De-initialize database managers.
- * @returns {Promise<void>}
+ *
+ * @return {Promise<void>}
  * @throws {Error} on error.
  */
 const deinitDbManagers = async () => {
@@ -86,4 +92,7 @@ const deinitDbManagers = async () => {
     await dbConnPool.end();
 };
 
-export {initDbManagers, deinitDbManagers};
+export {
+    deinitDbManagers,
+    initDbManagers,
+};
