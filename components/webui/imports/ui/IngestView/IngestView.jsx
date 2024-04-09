@@ -35,18 +35,8 @@ const IngestView = () => {
                 >
                     {stats &&
                         <Row>
-                            <Col
-                                md={6}
-                                sm={12}
-                            >
-                                <SpaceSavings stats={stats}/>
-                            </Col>
-                            <Col
-                                md={6}
-                                sm={12}
-                            >
-                                <Details stats={stats}/>
-                            </Col>
+                            <SpaceSavings stats={stats}/>
+                            <Details stats={stats}/>
                         </Row>}
                 </Col>
             </Row>

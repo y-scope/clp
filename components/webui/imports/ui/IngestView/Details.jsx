@@ -1,8 +1,3 @@
-import {
-    Col,
-    Row,
-} from "react-bootstrap";
-
 import dayjs from "dayjs";
 
 import {
@@ -14,6 +9,8 @@ import {
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 
 import {DATETIME_FORMAT_TEMPLATE} from "/imports/utils/datetime";
+
+import Panel from "./Panel";
 
 
 /**
@@ -96,25 +93,16 @@ const Details = ({stats}) => {
     }
 
     return (
-        <div className={"panel"}>
-            <Row>
-                <Col>
-                    <h1 className={"panel-h1"}>Details</h1>
-                </Col>
-                <Col xs={"auto"}>
-                    <FontAwesomeIcon
-                        className={"panel-icon"}
-                        icon={faChartBar}/>
-                </Col>
-            </Row>
-            <Row>
-                <Col>
-                    {timeRangeRow}
-                    {numFilesRow}
-                    {numMessagesRow}
-                </Col>
-            </Row>
-        </div>
+        <Panel
+            faIcon={faChartBar}
+            md={6}
+            sm={12}
+            title={"Details"}
+        >
+            {timeRangeRow}
+            {numFilesRow}
+            {numMessagesRow}
+        </Panel>
     );
 };
 

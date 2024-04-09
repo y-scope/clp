@@ -5,9 +5,10 @@ import {
 } from "react-bootstrap";
 
 import {faHdd} from "@fortawesome/free-solid-svg-icons";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 
 import {computeHumanSize} from "/imports/utils/misc";
+
+import Panel from "./Panel";
 
 
 /**
@@ -25,17 +26,12 @@ const SpaceSavings = ({stats}) => {
         0;
 
     return (
-        <div className={"panel"}>
-            <Row>
-                <Col>
-                    <h1 className={"panel-h1"}>Space Savings</h1>
-                </Col>
-                <Col xs={"auto"}>
-                    <FontAwesomeIcon
-                        className={"panel-icon"}
-                        icon={faHdd}/>
-                </Col>
-            </Row>
+        <Panel
+            faIcon={faHdd}
+            md={6}
+            sm={12}
+            title={"Space Savings"}
+        >
             <Row>
                 <Col>
                     <svg viewBox={"0 0 48 12"}>
@@ -72,7 +68,7 @@ const SpaceSavings = ({stats}) => {
                     </div>
                 </Col>
             </Row>
-        </div>
+        </Panel>
     );
 };
 
