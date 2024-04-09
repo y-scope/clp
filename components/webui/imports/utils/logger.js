@@ -10,6 +10,7 @@ const MAX_LOGS_RETENTION_DAYS = "30d";
 let winstonLogger = null;
 let isTraceEnabled = false;
 
+/* eslint-disable sort-keys */
 // attribute names should match clp_py_utils.clp_logging.LOGGING_LEVEL_MAPPING
 const webuiLoggingLevelToWinstonMap = {
     DEBUG: "debug",
@@ -19,7 +20,9 @@ const webuiLoggingLevelToWinstonMap = {
     ERROR: "error",
     CRITICAL: "error",
 };
+/* eslint-enable sort-keys */
 
+/* eslint-disable prefer-destructuring, no-magic-numbers */
 /**
  * Retrieves information about the calling function's stack trace.
  *
@@ -27,7 +30,7 @@ const webuiLoggingLevelToWinstonMap = {
  * or null if the information couldn't be extracted
  */
 const getStackInfo = () => {
-    let info = null;
+    let info;
 
     const stackList = (new Error()).stack.split("\n");
     const stackInfo = stackList[4];
@@ -52,7 +55,7 @@ const getStackInfo = () => {
 
     return info;
 };
-
+/* eslint-enable prefer-destructuring, no-magic-numbers */
 
 /**
  * Logs a message with the specified log level, including optional trace information.
@@ -76,12 +79,16 @@ const fileLineFuncLog = (level, ...args) => {
     }
 
     winstonLogger.log({
-        level,
+        level: level,
         message: logMessage,
         label: logLabel,
     });
 };
 
+/* eslint-disable sort-keys */
+/**
+ * Logger interface object that provides logging with different levels.
+ */
 const logger = Object.freeze({
     error: (...args) => (fileLineFuncLog("error", ...args)),
     warn: (...args) => (fileLineFuncLog("warn", ...args)),
@@ -94,6 +101,7 @@ const logger = Object.freeze({
     input: (...args) => (fileLineFuncLog("input", ...args)),
     silly: (...args) => (fileLineFuncLog("silly", ...args)),
 });
+/* eslint-enable sort-keys */
 
 /**
  * Initializes winston logger with the specified configuration.
@@ -121,11 +129,11 @@ const initLogger = (logsDir, webuiLoggingLevel, _isTraceEnabled = false) => {
         transports: [
             new winston.transports.Console(),
             new winston.transports.DailyRotateFile({
-                filename: "webui-%DATE%.log",
-                dirname: logsDir,
                 datePattern: "YYYY-MM-DD-HH",
-                maxSize: MAX_LOGS_FILE_SIZE,
+                dirname: logsDir,
+                filename: "webui-%DATE%.log",
                 maxFiles: MAX_LOGS_RETENTION_DAYS,
+                maxSize: MAX_LOGS_FILE_SIZE,
             }),
         ],
     });
@@ -134,5 +142,6 @@ const initLogger = (logsDir, webuiLoggingLevel, _isTraceEnabled = false) => {
 };
 
 export {
-    initLogger, logger,
+    initLogger,
+    logger,
 };
