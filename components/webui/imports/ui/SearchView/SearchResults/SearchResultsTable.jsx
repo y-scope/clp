@@ -5,6 +5,8 @@ import {
 import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 
+import dayjs from "dayjs";
+
 import {
     faSort,
     faSortDown,
@@ -17,8 +19,15 @@ import {
     SEARCH_RESULTS_FIELDS,
 } from "/imports/api/search/constants";
 
+import {DATETIME_FORMAT_TEMPLATE} from "../../../utils/datetime";
+
 import "./SearchResultsTable.scss";
 
+
+/**
+ * For calculating max message height from `maxLinesPerResult`.
+ */
+const SEARCH_RESULT_MESSAGE_LINE_HEIGHT = 1.5;
 
 /**
  * The interval, in milliseconds, at which the search results load sensor should poll for updates.
@@ -146,23 +155,26 @@ const SearchResultsTable = ({
     // Construct rows
     for (let i = 0; i < searchResults.length; ++i) {
         const searchResult = searchResults[i];
-        rows.push(<tr key={searchResult._id}>
-            <td>
-                {searchResult.timestamp ?
-                    new Date(searchResult.timestamp).toISOString()
-                        .slice(0, 19)
-                        .replace("T", " ") :
-                    "N/A"}
-            </td>
-            <td>
-                <pre
-                    className={"search-results-message"}
-                    style={{maxHeight: `${maxLinesPerResult * 1.4}rem`}}
-                >
-                    {searchResult.message}
-                </pre>
-            </td>
-        </tr>);
+        rows.push(
+            <tr key={searchResult._id}>
+                <td className={"search-results-content search-results-timestamp"}>
+                    {searchResult.timestamp ?
+                        dayjs.utc(searchResult.timestamp).format(DATETIME_FORMAT_TEMPLATE) :
+                        "N/A"}
+                </td>
+                <td>
+                    <pre
+                        className={"search-results-content search-results-message"}
+                        style={{
+                            maxHeight:
+                                `${(SEARCH_RESULT_MESSAGE_LINE_HEIGHT * maxLinesPerResult)}rem`,
+                        }}
+                    >
+                        {searchResult.message}
+                    </pre>
+                </td>
+            </tr>
+        );
     }
 
     return (
@@ -176,10 +188,10 @@ const SearchResultsTable = ({
                 <thead>
                     <tr>
                         <th
-                            className={"search-results-th search-results-th-sortable"}
                             data-column-name={SEARCH_RESULTS_FIELDS.TIMESTAMP}
                             key={SEARCH_RESULTS_FIELDS.TIMESTAMP}
-                            style={{width: "144px"}}
+                            className={"search-results-th search-results-th-sortable " +
+                                "search-results-th-timestamp"}
                             onClick={toggleSortDirection}
                         >
                             <div className={"search-results-table-header"}>

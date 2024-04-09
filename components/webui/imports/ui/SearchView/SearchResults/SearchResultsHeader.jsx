@@ -32,7 +32,7 @@ const SearchResultsHeader = ({
 }) => {
     const handleMaxLinesPerResultSubmission = (e) => {
         e.preventDefault();
-        const value = parseInt(e.target.elements.maxLinesPerResult.value);
+        const value = parseInt(e.target.elements.maxLinesPerResult.value, 10);
         if (0 < value) {
             setMaxLinesPerResult(value);
         }
@@ -57,19 +57,21 @@ const SearchResultsHeader = ({
                         <OverlayTrigger
                             placement={"left"}
                             trigger={"click"}
-                            overlay={<Popover id={"searchResultsDisplaySettings"}>
-                                <Form onSubmit={handleMaxLinesPerResultSubmission}>
-                                    <InputGroup>
-                                        <InputGroup.Text>Max lines per result</InputGroup.Text>
-                                        <Form.Control
-                                            defaultValue={maxLinesPerResult}
-                                            id={"maxLinesPerResult"}
-                                            min={1}
-                                            name={"maxLinesPerResult"}
-                                            type={"number"}/>
-                                    </InputGroup>
-                                </Form>
-                            </Popover>}
+                            overlay={
+                                <Popover id={"searchResultsDisplaySettings"}>
+                                    <Form onSubmit={handleMaxLinesPerResultSubmission}>
+                                        <InputGroup>
+                                            <InputGroup.Text>Max lines per result</InputGroup.Text>
+                                            <Form.Control
+                                                defaultValue={maxLinesPerResult}
+                                                id={"maxLinesPerResult"}
+                                                min={1}
+                                                name={"maxLinesPerResult"}
+                                                type={"number"}/>
+                                        </InputGroup>
+                                    </Form>
+                                </Popover>
+                            }
                         >
                             <Button
                                 title={"Display Settings"}
