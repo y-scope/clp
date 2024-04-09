@@ -12,6 +12,8 @@ import {
     isSearchSignalQuerying, SEARCH_SIGNAL,
 } from "/imports/api/search/constants";
 
+import "./SearchStatus.scss";
+
 
 // for pseudo progress bar
 const PROGRESS_INCREMENT = 5;
@@ -49,21 +51,21 @@ const SearchStatus = ({
 
     if ("" !== errorMsg && null !== errorMsg && "undefined" !== typeof errorMsg) {
         return (
-            <div className={"search-error"}>
+            <div id={"search-error"}>
                 <FontAwesomeIcon
-                    className={"search-error-icon"}
-                    icon={faExclamationCircle}/>
+                    icon={faExclamationCircle}
+                    id={"search-error-icon"}/>
                 {errorMsg}
             </div>
         );
     }
-    let message = null;
+    let statusMessage = null;
     switch (resultsMetadata.lastSignal) {
         case SEARCH_SIGNAL.NONE:
-            message = "Ready";
+            statusMessage = "Ready";
             break;
         case SEARCH_SIGNAL.REQ_CLEARING:
-            message = "Clearing...";
+            statusMessage = "Clearing...";
             break;
         default:
             break;
@@ -73,16 +75,17 @@ const SearchStatus = ({
         <>
             <ProgressBar
                 animated={true}
-                className={"search-progress-bar rounded-0 border-bottom"}
+                className={"rounded-0 border-bottom"}
+                id={"search-progress-bar"}
                 now={progress}
                 striped={true}
                 variant={"primary"}
                 style={{visibility: (0 === progress) ?
                     "hidden" :
                     "visible"}}/>
-            {(null !== message) &&
-            <div className={"search-no-results-status"}>
-                {message}
+            {(null !== statusMessage) &&
+            <div id={"search-status-message"}>
+                {statusMessage}
             </div>}
         </>
     );

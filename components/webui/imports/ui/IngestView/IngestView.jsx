@@ -8,6 +8,8 @@ import {StatsCollection} from "/imports/api/ingestion/collections";
 import Details from "./Details";
 import SpaceSavings from "./SpaceSavings";
 
+import "./IngestView.scss";
+
 
 /**
  * Presents compression statistics.

@@ -1,4 +1,4 @@
-@import "bootstrap-customized.scss";
+@import "./bootstrap-customized";
 
 html {
   font-size: 14px;
@@ -14,7 +14,3 @@ body {
 #page-container {
   flex-grow: 1;
 }
-
-@import "IngestView/IngestView.scss";
-@import "SearchView/SearchView.scss";
-@import "Sidebar/Sidebar.scss";
