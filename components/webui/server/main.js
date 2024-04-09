@@ -1,10 +1,10 @@
 import {Meteor} from "meteor/meteor";
 
-import {initLogger} from "/imports/utils/logger";
-
 import {
-    deinitDbManagers, initDbManagers,
-} from "../imports/utils/DbManager";
+    deinitDbManagers,
+    initDbManagers,
+} from "/imports/utils/DbManager";
+import {initLogger} from "/imports/utils/logger";
 
 import "/imports/api/ingestion/collections";
 import "/imports/api/ingestion/server/publications";
@@ -27,11 +27,15 @@ const DEFAULT_LOGGING_LEVEL = Meteor.isDevelopment ?
  *                 error.
  */
 const parseEnvVars = () => {
-    const {CLP_DB_USER} = process.env;
-    const {CLP_DB_PASS} = process.env;
+    const {
+        CLP_DB_USER,
+        CLP_DB_PASS,
+    } = process.env;
 
-    if ([CLP_DB_USER,
-        CLP_DB_PASS].includes(undefined)) {
+    if ([
+        typeof CLP_DB_USER,
+        typeof CLP_DB_PASS,
+    ].includes("undefined")) {
         console.error("Environment variables CLP_DB_USER and CLP_DB_PASS must be defined");
         process.exit(1);
     }
@@ -55,9 +59,10 @@ Meteor.startup(async () => {
     await initDbManagers({
         dbHost: Meteor.settings.private.SqlDbHost,
         dbPort: Meteor.settings.private.SqlDbPort,
+
         dbName: Meteor.settings.private.SqlDbName,
-        dbUser: envVars.CLP_DB_USER,
         dbPassword: envVars.CLP_DB_PASS,
+        dbUser: envVars.CLP_DB_USER,
     }, {
         searchJobsTableName: Meteor.settings.private.SqlDbSearchJobsTableName,
         clpArchivesTableName: Meteor.settings.private.SqlDbClpArchivesTableName,

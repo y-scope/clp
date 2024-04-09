@@ -22,9 +22,9 @@ let dbConnPool = null;
  * Creates a new database connection and initializes DB managers with it.
  *
  * @param {object} dbConfig
- * @param {string} dbConfig.dbName
  * @param {string} dbConfig.dbHost
  * @param {number} dbConfig.dbPort
+ * @param {string} dbConfig.dbName
  * @param {string} dbConfig.dbPassword
  * @param {string} dbConfig.dbUser
  * @param {object} tableNames
@@ -35,9 +35,9 @@ let dbConnPool = null;
  * @throws {Error} on error.
  */
 const initDbManagers = async ({
-    dbName,
     dbHost,
     dbPort,
+    dbName,
     dbPassword,
     dbUser,
 }, {
@@ -51,10 +51,10 @@ const initDbManagers = async ({
 
     try {
         const pool = await mysql.createPool({
-            database: dbName,
             host: dbHost,
             port: dbPort,
 
+            database: dbName,
             password: dbPassword,
             user: dbUser,
 
