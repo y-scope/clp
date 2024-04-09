@@ -1,8 +1,18 @@
 import {Mongo} from "meteor/mongo";
 
 
+/**
+ * Enum representing the statistics collection IDs.
+ *
+ * @enum {string}
+ */
+const STATS_COLLECTION_ID = Object.freeze({
+    COMPRESSION: "compression",
+});
+
 const StatsCollection = new Mongo.Collection(Meteor.settings.public.StatsCollectionName);
 
-const STATS_COLLECTION_ID_COMPRESSION = "compression_stats";
-
-export {StatsCollection, STATS_COLLECTION_ID_COMPRESSION};
+export {
+    STATS_COLLECTION_ID,
+    StatsCollection,
+};

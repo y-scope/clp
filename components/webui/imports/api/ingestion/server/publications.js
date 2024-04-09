@@ -3,7 +3,7 @@ import {Meteor} from "meteor/meteor";
 import {logger} from "/imports/utils/logger";
 
 import {
-    STATS_COLLECTION_ID_COMPRESSION,
+    STATS_COLLECTION_ID,
     StatsCollection,
 } from "../collections";
 import StatsDbManager from "./StatsDbManager";
@@ -33,7 +33,7 @@ const refreshCompressionStats = async () => {
 
     const stats = await statsDbManager.getCompressionStats();
     const filter = {
-        id: STATS_COLLECTION_ID_COMPRESSION,
+        _id: STATS_COLLECTION_ID.COMPRESSION,
     };
     const modifier = {
         $set: stats,
@@ -70,7 +70,7 @@ const initStatsDbManager = (sqlDbConnPool, {
 };
 
 /**
- * Deinitializes the StatsDbManager by clearing the refreshMeteorInterval.
+ * De-initializes the StatsDbManager by clearing the refreshMeteorInterval.
  */
 const deinitStatsDbManager = () => {
     if (null !== refreshMeteorInterval) {
@@ -91,7 +91,7 @@ Meteor.publish(Meteor.settings.public.StatsCollectionName, async () => {
     await refreshCompressionStats();
 
     const filter = {
-        id: STATS_COLLECTION_ID_COMPRESSION,
+        _id: STATS_COLLECTION_ID.COMPRESSION,
     };
 
     return StatsCollection.find(filter);
