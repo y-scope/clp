@@ -1,13 +1,11 @@
-import {
-    Button,
-    Col,
-    Container,
-    Form,
-    InputGroup,
-    OverlayTrigger,
-    Popover,
-    Row,
-} from "react-bootstrap";
+import Button from "react-bootstrap/Button";
+import Col from "react-bootstrap/Col";
+import Container from "react-bootstrap/Container";
+import Form from "react-bootstrap/Form";
+import InputGroup from "react-bootstrap/InputGroup";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Popover from "react-bootstrap/Popover";
+import Row from "react-bootstrap/Row";
 
 import {faCog} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";

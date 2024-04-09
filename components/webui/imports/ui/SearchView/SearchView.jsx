@@ -5,7 +5,7 @@ import {
     useRef,
     useState,
 } from "react";
-import {ProgressBar} from "react-bootstrap";
+import ProgressBar from "react-bootstrap/ProgressBar";
 
 import {faExclamationCircle} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";

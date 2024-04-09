@@ -1,12 +1,10 @@
-import {
-    Col,
-    Container,
-    Dropdown,
-    DropdownButton,
-    Form,
-    InputGroup,
-    Row,
-} from "react-bootstrap";
+import Col from "react-bootstrap/Col";
+import Container from "react-bootstrap/Container";
+import Dropdown from "react-bootstrap/Dropdown";
+import DropdownButton from "react-bootstrap/DropdownButton";
+import Form from "react-bootstrap/Form";
+import InputGroup from "react-bootstrap/InputGroup";
+import Row from "react-bootstrap/Row";
 
 import {
     computeTimeRange,

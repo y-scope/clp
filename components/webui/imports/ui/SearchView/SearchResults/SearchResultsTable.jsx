@@ -2,9 +2,8 @@ import {
     useEffect,
     useRef,
 } from "react";
-import {
-    Spinner, Table,
-} from "react-bootstrap";
+import Spinner from "react-bootstrap/Spinner";
+import Table from "react-bootstrap/Table";
 
 import {
     faSort,

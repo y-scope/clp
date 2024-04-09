@@ -1,9 +1,7 @@
 import {useTracker} from "meteor/react-meteor-data";
-import {
-    Col,
-    Container,
-    Row,
-} from "react-bootstrap";
+import Col from "react-bootstrap/Col";
+import Container from "react-bootstrap/Container";
+import Row from "react-bootstrap/Row";
 
 import {StatsCollection} from "/imports/api/ingestion/collections";
 

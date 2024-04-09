@@ -1,8 +1,6 @@
-import {
-    Col,
-    ProgressBar,
-    Row,
-} from "react-bootstrap";
+import Col from "react-bootstrap/Col";
+import ProgressBar from "react-bootstrap/ProgressBar";
+import Row from "react-bootstrap/Row";
 
 import {faHdd} from "@fortawesome/free-solid-svg-icons";
 
