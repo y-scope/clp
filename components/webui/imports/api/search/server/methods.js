@@ -57,9 +57,9 @@ const updateSearchResultsMeta = ({
 /**
  * Updates the search signal when the specified job finishes.
  *
- * @param {object} param
- * @param {number} param.searchJobId of the job to monitor
- * @param {number} param.aggregationJobId of the job to monitor
+ * @param {object} props
+ * @param {number} props.searchJobId of the job to monitor
+ * @param {number} props.aggregationJobId of the job to monitor
  */
 const updateSearchSignalWhenJobsFinish = async ({
     searchJobId,
@@ -136,12 +136,12 @@ Meteor.methods({
     /**
      * Submits a search query and initiates the search process.
      *
-     * @param {object} param
-     * @param {string} param.queryString
-     * @param {number} param.timestampBegin
-     * @param {number} param.timestampEnd
-     * @param {boolean} param.ignoreCase
-     * @param {number} param.timeRangeBucketSizeMillis
+     * @param {object} props
+     * @param {string} props.queryString
+     * @param {number} props.timestampBegin
+     * @param {number} props.timestampEnd
+     * @param {boolean} props.ignoreCase
+     * @param {number} props.timeRangeBucketSizeMillis
      * @return {SubmitQueryResp}
      */
     async "search.submitQuery" ({
@@ -197,9 +197,9 @@ Meteor.methods({
     /**
      * Clears the results of a search operation identified by jobId.
      *
-     * @param {object} param
-     * @param {number} param.searchJobId of the search results to clear
-     * @param {number} param.aggregationJobId of the search results to clear
+     * @param {object} props
+     * @param {number} props.searchJobId of the search results to clear
+     * @param {number} props.aggregationJobId of the search results to clear
      */
     async "search.clearResults" ({
         searchJobId,
@@ -225,9 +225,9 @@ Meteor.methods({
     /**
      * Cancels an ongoing search operation identified by jobId.
      *
-     * @param {object} param
-     * @param {number} param.searchJobId
-     * @param {number} param.aggregationJobId
+     * @param {object} props
+     * @param {number} props.searchJobId
+     * @param {number} props.aggregationJobId
      */
     async "search.cancelOperation" ({
         searchJobId,
