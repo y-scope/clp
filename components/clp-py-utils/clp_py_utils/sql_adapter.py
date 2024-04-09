@@ -1,5 +1,4 @@
 import contextlib
-import functools
 import logging
 import time
 
@@ -10,25 +9,6 @@ from mysql.connector import errorcode
 from sqlalchemy.dialects.mysql import mariadbconnector, mysqlconnector
 
 from clp_py_utils.clp_config import Database
-
-
-def exception_default_value(default):
-    """
-    A function decorator that returns the value specified by `default` when an uncaught exception
-    occurs in the decorated function. Otherwise, the decorated function's return value is returned.
-    """
-
-    def _exception_default_value(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except:
-                return default
-
-        return wrapper
-
-    return _exception_default_value
 
 
 class DummyCloseableObject:
@@ -44,7 +24,7 @@ class ConnectionPoolWrapper:
 
     def __init__(self, pool: pool.QueuePool, logger: logging.Logger):
         self.pool = pool
-        self.last_exception_logging_time = None
+        self.time_of_last_exception_log = None
         self.error_reporting_interval = 60  # one minute
         self.logger = logger
 
@@ -60,10 +40,10 @@ class ConnectionPoolWrapper:
             # past interval.
             current_time = time.time()
             if (
-                self.last_exception_logging_time is None
-                or current_time - self.last_exception_logging_time > self.error_reporting_interval
+                self.time_of_last_exception_log is None
+                or current_time - self.time_of_last_exception_log > self.error_reporting_interval
             ):
-                self.last_exception_logging_time = current_time
+                self.time_of_last_exception_log = current_time
                 self.logger.exception(
                     f"Failed to connect to database. Suppressing further connection error logs for "
                     f"{self.error_reporting_interval} seconds."
@@ -125,7 +105,10 @@ class SQL_Adapter:
             raise NotImplementedError
 
     def create_connection_pool(
-        self, logger: logging.Logger, pool_size: int, disable_localhost_socket_connection: bool = False
+        self,
+        logger: logging.Logger,
+        pool_size: int,
+        disable_localhost_socket_connection: bool = False,
     ):
         def create_connection():
             return self.create_connection(disable_localhost_socket_connection)
