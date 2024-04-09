@@ -9,8 +9,8 @@
 const SEARCH_SIGNAL = Object.freeze({
     NONE: "none",
 
-    REQ_CLEARING: "req-clearing",
     REQ_CANCELLING: "req-cancelling",
+    REQ_CLEARING: "req-clearing",
     REQ_QUERYING: "req-querying",
 
     RESP_DONE: "resp-done",
@@ -31,7 +31,6 @@ let enumSearchJobStatus;
  * Enum of job statuses, matching the `SearchJobStatus` class in
  * `job_orchestration.search_scheduler.constants`.
  *
- * @readonly
  * @enum {number}
  */
 const SEARCH_JOB_STATUS = Object.freeze({
@@ -44,8 +43,7 @@ const SEARCH_JOB_STATUS = Object.freeze({
 });
 /* eslint-enable sort-keys */
 
-
-const JOB_STATUS_WAITING_STATES = [
+const SEARCH_JOB_STATUS_WAITING_STATES = [
     SEARCH_JOB_STATUS.PENDING,
     SEARCH_JOB_STATUS.RUNNING,
     SEARCH_JOB_STATUS.CANCELLING,
@@ -54,7 +52,6 @@ const JOB_STATUS_WAITING_STATES = [
 /**
  * Enum of Mongo Collection sort orders.
  *
- * @readonly
  * @enum {string}
  */
 const MONGO_SORT_ORDER = Object.freeze({
@@ -65,7 +62,6 @@ const MONGO_SORT_ORDER = Object.freeze({
 /**
  * Enum of search results cache fields.
  *
- * @readonly
  * @enum {string}
  */
 const SEARCH_RESULTS_FIELDS = Object.freeze({
@@ -73,23 +69,19 @@ const SEARCH_RESULTS_FIELDS = Object.freeze({
     TIMESTAMP: "timestamp",
 });
 
-
-const INVALID_JOB_ID = -1;
-
 /**
  * The maximum number of results to retrieve for a search.
  */
 const SEARCH_MAX_NUM_RESULTS = 1000;
 
 export {
-    INVALID_JOB_ID,
     isOperationInProgress,
     isSearchSignalQuerying,
     isSearchSignalReq,
     isSearchSignalResp,
-    JOB_STATUS_WAITING_STATES,
     MONGO_SORT_ORDER,
     SEARCH_JOB_STATUS,
+    SEARCH_JOB_STATUS_WAITING_STATES,
     SEARCH_MAX_NUM_RESULTS,
     SEARCH_RESULTS_FIELDS,
     SEARCH_SIGNAL,

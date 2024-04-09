@@ -20,9 +20,9 @@ const COLLECTION_POLL_INTERVAL_MILLIS = 250;
  * Publishes search results metadata for a specific job.
  *
  * @param {string} publicationName
- * @param {string} searchJobId of the search operation
- *
- * @returns {Mongo.Cursor} cursor that provides access to the search results metadata
+ * @param {object} param
+ * @param {string} param.searchJobId of the search operation
+ * @return {Mongo.Cursor} cursor that provides access to the search results metadata.
  */
 Meteor.publish(Meteor.settings.public.SearchResultsMetadataCollectionName, ({searchJobId}) => {
     logger.debug(
@@ -41,8 +41,9 @@ Meteor.publish(Meteor.settings.public.SearchResultsMetadataCollectionName, ({sea
  * Publishes search results for a specific search job.
  *
  * @param {string} publicationName
- * @param {string} searchJobId
- * @returns {Mongo.Cursor} cursor that provides access to the search results
+ * @param {object} param
+ * @param {string} param.searchJobId
+ * @return {Mongo.Cursor} cursor that provides access to the search results.
  */
 Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
     searchJobId,
@@ -72,8 +73,9 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
  * Publishes search aggregation results for a specific aggregation job.
  *
  * @param {string} publicationName
- * @param {string} aggregationJobId
- * @returns {Mongo.Cursor} cursor that provides access to the aggregation results
+ * @param {object} param
+ * @param {string} param.aggregationJobId
+ * @return {Mongo.Cursor} cursor that provides access to the aggregation results.
  */
 Meteor.publish(Meteor.settings.public.AggregationResultsCollectionName, ({
     aggregationJobId,
