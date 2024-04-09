@@ -50,7 +50,9 @@ const initDbManagers = async ({
     }
 
     try {
-        const pool = await mysql.createPool({
+        // This method shall not be called twice and therefore incurs no race condition.
+        // eslint-disable-next-line require-atomic-updates
+        dbConnPool = await mysql.createPool({
             host: dbHost,
             port: dbPort,
 
@@ -74,8 +76,6 @@ const initDbManagers = async ({
             clpArchivesTableName,
             clpFilesTableName,
         });
-
-        dbConnPool = pool;
     } catch (e) {
         logger.error("Unable to create MySQL / mariadb connection pool.", e.toString());
         throw e;
