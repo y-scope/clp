@@ -24,7 +24,7 @@ import "./SearchResultsHeader.scss";
  * @param {number} props.numResultsOnServer
  * @param {number} props.searchJobId
  * @param {Function} props.setMaxLinesPerResult
- * @return {JSX.Element}
+ * @return {React.ReactElement}
  */
 const SearchResultsHeader = ({
     maxLinesPerResult,

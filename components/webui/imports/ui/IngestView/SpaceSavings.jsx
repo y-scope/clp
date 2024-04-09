@@ -15,7 +15,7 @@ import {computeHumanSize} from "/imports/utils/misc";
  *
  * @param {object} props
  * @param {CompressionStats} props.stats
- * @return {JSX.Element}
+ * @return {React.ReactElement}
  */
 const SpaceSavings = ({stats}) => {
     const logsUncompressedSize = parseInt(stats.total_uncompressed_size, 10) || 0;

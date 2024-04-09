@@ -134,7 +134,7 @@ const computeTimelineConfig = (timestampBeginUnixMillis, timestampEndUnixMillis)
  * @param {object} props.resultsMetadata
  * @param {TimelineBucket[]} props.timelineBuckets
  * @param {TimelineConfig} props.timelineConfig
- * @return {JSX.Element}
+ * @return {React.ReactElement}
  */
 const SearchResultsTimeline = ({
     onTimelineZoom,

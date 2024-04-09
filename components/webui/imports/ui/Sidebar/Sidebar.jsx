@@ -15,7 +15,7 @@ import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
  * @param {boolean} props.isSidebarCollapsed indicates whether the sidebar is collapsed
  * @param {object[]} props.routes objects for navigation links
  * @param {Function} props.onSidebarToggle callback to toggle the sidebar's collapsed state
- * @return {JSX.Element}
+ * @return {React.ReactElement}
  */
 const Sidebar = ({
     isSidebarCollapsed,

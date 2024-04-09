@@ -41,7 +41,7 @@ const DEFAULT_IGNORE_CASE_SETTING = true;
 /**
  * Provides a search interface, which searches queries and visualizes search results.
  *
- * @return {JSX.Element}
+ * @return {React.ReactElement}
  */
 const SearchView = () => {
     // Query states
@@ -353,7 +353,7 @@ const SearchView = () => {
  * @param {object} props
  * @param {object} props.resultsMetadata including the last search signal
  * @param {string} props.errorMsg if there is an error
- * @return {JSX.Element}
+ * @return {React.ReactElement}
  */
 const SearchStatus = ({
     resultsMetadata,

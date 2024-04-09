@@ -41,7 +41,7 @@ const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
  * @param {TimelineBucket[]} props.timelineBuckets
  * @param {TimelineConfig} props.timelineConfig
  * @param {number} props.visibleSearchResultsLimit
- * @return {JSX.Element}
+ * @return {React.ReactElement}
  */
 const SearchResults = ({
     fieldToSortBy,

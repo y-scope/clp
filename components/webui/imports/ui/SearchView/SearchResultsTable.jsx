@@ -33,7 +33,7 @@ const SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MS = 200;
  * @param {object} props
  * @param {boolean} props.hasMoreResults
  * @param {Function} props.onLoadMoreResults
- * @return {JSX.Element}
+ * @return {React.ReactElement}
  */
 const SearchResultsLoadSensor = ({
     hasMoreResults,
@@ -103,7 +103,7 @@ const SearchResultsLoadSensor = ({
  * @param {Function} props.onLoadMoreResults
  * @param {object} props.searchResults
  * @param {Function} props.setFieldToSortBy
- * @return {JSX.Element}
+ * @return {React.ReactElement}
  */
 const SearchResultsTable = ({
     fieldToSortBy,

@@ -46,7 +46,7 @@ import "./SearchControls.scss";
  * Renders a date picker control for selecting date and time.
  *
  * @param {object} props
- * @return {JSX.Element}
+ * @return {React.ReactElement}
  */
 const SearchControlsDatePicker = (props) => (
     <DatePicker
@@ -64,7 +64,7 @@ const SearchControlsDatePicker = (props) => (
  * Renders a label for a search filter control.
  *
  * @param {object} props
- * @return {JSX.Element}
+ * @return {React.ReactElement}
  */
 const SearchControlsFilterLabel = (props) => (
     <Form.Label
@@ -80,7 +80,7 @@ const SearchControlsFilterLabel = (props) => (
  * @param {object} props
  * @param {string} props.label
  * @param {object} props.rest
- * @return {JSX.Element}
+ * @return {React.ReactElement}
  */
 const SearchControlsCaseSensitivityCheck = ({label, ...rest}) => {
     console.log(rest, label);
@@ -104,7 +104,7 @@ const SearchControlsCaseSensitivityCheck = ({label, ...rest}) => {
  * @param {Function} props.setIgnoreCase
  * @param {Function} props.setTimeRange
  * @param {TimeRange} props.timeRange
- * @return {JSX.Element}
+ * @return {React.ReactElement}
  */
 const SearchFilterControlsDrawer = ({
     ignoreCase,
@@ -272,7 +272,7 @@ const SearchFilterControlsDrawer = ({
  * @param {Function} props.setQueryString
  * @param {Function} props.setTimeRange
  * @param {TimeRange} props.timeRange
- * @return {JSX.Element}
+ * @return {React.ReactElement}
  */
 const SearchControls = ({
     ignoreCase,

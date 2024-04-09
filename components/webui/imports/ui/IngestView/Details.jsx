@@ -21,7 +21,7 @@ import {DATETIME_FORMAT_TEMPLATE} from "/imports/utils/datetime";
  *
  * @param {object} props
  * @param {CompressionStats} props.stats
- * @return {JSX.Element}
+ * @return {React.ReactElement}
  */
 const Details = ({stats}) => {
     const {

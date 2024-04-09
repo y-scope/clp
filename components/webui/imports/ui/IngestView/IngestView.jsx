@@ -14,7 +14,7 @@ import SpaceSavings from "./SpaceSavings";
 /**
  * Presents compression statistics.
  *
- * @return {JSX.Element}
+ * @return {React.ReactElement}
  */
 const IngestView = () => {
     const stats = useTracker(() => {
