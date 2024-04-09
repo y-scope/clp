@@ -17,6 +17,7 @@ mysql-connector-python = "^8.2.0"
 pydantic = "^1.10.13"
 python-dotenv = "^1.0.1"
 python-Levenshtein = "~0.22"
+sqlalchemy = "~2.0"
 PyYAML = "^6.0.1"
 StrEnum = "^0.4.15"
 

@@ -1,10 +1,60 @@
+import contextlib
 import logging
+import time
 
 import mariadb
 import mysql.connector
+import sqlalchemy.pool as pool
 from mysql.connector import errorcode
+from sqlalchemy.dialects.mysql import mariadbconnector, mysqlconnector
 
 from clp_py_utils.clp_config import Database
+
+
+class DummyCloseableObject:
+    def close(self):
+        pass
+
+
+class ConnectionPoolWrapper:
+    """
+    A wrapper around a sqlalchemy connection pool in order to simplify error handling, and prevent
+    log spew when the database is down.
+    """
+
+    def __init__(self, pool: pool.QueuePool, logger: logging.Logger):
+        self.pool = pool
+        self.time_of_last_exception_log = None
+        self.error_reporting_interval = 60  # one minute
+        self.logger = logger
+
+    def connect(self):
+        """
+        Checks out a connection from the pool.
+        :return: On success, a connection from the pool. On error, a DummyCloseableObject.
+        """
+        try:
+            return self.pool.connect()
+        except (mariadb.Error, mysql.connector.Error):
+            # Periodically log the error so long as a connection error hasn't occurred within the
+            # past interval.
+            current_time = time.time()
+            if (
+                self.time_of_last_exception_log is None
+                or current_time - self.time_of_last_exception_log > self.error_reporting_interval
+            ):
+                self.time_of_last_exception_log = current_time
+                self.logger.exception(
+                    f"Failed to connect to database. Suppressing further connection error logs for "
+                    f"{self.error_reporting_interval} seconds."
+                )
+            return DummyCloseableObject()
+
+    def alive(self):
+        with contextlib.closing(self.connect()) as db_conn:
+            if isinstance(db_conn, DummyCloseableObject):
+                return False
+        return True
 
 
 class SQL_Adapter:
@@ -53,3 +103,29 @@ class SQL_Adapter:
             return self.create_mariadb_connection(disable_localhost_socket_connection)
         else:
             raise NotImplementedError
+
+    def create_connection_pool(
+        self,
+        logger: logging.Logger,
+        pool_size: int,
+        disable_localhost_socket_connection: bool = False,
+    ):
+        def create_connection():
+            return self.create_connection(disable_localhost_socket_connection)
+
+        if "mysql" == self.database_config.type:
+            dialect = mysqlconnector.dialect
+        elif "mariadb" == self.database_config.type:
+            dialect = mariadbconnector.dialect
+        else:
+            raise NotImplementedError
+        return ConnectionPoolWrapper(
+            pool.QueuePool(
+                create_connection,
+                pool_size=pool_size,
+                dialect=dialect,
+                max_overflow=0,
+                pre_ping=True,
+            ),
+            logger,
+        )
