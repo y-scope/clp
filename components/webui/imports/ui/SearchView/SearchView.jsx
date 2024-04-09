@@ -1,29 +1,31 @@
 import {Meteor} from "meteor/meteor";
 import {useTracker} from "meteor/react-meteor-data";
 import {
-    useEffect, useRef, useState,
+    useEffect,
+    useRef,
+    useState,
 } from "react";
 import {ProgressBar} from "react-bootstrap";
 
 import {faExclamationCircle} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 
-import {
-    DEFAULT_TIME_RANGE,
-    expandTimeRangeToDurationMultiple,
-} from "/imports/utils/datetime";
-
-import {CLP_STORAGE_ENGINES} from "../../api/constants";
-import {SearchResultsMetadataCollection} from "../../api/search/collections";
+import {CLP_STORAGE_ENGINES} from "/imports/api/constants";
+import {SearchResultsMetadataCollection} from "/imports/api/search/collections";
 import {
     isSearchSignalQuerying,
     MONGO_SORT_ORDER,
     SEARCH_MAX_NUM_RESULTS,
     SEARCH_RESULTS_FIELDS,
     SEARCH_SIGNAL,
-} from "../../api/search/constants";
-import SearchJobCollectionsManager from "../../api/search/SearchJobCollectionsManager";
-import {unquoteString} from "../../utils/misc";
+} from "/imports/api/search/constants";
+import SearchJobCollectionsManager from "/imports/api/search/SearchJobCollectionsManager";
+import {
+    DEFAULT_TIME_RANGE,
+    expandTimeRangeToDurationMultiple,
+} from "/imports/utils/datetime";
+import {unquoteString} from "/imports/utils/misc";
+
 import {LOCAL_STORAGE_KEYS} from "../constants";
 import SearchControls from "./SearchControls.jsx";
 import SearchResults, {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResults.jsx";

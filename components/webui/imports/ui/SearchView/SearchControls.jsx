@@ -1,7 +1,8 @@
-import {useEffect, useRef, useState} from "react";
-
-import {faBars, faSearch, faTimes, faTrash} from "@fortawesome/free-solid-svg-icons";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import {
+    useEffect,
+    useRef,
+    useState,
+} from "react";
 import {
     Button,
     Col,
@@ -15,6 +16,19 @@ import {
 import DatePicker from "react-datepicker";
 
 import {
+    faBars,
+    faSearch,
+    faTimes,
+    faTrash,
+} from "@fortawesome/free-solid-svg-icons";
+import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+
+import {
+    isOperationInProgress,
+    isSearchSignalReq,
+    SEARCH_SIGNAL,
+} from "/imports/api/search/constants";
+import {
     computeTimeRange,
     convertLocalDateToSameUtcDatetime,
     convertUtcDatetimeToSameLocalDate,
@@ -22,11 +36,6 @@ import {
     TIME_UNIT,
 } from "/imports/utils/datetime";
 
-import {
-    isOperationInProgress,
-    isSearchSignalReq,
-    SEARCH_SIGNAL,
-} from "../../api/search/constants";
 import {LOCAL_STORAGE_KEYS} from "../constants";
 
 import "react-datepicker/dist/react-datepicker.css";
@@ -36,25 +45,26 @@ import "./SearchControls.scss";
 /**
  * Renders a date picker control for selecting date and time.
  *
- * @param {Object} props to be passed to the DatePicker component
- * @returns {JSX.Element}
+ * @param {object} props to be passed to the DatePicker component
+ * @return {JSX.Element}
  */
-const SearchControlsDatePicker = (props) => (<DatePicker
-    {...props}
-    className={"timestamp-picker"}
-    dateFormat={"MMM d, yyyy h:mm aa"}
-    dropdownMode={"select"}
-    showTimeSelect={true}
-    timeCaption={"Time"}
-    timeFormat={"HH:mm"}
-    timeIntervals={15}
-/>);
+const SearchControlsDatePicker = (props) => (
+    <DatePicker
+        {...props}
+        className={"timestamp-picker"}
+        dateFormat={"MMM d, yyyy h:mm aa"}
+        dropdownMode={"select"}
+        showTimeSelect={true}
+        timeCaption={"Time"}
+        timeFormat={"HH:mm"}
+        timeIntervals={15}/>
+);
 
 /**
  * Renders a label for a search filter control.
  *
- * @param {Object} props
- * @returns {JSX.Element}
+ * @param {object} props
+ * @return {JSX.Element}
  */
 const SearchControlsFilterLabel = (props) => (
     <Form.Label
@@ -67,9 +77,9 @@ const SearchControlsFilterLabel = (props) => (
 /**
  * Renders a case sensitivity checkbox.
  *
- * @param {Object} props
+ * @param {object} props
  * @param {string} props.label
- * @returns {JSX.Element}
+ * @return {JSX.Element}
  */
 const SearchControlsCaseSensitivityCheck = (props) => (
     <Form.Check
@@ -85,10 +95,10 @@ const SearchControlsCaseSensitivityCheck = (props) => (
  * preset time range options.
  *
  * @param {TimeRange} timeRange
- * @param {function} setTimeRange
+ * @param {Function} setTimeRange
  * @param {boolean} ignoreCase
- * @param {function} setIgnoreCase
- * @returns {JSX.Element}
+ * @param {Function} setIgnoreCase
+ * @return {JSX.Element}
  */
 const SearchFilterControlsDrawer = ({
     timeRange,
@@ -151,12 +161,15 @@ const SearchFilterControlsDrawer = ({
         setIgnoreCase("true" === event.target.value);
     };
 
-    const timeRangePresetItems = Object.entries(TIME_RANGE_PRESET_LABEL).map(([token, label]) =>
+    const timeRangePresetItems = Object.entries(TIME_RANGE_PRESET_LABEL).map(([token, label]) => (
         <Dropdown.Item
-            key={token} data-preset={token}
-            onClick={handleTimeRangePresetSelection}>
+            data-preset={token}
+            key={token}
+            onClick={handleTimeRangePresetSelection}
+        >
             {label}
-        </Dropdown.Item>);
+        </Dropdown.Item>
+    ));
 
     // Compute range of end timestamp so that it's after the begin timestamp
     let datepickerEndMin = null;
@@ -200,18 +213,18 @@ const SearchFilterControlsDrawer = ({
                             </InputGroup.Text>
                             <SearchControlsDatePicker
                                 endDate={convertUtcDatetimeToSameLocalDate(timeRange.end)}
-                                maxTime={
-                                    datepickerEndMax
-                                    && convertUtcDatetimeToSameLocalDate(datepickerEndMax)
-                                }
                                 minDate={convertUtcDatetimeToSameLocalDate(timeRange.begin)}
-                                minTime={
-                                    datepickerEndMin
-                                    && convertUtcDatetimeToSameLocalDate(datepickerEndMin)
-                                }
                                 selected={convertUtcDatetimeToSameLocalDate(timeRange.end)}
                                 selectsEnd={true}
                                 startDate={convertUtcDatetimeToSameLocalDate(timeRange.begin)}
+                                maxTime={
+                                    datepickerEndMax &&
+                                    convertUtcDatetimeToSameLocalDate(datepickerEndMax)
+                                }
+                                minTime={
+                                    datepickerEndMin &&
+                                    convertUtcDatetimeToSameLocalDate(datepickerEndMin)
+                                }
                                 onChange={updateEndTimestamp}/>
                         </InputGroup>
                     </Col>
@@ -243,16 +256,16 @@ const SearchFilterControlsDrawer = ({
  * like submit, clear, and cancel. It also manages the state of the drawer.
  *
  * @param {string} queryString
- * @param {function} setQueryString
+ * @param {Function} setQueryString
  * @param {TimeRange} timeRange
- * @param {function} setTimeRange
+ * @param {Function} setTimeRange
  * @param {boolean} ignoreCase
- * @param {function} setIgnoreCase
- * @param {Object} resultsMetadata
- * @param {function} onSubmitQuery
- * @param {function} onClearResults
- * @param {function} onCancelOperation
- * @returns {JSX.Element}
+ * @param {Function} setIgnoreCase
+ * @param {object} resultsMetadata
+ * @param {Function} onSubmitQuery
+ * @param {Function} onClearResults
+ * @param {Function} onCancelOperation
+ * @return {JSX.Element}
  */
 const SearchControls = ({
     queryString,
@@ -297,70 +310,77 @@ const SearchControls = ({
         onSubmitQuery();
     };
 
-    return <>
-        <Form onSubmit={handleQuerySubmission}>
-            <Form.Group className={"mb-0 border-bottom"}>
-                <InputGroup>
-                    <Button
-                        active={false}
-                        className={"border-top-0 border-bottom-0 rounded-0"}
-                        onClick={handleDrawerToggleClick}
-                        variant={"secondary"}
-                    >
-                        <FontAwesomeIcon icon={faBars}/>
-                    </Button>
-                    <Form.Control
-                        ref={inputRef}
-                        disabled={isInputDisabled}
-                        autoFocus={true}
-                        className={"border-top-0 border-bottom-0"}
-                        type={"text"}
-                        placeholder={"Enter your query..."}
-                        value={queryString}
-                        onChange={queryChangeHandler}
-                    />
-                    {
-                        (SEARCH_SIGNAL.RESP_DONE === resultsMetadata["lastSignal"]) &&
+    return (
+        <>
+            <Form onSubmit={handleQuerySubmission}>
+                <Form.Group className={"mb-0 border-bottom"}>
+                    <InputGroup>
                         <Button
+                            active={false}
                             className={"border-top-0 border-bottom-0 rounded-0"}
-                            disabled={true === isSearchSignalReq(resultsMetadata["lastSignal"])}
-                            onClick={onClearResults}
-                            title={"Clear Results"}
-                            variant={"info"}>
-                            <FontAwesomeIcon icon={faTrash} fixedWidth={true}/>
+                            variant={"secondary"}
+                            onClick={handleDrawerToggleClick}
+                        >
+                            <FontAwesomeIcon icon={faBars}/>
                         </Button>
-                    }
-                    {
-                        (SEARCH_SIGNAL.RESP_QUERYING === resultsMetadata["lastSignal"]) ?
+                        <Form.Control
+                            autoFocus={true}
+                            className={"border-top-0 border-bottom-0"}
+                            disabled={isInputDisabled}
+                            placeholder={"Enter your query..."}
+                            ref={inputRef}
+                            type={"text"}
+                            value={queryString}
+                            onChange={queryChangeHandler}/>
+                        {
+                            (SEARCH_SIGNAL.RESP_DONE === resultsMetadata.lastSignal) &&
                             <Button
                                 className={"border-top-0 border-bottom-0 rounded-0"}
-                                disabled={SEARCH_SIGNAL.REQ_CANCELLING ===
-                                    resultsMetadata["lastSignal"]}
-                                variant={"danger"}
-                                onClick={onCancelOperation}
+                                disabled={true === isSearchSignalReq(resultsMetadata.lastSignal)}
+                                title={"Clear Results"}
+                                variant={"info"}
+                                onClick={onClearResults}
                             >
-                                <FontAwesomeIcon icon={faTimes} fixedWidth={true}/>
-                            </Button> :
-                            <Button
-                                className={"border-top-0 border-bottom-0 rounded-0"}
-                                disabled={isInputDisabled || "" === queryString}
-                                variant={"primary"}
-                                type={"submit"}
-                            >
-                                <FontAwesomeIcon icon={faSearch} fixedWidth={true}/>
+                                <FontAwesomeIcon
+                                    fixedWidth={true}
+                                    icon={faTrash}/>
                             </Button>
-                    }
-                </InputGroup>
-            </Form.Group>
-        </Form>
+                        }
+                        {
+                            (SEARCH_SIGNAL.RESP_QUERYING === resultsMetadata.lastSignal) ?
+                                <Button
+                                    className={"border-top-0 border-bottom-0 rounded-0"}
+                                    variant={"danger"}
+                                    disabled={SEARCH_SIGNAL.REQ_CANCELLING ===
+                                    resultsMetadata.lastSignal}
+                                    onClick={onCancelOperation}
+                                >
+                                    <FontAwesomeIcon
+                                        fixedWidth={true}
+                                        icon={faTimes}/>
+                                </Button> :
+                                <Button
+                                    className={"border-top-0 border-bottom-0 rounded-0"}
+                                    disabled={isInputDisabled || "" === queryString}
+                                    type={"submit"}
+                                    variant={"primary"}
+                                >
+                                    <FontAwesomeIcon
+                                        fixedWidth={true}
+                                        icon={faSearch}/>
+                                </Button>
+                        }
+                    </InputGroup>
+                </Form.Group>
+            </Form>
 
-        {drawerOpen && <SearchFilterControlsDrawer
-            timeRange={timeRange}
-            setTimeRange={setTimeRange}
-            ignoreCase={ignoreCase}
-            setIgnoreCase={setIgnoreCase}
-        />}
-    </>;
+            {drawerOpen && <SearchFilterControlsDrawer
+                ignoreCase={ignoreCase}
+                setIgnoreCase={setIgnoreCase}
+                setTimeRange={setTimeRange}
+                timeRange={timeRange}/>}
+        </>
+    );
 };
 
 export default SearchControls;

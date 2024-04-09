@@ -1,6 +1,7 @@
 import msgpack from "@msgpack/msgpack";
 
-import {sleep} from "../../../utils/misc";
+import {sleep} from "/imports/utils/misc";
+
 import {
     SEARCH_JOB_STATUS,
     SEARCH_JOB_STATUS_WAITING_STATES,
