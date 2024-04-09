@@ -37,7 +37,7 @@ const PROGRESS_INTERVAL_MS = 100;
 const DEFAULT_IGNORE_CASE_SETTING = true;
 
 /**
- * Provides a search interface, which search queries and visualizes search results.
+ * Provides a search interface, which searches queries and visualizes search results.
  */
 const SearchView = () => {
     // Query states
