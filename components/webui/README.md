@@ -7,7 +7,7 @@
 [nvm (Node Version Manager)](https://github.com/nvm-sh/nvm).
   * **Node.js 14** - For running Meteor. Meteor.js only
     [supports](https://docs.meteor.com/install#prereqs-node) Node.js versions >= 10 and <= 14.
-  * **Node.js 18 or higher** - for linting.
+  * **Node.js 18 or higher** - For linting.
 * [Meteor.js](https://docs.meteor.com/install.html#installation)
 
 ## Install the dependencies
