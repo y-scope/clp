@@ -79,15 +79,12 @@ public:
      */
     void append_column(BaseColumnReader* column_reader);
 
-    size_t get_next_column_reader_position() { return m_columns.size(); }
-
     /**
      * Appends an unordered column to the schema reader
      * @param column_reader
-     * @param node_type
      * @return
      */
-    int32_t append_unordered_column(BaseColumnReader* column_reader, NodeType node_type);
+    void append_unordered_column(BaseColumnReader* column_reader);
 
     /**
      * Appends a column to the schema reader
@@ -95,13 +92,7 @@ public:
      */
     void append_column(int32_t id);
 
-    /**
-     * Appends an unordered column to the schema reader
-     * @param id
-     * @param node_type
-     * @return
-     */
-    int32_t append_unordered_column(int32_t id, NodeType node_type);
+    size_t get_next_column_reader_position() { return m_columns.size(); }
 
     /**
      * Marks an unordered object for the purpose of marshalling records.
@@ -162,19 +153,12 @@ public:
 
 private:
     /**
-     * Generates a local schema tree and returns the local ID of the node closest to the root
-     * matching a specific NodeType.
-     *
-     * The return value is useful when we need to find the root of the subtree in the MST for some
-     * unordered object with a special NodeType. In particular the first schema entry related to
-     * the subtree for some unordered object in combination with the correct NodeType will yield the
-     * root of that subtree as desired.
+     * Merges the current local schema tree with the section of the global schema tree corresponding
+     * to the path from the root of the global schema tree to the node matching the global MPT node
+     * id passed to this function.
      * @param global_id
-     * @param node_type
-     * @return the local id of the mst node closest to the root matching the provided NodeType
-     * added by this operation, and INT32_MAX if no such mst node was inserted
      */
-    int32_t generate_local_tree(int32_t global_id, NodeType node_type);
+    void generate_local_tree(int32_t global_id);
 
     /**
      * Generates a json template
@@ -196,7 +180,11 @@ private:
     size_t
     generate_structured_object_template(int32_t id, size_t column_start, Span<int32_t> schema);
 
-    int32_t find_constrained_root(int32_t const subtree_root, Span<int32_t> schema, NodeType type);
+    /**
+     * @return the first column ID found in the given schema, or -1 if the schema contains no
+     * columns
+     */
+    static inline int32_t get_first_column_in_span(Span<int32_t> schema);
 
     void find_intersection_and_fix_brackets(
             int32_t cur_root,
@@ -228,7 +216,7 @@ private:
     JsonSerializer m_json_serializer;
     bool m_should_marshal_records{true};
 
-    std::map<int32_t, std::pair<size_t, Span<int32_t>>> m_local_id_to_unordered_object;
+    std::map<int32_t, std::pair<size_t, Span<int32_t>>> m_global_id_to_unordered_object;
 };
 }  // namespace clp_s
 

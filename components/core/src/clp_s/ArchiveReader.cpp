@@ -160,6 +160,14 @@ void ArchiveReader::append_unordered_reader_columns(
         BaseColumnReader* column_reader = nullptr;
         auto node = m_schema_tree->get_node(column_id);
         std::string key_name = node->get_key_name();
+        if (INT32_MAX == mst_subtree_root_node_id) {
+            mst_subtree_root_node_id = m_schema_tree->find_matching_subtree_root_in_subtree(
+                    -1,
+                    column_id,
+                    unordered_object_type
+            );
+            reader->append_column(mst_subtree_root_node_id);
+        }
         switch (node->get_type()) {
             case NodeType::Integer:
                 column_reader = new Int64ColumnReader(key_name, column_id);
@@ -177,13 +185,13 @@ void ArchiveReader::append_unordered_reader_columns(
             case NodeType::Boolean:
                 column_reader = new BooleanColumnReader(key_name, column_id);
                 break;
+            // Since we use the global schema tree to help marshal unordered objects there is no
+            // need to push these node types into the schema reader for the sake of generating a
+            // local schema tree.
             case NodeType::StructuredArray:
             case NodeType::Object:
-            case NodeType::NullValue: {
-                int32_t id = reader->append_unordered_column(column_id, unordered_object_type);
-                mst_subtree_root_node_id = std::min(mst_subtree_root_node_id, id);
+            case NodeType::NullValue:
                 break;
-            }
             // UnstructuredArray and DateString currently aren't supported as part of any unordered
             // object, so we disregard them here
             case NodeType::UnstructuredArray:
@@ -193,8 +201,7 @@ void ArchiveReader::append_unordered_reader_columns(
         }
 
         if (column_reader) {
-            int32_t id = reader->append_unordered_column(column_reader, unordered_object_type);
-            mst_subtree_root_node_id = std::min(mst_subtree_root_node_id, id);
+            reader->append_unordered_column(column_reader);
         }
     }
 

@@ -10,16 +10,15 @@ void SchemaReader::append_column(BaseColumnReader* column_reader) {
     m_columns.push_back(column_reader);
     // The local schema tree is only necessary for generating the JSON template to marshal records.
     if (m_should_marshal_records) {
-        generate_local_tree(column_reader->get_id(), NodeType::Unknown);
+        generate_local_tree(column_reader->get_id());
     }
 }
 
-int32_t SchemaReader::append_unordered_column(BaseColumnReader* column_reader, NodeType node_type) {
+void SchemaReader::append_unordered_column(BaseColumnReader* column_reader) {
     m_columns.push_back(column_reader);
     if (m_should_marshal_records) {
-        return generate_local_tree(column_reader->get_id(), node_type);
+        generate_local_tree(column_reader->get_id());
     }
-    return column_reader->get_id();
 }
 
 void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
@@ -47,12 +46,8 @@ void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
 void SchemaReader::append_column(int32_t id) {
     // The local schema tree is only necessary for generating the JSON template to marshal records.
     if (m_should_marshal_records) {
-        generate_local_tree(id, NodeType::Unknown);
+        generate_local_tree(id);
     }
-}
-
-int32_t SchemaReader::append_unordered_column(int32_t id, NodeType node_type) {
-    return generate_local_tree(id, node_type);
 }
 
 void SchemaReader::load(ZstdDecompressor& decompressor) {
@@ -240,14 +235,13 @@ void SchemaReader::initialize_filter(FilterClass* filter) {
     filter->init(this, m_schema_id, m_columns);
 }
 
-int32_t SchemaReader::generate_local_tree(int32_t global_id, NodeType node_type) {
+void SchemaReader::generate_local_tree(int32_t global_id) {
     auto it = m_global_id_to_local_id.find(global_id);
     if (m_global_id_to_local_id.end() != it) {
-        return INT32_MAX;
+        return;
     }
     std::stack<int32_t> global_id_stack;
     global_id_stack.emplace(global_id);
-    int32_t smallest_matching_mst_node_id = INT32_MAX;
     do {
         auto node = m_global_schema_tree->get_node(global_id_stack.top());
         int32_t parent_id = node->get_parent_id();
@@ -263,14 +257,11 @@ int32_t SchemaReader::generate_local_tree(int32_t global_id, NodeType node_type)
                 node->get_type(),
                 node->get_key_name()
         );
-        if (node->get_type() == node_type && local_id < smallest_matching_mst_node_id) {
-            smallest_matching_mst_node_id = local_id;
-        }
+
         m_global_id_to_local_id[global_id_stack.top()] = local_id;
         m_local_id_to_global_id[local_id] = global_id_stack.top();
         global_id_stack.pop();
     } while (false == global_id_stack.empty());
-    return smallest_matching_mst_node_id;
 }
 
 void SchemaReader::mark_unordered_object(
@@ -278,35 +269,19 @@ void SchemaReader::mark_unordered_object(
         int32_t mst_subtree_root,
         Span<int32_t> schema
 ) {
-    m_local_id_to_unordered_object.emplace(
+    m_global_id_to_unordered_object.emplace(
             mst_subtree_root,
             std::make_pair(column_reader_start, schema)
     );
 }
 
-int32_t SchemaReader::find_constrained_root(
-        int32_t subtree_root,
-        Span<int32_t> global_schema,
-        NodeType type
-) {
-    int32_t descendent = -1;
-    int32_t earliest_match = -1;
-
-    for (int32_t global_column_id : global_schema) {
-        if (false == Schema::schema_entry_is_unordered_object(global_column_id)) {
-            descendent = m_global_id_to_local_id[global_column_id];
-            break;
+int32_t SchemaReader::get_first_column_in_span(Span<int32_t> schema) {
+    for (int32_t column_id : schema) {
+        if (false == Schema::schema_entry_is_unordered_object(column_id)) {
+            return column_id;
         }
     }
-
-    while (subtree_root != descendent) {
-        auto node = m_local_schema_tree->get_node(descendent);
-        if (node->get_type() == type) {
-            earliest_match = descendent;
-        }
-        descendent = node->get_parent_id();
-    }
-    return earliest_match;
+    return -1;
 }
 
 void SchemaReader::find_intersection_and_fix_brackets(
@@ -314,29 +289,29 @@ void SchemaReader::find_intersection_and_fix_brackets(
         int32_t next_root,
         std::vector<int32_t>& path_to_intersection
 ) {
-    auto cur_node = m_local_schema_tree->get_node(cur_root);
-    auto next_node = m_local_schema_tree->get_node(next_root);
+    auto cur_node = m_global_schema_tree->get_node(cur_root);
+    auto next_node = m_global_schema_tree->get_node(next_root);
     while (cur_node->get_parent_id() != next_node->get_parent_id()) {
         if (cur_node->get_depth() > next_node->get_depth()) {
             cur_root = cur_node->get_parent_id();
-            cur_node = m_local_schema_tree->get_node(cur_root);
+            cur_node = m_global_schema_tree->get_node(cur_root);
             m_json_serializer.add_op(JsonSerializer::Op::EndObject);
         } else if (cur_node->get_depth() < next_node->get_depth()) {
             path_to_intersection.push_back(next_root);
             next_root = next_node->get_parent_id();
-            next_node = m_local_schema_tree->get_node(next_root);
+            next_node = m_global_schema_tree->get_node(next_root);
         } else {
             cur_root = cur_node->get_parent_id();
-            cur_node = m_local_schema_tree->get_node(cur_root);
+            cur_node = m_global_schema_tree->get_node(cur_root);
             m_json_serializer.add_op(JsonSerializer::Op::EndObject);
             path_to_intersection.push_back(next_root);
             next_root = next_node->get_parent_id();
-            next_node = m_local_schema_tree->get_node(next_root);
+            next_node = m_global_schema_tree->get_node(next_root);
         }
     }
 
     for (auto it = path_to_intersection.rbegin(); it != path_to_intersection.rend(); ++it) {
-        auto node = m_local_schema_tree->get_node(*it);
+        auto node = m_global_schema_tree->get_node(*it);
         bool no_name = true;
         if (false == node->get_key_name().empty()) {
             m_json_serializer.add_special_key(node->get_key_name());
@@ -363,7 +338,7 @@ size_t SchemaReader::generate_structured_array_template(
 ) {
     size_t column_idx = column_start;
     std::vector<int32_t> path_to_intersection;
-    int32_t depth = m_local_schema_tree->get_node(array_root)->get_depth();
+    int32_t depth = m_global_schema_tree->get_node(array_root)->get_depth();
 
     for (size_t i = 0; i < schema.size(); ++i) {
         int32_t global_column_id = schema[i];
@@ -372,11 +347,12 @@ size_t SchemaReader::generate_structured_array_template(
             size_t length = Schema::get_unordered_object_length(global_column_id);
             auto sub_object_schema = Span<int32_t>{&schema[i] + 1, length};
             if (NodeType::StructuredArray == type) {
-                int32_t sub_array_root = find_constrained_root(
-                        array_root,
-                        sub_object_schema,
-                        NodeType::StructuredArray
-                );
+                int32_t sub_array_root
+                        = m_global_schema_tree->find_matching_subtree_root_in_subtree(
+                                array_root,
+                                get_first_column_in_span(sub_object_schema),
+                                NodeType::StructuredArray
+                        );
                 m_json_serializer.add_op(JsonSerializer::Op::BeginArrayDocument);
                 column_idx = generate_structured_array_template(
                         sub_array_root,
@@ -385,8 +361,11 @@ size_t SchemaReader::generate_structured_array_template(
                 );
                 m_json_serializer.add_op(JsonSerializer::Op::EndArray);
             } else if (NodeType::Object == type) {
-                int32_t object_root
-                        = find_constrained_root(array_root, sub_object_schema, NodeType::Object);
+                int32_t object_root = m_global_schema_tree->find_matching_subtree_root_in_subtree(
+                        array_root,
+                        get_first_column_in_span(sub_object_schema),
+                        NodeType::Object
+                );
                 m_json_serializer.add_op(JsonSerializer::Op::BeginDocument);
                 column_idx = generate_structured_object_template(
                         object_root,
@@ -397,8 +376,7 @@ size_t SchemaReader::generate_structured_array_template(
             }
             i += length;
         } else {
-            int32_t column_id = m_global_id_to_local_id[global_column_id];
-            auto node = m_local_schema_tree->get_node(column_id);
+            auto node = m_global_schema_tree->get_node(global_column_id);
             switch (node->get_type()) {
                 case NodeType::Object: {
                     find_intersection_and_fix_brackets(
@@ -468,19 +446,21 @@ size_t SchemaReader::generate_structured_object_template(
             auto array_schema = Span<int32_t>{&schema[i] + 1, array_length};
             // we can guarantee that the last array we hit on the path to object root must be the
             // right one because otherwise we'd be inside the structured array generator
-            int32_t array_root
-                    = find_constrained_root(object_root, array_schema, NodeType::StructuredArray);
+            int32_t array_root = m_global_schema_tree->find_matching_subtree_root_in_subtree(
+                    object_root,
+                    get_first_column_in_span(array_schema),
+                    NodeType::StructuredArray
+            );
 
             find_intersection_and_fix_brackets(root, array_root, path_to_intersection);
             column_idx = generate_structured_array_template(array_root, column_idx, array_schema);
             m_json_serializer.add_op(JsonSerializer::Op::EndArray);
             i += array_length;
             // root is parent of the array object since we close the array bracket above
-            auto node = m_local_schema_tree->get_node(array_root);
+            auto node = m_global_schema_tree->get_node(array_root);
             root = node->get_parent_id();
         } else {
-            int32_t column_id = m_global_id_to_local_id[global_column_id];
-            auto node = m_local_schema_tree->get_node(column_id);
+            auto node = m_global_schema_tree->get_node(global_column_id);
             int32_t next_root = node->get_parent_id();
             find_intersection_and_fix_brackets(root, next_root, path_to_intersection);
             root = next_root;
@@ -558,11 +538,16 @@ void SchemaReader::generate_json_template(int32_t id) {
             case NodeType::StructuredArray: {
                 m_json_serializer.add_op(JsonSerializer::Op::BeginArray);
                 m_json_serializer.add_special_key(child_node->get_key_name());
-                auto structured_it = m_local_id_to_unordered_object.find(child_id);
-                if (m_local_id_to_unordered_object.end() != structured_it) {
+                int32_t global_child_id = m_local_id_to_global_id[child_id];
+                auto structured_it = m_global_id_to_unordered_object.find(global_child_id);
+                if (m_global_id_to_unordered_object.end() != structured_it) {
                     size_t column_start = structured_it->second.first;
                     Span<int32_t> structured_schema = structured_it->second.second;
-                    generate_structured_array_template(child_id, column_start, structured_schema);
+                    generate_structured_array_template(
+                            global_child_id,
+                            column_start,
+                            structured_schema
+                    );
                 }
                 m_json_serializer.add_op(JsonSerializer::Op::EndArray);
                 break;

@@ -53,4 +53,21 @@ size_t SchemaTree::store(std::string const& archives_dir, int compression_level)
     schema_tree_writer.close();
     return compressed_size;
 }
+
+int32_t SchemaTree::find_matching_subtree_root_in_subtree(
+        int32_t const subtree_root,
+        int32_t descendent,
+        NodeType subtree_type
+) {
+    int32_t earliest_match = -1;
+    while (subtree_root != descendent) {
+        auto node = get_node(descendent);
+        if (node->get_type() == subtree_type) {
+            earliest_match = descendent;
+        }
+        descendent = node->get_parent_id();
+    }
+    return earliest_match;
+}
+
 }  // namespace clp_s

@@ -113,6 +113,21 @@ public:
         m_node_map.clear();
     }
 
+    /**
+     * Finds the root node for a subtree matching a given type given the root node for some subtree
+     * in which the subtree we are looking for can be found, and some descendent node of the subtree
+     * we are trying to find.
+     * @param subtree_root
+     * @param descendent
+     * @param subtree_type
+     * @return the root node ID for the subtree we are trying to find if it exists, otherwise -1
+     */
+    int32_t find_matching_subtree_root_in_subtree(
+            int32_t const subtree_root,
+            int32_t descendent,
+            NodeType subtree_type
+    );
+
 private:
     std::vector<std::shared_ptr<SchemaNode>> m_nodes;
     absl::flat_hash_map<std::tuple<int32_t, std::string, NodeType>, int32_t> m_node_map;
