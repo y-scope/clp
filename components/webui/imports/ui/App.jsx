@@ -37,7 +37,7 @@ const ROUTES = [
 ];
 
 const App = () => {
-    const [isSidebarCollapsed, setSidebarStateCollapsed] = useState(
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
         "true" === localStorage.getItem(LOCAL_STORAGE_KEYS.IS_SIDEBAR_COLLAPSED),
     );
 
@@ -49,7 +49,7 @@ const App = () => {
     }, [isSidebarCollapsed]);
 
     const handleSidebarToggle = () => {
-        setSidebarStateCollapsed(!isSidebarCollapsed);
+        setIsSidebarCollapsed(!isSidebarCollapsed);
     };
 
     return (
