@@ -74,7 +74,7 @@ void ArchiveReader::read_dictionaries_and_metadata() {
     read_metadata();
 }
 
-std::unique_ptr<SchemaReader> ArchiveReader::read_table(
+SchemaReader& ArchiveReader::read_table(
         int32_t schema_id,
         bool should_extract_timestamp,
         bool should_marshal_records
@@ -85,18 +85,17 @@ std::unique_ptr<SchemaReader> ArchiveReader::read_table(
         throw OperationFailed(ErrorCodeFileNotFound, __FILENAME__, __LINE__);
     }
 
-    auto schema_reader
+    auto& schema_reader
             = create_schema_reader(schema_id, should_extract_timestamp, should_marshal_records);
 
     m_tables_file_reader.try_seek_from_begin(m_id_to_table_metadata[schema_id].offset);
     m_tables_decompressor.open(m_tables_file_reader, cDecompressorFileReadBufferCapacity);
-    schema_reader->load(m_tables_decompressor);
+    schema_reader.load(m_tables_decompressor);
     m_tables_decompressor.close();
     return schema_reader;
 }
 
-BaseColumnReader*
-ArchiveReader::append_reader_column(std::unique_ptr<SchemaReader>& reader, int32_t column_id) {
+BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int32_t column_id) {
     BaseColumnReader* column_reader = nullptr;
     auto node = m_schema_tree->get_node(column_id);
     std::string key_name = node->get_key_name();
@@ -131,26 +130,26 @@ ArchiveReader::append_reader_column(std::unique_ptr<SchemaReader>& reader, int32
         case NodeType::Object:
         case NodeType::NullValue:
         case NodeType::StructuredArray:
-            reader->append_column(column_id);
+            reader.append_column(column_id);
             break;
         case NodeType::Unknown:
             break;
     }
 
     if (column_reader) {
-        reader->append_column(column_reader);
+        reader.append_column(column_reader);
     }
     return column_reader;
 }
 
 void ArchiveReader::append_unordered_reader_columns(
-        std::unique_ptr<SchemaReader>& reader,
+        SchemaReader& reader,
         NodeType unordered_object_type,
         Span<int32_t> schema_ids,
         bool should_marshal_records
 ) {
     int32_t mst_subtree_root_node_id = INT32_MAX;
-    size_t object_readers_begin = reader->get_next_column_reader_position();
+    size_t object_readers_begin = reader.get_next_column_reader_position();
     for (int32_t column_id : schema_ids) {
         if (Schema::schema_entry_is_unordered_object(column_id)) {
             continue;
@@ -164,7 +163,7 @@ void ArchiveReader::append_unordered_reader_columns(
                     column_id,
                     unordered_object_type
             );
-            reader->append_column(mst_subtree_root_node_id);
+            reader.append_column(mst_subtree_root_node_id);
         }
         switch (node->get_type()) {
             case NodeType::Integer:
@@ -199,21 +198,21 @@ void ArchiveReader::append_unordered_reader_columns(
         }
 
         if (column_reader) {
-            reader->append_unordered_column(column_reader);
+            reader.append_unordered_column(column_reader);
         }
     }
 
     if (should_marshal_records) {
-        reader->mark_unordered_object(object_readers_begin, mst_subtree_root_node_id, schema_ids);
+        reader.mark_unordered_object(object_readers_begin, mst_subtree_root_node_id, schema_ids);
     }
 }
 
-std::unique_ptr<SchemaReader> ArchiveReader::create_schema_reader(
+SchemaReader& ArchiveReader::create_schema_reader(
         int32_t schema_id,
         bool should_extract_timestamp,
         bool should_marshal_records
 ) {
-    auto reader = std::make_unique<SchemaReader>(
+    m_schema_reader.reset(
             m_schema_tree,
             schema_id,
             m_id_to_table_metadata[schema_id].num_messages,
@@ -222,7 +221,7 @@ std::unique_ptr<SchemaReader> ArchiveReader::create_schema_reader(
     auto timestamp_column_ids = m_timestamp_dict->get_authoritative_timestamp_column_ids();
 
     size_t remaining_structured_object_entries = 0;
-    auto& schema = (*m_schema_map)[reader->get_schema_id()];
+    auto& schema = (*m_schema_map)[m_schema_reader.get_schema_id()];
     for (auto it = schema.begin(); it != schema.end(); ++it) {
         int32_t column_id = *it;
         if (remaining_structured_object_entries > 0) {
@@ -232,29 +231,29 @@ std::unique_ptr<SchemaReader> ArchiveReader::create_schema_reader(
         if (Schema::schema_entry_is_unordered_object(column_id)) {
             remaining_structured_object_entries = Schema::get_unordered_object_length(column_id);
             append_unordered_reader_columns(
-                    reader,
+                    m_schema_reader,
                     Schema::get_unordered_object_type(column_id),
                     Span<int32_t>(it.base() + 1, remaining_structured_object_entries),
                     should_marshal_records
             );
             continue;
         }
-        BaseColumnReader* column_reader = append_reader_column(reader, column_id);
+        BaseColumnReader* column_reader = append_reader_column(m_schema_reader, column_id);
 
         if (should_extract_timestamp && column_reader && timestamp_column_ids.count(column_id) > 0)
         {
-            reader->mark_column_as_timestamp(column_reader);
+            m_schema_reader.mark_column_as_timestamp(column_reader);
         }
     }
-    return reader;
+    return m_schema_reader;
 }
 
 void ArchiveReader::store(FileWriter& writer) {
     std::string message;
 
     for (auto& [id, table_metadata] : m_id_to_table_metadata) {
-        auto schema_reader = read_table(id, false, true);
-        while (schema_reader->get_next_message(message)) {
+        auto& schema_reader = read_table(id, false, true);
+        while (schema_reader.get_next_message(message)) {
             writer.write(message.c_str(), message.length());
         }
     }

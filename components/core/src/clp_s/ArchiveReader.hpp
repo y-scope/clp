@@ -88,7 +88,7 @@ public:
      * @param should_marshal_records
      * @return the schema reader
      */
-    std::unique_ptr<SchemaReader>
+    SchemaReader&
     read_table(int32_t schema_id, bool should_extract_timestamp, bool should_marshal_records);
 
     std::shared_ptr<VariableDictionaryReader> get_variable_dictionary() { return m_var_dict; }
@@ -129,7 +129,7 @@ private:
      * @param should_extract_timestamp
      * @param should_marshal_records
      */
-    std::unique_ptr<SchemaReader> create_schema_reader(
+    SchemaReader& create_schema_reader(
             int32_t schema_id,
             bool should_extract_timestamp,
             bool should_marshal_records
@@ -140,8 +140,7 @@ private:
      * @param reader
      * @param column_id
      */
-    BaseColumnReader*
-    append_reader_column(std::unique_ptr<SchemaReader>& reader, int32_t column_id);
+    BaseColumnReader* append_reader_column(SchemaReader& reader, int32_t column_id);
 
     /**
      * Appends columns for the entire schema of an unordered object.
@@ -150,7 +149,7 @@ private:
      * @param should_marshal_records
      */
     void append_unordered_reader_columns(
-            std::unique_ptr<SchemaReader>& reader,
+            SchemaReader& reader,
             NodeType unordered_object_type,
             Span<int32_t> schema_ids,
             bool should_marshal_records
@@ -173,6 +172,7 @@ private:
     FileReader m_table_metadata_file_reader;
     ZstdDecompressor m_tables_decompressor;
     ZstdDecompressor m_table_metadata_decompressor;
+    SchemaReader m_schema_reader{nullptr, -1, 0, false};
 };
 }  // namespace clp_s
 

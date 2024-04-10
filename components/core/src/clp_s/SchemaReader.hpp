@@ -67,10 +67,46 @@ public:
               m_should_marshal_records(should_marshal_records) {}
 
     // Destructor
-    ~SchemaReader() {
+    ~SchemaReader() { delete_columns(); }
+
+    void delete_columns() {
         for (auto& i : m_columns) {
             delete i;
         }
+    }
+
+    /**
+     * Reset the contents of this SchemaReader to an uninitialized SchemaReader with a new schema_id
+     *
+     * This function is ugly, but the performance tradeoff is worth it.
+     *
+     * @param schema_tree
+     * @param schema_id
+     * @param num_messages
+     * @param should_marshal_records
+     */
+    void reset(
+            std::shared_ptr<SchemaTree> schema_tree,
+            int32_t schema_id,
+            uint64_t num_messages,
+            bool should_marshal_records
+    ) {
+        m_schema_id = schema_id;
+        m_num_messages = num_messages;
+        m_cur_message = 0;
+        delete_columns();
+        m_column_map.clear();
+        m_columns.clear();
+        m_reordered_columns.clear();
+        m_timestamp_column = nullptr;
+        m_get_timestamp = []() -> epochtime_t { return 0; };
+        m_local_id_to_global_id.clear();
+        m_global_id_to_local_id.clear();
+        m_global_id_to_unordered_object.clear();
+        m_local_schema_tree->clear();
+        m_json_serializer.clear();
+        m_global_schema_tree = std::move(schema_tree);
+        m_should_marshal_records = should_marshal_records;
     }
 
     /**

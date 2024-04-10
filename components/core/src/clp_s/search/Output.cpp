@@ -84,20 +84,20 @@ bool Output::filter() {
 
         add_wildcard_columns_to_searched_columns();
 
-        auto reader = m_archive_reader->read_table(
+        auto& reader = m_archive_reader->read_table(
                 schema_id,
                 m_output_handler->should_output_timestamp(),
                 m_should_marshal_records
         );
-        reader->initialize_filter(this);
+        reader.initialize_filter(this);
 
         if (m_output_handler->should_output_timestamp()) {
             epochtime_t timestamp;
-            while (reader->get_next_message_with_timestamp(message, timestamp, this)) {
+            while (reader.get_next_message_with_timestamp(message, timestamp, this)) {
                 m_output_handler->write(message, timestamp);
             }
         } else {
-            while (reader->get_next_message(message, this)) {
+            while (reader.get_next_message(message, this)) {
                 m_output_handler->write(message);
             }
         }
