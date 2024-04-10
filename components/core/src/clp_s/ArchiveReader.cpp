@@ -1,7 +1,5 @@
 #include "ArchiveReader.hpp"
 
-#include <algorithm>
-
 #include "archive_constants.hpp"
 #include "ReaderUtils.hpp"
 
