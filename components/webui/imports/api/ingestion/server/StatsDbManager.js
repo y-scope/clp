@@ -15,10 +15,10 @@ const CLP_ARCHIVES_TABLE_COLUMN_NAMES = Object.freeze({
  *
  * @enum {string}
  */
-const CLP_FILES_TABLE_COLUMN_NAMES = {
+const CLP_FILES_TABLE_COLUMN_NAMES = Object.freeze({
     ORIG_FILE_ID: "orig_file_id",
     NUM_MESSAGES: "num_messages",
-};
+});
 
 /**
  * Class for retrieving compression stats from the database.
