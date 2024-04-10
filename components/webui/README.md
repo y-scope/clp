@@ -84,10 +84,11 @@ these steps to set up your environment for linting:
 
 2. **Re-install Dependencies**
 
-    After switching to the correct Node.js version, re-install the project dependencies:
-    
+    After switching to the correct Node.js version, re-install the project dependencies with the
+following command to prevent `npm` from checking the `package-lock.json` file version:
+
     ```shell
-    npm install
+    npm install --no-package-lock
     ```
 
 ## Checking for Linting Errors
