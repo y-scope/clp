@@ -4,6 +4,9 @@
   "scripts": {
     "start": "meteor run",
     "build-docs": "jsdoc -r client imports server tests launcher.js -d docs",
+    "lint": "npm run lint:check",
+    "lint:check": "eslint client imports server tests launcher.js",
+    "lint:fix": "eslint --fix client imports server tests launcher.js",
     "test": "meteor test --once --driver-package meteortesting:mocha",
     "test-app": "TEST_WATCH=1 meteor test --full-app --driver-package meteortesting:mocha",
     "visualize": "meteor --production --extra-packages bundle-visualizer"
