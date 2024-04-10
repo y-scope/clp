@@ -19,6 +19,16 @@ meteor npm install
 If you ever add a package manually to `package.json` or `package.json` changes
 for some other reason, you should rerun this command.
 
+> ℹ️ When running this command, you might see warnings related to uninstalled `eslint-config-yscope` peer dependencies,
+> like the ones below:
+> ```
+> npm WARN eslint-config-yscope@0.0.20 requires a peer of eslint@^8.57.0 but
+>  none is installed. You must install peer dependencies yourself.
+> ```
+> **These `eslint-config-yscope` warnings can be safely ignored.** They occur because the default npm version in
+> Node.js 14 does not automatically install peer dependencies. If needed, peer dependencies are automatically installed
+> when switching to Node.js version 18 or higher for linting purposes, as outlined in the [Linting](#linting) section.
+
 # Running in development
 
 The full functionality of the webui depends on other components in the CLP
