@@ -457,7 +457,7 @@ bool JsonParser::parse() {
                 m_archive_writer->close();
                 return false;
             }
-            parse_line(ref.value(), -1, "root");
+            parse_line(ref.value(), -1, "");
             m_num_messages++;
 
             int32_t current_schema_id = m_archive_writer->add_schema(m_current_schema);
