@@ -52,8 +52,7 @@ package:
 # Linting
 
 We enforce code quality and consistency across our project using ESLint. You can use the following
-npm scripts defined in `package.json` to check and
-fix linting issues.
+npm scripts defined in `package.json` to check and fix linting issues.
 
 ### Preparing Your Environment for Linting
 
