@@ -12,6 +12,7 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
+    "@babel/core": "^7.24.4",
     "@babel/runtime": "^7.24.4",
     "@babel/plugin-transform-react-jsx": "^7.23.4",
     "@fortawesome/fontawesome-svg-core": "^6.5.1",
