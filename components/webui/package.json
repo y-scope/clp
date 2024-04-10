@@ -36,7 +36,7 @@
   },
   "devDependencies": {
     "jsdoc": "^4.0.2",
-    "eslint-config-yscope": "^0.0.19"
+    "eslint-config-yscope": "^0.0.20"
   },
   "eslintConfig": {
     "extends": [
