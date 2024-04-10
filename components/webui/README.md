@@ -2,8 +2,12 @@
 
 ## Requirements
 
-* [Node.js 14](https://nodejs.org/download/release/v14.21.3/) (Meteor.js only
-  [supports](https://docs.meteor.com/install#prereqs-node) Node.js versions >= 10 and <= 14)
+* Node.js
+  To manage different versions of Node.js, we recommend using
+[nvm (Node Version Manager)](https://github.com/nvm-sh/nvm).
+  * **Node.js 14** - For running Meteor. Meteor.js only
+    [supports](https://docs.meteor.com/install#prereqs-node) Node.js versions >= 10 and <= 14.
+  * **Node.js 18 or higher** - for linting.
 * [Meteor.js](https://docs.meteor.com/install.html#installation)
 
 ## Install the dependencies
@@ -44,3 +48,68 @@ package:
    ```
 5. The Web UI should now be available at `http://<webui.host>:<webui.port>`
    (e.g., http://localhost:4000).
+
+# Linting
+
+We enforce code quality and consistency across our project using ESLint. You can use the following
+npm scripts defined in `package.json` to check and
+fix linting issues.
+
+### Preparing Your Environment for Linting
+
+Due to specific dependencies, linting this project requires Node.js version 18 or higher. Follow
+these steps to set up your environment for linting:
+1. **Switch to Node.js Version 18 or Higher**
+
+    If you have not installed Node.js 18 or higher, use nvm to install it first:
+    
+    ```shell
+    nvm install 18
+    ```
+    
+    Switch to Node.js 18:
+    
+    ```shell
+    nvm use 18
+    ```
+
+2. **Re-install Dependencies**
+
+    After switching to the correct Node.js version, re-install the project dependencies:
+    
+    ```shell
+    npm install
+    ```
+
+## Checking for Linting Errors
+
+To check for linting errors across the project, run the following command:
+
+```shell
+npm run lint
+```
+
+This command will run ESLint on the source code, reporting any linting errors without fixing them.
+
+## Automatically Fixing Linting Errors
+
+If you want to automatically fix linting errors that can be resolved by ESLint, use the following
+command:
+
+```shell
+npm run lint:fix
+```
+
+This command attempts to automatically fix any linting issues found in the same
+directories.
+
+## Linting Specific Files
+
+While the above commands lint multiple directories, you might sometimes need to lint specific files.
+You can do so by running ESLint directly with a custom file path, for example:
+
+```shell
+eslint path/to/src.js
+```
+
+Replace `path/to/src.js` with the path to the file you want to lint.
