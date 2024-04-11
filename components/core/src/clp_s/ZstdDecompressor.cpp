@@ -148,8 +148,12 @@ void ZstdDecompressor::open(FileReader& file_reader, size_t file_read_buffer_cap
     m_file_reader = &file_reader;
     m_file_reader_initial_pos = m_file_reader->get_pos();
 
-    m_file_read_buffer_capacity = file_read_buffer_capacity;
-    m_file_read_buffer = std::make_unique<char[]>(m_file_read_buffer_capacity);
+    // Avoid reallocating internal buffer if this ZstdDecompressor is being re-used with an
+    // unchanged buffer size.
+    if (file_read_buffer_capacity != m_file_read_buffer_capacity) {
+        m_file_read_buffer_capacity = file_read_buffer_capacity;
+        m_file_read_buffer = std::make_unique<char[]>(m_file_read_buffer_capacity);
+    }
     m_file_read_buffer_length = 0;
 
     m_compressed_stream_block = {m_file_read_buffer.get(), m_file_read_buffer_length, 0};
@@ -178,6 +182,16 @@ void ZstdDecompressor::close() {
         default:
             throw OperationFailed(ErrorCodeUnsupported, __FILENAME__, __LINE__);
     }
+    m_input_type = InputType::NotInitialized;
+}
+
+void ZstdDecompressor::close_for_reuse() {
+    if (InputType::File != m_input_type) {
+        close();
+        return;
+    }
+    m_file_read_buffer_length = 0;
+    m_file_reader = nullptr;
     m_input_type = InputType::NotInitialized;
 }
 

@@ -91,7 +91,7 @@ SchemaReader& ArchiveReader::read_table(
     m_tables_file_reader.try_seek_from_begin(m_id_to_table_metadata[schema_id].offset);
     m_tables_decompressor.open(m_tables_file_reader, cDecompressorFileReadBufferCapacity);
     schema_reader.load(m_tables_decompressor);
-    m_tables_decompressor.close();
+    m_tables_decompressor.close_for_reuse();
     return schema_reader;
 }
 
