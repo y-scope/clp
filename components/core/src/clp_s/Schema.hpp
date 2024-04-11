@@ -99,6 +99,12 @@ public:
     }
 
     /**
+     * Resizes the internal schema vector to match the given length.
+     * @param size
+     */
+    void resize(size_t size) { m_schema.resize(size); }
+
+    /**
      * Less than comparison operator so that Schema can act as a key for SchemaMap
      * @return true if this schema is less than the schema on the right hand side
      * @return false otherwise
@@ -176,7 +182,6 @@ private:
 
     std::vector<int32_t> m_schema;
     size_t m_num_ordered{0};
-    std::stack<std::pair<int32_t, size_t>> m_obj_stack;
 };
 }  // namespace clp_s
 

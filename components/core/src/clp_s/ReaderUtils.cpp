@@ -122,15 +122,16 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(std::string co
         }
 
         auto& schema = schemas[schema_id];
-        for (size_t j = 0; j < schema_node_size; j++) {
-            int32_t node_id;
-            error_code = schema_id_decompressor.try_read_numeric_value(node_id);
-            if (ErrorCodeSuccess != error_code) {
-                throw OperationFailed(error_code, __FILENAME__, __LINE__);
-            }
-
-            // Maintain schema ordering defined at compression time
-            schema.insert_unordered(node_id);
+        if (0 == schema_node_size) {
+            continue;
+        }
+        schema.resize(schema_node_size);
+        error_code = schema_id_decompressor.try_read_exact_length(
+                reinterpret_cast<char*>(schema.begin().base()),
+                sizeof(int32_t) * schema_node_size
+        );
+        if (ErrorCodeSuccess != error_code) {
+            throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
         schema.set_num_ordered(num_ordered_nodes);
     }
