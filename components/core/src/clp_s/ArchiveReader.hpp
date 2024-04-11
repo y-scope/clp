@@ -172,7 +172,7 @@ private:
     FileReader m_table_metadata_file_reader;
     ZstdDecompressor m_tables_decompressor;
     ZstdDecompressor m_table_metadata_decompressor;
-    SchemaReader m_schema_reader{nullptr, -1, 0, false};
+    SchemaReader m_schema_reader{nullptr, -1, {nullptr, 0}, 0, false};
 };
 }  // namespace clp_s
 

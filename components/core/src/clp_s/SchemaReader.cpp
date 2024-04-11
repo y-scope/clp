@@ -8,17 +8,10 @@ namespace clp_s {
 void SchemaReader::append_column(BaseColumnReader* column_reader) {
     m_column_map[column_reader->get_id()] = column_reader;
     m_columns.push_back(column_reader);
-    // The local schema tree is only necessary for generating the JSON template to marshal records.
-    if (m_should_marshal_records) {
-        generate_local_tree(column_reader->get_id());
-    }
 }
 
 void SchemaReader::append_unordered_column(BaseColumnReader* column_reader) {
     m_columns.push_back(column_reader);
-    if (m_should_marshal_records) {
-        generate_local_tree(column_reader->get_id());
-    }
 }
 
 void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
@@ -43,20 +36,9 @@ void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
     }
 }
 
-void SchemaReader::append_column(int32_t id) {
-    // The local schema tree is only necessary for generating the JSON template to marshal records.
-    if (m_should_marshal_records) {
-        generate_local_tree(id);
-    }
-}
-
 void SchemaReader::load(ZstdDecompressor& decompressor) {
     for (auto& reader : m_columns) {
         reader->load(decompressor, m_num_messages);
-    }
-
-    if (m_should_marshal_records) {
-        generate_json_template(0);
     }
 }
 
@@ -165,6 +147,9 @@ bool SchemaReader::get_next_message(std::string& message) {
         return false;
     }
 
+    if (false == m_serializer_initialized) {
+        initialize_serializer();
+    }
     generate_json_string();
 
     message = m_json_serializer.get_serialized_string();
@@ -185,6 +170,9 @@ bool SchemaReader::get_next_message(std::string& message, FilterClass* filter) {
         }
 
         if (m_should_marshal_records) {
+            if (false == m_serializer_initialized) {
+                initialize_serializer();
+            }
             generate_json_string();
             message = m_json_serializer.get_serialized_string();
 
@@ -214,6 +202,9 @@ bool SchemaReader::get_next_message_with_timestamp(
         }
 
         if (m_should_marshal_records) {
+            if (false == m_serializer_initialized) {
+                initialize_serializer();
+            }
             generate_json_string();
             message = m_json_serializer.get_serialized_string();
 
@@ -512,6 +503,29 @@ size_t SchemaReader::generate_structured_object_template(
     }
     find_intersection_and_fix_brackets(root, object_root, path_to_intersection);
     return column_idx;
+}
+
+void SchemaReader::initialize_serializer() {
+    if (m_serializer_initialized) {
+        return;
+    }
+
+    m_serializer_initialized = true;
+
+    for (int32_t global_column_id : m_ordered_schema) {
+        generate_local_tree(global_column_id);
+    }
+
+    for (auto it = m_global_id_to_unordered_object.begin();
+         it != m_global_id_to_unordered_object.end();
+         ++it)
+    {
+        generate_local_tree(it->first);
+    }
+
+    // TODO: this code will have to change once we allow mixing log lines parsed by different
+    // parsers.
+    generate_json_template(0);
 }
 
 void SchemaReader::generate_json_template(int32_t id) {

@@ -54,10 +54,12 @@ public:
     explicit SchemaReader(
             std::shared_ptr<SchemaTree> schema_tree,
             int32_t schema_id,
+            Span<int32_t> ordered_schema,
             uint64_t num_messages,
             bool should_marshal_records
     )
             : m_schema_id(schema_id),
+              m_ordered_schema(ordered_schema),
               m_num_messages(num_messages),
               m_cur_message(0),
               m_timestamp_column(nullptr),
@@ -82,18 +84,22 @@ public:
      *
      * @param schema_tree
      * @param schema_id
+     * @param ordered_schema
      * @param num_messages
      * @param should_marshal_records
      */
     void reset(
             std::shared_ptr<SchemaTree> schema_tree,
             int32_t schema_id,
+            Span<int32_t> ordered_schema,
             uint64_t num_messages,
             bool should_marshal_records
     ) {
         m_schema_id = schema_id;
         m_num_messages = num_messages;
         m_cur_message = 0;
+        m_serializer_initialized = false;
+        m_ordered_schema = ordered_schema;
         delete_columns();
         m_column_map.clear();
         m_columns.clear();
@@ -121,12 +127,6 @@ public:
      * @return
      */
     void append_unordered_column(BaseColumnReader* column_reader);
-
-    /**
-     * Appends a column to the schema reader
-     * @param id
-     */
-    void append_column(int32_t id);
 
     size_t get_next_column_reader_position() { return m_columns.size(); }
 
@@ -233,9 +233,15 @@ private:
      */
     void generate_json_string();
 
+    /**
+     * Initialize all internal data structured required to serialize records.
+     */
+    void initialize_serializer();
+
     int32_t m_schema_id;
     uint64_t m_num_messages;
     uint64_t m_cur_message;
+    Span<int32_t> m_ordered_schema;
 
     std::unordered_map<int32_t, BaseColumnReader*> m_column_map;
     std::vector<BaseColumnReader*> m_columns;
@@ -251,6 +257,7 @@ private:
 
     JsonSerializer m_json_serializer;
     bool m_should_marshal_records{true};
+    bool m_serializer_initialized{false};
 
     std::map<int32_t, std::pair<size_t, Span<int32_t>>> m_global_id_to_unordered_object;
 };

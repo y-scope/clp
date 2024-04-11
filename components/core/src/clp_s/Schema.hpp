@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "SchemaTree.hpp"
+#include "Utils.hpp"
 
 namespace clp_s {
 /**
@@ -92,6 +93,11 @@ public:
      */
     [[nodiscard]] auto cend() const { return m_schema.cend(); }
 
+    [[nodiscard]] Span<int32_t> get_ordered_schema_view() {
+        return m_num_ordered == 0 ? Span<int32_t>{nullptr, 0}
+                                  : Span<int32_t>{m_schema.begin().base(), m_num_ordered};
+    }
+
     /**
      * Less than comparison operator so that Schema can act as a key for SchemaMap
      * @return true if this schema is less than the schema on the right hand side
@@ -114,7 +120,7 @@ public:
      * @param object_type
      * @return the start position of the unordered object
      */
-    size_t start_unordered_object(NodeType object_type) {
+    [[nodiscard]] size_t start_unordered_object(NodeType object_type) {
         insert_unordered(encode_node_type_as_schema_entry(object_type));
         return m_schema.size();
     }

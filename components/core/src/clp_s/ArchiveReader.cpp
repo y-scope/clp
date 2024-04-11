@@ -127,11 +127,10 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
         case NodeType::DateString:
             column_reader = new DateStringColumnReader(key_name, column_id, m_timestamp_dict);
             break;
+        // No need to push columns without associated object readers into the SchemaReader.
         case NodeType::Object:
         case NodeType::NullValue:
         case NodeType::StructuredArray:
-            reader.append_column(column_id);
-            break;
         case NodeType::Unknown:
             break;
     }
@@ -163,7 +162,6 @@ void ArchiveReader::append_unordered_reader_columns(
                     column_id,
                     unordered_object_type
             );
-            reader.append_column(mst_subtree_root_node_id);
         }
         switch (node->get_type()) {
             case NodeType::Integer:
@@ -183,8 +181,7 @@ void ArchiveReader::append_unordered_reader_columns(
                 column_reader = new BooleanColumnReader(key_name, column_id);
                 break;
             // Since we use the global schema tree to help marshal unordered objects there is no
-            // need to push these node types into the schema reader for the sake of generating a
-            // local schema tree.
+            // need to push these node types into the schema reader
             case NodeType::StructuredArray:
             case NodeType::Object:
             case NodeType::NullValue:
@@ -212,16 +209,17 @@ SchemaReader& ArchiveReader::create_schema_reader(
         bool should_extract_timestamp,
         bool should_marshal_records
 ) {
+    auto& schema = (*m_schema_map)[schema_id];
     m_schema_reader.reset(
             m_schema_tree,
             schema_id,
+            schema.get_ordered_schema_view(),
             m_id_to_table_metadata[schema_id].num_messages,
             should_marshal_records
     );
     auto timestamp_column_ids = m_timestamp_dict->get_authoritative_timestamp_column_ids();
 
     size_t remaining_structured_object_entries = 0;
-    auto& schema = (*m_schema_map)[m_schema_reader.get_schema_id()];
     for (auto it = schema.begin(); it != schema.end(); ++it) {
         int32_t column_id = *it;
         if (remaining_structured_object_entries > 0) {
