@@ -95,8 +95,8 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
         if (Schema::schema_entry_is_unordered_object(id)) {
             continue;
         }
-        auto node = m_schema_tree.get_node(id);
-        switch (node->get_type()) {
+        auto const& node = m_schema_tree.get_node(id);
+        switch (node.get_type()) {
             case NodeType::Integer:
                 writer->append_column(new Int64ColumnWriter(id));
                 break;
@@ -118,6 +118,7 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
             case NodeType::DateString:
                 writer->append_column(new DateStringColumnWriter(id));
                 break;
+            case NodeType::StructuredArray:
             case NodeType::Object:
             case NodeType::NullValue:
             case NodeType::Unknown:

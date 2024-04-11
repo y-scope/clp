@@ -298,7 +298,7 @@ bool Output::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
     m_maybe_number = expr->get_column()->matches_type(LiteralType::FloatT);
     for (int32_t column_id : m_wildcard_to_searched_basic_columns[column]) {
         bool ret = false;
-        switch (node_to_literal_type(m_schema_tree->get_node(column_id)->get_type())) {
+        switch (node_to_literal_type(m_schema_tree->get_node(column_id).get_type())) {
             case LiteralType::IntegerT:
                 ret = evaluate_int_filter(op, column_id, literal);
                 break;
@@ -971,7 +971,7 @@ void Output::populate_searched_wildcard_columns(std::shared_ptr<Expression> cons
             if (Schema::schema_entry_is_unordered_object(node)) {
                 continue;
             }
-            auto tree_node_type = m_schema_tree->get_node(node)->get_type();
+            auto tree_node_type = m_schema_tree->get_node(node).get_type();
             if (col->matches_type(node_to_literal_type(tree_node_type))) {
                 auto literal_type = node_to_literal_type(tree_node_type);
                 matching_types |= literal_type;
@@ -1000,7 +1000,7 @@ void Output::add_wildcard_columns_to_searched_columns() {
         if (Schema::schema_entry_is_unordered_object(node_id)) {
             continue;
         }
-        auto node_literal_type = node_to_literal_type(m_schema_tree->get_node(node_id)->get_type());
+        auto node_literal_type = node_to_literal_type(m_schema_tree->get_node(node_id).get_type());
         if (0 != (mask & node_literal_type)) {
             m_match.add_searched_column_to_schema(m_schema, node_id);
         }

@@ -73,13 +73,13 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(std::shared_ptr
                 // TODO: will have to decide how we wan't to handle multi-column expressions
                 // with unresolved descriptors
                 for (int32_t node_id : m_unresolved_descriptor_to_descriptor[column]) {
-                    auto node = m_tree->get_node(node_id);
+                    auto const* node = &m_tree->get_node(node_id);
                     auto literal_type = node_to_literal_type(node->get_type());
                     DescriptorList descriptors;
                     while (node->get_id() != m_tree->get_root_node_id()) {
                         // may have to explicitly mark non-regex
                         descriptors.emplace_back(node->get_key_name());
-                        node = m_tree->get_node(node->get_parent_id());
+                        node = &m_tree->get_node(node->get_parent_id());
                     }
                     std::reverse(descriptors.begin(), descriptors.end());
                     auto resolved_column = ColumnDescriptor::create(descriptors);
@@ -97,8 +97,8 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(std::shared_ptr
 bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column) {
     bool matched = false;
     if (column->is_pure_wildcard()) {
-        for (auto& node : m_tree->get_nodes()) {
-            if (column->matches_type(node_to_literal_type(node->get_type()))) {
+        for (auto const& node : m_tree->get_nodes()) {
+            if (column->matches_type(node_to_literal_type(node.get_type()))) {
                 // column_to_descriptor_[node->get_id()].insert(column);
                 //  At least some node matches; break
                 //  Don't use column_to_descriptor_ for pure wildcard columns anyway, so
@@ -113,8 +113,8 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column) {
 
     // TODO: once we start supporting multi-rooted MPTs this (and anything that uses
     // get_root_node_id, or assumes root node id is 0) will have to change
-    auto root = m_tree->get_node(m_tree->get_root_node_id());
-    for (int32_t child_node_id : root->get_children_ids()) {
+    auto const& root = m_tree->get_node(m_tree->get_root_node_id());
+    for (int32_t child_node_id : root.get_children_ids()) {
         matched |= populate_column_mapping(column, child_node_id);
     }
 
@@ -162,8 +162,8 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column, int32_t node
         visited_states.emplace(cur_state);
 
         // Check if the current node is accepted
-        auto cur_node = m_tree->get_node(cur_node_id);
-        bool empty_key = cur_node->get_key_name().empty();
+        auto const& cur_node = m_tree->get_node(cur_node_id);
+        bool empty_key = cur_node.get_key_name().empty();
         bool at_descriptor_list_end = cur_it == column->descriptor_end();
         auto next_it = cur_it;
         if (false == at_descriptor_list_end) {
@@ -177,7 +177,7 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column, int32_t node
             accepted = true;
         } else if (empty_key) {
             accepted = true;
-        } else if (false == at_descriptor_list_end && cur_node->get_key_name() == cur_it->get_token())
+        } else if (false == at_descriptor_list_end && cur_node.get_key_name() == cur_it->get_token())
         {
             accepted = true;
         }
@@ -188,7 +188,7 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column, int32_t node
         }
 
         // Currently we only allow fully resolved descriptors for precise array search
-        if (NodeType::UnstructuredArray == cur_node->get_type()
+        if (NodeType::UnstructuredArray == cur_node.get_type()
             && false == column->is_unresolved_descriptor())
         {
             /**
@@ -203,7 +203,7 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column, int32_t node
             m_column_to_descriptor[cur_node_id].insert(column);
             matched = true;
             continue;
-        } else if (next_at_descriptor_list_end && column->matches_type(node_to_literal_type(cur_node->get_type())))
+        } else if (next_at_descriptor_list_end && column->matches_type(node_to_literal_type(cur_node.get_type())))
         {
             if (false == column->is_unresolved_descriptor()) {
                 m_column_to_descriptor[cur_node_id].insert(column);
@@ -220,7 +220,7 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column, int32_t node
         }
 
         // Push nodes to the work list
-        for (int32_t child_node_id : cur_node->get_children_ids()) {
+        for (int32_t child_node_id : cur_node.get_children_ids()) {
             if (empty_key) {
                 // Don't advance the iterator when accepting an empty key
                 work_list.emplace(std::make_tuple(cur_depth + 1, cur_it, child_node_id));
@@ -244,7 +244,7 @@ void SchemaMatch::populate_schema_mapping() {
             if (Schema::schema_entry_is_unordered_object(column_id)) {
                 continue;
             }
-            if (m_tree->get_node(column_id)->get_type() == NodeType::UnstructuredArray) {
+            if (NodeType::UnstructuredArray == m_tree->get_node(column_id).get_type()) {
                 m_array_schema_ids.insert(schema_id);
             }
             if (false == m_column_to_descriptor.count(column_id)) {
@@ -282,7 +282,7 @@ std::shared_ptr<Expression> SchemaMatch::intersect_schemas(std::shared_ptr<Expre
             for (int32_t schema : common_schema) {
                 if (m_descriptor_to_schema[column].count(schema)) {
                     types |= node_to_literal_type(
-                            m_tree->get_node(m_descriptor_to_schema[column][schema])->get_type()
+                            m_tree->get_node(m_descriptor_to_schema[column][schema]).get_type()
                     );
                 }
             }
@@ -406,7 +406,7 @@ void SchemaMatch::split_expression_by_schema(
                     if (Schema::schema_entry_is_unordered_object(column_id)) {
                         continue;
                     }
-                    if (m_tree->get_node(column_id)->get_type() == NodeType::UnstructuredArray) {
+                    if (NodeType::UnstructuredArray == m_tree->get_node(column_id).get_type()) {
                         m_array_search_schema_ids.insert(schema_id);
                         break;
                     }
@@ -495,7 +495,7 @@ bool SchemaMatch::has_array_search(int32_t schema_id) {
 
 LiteralType SchemaMatch::get_literal_type_for_column(ColumnDescriptor* column, int32_t schema) {
     return node_to_literal_type(
-            m_tree->get_node(get_column_id_for_descriptor(column, schema))->get_type()
+            m_tree->get_node(get_column_id_for_descriptor(column, schema)).get_type()
     );
 }
 

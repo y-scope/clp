@@ -44,7 +44,7 @@ public:
 
     int32_t get_parent_id() const { return m_parent_id; }
 
-    std::vector<int32_t>& get_children_ids() { return m_children_ids; }
+    std::vector<int32_t> const& get_children_ids() const { return m_children_ids; }
 
     NodeType get_type() const { return m_type; }
 
@@ -85,7 +85,7 @@ public:
 
     bool has_node(int32_t id) { return id < m_nodes.size() && id >= 0; }
 
-    std::shared_ptr<SchemaNode> get_node(int32_t id) {
+    SchemaNode const& get_node(int32_t id) const {
         if (id >= m_nodes.size() || id < 0) {
             throw std::invalid_argument("invalid access of id " + std::to_string(id));
         }
@@ -93,9 +93,9 @@ public:
         return m_nodes[id];
     }
 
-    int32_t get_root_node_id() { return m_nodes[0]->get_id(); }
+    int32_t get_root_node_id() const { return m_nodes[0].get_id(); }
 
-    std::vector<std::shared_ptr<SchemaNode>> get_nodes() { return m_nodes; }
+    std::vector<SchemaNode> const& get_nodes() const { return m_nodes; }
 
     /**
      * Write the contents of the SchemaTree to the schema tree file
@@ -129,7 +129,7 @@ public:
     );
 
 private:
-    std::vector<std::shared_ptr<SchemaNode>> m_nodes;
+    std::vector<SchemaNode> m_nodes;
     absl::flat_hash_map<std::tuple<int32_t, std::string, NodeType>, int32_t> m_node_map;
 };
 }  // namespace clp_s

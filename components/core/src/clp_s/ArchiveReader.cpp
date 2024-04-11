@@ -97,9 +97,9 @@ SchemaReader& ArchiveReader::read_table(
 
 BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int32_t column_id) {
     BaseColumnReader* column_reader = nullptr;
-    auto node = m_schema_tree->get_node(column_id);
-    std::string key_name = node->get_key_name();
-    switch (node->get_type()) {
+    auto const& node = m_schema_tree->get_node(column_id);
+    std::string const& key_name = node.get_key_name();
+    switch (node.get_type()) {
         case NodeType::Integer:
             column_reader = new Int64ColumnReader(key_name, column_id);
             break;
@@ -154,8 +154,8 @@ void ArchiveReader::append_unordered_reader_columns(
             continue;
         }
         BaseColumnReader* column_reader = nullptr;
-        auto node = m_schema_tree->get_node(column_id);
-        std::string key_name = node->get_key_name();
+        auto const& node = m_schema_tree->get_node(column_id);
+        std::string const& key_name = node.get_key_name();
         if (INT32_MAX == mst_subtree_root_node_id) {
             mst_subtree_root_node_id = m_schema_tree->find_matching_subtree_root_in_subtree(
                     -1,
@@ -163,7 +163,7 @@ void ArchiveReader::append_unordered_reader_columns(
                     unordered_object_type
             );
         }
-        switch (node->get_type()) {
+        switch (node.get_type()) {
             case NodeType::Integer:
                 column_reader = new Int64ColumnReader(key_name, column_id);
                 break;
