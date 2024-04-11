@@ -64,6 +64,9 @@ runs:
         mkdir -p "${output_dir}"
         cd "$GITHUB_WORKSPACE/components/core/build"
         cp clg clp clp-s glt make-dictionaries-readable "${output_dir}"
+        
+        # TODO Debug
+        ls -al "${output_dir}"
       shell: "bash"
 
     - if: "inputs.upload_binaries == 'true'"
