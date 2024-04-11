@@ -63,7 +63,7 @@ runs:
 
         mkdir -p "${output_dir}"
         cd "$GITHUB_WORKSPACE/components/core/build"
-        tar cf "${output_dir}/clp.tar" clg clp clp-s glt make-dictionaries-readable
+        tar cfvv "${output_dir}/clp.tar" clg clp clp-s glt make-dictionaries-readable
       shell: "bash"
 
     - if: "inputs.upload_binaries == 'true'"
