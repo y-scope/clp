@@ -2,12 +2,11 @@
 
 ## Requirements
 
-* Node.js.
-  To manage different versions of Node.js, we recommend using
-[nvm (Node Version Manager)](https://github.com/nvm-sh/nvm).
-  * **Node.js 14** - For running Meteor. Meteor.js only
-    [supports](https://docs.meteor.com/install#prereqs-node) Node.js versions >= 10 and <= 14.
-  * **Node.js 18 or higher** - For linting.
+* Node.js v14 for building and running the webui
+  * Meteor.js only [supports](https://docs.meteor.com/install#prereqs-node) Node.js versions >= v10
+    and <= v14.
+* Node.js v18 or higher for linting the webui
+* (Optional) [nvm (Node Version Manager)][nvm] to manage different versions of Node.js
 * [Meteor.js](https://docs.meteor.com/install.html#installation)
 
 ## Install the dependencies
@@ -19,15 +18,17 @@ meteor npm install
 If you ever add a package manually to `package.json` or `package.json` changes
 for some other reason, you should rerun this command.
 
-> ℹ️ When running this command, you might see warnings related to uninstalled `eslint-config-yscope` peer dependencies,
-> like the ones below:
+> [!NOTE]
+> When running this command, you might see warnings related to uninstalled `eslint-config-yscope
+> peer dependencies, like the ones below:
 > ```
 > npm WARN eslint-config-yscope@0.0.20 requires a peer of eslint@^8.57.0 but
 >  none is installed. You must install peer dependencies yourself.
 > ```
-> **These `eslint-config-yscope` warnings can be safely ignored.** They occur because the default npm version in
-> Node.js 14 does not automatically install peer dependencies. If needed, peer dependencies are automatically installed
-> when switching to Node.js version 18 or higher for linting purposes, as outlined in the [Linting](#linting) section.
+> **These `eslint-config-yscope` warnings can be safely ignored.** They occur because the default
+> npm version in Node.js v14 does not automatically install peer dependencies. If needed, peer
+> dependencies are automatically installed when switching to Node.js v18 or higher for linting
+> purposes, as outlined in the [Linting](#linting) section.
 
 # Running in development
 
@@ -61,65 +62,61 @@ package:
 
 # Linting
 
-We enforce code quality and consistency across our project using ESLint. You can use the following
-npm scripts defined in `package.json` to check and fix linting issues.
+We enforce code quality and consistency across our project using [ESLint][eslint]. You can use the
+following npm scripts defined in `package.json` to check and fix linting issues.
 
-## Preparing Your Environment for Linting
+## Setup
 
-Due to specific dependencies, linting this project requires Node.js version 18 or higher. Follow
-these steps to set up your environment for linting:
-1. **Switch to Node.js Version 18 or Higher**
+Due to specific dependencies, linting this project requires Node.js v18 or higher. Follow these
+steps to set up your environment for linting:
 
-    If you have not installed Node.js 18 or higher, use nvm to install it first:
+1. Switch to Node.js v18 or higher
     
     ```shell
+    # Install v18 if not already installed
     nvm install 18
-    ```
-    
-    Switch to Node.js 18:
-    
-    ```shell
+
+    # Switch to node v18
     nvm use 18
     ```
 
-2. **Re-install Dependencies**
-
-    After switching to the correct Node.js version, re-install the project dependencies with the
-following command to prevent `npm` from checking the `package-lock.json` file version:
+2. Re-install the project's dependencies with `--no-package-lock` to prevent `npm` from checking the
+   `package-lock.json` file version:
 
     ```shell
     npm install --no-package-lock
     ```
 
-## Checking for Linting Errors
+## Checking for linting errors
 
-To check for linting errors across the project, run the following command:
+To check for linting errors across the project:
 
 ```shell
 npm run lint
 ```
 
-This command will run ESLint on the source code, reporting any linting errors without fixing them.
+This will run ESLint on the entire project's source code and report any linting errors.
 
-## Automatically Fixing Linting Errors
+## Automatically fixing linting errors
 
-If you want to automatically fix linting errors that can be resolved by ESLint, use the following
-command:
+To automatically fix linting errors that can be resolved by ESLint:
 
 ```shell
 npm run lint:fix
 ```
 
-This command attempts to automatically fix any linting issues found in the same
-directories.
+This command attempts to automatically fix any linting issues found in the project.
 
-## Linting Specific Files
+## Linting specific files
 
-While the above commands lint multiple directories, you might sometimes need to lint specific files.
-You can do so by running ESLint directly with a custom file path, for example:
+If you want to lint a specific file rather than the entire project, you can run ESLint directly with
+a custom file path:
 
 ```shell
 eslint path/to/src.js
 ```
 
 Replace `path/to/src.js` with the path to the file you want to lint.
+
+[eslint]: https://eslint.org/
+[nvm]: https://github.com/nvm-sh/nvm
