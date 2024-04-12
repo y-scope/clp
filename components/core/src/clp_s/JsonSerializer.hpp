@@ -76,7 +76,9 @@ public:
     void end_document() { m_json_string[m_json_string.size() - 1] = '}'; }
 
     void end_object() {
-        if (m_op_list[m_op_list_index - 2] != BeginObject) {
+        if (m_op_list[m_op_list_index - 2] != BeginObject
+            && m_op_list[m_op_list_index - 2] != BeginDocument)
+        {
             m_json_string.pop_back();
         }
         m_json_string += "},";
@@ -90,7 +92,9 @@ public:
     }
 
     void end_array() {
-        if (m_op_list[m_op_list_index - 2] != BeginArray) {
+        if (m_op_list[m_op_list_index - 2] != BeginArray
+            && m_op_list[m_op_list_index - 2] != BeginArrayDocument)
+        {
             m_json_string.pop_back();
         }
         m_json_string += "],";
