@@ -86,9 +86,14 @@ void SchemaReader::generate_json_string() {
             case JsonSerializer::Op::AddIntField: {
                 column = m_reordered_columns[column_id_index++];
                 auto const& name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
-                if (false == name.empty()) {
-                    m_json_serializer.append_key(name);
-                }
+                m_json_serializer.append_key(name);
+                m_json_serializer.append_value(
+                        std::to_string(std::get<int64_t>(column->extract_value(m_cur_message)))
+                );
+                break;
+            }
+            case JsonSerializer::Op::AddIntValue: {
+                column = m_reordered_columns[column_id_index++];
                 m_json_serializer.append_value(
                         std::to_string(std::get<int64_t>(column->extract_value(m_cur_message)))
                 );
@@ -97,9 +102,14 @@ void SchemaReader::generate_json_string() {
             case JsonSerializer::Op::AddFloatField: {
                 column = m_reordered_columns[column_id_index++];
                 auto const& name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
-                if (false == name.empty()) {
-                    m_json_serializer.append_key(name);
-                }
+                m_json_serializer.append_key(name);
+                m_json_serializer.append_value(
+                        std::to_string(std::get<double>(column->extract_value(m_cur_message)))
+                );
+                break;
+            }
+            case JsonSerializer::Op::AddFloatValue: {
+                column = m_reordered_columns[column_id_index++];
                 m_json_serializer.append_value(
                         std::to_string(std::get<double>(column->extract_value(m_cur_message)))
                 );
@@ -108,10 +118,15 @@ void SchemaReader::generate_json_string() {
             case JsonSerializer::Op::AddBoolField: {
                 column = m_reordered_columns[column_id_index++];
                 auto const& name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
-                ;
-                if (false == name.empty()) {
-                    m_json_serializer.append_key(name);
-                }
+                m_json_serializer.append_key(name);
+                m_json_serializer.append_value(
+                        std::get<uint8_t>(column->extract_value(m_cur_message)) != 0 ? "true"
+                                                                                     : "false"
+                );
+                break;
+            }
+            case JsonSerializer::Op::AddBoolValue: {
+                column = m_reordered_columns[column_id_index++];
                 m_json_serializer.append_value(
                         std::get<uint8_t>(column->extract_value(m_cur_message)) != 0 ? "true"
                                                                                      : "false"
@@ -121,10 +136,14 @@ void SchemaReader::generate_json_string() {
             case JsonSerializer::Op::AddStringField: {
                 column = m_reordered_columns[column_id_index++];
                 auto const& name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
-                ;
-                if (false == name.empty()) {
-                    m_json_serializer.append_key(name);
-                }
+                m_json_serializer.append_key(name);
+                m_json_serializer.append_value_with_quotes(
+                        std::get<std::string>(column->extract_value(m_cur_message))
+                );
+                break;
+            }
+            case JsonSerializer::Op::AddStringValue: {
+                column = m_reordered_columns[column_id_index++];
                 m_json_serializer.append_value_with_quotes(
                         std::get<std::string>(column->extract_value(m_cur_message))
                 );
@@ -399,23 +418,23 @@ size_t SchemaReader::generate_structured_array_template(
                     break;
                 }
                 case NodeType::Integer: {
-                    m_json_serializer.add_op(JsonSerializer::Op::AddIntField);
+                    m_json_serializer.add_op(JsonSerializer::Op::AddIntValue);
                     m_reordered_columns.push_back(m_columns[column_idx++]);
                     break;
                 }
                 case NodeType::Float: {
-                    m_json_serializer.add_op(JsonSerializer::Op::AddFloatField);
+                    m_json_serializer.add_op(JsonSerializer::Op::AddFloatValue);
                     m_reordered_columns.push_back(m_columns[column_idx++]);
                     break;
                 }
                 case NodeType::Boolean: {
-                    m_json_serializer.add_op(JsonSerializer::Op::AddBoolField);
+                    m_json_serializer.add_op(JsonSerializer::Op::AddBoolValue);
                     m_reordered_columns.push_back(m_columns[column_idx++]);
                     break;
                 }
                 case NodeType::ClpString:
                 case NodeType::VarString: {
-                    m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
+                    m_json_serializer.add_op(JsonSerializer::Op::AddStringValue);
                     m_reordered_columns.push_back(m_columns[column_idx++]);
                     break;
                 }
