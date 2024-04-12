@@ -36,9 +36,18 @@ void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
     }
 }
 
-void SchemaReader::load(ZstdDecompressor& decompressor) {
+void SchemaReader::load(ZstdDecompressor& decompressor, size_t in_memory_size) {
+    if (in_memory_size > m_table_buffer_size) {
+        m_table_buffer = std::make_unique<char[]>(in_memory_size);
+        m_table_buffer_size = in_memory_size;
+    }
+    auto error = decompressor.try_read_exact_length(m_table_buffer.get(), in_memory_size);
+    if (ErrorCodeSuccess != error) {
+        throw OperationFailed(error, __FILENAME__, __LINE__);
+    }
+    char* cur = m_table_buffer.get();
     for (auto& reader : m_columns) {
-        reader->load(decompressor, m_num_messages);
+        cur = reader->load(cur, m_num_messages);
     }
 }
 
@@ -76,9 +85,9 @@ void SchemaReader::generate_json_string() {
             }
             case JsonSerializer::Op::AddIntField: {
                 column = m_reordered_columns[column_id_index++];
-                auto const& name = column->get_name();
+                auto const& name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
                 if (false == name.empty()) {
-                    m_json_serializer.append_key(column->get_name());
+                    m_json_serializer.append_key(name);
                 }
                 m_json_serializer.append_value(
                         std::to_string(std::get<int64_t>(column->extract_value(m_cur_message)))
@@ -87,9 +96,9 @@ void SchemaReader::generate_json_string() {
             }
             case JsonSerializer::Op::AddFloatField: {
                 column = m_reordered_columns[column_id_index++];
-                auto const& name = column->get_name();
+                auto const& name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
                 if (false == name.empty()) {
-                    m_json_serializer.append_key(column->get_name());
+                    m_json_serializer.append_key(name);
                 }
                 m_json_serializer.append_value(
                         std::to_string(std::get<double>(column->extract_value(m_cur_message)))
@@ -98,9 +107,10 @@ void SchemaReader::generate_json_string() {
             }
             case JsonSerializer::Op::AddBoolField: {
                 column = m_reordered_columns[column_id_index++];
-                auto const& name = column->get_name();
+                auto const& name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
+                ;
                 if (false == name.empty()) {
-                    m_json_serializer.append_key(column->get_name());
+                    m_json_serializer.append_key(name);
                 }
                 m_json_serializer.append_value(
                         std::get<uint8_t>(column->extract_value(m_cur_message)) != 0 ? "true"
@@ -110,9 +120,10 @@ void SchemaReader::generate_json_string() {
             }
             case JsonSerializer::Op::AddStringField: {
                 column = m_reordered_columns[column_id_index++];
-                auto const& name = column->get_name();
+                auto const& name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
+                ;
                 if (false == name.empty()) {
-                    m_json_serializer.append_key(column->get_name());
+                    m_json_serializer.append_key(name);
                 }
                 m_json_serializer.append_value_with_quotes(
                         std::get<std::string>(column->extract_value(m_cur_message))
@@ -121,7 +132,9 @@ void SchemaReader::generate_json_string() {
             }
             case JsonSerializer::Op::AddArrayField: {
                 column = m_reordered_columns[column_id_index++];
-                m_json_serializer.append_key(column->get_name());
+                m_json_serializer.append_key(
+                        m_global_schema_tree->get_node(column->get_id()).get_key_name()
+                );
                 m_json_serializer.append_value(
                         std::get<std::string>(column->extract_value(m_cur_message))
                 );

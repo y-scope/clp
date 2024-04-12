@@ -20,7 +20,7 @@ public:
     static bool decode_variables_into_message(
             LogTypeDictionaryEntry const& logtype_dict_entry,
             VariableDictionaryReader const& var_dict,
-            Span<int64_t> encoded_vars,
+            UnalignedSpan<int64_t> encoded_vars,
             std::string& decompressed_msg
     );
 

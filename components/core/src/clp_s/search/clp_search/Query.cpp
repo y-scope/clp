@@ -110,7 +110,7 @@ bool SubQuery::matches_logtype(logtype_dictionary_id_t const logtype) const {
     return m_possible_logtype_ids.count(logtype) > 0;
 }
 
-bool SubQuery::matches_vars(Span<int64_t> vars) const {
+bool SubQuery::matches_vars(UnalignedSpan<int64_t> vars) const {
     if (vars.size() < m_vars.size()) {
         // Not enough variables to satisfy query
         return false;

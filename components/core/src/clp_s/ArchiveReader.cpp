@@ -41,6 +41,7 @@ void ArchiveReader::read_metadata() {
         int32_t schema_id;
         uint64_t num_messages;
         size_t table_offset;
+        size_t in_memory_size;
 
         if (auto error = m_table_metadata_decompressor.try_read_numeric_value(schema_id);
             ErrorCodeSuccess != error)
@@ -60,7 +61,13 @@ void ArchiveReader::read_metadata() {
             throw OperationFailed(error, __FILENAME__, __LINE__);
         }
 
-        m_id_to_table_metadata[schema_id] = {num_messages, table_offset};
+        if (auto error = m_table_metadata_decompressor.try_read_numeric_value(in_memory_size);
+            ErrorCodeSuccess != error)
+        {
+            throw OperationFailed(error, __FILENAME__, __LINE__);
+        }
+
+        m_id_to_table_metadata[schema_id] = {num_messages, table_offset, in_memory_size};
         m_schema_ids.push_back(schema_id);
     }
     m_table_metadata_decompressor.close();
@@ -90,7 +97,7 @@ SchemaReader& ArchiveReader::read_table(
 
     m_tables_file_reader.try_seek_from_begin(m_id_to_table_metadata[schema_id].offset);
     m_tables_decompressor.open(m_tables_file_reader, cDecompressorFileReadBufferCapacity);
-    schema_reader.load(m_tables_decompressor);
+    schema_reader.load(m_tables_decompressor, m_id_to_table_metadata[schema_id].in_memory_size);
     m_tables_decompressor.close_for_reuse();
     return schema_reader;
 }
@@ -98,34 +105,27 @@ SchemaReader& ArchiveReader::read_table(
 BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int32_t column_id) {
     BaseColumnReader* column_reader = nullptr;
     auto const& node = m_schema_tree->get_node(column_id);
-    std::string const& key_name = node.get_key_name();
     switch (node.get_type()) {
         case NodeType::Integer:
-            column_reader = new Int64ColumnReader(key_name, column_id);
+            column_reader = new Int64ColumnReader(column_id);
             break;
         case NodeType::Float:
-            column_reader = new FloatColumnReader(key_name, column_id);
+            column_reader = new FloatColumnReader(column_id);
             break;
         case NodeType::ClpString:
-            column_reader = new ClpStringColumnReader(key_name, column_id, m_var_dict, m_log_dict);
+            column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict);
             break;
         case NodeType::VarString:
-            column_reader = new VariableStringColumnReader(key_name, column_id, m_var_dict);
+            column_reader = new VariableStringColumnReader(column_id, m_var_dict);
             break;
         case NodeType::Boolean:
-            column_reader = new BooleanColumnReader(key_name, column_id);
+            column_reader = new BooleanColumnReader(column_id);
             break;
         case NodeType::UnstructuredArray:
-            column_reader = new ClpStringColumnReader(
-                    key_name,
-                    column_id,
-                    m_var_dict,
-                    m_array_dict,
-                    true
-            );
+            column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_array_dict, true);
             break;
         case NodeType::DateString:
-            column_reader = new DateStringColumnReader(key_name, column_id, m_timestamp_dict);
+            column_reader = new DateStringColumnReader(column_id, m_timestamp_dict);
             break;
         // No need to push columns without associated object readers into the SchemaReader.
         case NodeType::Object:
@@ -155,7 +155,6 @@ void ArchiveReader::append_unordered_reader_columns(
         }
         BaseColumnReader* column_reader = nullptr;
         auto const& node = m_schema_tree->get_node(column_id);
-        std::string const& key_name = node.get_key_name();
         if (INT32_MAX == mst_subtree_root_node_id) {
             mst_subtree_root_node_id = m_schema_tree->find_matching_subtree_root_in_subtree(
                     -1,
@@ -165,20 +164,19 @@ void ArchiveReader::append_unordered_reader_columns(
         }
         switch (node.get_type()) {
             case NodeType::Integer:
-                column_reader = new Int64ColumnReader(key_name, column_id);
+                column_reader = new Int64ColumnReader(column_id);
                 break;
             case NodeType::Float:
-                column_reader = new FloatColumnReader(key_name, column_id);
+                column_reader = new FloatColumnReader(column_id);
                 break;
             case NodeType::ClpString:
-                column_reader
-                        = new ClpStringColumnReader(key_name, column_id, m_var_dict, m_log_dict);
+                column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict);
                 break;
             case NodeType::VarString:
-                column_reader = new VariableStringColumnReader(key_name, column_id, m_var_dict);
+                column_reader = new VariableStringColumnReader(column_id, m_var_dict);
                 break;
             case NodeType::Boolean:
-                column_reader = new BooleanColumnReader(key_name, column_id);
+                column_reader = new BooleanColumnReader(column_id);
                 break;
             // Since we use the global schema tree to help marshal unordered objects there is no
             // need to push these node types into the schema reader

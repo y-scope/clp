@@ -21,19 +21,19 @@ public:
     };
 
     // Constructor
-    BaseColumnReader(std::string name, int32_t id) : m_name(std::move(name)), m_id(id) {}
+    BaseColumnReader(int32_t id) : m_id(id) {}
 
     // Destructor
     virtual ~BaseColumnReader() = default;
 
     /**
-     * Reads the column from the disk
-     * @param decompressor
+     * Reads the column from a buffer and returns a pointer to the next byte in memory after this
+     * column.
+     * @param buffer
      * @param num_messages
+     * @return a pointer to the next byte in the provided buffer following this column.
      */
-    virtual void load(ZstdDecompressor& decompressor, uint64_t num_messages) = 0;
-
-    std::string get_name() const { return m_name; }
+    virtual char* load(char* buffer, uint64_t num_messages) = 0;
 
     int32_t get_id() const { return m_id; }
 
@@ -48,21 +48,19 @@ public:
             = 0;
 
 private:
-    std::string m_name;
     int32_t m_id;
 };
 
 class Int64ColumnReader : public BaseColumnReader {
 public:
     // Constructor
-    explicit Int64ColumnReader(std::string name, int32_t id)
-            : BaseColumnReader(std::move(name), id) {}
+    explicit Int64ColumnReader(int32_t id) : BaseColumnReader(id) {}
 
     // Destructor
     ~Int64ColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
-    void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
+    char* load(char* buffer, uint64_t num_messages) override;
 
     NodeType get_type() override { return NodeType::Integer; }
 
@@ -70,20 +68,19 @@ public:
     ) override;
 
 private:
-    std::unique_ptr<int64_t[]> m_values;
+    UnalignedSpan<int64_t> m_values;
 };
 
 class FloatColumnReader : public BaseColumnReader {
 public:
     // Constructor
-    explicit FloatColumnReader(std::string name, int32_t id)
-            : BaseColumnReader(std::move(name), id) {}
+    explicit FloatColumnReader(int32_t id) : BaseColumnReader(id) {}
 
     // Destructor
     ~FloatColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
-    void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
+    char* load(char* buffer, uint64_t num_messages) override;
 
     NodeType get_type() override { return NodeType::Float; }
 
@@ -91,20 +88,19 @@ public:
     ) override;
 
 private:
-    std::unique_ptr<double[]> m_values;
+    UnalignedSpan<double> m_values;
 };
 
 class BooleanColumnReader : public BaseColumnReader {
 public:
     // Constructor
-    explicit BooleanColumnReader(std::string name, int32_t id)
-            : BaseColumnReader(std::move(name), id) {}
+    explicit BooleanColumnReader(int32_t id) : BaseColumnReader(id) {}
 
     // Destructor
     ~BooleanColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
-    void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
+    char* load(char* buffer, uint64_t num_messages) override;
 
     NodeType get_type() override { return NodeType::Boolean; }
 
@@ -112,20 +108,19 @@ public:
     ) override;
 
 private:
-    std::unique_ptr<uint8_t[]> m_values;
+    UnalignedSpan<uint8_t> m_values;
 };
 
 class ClpStringColumnReader : public BaseColumnReader {
 public:
     // Constructor
     ClpStringColumnReader(
-            std::string const& name,
             int32_t id,
             std::shared_ptr<VariableDictionaryReader> var_dict,
             std::shared_ptr<LogTypeDictionaryReader> log_dict,
             bool is_array = false
     )
-            : BaseColumnReader(name, id),
+            : BaseColumnReader(id),
               m_var_dict(std::move(var_dict)),
               m_log_dict(std::move(log_dict)),
               m_is_array(is_array) /*, encoded_vars_index_(0)*/ {}
@@ -134,7 +129,7 @@ public:
     ~ClpStringColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
-    void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
+    char* load(char* buffer, uint64_t num_messages) override;
 
     NodeType get_type() override {
         return m_is_array ? NodeType::UnstructuredArray : NodeType::ClpString;
@@ -155,15 +150,14 @@ public:
      * @param cur_message
      * @return Encoded variables in a span
      */
-    Span<int64_t> get_encoded_vars(uint64_t cur_message);
+    UnalignedSpan<int64_t> get_encoded_vars(uint64_t cur_message);
 
 private:
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
     std::shared_ptr<LogTypeDictionaryReader> m_log_dict;
 
-    std::unique_ptr<int64_t[]> m_logtypes;
-    std::unique_ptr<int64_t[]> m_encoded_vars;
-    // size_t encoded_vars_index_;
+    UnalignedSpan<uint64_t> m_logtypes;
+    UnalignedSpan<int64_t> m_encoded_vars;
 
     bool m_is_array;
 };
@@ -171,19 +165,15 @@ private:
 class VariableStringColumnReader : public BaseColumnReader {
 public:
     // Constructor
-    VariableStringColumnReader(
-            std::string const& name,
-            int32_t id,
-            std::shared_ptr<VariableDictionaryReader> var_dict
-    )
-            : BaseColumnReader(name, id),
+    VariableStringColumnReader(int32_t id, std::shared_ptr<VariableDictionaryReader> var_dict)
+            : BaseColumnReader(id),
               m_var_dict(std::move(var_dict)) {}
 
     // Destructor
     ~VariableStringColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
-    void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
+    char* load(char* buffer, uint64_t num_messages) override;
 
     NodeType get_type() override { return NodeType::VarString; }
 
@@ -200,25 +190,21 @@ public:
 private:
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
 
-    std::unique_ptr<int64_t[]> m_variables;
+    UnalignedSpan<uint64_t> m_variables;
 };
 
 class DateStringColumnReader : public BaseColumnReader {
 public:
     // Constructor
-    DateStringColumnReader(
-            std::string const& name,
-            int32_t id,
-            std::shared_ptr<TimestampDictionaryReader> timestamp_dict
-    )
-            : BaseColumnReader(name, id),
+    DateStringColumnReader(int32_t id, std::shared_ptr<TimestampDictionaryReader> timestamp_dict)
+            : BaseColumnReader(id),
               m_timestamp_dict(std::move(timestamp_dict)) {}
 
     // Destructor
     ~DateStringColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
-    void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
+    char* load(char* buffer, uint64_t num_messages) override;
 
     NodeType get_type() override { return NodeType::DateString; }
 
@@ -234,8 +220,8 @@ public:
 private:
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dict;
 
-    std::unique_ptr<int64_t[]> m_timestamps;
-    std::unique_ptr<int64_t[]> m_timestamp_encodings;
+    UnalignedSpan<int64_t> m_timestamps;
+    UnalignedSpan<int64_t> m_timestamp_encodings;
 };
 }  // namespace clp_s
 

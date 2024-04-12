@@ -32,10 +32,12 @@ public:
     virtual void add_value(ParsedMessage::variable_t& value, size_t& size) = 0;
 
     /**
-     * Stores the column to a compressed file
+     * Stores the column to a compressed file and returns the in-memory original size of the data
+     * written to the compressor.
      * @param compressor
+     * @return
      */
-    virtual void store(ZstdCompressor& compressor) = 0;
+    virtual size_t store(ZstdCompressor& compressor) = 0;
 
 protected:
     int32_t m_id;
@@ -52,7 +54,7 @@ public:
     // Methods inherited from BaseColumnWriter
     void add_value(ParsedMessage::variable_t& value, size_t& size) override;
 
-    void store(ZstdCompressor& compressor) override;
+    size_t store(ZstdCompressor& compressor) override;
 
 private:
     std::vector<int64_t> m_values;
@@ -69,7 +71,7 @@ public:
     // Methods inherited from BaseColumnWriter
     void add_value(ParsedMessage::variable_t& value, size_t& size) override;
 
-    void store(ZstdCompressor& compressor) override;
+    size_t store(ZstdCompressor& compressor) override;
 
 private:
     std::vector<double> m_values;
@@ -86,7 +88,7 @@ public:
     // Methods inherited from BaseColumnWriter
     void add_value(ParsedMessage::variable_t& value, size_t& size) override;
 
-    void store(ZstdCompressor& compressor) override;
+    size_t store(ZstdCompressor& compressor) override;
 
 private:
     std::vector<uint8_t> m_values;
@@ -110,7 +112,7 @@ public:
     // Methods inherited from BaseColumnWriter
     void add_value(ParsedMessage::variable_t& value, size_t& size) override;
 
-    void store(ZstdCompressor& compressor) override;
+    size_t store(ZstdCompressor& compressor) override;
 
     /**
      * @param encoded_id
@@ -164,7 +166,7 @@ public:
     // Methods inherited from BaseColumnWriter
     void add_value(ParsedMessage::variable_t& value, size_t& size) override;
 
-    void store(ZstdCompressor& compressor) override;
+    size_t store(ZstdCompressor& compressor) override;
 
 private:
     std::shared_ptr<VariableDictionaryWriter> m_var_dict;
@@ -182,7 +184,7 @@ public:
     // Methods inherited from BaseColumnWriter
     void add_value(ParsedMessage::variable_t& value, size_t& size) override;
 
-    void store(ZstdCompressor& compressor) override;
+    size_t store(ZstdCompressor& compressor) override;
 
 private:
     std::vector<int64_t> m_timestamps;

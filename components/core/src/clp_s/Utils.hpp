@@ -2,6 +2,7 @@
 #define CLP_S_UTILS_HPP
 
 #include <charconv>
+#include <cstring>
 #include <string>
 
 #include <boost/filesystem.hpp>
@@ -269,5 +270,30 @@ private:
     size_t m_size{};
 };
 }  // namespace clp_s
+
+template <typename T>
+class UnalignedSpan {
+public:
+    UnalignedSpan() = default;
+    UnalignedSpan(char* begin, size_t size) : m_begin(begin), m_size(size){};
+
+    size_t size() { return m_size; }
+
+    size_t size_in_bytes() { return m_size * sizeof(T); }
+
+    T operator[](size_t i) {
+        T tmp;
+        memcpy(&tmp, m_begin + i * sizeof(T), sizeof(T));
+        return tmp;
+    }
+
+    UnalignedSpan<T> sub_span(size_t start, size_t size) {
+        return {m_begin + start * sizeof(T), size};
+    }
+
+private:
+    char* m_begin{nullptr};
+    size_t m_size{0};
+};
 
 #endif  // CLP_S_UTILS_HPP

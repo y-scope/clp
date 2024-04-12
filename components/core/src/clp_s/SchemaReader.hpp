@@ -45,9 +45,17 @@ struct InternalGeneratorState {
 
 class SchemaReader {
 public:
+    class OperationFailed : public TraceableException {
+    public:
+        // Constructors
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
+    };
+
     struct TableMetadata {
         uint64_t num_messages;
         size_t offset;
+        size_t in_memory_size;
     };
 
     // Constructor
@@ -142,8 +150,9 @@ public:
     /**
      * Loads the encoded messages
      * @param decompressor
+     * @param in_memory_size
      */
-    void load(ZstdDecompressor& decompressor);
+    void load(ZstdDecompressor& decompressor, size_t in_memory_size);
 
     /**
      * Gets next message
@@ -246,6 +255,8 @@ private:
     std::unordered_map<int32_t, BaseColumnReader*> m_column_map;
     std::vector<BaseColumnReader*> m_columns;
     std::vector<BaseColumnReader*> m_reordered_columns;
+    std::unique_ptr<char[]> m_table_buffer;
+    size_t m_table_buffer_size{0};
 
     BaseColumnReader* m_timestamp_column;
     std::function<epochtime_t()> m_get_timestamp;
