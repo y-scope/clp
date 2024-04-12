@@ -221,7 +221,6 @@ const SearchResultsTimeline = ({
                             `${bucketEndTime.format(DATETIME_FORMAT_TEMPLATE)}`;
                     },
                 },
-
                 caretSize: 0,
                 intersect: false,
                 mode: "x",
