@@ -37,12 +37,6 @@ public:
     virtual bool filter(uint64_t cur_message) = 0;
 };
 
-struct InternalGeneratorState {
-    size_t end_pos;
-    size_t repetitions;
-    JsonSerializer::Op operation;
-};
-
 class SchemaReader {
 public:
     class OperationFailed : public TraceableException {
