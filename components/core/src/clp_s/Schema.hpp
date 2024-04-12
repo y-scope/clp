@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "SchemaTree.hpp"
+#include "TraceableException.hpp"
 #include "Utils.hpp"
 
 namespace clp_s {
@@ -22,6 +23,13 @@ namespace clp_s {
  */
 class Schema {
 public:
+    class OperationFailed : public TraceableException {
+    public:
+        // Constructors
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
+    };
+
     /**
      * Inserts a node into the ordered region of the schema.
      */
@@ -93,9 +101,26 @@ public:
      */
     [[nodiscard]] auto cend() const { return m_schema.cend(); }
 
+    int32_t operator[](size_t i) const { return m_schema[i]; }
+
+    /**
+     * @return a view into the ordered region of the underlying schema
+     */
     [[nodiscard]] Span<int32_t> get_ordered_schema_view() {
         return m_num_ordered == 0 ? Span<int32_t>{nullptr, 0}
                                   : Span<int32_t>{m_schema.begin().base(), m_num_ordered};
+    }
+
+    /**
+     * @param i
+     * @param size
+     * @return a view into the requested region of the schema
+     */
+    [[nodiscard]] Span<int32_t> get_view(size_t i, size_t size) {
+        if (i + size > m_schema.size()) {
+            throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
+        }
+        return Span<int32_t>{m_schema.begin().base() + i, size};
     }
 
     /**

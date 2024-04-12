@@ -217,21 +217,17 @@ SchemaReader& ArchiveReader::create_schema_reader(
     );
     auto timestamp_column_ids = m_timestamp_dict->get_authoritative_timestamp_column_ids();
 
-    size_t remaining_structured_object_entries = 0;
-    for (auto it = schema.begin(); it != schema.end(); ++it) {
-        int32_t column_id = *it;
-        if (remaining_structured_object_entries > 0) {
-            --remaining_structured_object_entries;
-            continue;
-        }
+    for (size_t i = 0; i < schema.size(); ++i) {
+        int32_t column_id = schema[i];
         if (Schema::schema_entry_is_unordered_object(column_id)) {
-            remaining_structured_object_entries = Schema::get_unordered_object_length(column_id);
+            size_t length = Schema::get_unordered_object_length(column_id);
             append_unordered_reader_columns(
                     m_schema_reader,
                     Schema::get_unordered_object_type(column_id),
-                    Span<int32_t>(it.base() + 1, remaining_structured_object_entries),
+                    schema.get_view(i + 1, length),
                     should_marshal_records
             );
+            i += length;
             continue;
         }
         BaseColumnReader* column_reader = append_reader_column(m_schema_reader, column_id);

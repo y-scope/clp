@@ -5,9 +5,8 @@
 #include "VariableDecoder.hpp"
 
 namespace clp_s {
-char* Int64ColumnReader::load(char* buffer, uint64_t num_messages) {
-    m_values = {buffer, num_messages};
-    return buffer + m_values.size_in_bytes();
+void Int64ColumnReader::load(ManagedBufferViewReader& reader, uint64_t num_messages) {
+    m_values = reader.consume_unaligned_span<int64_t>(num_messages);
 }
 
 std::variant<int64_t, double, std::string, uint8_t> Int64ColumnReader::extract_value(
@@ -16,9 +15,8 @@ std::variant<int64_t, double, std::string, uint8_t> Int64ColumnReader::extract_v
     return m_values[cur_message];
 }
 
-char* FloatColumnReader::load(char* buffer, uint64_t num_messages) {
-    m_values = {buffer, num_messages};
-    return buffer + m_values.size_in_bytes();
+void FloatColumnReader::load(ManagedBufferViewReader& reader, uint64_t num_messages) {
+    m_values = reader.consume_unaligned_span<double>(num_messages);
 }
 
 std::variant<int64_t, double, std::string, uint8_t> FloatColumnReader::extract_value(
@@ -27,9 +25,8 @@ std::variant<int64_t, double, std::string, uint8_t> FloatColumnReader::extract_v
     return m_values[cur_message];
 }
 
-char* BooleanColumnReader::load(char* buffer, uint64_t num_messages) {
-    m_values = {buffer, num_messages};
-    return buffer + m_values.size_in_bytes();
+void BooleanColumnReader::load(ManagedBufferViewReader& reader, uint64_t num_messages) {
+    m_values = reader.consume_unaligned_span<uint8_t>(num_messages);
 }
 
 std::variant<int64_t, double, std::string, uint8_t> BooleanColumnReader::extract_value(
@@ -38,15 +35,10 @@ std::variant<int64_t, double, std::string, uint8_t> BooleanColumnReader::extract
     return m_values[cur_message];
 }
 
-char* ClpStringColumnReader::load(char* buffer, uint64_t num_messages) {
-    size_t encoded_vars_length;
-
-    m_logtypes = {buffer, num_messages};
-    buffer += m_logtypes.size_in_bytes();
-    memcpy(&encoded_vars_length, buffer, sizeof(encoded_vars_length));
-    buffer += sizeof(encoded_vars_length);
-    m_encoded_vars = {buffer, encoded_vars_length};
-    return buffer + m_encoded_vars.size_in_bytes();
+void ClpStringColumnReader::load(ManagedBufferViewReader& reader, uint64_t num_messages) {
+    m_logtypes = reader.consume_unaligned_span<uint64_t>(num_messages);
+    size_t encoded_vars_length = reader.consume_value<size_t>();
+    m_encoded_vars = reader.consume_unaligned_span<int64_t>(encoded_vars_length);
 }
 
 std::variant<int64_t, double, std::string, uint8_t> ClpStringColumnReader::extract_value(
@@ -90,9 +82,8 @@ UnalignedSpan<int64_t> ClpStringColumnReader::get_encoded_vars(uint64_t cur_mess
     return m_encoded_vars.sub_span(encoded_vars_offset, entry.get_num_vars());
 }
 
-char* VariableStringColumnReader::load(char* buffer, uint64_t num_messages) {
-    m_variables = {buffer, num_messages};
-    return buffer + m_variables.size_in_bytes();
+void VariableStringColumnReader::load(ManagedBufferViewReader& reader, uint64_t num_messages) {
+    m_variables = reader.consume_unaligned_span<uint64_t>(num_messages);
 }
 
 std::variant<int64_t, double, std::string, uint8_t> VariableStringColumnReader::extract_value(
@@ -105,11 +96,9 @@ int64_t VariableStringColumnReader::get_variable_id(uint64_t cur_message) {
     return m_variables[cur_message];
 }
 
-char* DateStringColumnReader::load(char* buffer, uint64_t num_messages) {
-    m_timestamps = {buffer, num_messages};
-    buffer += m_timestamps.size_in_bytes();
-    m_timestamp_encodings = {buffer, num_messages};
-    return buffer + m_timestamp_encodings.size_in_bytes();
+void DateStringColumnReader::load(ManagedBufferViewReader& reader, uint64_t num_messages) {
+    m_timestamps = reader.consume_unaligned_span<int64_t>(num_messages);
+    m_timestamp_encodings = reader.consume_unaligned_span<int64_t>(num_messages);
 }
 
 std::variant<int64_t, double, std::string, uint8_t> DateStringColumnReader::extract_value(

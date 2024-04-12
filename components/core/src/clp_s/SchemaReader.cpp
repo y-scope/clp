@@ -45,9 +45,13 @@ void SchemaReader::load(ZstdDecompressor& decompressor, size_t in_memory_size) {
     if (ErrorCodeSuccess != error) {
         throw OperationFailed(error, __FILENAME__, __LINE__);
     }
-    char* cur = m_table_buffer.get();
+
+    ManagedBufferViewReader buffer_reader{m_table_buffer.get(), in_memory_size};
     for (auto& reader : m_columns) {
-        cur = reader->load(cur, m_num_messages);
+        reader->load(buffer_reader, m_num_messages);
+    }
+    if (buffer_reader.get_remaining_size() > 0) {
+        throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
     }
 }
 
@@ -368,7 +372,7 @@ size_t SchemaReader::generate_structured_array_template(
         if (Schema::schema_entry_is_unordered_object(global_column_id)) {
             auto type = Schema::get_unordered_object_type(global_column_id);
             size_t length = Schema::get_unordered_object_length(global_column_id);
-            auto sub_object_schema = Span<int32_t>{&schema[i] + 1, length};
+            auto sub_object_schema = schema.sub_span(i + 1, length);
             if (NodeType::StructuredArray == type) {
                 int32_t sub_array_root
                         = m_global_schema_tree->find_matching_subtree_root_in_subtree(
@@ -466,7 +470,7 @@ size_t SchemaReader::generate_structured_object_template(
         if (Schema::schema_entry_is_unordered_object(global_column_id)) {
             // It should only be possible to encounter arrays inside of structured objects
             size_t array_length = Schema::get_unordered_object_length(global_column_id);
-            auto array_schema = Span<int32_t>{&schema[i] + 1, array_length};
+            auto array_schema = schema.sub_span(i + 1, array_length);
             // we can guarantee that the last array we hit on the path to object root must be the
             // right one because otherwise we'd be inside the structured array generator
             int32_t array_root = m_global_schema_tree->find_matching_subtree_root_in_subtree(
