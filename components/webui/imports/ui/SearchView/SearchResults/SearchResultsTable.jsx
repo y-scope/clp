@@ -32,7 +32,7 @@ const SEARCH_RESULT_MESSAGE_LINE_HEIGHT = 1.5;
 /**
  * The interval, in milliseconds, at which the search results load sensor should poll for updates.
  */
-const SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MS = 200;
+const SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MILLIS = 200;
 
 /**
  * Senses if the user has requested to load more results by scrolling until
@@ -60,7 +60,7 @@ const SearchResultsLoadSensor = ({
                 onLoadMoreResults();
                 loadIntervalRef.current = setInterval(
                     onLoadMoreResults,
-                    SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MS,
+                    SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MILLIS,
                 );
             } else if (null !== loadIntervalRef.current) {
                 clearInterval(loadIntervalRef.current);

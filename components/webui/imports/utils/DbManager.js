@@ -11,7 +11,7 @@ import {initSearchJobsDbManager} from "../api/search/server/methods";
 
 const DB_CONNECTION_LIMIT = 2;
 const DB_MAX_IDLE = DB_CONNECTION_LIMIT;
-const DB_IDLE_TIMEOUT_IN_MS = 10000;
+const DB_IDLE_TIMEOUT_MILLIS = 10000;
 
 /**
  * @type {import("mysql2/promise").Pool|null}
@@ -65,7 +65,7 @@ const initDbManagers = async ({
 
             connectionLimit: DB_CONNECTION_LIMIT,
             enableKeepAlive: true,
-            idleTimeout: DB_IDLE_TIMEOUT_IN_MS,
+            idleTimeout: DB_IDLE_TIMEOUT_MILLIS,
             maxIdle: DB_MAX_IDLE,
         });
 

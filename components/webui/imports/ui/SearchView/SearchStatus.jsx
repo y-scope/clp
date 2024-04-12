@@ -17,7 +17,7 @@ import "./SearchStatus.scss";
 
 // for pseudo progress bar
 const PROGRESS_INCREMENT = 5;
-const PROGRESS_INTERVAL_MS = 100;
+const PROGRESS_INTERVAL_MILLIS = 100;
 
 /**
  * Displays the status of a search operation, which shows error messages if any, and otherwise
@@ -39,7 +39,7 @@ const SearchStatus = ({
         if (true === isSearchSignalQuerying(resultsMetadata.lastSignal)) {
             timerIntervalRef.current ??= setInterval(() => {
                 setProgress((v) => (v + PROGRESS_INCREMENT));
-            }, PROGRESS_INTERVAL_MS);
+            }, PROGRESS_INTERVAL_MILLIS);
         } else {
             if (null !== timerIntervalRef.current) {
                 clearInterval(timerIntervalRef.current);
