@@ -79,7 +79,7 @@ const updateSearchSignalWhenJobsFinish = async ({
             .getOrCreateCollection(searchJobId)
             .countDocuments();
     } catch (e) {
-        if (e.error === ERROR_NAME_COLLECTION_DROPPED) {
+        if (ERROR_NAME_COLLECTION_DROPPED === e.error) {
             logger.warn(`Collection ${searchJobId} has been dropped.`);
 
             return;

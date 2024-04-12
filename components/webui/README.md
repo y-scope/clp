@@ -2,7 +2,7 @@
 
 ## Requirements
 
-* Node.js
+* Node.js.
   To manage different versions of Node.js, we recommend using
 [nvm (Node Version Manager)](https://github.com/nvm-sh/nvm).
   * **Node.js 14** - For running Meteor. Meteor.js only

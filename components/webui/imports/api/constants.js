@@ -1,5 +1,5 @@
 /**
- * Enum for the CLP package's possible storage engines. These must match the values in
+ * Enum of the CLP package's possible storage engines. These must match the values in
  * clp_py_utils.clp_config.StorageEngine.
  *
  * @enum {string}

@@ -1,5 +1,5 @@
 /**
- * Enum of the column names for the `clp-archives` table.
+ * Enum of the column names for the `clp_archives` table.
  *
  * @enum {string}
  */
@@ -11,7 +11,7 @@ const CLP_ARCHIVES_TABLE_COLUMN_NAMES = Object.freeze({
 });
 
 /**
- * Enum of the column names for the clp-files` table.
+ * Enum of the column names for the `clp_files` table.
  *
  * @enum {string}
  */
@@ -55,6 +55,7 @@ class StatsDbManager {
      * @property {number|null} num_files
      * @property {number|null} num_messages
      */
+
     /**
      * Queries compression stats.
      *

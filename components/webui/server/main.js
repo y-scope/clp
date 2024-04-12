@@ -21,10 +21,10 @@ const DEFAULT_LOGGING_LEVEL = Meteor.isDevelopment ?
 /**
  * Parses environment variables into config values for the application.
  *
- * @return {object} An object containing config values including the SQL database credentials,
+ * @return {object} containing config values including the SQL database credentials,
  * logs directory, and logging level.
  * @throws {Error} if the required environment variables are undefined, it exits the process with an
- *                 error.
+ * error.
  */
 const parseEnvVars = () => {
     const {

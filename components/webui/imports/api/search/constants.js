@@ -1,6 +1,7 @@
 /**
  * @typedef {string} SearchSignal
  */
+
 /**
  * Enum of search-related signals.
  *

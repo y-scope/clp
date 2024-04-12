@@ -13,6 +13,11 @@ import {
  */
 const JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS = 0.5;
 
+/**
+ * Enum of the column names of the `search_jobs` table.
+ *
+ * @enum {string}
+ */
 const SEARCH_JOBS_TABLE_COLUMN_NAMES = Object.freeze({
     ID: "id",
     STATUS: "status",

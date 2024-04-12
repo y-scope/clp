@@ -83,7 +83,7 @@ const initDbManagers = async ({
 };
 
 /**
- * De-initialize database managers.
+ * De-initializes database managers.
  *
  * @return {Promise<void>}
  * @throws {Error} on error.
