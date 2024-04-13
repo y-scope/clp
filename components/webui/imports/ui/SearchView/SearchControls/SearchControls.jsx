@@ -8,7 +8,10 @@ import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 
 import {
-    faBars, faSearch, faTimes, faTrash,
+    faBars,
+    faSearch,
+    faTimes,
+    faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 
@@ -19,9 +22,7 @@ import {
 } from "/imports/api/search/constants";
 
 import {LOCAL_STORAGE_KEYS} from "../../constants";
-import SearchFilterControlsDrawer from "./SearchFilterControlsDrawer";
-
-import "./SearchControls.scss";
+import SearchControlsFilterDrawer from "./SearchControlsFilterDrawer/SearchControlsFilterDrawer";
 
 
 /**
@@ -144,7 +145,7 @@ const SearchControls = ({
                 </Form.Group>
             </Form>
 
-            {drawerOpen && <SearchFilterControlsDrawer
+            {drawerOpen && <SearchControlsFilterDrawer
                 ignoreCase={ignoreCase}
                 setIgnoreCase={setIgnoreCase}
                 setTimeRange={setTimeRange}

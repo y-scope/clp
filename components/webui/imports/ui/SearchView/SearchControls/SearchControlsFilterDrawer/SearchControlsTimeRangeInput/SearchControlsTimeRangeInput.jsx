@@ -1,5 +1,4 @@
 import Col from "react-bootstrap/Col";
-import Container from "react-bootstrap/Container";
 import Dropdown from "react-bootstrap/Dropdown";
 import DropdownButton from "react-bootstrap/DropdownButton";
 import Form from "react-bootstrap/Form";
@@ -9,13 +8,11 @@ import Row from "react-bootstrap/Row";
 import {
     computeTimeRange,
     convertLocalDateToSameUtcDatetime,
-    convertUtcDatetimeToSameLocalDate,
-    TIME_RANGE_PRESET_LABEL,
-    TIME_UNIT,
-} from "../../../utils/datetime";
-import SearchControlsCaseSensitivityCheck from "./SearchControlsCaseSensitivityCheck";
+    convertUtcDatetimeToSameLocalDate, TIME_RANGE_PRESET_LABEL, TIME_UNIT,
+} from "/imports/utils/datetime";
+
+import SearchControlsFilterLabel from "../SearchControlsFilterLabel";
 import SearchControlsDatePicker from "./SearchControlsDatePicker";
-import SearchControlsFilterLabel from "./SearchControlsFilterLabel";
 
 
 /**
@@ -137,78 +134,4 @@ const SearchControlsTimeRangeInput = ({
     );
 };
 
-/**
- * Represents a component for selecting case sensitivity.
- *
- * @param {object} props
- * @param {boolean} props.ignoreCase
- * @param {Function} props.setIgnoreCase
- * @return {React.ReactElement}
- */
-const SearchControlsCaseSensitivity = ({
-    ignoreCase,
-    setIgnoreCase,
-}) => {
-    /**
-     * Handles case sensitivity change.
-     *
-     * @param {InputEvent} event
-     */
-    const handleCaseSensitivityChange = (event) => {
-        setIgnoreCase("true" === event.target.value);
-    };
-
-    return (
-        <Form.Group as={Row}>
-            <SearchControlsFilterLabel>
-                Case sensitivity
-            </SearchControlsFilterLabel>
-            <Col>
-                <SearchControlsCaseSensitivityCheck
-                    checked={true === ignoreCase}
-                    label={"Insensitive"}
-                    value={true}
-                    onChange={handleCaseSensitivityChange}/>
-                <SearchControlsCaseSensitivityCheck
-                    checked={false === ignoreCase}
-                    label={"Sensitive"}
-                    value={false}
-                    onChange={handleCaseSensitivityChange}/>
-            </Col>
-        </Form.Group>
-    );
-};
-
-/**
- * Renders the controls for filtering search results by time range, including a date picker and
- * preset time range options.
- *
- * @param {object} props
- * @param {boolean} props.ignoreCase
- * @param {Function} props.setIgnoreCase
- * @param {Function} props.setTimeRange
- * @param {TimeRange} props.timeRange
- * @return {React.ReactElement}
- */
-const SearchFilterControlsDrawer = ({
-    ignoreCase,
-    setIgnoreCase,
-    setTimeRange,
-    timeRange,
-}) => {
-    return (
-        <Container
-            className={"search-filter-controls-drawer px-3 py-3 border-bottom"}
-            fluid={true}
-        >
-            <SearchControlsTimeRangeInput
-                setTimeRange={setTimeRange}
-                timeRange={timeRange}/>
-            <SearchControlsCaseSensitivity
-                ignoreCase={ignoreCase}
-                setIgnoreCase={setIgnoreCase}/>
-        </Container>
-    );
-};
-
-export default SearchFilterControlsDrawer;
+export default SearchControlsTimeRangeInput;
