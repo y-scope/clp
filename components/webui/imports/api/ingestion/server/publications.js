@@ -46,7 +46,8 @@ const refreshCompressionStats = async () => {
 };
 
 /**
- * Initializes the StatsDbManager and sets the refresh interval for compression stats updates.
+ * Initializes the StatsDbManager and starts an interval timer (`refreshMeteorInterval`) for
+ * compression stats updates.
  *
  * @param {import("mysql2/promise").Pool} sqlDbConnPool
  * @param {object} tableNames
@@ -70,7 +71,8 @@ const initStatsDbManager = (sqlDbConnPool, {
 };
 
 /**
- * De-initializes the StatsDbManager by clearing the refreshMeteorInterval.
+ * De-initializes the StatsDbManager by clearing the interval timer for compression stats updates
+ * (`refreshMeteorInterval`).
  */
 const deinitStatsDbManager = () => {
     if (null !== refreshMeteorInterval) {

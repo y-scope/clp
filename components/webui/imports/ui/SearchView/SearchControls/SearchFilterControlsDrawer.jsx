@@ -210,4 +210,5 @@ const SearchFilterControlsDrawer = ({
         </Container>
     );
 };
+
 export default SearchFilterControlsDrawer;

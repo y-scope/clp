@@ -9,12 +9,12 @@ import {
 
 
 /**
- * The poll interval in milliseconds for checking the completion status of a job.
+ * Interval in milliseconds for polling the completion status of a job.
  */
 const JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS = 0.5;
 
 /**
- * Enum of the column names of the `search_jobs` table.
+ * Enum of the `search_jobs` table's column names.
  *
  * @enum {string}
  */

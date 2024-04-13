@@ -32,7 +32,7 @@ import SearchStatus from "./SearchStatus";
 const DEFAULT_IGNORE_CASE_SETTING = true;
 
 /**
- * Provides a search interface, which searches queries and visualizes search results.
+ * Provides a search interface that allows users to query archives and visualize search results.
  *
  * @return {React.ReactElement}
  */
