@@ -190,8 +190,7 @@ const SearchResultsTable = ({
                         <th
                             data-column-name={SEARCH_RESULTS_FIELDS.TIMESTAMP}
                             key={SEARCH_RESULTS_FIELDS.TIMESTAMP}
-                            className={"search-results-th search-results-th-sortable " +
-                                "search-results-th-timestamp"}
+                            className={"search-results-th search-results-th-sortable"}
                             onClick={toggleSortDirection}
                         >
                             <div className={"search-results-table-header"}>
