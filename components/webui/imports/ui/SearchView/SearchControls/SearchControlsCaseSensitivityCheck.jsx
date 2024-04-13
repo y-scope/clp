@@ -15,6 +15,7 @@ const SearchControlsCaseSensitivityCheck = ({
 }) => (
     <Form.Check
         {...rest}
+        className={"mt-1"}
         inline={true}
         label={label}
         name={"case-sensitivity"}
