@@ -1,5 +1,5 @@
 const MILLIS_PER_SECOND = 1000;
-const BYTES_PER_KILOBYTE = 1024;
+const BYTES_PER_KIBIBYTE = 1024;
 
 /**
  * Creates a promise that resolves after a specified number of seconds.
@@ -21,10 +21,10 @@ const computeHumanSize = (num) => {
     // eslint-disable-next-line @stylistic/js/array-element-newline
     const siPrefixes = ["", "K", "M", "G", "T", "P", "E", "Z"];
     for (let i = 0; i < siPrefixes.length; ++i) {
-        if (BYTES_PER_KILOBYTE > Math.abs(num)) {
+        if (BYTES_PER_KIBIBYTE > Math.abs(num)) {
             return `${Math.round(num)} ${siPrefixes[i]}B`;
         }
-        num /= BYTES_PER_KILOBYTE;
+        num /= BYTES_PER_KIBIBYTE;
     }
 
     return `${Math.round(num)} B`;
