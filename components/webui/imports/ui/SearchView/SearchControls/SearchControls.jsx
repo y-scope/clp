@@ -22,7 +22,7 @@ import {
 } from "/imports/api/search/constants";
 
 import {LOCAL_STORAGE_KEYS} from "../../constants";
-import SearchControlsFilterDrawer from "./SearchControlsFilterDrawer/SearchControlsFilterDrawer";
+import SearchControlsFilterDrawer from "./SearchControlsFilterDrawer";
 
 
 /**

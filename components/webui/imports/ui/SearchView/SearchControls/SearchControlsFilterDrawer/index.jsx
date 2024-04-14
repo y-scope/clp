@@ -1,9 +1,7 @@
 import Container from "react-bootstrap/Container";
 
-import SearchControlsCaseSensitivity
-    from "./SearchControlsCaseSensitivity/SearchControlsCaseSensitivity";
-import SearchControlsTimeRangeInput
-    from "./SearchControlsTimeRangeInput/SearchControlsTimeRangeInput";
+import SearchControlsCaseSensitivity from "./SearchControlsCaseSensitivity";
+import SearchControlsTimeRangeInput from "./SearchControlsTimeRangeInput";
 
 import "./SearchControlsFilterDrawer.scss";
 
