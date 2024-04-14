@@ -5,8 +5,8 @@ import Row from "react-bootstrap/Row";
 
 import {StatsCollection} from "/imports/api/ingestion/collections";
 
-import Details from "./Details";
-import SpaceSavings from "./SpaceSavings";
+import Details from "./panels/Details";
+import SpaceSavings from "./panels/SpaceSavings";
 
 import "./IngestView.scss";
 

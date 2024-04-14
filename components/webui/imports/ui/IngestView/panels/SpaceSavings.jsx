@@ -6,7 +6,7 @@ import {faHdd} from "@fortawesome/free-solid-svg-icons";
 
 import {computeHumanSize} from "/imports/utils/misc";
 
-import Panel from "./Panel";
+import Panel from "../Panel";
 
 
 /**
