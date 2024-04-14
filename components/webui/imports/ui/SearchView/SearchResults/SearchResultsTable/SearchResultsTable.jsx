@@ -12,8 +12,8 @@ import {
     MONGO_SORT_ORDER, SEARCH_RESULTS_FIELDS,
 } from "/imports/api/search/constants";
 
-import {DATETIME_FORMAT_TEMPLATE} from "../../../utils/datetime";
-import SearchResultsLoadSensor from "./SearchResultsLoadSensor/SearchResultsLoadSensor";
+import {DATETIME_FORMAT_TEMPLATE} from "../../../../utils/datetime";
+import SearchResultsLoadSensor from "../SearchResultsLoadSensor/SearchResultsLoadSensor";
 
 import "./SearchResultsTable.scss";
 
