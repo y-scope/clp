@@ -150,9 +150,21 @@ const SearchResultsTable = ({
         }
     };
 
-    const rows = [];
+    useEffect(() => {
+        document.documentElement.style.setProperty(
+            "--search-results-message-line-height",
+            `${SEARCH_RESULT_MESSAGE_LINE_HEIGHT}rem`
+        );
+    }, []);
 
-    // Construct rows
+    useEffect(() => {
+        document.documentElement.style.setProperty(
+            "--search-results-message-max-height",
+            `${(SEARCH_RESULT_MESSAGE_LINE_HEIGHT * maxLinesPerResult)}rem`
+        );
+    }, [maxLinesPerResult]);
+
+    const rows = [];
     for (let i = 0; i < searchResults.length; ++i) {
         const searchResult = searchResults[i];
         rows.push(
@@ -163,13 +175,7 @@ const SearchResultsTable = ({
                         "N/A"}
                 </td>
                 <td>
-                    <pre
-                        className={"search-results-content search-results-message"}
-                        style={{
-                            maxHeight:
-                                `${(SEARCH_RESULT_MESSAGE_LINE_HEIGHT * maxLinesPerResult)}rem`,
-                        }}
-                    >
+                    <pre className={"search-results-content search-results-message"}>
                         {searchResult.message}
                     </pre>
                 </td>
@@ -188,9 +194,9 @@ const SearchResultsTable = ({
                 <thead>
                     <tr>
                         <th
+                            className={"search-results-th search-results-th-sortable"}
                             data-column-name={SEARCH_RESULTS_FIELDS.TIMESTAMP}
                             key={SEARCH_RESULTS_FIELDS.TIMESTAMP}
-                            className={"search-results-th search-results-th-sortable"}
                             onClick={toggleSortDirection}
                         >
                             <div className={"search-results-table-header"}>

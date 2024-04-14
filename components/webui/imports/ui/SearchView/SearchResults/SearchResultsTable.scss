@@ -27,19 +27,23 @@
 }
 
 .search-results-content {
-  font-family: "Roboto Mono", monospace;
-  font-weight: 400;
   font-size: 0.875rem;
-  line-height: 1.5rem;
+  line-height: var(--search-results-message-line-height);
 }
 
 .search-results-timestamp {
+  color: #69707D !important;
+  font-family: "Roboto", sans-serif;
+  font-weight: 500;
   white-space: nowrap;
-  color: #69707D!important;
 }
 
 .search-results-message {
   margin: 0;
+  max-height: var(--search-results-message-max-height);
+
+  font-family: "Roboto Mono", monospace;
+  font-weight: 400;
   white-space: pre-wrap;
   word-break: break-word;
 }
