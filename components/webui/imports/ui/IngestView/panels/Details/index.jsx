@@ -6,11 +6,11 @@ import {
     faEnvelope,
     faFileAlt,
 } from "@fortawesome/free-solid-svg-icons";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 
 import {DATETIME_FORMAT_TEMPLATE} from "/imports/utils/datetime";
 
 import Panel from "../../Panel";
+import DetailsRow from "./DetailsRow";
 
 
 /**
@@ -31,65 +31,48 @@ const Details = ({stats}) => {
     let timeRangeRow = null;
     if (null !== endTimestamp) {
         timeRangeRow = (
-            <div className={"ingest-stats-details-row"}>
-                <div className={"ingest-stats-details-icon-container"}>
-                    <FontAwesomeIcon icon={faClock}/>
+            <DetailsRow
+                faIcon={faClock}
+                title={"time range"}
+            >
+                <div>
+                    {dayjs.utc(Number(beginTimestamp)).format(DATETIME_FORMAT_TEMPLATE)}
+                    {" to"}
                 </div>
-                <div className={"ingest-stats-details-text-container"}>
-                    <span className={"ingest-stats-detail"}>
-                        <div>
-                            {dayjs.utc(Number(beginTimestamp)).format(DATETIME_FORMAT_TEMPLATE)}
-                            {" to"}
-                        </div>
-                        <div>
-                            {dayjs.utc(Number(endTimestamp)).format(DATETIME_FORMAT_TEMPLATE)}
-                        </div>
-                    </span>
-                    <span className={"ingest-desc-text"}>time range</span>
+                <div>
+                    {dayjs.utc(Number(endTimestamp)).format(DATETIME_FORMAT_TEMPLATE)}
                 </div>
-            </div>
+            </DetailsRow>
         );
     }
 
     let numFilesRow = null;
     if (null !== numFiles) {
         numFilesRow = (
-            <div className={"ingest-stats-details-row"}>
-                <div className={"ingest-stats-details-icon-container"}>
-                    <FontAwesomeIcon icon={faFileAlt}/>
-                </div>
-                <div className={"ingest-stats-details-text-container"}>
-                    <span className={"ingest-stats-detail"}>
-                        {Number(numFiles).toLocaleString()}
-                    </span>
-                    <span className={"ingest-desc-text"}>files</span>
-                </div>
-            </div>
+            <DetailsRow
+                faIcon={faFileAlt}
+                title={"files"}
+            >
+                {Number(numFiles).toLocaleString()}
+            </DetailsRow>
         );
     }
 
     let numMessagesRow = null;
     if (null !== numMessages) {
         numMessagesRow = (
-            <div className={"ingest-stats-details-row"}>
-                <div className={"ingest-stats-details-icon-container"}>
-                    <FontAwesomeIcon icon={faEnvelope}/>
-                </div>
-                <div className={"ingest-stats-details-text-container"}>
-                    <span
-                        className={"ingest-stats-detail"}
-                    >
-                        {Number(numMessages).toLocaleString()}
-                    </span>
-                    <span className={"ingest-desc-text"}>messages</span>
-                </div>
-            </div>
+            <DetailsRow
+                faIcon={faEnvelope}
+                title={"messages"}
+            >
+                {Number(numMessages).toLocaleString()}
+            </DetailsRow>
         );
     }
 
     if (!(timeRangeRow || numFilesRow || numMessagesRow)) {
         // No details to display
-        return (<></>);
+        return <></>;
     }
 
     return (
