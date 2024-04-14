@@ -54,7 +54,7 @@ const App = () => {
     }, [isSidebarCollapsed]);
 
     const handleSidebarToggle = () => {
-        setIsSidebarCollapsed(!isSidebarCollapsed);
+        setIsSidebarCollapsed(false === isSidebarCollapsed);
     };
 
     return (

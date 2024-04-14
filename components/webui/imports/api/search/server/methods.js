@@ -123,8 +123,10 @@ const createMongoIndexes = async (searchJobId) => {
 
     const queryJobCollection = searchJobCollectionsManager.getOrCreateCollection(searchJobId);
     const queryJobRawCollection = queryJobCollection.rawCollection();
-    await queryJobRawCollection.createIndexes([timestampAscendingIndex,
-        timestampDescendingIndex]);
+    await queryJobRawCollection.createIndexes([
+        timestampAscendingIndex,
+        timestampDescendingIndex,
+    ]);
 };
 
 Meteor.methods({
