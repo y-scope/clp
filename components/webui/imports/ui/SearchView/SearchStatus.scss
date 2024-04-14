@@ -1,13 +1,13 @@
-#search-status-message {
+.search-status-message {
   color: #ccc;
   font-size: 5rem;
-  line-height: 1;
+  line-height: 1em;
 
   padding: 1rem 2rem;
   user-select: none;
 }
 
-#search-error {
+.search-error {
   padding: 0.5rem;
 
   background-color: #ffc0c0;
@@ -16,11 +16,11 @@
   border-bottom: 1px solid #ecb4b4;
 }
 
-#search-error-icon {
+.search-error-icon {
   margin-right: 0.5rem;
   vertical-align: middle;
 }
 
-#search-progress-bar {
-  height: 4px;
+.search-progress-bar {
+  height: 4px !important;
 }

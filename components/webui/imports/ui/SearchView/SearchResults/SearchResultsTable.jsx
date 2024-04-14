@@ -1,25 +1,19 @@
-import {
-    useEffect,
-    useRef,
-} from "react";
-import Spinner from "react-bootstrap/Spinner";
+import {useEffect} from "react";
 import Table from "react-bootstrap/Table";
 
 import dayjs from "dayjs";
 
 import {
-    faSort,
-    faSortDown,
-    faSortUp,
+    faSort, faSortDown, faSortUp,
 } from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 
 import {
-    MONGO_SORT_ORDER,
-    SEARCH_RESULTS_FIELDS,
+    MONGO_SORT_ORDER, SEARCH_RESULTS_FIELDS,
 } from "/imports/api/search/constants";
 
 import {DATETIME_FORMAT_TEMPLATE} from "../../../utils/datetime";
+import SearchResultsLoadSensor from "./SearchResultsLoadSensor/SearchResultsLoadSensor";
 
 import "./SearchResultsTable.scss";
 
@@ -28,78 +22,6 @@ import "./SearchResultsTable.scss";
  * For calculating max message height from `maxLinesPerResult`.
  */
 const SEARCH_RESULT_MESSAGE_LINE_HEIGHT = 1.5;
-
-/**
- * The interval, in milliseconds, at which the search results load sensor should poll for updates.
- */
-const SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MILLIS = 200;
-
-/**
- * Senses if the user has requested to load more results by scrolling until
- * this element becomes partially visible.
- *
- * @param {object} props
- * @param {boolean} props.hasMoreResults
- * @param {Function} props.onLoadMoreResults
- * @return {React.ReactElement}
- */
-const SearchResultsLoadSensor = ({
-    hasMoreResults,
-    onLoadMoreResults,
-}) => {
-    const loadingBlockRef = useRef(null);
-    const loadIntervalRef = useRef(null);
-
-    useEffect(() => {
-        if (false === hasMoreResults) {
-            return () => null;
-        }
-
-        const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting) {
-                onLoadMoreResults();
-                loadIntervalRef.current = setInterval(
-                    onLoadMoreResults,
-                    SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MILLIS,
-                );
-            } else if (null !== loadIntervalRef.current) {
-                clearInterval(loadIntervalRef.current);
-                loadIntervalRef.current = null;
-            }
-        });
-
-        observer.observe(loadingBlockRef.current);
-
-        return () => {
-            if (null !== loadIntervalRef.current) {
-                clearInterval(loadIntervalRef.current);
-                loadIntervalRef.current = null;
-            }
-            observer.disconnect();
-        };
-    }, [
-        hasMoreResults,
-        onLoadMoreResults,
-    ]);
-
-    return (
-        <div
-            id={"search-results-load-sensor"}
-            ref={loadingBlockRef}
-            style={{
-                visibility: (true === hasMoreResults) ?
-                    "visible" :
-                    "hidden",
-            }}
-        >
-            <Spinner
-                animation={"border"}
-                size={"sm"}
-                variant={"primary"}/>
-            <span>Loading...</span>
-        </div>
-    );
-};
 
 /**
  * Represents a table component to display search results.

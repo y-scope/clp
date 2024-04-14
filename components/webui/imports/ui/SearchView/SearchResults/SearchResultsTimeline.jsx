@@ -1,3 +1,4 @@
+import {useEffect} from "react";
 import {Bar} from "react-chartjs-2";
 
 import {
@@ -142,11 +143,19 @@ const SearchResultsTimeline = ({
     timelineBuckets,
     timelineConfig,
 }) => {
+    const isInputDisabled = isOperationInProgress(resultsMetadata.lastSignal);
+    useEffect(() => {
+        document.documentElement.style.setProperty(
+            "--timeline-chart-cursor",
+            (true === isInputDisabled) ?
+                "wait" :
+                "crosshair"
+        );
+    }, [isInputDisabled]);
+
     if (null === timelineBuckets) {
         return <></>;
     }
-
-    const isInputDisabled = isOperationInProgress(resultsMetadata.lastSignal);
 
     const data = {
         datasets: [
@@ -251,12 +260,10 @@ const SearchResultsTimeline = ({
 
     return (
         <Bar
+            className={"timeline-chart"}
             data={data}
             id={"timeline-chart"}
-            options={options}
-            className={isInputDisabled ?
-                "timeline-chart-cursor-disabled" :
-                ""}/>
+            options={options}/>
     );
 };
 

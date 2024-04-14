@@ -51,10 +51,10 @@ const SearchStatus = ({
 
     if ("" !== errorMsg && null !== errorMsg && "undefined" !== typeof errorMsg) {
         return (
-            <div id={"search-error"}>
+            <div className={"search-error"}>
                 <FontAwesomeIcon
-                    icon={faExclamationCircle}
-                    id={"search-error-icon"}/>
+                    className={"search-error-icon"}
+                    icon={faExclamationCircle}/>
                 {errorMsg}
             </div>
         );
@@ -75,8 +75,7 @@ const SearchStatus = ({
         <>
             <ProgressBar
                 animated={true}
-                className={"rounded-0 border-bottom"}
-                id={"search-progress-bar"}
+                className={"rounded-0 border-bottom search-progress-bar"}
                 now={progress}
                 striped={true}
                 variant={"primary"}
@@ -84,7 +83,7 @@ const SearchStatus = ({
                     "hidden" :
                     "visible"}}/>
             {(null !== statusMessage) &&
-            <div id={"search-status-message"}>
+            <div className={"search-status-message"}>
                 {statusMessage}
             </div>}
         </>
