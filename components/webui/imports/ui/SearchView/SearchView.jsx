@@ -23,7 +23,7 @@ import {
 import {unquoteString} from "/imports/utils/misc";
 
 import {LOCAL_STORAGE_KEYS} from "../constants";
-import SearchControls from "./SearchControls/SearchControls";
+import SearchControls from "./SearchControls";
 import SearchResults, {VISIBLE_RESULTS_LIMIT_INITIAL} from "./SearchResults";
 import {computeTimelineConfig} from "./SearchResults/SearchResultsTimeline";
 import SearchStatus from "./SearchStatus";
