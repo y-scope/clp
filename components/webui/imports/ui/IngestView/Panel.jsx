@@ -12,16 +12,16 @@ import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
  * @param {import("@fortawesome/react-fontawesome").IconProp} props.faIcon The FontAwesomeIcon to
  * display in the Panel.
  * @param {string} props.title
- * @param {object} props.rest
+ * @param {object} props.rootColProps
  * @return {React.ReactElement}
  */
 const Panel = ({
     children,
     faIcon,
     title,
-    ...rest
+    ...rootColProps
 }) => (
-    <Col {...rest}>
+    <Col {...rootColProps}>
         <div className={"panel"}>
             <Row>
                 <Col>
