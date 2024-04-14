@@ -21,9 +21,37 @@ const SEARCH_SIGNAL = Object.freeze({
     RESP_QUERYING: "resp-querying",
 });
 
+/**
+ * Checks if the given search signal is a search signal request.
+ *
+ * @param {SearchSignal} s
+ * @return {boolean}
+ */
 const isSearchSignalReq = (s) => s.startsWith("req-");
+
+/**
+ * Checks if the given search signal is a search signal response.
+ *
+ * @param {SearchSignal} s
+ * @return {boolean}
+ */
 const isSearchSignalResp = (s) => s.startsWith("resp-");
+
+/**
+ * Checks if the given search signal is a querying request / response.
+ *
+ * @param {SearchSignal} s
+ * @return {boolean}
+ */
 const isSearchSignalQuerying = (s) => s.endsWith("-querying");
+
+/**
+ * Checks if the given search signal is an operation in progress, which can be used as a
+ * condition to disable UI elements.
+ *
+ * @param {SearchSignal} s
+ * @return {boolean}
+ */
 const isOperationInProgress = (s) => (
     (true === isSearchSignalReq(s)) ||
     (true === isSearchSignalQuerying(s))

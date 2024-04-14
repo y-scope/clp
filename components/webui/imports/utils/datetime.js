@@ -11,6 +11,11 @@ dayjs.extend(Duration);
 const DATETIME_FORMAT_TEMPLATE = "YYYY-MMM-DD HH:mm:ss";
 
 /* eslint-disable sort-keys */
+/**
+ * Enum of time units.
+ *
+ * @enum {string}
+ */
 const TIME_UNIT = Object.freeze({
     ALL: "all",
     MINUTE: "minute",
@@ -23,6 +28,11 @@ const TIME_UNIT = Object.freeze({
 /* eslint-enable sort-keys */
 
 /* eslint-disable sort-keys */
+/**
+ * Enum of time range modifiers.
+ *
+ * @enum {string}
+ */
 const TIME_RANGE_MODIFIER = Object.freeze({
     NONE: "none",
     TODAY: "today",
@@ -60,9 +70,11 @@ const TIME_RANGE_PRESET_LABEL = Object.freeze({
  * @return {TimeRange} The computed time range
  */
 const computeTimeRange = (token) => {
-    const [unit,
+    const [
+        unit,
         modifier,
-        amount] = token.split("_");
+        amount,
+    ] = token.split("_");
     let end;
     let begin;
 

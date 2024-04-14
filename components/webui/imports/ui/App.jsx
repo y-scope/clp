@@ -36,6 +36,11 @@ const ROUTES = [
     },
 ];
 
+/**
+ * Represents the top-level application component.
+ *
+ * @return {React.ReactElement} The rendered App component.
+ */
 const App = () => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
         "true" === localStorage.getItem(LOCAL_STORAGE_KEYS.IS_SIDEBAR_COLLAPSED),
