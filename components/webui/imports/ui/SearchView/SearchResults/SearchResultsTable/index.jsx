@@ -13,7 +13,7 @@ import {
 } from "/imports/api/search/constants";
 
 import {DATETIME_FORMAT_TEMPLATE} from "../../../../utils/datetime";
-import SearchResultsLoadSensor from "../SearchResultsLoadSensor/SearchResultsLoadSensor";
+import SearchResultsLoadSensor from "./SearchResultsLoadSensor";
 
 import "./SearchResultsTable.scss";
 
