@@ -10,7 +10,7 @@ import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 
 import {DATETIME_FORMAT_TEMPLATE} from "/imports/utils/datetime";
 
-import Panel from "../Panel";
+import Panel from "../../Panel";
 
 
 /**
