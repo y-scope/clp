@@ -147,7 +147,7 @@ const SearchResultsTimeline = ({
     useEffect(() => {
         document.documentElement.style.setProperty(
             "--timeline-chart-cursor",
-            (true === isInputDisabled) ?
+            isInputDisabled ?
                 "wait" :
                 "crosshair"
         );
