@@ -28,10 +28,6 @@ LiteralType node_to_literal_type(NodeType type) {
             return LiteralType::VarStringT;
         case NodeType::Boolean:
             return LiteralType::BooleanT;
-        // StructuredArray should be LiteralType::UnknownT for the same reason that
-        // Object is. Also maybe there's a more general name for the thing that LiteralType::ArrayT
-        // does for us
-        // case NodeType::StructuredArray:
         case NodeType::UnstructuredArray:
             return LiteralType::ArrayT;
         case NodeType::NullValue:
