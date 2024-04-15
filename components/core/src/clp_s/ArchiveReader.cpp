@@ -178,16 +178,14 @@ void ArchiveReader::append_unordered_reader_columns(
             case NodeType::Boolean:
                 column_reader = new BooleanColumnReader(column_id);
                 break;
-            // Since we use the global schema tree to help marshal unordered objects there is no
-            // need to push these node types into the schema reader
-            case NodeType::StructuredArray:
-            case NodeType::Object:
-            case NodeType::NullValue:
-                break;
             // UnstructuredArray and DateString currently aren't supported as part of any unordered
             // object, so we disregard them here
             case NodeType::UnstructuredArray:
             case NodeType::DateString:
+            // No need to push columns without associated object readers into the SchemaReader.
+            case NodeType::StructuredArray:
+            case NodeType::Object:
+            case NodeType::NullValue:
             case NodeType::Unknown:
                 break;
         }

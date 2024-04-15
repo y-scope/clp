@@ -101,6 +101,9 @@ public:
      */
     [[nodiscard]] auto cend() const { return m_schema.cend(); }
 
+    /**
+     * @return the nth value in the underlying schema
+     */
     int32_t operator[](size_t i) const { return m_schema[i]; }
 
     /**

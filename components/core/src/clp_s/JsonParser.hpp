@@ -73,8 +73,18 @@ private:
      */
     void parse_line(ondemand::value line, int32_t parent_node_id, std::string const& key);
 
+    /**
+     * Parses an array within a JSON line
+     * @param line the JSON array
+     * @param parent_node_id the parent node id
+     */
     void parse_array_obj(ondemand::array line, int32_t parent_node_id);
 
+    /**
+     * Parses an object within an array in a JSON line
+     * @param line the JSON object
+     * @param parent_node_id the parent node id
+     */
     void parse_obj_in_array(ondemand::object line, int32_t parent_node_id);
 
     /**
