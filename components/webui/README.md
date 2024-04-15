@@ -19,7 +19,7 @@ If you ever add a package manually to `package.json` or `package.json` changes
 for some other reason, you should rerun this command.
 
 > [!NOTE]
-> When running this command, you might see warnings related to uninstalled `eslint-config-yscope
+> When running this command, you might see warnings related to uninstalled `eslint-config-yscope`
 > peer dependencies, like the ones below:
 > ```
 > npm WARN eslint-config-yscope@0.0.20 requires a peer of eslint@^8.57.0 but
