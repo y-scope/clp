@@ -2,6 +2,8 @@
 #define CLP_STREAMINGREADER_HPP
 
 #include <condition_variable>
+#include <cstddef>
+#include <cstdint>
 #include <mutex>
 #include <optional>
 #include <queue>
@@ -20,9 +22,12 @@
 
 namespace clp {
 /**
- * This class implements a ReaderInterface to stream data directly from a given URL (i.e., streaming
- * from a pre-signed S3 URL). When open an URL< a daemon thread will be created to fetch data in the
- * background using libcurl. This class guarantees the synchronization between the read operations
+ * This class implements a ReaderInterface to stream data directly from a given URL (e.g., streaming
+ * from a pre-signed S3 URL). When opening a URL, a daemon thread will be created to fetch data in
+ * the background using libcurl.
+ *
+ * TODO Move into implementation details? Should also describe buffer pooling behaviour.
+ * This class guarantees synchronization between the read operations
  * and data streaming (fetching). However, it is assumed that both the reader and the data fetcher
  * are single threaded.
  */
@@ -32,7 +37,7 @@ public:
 
     // Types
     /**
-     * This class defines the exception thrown by the streaming reader.
+     * The exception thrown by this class.
      */
     class OperationFailed : public TraceableException {
     public:
@@ -40,12 +45,12 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
 
         [[nodiscard]] auto what() const noexcept -> char const* override {
-            return "StreamingReader operation failed.";
+            return "clp::StreamingReader operation failed.";
         }
     };
 
     /**
-     * This enum defines the states of the reader.
+     * Enum defining the states of the reader.
      * NotInit: The reader is not initialized with a source URL.
      * Failed: The reader has failed to stream data from the source URL.
      * InProgress: The reader is fetching data from the source URL.
@@ -58,17 +63,11 @@ public:
         Finished
     };
 
-    /**
-     * These static members defines the default buffer size and the number of pools.
-     */
     static constexpr size_t cDefaultBufferPoolSize{8};
     static constexpr size_t cDefaultBufferSize{4096};
 
-    /**
-     * These static members defines the minimum allowed buffer size and the number of pools.
-     */
-    static constexpr size_t cMinimalBufferSize{512};
-    static constexpr size_t cMinimalBufferPoolSize{2};
+    static constexpr size_t cMinBufferPoolSize{2};
+    static constexpr size_t cMinBufferSize{512};
 
     /**
      * These static members defines the default connection timeout and operation timeout.
@@ -76,14 +75,14 @@ public:
      * ConnectionTimeout: https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
      * OperationTimeout: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
      */
-    static constexpr uint32_t cDefaultConnectionTimeout{10};
-    static constexpr uint32_t cDefaultOperationTimeout{45};
+    static constexpr uint32_t cDefaultConnectionTimeout{10};  // Seconds
+    static constexpr uint32_t cDefaultOperationTimeout{45};  // Seconds
 
     /**
      * Initializes the underlying libcurl functionalities globally. It should be called before
      * opening a source URL for data fetching.
      * @return ErrorCode_Success on success.
-     * @return ErrorCode_Failure if the libcurl initialization failed.
+     * @return ErrorCode_Failure if libcurl initialization failed.
      */
     [[nodiscard]] static auto global_init() -> ErrorCode;
 
@@ -267,14 +266,14 @@ private:
             -> void;
 
     /**
-     * Progress callback. It should be used to determine whether to abort the current transfer.
+     * libcurl progress callback used only to determine whether to abort the current transfer.
      * Doc: https://curl.se/libcurl/c/CURLOPT_XFERINFOFUNCTION.html
-     * @param ptr A pointer to an instance of StreamingReader.
+     * @param ptr A pointer to an instance of this class.
      * @param dltotal Unused
      * @param dlnow Unused
      * @param ultotal Unused
      * @param ulnow Unused
-     * @return 0 if the transfer is not aborted; 1 otherwise.
+     * @return 1 if the transfer was aborted, 0 otherwise.
      */
     static auto progress_callback(
             void* ptr,

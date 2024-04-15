@@ -1,10 +1,12 @@
 #include <filesystem>
 #include <iostream>
+#include <memory>
 #include <string_view>
 #include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
 
+#include "../src/clp/ErrorCode.hpp"
 #include "../src/clp/FileReader.hpp"
 #include "../src/clp/ReaderInterface.hpp"
 #include "../src/clp/StreamingReader.hpp"
@@ -63,6 +65,7 @@ TEST_CASE("streaming_reader_basic", "[StreamingReader]") {
     std::vector<char> streamed_data;
     reader.open(get_test_src_url());
     read_into_memory_buffer(reader, streamed_data);
+    reader.close();
 
     REQUIRE(streamed_data == ref_data);
 }

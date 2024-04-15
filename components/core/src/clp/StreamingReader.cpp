@@ -2,8 +2,14 @@
 
 #include <chrono>
 #include <cstring>
+#include <functional>
+#include <memory>
+#include <string>
 
 #include <curl/curl.h>
+
+#include "ErrorCode.hpp"
+#include "TraceableException.hpp"
 
 namespace clp {
 namespace {
@@ -69,7 +75,7 @@ auto StreamingReader::transfer_thread_entry(
     );
     curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, static_cast<long>(reader.m_operation_timeout));
 
-    // Setup the header (if necessary)
+    // Set up HTTP header (if necessary)
     reader.m_file_pos = offset;
     struct curl_slist* request_header{nullptr};
     if (0 != offset) {
@@ -86,7 +92,7 @@ auto StreamingReader::transfer_thread_entry(
 
     auto const retval{curl_easy_perform(curl_handle)};
     reader.commit_fetching_buffer();
-    reader.set_status_code((0 != retval) ? StatusCode::Failed : StatusCode::Finished);
+    reader.set_status_code((0 == retval) ? StatusCode::Finished : StatusCode::Failed);
     reader.m_curl_return_code = retval;
 
     curl_easy_cleanup(curl_handle);
@@ -116,12 +122,9 @@ auto StreamingReader::write_callback(char* ptr, size_t size, size_t nmemb, void*
             if (false == reader->get_buffer_to_fetch(fetching_buffer)) {
                 return 0;
             }
-            auto const num_bytes_to_fetch{
-                    num_bytes_left > fetching_buffer.size() ? fetching_buffer.size()
-                                                            : num_bytes_left
-            };
+            auto const num_bytes_to_fetch = std::min(fetching_buffer.size(), num_bytes_left);
             memcpy(fetching_buffer.data(), input_buffer.data(), num_bytes_to_fetch);
-            input_buffer = input_buffer.last(num_bytes_left - num_bytes_to_fetch);
+            input_buffer = input_buffer.subspan(num_bytes_to_fetch);
             reader->commit_fetching(num_bytes_to_fetch);
         }
     } catch (TraceableException const& ex) {
