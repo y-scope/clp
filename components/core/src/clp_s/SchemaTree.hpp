@@ -20,7 +20,6 @@ enum class NodeType : uint8_t {
     UnstructuredArray,
     NullValue,
     DateString,
-    StructuredArray,
     Unknown = std::underlying_type<NodeType>::type(~0ULL)
 };
 

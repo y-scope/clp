@@ -34,7 +34,6 @@ struct JsonParserOption {
     size_t max_document_size;
     int compression_level;
     bool print_archive_stats;
-    bool structurize_arrays;
     std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db;
 };
 
@@ -74,20 +73,6 @@ private:
     void parse_line(ondemand::value line, int32_t parent_node_id, std::string const& key);
 
     /**
-     * Parses an array within a JSON line
-     * @param line the JSON array
-     * @param parent_node_id the parent node id
-     */
-    void parse_array_obj(ondemand::array line, int32_t parent_node_id);
-
-    /**
-     * Parses an object within an array in a JSON line
-     * @param line the JSON object
-     * @param parent_node_id the parent node id
-     */
-    void parse_obj_in_array(ondemand::object line, int32_t parent_node_id);
-
-    /**
      * Splits the archive if the size of the archive exceeds the maximum size
      */
     void split_archive();
@@ -108,7 +93,6 @@ private:
     std::unique_ptr<ArchiveWriter> m_archive_writer;
     size_t m_target_encoded_size;
     size_t m_max_document_size;
-    bool m_structurize_arrays{false};
 };
 }  // namespace clp_s
 

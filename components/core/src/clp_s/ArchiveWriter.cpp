@@ -118,7 +118,6 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
             case NodeType::DateString:
                 writer->append_column(new DateStringColumnWriter(id));
                 break;
-            case NodeType::StructuredArray:
             case NodeType::Object:
             case NodeType::NullValue:
             case NodeType::Unknown:

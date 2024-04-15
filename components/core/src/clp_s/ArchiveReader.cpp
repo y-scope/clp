@@ -130,7 +130,6 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
         // No need to push columns without associated object readers into the SchemaReader.
         case NodeType::Object:
         case NodeType::NullValue:
-        case NodeType::StructuredArray:
         case NodeType::Unknown:
             break;
     }
@@ -183,7 +182,6 @@ void ArchiveReader::append_unordered_reader_columns(
             case NodeType::UnstructuredArray:
             case NodeType::DateString:
             // No need to push columns without associated object readers into the SchemaReader.
-            case NodeType::StructuredArray:
             case NodeType::Object:
             case NodeType::NullValue:
             case NodeType::Unknown:

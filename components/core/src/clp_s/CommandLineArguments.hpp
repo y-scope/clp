@@ -102,8 +102,6 @@ public:
 
     OutputHandlerType get_output_handler_type() const { return m_output_handler_type; }
 
-    bool get_structurize_arrays() const { return m_structurize_arrays; }
-
 private:
     // Methods
     /**
@@ -166,7 +164,6 @@ private:
     size_t m_target_encoded_size{8ULL * 1024 * 1024 * 1024};  // 8 GiB
     bool m_print_archive_stats{false};
     size_t m_max_document_size{512ULL * 1024 * 1024};  // 512 MB
-    bool m_structurize_arrays{false};
 
     // Metadata db variables
     std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;
