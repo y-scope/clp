@@ -61,7 +61,7 @@ const SearchResultsLoadSensor = ({
 
     return (
         <div
-            id={"search-results-load-sensor"}
+            className={"search-results-load-sensor"}
             ref={loadingBlockRef}
             style={{
                 visibility: (true === hasMoreResults) ?
