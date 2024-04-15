@@ -262,7 +262,6 @@ const SearchResultsTimeline = ({
         <Bar
             className={"timeline-chart"}
             data={data}
-            id={"timeline-chart"}
             options={options}/>
     );
 };
