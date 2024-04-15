@@ -73,7 +73,7 @@ steps to set up your environment for linting:
 1. Switch to Node.js v18 or higher
     
     ```shell
-    # Install v18 if not already installed
+    # Install node v18 if not already installed
     nvm install 18
 
     # Switch to node v18
