@@ -84,12 +84,12 @@ public:
      * @return ErrorCode_Success on success.
      * @return ErrorCode_Failure if libcurl initialization failed.
      */
-    [[nodiscard]] static auto global_init() -> ErrorCode;
+    [[nodiscard]] static auto init() -> ErrorCode;
 
     /**
      * Releases the globally initialized libcurl resources.
      */
-    static auto global_cleanup() -> void;
+    static auto deinit() -> void;
 
     /**
      * Constructor.
@@ -100,14 +100,8 @@ public:
             size_t buffer_pool_size = cDefaultBufferPoolSize,
             size_t buffer_size = cDefaultBufferSize
     )
-            : m_buffer_pool_size{buffer_pool_size},
-              m_buffer_size{buffer_size} {
-        if (cMinimalBufferSize > m_buffer_size) {
-            m_buffer_size = cMinimalBufferSize;
-        }
-        if (cMinimalBufferPoolSize > m_buffer_pool_size) {
-            m_buffer_pool_size = cMinimalBufferPoolSize;
-        }
+            : m_buffer_pool_size{std::max(cMinBufferPoolSize, buffer_pool_size)},
+              m_buffer_size{std::max(cMinBufferPoolSize, buffer_size)} {
         for (size_t i = 0; i < m_buffer_pool_size; ++i) {
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
             m_buffer_pool.emplace_back(std::make_unique<char[]>(m_buffer_size));

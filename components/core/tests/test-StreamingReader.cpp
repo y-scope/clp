@@ -1,5 +1,4 @@
 #include <filesystem>
-#include <iostream>
 #include <memory>
 #include <string_view>
 #include <vector>
@@ -12,16 +11,10 @@
 #include "../src/clp/StreamingReader.hpp"
 
 namespace {
-/**
- * @return The src url that the StreamingReader will stream from.
- */
-[[nodiscard]] auto get_test_src_url() -> std::string_view {
-    static constexpr char cTestUrl[]{
-            "https://raw.githubusercontent.com/y-scope/clp/main/components/core/tests/"
-            "test_network_reader_src/random.log"
-    };
-    return cTestUrl;
-}
+static constexpr char cTestUrl[]{
+        "https://raw.githubusercontent.com/y-scope/clp/main/components/core/tests/"
+        "test_network_reader_src/random.log"
+};
 
 [[nodiscard]] auto get_ref_file_abs_path() -> std::filesystem::path {
     std::filesystem::path const file_path{__FILE__};
@@ -60,10 +53,10 @@ TEST_CASE("streaming_reader_basic", "[StreamingReader]") {
     read_into_memory_buffer(ref_reader, ref_data);
     ref_reader.close();
 
-    REQUIRE(clp::ErrorCode_Success == clp::StreamingReader::global_init());
+    REQUIRE(clp::ErrorCode_Success == clp::StreamingReader::init());
     clp::StreamingReader reader;
     std::vector<char> streamed_data;
-    reader.open(get_test_src_url());
+    reader.open(cTestUrl);
     read_into_memory_buffer(reader, streamed_data);
     reader.close();
 

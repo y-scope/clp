@@ -27,7 +27,7 @@ namespace {
 
 bool StreamingReader::m_initialized{false};
 
-auto StreamingReader::global_init() -> ErrorCode {
+auto StreamingReader::init() -> ErrorCode {
     if (m_initialized) {
         return ErrorCode_Success;
     }
@@ -38,7 +38,7 @@ auto StreamingReader::global_init() -> ErrorCode {
     return ErrorCode_Success;
 }
 
-auto StreamingReader::global_cleanup() -> void {
+auto StreamingReader::deinit() -> void {
     curl_global_cleanup();
     m_initialized = false;
 }
@@ -112,18 +112,21 @@ auto StreamingReader::progress_callback(
 
 auto StreamingReader::write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr)
         -> size_t {
-    auto const num_total_bytes{size * nmemb};
+    auto const num_bytes_to_write{size * nmemb};
     try {
-        StreamingReader::BufferView input_buffer{ptr, num_total_bytes};
+        StreamingReader::BufferView input_buffer{ptr, num_bytes_to_write};
         auto* reader{get_reader(reader_ptr)};
         while (false == input_buffer.empty()) {
-            auto const num_bytes_left{input_buffer.size()};
             StreamingReader::BufferView fetching_buffer;
             if (false == reader->get_buffer_to_fetch(fetching_buffer)) {
                 return 0;
             }
-            auto const num_bytes_to_fetch = std::min(fetching_buffer.size(), num_bytes_left);
-            memcpy(fetching_buffer.data(), input_buffer.data(), num_bytes_to_fetch);
+            auto const num_bytes_to_fetch{std::min(fetching_buffer.size(), input_buffer.size())};
+            std::copy(
+                    input_buffer.begin(),
+                    input_buffer.begin() + num_bytes_to_fetch,
+                    fetching_buffer.begin()
+            );
             input_buffer = input_buffer.subspan(num_bytes_to_fetch);
             reader->commit_fetching(num_bytes_to_fetch);
         }
@@ -131,7 +134,7 @@ auto StreamingReader::write_callback(char* ptr, size_t size, size_t nmemb, void*
         // TODO: add logging to track the exceptions.
         return 0;
     }
-    return num_total_bytes;
+    return num_bytes_to_write;
 }
 
 auto StreamingReader::open(std::string_view src_url, size_t offset, bool disable_caching) -> void {
@@ -149,27 +152,27 @@ auto StreamingReader::open(std::string_view src_url, size_t offset, bool disable
             offset,
             disable_caching
     );
-    m_transfer_thread->detach();
 }
 
 auto StreamingReader::terminate_current_transfer() -> void {
     if (StatusCode::InProgress != get_status_code()) {
         while (false == is_transfer_terminated()) {
         }
-        return;
-    }
-    // If control flow reaches here, it means the we need to kill the current connected session.
-    // Since the fetcher thread is an async daemon thread, we need to set the flag for aborting
-    // and wait for it to terminate.
-    // TODO: we could use sleep here instead of actively pulling.
-    auto transfer_aborted{is_transfer_aborted()};
-    while (false == is_transfer_terminated()) {
-        if (transfer_aborted) {
-            continue;
+    } else {
+        // If control flow reaches here, it means the we need to kill the current connected session.
+        // Since the fetcher thread is an async daemon thread, we need to set the flag for aborting
+        // and wait for it to terminate.
+        // TODO: we could use sleep here instead of actively pulling.
+        auto transfer_aborted{is_transfer_aborted()};
+        while (false == is_transfer_terminated()) {
+            if (transfer_aborted) {
+                continue;
+            }
+            abort_data_transfer();
+            transfer_aborted = true;
         }
-        abort_data_transfer();
-        transfer_aborted = true;
     }
+    m_transfer_thread->join();
 }
 
 auto StreamingReader::abort_data_transfer() -> void {
