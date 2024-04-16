@@ -1,6 +1,6 @@
-import {logger} from "/imports/utils/logger";
 import {Meteor} from "meteor/meteor";
 
+import {logger} from "/imports/utils/logger";
 import {
     MONGO_SORT_BY_ID,
     MONGO_SORT_ORDER,

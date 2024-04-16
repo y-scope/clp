@@ -7,11 +7,6 @@ import {
     useState,
 } from "react";
 
-import {
-    MONGO_SORT_BY_ID,
-    MONGO_SORT_ORDER,
-} from "/imports/utils/mongo";
-
 import {CLP_STORAGE_ENGINES} from "/imports/api/constants";
 import {SearchResultsMetadataCollection} from "/imports/api/search/collections";
 import {
@@ -25,6 +20,10 @@ import {
     expandTimeRangeToDurationMultiple,
 } from "/imports/utils/datetime";
 import {unquoteString} from "/imports/utils/misc";
+import {
+    MONGO_SORT_BY_ID,
+    MONGO_SORT_ORDER,
+} from "/imports/utils/mongo";
 
 import {LOCAL_STORAGE_KEYS} from "../constants";
 import SearchControls from "./SearchControls";

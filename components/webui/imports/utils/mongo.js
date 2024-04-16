@@ -1,7 +1,6 @@
 /**
  * Enum of Mongo Collection sort orders.
  *
- * @readonly
  * @enum {string}
  */
 const MONGO_SORT_ORDER = Object.freeze({
@@ -12,7 +11,7 @@ const MONGO_SORT_ORDER = Object.freeze({
 /**
  * Represents the sort order for MongoDB queries using the "_id" field.
  *
- * @type {object[]}
+ * @type {string[]}
  */
 const MONGO_SORT_BY_ID = Object.freeze([
     "_id",

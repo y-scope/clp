@@ -1,4 +1,9 @@
 /* eslint-disable sort-keys */
+/**
+ * Enum of the column names for the `compression_jobs` table.
+ *
+ * @enum {string}
+ */
 const COMPRESSION_JOBS_TABLE_COLUMN_NAMES = Object.freeze({
     ID: "id",
     STATUS: "status",
@@ -32,6 +37,7 @@ const COMPRESSION_JOB_STATUS = Object.freeze({
 
 /**
  * List of waiting states for a compression job.
+ *
  * @see COMPRESSION_JOB_STATUS
  */
 const COMPRESSION_JOB_WAITING_STATES = Object.freeze([
@@ -41,6 +47,7 @@ const COMPRESSION_JOB_WAITING_STATES = Object.freeze([
 
 /**
  * Represents the possible status names for a compression job.
+ *
  * @type {ReadonlyArray<string>}
  */
 const COMPRESSION_JOB_STATUS_NAMES = Object.freeze([
