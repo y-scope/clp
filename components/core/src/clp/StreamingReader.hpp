@@ -179,9 +179,13 @@ public:
 
     /**
      * @param pos Returns the position of the read head in the buffer.
-     * @return ErrorCode_Success.
+     * @return ErrorCode_NotInit if the reader is not opened yet.
+     * @return ErrorCode_Success on success.
      */
     [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override {
+        if (StatusCode::NotInit == get_status_code()) {
+            return ErrorCode_NotInit;
+        }
         pos = m_file_pos;
         return ErrorCode_Success;
     }
