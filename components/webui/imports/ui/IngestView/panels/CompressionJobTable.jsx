@@ -1,8 +1,8 @@
 import {useTracker} from "meteor/react-meteor-data";
-import React from "react";
-import {
-    Col, OverlayTrigger, Row, Spinner, Table, Tooltip,
-} from "react-bootstrap";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Spinner from "react-bootstrap/Spinner";
+import Table from "react-bootstrap/Table";
+import Tooltip from "react-bootstrap/Tooltip";
 
 import {
     faBarsProgress, faCheck, faClock, faExclamation,
@@ -17,8 +17,15 @@ import {
 import {computeHumanSize} from "/imports/utils/misc";
 import {MONGO_SORT_BY_ID} from "/imports/utils/mongo";
 
+import Panel from "../Panel";
+
 
 /* eslint-disable line-comment-position, no-inline-comments, @stylistic/js/no-multi-spaces */
+/**
+ * Icons corresponding to different compression job statuses.
+ *
+ * @type {(import("@fortawesome/react-fontawesome").IconProp)[]}
+ */
 const COMPRESSION_JOB_STATUS_ICONS = Object.freeze([
     faClock,        // PENDING
     null,           // RUNNING: <Spinner/> is shown instead
@@ -40,8 +47,9 @@ const COMPRESSION_JOB_STATUS_ICONS = Object.freeze([
 
 /**
  * Renders a compression job.
- * @param {CompressionJob} job - The job object containing information about the compression job.
- * @return {JSX.Element}
+ *
+ * @param {CompressionJob} job The job object containing information about the compression job.
+ * @return {React.ReactElement}
  */
 const CompressionJobRow = ({job}) => {
     let speedText = "";
@@ -93,7 +101,8 @@ const CompressionJobRow = ({job}) => {
 
 /**
  * Displays a table of compression jobs.
- * @return {JSX.Element}
+ *
+ * @return {React.ReactElement}
  */
 const CompressionJobTable = () => {
     const compressionJobs = useTracker(() => {
@@ -111,45 +120,31 @@ const CompressionJobTable = () => {
     }
 
     return (
-        <Col
+        <Panel
+            faIcon={faBarsProgress}
+            title={"Ingestion Jobs"}
             xl={6}
             xs={12}
         >
-            <div className={"panel"}>
-                <Row>
-                    <Col>
-                        <h1 className={"panel-h1"}>Ingestion Jobs</h1>
-                    </Col>
-                    <Col xs={"auto"}>
-                        <FontAwesomeIcon
-                            className={"panel-icon"}
-                            icon={faBarsProgress}/>
-                    </Col>
-                </Row>
-                <Row>
-                    <Col>
-                        <Table>
-                            <thead>
-                                <tr>
-                                    <th className={"text-center"}>Status</th>
-                                    <th>Job ID</th>
-                                    <th className={"text-right"}>Speed</th>
-                                    <th className={"text-right"}>Data Ingested</th>
-                                    <th className={"text-right"}>Compressed Size</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {compressionJobs.map((job, i) => (
-                                    <CompressionJobRow
-                                        job={job}
-                                        key={i}/>
-                                ))}
-                            </tbody>
-                        </Table>
-                    </Col>
-                </Row>
-            </div>
-        </Col>
+            <Table>
+                <thead>
+                    <tr>
+                        <th className={"text-center"}>Status</th>
+                        <th>Job ID</th>
+                        <th className={"text-right"}>Speed</th>
+                        <th className={"text-right"}>Data Ingested</th>
+                        <th className={"text-right"}>Compressed Size</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {compressionJobs.map((job, i) => (
+                        <CompressionJobRow
+                            job={job}
+                            key={i}/>
+                    ))}
+                </tbody>
+            </Table>
+        </Panel>
     );
 };
 export default CompressionJobTable;

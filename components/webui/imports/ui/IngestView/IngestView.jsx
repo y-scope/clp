@@ -1,14 +1,13 @@
 import {useTracker} from "meteor/react-meteor-data";
 import Col from "react-bootstrap/Col";
 import Container from "react-bootstrap/Container";
-import ProgressBar from "react-bootstrap/ProgressBar";
 import Row from "react-bootstrap/Row";
 
 import {StatsCollection} from "/imports/api/ingestion/collections";
 
+import CompressionJobTable from "./panels/CompressionJobTable";
 import Details from "./panels/Details";
 import SpaceSavings from "./panels/SpaceSavings";
-import CompressionJobTable from "./CompressionJobTable";
 
 import "./IngestView.scss";
 
