@@ -62,3 +62,29 @@ TEST_CASE("streaming_reader_basic", "[StreamingReader]") {
 
     REQUIRE(streamed_data == ref_data);
 }
+
+TEST_CASE("streaming_reader_with_offset_and_seek", "[StreamingReader]") {
+    size_t const offset{319};
+    clp::FileReader ref_reader;
+    ref_reader.open(get_ref_file_abs_path().string());
+    ref_reader.seek_from_begin(offset);
+    std::vector<char> ref_data;
+    read_into_memory_buffer(ref_reader, ref_data);
+    ref_reader.close();
+
+    REQUIRE(clp::ErrorCode_Success == clp::StreamingReader::init());
+    clp::StreamingReader reader;
+    std::vector<char> streamed_data;
+
+    // Read by opening with the offset.
+    reader.open(cTestUrl, offset);
+    read_into_memory_buffer(reader, streamed_data);
+    reader.close();
+    REQUIRE(streamed_data == ref_data);
+
+    // Read by seeking to the offset.
+    reader.open(cTestUrl);
+    reader.seek_from_begin(offset);
+    reader.close();
+    REQUIRE(streamed_data == ref_data);
+}
