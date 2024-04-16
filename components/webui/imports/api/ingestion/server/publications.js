@@ -16,6 +16,7 @@ import {
 import CompressionDbManager from "./CompressionDbManager";
 import StatsDbManager from "./StatsDbManager";
 
+
 const COMPRESSION_JOBS_REFRESH_INTERVAL_MILLIS = 1000;
 const STATS_REFRESH_INTERVAL_MILLIS = 5000;
 
@@ -110,6 +111,10 @@ const refreshCompressionJobs = async () => {
     if (0 !== operations.length) {
         await CompressionJobsCollection.rawCollection().bulkWrite(operations);
     }
+
+    // `refreshCompressionJobs()` shall not be run concurrently and therefore incurs no race
+    // condition.
+    // eslint-disable-next-line require-atomic-updates
     compressionJobsRefreshTimeout = Meteor.setTimeout(
         refreshCompressionJobs,
         COMPRESSION_JOBS_REFRESH_INTERVAL_MILLIS
@@ -117,6 +122,9 @@ const refreshCompressionJobs = async () => {
 };
 
 /**
+ * Initializes the CompressionDbManager and starts a timeout timer (`compressionJobsRefreshTimeout`)
+ * for compression job updates.
+ *
  * @param {import("mysql2/promise").Pool} sqlDbConnPool
  * @param {object} tableNames
  * @param {string} tableNames.compressionJobsTableName
@@ -135,6 +143,10 @@ const initCompressionDbManager = (sqlDbConnPool, {
     );
 };
 
+/**
+ * De-initializes the CompressionDbManager by clearing the timeout timer for compression job
+ * updates (`refreshCompressionJobs`).
+ */
 const deinitCompressionDbManager = () => {
     if (null !== compressionJobsRefreshTimeout) {
         Meteor.clearTimeout(compressionJobsRefreshTimeout);
@@ -182,7 +194,6 @@ const deinitStatsDbManager = () => {
  * Updates and publishes compression job statuses.
  *
  * @param {string} publicationName
- *
  * @return {Mongo.Cursor}
  */
 Meteor.publish(Meteor.settings.public.CompressionJobsCollectionName, async () => {
