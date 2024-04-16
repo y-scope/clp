@@ -1,7 +1,5 @@
 import mysql from "mysql2/promise";
 
-import {logger} from "/imports/utils/logger";
-
 import {
     deinitCompressionDbManager,
     deinitStatsDbManager,
@@ -9,6 +7,7 @@ import {
     initStatsDbManager,
 } from "/imports/api/ingestion/server/publications";
 import {initSearchJobsDbManager} from "/imports/api/search/server/methods";
+import {logger} from "/imports/utils/logger";
 
 
 const DB_CONNECTION_LIMIT = 2;
