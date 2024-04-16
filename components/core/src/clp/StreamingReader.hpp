@@ -136,10 +136,14 @@ public:
      * @param num_bytes_to_read
      * @param num_bytes_read Returns the number of bytes read.
      * @return ErrorCode_EndOfFile if the buffer doesn't contain any more data.
+     * @return ErrorCode_NotInit if the reader is not opened yet.
      * @return ErrorCode_Success on success.
      */
     [[nodiscard]] auto try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
             -> ErrorCode override {
+        if (StatusCode::NotInit == get_status_code()) {
+            return ErrorCode_NotInit;
+        }
         return read_from_fetched_buffers(num_bytes_to_read, num_bytes_read, buf);
     }
 
@@ -148,10 +152,14 @@ public:
      * @param pos
      * @return ErrorCode_Unsupported if the given position is lower than the current position.
      * Since this is a streaming reader, it should not seek backward.
+     * @return ErrorCode_NotInit if the reader is not opened yet.
      * @return ErrorCode_OutOfBounds if the given pos is out of bound.
      * @return ErrorCode_Success on success.
      */
     [[nodiscard]] auto try_seek_from_begin(size_t pos) -> ErrorCode override {
+        if (StatusCode::NotInit == get_status_code()) {
+            return ErrorCode_NotInit;
+        }
         if (pos < m_file_pos) {
             return ErrorCode_Unsupported;
         }
