@@ -245,6 +245,14 @@ public:
         return (CURLE_FTP_ACCEPT_TIMEOUT == val || CURLE_OPERATION_TIMEDOUT == val);
     }
 
+    /**
+     * Writes the data into the fetching buffer.
+     * This function should be called by libcurl's write callback.
+     * @param data_to_write
+     * @return NUmber of bytes fetched.
+     */
+    [[nodiscard]] auto write_to_fetching_buffer(BufferView data_to_write) -> size_t;
+
 private:
     static constexpr uint32_t cConditionVariableTimeoutMilliSecond{50};
 
@@ -258,36 +266,6 @@ private:
      */
     static auto transfer_thread_entry(StreamingReader& reader, size_t offset, bool disable_caching)
             -> void;
-
-    /**
-     * libcurl progress callback used only to determine whether to abort the current transfer.
-     * Doc: https://curl.se/libcurl/c/CURLOPT_XFERINFOFUNCTION.html
-     * @param ptr A pointer to an instance of this class.
-     * @param dltotal Unused
-     * @param dlnow Unused
-     * @param ultotal Unused
-     * @param ulnow Unused
-     * @return 1 if the transfer was aborted, 0 otherwise.
-     */
-    static auto progress_callback(
-            void* ptr,
-            [[maybe_unused]] curl_off_t dltotal,
-            [[maybe_unused]] curl_off_t dlnow,
-            [[maybe_unused]] curl_off_t ultotal,
-            [[maybe_unused]] curl_off_t ulnow
-    ) -> int;
-
-    /**
-     * Write-back callback. This is how the data is written into the fetching buffer.
-     * Doc: https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html
-     * @param ptr A pointer to an instance of StreamingReader.
-     * @param size Number of bytes of the input data.
-     * @param nmemb
-     * @param reader_ptr A pointer pointing to an instance of StreamingReader.
-     * @return Number of bytes transferred (fetched).
-     */
-    static auto write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr) -> size_t;
-
     /**
      * Terminates the current transfer. When this function returns, it will ensure that the current
      * data transfer session has been terminated, and all the daemon threads exit.
