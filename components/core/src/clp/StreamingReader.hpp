@@ -51,15 +51,15 @@ public:
 
     /**
      * Enum defining the states of the reader.
-     * NotInit: The reader is not initialized with a source URL.
-     * Failed: The reader has failed to stream data from the source URL.
-     * InProgress: The reader is fetching data from the source URL.
-     * Finished: The streaming of the given source URL has been accomplished.
      */
     enum class StatusCode : uint8_t {
+        // NotInit: The reader is not initialized with a source URL.
         NotInit = 0,
+        // Failed: The reader has failed to stream data from the source URL.
         Failed,
+        // InProgress: The reader is fetching data from the source URL.
         InProgress,
+        // Finished: The streaming of the given source URL has been accomplished.
         Finished
     };
 
