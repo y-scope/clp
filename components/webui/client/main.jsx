@@ -1,18 +1,21 @@
-import React from "react";
+import {Meteor} from "meteor/meteor";
+import {StrictMode} from "react";
+import ReactDOM from "react-dom/client";
+import {Router} from "react-router";
 
 import {createBrowserHistory} from "history";
-import {Meteor} from "meteor/meteor";
-import {render} from "react-dom";
-import {Router, Switch} from "react-router";
 
-import {App} from "/imports/ui/App.jsx";
+import {App} from "/imports/ui/App";
+
 
 Meteor.startup(() => {
-    const routes = (
-        <Router history={createBrowserHistory()}>
-            <App/>
-        </Router>
-    );
+    const root = ReactDOM.createRoot(document.getElementById("root"));
 
-    render(routes, document.getElementById("root"));
+    root.render(
+        <StrictMode>
+            <Router history={createBrowserHistory()}>
+                <App/>
+            </Router>
+        </StrictMode>
+    );
 });

@@ -259,6 +259,7 @@ jobs:
     runs-on: "ubuntu-latest"
     env:
       OS_NAME: "ubuntu-focal"
+      TMP_OUTPUT_DIR: "/tmp"
     steps:
       - uses: "actions/checkout@v3"
         with:
@@ -271,7 +272,14 @@ jobs:
       - uses: "actions/download-artifact@v4"
         with:
           name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
-          path: "/tmp/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          path: "${{env.TMP_OUTPUT_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+
+      - name: "Untar binaries"
+        working-directory: >-
+          ${{env.TMP_OUTPUT_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}
+        run: |-
+          tar xf clp.tar
+          rm clp.tar
 
       - uses: "docker/login-action@v3"
         with:
@@ -297,7 +305,7 @@ jobs:
 
       - uses: "docker/build-push-action@v5"
         with:
-          context: "/tmp/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          context: "${{env.TMP_OUTPUT_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
           file: "components/core/tools/docker-images/clp-core-${{env.OS_NAME}}/Dockerfile"
           push: true
           tags: "${{steps.core_image_meta.outputs.tags}}"

@@ -1,7 +1,7 @@
 /**
  * Dictionary for local storage items used in the application.
  *
- * @type {Object}
+ * @enum {string}
  */
 const LOCAL_STORAGE_KEYS = Object.freeze({
     IS_SIDEBAR_COLLAPSED: "isSidebarCollapsed",

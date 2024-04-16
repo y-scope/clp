@@ -10,8 +10,10 @@
     "SqlDbSearchJobsTableName": "search_jobs"
   },
   "public": {
+    "AggregationResultsCollectionName": "aggregation-results",
+    "ClpStorageEngine": "clp",
     "CompressionJobsCollectionName": "compression-jobs",
-    "SearchResultsCollectionName": "results",
+    "SearchResultsCollectionName": "search-results",
     "SearchResultsMetadataCollectionName": "results-metadata",
     "StatsCollectionName": "stats"
   }

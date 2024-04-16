@@ -1,5 +1,7 @@
 import mysql from "mysql2/promise";
 
+import {logger} from "/imports/utils/logger";
+
 import {
     deinitCompressionDbManager,
     deinitStatsDbManager,
@@ -7,12 +9,11 @@ import {
     initStatsDbManager,
 } from "/imports/api/ingestion/server/publications";
 import {initSearchJobsDbManager} from "/imports/api/search/server/methods";
-import {logger} from "/imports/utils/logger";
 
 
 const DB_CONNECTION_LIMIT = 2;
 const DB_MAX_IDLE = DB_CONNECTION_LIMIT;
-const DB_IDLE_TIMEOUT_IN_MS = 10000;
+const DB_IDLE_TIMEOUT_MILLIS = 10000;
 
 /**
  * @type {import("mysql2/promise").Pool|null}
@@ -26,24 +27,22 @@ let dbConnPool = null;
  * @param {string} dbConfig.dbHost
  * @param {number} dbConfig.dbPort
  * @param {string} dbConfig.dbName
- * @param {string} dbConfig.dbUser
  * @param {string} dbConfig.dbPassword
- *
+ * @param {string} dbConfig.dbUser
  * @param {object} tableNames
  * @param {string} tableNames.clpArchivesTableName
  * @param {string} tableNames.clpFilesTableName
  * @param {string} tableNames.compressionJobsTableName
  * @param {string} tableNames.searchJobsTableName
- *
- * @returns {Promise<void>}
+ * @return {Promise<void>}
  * @throws {Error} on error.
  */
 const initDbManagers = async ({
     dbHost,
     dbPort,
     dbName,
-    dbUser,
     dbPassword,
+    dbUser,
 }, {
     clpArchivesTableName,
     clpFilesTableName,
@@ -55,30 +54,35 @@ const initDbManagers = async ({
     }
 
     try {
+        // This method shall not be called twice and therefore incurs no race condition.
+        // eslint-disable-next-line require-atomic-updates
         dbConnPool = await mysql.createPool({
             host: dbHost,
             port: dbPort,
+
             database: dbName,
-            user: dbUser,
             password: dbPassword,
+            user: dbUser,
+
             bigNumberStrings: true,
             supportBigNumbers: true,
-            enableKeepAlive: true,
-            connectionLimit: DB_CONNECTION_LIMIT,
-            maxIdle: DB_MAX_IDLE,
-            idleTimeout: DB_IDLE_TIMEOUT_IN_MS,
             timezone: "Z",
+
+            connectionLimit: DB_CONNECTION_LIMIT,
+            enableKeepAlive: true,
+            idleTimeout: DB_IDLE_TIMEOUT_MILLIS,
+            maxIdle: DB_MAX_IDLE,
         });
 
-        initStatsDbManager(dbConnPool, {
-            clpArchivesTableName,
-            clpFilesTableName,
-        });
         initCompressionDbManager(dbConnPool, {
             compressionJobsTableName,
         });
         initSearchJobsDbManager(dbConnPool, {
             searchJobsTableName,
+        });
+        initStatsDbManager(dbConnPool, {
+            clpArchivesTableName,
+            clpFilesTableName,
         });
     } catch (e) {
         logger.error("Unable to create MySQL / mariadb connection pool.", e.toString());
@@ -87,13 +91,14 @@ const initDbManagers = async ({
 };
 
 /**
- * De-initialize database managers.
- * @returns {Promise<void>}
+ * De-initializes database managers.
+ *
+ * @return {Promise<void>}
  * @throws {Error} on error.
  */
 const deinitDbManagers = async () => {
-    deinitStatsDbManager();
     deinitCompressionDbManager();
+    deinitStatsDbManager();
 
     await dbConnPool.end();
 };

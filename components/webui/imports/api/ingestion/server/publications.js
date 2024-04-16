@@ -5,7 +5,7 @@ import {MONGO_SORT_BY_ID} from "/imports/utils/mongo";
 
 import {
     CompressionJobsCollection,
-    STATS_COLLECTION_ID_COMPRESSION,
+    STATS_COLLECTION_ID,
     StatsCollection,
 } from "../collections";
 import {
@@ -16,21 +16,8 @@ import {
 import CompressionDbManager from "./CompressionDbManager";
 import StatsDbManager from "./StatsDbManager";
 
-
-/**
- * The refresh interval (in milliseconds) for updating compression statistics.
- */
-const STATS_REFRESH_INTERVAL_MS = 5000;
-
-/**
- * The refresh interval (in milliseconds) for updating compression jobs.
- */
-const COMPRESSION_JOBS_REFRESH_INTERVAL_MS = 1000;
-
-/**
- * @type {StatsDbManager|null}
- */
-let statsDbManager = null;
+const COMPRESSION_JOBS_REFRESH_INTERVAL_MILLIS = 1000;
+const STATS_REFRESH_INTERVAL_MILLIS = 5000;
 
 /**
  * @type {CompressionDbManager|null}
@@ -38,9 +25,9 @@ let statsDbManager = null;
 let compressionDbManager = null;
 
 /**
- * @type {number|null}
+ * @type {StatsDbManager|null}
  */
-let statsRefreshInterval = null;
+let statsDbManager = null;
 
 /**
  * @type {number|null}
@@ -48,9 +35,14 @@ let statsRefreshInterval = null;
 let compressionJobsRefreshTimeout = null;
 
 /**
+ * @type {number|null}
+ */
+let statsRefreshInterval = null;
+
+/**
  * Updates the compression statistics in the StatsCollection.
  *
- * @returns {Promise<void>}
+ * @return {Promise<void>}
  */
 const refreshCompressionStats = async () => {
     if (0 === Meteor.server.stream_server.all_sockets().length) {
@@ -59,7 +51,7 @@ const refreshCompressionStats = async () => {
 
     const stats = await statsDbManager.getCompressionStats();
     const filter = {
-        id: STATS_COLLECTION_ID_COMPRESSION,
+        _id: STATS_COLLECTION_ID.COMPRESSION,
     };
     const modifier = {
         $set: stats,
@@ -72,35 +64,9 @@ const refreshCompressionStats = async () => {
 };
 
 /**
- * @param {import("mysql2/promise").Pool} sqlDbConnPool
- * @param {object} tableNames
- * @param {string} tableNames.clpArchivesTableName
- * @param {string} tableNames.clpFilesTableName
- * @throws {Error} on error.
- */
-const initStatsDbManager = (sqlDbConnPool, {
-    clpArchivesTableName,
-    clpFilesTableName,
-}) => {
-    statsDbManager = new StatsDbManager(sqlDbConnPool, {
-        clpArchivesTableName,
-        clpFilesTableName,
-    });
-
-    statsRefreshInterval = Meteor.setInterval(refreshCompressionStats, STATS_REFRESH_INTERVAL_MS);
-};
-
-const deinitStatsDbManager = () => {
-    if (null !== statsRefreshInterval) {
-        Meteor.clearInterval(statsRefreshInterval);
-        statsRefreshInterval = null;
-    }
-};
-
-/**
  * Updates the compression jobs in the CompressionJobsCollection.
  *
- * @returns {Promise<void>}
+ * @return {Promise<void>}
  */
 const refreshCompressionJobs = async () => {
     if (null !== compressionJobsRefreshTimeout) {
@@ -110,7 +76,7 @@ const refreshCompressionJobs = async () => {
     if (0 === Meteor.server.stream_server.all_sockets().length) {
         compressionJobsRefreshTimeout = Meteor.setTimeout(
             refreshCompressionJobs,
-            COMPRESSION_JOBS_REFRESH_INTERVAL_MS
+            COMPRESSION_JOBS_REFRESH_INTERVAL_MILLIS
         );
 
         return;
@@ -146,7 +112,7 @@ const refreshCompressionJobs = async () => {
     }
     compressionJobsRefreshTimeout = Meteor.setTimeout(
         refreshCompressionJobs,
-        COMPRESSION_JOBS_REFRESH_INTERVAL_MS
+        COMPRESSION_JOBS_REFRESH_INTERVAL_MILLIS
     );
 };
 
@@ -165,7 +131,7 @@ const initCompressionDbManager = (sqlDbConnPool, {
 
     compressionJobsRefreshTimeout = Meteor.setTimeout(
         refreshCompressionJobs,
-        COMPRESSION_JOBS_REFRESH_INTERVAL_MS
+        COMPRESSION_JOBS_REFRESH_INTERVAL_MILLIS
     );
 };
 
@@ -177,30 +143,47 @@ const deinitCompressionDbManager = () => {
 };
 
 /**
- * Updates and publishes compression statistics.
+ * Initializes the StatsDbManager and starts an interval timer (`refreshMeteorInterval`) for
+ * compression stats updates.
  *
- * @param {string} publicationName
- *
- * @returns {Mongo.Cursor}
+ * @param {import("mysql2/promise").Pool} sqlDbConnPool
+ * @param {object} tableNames
+ * @param {string} tableNames.clpArchivesTableName
+ * @param {string} tableNames.clpFilesTableName
+ * @throws {Error} on error.
  */
-Meteor.publish(Meteor.settings.public.StatsCollectionName, async () => {
-    logger.debug(`Subscription '${Meteor.settings.public.StatsCollectionName}'`);
+const initStatsDbManager = (sqlDbConnPool, {
+    clpArchivesTableName,
+    clpFilesTableName,
+}) => {
+    statsDbManager = new StatsDbManager(sqlDbConnPool, {
+        clpArchivesTableName,
+        clpFilesTableName,
+    });
 
-    await refreshCompressionStats();
+    statsRefreshInterval = Meteor.setInterval(
+        refreshCompressionStats,
+        STATS_REFRESH_INTERVAL_MILLIS
+    );
+};
 
-    const filter = {
-        id: STATS_COLLECTION_ID_COMPRESSION,
-    };
-
-    return StatsCollection.find(filter);
-});
+/**
+ * De-initializes the StatsDbManager by clearing the interval timer for compression stats updates
+ * (`refreshMeteorInterval`).
+ */
+const deinitStatsDbManager = () => {
+    if (null !== statsRefreshInterval) {
+        Meteor.clearInterval(statsRefreshInterval);
+        statsRefreshInterval = null;
+    }
+};
 
 /**
  * Updates and publishes compression job statuses.
  *
  * @param {string} publicationName
  *
- * @returns {Mongo.Cursor}
+ * @return {Mongo.Cursor}
  */
 Meteor.publish(Meteor.settings.public.CompressionJobsCollectionName, async () => {
     logger.debug(`Subscription '${Meteor.settings.public.CompressionJobsCollectionName}'`);
@@ -212,6 +195,24 @@ Meteor.publish(Meteor.settings.public.CompressionJobsCollectionName, async () =>
     };
 
     return CompressionJobsCollection.find({}, findOptions);
+});
+
+/**
+ * Updates and publishes compression statistics.
+ *
+ * @param {string} publicationName
+ * @return {Mongo.Cursor}
+ */
+Meteor.publish(Meteor.settings.public.StatsCollectionName, async () => {
+    logger.debug(`Subscription '${Meteor.settings.public.StatsCollectionName}'`);
+
+    await refreshCompressionStats();
+
+    const filter = {
+        _id: STATS_COLLECTION_ID.COMPRESSION,
+    };
+
+    return StatsCollection.find(filter);
 });
 
 export {

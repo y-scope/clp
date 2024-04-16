@@ -1,13 +1,22 @@
-import React from "react";
+import {
+    useEffect,
+    useState,
+} from "react";
+import {
+    Redirect,
+    Route,
+    Switch,
+} from "react-router";
 
-import {faFileUpload, faSearch} from "@fortawesome/free-solid-svg-icons";
-import {Redirect, Route, Switch} from "react-router";
+import {
+    faFileUpload,
+    faSearch,
+} from "@fortawesome/free-solid-svg-icons";
 
 import {LOCAL_STORAGE_KEYS} from "./constants";
-
-import IngestView from "./IngestView/IngestView.jsx";
-import SearchView from "./SearchView/SearchView.jsx";
-import Sidebar from "./Sidebar/Sidebar.jsx";
+import IngestView from "./IngestView/IngestView";
+import SearchView from "./SearchView/SearchView";
+import Sidebar from "./Sidebar/Sidebar";
 
 import "./App.scss";
 
@@ -27,40 +36,57 @@ const ROUTES = [
     },
 ];
 
+/**
+ * Represents the top-level application component.
+ *
+ * @return {React.ReactElement} The rendered App component.
+ */
 const App = () => {
-    const [isSidebarCollapsed, setSidebarStateCollapsed] = React.useState(
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
         "true" === localStorage.getItem(LOCAL_STORAGE_KEYS.IS_SIDEBAR_COLLAPSED),
     );
 
-    React.useEffect(() => {
-        localStorage.setItem(LOCAL_STORAGE_KEYS.IS_SIDEBAR_COLLAPSED,
-            isSidebarCollapsed.toString());
+    useEffect(() => {
+        localStorage.setItem(
+            LOCAL_STORAGE_KEYS.IS_SIDEBAR_COLLAPSED,
+            isSidebarCollapsed.toString()
+        );
     }, [isSidebarCollapsed]);
 
     const handleSidebarToggle = () => {
-        setSidebarStateCollapsed(!isSidebarCollapsed);
+        setIsSidebarCollapsed(false === isSidebarCollapsed);
     };
 
-    return (<>
-        <Sidebar
-            isSidebarCollapsed={isSidebarCollapsed}
-            routes={ROUTES}
-            onSidebarToggle={handleSidebarToggle}
-        />
-        <div id={"page-container"}>
-            <Switch>
-                <Route exact path="/">
-                    <Redirect to="/ingest"/>
-                </Route>
-                <Route exact path={"/ingest"}>
-                    <IngestView/>
-                </Route>
-                <Route exact path={"/search"}>
-                    <SearchView/>
-                </Route>
-            </Switch>
-        </div>
-    </>);
+    return (
+        <>
+            <Sidebar
+                isSidebarCollapsed={isSidebarCollapsed}
+                routes={ROUTES}
+                onSidebarToggle={handleSidebarToggle}/>
+            <div id={"page-container"}>
+                <Switch>
+                    <Route
+                        exact={true}
+                        path={"/"}
+                    >
+                        <Redirect to={"/ingest"}/>
+                    </Route>
+                    <Route
+                        exact={true}
+                        path={"/ingest"}
+                    >
+                        <IngestView/>
+                    </Route>
+                    <Route
+                        exact={true}
+                        path={"/search"}
+                    >
+                        <SearchView/>
+                    </Route>
+                </Switch>
+            </div>
+        </>
+    );
 };
 
 export {App};

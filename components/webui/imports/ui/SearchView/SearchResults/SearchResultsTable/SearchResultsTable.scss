@@ -1,5 +1,6 @@
 .search-results-container {
-  position: relative;
+  overflow-y: auto;
+  background: white;
 }
 
 // NOTE: We use a hierarchical selector to override Bootstrap's hierarchical selector (classes can't override hierarchical selectors without !important)
@@ -25,19 +26,25 @@
   padding: 10px;
 }
 
+.search-results-content {
+  font-size: 0.875rem;
+  line-height: var(--search-results-message-line-height);
+}
+
+.search-results-timestamp {
+  color: #69707D !important;
+  font-family: "Roboto", sans-serif;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 .search-results-message {
-  font-size: 0.93rem;
-  line-height: 1.4rem;
   margin: 0;
+  max-height: var(--search-results-message-max-height);
+
+  font-family: "Roboto Mono", monospace;
+  font-weight: 400;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
-#search-results-load-sensor {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-inline: 10px;
-  padding-bottom: 12px;
-  font-size: 1.3rem;
-}

@@ -690,7 +690,10 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
             "SqlDbClpFilesTableName": f"{CLP_METADATA_TABLE_PREFIX}files",
             "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
             "SqlDbSearchJobsTableName": SEARCH_JOBS_TABLE_NAME,
-        }
+        },
+        "public": {
+            "ClpStorageEngine": clp_config.package.storage_engine,
+        },
     }
     update_meteor_settings("", meteor_settings, meteor_settings_updates)
 
