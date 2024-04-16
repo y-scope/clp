@@ -2,6 +2,8 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Spinner from "react-bootstrap/Spinner";
 import Tooltip from "react-bootstrap/Tooltip";
 
+import dayjs from "dayjs";
+
 import {
     faCheck,
     faClock,
@@ -53,7 +55,9 @@ const IngestionJobRow = ({job}) => {
     let compressedSizeText = "";
 
     if (null === job.duration && null !== job.start_time) {
-        job.duration = (Date.now() - job.start_time) / 1000;
+        job.duration = dayjs.duration(
+            dayjs() - dayjs(job.start_time)
+        ).asSeconds();
     }
     if (0 < job.duration) {
         speedText = `${computeHumanSize(job.uncompressed_size / job.duration)}/s`;
