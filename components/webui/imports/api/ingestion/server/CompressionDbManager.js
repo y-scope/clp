@@ -1,12 +1,8 @@
-import {logger} from "/imports/utils/logger";
-
-import {
-    COMPRESSION_JOB_WAITING_STATES, COMPRESSION_JOBS_TABLE_COLUMN_NAMES,
-} from "../constants";
+import {COMPRESSION_JOBS_TABLE_COLUMN_NAMES} from "../constants";
 
 
 /**
- * Class for retrieving compression stats from the database.
+ * Class for retrieving compression jobs from the database.
  */
 class CompressionDbManager {
     #sqlDbConnPool;
@@ -26,7 +22,9 @@ class CompressionDbManager {
     }
 
     /**
-     * Retrieve the last `limit` number of jobs. Also includes the ones in `jobIdList`.
+     * Retrieve the last `limit` number of jobs. Also includes the ones in
+     * `jobIdList`.
+     *
      * @param {number} limit
      * @param {number[]} jobIdList
      * @return {Promise<object[]>}
@@ -42,7 +40,7 @@ class CompressionDbManager {
                     ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.DURATION},
                     ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.UNCOMPRESSED_SIZE},
                     ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.COMPRESSED_SIZE}
-                FROM compression_jobs
+                FROM ${this.#compressionJobsTableName}
             )
             (
                 SELECT *
