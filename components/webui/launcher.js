@@ -1,7 +1,7 @@
 /**
  * Production launcher for CLP WebUI, which redirects Meteor server stderr to rotated error logs
  * files in a specified directory for error monitoring.
-
+ *
  * To avoid duplicated installations of dependencies, use the same `node_modules` for the server
  * by setting envvar NODE_PATH="./programs/server/npm/node_modules", assuming this script is
  * placed under the same directory where the bundled `main.js` is located.
@@ -31,7 +31,7 @@ const MAX_LOGS_RETENTION_DAYS = "30d";
  * Creates a logger using winston module.
  *
  * @param {string} logsDir directory where the log files will be saved.
- * @returns {object} the logger object
+ * @return {object} the logger object
  */
 const getLogger = (logsDir) => {
     return winston.createLogger({
@@ -48,11 +48,11 @@ const getLogger = (logsDir) => {
         ),
         transports: [
             new winston.transports.DailyRotateFile({
-                filename: "webui_error-%DATE%.log",
-                dirname: logsDir,
                 datePattern: "YYYY-MM-DD-HH",
-                maxSize: MAX_LOGS_FILE_SIZE,
+                dirname: logsDir,
+                filename: "webui_error-%DATE%.log",
                 maxFiles: MAX_LOGS_RETENTION_DAYS,
+                maxSize: MAX_LOGS_FILE_SIZE,
             }),
         ],
     });
@@ -82,10 +82,11 @@ const runScript = (logsDir, scriptPath) => {
  * Parses the command line arguments and retrieves the values for the
  * WEBUI_LOGS_DIR and scriptPath variables.
  *
- * @returns {Object} containing the values for WEBUI_LOGS_DIR and scriptPath
+ * @return {object} containing the values for WEBUI_LOGS_DIR and scriptPath
  */
 const parseArgs = () => {
-    const WEBUI_LOGS_DIR = process.env["WEBUI_LOGS_DIR"] || DEFAULT_LOGS_DIR;
+    const WEBUI_LOGS_DIR = process.env.WEBUI_LOGS_DIR || DEFAULT_LOGS_DIR;
+    // eslint-disable-next-line prefer-destructuring
     const scriptPath = process.argv[2];
 
     return {
@@ -99,7 +100,7 @@ const parseArgs = () => {
  *
  * This function is the entry point of the program.
  *
- * @returns {void}
+ * @return {void}
  */
 const main = () => {
     const args = parseArgs();

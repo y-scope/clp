@@ -15,13 +15,13 @@ class SearchJobCollectionsManager {
      * Gets, or if it doesn't exist, creates a MongoDB collection named with the given job ID.
      *
      * @param {number} jobId
+     * @return {Mongo.Collection}
      * @throws {Meteor.Error} with ERROR_NAME_COLLECTION_DROPPED if the collection was already
      * dropped.
-     * @return {Mongo.Collection}
      */
     getOrCreateCollection (jobId) {
         const name = jobId.toString();
-        if (undefined === this.#collections.get(name)) {
+        if ("undefined" === typeof this.#collections.get(name)) {
             this.#collections.set(name, new Mongo.Collection(name));
         } else if (null === this.#collections.get(name)) {
             throw new Meteor.Error(

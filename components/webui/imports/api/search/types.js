@@ -1,12 +1,12 @@
 /**
  * @typedef {object} TimeRange
- * @property {dayjs.Dayjs} begin
- * @property {dayjs.Dayjs} end
+ * @property {import("dayjs").Dayjs} begin
+ * @property {import("dayjs").Dayjs} end
  */
 
 /**
  * @typedef {object} TimelineConfig
- * @property {plugin.Duration} bucketDuration
+ * @property {import("dayjs/plugin/duration").Duration} bucketDuration
  * @property {TimeRange} range
  */
 

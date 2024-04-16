@@ -1,3 +1,17 @@
+import {useEffect} from "react";
+import {Bar} from "react-chartjs-2";
+
+import {
+    BarElement,
+    Chart as ChartJs,
+    LinearScale,
+    TimeScale,
+    Tooltip,
+} from "chart.js";
+import zoomPlugin from "chartjs-plugin-zoom";
+import dayjs from "dayjs";
+
+import {isOperationInProgress} from "/imports/api/search/constants";
 import {
     convertLocalDateToSameUtcDatetime,
     convertUtcDatetimeToSameLocalDate,
@@ -8,13 +22,6 @@ import {
 
 import "chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm";
 import "./SearchResultsTimeline.scss";
-
-import {BarElement, Chart as ChartJs, LinearScale, TimeScale, Tooltip} from "chart.js";
-import zoomPlugin from "chartjs-plugin-zoom";
-import dayjs from "dayjs";
-import React from "react";
-import {Bar} from "react-chartjs-2";
-import {isOperationInProgress} from "../../api/search/constants";
 
 
 ChartJs.register(
@@ -66,7 +73,7 @@ const convertZoomTimestampToUtcDatetime = (timestampUnixMillis) => {
 
     // Reverse local timezone offset again.
     return convertLocalDateToSameUtcDatetime(intermediateDateTime.toDate());
-}
+};
 
 /**
  * Computes the timestamp range and bucket duration necessary to render the bars in the timeline
@@ -106,8 +113,8 @@ const computeTimelineConfig = (timestampBeginUnixMillis, timestampEndUnixMillis)
             (duration) => (exactTimelineBucketMillis <= duration.asMilliseconds()),
         ) ||
         dayjs.duration(
-            Math.ceil(exactTimelineBucketMillis
-                / dayjs.duration(1, TIME_UNIT.YEAR).asMilliseconds()),
+            Math.ceil(exactTimelineBucketMillis /
+                dayjs.duration(1, TIME_UNIT.YEAR).asMilliseconds()),
             TIME_UNIT.YEAR,
         );
 
@@ -123,23 +130,32 @@ const computeTimelineConfig = (timestampBeginUnixMillis, timestampEndUnixMillis)
 /**
  * Displays a timeline of search results.
  *
- * @param {object} resultsMetadata
- * @param {TimelineConfig} timelineConfig
- * @param {TimelineBucket[]} timelineBuckets
- * @param {function} onTimelineZoom
- * @return {JSX.Element}
+ * @param {object} props
+ * @param {Function} props.onTimelineZoom
+ * @param {object} props.resultsMetadata
+ * @param {TimelineBucket[]} props.timelineBuckets
+ * @param {TimelineConfig} props.timelineConfig
+ * @return {React.ReactElement}
  */
 const SearchResultsTimeline = ({
-    resultsMetadata,
-    timelineConfig,
-    timelineBuckets,
     onTimelineZoom,
+    resultsMetadata,
+    timelineBuckets,
+    timelineConfig,
 }) => {
+    const isInputDisabled = isOperationInProgress(resultsMetadata.lastSignal);
+    useEffect(() => {
+        document.documentElement.style.setProperty(
+            "--timeline-chart-cursor",
+            isInputDisabled ?
+                "wait" :
+                "crosshair"
+        );
+    }, [isInputDisabled]);
+
     if (null === timelineBuckets) {
         return <></>;
     }
-
-    const isInputDisabled = isOperationInProgress(resultsMetadata.lastSignal);
 
     const data = {
         datasets: [
@@ -166,8 +182,8 @@ const SearchResultsTimeline = ({
             x: {
                 type: "time",
 
-                min: timelineConfig.range.begin.valueOf(),
                 max: timelineConfig.range.end.valueOf(),
+                min: timelineConfig.range.begin.valueOf(),
                 offset: false,
 
                 grid: {
@@ -214,7 +230,6 @@ const SearchResultsTimeline = ({
                             `${bucketEndTime.format(DATETIME_FORMAT_TEMPLATE)}`;
                     },
                 },
-
                 caretSize: 0,
                 intersect: false,
                 mode: "x",
@@ -245,11 +260,8 @@ const SearchResultsTimeline = ({
 
     return (
         <Bar
-            className={isInputDisabled ?
-                "timeline-chart-cursor-disabled" :
-                ""}
+            className={"timeline-chart"}
             data={data}
-            id={"timeline-chart"}
             options={options}/>
     );
 };

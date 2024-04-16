@@ -1,13 +1,17 @@
-import {logger} from "/imports/utils/logger";
 import mysql from "mysql2/promise";
 
-import {deinitStatsDbManager, initStatsDbManager} from "../api/ingestion/server/publications";
+import {logger} from "/imports/utils/logger";
+
+import {
+    deinitStatsDbManager,
+    initStatsDbManager,
+} from "../api/ingestion/server/publications";
 import {initSearchJobsDbManager} from "../api/search/server/methods";
 
 
 const DB_CONNECTION_LIMIT = 2;
 const DB_MAX_IDLE = DB_CONNECTION_LIMIT;
-const DB_IDLE_TIMEOUT_IN_MS = 10000;
+const DB_IDLE_TIMEOUT_MILLIS = 10000;
 
 /**
  * @type {import("mysql2/promise").Pool|null}
@@ -21,23 +25,21 @@ let dbConnPool = null;
  * @param {string} dbConfig.dbHost
  * @param {number} dbConfig.dbPort
  * @param {string} dbConfig.dbName
- * @param {string} dbConfig.dbUser
  * @param {string} dbConfig.dbPassword
- *
+ * @param {string} dbConfig.dbUser
  * @param {object} tableNames
  * @param {string} tableNames.searchJobsTableName
  * @param {string} tableNames.clpArchivesTableName
  * @param {string} tableNames.clpFilesTableName
- *
- * @returns {Promise<void>}
+ * @return {Promise<void>}
  * @throws {Error} on error.
  */
 const initDbManagers = async ({
     dbHost,
     dbPort,
     dbName,
-    dbUser,
     dbPassword,
+    dbUser,
 }, {
     searchJobsTableName,
     clpArchivesTableName,
@@ -48,18 +50,23 @@ const initDbManagers = async ({
     }
 
     try {
+        // This method shall not be called twice and therefore incurs no race condition.
+        // eslint-disable-next-line require-atomic-updates
         dbConnPool = await mysql.createPool({
             host: dbHost,
             port: dbPort,
+
             database: dbName,
-            user: dbUser,
             password: dbPassword,
+            user: dbUser,
+
             bigNumberStrings: true,
             supportBigNumbers: true,
-            enableKeepAlive: true,
+
             connectionLimit: DB_CONNECTION_LIMIT,
+            enableKeepAlive: true,
+            idleTimeout: DB_IDLE_TIMEOUT_MILLIS,
             maxIdle: DB_MAX_IDLE,
-            idleTimeout: DB_IDLE_TIMEOUT_IN_MS
         });
 
         initSearchJobsDbManager(dbConnPool, {
@@ -76,8 +83,9 @@ const initDbManagers = async ({
 };
 
 /**
- * De-initialize database managers.
- * @returns {Promise<void>}
+ * De-initializes database managers.
+ *
+ * @return {Promise<void>}
  * @throws {Error} on error.
  */
 const deinitDbManagers = async () => {
@@ -86,4 +94,7 @@ const deinitDbManagers = async () => {
     await dbConnPool.end();
 };
 
-export {initDbManagers, deinitDbManagers};
+export {
+    deinitDbManagers,
+    initDbManagers,
+};

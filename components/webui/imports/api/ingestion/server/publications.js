@@ -1,14 +1,15 @@
-import {logger} from "/imports/utils/logger";
 import {Meteor} from "meteor/meteor";
 
-import {STATS_COLLECTION_ID_COMPRESSION, StatsCollection} from "../collections";
+import {logger} from "/imports/utils/logger";
+
+import {
+    STATS_COLLECTION_ID,
+    StatsCollection,
+} from "../collections";
 import StatsDbManager from "./StatsDbManager";
 
 
-/**
- * @type {number}
- */
-const STATS_REFRESH_INTERVAL_MS = 5000;
+const STATS_REFRESH_INTERVAL_MILLIS = 5000;
 
 /**
  * @type {StatsDbManager|null}
@@ -23,16 +24,16 @@ let refreshMeteorInterval = null;
 /**
  * Updates the compression statistics in the StatsCollection.
  *
- * @returns {Promise<void>}
+ * @return {Promise<void>}
  */
 const refreshCompressionStats = async () => {
-    if (Meteor.server.stream_server.all_sockets().length === 0) {
+    if (0 === Meteor.server.stream_server.all_sockets().length) {
         return;
     }
 
     const stats = await statsDbManager.getCompressionStats();
     const filter = {
-        id: STATS_COLLECTION_ID_COMPRESSION,
+        _id: STATS_COLLECTION_ID.COMPRESSION,
     };
     const modifier = {
         $set: stats,
@@ -45,6 +46,9 @@ const refreshCompressionStats = async () => {
 };
 
 /**
+ * Initializes the StatsDbManager and starts an interval timer (`refreshMeteorInterval`) for
+ * compression stats updates.
+ *
  * @param {import("mysql2/promise").Pool} sqlDbConnPool
  * @param {object} tableNames
  * @param {string} tableNames.clpArchivesTableName
@@ -60,9 +64,16 @@ const initStatsDbManager = (sqlDbConnPool, {
         clpFilesTableName,
     });
 
-    refreshMeteorInterval = Meteor.setInterval(refreshCompressionStats, STATS_REFRESH_INTERVAL_MS);
+    refreshMeteorInterval = Meteor.setInterval(
+        refreshCompressionStats,
+        STATS_REFRESH_INTERVAL_MILLIS
+    );
 };
 
+/**
+ * De-initializes the StatsDbManager by clearing the interval timer for compression stats updates
+ * (`refreshMeteorInterval`).
+ */
 const deinitStatsDbManager = () => {
     if (null !== refreshMeteorInterval) {
         Meteor.clearInterval(refreshMeteorInterval);
@@ -74,8 +85,7 @@ const deinitStatsDbManager = () => {
  * Updates and publishes compression statistics.
  *
  * @param {string} publicationName
- *
- * @returns {Mongo.Cursor}
+ * @return {Mongo.Cursor}
  */
 Meteor.publish(Meteor.settings.public.StatsCollectionName, async () => {
     logger.debug(`Subscription '${Meteor.settings.public.StatsCollectionName}'`);
@@ -83,10 +93,13 @@ Meteor.publish(Meteor.settings.public.StatsCollectionName, async () => {
     await refreshCompressionStats();
 
     const filter = {
-        id: STATS_COLLECTION_ID_COMPRESSION,
+        _id: STATS_COLLECTION_ID.COMPRESSION,
     };
 
     return StatsCollection.find(filter);
 });
 
-export {initStatsDbManager, deinitStatsDbManager};
+export {
+    deinitStatsDbManager,
+    initStatsDbManager,
+};
