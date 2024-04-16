@@ -1,18 +1,22 @@
 version: "3"
 
 vars:
+  NODEJS_18_BIN_DIR: "{{.TASKFILE_DIR}}/build/nodejs_18/node/bin"
+  NODEJS_18_BUILD_DIR: "{{.TASKFILE_DIR}}/build/nodejs_18"
   VENV_DIR: "{{.TASKFILE_DIR}}/.lint-venv"
 
 tasks:
   check:
     cmds:
       - task: "cpp-check"
+      - task: "js-check"
       - task: "py-check"
       - task: "yml-check"
 
   fix:
     cmds:
       - task: "cpp-fix"
+      - task: "js-fix"
       - task: "py-fix"
       - task: "yml-fix"
 
@@ -41,6 +45,32 @@ tasks:
         vars:
           FLAGS: "-i"
     sources: *cpp_source_files
+
+  js-check:
+    dir: "{{.TASKFILE_DIR}}/components/webui"
+    cmds:
+      - task: "js"
+        vars:
+          LINT_SCRIPT: "check"
+    sources: &js_source_files
+      - "client/**/*.js"
+      - "client/**/*.jsx"
+      - "imports/**/*.js"
+      - "imports/**/*.jsx"
+      - "launcher.js"
+      - "package.json"
+      - "server/**/*.js"
+      - "server/**/*.jsx"
+      - "tests/**/*.js"
+      - "tests/**/*.jsx"
+
+  js-fix:
+    dir: "{{.TASKFILE_DIR}}/components/webui"
+    cmds:
+      - task: "js"
+        vars:
+          LINT_SCRIPT: "fix"
+    sources: *js_source_files
 
   py-check:
     cmds:
@@ -81,6 +111,15 @@ tasks:
           -print0 | \
             xargs -0 clang-format {{.FLAGS}} -Werror
 
+  js:
+    internal: true
+    requires:
+      vars: ["LINT_SCRIPT"]
+    deps: ["node_modules"]
+    dir: "{{.TASKFILE_DIR}}/components/webui"
+    cmds:
+      - "PATH='{{.NODEJS_18_BIN_DIR}}':$PATH npm run 'lint:{{.LINT_SCRIPT}}'"
+
   py:
     internal: true
     requires:
@@ -96,6 +135,46 @@ tasks:
           cd "{{.ITEM}}"
           black --color --line-length 100 {{.BLACK_FLAGS}} .
           ruff check {{.RUFF_FLAGS}} .
+
+  nodejs-18:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
+      NODEJS_VERSION: "18.20.2"
+      NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
+      OUTPUT_DIR: "{{.NODEJS_18_BUILD_DIR}}"
+      TAR_FILE_NAME: "node-v{{.NODEJS_VERSION}}-linux-{{.NODEJS_ARCH}}.tar.xz"
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}/node'"
+      - "mkdir -p '{{.OUTPUT_DIR}}'"
+      - >-
+        curl -fsSL
+        "https://nodejs.org/dist/v{{.NODEJS_VERSION}}/{{.TAR_FILE_NAME}}"
+        -o "{{.OUTPUT_DIR}}/{{.TAR_FILE_NAME}}"
+      - "tar xf '{{.OUTPUT_DIR}}/{{.TAR_FILE_NAME}}' -C '{{.OUTPUT_DIR}}'"
+      - >-
+        mv "{{.OUTPUT_DIR}}/node-v{{.NODEJS_VERSION}}-linux-{{.NODEJS_ARCH}}"
+        "{{.OUTPUT_DIR}}/node"
+      - "rm -f '{{.OUTPUT_DIR}}/{{.TAR_FILE_NAME}}'"
+      # Checksum the generated files (this command must be last)
+      - >-
+        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
+        | md5sum > "{{.CHECKSUM_FILE}}"
+    sources:
+      - "{{.TASKFILE_DIR}}/lint-tasks.yml"
+    status:
+      - "test -f '{{.CHECKSUM_FILE}}'"
+      - >-
+        diff
+        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        "{{.CHECKSUM_FILE}}"
+
+  node_modules:
+    internal: true
+    dir: "{{.TASKFILE_DIR}}/components/webui"
+    deps: ["nodejs-18"]
+    cmds:
+      - "PATH='{{.NODEJS_18_BIN_DIR}}':$PATH '{{.NODEJS_18_BIN_DIR}}/npm' install --no-package-lock"
 
   venv:
     internal: true
