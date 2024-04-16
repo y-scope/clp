@@ -100,11 +100,11 @@ const CompressionJobRow = ({job}) => {
 };
 
 /**
- * Displays a table of compression jobs.
+ * Displays a table of ingestion jobs.
  *
  * @return {React.ReactElement}
  */
-const CompressionJobTable = () => {
+const IngestionJobs = () => {
     const compressionJobs = useTracker(() => {
         Meteor.subscribe(Meteor.settings.public.CompressionJobsCollectionName);
 
@@ -147,4 +147,4 @@ const CompressionJobTable = () => {
         </Panel>
     );
 };
-export default CompressionJobTable;
+export default IngestionJobs;

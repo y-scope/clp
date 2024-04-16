@@ -5,8 +5,8 @@ import Row from "react-bootstrap/Row";
 
 import {StatsCollection} from "/imports/api/ingestion/collections";
 
-import CompressionJobTable from "./panels/CompressionJobTable";
 import Details from "./panels/Details";
+import IngestionJobs from "./panels/IngestionJobs";
 import SpaceSavings from "./panels/SpaceSavings";
 
 import "./IngestView.scss";
@@ -42,7 +42,7 @@ const IngestView = () => {
                 </Col>
             </Row>
             <Row>
-                <CompressionJobTable/>
+                <IngestionJobs/>
             </Row>
         </Container>
     );
