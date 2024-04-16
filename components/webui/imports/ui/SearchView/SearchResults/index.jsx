@@ -28,9 +28,9 @@ const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
  * table.
  *
  * @param {object} props
+ * @param {number} props.estimatedNumResults
  * @param {object} props.fieldToSortBy
  * @param {number} props.maxLinesPerResult
- * @param {number} props.numResultsOnServer
  * @param {Function} props.onTimelineZoom
  * @param {SearchResultsMetadata} props.resultsMetadata
  * @param {number} props.searchJobId
@@ -44,9 +44,9 @@ const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
  * @return {React.ReactElement}
  */
 const SearchResults = ({
+    estimatedNumResults,
     fieldToSortBy,
     maxLinesPerResult,
-    numResultsOnServer,
     onTimelineZoom,
     resultsMetadata,
     searchJobId,
@@ -58,14 +58,37 @@ const SearchResults = ({
     timelineConfig,
     visibleSearchResultsLimit,
 }) => {
-    const hasMoreResults = visibleSearchResultsLimit < numResultsOnServer;
+    let aggregatedCount = null;
+    if (null !== timelineBuckets && 0 !== timelineBuckets.length) {
+        aggregatedCount =
+        timelineBuckets.reduce(
+            (accumulator, currentValue) => (accumulator + currentValue.count),
+            0
+        );
+    }
+
+    // The number of result in the results cache is available in different variables at different
+    // times:
+    // - when the search job ends, it will be in resultsMetadata.numTotalResults.
+    // - while the query is in progress, it will be in estimatedNumResults.
+    // - when the query starts, the other two variables will be null, so searchResults.length is the
+    //   best estimate.
+    const numResultsInCache =
+        resultsMetadata.numTotalResults ||
+        estimatedNumResults ||
+        searchResults.length;
+
+    const numResultsInTotal = aggregatedCount || numResultsInCache;
+
+    const hasMoreResultsInCache = visibleSearchResultsLimit < numResultsInCache;
+    const hasMoreResultsInTotal = visibleSearchResultsLimit < numResultsInTotal;
 
     const handleLoadMoreResults = useCallback(() => {
-        if (hasMoreResults) {
+        if (hasMoreResultsInCache) {
             setVisibleSearchResultsLimit((v) => v + VISIBLE_RESULTS_LIMIT_INCREMENT);
         }
     }, [
-        hasMoreResults,
+        hasMoreResultsInCache,
         setVisibleSearchResultsLimit,
     ]);
 
@@ -78,7 +101,7 @@ const SearchResults = ({
                 <Row>
                     <SearchResultsHeader
                         maxLinesPerResult={maxLinesPerResult}
-                        numResultsOnServer={numResultsOnServer}
+                        numResultsInTotal={numResultsInTotal}
                         searchJobId={searchJobId}
                         setMaxLinesPerResult={setMaxLinesPerResult}/>
                 </Row>
@@ -93,7 +116,8 @@ const SearchResults = ({
             {0 < searchResults.length &&
                 <SearchResultsTable
                     fieldToSortBy={fieldToSortBy}
-                    hasMoreResults={hasMoreResults}
+                    hasMoreResultsInCache={hasMoreResultsInCache}
+                    hasMoreResultsInTotal={hasMoreResultsInTotal}
                     maxLinesPerResult={maxLinesPerResult}
                     searchResults={searchResults}
                     setFieldToSortBy={setFieldToSortBy}
