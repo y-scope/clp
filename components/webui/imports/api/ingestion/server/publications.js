@@ -90,7 +90,6 @@ const refreshCompressionJobs = async () => {
     })
         .fetch()
         .map((job) => (
-            // eslint-disable-next-line no-underscore-dangle
             job._id
         ));
 
@@ -101,7 +100,6 @@ const refreshCompressionJobs = async () => {
 
     const operations = jobs.map((doc) => ({
         updateOne: {
-            // eslint-disable-next-line no-underscore-dangle
             filter: {_id: doc._id},
             update: {$set: doc},
             upsert: true,
