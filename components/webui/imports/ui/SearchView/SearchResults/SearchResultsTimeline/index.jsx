@@ -19,6 +19,7 @@ import {
     expandTimeRangeToDurationMultiple,
     TIME_UNIT,
 } from "/imports/utils/datetime";
+import {deselectAll} from "/imports/utils/misc";
 
 import "chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm";
 import "./SearchResultsTimeline.scss";
@@ -262,7 +263,11 @@ const SearchResultsTimeline = ({
         <Bar
             className={"timeline-chart"}
             data={data}
-            options={options}/>
+            options={options}
+
+            // Deselect all selections to address a bug that prevents dragging
+            // on the chart when elements such as text or images are selected.
+            onMouseDown={deselectAll}/>
     );
 };
 
