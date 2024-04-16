@@ -89,8 +89,6 @@ steps to set up your environment for linting:
 
 ## Checking for linting errors
 
-To check for linting errors across the project:
-
 ```shell
 npm run lint
 ```
@@ -98,8 +96,6 @@ npm run lint
 This will run ESLint on the entire project's source code and report any linting errors.
 
 ## Automatically fixing linting errors
-
-To automatically fix linting errors that can be resolved by ESLint:
 
 ```shell
 npm run lint:fix
