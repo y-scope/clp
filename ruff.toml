@@ -1,0 +1,6 @@
+line-length = 100
+select = ["I"]
+
+[lint.isort]
+case-sensitive = false
+order-by-type = false

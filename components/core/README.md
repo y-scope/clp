@@ -12,17 +12,14 @@ CLP core is the low-level component that performs compression, decompression, an
     * [Docker Environment](#docker-environment)
   * [Build](#build)
 * [Running](#running)
-  * [`clp`](#clp)
-  * [`clg`](#clg)
-  * [`make-dictionaries-readable`](#make-dictionaries-readable)
-* [Parallel Compression](#parallel-compression)
+
 
 ## Requirements
 
 * We have built and tested CLP on the OSes listed 
   [below](https://github.com/y-scope/clp/tree/main/components/core#native-environment).
   * If you have trouble building for another OS, file an issue, and we may be able to help.
-* A compiler that supports C++17 (e.g., gcc-8)
+* A compiler that supports C++17 and std::span (e.g., gcc-10)
 
 ## Building
 
@@ -36,10 +33,13 @@ tools/scripts/deps-download/download-all.sh
 ```
 
 This will download:
-* [ANTLR v4](https://www.antlr.org/download.html) (v4.11.1)
+* [abseil-cpp](https://github.com/abseil/abseil-cpp) (20230802.1)
+* [ANTLR](https://www.antlr.org) (v4.13.1)
 * [Catch2](https://github.com/catchorg/Catch2.git) (v2.13.7)
 * [date](https://github.com/HowardHinnant/date.git) (v3.0.1)
 * [json](https://github.com/nlohmann/json.git) (v3.10.4)
+* [log-surgeon](https://github.com/y-scope/log-surgeon) (895f464)
+* [simdjson](https://github.com/simdjson/simdjson) (v3.6.3)
 * [SQLite3](https://www.sqlite.org/download.html) (v3.36.0)
 * [yaml-cpp](https://github.com/jbeder/yaml-cpp.git) (v0.7.0)
 
@@ -57,8 +57,8 @@ See the relevant README for your OS:
 
 * [CentOS 7.4](./tools/scripts/lib_install/centos7.4/README.md)
 * [macOS 12](./tools/scripts/lib_install/macos-12/README.md)
-* [Ubuntu 18.04](./tools/scripts/lib_install/ubuntu-bionic/README.md)
 * [Ubuntu 20.04](./tools/scripts/lib_install/ubuntu-focal/README.md)
+* [Ubuntu 22.04](./tools/scripts/lib_install/ubuntu-jammy/README.md)
 
 Want to build natively on an OS not listed here? You can file a [feature request](https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml).
 
@@ -98,108 +98,13 @@ the relevant paths on your machine.
 
 ## Running
 
-* CLP contains two core executables: `clp` and `clg`
-    * `clp` is used for compressing and extracting logs
-    * `clg` is used for performing wildcard searches on the compressed logs
+* CLP contains four core executables: `clp`, `clg`, `clp-s` and `glt`.
+  * `clp` is used for compressing and extracting unstructured (plain text) logs.
+  * `clg` is used for performing wildcard searches on the compressed unstructured logs.
+  * `clp-s` is used for compressing and searching semi-structured logs (e.g., JSON) with support for
+    handling highly dynamic schemas.
+  * `glt` is a version of clp specialized for searching unstructured (plain text) logs.
 
-### `clp`
-
-To compress some logs without a schema file:
-```shell
-./clp c archives-dir /home/my/logs
-```
-* `archives-dir` is where compressed logs should be output
-  * `clp` will create a number of files and directories within, so it's best if this directory is empty
-  * You can use the same directory repeatedly and `clp` will add to the compressed logs within.
-* `/home/my/logs` is any log file or directory containing log files
-* In this mode, `clp` will use heuristics to determine what are the variables in
-  each uncompressed message.
-  * The heuristics roughly correspond to the example schema file in
-    `config/schemas.txt`.
-
-To compress with a user-defined schema file:
-```shell
-./clp c --schema-path path-to-schema-file archives-dir /home/my/logs 
-```
-* `path-to-schema-file` is the location of a schema file. For more details on 
-  schema files, see README-Schema.md.
-
-To decompress those logs:
-```shell
-./clp x archive-dir decompressed
-```
-* `archives-dir` is where the compressed logs were previously stored
-* `decompressed` is a directory where they will be decompressed to
-
-You can also decompress a specific file:
-```shell
-./clp x archive-dir decompressed /my/file/path.log
-```
-* `/my/file/path.log` is the uncompressed file's path (the one that was passed to `clp` for compression) 
-
-More usage instructions can be found by running:
-```shell
-./clp --help
-```
-
-### `clg`
-
-To search the compressed logs:
-```shell
-./clg archives-dir " a *wildcard* search phrase "
-```
-* `archives-dir` is where the compressed logs were previously stored
-* For archives compressed without a schema file:
-  * The search phrase can contain the `*` wildcard which matches 0 or more
-    characters, or the `?` wildcard which matches any single character.
-* For archives compressed using a schema file:
-  * `*` may only represent non-delimiter characters.
-
-Similar to `clp`, `clg` can search a single file:
-```shell
-./clg archives-dir " a *wildcard* search phrase " /my/file/path.log
-```
-* `/my/file/path.log` is the uncompressed file's path (the one that was passed to `clp` for compression)
-
-More usage instructions can be found by running:
-```shell
-./clg --help
-```
-
-### `make-dictionaries-readable`
-
-If you'd like to convert the dictionaries of an individual archive into a human-readable form, you 
-can use `make-dictionaries-readable`.
-
-```shell
-./make-dictionaries-readable archive-path <output dir>
-```
-* `archive-path` is a path to a specific archive (inside `archives-dir`)
-
-See the `make-dictionaries-readable` [README](src/utils/make_dictionaries_readable/README.md) for 
-details on the output format. 
-
-## Parallel Compression
-
-By default, `clp` uses an embedded SQLite database, so each directory containing archives can only
-be accessed by a single `clp` instance.
-
-To enable parallel compression to the same archives directory, `clp`/`clg` can be configured to
-use a MySQL-type database (MariaDB) as follows: 
-
-* Install and configure MariaDB using the instructions for your platform
-* Create a user that has privileges to create databases, create tables, insert records, and delete
-  records.
-* Copy and change `config/metadata-db.yml`, setting the type to `mysql` and uncommenting the MySQL 
-  parameters.
-* Install the MariaDB and PyYAML Python packages `pip3 install mariadb PyYAML`
-  * This is necessary to run the database initialization script. If you prefer, you can run the 
-    SQL statements in `tools/scripts/db/init-db.py` directly.
-* Run `tools/scripts/db/init-db.py` with the updated config file. This will initialize the 
-  database CLP requires.
-* Run `clp` or `clg` as before, with the addition of the `--db-config-file` option pointing at 
-  the updated config file.
-* To compress in parallel, simply run another instance of `clp` concurrently.
-
-Note that currently, decompression (`clp x`) and search (`clg`) can only be run with a single 
-instance. We are in the process of open-sourcing parallelized versions of these as well.
+See [Using CLP for unstructured logs](../../docs/core/clp-unstructured.md),
+ [Using CLP for semi-structured logs](../../docs/core/clp-structured.md) and
+ [Using GLT for unstructured logs](../../docs/core/glt.md) for usage instructions.

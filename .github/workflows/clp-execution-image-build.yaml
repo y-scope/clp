@@ -1,34 +1,91 @@
-name: generate-execution-dependency-image
+name: "clp-execution-image-build"
 
 on:
+  pull_request:
+    paths:
+      - ".github/actions/clp-execution-image-build/action.yaml"
+      - ".github/workflows/clp-execution-image-build.yaml"
+      - "tools/docker-images/**/*"
   push:
     paths:
-      - 'tools/docker-images/clp-execution-base-focal/**'
-      - 'components/core/tools/scripts/lib_install/**'
-      - '.github/workflows/clp-execution-image-build.yaml'
+      - ".github/actions/clp-execution-image-build/action.yaml"
+      - ".github/workflows/clp-execution-image-build.yaml"
+      - "tools/docker-images/**/*"
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{github.repository}}/clp-execution-x86-ubuntu-focal
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+  # Cancel in-progress jobs for efficiency
+  cancel-in-progress: true
 
 jobs:
-  build:
-    runs-on: ubuntu-20.04
-    name: Build Image
+  filter-relevant-changes:
+    runs-on: "ubuntu-latest"
+    outputs:
+      ubuntu_focal_image_changed: "${{steps.filter.outputs.ubuntu_focal_image}}"
+      ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: "actions/checkout@v3"
         with:
-            submodules: recursive
+          submodules: "recursive"
 
-      - name: Workaround actions/runner-images/issues/6775
-        run: chown $(id -u):$(id -g) -R .
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
 
-      - name: Build and push Docker image
-        uses: ./.github/actions/clp-docker-build-push-action
+      - name: "Filter relevant changes"
+        uses: "dorny/paths-filter@v2"
+        id: "filter"
         with:
-          image_name: ${{env.IMAGE_NAME}}
-          file: ./tools/docker-images/clp-execution-base-focal/Dockerfile
-          token: ${{secrets.GITHUB_TOKEN}}
-          push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
+          base: "main"
+          filters: |
+            ubuntu_focal_image:
+              - ".github/actions/clp-execution-image-build/action.yaml"
+              - ".github/workflows/clp-execution-image-build.yaml"
+              - "tools/docker-images/clp-execution-base-ubuntu-focal/**/*"
+            ubuntu_jammy_image:
+              - ".github/actions/clp-execution-image-build/action.yaml"
+              - ".github/workflows/clp-execution-image-build.yaml"
+              - "tools/docker-images/clp-execution-base-ubuntu-jammy/**/*"
+
+  ubuntu_focal_execution_image:
+    if: "'true' == needs.filter-relevant-changes.outputs.ubuntu_focal_image_changed"
+    needs: "filter-relevant-changes"
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+        with:
+          submodules: "recursive"
+
+      - name: "Workaround actions/runner-images/issues/6775"
+        shell: "bash"
+        run: "chown $(id -u):$(id -g) -R ."
+
+      - uses: "./.github/actions/clp-execution-image-build"
+        with:
+          image_registry: "ghcr.io"
+          image_registry_username: "${{github.actor}}"
+          image_registry_password: "${{secrets.GITHUB_TOKEN}}"
+          platform_id: "ubuntu"
+          platform_version_id: "focal"
+
+  ubuntu_jammy_execution_image:
+    if: "'true' == needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed"
+    needs: "filter-relevant-changes"
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+        with:
+          submodules: "recursive"
+
+      - name: "Workaround actions/runner-images/issues/6775"
+        shell: "bash"
+        run: "chown $(id -u):$(id -g) -R ."
+
+      - uses: "./.github/actions/clp-execution-image-build"
+        with:
+          image_registry: "ghcr.io"
+          image_registry_username: "${{github.actor}}"
+          image_registry_password: "${{secrets.GITHUB_TOKEN}}"
+          platform_id: "ubuntu"
+          platform_version_id: "jammy"

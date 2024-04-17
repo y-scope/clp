@@ -3,24 +3,26 @@ These same steps are used by our Docker containers.
 
 # Installing dependencies
 
-Before you run any commands below, you should review the scripts to ensure they
-will not install any dependencies you don't expect.
+> [!WARNING]
+> Before you run any commands below, you should review the scripts to ensure they will not install
+> any dependencies or apply any configurations that you don't expect.
 
-* Install all dependencies:
-  * ⚠ NOTE: The packages built from source (`install-packages-from-source.sh`) 
-    are installed without using a packager. So if you ever need to uninstall 
-    them, you will need to do so manually.
+To install all dependencies, run:
 
-  ```bash
-  ./install-all.sh
-  ```
+> [!NOTE]
+> The packages built from source (`install-packages-from-source.sh`) are installed without using a
+> packager. So if you ever need to uninstall them, you will need to do so manually.
+
+```bash
+./install-all.sh
+```
 
 # Setup dependencies
 
-* Enable gcc 9
+* Enable gcc 10
 
   ```bash
-  ln -s /opt/rh/devtoolset-9/enable /etc/profile.d/devtoolset.sh
+  ln -s /opt/rh/devtoolset-10/enable /etc/profile.d/devtoolset.sh
   ```
 
 * Set PKG_CONFIG_PATH since CentOS doesn't look in `/usr/local` by default.

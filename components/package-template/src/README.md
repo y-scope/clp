@@ -8,13 +8,13 @@ without decompression. CLP's compression ratio is significantly higher than gzip
 ### Starting CLP
 
 ```shell
-sbin/start-clp
+sbin/start-clp.sh
 ```
 
 ### Compressing logs
 
 ```shell
-sbin/compress <uncompressed log files/directories>
+sbin/compress.sh <uncompressed log files/directories>
 ```
 
 For more options, run the script with the `--help` option.
@@ -22,7 +22,7 @@ For more options, run the script with the `--help` option.
 ### Decompressing logs
 
 ```shell
-sbin/decompress -d <output directory> 
+sbin/decompress.sh -d <output directory> 
 ```
 
 For more options, run the script with the `--help` option.
@@ -30,7 +30,7 @@ For more options, run the script with the `--help` option.
 ### Searching logs
 
 ```bash
-sbin/search <your * wildcard * query>
+sbin/search.sh <your * wildcard * query>
 ```
 
 CLP supports two wildcard characters:
@@ -113,9 +113,10 @@ On the control node, run the following commands (these must be started in the
 order below):
 
 ```bash
-sbin/start-clp db
-sbin/start-clp queue
-sbin/start-clp scheduler
+sbin/start-clp.sh database
+sbin/start-clp.sh queue
+sbin/start-clp.sh results_cache
+sbin/start-clp.sh scheduler
 ```
 
 ### Starting the worker-node components
@@ -123,7 +124,7 @@ sbin/start-clp scheduler
 On every node you want to run workers, run this command:
 
 ```bash
-sbin/start-clp worker
+sbin/start-clp.sh worker
 ```
 
 ### Stopping components
@@ -131,13 +132,13 @@ sbin/start-clp worker
 To stop an individual component on a node, you can use:
 
 ```bash
-sbin/stop-clp <component name>
+sbin/stop-clp.sh <component name>
 ```
 
 To stop all components on a node, you can use:
 
 ```bash
-sbin/stop-clp
+sbin/stop-clp.sh
 ```
 
 ## Troubleshooting

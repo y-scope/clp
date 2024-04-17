@@ -1,0 +1,161 @@
+set(
+        CLO_SOURCES
+        ../BufferReader.cpp
+        ../BufferReader.hpp
+        ../cli_utils.cpp
+        ../cli_utils.hpp
+        ../database_utils.cpp
+        ../database_utils.hpp
+        ../Defs.h
+        ../dictionary_utils.cpp
+        ../dictionary_utils.hpp
+        ../DictionaryEntry.hpp
+        ../DictionaryReader.hpp
+        ../EncodedVariableInterpreter.cpp
+        ../EncodedVariableInterpreter.hpp
+        ../ErrorCode.hpp
+        ../ffi/encoding_methods.cpp
+        ../ffi/encoding_methods.hpp
+        ../ffi/encoding_methods.inc
+        ../ffi/ir_stream/decoding_methods.cpp
+        ../ffi/ir_stream/decoding_methods.hpp
+        ../ffi/ir_stream/decoding_methods.inc
+        ../FileReader.cpp
+        ../FileReader.hpp
+        ../FileWriter.cpp
+        ../FileWriter.hpp
+        ../Grep.cpp
+        ../Grep.hpp
+        ../ir/LogEvent.hpp
+        ../ir/parsing.cpp
+        ../ir/parsing.hpp
+        ../ir/parsing.inc
+        ../ir/types.hpp
+        ../LogSurgeonReader.cpp
+        ../LogSurgeonReader.hpp
+        ../LogTypeDictionaryEntry.cpp
+        ../LogTypeDictionaryEntry.hpp
+        ../LogTypeDictionaryReader.hpp
+        ../networking/socket_utils.cpp
+        ../networking/socket_utils.hpp
+        ../networking/SocketOperationFailed.hpp
+        ../PageAllocatedVector.hpp
+        ../ParsedMessage.cpp
+        ../ParsedMessage.hpp
+        ../Platform.hpp
+        ../Profiler.cpp
+        ../Profiler.hpp
+        ../Query.cpp
+        ../Query.hpp
+        ../ReaderInterface.cpp
+        ../ReaderInterface.hpp
+        ../spdlog_with_specializations.hpp
+        ../SQLiteDB.cpp
+        ../SQLiteDB.hpp
+        ../SQLitePreparedStatement.cpp
+        ../SQLitePreparedStatement.hpp
+        ../Stopwatch.cpp
+        ../Stopwatch.hpp
+        ../streaming_archive/ArchiveMetadata.cpp
+        ../streaming_archive/ArchiveMetadata.hpp
+        ../streaming_archive/Constants.hpp
+        ../streaming_archive/MetadataDB.cpp
+        ../streaming_archive/MetadataDB.hpp
+        ../streaming_archive/reader/Archive.cpp
+        ../streaming_archive/reader/Archive.hpp
+        ../streaming_archive/reader/File.cpp
+        ../streaming_archive/reader/File.hpp
+        ../streaming_archive/reader/Message.cpp
+        ../streaming_archive/reader/Message.hpp
+        ../streaming_archive/reader/Segment.cpp
+        ../streaming_archive/reader/Segment.hpp
+        ../streaming_archive/reader/SegmentManager.cpp
+        ../streaming_archive/reader/SegmentManager.hpp
+        ../streaming_archive/writer/File.cpp
+        ../streaming_archive/writer/File.hpp
+        ../streaming_archive/writer/Segment.cpp
+        ../streaming_archive/writer/Segment.hpp
+        ../streaming_compression/Constants.hpp
+        ../streaming_compression/Decompressor.hpp
+        ../streaming_compression/passthrough/Compressor.cpp
+        ../streaming_compression/passthrough/Compressor.hpp
+        ../streaming_compression/passthrough/Decompressor.cpp
+        ../streaming_compression/passthrough/Decompressor.hpp
+        ../streaming_compression/zstd/Compressor.cpp
+        ../streaming_compression/zstd/Compressor.hpp
+        ../streaming_compression/zstd/Constants.hpp
+        ../streaming_compression/zstd/Decompressor.cpp
+        ../streaming_compression/zstd/Decompressor.hpp
+        ../StringReader.cpp
+        ../StringReader.hpp
+        ../Thread.cpp
+        ../Thread.hpp
+        ../TimestampPattern.cpp
+        ../TimestampPattern.hpp
+        ../TraceableException.hpp
+        ../type_utils.hpp
+        ../Utils.cpp
+        ../Utils.hpp
+        ../VariableDictionaryEntry.cpp
+        ../VariableDictionaryEntry.hpp
+        ../VariableDictionaryReader.hpp
+        ../VariableDictionaryWriter.cpp
+        ../VariableDictionaryWriter.hpp
+        ../version.hpp
+        ../WriterInterface.cpp
+        ../WriterInterface.hpp
+        "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.c"
+        "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.h"
+        "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3ext.h"
+        clo.cpp
+        CommandLineArguments.cpp
+        CommandLineArguments.hpp
+        OutputHandler.cpp
+        OutputHandler.hpp
+)
+
+set(
+        REDUCER_SOURCES
+        ../../reducer/BufferedSocketWriter.cpp
+        ../../reducer/BufferedSocketWriter.hpp
+        ../../reducer/ConstRecordIterator.hpp
+        ../../reducer/CountOperator.cpp
+        ../../reducer/CountOperator.hpp
+        ../../reducer/DeserializedRecordGroup.cpp
+        ../../reducer/DeserializedRecordGroup.hpp
+        ../../reducer/GroupTags.hpp
+        ../../reducer/network_utils.cpp
+        ../../reducer/network_utils.hpp
+        ../../reducer/Operator.cpp
+        ../../reducer/Operator.hpp
+        ../../reducer/Pipeline.cpp
+        ../../reducer/Pipeline.hpp
+        ../../reducer/Record.hpp
+        ../../reducer/RecordGroup.hpp
+        ../../reducer/RecordGroupIterator.hpp
+        ../../reducer/RecordTypedKeyIterator.hpp
+        ../../reducer/types.hpp
+)
+
+add_executable(clo ${CLO_SOURCES} ${REDUCER_SOURCES})
+target_compile_features(clo PRIVATE cxx_std_17)
+target_include_directories(clo PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
+target_link_libraries(clo
+        PRIVATE
+        Boost::filesystem Boost::iostreams Boost::program_options
+        fmt::fmt
+        log_surgeon::log_surgeon
+        ${MONGOCXX_TARGET}
+        msgpack-cxx
+        spdlog::spdlog
+        ${sqlite_LIBRARY_DEPENDENCIES}
+        ${STD_FS_LIBS}
+        clp::string_utils
+        ZStd::ZStd
+)
+# Put the built executable at the root of the build directory
+set_target_properties(
+        clo
+        PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+)

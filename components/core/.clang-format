@@ -1,37 +1,40 @@
+# yamllint disable-line rule:document-start
 ---
 ColumnLimit: 100
 IndentWidth: 4
+# yamllint disable-line rule:document-start
 ---
-Language: Cpp
+Language: "Cpp"
 AccessModifierOffset: -4
-AlignAfterOpenBracket: BlockIndent
-AlignArrayOfStructures: None
-AlignConsecutiveAssignments: None
-AlignConsecutiveBitFields: None
-AlignConsecutiveDeclarations: None
-AlignConsecutiveMacros: None
-AlignEscapedNewlines: DontAlign
-AlignOperands: Align
-AlignTrailingComments: Never
+AlignAfterOpenBracket: "BlockIndent"
+AlignArrayOfStructures: "None"
+AlignConsecutiveAssignments: "None"
+AlignConsecutiveBitFields: "None"
+AlignConsecutiveDeclarations: "None"
+AlignConsecutiveMacros: "None"
+AlignEscapedNewlines: "DontAlign"
+AlignOperands: "Align"
+AlignTrailingComments:
+  Kind: "Never"
 AllowAllArgumentsOnNextLine: false
 AllowAllParametersOfDeclarationOnNextLine: false
-AllowShortBlocksOnASingleLine: Always
+AllowShortBlocksOnASingleLine: "Always"
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortEnumsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: Inline
-AllowShortIfStatementsOnASingleLine: Never
-AllowShortLambdasOnASingleLine: All
+AllowShortFunctionsOnASingleLine: "Inline"
+AllowShortIfStatementsOnASingleLine: "Never"
+AllowShortLambdasOnASingleLine: "All"
 AllowShortLoopsOnASingleLine: false
-AlwaysBreakAfterReturnType: None
+AlwaysBreakAfterReturnType: "None"
 AlwaysBreakBeforeMultilineStrings: false
-AlwaysBreakTemplateDeclarations: Yes
+AlwaysBreakTemplateDeclarations: "Yes"
 BinPackArguments: false
 BinPackParameters: false
-BitFieldColonSpacing: Both
+BitFieldColonSpacing: "Both"
 BraceWrapping:
   AfterCaseLabel: false
   AfterClass: false
-  AfterControlStatement: MultiLine
+  AfterControlStatement: "MultiLine"
   AfterEnum: false
   AfterFunction: false
   AfterNamespace: false
@@ -46,14 +49,14 @@ BraceWrapping:
   SplitEmptyFunction: false
   SplitEmptyNamespace: false
   SplitEmptyRecord: false
-BreakAfterAttributes: Never
-BreakBeforeBinaryOperators: All
-BreakBeforeBraces: Custom
-BreakBeforeConceptDeclarations: Always
-BreakBeforeInlineASMColon: OnlyMultiline
+BreakAfterAttributes: "Never"
+BreakBeforeBinaryOperators: "All"
+BreakBeforeBraces: "Custom"
+BreakBeforeConceptDeclarations: "Always"
+BreakBeforeInlineASMColon: "OnlyMultiline"
 BreakBeforeTernaryOperators: true
-BreakConstructorInitializers: BeforeColon
-BreakInheritanceList: BeforeColon
+BreakConstructorInitializers: "BeforeColon"
+BreakInheritanceList: "BeforeColon"
 BreakStringLiterals: true
 CompactNamespaces: true
 ConstructorInitializerIndentWidth: 8
@@ -61,30 +64,33 @@ ContinuationIndentWidth: 8
 Cpp11BracedListStyle: true
 DerivePointerAlignment: false
 DisableFormat: false
-EmptyLineAfterAccessModifier: Never
-EmptyLineBeforeAccessModifier: LogicalBlock
+EmptyLineAfterAccessModifier: "Never"
+EmptyLineBeforeAccessModifier: "LogicalBlock"
 FixNamespaceComments: true
-IncludeBlocks: Regroup
+IncludeBlocks: "Regroup"
 IncludeCategories:
   # NOTE: A header is grouped by first matching regex
-  # Third-party headers. Update when adding new third-party libraries.
-  - Regex: '^<(archive|boost|catch2|date|fmt|json|log_surgeon|mariadb|spdlog|sqlite3|yaml-cpp|zstd)'
+  # Library headers. Update when adding new libraries.
+  # NOTE: clang-format retains leading white-space on a line in violation of the YAML spec.
+
+  - Regex: "<(absl|antlr4|archive|boost|bsoncxx|catch2|date|fmt|json|log_surgeon|mariadb|mongocxx\
+|msgpack|simdjson|spdlog|sqlite3|string_utils|yaml-cpp|zstd)"
     Priority: 3
   # C system headers
-  - Regex: '^<.+.h>'
+  - Regex: "^<.+\\.h>"
     Priority: 1
   # C++ standard libraries
-  - Regex: '^<.+>'
+  - Regex: "^<.+>"
     Priority: 2
   # Project headers
-  - Regex: '^".+"'
+  - Regex: "^\".+\""
     Priority: 4
 IndentAccessModifiers: false
 IndentCaseBlocks: false
 IndentCaseLabels: true
-IndentExternBlock: Indent
+IndentExternBlock: "Indent"
 IndentGotoLabels: false
-IndentPPDirectives: BeforeHash
+IndentPPDirectives: "BeforeHash"
 IndentRequiresClause: false
 IndentWrappedFunctionNames: false
 InsertBraces: true
@@ -97,46 +103,46 @@ IntegerLiteralSeparator:
   Hex: 4
   HexMinDigits: 4
 KeepEmptyLinesAtTheStartOfBlocks: false
-LambdaBodyIndentation: Signature
-LineEnding: LF
+LambdaBodyIndentation: "Signature"
+LineEnding: "LF"
 MaxEmptyLinesToKeep: 1
-NamespaceIndentation: Inner
+NamespaceIndentation: "None"
 PPIndentWidth: -1
-PackConstructorInitializers: CurrentLine
+PackConstructorInitializers: "CurrentLine"
 PenaltyBreakOpenParenthesis: 25
 PenaltyBreakBeforeFirstCallParameter: 25
 PenaltyReturnTypeOnItsOwnLine: 100
-PointerAlignment: Left
-QualifierAlignment: Custom
+PointerAlignment: "Left"
+QualifierAlignment: "Custom"
 QualifierOrder:
-  - static
-  - friend
-  - inline
+  - "static"
+  - "friend"
+  - "inline"
   # constexpr west as explained in https://www.youtube.com/watch?v=z6s6bacI424
-  - constexpr
-  - type
-  - const
-  - volatile
-ReferenceAlignment: Pointer
+  - "constexpr"
+  - "type"
+  - "const"
+  - "volatile"
+ReferenceAlignment: "Pointer"
 ReflowComments: true
 RemoveBracesLLVM: false
 RemoveSemicolon: true
-RequiresClausePosition: OwnLine
-RequiresExpressionIndentation: OuterScope
-SeparateDefinitionBlocks: Always
+RequiresClausePosition: "OwnLine"
+RequiresExpressionIndentation: "OuterScope"
+SeparateDefinitionBlocks: "Always"
 ShortNamespaceLines: 0
-SortIncludes: CaseInsensitive
-SortUsingDeclarations: Lexicographic
+SortIncludes: "CaseInsensitive"
+SortUsingDeclarations: "Lexicographic"
 SpaceAfterCStyleCast: false
 SpaceAfterLogicalNot: false
 SpaceAfterTemplateKeyword: true
-SpaceAroundPointerQualifiers: Default
+SpaceAroundPointerQualifiers: "Default"
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeCaseColon: false
 SpaceBeforeCpp11BracedList: false
 SpaceBeforeCtorInitializerColon: true
 SpaceBeforeInheritanceColon: true
-SpaceBeforeParens: ControlStatements
+SpaceBeforeParens: "ControlStatements"
 SpaceBeforeRangeBasedForLoopColon: true
 SpaceBeforeSquareBrackets: false
 SpaceInEmptyBlock: false
@@ -151,6 +157,6 @@ SpacesInLineCommentPrefix:
   Maximum: -1
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
-Standard: Latest
+Standard: "Latest"
 TabWidth: 4
-UseTab: Never
+UseTab: "Never"

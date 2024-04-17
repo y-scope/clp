@@ -1,41 +1,74 @@
-name: "Build CLP Core"
-description: "Configures CMake and uses CMake to build CLP Core"
+name: "clp-core-build"
+description: "Builds CLP-core in the specified container"
 
 inputs:
-  build_type:
-    description: "CLP CMake Build Type: Debug, Release, RelWithDebInfo and MinSizeRel"
+  image_name:
+    description: "Name of the container image (without registry or repository) to use"
+    required: true
+  use_published_image:
+    description: "Whether to use the published container image"
+    required: true
+  upload_binaries:
+    description: "Whether to upload the core binaries"
+    required: true
+  binaries_artifact_name:
+    description: "Name of the artifact containing the core binaries"
     required: false
-    default: Release
-  cmake_config_extra_args:
-    description: "Extra args to pass to CMake during configuration"
-    required: false
-    default: ""
-  
+
 runs:
   using: "composite"
   steps:
+    - shell: "bash"
+      working-directory: "./components/core"
+      run: "./tools/scripts/deps-download/download-all.sh"
 
-    - name: Download submodules
-      run: ./tools/scripts/deps-download/download-all.sh
-      working-directory: ./components/core
-      shell: bash
+    - if: "inputs.use_published_image == 'false'"
+      uses: "actions/download-artifact@v4"
+      with:
+        name: "${{inputs.image_name}}"
+        path: "/tmp"
 
-    - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory
-      run: cmake -B $GITHUB_WORKSPACE/build
-                 -DCMAKE_BUILD_TYPE=${{inputs.build_type}} 
-                 ${{inputs.cmake_config_extra_args}}
-      working-directory: ./components/core
-      shell: bash
+    - if: "inputs.use_published_image == 'false'"
+      name: "Load image"
+      run: "docker load --input '/tmp/${{inputs.image_name}}.tar'"
+      shell: "bash"
 
-    - name: Build
-      # Build your program with the given configuration
-      run: cmake --build $GITHUB_WORKSPACE/build --config ${{inputs.build_type}}
-      working-directory: ./components/core
-      shell: bash
-      
-    - name: Bundle Built Binaries
+    - id: "get_image_props"
       run: |
-        cd $GITHUB_WORKSPACE/build 
-        tar -cf $GITHUB_WORKSPACE/clp-binaries-focal.tar ./clp ./clg ./clo ./make-dictionaries-readable
-      shell: bash
+        if [[ "${{inputs.use_published_image}}" == "true" ]] ; then
+          # Docker doesn't support repository names with uppercase characters, so we convert to
+          # lowercase here.
+          repository=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')
+          echo "qualified_image_name=ghcr.io/${repository}/${{inputs.image_name}}:main" \
+            >> "$GITHUB_OUTPUT"
+        else
+          echo "qualified_image_name=${{inputs.image_name}}:latest" >> "$GITHUB_OUTPUT"
+        fi
+      shell: "bash"
+
+    - run: >-
+        docker run
+        --user $(id -u):$(id -g)
+        --volume "$GITHUB_WORKSPACE/components/core":/mnt/clp
+        --workdir /mnt/clp
+        ${{steps.get_image_props.outputs.qualified_image_name}}
+        /mnt/clp/tools/scripts/utils/build-and-run-unit-tests.sh . build
+      shell: "bash"
+
+    - if: "inputs.upload_binaries == 'true'"
+      id: "copy_binaries"
+      run: |-
+        output_dir="/tmp/${{inputs.binaries_artifact_name}}"
+        echo "output_dir=${output_dir}" >> "$GITHUB_OUTPUT"
+
+        mkdir -p "${output_dir}"
+        cd "$GITHUB_WORKSPACE/components/core/build"
+        tar cfvv "${output_dir}/clp.tar" clg clp clp-s glt make-dictionaries-readable
+      shell: "bash"
+
+    - if: "inputs.upload_binaries == 'true'"
+      uses: "actions/upload-artifact@v4"
+      with:
+        name: "${{inputs.binaries_artifact_name}}"
+        path: "${{steps.copy_binaries.outputs.output_dir}}"
+        retention-days: 1

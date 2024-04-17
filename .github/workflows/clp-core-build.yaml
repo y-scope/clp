@@ -1,113 +1,312 @@
-name: build-clp-core
+name: "clp-core-build"
 
 on:
-  push:
-    paths:
-      - '.github/workflows/clp-core-build.yaml'
-      - 'components/core/**'
-      - '!components/core/tools/scripts/lib_install/macos-12/**'
   pull_request:
     paths:
-      - '.github/workflows/clp-core-build.yaml'
-      - 'components/core/**'
-      - '!components/core/tools/scripts/lib_install/macos-12/**'
+      - ".github/actions/clp-core-build/action.yaml"
+      - ".github/actions/clp-core-build-containers/action.yaml"
+      - ".github/workflows/clp-core-build.yaml"
+      - ".gitmodules"
+      - "components/core/**"
+      - "!components/core/tools/scripts/lib_install/macos-12/**"
+  push:
+    paths:
+      - ".github/actions/clp-core-build/action.yaml"
+      - ".github/actions/clp-core-build-containers/action.yaml"
+      - ".github/workflows/clp-core-build.yaml"
+      - ".gitmodules"
+      - "components/core/**"
+      - "!components/core/tools/scripts/lib_install/macos-12/**"
   workflow_dispatch:
-  workflow_run:
-    workflows: ["generate-build-dependency-image"]
-    branches: [main]
-    types:
-      - completed
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME_BASE: ${{github.repository}}/clp-core-x86
+  BINARIES_ARTIFACT_NAME_PREFIX: "clp-core-binaries-"
+  DEPS_IMAGE_NAME_PREFIX: "clp-core-dependencies-x86-"
 
-concurrency: build-${{github.ref}}
+# Currency group to prevent multiple workflow instances from trying to publish container images
+concurrency: "${{github.workflow}}-${{github.ref}}"
 
 jobs:
-  build-focal:
-    runs-on: ubuntu-latest
-    container: 
-      image: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main
-      volumes:
-        - ${{github.workspace}}/build:/output
+  filter-relevant-changes:
+    runs-on: "ubuntu-latest"
+    outputs:
+      centos74_image_changed: "${{steps.filter.outputs.centos74_image}}"
+      ubuntu_focal_image_changed: "${{steps.filter.outputs.ubuntu_focal_image}}"
+      ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
+      clp_changed: "${{steps.filter.outputs.clp}}"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: "actions/checkout@v3"
         with:
-            submodules: recursive
+          submodules: "recursive"
 
-      - name: Workaround actions/runner-images/issues/6775
-        run: chown $(id -u):$(id -g) -R .
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
 
-      - name: Build CLP Core
-        id: build
-        uses: ./.github/actions/clp-core-build
-      
-      - name: Upload CLP Binary artifact
-        uses: actions/upload-artifact@main
+      - name: "Filter relevant changes"
+        uses: "dorny/paths-filter@v2"
+        id: "filter"
         with:
-            name: clp-binaries-focal
-            path: ${{github.workspace}}/clp-binaries-focal.tar
-            if-no-files-found: error
-  
-  build-clp-core-image:
-    needs: build-focal
-    runs-on: ubuntu-latest
+          # Consider changes between the current commit and `main`
+          # NOTE: If a pull request changes one of the images, then we need to (1) build the image
+          # (based on commits in the PR) and then (2) build CLP using the changed image. If a pull
+          # request doesn't change an image, then we don't need to rebuild the image; instead we can
+          # use the published image which is based on `main`. So when determining what files have
+          # changed, we need to consider the delta between the current commit and `main` (rather
+          # than the current and previous commits) in order to detect if we need to rebuild the
+          # image (since it would be different from the published image).
+          base: "main"
+          filters: |
+            centos74_image:
+              - ".github/actions/**"
+              - ".github/workflows/clp-core-build.yaml"
+              - "components/core/tools/scripts/lib_install/*.sh"
+              - "components/core/tools/docker-images/clp-env-base-centos7.4/**"
+              - "components/core/tools/scripts/lib_install/centos7.4/**"
+            ubuntu_focal_image:
+              - ".github/actions/**"
+              - ".github/workflows/clp-core-build.yaml"
+              - "components/core/tools/scripts/lib_install/*.sh"
+              - "components/core/tools/docker-images/clp-env-base-ubuntu-focal/**"
+              - "components/core/tools/scripts/lib_install/ubuntu-focal/**"
+            ubuntu_jammy_image:
+              - ".github/actions/**"
+              - ".github/workflows/clp-core-build.yaml"
+              - "components/core/tools/scripts/lib_install/*.sh"
+              - "components/core/tools/docker-images/clp-env-base-ubuntu-jammy/**"
+              - "components/core/tools/scripts/lib_install/ubuntu-jammy/**"
+            clp:
+              - ".github/actions/**"
+              - ".github/workflows/clp-core-build.yaml"
+              - ".gitmodules"
+              - "components/core/cmake/**"
+              - "components/core/CMakeLists.txt"
+              - "components/core/src/**"
+              - "components/core/tests/**"
+              - "components/core/tools/scripts/deps-download/**"
+              - "components/core/tools/scripts/utils/build-and-run-unit-tests.sh"
+
+  centos74-deps-image:
+    if: "needs.filter-relevant-changes.outputs.centos74_image_changed == 'true'"
+    needs: "filter-relevant-changes"
+    runs-on: "ubuntu-latest"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: "actions/checkout@v3"
         with:
-            submodules: recursive
+          submodules: "recursive"
 
-      - name: Workaround actions/runner-images/issues/6775
-        run: chown $(id -u):$(id -g) -R .
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
 
-      - name: Download built CLP Binaries
-        uses: actions/download-artifact@v2
+      - uses: "./.github/actions/clp-core-build-containers"
+        env:
+          OS_NAME: "centos7.4"
         with:
-          name: clp-binaries-focal
-          path: ${{github.workspace}}/binaries
-      
-      - name: Extract Binaries Bundle
-        run: tar -xvf clp-binaries-focal.tar
-        working-directory: ${{github.workspace}}/binaries
-          
-      - name: Build and Push Ubuntu Focal Docker Image
-        uses: ./.github/actions/clp-docker-build-push-action
-        with:
-          image_name: ${{env.IMAGE_NAME_BASE}}-ubuntu-focal
-          context: ${{github.workspace}}/binaries
-          file: components/core/tools/docker-images/clp-core-focal/Dockerfile
-          token: ${{secrets.GITHUB_TOKEN}}
-          push_image: ${{'pull_request' != github.event_name && 'refs/heads/main' == github.ref}}
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          docker_context: "components/core"
+          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
+            /Dockerfile"
+          push_deps_image: >-
+            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          token: "${{secrets.GITHUB_TOKEN}}"
 
-  build-bionic:
-    runs-on: ubuntu-latest
-    container: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-bionic:main
+  ubuntu-focal-deps-image:
+    if: "needs.filter-relevant-changes.outputs.ubuntu_focal_image_changed == 'true'"
+    needs: "filter-relevant-changes"
+    runs-on: "ubuntu-latest"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: "actions/checkout@v3"
         with:
-            submodules: recursive
+          submodules: "recursive"
 
-      - name: Workaround actions/runner-images/issues/6775
-        run: chown $(id -u):$(id -g) -R .
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
 
-      - name: Build CLP Core
-        uses: ./.github/actions/clp-core-build
+      - uses: "./.github/actions/clp-core-build-containers"
+        env:
+          OS_NAME: "ubuntu-focal"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          docker_context: "components/core"
+          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
+            /Dockerfile"
+          push_deps_image: >-
+            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          token: "${{secrets.GITHUB_TOKEN}}"
 
-  build-centos:
-    runs-on: ubuntu-latest
-    container: ghcr.io/y-scope/clp/clp-core-dependencies-x86-centos7.4:main
+  ubuntu-jammy-deps-image:
+    if: "needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'true'"
+    needs: "filter-relevant-changes"
+    runs-on: "ubuntu-latest"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: "actions/checkout@v3"
         with:
-            submodules: recursive
+          submodules: "recursive"
 
-      - name: Workaround actions/runner-images/issues/6775
-        run: chown $(id -u):$(id -g) -R .
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
 
-      - name: Build CLP Core
-        uses: ./.github/actions/clp-core-build
+      - uses: "./.github/actions/clp-core-build-containers"
+        env:
+          OS_NAME: "ubuntu-jammy"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          docker_context: "components/core"
+          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
+            /Dockerfile"
+          push_deps_image: >-
+            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          token: "${{secrets.GITHUB_TOKEN}}"
+
+  centos74-binaries:
+    # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
+    if: >-
+      success()
+      || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
+    needs:
+      - "centos74-deps-image"
+      - "filter-relevant-changes"
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/clp-core-build"
+        env:
+          OS_NAME: "centos7.4"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          use_published_image: >-
+            ${{needs.filter-relevant-changes.outputs.centos74_image_changed == 'false'
+            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          upload_binaries: "false"
+
+  ubuntu-focal-binaries:
+    # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
+    if: >-
+      success()
+      || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
+    needs:
+      - "filter-relevant-changes"
+      - "ubuntu-focal-deps-image"
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/clp-core-build"
+        env:
+          OS_NAME: "ubuntu-focal"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          use_published_image: >-
+            ${{needs.filter-relevant-changes.outputs.ubuntu_focal_image_changed == 'false'
+            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          upload_binaries: "true"
+          binaries_artifact_name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+
+  ubuntu-jammy-binaries:
+    # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
+    if: >-
+      success()
+      || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
+    needs:
+      - "filter-relevant-changes"
+      - "ubuntu-jammy-deps-image"
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/clp-core-build"
+        env:
+          OS_NAME: "ubuntu-jammy"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          use_published_image: >-
+            ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
+            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          upload_binaries: "false"
+
+  ubuntu-focal-binaries-image:
+    # Run if the ancestor jobs were successful/skipped, building clp was successful, and this is a
+    # push to `main`.
+    if: >-
+      !cancelled()
+      && !failure()
+      && needs.ubuntu-focal-binaries.result == 'success'
+      && github.event_name == 'push'
+      && github.ref == 'refs/heads/main'
+    needs: "ubuntu-focal-binaries"
+    runs-on: "ubuntu-latest"
+    env:
+      OS_NAME: "ubuntu-focal"
+      TMP_OUTPUT_DIR: "/tmp"
+    steps:
+      - uses: "actions/checkout@v3"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "actions/download-artifact@v4"
+        with:
+          name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          path: "${{env.TMP_OUTPUT_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+
+      - name: "Untar binaries"
+        working-directory: >-
+          ${{env.TMP_OUTPUT_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}
+        run: |-
+          tar xf clp.tar
+          rm clp.tar
+
+      - uses: "docker/login-action@v3"
+        with:
+          registry: "ghcr.io"
+          username: "${{github.actor}}"
+          password: "${{secrets.GITHUB_TOKEN}}"
+
+      - name: "Sanitize the repo's name"
+        id: "sanitize_repo_name"
+        run: |-
+          # Docker doesn't support repository names with uppercase characters, so we convert to
+          # lowercase here.
+          lowercase_repo=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')
+          echo "repository=${lowercase_repo}" >> "$GITHUB_OUTPUT"
+        shell: "bash"
+
+      - id: "core_image_meta"
+        uses: "docker/metadata-action@v5"
+        with:
+          images: >-
+            ghcr.io/${{steps.sanitize_repo_name.outputs.repository}}/clp-core-x86-${{env.OS_NAME}}
+          tags: "type=raw,value=${{github.ref_name}}"
+
+      - uses: "docker/build-push-action@v5"
+        with:
+          context: "${{env.TMP_OUTPUT_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          file: "components/core/tools/docker-images/clp-core-${{env.OS_NAME}}/Dockerfile"
+          push: true
+          tags: "${{steps.core_image_meta.outputs.tags}}"
+          labels: "${{steps.core_image_meta.outputs.labels}}"

@@ -1,0 +1,10 @@
+{
+  "url": "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip",
+  "unzip": true,
+  "targets": [
+    {
+      "source": "abseil-cpp-20230802.1",
+      "destination": "submodules/abseil-cpp"
+    }
+  ]
+}

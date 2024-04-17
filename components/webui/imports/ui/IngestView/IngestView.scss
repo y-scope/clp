@@ -1,0 +1,75 @@
+@import "../bootstrap-customized";
+
+.ingest-container {
+  // Background highlight
+  background: linear-gradient(to bottom, #004850, #004850 160px, transparent 160px);
+  padding: 30px;
+}
+
+.panel {
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  box-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  margin: 10px 0;
+}
+
+.panel-h1 {
+  font-size: 1.5rem;
+  line-height: 1.5rem;
+  margin: 0 0 15px 0;
+}
+
+.panel-icon {
+  color: #004850;
+  font-size: 1.5rem;
+  line-height: 1.5rem;
+}
+
+.ingest {
+  &-stats {
+    &-details {
+      &-icon-container {
+        width: 40px;
+
+        flex: 0 0 auto;
+        margin-right: 10px;
+
+        color: #ad1869;
+        font-size: 40px;
+        line-height: 40px;
+        text-align: center;
+      }
+
+      &-text-container {
+        flex-basis: 0;
+        flex-grow: 1;
+        max-width: 100%;
+      }
+
+      &-row {
+        border-top: 1px solid #eee;
+        display: flex;
+        flex-wrap: wrap;
+        padding: 15px 0;
+      }
+    }
+
+    &-detail {
+      display: block;
+      font-family: "Roboto Mono", monospace;
+      font-weight: 600;
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+  }
+}
+
+.ingest-stat-bar {
+  height: 4px !important;
+}
+
+.ingest-stat-bar > .progress-bar {
+  background-color: $info;
+}

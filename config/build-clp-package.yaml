@@ -1,16 +1,16 @@
-working_dir: out
-version: 0.0.1
-artifact_name: clp-package-ubuntu-focal
-build_parallelism: 0   # 0 -> attempt to compile with available cores on the machine
-builder_image: ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main
+working_dir: "out"
+version: "0.0.1"
+artifact_name: "clp-package-ubuntu-focal"
+build_parallelism: 0  # 0 -> attempt to compile with available cores on the machine
+builder_image: "ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main"
 components:
-  - name: package-template
-    type: local
-  - name: compression-job-handler
-    type: local
-  - name: job-orchestration
-    type: local
-  - name: clp-py-utils
-    type: local
-  - name: core
-    type: local
+  - name: "package-template"
+    type: "local"
+  - name: "job-orchestration"
+    type: "local"
+  - name: "clp-py-utils"
+    type: "local"
+  - name: "clp-package-utils"
+    type: "local"
+  - name: "core"
+    type: "local"

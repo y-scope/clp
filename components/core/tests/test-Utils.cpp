@@ -1,22 +1,22 @@
-// C libaries
 #include <sys/stat.h>
 #include <unistd.h>
 
-// C++ libraries
-#include <boost/foreach.hpp>
-#include <boost/range/combine.hpp>
 #include <chrono>
 #include <ctime>
 #include <iostream>
 #include <ratio>
 
-// Catch2
+#include <boost/foreach.hpp>
+#include <boost/range/combine.hpp>
 #include <Catch2/single_include/catch2/catch.hpp>
 
-// Project headers
-#include "../src/Utils.hpp"
+#include "../src/clp/Utils.hpp"
 
-using namespace std;
+using clp::create_directory_structure;
+using clp::ErrorCode_Success;
+using clp::get_parent_directory_path;
+using clp::get_unambiguous_path;
+using std::string;
 
 TEST_CASE("create_directory_structure", "[create_directory_structure]") {
     struct stat s = {};

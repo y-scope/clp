@@ -1,0 +1,21 @@
+[project]
+requires-python = ">= 3.8"
+
+[tool.poetry]
+name = "clp-package-utils"
+version = "0.0.3-dev"
+description = "Utilities for the CLP package."
+authors = ["YScope Inc. <dev@yscope.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8 || ^3.10"
+Brotli = "^1.1.0"
+msgpack = "^1.0.7"
+pymongo = "^4.6.1"
+PyYAML = "^6.0.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+

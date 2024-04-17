@@ -8,7 +8,7 @@ FILE_GROUPING_MIN_LEVENSHTEIN_RATIO = 0.6
 
 
 class FileMetadata:
-    __slots__ = ('path', 'size', 'estimated_uncompressed_size')
+    __slots__ = ("path", "size", "estimated_uncompressed_size")
 
     def __init__(self, path: pathlib.Path, size: int):
         self.path = path
@@ -16,9 +16,12 @@ class FileMetadata:
         self.estimated_uncompressed_size = size
 
         filename = path.name
-        if any(filename.endswith(extension) for extension in ['.gz', '.gzip', '.tgz', '.tar.gz']):
+        if any(filename.endswith(extension) for extension in [".gz", ".gzip", ".tgz", ".tar.gz"]):
             self.estimated_uncompressed_size *= 13
-        elif any(filename.endswith(extension) for extension in ['.zstd', '.zstandard', '.tar.zstd', '.tar.zstandard']):
+        elif any(
+            filename.endswith(extension)
+            for extension in [".zstd", ".zstandard", ".tar.zstd", ".tar.zstandard"]
+        ):
             self.estimated_uncompressed_size *= 8
 
 
@@ -80,7 +83,7 @@ def group_files_by_similar_filenames(files: typing.List[FileMetadata]):
         return groups
 
     current_group_id = 0
-    current_group = {'id': current_group_id, 'files': []}
+    current_group = {"id": current_group_id, "files": []}
     groups.append(current_group)
 
     # Sort by filename
@@ -88,17 +91,17 @@ def group_files_by_similar_filenames(files: typing.List[FileMetadata]):
 
     file_ix = 0
     file = files[file_ix]
-    current_group['files'].append(file)
+    current_group["files"].append(file)
     last_file_path = file.path
 
     for file_ix in range(1, len(files)):
         file = files[file_ix]
         if not file_paths_in_same_group(last_file_path, file.path):
             current_group_id += 1
-            current_group = {'id': current_group_id, 'files': []}
+            current_group = {"id": current_group_id, "files": []}
             groups.append(current_group)
 
-        current_group['files'].append(file)
+        current_group["files"].append(file)
         last_file_path = file.path
 
     return groups

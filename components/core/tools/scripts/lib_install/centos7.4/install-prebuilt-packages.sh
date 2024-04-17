@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# Exit on any error
+set -e
+
+# Error on undefined variable
+set -u
+
 yum install -y \
   bzip2 \
   centos-release-scl \
@@ -14,5 +20,5 @@ yum install -y \
 
 # Install packages from CentOS' software collections repository (centos-release-scl)
 yum install -y \
-  devtoolset-9 \
+  devtoolset-10 \
   rh-git227

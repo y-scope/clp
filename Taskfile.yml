@@ -1,0 +1,362 @@
+version: "3"
+
+includes:
+  lint: "lint-tasks.yml"
+
+vars:
+  BUILD_DIR: "{{.TASKFILE_DIR}}/build"
+  CHECKSUM_TAR_BASE_ARGS: >-
+    --group=0
+    --mtime='UTC 1970-01-01'
+    --numeric-owner
+    --owner=0
+    --sort=name
+  CORE_COMPONENT_BUILD_DIR: "{{.TASKFILE_DIR}}/build/core"
+  NODEJS_BIN_DIR: "{{.TASKFILE_DIR}}/build/nodejs/node/bin"
+  NODEJS_BUILD_DIR: "{{.TASKFILE_DIR}}/build/nodejs"
+  PACKAGE_BUILD_DIR: "{{.TASKFILE_DIR}}/build/clp-package"
+  PACKAGE_VENV_DIR: "{{.TASKFILE_DIR}}/build/package-venv"
+  PACKAGE_VERSION: "0.0.3-dev"
+  PYTHON_VERSION:
+    sh: "python3 -c \"import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')\""
+  WEBUI_BUILD_DIR: "{{.TASKFILE_DIR}}/build/webui"
+
+tasks:
+  default:
+    deps: ["package"]
+
+  clean:
+    cmds:
+      - "rm -rf '{{.BUILD_DIR}}'"
+      - task: "clean-python-component"
+        vars:
+          COMPONENT: "clp-package-utils"
+      - task: "clean-python-component"
+        vars:
+          COMPONENT: "clp-py-utils"
+      - task: "clean-python-component"
+        vars:
+          COMPONENT: "job-orchestration"
+
+  clean-package:
+    cmds:
+      - "rm -rf '{{.PACKAGE_BUILD_DIR}}'"
+
+  package-tar:
+    deps:
+      - "package"
+    vars:
+      VERSIONED_PACKAGE_NAME:
+        sh: |
+          source /etc/os-release
+          echo "clp-package-${ID}-${VERSION_CODENAME}-$(arch)-v{{.PACKAGE_VERSION}}"
+    dir: "{{.BUILD_DIR}}"
+    cmds:
+      - "rm -rf '{{.VERSIONED_PACKAGE_NAME}}' '{{.VERSIONED_PACKAGE_NAME}}.tar.gz'"
+      - "ln -s '{{.PACKAGE_BUILD_DIR}}' '{{.VERSIONED_PACKAGE_NAME}}'"
+      - "tar czf '{{.VERSIONED_PACKAGE_NAME}}.tar.gz' --dereference '{{.VERSIONED_PACKAGE_NAME}}'"
+    sources:
+      - "{{.BUILD_DIR}}/package.md5"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+    generates:
+      - "{{.VERSIONED_PACKAGE_NAME}}.tar.gz"
+
+  package:
+    vars:
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
+      OUTPUT_DIR: "{{.PACKAGE_BUILD_DIR}}"
+      PACKAGE_VERSION_FILE: "{{.PACKAGE_BUILD_DIR}}/VERSION"
+    deps:
+      - "core"
+      - "clp-package-utils"
+      - "clp-py-utils"
+      - "job-orchestration"
+      - "package-venv"
+      - "nodejs"
+      - "webui"
+    cmds:
+      - task: "clean-package"
+      - "mkdir -p '{{.OUTPUT_DIR}}'"
+      - "rsync -a components/package-template/src/ '{{.OUTPUT_DIR}}'"
+      - "rsync --copy-links /etc/os-release '{{.OUTPUT_DIR}}/etc/os-release'"
+      - "mkdir -p '{{.OUTPUT_DIR}}/lib/python3/site-packages'"
+      - |-
+        . "{{.PACKAGE_VENV_DIR}}/bin/activate"
+        pip3 install --upgrade \
+          components/clp-package-utils/dist/*.whl \
+          components/clp-py-utils/dist/*.whl \
+          components/job-orchestration/dist/*.whl \
+          -t "{{.OUTPUT_DIR}}/lib/python3/site-packages"
+      - "mkdir -p '{{.OUTPUT_DIR}}/bin'"
+      - >-
+        rsync -a
+        "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
+        "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
+        "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
+        "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
+        "{{.CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+        "{{.NODEJS_BIN_DIR}}/node"
+        "{{.OUTPUT_DIR}}/bin/"
+      - "mkdir -p '{{.OUTPUT_DIR}}/var/www/'"
+      - >-
+        rsync -a
+        "{{.WEBUI_BUILD_DIR}}/"
+        "{{.OUTPUT_DIR}}/var/www/"
+      - |-
+        cd "{{.OUTPUT_DIR}}/var/www/programs/server"
+        PATH="{{.NODEJS_BIN_DIR}}":$PATH npm install
+      # Checksum the generated files (this command must be last)
+      - |-
+        cd "{{.OUTPUT_DIR}}"
+        tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
+    sources:
+      - "{{.BUILD_DIR}}/nodejs.md5"
+      - "{{.BUILD_DIR}}/package-venv.md5"
+      - "{{.BUILD_DIR}}/webui.md5"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "/etc/os-release"
+      - "components/clp-package-utils/dist/*.whl"
+      - "components/clp-py-utils/dist/*.whl"
+      - "components/job-orchestration/dist/*.whl"
+      - "components/package-template/src/**/*"
+    status:
+      - "test -f '{{.CHECKSUM_FILE}}'"
+      - >-
+        diff
+        <(cd '{{.OUTPUT_DIR}}' && tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        "{{.CHECKSUM_FILE}}"
+
+  core:
+    deps: ["core-submodules"]
+    vars:
+      SRC_DIR: "components/core"
+    cmds:
+      - "mkdir -p '{{.CORE_COMPONENT_BUILD_DIR}}'"
+      - "cmake -S '{{.SRC_DIR}}' -B '{{.CORE_COMPONENT_BUILD_DIR}}'"
+      - >-
+        cmake
+        --build "{{.CORE_COMPONENT_BUILD_DIR}}"
+        --parallel
+        --target clg clo clp clp-s reducer-server
+    sources:
+      - "{{.BUILD_DIR}}/core-submodules.md5"
+      - "{{.SRC_DIR}}/cmake/**/*"
+      - "{{.SRC_DIR}}/CMakeLists.txt"
+      - "{{.SRC_DIR}}/src/**/*"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "/etc/os-release"
+    generates:
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
+      - "{{.CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+
+  clp-package-utils:
+    - task: "python-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
+
+  clp-py-utils:
+    - task: "python-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
+
+  job-orchestration:
+    - task: "python-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
+
+  nodejs:
+    vars:
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
+      NODEJS_VERSION: "14.21.3"
+      NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
+      OUTPUT_DIR: "{{.NODEJS_BUILD_DIR}}"
+      TAR_FILE_NAME: "node-v{{.NODEJS_VERSION}}-linux-{{.NODEJS_ARCH}}.tar.xz"
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}/node'"
+      - "mkdir -p '{{.OUTPUT_DIR}}'"
+      - >-
+        curl -fsSL
+        "https://nodejs.org/dist/v{{.NODEJS_VERSION}}/{{.TAR_FILE_NAME}}"
+        -o "{{.OUTPUT_DIR}}/{{.TAR_FILE_NAME}}"
+      - "tar xf '{{.OUTPUT_DIR}}/{{.TAR_FILE_NAME}}' -C '{{.OUTPUT_DIR}}'"
+      - >-
+        mv "{{.OUTPUT_DIR}}/node-v{{.NODEJS_VERSION}}-linux-{{.NODEJS_ARCH}}"
+        "{{.OUTPUT_DIR}}/node"
+      - "rm -f '{{.OUTPUT_DIR}}/{{.TAR_FILE_NAME}}'"
+      # Checksum the generated files (this command must be last)
+      - |-
+        cd "{{.OUTPUT_DIR}}"
+        tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
+    sources:
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+    status:
+      - "test -f '{{.CHECKSUM_FILE}}'"
+      - >-
+        diff
+        <(cd '{{.OUTPUT_DIR}}' && tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        "{{.CHECKSUM_FILE}}"
+
+  webui:
+    dir: "components/webui"
+    platforms: ["386", "amd64"]
+    vars:
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
+      OUTPUT_DIR: "{{.WEBUI_BUILD_DIR}}"
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "mkdir -p '{{.OUTPUT_DIR}}'"
+      - "meteor npm install --production"
+      - "meteor build --directory '{{.OUTPUT_DIR}}'"
+      - >-
+        rsync -a
+        "{{.OUTPUT_DIR}}/bundle/"
+        launcher.js
+        settings.json
+        "{{.OUTPUT_DIR}}/"
+      - "rm -rf '{{.OUTPUT_DIR}}/bundle/'"
+      # Checksum the generated files (this command must be last)
+      - |-
+        cd "{{.OUTPUT_DIR}}"
+        tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
+    sources:
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "*"
+      - ".meteor/*"
+      - "client/**/*"
+      - "imports/**/*"
+      - "server/**/*"
+      - "tests/**/*"
+    status:
+      - "test -f '{{.CHECKSUM_FILE}}'"
+      - >-
+        diff
+        <(cd '{{.OUTPUT_DIR}}' && tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        "{{.CHECKSUM_FILE}}"
+
+  core-submodules:
+    internal: true
+    dir: "components/core"
+    vars:
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
+      OUTPUT_DIR: "submodules"
+    cmds:
+      - "tools/scripts/deps-download/download-all.sh"
+      # Checksum the generated files (this command must be last)
+      - |-
+        cd "{{.OUTPUT_DIR}}"
+        tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
+    sources:
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - ".gitmodules"
+      - "tools/scripts/deps-download/**/*"
+    status:
+      - "test -f '{{.CHECKSUM_FILE}}'"
+      - >-
+        diff
+        <(cd '{{.OUTPUT_DIR}}' && tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        "{{.CHECKSUM_FILE}}"
+
+  package-venv:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
+      OUTPUT_DIR: "{{.PACKAGE_VENV_DIR}}"
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "python3 -m venv '{{.OUTPUT_DIR}}'"
+      - |-
+        . "{{.OUTPUT_DIR}}/bin/activate"
+        pip3 install --upgrade -r "{{.TASKFILE_DIR}}/requirements.txt"
+      # Checksum the generated files (this command must be last)
+      - |-
+        cd "{{.OUTPUT_DIR}}"
+        tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
+    sources:
+      - "{{.TASKFILE_DIR}}/requirements.txt"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "/etc/os-release"
+    status:
+      - "test -f '{{.CHECKSUM_FILE}}'"
+      - >-
+        diff
+        <(cd '{{.OUTPUT_DIR}}' && tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        "{{.CHECKSUM_FILE}}"
+
+  python-component:
+    internal: true
+    requires:
+      vars: ["COMPONENT"]
+    label: "{{.COMPONENT}}"
+    deps:
+      - task: "component-venv"
+        vars:
+          COMPONENT: "{{.COMPONENT}}"
+          OUTPUT_DIR: "{{.VENV_DIR}}"
+    vars:
+      PACKAGE:
+        sh: "echo {{.COMPONENT}} | tr - _"
+      VENV_DIR: "{{.BUILD_DIR}}/{{.COMPONENT}}/venv"
+    dir: "components/{{.COMPONENT}}"
+    cmds:
+      - task: "clean-python-component"
+        vars:
+          COMPONENT: "{{.COMPONENT}}"
+      - |-
+        . "{{.VENV_DIR}}/bin/activate"
+        poetry build --format wheel
+    sources:
+      - "{{.BUILD_DIR}}/{{.COMPONENT}}_venv.md5"
+      - "{{.PACKAGE}}/**/*"
+      - "{{.TASKFILE_DIR}}/requirements.txt"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "/etc/os-release"
+      - "pyproject.toml"
+    generates:
+      - "dist/*.whl"
+
+  component-venv:
+    internal: true
+    requires:
+      vars: ["COMPONENT", "OUTPUT_DIR"]
+    label: "{{.COMPONENT}}_venv"
+    dir: "components/{{.COMPONENT}}"
+    vars:
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.COMPONENT}}_venv.md5"
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "python3 -m venv '{{.OUTPUT_DIR}}'"
+      - |-
+        . "{{.OUTPUT_DIR}}/bin/activate"
+        pip3 install --upgrade -r "{{.TASKFILE_DIR}}/requirements.txt"
+      # Checksum the generated files (this command must be last)
+      - |-
+        cd "{{.OUTPUT_DIR}}"
+        tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
+    sources:
+      - "{{.TASKFILE_DIR}}/requirements.txt"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "/etc/os-release"
+      - "pyproject.toml"
+    status:
+      - "test -f '{{.CHECKSUM_FILE}}'"
+      - >-
+        diff
+        <(cd '{{.OUTPUT_DIR}}' && tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        "{{.CHECKSUM_FILE}}"
+
+  clean-python-component:
+    internal: true
+    requires:
+      vars: ["COMPONENT"]
+    label: "clean-{{.COMPONENT}}"
+    dir: "components/{{.COMPONENT}}"
+    cmds:
+      - "rm -rf dist"
