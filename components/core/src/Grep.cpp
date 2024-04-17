@@ -322,8 +322,9 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
     } else {
         // DFA search
         stopwatch1.start();
-        vector<set<QueryLogtype>> query_matrix(processed_search_string.size());
-        for (uint32_t i = 0; i < processed_search_string.size(); i++) {
+        static vector<set<QueryLogtype>> query_matrix(processed_search_string.size());
+        static bool query_matrix_set = false;
+        for (uint32_t i = 0; i < processed_search_string.size() && query_matrix_set == false; i++) {
             for (uint32_t j = 0; j <= i; j++) {
                 std::string current_string = processed_search_string.substr(j, i - j + 1);
                 std::vector<QueryLogtype> suffixes;
@@ -481,10 +482,11 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
                 }
             }
         }
+        query_matrix_set = true;
         stopwatch1.stop();
         stopwatch10.start();
         uint32_t last_row = query_matrix.size() - 1;
-        
+        /*
         std::cout << "query_matrix" << std::endl;
         for(QueryLogtype const& query_logtype : query_matrix[last_row]) {
             for(uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
@@ -501,7 +503,7 @@ bool Grep::process_raw_query (const Archive& archive, const string& search_strin
         }
         std::cout << std::endl;
         std::cout << query_matrix[last_row].size() << std::endl;
-        
+        */
         for (QueryLogtype const& query_logtype: query_matrix[last_row]) {
             SubQuery sub_query;
             std::string logtype_string;
