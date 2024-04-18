@@ -51,6 +51,8 @@ set(
         ../LibarchiveFileReader.hpp
         ../LibarchiveReader.cpp
         ../LibarchiveReader.hpp
+        ../LogSurgeonReader.cpp
+        ../LogSurgeonReader.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
         ../LogTypeDictionaryReader.hpp
