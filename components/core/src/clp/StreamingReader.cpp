@@ -10,6 +10,7 @@
 #include <curl/curl.h>
 
 #include "ErrorCode.hpp"
+#include "Thread.hpp"
 #include "TraceableException.hpp"
 
 namespace clp {
@@ -187,8 +188,8 @@ extern "C" auto curl_download_progress_callback(
  * @param reader_ptr A pointer pointing to an instance of StreamingReader.
  * @return Number of bytes transferred (fetched).
  */
-extern "C" auto curl_download_write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr)
-        -> size_t {
+extern "C" auto
+curl_download_write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr) -> size_t {
     return get_reader(reader_ptr)->write_to_fetching_buffer({ptr, size * nmemb});
 }
 
@@ -236,6 +237,29 @@ CurlDownloadHandler::CurlDownloadHandler(
 }
 }  // namespace
 
+auto StreamingReader::TransferThread::thread_method() -> void {
+    CURLcode retval{CURLE_FAILED_INIT};
+    try {
+        CurlDownloadHandler curl_handler{
+                m_reader,
+                m_reader.m_src_url,
+                static_cast<long>(m_reader.m_connection_timeout),
+                static_cast<long>(m_reader.m_operation_timeout),
+                m_offset,
+                m_disable_caching
+        };
+        retval = curl_handler.download();
+    } catch (CurlOperationFailed const& ex) {
+        m_reader.m_curl_return_code = ex.get_curl_err();
+        m_reader.set_status_code(StatusCode::Failed);
+        return;
+    }
+
+    m_reader.commit_fetching_buffer();
+    m_reader.set_status_code((CURLE_OK == retval) ? StatusCode::Finished : StatusCode::Failed);
+    m_reader.m_curl_return_code = retval;
+}
+
 bool StreamingReader::m_initialized{false};
 
 auto StreamingReader::init() -> ErrorCode {
@@ -254,37 +278,8 @@ auto StreamingReader::deinit() -> void {
     m_initialized = false;
 }
 
-auto StreamingReader::transfer_thread_entry(
-        StreamingReader& reader,
-        size_t offset,
-        bool disable_caching
-) -> void {
-    CURLcode retval{CURLE_FAILED_INIT};
-    try {
-        CurlDownloadHandler curl_handler{
-                reader,
-                reader.m_src_url,
-                static_cast<long>(reader.m_connection_timeout),
-                static_cast<long>(reader.m_operation_timeout),
-                offset,
-                disable_caching
-        };
-        retval = curl_handler.download();
-    } catch (CurlOperationFailed const& ex) {
-        reader.m_curl_return_code = ex.get_curl_err();
-        reader.set_status_code(StatusCode::Failed);
-        reader.m_transfer_terminated.store(true);
-        return;
-    }
-
-    reader.commit_fetching_buffer();
-    reader.set_status_code((CURLE_OK == retval) ? StatusCode::Finished : StatusCode::Failed);
-    reader.m_curl_return_code = retval;
-    reader.m_transfer_terminated.store(true);
-}
-
-auto StreamingReader::write_to_fetching_buffer(StreamingReader::BufferView data_to_write)
-        -> size_t {
+auto StreamingReader::write_to_fetching_buffer(StreamingReader::BufferView data_to_write
+) -> size_t {
     auto const num_bytes_to_write{data_to_write.size()};
     try {
         while (false == data_to_write.empty()) {
@@ -316,17 +311,13 @@ auto StreamingReader::open(std::string_view src_url, size_t offset, bool disable
     }
     m_src_url = src_url;
     set_status_code(StatusCode::InProgress);
-    m_transfer_thread = std::make_unique<std::thread>(
-            transfer_thread_entry,
-            std::ref(*this),
-            offset,
-            disable_caching
-    );
+    m_transfer_thread = std::make_unique<TransferThread>(std::ref(*this), offset, disable_caching);
+    m_transfer_thread->start();
 }
 
 auto StreamingReader::terminate_current_transfer() -> void {
     if (StatusCode::InProgress != get_status_code()) {
-        while (false == is_transfer_terminated()) {
+        while (is_transfer_thread_running()) {
         }
     } else {
         // If control flow reaches here, it means the we need to kill the current connected session.
@@ -334,7 +325,7 @@ auto StreamingReader::terminate_current_transfer() -> void {
         // and wait for it to terminate.
         // TODO: we could use sleep here instead of actively pulling.
         auto transfer_aborted{is_transfer_aborted()};
-        while (false == is_transfer_terminated()) {
+        while (is_transfer_thread_running()) {
             if (transfer_aborted) {
                 continue;
             }
@@ -342,7 +333,6 @@ auto StreamingReader::terminate_current_transfer() -> void {
             transfer_aborted = true;
         }
     }
-    m_transfer_thread->join();
 }
 
 auto StreamingReader::abort_data_transfer() -> void {
@@ -402,7 +392,7 @@ auto StreamingReader::set_reading_buffer() -> bool {
         throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
     }
     while (m_fetched_buffer_queue.empty()) {
-        if (is_transfer_terminated()) {
+        if (false == is_transfer_thread_running()) {
             return false;
         }
         m_cv_reader.wait_for(
@@ -469,7 +459,7 @@ auto StreamingReader::reset() -> void {
         return;
     }
 
-    if (false == m_transfer_terminated.load()) {
+    if (is_transfer_thread_running()) {
         throw OperationFailed(ErrorCode_Failure, __FILE__, __LINE__);
     }
 
@@ -485,7 +475,6 @@ auto StreamingReader::reset() -> void {
 
     m_transfer_thread.reset();
     m_transfer_aborted.store(false);
-    m_transfer_terminated.store(false);
     set_status_code(StatusCode::NotInit);
     m_curl_return_code.reset();
 }

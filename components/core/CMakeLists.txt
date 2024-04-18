@@ -363,6 +363,8 @@ set(SOURCE_FILES_unitTest
         src/clp/StreamingReader.hpp
         src/clp/StringReader.cpp
         src/clp/StringReader.hpp
+        src/clp/Thread.cpp
+        src/clp/Thread.hpp
         src/clp/TimestampPattern.cpp
         src/clp/TimestampPattern.hpp
         src/clp/TraceableException.hpp

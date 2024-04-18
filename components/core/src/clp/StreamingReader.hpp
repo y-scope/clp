@@ -18,6 +18,7 @@
 #include "Defs.h"
 #include "ErrorCode.hpp"
 #include "ReaderInterface.hpp"
+#include "Thread.hpp"
 #include "TraceableException.hpp"
 
 namespace clp {
@@ -129,7 +130,7 @@ public:
     auto operator=(StreamingReader const&) -> StreamingReader& = delete;
     auto operator=(StreamingReader&&) -> StreamingReader& = delete;
 
-    // Methods implementing `ReaderInterface`
+    // Methods implementing `clp::ReaderInterface`
     /**
      * Tries to read up to a given number of bytes from the buffer.
      * @param buf
@@ -139,8 +140,8 @@ public:
      * @return ErrorCode_NotInit if the reader is not opened yet.
      * @return ErrorCode_Success on success.
      */
-    [[nodiscard]] auto try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
-            -> ErrorCode override {
+    [[nodiscard]] auto
+    try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) -> ErrorCode override {
         if (StatusCode::NotInit == get_status_code()) {
             return ErrorCode_NotInit;
         }
@@ -240,10 +241,13 @@ public:
     [[nodiscard]] auto is_transfer_aborted() const -> bool { return m_transfer_aborted.load(); }
 
     /**
-     * @return true the transfer has terminated, false otherwise.
+     * @return true the transfer thread is running, false otherwise.
      */
-    [[nodiscard]] auto is_transfer_terminated() const -> bool {
-        return m_transfer_terminated.load();
+    [[nodiscard]] auto is_transfer_thread_running() const -> bool {
+        if (nullptr == m_transfer_thread) {
+            return false;
+        }
+        return m_transfer_thread->is_running();
     }
 
     /**
@@ -266,18 +270,31 @@ public:
     [[nodiscard]] auto write_to_fetching_buffer(BufferView data_to_write) -> size_t;
 
 private:
+    /**
+     * This class implements clp::Thread to fetch data as a daemon thread.
+     */
+    class TransferThread : public clp::Thread {
+    public:
+        // Constructor
+        TransferThread(StreamingReader& reader, size_t offset, bool disable_caching)
+                : m_reader{reader},
+                  m_offset{offset},
+                  m_disable_caching{disable_caching} {}
+
+    private:
+        // Methods implementing `clp::Thread`
+        auto thread_method() -> void override final;
+
+        StreamingReader& m_reader;
+        size_t m_offset;
+        bool m_disable_caching;
+    };
+    friend class TransferThread;
+
     static constexpr uint32_t cConditionVariableTimeoutMilliSecond{50};
 
     static bool m_initialized;
 
-    /**
-     * The entry of the transfer thread.
-     * @param reader
-     * @param offset
-     * @param disable_caching
-     */
-    static auto transfer_thread_entry(StreamingReader& reader, size_t offset, bool disable_caching)
-            -> void;
     /**
      * Terminates the current transfer. When this function returns, it will ensure that the current
      * data transfer session has been terminated, and all the daemon threads exit.
@@ -353,9 +370,11 @@ private:
      * @return ErrorCode_EndOfFile if the buffer doesn't contain any more data.
      * @return ErrorCode_Success on success.
      */
-    [[nodiscard]] auto
-    read_from_fetched_buffers(size_t num_bytes_to_read, size_t& num_bytes_read, char* dst)
-            -> ErrorCode;
+    [[nodiscard]] auto read_from_fetched_buffers(
+            size_t num_bytes_to_read,
+            size_t& num_bytes_read,
+            char* dst
+    ) -> ErrorCode;
 
     auto set_status_code(StatusCode code) -> void { m_status_code.store(code); }
 
@@ -383,9 +402,8 @@ private:
     std::condition_variable m_cv_fetcher;
     std::condition_variable m_cv_reader;
 
-    std::unique_ptr<std::thread> m_transfer_thread{nullptr};
+    std::unique_ptr<TransferThread> m_transfer_thread{nullptr};
     std::atomic<bool> m_transfer_aborted{false};
-    std::atomic<bool> m_transfer_terminated{false};
     std::atomic<StatusCode> m_status_code{StatusCode::NotInit};
     std::optional<CURLcode> m_curl_return_code{std::nullopt};
 };
