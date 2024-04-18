@@ -188,8 +188,8 @@ extern "C" auto curl_download_progress_callback(
  * @param reader_ptr A pointer pointing to an instance of StreamingReader.
  * @return Number of bytes transferred (fetched).
  */
-extern "C" auto
-curl_download_write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr) -> size_t {
+extern "C" auto curl_download_write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr)
+        -> size_t {
     return get_reader(reader_ptr)->write_to_fetching_buffer({ptr, size * nmemb});
 }
 
@@ -278,8 +278,8 @@ auto StreamingReader::deinit() -> void {
     m_initialized = false;
 }
 
-auto StreamingReader::write_to_fetching_buffer(StreamingReader::BufferView data_to_write
-) -> size_t {
+auto StreamingReader::write_to_fetching_buffer(StreamingReader::BufferView data_to_write)
+        -> size_t {
     auto const num_bytes_to_write{data_to_write.size()};
     try {
         while (false == data_to_write.empty()) {

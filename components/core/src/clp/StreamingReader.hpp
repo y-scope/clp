@@ -140,8 +140,8 @@ public:
      * @return ErrorCode_NotInit if the reader is not opened yet.
      * @return ErrorCode_Success on success.
      */
-    [[nodiscard]] auto
-    try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) -> ErrorCode override {
+    [[nodiscard]] auto try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
+            -> ErrorCode override {
         if (StatusCode::NotInit == get_status_code()) {
             return ErrorCode_NotInit;
         }
@@ -370,11 +370,9 @@ private:
      * @return ErrorCode_EndOfFile if the buffer doesn't contain any more data.
      * @return ErrorCode_Success on success.
      */
-    [[nodiscard]] auto read_from_fetched_buffers(
-            size_t num_bytes_to_read,
-            size_t& num_bytes_read,
-            char* dst
-    ) -> ErrorCode;
+    [[nodiscard]] auto
+    read_from_fetched_buffers(size_t num_bytes_to_read, size_t& num_bytes_read, char* dst)
+            -> ErrorCode;
 
     auto set_status_code(StatusCode code) -> void { m_status_code.store(code); }
 
