@@ -32,6 +32,7 @@ using log_surgeon::finite_automata::RegexNFA;
 using log_surgeon::finite_automata::RegexNFAByteState;
 using log_surgeon::lexers::ByteLexer;
 using log_surgeon::ParserAST;
+using log_surgeon::SchemaAST;
 using log_surgeon::SchemaVarAST;
 using std::set;
 using std::string;
@@ -686,8 +687,8 @@ std::optional<Query> Grep::process_raw_query(
                         // TODO: NFA creation not optimized at all
                         schema2.add_variable("search", regex_search_string, -1);
                         RegexNFA<RegexNFAByteState> nfa;
-                        for (std::unique_ptr<ParserAST> const& parser_ast :
-                                schema2.release_schema_ast_ptr()->m_schema_vars) {
+                        std::unique_ptr<SchemaAST> schema_ast = schema2.release_schema_ast_ptr();
+                        for (std::unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
                             auto* schema_var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
                             ByteLexer::Rule rule(0, std::move(schema_var_ast->m_regex_ptr));
                             rule.add_ast(&nfa);
