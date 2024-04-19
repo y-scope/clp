@@ -794,6 +794,44 @@ std::optional<Query> Grep::process_raw_query(
             }
         }
     } else {
+        auto escape_handler
+                = [](std::string_view constant, size_t char_to_escape_pos, string& logtype) -> void {
+                    auto const escape_char{enum_to_underlying_type(ir::VariablePlaceholder::Escape)};
+                    auto const next_char_pos{char_to_escape_pos + 1};
+                    // NOTE: We don't want to add additional escapes for wildcards that have been escaped. E.g.,
+                    // the query "\\*" should remain unchanged.
+                    if (next_char_pos < constant.length() && false == is_wildcard(constant[next_char_pos])) {
+                        logtype += escape_char;
+                    } else if (ir::is_variable_placeholder(constant[char_to_escape_pos])) {
+                        logtype += escape_char;
+                        logtype += escape_char;
+                    }
+                };
+        auto escape_decoder
+                = [](std::string_view input_str, size_t& current_pos, string& token) -> void {
+                    auto const escape_char{enum_to_underlying_type(ir::VariablePlaceholder::Escape)};
+                    // Note: we don't need to do a check, because the upstream should guarantee all
+                    // escapes are followed by some characters
+                    auto const next_char = input_str.at(current_pos + 1);
+                    if (escape_char == next_char) {
+                        // turn two consecutive escape into a single one.
+                        token += escape_char;
+                    } else if (is_wildcard(next_char)) {
+                        // if it is an escape followed by a wildcard, we know no escape has been added.
+                        // we also remove the original escape because it was purely for query
+                        token += next_char;
+                    } else if (ir::is_variable_placeholder(next_char)) {
+                        // If we are at here, it means we are in the middle of processing a '\\\v' sequence
+                        // in this case, since we removed only one escape from the previous '\\' sequence
+                        // we need to remove another escape here.
+                        token += next_char;
+                    } else {
+                        printf("Unexpected\n");
+                        throw;
+                    }
+                    current_pos++;
+                };
+    
         // DFA search
         static vector<set<QueryLogtype>> query_matrix(processed_search_string.size());
         static bool query_matrix_set = false;
@@ -1062,6 +1100,14 @@ std::optional<Query> Grep::process_raw_query(
             }
             if (false == possible_logtype_entries.empty()) {
                 //std::cout << logtype_string << std::endl;
+                // Find boundaries
+                auto const retokenized_tokens = retokenization(logtype_string, escape_decoder);
+                for (auto const& logtype_entry : possible_logtype_entries) {
+                    size_t var_begin_index;
+                    size_t var_end_index;
+                    find_boundaries(logtype_entry, retokenized_tokens, var_begin_index, var_end_index);
+                    sub_query.set_logtype_boundary(logtype_entry->get_id(), var_begin_index, var_end_index);
+                }
                 sub_query.set_possible_logtypes(possible_logtype_entries);
 
                 // Calculate the IDs of the segments that may contain results for the sub-query now that we've calculated the matching logtypes and variables

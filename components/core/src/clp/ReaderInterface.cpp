@@ -134,4 +134,4 @@ ReaderInterfaceWrapper::ReaderInterfaceWrapper (ReaderInterface& reader_interfac
         return log_surgeon::ErrorCode::Success;
     };
 }  
-}  na// namespace clp
+}  // namespace clp
