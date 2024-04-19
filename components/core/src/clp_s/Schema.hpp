@@ -64,7 +64,7 @@ public:
     /**
      * @return the number of ordered elements in the underlying schema
      */
-    size_t num_ordered() const { return m_num_ordered; }
+    [[nodiscard]] size_t get_num_ordered() const { return m_num_ordered; }
 
     /**
      * @return the number of elements in the underlying schema
@@ -179,14 +179,14 @@ public:
     /**
      * Checks if a schema entry is the delimeter for an unordered object.
      * @param schema_entry
-     * @return Whether the schema_entry is the delimeter for an unordered object or not
+     * @return true if the schema_entry is the delimiter for an unordered object, false otherwise
      */
     static int32_t schema_entry_is_unordered_object(int32_t schema_entry) {
         return 0 != (schema_entry & cEncodedTypeBitmask);
     }
 
     /**
-     * Extracts the NodeType from an unordered object delimeter.
+     * Extracts the NodeType from an unordered object delimiter.
      * @param schema_entry
      * @return The extracted NodeType
      */
@@ -195,7 +195,7 @@ public:
     }
 
     /**
-     * Extracts the unordered object length from an unordered object delimeter.
+     * Extracts the unordered object length from an unordered object delimiter.
      * @param schema_entry
      * @return The extracted NodeType
      */

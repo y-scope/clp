@@ -315,10 +315,12 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
+    // Constructor
     explicit ManagedBufferViewReader(char* buffer, size_t size)
             : m_buffer(buffer),
               m_remaining_size(size) {}
 
+    // Methods
     template <typename T>
     T consume_value() {
         if (m_remaining_size < sizeof(T)) {

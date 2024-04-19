@@ -145,7 +145,8 @@ private:
     /**
      * Appends columns for the entire schema of an unordered object.
      * @param reader
-     * @param column_id
+     * @param unordered_object_type
+     * @param schema_ids
      * @param should_marshal_records
      */
     void append_unordered_reader_columns(

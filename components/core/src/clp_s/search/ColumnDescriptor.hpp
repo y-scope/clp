@@ -231,7 +231,7 @@ private:
     void check_and_set_unresolved_descriptor_flag();
 
     /**
-     * Scan the list of descriptors to eliminate any series of multiple wildcards in a row.
+     * Scans the list of descriptors to eliminate any series of multiple wildcards in a row.
      */
     void simplify_descriptor_wildcards();
 };

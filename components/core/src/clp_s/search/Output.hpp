@@ -356,7 +356,7 @@ private:
     void add_wildcard_columns_to_searched_columns();
 
     /**
-     * Get the cached decompressed structured array for the current message stored in the column
+     * Gets the cached decompressed structured array for the current message stored in the column
      * column_id. Decompressing array fields can be expensive, so this interface allows us to
      * decompress lazily, and decompress the field only once.
      *

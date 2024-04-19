@@ -148,7 +148,7 @@ void ZstdDecompressor::open(FileReader& file_reader, size_t file_read_buffer_cap
     m_file_reader = &file_reader;
     m_file_reader_initial_pos = m_file_reader->get_pos();
 
-    // Avoid reallocating internal buffer if this ZstdDecompressor is being re-used with an
+    // Avoid reallocating the internal buffer if this instance is being re-used with an
     // unchanged buffer size.
     if (file_read_buffer_capacity != m_file_read_buffer_capacity) {
         m_file_read_buffer_capacity = file_read_buffer_capacity;

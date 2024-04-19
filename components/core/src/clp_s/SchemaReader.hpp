@@ -80,7 +80,7 @@ public:
     }
 
     /**
-     * Reset the contents of this SchemaReader to an uninitialized SchemaReader with a new schema_id
+     * Resets the contents of this SchemaReader to an uninitialized SchemaReader with a new schema_id
      *
      * This function is ugly, but the performance tradeoff is worth it.
      *
@@ -126,7 +126,6 @@ public:
     /**
      * Appends an unordered column to the schema reader
      * @param column_reader
-     * @return
      */
     void append_unordered_column(BaseColumnReader* column_reader);
 
@@ -134,6 +133,9 @@ public:
 
     /**
      * Marks an unordered object for the purpose of marshalling records.
+     * @param column_reader_start,
+     * @param mst_subtree_root,
+     * @param schema
      */
     void mark_unordered_object(
             size_t column_reader_start,
@@ -206,6 +208,7 @@ private:
     void generate_json_template(int32_t id);
 
     /**
+     * @param schema
      * @return the first column ID found in the given schema, or -1 if the schema contains no
      * columns
      */
@@ -217,7 +220,7 @@ private:
     void generate_json_string();
 
     /**
-     * Initialize all internal data structured required to serialize records.
+     * Initializes all internal data structured required to serialize records.
      */
     void initialize_serializer();
 
