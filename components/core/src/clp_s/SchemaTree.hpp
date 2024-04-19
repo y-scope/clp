@@ -121,11 +121,11 @@ public:
      * @param subtree_type
      * @return the root node ID for the subtree we are trying to find if it exists, otherwise -1
      */
-    int32_t find_matching_subtree_root_in_subtree(
+    [[nodiscard]] int32_t find_matching_subtree_root_in_subtree(
             int32_t const subtree_root,
             int32_t descendent,
             NodeType subtree_type
-    );
+    ) const;
 
 private:
     std::vector<SchemaNode> m_nodes;

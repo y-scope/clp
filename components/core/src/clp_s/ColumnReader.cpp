@@ -1,12 +1,12 @@
 #include "ColumnReader.hpp"
 
+#include "BufferViewReader.hpp"
 #include "ColumnWriter.hpp"
-#include "Utils.hpp"
 #include "VariableDecoder.hpp"
 
 namespace clp_s {
-void Int64ColumnReader::load(ManagedBufferViewReader& reader, uint64_t num_messages) {
-    m_values = reader.consume_unaligned_span<int64_t>(num_messages);
+void Int64ColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+    m_values = reader.read_unaligned_span<int64_t>(num_messages);
 }
 
 std::variant<int64_t, double, std::string, uint8_t> Int64ColumnReader::extract_value(
@@ -15,8 +15,8 @@ std::variant<int64_t, double, std::string, uint8_t> Int64ColumnReader::extract_v
     return m_values[cur_message];
 }
 
-void FloatColumnReader::load(ManagedBufferViewReader& reader, uint64_t num_messages) {
-    m_values = reader.consume_unaligned_span<double>(num_messages);
+void FloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+    m_values = reader.read_unaligned_span<double>(num_messages);
 }
 
 std::variant<int64_t, double, std::string, uint8_t> FloatColumnReader::extract_value(
@@ -25,8 +25,8 @@ std::variant<int64_t, double, std::string, uint8_t> FloatColumnReader::extract_v
     return m_values[cur_message];
 }
 
-void BooleanColumnReader::load(ManagedBufferViewReader& reader, uint64_t num_messages) {
-    m_values = reader.consume_unaligned_span<uint8_t>(num_messages);
+void BooleanColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+    m_values = reader.read_unaligned_span<uint8_t>(num_messages);
 }
 
 std::variant<int64_t, double, std::string, uint8_t> BooleanColumnReader::extract_value(
@@ -35,10 +35,10 @@ std::variant<int64_t, double, std::string, uint8_t> BooleanColumnReader::extract
     return m_values[cur_message];
 }
 
-void ClpStringColumnReader::load(ManagedBufferViewReader& reader, uint64_t num_messages) {
-    m_logtypes = reader.consume_unaligned_span<uint64_t>(num_messages);
-    size_t encoded_vars_length = reader.consume_value<size_t>();
-    m_encoded_vars = reader.consume_unaligned_span<int64_t>(encoded_vars_length);
+void ClpStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+    m_logtypes = reader.read_unaligned_span<uint64_t>(num_messages);
+    size_t encoded_vars_length = reader.read_value<size_t>();
+    m_encoded_vars = reader.read_unaligned_span<int64_t>(encoded_vars_length);
 }
 
 std::variant<int64_t, double, std::string, uint8_t> ClpStringColumnReader::extract_value(
@@ -82,8 +82,8 @@ UnalignedSpan<int64_t> ClpStringColumnReader::get_encoded_vars(uint64_t cur_mess
     return m_encoded_vars.sub_span(encoded_vars_offset, entry.get_num_vars());
 }
 
-void VariableStringColumnReader::load(ManagedBufferViewReader& reader, uint64_t num_messages) {
-    m_variables = reader.consume_unaligned_span<uint64_t>(num_messages);
+void VariableStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+    m_variables = reader.read_unaligned_span<uint64_t>(num_messages);
 }
 
 std::variant<int64_t, double, std::string, uint8_t> VariableStringColumnReader::extract_value(
@@ -96,9 +96,9 @@ int64_t VariableStringColumnReader::get_variable_id(uint64_t cur_message) {
     return m_variables[cur_message];
 }
 
-void DateStringColumnReader::load(ManagedBufferViewReader& reader, uint64_t num_messages) {
-    m_timestamps = reader.consume_unaligned_span<int64_t>(num_messages);
-    m_timestamp_encodings = reader.consume_unaligned_span<int64_t>(num_messages);
+void DateStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+    m_timestamps = reader.read_unaligned_span<int64_t>(num_messages);
+    m_timestamp_encodings = reader.read_unaligned_span<int64_t>(num_messages);
 }
 
 std::variant<int64_t, double, std::string, uint8_t> DateStringColumnReader::extract_value(

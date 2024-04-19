@@ -57,7 +57,7 @@ int32_t SchemaTree::find_matching_subtree_root_in_subtree(
         int32_t const subtree_root,
         int32_t descendent,
         NodeType subtree_type
-) {
+) const {
     int32_t earliest_match = -1;
     while (subtree_root != descendent) {
         auto const& node = get_node(descendent);

@@ -4,6 +4,7 @@
 #include <string>
 #include <variant>
 
+#include "BufferViewReader.hpp"
 #include "DictionaryReader.hpp"
 #include "SchemaTree.hpp"
 #include "TimestampDictionaryReader.hpp"
@@ -27,13 +28,11 @@ public:
     virtual ~BaseColumnReader() = default;
 
     /**
-     * Reads the column from a buffer and returns a pointer to the next byte in memory after this
-     * column.
+     * Reads the column from a shared buffer.
      * @param buffer
      * @param num_messages
-     * @return a pointer to the next byte in the provided buffer following this column.
      */
-    virtual void load(ManagedBufferViewReader& reader, uint64_t num_messages) = 0;
+    virtual void load(BufferViewReader& reader, uint64_t num_messages) = 0;
 
     int32_t get_id() const { return m_id; }
 
@@ -60,7 +59,7 @@ public:
     ~Int64ColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
-    void load(ManagedBufferViewReader& reader, uint64_t num_messages) override;
+    void load(BufferViewReader& reader, uint64_t num_messages) override;
 
     NodeType get_type() override { return NodeType::Integer; }
 
@@ -80,7 +79,7 @@ public:
     ~FloatColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
-    void load(ManagedBufferViewReader& reader, uint64_t num_messages) override;
+    void load(BufferViewReader& reader, uint64_t num_messages) override;
 
     NodeType get_type() override { return NodeType::Float; }
 
@@ -100,7 +99,7 @@ public:
     ~BooleanColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
-    void load(ManagedBufferViewReader& reader, uint64_t num_messages) override;
+    void load(BufferViewReader& reader, uint64_t num_messages) override;
 
     NodeType get_type() override { return NodeType::Boolean; }
 
@@ -129,7 +128,7 @@ public:
     ~ClpStringColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
-    void load(ManagedBufferViewReader& reader, uint64_t num_messages) override;
+    void load(BufferViewReader& reader, uint64_t num_messages) override;
 
     NodeType get_type() override {
         return m_is_array ? NodeType::UnstructuredArray : NodeType::ClpString;
@@ -173,7 +172,7 @@ public:
     ~VariableStringColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
-    void load(ManagedBufferViewReader& reader, uint64_t num_messages) override;
+    void load(BufferViewReader& reader, uint64_t num_messages) override;
 
     NodeType get_type() override { return NodeType::VarString; }
 
@@ -204,7 +203,7 @@ public:
     ~DateStringColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
-    void load(ManagedBufferViewReader& reader, uint64_t num_messages) override;
+    void load(BufferViewReader& reader, uint64_t num_messages) override;
 
     NodeType get_type() override { return NodeType::DateString; }
 

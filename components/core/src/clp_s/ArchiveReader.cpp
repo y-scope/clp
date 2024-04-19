@@ -41,7 +41,7 @@ void ArchiveReader::read_metadata() {
         int32_t schema_id;
         uint64_t num_messages;
         size_t table_offset;
-        size_t in_memory_size;
+        size_t uncompressed_size;
 
         if (auto error = m_table_metadata_decompressor.try_read_numeric_value(schema_id);
             ErrorCodeSuccess != error)
@@ -61,13 +61,13 @@ void ArchiveReader::read_metadata() {
             throw OperationFailed(error, __FILENAME__, __LINE__);
         }
 
-        if (auto error = m_table_metadata_decompressor.try_read_numeric_value(in_memory_size);
+        if (auto error = m_table_metadata_decompressor.try_read_numeric_value(uncompressed_size);
             ErrorCodeSuccess != error)
         {
             throw OperationFailed(error, __FILENAME__, __LINE__);
         }
 
-        m_id_to_table_metadata[schema_id] = {num_messages, table_offset, in_memory_size};
+        m_id_to_table_metadata[schema_id] = {num_messages, table_offset, uncompressed_size};
         m_schema_ids.push_back(schema_id);
     }
     m_table_metadata_decompressor.close();
@@ -97,7 +97,7 @@ SchemaReader& ArchiveReader::read_table(
 
     m_tables_file_reader.try_seek_from_begin(m_id_to_table_metadata[schema_id].offset);
     m_tables_decompressor.open(m_tables_file_reader, cDecompressorFileReadBufferCapacity);
-    schema_reader.load(m_tables_decompressor, m_id_to_table_metadata[schema_id].in_memory_size);
+    schema_reader.load(m_tables_decompressor, m_id_to_table_metadata[schema_id].uncompressed_size);
     m_tables_decompressor.close_for_reuse();
     return schema_reader;
 }
@@ -147,7 +147,7 @@ void ArchiveReader::append_unordered_reader_columns(
         bool should_marshal_records
 ) {
     int32_t mst_subtree_root_node_id = INT32_MAX;
-    size_t object_readers_begin = reader.get_next_column_reader_position();
+    size_t object_readers_begin = reader.get_column_size();
     for (int32_t column_id : schema_ids) {
         if (Schema::schema_entry_is_unordered_object(column_id)) {
             continue;

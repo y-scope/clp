@@ -32,10 +32,9 @@ public:
     virtual void add_value(ParsedMessage::variable_t& value, size_t& size) = 0;
 
     /**
-     * Stores the column to a compressed file and returns the in-memory original size of the data
-     * written to the compressor.
+     * Stores the column to a compressed file.
      * @param compressor
-     * @return
+     * @return the in-memory uncompressed size of the data written to the compressor
      */
     virtual size_t store(ZstdCompressor& compressor) = 0;
 

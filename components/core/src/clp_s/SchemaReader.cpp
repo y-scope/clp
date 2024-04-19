@@ -2,6 +2,7 @@
 
 #include <stack>
 
+#include "BufferViewReader.hpp"
 #include "Schema.hpp"
 
 namespace clp_s {
@@ -36,17 +37,17 @@ void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
     }
 }
 
-void SchemaReader::load(ZstdDecompressor& decompressor, size_t in_memory_size) {
-    if (in_memory_size > m_table_buffer_size) {
-        m_table_buffer = std::make_unique<char[]>(in_memory_size);
-        m_table_buffer_size = in_memory_size;
+void SchemaReader::load(ZstdDecompressor& decompressor, size_t uncompressed_size) {
+    if (uncompressed_size > m_table_buffer_size) {
+        m_table_buffer = std::make_unique<char[]>(uncompressed_size);
+        m_table_buffer_size = uncompressed_size;
     }
-    auto error = decompressor.try_read_exact_length(m_table_buffer.get(), in_memory_size);
+    auto error = decompressor.try_read_exact_length(m_table_buffer.get(), uncompressed_size);
     if (ErrorCodeSuccess != error) {
         throw OperationFailed(error, __FILENAME__, __LINE__);
     }
 
-    ManagedBufferViewReader buffer_reader{m_table_buffer.get(), in_memory_size};
+    BufferViewReader buffer_reader{m_table_buffer.get(), uncompressed_size};
     for (auto& reader : m_columns) {
         reader->load(buffer_reader, m_num_messages);
     }
@@ -247,10 +248,6 @@ void SchemaReader::initialize_filter(FilterClass* filter) {
 }
 
 void SchemaReader::generate_local_tree(int32_t global_id) {
-    auto it = m_global_id_to_local_id.find(global_id);
-    if (m_global_id_to_local_id.end() != it) {
-        return;
-    }
     std::stack<int32_t> global_id_stack;
     global_id_stack.emplace(global_id);
     do {

@@ -87,12 +87,11 @@ private:
     bool m_maybe_string, m_maybe_number;
 
     /**
-     * Initializes the variables. It is init is called once for each schema after which filter
-     * is called once for every message in the schema
+     * Initializes the variables. Init is called once for each schema after which filter is called
+     * once for every message in the schema
      * @param reader
      * @param schema_id
-     * @param ordered_columns
-     * @param unordered_columns
+     * @param column_readers
      */
     void init(
             SchemaReader* reader,

@@ -7,8 +7,6 @@
 
 #include <boost/filesystem.hpp>
 
-#include "TraceableException.hpp"
-
 namespace clp_s {
 class FileUtils {
 public:
@@ -273,8 +271,11 @@ private:
     T* m_begin;
     size_t m_size{};
 };
-}  // namespace clp_s
 
+/**
+ * A span of memory where the underlying memory may not be aligned correctly for type T.
+ * @tparam T
+ */
 template <typename T>
 class UnalignedSpan {
 public:
@@ -282,8 +283,6 @@ public:
     UnalignedSpan(char* begin, size_t size) : m_begin(begin), m_size(size){};
 
     size_t size() { return m_size; }
-
-    size_t size_in_bytes() { return m_size * sizeof(T); }
 
     T operator[](size_t i) {
         T tmp;
@@ -299,57 +298,5 @@ private:
     char* m_begin{nullptr};
     size_t m_size{0};
 };
-
-/**
- * ManagedBufferViewReader is a utility class designed to let several readers safely share views
- * into a shared buffer. Readers can consume from the buffer either by consuming spans and scalar
- * values from the buffer. Any attempt to consume past the end of the buffer will throw.
- * @throws OperationFailed
- */
-class ManagedBufferViewReader {
-public:
-    class OperationFailed : public clp_s::TraceableException {
-    public:
-        // Constructors
-        OperationFailed(clp_s::ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
-    };
-
-    // Constructor
-    explicit ManagedBufferViewReader(char* buffer, size_t size)
-            : m_buffer(buffer),
-              m_remaining_size(size) {}
-
-    // Methods
-    template <typename T>
-    T consume_value() {
-        if (m_remaining_size < sizeof(T)) {
-            throw OperationFailed(clp_s::ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
-        }
-        T tmp;
-        memcpy(&tmp, m_buffer, sizeof(T));
-        m_buffer += sizeof(T);
-        m_remaining_size -= sizeof(T);
-        return tmp;
-    }
-
-    template <typename T>
-    UnalignedSpan<T> consume_unaligned_span(size_t length) {
-        size_t span_length_in_bytes = sizeof(T) * length;
-        if (m_remaining_size < span_length_in_bytes) {
-            throw OperationFailed(clp_s::ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
-        }
-        UnalignedSpan<T> tmp{m_buffer, length};
-        m_buffer += span_length_in_bytes;
-        m_remaining_size -= span_length_in_bytes;
-        return tmp;
-    }
-
-    size_t get_remaining_size() { return m_remaining_size; }
-
-private:
-    char* m_buffer{};
-    size_t m_remaining_size{};
-};
-
+}  // namespace clp_s
 #endif  // CLP_S_UTILS_HPP

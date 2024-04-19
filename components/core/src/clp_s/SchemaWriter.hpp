@@ -38,8 +38,9 @@ public:
     size_t append_message(ParsedMessage& message);
 
     /**
-     * Stores the columns to disk and returns the decompressed in-memory size of the table.
+     * Stores the columns to disk.
      * @param compressor
+     * @return the uncompressed in-memory size of the table
      */
     [[nodiscard]] size_t store(ZstdCompressor& compressor);
 

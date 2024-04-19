@@ -144,11 +144,11 @@ size_t ArchiveWriter::store_tables() {
         m_table_metadata_compressor.write_numeric_value(m_tables_file_writer.get_pos());
 
         m_tables_compressor.open(m_tables_file_writer, m_compression_level);
-        size_t table_image_size = i.second->store(m_tables_compressor);
+        size_t uncompressed_size = i.second->store(m_tables_compressor);
         m_tables_compressor.close();
         delete i.second;
 
-        m_table_metadata_compressor.write_numeric_value(table_image_size);
+        m_table_metadata_compressor.write_numeric_value(uncompressed_size);
     }
     m_table_metadata_compressor.close();
 

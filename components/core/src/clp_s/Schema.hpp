@@ -3,7 +3,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <stack>
 #include <vector>
 
 #include "SchemaTree.hpp"
@@ -181,7 +180,7 @@ public:
      * @param schema_entry
      * @return true if the schema_entry is the delimiter for an unordered object, false otherwise
      */
-    static int32_t schema_entry_is_unordered_object(int32_t schema_entry) {
+    static bool schema_entry_is_unordered_object(int32_t schema_entry) {
         return 0 != (schema_entry & cEncodedTypeBitmask);
     }
 
@@ -197,7 +196,7 @@ public:
     /**
      * Extracts the unordered object length from an unordered object delimiter.
      * @param schema_entry
-     * @return The extracted NodeType
+     * @return The extracted object length
      */
     static int32_t get_unordered_object_length(int32_t schema_entry) {
         return schema_entry & cEncodedTypeLengthBitmask;

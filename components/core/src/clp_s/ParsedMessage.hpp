@@ -25,6 +25,8 @@ public:
 
     /**
      * Adds a value to the message for a given MST node ID.
+     * @tparam T
+     * @param value
      */
     template <typename T>
     inline void add_value(int32_t node_id, T const& value) {
@@ -40,6 +42,12 @@ public:
         m_message.emplace(node_id, std::make_pair(encoding_id, value));
     }
 
+    /**
+     * Adds a value to the unordered region of the message. The order in which unordered values are
+     * added to the message must match the order in which the corresponding MST node IDs are added
+     * to the unordered region of the schema.
+     * @param value
+     */
     template <typename T>
     inline void add_unordered_value(T const& value) {
         m_unordered_message.emplace_back(value);

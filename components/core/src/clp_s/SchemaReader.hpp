@@ -21,7 +21,7 @@ public:
      * Initializes the filter
      * @param reader
      * @param schema_id
-     * @param columns
+     * @param column_readers
      */
     virtual void init(
             SchemaReader* reader,
@@ -49,26 +49,11 @@ public:
     struct TableMetadata {
         uint64_t num_messages;
         size_t offset;
-        size_t in_memory_size;
+        size_t uncompressed_size;
     };
 
     // Constructor
-    explicit SchemaReader(
-            std::shared_ptr<SchemaTree> schema_tree,
-            int32_t schema_id,
-            Span<int32_t> ordered_schema,
-            uint64_t num_messages,
-            bool should_marshal_records
-    )
-            : m_schema_id(schema_id),
-              m_ordered_schema(ordered_schema),
-              m_num_messages(num_messages),
-              m_cur_message(0),
-              m_timestamp_column(nullptr),
-              m_get_timestamp([]() -> epochtime_t { return 0; }),
-              m_global_schema_tree(std::move(schema_tree)),
-              m_local_schema_tree(std::make_unique<SchemaTree>()),
-              m_should_marshal_records(should_marshal_records) {}
+    SchemaReader() {}
 
     // Destructor
     ~SchemaReader() { delete_columns(); }
@@ -80,9 +65,9 @@ public:
     }
 
     /**
-     * Resets the contents of this SchemaReader to an uninitialized SchemaReader with a new schema_id
-     *
-     * This function is ugly, but the performance tradeoff is worth it.
+     * Resets the contents of this SchemaReader and prepares it to become a SchemaReader with a new
+     * schema id, schema tree, and other parameters. After this call the SchemaReader is prepared
+     * to accept append_column calls for the new schema.
      *
      * @param schema_tree
      * @param schema_id
@@ -129,7 +114,7 @@ public:
      */
     void append_unordered_column(BaseColumnReader* column_reader);
 
-    size_t get_next_column_reader_position() { return m_columns.size(); }
+    size_t get_column_size() { return m_columns.size(); }
 
     /**
      * Marks an unordered object for the purpose of marshalling records.
@@ -146,9 +131,9 @@ public:
     /**
      * Loads the encoded messages
      * @param decompressor
-     * @param in_memory_size
+     * @param uncompressed_size
      */
-    void load(ZstdDecompressor& decompressor, size_t in_memory_size);
+    void load(ZstdDecompressor& decompressor, size_t uncompressed_size);
 
     /**
      * Gets next message
