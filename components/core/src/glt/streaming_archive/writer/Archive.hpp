@@ -71,6 +71,7 @@ public:
     std::string m_path_for_compression;
     group_id_t m_group_id;
     size_t m_target_encoded_file_size;
+    std::string m_schema_file_path;
 
     // Constructors
     Archive()

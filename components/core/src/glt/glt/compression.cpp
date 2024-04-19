@@ -108,6 +108,12 @@ bool compress(
 
     // Open Archive
     streaming_archive::writer::Archive archive_writer;
+
+    // Set schema file if specified by user
+    if (false == command_line_args.get_use_heuristic()) {
+        archive_writer.m_schema_file_path = command_line_args.get_schema_file_path();
+    }
+    
     // Open archive
     archive_writer.open(archive_user_config);
 

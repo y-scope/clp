@@ -118,6 +118,19 @@ void Archive::open(UserConfig const& user_config) {
     m_next_segment_id = 0;
     m_compression_level = user_config.compression_level;
 
+    /// TODO: add schema file size to m_stable_size???
+    // Copy schema file into archive
+    if (!m_schema_file_path.empty()) {
+        const std::filesystem::path archive_schema_filesystem_path = archive_path / cSchemaFileName;
+        try {
+            const std::filesystem::path schema_filesystem_path = m_schema_file_path;
+            std::filesystem::copy(schema_filesystem_path, archive_schema_filesystem_path);
+        } catch (FileWriter::OperationFailed& e) {
+            SPDLOG_CRITICAL("Failed to copy schema file to archive: {}", archive_schema_filesystem_path.c_str());
+            throw;
+        }
+    }
+
     // Save metadata to disk
     auto metadata_file_path = archive_path / cMetadataFileName;
     try {
