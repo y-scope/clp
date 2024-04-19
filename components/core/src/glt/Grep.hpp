@@ -3,6 +3,9 @@
 
 #include <optional>
 #include <string>
+#include <variant>
+
+#include <log_surgeon/Lexer.hpp>
 
 #include "Defs.h"
 #include "Query.hpp"
@@ -10,6 +13,82 @@
 #include "streaming_archive/reader/File.hpp"
 
 namespace glt {
+class QueryLogtype {
+public:
+    std::vector<std::variant<char, int>> m_logtype;
+    std::vector<std::string> m_search_query;
+    std::vector<bool> m_is_special;
+    std::vector<bool> m_var_has_wildcard;
+
+    auto insert (QueryLogtype& query_logtype) -> void {
+        m_logtype.insert(m_logtype.end(), query_logtype.m_logtype.begin(),
+                         query_logtype.m_logtype.end());
+        m_search_query.insert(m_search_query.end(), query_logtype.m_search_query.begin(),
+                              query_logtype.m_search_query.end());
+        m_is_special.insert(m_is_special.end(), query_logtype.m_is_special.begin(),
+                            query_logtype.m_is_special.end());
+        m_var_has_wildcard.insert(m_var_has_wildcard.end(),
+                                  query_logtype.m_var_has_wildcard.begin(),
+                                  query_logtype.m_var_has_wildcard.end());
+    }
+
+    auto insert (std::variant<char, int> const& val, std::string const& string,
+                 bool var_contains_wildcard) -> void {
+        m_var_has_wildcard.push_back(var_contains_wildcard);
+        m_logtype.push_back(val);
+        m_search_query.push_back(string);
+        m_is_special.push_back(false);
+    }
+
+    QueryLogtype (std::variant<char, int> const& val, std::string const& string,
+                  bool var_contains_wildcard) {
+        insert(val, string, var_contains_wildcard);
+    }
+
+    QueryLogtype () = default;
+
+    bool operator<(const QueryLogtype &rhs) const{
+        if(m_logtype.size() < rhs.m_logtype.size()) {
+            return true;
+        } else if (m_logtype.size() > rhs.m_logtype.size()) {
+            return false;
+        }
+        for(uint32_t i = 0; i < m_logtype.size(); i++) {
+            if(m_logtype[i] < rhs.m_logtype[i]) {
+                return true;
+            } else if(m_logtype[i] > rhs.m_logtype[i]) {
+                return false;
+            }
+        }
+        for(uint32_t i = 0; i < m_search_query.size(); i++) {
+            if(m_search_query[i] < rhs.m_search_query[i]) {
+                return true;
+            } else if(m_search_query[i] > rhs.m_search_query[i]) {
+                return false;
+            }
+        }
+        for(uint32_t i = 0; i < m_is_special.size(); i++) {
+            if(m_is_special[i] < rhs.m_is_special[i]) {
+                return true;
+            } else if(m_is_special[i] > rhs.m_is_special[i]) {
+                return false;
+            }
+        }
+        return false;
+    }
+
+};
+
+/**
+ * Wraps the tokens returned from the log_surgeon lexer, and stores the variable
+ * ids of the tokens in a search query in a set. This allows for optimized
+ * search performance.
+ */
+class SearchToken : public log_surgeon::Token {
+public:
+    std::set<int> m_type_ids_set;
+};
+
 class Grep {
 public:
     // Types
@@ -35,6 +114,9 @@ public:
      * @param search_begin_ts
      * @param search_end_ts
      * @param ignore_case
+     * @param forward_lexer
+     * @param reverse_lexer
+     * @param use_heuristic
      * @return Query if it may match a message, std::nullopt otherwise
      */
     static std::optional<Query> process_raw_query(
@@ -42,7 +124,10 @@ public:
             std::string const& search_string,
             epochtime_t search_begin_ts,
             epochtime_t search_end_ts,
-            bool ignore_case
+            bool ignore_case,
+            log_surgeon::lexers::ByteLexer& forward_lexer,
+            log_surgeon::lexers::ByteLexer& reverse_lexer,
+            bool use_heuristic
     );
 
     /**

@@ -11,7 +11,10 @@
 #include "../GlobalSQLiteMetadataDB.hpp"
 #include "../Grep.hpp"
 #include "../Profiler.hpp"
+#include "../streaming_archive/Constants.hpp"
 #include "CommandLineArguments.hpp"
+
+#include <log_surgeon/Lexer.hpp>
 
 using glt::combined_table_id_t;
 using glt::epochtime_t;
@@ -191,7 +194,10 @@ static bool search(
         vector<string> const& search_strings,
         CommandLineArguments& command_line_args,
         Archive& archive,
-        size_t& num_matches
+        size_t& num_matches,
+        log_surgeon::lexers::ByteLexer& forward_lexer,
+        log_surgeon::lexers::ByteLexer& reverse_lexer,
+        bool use_heuristic
 ) {
     ErrorCode error_code;
     auto search_begin_ts = command_line_args.get_search_begin_ts();
@@ -208,7 +214,10 @@ static bool search(
                     search_string,
                     search_begin_ts,
                     search_end_ts,
-                    command_line_args.ignore_case()
+                    command_line_args.ignore_case(),
+                    forward_lexer,
+                    reverse_lexer,
+                    use_heuristic
             );
             if (query_processing_result.has_value()) {
                 auto& query = query_processing_result.value();
@@ -520,6 +529,16 @@ bool search(CommandLineArguments& command_line_args) {
     }
     global_metadata_db->open();
 
+    // TODO: if performance is too slow, can make this more efficient by only diffing files with the
+    // same checksum
+    uint32_t const max_map_schema_length = 100'000;
+    std::map<std::string, log_surgeon::lexers::ByteLexer> forward_lexer_map;
+    std::map<std::string, log_surgeon::lexers::ByteLexer> reverse_lexer_map;
+    log_surgeon::lexers::ByteLexer one_time_use_forward_lexer;
+    log_surgeon::lexers::ByteLexer one_time_use_reverse_lexer;
+    log_surgeon::lexers::ByteLexer* forward_lexer_ptr;
+    log_surgeon::lexers::ByteLexer* reverse_lexer_ptr;
+
     string archive_id;
     Archive archive_reader;
     size_t num_matches = 0;
@@ -551,8 +570,58 @@ bool search(CommandLineArguments& command_line_args) {
 
         // Generate lexer if schema file exists
         auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
+        bool use_heuristic = true;
+        if (std::filesystem::exists(schema_file_path)) {
+            use_heuristic = false;
+
+            char buf[max_map_schema_length];
+            FileReader file_reader;
+            file_reader.try_open(schema_file_path);
+
+            size_t num_bytes_read;
+            file_reader.read(buf, max_map_schema_length, num_bytes_read);
+            if (num_bytes_read < max_map_schema_length) {
+                auto forward_lexer_map_it = forward_lexer_map.find(buf);
+                auto reverse_lexer_map_it = reverse_lexer_map.find(buf);
+                // if there is a chance there might be a difference make a new lexer as it's pretty
+                // fast to create
+                if (forward_lexer_map_it == forward_lexer_map.end()) {
+                    // Create forward lexer
+                    auto insert_result
+                            = forward_lexer_map.emplace(buf, log_surgeon::lexers::ByteLexer());
+                    forward_lexer_ptr = &insert_result.first->second;
+                    load_lexer_from_file(schema_file_path, false, *forward_lexer_ptr);
+
+                    // Create reverse lexer
+                    insert_result
+                            = reverse_lexer_map.emplace(buf, log_surgeon::lexers::ByteLexer());
+                    reverse_lexer_ptr = &insert_result.first->second;
+                    load_lexer_from_file(schema_file_path, true, *reverse_lexer_ptr);
+                } else {
+                    // load the lexers if they already exist
+                    forward_lexer_ptr = &forward_lexer_map_it->second;
+                    reverse_lexer_ptr = &reverse_lexer_map_it->second;
+                }
+            } else {
+                // Create forward lexer
+                forward_lexer_ptr = &one_time_use_forward_lexer;
+                load_lexer_from_file(schema_file_path, false, one_time_use_forward_lexer);
+
+                // Create reverse lexer
+                reverse_lexer_ptr = &one_time_use_reverse_lexer;
+                load_lexer_from_file(schema_file_path, false, one_time_use_reverse_lexer);
+            }
+        }
+        
         // Perform search
-        if (!search(search_strings, command_line_args, archive_reader, num_matches)) {
+        if (!search(search_strings, 
+                    command_line_args, 
+                    archive_reader, 
+                    num_matches,
+                    *forward_lexer_ptr,
+                    *reverse_lexer_ptr,
+                    use_heuristic)) 
+        {
             return false;
         }
         archive_reader.close();
