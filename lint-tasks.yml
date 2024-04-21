@@ -1,10 +1,10 @@
 version: "3"
 
 vars:
-  VENV_DIR: "{{.TASKFILE_DIR}}/.lint-venv"
-
   LINTER_NODEJS_BUILD_DIR: "{{.TASKFILE_DIR}}/build/linter-nodejs"
   LINTER_NODEJS_BIN_DIR: "{{.LINTER_NODEJS_BUILD_DIR}}/node/bin"
+  VENV_DIR: "{{.TASKFILE_DIR}}/.lint-venv"
+
 
 tasks:
   check:
@@ -28,8 +28,8 @@ tasks:
         vars:
           FLAGS: "--dry-run"
     sources: &cpp_source_files
+      - "{{.TASKFILE_DIR}}/lint-tasks.yml"
       - ".clang-format"
-      - "lint-tasks.yml"
       - "src/**/*.cpp"
       - "src/**/*.h"
       - "src/**/*.hpp"
@@ -54,6 +54,8 @@ tasks:
         vars:
           LINT_CMD: "check"
     sources: &js_source_files
+      - "{{.TASKFILE_DIR}}/lint-tasks.yml"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "client/**/*.js"
       - "client/**/*.jsx"
       - "imports/**/*.js"
@@ -137,32 +139,23 @@ tasks:
           black --color --line-length 100 {{.BLACK_FLAGS}} .
           ruff check {{.RUFF_FLAGS}} .
 
-  nodejs-18:
+  linter-nodejs:
     internal: true
     vars:
       CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
-      NODEJS_VERSION: "18.20.2"
-      NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
-      OUTPUT_DIR: "{{.NODEJS_18_BUILD_DIR}}"
-      TAR_FILE_NAME: "node-v{{.NODEJS_VERSION}}-linux-{{.NODEJS_ARCH}}.tar.xz"
+      OUTPUT_DIR: "{{.LINTER_NODEJS_BUILD_DIR}}"
     cmds:
-      - "rm -rf '{{.OUTPUT_DIR}}/node'"
-      - "mkdir -p '{{.OUTPUT_DIR}}'"
-      - >-
-        curl -fsSL
-        "https://nodejs.org/dist/v{{.NODEJS_VERSION}}/{{.TAR_FILE_NAME}}"
-        -o "{{.OUTPUT_DIR}}/{{.TAR_FILE_NAME}}"
-      - "tar xf '{{.OUTPUT_DIR}}/{{.TAR_FILE_NAME}}' -C '{{.OUTPUT_DIR}}'"
-      - >-
-        mv "{{.OUTPUT_DIR}}/node-v{{.NODEJS_VERSION}}-linux-{{.NODEJS_ARCH}}"
-        "{{.OUTPUT_DIR}}/node"
-      - "rm -f '{{.OUTPUT_DIR}}/{{.TAR_FILE_NAME}}'"
+      - task: ":nodejs"
+        vars:
+          NODEJS_VERSION: "latest"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
       # Checksum the generated files (this command must be last)
       - >-
         tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
         | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
       - "{{.TASKFILE_DIR}}/lint-tasks.yml"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
     status:
       - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
@@ -173,9 +166,10 @@ tasks:
   node-modules:
     internal: true
     dir: "{{.TASKFILE_DIR}}/components/webui"
-    deps: ["nodejs-18"]
+    deps: ["linter-nodejs"]
     cmds:
-      - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH '{{.LINTER_NODEJS_BIN_DIR}}/npm' install --no-package-lock"
+      - # `--no-package-lock`: prevent `npm` from checking the `package-lock.json` file version
+        "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm install --no-package-lock"
 
   venv:
     internal: true
