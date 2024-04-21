@@ -1,9 +1,10 @@
 version: "3"
 
 vars:
-  LINTER_NODEJS_BIN_DIR: "{{.TASKFILE_DIR}}/build/linter-nodejs/node/bin"
-  LINTER_NODEJS_BUILD_DIR: "{{.TASKFILE_DIR}}/build/linter-nodejs"
   VENV_DIR: "{{.TASKFILE_DIR}}/.lint-venv"
+
+  LINTER_NODEJS_BUILD_DIR: "{{.TASKFILE_DIR}}/build/linter-nodejs"
+  LINTER_NODEJS_BIN_DIR: "{{.LINTER_NODEJS_BUILD_DIR}}/node/bin"
 
 tasks:
   check:
