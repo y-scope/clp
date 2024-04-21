@@ -1,8 +1,8 @@
 version: "3"
 
 vars:
-  NODEJS_18_BIN_DIR: "{{.TASKFILE_DIR}}/build/nodejs_18/node/bin"
-  NODEJS_18_BUILD_DIR: "{{.TASKFILE_DIR}}/build/nodejs_18"
+  LINTER_NODEJS_BIN_DIR: "{{.TASKFILE_DIR}}/build/linter-nodejs/node/bin"
+  LINTER_NODEJS_BUILD_DIR: "{{.TASKFILE_DIR}}/build/linter-nodejs"
   VENV_DIR: "{{.TASKFILE_DIR}}/.lint-venv"
 
 tasks:
@@ -118,7 +118,7 @@ tasks:
     deps: ["node-modules"]
     dir: "{{.TASKFILE_DIR}}/components/webui"
     cmds:
-      - "PATH='{{.NODEJS_18_BIN_DIR}}':$PATH npm run 'lint:{{.LINT_CMD}}'"
+      - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm run 'lint:{{.LINT_CMD}}'"
 
   py:
     internal: true
@@ -174,7 +174,7 @@ tasks:
     dir: "{{.TASKFILE_DIR}}/components/webui"
     deps: ["nodejs-18"]
     cmds:
-      - "PATH='{{.NODEJS_18_BIN_DIR}}':$PATH '{{.NODEJS_18_BIN_DIR}}/npm' install --no-package-lock"
+      - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH '{{.LINTER_NODEJS_BIN_DIR}}/npm' install --no-package-lock"
 
   venv:
     internal: true
