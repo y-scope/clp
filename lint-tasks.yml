@@ -115,7 +115,7 @@ tasks:
     internal: true
     requires:
       vars: ["LINT_SCRIPT"]
-    deps: ["node_modules"]
+    deps: ["node-modules"]
     dir: "{{.TASKFILE_DIR}}/components/webui"
     cmds:
       - "PATH='{{.NODEJS_18_BIN_DIR}}':$PATH npm run 'lint:{{.LINT_SCRIPT}}'"
@@ -169,7 +169,7 @@ tasks:
         <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
         "{{.CHECKSUM_FILE}}"
 
-  node_modules:
+  node-modules:
     internal: true
     dir: "{{.TASKFILE_DIR}}/components/webui"
     deps: ["nodejs-18"]
