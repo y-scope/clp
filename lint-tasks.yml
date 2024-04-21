@@ -51,7 +51,7 @@ tasks:
     cmds:
       - task: "js"
         vars:
-          LINT_SCRIPT: "check"
+          LINT_CMD: "check"
     sources: &js_source_files
       - "client/**/*.js"
       - "client/**/*.jsx"
@@ -69,7 +69,7 @@ tasks:
     cmds:
       - task: "js"
         vars:
-          LINT_SCRIPT: "fix"
+          LINT_CMD: "fix"
     sources: *js_source_files
 
   py-check:
@@ -114,11 +114,11 @@ tasks:
   js:
     internal: true
     requires:
-      vars: ["LINT_SCRIPT"]
+      vars: ["LINT_CMD"]
     deps: ["node-modules"]
     dir: "{{.TASKFILE_DIR}}/components/webui"
     cmds:
-      - "PATH='{{.NODEJS_18_BIN_DIR}}':$PATH npm run 'lint:{{.LINT_SCRIPT}}'"
+      - "PATH='{{.NODEJS_18_BIN_DIR}}':$PATH npm run 'lint:{{.LINT_CMD}}'"
 
   py:
     internal: true
