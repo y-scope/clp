@@ -284,31 +284,6 @@ tasks:
         "{{.OUTPUT_DIR}}/node"
       - "rm -f '{{.OUTPUT_DIR}}/{{.NODEJS_FILE_TAR_NAME}}'"
 
-  webui-node-modules:
-    internal: true
-    vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
-      WEBUI_SRC_DIR: "{{.TASKFILE_DIR}}/components/webui"
-      OUTPUT_DIR: "{{.WEBUI_SRC_DIR}}/node_modules"
-    dir: "{{.WEBUI_SRC_DIR}}"
-    cmds:
-      - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "meteor npm install --production"
-      # Checksum the generated files (this command must be last)
-      - >-
-        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
-        | md5sum > "{{.CHECKSUM_FILE}}"
-    sources:
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
-      - ".meteor/packages"
-      - "package.json"
-    status:
-      - "test -f '{{.CHECKSUM_FILE}}'"
-      - >-
-        diff
-        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
-        "{{.CHECKSUM_FILE}}"
-
   package-venv:
     internal: true
     vars:
@@ -366,6 +341,31 @@ tasks:
       - "pyproject.toml"
     generates:
       - "dist/*.whl"
+
+  webui-node-modules:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
+      WEBUI_SRC_DIR: "{{.TASKFILE_DIR}}/components/webui"
+      OUTPUT_DIR: "{{.WEBUI_SRC_DIR}}/node_modules"
+    dir: "{{.WEBUI_SRC_DIR}}"
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "meteor npm install --production"
+      # Checksum the generated files (this command must be last)
+      - >-
+        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
+        | md5sum > "{{.CHECKSUM_FILE}}"
+    sources:
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - ".meteor/packages"
+      - "package.json"
+    status:
+      - "test -f '{{.CHECKSUM_FILE}}'"
+      - >-
+        diff
+        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        "{{.CHECKSUM_FILE}}"
 
   component-venv:
     internal: true
