@@ -18,19 +18,16 @@ import {
 import {computeHumanSize} from "/imports/utils/misc";
 
 
-/* eslint-disable line-comment-position, no-inline-comments, @stylistic/js/no-multi-spaces */
 /**
  * Icons corresponding to different compression job statuses.
  *
- * @type {(import("@fortawesome/react-fontawesome").IconProp)[]}
+ * @type {{[key: CompressionJobStatus]: import("@fortawesome/react-fontawesome").IconProp}}
  */
-const COMPRESSION_JOB_STATUS_ICONS = Object.freeze([
-    faClock,        // PENDING
-    null,           // RUNNING: <Spinner/> is shown instead
-    faCheck,        // SUCCEEDED
-    faExclamation,  // FAILED
-]);
-/* eslint-enable line-comment-position, no-inline-comments, @stylistic/js/no-multi-spaces */
+const COMPRESSION_JOB_STATUS_ICONS = Object.freeze({
+    [COMPRESSION_JOB_STATUS.PENDING]: faClock,
+    [COMPRESSION_JOB_STATUS.SUCCEEDED]: faCheck,
+    [COMPRESSION_JOB_STATUS.FAILED]: faExclamation,
+});
 
 /**
  * Renders an ingestion job.

@@ -21,12 +21,15 @@ const COMPRESSION_JOBS_TABLE_COLUMN_NAMES = Object.freeze({
 });
 /* eslint-enable sort-keys */
 
+/**
+ * @typedef {number} CompressionJobStatus
+ */
 let enumCompressionJobStatus;
 /**
  * Enum of compression job statuses, matching the `CompressionJobStatus` class in
  * `job_orchestration.scheduler.constants`.
  *
- * @enum {string}
+ * @enum {CompressionJobStatus}
  */
 const COMPRESSION_JOB_STATUS = Object.freeze({
     PENDING: (enumCompressionJobStatus = 0),
