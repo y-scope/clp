@@ -22,12 +22,13 @@ class CompressionDbManager {
     }
 
     /**
-     * Retrieve the last `limit` number of jobs. Also includes the ones in
-     * `jobIdList`.
+     * Retrieves the last `limit` number of jobs and the ones with the given
+     * job IDs.
      *
      * @param {number} limit
      * @param {number[]} jobIdList
-     * @return {Promise<object[]>}
+     * @return {Promise<object[]>} Job objects with fields with the names in
+     * `COMPRESSION_JOBS_TABLE_COLUMN_NAMES`
      */
     async getCompressionJobs (limit, jobIdList) {
         let queryString = `

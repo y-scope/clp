@@ -9,7 +9,7 @@ const MONGO_SORT_ORDER = Object.freeze({
 });
 
 /**
- * Represents the sort order for MongoDB queries using the "_id" field.
+ * The sort order for MongoDB queries using the "_id" field.
  *
  * @type {string[]}
  */

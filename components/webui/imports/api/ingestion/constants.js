@@ -46,19 +46,14 @@ const COMPRESSION_JOB_WAITING_STATES = Object.freeze([
 ]);
 
 /**
- * Represents the possible status names for a compression job.
+ * Names for the compression job statuses.
  *
  * @type {ReadonlyArray<string>}
  */
-const COMPRESSION_JOB_STATUS_NAMES = Object.freeze([
-    "PENDING",
-    "RUNNING",
-    "SUCCEEDED",
-    "FAILED",
-]);
+const COMPRESSION_JOB_STATUS_NAMES = Object.freeze(Object.keys(COMPRESSION_JOB_STATUS));
 
 /**
- * The maximum number of compression jobs that is retrieved at a time.
+ * The maximum number of compression jobs to retrieve at a time.
  */
 const COMPRESSION_MAX_RETRIEVE_JOBS = 5;
 
