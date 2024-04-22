@@ -73,6 +73,7 @@ const refreshCompressionStats = async () => {
  */
 const refreshCompressionJobs = async () => {
     if (null !== compressionJobsRefreshTimeout) {
+        // Clear the timeout in case this method is not called due to the timeout expiring.
         Meteor.clearTimeout(compressionJobsRefreshTimeout);
         compressionJobsRefreshTimeout = null;
     }
