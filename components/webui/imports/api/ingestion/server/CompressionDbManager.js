@@ -14,9 +14,7 @@ class CompressionDbManager {
      * @param {object} tableNames
      * @param {string} tableNames.compressionJobsTableName
      */
-    constructor (sqlDbConnPool, {
-        compressionJobsTableName,
-    }) {
+    constructor (sqlDbConnPool, {compressionJobsTableName}) {
         this.#sqlDbConnPool = sqlDbConnPool;
         this.#compressionJobsTableName = compressionJobsTableName;
     }
@@ -26,12 +24,14 @@ class CompressionDbManager {
      * job IDs.
      *
      * @param {number} limit
-     * @param {number[]} jobIdList
+     * @param {number[]} jobIds
      * @return {Promise<object[]>} Job objects with fields with the names in
      * `COMPRESSION_JOBS_TABLE_COLUMN_NAMES`
      */
-    async getCompressionJobs (limit, jobIdList) {
-        let queryString = `
+    async getCompressionJobs (limit, jobIds) {
+        const queries = [];
+
+        queries.push(`
             WITH SelectedColumns AS (
                 SELECT 
                     id as _id, 
@@ -49,24 +49,23 @@ class CompressionDbManager {
                 ORDER BY _id DESC
                 LIMIT ${limit}
             )
-        `;
-
-        jobIdList.forEach((jobId) => {
-            queryString += `
+        `);
+        jobIds.forEach((jobId) => {
+            queries.push(`
                 UNION DISTINCT
                 (
                     SELECT *
                     FROM SelectedColumns
                     WHERE _id=${jobId}
                 )
-            `;
+            `);
         });
+        queries.push("ORDER BY _id DESC;");
 
-        queryString += "ORDER BY _id DESC;";
+        const queryString = queries.join("\n");
+        const [results] = await this.#sqlDbConnPool.query(queryString);
 
-        const results = await this.#sqlDbConnPool.query(queryString);
-
-        return results[0];
+        return results;
     }
 }
 

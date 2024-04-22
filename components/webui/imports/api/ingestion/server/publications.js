@@ -85,7 +85,7 @@ const refreshCompressionJobs = async () => {
         return;
     }
 
-    const pendingJobIdList = await CompressionJobsCollection.find({
+    const pendingJobIds = await CompressionJobsCollection.find({
         [COMPRESSION_JOBS_TABLE_COLUMN_NAMES.STATUS]: {
             $in: COMPRESSION_JOB_WAITING_STATES,
         },
@@ -97,7 +97,7 @@ const refreshCompressionJobs = async () => {
 
     const jobs = await compressionDbManager.getCompressionJobs(
         COMPRESSION_MAX_RETRIEVE_JOBS,
-        pendingJobIdList
+        pendingJobIds
     );
 
     const operations = jobs.map((doc) => ({
