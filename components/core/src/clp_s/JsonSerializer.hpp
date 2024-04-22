@@ -63,12 +63,21 @@ public:
 
     void append_key() { append_key(m_special_keys[m_special_keys_index++]); }
 
-    void append_key(std::string const& key) { m_json_string += "\"" + key + "\":"; }
+    void append_key(std::string const& key) {
+        m_json_string += "\"";
+        m_json_string += key;
+        m_json_string += "\":";
+    }
 
-    void append_value(std::string const& value) { m_json_string += value + ","; }
+    void append_value(std::string const& value) {
+        m_json_string += value;
+        m_json_string += ",";
+    }
 
     void append_value_with_quotes(std::string const& value) {
-        m_json_string += "\"" + value + "\",";
+        m_json_string += "\"";
+        m_json_string += value;
+        m_json_string += "\",";
     }
 
 private:
