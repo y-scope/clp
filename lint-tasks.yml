@@ -5,7 +5,6 @@ vars:
   LINTER_NODEJS_BIN_DIR: "{{.LINTER_NODEJS_BUILD_DIR}}/node/bin"
   VENV_DIR: "{{.TASKFILE_DIR}}/.lint-venv"
 
-
 tasks:
   check:
     cmds:
