@@ -80,11 +80,11 @@ steps to set up your environment for linting:
     nvm use 18
     ```
 
-2. Re-install the project's dependencies with `--no-package-lock` to prevent `npm` from checking the
+2. Re-install the project's dependencies with `--package-lock=false` to prevent `npm` from checking the
    `package-lock.json` file version:
 
     ```shell
-    npm install --no-package-lock
+    npm install --package-lock=false
     ```
 
 ## Checking for linting errors

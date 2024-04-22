@@ -168,8 +168,8 @@ tasks:
     dir: "{{.TASKFILE_DIR}}/components/webui"
     deps: ["linter-nodejs"]
     cmds:
-      -  # `--no-package-lock`: prevent `npm` from checking the `package-lock.json` file version
-        "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm install --no-package-lock"
+      # `--package-lock=false`: prevent `npm` from checking the `package-lock.json` file version
+      - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm install --package-lock=false"
 
   venv:
     internal: true
