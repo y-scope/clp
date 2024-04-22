@@ -261,11 +261,14 @@ tasks:
     vars:
       NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
       NODEJS_FILE_BASE_NAME:
-        sh:
-          >-
-          curl -s "https://nodejs.org/dist/{{.NODEJS_VERSION}}/"
-          | grep -oP -m 1 "node-v[0-9]+\\.[0-9]+\\.[0-9]+-linux-{{.NODEJS_ARCH}}"
-          | head -1
+        sh: >-
+          curl --silent "https://nodejs.org/dist/{{.NODEJS_VERSION}}/"
+          | grep 
+          --only-matching
+          --perl-regexp
+          --max-count 1
+          "node-v\\d+\\.\\d+\\.\\d+-linux-{{.NODEJS_ARCH}}"
+          | head --lines 1
       NODEJS_FILE_TAR_NAME: "{{.NODEJS_FILE_BASE_NAME}}.tar.xz"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}/node'"
