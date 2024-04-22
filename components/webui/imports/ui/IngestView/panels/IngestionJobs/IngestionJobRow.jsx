@@ -87,13 +87,13 @@ const IngestionJobRow = ({job}) => {
             <td className={"fw-bold"}>
                 {job._id}
             </td>
-            <td className={"text-right"}>
+            <td className={"text-end"}>
                 {speedText}
             </td>
-            <td className={"text-right"}>
+            <td className={"text-end"}>
                 {uncompressedSizeText}
             </td>
-            <td className={"text-right"}>
+            <td className={"text-end"}>
                 {compressedSizeText}
             </td>
         </tr>

@@ -42,9 +42,9 @@ const IngestionJobs = () => {
                     <tr>
                         <th className={"text-center"}>Status</th>
                         <th>Job ID</th>
-                        <th className={"text-right"}>Speed</th>
-                        <th className={"text-right"}>Data Ingested</th>
-                        <th className={"text-right"}>Compressed Size</th>
+                        <th className={"text-end"}>Speed</th>
+                        <th className={"text-end"}>Data Ingested</th>
+                        <th className={"text-end"}>Compressed Size</th>
                     </tr>
                 </thead>
                 <tbody>
