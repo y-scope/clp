@@ -1,12 +1,13 @@
 import mysql from "mysql2/promise";
 
-import {logger} from "/imports/utils/logger";
-
 import {
+    deinitCompressionDbManager,
     deinitStatsDbManager,
+    initCompressionDbManager,
     initStatsDbManager,
-} from "../api/ingestion/server/publications";
-import {initSearchJobsDbManager} from "../api/search/server/methods";
+} from "/imports/api/ingestion/server/publications";
+import {initSearchJobsDbManager} from "/imports/api/search/server/methods";
+import {logger} from "/imports/utils/logger";
 
 
 const DB_CONNECTION_LIMIT = 2;
@@ -28,9 +29,10 @@ let dbConnPool = null;
  * @param {string} dbConfig.dbPassword
  * @param {string} dbConfig.dbUser
  * @param {object} tableNames
- * @param {string} tableNames.searchJobsTableName
  * @param {string} tableNames.clpArchivesTableName
  * @param {string} tableNames.clpFilesTableName
+ * @param {string} tableNames.compressionJobsTableName
+ * @param {string} tableNames.searchJobsTableName
  * @return {Promise<void>}
  * @throws {Error} on error.
  */
@@ -41,9 +43,10 @@ const initDbManagers = async ({
     dbPassword,
     dbUser,
 }, {
-    searchJobsTableName,
     clpArchivesTableName,
     clpFilesTableName,
+    compressionJobsTableName,
+    searchJobsTableName,
 }) => {
     if (null !== dbConnPool) {
         throw Error("This method should not be called twice.");
@@ -62,6 +65,7 @@ const initDbManagers = async ({
 
             bigNumberStrings: true,
             supportBigNumbers: true,
+            timezone: "Z",
 
             connectionLimit: DB_CONNECTION_LIMIT,
             enableKeepAlive: true,
@@ -69,6 +73,9 @@ const initDbManagers = async ({
             maxIdle: DB_MAX_IDLE,
         });
 
+        initCompressionDbManager(dbConnPool, {
+            compressionJobsTableName,
+        });
         initSearchJobsDbManager(dbConnPool, {
             searchJobsTableName,
         });
@@ -89,6 +96,7 @@ const initDbManagers = async ({
  * @throws {Error} on error.
  */
 const deinitDbManagers = async () => {
+    deinitCompressionDbManager();
     deinitStatsDbManager();
 
     await dbConnPool.end();
