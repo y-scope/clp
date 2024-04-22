@@ -34,7 +34,7 @@ class CompressionDbManager {
         queries.push(`
             WITH SelectedColumns AS (
                 SELECT 
-                    id as _id, 
+                    id as _id,
                     ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.STATUS},
                     ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.STATUS_MSG},
                     ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.START_TIME},
