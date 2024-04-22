@@ -350,6 +350,7 @@ tasks:
       OUTPUT_DIR: "{{.WEBUI_SRC_DIR}}/node_modules"
     dir: "{{.WEBUI_SRC_DIR}}"
     cmds:
+      - "mkdir -p '{{.BUILD_DIR}}'"
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "meteor npm install --production"
       # Checksum the generated files (this command must be last)
