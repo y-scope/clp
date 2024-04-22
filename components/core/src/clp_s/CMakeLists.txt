@@ -38,6 +38,7 @@ set(
         ArchiveReader.hpp
         ArchiveWriter.cpp
         ArchiveWriter.hpp
+        BufferViewReader.hpp
         ColumnReader.cpp
         ColumnReader.hpp
         ColumnWriter.cpp
