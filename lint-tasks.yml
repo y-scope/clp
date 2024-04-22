@@ -53,8 +53,8 @@ tasks:
         vars:
           LINT_CMD: "check"
     sources: &js_source_files
+      - "{{.BUILD_DIR}}/lint#node-modules.md5"
       - "{{.TASKFILE_DIR}}/lint-tasks.yml"
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "client/**/*.js"
       - "client/**/*.jsx"
       - "imports/**/*.js"
@@ -141,7 +141,7 @@ tasks:
   linter-nodejs:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/lint#linter-nodejs.md5"
       OUTPUT_DIR: "{{.LINTER_NODEJS_BUILD_DIR}}"
     cmds:
       - task: ":nodejs"
@@ -164,11 +164,30 @@ tasks:
 
   node-modules:
     internal: true
-    dir: "{{.TASKFILE_DIR}}/components/webui"
+    vars:
+      WEBUI_SRC_DIR: "{{.TASKFILE_DIR}}/components/webui"
+      OUTPUT_DIR: "{{.WEBUI_SRC_DIR}}/node_modules"
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/lint#node-modules.md5"
+    dir: "{{.WEBUI_SRC_DIR}}"
     deps: ["linter-nodejs"]
     cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
       # `--package-lock=false`: prevent `npm` from checking the `package-lock.json` file version
       - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm install --package-lock=false"
+      # Checksum the generated files (this command must be last)
+      - >-
+        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
+        | md5sum > "{{.CHECKSUM_FILE}}"
+    sources:
+      - "{{.BUILD_DIR}}/lint#linter-nodejs.md5"
+      - "{{.TASKFILE_DIR}}/lint-tasks.yml"
+      - "package.json"
+    status:
+      - "test -f '{{.CHECKSUM_FILE}}'"
+      - >-
+        diff
+        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        "{{.CHECKSUM_FILE}}"
 
   venv:
     internal: true
