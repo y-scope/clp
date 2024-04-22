@@ -1,6 +1,10 @@
 import {Mongo} from "meteor/mongo";
 
 
+const CompressionJobsCollection = new Mongo.Collection(
+    Meteor.settings.public.CompressionJobsCollectionName
+);
+
 /**
  * Enum representing the statistics collection IDs.
  *
@@ -11,10 +15,6 @@ const STATS_COLLECTION_ID = Object.freeze({
 });
 
 const StatsCollection = new Mongo.Collection(Meteor.settings.public.StatsCollectionName);
-
-const CompressionJobsCollection = new Mongo.Collection(
-    Meteor.settings.public.CompressionJobsCollectionName
-);
 
 export {
     CompressionJobsCollection,
