@@ -33,20 +33,10 @@ const COMPRESSION_JOB_STATUS_ICONS = Object.freeze([
 /* eslint-enable line-comment-position, no-inline-comments, @stylistic/js/no-multi-spaces */
 
 /**
- * @typedef {object} CompressionJob
- * @property {number} _id
- * @property {number} status
- * @property {string} status_msg
- * @property {Date} start_time
- * @property {number} duration
- * @property {number} uncompressed_size
- * @property {number} compressed_size
- */
-
-/**
  * Renders an ingestion job.
  *
- * @param {CompressionJob} job The job object containing information about the compression job.
+ * @param {import("/imports/api/ingestion/types").CompressionJob} job The job object containing
+ * information about the compression job.
  * @return {React.ReactElement}
  */
 const IngestionJobRow = ({job}) => {
