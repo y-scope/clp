@@ -19,6 +19,10 @@ jobs:
         with:
           python-version: "3.11"
 
+      - uses: "meteorengineer/setup-meteor@v1"
+        with:
+          meteor-release: '2.15.0'
+
       - name: "Install task"
         shell: "bash"
         run: "npm install -g @go-task/cli"
