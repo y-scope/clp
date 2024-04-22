@@ -264,7 +264,7 @@ tasks:
       NODEJS_FILE_BASE_NAME:
         sh: >-
           curl --silent "{{.NODEJS_VERSION_BASE_URL}}"
-          | grep 
+          | grep
           --only-matching
           --perl-regexp
           --max-count 1
