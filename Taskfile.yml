@@ -260,9 +260,10 @@ tasks:
       vars: ["NODEJS_VERSION", "OUTPUT_DIR"]
     vars:
       NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
+      NODEJS_VERSION_BASE_URL: "https://nodejs.org/dist/{{.NODEJS_VERSION}}/"
       NODEJS_FILE_BASE_NAME:
         sh: >-
-          curl --silent "https://nodejs.org/dist/{{.NODEJS_VERSION}}/"
+          curl --silent "{{.NODEJS_VERSION_BASE_URL}}"
           | grep 
           --only-matching
           --perl-regexp
@@ -275,7 +276,7 @@ tasks:
       - "mkdir -p '{{.OUTPUT_DIR}}'"
       - >-
         curl -fsSL
-        "https://nodejs.org/dist/{{.NODEJS_VERSION}}/{{.NODEJS_FILE_TAR_NAME}}"
+        "{{.NODEJS_VERSION_BASE_URL}}{{.NODEJS_FILE_TAR_NAME}}"
         -o "{{.OUTPUT_DIR}}/{{.NODEJS_FILE_TAR_NAME}}"
       - "tar xf '{{.OUTPUT_DIR}}/{{.NODEJS_FILE_TAR_NAME}}' -C '{{.OUTPUT_DIR}}'"
       - >-
