@@ -1,10 +1,11 @@
-# Setup
+# CLP WebUI
 
 ## Requirements
 
 * Node.js v14 for building and running the webui
   * Meteor.js only [supports](https://docs.meteor.com/install#prereqs-node) Node.js versions >= v10
     and <= v14.
+* Node.js v18 or higher for linting the webui
 * (Optional) [nvm (Node Version Manager)][nvm] to manage different versions of Node.js
 * [Meteor.js](https://docs.meteor.com/install.html#installation)
 
@@ -29,7 +30,7 @@ for some other reason, you should rerun this command.
 > dependencies are automatically installed when switching to Node.js v18 or higher for linting
 > purposes, as outlined in the [Linting](#linting) section.
 
-# Running in development
+## Running in development
 
 The full functionality of the webui depends on other components in the CLP
 package:
@@ -59,4 +60,55 @@ package:
 5. The Web UI should now be available at `http://<webui.host>:<webui.port>`
    (e.g., http://localhost:4000).
 
+## Linting
+
+We enforce code quality and consistency across our project using [ESLint][eslint]. Due to specific
+dependencies, linting this project requires Node.js v18 or higher. We offer two methods for managing
+linting processes; you may choose either one according to your preference.
+
+### Method 1 - Run `Taskfile` tasks
+
+Within the project's root directory, predefined `Taskfile` tasks are available to automatically
+manage dependency setup and linting operations.
+
+#### Checking for linting errors
+
+```shell
+cd <clp_repo>
+task lint:js-check
+```
+
+This will run ESLint on the entire project's source code and report any linting errors.
+
+#### Automatically fixing linting errors
+
+```shell
+cd <clp_repo>
+task lint:js-fix
+```
+
+This command attempts to automatically fix any linting issues found in the project.
+
+### Method 2: IDE Integration
+
+To integrate ESLint into IDEs like WebStorm and VS Code, follow these setup steps:
+
+1. Switch to Node.js v18 or higher
+    
+    ```shell
+    # Install node v18 if not already installed
+    nvm install 18
+
+    # Switch to node v18
+    nvm use 18
+    ```
+
+2. Re-install the project's dependencies with `--package-lock=false` to prevent `npm` from checking the
+   `package-lock.json` file version:
+
+    ```shell
+    npm install --package-lock=false
+    ```
+
+[eslint]: https://eslint.org/
 [nvm]: https://github.com/nvm-sh/nvm
