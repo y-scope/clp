@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "ColumnReader.hpp"
+
 class JsonSerializer {
 public:
     enum Op : uint8_t {
@@ -74,9 +76,10 @@ public:
         m_json_string += ",";
     }
 
-    void append_value_with_quotes(std::string const& value) {
+    void
+    append_value_from_column_with_quotes(clp_s::BaseColumnReader* column, uint64_t cur_message) {
         m_json_string += "\"";
-        m_json_string += value;
+        column->extract_string_value_into_buffer(cur_message, m_json_string);
         m_json_string += "\",";
     }
 

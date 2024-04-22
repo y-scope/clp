@@ -93,9 +93,7 @@ void SchemaReader::generate_json_string() {
             case JsonSerializer::Op::AddStringField: {
                 column = m_reordered_columns[column_id_index++];
                 m_json_serializer.append_key(column->get_name());
-                m_json_serializer.append_value_with_quotes(
-                        std::get<std::string>(column->extract_value(m_cur_message))
-                );
+                m_json_serializer.append_value_from_column_with_quotes(column, m_cur_message);
                 break;
             }
             case JsonSerializer::Op::AddArrayField: {
