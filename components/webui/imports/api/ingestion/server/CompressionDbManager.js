@@ -50,6 +50,9 @@ class CompressionDbManager {
                 LIMIT ${limit}
             )
         `);
+
+        // The initial select may not include the jobs specified by `jobIds`, so we select
+        // them explicitly and then deduplicate the rows with a UNION DISTINCT clause.
         jobIds.forEach((jobId) => {
             queries.push(`
                 UNION DISTINCT
@@ -60,6 +63,7 @@ class CompressionDbManager {
                 )
             `);
         });
+
         queries.push("ORDER BY _id DESC;");
 
         const queryString = queries.join("\n");
