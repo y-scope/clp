@@ -21,7 +21,7 @@ jobs:
 
       - uses: "meteorengineer/setup-meteor@v1"
         with:
-          meteor-release: '2.15'
+          meteor-release: "2.15"
 
       - name: "Install task"
         shell: "bash"
