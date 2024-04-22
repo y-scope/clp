@@ -56,7 +56,7 @@ const IngestionJobRow = ({job}) => {
         <tr>
             <td className={"text-center"}>
                 <OverlayTrigger
-                    placement={"bottom-end"}
+                    placement={"bottom-start"}
                     overlay={
                         <Tooltip>
                             {COMPRESSION_JOB_STATUS_NAMES[job.status]}
