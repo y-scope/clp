@@ -52,15 +52,9 @@ const COMPRESSION_JOB_WAITING_STATES = Object.freeze([
  */
 const COMPRESSION_JOB_STATUS_NAMES = Object.freeze(Object.keys(COMPRESSION_JOB_STATUS));
 
-/**
- * The maximum number of compression jobs to retrieve at a time.
- */
-const COMPRESSION_MAX_RETRIEVE_JOBS = 5;
-
 export {
     COMPRESSION_JOB_STATUS,
     COMPRESSION_JOB_STATUS_NAMES,
     COMPRESSION_JOB_WAITING_STATES,
     COMPRESSION_JOBS_TABLE_COLUMN_NAMES,
-    COMPRESSION_MAX_RETRIEVE_JOBS,
 };

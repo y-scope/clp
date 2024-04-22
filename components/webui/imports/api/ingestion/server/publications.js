@@ -4,20 +4,22 @@ import {logger} from "/imports/utils/logger";
 import {MONGO_SORT_BY_ID} from "/imports/utils/mongo";
 
 import {
-    CompressionJobsCollection,
-    STATS_COLLECTION_ID,
-    StatsCollection,
+    CompressionJobsCollection, STATS_COLLECTION_ID, StatsCollection,
 } from "../collections";
 import {
-    COMPRESSION_JOB_WAITING_STATES,
-    COMPRESSION_JOBS_TABLE_COLUMN_NAMES,
-    COMPRESSION_MAX_RETRIEVE_JOBS,
+    COMPRESSION_JOB_WAITING_STATES, COMPRESSION_JOBS_TABLE_COLUMN_NAMES,
 } from "../constants";
 import CompressionDbManager from "./CompressionDbManager";
 import StatsDbManager from "./StatsDbManager";
 
 
 const COMPRESSION_JOBS_REFRESH_INTERVAL_MILLIS = 1000;
+
+/**
+ * The maximum number of compression jobs to retrieve at a time.
+ */
+const COMPRESSION_MAX_RETRIEVE_JOBS = 5;
+
 const STATS_REFRESH_INTERVAL_MILLIS = 5000;
 
 /**
