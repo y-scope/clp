@@ -173,6 +173,7 @@ tasks:
         COMPONENT: "{{.TASK}}"
 
   webui:
+    deps: ["webui-node-modules"]
     dir: "components/webui"
     platforms: ["386", "amd64"]
     vars:
@@ -181,7 +182,6 @@ tasks:
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
-      - "meteor npm install --production"
       - "meteor build --directory '{{.OUTPUT_DIR}}'"
       - >-
         rsync -a
@@ -283,6 +283,31 @@ tasks:
         mv "{{.OUTPUT_DIR}}/{{.NODEJS_FILE_BASE_NAME}}"
         "{{.OUTPUT_DIR}}/node"
       - "rm -f '{{.OUTPUT_DIR}}/{{.NODEJS_FILE_TAR_NAME}}'"
+
+  webui-node-modules:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
+      WEBUI_SRC_DIR: "{{.TASKFILE_DIR}}/components/webui"
+      OUTPUT_DIR: "{{.WEBUI_SRC_DIR}}/node_modules"
+    dir: "{{.WEBUI_SRC_DIR}}"
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "meteor npm install --production"
+      # Checksum the generated files (this command must be last)
+      - >-
+        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
+        | md5sum > "{{.CHECKSUM_FILE}}"
+    sources:
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - ".meteor/packages"
+      - "package.json"
+    status:
+      - "test -f '{{.CHECKSUM_FILE}}'"
+      - >-
+        diff
+        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        "{{.CHECKSUM_FILE}}"
 
   package-venv:
     internal: true

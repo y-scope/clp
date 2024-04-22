@@ -53,7 +53,8 @@ tasks:
         vars:
           LINT_CMD: "check"
     sources: &js_source_files
-      - "{{.BUILD_DIR}}/lint#node-modules.md5"
+      - "{{.BUILD_DIR}}/lint#linter-node-modules.md5"
+      - "{{.BUILD_DIR}}/webui-node-modules.md5"
       - "{{.TASKFILE_DIR}}/lint-tasks.yml"
       - "client/**/*.js"
       - "client/**/*.jsx"
@@ -117,10 +118,10 @@ tasks:
     internal: true
     requires:
       vars: ["LINT_CMD"]
-    deps: ["node-modules"]
+    deps: ["linter-node-modules"]
     dir: "{{.TASKFILE_DIR}}/components/webui"
     cmds:
-      - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm run 'lint:{{.LINT_CMD}}'"
+      - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm --prefix linter/ run 'lint:{{.LINT_CMD}}'"
 
   py:
     internal: true
@@ -162,26 +163,26 @@ tasks:
         <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
         "{{.CHECKSUM_FILE}}"
 
-  node-modules:
+  linter-node-modules:
     internal: true
+    deps: [":webui-node-modules"]
+    dir: "{{.WEBUI_LINTER_DIR}}"
     vars:
-      WEBUI_SRC_DIR: "{{.TASKFILE_DIR}}/components/webui"
-      OUTPUT_DIR: "{{.WEBUI_SRC_DIR}}/node_modules"
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/lint#node-modules.md5"
-    dir: "{{.WEBUI_SRC_DIR}}"
-    deps: ["linter-nodejs"]
+      WEBUI_LINTER_DIR: "{{.TASKFILE_DIR}}/components/webui/linter"
+      OUTPUT_DIR: "{{.WEBUI_LINTER_DIR}}/node_modules"
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/lint#linter-node-modules.md5"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
-      # `--package-lock=false`: prevent `npm` from checking the `package-lock.json` file version
-      - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm install --package-lock=false"
+      - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm install"
       # Checksum the generated files (this command must be last)
       - >-
         tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
         | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
       - "{{.BUILD_DIR}}/lint#linter-nodejs.md5"
+      - "{{.BUILD_DIR}}/webui-node-modules.md5"
       - "{{.TASKFILE_DIR}}/lint-tasks.yml"
-      - "package.json"
+      - "../package.json"
     status:
       - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
