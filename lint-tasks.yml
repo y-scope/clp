@@ -121,7 +121,7 @@ tasks:
     deps: ["linter-node-modules"]
     dir: "{{.TASKFILE_DIR}}/components/webui"
     cmds:
-      - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm --prefix linter/ run 'lint:{{.LINT_CMD}}'"
+      - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm run 'lint:{{.LINT_CMD}}'"
 
   py:
     internal: true
