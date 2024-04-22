@@ -84,7 +84,7 @@ const IngestionJobRow = ({job}) => {
                             icon={COMPRESSION_JOB_STATUS_ICONS[job.status]}/>}
                 </OverlayTrigger>
             </td>
-            <td className={"fw-bold"}>
+            <td className={"fw-bold text-end"}>
                 {job._id}
             </td>
             <td className={"text-end"}>

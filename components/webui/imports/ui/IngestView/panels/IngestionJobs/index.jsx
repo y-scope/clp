@@ -41,7 +41,7 @@ const IngestionJobs = () => {
                 <thead>
                     <tr>
                         <th className={"text-center"}>Status</th>
-                        <th>Job ID</th>
+                        <th className={"text-end"}>Job ID</th>
                         <th className={"text-end"}>Speed</th>
                         <th className={"text-end"}>Data Ingested</th>
                         <th className={"text-end"}>Compressed Size</th>
