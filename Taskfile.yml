@@ -278,7 +278,7 @@ tasks:
         curl -fsSL
         "{{.NODEJS_VERSION_BASE_URL}}{{.NODEJS_FILE_TAR_NAME}}"
         -o "{{.OUTPUT_DIR}}/{{.NODEJS_FILE_TAR_NAME}}"
-      - "tar xf '{{.OUTPUT_DIR}}/{{.NODEJS_FILE_TAR_NAME}}' -C '{{.OUTPUT_DIR}}'"
+      - "tar xf '{{.OUTPUT_DIR}}/{{.NODEJS_FILE_TAR_NAME}}' --directory '{{.OUTPUT_DIR}}'"
       - >-
         mv "{{.OUTPUT_DIR}}/{{.NODEJS_FILE_BASE_NAME}}"
         "{{.OUTPUT_DIR}}/node"

@@ -63,18 +63,16 @@ package:
 ## Linting
 
 We enforce code quality and consistency across our project using [ESLint][eslint]. Due to specific
-dependencies, linting this project requires Node.js v18 or higher. We offer two methods for managing
-linting processes; you may choose either one according to your preference.
+dependencies, linting this project requires Node.js v18 or higher. We offer two methods for
+performing linting; you may choose either one according to your preference.
 
-### Method 1 - Run `Taskfile` tasks
+### Method 1: Run `Taskfile` tasks
 
-Within the project's root directory, predefined `Taskfile` tasks are available to automatically
-manage dependency setup and linting operations.
+`Taskfile` tasks are available to automatically manage dependency setup and linting operations.
 
 #### Checking for linting errors
 
 ```shell
-cd <clp_repo>
 task lint:js-check
 ```
 
@@ -83,7 +81,6 @@ This will run ESLint on the entire project's source code and report any linting 
 #### Automatically fixing linting errors
 
 ```shell
-cd <clp_repo>
 task lint:js-fix
 ```
 
@@ -91,20 +88,22 @@ This command attempts to automatically fix any linting issues found in the proje
 
 ### Method 2: IDE Integration
 
-To integrate ESLint into IDEs like WebStorm and VS Code, follow these setup steps:
+To integrate ESLint into IDEs like WebStorm and VSCode, follow these steps:
 
 1. Switch to Node.js v18 or higher
-    
     ```shell
-    # Install node v18 if not already installed
-    nvm install 18
+    # Install the latest node if not already installed
+    nvm install node
 
-    # Switch to node v18
-    nvm use 18
+    # Switch to the latest node
+    nvm use node
     ```
 
-2. Re-install the project's dependencies with `--package-lock=false` to prevent `npm` from checking the
-   `package-lock.json` file version:
+2. Re-install the project's dependencies.
+    * `--package-lock=false` is used to make `npm` *actually* install the dependencies; otherwise
+      the first invocation will only update `package-lock.json`, and installing the dependencies
+      requires a second invocation. This is likely because the initial `package-lock.json` is from a
+      much older version of `npm` than the one used below.
 
     ```shell
     npm install --package-lock=false

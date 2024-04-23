@@ -56,6 +56,7 @@ tasks:
       - "{{.BUILD_DIR}}/lint#linter-node-modules.md5"
       - "{{.BUILD_DIR}}/webui-node-modules.md5"
       - "{{.TASKFILE_DIR}}/lint-tasks.yml"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "client/**/*.js"
       - "client/**/*.jsx"
       - "imports/**/*.js"
@@ -165,7 +166,7 @@ tasks:
 
   linter-node-modules:
     internal: true
-    deps: [":webui-node-modules"]
+    deps: [":webui-node-modules", "linter-nodejs"]
     dir: "{{.WEBUI_LINTER_DIR}}"
     vars:
       WEBUI_LINTER_DIR: "{{.TASKFILE_DIR}}/components/webui/linter"
@@ -182,6 +183,7 @@ tasks:
       - "{{.BUILD_DIR}}/lint#linter-nodejs.md5"
       - "{{.BUILD_DIR}}/webui-node-modules.md5"
       - "{{.TASKFILE_DIR}}/lint-tasks.yml"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "../package.json"
     status:
       - "test -f '{{.CHECKSUM_FILE}}'"
