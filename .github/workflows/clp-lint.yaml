@@ -23,7 +23,7 @@ jobs:
         run: |-
           release_file="./components/webui/.meteor/release"
           meteor_version=$(grep --only-matching --perl-regexp "[\d.]+" $release_file)
-          echo "meteor_version=${meteor_version}" >> $GITHUB_OUTPUT
+          echo "meteor_version=${meteor_version}" | tee --append $GITHUB_OUTPUT
 
       - uses: "meteorengineer/setup-meteor@v1"
         with:
