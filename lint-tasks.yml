@@ -143,7 +143,7 @@ tasks:
   linter-nodejs:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/lint#linter-nodejs.md5"
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.LINTER_NODEJS_BUILD_DIR}}"
     cmds:
       - task: ":nodejs"
@@ -171,7 +171,7 @@ tasks:
     vars:
       WEBUI_LINTER_DIR: "{{.TASKFILE_DIR}}/components/webui/linter"
       OUTPUT_DIR: "{{.WEBUI_LINTER_DIR}}/node_modules"
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/lint#linter-node-modules.md5"
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm install"
