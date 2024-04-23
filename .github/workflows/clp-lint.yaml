@@ -21,8 +21,8 @@ jobs:
 
       - id: "parse_meteor_version"
         run: |-
-          meteor_version= \
-            $(grep --only-matching --perl-regexp '[\d.]+' \'./components/webui/.meteor/release')
+          release_file="./components/webui/.meteor/release"
+          meteor_version=$(grep --only-matching --perl-regexp "[\d.]+" $release_file)
           echo "meteor_version=${meteor_version}" >> $GITHUB_OUTPUT
 
       - uses: "meteorengineer/setup-meteor@v1"
