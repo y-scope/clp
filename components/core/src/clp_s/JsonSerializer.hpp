@@ -76,6 +76,10 @@ public:
         m_json_string += ",";
     }
 
+    void append_value_from_column(clp_s::BaseColumnReader* column, uint64_t cur_message) {
+        column->extract_string_value_into_buffer(cur_message, m_json_string);
+    }
+
     void
     append_value_from_column_with_quotes(clp_s::BaseColumnReader* column, uint64_t cur_message) {
         m_json_string += "\"";
