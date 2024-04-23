@@ -106,7 +106,7 @@ To integrate ESLint into IDEs like WebStorm and VSCode, follow these steps:
       much older version of `npm` than the one used below.
 
     ```shell
-    npm install --package-lock=false
+    npm --package-lock=false install eslint-config-yscope@latest
     ```
 
 [eslint]: https://eslint.org/
