@@ -1,4 +1,5 @@
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Placeholder from "react-bootstrap/Placeholder";
 import Spinner from "react-bootstrap/Spinner";
 import Tooltip from "react-bootstrap/Tooltip";
 
@@ -16,6 +17,8 @@ import {
     COMPRESSION_JOB_STATUS_NAMES,
 } from "/imports/api/ingestion/constants";
 import {computeHumanSize} from "/imports/utils/misc";
+
+import PlaceholderText from "./PlaceholderText";
 
 
 /**
@@ -37,20 +40,31 @@ const COMPRESSION_JOB_STATUS_ICONS = Object.freeze({
  * @return {React.ReactElement}
  */
 const IngestionJobRow = ({job}) => {
-    let speedText = "";
-    let uncompressedSizeText = "";
-    let compressedSizeText = "";
-
     if (null === job.duration && null !== job.start_time) {
         job.duration = dayjs.duration(
             dayjs() - dayjs(job.start_time)
         ).asSeconds();
     }
-    if (0 < job.duration) {
-        speedText = `${computeHumanSize(job.uncompressed_size / job.duration)}/s`;
-        uncompressedSizeText = computeHumanSize(job.uncompressed_size);
-        compressedSizeText = computeHumanSize(job.compressed_size);
-    }
+
+    const uncompressedSize = Number(job.uncompressed_size);
+    const uncompressedSizeText =
+        (false === isNaN(uncompressedSize) && 0 !== uncompressedSize) ?
+            computeHumanSize(uncompressedSize) :
+            "";
+
+    const speedText = (
+        0 < job.duration &&
+        false === isNaN(uncompressedSize) &&
+        0 !== uncompressedSize
+    ) ?
+        `${computeHumanSize(job.uncompressed_size / job.duration)}/s` :
+        "";
+
+    const compressedSize = Number(job.compressed_size);
+    const compressedSizeText =
+        (false === isNaN(compressedSize) && 0 !== compressedSize) ?
+            computeHumanSize(compressedSize) :
+            "";
 
     return (
         <tr>
@@ -75,13 +89,13 @@ const IngestionJobRow = ({job}) => {
                 {job._id}
             </td>
             <td className={"text-end"}>
-                {speedText}
+                <PlaceholderText text={speedText}/>
             </td>
             <td className={"text-end"}>
-                {uncompressedSizeText}
+                <PlaceholderText text={uncompressedSizeText}/>
             </td>
             <td className={"text-end"}>
-                {compressedSizeText}
+                <PlaceholderText text={compressedSizeText}/>
             </td>
         </tr>
     );
