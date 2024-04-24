@@ -1,0 +1,14 @@
+{
+  "scripts": {
+    "lint:check": "npx eslint --no-eslintrc --config package.json ../client ../imports ../server ../tests ../launcher.js",
+    "lint:fix": "npx eslint --fix --no-eslintrc --config package.json ../client ../imports ../server ../tests ../launcher.js"
+  },
+  "devDependencies": {
+    "eslint-config-yscope": "latest"
+  },
+  "eslintConfig": {
+    "extends": [
+      "yscope/meteor"
+    ]
+  }
+}

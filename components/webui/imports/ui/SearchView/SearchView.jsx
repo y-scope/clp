@@ -10,7 +10,6 @@ import {
 import {CLP_STORAGE_ENGINES} from "/imports/api/constants";
 import {SearchResultsMetadataCollection} from "/imports/api/search/collections";
 import {
-    MONGO_SORT_ORDER,
     SEARCH_MAX_NUM_RESULTS,
     SEARCH_RESULTS_FIELDS,
     SEARCH_SIGNAL,
@@ -21,6 +20,10 @@ import {
     expandTimeRangeToDurationMultiple,
 } from "/imports/utils/datetime";
 import {unquoteString} from "/imports/utils/misc";
+import {
+    MONGO_SORT_BY_ID,
+    MONGO_SORT_ORDER,
+} from "/imports/utils/mongo";
 
 import {LOCAL_STORAGE_KEYS} from "../constants";
 import SearchControls from "./SearchControls";
@@ -117,10 +120,7 @@ const SearchView = () => {
                     fieldToSortBy.name,
                     fieldToSortBy.direction,
                 ],
-                [
-                    SEARCH_RESULTS_FIELDS.ID,
-                    fieldToSortBy.direction,
-                ],
+                MONGO_SORT_BY_ID,
             ],
         };
 

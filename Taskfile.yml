@@ -12,14 +12,14 @@ vars:
     --owner=0
     --sort=name
   CORE_COMPONENT_BUILD_DIR: "{{.TASKFILE_DIR}}/build/core"
-  NODEJS_BIN_DIR: "{{.TASKFILE_DIR}}/build/nodejs/node/bin"
-  NODEJS_BUILD_DIR: "{{.TASKFILE_DIR}}/build/nodejs"
   PACKAGE_BUILD_DIR: "{{.TASKFILE_DIR}}/build/clp-package"
   PACKAGE_VENV_DIR: "{{.TASKFILE_DIR}}/build/package-venv"
   PACKAGE_VERSION: "0.0.3-dev"
   PYTHON_VERSION:
     sh: "python3 -c \"import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')\""
   WEBUI_BUILD_DIR: "{{.TASKFILE_DIR}}/build/webui"
+  WEBUI_NODEJS_BUILD_DIR: "{{.TASKFILE_DIR}}/build/webui-nodejs"
+  WEBUI_NODEJS_BIN_DIR: "{{.WEBUI_NODEJS_BUILD_DIR}}/node/bin"
 
 tasks:
   default:
@@ -72,8 +72,8 @@ tasks:
       - "clp-py-utils"
       - "job-orchestration"
       - "package-venv"
-      - "nodejs"
       - "webui"
+      - "webui-nodejs"
     cmds:
       - task: "clean-package"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
@@ -95,7 +95,7 @@ tasks:
         "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
         "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
         "{{.CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-        "{{.NODEJS_BIN_DIR}}/node"
+        "{{.WEBUI_NODEJS_BIN_DIR}}/node"
         "{{.OUTPUT_DIR}}/bin/"
       - "mkdir -p '{{.OUTPUT_DIR}}/var/www/'"
       - >-
@@ -104,15 +104,15 @@ tasks:
         "{{.OUTPUT_DIR}}/var/www/"
       - |-
         cd "{{.OUTPUT_DIR}}/var/www/programs/server"
-        PATH="{{.NODEJS_BIN_DIR}}":$PATH npm install
+        PATH="{{.WEBUI_NODEJS_BIN_DIR}}":$PATH npm install
       # Checksum the generated files (this command must be last)
       - |-
         cd "{{.OUTPUT_DIR}}"
         tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
-      - "{{.BUILD_DIR}}/nodejs.md5"
       - "{{.BUILD_DIR}}/package-venv.md5"
       - "{{.BUILD_DIR}}/webui.md5"
+      - "{{.BUILD_DIR}}/webui-nodejs.md5"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
@@ -172,39 +172,8 @@ tasks:
       vars:
         COMPONENT: "{{.TASK}}"
 
-  nodejs:
-    vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
-      NODEJS_VERSION: "14.21.3"
-      NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
-      OUTPUT_DIR: "{{.NODEJS_BUILD_DIR}}"
-      TAR_FILE_NAME: "node-v{{.NODEJS_VERSION}}-linux-{{.NODEJS_ARCH}}.tar.xz"
-    cmds:
-      - "rm -rf '{{.OUTPUT_DIR}}/node'"
-      - "mkdir -p '{{.OUTPUT_DIR}}'"
-      - >-
-        curl -fsSL
-        "https://nodejs.org/dist/v{{.NODEJS_VERSION}}/{{.TAR_FILE_NAME}}"
-        -o "{{.OUTPUT_DIR}}/{{.TAR_FILE_NAME}}"
-      - "tar xf '{{.OUTPUT_DIR}}/{{.TAR_FILE_NAME}}' -C '{{.OUTPUT_DIR}}'"
-      - >-
-        mv "{{.OUTPUT_DIR}}/node-v{{.NODEJS_VERSION}}-linux-{{.NODEJS_ARCH}}"
-        "{{.OUTPUT_DIR}}/node"
-      - "rm -f '{{.OUTPUT_DIR}}/{{.TAR_FILE_NAME}}'"
-      # Checksum the generated files (this command must be last)
-      - |-
-        cd "{{.OUTPUT_DIR}}"
-        tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
-    sources:
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
-    status:
-      - "test -f '{{.CHECKSUM_FILE}}'"
-      - >-
-        diff
-        <(cd '{{.OUTPUT_DIR}}' && tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
-        "{{.CHECKSUM_FILE}}"
-
   webui:
+    deps: ["webui-node-modules"]
     dir: "components/webui"
     platforms: ["386", "amd64"]
     vars:
@@ -213,7 +182,6 @@ tasks:
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
-      - "meteor npm install --production"
       - "meteor build --directory '{{.OUTPUT_DIR}}'"
       - >-
         rsync -a
@@ -241,6 +209,28 @@ tasks:
         <(cd '{{.OUTPUT_DIR}}' && tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
         "{{.CHECKSUM_FILE}}"
 
+  webui-nodejs:
+    vars:
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
+      OUTPUT_DIR: "{{.WEBUI_NODEJS_BUILD_DIR}}"
+    cmds:
+      - task: "nodejs"
+        vars:
+          NODEJS_VERSION: "v14.21.3"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+      # Checksum the generated files (this command must be last)
+      - >-
+        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
+        | md5sum > "{{.CHECKSUM_FILE}}"
+    sources:
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+    status:
+      - "test -f '{{.CHECKSUM_FILE}}'"
+      - >-
+        diff
+        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        "{{.CHECKSUM_FILE}}"
+
   core-submodules:
     internal: true
     dir: "components/core"
@@ -263,6 +253,36 @@ tasks:
         diff
         <(cd '{{.OUTPUT_DIR}}' && tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
         "{{.CHECKSUM_FILE}}"
+
+  nodejs:
+    internal: true
+    requires:
+      vars: ["NODEJS_VERSION", "OUTPUT_DIR"]
+    vars:
+      NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
+      NODEJS_VERSION_BASE_URL: "https://nodejs.org/dist/{{.NODEJS_VERSION}}/"
+      NODEJS_FILE_BASE_NAME:
+        sh: >-
+          curl --silent "{{.NODEJS_VERSION_BASE_URL}}"
+          | grep
+          --only-matching
+          --perl-regexp
+          --max-count 1
+          "node-v\\d+\\.\\d+\\.\\d+-linux-{{.NODEJS_ARCH}}"
+          | head --lines 1
+      NODEJS_FILE_TAR_NAME: "{{.NODEJS_FILE_BASE_NAME}}.tar.xz"
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}/node'"
+      - "mkdir -p '{{.OUTPUT_DIR}}'"
+      - >-
+        curl -fsSL
+        "{{.NODEJS_VERSION_BASE_URL}}{{.NODEJS_FILE_TAR_NAME}}"
+        -o "{{.OUTPUT_DIR}}/{{.NODEJS_FILE_TAR_NAME}}"
+      - "tar xf '{{.OUTPUT_DIR}}/{{.NODEJS_FILE_TAR_NAME}}' --directory '{{.OUTPUT_DIR}}'"
+      - >-
+        mv "{{.OUTPUT_DIR}}/{{.NODEJS_FILE_BASE_NAME}}"
+        "{{.OUTPUT_DIR}}/node"
+      - "rm -f '{{.OUTPUT_DIR}}/{{.NODEJS_FILE_TAR_NAME}}'"
 
   package-venv:
     internal: true
@@ -321,6 +341,32 @@ tasks:
       - "pyproject.toml"
     generates:
       - "dist/*.whl"
+
+  webui-node-modules:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
+      WEBUI_SRC_DIR: "{{.TASKFILE_DIR}}/components/webui"
+      OUTPUT_DIR: "{{.WEBUI_SRC_DIR}}/node_modules"
+    dir: "{{.WEBUI_SRC_DIR}}"
+    cmds:
+      - "mkdir -p '{{.BUILD_DIR}}'"
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "meteor npm install --production"
+      # Checksum the generated files (this command must be last)
+      - >-
+        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
+        | md5sum > "{{.CHECKSUM_FILE}}"
+    sources:
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - ".meteor/packages"
+      - "package.json"
+    status:
+      - "test -f '{{.CHECKSUM_FILE}}'"
+      - >-
+        diff
+        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        "{{.CHECKSUM_FILE}}"
 
   component-venv:
     internal: true
