@@ -20,7 +20,7 @@ const PlaceholderText = ({
         {(0 !== text.length) ?
             text :
             (
-                (true === isAlwaysVisible) &&
+                (isAlwaysVisible) &&
                 <Placeholder
                     size={"sm"}
                     xs={4}/>
