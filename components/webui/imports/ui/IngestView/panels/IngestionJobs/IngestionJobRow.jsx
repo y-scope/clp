@@ -1,5 +1,4 @@
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Placeholder from "react-bootstrap/Placeholder";
 import Spinner from "react-bootstrap/Spinner";
 import Tooltip from "react-bootstrap/Tooltip";
 
@@ -68,6 +67,8 @@ const IngestionJobRow = ({job}) => {
         speedText = `${computeHumanSize(job.uncompressed_size / job.duration)}/s`;
     }
 
+    const isPlaceholderVisible = job.status !== COMPRESSION_JOB_STATUS.FAILED;
+
     return (
         <tr>
             <td className={"text-center"}>
@@ -92,17 +93,17 @@ const IngestionJobRow = ({job}) => {
             </td>
             <td className={"text-end"}>
                 <PlaceholderText
-                    isAlwaysVisible={job.status !== COMPRESSION_JOB_STATUS.FAILED}
+                    isAlwaysVisible={isPlaceholderVisible}
                     text={speedText}/>
             </td>
             <td className={"text-end"}>
                 <PlaceholderText
-                    isAlwaysVisible={job.status !== COMPRESSION_JOB_STATUS.FAILED}
+                    isAlwaysVisible={isPlaceholderVisible}
                     text={uncompressedSizeText}/>
             </td>
             <td className={"text-end"}>
                 <PlaceholderText
-                    isAlwaysVisible={job.status !== COMPRESSION_JOB_STATUS.FAILED}
+                    isAlwaysVisible={isPlaceholderVisible}
                     text={compressedSizeText}/>
             </td>
         </tr>
