@@ -39,8 +39,7 @@
     "winston-daily-rotate-file": "^4.7.1"
   },
   "devDependencies": {
-    "jsdoc": "^4.0.2",
-    "eslint-config-yscope": "latest"
+    "jsdoc": "^4.0.2"
   },
   "eslintConfig": {
     "extends": [

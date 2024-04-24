@@ -18,18 +18,6 @@ meteor npm install
 If you ever add a package manually to `package.json` or `package.json` changes
 for some other reason, you should rerun this command.
 
-> [!NOTE]
-> When running this command, you might see warnings related to uninstalled `eslint-config-yscope`
-> peer dependencies, like the ones below:
-> ```
-> npm WARN eslint-config-yscope@0.0.20 requires a peer of eslint@^8.57.0 but
->  none is installed. You must install peer dependencies yourself.
-> ```
-> **These `eslint-config-yscope` warnings can be safely ignored.** They occur because the default
-> npm version in Node.js v14 does not automatically install peer dependencies. If needed, peer
-> dependencies are automatically installed when switching to Node.js v18 or higher for linting
-> purposes, as outlined in the [Linting](#linting) section.
-
 ## Running in development
 
 The full functionality of the webui depends on other components in the CLP
@@ -99,14 +87,12 @@ To integrate ESLint into IDEs like WebStorm and VSCode, follow these steps:
     nvm use node
     ```
 
-2. Re-install the project's dependencies.
-    * `--package-lock=false` is used to make `npm` *actually* install the dependencies; otherwise
-      the first invocation will only update `package-lock.json`, and installing the dependencies
-      requires a second invocation. This is likely because the initial `package-lock.json` is from a
-      much older version of `npm` than the one used below.
+2. Install the latest ESLint shared config package.
+    * We use `--package-lock=false` and `--no-save` to avoid adding the package to
+      `package-lock.json` and `package.json`.
 
     ```shell
-    npm install --package-lock=false
+    npm --package-lock=false install --no-save eslint-config-yscope@latest
     ```
 
 [eslint]: https://eslint.org/

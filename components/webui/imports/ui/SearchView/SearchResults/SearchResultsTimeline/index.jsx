@@ -19,6 +19,7 @@ import {
     expandTimeRangeToDurationMultiple,
     TIME_UNIT,
 } from "/imports/utils/datetime";
+import {deselectAll} from "/imports/utils/misc";
 
 import "chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm";
 import "./SearchResultsTimeline.scss";
@@ -262,7 +263,12 @@ const SearchResultsTimeline = ({
         <Bar
             className={"timeline-chart"}
             data={data}
-            options={options}/>
+            options={options}
+
+            // If the user inadvertently selected the timeline, then dragging on it will drag the
+            // timeline object rather than selecting a time range within it. Thus, on mouse down, we
+            // clear any existing selections so that the following drag selects a time range.
+            onMouseDown={deselectAll}/>
     );
 };
 
