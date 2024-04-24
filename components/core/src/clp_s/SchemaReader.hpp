@@ -96,7 +96,7 @@ public:
         m_local_id_to_global_id.clear();
         m_global_id_to_local_id.clear();
         m_global_id_to_unordered_object.clear();
-        m_local_schema_tree->clear();
+        m_local_schema_tree.clear();
         m_json_serializer.clear();
         m_global_schema_tree = std::move(schema_tree);
         m_should_marshal_records = should_marshal_records;
@@ -224,7 +224,7 @@ private:
     std::function<epochtime_t()> m_get_timestamp;
 
     std::shared_ptr<SchemaTree> m_global_schema_tree;
-    std::unique_ptr<SchemaTree> m_local_schema_tree;
+    SchemaTree m_local_schema_tree;
     std::unordered_map<int32_t, int32_t> m_global_id_to_local_id;
     std::unordered_map<int32_t, int32_t> m_local_id_to_global_id;
 

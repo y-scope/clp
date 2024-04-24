@@ -254,7 +254,7 @@ void SchemaReader::generate_local_tree(int32_t global_id) {
             continue;
         }
 
-        int32_t local_id = m_local_schema_tree->add_node(
+        int32_t local_id = m_local_schema_tree.add_node(
                 parent_id == -1 ? -1 : m_global_id_to_local_id[parent_id],
                 node.get_type(),
                 node.get_key_name()
@@ -310,12 +310,12 @@ void SchemaReader::initialize_serializer() {
 }
 
 void SchemaReader::generate_json_template(int32_t id) {
-    auto const& node = m_local_schema_tree->get_node(id);
+    auto const& node = m_local_schema_tree.get_node(id);
     auto const& children_ids = node.get_children_ids();
 
     for (int32_t child_id : children_ids) {
         int32_t child_global_id = m_local_id_to_global_id[child_id];
-        auto const& child_node = m_local_schema_tree->get_node(child_id);
+        auto const& child_node = m_local_schema_tree.get_node(child_id);
         std::string const& key = child_node.get_key_name();
         switch (child_node.get_type()) {
             case NodeType::Object: {
