@@ -295,11 +295,11 @@ tasks:
       CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.PACKAGE_VENV_DIR}}"
     cmds:
-      - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "python3 -m venv '{{.OUTPUT_DIR}}'"
-      - |-
-        . "{{.OUTPUT_DIR}}/bin/activate"
-        pip3 install --upgrade -r "{{.ROOT_DIR}}/requirements.txt"
+      - task: "create-venv"
+        vars:
+          LABEL: "package"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+          REQUIREMENTS_FILE: "{{.ROOT_DIR}}/requirements.txt"
       # Checksum the generated files (this command must be last)
       - >-
         tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
@@ -377,16 +377,16 @@ tasks:
     internal: true
     requires:
       vars: ["COMPONENT", "OUTPUT_DIR"]
-    label: "{{.COMPONENT}}_venv"
+    label: "{{.COMPONENT}}-venv"
     dir: "components/{{.COMPONENT}}"
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.COMPONENT}}_venv.md5"
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.COMPONENT}}-venv.md5"
     cmds:
-      - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "python3 -m venv '{{.OUTPUT_DIR}}'"
-      - |-
-        . "{{.OUTPUT_DIR}}/bin/activate"
-        pip3 install --upgrade -r "{{.ROOT_DIR}}/requirements.txt"
+      - task: "create-venv"
+        vars:
+          LABEL: "{{.COMPONENT}}"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+          REQUIREMENTS_FILE: "{{.ROOT_DIR}}/requirements.txt"
       # Checksum the generated files (this command must be last)
       - >-
         tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
@@ -411,3 +411,26 @@ tasks:
     dir: "components/{{.COMPONENT}}"
     cmds:
       - "rm -rf dist"
+
+  create-venv:
+    internal: true
+    requires:
+      vars: ["LABEL", "OUTPUT_DIR", "REQUIREMENTS_FILE"]
+    label: "create-venv-{{.LABEL}}"
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "python3 -m venv '{{.OUTPUT_DIR}}'"
+      # Remove calls to `hash` from the venv activation script since Task uses `gosh` rather than
+      # `bash`.
+      # NOTE: Older versions of Python's venv would only call `hash` if they detected the running
+      # shell was one that had the command, but that's not the case in newer versions.
+      - |-
+        # NOTE: We can't use `sed -i` since `-i` has different syntax on Linux and macOS
+        old="{{.OUTPUT_DIR}}/bin/activate"
+        new="{{.OUTPUT_DIR}}/bin/activate.tmp"
+        sed -E 's/^([[:space:]]*)hash[[:space:]]+.*/\1true/g' "${old}" > "${new}"
+        mv "${new}" "${old}"
+      - |-
+        . "{{.OUTPUT_DIR}}/bin/activate"
+        pip3 install --upgrade pip
+        pip3 install --upgrade -r "{{.REQUIREMENTS_FILE}}"

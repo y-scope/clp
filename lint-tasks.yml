@@ -194,19 +194,26 @@ tasks:
 
   venv:
     internal: true
+    vars:
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      OUTPUT_DIR: "{{.LINT_VENV_DIR}}"
     cmds:
-      - "rm -rf '{{.LINT_VENV_DIR}}'"
-      - "python3 -m venv '{{.LINT_VENV_DIR}}'"
-      # Remove calls to `hash` since Task uses `gosh` rather than `bash`.
-      # NOTE: Older versions of Python's venv would only call `hash` if they detected the running
-      # shell was one that had the command, but that's not the case in newer versions.
-      - "sed -i 's/^\\s*hash\\s\\+.*/true/g' \"{{.LINT_VENV_DIR}}/bin/activate\""
-      - |-
-        . "{{.LINT_VENV_DIR}}/bin/activate"
-        pip3 install --upgrade pip
-        pip3 install --upgrade -r lint-requirements.txt
+      - task: ":create-venv"
+        vars:
+          LABEL: "lint"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+          REQUIREMENTS_FILE: "lint-requirements.txt"
+      # Checksum the generated files (this command must be last)
+      - >-
+        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
+        | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
+      - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
       - "lint-requirements.txt"
-    generates:
-      - "{{.LINT_VENV_DIR}}/**/*"
+    status:
+      - "test -f '{{.CHECKSUM_FILE}}'"
+      - >-
+        diff
+        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        "{{.CHECKSUM_FILE}}"
