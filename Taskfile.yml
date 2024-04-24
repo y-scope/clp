@@ -12,6 +12,7 @@ vars:
     --owner=0
     --sort=name
   CORE_COMPONENT_BUILD_DIR: "{{.TASKFILE_DIR}}/build/core"
+  METEOR_BUILD_DIR: "{{.TASKFILE_DIR}}/build/meteor"
   PACKAGE_BUILD_DIR: "{{.TASKFILE_DIR}}/build/clp-package"
   PACKAGE_VENV_DIR: "{{.TASKFILE_DIR}}/build/package-venv"
   PACKAGE_VERSION: "0.0.3-dev"
@@ -110,6 +111,7 @@ tasks:
         cd "{{.OUTPUT_DIR}}"
         tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
+      - "{{.BUILD_DIR}}/meteor.md5"
       - "{{.BUILD_DIR}}/package-venv.md5"
       - "{{.BUILD_DIR}}/webui.md5"
       - "{{.BUILD_DIR}}/webui-nodejs.md5"
@@ -182,7 +184,7 @@ tasks:
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
-      - "meteor build --directory '{{.OUTPUT_DIR}}'"
+      - "PATH='{{.METEOR_BUILD_DIR}}':$PATH meteor build --directory '{{.OUTPUT_DIR}}'"
       - >-
         rsync -a
         "{{.OUTPUT_DIR}}/bundle/"
@@ -195,6 +197,7 @@ tasks:
         cd "{{.OUTPUT_DIR}}"
         tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
+      - "{{.BUILD_DIR}}/meteor.md5"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "*"
       - ".meteor/*"
@@ -252,6 +255,41 @@ tasks:
       - >-
         diff
         <(cd '{{.OUTPUT_DIR}}' && tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        "{{.CHECKSUM_FILE}}"
+
+  meteor:
+    vars:
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
+      METEOR_RELEASE: "2.15"
+      METEOR_ARCH: "{{ if eq ARCH \"arm64\" }}aarch64{{ else }}x86_64{{ end }}"
+      METEOR_PLATFORM: "{{ if eq OS \"darwin\" }}osx{{ else }}linux{{ end }}"
+      METEOR_FILE_TAR_NAME: "meteor-bootstrap-os.{{.METEOR_PLATFORM}}.{{.METEOR_ARCH}}.tar.gz"
+      OUTPUT_DIR: "{{.METEOR_BUILD_DIR}}"
+      METEOR_FILE_BASE_DIR: "{{.OUTPUT_DIR}}/.meteor"
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "mkdir -p '{{.OUTPUT_DIR}}'"
+      - >-
+        curl --fail --location --show-error
+        "https://static.meteor.com/packages-bootstrap/{{.METEOR_RELEASE}}/{{.METEOR_FILE_TAR_NAME}}"
+        -o "{{.OUTPUT_DIR}}/{{.METEOR_FILE_TAR_NAME}}"
+      - "tar xf '{{.OUTPUT_DIR}}/{{.METEOR_FILE_TAR_NAME}}' --directory '{{.OUTPUT_DIR}}'"
+      - >-
+        mv "{{.METEOR_FILE_BASE_DIR}}/"*
+        "{{.OUTPUT_DIR}}"
+      - "rm -rf '{{.METEOR_FILE_BASE_DIR}}'"
+      - "rm -f '{{.OUTPUT_DIR}}/{{.METEOR_FILE_TAR_NAME}}'"
+      # Checksum the generated files (this command must be last)
+      - >-
+        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
+        | md5sum > "{{.CHECKSUM_FILE}}"
+    sources:
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+    status:
+      - "test -f '{{.CHECKSUM_FILE}}'"
+      - >-
+        diff
+        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
         "{{.CHECKSUM_FILE}}"
 
   nodejs:
@@ -343,7 +381,7 @@ tasks:
       - "dist/*.whl"
 
   webui-node-modules:
-    internal: true
+    deps: ["meteor"]
     vars:
       CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
       WEBUI_SRC_DIR: "{{.TASKFILE_DIR}}/components/webui"
@@ -352,12 +390,13 @@ tasks:
     cmds:
       - "mkdir -p '{{.BUILD_DIR}}'"
       - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "meteor npm install --production"
+      - "PATH='{{.METEOR_BUILD_DIR}}':$PATH meteor npm install --production"
       # Checksum the generated files (this command must be last)
       - >-
         tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
         | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
+      - "{{.BUILD_DIR}}/meteor.md5"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - ".meteor/packages"
       - "package.json"
