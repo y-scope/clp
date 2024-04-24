@@ -1,9 +1,9 @@
 version: "3"
 
 vars:
-  LINTER_NODEJS_BUILD_DIR: "{{.BUILD_DIR}}/linter-nodejs"
-  LINTER_NODEJS_BIN_DIR: "{{.LINTER_NODEJS_BUILD_DIR}}/node/bin"
-  LINT_VENV_DIR: "{{.BUILD_DIR}}/lint-venv"
+  G_LINTER_NODEJS_BUILD_DIR: "{{.G_BUILD_DIR}}/linter-nodejs"
+  G_LINTER_NODEJS_BIN_DIR: "{{.G_LINTER_NODEJS_BUILD_DIR}}/node/bin"
+  G_LINT_VENV_DIR: "{{.G_BUILD_DIR}}/lint-venv"
 
 tasks:
   check:
@@ -53,8 +53,8 @@ tasks:
         vars:
           LINT_CMD: "check"
     sources: &js_source_files
-      - "{{.BUILD_DIR}}/lint#linter-node-modules.md5"
-      - "{{.BUILD_DIR}}/webui-node-modules.md5"
+      - "{{.G_BUILD_DIR}}/lint#linter-node-modules.md5"
+      - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
       - "client/**/*.js"
@@ -97,7 +97,7 @@ tasks:
     deps: ["venv"]
     cmds:
       - |-
-        . "{{.LINT_VENV_DIR}}/bin/activate"
+        . "{{.G_LINT_VENV_DIR}}/bin/activate"
         yamllint .
 
   cpp:
@@ -108,7 +108,7 @@ tasks:
     dir: "{{.ROOT_DIR}}/components/core"
     cmds:
       - |-
-        . "{{.LINT_VENV_DIR}}/bin/activate"
+        . "{{.G_LINT_VENV_DIR}}/bin/activate"
         find src tests \
           -type f \
           \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.inc" \) \
@@ -122,7 +122,7 @@ tasks:
     deps: ["linter-node-modules"]
     dir: "{{.ROOT_DIR}}/components/webui"
     cmds:
-      - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm run 'lint:{{.LINT_CMD}}'"
+      - "PATH='{{.G_LINTER_NODEJS_BIN_DIR}}':$PATH npm run 'lint:{{.LINT_CMD}}'"
 
   py:
     internal: true
@@ -135,7 +135,7 @@ tasks:
           - "components/clp-py-utils/clp_py_utils"
           - "components/job-orchestration/job_orchestration"
         cmd: |-
-          . "{{.LINT_VENV_DIR}}/bin/activate"
+          . "{{.G_LINT_VENV_DIR}}/bin/activate"
           cd "{{.ITEM}}"
           black --color --line-length 100 {{.BLACK_FLAGS}} .
           ruff check {{.RUFF_FLAGS}} .
@@ -143,8 +143,8 @@ tasks:
   linter-nodejs:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
-      OUTPUT_DIR: "{{.LINTER_NODEJS_BUILD_DIR}}"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      OUTPUT_DIR: "{{.G_LINTER_NODEJS_BUILD_DIR}}"
     cmds:
       - task: ":nodejs"
         vars:
@@ -171,17 +171,17 @@ tasks:
     vars:
       WEBUI_LINTER_DIR: "{{.ROOT_DIR}}/components/webui/linter"
       OUTPUT_DIR: "{{.WEBUI_LINTER_DIR}}/node_modules"
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm update"
+      - "PATH='{{.G_LINTER_NODEJS_BIN_DIR}}':$PATH npm update"
       # Checksum the generated files (this command must be last)
       - >-
         tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
         | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
-      - "{{.BUILD_DIR}}/lint#linter-nodejs.md5"
-      - "{{.BUILD_DIR}}/webui-node-modules.md5"
+      - "{{.G_BUILD_DIR}}/lint#linter-nodejs.md5"
+      - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
       - "../package.json"
@@ -195,8 +195,8 @@ tasks:
   venv:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
-      OUTPUT_DIR: "{{.LINT_VENV_DIR}}"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      OUTPUT_DIR: "{{.G_LINT_VENV_DIR}}"
     cmds:
       - task: ":create-venv"
         vars:

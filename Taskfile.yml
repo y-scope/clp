@@ -5,13 +5,13 @@ includes:
 
 vars:
   # Paths
-  BUILD_DIR: "{{.ROOT_DIR}}/build"
-  CORE_COMPONENT_BUILD_DIR: "{{.BUILD_DIR}}/core"
-  PACKAGE_BUILD_DIR: "{{.BUILD_DIR}}/clp-package"
-  PACKAGE_VENV_DIR: "{{.BUILD_DIR}}/package-venv"
-  WEBUI_BUILD_DIR: "{{.BUILD_DIR}}/webui"
-  WEBUI_NODEJS_BUILD_DIR: "{{.BUILD_DIR}}/webui-nodejs"
-  WEBUI_NODEJS_BIN_DIR: "{{.WEBUI_NODEJS_BUILD_DIR}}/node/bin"
+  G_BUILD_DIR: "{{.ROOT_DIR}}/build"
+  G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
+  G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
+  G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
+  G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
+  G_WEBUI_NODEJS_BUILD_DIR: "{{.G_BUILD_DIR}}/webui-nodejs"
+  G_WEBUI_NODEJS_BIN_DIR: "{{.G_WEBUI_NODEJS_BUILD_DIR}}/node/bin"
 
   # Versions
   PACKAGE_VERSION: "0.0.3-dev"
@@ -32,7 +32,7 @@ tasks:
 
   clean:
     cmds:
-      - "rm -rf '{{.BUILD_DIR}}'"
+      - "rm -rf '{{.G_BUILD_DIR}}'"
       - task: "clean-python-component"
         vars:
           COMPONENT: "clp-package-utils"
@@ -45,7 +45,7 @@ tasks:
 
   clean-package:
     cmds:
-      - "rm -rf '{{.PACKAGE_BUILD_DIR}}'"
+      - "rm -rf '{{.G_PACKAGE_BUILD_DIR}}'"
 
   package-tar:
     deps:
@@ -55,22 +55,22 @@ tasks:
         sh: |
           source /etc/os-release
           echo "clp-package-${ID}-${VERSION_CODENAME}-$(arch)-v{{.PACKAGE_VERSION}}"
-    dir: "{{.BUILD_DIR}}"
+    dir: "{{.G_BUILD_DIR}}"
     cmds:
       - "rm -rf '{{.VERSIONED_PACKAGE_NAME}}' '{{.VERSIONED_PACKAGE_NAME}}.tar.gz'"
-      - "ln -s '{{.PACKAGE_BUILD_DIR}}' '{{.VERSIONED_PACKAGE_NAME}}'"
+      - "ln -s '{{.G_PACKAGE_BUILD_DIR}}' '{{.VERSIONED_PACKAGE_NAME}}'"
       - "tar czf '{{.VERSIONED_PACKAGE_NAME}}.tar.gz' --dereference '{{.VERSIONED_PACKAGE_NAME}}'"
     sources:
-      - "{{.BUILD_DIR}}/package.md5"
+      - "{{.G_BUILD_DIR}}/package.md5"
       - "{{.TASKFILE}}"
     generates:
       - "{{.VERSIONED_PACKAGE_NAME}}.tar.gz"
 
   package:
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "{{.PACKAGE_BUILD_DIR}}"
-      PACKAGE_VERSION_FILE: "{{.PACKAGE_BUILD_DIR}}/VERSION"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      OUTPUT_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
+      PACKAGE_VERSION_FILE: "{{.G_PACKAGE_BUILD_DIR}}/VERSION"
     deps:
       - "core"
       - "clp-package-utils"
@@ -86,7 +86,7 @@ tasks:
       - "rsync --copy-links /etc/os-release '{{.OUTPUT_DIR}}/etc/os-release'"
       - "mkdir -p '{{.OUTPUT_DIR}}/lib/python3/site-packages'"
       - |-
-        . "{{.PACKAGE_VENV_DIR}}/bin/activate"
+        . "{{.G_PACKAGE_VENV_DIR}}/bin/activate"
         pip3 install --upgrade \
           components/clp-package-utils/dist/*.whl \
           components/clp-py-utils/dist/*.whl \
@@ -95,34 +95,34 @@ tasks:
       - "mkdir -p '{{.OUTPUT_DIR}}/bin'"
       - >-
         rsync -a
-        "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
-        "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
-        "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
-        "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
-        "{{.CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-        "{{.WEBUI_NODEJS_BIN_DIR}}/node"
+        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
+        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
+        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
+        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
+        "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+        "{{.G_WEBUI_NODEJS_BIN_DIR}}/node"
         "{{.OUTPUT_DIR}}/bin/"
       - "mkdir -p '{{.OUTPUT_DIR}}/var/www/'"
       - >-
         rsync -a
-        "{{.WEBUI_BUILD_DIR}}/"
+        "{{.G_WEBUI_BUILD_DIR}}/"
         "{{.OUTPUT_DIR}}/var/www/"
       - |-
         cd "{{.OUTPUT_DIR}}/var/www/programs/server"
-        PATH="{{.WEBUI_NODEJS_BIN_DIR}}":$PATH npm install
+        PATH="{{.G_WEBUI_NODEJS_BIN_DIR}}":$PATH npm install
       # Checksum the generated files (this command must be last)
       - >-
         tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
         | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
-      - "{{.BUILD_DIR}}/package-venv.md5"
-      - "{{.BUILD_DIR}}/webui.md5"
-      - "{{.BUILD_DIR}}/webui-nodejs.md5"
-      - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
-      - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
-      - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
-      - "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
-      - "{{.CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+      - "{{.G_BUILD_DIR}}/package-venv.md5"
+      - "{{.G_BUILD_DIR}}/webui.md5"
+      - "{{.G_BUILD_DIR}}/webui-nodejs.md5"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
       - "{{.TASKFILE}}"
       - "/etc/os-release"
       - "components/clp-package-utils/dist/*.whl"
@@ -141,26 +141,26 @@ tasks:
     vars:
       SRC_DIR: "components/core"
     cmds:
-      - "mkdir -p '{{.CORE_COMPONENT_BUILD_DIR}}'"
-      - "cmake -S '{{.SRC_DIR}}' -B '{{.CORE_COMPONENT_BUILD_DIR}}'"
+      - "mkdir -p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
+      - "cmake -S '{{.SRC_DIR}}' -B '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
       - >-
         cmake
-        --build "{{.CORE_COMPONENT_BUILD_DIR}}"
+        --build "{{.G_CORE_COMPONENT_BUILD_DIR}}"
         --parallel
         --target clg clo clp clp-s reducer-server
     sources:
-      - "{{.BUILD_DIR}}/core-submodules.md5"
+      - "{{.G_BUILD_DIR}}/core-submodules.md5"
       - "{{.SRC_DIR}}/cmake/**/*"
       - "{{.SRC_DIR}}/CMakeLists.txt"
       - "{{.SRC_DIR}}/src/**/*"
       - "{{.TASKFILE}}"
       - "/etc/os-release"
     generates:
-      - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
-      - "{{.CORE_COMPONENT_BUILD_DIR}}/clo"
-      - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
-      - "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
-      - "{{.CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
 
   clp-package-utils:
     - task: "python-component"
@@ -182,8 +182,8 @@ tasks:
     dir: "components/webui"
     platforms: ["386", "amd64"]
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "{{.WEBUI_BUILD_DIR}}"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      OUTPUT_DIR: "{{.G_WEBUI_BUILD_DIR}}"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
@@ -216,8 +216,8 @@ tasks:
 
   webui-nodejs:
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "{{.WEBUI_NODEJS_BUILD_DIR}}"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      OUTPUT_DIR: "{{.G_WEBUI_NODEJS_BUILD_DIR}}"
     cmds:
       - task: "nodejs"
         vars:
@@ -240,7 +240,7 @@ tasks:
     internal: true
     dir: "components/core"
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "submodules"
     cmds:
       - "tools/scripts/deps-download/download-all.sh"
@@ -292,8 +292,8 @@ tasks:
   package-venv:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "{{.PACKAGE_VENV_DIR}}"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      OUTPUT_DIR: "{{.G_PACKAGE_VENV_DIR}}"
     cmds:
       - task: "create-venv"
         vars:
@@ -328,7 +328,7 @@ tasks:
     vars:
       PACKAGE:
         sh: "echo {{.COMPONENT}} | tr - _"
-      VENV_DIR: "{{.BUILD_DIR}}/{{.COMPONENT}}/venv"
+      VENV_DIR: "{{.G_BUILD_DIR}}/{{.COMPONENT}}/venv"
     dir: "components/{{.COMPONENT}}"
     cmds:
       - task: "clean-python-component"
@@ -338,7 +338,7 @@ tasks:
         . "{{.VENV_DIR}}/bin/activate"
         poetry build --format wheel
     sources:
-      - "{{.BUILD_DIR}}/{{.COMPONENT}}_venv.md5"
+      - "{{.G_BUILD_DIR}}/{{.COMPONENT}}_venv.md5"
       - "{{.PACKAGE}}/**/*"
       - "{{.ROOT_DIR}}/requirements.txt"
       - "{{.TASKFILE}}"
@@ -350,12 +350,12 @@ tasks:
   webui-node-modules:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       WEBUI_SRC_DIR: "{{.ROOT_DIR}}/components/webui"
       OUTPUT_DIR: "{{.WEBUI_SRC_DIR}}/node_modules"
     dir: "{{.WEBUI_SRC_DIR}}"
     cmds:
-      - "mkdir -p '{{.BUILD_DIR}}'"
+      - "mkdir -p '{{.G_BUILD_DIR}}'"
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "meteor npm install --production"
       # Checksum the generated files (this command must be last)
@@ -380,7 +380,7 @@ tasks:
     label: "{{.COMPONENT}}-venv"
     dir: "components/{{.COMPONENT}}"
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.COMPONENT}}-venv.md5"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.COMPONENT}}-venv.md5"
     cmds:
       - task: "create-venv"
         vars:
