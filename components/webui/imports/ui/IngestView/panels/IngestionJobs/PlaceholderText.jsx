@@ -1,5 +1,7 @@
 import Placeholder from "react-bootstrap/Placeholder";
 
+import "./PlaceholderText.scss";
+
 
 /**
  * Renders an animated text placeholder when the text is an empty string.
@@ -22,6 +24,7 @@ const PlaceholderText = ({
             (
                 (isAlwaysVisible) &&
                 <Placeholder
+                    className={"placeholder-element"}
                     size={"sm"}
                     xs={4}/>
             )}
