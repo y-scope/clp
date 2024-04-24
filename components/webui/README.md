@@ -87,11 +87,9 @@ To integrate ESLint into IDEs like WebStorm and VSCode, follow these steps:
     nvm use node
     ```
 
-2. Re-install the project's dependencies.
-    * `--package-lock=false` is used to make `npm` *actually* install the dependencies; otherwise
-      the first invocation will only update `package-lock.json`, and installing the dependencies
-      requires a second invocation. This is likely because the initial `package-lock.json` is from a
-      much older version of `npm` than the one used below.
+2. Install the latest ESLint shared config package.
+    We use `--package-lock=false` and `--no-save` to avoid adding the package to the
+`package-lock.json` and the `package.json`.
 
     ```shell
     npm --package-lock=false install --no-save eslint-config-yscope@latest
