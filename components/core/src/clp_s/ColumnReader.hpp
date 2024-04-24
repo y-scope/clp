@@ -46,6 +46,13 @@ public:
     virtual std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message)
             = 0;
 
+    /**
+     * Extracts a value from the column and serializes it into a provided buffer as a string.
+     * @param cur_message
+     * @param buffer
+     */
+    virtual void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) = 0;
+
 private:
     int32_t m_id;
 };
@@ -65,6 +72,8 @@ public:
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
+
+    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 
 private:
     UnalignedSpan<int64_t> m_values;
@@ -86,6 +95,8 @@ public:
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
 
+    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+
 private:
     UnalignedSpan<double> m_values;
 };
@@ -105,6 +116,8 @@ public:
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
+
+    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 
 private:
     UnalignedSpan<uint8_t> m_values;
@@ -136,6 +149,8 @@ public:
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
+
+    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 
     /**
      * Gets the encoded id of the variable
@@ -179,6 +194,8 @@ public:
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
 
+    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+
     /**
      * Gets the encoded id of the variable
      * @param cur_message
@@ -209,6 +226,8 @@ public:
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
+
+    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 
     /**
      * @param cur_message

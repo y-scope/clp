@@ -18,6 +18,8 @@ import SearchJobsDbManager from "./SearchJobsDbManager";
 let searchJobsDbManager = null;
 
 /**
+ * Initializes the SearchJobsDbManager.
+ *
  * @param {import("mysql2/promise").Pool} sqlDbConnPool
  * @param {object} tableNames
  * @param {string} tableNames.searchJobsTableName
@@ -33,7 +35,7 @@ const initSearchJobsDbManager = (sqlDbConnPool, {searchJobsTableName}) => {
  * @param {object} filter
  * @param {number} filter.jobId
  * @param {string} filter.lastSignal
- * @param {object} fields The fields to be updated in the search results metadata.
+ * @param {SearchResultsMetadata} fields The fields to be updated in the search results metadata.
  */
 const updateSearchResultsMeta = ({
     jobId,
@@ -55,8 +57,9 @@ const updateSearchResultsMeta = ({
 /**
  * Updates the search signal when the specified job finishes.
  *
- * @param {number} searchJobId of the job to monitor
- * @param {number} aggregationJobId of the job to monitor
+ * @param {object} props
+ * @param {number} props.searchJobId of the job to monitor
+ * @param {number} props.aggregationJobId of the job to monitor
  */
 const updateSearchSignalWhenJobsFinish = async ({
     searchJobId,
@@ -76,13 +79,12 @@ const updateSearchSignalWhenJobsFinish = async ({
             .getOrCreateCollection(searchJobId)
             .countDocuments();
     } catch (e) {
-        if (e.error === ERROR_NAME_COLLECTION_DROPPED) {
+        if (ERROR_NAME_COLLECTION_DROPPED === e.error) {
             logger.warn(`Collection ${searchJobId} has been dropped.`);
 
             return;
-        } else {
-            throw e;
         }
+        throw e;
     }
 
     updateSearchResultsMeta({
@@ -121,21 +123,28 @@ const createMongoIndexes = async (searchJobId) => {
 
     const queryJobCollection = searchJobCollectionsManager.getOrCreateCollection(searchJobId);
     const queryJobRawCollection = queryJobCollection.rawCollection();
-    await queryJobRawCollection.createIndexes([timestampAscendingIndex, timestampDescendingIndex]);
+    await queryJobRawCollection.createIndexes([
+        timestampAscendingIndex,
+        timestampDescendingIndex,
+    ]);
 };
 
 Meteor.methods({
     /**
+     * @typedef {object} SubmitQueryResp
+     * @property {number} searchJobId
+     * @property {number} aggregationJobId
+     */
+    /**
      * Submits a search query and initiates the search process.
      *
-     * @param {string} queryString
-     * @param {number} timestampBegin
-     * @param {number} timestampEnd
-     * @param {boolean} ignoreCase
-     * @param {number} timeRangeBucketSizeMillis
-     * @return {Object}
-     * @property {number} searchJobId of the submitted query
-     * @property {number} aggregationJobId of the submitted query
+     * @param {object} props
+     * @param {string} props.queryString
+     * @param {number} props.timestampBegin
+     * @param {number} props.timestampEnd
+     * @param {boolean} props.ignoreCase
+     * @param {number} props.timeRangeBucketSizeMillis
+     * @return {SubmitQueryResp}
      */
     async "search.submitQuery" ({
         queryString,
@@ -148,11 +157,13 @@ Meteor.methods({
 
         const args = {
             query_string: queryString,
+
             begin_timestamp: timestampBegin,
             end_timestamp: timestampEnd,
-            max_num_results: SEARCH_MAX_NUM_RESULTS,
             ignore_case: ignoreCase,
+            max_num_results: SEARCH_MAX_NUM_RESULTS,
         };
+
         logger.info("search.submitQuery args =", args);
 
         let searchJobId;
@@ -188,8 +199,9 @@ Meteor.methods({
     /**
      * Clears the results of a search operation identified by jobId.
      *
-     * @param {number} searchJobId of the search results to clear
-     * @param {number} aggregationJobId of the search results to clear
+     * @param {object} props
+     * @param {number} props.searchJobId of the search results to clear
+     * @param {number} props.aggregationJobId of the search results to clear
      */
     async "search.clearResults" ({
         searchJobId,
@@ -215,8 +227,9 @@ Meteor.methods({
     /**
      * Cancels an ongoing search operation identified by jobId.
      *
-     * @param {number} searchJobId
-     * @param {number} aggregationJobId
+     * @param {object} props
+     * @param {number} props.searchJobId
+     * @param {number} props.aggregationJobId
      */
     async "search.cancelOperation" ({
         searchJobId,
@@ -235,7 +248,7 @@ Meteor.methods({
                 lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
             }, {
                 lastSignal: SEARCH_SIGNAL.RESP_DONE,
-                errorMsg: "Query cancelled before it could be completed."
+                errorMsg: "Query cancelled before it could be completed.",
             });
         } catch (e) {
             const errorMsg = `Failed to submit cancel request for searchJobId=${searchJobId},` +

@@ -3,12 +3,19 @@ import Duration from "dayjs/plugin/duration";
 import Timezone from "dayjs/plugin/timezone";
 import Utc from "dayjs/plugin/utc";
 
+
 dayjs.extend(Utc);
 dayjs.extend(Timezone);
 dayjs.extend(Duration);
 
 const DATETIME_FORMAT_TEMPLATE = "YYYY-MMM-DD HH:mm:ss";
 
+/* eslint-disable sort-keys */
+/**
+ * Enum of time units.
+ *
+ * @enum {string}
+ */
 const TIME_UNIT = Object.freeze({
     ALL: "all",
     MINUTE: "minute",
@@ -18,7 +25,14 @@ const TIME_UNIT = Object.freeze({
     MONTH: "month",
     YEAR: "year",
 });
+/* eslint-enable sort-keys */
 
+/* eslint-disable sort-keys */
+/**
+ * Enum of time range modifiers.
+ *
+ * @enum {string}
+ */
 const TIME_RANGE_MODIFIER = Object.freeze({
     NONE: "none",
     TODAY: "today",
@@ -26,7 +40,13 @@ const TIME_RANGE_MODIFIER = Object.freeze({
     PREV: "prev",
     TO_DATE: "to-date",
 });
+/* eslint-enable sort-keys */
 
+/**
+ * Time range presets.
+ *
+ * @type {{[key: string]: string}}
+ */
 const TIME_RANGE_PRESET_LABEL = Object.freeze({
     [`${TIME_UNIT.MINUTE}_${TIME_RANGE_MODIFIER.LAST}_15`]: "Last 15 Minutes",
     [`${TIME_UNIT.MINUTE}_${TIME_RANGE_MODIFIER.LAST}_60`]: "Last 60 Minutes",
@@ -49,10 +69,12 @@ const TIME_RANGE_PRESET_LABEL = Object.freeze({
  * @param {string} token representing the time range to compute; format: `unit_modifier_amount`
  * @return {TimeRange} The computed time range
  */
-const computeTimeRange = (token)  => {
-    const [unit,
+const computeTimeRange = (token) => {
+    const [
+        unit,
         modifier,
-        amount] = token.split("_");
+        amount,
+    ] = token.split("_");
     let end;
     let begin;
 
@@ -91,6 +113,7 @@ const DEFAULT_TIME_RANGE = computeTimeRange(
     `${TIME_UNIT.ALL}_${TIME_RANGE_MODIFIER.NONE}_0`,
 );
 
+// eslint-disable-next-line no-warning-comments
 // TODO: Switch date pickers so we don't have to do this hack
 /**
  * Converts a UTC Dayjs object to a local-timezone JavaScript Date object that represents the same

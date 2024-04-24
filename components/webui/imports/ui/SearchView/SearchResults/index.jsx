@@ -1,10 +1,10 @@
-import React, {useCallback} from "react";
+import {useCallback} from "react";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 
-import SearchResultsHeader from "./SearchResultsHeader.jsx";
-import SearchResultsTable from "./SearchResultsTable.jsx";
-import SearchResultsTimeline from "./SearchResultsTimeline.jsx";
+import SearchResultsHeader from "./SearchResultsHeader";
+import SearchResultsTable from "./SearchResultsTable";
+import SearchResultsTimeline from "./SearchResultsTimeline";
 
 
 /**
@@ -27,20 +27,21 @@ const VISIBLE_RESULTS_LIMIT_INCREMENT = 10;
  * Renders the search results, which includes the search results header and the search results
  * table.
  *
- * @param {Object} fieldToSortBy
- * @param {number} maxLinesPerResult
- * @param {number} numResultsOnServer
- * @param {function} onTimelineZoom
- * @param {object} resultsMetadata
- * @param {number} searchJobId of the search job
- * @param {Object[]} searchResults
- * @param {function} setFieldToSortBy
- * @param {function} setMaxLinesPerResult
- * @param {function} setVisibleSearchResultsLimit
- * @param {TimelineBucket[]} timelineBuckets
- * @param {TimelineConfig} timelineConfig
- * @param {number} visibleSearchResultsLimit
- * @returns {JSX.Element}
+ * @param {object} props
+ * @param {object} props.fieldToSortBy
+ * @param {number} props.maxLinesPerResult
+ * @param {number} props.numResultsOnServer
+ * @param {Function} props.onTimelineZoom
+ * @param {SearchResultsMetadata} props.resultsMetadata
+ * @param {number} props.searchJobId
+ * @param {object[]} props.searchResults
+ * @param {Function} props.setFieldToSortBy
+ * @param {Function} props.setMaxLinesPerResult
+ * @param {Function} props.setVisibleSearchResultsLimit
+ * @param {TimelineBucket[]} props.timelineBuckets
+ * @param {TimelineConfig} props.timelineConfig
+ * @param {number} props.visibleSearchResultsLimit
+ * @return {React.ReactElement}
  */
 const SearchResults = ({
     fieldToSortBy,

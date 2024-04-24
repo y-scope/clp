@@ -1,18 +1,22 @@
 version: "3"
 
 vars:
+  LINTER_NODEJS_BUILD_DIR: "{{.TASKFILE_DIR}}/build/linter-nodejs"
+  LINTER_NODEJS_BIN_DIR: "{{.LINTER_NODEJS_BUILD_DIR}}/node/bin"
   VENV_DIR: "{{.TASKFILE_DIR}}/.lint-venv"
 
 tasks:
   check:
     cmds:
       - task: "cpp-check"
+      - task: "js-check"
       - task: "py-check"
       - task: "yml-check"
 
   fix:
     cmds:
       - task: "cpp-fix"
+      - task: "js-fix"
       - task: "py-fix"
       - task: "yml-fix"
 
@@ -23,8 +27,8 @@ tasks:
         vars:
           FLAGS: "--dry-run"
     sources: &cpp_source_files
+      - "{{.TASKFILE_DIR}}/lint-tasks.yml"
       - ".clang-format"
-      - "lint-tasks.yml"
       - "src/**/*.cpp"
       - "src/**/*.h"
       - "src/**/*.hpp"
@@ -41,6 +45,36 @@ tasks:
         vars:
           FLAGS: "-i"
     sources: *cpp_source_files
+
+  js-check:
+    dir: "{{.TASKFILE_DIR}}/components/webui"
+    cmds:
+      - task: "js"
+        vars:
+          LINT_CMD: "check"
+    sources: &js_source_files
+      - "{{.BUILD_DIR}}/lint#linter-node-modules.md5"
+      - "{{.BUILD_DIR}}/webui-node-modules.md5"
+      - "{{.TASKFILE_DIR}}/lint-tasks.yml"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "client/**/*.js"
+      - "client/**/*.jsx"
+      - "imports/**/*.js"
+      - "imports/**/*.jsx"
+      - "launcher.js"
+      - "package.json"
+      - "server/**/*.js"
+      - "server/**/*.jsx"
+      - "tests/**/*.js"
+      - "tests/**/*.jsx"
+
+  js-fix:
+    dir: "{{.TASKFILE_DIR}}/components/webui"
+    cmds:
+      - task: "js"
+        vars:
+          LINT_CMD: "fix"
+    sources: *js_source_files
 
   py-check:
     cmds:
@@ -81,6 +115,15 @@ tasks:
           -print0 | \
             xargs -0 clang-format {{.FLAGS}} -Werror
 
+  js:
+    internal: true
+    requires:
+      vars: ["LINT_CMD"]
+    deps: ["linter-node-modules"]
+    dir: "{{.TASKFILE_DIR}}/components/webui"
+    cmds:
+      - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm run 'lint:{{.LINT_CMD}}'"
+
   py:
     internal: true
     requires:
@@ -96,6 +139,58 @@ tasks:
           cd "{{.ITEM}}"
           black --color --line-length 100 {{.BLACK_FLAGS}} .
           ruff check {{.RUFF_FLAGS}} .
+
+  linter-nodejs:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      OUTPUT_DIR: "{{.LINTER_NODEJS_BUILD_DIR}}"
+    cmds:
+      - task: ":nodejs"
+        vars:
+          NODEJS_VERSION: "latest"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+      # Checksum the generated files (this command must be last)
+      - >-
+        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
+        | md5sum > "{{.CHECKSUM_FILE}}"
+    sources:
+      - "{{.TASKFILE_DIR}}/lint-tasks.yml"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+    status:
+      - "test -f '{{.CHECKSUM_FILE}}'"
+      - >-
+        diff
+        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        "{{.CHECKSUM_FILE}}"
+
+  linter-node-modules:
+    internal: true
+    deps: [":webui-node-modules", "linter-nodejs"]
+    dir: "{{.WEBUI_LINTER_DIR}}"
+    vars:
+      WEBUI_LINTER_DIR: "{{.TASKFILE_DIR}}/components/webui/linter"
+      OUTPUT_DIR: "{{.WEBUI_LINTER_DIR}}/node_modules"
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm update"
+      # Checksum the generated files (this command must be last)
+      - >-
+        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
+        | md5sum > "{{.CHECKSUM_FILE}}"
+    sources:
+      - "{{.BUILD_DIR}}/lint#linter-nodejs.md5"
+      - "{{.BUILD_DIR}}/webui-node-modules.md5"
+      - "{{.TASKFILE_DIR}}/lint-tasks.yml"
+      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "../package.json"
+    status:
+      - "test -f '{{.CHECKSUM_FILE}}'"
+      - >-
+        diff
+        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        "{{.CHECKSUM_FILE}}"
 
   venv:
     internal: true

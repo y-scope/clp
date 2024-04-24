@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "ColumnReader.hpp"
+
 class JsonSerializer {
 public:
     enum Op : uint8_t {
@@ -80,12 +82,26 @@ public:
 
     void append_key() { append_key(m_special_keys[m_special_keys_index++]); }
 
-    void append_key(std::string const& key) { m_json_string += "\"" + key + "\":"; }
+    void append_key(std::string const& key) {
+        m_json_string += "\"";
+        m_json_string += key;
+        m_json_string += "\":";
+    }
 
-    void append_value(std::string const& value) { m_json_string += value + ","; }
+    void append_value(std::string const& value) {
+        m_json_string += value;
+        m_json_string += ",";
+    }
 
-    void append_value_with_quotes(std::string const& value) {
-        m_json_string += "\"" + value + "\",";
+    void append_value_from_column(clp_s::BaseColumnReader* column, uint64_t cur_message) {
+        column->extract_string_value_into_buffer(cur_message, m_json_string);
+    }
+
+    void
+    append_value_from_column_with_quotes(clp_s::BaseColumnReader* column, uint64_t cur_message) {
+        m_json_string += "\"";
+        column->extract_string_value_into_buffer(cur_message, m_json_string);
+        m_json_string += "\",";
     }
 
 private:

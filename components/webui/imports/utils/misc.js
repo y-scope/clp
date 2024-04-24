@@ -1,41 +1,62 @@
+const MILLIS_PER_SECOND = 1000;
+const BYTES_PER_KIBIBYTE = 1024;
+
 /**
  * Creates a promise that resolves after a specified number of seconds.
  *
  * @param {number} seconds to wait before resolving the promise
- * @returns {Promise<void>} that resolves after the specified delay
+ * @return {Promise<void>} that resolves after the specified delay
  */
-const sleep = (seconds) => new Promise(r => setTimeout(r, seconds * 1000));
+const sleep = (seconds) => new Promise((resolve) => {
+    setTimeout(resolve, seconds * MILLIS_PER_SECOND);
+});
 
 /**
  * Computes a human-readable representation of a size in bytes.
  *
  * @param {number} num
- * @returns {string}
+ * @return {string}
  */
 const computeHumanSize = (num) => {
+    // eslint-disable-next-line @stylistic/js/array-element-newline
     const siPrefixes = ["", "K", "M", "G", "T", "P", "E", "Z"];
     for (let i = 0; i < siPrefixes.length; ++i) {
-        if (Math.abs(num) < 1024.0) {
+        if (BYTES_PER_KIBIBYTE > Math.abs(num)) {
             return `${Math.round(num)} ${siPrefixes[i]}B`;
         }
-        num /= 1024.0;
+        num /= BYTES_PER_KIBIBYTE;
     }
+
     return `${Math.round(num)} B`;
 };
+
+/**
+ * Deselects all selections within the browser viewport.
+ */
+const deselectAll = () => {
+    window.getSelection().removeAllRanges();
+};
+
 
 /**
  * Removes wrapping quotes from the given string, if it's quoted, and unescapes quotes from within
  * the quoted string.
  * NOTE: This method does *not* unescape non-quote characters, unlike most methods which handle
  * unescaping quotes.
- * @param str
- * @param quoteChar
- * @param escapeChar
- * @return The processed string
+ *
+ * @param {string} str
+ * @param {string} quoteChar
+ * @param {string} escapeChar
+ * @return {string} The processed string
  * @throws Error if the quoted string has a quote within it (rather than at its ends) or it's
  * missing one of it's begin/end quotes.
  */
-const unquoteString = (str, quoteChar, escapeChar) => {
+// eslint-disable-next-line max-statements
+const unquoteString = (
+    str,
+    quoteChar,
+    escapeChar,
+) => {
     if (0 === str.length) {
         return str;
     }
@@ -59,7 +80,7 @@ const unquoteString = (str, quoteChar, escapeChar) => {
         }
     }
 
-    if (positionOfCharsToRemove.length === 0) {
+    if (0 === positionOfCharsToRemove.length) {
         return str;
     }
 
@@ -82,8 +103,18 @@ const unquoteString = (str, quoteChar, escapeChar) => {
         throw new Error("Begin/end quote is missing.");
     }
 
-    const processedChars = chars.filter((c, i) => false === positionOfCharsToRemove.includes(i));
-    return processedChars.join("");
-}
+    const processedChars = chars.filter(
+        (c, i) => (
+            false === positionOfCharsToRemove.includes(i)
+        )
+    );
 
-export {computeHumanSize, sleep, unquoteString};
+    return processedChars.join("");
+};
+
+export {
+    computeHumanSize,
+    deselectAll,
+    sleep,
+    unquoteString,
+};

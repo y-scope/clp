@@ -1,3 +1,5 @@
+@import "../bootstrap-customized";
+
 .ingest-container {
   // Background highlight
   background: linear-gradient(to bottom, #004850, #004850 160px, transparent 160px);
@@ -65,8 +67,7 @@
 }
 
 .ingest-stat-bar {
-  height: 4px;
-  margin-bottom: 0.25rem;
+  height: 4px !important;
 }
 
 .ingest-stat-bar > .progress-bar {
