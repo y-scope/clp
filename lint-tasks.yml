@@ -174,7 +174,7 @@ tasks:
       CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm install"
+      - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm update"
       # Checksum the generated files (this command must be last)
       - >-
         tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
