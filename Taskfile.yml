@@ -111,9 +111,9 @@ tasks:
         cd "{{.OUTPUT_DIR}}/var/www/programs/server"
         PATH="{{.WEBUI_NODEJS_BIN_DIR}}":$PATH npm install
       # Checksum the generated files (this command must be last)
-      - |-
-        cd "{{.OUTPUT_DIR}}"
-        tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
+      - >-
+        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
+        | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
       - "{{.BUILD_DIR}}/package-venv.md5"
       - "{{.BUILD_DIR}}/webui.md5"
@@ -133,7 +133,7 @@ tasks:
       - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
         diff
-        <(cd '{{.OUTPUT_DIR}}' && tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
         "{{.CHECKSUM_FILE}}"
 
   core:
@@ -196,9 +196,9 @@ tasks:
         "{{.OUTPUT_DIR}}/"
       - "rm -rf '{{.OUTPUT_DIR}}/bundle/'"
       # Checksum the generated files (this command must be last)
-      - |-
-        cd "{{.OUTPUT_DIR}}"
-        tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
+      - >-
+        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
+        | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
       - "{{.TASKFILE}}"
       - "*"
@@ -211,7 +211,7 @@ tasks:
       - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
         diff
-        <(cd '{{.OUTPUT_DIR}}' && tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
         "{{.CHECKSUM_FILE}}"
 
   webui-nodejs:
@@ -245,9 +245,9 @@ tasks:
     cmds:
       - "tools/scripts/deps-download/download-all.sh"
       # Checksum the generated files (this command must be last)
-      - |-
-        cd "{{.OUTPUT_DIR}}"
-        tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
+      - >-
+        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
+        | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
       - "{{.TASKFILE}}"
       - ".gitmodules"
@@ -256,7 +256,7 @@ tasks:
       - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
         diff
-        <(cd '{{.OUTPUT_DIR}}' && tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
         "{{.CHECKSUM_FILE}}"
 
   nodejs:
@@ -301,9 +301,9 @@ tasks:
         . "{{.OUTPUT_DIR}}/bin/activate"
         pip3 install --upgrade -r "{{.ROOT_DIR}}/requirements.txt"
       # Checksum the generated files (this command must be last)
-      - |-
-        cd "{{.OUTPUT_DIR}}"
-        tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
+      - >-
+        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
+        | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
       - "{{.ROOT_DIR}}/requirements.txt"
       - "{{.TASKFILE}}"
@@ -312,7 +312,7 @@ tasks:
       - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
         diff
-        <(cd '{{.OUTPUT_DIR}}' && tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
         "{{.CHECKSUM_FILE}}"
 
   python-component:
@@ -388,9 +388,9 @@ tasks:
         . "{{.OUTPUT_DIR}}/bin/activate"
         pip3 install --upgrade -r "{{.ROOT_DIR}}/requirements.txt"
       # Checksum the generated files (this command must be last)
-      - |-
-        cd "{{.OUTPUT_DIR}}"
-        tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
+      - >-
+        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
+        | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
       - "{{.ROOT_DIR}}/requirements.txt"
       - "{{.TASKFILE}}"
@@ -400,7 +400,7 @@ tasks:
       - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
         diff
-        <(cd '{{.OUTPUT_DIR}}' && tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
+        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
         "{{.CHECKSUM_FILE}}"
 
   clean-python-component:
