@@ -31,7 +31,7 @@ const computeHumanSize = (num) => {
 };
 
 /**
- * Deselect all selections within the browser viewport.
+ * Deselects all selections within the browser viewport.
  */
 const deselectAll = () => {
     window.getSelection().removeAllRanges();

@@ -265,8 +265,9 @@ const SearchResultsTimeline = ({
             data={data}
             options={options}
 
-            // Deselect all selections to address a bug that prevents dragging
-            // on the chart when elements such as text or images are selected.
+            // If the user inadvertently selected the timeline, then dragging on it will drag the
+            // timeline object rather than selecting a time range within it. Thus, on mouse down, we
+            // clear any existing selections so that the following drag selects a time range.
             onMouseDown={deselectAll}/>
     );
 };
