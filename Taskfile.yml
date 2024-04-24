@@ -381,6 +381,7 @@ tasks:
       - "dist/*.whl"
 
   webui-node-modules:
+    internal: true
     deps: ["meteor"]
     vars:
       CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
