@@ -203,6 +203,8 @@ Meteor.publish(Meteor.settings.public.CompressionJobsCollectionName, async () =>
     await refreshCompressionJobs();
 
     const findOptions = {
+        disableOplog: true,
+        pollingIntervalMs: COMPRESSION_JOBS_REFRESH_INTERVAL_MILLIS,
         sort: [MONGO_SORT_BY_ID],
     };
 
