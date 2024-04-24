@@ -198,6 +198,7 @@ tasks:
         tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
       - "{{.BUILD_DIR}}/meteor.md5"
+      - "{{.BUILD_DIR}}/webui-node-modules.md5"
       - "{{.TASKFILE_DIR}}/Taskfile.yml"
       - "*"
       - ".meteor/*"
