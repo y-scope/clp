@@ -6,18 +6,25 @@ import Placeholder from "react-bootstrap/Placeholder";
  *
  * @param {object} props
  * @param {string} props.text
+ * @param {boolean} props.isAlwaysVisible
  * @return {React.ReactElement}
  */
-const PlaceholderText = ({text}) => (
+const PlaceholderText = ({
+    text,
+    isAlwaysVisible = true,
+}) => (
     <Placeholder
         animation={"glow"}
         as={"span"}
     >
-        {text ?
+        {(0 !== text.length) ?
             text :
-            <Placeholder
-                size={"sm"}
-                xs={4}/>}
+            (
+                (true === isAlwaysVisible) &&
+                <Placeholder
+                    size={"sm"}
+                    xs={4}/>
+            )}
     </Placeholder>
 );
 

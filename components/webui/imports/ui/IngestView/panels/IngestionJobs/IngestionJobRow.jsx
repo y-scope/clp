@@ -89,13 +89,19 @@ const IngestionJobRow = ({job}) => {
                 {job._id}
             </td>
             <td className={"text-end"}>
-                <PlaceholderText text={speedText}/>
+                <PlaceholderText
+                    isAlwaysVisible={job.status !== COMPRESSION_JOB_STATUS.FAILED}
+                    text={speedText}/>
             </td>
             <td className={"text-end"}>
-                <PlaceholderText text={uncompressedSizeText}/>
+                <PlaceholderText
+                    isAlwaysVisible={job.status !== COMPRESSION_JOB_STATUS.FAILED}
+                    text={uncompressedSizeText}/>
             </td>
             <td className={"text-end"}>
-                <PlaceholderText text={compressedSizeText}/>
+                <PlaceholderText
+                    isAlwaysVisible={job.status !== COMPRESSION_JOB_STATUS.FAILED}
+                    text={compressedSizeText}/>
             </td>
         </tr>
     );
