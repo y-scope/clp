@@ -20,7 +20,7 @@ vars:
     sh: "python3 -c \"import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')\""
   WEBUI_BUILD_DIR: "{{.TASKFILE_DIR}}/build/webui"
   WEBUI_NODEJS_BUILD_DIR: "{{.TASKFILE_DIR}}/build/webui-nodejs"
-  WEBUI_NODEJS_BIN_DIR: "{{.WEBUI_NODEJS_BUILD_DIR}}/node/bin"
+  WEBUI_NODEJS_BIN_DIR: "{{.WEBUI_NODEJS_BUILD_DIR}}/bin"
 
 tasks:
   default:
@@ -219,20 +219,9 @@ tasks:
     cmds:
       - task: "nodejs"
         vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           NODEJS_VERSION: "v14.21.3"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-      # Checksum the generated files (this command must be last)
-      - >-
-        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
-        | md5sum > "{{.CHECKSUM_FILE}}"
-    sources:
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
-    status:
-      - "test -f '{{.CHECKSUM_FILE}}'"
-      - >-
-        diff
-        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
-        "{{.CHECKSUM_FILE}}"
 
   core-submodules:
     internal: true
@@ -257,28 +246,24 @@ tasks:
         <(cd '{{.OUTPUT_DIR}}' && tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
         "{{.CHECKSUM_FILE}}"
 
-  meteor:
-    vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
-      METEOR_RELEASE: "2.15"
-      METEOR_ARCH: "{{ if eq ARCH \"arm64\" }}aarch64{{ else }}x86_64{{ end }}"
-      METEOR_PLATFORM: "{{ if eq OS \"darwin\" }}osx{{ else }}linux{{ end }}"
-      METEOR_FILE_TAR_NAME: "meteor-bootstrap-os.{{.METEOR_PLATFORM}}.{{.METEOR_ARCH}}.tar.gz"
-      OUTPUT_DIR: "{{.METEOR_BUILD_DIR}}"
-      METEOR_FILE_BASE_DIR: "{{.OUTPUT_DIR}}/.meteor"
+  download-tar-and-extract:
+    internal: true
+    requires:
+      vars: ["CHECKSUM_FILE", "FILE_BASE_DIR", "FILE_TAR_NAME", "OUTPUT_DIR", "URL_PREFIX"]
+    label: "Download & Extract {{.FILE_TAR_NAME}}"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
       - >-
         curl --fail --location --show-error
-        "https://static.meteor.com/packages-bootstrap/{{.METEOR_RELEASE}}/{{.METEOR_FILE_TAR_NAME}}"
-        -o "{{.OUTPUT_DIR}}/{{.METEOR_FILE_TAR_NAME}}"
-      - "tar xf '{{.OUTPUT_DIR}}/{{.METEOR_FILE_TAR_NAME}}' --directory '{{.OUTPUT_DIR}}'"
+        "{{.URL_PREFIX}}/{{.FILE_TAR_NAME}}"
+        -o "{{.OUTPUT_DIR}}/{{.FILE_TAR_NAME}}"
+      - "tar xf '{{.OUTPUT_DIR}}/{{.FILE_TAR_NAME}}' --directory '{{.OUTPUT_DIR}}'"
       - >-
-        mv "{{.METEOR_FILE_BASE_DIR}}/"*
+        mv "{{.FILE_BASE_DIR}}/"*
         "{{.OUTPUT_DIR}}"
-      - "rm -rf '{{.METEOR_FILE_BASE_DIR}}'"
-      - "rm -f '{{.OUTPUT_DIR}}/{{.METEOR_FILE_TAR_NAME}}'"
+      - "rm -rf '{{.FILE_BASE_DIR}}'"
+      - "rm -f '{{.OUTPUT_DIR}}/{{.FILE_TAR_NAME}}'"
       # Checksum the generated files (this command must be last)
       - >-
         tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
@@ -292,10 +277,27 @@ tasks:
         <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
         "{{.CHECKSUM_FILE}}"
 
+  meteor:
+    vars:
+      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
+      METEOR_RELEASE: "2.15"
+      METEOR_ARCH: "{{ if eq ARCH \"arm64\" }}aarch64{{ else }}x86_64{{ end }}"
+      METEOR_PLATFORM: "{{ if eq OS \"darwin\" }}osx{{ else }}linux{{ end }}"
+      OUTPUT_DIR: "{{.METEOR_BUILD_DIR}}"
+      METEOR_FILE_BASE_DIR: "{{.OUTPUT_DIR}}/.meteor"
+    cmds:
+      - task: "download-tar-and-extract"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          FILE_TAR_NAME: "meteor-bootstrap-os.{{.METEOR_PLATFORM}}.{{.METEOR_ARCH}}.tar.gz"
+          FILE_BASE_DIR: "{{.OUTPUT_DIR}}/.meteor"
+          URL_PREFIX: "https://static.meteor.com/packages-bootstrap/{{.METEOR_RELEASE}}"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+
   nodejs:
     internal: true
     requires:
-      vars: ["NODEJS_VERSION", "OUTPUT_DIR"]
+      vars: ["CHECKSUM_FILE", "NODEJS_VERSION", "OUTPUT_DIR"]
     vars:
       NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
       NODEJS_VERSION_BASE_URL: "https://nodejs.org/dist/{{.NODEJS_VERSION}}/"
@@ -308,19 +310,14 @@ tasks:
           --max-count 1
           "node-v\\d+\\.\\d+\\.\\d+-linux-{{.NODEJS_ARCH}}"
           | head --lines 1
-      NODEJS_FILE_TAR_NAME: "{{.NODEJS_FILE_BASE_NAME}}.tar.xz"
     cmds:
-      - "rm -rf '{{.OUTPUT_DIR}}/node'"
-      - "mkdir -p '{{.OUTPUT_DIR}}'"
-      - >-
-        curl -fsSL
-        "{{.NODEJS_VERSION_BASE_URL}}{{.NODEJS_FILE_TAR_NAME}}"
-        -o "{{.OUTPUT_DIR}}/{{.NODEJS_FILE_TAR_NAME}}"
-      - "tar xf '{{.OUTPUT_DIR}}/{{.NODEJS_FILE_TAR_NAME}}' --directory '{{.OUTPUT_DIR}}'"
-      - >-
-        mv "{{.OUTPUT_DIR}}/{{.NODEJS_FILE_BASE_NAME}}"
-        "{{.OUTPUT_DIR}}/node"
-      - "rm -f '{{.OUTPUT_DIR}}/{{.NODEJS_FILE_TAR_NAME}}'"
+      - task: "download-tar-and-extract"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          FILE_TAR_NAME: "{{.NODEJS_FILE_BASE_NAME}}.tar.xz"
+          FILE_BASE_DIR: "{{.OUTPUT_DIR}}/{{.NODEJS_FILE_BASE_NAME}}"
+          URL_PREFIX: "{{.NODEJS_VERSION_BASE_URL}}"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
 
   package-venv:
     internal: true
