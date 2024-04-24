@@ -263,7 +263,7 @@ tasks:
       NODEJS_VERSION_BASE_URL: "https://nodejs.org/dist/{{.NODEJS_VERSION}}/"
       NODEJS_FILE_BASE_NAME:
         sh: >-
-          curl --silent "{{.NODEJS_VERSION_BASE_URL}}"
+          curl --header "Cache-Control: no-cache, no-store" --silent "{{.NODEJS_VERSION_BASE_URL}}"
           | grep
           --only-matching
           --perl-regexp
