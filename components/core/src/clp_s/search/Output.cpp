@@ -188,12 +188,6 @@ bool Output::filter(
     return true;
 }
 
-enum CurExpr {
-    AND,
-    OR,
-    FILTER
-};
-
 bool Output::evaluate(
         Expression* expr,
         int32_t schema,
@@ -203,47 +197,40 @@ bool Output::evaluate(
         return true;
     }
 
-    std::stack<CurExpr, std::vector<CurExpr>> parent_type;
-    std::stack<OpList::iterator, std::vector<OpList::iterator>> parent_it;
-
     Expression* cur = expr;
-    CurExpr cur_type = CurExpr::FILTER;
+    ExpressionType cur_type = ExpressionType::Filter;
     bool ret = false;
 
     if (dynamic_cast<AndExpr*>(cur)) {
-        cur_type = CurExpr::AND;
-        parent_type.push(CurExpr::AND);
-        parent_it.push(cur->op_begin());
+        cur_type = ExpressionType::And;
+        m_expression_state.emplace(cur_type, cur->op_begin());
         ret = true;
     } else if (dynamic_cast<OrExpr*>(cur)) {
-        cur_type = CurExpr::OR;
-        parent_type.push(CurExpr::OR);
-        parent_it.push(cur->op_begin());
+        cur_type = ExpressionType::Or;
+        m_expression_state.emplace(cur_type, cur->op_begin());
         ret = false;
     }
 
     do {
         switch (cur_type) {
-            case CurExpr::AND:
-                if (false == ret || parent_it.top() == cur->op_end()) {
-                    parent_type.pop();
-                    parent_it.pop();
+            case ExpressionType::And:
+                if (false == ret || m_expression_state.top().second == cur->op_end()) {
+                    m_expression_state.pop();
                     break;
                 } else {
-                    cur = static_cast<Expression*>((parent_it.top()++)->get());
+                    cur = static_cast<Expression*>((m_expression_state.top().second++)->get());
                     if (dynamic_cast<FilterExpr*>(cur)) {
-                        cur_type = CurExpr::FILTER;
+                        cur_type = ExpressionType::Filter;
                     } else {
                         // must be an OR-expr because AST would have been simplified
                         // to eliminate nested AND
-                        cur_type = CurExpr::OR;
-                        parent_type.push(CurExpr::OR);
-                        parent_it.push(cur->op_begin());
+                        cur_type = ExpressionType::Or;
+                        m_expression_state.emplace(cur_type, cur->op_begin());
                         ret = false;
                     }
                     continue;
                 }
-            case CurExpr::FILTER:
+            case ExpressionType::Filter:
                 if (static_cast<FilterExpr*>(cur)->get_column()->is_pure_wildcard()) {
                     ret = evaluate_wildcard_filter(
                             static_cast<FilterExpr*>(cur),
@@ -254,21 +241,19 @@ bool Output::evaluate(
                     ret = evaluate_filter(static_cast<FilterExpr*>(cur), schema, extracted_values);
                 }
                 break;
-            case CurExpr::OR:
-                if (ret || parent_it.top() == cur->op_end()) {
-                    parent_type.pop();
-                    parent_it.pop();
+            case ExpressionType::Or:
+                if (ret || m_expression_state.top().second == cur->op_end()) {
+                    m_expression_state.pop();
                     break;
                 } else {
-                    cur = static_cast<Expression*>((parent_it.top()++)->get());
+                    cur = static_cast<Expression*>((m_expression_state.top().second++)->get());
                     if (dynamic_cast<FilterExpr*>(cur)) {
-                        cur_type = CurExpr::FILTER;
+                        cur_type = ExpressionType::Filter;
                     } else {
                         // must be an AND-expr because AST would have been simplified
                         // to eliminate nested OR
-                        cur_type = CurExpr::AND;
-                        parent_type.push(CurExpr::AND);
-                        parent_it.push(cur->op_begin());
+                        cur_type = ExpressionType::And;
+                        m_expression_state.emplace(cur_type, cur->op_begin());
                         ret = true;
                     }
                     continue;
@@ -276,8 +261,8 @@ bool Output::evaluate(
         }
 
         ret = cur->is_inverted() ? !ret : ret;
-        if (false == parent_type.empty()) {
-            cur_type = parent_type.top();
+        if (false == m_expression_state.empty()) {
+            cur_type = m_expression_state.top().first;
         }
         cur = cur->get_parent();
     } while (cur != nullptr);

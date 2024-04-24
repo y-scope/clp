@@ -48,6 +48,12 @@ public:
     bool filter();
 
 private:
+    enum class ExpressionType {
+        And,
+        Or,
+        Filter
+    };
+
     std::shared_ptr<ArchiveReader> m_archive_reader;
     std::shared_ptr<Expression> m_expr;
     SchemaMatch& m_match;
@@ -85,6 +91,11 @@ private:
     std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_varstrings;
     std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_datestrings;
     std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_columns;
+
+    std::stack<
+            std::pair<ExpressionType, OpList::iterator>,
+            std::vector<std::pair<ExpressionType, OpList::iterator>>>
+            m_expression_state;
 
     simdjson::ondemand::parser m_array_parser;
     std::string m_array_search_string;
