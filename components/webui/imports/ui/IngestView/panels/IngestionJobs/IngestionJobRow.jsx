@@ -41,8 +41,8 @@ const COMPRESSION_JOB_STATUS_ICONS = Object.freeze({
  */
 const IngestionJobRow = ({job}) => {
     let uncompressedSizeText = "";
-    let speedText = "";
     let compressedSizeText = "";
+    let speedText = "";
 
     if (null === job.duration && null !== job.start_time) {
         job.duration = dayjs.duration(
@@ -55,17 +55,17 @@ const IngestionJobRow = ({job}) => {
         uncompressedSizeText = computeHumanSize(uncompressedSize);
     }
 
+    const compressedSize = Number(job.compressed_size);
+    if (false === isNaN(compressedSize) && 0 !== compressedSize) {
+        compressedSizeText = computeHumanSize(compressedSize);
+    }
+
     if (
         false === isNaN(uncompressedSize) &&
         0 !== uncompressedSize &&
         0 < job.duration
     ) {
         speedText = `${computeHumanSize(job.uncompressed_size / job.duration)}/s`;
-    }
-
-    const compressedSize = Number(job.compressed_size);
-    if (false === isNaN(compressedSize) && 0 !== compressedSize) {
-        compressedSizeText = computeHumanSize(compressedSize);
     }
 
     return (
