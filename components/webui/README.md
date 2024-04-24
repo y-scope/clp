@@ -88,8 +88,8 @@ To integrate ESLint into IDEs like WebStorm and VSCode, follow these steps:
     ```
 
 2. Install the latest ESLint shared config package.
-    We use `--package-lock=false` and `--no-save` to avoid adding the package to the
-`package-lock.json` and the `package.json`.
+    * We use `--package-lock=false` and `--no-save` to avoid adding the package to
+      `package-lock.json` and `package.json`.
 
     ```shell
     npm --package-lock=false install --no-save eslint-config-yscope@latest
