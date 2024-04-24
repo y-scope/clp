@@ -4,22 +4,27 @@ includes:
   lint: "lint-tasks.yml"
 
 vars:
-  BUILD_DIR: "{{.TASKFILE_DIR}}/build"
+  # Paths
+  BUILD_DIR: "{{.ROOT_DIR}}/build"
+  CORE_COMPONENT_BUILD_DIR: "{{.BUILD_DIR}}/core"
+  PACKAGE_BUILD_DIR: "{{.BUILD_DIR}}/clp-package"
+  PACKAGE_VENV_DIR: "{{.BUILD_DIR}}/package-venv"
+  WEBUI_BUILD_DIR: "{{.BUILD_DIR}}/webui"
+  WEBUI_NODEJS_BUILD_DIR: "{{.BUILD_DIR}}/webui-nodejs"
+  WEBUI_NODEJS_BIN_DIR: "{{.WEBUI_NODEJS_BUILD_DIR}}/node/bin"
+
+  # Versions
+  PACKAGE_VERSION: "0.0.3-dev"
+  PYTHON_VERSION:
+    sh: "python3 -c \"import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')\""
+
+  # Utils
   CHECKSUM_TAR_BASE_ARGS: >-
     --group=0
     --mtime='UTC 1970-01-01'
     --numeric-owner
     --owner=0
     --sort=name
-  CORE_COMPONENT_BUILD_DIR: "{{.TASKFILE_DIR}}/build/core"
-  PACKAGE_BUILD_DIR: "{{.TASKFILE_DIR}}/build/clp-package"
-  PACKAGE_VENV_DIR: "{{.TASKFILE_DIR}}/build/package-venv"
-  PACKAGE_VERSION: "0.0.3-dev"
-  PYTHON_VERSION:
-    sh: "python3 -c \"import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')\""
-  WEBUI_BUILD_DIR: "{{.TASKFILE_DIR}}/build/webui"
-  WEBUI_NODEJS_BUILD_DIR: "{{.TASKFILE_DIR}}/build/webui-nodejs"
-  WEBUI_NODEJS_BIN_DIR: "{{.WEBUI_NODEJS_BUILD_DIR}}/node/bin"
 
 tasks:
   default:
@@ -57,7 +62,7 @@ tasks:
       - "tar czf '{{.VERSIONED_PACKAGE_NAME}}.tar.gz' --dereference '{{.VERSIONED_PACKAGE_NAME}}'"
     sources:
       - "{{.BUILD_DIR}}/package.md5"
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
     generates:
       - "{{.VERSIONED_PACKAGE_NAME}}.tar.gz"
 
@@ -118,7 +123,7 @@ tasks:
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
       - "/etc/os-release"
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
@@ -148,7 +153,7 @@ tasks:
       - "{{.SRC_DIR}}/cmake/**/*"
       - "{{.SRC_DIR}}/CMakeLists.txt"
       - "{{.SRC_DIR}}/src/**/*"
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
       - "/etc/os-release"
     generates:
       - "{{.CORE_COMPONENT_BUILD_DIR}}/clg"
@@ -195,7 +200,7 @@ tasks:
         cd "{{.OUTPUT_DIR}}"
         tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
       - "*"
       - ".meteor/*"
       - "client/**/*"
@@ -223,7 +228,7 @@ tasks:
         tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
         | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
     status:
       - "test -f '{{.CHECKSUM_FILE}}'"
       - >-
@@ -244,7 +249,7 @@ tasks:
         cd "{{.OUTPUT_DIR}}"
         tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
       - ".gitmodules"
       - "tools/scripts/deps-download/**/*"
     status:
@@ -294,14 +299,14 @@ tasks:
       - "python3 -m venv '{{.OUTPUT_DIR}}'"
       - |-
         . "{{.OUTPUT_DIR}}/bin/activate"
-        pip3 install --upgrade -r "{{.TASKFILE_DIR}}/requirements.txt"
+        pip3 install --upgrade -r "{{.ROOT_DIR}}/requirements.txt"
       # Checksum the generated files (this command must be last)
       - |-
         cd "{{.OUTPUT_DIR}}"
         tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
-      - "{{.TASKFILE_DIR}}/requirements.txt"
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/requirements.txt"
+      - "{{.TASKFILE}}"
       - "/etc/os-release"
     status:
       - "test -f '{{.CHECKSUM_FILE}}'"
@@ -335,8 +340,8 @@ tasks:
     sources:
       - "{{.BUILD_DIR}}/{{.COMPONENT}}_venv.md5"
       - "{{.PACKAGE}}/**/*"
-      - "{{.TASKFILE_DIR}}/requirements.txt"
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/requirements.txt"
+      - "{{.TASKFILE}}"
       - "/etc/os-release"
       - "pyproject.toml"
     generates:
@@ -346,7 +351,7 @@ tasks:
     internal: true
     vars:
       CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK}}.md5"
-      WEBUI_SRC_DIR: "{{.TASKFILE_DIR}}/components/webui"
+      WEBUI_SRC_DIR: "{{.ROOT_DIR}}/components/webui"
       OUTPUT_DIR: "{{.WEBUI_SRC_DIR}}/node_modules"
     dir: "{{.WEBUI_SRC_DIR}}"
     cmds:
@@ -358,7 +363,7 @@ tasks:
         tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
         | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
       - ".meteor/packages"
       - "package.json"
     status:
@@ -381,14 +386,14 @@ tasks:
       - "python3 -m venv '{{.OUTPUT_DIR}}'"
       - |-
         . "{{.OUTPUT_DIR}}/bin/activate"
-        pip3 install --upgrade -r "{{.TASKFILE_DIR}}/requirements.txt"
+        pip3 install --upgrade -r "{{.ROOT_DIR}}/requirements.txt"
       # Checksum the generated files (this command must be last)
       - |-
         cd "{{.OUTPUT_DIR}}"
         tar cf - {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum > "{{.CHECKSUM_FILE}}"
     sources:
-      - "{{.TASKFILE_DIR}}/requirements.txt"
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/requirements.txt"
+      - "{{.TASKFILE}}"
       - "/etc/os-release"
       - "pyproject.toml"
     status:
