@@ -6,7 +6,7 @@ import Spinner from "react-bootstrap/Spinner";
 import {faCircleInfo} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 
-import {SEARCH_MAX_NUM_RESULTS} from "../../../../api/search/constants";
+import {SEARCH_MAX_NUM_RESULTS} from "/imports/api/search/constants";
 
 import "./SearchResultsLoadSensor.scss";
 
@@ -89,11 +89,11 @@ const SearchResultsLoadSensor = ({
                         icon={faCircleInfo}
                         size={"sm"}/>
                     <span>
-                        Results limit
+                        Showing the top
                         {" "}
                         {SEARCH_MAX_NUM_RESULTS}
                         {" "}
-                        reached. Please refine the filters to display additional matches.
+                        results by time. To view any other results, please refine your search.
                     </span>
                 </div>}
         </div>
