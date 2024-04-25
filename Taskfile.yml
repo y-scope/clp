@@ -296,7 +296,7 @@ tasks:
         vars:
           LABEL: "package"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-          REQUIREMENTS_FILE: "{{.ROOT_DIR}}/requirements.txt"
+          REQUIREMENTS_FILE: "requirements.txt"
       # Checksum the generated files (this command must be last)
       - >-
         tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
