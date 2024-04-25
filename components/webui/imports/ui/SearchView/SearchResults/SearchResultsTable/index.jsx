@@ -28,7 +28,8 @@ const SEARCH_RESULT_MESSAGE_LINE_HEIGHT = 1.5;
  *
  * @param {object} props
  * @param {object} props.fieldToSortBy
- * @param {boolean} props.hasMoreResults
+ * @param {boolean} props.hasMoreResultsInCache
+ * @param {boolean} props.hasMoreResultsInTotal
  * @param {number} props.maxLinesPerResult
  * @param {Function} props.onLoadMoreResults
  * @param {object} props.searchResults
@@ -37,7 +38,8 @@ const SEARCH_RESULT_MESSAGE_LINE_HEIGHT = 1.5;
  */
 const SearchResultsTable = ({
     fieldToSortBy,
-    hasMoreResults,
+    hasMoreResultsInCache,
+    hasMoreResultsInTotal,
     maxLinesPerResult,
     onLoadMoreResults,
     searchResults,
@@ -142,7 +144,8 @@ const SearchResultsTable = ({
                 </tbody>
             </Table>
             <SearchResultsLoadSensor
-                hasMoreResults={hasMoreResults}
+                hasMoreResultsInCache={hasMoreResultsInCache}
+                hasMoreResultsInTotal={hasMoreResultsInTotal}
                 onLoadMoreResults={onLoadMoreResults}/>
         </div>
     );
