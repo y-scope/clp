@@ -21,7 +21,7 @@ tasks:
       - task: "yml-fix"
 
   cpp-check:
-    dir: "{{.ROOT_DIR}}/components/core"
+    dir: "components/core"
     cmds:
       - task: "cpp"
         vars:
@@ -39,7 +39,7 @@ tasks:
       - "tests/**/*.inc"
 
   cpp-fix:
-    dir: "{{.ROOT_DIR}}/components/core"
+    dir: "components/core"
     cmds:
       - task: "cpp"
         vars:
@@ -47,7 +47,7 @@ tasks:
     sources: *cpp_source_files
 
   js-check:
-    dir: "{{.ROOT_DIR}}/components/webui"
+    dir: "components/webui"
     cmds:
       - task: "js"
         vars:
@@ -69,7 +69,7 @@ tasks:
       - "tests/**/*.jsx"
 
   js-fix:
-    dir: "{{.ROOT_DIR}}/components/webui"
+    dir: "components/webui"
     cmds:
       - task: "js"
         vars:
@@ -105,7 +105,7 @@ tasks:
     requires:
       vars: ["FLAGS"]
     deps: ["venv"]
-    dir: "{{.ROOT_DIR}}/components/core"
+    dir: "components/core"
     cmds:
       - |-
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
@@ -120,7 +120,7 @@ tasks:
     requires:
       vars: ["LINT_CMD"]
     deps: ["linter-node-modules"]
-    dir: "{{.ROOT_DIR}}/components/webui"
+    dir: "components/webui"
     cmds:
       - "PATH='{{.G_LINTER_NODEJS_BIN_DIR}}':$PATH npm run 'lint:{{.LINT_CMD}}'"
 
