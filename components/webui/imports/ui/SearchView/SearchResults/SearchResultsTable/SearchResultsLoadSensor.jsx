@@ -70,12 +70,12 @@ const SearchResultsLoadSensor = ({
         <div
             ref={loadingBlockRef}
             style={{
-                visibility: (true === hasMoreResultsInCache || true === hasMoreResultsInTotal) ?
+                visibility: (hasMoreResultsInCache || hasMoreResultsInTotal) ?
                     "visible" :
                     "hidden",
             }}
         >
-            {(true === hasMoreResultsInCache) &&
+            {(hasMoreResultsInCache) &&
                 <div className={"search-results-load-sensor-content"}>
                     <Spinner
                         animation={"border"}
@@ -83,7 +83,7 @@ const SearchResultsLoadSensor = ({
                         variant={"primary"}/>
                     <span>Loading...</span>
                 </div>}
-            {(false === hasMoreResultsInCache && true === hasMoreResultsInTotal) &&
+            {(false === hasMoreResultsInCache && hasMoreResultsInTotal) &&
                 <div className={"search-results-load-sensor-content"}>
                     <FontAwesomeIcon
                         icon={faCircleInfo}
