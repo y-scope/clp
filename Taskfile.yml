@@ -14,9 +14,7 @@ vars:
   G_WEBUI_NODEJS_BIN_DIR: "{{.G_WEBUI_NODEJS_BUILD_DIR}}/node/bin"
 
   # Versions
-  PACKAGE_VERSION: "0.0.3-dev"
-  PYTHON_VERSION:
-    sh: "python3 -c \"import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')\""
+  G_PACKAGE_VERSION: "0.0.3-dev"
 
   # Utils
   CHECKSUM_TAR_BASE_ARGS: >-
@@ -54,7 +52,7 @@ tasks:
       VERSIONED_PACKAGE_NAME:
         sh: |
           source /etc/os-release
-          echo "clp-package-${ID}-${VERSION_CODENAME}-$(arch)-v{{.PACKAGE_VERSION}}"
+          echo "clp-package-${ID}-${VERSION_CODENAME}-$(arch)-v{{.G_PACKAGE_VERSION}}"
     dir: "{{.G_BUILD_DIR}}"
     cmds:
       - "rm -rf '{{.VERSIONED_PACKAGE_NAME}}' '{{.VERSIONED_PACKAGE_NAME}}.tar.gz'"
@@ -70,7 +68,6 @@ tasks:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
-      PACKAGE_VERSION_FILE: "{{.G_PACKAGE_BUILD_DIR}}/VERSION"
     deps:
       - "core"
       - "clp-package-utils"
