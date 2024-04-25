@@ -60,10 +60,9 @@ const SearchResults = ({
 }) => {
     let aggregatedCount = null;
     if (null !== timelineBuckets && 0 !== timelineBuckets.length) {
-        aggregatedCount =
-        timelineBuckets.reduce(
+        aggregatedCount = timelineBuckets.reduce(
             (accumulator, currentValue) => (accumulator + currentValue.count),
-            0
+            0,
         );
     }
 
