@@ -1,4 +1,4 @@
-# Setup
+# CLP WebUI
 
 ## Requirements
 
@@ -18,19 +18,7 @@ meteor npm install
 If you ever add a package manually to `package.json` or `package.json` changes
 for some other reason, you should rerun this command.
 
-> [!NOTE]
-> When running this command, you might see warnings related to uninstalled `eslint-config-yscope`
-> peer dependencies, like the ones below:
-> ```
-> npm WARN eslint-config-yscope@0.0.20 requires a peer of eslint@^8.57.0 but
->  none is installed. You must install peer dependencies yourself.
-> ```
-> **These `eslint-config-yscope` warnings can be safely ignored.** They occur because the default
-> npm version in Node.js v14 does not automatically install peer dependencies. If needed, peer
-> dependencies are automatically installed when switching to Node.js v18 or higher for linting
-> purposes, as outlined in the [Linting](#linting) section.
-
-# Running in development
+## Running in development
 
 The full functionality of the webui depends on other components in the CLP
 package:
@@ -60,59 +48,52 @@ package:
 5. The Web UI should now be available at `http://<webui.host>:<webui.port>`
    (e.g., http://localhost:4000).
 
-# Linting
+## Linting
 
-We enforce code quality and consistency across our project using [ESLint][eslint]. You can use the
-following npm scripts defined in `package.json` to check and fix linting issues.
+We enforce code quality and consistency across our project using [ESLint][eslint]. Due to specific
+dependencies, linting this project requires Node.js v18 or higher. We offer two methods for
+performing linting; you may choose either one according to your preference.
 
-## Setup
+### Method 1: Run `Taskfile` tasks
 
-Due to specific dependencies, linting this project requires Node.js v18 or higher. Follow these
-steps to set up your environment for linting:
+`Taskfile` tasks are available to automatically manage dependency setup and linting operations.
 
-1. Switch to Node.js v18 or higher
-    
-    ```shell
-    # Install node v18 if not already installed
-    nvm install 18
-
-    # Switch to node v18
-    nvm use 18
-    ```
-
-2. Re-install the project's dependencies with `--no-package-lock` to prevent `npm` from checking the
-   `package-lock.json` file version:
-
-    ```shell
-    npm install --no-package-lock
-    ```
-
-## Checking for linting errors
+#### Checking for linting errors
 
 ```shell
-npm run lint
+task lint:js-check
 ```
 
 This will run ESLint on the entire project's source code and report any linting errors.
 
-## Automatically fixing linting errors
+#### Automatically fixing linting errors
 
 ```shell
-npm run lint:fix
+task lint:js-fix
 ```
 
 This command attempts to automatically fix any linting issues found in the project.
 
-## Linting specific files
+### Method 2: IDE Integration
 
-If you want to lint a specific file rather than the entire project, you can run ESLint directly with
-a custom file path:
+To integrate ESLint into IDEs like WebStorm and VSCode, follow these steps:
 
-```shell
-eslint path/to/src.js
-```
+1. Switch to Node.js v18 or higher
+    ```shell
+    # Install the latest node if not already installed
+    nvm install node
 
-Replace `path/to/src.js` with the path to the file you want to lint.
+    # Switch to the latest node
+    nvm use node
+    ```
+
+2. Install the latest ESLint shared config package.
+    * We use `--package-lock=false` and `--no-save` to avoid adding the package to
+      `package-lock.json` and `package.json`.
+
+    ```shell
+    npm --package-lock=false install --no-save eslint-config-yscope@latest
+    ```
 
 [eslint]: https://eslint.org/
 [nvm]: https://github.com/nvm-sh/nvm

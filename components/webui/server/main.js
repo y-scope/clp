@@ -64,9 +64,10 @@ Meteor.startup(async () => {
         dbPassword: envVars.CLP_DB_PASS,
         dbUser: envVars.CLP_DB_USER,
     }, {
-        searchJobsTableName: Meteor.settings.private.SqlDbSearchJobsTableName,
         clpArchivesTableName: Meteor.settings.private.SqlDbClpArchivesTableName,
         clpFilesTableName: Meteor.settings.private.SqlDbClpFilesTableName,
+        compressionJobsTableName: Meteor.settings.private.SqlDbCompressionJobsTableName,
+        searchJobsTableName: Meteor.settings.private.SqlDbSearchJobsTableName,
     });
 });
 
