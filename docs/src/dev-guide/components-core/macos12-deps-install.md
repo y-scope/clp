@@ -1,8 +1,7 @@
 # macOS 12 setup
 
 To install the dependencies required to build clp-core, follow the steps below.
-These same steps are used by our 
-[GitHub workflow][gh-workflow].
+These same steps are used by our [GitHub workflow][gh-workflow].
 
 ## Installing dependencies
 
