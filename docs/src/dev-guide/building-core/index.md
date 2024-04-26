@@ -42,10 +42,10 @@ A handful of packages and libraries are required to build CLP. There are two opt
 
 See the relevant README for your OS:
 
-* [CentOS 7.4][1]
-* [macOS 12][2]
-* [Ubuntu 20.04][3]
-* [Ubuntu 22.04][4]
+* [CentOS 7.4](centos7.4-deps-install)
+* [macOS 12](macos12-deps-install)
+* [Ubuntu 20.04](ubuntu-focal-deps-install)
+* [Ubuntu 22.04](ubuntu-jammy-deps-install)
 
 Want to build natively on an OS not listed here? You can file a [feature request][5].
 
@@ -82,6 +82,15 @@ the relevant paths on your machine.
   :::{code-block} shell
   make -j
   :::
+
+:::{toctree}
+:hidden:
+
+centos7.4-deps-install
+macos12-deps-install
+ubuntu-focal-deps-install
+ubuntu-jammy-deps-install
+:::
 
 [1]: https://github.com/y-scope/clp/blob/main/components/core/tools/scripts/lib_install/centos7.4/README.md
 [2]: https://github.com/y-scope/clp/blob/main/components/core/tools/scripts/lib_install/macos-12/README.md

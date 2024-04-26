@@ -69,7 +69,7 @@ CLP can be run in Docker containers, in one of two deployments:
   compress and search logs, you can place a schema file at `etc/clp-schema.txt`
   * A template schema file with some example patterns is at
     `etc/clp-schema.template.txt`. The syntax of the schema file is described
-    [here](https://github.com/y-scope/clp/blob/main/components/core/README-Schema.md).
+    [here](https://docs.yscope.com/clp/main/user-guide/reference-unstructured-schema-file).
   * If no schema file is found, CLP uses its default schemas.
 * Note: In most cases, changing any configurations will require restarting CLP.
 
