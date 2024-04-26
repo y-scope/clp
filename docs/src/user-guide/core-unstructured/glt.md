@@ -1,4 +1,4 @@
-# Using GLT for unstructured logs
+# glt
 
 GLT (Group-by Log Type) is a version of CLP specialized for enhanced search performance, at the 
 cost of higher memory usage during compression. During compression, log events with the same log 
@@ -9,22 +9,13 @@ are 7.8x faster on average.
 You can use GLT to compress, decompress, and search unstructured (plain-text) logs using the `glt`
 binary described below.
 
-## Contents
-
-* [Compression](#compression)
-* [Decompression](#decompression)
-* [Search](#search)
-* [Utilities](#utilities)
-  * [`make-dictionaries-readable`](#make-dictionaries-readable)
-* [Current limitations](#current-limitations)
-
 ## Compression
 
 Usage:
 
-```shell
+:::{code-block} shell
 ./glt c [<options>] <archives-dir> <input-path> [<input-path> ...]
-```
+:::
 
 * `archives-dir` is the directory that archives should be written to.
   * `glt` will create a number of files and directories within, so it's best if this directory is
@@ -38,17 +29,17 @@ Usage:
 
 **Compress `/mnt/logs/log1.log` and output archives to `/mnt/data/archives1`:**
 
-```shell
+:::{code-block} shell
 ./glt c /mnt/data/archives1 /mnt/logs/log1.log
-```
+:::
 
 ## Decompression
 
 Usage:
 
-```shell
+:::{code-block} shell
 ./glt x [<options>] <archives-dir> <output-dir> [<file-path>]
-```
+:::
 
 * `archives-dir` is a directory containing archives.
 * `output-dir` is the directory that decompressed logs should be written to.
@@ -58,23 +49,23 @@ Usage:
 
 **Decompress all logs from `/mnt/data/archives1` into `/mnt/data/archives1-decomp`:**
 
-```shell
+:::{code-block} shell
 ./glt x /mnt/data/archives1 /mnt/data/archives1-decomp
-```
+:::
 
 **Decompress just `/mnt/logs/file1.log`:**
 
-```shell
+:::{code-block} shell
 ./glt x /mnt/data/archives1 /mnt/data/archives1-decomp /mnt/logs/file1.log
-```
+:::
 
 ## Search
 
 Usage:
 
-```shell
+:::{code-block} shell
 ./glt s [<options>] <archives-dir> <wildcard-query> [<file-path>]
-```
+:::
 
 * `archives-dir` is a directory containing archives.
 * `wildcard-query` is a wildcard query where:
@@ -83,33 +74,35 @@ Usage:
 * `options` allow you to specify things like a time-range filter.
     * For a complete list, run `./glt s --help`
 
-> [!TIP]
-> Adding spaces (when possible) at the beginning and the end of the wildcard-query can improve GLT's 
-> search performance, since GLT won't need to consider implicit wildcards during query processing.
-> For example, the query " ERROR * container " is preferred to "ERROR * container".
+:::{tip}
+Adding spaces (when possible) at the beginning and the end of the wildcard-query can improve GLT's 
+search performance, since GLT won't need to consider implicit wildcards during query processing.
+For example, the query " ERROR * container " is preferred to "ERROR * container".
+:::
 
 ### Examples
 
 **Search `/mnt/data/archives1` for specific ERROR logs:**
 
-```shell
+:::{code-block} shell
 ./glt s /mnt/data/archives1 " ERROR * container "
-```
+:::
 
 **Search for logs in a time range:**
 
-```shell
+:::{code-block} shell
 ./glt s /mnt/data/archives1 --tge 1546344654321 --tle 1546344912345 " user1 "
-```
+:::
 
-> [!NOTE]
-> Currently, timestamps must be specified as milliseconds since the UNIX epoch.
+:::{note}
+Currently, timestamps must be specified as milliseconds since the UNIX epoch.
+:::
 
 **Search a single file**:
 
-```shell
+:::{code-block} shell
 ./clg /mnt/data/archives1 " session closed " /mnt/logs/file1
-```
+:::
 
 # Utilities
 
@@ -120,18 +113,18 @@ Below are utilities for working with GLT archives.
 To convert the dictionaries of an individual archive into a human-readable form, you can use
 `make-dictionaries-readable`.
 
-```shell
+:::{code-block} shell
 ./make-dictionaries-readable archive-path <output dir>
-```
+:::
 
 * `archive-path` is a path to a specific archive (inside `archives-dir`)
 
 See the `make-dictionaries-readable`
-[README](../../components/core/src/clp/make_dictionaries_readable/README.md) for details on the
+[README](../../../../components/core/src/clp/make_dictionaries_readable/README.md) for details on the
 output format.
 
 
-## Current limitations
+# Current limitations
 
 * Timestamp format information is not preserved in search results. Instead, all search results use a
   default timestamp format.

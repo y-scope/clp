@@ -12,8 +12,8 @@ about it, you can read our [paper][9].
 
 # Benchmarks
 
-![CLP Benchmark on JSON Logs](docs/img/clp-json-benchmark.png)
-![CLP Benchmark on Unstructured Logs](docs/img/clp-unstructured-benchmark.png)
+![CLP Benchmark on JSON Logs](docs/src/_static/clp-json-benchmark.png)
+![CLP Benchmark on Unstructured Logs](docs/src/_static/clp-unstructured-benchmark.png)
 
 The figures above show CLP's compression and search performance compared to other tools. We separate
 the experiments between JSON and unstructured logs because (1) some tools can only handle one type
@@ -21,7 +21,7 @@ of logs, and (2) tools that can handle both types often have different designs f
 as CLP).
 
 Compression ratio is measured as the average across a variety of log datasets. Some of these
-datasets can be found [here](docs/Datasets.md). Search performance is measured using queries on the
+datasets can be found [here][1]. Search performance is measured using queries on the
 MongoDB logs (for JSON) and the Hadoop logs (for unstructured logs). Note that CLP uses an
 index-less design, so for a fair comparison, we disabled MongoDB and PostgreSQL's indexes; If we
 left them enabled, MongoDB and PostgreSQL's compression ratio would be worse. We didn't disable
@@ -31,7 +31,7 @@ the [CLP paper][9].
 
 # System Overview
 
-![CLP systems overview](docs/img/clp-complete-solution.png)
+![CLP systems overview](docs/src/_static/clp-complete-solution.png)
 
 CLP provides an end-to-end log management pipeline consisting of compression, search, analytics, and
 viewing. The figure above shows the CLP ecosystem architecture. It consists of the following
@@ -67,87 +67,30 @@ features:
 
 You can download a [release package](https://github.com/y-scope/clp/releases) which includes support
 for distributed compression and search. Or, to quickly try CLP's *core* compression and search, you
-can use a [prebuilt container](docs/core/clp-core-container.md).
+can use a [prebuilt container][2].
 
-We also have guides for building the [package](docs/Building.md) and
-[CLP core](components/core/README.md) from source.
+We also have guides for building the [package][3] and [CLP core][4] from source.
 
-For some logs you can use to test CLP, check out our open-source 
-[datasets](docs/Datasets.md).
+For some logs you can use to test CLP, check out our open-source [datasets][1].
 
 # Providing Feedback
 
-You can use GitHub issues to [report a bug](https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&template=bug-report.yml) 
-or [request a feature](https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml).
+You can use GitHub issues to [report a bug][5] or [request a feature][6].
 
-Join us on [Zulip](https://yscope-clp.zulipchat.com/) to chat with developers 
-and other community members.
-
-# Project Structure
-
-CLP is currently split across a few different components in the [components](components) 
-directory:
-
-* [clp-package-utils](components/clp-package-utils) contains Python utilities
-  for operating the CLP package.
-* [clp-py-utils](components/clp-py-utils) contains Python utilities common to several of the 
-  other components.
-* [core](components/core) contains code to compress uncompressed logs, decompress compressed 
-  logs, and search compressed logs.
-* [job-orchestration](components/job-orchestration) contains code to schedule compression jobs on
-  the cluster.
-* [package-template](components/package-template) contains the base directory structure and files of the 
-  CLP package.
-
-# GitHub Packages
-
-The artifacts published to [GitHub packages][1] in this repo are a set of Docker container images
-useful for building and running CLP:
-
-| Image name                                                        | Image contents                                                                                       | Link   |
-|-------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|--------|
-| `ghcr.io/y-scope/clp/clp-core-dependencies-x86-centos7.4:main`    | The dependencies necessary to build CLP core in a Centos 7.4 x86 environment.                        | [↗][2] |
-| `ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main` | The dependencies necessary to build CLP core in an Ubuntu Focal x86 environment.                     | [↗][3] |
-| `ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-jammy:main` | The dependencies necessary to build CLP core in an Ubuntu Jammy x86 environment.                     | [↗][4] |
-| `ghcr.io/y-scope/clp/clp-core-x86-ubuntu-focal:main`              | The CLP core binaries (`clg`, `clp`, `clp-s`, `glt`, etc.) built in an Ubuntu Focal x86 environment. | [↗][5] |
-| `ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-focal:main`         | The dependencies necessary to run the CLP package in an Ubuntu Focal x86 environment.                | [↗][6] |
-| `ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-jammy:main`         | The dependencies necessary to run the CLP package in an Ubuntu Jammy x86 environment.                | [↗][7] |
+Join us on [Zulip][7] to chat with developers and other community members.
 
 # Next Steps
 
 This is our open-source release which we will be constantly updating with bug fixes, features, etc.
 If you would like a feature or want to report a bug, please file an issue and we'll be happy to engage.
 
-# Contributing
-
-Have an issue you want to fix or a feature you'd like to implement? We'd love to see it!
-
-## Linting
-
-Before submitting a PR, ensure you've run our linting tools and either fixed any violations or
-suppressed the warning. To run our linting workflows locally, you'll need [Task][8]. Alternatively,
-you can run the [clp-lint](.github/workflows/clp-lint.yaml) workflow in your fork.
-
-To perform the linting checks:
-
-```shell
-task lint:check
-```
-
-To also apply any automatic fixes:
-
-```shell
-task lint:fix
-```
-
-[1]: https://github.com/orgs/y-scope/packages?repo_name=clp
-[2]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-centos7.4
-[3]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-ubuntu-focal
-[4]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-ubuntu-jammy
-[5]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-x86-ubuntu-focal
-[6]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-execution-x86-ubuntu-focal
-[7]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-execution-x86-ubuntu-jammy
-[8]: https://taskfile.dev/
+[1]: https://docs.yscope.com/clp/main/user-guide/resources-datasets.html
+[2]: http://docs.yscope.com/clp/main/user-guide/core-container.html
+[3]: http://docs.yscope.com/clp/main/dev-guide/building-package.html
+[4]: http://docs.yscope.com/clp/main/dev-guide/building-core.html
+[5]: https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&template=bug-report.yml
+[6]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
+[7]: https://yscope-clp.zulipchat.com/
 [9]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
 [10]: https://github.com/y-scope/clp-loglib-py
 [11]: https://github.com/y-scope/log4j1-appenders

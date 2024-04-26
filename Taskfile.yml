@@ -1,6 +1,7 @@
 version: "3"
 
 includes:
+  docs: "docs/tasks.yml"
   lint: "lint-tasks.yml"
 
 vars:

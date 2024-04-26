@@ -1,16 +1,7 @@
-# Using CLP for unstructured logs
+# clp
 
 For unstructured (plain text) logs, you can compress, decompress, and search them using the `clp`
 and `clg` binaries described below.
-
-## Contents
-
-* [Compression](#compression)
-* [Decompression](#decompression)
-* [Search](#search)
-* [Parallel compression](#parallel-compression)
-* [Utilities](#utilities)
-  * [`make-dictionaries-readable`](#make-dictionaries-readable)
 
 ## Compression
 
@@ -18,9 +9,9 @@ and `clg` binaries described below.
 
 Usage:
 
-```shell
+:::{code-block} shell
 ./clp c [<options>] <archives-dir> <input-path> [<input-path> ...]
-```
+:::
 
 * `archives-dir` is the directory that archives should be written to.
   * `clp` will create a number of files and directories within, so it's best if this directory is
@@ -28,30 +19,30 @@ Usage:
   * You can use the same directory repeatedly and `clp` will add to the compressed logs within.
 * `input-path` is any plain-text log file or directory containing such files.
 * `options` allow you to specify things like a path to a custom
-  [schema](../../components/core/README-Schema.md) file (`--schema-path <file-path>`).
+  [schema](schema) file (`--schema-path <file-path>`).
   * For a complete list, run `./clp c --help`
 
 ### Examples
 
 **Compress `/mnt/logs/log1.log` and output archives to `/mnt/data/archives1`:**
 
-```shell
+:::{code-block} shell
 ./clp c /mnt/data/archives1 /mnt/logs/log1.log
-```
+:::
 
 **Compress `/mnt/logs/log1.log` using a custom schema specified in `/mnt/conf/schemas.txt`:**
 
-```shell
+:::{code-block} shell
 ./clp c --schema-path /mnt/conf/schemas.txt /mnt/data/archives1 /mnt/logs/log1.log
-```
+:::
 
 ## Decompression
 
 Usage:
 
-```shell
+:::{code-block} shell
 ./clp x [<options>] <archives-dir> <output-dir> [<file-path>]
-```
+:::
 
 * `archives-dir` is a directory containing archives.
 * `output-dir` is the directory that decompressed logs should be written to.
@@ -61,26 +52,27 @@ Usage:
 
 **Decompress all logs from `/mnt/data/archives1` into `/mnt/data/archives1-decomp`:**
 
-```shell
+:::{code-block} shell
 ./clp x /mnt/data/archives1 /mnt/data/archives1-decomp
-```
+:::
 
 **Decompress just `/mnt/logs/file1.log`:**
 
-```shell
+:::{code-block} shell
 ./clp x /mnt/data/archives1 /mnt/data/archives1-decomp /mnt/logs/file1.log
-```
+:::
 
 ## Search
 
 Usage:
 
-> [!NOTE]
-> Search uses a different executable (`clg`) than compression (`clp`).
+:::{note}
+Search uses a different executable (`clg`) than compression (`clp`).
+:::
 
-```shell
+:::{code-block} shell
 ./clg [<options>] <archives-dir> <wildcard-query> [<file-path>]
-```
+:::
 
 * `archives-dir` is a directory containing archives.
 * `wildcard-query` is a wildcard query where:
@@ -93,24 +85,25 @@ Usage:
 
 **Search `/mnt/data/archives1` for specific ERROR logs and ignore case distinctions:**
 
-```shell
+:::{code-block} shell
 ./clg --ignore-case /mnt/data/archives1 " ERROR * container "
-```
+:::
 
 **Search for logs in a time range:**
 
-```shell
+:::{code-block} shell
 ./clg /mnt/data/archives1 --tge 1546344654321 --tle 1546344912345 " user1 "
-```
+:::
 
-> [!NOTE]
-> Currently, timestamps must be specified as milliseconds since the UNIX epoch.
+:::{note}
+Currently, timestamps must be specified as milliseconds since the UNIX epoch.
+:::
 
 **Search a single file**:
 
-```shell
+:::{code-block} shell
 ./clg /mnt/data/archives1 " session closed " /mnt/logs/file1
-```
+:::
 
 # Parallel Compression
 
@@ -146,12 +139,12 @@ Below are utilities for working with CLP archives.
 To convert the dictionaries of an individual archive into a human-readable form, you can use
 `make-dictionaries-readable`.
 
-```shell
+:::{code-block} shell
 ./make-dictionaries-readable archive-path <output dir>
-```
+:::
 
 * `archive-path` is a path to a specific archive (inside `archives-dir`)
 
 See the `make-dictionaries-readable` 
-[README](../../components/core/src/clp/make_dictionaries_readable/README.md) for details on the 
+[README](../../../../components/core/src/clp/make_dictionaries_readable/README.md) for details on the 
 output format.

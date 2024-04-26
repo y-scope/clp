@@ -1,0 +1,21 @@
+html[data-theme="dark"], html[data-theme="light"] {
+    --pst-color-primary: #3399ff;
+    --pst-color-secondary: #9580ff;
+}
+
+a {
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/*
+Remove margin from sidebar-primary-items__end so that we don't have an unnecessary scrollbar. We're
+not using the end items currently.
+*/
+.bd-sidebar-primary .sidebar-primary-items__end {
+    margin-top: 0;
+    margin-bottom: 0;
+}
