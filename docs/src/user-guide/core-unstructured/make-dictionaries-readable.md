@@ -10,7 +10,6 @@ Usage:
 
 * `archive-path` is a path to a specific archive (inside `archives-dir`)
 
-
 ## Format
 
 For a dictionary, `make-dictionaries-readable` prints one entry per line.
