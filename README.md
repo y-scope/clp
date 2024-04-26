@@ -2,7 +2,7 @@
 
 [![Open bug reports](https://img.shields.io/github/issues/y-scope/clp/bug?label=bugs)](https://github.com/y-scope/clp/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
 [![Open feature requests](https://img.shields.io/github/issues/y-scope/clp/enhancement?label=feature-requests)](https://github.com/y-scope/clp/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement)
-[![CLP on Zulip](https://img.shields.io/badge/zulip-yscope--clp%20chat-1888FA?logo=zulip)](https://yscope-clp.zulipchat.com/) 
+[![CLP on Zulip](https://img.shields.io/badge/zulip-yscope--clp%20chat-1888FA?logo=zulip)](https://yscope-clp.zulipchat.com/)
 
 YScope's Compressed Log Processor (CLP) compresses your logs, and allows you to search the
 compressed logs without decompression. CLP supports both JSON logs and unstructured (i.e., free
@@ -42,7 +42,7 @@ features:
   (intermediate representation) produced by CLP's logging libraries.
 
 - **Real-time Compression with CLP Logging Libraries**: CLP provides logging libraries for
-  [Python][clp-loglib-py] and Java ([Log4j][log4j1-appenders] and [Logback][logback-appenders]). The 
+  [Python][clp-loglib-py] and Java ([Log4j][log4j1-appenders] and [Logback][logback-appenders]). The
   logging libraries compress logs in real-time, so only compressed logs are written to disk or
   transmitted over the network. The compressed logs use CLP's intermediate representation (IR)
   format which achieves a higher compression ratio than general purpose compressors like Zstandard.

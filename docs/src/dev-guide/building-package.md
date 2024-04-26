@@ -48,7 +48,7 @@ To clean up the package, run:
 ```shell
 task clean-package
 ```
-  
+
 To clean up all build artifacts, run:
 
 ```shell

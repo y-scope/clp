@@ -12,21 +12,21 @@ The sections are as follows:
 :link: core-overview
 Core
 ^^^
-Docs about CLP's core component for compressing, decompressing, and searching logs. 
+Docs about CLP's core component for compressing, decompressing, and searching logs.
 :::
 
 :::{grid-item-card}
 :link: resources-datasets
 Resources
 ^^^
-Resources like log datasets, etc. 
+Resources like log datasets, etc.
 :::
 
 :::{grid-item-card}
 :link: reference-unstructured-schema-file
 Reference
 ^^^
-Reference docs like format specifications, etc. 
+Reference docs like format specifications, etc.
 :::
 ::::
 

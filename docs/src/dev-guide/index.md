@@ -12,7 +12,7 @@ The sections are as follows:
 :link: building-package
 Building
 ^^^
-Docs about building CLP. 
+Docs about building CLP.
 :::
 
 :::{grid-item-card}
@@ -26,7 +26,7 @@ Docs about contributing to this project.
 :link: tooling-containers
 Tooling
 ^^^
-Docs about various tooling like available containers, etc. 
+Docs about various tooling like available containers, etc.
 :::
 
 :::{grid-item-card}

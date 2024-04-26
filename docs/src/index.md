@@ -79,14 +79,14 @@ Check out the relevant guide below, based on whether you'd like to use or develo
 :link: user-guide/index
 User guide
 ^^^
-Docs for those interested in using and operating CLP. 
+Docs for those interested in using and operating CLP.
 :::
 
 :::{grid-item-card}
 :link: dev-guide/index
 Developer guide
 ^^^
-Docs for those interested in developing CLP. 
+Docs for those interested in developing CLP.
 :::
 ::::
 
