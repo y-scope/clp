@@ -1,9 +1,9 @@
 version: "3"
 
 vars:
-  LINTER_NODEJS_BUILD_DIR: "{{.TASKFILE_DIR}}/build/linter-nodejs"
-  LINTER_NODEJS_BIN_DIR: "{{.LINTER_NODEJS_BUILD_DIR}}/node/bin"
-  VENV_DIR: "{{.TASKFILE_DIR}}/.lint-venv"
+  G_LINTER_NODEJS_BUILD_DIR: "{{.G_BUILD_DIR}}/linter-nodejs"
+  G_LINTER_NODEJS_BIN_DIR: "{{.G_LINTER_NODEJS_BUILD_DIR}}/node/bin"
+  G_LINT_VENV_DIR: "{{.G_BUILD_DIR}}/lint-venv"
 
 tasks:
   check:
@@ -21,13 +21,13 @@ tasks:
       - task: "yml-fix"
 
   cpp-check:
-    dir: "{{.TASKFILE_DIR}}/components/core"
+    dir: "components/core"
     cmds:
       - task: "cpp"
         vars:
           FLAGS: "--dry-run"
     sources: &cpp_source_files
-      - "{{.TASKFILE_DIR}}/lint-tasks.yml"
+      - "{{.TASKFILE}}"
       - ".clang-format"
       - "src/**/*.cpp"
       - "src/**/*.h"
@@ -39,7 +39,7 @@ tasks:
       - "tests/**/*.inc"
 
   cpp-fix:
-    dir: "{{.TASKFILE_DIR}}/components/core"
+    dir: "components/core"
     cmds:
       - task: "cpp"
         vars:
@@ -47,16 +47,16 @@ tasks:
     sources: *cpp_source_files
 
   js-check:
-    dir: "{{.TASKFILE_DIR}}/components/webui"
+    dir: "components/webui"
     cmds:
       - task: "js"
         vars:
           LINT_CMD: "check"
     sources: &js_source_files
-      - "{{.BUILD_DIR}}/lint#linter-node-modules.md5"
-      - "{{.BUILD_DIR}}/webui-node-modules.md5"
-      - "{{.TASKFILE_DIR}}/lint-tasks.yml"
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "{{.G_BUILD_DIR}}/lint#linter-node-modules.md5"
+      - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
+      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
       - "client/**/*.js"
       - "client/**/*.jsx"
       - "imports/**/*.js"
@@ -69,7 +69,7 @@ tasks:
       - "tests/**/*.jsx"
 
   js-fix:
-    dir: "{{.TASKFILE_DIR}}/components/webui"
+    dir: "components/webui"
     cmds:
       - task: "js"
         vars:
@@ -97,7 +97,7 @@ tasks:
     deps: ["venv"]
     cmds:
       - |-
-        . "{{.VENV_DIR}}/bin/activate"
+        . "{{.G_LINT_VENV_DIR}}/bin/activate"
         yamllint .
 
   cpp:
@@ -105,10 +105,10 @@ tasks:
     requires:
       vars: ["FLAGS"]
     deps: ["venv"]
-    dir: "{{.TASKFILE_DIR}}/components/core"
+    dir: "components/core"
     cmds:
       - |-
-        . "{{.VENV_DIR}}/bin/activate"
+        . "{{.G_LINT_VENV_DIR}}/bin/activate"
         find src tests \
           -type f \
           \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.inc" \) \
@@ -120,9 +120,9 @@ tasks:
     requires:
       vars: ["LINT_CMD"]
     deps: ["linter-node-modules"]
-    dir: "{{.TASKFILE_DIR}}/components/webui"
+    dir: "components/webui"
     cmds:
-      - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm run 'lint:{{.LINT_CMD}}'"
+      - "PATH='{{.G_LINTER_NODEJS_BIN_DIR}}':$PATH npm run 'lint:{{.LINT_CMD}}'"
 
   py:
     internal: true
@@ -135,7 +135,7 @@ tasks:
           - "components/clp-py-utils/clp_py_utils"
           - "components/job-orchestration/job_orchestration"
         cmd: |-
-          . "{{.VENV_DIR}}/bin/activate"
+          . "{{.G_LINT_VENV_DIR}}/bin/activate"
           cd "{{.ITEM}}"
           black --color --line-length 100 {{.BLACK_FLAGS}} .
           ruff check {{.RUFF_FLAGS}} .
@@ -143,71 +143,84 @@ tasks:
   linter-nodejs:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
-      OUTPUT_DIR: "{{.LINTER_NODEJS_BUILD_DIR}}"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      OUTPUT_DIR: "{{.G_LINTER_NODEJS_BUILD_DIR}}"
+    deps:
+      - ":init"
+      - task: ":validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.OUTPUT_DIR}}"
     cmds:
       - task: ":nodejs"
         vars:
           NODEJS_VERSION: "latest"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-      # Checksum the generated files (this command must be last)
-      - >-
-        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
-        | md5sum > "{{.CHECKSUM_FILE}}"
+      # This command must be last
+      - task: ":compute-checksum"
+        vars:
+          DATA_DIR: "{{.OUTPUT_DIR}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
     sources:
-      - "{{.TASKFILE_DIR}}/lint-tasks.yml"
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
-    status:
-      - "test -f '{{.CHECKSUM_FILE}}'"
-      - >-
-        diff
-        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
-        "{{.CHECKSUM_FILE}}"
+      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
 
   linter-node-modules:
     internal: true
-    deps: [":webui-node-modules", "linter-nodejs"]
+    deps:
+      - ":init"
+      - ":webui-node-modules"
+      - task: ":validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.OUTPUT_DIR}}"
+      - "linter-nodejs"
     dir: "{{.WEBUI_LINTER_DIR}}"
     vars:
-      WEBUI_LINTER_DIR: "{{.TASKFILE_DIR}}/components/webui/linter"
+      WEBUI_LINTER_DIR: "{{.ROOT_DIR}}/components/webui/linter"
       OUTPUT_DIR: "{{.WEBUI_LINTER_DIR}}/node_modules"
-      CHECKSUM_FILE: "{{.BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "PATH='{{.LINTER_NODEJS_BIN_DIR}}':$PATH npm update"
-      # Checksum the generated files (this command must be last)
-      - >-
-        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
-        | md5sum > "{{.CHECKSUM_FILE}}"
+      - "PATH='{{.G_LINTER_NODEJS_BIN_DIR}}':$PATH npm update"
+      # This command must be last
+      - task: ":compute-checksum"
+        vars:
+          DATA_DIR: "{{.OUTPUT_DIR}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
     sources:
-      - "{{.BUILD_DIR}}/lint#linter-nodejs.md5"
-      - "{{.BUILD_DIR}}/webui-node-modules.md5"
-      - "{{.TASKFILE_DIR}}/lint-tasks.yml"
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "{{.G_BUILD_DIR}}/lint#linter-nodejs.md5"
+      - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
+      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
       - "../package.json"
-    status:
-      - "test -f '{{.CHECKSUM_FILE}}'"
-      - >-
-        diff
-        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
-        "{{.CHECKSUM_FILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
 
   venv:
     internal: true
-    dir: "{{.TASKFILE_DIR}}"
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      OUTPUT_DIR: "{{.G_LINT_VENV_DIR}}"
+    deps:
+      - ":init"
+      - task: ":validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.OUTPUT_DIR}}"
     cmds:
-      - "rm -rf '{{.VENV_DIR}}'"
-      - "python3 -m venv '{{.VENV_DIR}}'"
-      # Remove calls to `hash` since Task uses `gosh` rather than `bash`.
-      # NOTE: Older versions of Python's venv would only call `hash` if they detected the running
-      # shell was one that had the command, but that's not the case in newer versions.
-      - "sed -i 's/^\\s*hash\\s\\+.*/true/g' \"{{.VENV_DIR}}/bin/activate\""
-      - |-
-        . "{{.VENV_DIR}}/bin/activate"
-        pip3 install --upgrade pip
-        pip3 install --upgrade -r lint-requirements.txt
+      - task: ":create-venv"
+        vars:
+          LABEL: "lint"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+          REQUIREMENTS_FILE: "lint-requirements.txt"
+      # This command must be last
+      - task: ":compute-checksum"
+        vars:
+          DATA_DIR: "{{.OUTPUT_DIR}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
     sources:
+      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
       - "lint-requirements.txt"
-      - "lint-tasks.yml"
-    generates:
-      - "{{.VENV_DIR}}/**/*"
+    generates: ["{{.CHECKSUM_FILE}}"]
