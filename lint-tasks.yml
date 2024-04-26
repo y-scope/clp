@@ -142,32 +142,40 @@ tasks:
 
   linter-nodejs:
     internal: true
-    deps: [":init"]
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_LINTER_NODEJS_BUILD_DIR}}"
+    deps:
+      - ":init"
+      - task: ":validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.OUTPUT_DIR}}"
     cmds:
       - task: ":nodejs"
         vars:
           NODEJS_VERSION: "latest"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-      # Checksum the generated files (this command must be last)
-      - >-
-        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
-        | md5sum > "{{.CHECKSUM_FILE}}"
+      # This command must be last
+      - task: ":compute-checksum"
+        vars:
+          DATA_DIR: "{{.OUTPUT_DIR}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
     sources:
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
-    status:
-      - "test -f '{{.CHECKSUM_FILE}}'"
-      - >-
-        diff
-        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
-        "{{.CHECKSUM_FILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
 
   linter-node-modules:
     internal: true
-    deps: [":init", ":webui-node-modules", "linter-nodejs"]
+    deps:
+      - ":init"
+      - ":webui-node-modules"
+      - task: ":validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.OUTPUT_DIR}}"
+      - "linter-nodejs"
     dir: "{{.WEBUI_LINTER_DIR}}"
     vars:
       WEBUI_LINTER_DIR: "{{.ROOT_DIR}}/components/webui/linter"
@@ -176,46 +184,43 @@ tasks:
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "PATH='{{.G_LINTER_NODEJS_BIN_DIR}}':$PATH npm update"
-      # Checksum the generated files (this command must be last)
-      - >-
-        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
-        | md5sum > "{{.CHECKSUM_FILE}}"
+      # This command must be last
+      - task: ":compute-checksum"
+        vars:
+          DATA_DIR: "{{.OUTPUT_DIR}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
     sources:
       - "{{.G_BUILD_DIR}}/lint#linter-nodejs.md5"
       - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
       - "../package.json"
-    status:
-      - "test -f '{{.CHECKSUM_FILE}}'"
-      - >-
-        diff
-        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
-        "{{.CHECKSUM_FILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
 
   venv:
     internal: true
-    deps: [":init"]
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_LINT_VENV_DIR}}"
+    deps:
+      - ":init"
+      - task: ":validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.OUTPUT_DIR}}"
     cmds:
       - task: ":create-venv"
         vars:
           LABEL: "lint"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
           REQUIREMENTS_FILE: "lint-requirements.txt"
-      # Checksum the generated files (this command must be last)
-      - >-
-        tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} .
-        | md5sum > "{{.CHECKSUM_FILE}}"
+      # This command must be last
+      - task: ":compute-checksum"
+        vars:
+          DATA_DIR: "{{.OUTPUT_DIR}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
     sources:
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
       - "lint-requirements.txt"
-    status:
-      - "test -f '{{.CHECKSUM_FILE}}'"
-      - >-
-        diff
-        <(tar cf - --directory "{{.OUTPUT_DIR}}" {{.CHECKSUM_TAR_BASE_ARGS}} . | md5sum)
-        "{{.CHECKSUM_FILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
