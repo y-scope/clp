@@ -24,13 +24,13 @@ of logs, and (2) tools that can handle both types often have different designs f
 as CLP).
 
 Compression ratio is measured as the average across a variety of log datasets. Some of these
-datasets can be found [here][1]. Search performance is measured using queries on the MongoDB logs
-(for JSON) and the Hadoop logs (for unstructured logs). Note that CLP uses an index-less design, so
-for a fair comparison, we disabled MongoDB and PostgreSQL's indexes; If we left them enabled,
-MongoDB and PostgreSQL's compression ratio would be worse. We didn't disable indexing for
+datasets can be found [here][datasets]. Search performance is measured using queries on the MongoDB
+logs (for JSON) and the Hadoop logs (for unstructured logs). Note that CLP uses an index-less
+design, so for a fair comparison, we disabled MongoDB and PostgreSQL's indexes; If we left them
+enabled, MongoDB and PostgreSQL's compression ratio would be worse. We didn't disable indexing for
 Elasticsearch or Splunk since these tools are fundamentally index-based (i.e., logs cannot be
 searched without indexes). More details about our experimental methodology can be found in the
-[CLP paper][2].
+[CLP paper][clp-paper].
 
 # System Overview
 
@@ -43,29 +43,29 @@ viewing. The figure above shows the CLP ecosystem architecture. It consists of t
 features:
 
 - **Compression and Search**: CLP compresses logs into archives, which can be searched and analyzed
-  in a [web UI][3]. The input can either be raw logs or CLP's compressed IR
+  in a [web UI][webui]. The input can either be raw logs or CLP's compressed IR
   (intermediate representation) produced by CLP's logging libraries.
 
 - **Real-time Compression with CLP Logging Libraries**: CLP provides logging libraries for
-  [Python][4] and Java ([Log4j][5] and [Logback][6]). The logging libraries compress logs in
-  real-time, so only compressed logs are written to disk or transmitted over the network. The
-  compressed logs use CLP's intermediate representation (IR) format which achieves a higher
-  compression ratio than general purpose compressors like Zstandard. Compressing IR into archives
-  can further double the compression ratio and enable global search, but this requires more memory
-  usage as it needs to buffer enough logs. More details on IR versus archives can be found in this
-  [Uber Engineering Blog][7].
+  [Python][clp-loglib-py] and Java ([Log4j][log4j1-appenders] and [Logback][logback-appenders]). The
+  logging libraries compress logs in real-time, so only compressed logs are written to disk or
+  transmitted over the network. The compressed logs use CLP's intermediate representation (IR)
+  format which achieves a higher compression ratio than general purpose compressors like Zstandard.
+  Compressing IR into archives can further double the compression ratio and enable global search,
+  but this requires more memory usage as it needs to buffer enough logs. More details on IR versus
+  archives can be found in this [Uber Engineering Blog][uber-blog].
 
-- **[Log Viewer][8]**: the compressed IR can be viewed in a web-based log viewer. Compared to
-  viewing the logs in an editor, CLP's log viewer supports advanced features like filtering logs
+- **[Log Viewer][log-viewer]**: the compressed IR can be viewed in a web-based log viewer. Compared
+  to viewing the logs in an editor, CLP's log viewer supports advanced features like filtering logs
   based on log level verbosity (e.g., only displaying logs with log level equal or higher than
   ERROR). These features are possible because CLP's logging libraries parse the logs before
   compressing them into IR.
 
-- **IR Analytics Libraries**: we also provide a [Python library][9] and a [Go library][10] that can
-  analyze compressed IR.
+- **IR Analytics Libraries**: we also provide a [Python library][clp-ffi-py] and a
+  [Go library][clp-ffi-go] that can analyze compressed IR.
 
-- **[Log parser][11]**: CLP also includes a custom pushdown-automata-based log parser that is 3x
-  faster than state-of-the-art regular expression engines like [RE2][12]. The log parser is
+- **[Log parser][log-surgeon]**: CLP also includes a custom pushdown-automata-based log parser that
+  is 3x faster than state-of-the-art regular expression engines like [RE2][re2]. The log parser is
   available as a library that can be used by other applications.
 
 # Getting started
@@ -92,9 +92,9 @@ Docs for those interested in developing CLP.
 
 # Getting in touch
 
-You can use GitHub issues to [report a bug][13] or [request a feature][14].
+You can use GitHub issues to [report a bug][bug-report] or [request a feature][feature-req].
 
-Join us on [Zulip][15] to chat with developers and other community members.
+Join us on [Zulip][zulip] to chat with developers and other community members.
 
 :::{toctree}
 :hidden:
@@ -103,18 +103,18 @@ user-guide/index
 dev-guide/index
 :::
 
-[1]: user-guide/resources-datasets
-[2]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
-[3]: https://github.com/y-scope/clp/blob/main/components/webui
-[4]: https://github.com/y-scope/clp-loglib-py
-[5]: https://github.com/y-scope/log4j1-appenders
-[6]: https://github.com/y-scope/logback-appenders
-[7]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp
-[8]: https://github.com/y-scope/yscope-log-viewer
-[9]: https://github.com/y-scope/clp-ffi-py
-[10]: https://github.com/y-scope/clp-ffi-go
-[11]: https://github.com/y-scope/log-surgeon
-[12]: https://github.com/google/re2
-[13]: https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&template=bug-report.yml
-[14]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
-[15]: https://yscope-clp.zulipchat.com/
+[bug-report]: https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&template=bug-report.yml
+[clp-ffi-go]: https://github.com/y-scope/clp-ffi-go
+[clp-ffi-py]: https://github.com/y-scope/clp-ffi-py
+[clp-loglib-py]: https://github.com/y-scope/clp-loglib-py
+[clp-paper]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
+[datasets]: user-guide/resources-datasets
+[feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
+[log-surgeon]: https://github.com/y-scope/log-surgeon
+[log-viewer]: https://github.com/y-scope/yscope-log-viewer
+[log4j1-appenders]: https://github.com/y-scope/log4j1-appenders
+[logback-appenders]: https://github.com/y-scope/logback-appenders
+[re2]: https://github.com/google/re2
+[uber-blog]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp
+[webui]: https://github.com/y-scope/clp/blob/main/components/webui
+[zulip]: https://yscope-clp.zulipchat.com/

@@ -47,7 +47,7 @@ See the relevant README for your OS:
 * [Ubuntu 20.04](ubuntu-focal-deps-install)
 * [Ubuntu 22.04](ubuntu-jammy-deps-install)
 
-Want to build natively on an OS not listed here? You can file a [feature request][5].
+Want to build natively on an OS not listed here? You can file a [feature request][feature-req].
 
 #### Docker Environment
 
@@ -92,8 +92,4 @@ ubuntu-focal-deps-install
 ubuntu-jammy-deps-install
 :::
 
-[1]: https://github.com/y-scope/clp/blob/main/components/core/tools/scripts/lib_install/centos7.4/README.md
-[2]: https://github.com/y-scope/clp/blob/main/components/core/tools/scripts/lib_install/macos-12/README.md
-[3]: https://github.com/y-scope/clp/blob/main/components/core/tools/scripts/lib_install/ubuntu-focal/README.md
-[4]: https://github.com/y-scope/clp/blob/main/components/core/tools/scripts/lib_install/ubuntu-jammy/README.md
-[5]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
+[feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
