@@ -13,8 +13,8 @@ will not install any dependencies you don't expect.
 
 To install all dependencies, run:
 
-:::{code-block} shell
+```shell
 components/core/tools/scripts/lib_install/macos-12/install-all.sh
-:::
+```
 
 [gh-workflow]: https://github.com/y-scope/clp/blob/main/.github/workflows/clp-core-build-macos.yaml

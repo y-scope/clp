@@ -13,9 +13,9 @@ binary described below.
 
 Usage:
 
-:::{code-block} shell
+```shell
 ./glt c [<options>] <archives-dir> <input-path> [<input-path> ...]
-:::
+```
 
 * `archives-dir` is the directory that archives should be written to.
   * `glt` will create a number of files and directories within, so it's best if this directory is
@@ -29,17 +29,17 @@ Usage:
 
 **Compress `/mnt/logs/log1.log` and output archives to `/mnt/data/archives1`:**
 
-:::{code-block} shell
+```shell
 ./glt c /mnt/data/archives1 /mnt/logs/log1.log
-:::
+```
 
 ## Decompression
 
 Usage:
 
-:::{code-block} shell
+```shell
 ./glt x [<options>] <archives-dir> <output-dir> [<file-path>]
-:::
+```
 
 * `archives-dir` is a directory containing archives.
 * `output-dir` is the directory that decompressed logs should be written to.
@@ -49,23 +49,23 @@ Usage:
 
 **Decompress all logs from `/mnt/data/archives1` into `/mnt/data/archives1-decomp`:**
 
-:::{code-block} shell
+```shell
 ./glt x /mnt/data/archives1 /mnt/data/archives1-decomp
-:::
+```
 
 **Decompress just `/mnt/logs/file1.log`:**
 
-:::{code-block} shell
+```shell
 ./glt x /mnt/data/archives1 /mnt/data/archives1-decomp /mnt/logs/file1.log
-:::
+```
 
 ## Search
 
 Usage:
 
-:::{code-block} shell
+```shell
 ./glt s [<options>] <archives-dir> <wildcard-query> [<file-path>]
-:::
+```
 
 * `archives-dir` is a directory containing archives.
 * `wildcard-query` is a wildcard query where:
@@ -84,15 +84,15 @@ For example, the query " ERROR * container " is preferred to "ERROR * container"
 
 **Search `/mnt/data/archives1` for specific ERROR logs:**
 
-:::{code-block} shell
+```shell
 ./glt s /mnt/data/archives1 " ERROR * container "
-:::
+```
 
 **Search for logs in a time range:**
 
-:::{code-block} shell
+```shell
 ./glt s /mnt/data/archives1 --tge 1546344654321 --tle 1546344912345 " user1 "
-:::
+```
 
 :::{note}
 Currently, timestamps must be specified as milliseconds since the UNIX epoch.
@@ -100,9 +100,9 @@ Currently, timestamps must be specified as milliseconds since the UNIX epoch.
 
 **Search a single file**:
 
-:::{code-block} shell
+```shell
 ./clg /mnt/data/archives1 " session closed " /mnt/logs/file1
-:::
+```
 
 # Current limitations
 

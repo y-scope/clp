@@ -4,9 +4,9 @@ This program converts an archive's dictionaries into a human-readable form.
 
 Usage:
 
-:::{code-block} shell
+```shell
 ./make-dictionaries-readable <archive-path> <output-dir>
-:::
+```
 
 * `archive-path` is a path to a specific archive (inside `archives-dir`)
 

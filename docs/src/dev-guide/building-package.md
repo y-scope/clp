@@ -21,23 +21,23 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
 
 Download CLP core's source dependencies:
 
-:::{code-block} shell
+```shell
 components/core/tools/scripts/deps-download/download-all.sh
-:::
+```
 
 Install CLP core's dependencies
 
-:::{code-block} shell
+```shell
 components/core/tools/ubuntu-focal/install-all.sh
-:::
+```
 
 ## Build
 
 To build the package as a tar ball, run;
 
-:::{code-block} shell
+```shell
 task package-tar
-:::
+```
 
 The built tar will be output in the `build` directory.
 
@@ -45,12 +45,12 @@ The built tar will be output in the `build` directory.
 
 To clean up the package, run:
 
-:::{code-block} shell
+```shell
 task clean-package
-:::
+```
   
 To clean up all build artifacts, run:
 
-:::{code-block} shell
+```shell
 task clean
-:::
+```

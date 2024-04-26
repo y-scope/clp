@@ -9,9 +9,9 @@ and `clg` binaries described below.
 
 Usage:
 
-:::{code-block} shell
+```shell
 ./clp c [<options>] <archives-dir> <input-path> [<input-path> ...]
-:::
+```
 
 * `archives-dir` is the directory that archives should be written to.
   * `clp` will create a number of files and directories within, so it's best if this directory is
@@ -26,23 +26,23 @@ Usage:
 
 **Compress `/mnt/logs/log1.log` and output archives to `/mnt/data/archives1`:**
 
-:::{code-block} shell
+```shell
 ./clp c /mnt/data/archives1 /mnt/logs/log1.log
-:::
+```
 
 **Compress `/mnt/logs/log1.log` using a custom schema specified in `/mnt/conf/schemas.txt`:**
 
-:::{code-block} shell
+```shell
 ./clp c --schema-path /mnt/conf/schemas.txt /mnt/data/archives1 /mnt/logs/log1.log
-:::
+```
 
 ## Decompression
 
 Usage:
 
-:::{code-block} shell
+```shell
 ./clp x [<options>] <archives-dir> <output-dir> [<file-path>]
-:::
+```
 
 * `archives-dir` is a directory containing archives.
 * `output-dir` is the directory that decompressed logs should be written to.
@@ -52,15 +52,15 @@ Usage:
 
 **Decompress all logs from `/mnt/data/archives1` into `/mnt/data/archives1-decomp`:**
 
-:::{code-block} shell
+```shell
 ./clp x /mnt/data/archives1 /mnt/data/archives1-decomp
-:::
+```
 
 **Decompress just `/mnt/logs/file1.log`:**
 
-:::{code-block} shell
+```shell
 ./clp x /mnt/data/archives1 /mnt/data/archives1-decomp /mnt/logs/file1.log
-:::
+```
 
 ## Search
 
@@ -70,9 +70,9 @@ Usage:
 Search uses a different executable (`clg`) than compression (`clp`).
 :::
 
-:::{code-block} shell
+```shell
 ./clg [<options>] <archives-dir> <wildcard-query> [<file-path>]
-:::
+```
 
 * `archives-dir` is a directory containing archives.
 * `wildcard-query` is a wildcard query where:
@@ -85,15 +85,15 @@ Search uses a different executable (`clg`) than compression (`clp`).
 
 **Search `/mnt/data/archives1` for specific ERROR logs and ignore case distinctions:**
 
-:::{code-block} shell
+```shell
 ./clg --ignore-case /mnt/data/archives1 " ERROR * container "
-:::
+```
 
 **Search for logs in a time range:**
 
-:::{code-block} shell
+```shell
 ./clg /mnt/data/archives1 --tge 1546344654321 --tle 1546344912345 " user1 "
-:::
+```
 
 :::{note}
 Currently, timestamps must be specified as milliseconds since the UNIX epoch.
@@ -101,9 +101,9 @@ Currently, timestamps must be specified as milliseconds since the UNIX epoch.
 
 **Search a single file**:
 
-:::{code-block} shell
+```shell
 ./clg /mnt/data/archives1 " session closed " /mnt/logs/file1
-:::
+```
 
 # Parallel Compression
 

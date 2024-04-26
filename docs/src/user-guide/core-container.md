@@ -5,9 +5,9 @@ use the [clp-core-x86-ubuntu-focal][1] container as follows.
 
 Pull the container image:
 
-:::{code-block} shell
+```shell
 docker pull ghcr.io/y-scope/clp/clp-core-x86-ubuntu-focal:main
-:::
+```
 
 Start the container with mounts for your logs and output directories:
 
@@ -15,7 +15,7 @@ Start the container with mounts for your logs and output directories:
 Be sure to change the paths in the command below before running it.
 :::
 
-:::{code-block} shell
+```shell
 docker run \
   --rm \
   -it \
@@ -23,7 +23,7 @@ docker run \
   --volume /my/logs/dir:/mnt/logs \
   --volume /my/data/dir:/mnt/data \
   ghcr.io/y-scope/clp/clp-core-x86-ubuntu-focal:main /bin/bash
-:::
+```
 
 * Change `/my/logs/dir` to the directory on your machine that contains the logs you wish to
   compress. It will be mounted at `/mnt/logs` in the container.

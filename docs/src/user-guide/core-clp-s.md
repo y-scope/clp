@@ -7,9 +7,9 @@ the `clp-s` binary described below.
 
 Usage:
 
-:::{code-block} shell
+```shell
 ./clp-s c [<options>] <archives-dir> <input-path> [<input-path> ...]
-:::
+```
 
 * `archives-dir` is the directory that archives should be written to.
 * `input-path` is any new-line-delimited JSON (ndjson) log file or directory containing such files.
@@ -21,15 +21,15 @@ Usage:
 
 **Compress `/mnt/logs/log1.json` and output archives to `/mnt/data/archives1`:**
 
-:::{code-block} shell
+```shell
 ./clp-s c /mnt/data/archives1 /mnt/logs/log1.json
-:::
+```
 
 **Treat the field `{"d": {"@timestamp": "..."}}` as each log event's timestamp:**
 
-:::{code-block} shell
+```shell
 ./clp-s c --timestamp-key 'd.@timestamp' /mnt/data/archives1 /mnt/logs/log1.json
-:::
+```
 
 
 :::{tip}
@@ -39,21 +39,21 @@ compression ratio and search performance.
 
 **Set the target encoded size to 1 GiB and the compression level to 6 (3 by default)**
 
-:::{code-block} shell
+```shell
 ./clp-s c \
     --target-encoded-size 1073741824 \
     --compression-level 6 \
     /mnt/data/archives1 \
     /mnt/logs/log1.json
-:::
+```
 
 ## Decompression
 
 Usage:
 
-:::{code-block} shell
+```shell
 ./clp-s x [<options>] <archives-dir> <output-dir>
-:::
+```
 
 * `archives-dir` is a directory containing archives.
 * `output-dir` is the directory that decompressed logs should be written to.
@@ -65,17 +65,17 @@ Usage:
 
 **Decompress all logs from `/mnt/data/archives1` into `/mnt/data/archives1-decomp`:**
 
-:::{code-block} shell
+```shell
 ./clp-s x /mnt/data/archives1 /mnt/data/archives1-decomp
-:::
+```
 
 ## Search
 
 Usage:
 
-:::{code-block} shell
+```shell
 ./clp-s s [<options>] <archives-dir> <kql-query>
-:::
+```
 
 * `archives-dir` is a directory containing archives.
 * `kql-query` is a [KQL][1] query.
@@ -87,33 +87,33 @@ Usage:
 
 **Find all log events within a time range:**
 
-:::{code-block} shell
+```shell
 ./clp-s s /mnt/data/archives1 'ts >= 1649923037 AND ts <= 1649923038'
-:::
+```
 or
-:::{code-block} shell
+```shell
 ./clp-s s /mnt/data/archives1 \
     'ts >= date("2022-04-14T07:57:17") AND ts <= date("2022-04-14T07:57:18")'
-:::
+```
 
 **Find log events with a given key-value pair:**
 
-:::{code-block} shell
+```shell
 ./clp-s s /mnt/data/archives1 'id: 22149'
-:::
+```
 
 **Find ERROR log events containing a substring:**
 
-:::{code-block} shell
+```shell
 ./clp-s s /mnt/data/archives1 'level: ERROR AND message: "job*"'
-:::
+```
 
 **Find FATAL or ERROR log events and ignore case distinctions between values in the query and the
 compressed data:**
 
-:::{code-block} shell
+```shell
 ./clp-s s --ignore-case /mnt/data/archives1 'level: FATAL OR level: ERROR'
-:::
+```
 
 ## Current limitations
 

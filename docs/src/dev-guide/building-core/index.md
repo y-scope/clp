@@ -14,9 +14,9 @@ from source.
 We use both git submodules and third-party source packages. To download all, you can run this
 script:
 
-:::{code-block} shell
+```shell
 components/core/tools/scripts/deps-download/download-all.sh
-:::
+```
 
 This will download:
 * [abseil-cpp](https://github.com/abseil/abseil-cpp) (20230802.1)
@@ -53,7 +53,7 @@ Want to build natively on an OS not listed here? You can file a [feature request
 
 You can use these commands to start a container in which you can build and run CLP:
 
-:::{code-block} shell
+```shell
 # Make sure to change /path/to/clp/components/core and /path/to/my/logs below
 docker run --rm -it \
   --name 'clp-build-env' \
@@ -64,7 +64,7 @@ docker run --rm -it \
   /bin/bash -l
 
 cd /mnt/clp
-:::
+```
 
 Make sure to change `/path/to/clp/components/core` and `/path/to/my/logs` to
 the relevant paths on your machine.
@@ -72,16 +72,16 @@ the relevant paths on your machine.
 ## Build
 
 * Configure the cmake project:
-  :::{code-block} shell
+  ```shell
   mkdir build
   cd build
   cmake ../
-  :::
+  ```
 
 * Build:
-  :::{code-block} shell
+  ```shell
   make -j
-  :::
+  ```
 
 :::{toctree}
 :hidden:
