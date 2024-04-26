@@ -1,4 +1,4 @@
-# CLP for dynamically-structured logs
+# clp for dynamically-structured logs
 
 For dynamically-structured logs (e.g., JSON), you can compress, decompress, and search them using
 the `clp-s` binary described below.

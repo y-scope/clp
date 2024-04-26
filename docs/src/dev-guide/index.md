@@ -1,31 +1,54 @@
 # Developer guide
 
-This section contains docs describing our development practices and the like.
+This guide contains docs useful for developing CLP. Use the left sidebar (if it's hidden, click the
+<i class="fa fa-bars"></i> icon) to navigate to specific docs.
 
-## Project Structure
+The sections are as follows:
 
-CLP is currently split across a few different components in the [components][1] directory:
+::::{grid} 1 1 2 2
+:gutter: 2
 
-* [clp-package-utils][2] contains Python utilities for operating the CLP package.
-* [clp-py-utils][3] contains Python utilities common to several of the other components.
-* [core][4] contains code to compress uncompressed logs, decompress compressed logs, and search
-  compressed logs.
-* [job-orchestration][5] contains code to schedule compression jobs on the cluster.
-* [package-template][6] contains the base directory structure and files of the CLP package.
-* [webui][7] contains the web interface for the CLP package.
+:::{grid-item-card}
+:link: building-package
+Building
+^^^
+Docs about building CLP. 
+:::
+
+:::{grid-item-card}
+:link: contributing-getting-started
+Contributing
+^^^
+Docs about contributing to this project. 
+:::
+
+:::{grid-item-card}
+:link: tooling-containers
+Tooling
+^^^
+Docs about various tooling like available containers, etc. 
+:::
+
+:::{grid-item-card}
+:link: design-project-structure
+Design
+^^^
+Any design docs describing parts of this project.
+:::
+::::
 
 :::{toctree}
 :caption: Building
-:maxdepth: 2
+:hidden:
 
 building-package
-building-core
+building-core/index
 :::
 
 
 :::{toctree}
 :caption: Contributing
-:maxdepth: 2
+:hidden:
 
 contributing-getting-started
 contributing-linting
@@ -33,23 +56,16 @@ contributing-linting
 
 :::{toctree}
 :caption: Tooling
-:maxdepth: 2
+:hidden:
 
 tooling-containers
 tooling-gh-workflows
 :::
 
 :::{toctree}
-:caption: Design notes
-:maxdepth: 2
+:caption: Design
+:hidden:
 
-design-notes-parsing-wildcard-queries
+design-project-structure
+design-parsing-wildcard-queries
 :::
-
-[1]: https://github.com/y-scope/clp/tree/main/components
-[2]: https://github.com/y-scope/clp/tree/main/components/clp-package-utils
-[3]: https://github.com/y-scope/clp/tree/main/components/clp-py-utils
-[4]: https://github.com/y-scope/clp/tree/main/components/core
-[5]: https://github.com/y-scope/clp/tree/main/components/job-orchestration
-[6]: https://github.com/y-scope/clp/tree/main/components/package-template
-[7]: https://github.com/y-scope/clp/tree/main/components/webui

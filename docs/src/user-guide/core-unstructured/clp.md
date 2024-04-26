@@ -19,7 +19,7 @@ Usage:
   * You can use the same directory repeatedly and `clp` will add to the compressed logs within.
 * `input-path` is any plain-text log file or directory containing such files.
 * `options` allow you to specify things like a path to a custom
-  [schema](schema) file (`--schema-path <file-path>`).
+  [schema](../reference-unstructured-schema-file) file (`--schema-path <file-path>`).
   * For a complete list, run `./clp c --help`
 
 ### Examples
@@ -129,22 +129,3 @@ a MySQL-type database (e.g., MariaDB) as follows:
 
 Note that currently, decompression (`clp x`) and search (`clg`) can only be run with a single
 instance. We are in the process of open-sourcing parallelized versions of these as well.
-
-# Utilities
-
-Below are utilities for working with CLP archives. 
-
-## `make-dictionaries-readable`
-
-To convert the dictionaries of an individual archive into a human-readable form, you can use
-`make-dictionaries-readable`.
-
-:::{code-block} shell
-./make-dictionaries-readable archive-path <output dir>
-:::
-
-* `archive-path` is a path to a specific archive (inside `archives-dir`)
-
-See the `make-dictionaries-readable` 
-[README](../../../../components/core/src/clp/make_dictionaries_readable/README.md) for details on the 
-output format.

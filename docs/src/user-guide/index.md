@@ -1,6 +1,9 @@
 # User guide
 
-The docs in this section describe how to use and operate CLP.
+This guide documents how to use and operate CLP. Use the left sidebar (if it's hidden, click the
+<i class="fa fa-bars"></i> icon) to navigate to specific docs.
+
+The sections are as follows:
 
 ::::{grid} 1 1 2 2
 :gutter: 2
@@ -9,14 +12,21 @@ The docs in this section describe how to use and operate CLP.
 :link: core-overview
 Core
 ^^^
-Docs about CLP's core component.
+Docs about CLP's core component for compressing, decompressing, and searching logs. 
 :::
 
 :::{grid-item-card}
 :link: resources-datasets
 Resources
-^^^^^^^^^^^^
-Open-source datasets and the like.
+^^^
+Resources like log datasets, etc. 
+:::
+
+:::{grid-item-card}
+:link: reference-unstructured-schema-file
+Reference
+^^^
+Reference docs like format specifications, etc. 
 :::
 ::::
 
@@ -36,4 +46,11 @@ core-clp-s
 :caption: Resources
 
 resources-datasets
+:::
+
+:::{toctree}
+:hidden:
+:caption: Reference
+
+reference-unstructured-schema-file
 :::

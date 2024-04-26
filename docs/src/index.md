@@ -6,13 +6,17 @@
 YScope's Compressed Log Processor (CLP) compresses your logs, and allows you to search the
 compressed logs without decompression. CLP supports both JSON logs and unstructured (i.e., free
 text) logs. It also supports real-time log compression within several logging libraries. CLP also
-includes purpose-built web interfaces for searching and viewing the compressed logs. To learn more
-about it, you can read our [paper][1].
+includes purpose-built web interfaces for searching and viewing the compressed logs.
 
 # Benchmarks
 
-![CLP Benchmark on JSON Logs](_static/clp-json-benchmark.png)
-![CLP Benchmark on Unstructured Logs](_static/clp-unstructured-benchmark.png)
+:::{image} _static/clp-json-benchmark.png
+:alt: CLP Benchmark on JSON Logs
+:::
+
+:::{image} _static/clp-unstructured-benchmark.png
+:alt: CLP Benchmark on Unstructured Logs
+:::
 
 The figures above show CLP's compression and search performance compared to other tools. We separate
 the experiments between JSON and unstructured logs because (1) some tools can only handle one type
@@ -20,17 +24,19 @@ of logs, and (2) tools that can handle both types often have different designs f
 as CLP).
 
 Compression ratio is measured as the average across a variety of log datasets. Some of these
-datasets can be found [here][2]. Search performance is measured using queries on the MongoDB logs
+datasets can be found [here][1]. Search performance is measured using queries on the MongoDB logs
 (for JSON) and the Hadoop logs (for unstructured logs). Note that CLP uses an index-less design, so
 for a fair comparison, we disabled MongoDB and PostgreSQL's indexes; If we left them enabled,
 MongoDB and PostgreSQL's compression ratio would be worse. We didn't disable indexing for
 Elasticsearch or Splunk since these tools are fundamentally index-based (i.e., logs cannot be
 searched without indexes). More details about our experimental methodology can be found in the
-[CLP paper][1].
+[CLP paper][2].
 
 # System Overview
 
-![CLP systems overview](_static/clp-complete-solution.png)
+:::{image} _static/clp-complete-solution.png
+:alt: CLP systems overview
+:::
 
 CLP provides an end-to-end log management pipeline consisting of compression, search, analytics, and
 viewing. The figure above shows the CLP ecosystem architecture. It consists of the following
@@ -62,6 +68,34 @@ features:
   faster than state-of-the-art regular expression engines like [RE2][12]. The log parser is
   available as a library that can be used by other applications.
 
+# Getting started
+
+Check out the relevant guide below, based on whether you'd like to use or develop CLP.
+
+::::{grid} 1 1 2 2
+:gutter: 2
+
+:::{grid-item-card}
+:link: user-guide/index
+User guide
+^^^
+Docs for those interested in using and operating CLP. 
+:::
+
+:::{grid-item-card}
+:link: dev-guide/index
+Developer guide
+^^^
+Docs for those interested in developing CLP. 
+:::
+::::
+
+# Getting in touch
+
+You can use GitHub issues to [report a bug][13] or [request a feature][14].
+
+Join us on [Zulip][15] to chat with developers and other community members.
+
 :::{toctree}
 :hidden:
 
@@ -69,8 +103,8 @@ user-guide/index
 dev-guide/index
 :::
 
-[1]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
-[2]: user-guide/resources-datasets.md
+[1]: user-guide/resources-datasets
+[2]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
 [3]: https://github.com/y-scope/clp/blob/main/components/webui
 [4]: https://github.com/y-scope/clp-loglib-py
 [5]: https://github.com/y-scope/log4j1-appenders
@@ -81,3 +115,6 @@ dev-guide/index
 [10]: https://github.com/y-scope/clp-ffi-go
 [11]: https://github.com/y-scope/log-surgeon
 [12]: https://github.com/google/re2
+[13]: https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&template=bug-report.yml
+[14]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
+[15]: https://yscope-clp.zulipchat.com/

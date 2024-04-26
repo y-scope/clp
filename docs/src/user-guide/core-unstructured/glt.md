@@ -104,26 +104,6 @@ Currently, timestamps must be specified as milliseconds since the UNIX epoch.
 ./clg /mnt/data/archives1 " session closed " /mnt/logs/file1
 :::
 
-# Utilities
-
-Below are utilities for working with GLT archives.
-
-## `make-dictionaries-readable`
-
-To convert the dictionaries of an individual archive into a human-readable form, you can use
-`make-dictionaries-readable`.
-
-:::{code-block} shell
-./make-dictionaries-readable archive-path <output dir>
-:::
-
-* `archive-path` is a path to a specific archive (inside `archives-dir`)
-
-See the `make-dictionaries-readable`
-[README](../../../../components/core/src/clp/make_dictionaries_readable/README.md) for details on the
-output format.
-
-
 # Current limitations
 
 * Timestamp format information is not preserved in search results. Instead, all search results use a

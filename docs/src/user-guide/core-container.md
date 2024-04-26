@@ -30,8 +30,7 @@ docker run \
 * Change `/my/data/dir` to the directory on your machine where you want to store the generated
   archives. It will be mounted at `/mnt/data` in the container.
 
-Follow the usage instructions in [Using CLP for unstructured logs](core-unstructured/clp),
-[Using CLP for semi-structured logs](core-clp-s) or [Using GLT for unstructured logs](core-unstructured/glt)
-depending on your use case.
+Follow the usage instructions in [clp for unstructured logs](core-unstructured/index) or
+[clp for dynamically-structured logs](core-clp-s), depending on the format of your logs.
 
 [1]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-x86-ubuntu-focal

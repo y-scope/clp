@@ -9,7 +9,7 @@ The general process is as follows:
   how to proceed.
 * [Fork][3] the repo.
 * Implement your change, adding unit/integration tests where possible.
-* Apply the [linters](contributing-linting.md).
+* Apply the [linters](contributing-linting).
 * Submit a pull-request for your change. One or more CLP developers will review your change.
 * Respond to the review(s).
 
