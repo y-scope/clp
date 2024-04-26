@@ -19,14 +19,14 @@ import "./SearchResultsHeader.scss";
  *
  * @param {object} props
  * @param {number} props.maxLinesPerResult
- * @param {number} props.numResultsOnServer
+ * @param {number} props.numResultsInTotal
  * @param {number} props.searchJobId
  * @param {Function} props.setMaxLinesPerResult
  * @return {React.ReactElement}
  */
 const SearchResultsHeader = ({
     maxLinesPerResult,
-    numResultsOnServer,
+    numResultsInTotal,
     searchJobId,
     setMaxLinesPerResult,
 }) => {
@@ -50,7 +50,7 @@ const SearchResultsHeader = ({
                             {" "}
                             | Results count:
                             {" "}
-                            {numResultsOnServer}
+                            {numResultsInTotal}
                         </span>
                     </Col>
                     <Col xs={"auto"}>

@@ -3,6 +3,11 @@ import {
 } from "react";
 import Spinner from "react-bootstrap/Spinner";
 
+import {faCircleInfo} from "@fortawesome/free-solid-svg-icons";
+import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+
+import {SEARCH_MAX_NUM_RESULTS} from "/imports/api/search/constants";
+
 import "./SearchResultsLoadSensor.scss";
 
 
@@ -16,19 +21,21 @@ const SEARCH_RESULTS_LOAD_SENSOR_POLL_INTERVAL_MILLIS = 200;
  * this element becomes partially visible.
  *
  * @param {object} props
- * @param {boolean} props.hasMoreResults
+ * @param {boolean} props.hasMoreResultsInCache
+ * @param {boolean} props.hasMoreResultsInTotal
  * @param {Function} props.onLoadMoreResults
  * @return {React.ReactElement}
  */
 const SearchResultsLoadSensor = ({
-    hasMoreResults,
+    hasMoreResultsInCache,
+    hasMoreResultsInTotal,
     onLoadMoreResults,
 }) => {
     const loadingBlockRef = useRef(null);
     const loadIntervalRef = useRef(null);
 
     useEffect(() => {
-        if (false === hasMoreResults) {
+        if (false === hasMoreResultsInCache) {
             return () => null;
         }
 
@@ -55,25 +62,40 @@ const SearchResultsLoadSensor = ({
             observer.disconnect();
         };
     }, [
-        hasMoreResults,
+        hasMoreResultsInCache,
         onLoadMoreResults,
     ]);
 
     return (
         <div
-            className={"search-results-load-sensor"}
             ref={loadingBlockRef}
             style={{
-                visibility: (true === hasMoreResults) ?
+                visibility: (hasMoreResultsInCache || hasMoreResultsInTotal) ?
                     "visible" :
                     "hidden",
             }}
         >
-            <Spinner
-                animation={"border"}
-                size={"sm"}
-                variant={"primary"}/>
-            <span>Loading...</span>
+            {(hasMoreResultsInCache) &&
+                <div className={"search-results-load-sensor-content"}>
+                    <Spinner
+                        animation={"border"}
+                        size={"sm"}
+                        variant={"primary"}/>
+                    <span>Loading...</span>
+                </div>}
+            {(false === hasMoreResultsInCache && hasMoreResultsInTotal) &&
+                <div className={"search-results-load-sensor-content"}>
+                    <FontAwesomeIcon
+                        icon={faCircleInfo}
+                        size={"sm"}/>
+                    <span>
+                        Showing the top
+                        {" "}
+                        {SEARCH_MAX_NUM_RESULTS}
+                        {" "}
+                        results by time. To view any other results, please refine your search.
+                    </span>
+                </div>}
         </div>
     );
 };

@@ -9,6 +9,8 @@ import {MONGO_SORT_BY_ID} from "/imports/utils/mongo";
 import Panel from "../../Panel";
 import IngestionJobRow from "./IngestionJobRow";
 
+import "./IngestionJobs.scss";
+
 
 /**
  * Displays a table of ingestion jobs.
@@ -37,10 +39,10 @@ const IngestionJobs = () => {
             xl={6}
             xs={12}
         >
-            <Table>
+            <Table className={"ingestion-jobs-table"}>
                 <thead>
                     <tr>
-                        <th className={"text-center"}>Status</th>
+                        <th className={"text-center col-1"}>Status</th>
                         <th className={"text-end"}>Job ID</th>
                         <th className={"text-end"}>Speed</th>
                         <th className={"text-end"}>Data Ingested</th>
