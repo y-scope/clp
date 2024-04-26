@@ -7,10 +7,10 @@ into a logtype and variable values that we can use to match encoded messages.
 
 Consider this message (timestamp omitted for brevity):
 
-:::{code-block}
+```
   INFO Task task_12 assigned to container: [NodeAddress:172.128.0.41, \
  ContainerID:container_15], operation took 0.335 seconds
-:::
+```
 
 At a high-level, we parse it as follows:
 
@@ -29,10 +29,10 @@ The output for the example is:
   details for brevity)
 * Logtype:
   
-  :::{code-block}
+  ```
    INFO Task <dict-var> assigned to container: [NodeAddress:<dict-var>, \
   ContainerID:<dict-var>], operation took <float> seconds
-  :::
+  ```
   
   * Where `<dict-var>` and `<float>` are single-byte placeholder characters.
 
@@ -185,10 +185,10 @@ choose the first pattern since that would ignore cases where only the second
 pattern's variables match the query. For instance, consider these non-nested
 patterns:
 
-:::{code-block}
+```
 ip_addr: \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}
 float: \d+\.\d+
-:::
+```
 
 If we encounter a wildcard-containing token like `*1.2*`, we have to search for
 variables matching either `ip_addr` or `float`. For instance, encoded messages

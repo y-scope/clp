@@ -9,7 +9,7 @@ Anything not matching a variable type is considered to be static text.
 
 ## Example Schema File 
 
-:::{code-block}
+```
 // Delimiters
 delimiters: \t\r\n:,!;%
 
@@ -23,7 +23,7 @@ float:\-{0,1}[0-9]+\.[0-9]+
 hex:[a-fA-F]+
 hasNumber:.*\d.*
 equals:.*=.*[a-zA-Z0-9].*
-:::
+```
 
 * `delimiters: \t\r\n:,!;%` indicates that ` `, `\t`, `\r`, `\n`, `:`, `,`, `!`,
   `;`, `%`, and `'` are delimiters. Note, this is not a regular expression but a 
@@ -53,7 +53,7 @@ equals:.*=.*[a-zA-Z0-9].*
   performance.
 
 ## Supported Regex
-:::{code-block}
+```
 REGEX RULE   DEFINITION
 ab           Match 'a' followed by 'b'
 a|b          Match a OR b
@@ -68,7 +68,7 @@ a{N,M}       Match 'a' between N and M times
 \d           Match any digit 0-9
 \s           Match any whitespace character (' ', '\r', '\t', '\v', or '\f')
 .            Match any *non-delimiter* character
-:::
+```
 
 Regex rules are listed in order of operation
 
