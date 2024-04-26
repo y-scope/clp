@@ -23,6 +23,13 @@ Docs about contributing to this project.
 :::
 
 :::{grid-item-card}
+:link: components-core
+Components
+^^^
+Docs specific to each component.
+:::
+
+:::{grid-item-card}
 :link: tooling-containers
 Tooling
 ^^^
