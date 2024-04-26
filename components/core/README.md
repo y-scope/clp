@@ -4,5 +4,5 @@ CLP core is the low-level component that performs compression, decompression, an
 
 See the docs below for more details:
 
-* [Building](http://docs.yscope.com/dev-guide/building-core.html)
-* [Running](http://docs.yscope.com/user-guide/core-overview.html)
+* [Building](https://docs.yscope.com/clp/main/dev-guide/building-core.html)
+* [Running](https://docs.yscope.com/clp/main/user-guide/core-overview.html)
