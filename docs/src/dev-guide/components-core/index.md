@@ -1,4 +1,6 @@
-# Building CLP's core
+# Core
+
+CLP core is the low-level component that performs compression, decompression, and search.
 
 ## Requirements
 

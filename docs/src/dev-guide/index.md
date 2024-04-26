@@ -19,7 +19,7 @@ Docs about building CLP.
 :link: contributing-getting-started
 Contributing
 ^^^
-Docs about contributing to this project. 
+Docs about contributing to this project.
 :::
 
 :::{grid-item-card}
@@ -38,13 +38,10 @@ Any design docs describing parts of this project.
 ::::
 
 :::{toctree}
-:caption: Building
 :hidden:
 
 building-package
-building-core/index
 :::
-
 
 :::{toctree}
 :caption: Contributing
@@ -52,6 +49,14 @@ building-core/index
 
 contributing-getting-started
 contributing-linting
+:::
+
+:::{toctree}
+:caption: Components
+:hidden:
+
+components-core/index
+components-webui
 :::
 
 :::{toctree}

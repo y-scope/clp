@@ -69,8 +69,7 @@ You can download a [release package](https://github.com/y-scope/clp/releases) wh
 for distributed compression and search. Or, to quickly try CLP's *core* compression and search, you
 can use a [prebuilt container][core-container].
 
-We also have guides for building the [package][build-package] and [CLP core][build-core] from
-source.
+We also have guides for building the [package][build-package] and [CLP core][core] from source.
 
 For some logs you can use to test CLP, check out our open-source [datasets][datasets].
 
@@ -86,14 +85,14 @@ This is our open-source release which we will be constantly updating with bug fi
 If you would like a feature or want to report a bug, please file an issue and we'll be happy to engage.
 
 [bug-report]: https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&template=bug-report.yml
-[build-core]: http://docs.yscope.com/clp/main/dev-guide/building-core.html
-[build-package]: http://docs.yscope.com/clp/main/dev-guide/building-package.html
+[build-package]: http://docs.yscope.com/clp/main/dev-guide/building-package
 [clp-ffi-go]: https://github.com/y-scope/clp-ffi-go
 [clp-ffi-py]: https://github.com/y-scope/clp-ffi-py
 [clp-loglib-py]: https://github.com/y-scope/clp-loglib-py
 [clp-paper]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
-[core-container]: http://docs.yscope.com/clp/main/user-guide/core-container.html
-[datasets]: https://docs.yscope.com/clp/main/user-guide/resources-datasets.html
+[core]: http://docs.yscope.com/clp/main/dev-guide/components-core
+[core-container]: http://docs.yscope.com/clp/main/user-guide/core-container
+[datasets]: https://docs.yscope.com/clp/main/user-guide/resources-datasets
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
 [log-surgeon]: https://github.com/y-scope/log-surgeon
 [log-viewer]: https://github.com/y-scope/yscope-log-viewer
