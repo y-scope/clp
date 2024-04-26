@@ -5,8 +5,6 @@ and `clg` binaries described below.
 
 ## Compression
 
-### `clp`
-
 Usage:
 
 ```shell
