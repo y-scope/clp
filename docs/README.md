@@ -33,7 +33,8 @@ this project:
 task docs:serve
 ```
 
-The command above will install [http-server] and serve the built docs site.
+The command above will install [http-server] and serve the built docs site; `http-server` will print
+the address it binds to (usually http://localhost:8080).
 
 [http-server]: https://www.npmjs.com/package/http-server
 [Node.js]: https://nodejs.org/en/download/current
