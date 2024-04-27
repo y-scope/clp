@@ -1,4 +1,4 @@
-# clp for unstructured logs
+# CLP for unstructured logs
 
 There are two flavours of CLP for compressing unstructured logs. The guides below explain how to use
 each flavour.
