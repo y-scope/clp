@@ -48,7 +48,10 @@ html_theme = "pydata_sphinx_theme"
 html_theme_options = {
     "icon_links": [
         {
-            "icon": "https://raw.githubusercontent.com/zulip/zulip/main/static/images/logo/zulip-icon-circle.svg",
+            "icon": (
+                "https://raw.githubusercontent.com/zulip/zulip/main/static/images/logo"
+                "/zulip-icon-circle.svg"
+            ),
             "name": "CLP on Zulip",
             "url": "https://yscope-clp.zulipchat.com/",
             "type": "url",
@@ -77,6 +80,7 @@ html_context = {
 
 # -- Theme custom CSS and JS ---------------------------------------------------
 # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/static_assets.html
+
 
 def setup(app):
     app.add_css_file("custom.css")
