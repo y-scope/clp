@@ -81,6 +81,7 @@ private:
 
     std::vector<ColumnDescriptor*> m_wildcard_columns;
     std::map<ColumnDescriptor*, std::set<int32_t>> m_wildcard_to_searched_basic_columns;
+    LiteralTypeBitmask m_wildcard_type_mask{0};
 
     simdjson::ondemand::parser m_array_parser;
     std::string m_array_search_string;

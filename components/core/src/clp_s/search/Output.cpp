@@ -72,6 +72,7 @@ bool Output::filter() {
         m_expr_var_match_map.clear();
         m_expr = m_match.get_query_for_schema(schema_id)->copy();
         m_wildcard_to_searched_basic_columns.clear();
+        m_wildcard_columns.clear();
         m_schema = schema_id;
 
         populate_searched_wildcard_columns(m_expr);
@@ -136,7 +137,12 @@ void Output::init(
 
     for (auto column_reader : column_readers) {
         auto column_id = column_reader->get_id();
-        if (m_match.schema_searches_against_column(schema_id, column_id)) {
+        if ((0 != m_wildcard_type_mask
+             && 0
+                        != (m_wildcard_type_mask
+                            & node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
+            || m_match.schema_searches_against_column(schema_id, column_id))
+        {
             ClpStringColumnReader* clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
             VariableStringColumnReader* var_reader
                     = dynamic_cast<VariableStringColumnReader*>(column_reader);
@@ -987,23 +993,9 @@ void Output::populate_searched_wildcard_columns(std::shared_ptr<Expression> cons
 }
 
 void Output::add_wildcard_columns_to_searched_columns() {
-    LiteralTypeBitmask mask{0};
+    m_wildcard_type_mask = 0;
     for (ColumnDescriptor* wildcard : m_wildcard_columns) {
-        mask |= wildcard->get_matching_types();
-    }
-
-    if (0 == mask) {
-        return;
-    }
-
-    for (int32_t node_id : (*m_schemas)[m_schema]) {
-        if (Schema::schema_entry_is_unordered_object(node_id)) {
-            continue;
-        }
-        auto node_literal_type = node_to_literal_type(m_schema_tree->get_node(node_id).get_type());
-        if (0 != (mask & node_literal_type)) {
-            m_match.add_searched_column_to_schema(m_schema, node_id);
-        }
+        m_wildcard_type_mask |= wildcard->get_matching_types();
     }
 }
 
