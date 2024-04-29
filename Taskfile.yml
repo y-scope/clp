@@ -20,7 +20,7 @@ vars:
 
 tasks:
   default:
-    deps: ["clp-text-pkg"]
+    deps: ["clp-json-pkg", "clp-text-pkg"]
 
   clean:
     cmds:
@@ -54,6 +54,7 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_CLP_JSON_PKG_BUILD_DIR}}"
     deps:
+      - "init"
       - task: "validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
@@ -76,6 +77,7 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_CLP_TEXT_PKG_BUILD_DIR}}"
     deps:
+      - "init"
       - task: "validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
@@ -94,6 +96,7 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
 
   core:
+    run: "once"
     deps: ["core-submodules", "init"]
     vars:
       SRC_DIR: "components/core"
@@ -120,21 +123,28 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
 
   clp-package-utils:
-    - task: "python-component"
-      vars:
-        COMPONENT: "{{.TASK}}"
+    run: "once"
+    cmds:
+      - task: "python-component"
+        vars:
+          COMPONENT: "{{.TASK}}"
 
   clp-py-utils:
-    - task: "python-component"
-      vars:
-        COMPONENT: "{{.TASK}}"
+    run: "once"
+    cmds:
+      - task: "python-component"
+        vars:
+          COMPONENT: "{{.TASK}}"
 
   job-orchestration:
-    - task: "python-component"
-      vars:
-        COMPONENT: "{{.TASK}}"
+    run: "once"
+    cmds:
+      - task: "python-component"
+        vars:
+          COMPONENT: "{{.TASK}}"
 
   webui:
+    run: "once"
     deps:
       - "init"
       - task: "validate-checksum"
@@ -174,6 +184,7 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
 
   webui-nodejs:
+    run: "once"
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_WEBUI_NODEJS_BUILD_DIR}}"
@@ -347,6 +358,7 @@ tasks:
       - "components/package-template/src/**/*"
 
   package-venv:
+    run: "once"
     internal: true
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
