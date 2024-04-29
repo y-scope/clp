@@ -10,7 +10,7 @@ script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 lib_install_scripts_dir=$script_dir/..
 
 # NOTE: cmake and boost must be installed first since the remaining packages depend on them
-"$lib_install_scripts_dir"/install-boost.sh 1.74.0
+"$lib_install_scripts_dir"/install-boost.sh 1.76.0
 
 "$lib_install_scripts_dir"/fmtlib.sh 8.0.1
 "$lib_install_scripts_dir"/libarchive.sh 3.5.1
