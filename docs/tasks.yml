@@ -31,6 +31,9 @@ tasks:
           DATA_DIR: "{{.OUTPUT_DIR}}"
       - "docs-venv"
     cmds:
+      # Call `clean` before building since `sphinx-build --write-all --fresh-env` isn't always
+      # equivalent to building from scratch.
+      - task: "clean"
       - |-
         . "{{.G_DOCS_VENV_DIR}}/bin/activate"
         sphinx-build \
