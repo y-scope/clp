@@ -33,15 +33,6 @@ curl -fsSL https://boostorg.jfrog.io/artifactory/main/release/${version}/source/
 tar xzf ${tar_filename}
 cd boost_${version_with_underscores}
 
-# Set compiler path if /usr/bin/g++ doesn't exist
-# if [ ! -e "/usr/bin/g++" ] ; then
-#     # `CC` and `CXX` are required for `bootstrap.sh` to build `b2`
-#     export CC=cc
-#     export CXX=c++
-#     # `g++` path is required by `b2`
-#     echo "using gcc : : $(readlink -f /usr/bin/c++) ;" >> tools/build/src/user-config.jam
-# fi
-
 # Build
 ./bootstrap.sh --with-libraries=filesystem,iostreams,program_options,system
 ./b2 -j${num_cpus}
