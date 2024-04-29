@@ -1,6 +1,8 @@
 myst-parser>=2.0.0
+# Locked to avoid pydata/pydata-sphinx-theme#1676 until its fix is released in a version above
+# 0.15.2
 pydata-sphinx-theme==0.14.4
-sphinx>=7.2.6
+sphinx>=7.3.7
 sphinx_design>=0.5.0
 sphinx-copybutton>=0.5.2
 sphinxcontrib-mermaid>=0.9.2
