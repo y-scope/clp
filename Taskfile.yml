@@ -49,29 +49,6 @@ tasks:
           FLAVOUR: "text"
           BUILD_DIR: "{{.G_CLP_JSON_PKG_BUILD_DIR}}"
 
-  package-tar:
-    internal: true
-    requires:
-      vars: ["FLAVOUR", "BUILD_DIR"]
-    deps:
-      - task: "{{.PKG_BUILD_TASK_NAME}}"
-    vars:
-      PKG_BUILD_TASK_NAME: "clp-{{.FLAVOUR}}-pkg"
-      VERSIONED_PACKAGE_NAME:
-        sh: |
-          source /etc/os-release
-          echo "clp-{{.FLAVOUR}}-${ID}-${VERSION_CODENAME}-$(arch)-v{{.G_PACKAGE_VERSION}}"
-    dir: "{{.G_BUILD_DIR}}"
-    cmds:
-      - "rm -rf '{{.VERSIONED_PACKAGE_NAME}}' '{{.VERSIONED_PACKAGE_NAME}}.tar.gz'"
-      - "ln -s '{{.BUILD_DIR}}' '{{.VERSIONED_PACKAGE_NAME}}'"
-      - "tar czf '{{.VERSIONED_PACKAGE_NAME}}.tar.gz' --dereference '{{.VERSIONED_PACKAGE_NAME}}'"
-    sources:
-      - "{{.G_BUILD_DIR}}/{{.PKG_BUILD_TASK_NAME}}.md5"
-      - "{{.TASKFILE}}"
-    generates:
-      - "{{.VERSIONED_PACKAGE_NAME}}.tar.gz"
-
   clp-json-pkg:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
@@ -115,76 +92,6 @@ tasks:
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
     sources: ["{{.TASKFILE}}"]
     generates: ["{{.CHECKSUM_FILE}}"]
-
-  package:
-    internal: true
-    requires:
-      vars: ["OUTPUT_DIR", "STORAGE_ENGINE"]
-    deps:
-      - "core"
-      - "clp-package-utils"
-      - "clp-py-utils"
-      - "init"
-      - "job-orchestration"
-      - "package-venv"
-      - "webui"
-      - "webui-nodejs"
-    cmds:
-      - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "rsync -a components/package-template/src/ '{{.OUTPUT_DIR}}'"
-      - "rsync --copy-links /etc/os-release '{{.OUTPUT_DIR}}/etc/os-release'"
-      - "mkdir -p '{{.OUTPUT_DIR}}/lib/python3/site-packages'"
-      - |-
-        . "{{.G_PACKAGE_VENV_DIR}}/bin/activate"
-        pip3 install --upgrade \
-          components/clp-package-utils/dist/*.whl \
-          components/clp-py-utils/dist/*.whl \
-          components/job-orchestration/dist/*.whl \
-          -t "{{.OUTPUT_DIR}}/lib/python3/site-packages"
-      - "mkdir -p '{{.OUTPUT_DIR}}/bin'"
-      - >-
-        rsync -a
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-        "{{.G_WEBUI_NODEJS_BIN_DIR}}/node"
-        "{{.OUTPUT_DIR}}/bin/"
-      - "mkdir -p '{{.OUTPUT_DIR}}/var/www/'"
-      - >-
-        rsync -a
-        "{{.G_WEBUI_BUILD_DIR}}/"
-        "{{.OUTPUT_DIR}}/var/www/"
-      - |-
-        cd "{{.OUTPUT_DIR}}/var/www/programs/server"
-        PATH="{{.G_WEBUI_NODEJS_BIN_DIR}}":$PATH npm install
-      # Set the storage engine for the package
-      - task: "replace-text"
-        vars:
-          FILE_PATH: "{{.OUTPUT_DIR}}/lib/python3/site-packages/clp_py_utils/clp_config.py"
-          SED_EXP: >-
-            s/([[:space:]]*storage_engine: str = ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
-      - task: "replace-text"
-        vars:
-          FILE_PATH: "{{.OUTPUT_DIR}}/etc/clp-config.yml"
-          SED_EXP: >-
-            s/(\#[[:space:]]*storage_engine: ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
-    sources:
-      - "{{.G_BUILD_DIR}}/package-venv.md5"
-      - "{{.G_BUILD_DIR}}/webui.md5"
-      - "{{.G_BUILD_DIR}}/webui-nodejs.md5"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-      - "{{.TASKFILE}}"
-      - "/etc/os-release"
-      - "components/clp-package-utils/dist/*.whl"
-      - "components/clp-py-utils/dist/*.whl"
-      - "components/job-orchestration/dist/*.whl"
-      - "components/package-template/src/**/*"
 
   core:
     deps: ["core-submodules", "init"]
@@ -345,6 +252,99 @@ tasks:
         mv "{{.OUTPUT_DIR}}/{{.NODEJS_FILE_BASE_NAME}}"
         "{{.OUTPUT_DIR}}/node"
       - "rm -f '{{.OUTPUT_DIR}}/{{.NODEJS_FILE_TAR_NAME}}'"
+
+  package-tar:
+    internal: true
+    requires:
+      vars: ["FLAVOUR", "BUILD_DIR"]
+    deps:
+      - task: "{{.PKG_BUILD_TASK_NAME}}"
+    vars:
+      PKG_BUILD_TASK_NAME: "clp-{{.FLAVOUR}}-pkg"
+      VERSIONED_PACKAGE_NAME:
+        sh: |
+          source /etc/os-release
+          echo "clp-{{.FLAVOUR}}-${ID}-${VERSION_CODENAME}-$(arch)-v{{.G_PACKAGE_VERSION}}"
+    dir: "{{.G_BUILD_DIR}}"
+    cmds:
+      - "rm -rf '{{.VERSIONED_PACKAGE_NAME}}' '{{.VERSIONED_PACKAGE_NAME}}.tar.gz'"
+      - "ln -s '{{.BUILD_DIR}}' '{{.VERSIONED_PACKAGE_NAME}}'"
+      - "tar czf '{{.VERSIONED_PACKAGE_NAME}}.tar.gz' --dereference '{{.VERSIONED_PACKAGE_NAME}}'"
+    sources:
+      - "{{.G_BUILD_DIR}}/{{.PKG_BUILD_TASK_NAME}}.md5"
+      - "{{.TASKFILE}}"
+    generates:
+      - "{{.VERSIONED_PACKAGE_NAME}}.tar.gz"
+
+  package:
+    internal: true
+    requires:
+      vars: ["OUTPUT_DIR", "STORAGE_ENGINE"]
+    deps:
+      - "core"
+      - "clp-package-utils"
+      - "clp-py-utils"
+      - "init"
+      - "job-orchestration"
+      - "package-venv"
+      - "webui"
+      - "webui-nodejs"
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "rsync -a components/package-template/src/ '{{.OUTPUT_DIR}}'"
+      - "rsync --copy-links /etc/os-release '{{.OUTPUT_DIR}}/etc/os-release'"
+      - "mkdir -p '{{.OUTPUT_DIR}}/lib/python3/site-packages'"
+      - |-
+        . "{{.G_PACKAGE_VENV_DIR}}/bin/activate"
+        pip3 install --upgrade \
+          components/clp-package-utils/dist/*.whl \
+          components/clp-py-utils/dist/*.whl \
+          components/job-orchestration/dist/*.whl \
+          -t "{{.OUTPUT_DIR}}/lib/python3/site-packages"
+      - "mkdir -p '{{.OUTPUT_DIR}}/bin'"
+      - >-
+        rsync -a
+        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
+        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
+        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
+        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
+        "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+        "{{.G_WEBUI_NODEJS_BIN_DIR}}/node"
+        "{{.OUTPUT_DIR}}/bin/"
+      - "mkdir -p '{{.OUTPUT_DIR}}/var/www/'"
+      - >-
+        rsync -a
+        "{{.G_WEBUI_BUILD_DIR}}/"
+        "{{.OUTPUT_DIR}}/var/www/"
+      - |-
+        cd "{{.OUTPUT_DIR}}/var/www/programs/server"
+        PATH="{{.G_WEBUI_NODEJS_BIN_DIR}}":$PATH npm install
+      # Set the storage engine for the package
+      - task: "replace-text"
+        vars:
+          FILE_PATH: "{{.OUTPUT_DIR}}/lib/python3/site-packages/clp_py_utils/clp_config.py"
+          SED_EXP: >-
+            s/([[:space:]]*storage_engine: str = ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
+      - task: "replace-text"
+        vars:
+          FILE_PATH: "{{.OUTPUT_DIR}}/etc/clp-config.yml"
+          SED_EXP: >-
+            s/(\#[[:space:]]*storage_engine: ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
+    sources:
+      - "{{.G_BUILD_DIR}}/package-venv.md5"
+      - "{{.G_BUILD_DIR}}/webui.md5"
+      - "{{.G_BUILD_DIR}}/webui-nodejs.md5"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+      - "{{.TASKFILE}}"
+      - "/etc/os-release"
+      - "components/clp-package-utils/dist/*.whl"
+      - "components/clp-py-utils/dist/*.whl"
+      - "components/job-orchestration/dist/*.whl"
+      - "components/package-template/src/**/*"
 
   package-venv:
     internal: true
