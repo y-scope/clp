@@ -39,7 +39,7 @@ tasks:
         sphinx-build \
           --write-all \
           --fresh-env \
-          --config-dir conf \
+          --conf-dir conf \
           --builder html \
           src "{{.OUTPUT_DIR}}"
       # This command must be last
