@@ -21,15 +21,7 @@ components/core/tools/scripts/lib_install/ubuntu-focal/install-all.sh
 Enable GCC 10 as the default compiler by running:
 
 ```shell
-update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 10
-update-alternatives --set gcc /usr/bin/gcc-10
-
-update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-10 20
 update-alternatives --set cc /usr/bin/gcc-10
-
-update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 10
-update-alternatives --set g++ /usr/bin/g++-10
-
-update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-10 20
 update-alternatives --set c++ /usr/bin/g++-10
+update-alternatives --set cpp /usr/bin/cpp-10
 ```
