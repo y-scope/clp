@@ -12,12 +12,11 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   checkinstall \
   cmake \
   curl \
-  git \
+  g++ \
   g++-10 \
+  gcc \
   gcc-10 \
-  libboost-filesystem-dev \
-  libboost-iostreams-dev \
-  libboost-program-options-dev \
+  git \
   libmariadb-dev \
   libssl-dev \
   make \
