@@ -7,16 +7,16 @@ import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
  * Component for rendering a sidebar link.
  *
  * @param {object} props
- * @param {string} [props.link]
  * @param {import("@fortawesome/react-fontawesome").IconProp} props.icon
  * @param {string} props.label
+ * @param {string} [props.link]
  * @param {Function} [props.onClick]
  * @return {React.ReactElement}
  */
 const SidebarButton = ({
-    link,
     icon,
     label,
+    link,
     onClick,
 }) => {
     const children = (
