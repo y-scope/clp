@@ -19,3 +19,7 @@ not using the end items currently.
     margin-top: 0;
     margin-bottom: 0;
 }
+
+.navbar-brand img {
+    height: 60%;
+}

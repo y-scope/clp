@@ -34,10 +34,10 @@ tasks:
       - |-
         . "{{.G_DOCS_VENV_DIR}}/bin/activate"
         sphinx-build \
-          -a \
-          -E \
-          -c conf \
-          -b html \
+          --write-all \
+          --fresh-env \
+          --config-dir conf \
+          --builder html \
           src "{{.OUTPUT_DIR}}"
       # This command must be last
       - task: ":compute-checksum"
