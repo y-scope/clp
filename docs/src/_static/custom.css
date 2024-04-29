@@ -12,6 +12,17 @@ a:hover {
 }
 
 /*
+Use the bottom border that's used for indicating the current page as the hover style (for a more
+cohesive look).
+NOTE: This selector matches the one in pydata-sphinx-theme
+pydata/pydata-sphinx-theme@v0.14.4/src/pydata_sphinx_theme/assets/styles/sections/_header.scss#L86
+*/
+.bd-header .navbar-nav li a.nav-link:hover {
+    border-bottom: max(3px,.1875rem,.12em) solid var(--pst-color-secondary);
+    text-decoration: none;
+}
+
+/*
 Remove margin from sidebar-primary-items__end so that we don't have an unnecessary scrollbar. We're
 not using the end items currently.
 */
