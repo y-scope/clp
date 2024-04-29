@@ -1,10 +1,11 @@
-import {NavLink} from "react-router-dom";
-
 import {
     faAngleDoubleLeft,
     faAngleDoubleRight,
+    faCircleInfo,
+    faEnvelope,
 } from "@fortawesome/free-solid-svg-icons";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+
+import SidebarButton from "./SidebarButton";
 
 import "./Sidebar.scss";
 
@@ -23,60 +24,47 @@ const Sidebar = ({
     isSidebarCollapsed,
     routes,
     onSidebarToggle,
-}) => {
-    return (
-        <div
-            id={"sidebar"}
-            className={isSidebarCollapsed ?
-                "collapsed" :
-                ""}
-        >
-            <div className={"brand"}>
-                {!isSidebarCollapsed && <b style={{marginRight: "0.25rem"}}>YScope</b>}
-                {isSidebarCollapsed ?
-                    <b>CLP</b> :
-                    "CLP"}
-            </div>
-
-            <div className={"flex-column sidebar-menu"}>
-                {routes.map((route, i) => (false === (route.hide ?? false)) && (
-                    <NavLink
-                        activeClassName={"active"}
-                        key={i}
-                        to={route.path}
-                    >
-                        <div className={"sidebar-item-icon"}>
-                            <FontAwesomeIcon
-                                fixedWidth={true}
-                                icon={route.icon}
-                                size={"sm"}/>
-                        </div>
-                        <span className={"sidebar-item-text"}>
-                            {route.label}
-                        </span>
-                    </NavLink>
-                ))}
-            </div>
-
-            <div
-                className={"sidebar-collapse-toggle"}
-                onClick={onSidebarToggle}
-            >
-                <div className={"sidebar-collapse-icon"}>
-                    {
-                        isSidebarCollapsed ?
-                            <FontAwesomeIcon
-                                icon={faAngleDoubleRight}
-                                size={"sm"}/> :
-                            <FontAwesomeIcon
-                                icon={faAngleDoubleLeft}
-                                size={"sm"}/>
-                    }
-                </div>
-                <span className={"sidebar-collapse-text"}>Collapse Menu</span>
-            </div>
+}) => (
+    <div
+        id={"sidebar"}
+        className={isSidebarCollapsed ?
+            "collapsed" :
+            ""}
+    >
+        <div className={"brand"}>
+            {!isSidebarCollapsed && <b style={{marginRight: "0.25rem"}}>YScope</b>}
+            {isSidebarCollapsed ?
+                <b>CLP</b> :
+                "CLP"}
         </div>
-    );
-};
+
+        <div className={"flex-grow-1 sidebar-menu"}>
+            {routes.map((route, i) => (false === (route.hide ?? false)) && (
+                <SidebarButton
+                    icon={route.icon}
+                    key={i}
+                    label={route.label}
+                    link={route.path}/>
+            ))}
+        </div>
+
+        <div className={"flex-grow-0 sidebar-menu"}>
+            <SidebarButton
+                icon={faCircleInfo}
+                label={"Documentation"}
+                link={"https://docs.yscope.com/clp/main/"}/>
+            <SidebarButton
+                icon={faEnvelope}
+                label={"Email us"}
+                link={"mailto:support@yscope.com"}/>
+            <SidebarButton
+                label={"Collapse Menu"}
+                icon={isSidebarCollapsed ?
+                    faAngleDoubleRight :
+                    faAngleDoubleLeft}
+                onClick={onSidebarToggle}/>
+        </div>
+    </div>
+);
 
 export default Sidebar;
