@@ -7,8 +7,8 @@ includes:
 vars:
   # Paths
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
-  G_CLP_JSON_PKG_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-json"
-  G_CLP_TEXT_PKG_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-text"
+  G_CLP_JSON_PKG_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-json-package"
+  G_CLP_TEXT_PKG_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-text-package"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
@@ -20,7 +20,7 @@ vars:
 
 tasks:
   default:
-    deps: ["package"]
+    deps: ["clp-text-pkg"]
 
   clean:
     cmds:
@@ -40,28 +40,23 @@ tasks:
       - task: "package-tar"
         vars:
           FLAVOUR: "json"
-          PACKAGE_BUILD_DIR: "{{.G_CLP_JSON_PKG_BUILD_DIR}}"
-    sources:
-      - "{{.TASKFILE}}"
+          BUILD_DIR: "{{.G_CLP_JSON_PKG_BUILD_DIR}}"
 
   clp-text-pkg-tar:
     cmds:
       - task: "package-tar"
         vars:
           FLAVOUR: "text"
-          PACKAGE_BUILD_DIR: "{{.G_CLP_JSON_PKG_BUILD_DIR}}"
-    sources:
-      - "{{.TASKFILE}}"
+          BUILD_DIR: "{{.G_CLP_JSON_PKG_BUILD_DIR}}"
 
   package-tar:
     internal: true
     requires:
-      vars: ["FLAVOUR", "PACKAGE_BUILD_DIR"]
-    vars:
-      PKG_BUILD_TASK_NAME: "clp-{{.FLAVOUR}}-pkg"
+      vars: ["FLAVOUR", "BUILD_DIR"]
     deps:
       - task: "{{.PKG_BUILD_TASK_NAME}}"
     vars:
+      PKG_BUILD_TASK_NAME: "clp-{{.FLAVOUR}}-pkg"
       VERSIONED_PACKAGE_NAME:
         sh: |
           source /etc/os-release
@@ -69,7 +64,7 @@ tasks:
     dir: "{{.G_BUILD_DIR}}"
     cmds:
       - "rm -rf '{{.VERSIONED_PACKAGE_NAME}}' '{{.VERSIONED_PACKAGE_NAME}}.tar.gz'"
-      - "ln -s '{{.PACKAGE_BUILD_DIR}}' '{{.VERSIONED_PACKAGE_NAME}}'"
+      - "ln -s '{{.BUILD_DIR}}' '{{.VERSIONED_PACKAGE_NAME}}'"
       - "tar czf '{{.VERSIONED_PACKAGE_NAME}}.tar.gz' --dereference '{{.VERSIONED_PACKAGE_NAME}}'"
     sources:
       - "{{.G_BUILD_DIR}}/{{.PKG_BUILD_TASK_NAME}}.md5"
@@ -164,7 +159,7 @@ tasks:
       - |-
         cd "{{.OUTPUT_DIR}}/var/www/programs/server"
         PATH="{{.G_WEBUI_NODEJS_BIN_DIR}}":$PATH npm install
-      # Set CLP's storage engine
+      # Set the storage engine for the package
       - task: "replace-text"
         vars:
           FILE_PATH: "{{.OUTPUT_DIR}}/lib/python3/site-packages/clp_py_utils/clp_config.py"
@@ -554,7 +549,7 @@ tasks:
     cmds:
       - |-
         # NOTE: We can't use `sed -i` since `-i` has different syntax on Linux and macOS
-        old="{{.FILE_PATH}}"
-        new="{{.FILE_PATH}}.tmp"
-        sed --regexp-extended '{{.SED_EXP}}' "${old}" > "${new}"
-        mv "${new}" "${old}"
+        src="{{.FILE_PATH}}"
+        dst="{{.FILE_PATH}}.tmp"
+        sed --regexp-extended '{{.SED_EXP}}' "${src}" > "${dst}"
+        mv "${dst}" "${src}"
