@@ -1,4 +1,4 @@
-# Schema File
+# Schema file syntax
 
 The schema file is used to specify the delimiters and variable patterns for 
 compressing and searching logs. Logs are tokenized using delimiters and each 

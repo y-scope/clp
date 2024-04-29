@@ -1,0 +1,56 @@
+# User guide
+
+This guide documents how to use and operate CLP. Use the left sidebar (if it's hidden, click the
+<i class="fa fa-bars"></i> icon) to navigate to specific docs.
+
+The sections are as follows:
+
+::::{grid} 1 1 2 2
+:gutter: 2
+
+:::{grid-item-card}
+:link: core-overview
+Core
+^^^
+Docs about CLP's core component for compressing, decompressing, and searching logs.
+:::
+
+:::{grid-item-card}
+:link: resources-datasets
+Resources
+^^^
+Resources like log datasets, etc.
+:::
+
+:::{grid-item-card}
+:link: reference-unstructured-schema-file
+Reference
+^^^
+Reference docs like format specifications, etc.
+:::
+::::
+
+:::{toctree}
+:hidden:
+:caption: Core
+:glob:
+
+core-overview
+core-container
+core-unstructured/index
+core-clp-s
+:::
+
+:::{toctree}
+:hidden:
+:caption: Resources
+
+resources-datasets
+:::
+
+:::{toctree}
+:hidden:
+:caption: Reference
+
+reference-unstructured-schema-file
+:::

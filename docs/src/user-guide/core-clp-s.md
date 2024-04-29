@@ -1,14 +1,7 @@
-# Using CLP for semi-structured logs
+# CLP for dynamically-structured logs
 
-For semi-structured logs (e.g., JSON), you can compress, decompress, and search them using the
-`clp-s` binary described below.
-
-## Contents
-
-* [Compression](#compression)
-* [Decompression](#decompression)
-* [Search](#search)
-* [Current limitations](#current-limitations)
+For dynamically-structured logs (e.g., JSON), you can compress, decompress, and search them using
+the `clp-s` binary described below.
 
 ## Compression
 
@@ -28,23 +21,24 @@ Usage:
 
 **Compress `/mnt/logs/log1.json` and output archives to `/mnt/data/archives1`:**
 
-```bash
+```shell
 ./clp-s c /mnt/data/archives1 /mnt/logs/log1.json
 ```
 
 **Treat the field `{"d": {"@timestamp": "..."}}` as each log event's timestamp:**
 
-```bash
+```shell
 ./clp-s c --timestamp-key 'd.@timestamp' /mnt/data/archives1 /mnt/logs/log1.json
 ```
 
-> [!TIP]
-> Specifying the timestamp-key will create a range-index for the timestamp column which can increase
-> compression ratio and search performance.
+:::{tip}
+Specifying the timestamp-key will create a range-index for the timestamp column which can increase
+compression ratio and search performance.
+:::
 
 **Set the target encoded size to 1 GiB and the compression level to 6 (3 by default)**
 
-```bash
+```shell
 ./clp-s c \
     --target-encoded-size 1073741824 \
     --compression-level 6 \
@@ -56,7 +50,7 @@ Usage:
 
 Usage:
 
-```bash
+```shell
 ./clp-s x [<options>] <archives-dir> <output-dir>
 ```
 
@@ -70,7 +64,7 @@ Usage:
 
 **Decompress all logs from `/mnt/data/archives1` into `/mnt/data/archives1-decomp`:**
 
-```bash
+```shell
 ./clp-s x /mnt/data/archives1 /mnt/data/archives1-decomp
 ```
 
@@ -78,7 +72,7 @@ Usage:
 
 Usage:
 
-```bash
+```shell
 ./clp-s s [<options>] <archives-dir> <kql-query>
 ```
 
@@ -92,31 +86,31 @@ Usage:
 
 **Find all log events within a time range:**
 
-```bash
+```shell
 ./clp-s s /mnt/data/archives1 'ts >= 1649923037 AND ts <= 1649923038'
 ```
 or
-```bash
+```shell
 ./clp-s s /mnt/data/archives1 \
     'ts >= date("2022-04-14T07:57:17") AND ts <= date("2022-04-14T07:57:18")'
 ```
 
 **Find log events with a given key-value pair:**
 
-```bash
+```shell
 ./clp-s s /mnt/data/archives1 'id: 22149'
 ```
 
 **Find ERROR log events containing a substring:**
 
-```bash
+```shell
 ./clp-s s /mnt/data/archives1 'level: ERROR AND message: "job*"'
 ```
 
 **Find FATAL or ERROR log events and ignore case distinctions between values in the query and the
 compressed data:**
 
-```bash
+```shell
 ./clp-s s --ignore-case /mnt/data/archives1 'level: FATAL OR level: ERROR'
 ```
 

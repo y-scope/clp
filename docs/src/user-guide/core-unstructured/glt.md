@@ -1,4 +1,4 @@
-# Using GLT for unstructured logs
+# glt
 
 GLT (Group-by Log Type) is a version of CLP specialized for enhanced search performance, at the 
 cost of higher memory usage during compression. During compression, log events with the same log 
@@ -8,15 +8,6 @@ are 7.8x faster on average.
 
 You can use GLT to compress, decompress, and search unstructured (plain-text) logs using the `glt`
 binary described below.
-
-## Contents
-
-* [Compression](#compression)
-* [Decompression](#decompression)
-* [Search](#search)
-* [Utilities](#utilities)
-  * [`make-dictionaries-readable`](#make-dictionaries-readable)
-* [Current limitations](#current-limitations)
 
 ## Compression
 
@@ -83,10 +74,11 @@ Usage:
 * `options` allow you to specify things like a time-range filter.
     * For a complete list, run `./glt s --help`
 
-> [!TIP]
-> Adding spaces (when possible) at the beginning and the end of the wildcard-query can improve GLT's 
-> search performance, since GLT won't need to consider implicit wildcards during query processing.
-> For example, the query " ERROR * container " is preferred to "ERROR * container".
+:::{tip}
+Adding spaces (when possible) at the beginning and the end of the wildcard-query can improve GLT's 
+search performance, since GLT won't need to consider implicit wildcards during query processing.
+For example, the query " ERROR * container " is preferred to "ERROR * container".
+:::
 
 ### Examples
 
@@ -102,8 +94,9 @@ Usage:
 ./glt s /mnt/data/archives1 --tge 1546344654321 --tle 1546344912345 " user1 "
 ```
 
-> [!NOTE]
-> Currently, timestamps must be specified as milliseconds since the UNIX epoch.
+:::{note}
+Currently, timestamps must be specified as milliseconds since the UNIX epoch.
+:::
 
 **Search a single file**:
 
@@ -111,27 +104,7 @@ Usage:
 ./clg /mnt/data/archives1 " session closed " /mnt/logs/file1
 ```
 
-# Utilities
-
-Below are utilities for working with GLT archives.
-
-## `make-dictionaries-readable`
-
-To convert the dictionaries of an individual archive into a human-readable form, you can use
-`make-dictionaries-readable`.
-
-```shell
-./make-dictionaries-readable archive-path <output dir>
-```
-
-* `archive-path` is a path to a specific archive (inside `archives-dir`)
-
-See the `make-dictionaries-readable`
-[README](../../components/core/src/clp/make_dictionaries_readable/README.md) for details on the
-output format.
-
-
-## Current limitations
+# Current limitations
 
 * Timestamp format information is not preserved in search results. Instead, all search results use a
   default timestamp format.
