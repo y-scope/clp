@@ -15,9 +15,6 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   git \
   g++-10 \
   gcc-10 \
-  libboost-filesystem-dev \
-  libboost-iostreams-dev \
-  libboost-program-options-dev \
   libmariadb-dev \
   libssl-dev \
   make \
