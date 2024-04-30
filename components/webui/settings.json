@@ -15,6 +15,7 @@
     "CompressionJobsCollectionName": "compression-jobs",
     "SearchResultsCollectionName": "search-results",
     "SearchResultsMetadataCollectionName": "results-metadata",
-    "StatsCollectionName": "stats"
+    "StatsCollectionName": "stats",
+    "SupportUrl": "https://github.com/y-scope/clp/issues/new/choose"
   }
 }

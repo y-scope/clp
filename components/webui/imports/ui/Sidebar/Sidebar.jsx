@@ -2,7 +2,7 @@ import {
     faAngleDoubleLeft,
     faAngleDoubleRight,
     faCircleInfo,
-    faEnvelope,
+    faMessage,
 } from "@fortawesome/free-solid-svg-icons";
 
 import SidebarButton from "./SidebarButton";
@@ -54,9 +54,9 @@ const Sidebar = ({
                 label={"Documentation"}
                 link={"https://docs.yscope.com/clp/main/"}/>
             <SidebarButton
-                icon={faEnvelope}
+                icon={faMessage}
                 label={"Email us"}
-                link={"mailto:support@yscope.com"}/>
+                link={Meteor.settings.public.SupportUrl}/>
             <SidebarButton
                 label={"Collapse Menu"}
                 icon={isSidebarCollapsed ?
