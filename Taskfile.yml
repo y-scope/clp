@@ -285,17 +285,17 @@ tasks:
     run: "once"
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      METEOR_RELEASE: "2.15"
       METEOR_ARCH: "{{ if eq ARCH \"arm64\" }}aarch64{{ else }}x86_64{{ end }}"
       METEOR_PLATFORM: "{{ if eq OS \"darwin\" }}osx{{ else }}linux{{ end }}"
+      METEOR_RELEASE: "2.15"
     cmds:
       - task: "download-and-extract-tar"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          TAR_NAME: "meteor-bootstrap-os.{{.METEOR_PLATFORM}}.{{.METEOR_ARCH}}.tar.gz"
           EXTRACTED_DIR_NAME: ".meteor"
-          URL_PREFIX: "https://static.meteor.com/packages-bootstrap/{{.METEOR_RELEASE}}"
           OUTPUT_DIR: "{{.G_METEOR_BUILD_DIR}}"
+          TAR_NAME: "meteor-bootstrap-os.{{.METEOR_PLATFORM}}.{{.METEOR_ARCH}}.tar.gz"
+          URL_PREFIX: "https://static.meteor.com/packages-bootstrap/{{.METEOR_RELEASE}}"
 
   nodejs:
     internal: true
