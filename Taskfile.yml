@@ -251,8 +251,8 @@ tasks:
   download-and-extract-tar:
     internal: true
     requires:
-      vars: ["CHECKSUM_FILE", "FILE_BASE_DIR", "FILE_TAR_NAME", "OUTPUT_DIR", "URL_PREFIX"]
-    label: "{{.TASK}}-{{.FILE_TAR_NAME}}"
+      vars: ["CHECKSUM_FILE", "FILE_BASE_DIR", "TAR_NAME", "OUTPUT_DIR", "URL_PREFIX"]
+    label: "{{.TASK}}-{{.TAR_NAME}}"
     vars:
       TAR_PATH: "{{.OUTPUT_DIR}}/{{.TAR_NAME}}"
     deps:
@@ -266,7 +266,7 @@ tasks:
       - "mkdir -p '{{.OUTPUT_DIR}}'"
       - >-
         curl --fail --location --show-error
-        "{{.URL_PREFIX}}/{{.FILE_TAR_NAME}}"
+        "{{.URL_PREFIX}}/{{.TAR_NAME}}"
         --output "{{.TAR_PATH}}"
       - "tar xf '{{.TAR_PATH}}' --directory '{{.OUTPUT_DIR}}'"
       - >-
@@ -292,7 +292,7 @@ tasks:
       - task: "download-and-extract-tar"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          FILE_TAR_NAME: "meteor-bootstrap-os.{{.METEOR_PLATFORM}}.{{.METEOR_ARCH}}.tar.gz"
+          TAR_NAME: "meteor-bootstrap-os.{{.METEOR_PLATFORM}}.{{.METEOR_ARCH}}.tar.gz"
           FILE_BASE_DIR: "{{.G_METEOR_BUILD_DIR}}/.meteor"
           URL_PREFIX: "https://static.meteor.com/packages-bootstrap/{{.METEOR_RELEASE}}"
           OUTPUT_DIR: "{{.G_METEOR_BUILD_DIR}}"
@@ -318,7 +318,7 @@ tasks:
       - task: "download-and-extract-tar"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          FILE_TAR_NAME: "{{.NODEJS_FILE_BASE_NAME}}.tar.xz"
+          TAR_NAME: "{{.NODEJS_FILE_BASE_NAME}}.tar.xz"
           FILE_BASE_DIR: "{{.OUTPUT_DIR}}/{{.NODEJS_FILE_BASE_NAME}}"
           URL_PREFIX: "{{.NODEJS_VERSION_BASE_URL}}"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
