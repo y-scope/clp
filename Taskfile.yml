@@ -391,11 +391,11 @@ tasks:
     dir: "{{.WEBUI_SRC_DIR}}"
     deps:
       - "init"
+      - "meteor"
       - task: "validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.OUTPUT_DIR}}"
-      - "meteor"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "PATH='{{.G_METEOR_BUILD_DIR}}':$PATH meteor npm install --production"
