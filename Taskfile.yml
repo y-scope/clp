@@ -278,8 +278,7 @@ tasks:
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-    sources:
-      - "{{.TASKFILE}}"
+    sources: ["{{.TASKFILE}}"]
     generates: ["{{.CHECKSUM_FILE}}"]
 
   meteor:
