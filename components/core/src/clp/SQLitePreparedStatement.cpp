@@ -3,8 +3,6 @@
 #include "Defs.h"
 #include "spdlog_with_specializations.hpp"
 
-#include <iostream>
-
 using std::string;
 
 namespace clp {
