@@ -1,6 +1,6 @@
-# Building a package
+# Building the package
 
-This page describes the requirements and steps to build a CLP package. If you're looking for a
+This page describes the requirements and steps to build the CLP package. If you're looking for a
 prebuilt version instead, check out the [releases](https://github.com/y-scope/clp/releases) page.
 
 ## Requirements
@@ -38,29 +38,29 @@ There are two flavours of the CLP package:
 1. `clp-json` for managing JSON logs
 2. `clp-text` for managing text logs
 
-To build both flavours, run:
+:::{note}
+Both flavours contain the same binaries but are configured with different values for the
+`package.storage_engine` key.
+:::
+
+To build the package, run:
 
 ```shell
-task
+task package
 ```
 
-The builds will be written to `build/clp-json-package` and `build/clp-text-package`, respectively.
+The build will be in `build/clp-package` and defaults to using the storage engine for `clp-text`.
 
-To build a single flavour, run:
-
-```shell
-task clp-<flavour>-pkg
-```
-
-where `<flavour>` is `json` or `text`.
-
-To build a releasable tar of either package, run:
+To build a releasable tar of either flavour, run:
 
 ```shell
 task clp-<flavour>-pkg-tar
 ```
 
 where `<flavour>` is `json` or `text`.
+
+The tar will be written to `build/clp-<flavour>-<os>-<arch>-v<version>.tar.gz`, with appropriate
+values for the fields in angle brackets.
 
 ## Cleanup
 

@@ -7,9 +7,8 @@ includes:
 vars:
   # Paths
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
-  G_CLP_JSON_PKG_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-json-package"
-  G_CLP_TEXT_PKG_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-text-package"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
+  G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
   G_WEBUI_NODEJS_BUILD_DIR: "{{.G_BUILD_DIR}}/webui-nodejs"
@@ -20,7 +19,7 @@ vars:
 
 tasks:
   default:
-    deps: ["clp-json-pkg", "clp-text-pkg"]
+    deps: ["package"]
 
   clean:
     cmds:
@@ -40,36 +39,68 @@ tasks:
       - task: "package-tar"
         vars:
           FLAVOUR: "json"
-          BUILD_DIR: "{{.G_CLP_JSON_PKG_BUILD_DIR}}"
+          STORAGE_ENGINE: "clp-s"
 
   clp-text-pkg-tar:
     cmds:
       - task: "package-tar"
         vars:
           FLAVOUR: "text"
-          BUILD_DIR: "{{.G_CLP_JSON_PKG_BUILD_DIR}}"
+          STORAGE_ENGINE: "clp"
 
-  clp-json-pkg:
+  package:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "{{.G_CLP_JSON_PKG_BUILD_DIR}}"
+      OUTPUT_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
     deps:
+      - "core"
+      - "clp-package-utils"
+      - "clp-py-utils"
       - "init"
+      - "job-orchestration"
+      - "package-venv"
       - task: "validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.OUTPUT_DIR}}"
+      - "webui"
+      - "webui-nodejs"
     cmds:
-      - task: "package"
-        vars:
-          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-          STORAGE_ENGINE: "clp-s"
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "rsync -a components/package-template/src/ '{{.OUTPUT_DIR}}'"
+      - "rsync --copy-links /etc/os-release '{{.OUTPUT_DIR}}/etc/os-release'"
+      - "mkdir -p '{{.OUTPUT_DIR}}/lib/python3/site-packages'"
+      - |-
+        . "{{.G_PACKAGE_VENV_DIR}}/bin/activate"
+        pip3 install --upgrade \
+          components/clp-package-utils/dist/*.whl \
+          components/clp-py-utils/dist/*.whl \
+          components/job-orchestration/dist/*.whl \
+          -t "{{.OUTPUT_DIR}}/lib/python3/site-packages"
+      - "mkdir -p '{{.OUTPUT_DIR}}/bin'"
+      - >-
+        rsync -a
+        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
+        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
+        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
+        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
+        "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+        "{{.G_WEBUI_NODEJS_BIN_DIR}}/node"
+        "{{.OUTPUT_DIR}}/bin/"
+      - "mkdir -p '{{.OUTPUT_DIR}}/var/www/'"
+      - >-
+        rsync -a
+        "{{.G_WEBUI_BUILD_DIR}}/"
+        "{{.OUTPUT_DIR}}/var/www/"
+      - |-
+        cd "{{.OUTPUT_DIR}}/var/www/programs/server"
+        PATH="{{.G_WEBUI_NODEJS_BIN_DIR}}":$PATH npm install
       # This command must be last
       - task: "compute-checksum"
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-    sources: &package_source_files
+    sources:
       - "{{.G_BUILD_DIR}}/package-venv.md5"
       - "{{.G_BUILD_DIR}}/webui.md5"
       - "{{.G_BUILD_DIR}}/webui-nodejs.md5"
@@ -86,31 +117,7 @@ tasks:
       - "components/package-template/src/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
 
-  clp-text-pkg:
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "{{.G_CLP_TEXT_PKG_BUILD_DIR}}"
-    deps:
-      - "init"
-      - task: "validate-checksum"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-    cmds:
-      - task: "package"
-        vars:
-          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-          STORAGE_ENGINE: "clp"
-      # This command must be last
-      - task: "compute-checksum"
-        vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-    sources: *package_source_files
-    generates: ["{{.CHECKSUM_FILE}}"]
-
   core:
-    run: "once"
     deps: ["core-submodules", "init"]
     vars:
       SRC_DIR: "components/core"
@@ -137,28 +144,21 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
 
   clp-package-utils:
-    run: "once"
-    cmds:
-      - task: "python-component"
-        vars:
-          COMPONENT: "{{.TASK}}"
+    - task: "python-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
 
   clp-py-utils:
-    run: "once"
-    cmds:
-      - task: "python-component"
-        vars:
-          COMPONENT: "{{.TASK}}"
+    - task: "python-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
 
   job-orchestration:
-    run: "once"
-    cmds:
-      - task: "python-component"
-        vars:
-          COMPONENT: "{{.TASK}}"
+    - task: "python-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
 
   webui:
-    run: "once"
     deps:
       - "init"
       - task: "validate-checksum"
@@ -198,7 +198,6 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
 
   webui-nodejs:
-    run: "once"
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_WEBUI_NODEJS_BUILD_DIR}}"
@@ -281,69 +280,19 @@ tasks:
   package-tar:
     internal: true
     requires:
-      vars: ["FLAVOUR", "BUILD_DIR"]
-    deps:
-      - task: "{{.PKG_BUILD_TASK_NAME}}"
+      vars: ["FLAVOUR", "STORAGE_ENGINE"]
     vars:
-      PKG_BUILD_TASK_NAME: "clp-{{.FLAVOUR}}-pkg"
       VERSIONED_PACKAGE_NAME:
         sh: |
           source /etc/os-release
           echo "clp-{{.FLAVOUR}}-${ID}-${VERSION_CODENAME}-$(arch)-v{{.G_PACKAGE_VERSION}}"
+      OUTPUT_DIR: "{{.G_BUILD_DIR}}/{{.VERSIONED_PACKAGE_NAME}}"
+      OUTPUT_FILE: "{{.G_BUILD_DIR}}/{{.VERSIONED_PACKAGE_NAME}}.tar.gz"
     dir: "{{.G_BUILD_DIR}}"
+    deps: ["package"]
     cmds:
-      - "rm -rf '{{.VERSIONED_PACKAGE_NAME}}' '{{.VERSIONED_PACKAGE_NAME}}.tar.gz'"
-      - "ln -s '{{.BUILD_DIR}}' '{{.VERSIONED_PACKAGE_NAME}}'"
-      - "tar czf '{{.VERSIONED_PACKAGE_NAME}}.tar.gz' --dereference '{{.VERSIONED_PACKAGE_NAME}}'"
-    sources:
-      - "{{.G_BUILD_DIR}}/{{.PKG_BUILD_TASK_NAME}}.md5"
-      - "{{.TASKFILE}}"
-    generates:
-      - "{{.VERSIONED_PACKAGE_NAME}}.tar.gz"
-
-  package:
-    internal: true
-    requires:
-      vars: ["OUTPUT_DIR", "STORAGE_ENGINE"]
-    deps:
-      - "core"
-      - "clp-package-utils"
-      - "clp-py-utils"
-      - "init"
-      - "job-orchestration"
-      - "package-venv"
-      - "webui"
-      - "webui-nodejs"
-    cmds:
-      - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "rsync -a components/package-template/src/ '{{.OUTPUT_DIR}}'"
-      - "rsync --copy-links /etc/os-release '{{.OUTPUT_DIR}}/etc/os-release'"
-      - "mkdir -p '{{.OUTPUT_DIR}}/lib/python3/site-packages'"
-      - |-
-        . "{{.G_PACKAGE_VENV_DIR}}/bin/activate"
-        pip3 install --upgrade \
-          components/clp-package-utils/dist/*.whl \
-          components/clp-py-utils/dist/*.whl \
-          components/job-orchestration/dist/*.whl \
-          -t "{{.OUTPUT_DIR}}/lib/python3/site-packages"
-      - "mkdir -p '{{.OUTPUT_DIR}}/bin'"
-      - >-
-        rsync -a
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-        "{{.G_WEBUI_NODEJS_BIN_DIR}}/node"
-        "{{.OUTPUT_DIR}}/bin/"
-      - "mkdir -p '{{.OUTPUT_DIR}}/var/www/'"
-      - >-
-        rsync -a
-        "{{.G_WEBUI_BUILD_DIR}}/"
-        "{{.OUTPUT_DIR}}/var/www/"
-      - |-
-        cd "{{.OUTPUT_DIR}}/var/www/programs/server"
-        PATH="{{.G_WEBUI_NODEJS_BIN_DIR}}":$PATH npm install
+      - "rm -rf '{{.OUTPUT_DIR}}' '{{.OUTPUT_FILE}}'"
+      - "cp -r '{{.G_PACKAGE_BUILD_DIR}}' '{{.OUTPUT_DIR}}'"
       # Set the storage engine for the package
       - task: "replace-text"
         vars:
@@ -355,9 +304,17 @@ tasks:
           FILE_PATH: "{{.OUTPUT_DIR}}/etc/clp-config.yml"
           SED_EXP: >-
             s/(\#[[:space:]]*storage_engine: ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
+      - >-
+        tar czf '{{.OUTPUT_FILE}}'
+        --directory '{{.G_BUILD_DIR}}'
+        --dereference '{{.VERSIONED_PACKAGE_NAME}}'
+    sources:
+      - "{{.G_BUILD_DIR}}/package.md5"
+      - "{{.TASKFILE}}"
+    generates:
+      - "{{.VERSIONED_PACKAGE_NAME}}.tar.gz"
 
   package-venv:
-    run: "once"
     internal: true
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
