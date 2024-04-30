@@ -548,6 +548,7 @@ tasks:
           DATA_DIR: "{{.DATA_DIR}}"
           OUTPUT_FILE: "{{.TMP_CHECKSUM_FILE}}"
       - defer: "rm -f '{{.TMP_CHECKSUM_FILE}}'"
+      # Check that the directory exists and the checksum matches; otherwise delete the checksum file
       - >-
         (
         [[ -d "{{.DATA_DIR}}" ]]
