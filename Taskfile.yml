@@ -254,8 +254,9 @@ tasks:
       vars: ["CHECKSUM_FILE", "EXTRACTED_DIR_NAME", "TAR_NAME", "OUTPUT_DIR", "URL_PREFIX"]
     label: "{{.TASK}}-{{.TAR_NAME}}"
     vars:
-      EXTRACTED_DIR: "{{.OUTPUT_DIR}}/{{.EXTRACTED_DIR_NAME}}"
-      TAR_PATH: "{{.OUTPUT_DIR}}/{{.TAR_NAME}}"
+      OUTPUT_TMP_DIR: "{{.OUTPUT_DIR}}-tmp"
+      EXTRACTED_DIR: "{{.OUTPUT_TMP_DIR}}/{{.EXTRACTED_DIR_NAME}}"
+      TAR_PATH: "{{.OUTPUT_TMP_DIR}}/{{.TAR_NAME}}"
     deps:
       - "init"
       - task: "validate-checksum"
@@ -263,16 +264,15 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.OUTPUT_DIR}}"
     cmds:
-      - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "mkdir -p '{{.OUTPUT_DIR}}'"
+      - "rm -rf '{{.OUTPUT_DIR}}' {{.OUTPUT_TMP_DIR}}"
+      - "mkdir -p '{{.OUTPUT_TMP_DIR}}'"
       - >-
         curl --fail --location --show-error
         "{{.URL_PREFIX}}/{{.TAR_NAME}}"
         --output "{{.TAR_PATH}}"
-      - "tar xf '{{.TAR_PATH}}' --directory '{{.OUTPUT_DIR}}'"
-      - "mv '{{.EXTRACTED_DIR}}/'* '{{.OUTPUT_DIR}}'"
-      - "rm -rf '{{.EXTRACTED_DIR}}'"
-      - "rm '{{.TAR_PATH}}'"
+      - "tar xf '{{.TAR_PATH}}' --directory '{{.OUTPUT_TMP_DIR}}'"
+      - "mv '{{.EXTRACTED_DIR}}' '{{.OUTPUT_DIR}}'"
+      - "rm -rf '{{.OUTPUT_TMP_DIR}}'"
       # This command must be last
       - task: "compute-checksum"
         vars:
