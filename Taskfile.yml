@@ -170,6 +170,7 @@ tasks:
   webui:
     deps:
       - "init"
+      - "meteor"
       - task: "validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
