@@ -1,6 +1,6 @@
-# Building the package
+# Building a package
 
-This page describes the requirements and steps to build the CLP package. If you're looking for a
+This page describes the requirements and steps to build a CLP package. If you're looking for a
 prebuilt version instead, check out the [releases](https://github.com/y-scope/clp/releases) page.
 
 ## Requirements
@@ -33,21 +33,36 @@ components/core/tools/ubuntu-focal/install-all.sh
 
 ## Build
 
-To build the package as a tar ball, run;
+There are two flavours of the CLP package:
+
+1. `clp-json` for managing JSON logs
+2. `clp-text` for managing text logs
+
+To build both flavours, run:
 
 ```shell
-task package-tar
+task
 ```
 
-The built tar will be output in the `build` directory.
+The builds will be written to `build/clp-json-package` and `build/clp-text-package`, respectively.
+
+To build a single flavour, run:
+
+```shell
+task clp-<flavour>-pkg
+```
+
+where `<flavour>` is `json` or `text`.
+
+To build a releasable tar of either package, run:
+
+```shell
+task clp-<flavour>-pkg-tar
+```
+
+where `<flavour>` is `json` or `text`.
 
 ## Cleanup
-
-To clean up the package, run:
-
-```shell
-task clean-package
-```
 
 To clean up all build artifacts, run:
 
