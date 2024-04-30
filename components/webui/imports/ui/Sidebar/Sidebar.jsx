@@ -55,7 +55,7 @@ const Sidebar = ({
                 link={"https://docs.yscope.com/clp/main/"}/>
             <SidebarButton
                 icon={faMessage}
-                label={"Email us"}
+                label={"Report Issue"}
                 link={Meteor.settings.public.SupportUrl}/>
             <SidebarButton
                 label={"Collapse Menu"}
