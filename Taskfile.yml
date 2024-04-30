@@ -211,6 +211,7 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
 
   webui-nodejs:
+    internal: true
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_WEBUI_NODEJS_BUILD_DIR}}"
