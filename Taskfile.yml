@@ -282,6 +282,7 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
 
   meteor:
+    run: "once"
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       METEOR_RELEASE: "2.15"
