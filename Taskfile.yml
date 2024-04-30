@@ -69,7 +69,21 @@ tasks:
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-    sources: ["{{.TASKFILE}}"]
+    sources: &package_source_files
+      - "{{.G_BUILD_DIR}}/package-venv.md5"
+      - "{{.G_BUILD_DIR}}/webui.md5"
+      - "{{.G_BUILD_DIR}}/webui-nodejs.md5"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+      - "{{.TASKFILE}}"
+      - "/etc/os-release"
+      - "components/clp-package-utils/dist/*.whl"
+      - "components/clp-py-utils/dist/*.whl"
+      - "components/job-orchestration/dist/*.whl"
+      - "components/package-template/src/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
 
   clp-text-pkg:
@@ -92,7 +106,7 @@ tasks:
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-    sources: ["{{.TASKFILE}}"]
+    sources: *package_source_files
     generates: ["{{.CHECKSUM_FILE}}"]
 
   core:
@@ -341,21 +355,6 @@ tasks:
           FILE_PATH: "{{.OUTPUT_DIR}}/etc/clp-config.yml"
           SED_EXP: >-
             s/(\#[[:space:]]*storage_engine: ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
-    sources:
-      - "{{.G_BUILD_DIR}}/package-venv.md5"
-      - "{{.G_BUILD_DIR}}/webui.md5"
-      - "{{.G_BUILD_DIR}}/webui-nodejs.md5"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-      - "{{.TASKFILE}}"
-      - "/etc/os-release"
-      - "components/clp-package-utils/dist/*.whl"
-      - "components/clp-py-utils/dist/*.whl"
-      - "components/job-orchestration/dist/*.whl"
-      - "components/package-template/src/**/*"
 
   package-venv:
     run: "once"
@@ -550,8 +549,10 @@ tasks:
           OUTPUT_FILE: "{{.TMP_CHECKSUM_FILE}}"
       - defer: "rm -f '{{.TMP_CHECKSUM_FILE}}'"
       - >-
-        diff -q '{{.TMP_CHECKSUM_FILE}}' '{{.CHECKSUM_FILE}}' 2> /dev/null
-        || rm -f '{{.CHECKSUM_FILE}}'
+        (
+        [[ -d "{{.DATA_DIR}}" ]]
+        && diff -q '{{.TMP_CHECKSUM_FILE}}' '{{.CHECKSUM_FILE}}' 2> /dev/null
+        ) || rm -f '{{.CHECKSUM_FILE}}'
 
   replace-text:
     desc: "Task to replace some text in a file using sed."
