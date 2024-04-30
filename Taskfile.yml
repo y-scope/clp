@@ -110,7 +110,6 @@ tasks:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
     sources:
-      - "{{.G_BUILD_DIR}}/meteor.md5"
       - "{{.G_BUILD_DIR}}/package-venv.md5"
       - "{{.G_BUILD_DIR}}/webui.md5"
       - "{{.G_BUILD_DIR}}/webui-nodejs.md5"
@@ -251,7 +250,9 @@ tasks:
     internal: true
     requires:
       vars: ["CHECKSUM_FILE", "FILE_BASE_DIR", "FILE_TAR_NAME", "OUTPUT_DIR", "URL_PREFIX"]
-    label: "Download & Extract {{.FILE_TAR_NAME}}"
+    label: "{{.TASK}}-{{.FILE_TAR_NAME}}"
+    vars:
+      TAR_PATH: "{{.OUTPUT_DIR}}/{{.TAR_NAME}}"
     deps:
       - "init"
       - task: "validate-checksum"
@@ -264,20 +265,20 @@ tasks:
       - >-
         curl --fail --location --show-error
         "{{.URL_PREFIX}}/{{.FILE_TAR_NAME}}"
-        -o "{{.OUTPUT_DIR}}/{{.FILE_TAR_NAME}}"
-      - "tar xf '{{.OUTPUT_DIR}}/{{.FILE_TAR_NAME}}' --directory '{{.OUTPUT_DIR}}'"
+        --output "{{.TAR_PATH}}"
+      - "tar xf '{{.TAR_PATH}}' --directory '{{.OUTPUT_DIR}}'"
       - >-
         mv "{{.FILE_BASE_DIR}}/"*
         "{{.OUTPUT_DIR}}"
       - "rm -rf '{{.FILE_BASE_DIR}}'"
-      - "rm -f '{{.OUTPUT_DIR}}/{{.FILE_TAR_NAME}}'"
+      - "rm '{{.TAR_PATH}}'"
       # This command must be last
       - task: "compute-checksum"
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
     sources:
-      - "{{.TASKFILE_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
 
   meteor:
@@ -286,16 +287,14 @@ tasks:
       METEOR_RELEASE: "2.15"
       METEOR_ARCH: "{{ if eq ARCH \"arm64\" }}aarch64{{ else }}x86_64{{ end }}"
       METEOR_PLATFORM: "{{ if eq OS \"darwin\" }}osx{{ else }}linux{{ end }}"
-      OUTPUT_DIR: "{{.G_METEOR_BUILD_DIR}}"
-      METEOR_FILE_BASE_DIR: "{{.OUTPUT_DIR}}/.meteor"
     cmds:
       - task: "download-tar-and-extract"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           FILE_TAR_NAME: "meteor-bootstrap-os.{{.METEOR_PLATFORM}}.{{.METEOR_ARCH}}.tar.gz"
-          FILE_BASE_DIR: "{{.OUTPUT_DIR}}/.meteor"
+          FILE_BASE_DIR: "{{.G_METEOR_BUILD_DIR}}/.meteor"
           URL_PREFIX: "https://static.meteor.com/packages-bootstrap/{{.METEOR_RELEASE}}"
-          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+          OUTPUT_DIR: "{{.G_METEOR_BUILD_DIR}}"
 
   nodejs:
     internal: true
