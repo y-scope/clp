@@ -12,8 +12,8 @@ about it, you can read our [paper][clp-paper].
 
 # Benchmarks
 
-![CLP Benchmark on JSON Logs](docs/src/_static/clp-json-benchmark.png)
-![CLP Benchmark on Unstructured Logs](docs/src/_static/clp-unstructured-benchmark.png)
+![CLP Benchmark on JSON Logs](docs/src/clp-json-benchmark.png)
+![CLP Benchmark on Unstructured Logs](docs/src/clp-unstructured-benchmark.png)
 
 The figures above show CLP's compression and search performance compared to other tools. We separate
 the experiments between JSON and unstructured logs because (1) some tools can only handle one type
@@ -31,7 +31,7 @@ the [CLP paper][clp-paper].
 
 # System Overview
 
-![CLP systems overview](docs/src/_static/clp-complete-solution.png)
+![CLP systems overview](docs/src/clp-complete-solution.png)
 
 CLP provides an end-to-end log management pipeline consisting of compression, search, analytics, and
 viewing. The figure above shows the CLP ecosystem architecture. It consists of the following
