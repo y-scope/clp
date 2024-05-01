@@ -53,21 +53,22 @@ The kv-pair may be nested one or more levels deep.
 
 ### Wildcards in values
 
-To search for a kv-pair with *any* value, you can specify the value `*`
+To search for a kv-pair with *any* value, you can specify the value as a single `*`.
 
 ```
 key: *
 ```
 
-To search for a kv-pair where the value contains a substring, you can specify the value as a
-wildcard expression, where the wildcard `*` which matches zero or more characters:
+To search for a kv-pair where a (string) value contains one or more substrings, you can include `*`
+wildcards in the query, where each `*` matches zero or more characters:
 
 ```
 key: "*partial value*"
 ```
 
 :::{caution}
-Wildcard expressions only work for kv-pairs where the value is a string. 
+Although you can use a single `*` to search for a kv-pair with *any* value, the substring search
+syntax above only works for values which have the string type.
 :::
 
 :::{caution}
@@ -203,6 +204,9 @@ There are a few notable differences between CLP's search syntax and KQL:
   enabled when using KQL with Elasticsearch.
 * CLP doesn't currently support fuzzy matches (e.g., misspellings) for a value, whereas KQL on
   Elasticsearch may perform a fuzzy match depending on how the kv-pair was ingested.
+* CLP will perform a substring search if the query value contains wildcards or includes spaces,
+  whereas KQL on Elasticsearch may perform a fuzzy match (equivalent to a substring search)
+  depending on how the kv-pair was ingested.
 * CLP doesn't support the following _shorthand_ syntax for matching one or more values with the same
   key: `key: (value1 or value2)`.
   * In CLP, this query can be written as `key: value1 OR key: value2`.
