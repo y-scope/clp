@@ -48,13 +48,14 @@ public:
      * @param where_clause SQLite `WHERE` clause to filter rows in the result set.
      * @param ordering_clause SQLite `ORDER BY` clause to sort the result set.
      * @param db_handle
+     * @return a new constructed select statement.
      * @throw clp::SQLitePreparedStatement::OperationFailed on failure.
      */
     [[nodiscard]] static auto create_sqlite_prepared_select_statement(
             std::vector<std::string> const& columns_to_select,
             std::string_view table,
-            std::vector<std::string> where_clause,
-            std::vector<std::string> ordering_clause,
+            std::vector<std::string> const& where_clause,
+            std::vector<std::string> const& ordering_clause,
             sqlite3* db_handle
     ) -> SQLitePreparedSelectStatement;
 

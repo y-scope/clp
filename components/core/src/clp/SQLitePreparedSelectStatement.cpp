@@ -18,8 +18,8 @@ namespace clp {
 [[nodiscard]] auto SQLitePreparedSelectStatement::create_sqlite_prepared_select_statement(
         std::vector<std::string> const& columns_to_select,
         std::string_view table,
-        std::vector<std::string> where_clause,
-        std::vector<std::string> ordering_clause,
+        std::vector<std::string> const& where_clause,
+        std::vector<std::string> const& ordering_clause,
         sqlite3* db_handle
 ) -> SQLitePreparedSelectStatement {
     if (columns_to_select.empty()) {
