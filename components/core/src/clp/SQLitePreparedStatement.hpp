@@ -38,12 +38,8 @@ public:
 
     // Methods
     void bind_int(int parameter_index, int value);
-    void bind_int(std::string const& parameter_name, int value);
     void bind_int64(int parameter_index, int64_t value);
-    void bind_int64(std::string const& parameter_name, int64_t value);
     void bind_text(int parameter_index, std::string const& value, bool copy_parameter);
-    void
-    bind_text(std::string const& parameter_name, std::string const& value, bool copy_parameter);
     void reset();
 
     bool step();

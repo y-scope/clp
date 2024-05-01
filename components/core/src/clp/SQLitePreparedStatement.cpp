@@ -77,15 +77,6 @@ void SQLitePreparedStatement::bind_int(int parameter_index, int value) {
     }
 }
 
-void SQLitePreparedStatement::bind_int(string const& parameter_name, int value) {
-    int parameter_index = sqlite3_bind_parameter_index(m_statement_handle, parameter_name.c_str());
-    if (0 == parameter_index) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
-
-    bind_int(parameter_index, value);
-}
-
 void SQLitePreparedStatement::bind_int64(int parameter_index, int64_t value) {
     auto return_value = sqlite3_bind_int64(m_statement_handle, parameter_index, value);
     if (SQLITE_OK != return_value) {
@@ -95,15 +86,6 @@ void SQLitePreparedStatement::bind_int64(int parameter_index, int64_t value) {
         );
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
-}
-
-void SQLitePreparedStatement::bind_int64(string const& parameter_name, int64_t value) {
-    int parameter_index = sqlite3_bind_parameter_index(m_statement_handle, parameter_name.c_str());
-    if (0 == parameter_index) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
-
-    bind_int64(parameter_index, value);
 }
 
 void SQLitePreparedStatement::bind_text(
@@ -125,19 +107,6 @@ void SQLitePreparedStatement::bind_text(
         );
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
-}
-
-void SQLitePreparedStatement::bind_text(
-        string const& parameter_name,
-        string const& value,
-        bool copy_parameter
-) {
-    int parameter_index = sqlite3_bind_parameter_index(m_statement_handle, parameter_name.c_str());
-    if (0 == parameter_index) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
-
-    bind_text(parameter_index, value, copy_parameter);
 }
 
 void SQLitePreparedStatement::reset() {
