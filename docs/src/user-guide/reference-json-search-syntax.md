@@ -51,7 +51,7 @@ parent1: {parent2: {child: value}}
 
 The kv-pair may be nested one or more levels deep.
 
-### Wildcards queries for values
+### Wildcards in values
 
 To search for a kv-pair with *any* value, you can specify the value `*`
 
@@ -75,7 +75,7 @@ CLP doesn't currently support the `?` wildcard (which matches any single charact
 values containing multiple words. This limitation will be addressed in a future version of CLP. 
 :::
 
-### Wildcard queries for keys
+### Wildcards in keys
 
 To search for a kv-pair with *any* key, you can specify the query in one of two ways:
 
@@ -170,10 +170,28 @@ id: 22149
 level: ERROR AND message: "*job*"
 ```
 
-**Search for FATAL or ERROR log events:**
+**Search for FATAL log events containing the substring "container":**
 
 ```
-level: FATAL OR level: ERROR
+level: FATAL OR *: *container*
+```
+
+**Search for log events where the value of a nested key is in some range:**
+
+```
+job.stats.latency > 0.5 AND job.stats.latency <= 5
+```
+
+**Search for log events where part of the key is unspecified:**
+
+```
+job.*.status: FAILED
+```
+
+**Search for log events where the value of any child key is "STOPPED":**
+
+```
+job.*: STOPPED
 ```
 
 (differences-with-kql)=
@@ -181,11 +199,15 @@ level: FATAL OR level: ERROR
 
 There are a few notable differences between CLP's search syntax and KQL:
 
-* CLP allows a value to contain leading wildcards.
-* CLP does not currently support fuzzy matches (e.g., misspellings) on a value whereas KQL on
+* CLP allows a value to contain leading wildcards, by default, whereas they must be explicitly
+  enabled when using KQL with Elasticsearch.
+* CLP doesn't currently support fuzzy matches (e.g., misspellings) for a value, whereas KQL on
   Elasticsearch may perform a fuzzy match depending on how the kv-pair was ingested.
-* We don't support the following _shorthand_ syntax for matching one or more values with the same
-  key: `key: (value1 or value2)`
+* CLP doesn't support the following _shorthand_ syntax for matching one or more values with the same
+  key: `key: (value1 or value2)`.
+  * In CLP, this query can be written as `key: value1 OR key: value2`.
+* CLP doesn't support unquoted multi-word queries (e.g. `key: word1 word2`), whereas KQL allows it
+  for queries that only contain a single predicate.
 * When querying for multiple kv-pairs in an array, CLP does not guarantee that all kv-pairs are in
   the same object, whereas KQL does.
   * For example, in CLP, the query `a: {"b": 0, "c": 0}` will match log events like
@@ -200,6 +222,6 @@ There are a few notable differences between CLP's search syntax and KQL:
     {"a": [{"b": 0, "c": 0}]}
     ```
     
-    Whereas with KQL, it would only match the second document.
+    Whereas with KQL, the query would only match the second log event.
 
 [kql]: https://www.elastic.co/guide/en/kibana/current/kuery-query.html
