@@ -3,7 +3,7 @@
 CLP includes a web interface available at [http://localhost:4000](http://localhost:4000) by default
 (if you changed `webui.host` or `webui.port` in `etc/clp-config.yml`, use the new values). 
 
-:::{image} ../../_static/clp-search-ui.png
+:::{image} clp-search-ui.png
 :::
 
 The image above shows the search page after running a query. The numbered circles correspond to the
