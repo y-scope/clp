@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <fmt/core.h>
+#include <fmt/fmt.h>
 
 #include "../database_utils.hpp"
 #include "../Defs.h"
