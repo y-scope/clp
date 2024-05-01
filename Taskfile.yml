@@ -264,7 +264,7 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.OUTPUT_DIR}}"
     cmds:
-      - "rm -rf '{{.OUTPUT_DIR}}' {{.OUTPUT_TMP_DIR}}"
+      - "rm -rf '{{.OUTPUT_DIR}}' '{{.OUTPUT_TMP_DIR}}'"
       - "mkdir -p '{{.OUTPUT_TMP_DIR}}'"
       - >-
         curl --fail --location --show-error
