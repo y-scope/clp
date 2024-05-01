@@ -10,7 +10,6 @@ import {
 import {CLP_STORAGE_ENGINES} from "/imports/api/constants";
 import {SearchResultsMetadataCollection} from "/imports/api/search/collections";
 import {
-    SEARCH_MAX_NUM_RESULTS,
     SEARCH_RESULTS_FIELDS,
     SEARCH_SIGNAL,
 } from "/imports/api/search/constants";
@@ -129,11 +128,7 @@ const SearchView = () => {
             // otherwise the count would already be available in
             // `resultsMetadata.numTotalResults`
             resultsCollection.estimatedDocumentCount()
-                .then((count) => {
-                    setEstimatedNumResults(
-                        Math.min(count, SEARCH_MAX_NUM_RESULTS)
-                    );
-                })
+                .then(setEstimatedNumResults)
                 .catch((e) => {
                     console.log(
                         "Error occurred in " +
@@ -296,16 +291,6 @@ const SearchView = () => {
         handleQuerySubmit(expandedTimeRange);
     };
 
-    // The number of results on the server is available in different variables at different times:
-    // - when the query ends, it will be in resultsMetadata.numTotalResults.
-    // - while the query is in progress, it will be in estimatedNumResults.
-    // - when the query starts, the other two variables will be null, so searchResults.length is the
-    //   best estimate.
-    const numResultsOnServer =
-        resultsMetadata.numTotalResults ||
-        estimatedNumResults ||
-        searchResults.length;
-
     return (
         <div className={"d-flex flex-column h-100"}>
             <div className={"flex-column"}>
@@ -329,9 +314,9 @@ const SearchView = () => {
             </div>
 
             {(null !== searchJobId) && <SearchResults
+                estimatedNumResults={estimatedNumResults}
                 fieldToSortBy={fieldToSortBy}
                 maxLinesPerResult={maxLinesPerResult}
-                numResultsOnServer={numResultsOnServer}
                 resultsMetadata={resultsMetadata}
                 searchJobId={searchJobId}
                 searchResults={searchResults}

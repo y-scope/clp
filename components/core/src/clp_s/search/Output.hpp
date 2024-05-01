@@ -3,6 +3,7 @@
 
 #include <map>
 #include <set>
+#include <stack>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -48,6 +49,12 @@ public:
     bool filter();
 
 private:
+    enum class ExpressionType {
+        And,
+        Or,
+        Filter
+    };
+
     std::shared_ptr<ArchiveReader> m_archive_reader;
     std::shared_ptr<Expression> m_expr;
     SchemaMatch& m_match;
@@ -82,6 +89,11 @@ private:
     std::vector<ColumnDescriptor*> m_wildcard_columns;
     std::map<ColumnDescriptor*, std::set<int32_t>> m_wildcard_to_searched_basic_columns;
     LiteralTypeBitmask m_wildcard_type_mask{0};
+
+    std::stack<
+            std::pair<ExpressionType, OpList::iterator>,
+            std::vector<std::pair<ExpressionType, OpList::iterator>>>
+            m_expression_state;
 
     simdjson::ondemand::parser m_array_parser;
     std::string m_array_search_string;
