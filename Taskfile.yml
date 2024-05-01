@@ -284,8 +284,9 @@ tasks:
   meteor:
     run: "once"
     preconditions:
-      # NOTE: Meteor 2.x does not support AArch64 on Linux
-      - "test '$(uname -m)' != 'aarch64' || (test '$(uname -s)' != 'Linux')"
+      - sh: >-
+          (test "$(uname -m)" != "aarch64") || (test "$(uname -s)" != "Linux")
+        msg: "Meteor 2.x does not support aarch64 on Linux"
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       METEOR_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x86_64{{ end }}"
