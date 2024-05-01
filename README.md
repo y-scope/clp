@@ -73,6 +73,10 @@ We also have guides for building the [package][build-package] and [CLP core][cor
 
 For some logs you can use to test CLP, check out our open-source [datasets][datasets].
 
+# Docs
+
+You can find our docs [online][clp-docs] or view the source in `docs/src`. 
+
 # Providing Feedback
 
 You can use GitHub issues to [report a bug][bug-report] or [request a feature][feature-req].
@@ -86,6 +90,7 @@ If you would like a feature or want to report a bug, please file an issue and we
 
 [bug-report]: https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&template=bug-report.yml
 [build-package]: http://docs.yscope.com/clp/main/dev-guide/building-package
+[clp-docs]: https://docs.yscope.com/clp/main
 [clp-ffi-go]: https://github.com/y-scope/clp-ffi-go
 [clp-ffi-py]: https://github.com/y-scope/clp-ffi-py
 [clp-loglib-py]: https://github.com/y-scope/clp-loglib-py
