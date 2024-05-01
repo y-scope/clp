@@ -26,7 +26,7 @@ public:
 
     // Constructors
     SQLitePreparedStatement(char const* statement, size_t statement_length, sqlite3* db_handle);
-    ~SQLitePreparedStatement();
+    virtual ~SQLitePreparedStatement();
 
     // Delete copy constructor and assignment
     SQLitePreparedStatement(SQLitePreparedStatement const&) = delete;
@@ -37,6 +37,7 @@ public:
     SQLitePreparedStatement& operator=(SQLitePreparedStatement&& rhs) noexcept;
 
     // Methods
+    virtual void reset();
     void bind_int(int parameter_index, int value);
     void bind_int(std::string const& parameter_name, int value);
     void bind_int64(int parameter_index, int64_t value);
@@ -44,7 +45,6 @@ public:
     void bind_text(int parameter_index, std::string const& value, bool copy_parameter);
     void
     bind_text(std::string const& parameter_name, std::string const& value, bool copy_parameter);
-    void reset();
 
     bool step();
     int column_int(int parameter_index) const;
