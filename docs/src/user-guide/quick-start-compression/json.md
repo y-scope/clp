@@ -18,8 +18,8 @@ sbin/compress.sh --timestamp-key '<timestamp-key>' <path1> [<path2> ...]
   :::
 
 * `<path...>` are paths to JSON log files or directories containing JSON log files.
-    * Each JSON log file should contain each log event as a separate JSON object, i.e., _not_ as an
-      array.
+    * Each JSON log file should contain each log event as a [separate JSON object][json-log-format],
+      i.e., _not_ as an array.
 
 # Sample logs
 
@@ -29,3 +29,5 @@ For some sample logs, check out the open-source [datasets](../resources-datasets
 
 The compression script used above will output the compression ratio of each dataset you compress, or
 you can use the UI to view overall statistics.
+
+[json-log-format]: ../quick-start-cluster-setup/index.md#clp-json

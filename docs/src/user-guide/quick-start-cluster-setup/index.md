@@ -17,7 +17,7 @@ There are two flavours of CLP [releases][clp-releases]:
 
 :::{note}
 Both flavours contain the same binaries but are configured with different values for the
-`package.storage_engine` key.
+`package.storage_engine` key in the package's config file (`etc/clp-config.yml`).
 :::
 
 You should download and extract the release that's appropriate for your logs.

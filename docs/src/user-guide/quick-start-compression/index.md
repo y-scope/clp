@@ -14,12 +14,12 @@ version of CLP.
 :gutter: 2
 
 :::{grid-item-card}
-:link: clp-json
+:link: json
 Compressing JSON logs
 :::
 
 :::{grid-item-card}
-:link: clp-text
+:link: text
 Compressing text logs
 :::
 ::::

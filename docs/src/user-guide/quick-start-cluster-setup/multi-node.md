@@ -38,8 +38,8 @@ worker components. The tables below list the components and their functions.
 
 | Component          | Description                                                  |
 |--------------------|--------------------------------------------------------------|
-| compression_worker | Worker processes for compression tasks                       |
-| search_worker      | Worker processes for search/aggregation tasks                |
+| compression_worker | Worker processes for compression jobs                        |
+| search_worker      | Worker processes for search/aggregation jobs                 |
 | reducer            | Reducers for performing the final stages of aggregation jobs |
 :::
 
@@ -54,7 +54,7 @@ Running additional workers increases the parallelism of compression and search j
 
     {style=lower-alpha}
     1. Uncomment the file.
-    2. Set the username and password to something appropriate.
+    2. Choose an appropriate username and password.
        * Note that these are *new* credentials that will be used by the components.
 
 3. Choose which hosts you would like to use for the controller components.
@@ -63,22 +63,50 @@ Running additional workers increases the parallelism of compression and search j
 
     {style=lower-alpha}
     1. Uncomment the file.
-    2. Set the `host` config of each controller component to the hosts you choose in step 3.
+    2. Set the `host` config of each controller component to the host that you'd like to run them
+       on.
+       * If desired, you can run different controller components on different hosts.
     3. Change any of the controller components' ports that will conflict with services you already
        have running.
     4. Set `archive_output.directory` to a directory on the distributed filesystem.
+       * Ideally, the directory should be empty or should not yet exist (CLP will create it) since
+         CLP will write several files and directories directly to the given directory.
 
 5. Download and extract the package on all nodes.
-6. Take the versions of `credentials.yml` and `clp-config.yml` that you created above and copy them
+6. Copy the `credentials.yml` and `clp-config.yml` files that you created above and paste them
    into `etc` on all the hosts where you extracted the package.
 
 ## Starting CLP
+
+Before starting each CLP component, note that some components must be started before others. We
+organize the components into groups below, where components in a group can be started in any order,
+but all components in a group must be started before starting a component in the next group.
+
+**Group 1 components:**
+
+* `database`
+* `queue`
+* `redis`
+* `results_cache`
+
+**Group 2 components:**
+
+* `compression_scheduler`
+* `search_scheduler`
+
+**Group 3 components:**
+
+* `compression_worker`
+* `search_worker`
+* `reducer`
 
 For each component, on the host where you want to run the component, run:
 
 ```bash
 sbin/start-clp.sh <component>
 ```
+
+Where `<component>` is the name of the component in the groups above.
 
 ## Using CLP
 
