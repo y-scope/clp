@@ -26,7 +26,8 @@ The most basic query is one for a field with a key and a value:
 key: value
 ```
 
-To search for a key or value with multiple words, you should quote the key/value:
+To search for a key or value with multiple words, you must quote the key/value with double-quotes
+(`"`):
 
 ```
 "multi-word key": "multi-word value"
@@ -68,7 +69,7 @@ key: "*partial value*"
 
 :::{caution}
 Although you can use a single `*` to search for a kv-pair with *any* value, the substring search
-syntax above only works for values which have the string type.
+syntax above only works for values that are strings.
 :::
 
 :::{caution}
