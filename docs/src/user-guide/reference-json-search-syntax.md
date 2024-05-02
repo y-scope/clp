@@ -36,6 +36,12 @@ To search for a key or value with multiple words, you must quote the key/value w
 Queries for keys or values with the following literal characters must escape the characters using a
 `\` (backslash): `\`, `(`, `)`, `:`, `<`, `>`, `"`, `*`, `{`, `}`.
 
+:::{caution}
+Currently, a query that contains spaces is interpreted as a substring search, i.e., it will match
+log events that contain the value as a *substring*. In a future version of CLP, these queries will
+be interpreted as _exact_ searches unless they include [wildcards](#wildcards-in-values).
+:::
+
 ### Querying nested kv-pairs
 
 If the kv-pair is nested in one or more objects, you can specify the key in one of two ways:
@@ -52,6 +58,7 @@ parent1: {parent2: {child: value}}
 
 The kv-pair may be nested one or more levels deep.
 
+(wildcards-in-values)=
 ### Wildcards in values
 
 To search for a kv-pair with *any* value, you can specify the value as a single `*`.
