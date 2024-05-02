@@ -39,7 +39,6 @@ A handful of packages and libraries are required to build CLP. There are two opt
 * Build CLP within a prebuilt docker container that contains the libraries;
   However, this won't work if you need additional libraries that aren't already in the container.
 
-(native-environment)=
 #### Native Environment
 
 See the relevant README for your OS:

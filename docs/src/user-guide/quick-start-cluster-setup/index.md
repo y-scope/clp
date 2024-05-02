@@ -22,7 +22,6 @@ Both flavours contain the same binaries but are configured with different values
 
 You should download and extract the release that's appropriate for your logs.
 
-(clp-json)=
 ### clp-json
 
 `clp-json` releases are appropriate for JSON logs where each log event is an independent JSON
@@ -47,7 +46,6 @@ object. For example:
 The log file above contains two log events represented by two JSON objects printed one after the
 other. Whitespace is ignored, so the log events could also appear with no newlines and indentation.
 
-(clp-text)=
 ### clp-text
 
 `clp-text` releases are appropriate for unstructured text logs where each log event contains a

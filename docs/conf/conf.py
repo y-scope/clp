@@ -24,6 +24,8 @@ myst_enable_extensions = [
     "colon_fence",
 ]
 
+myst_heading_anchors = 4
+
 # -- Sphinx autodoc options ----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#configuration
 

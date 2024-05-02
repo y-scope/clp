@@ -121,7 +121,6 @@ If you need to stop the cluster, run:
 sbin/stop-clp.sh
 ```
 
-(setting-up-seaweedfs)=
 ## Setting up SeaweedFS
 
 The instructions below are for running a simple SeaweedFS cluster on a set of hosts. For other use

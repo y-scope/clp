@@ -58,7 +58,6 @@ parent1: {parent2: {child: value}}
 
 The kv-pair may be nested one or more levels deep.
 
-(wildcards-in-values)=
 ### Wildcards in values
 
 To search for a kv-pair with *any* value, you can specify the value as a single `*`.
@@ -203,7 +202,6 @@ job.*.status: FAILED
 job.*: STOPPED
 ```
 
-(differences-with-kql)=
 ## Differences with KQL
 
 There are a few notable differences between CLP's search syntax and KQL:
