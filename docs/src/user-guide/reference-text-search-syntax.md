@@ -13,9 +13,14 @@ By default, CLP treats queries as substring searches (alike `grep`). So the quer
 `*`).
 
 :::{tip}
-Queries where words contain wildcards are generally[^1] slower than queries where the words are
-separate from any wildcards. For example, the query `ERROR c*4 FAILED!` will likely take longer to
-complete than the query ` ERROR container_4 FAILED!` (assuming they match the same log events).
+Queries where words[^1] contain or are attached to wildcards are generally slower than queries where
+the words are separate from any wildcards.
+
+For example, the query `ERROR c*4 FAILED!` (interpreted internally as `*ERROR c*4 FAILED!*`) will
+likely take longer to execute than the query ` ERROR container_4 FAILED!` (assuming they match
+the same log events). In the former, `ERROR` has an implicit preceding wildcard, `c*4` contains a
+wildcard, and `FAILED` does not (`!` is a delimiter by default). In the latter, all three words are
+detached from any wildcards.
 :::
 
 ## Quoting in the UI
@@ -57,4 +62,4 @@ _Note that because the query is surrounded by spaces, it will be interpreted int
 [^1]: A "word" is any contiguous group of non-delimiter characters. A delimiter is a character that
 CLP uses to split-up (tokenize) a log event. By default, these delimiters are any non-alphanumeric
 character except `+`, `-`, `.`, and `_`; but users can
-[configure](reference-unstructured-schema-file) these delimiters if they wish.
+[configure](reference-unstructured-schema-file) these delimiters.
