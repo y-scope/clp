@@ -48,11 +48,8 @@ public:
 
     bool step();
     int column_int(int parameter_index) const;
-    int column_int(std::string const& parameter_name) const;
     int64_t column_int64(int parameter_index) const;
-    int64_t column_int64(std::string const& parameter_name) const;
     void column_string(int parameter_index, std::string& value) const;
-    void column_string(std::string const& parameter_name, std::string& value) const;
 
     bool is_row_ready() const { return m_row_ready; }
 
