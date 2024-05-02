@@ -17,7 +17,7 @@ sbin/compress.sh --timestamp-key '<timestamp-key>' <path1> [<path2> ...]
   filter).
   :::
 
-* `<path...>` are paths to JSON log files or directories containing JSON log files.
+* `<path...>` are paths to JSON log files or directories containing such files.
     * Each JSON log file should contain each log event as a [separate JSON object][json-log-format],
       i.e., _not_ as an array.
 

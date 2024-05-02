@@ -1,4 +1,4 @@
-# JSON-log search syntax
+# clp-json search syntax
 
 To query JSON logs, CLP currently supports a [variant](#differences-with-kql) of the
 [Kibana Query Language (KQL)][kql].

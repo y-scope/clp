@@ -1,12 +1,12 @@
-# Compressing text logs
+# Compressing unstructured text logs
 
-To compress text logs, from inside the package directory, run:
+To compress unstructured text logs, from inside the package directory, run:
 
 ```bash
 sbin/compress.sh <path1> [<path2> ...]
 ```
 
-`<path...>` are paths to text log files or directories containing text log files.
+`<path...>` are paths to unstructured text log files or directories containing such files.
 
 # Sample logs
 

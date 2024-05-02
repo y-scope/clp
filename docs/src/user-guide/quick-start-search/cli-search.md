@@ -7,7 +7,7 @@ sbin/search.sh '<query>'
 ```
 
 The format of `<query>` depends on the format your logs: [JSON](../reference-json-search-syntax.md)
-or [text](../reference-text-search-syntax.md).
+or [unstructured text](../reference-text-search-syntax.md).
 
 To narrow your search to a specific time range:
 

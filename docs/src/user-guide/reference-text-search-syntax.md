@@ -1,6 +1,7 @@
-# Text-log search syntax
+# clp-text search syntax
 
-To search text logs, CLP currently supports wildcard queries. A wildcard query is a query where:
+To search unstructured text logs, CLP currently supports wildcard queries. A wildcard query is one
+where:
 
 * `*` matches zero or more characters
 * `?` matches any single character

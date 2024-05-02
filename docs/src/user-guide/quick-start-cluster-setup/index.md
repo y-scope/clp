@@ -13,7 +13,7 @@ To set up a cluster, you'll need to:
 There are two flavours of CLP [releases][clp-releases]:
 
 * **[clp-json](#clp-json)** for compressing and searching **JSON** logs.
-* **[clp-text](#clp-text)** for compressing and searching **free-text** logs.
+* **[clp-text](#clp-text)** for compressing and searching **unstructured text** logs.
 
 :::{note}
 Both flavours contain the same binaries but are configured with different values for the
@@ -50,8 +50,8 @@ other. Whitespace is ignored, so the log events could also appear with no newlin
 (clp-text)=
 ### clp-text
 
-`clp-text` releases are appropriate for free text logs where each log event contains a timestamp
-and may span one or more lines.
+`clp-text` releases are appropriate for unstructured text logs where each log event contains a
+timestamp and may span one or more lines.
 
 :::{note}
 If your logs do not contain timestamps or CLP can't automatically parse the timestamps in your logs,

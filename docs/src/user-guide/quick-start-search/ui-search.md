@@ -11,7 +11,8 @@ following features:
 
 1. The search box is where you can enter a query.
    * The format of a query depends on the format of your logs:
-     [JSON](../reference-json-search-syntax.md) or [text](../reference-text-search-syntax.md).
+     [JSON](../reference-json-search-syntax.md) or
+     [unstructured text](../reference-text-search-syntax.md).
 2. The timeline shows the number of results across the time range of your query.
    * You can click and drag to zoom into a time range or use the time range filter in (4).
 3. The table displays the search results for your query.

@@ -16,19 +16,19 @@ Searching from the command line
 :::
 ::::
 
-The syntax for searching JSON logs and text logs is different.
+The syntax for searching JSON logs and unstructured text logs is different.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
 
 :::{grid-item-card}
 :link: ../reference-json-search-syntax
-JSON log search syntax
+`clp-json` search syntax
 :::
 
 :::{grid-item-card}
 :link: ../reference-text-search-syntax
-Text log search syntax
+`clp-text` search syntax
 :::
 ::::
 
