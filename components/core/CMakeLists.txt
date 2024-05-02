@@ -389,6 +389,7 @@ set(SOURCE_FILES_unitTest
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
         tests/test-Segment.cpp
+        tests/test-SQLiteDB.cpp
         tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
         tests/test-string_utils.cpp
