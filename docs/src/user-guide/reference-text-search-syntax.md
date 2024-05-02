@@ -13,12 +13,9 @@ By default, CLP treats queries as substring searches (alike `grep`). So the quer
 `*`).
 
 :::{tip}
-Including delimiters (e.g. spaces, colons, etc.) at the beginning and end of your query can improve
-CLP's search performance.
-
-If your query begins/ends with a token, since CLP implicitly adds wildcards to each end of the
-query, that token will have wildcards attached to it. Generally, queries for tokens containing
-wildcards are slower than queries for tokens that don't contain wildcards.
+Queries where words contain wildcards are generally[^1] slower than queries where the words are
+separate from any wildcards. For example, the query `ERROR c*4 FAILED!` will likely take longer to
+complete than the query ` ERROR container_4 FAILED!` (assuming they match the same log events).
 :::
 
 ## Quoting in the UI
@@ -56,3 +53,8 @@ _Note that because the query is surrounded by spaces, it will be interpreted int
 ```
  formula: \\x \* \\y
 ```
+
+[^1]: A "word" is any contiguous group of non-delimiter characters. A delimiter is a character that
+CLP uses to split-up (tokenize) a log event. By default, these delimiters are any non-alphanumeric
+character except `+`, `-`, `.`, and `_`; but users can
+[configure](reference-unstructured-schema-file) these delimiters if they wish.
