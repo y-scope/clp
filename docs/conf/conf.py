@@ -63,10 +63,17 @@ html_theme_options = {
     "footer_start": ["copyright"],
     "footer_center": [],
     "footer_end": ["theme-version"],
+    "navbar_start": ["navbar-logo", "version-switcher"],
     "navbar_end": ["navbar-icon-links", "theme-switcher"],
     "primary_sidebar_end": [],
     "secondary_sidebar_items": ["page-toc", "edit-this-page"],
     "show_prev_next": False,
+    "switcher": {
+        # TODO
+        "json_url": "https://raw.githubusercontent.com/kirkrodrigues/clp/docs-version-switcher"
+                    "/docs/conf/versions.json",
+        "version_match": "main",
+    },
     "use_edit_page_button": True,
 }
 
