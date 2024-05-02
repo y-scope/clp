@@ -74,7 +74,7 @@ syntax above only works for values that are strings.
 
 :::{caution}
 CLP doesn't currently support the `?` wildcard (which matches any single character) _except_ in
-values containing multiple words. This limitation will be addressed in a future version of CLP. 
+values containing multiple words. This limitation will be addressed in a future version of CLP.
 :::
 
 ### Wildcards in keys
@@ -152,7 +152,7 @@ key1: value1 AND (key2: valueA OR key2: valueB) AND NOT key3: value3
 
 There are three supported boolean operators:
 
-* `AND` - the expressions on _both_ sides of the operator must be true. 
+* `AND` - the expressions on _both_ sides of the operator must be true.
 * `OR` - the expressions on _either_ side of the operator must be true.
 * `NOT` - the expression after the operator must _not_ be true.
 
@@ -218,17 +218,17 @@ There are a few notable differences between CLP's search syntax and KQL:
 * When querying for multiple kv-pairs in an array, CLP does not guarantee that all kv-pairs are in
   the same object, whereas KQL does.
   * For example, in CLP, the query `a: {"b": 0, "c": 0}` will match log events like
-  
+
     ```json
     {"a": [{"b": 0}, {"c": 0}]}
     ```
-    
+
     and
 
     ```json
     {"a": [{"b": 0, "c": 0}]}
     ```
-    
+
     Whereas with KQL, the query would only match the second log event.
 
 [kql]: https://www.elastic.co/guide/en/kibana/current/kuery-query.html

@@ -134,17 +134,17 @@ cases, see the [SeaweedFS docs][seaweedfs-docs].
     weed master -port 9333
     weed filer -port 8888 -master "localhost:9333"
     ```
-    
+
 3. Start one or more volume servers on one or more hosts.
 
     {style=lower-alpha}
     1. Create a directory where you want SeaweedFS to store data.
     2. Start the volume server:
-        
+
         ```bash
         weed volume -mserver "<master-host>:9333" -dir <storage-dir> -max 0
         ```
-        
+
         * `<master-host>` is the hostname/IP of the master host.
         * `<storage-dir>` is the directory where you want SeaweedFS to store data.
 4. Start a FUSE mount on every host that you want to run a CLP worker:
