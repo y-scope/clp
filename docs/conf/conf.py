@@ -20,8 +20,11 @@ extensions = [
 # -- MyST extensions -----------------------------------------------------------
 # https://myst-parser.readthedocs.io/en/stable/syntax/optional.html
 myst_enable_extensions = [
+    "attrs_block",
     "colon_fence",
 ]
+
+myst_heading_anchors = 4
 
 # -- Sphinx autodoc options ----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#configuration

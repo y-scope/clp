@@ -12,8 +12,8 @@ about it, you can read our [paper][clp-paper].
 
 # Benchmarks
 
-![CLP Benchmark on JSON Logs](docs/src/_static/clp-json-benchmark.png)
-![CLP Benchmark on Unstructured Logs](docs/src/_static/clp-unstructured-benchmark.png)
+![CLP Benchmark on JSON Logs](docs/src/clp-json-benchmark.png)
+![CLP Benchmark on Unstructured Logs](docs/src/clp-unstructured-benchmark.png)
 
 The figures above show CLP's compression and search performance compared to other tools. We separate
 the experiments between JSON and unstructured logs because (1) some tools can only handle one type
@@ -31,7 +31,7 @@ the [CLP paper][clp-paper].
 
 # System Overview
 
-![CLP systems overview](docs/src/_static/clp-complete-solution.png)
+![CLP systems overview](docs/src/clp-complete-solution.png)
 
 CLP provides an end-to-end log management pipeline consisting of compression, search, analytics, and
 viewing. The figure above shows the CLP ecosystem architecture. It consists of the following
@@ -73,6 +73,10 @@ We also have guides for building the [package][build-package] and [CLP core][cor
 
 For some logs you can use to test CLP, check out our open-source [datasets][datasets].
 
+# Docs
+
+You can find our docs [online][clp-docs] or view the source in `docs/src`. 
+
 # Providing Feedback
 
 You can use GitHub issues to [report a bug][bug-report] or [request a feature][feature-req].
@@ -86,6 +90,7 @@ If you would like a feature or want to report a bug, please file an issue and we
 
 [bug-report]: https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&template=bug-report.yml
 [build-package]: http://docs.yscope.com/clp/main/dev-guide/building-package
+[clp-docs]: https://docs.yscope.com/clp/main
 [clp-ffi-go]: https://github.com/y-scope/clp-ffi-go
 [clp-ffi-py]: https://github.com/y-scope/clp-ffi-py
 [clp-loglib-py]: https://github.com/y-scope/clp-loglib-py
