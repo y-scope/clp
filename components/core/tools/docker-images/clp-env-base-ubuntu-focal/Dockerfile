@@ -9,15 +9,10 @@ ADD ./tools/scripts/lib_install ./tools/scripts/lib_install
 # `install-prebuilt-packages.sh` and `install-packages-from-source.sh`.
 RUN ./tools/scripts/lib_install/ubuntu-focal/install-prebuilt-packages.sh
 
-# Set gcc/g++ 10 as the default compiler
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 10
-RUN update-alternatives --set gcc /usr/bin/gcc-10
-RUN update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-10 20
+# Set cpp, cc, and c++ to v10
 RUN update-alternatives --set cc /usr/bin/gcc-10
-RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 10
-RUN update-alternatives --set g++ /usr/bin/g++-10
-RUN update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-10 20
 RUN update-alternatives --set c++ /usr/bin/g++-10
+RUN update-alternatives --set cpp /usr/bin/cpp-10
 
 RUN ./tools/scripts/lib_install/ubuntu-focal/install-packages-from-source.sh
 

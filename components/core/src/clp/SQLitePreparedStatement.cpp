@@ -169,36 +169,12 @@ int SQLitePreparedStatement::column_int(int parameter_index) const {
     return sqlite3_column_int(m_statement_handle, parameter_index);
 }
 
-int SQLitePreparedStatement::column_int(string const& parameter_name) const {
-    if (false == m_row_ready) {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
-    }
-    int parameter_index = sqlite3_bind_parameter_index(m_statement_handle, parameter_name.c_str());
-    if (0 == parameter_index) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
-
-    return column_int(parameter_index);
-}
-
 int64_t SQLitePreparedStatement::column_int64(int parameter_index) const {
     if (false == m_row_ready) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }
 
     return sqlite3_column_int64(m_statement_handle, parameter_index);
-}
-
-int64_t SQLitePreparedStatement::column_int64(string const& parameter_name) const {
-    if (false == m_row_ready) {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
-    }
-    int parameter_index = sqlite3_bind_parameter_index(m_statement_handle, parameter_name.c_str());
-    if (0 == parameter_index) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
-
-    return column_int64(parameter_index);
 }
 
 void SQLitePreparedStatement::column_string(int parameter_index, std::string& value) const {
@@ -210,20 +186,5 @@ void SQLitePreparedStatement::column_string(int parameter_index, std::string& va
             reinterpret_cast<char const*>(sqlite3_column_text(m_statement_handle, parameter_index)),
             sqlite3_column_bytes(m_statement_handle, parameter_index)
     );
-}
-
-void SQLitePreparedStatement::column_string(
-        std::string const& parameter_name,
-        std::string& value
-) const {
-    if (false == m_row_ready) {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
-    }
-    int parameter_index = sqlite3_bind_parameter_index(m_statement_handle, parameter_name.c_str());
-    if (0 == parameter_index) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
-
-    column_string(parameter_index, value);
 }
 }  // namespace clp
