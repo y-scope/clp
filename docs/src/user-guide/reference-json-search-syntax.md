@@ -213,6 +213,8 @@ There are a few notable differences between CLP's search syntax and KQL:
   * In CLP, this query can be written as `key: value1 OR key: value2`.
 * CLP doesn't support unquoted multi-word queries (e.g. `key: word1 word2`), whereas KQL allows it
   for queries that only contain a single predicate.
+* CLP doesn't support using comparison operators on strings, IP addresses, or timestamps whereas
+  KQL does.
 * When querying for multiple kv-pairs in an array, CLP does not guarantee that all kv-pairs are in
   the same object, whereas KQL does.
   * For example, in CLP, the query `a: {"b": 0, "c": 0}` will match log events like
