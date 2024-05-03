@@ -30,21 +30,36 @@ components/core/tools/ubuntu-focal/install-all.sh
 
 ## Build
 
-To build the package as a tar ball, run;
+There are two flavours of the CLP package:
+
+1. `clp-json` for managing JSON logs
+2. `clp-text` for managing text logs
+
+:::{note}
+Both flavours contain the same binaries but are configured with different values for the
+`package.storage_engine` key.
+:::
+
+To build the package, run:
 
 ```shell
-task package-tar
+task package
 ```
 
-The built tar will be output in the `build` directory.
+The build will be in `build/clp-package` and defaults to using the storage engine for `clp-text`.
+
+To build a releasable tar of either flavour, run:
+
+```shell
+task clp-<flavour>-pkg-tar
+```
+
+where `<flavour>` is `json` or `text`.
+
+The tar will be written to `build/clp-<flavour>-<os>-<arch>-v<version>.tar.gz`, with appropriate
+values for the fields in angle brackets.
 
 ## Cleanup
-
-To clean up the package, run:
-
-```shell
-task clean-package
-```
 
 To clean up all build artifacts, run:
 

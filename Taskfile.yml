@@ -35,28 +35,19 @@ tasks:
         vars:
           COMPONENT: "job-orchestration"
 
-  clean-package:
+  clp-json-pkg-tar:
     cmds:
-      - "rm -rf '{{.G_PACKAGE_BUILD_DIR}}'"
+      - task: "package-tar"
+        vars:
+          FLAVOUR: "json"
+          STORAGE_ENGINE: "clp-s"
 
-  package-tar:
-    deps:
-      - "package"
-    vars:
-      VERSIONED_PACKAGE_NAME:
-        sh: |
-          source /etc/os-release
-          echo "clp-package-${ID}-${VERSION_CODENAME}-$(arch)-v{{.G_PACKAGE_VERSION}}"
-    dir: "{{.G_BUILD_DIR}}"
+  clp-text-pkg-tar:
     cmds:
-      - "rm -rf '{{.VERSIONED_PACKAGE_NAME}}' '{{.VERSIONED_PACKAGE_NAME}}.tar.gz'"
-      - "ln -s '{{.G_PACKAGE_BUILD_DIR}}' '{{.VERSIONED_PACKAGE_NAME}}'"
-      - "tar czf '{{.VERSIONED_PACKAGE_NAME}}.tar.gz' --dereference '{{.VERSIONED_PACKAGE_NAME}}'"
-    sources:
-      - "{{.G_BUILD_DIR}}/package.md5"
-      - "{{.TASKFILE}}"
-    generates:
-      - "{{.VERSIONED_PACKAGE_NAME}}.tar.gz"
+      - task: "package-tar"
+        vars:
+          FLAVOUR: "text"
+          STORAGE_ENGINE: "clp"
 
   package:
     vars:
@@ -76,7 +67,7 @@ tasks:
       - "webui"
       - "webui-nodejs"
     cmds:
-      - task: "clean-package"
+      - "rm -rf '{{.OUTPUT_DIR}}'"
       - "rsync -a components/package-template/src/ '{{.OUTPUT_DIR}}'"
       - "rsync --copy-links /etc/os-release '{{.OUTPUT_DIR}}/etc/os-release'"
       - "mkdir -p '{{.OUTPUT_DIR}}/lib/python3/site-packages'"
@@ -328,6 +319,45 @@ tasks:
           URL_PREFIX: "{{.NODEJS_VERSION_BASE_URL}}"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
 
+  package-tar:
+    internal: true
+    requires:
+      vars: ["FLAVOUR", "STORAGE_ENGINE"]
+    vars:
+      VERSIONED_PACKAGE_NAME:
+        sh: |
+          source /etc/os-release
+          echo "clp-{{.FLAVOUR}}-${ID}-${VERSION_CODENAME}-$(arch)-v{{.G_PACKAGE_VERSION}}"
+      OUTPUT_DIR: "{{.G_BUILD_DIR}}/{{.VERSIONED_PACKAGE_NAME}}"
+      OUTPUT_FILE: "{{.OUTPUT_DIR}}.tar.gz"
+    dir: "{{.G_BUILD_DIR}}"
+    deps: ["package"]
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}' '{{.OUTPUT_FILE}}'"
+      # NOTE: The trailing slash after the source is necessary so that rsync copies
+      # `/parents/A` -> `/parents/B` rather than `/parents/A` -> `/parents/B/A`
+      - "rsync --archive '{{.G_PACKAGE_BUILD_DIR}}/' '{{.OUTPUT_DIR}}'"
+      # Set the storage engine for the package
+      - task: "replace-text"
+        vars:
+          FILE_PATH: "{{.OUTPUT_DIR}}/lib/python3/site-packages/clp_py_utils/clp_config.py"
+          SED_EXP: >-
+            s/([[:space:]]*storage_engine: str = ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
+      - task: "replace-text"
+        vars:
+          FILE_PATH: "{{.OUTPUT_DIR}}/etc/clp-config.yml"
+          SED_EXP: >-
+            s/(\#[[:space:]]*storage_engine: ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
+      - >-
+        tar czf '{{.OUTPUT_FILE}}'
+        --directory '{{.G_BUILD_DIR}}'
+        --dereference '{{.VERSIONED_PACKAGE_NAME}}'
+    sources:
+      - "{{.G_BUILD_DIR}}/package.md5"
+      - "{{.TASKFILE}}"
+    generates:
+      - "{{.VERSIONED_PACKAGE_NAME}}.tar.gz"
+
   package-venv:
     internal: true
     vars:
@@ -470,12 +500,11 @@ tasks:
       # `bash`.
       # NOTE: Older versions of Python's venv would only call `hash` if they detected the running
       # shell was one that had the command, but that's not the case in newer versions.
-      - |-
-        # NOTE: We can't use `sed -i` since `-i` has different syntax on Linux and macOS
-        old="{{.OUTPUT_DIR}}/bin/activate"
-        new="{{.OUTPUT_DIR}}/bin/activate.tmp"
-        sed -E 's/^([[:space:]]*)hash[[:space:]]+.*/\1true/g' "${old}" > "${new}"
-        mv "${new}" "${old}"
+      - task: "replace-text"
+        vars:
+          FILE_PATH: "{{.OUTPUT_DIR}}/bin/activate"
+          SED_EXP: >-
+            s/^([[:space:]]*)hash[[:space:]]+.*/\1true/g
       - |-
         . "{{.OUTPUT_DIR}}/bin/activate"
         pip3 install --upgrade pip
@@ -522,6 +551,22 @@ tasks:
           DATA_DIR: "{{.DATA_DIR}}"
           OUTPUT_FILE: "{{.TMP_CHECKSUM_FILE}}"
       - defer: "rm -f '{{.TMP_CHECKSUM_FILE}}'"
+      # Check that the directory exists and the checksum matches; otherwise delete the checksum file
       - >-
-        diff -q '{{.TMP_CHECKSUM_FILE}}' '{{.CHECKSUM_FILE}}' 2> /dev/null
-        || rm -f '{{.CHECKSUM_FILE}}'
+        (
+        test -d "{{.DATA_DIR}}"
+        && diff -q '{{.TMP_CHECKSUM_FILE}}' '{{.CHECKSUM_FILE}}' 2> /dev/null
+        ) || rm -f '{{.CHECKSUM_FILE}}'
+
+  replace-text:
+    desc: "Task to replace some text in a file using sed."
+    internal: true
+    requires:
+      vars: ["FILE_PATH", "SED_EXP"]
+    cmds:
+      - |-
+        # NOTE: We can't use `sed -i` since `-i` has different syntax on Linux and macOS
+        src="{{.FILE_PATH}}"
+        dst="{{.FILE_PATH}}.tmp"
+        sed --regexp-extended '{{.SED_EXP}}' "${src}" > "${dst}"
+        mv "${dst}" "${src}"
