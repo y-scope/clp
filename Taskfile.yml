@@ -306,9 +306,8 @@ tasks:
           curl --header "Cache-Control: no-cache, no-store" --silent "{{.NODEJS_VERSION_BASE_URL}}"
           | grep
           --only-matching
-          --perl-regexp
           --max-count 1
-          "node-v\\d+\\.\\d+\\.\\d+-linux-{{.NODEJS_ARCH}}"
+          "node-v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+-{{OS}}-{{.NODEJS_ARCH}}"
           | head --lines 1
     cmds:
       - task: "download-and-extract-tar"
@@ -565,8 +564,10 @@ tasks:
       vars: ["FILE_PATH", "SED_EXP"]
     cmds:
       - |-
-        # NOTE: We can't use `sed -i` since `-i` has different syntax on Linux and macOS
+        # NOTE:
+        # 1. We can't use `sed -i` since `-i` has different syntax on Linux and macOS
+        # 2. We can't use `--regexp` instead of `-E` since `--regexp` is not supported on macOS
         src="{{.FILE_PATH}}"
         dst="{{.FILE_PATH}}.tmp"
-        sed --regexp-extended '{{.SED_EXP}}' "${src}" > "${dst}"
+        sed -E '{{.SED_EXP}}' "${src}" > "${dst}"
         mv "${dst}" "${src}"
