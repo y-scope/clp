@@ -306,9 +306,8 @@ tasks:
           curl --header "Cache-Control: no-cache, no-store" --silent "{{.NODEJS_VERSION_BASE_URL}}"
           | grep
           --only-matching
-          --perl-regexp
           --max-count 1
-          "node-v\\d+\\.\\d+\\.\\d+-{{OS}}-{{.NODEJS_ARCH}}"
+          "node-v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+-{{OS}}-{{.NODEJS_ARCH}}"
           | head --lines 1
     cmds:
       - task: "download-and-extract-tar"
