@@ -334,7 +334,9 @@ tasks:
     deps: ["package"]
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}' '{{.OUTPUT_FILE}}'"
-      - "cp -r '{{.G_PACKAGE_BUILD_DIR}}' '{{.OUTPUT_DIR}}'"
+      # NOTE: The trailing slash after the source is necessary so that rsync copies
+      # `/parents/A` -> `/parents/B` rather than `/parents/A` -> `/parents/B/A`
+      - "rsync --archive '{{.G_PACKAGE_BUILD_DIR}}/' '{{.OUTPUT_DIR}}'"
       # Set the storage engine for the package
       - task: "replace-text"
         vars:
