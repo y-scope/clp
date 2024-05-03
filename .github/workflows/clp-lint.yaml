@@ -26,6 +26,10 @@ jobs:
         shell: "bash"
         run: "npm install -g @go-task/cli"
 
+      - if: "matrix.os == 'macos-latest'"
+        name: "Install coreutils (for md5sum)"
+        run: "brew install coreutils"
+
       - name: "Run lint task"
         shell: "bash"
         run: "task lint:check"
