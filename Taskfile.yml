@@ -329,7 +329,7 @@ tasks:
           source /etc/os-release
           echo "clp-{{.FLAVOUR}}-${ID}-${VERSION_CODENAME}-$(arch)-v{{.G_PACKAGE_VERSION}}"
       OUTPUT_DIR: "{{.G_BUILD_DIR}}/{{.VERSIONED_PACKAGE_NAME}}"
-      OUTPUT_FILE: "{{.G_BUILD_DIR}}/{{.VERSIONED_PACKAGE_NAME}}.tar.gz"
+      OUTPUT_FILE: "{{.OUTPUT_DIR}}.tar.gz"
     dir: "{{.G_BUILD_DIR}}"
     deps: ["package"]
     cmds:
@@ -552,7 +552,7 @@ tasks:
       # Check that the directory exists and the checksum matches; otherwise delete the checksum file
       - >-
         (
-        [[ -d "{{.DATA_DIR}}" ]]
+        test -d "{{.DATA_DIR}}"
         && diff -q '{{.TMP_CHECKSUM_FILE}}' '{{.CHECKSUM_FILE}}' 2> /dev/null
         ) || rm -f '{{.CHECKSUM_FILE}}'
 
