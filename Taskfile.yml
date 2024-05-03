@@ -308,7 +308,7 @@ tasks:
           --only-matching
           --perl-regexp
           --max-count 1
-          "node-v\\d+\\.\\d+\\.\\d+-{{.OS}}-{{.NODEJS_ARCH}}"
+          "node-v\\d+\\.\\d+\\.\\d+-{{OS}}-{{.NODEJS_ARCH}}"
           | head --lines 1
     cmds:
       - task: "download-and-extract-tar"
