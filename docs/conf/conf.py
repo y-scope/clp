@@ -69,9 +69,7 @@ html_theme_options = {
     "secondary_sidebar_items": ["page-toc", "edit-this-page"],
     "show_prev_next": False,
     "switcher": {
-        # TODO
-        "json_url": "https://raw.githubusercontent.com/kirkrodrigues/clp/docs-version-switcher"
-                    "/docs/conf/versions.json",
+        "json_url": "https://docs.yscope.com/_static/clp-versions.json",
         "version_match": "main",
     },
     "use_edit_page_button": True,
