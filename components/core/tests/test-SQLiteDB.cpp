@@ -247,12 +247,11 @@ auto create_indices(SQLiteDB& db) -> void {
  * @return The absolute path of the generated test sqlite database.
  */
 [[nodiscard]] auto get_test_sqlite_db_abs_path() -> std::filesystem::path {
-    return std::filesystem::current_path() / "sqlite_test.db";
+    return std::filesystem::current_path() / "sqlite-test.db";
 }
 
 /**
- * Creates a SQLite database with a table specified in `TestTableSchema`, and insert all the rows
- * to the table.
+ * Creates a SQLite database using `TestTableSchema`, and inserts the given rows into the table.
  * @param rows
  */
 auto sqlite_db_create(std::vector<TestTableSchema::Row> const& rows) -> void {
@@ -264,10 +263,9 @@ auto sqlite_db_create(std::vector<TestTableSchema::Row> const& rows) -> void {
     SQLiteDB sqlite_db;
     sqlite_db.open(db_path.string());
 
-    // Create a new table and indices.
     create_table(sqlite_db);
 
-    // Insert rows to the table.
+    // Insert rows into the table
     auto const& test_table_schema{get_test_table_schema()};
     auto transaction_begin_stmt{sqlite_db.prepare_statement("BEGIN TRANSACTION")};
     auto transaction_end_stmt{sqlite_db.prepare_statement("END TRANSACTION")};
@@ -363,5 +361,5 @@ TEST_CASE("sqlite_db_basic", "[SQLiteDB]") {
     sqlite_db.close();
 
     // Cleanup
-    REQUIRE((std::filesystem::remove(test_db_path)));
+    REQUIRE(std::filesystem::remove(test_db_path));
 }
