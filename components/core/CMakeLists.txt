@@ -211,11 +211,6 @@ add_subdirectory(src/clp_s)
 add_subdirectory(src/reducer)
 
 set(SOURCE_FILES_clp_s_unitTest
-    src/clp_s/SchemaTree.hpp
-    src/clp_s/TimestampPattern.cpp
-    src/clp_s/TimestampPattern.hpp
-    src/clp_s/Utils.cpp
-    src/clp_s/Utils.hpp
     src/clp_s/search/AndExpr.cpp
     src/clp_s/search/AndExpr.hpp
     src/clp_s/search/BooleanLiteral.cpp
@@ -248,6 +243,11 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/search/StringLiteral.hpp
     src/clp_s/search/Transformation.hpp
     src/clp_s/search/Value.hpp
+    src/clp_s/SchemaTree.hpp
+    src/clp_s/TimestampPattern.cpp
+    src/clp_s/TimestampPattern.hpp
+    src/clp_s/Utils.cpp
+    src/clp_s/Utils.hpp
 )
 
 set(SOURCE_FILES_unitTest
@@ -418,13 +418,13 @@ set(SOURCE_FILES_unitTest
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
-        tests/test-kql.cpp
         tests/test-BufferedFileReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
         tests/test-Grep.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp
+        tests/test-kql.cpp
         tests/test-main.cpp
         tests/test-math_utils.cpp
         tests/test-ParserWithUserSchema.cpp
