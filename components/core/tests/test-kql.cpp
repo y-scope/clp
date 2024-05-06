@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
+#include <spdlog/spdlog.h>
 
 #include "../src/clp_s/search/AndExpr.hpp"
 #include "../src/clp_s/search/FilterExpr.hpp"
@@ -20,6 +21,10 @@ using std::stringstream;
 using std::vector;
 
 TEST_CASE("Test parsing KQL", "[KQL]") {
+    // Suppress logging
+    auto previous_logging_level = spdlog::default_logger()->level();
+    spdlog::default_logger()->set_level(spdlog::level::off);
+
     SECTION("Pure wildcard key queries") {
         auto query = GENERATE(
                 "value",
@@ -77,6 +82,13 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(DescriptorToken{"key"} == *not_filter->get_column()->descriptor_begin());
     }
 
+    SECTION("Incorrect NOT filter") {
+        auto query = GENERATE("NOT :", "NOT key: ", "NOT  : value");
+        stringstream incorrect_query{query};
+        auto failure = parse_kql_expression(incorrect_query);
+        REQUIRE(nullptr == failure);
+    }
+
     SECTION("Basic AND expression") {
         auto query = GENERATE(
                 "a:a and b:b",
@@ -110,6 +122,19 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
             REQUIRE(DescriptorToken{str} == *filter->get_column()->descriptor_begin());
             ++c;
         }
+    }
+
+    SECTION("Incorrect AND filter") {
+        auto query = GENERATE(
+                "a : a AND b :",
+                " : a AND b :",
+                ": a AND b :b",
+                " AND b :b",
+                "a: a AND"
+        );
+        stringstream incorrect_query{query};
+        auto failure = parse_kql_expression(incorrect_query);
+        REQUIRE(nullptr == failure);
     }
 
     SECTION("Basic OR expression") {
@@ -146,4 +171,14 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
             ++c;
         }
     }
+
+    SECTION("Incorrect OR filter") {
+        auto query = GENERATE("a : a OR b :", " : a OR b :", ": a OR b :b", " OR b :b", "a: a OR");
+        stringstream incorrect_query{query};
+        auto failure = parse_kql_expression(incorrect_query);
+        REQUIRE(nullptr == failure);
+    }
+
+    // Re-enable logging
+    spdlog::default_logger()->set_level(previous_logging_level);
 }
