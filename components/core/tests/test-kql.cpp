@@ -21,33 +21,37 @@ using std::vector;
 
 TEST_CASE("Test parsing KQL", "[KQL]") {
     SECTION("Pure wildcard key queries") {
-        vector<string> const basic_equivalent_wildcard_queries{
+        auto query = GENERATE(
                 "value",
+                "  value ",
                 "\"value\"",
+                " \"value\" ",
                 "*:value",
+                " * : value ",
                 "*:\"value\"",
+                " *:   \"value\" ",
                 "\"*\":value",
-                "\"*\":\"value\""
-        };
-        for (auto const& query : basic_equivalent_wildcard_queries) {
-            stringstream wildcard_filter{query};
-            auto filter
-                    = std::dynamic_pointer_cast<FilterExpr>(parse_kql_expression(wildcard_filter));
-            REQUIRE(nullptr != filter);
-            REQUIRE(nullptr != filter->get_operand());
-            REQUIRE(nullptr != filter->get_column());
-            REQUIRE(false == filter->has_only_expression_operands());
-            REQUIRE(false == filter->is_inverted());
-            REQUIRE(filter->get_column()->is_pure_wildcard());
-            REQUIRE(FilterOperation::EQ == filter->get_operation());
-            std::string extracted_value;
-            REQUIRE(filter->get_operand()->as_var_string(extracted_value, filter->get_operation()));
-            REQUIRE("value" == extracted_value);
-        }
+                " \"*\" :value",
+                "\"*\":\"value\"",
+                "   \"*\":  \"value\" "
+        );
+        stringstream wildcard_filter{query};
+        auto filter = std::dynamic_pointer_cast<FilterExpr>(parse_kql_expression(wildcard_filter));
+        REQUIRE(nullptr != filter);
+        REQUIRE(nullptr != filter->get_operand());
+        REQUIRE(nullptr != filter->get_column());
+        REQUIRE(false == filter->has_only_expression_operands());
+        REQUIRE(false == filter->is_inverted());
+        REQUIRE(filter->get_column()->is_pure_wildcard());
+        REQUIRE(FilterOperation::EQ == filter->get_operation());
+        std::string extracted_value;
+        REQUIRE(filter->get_operand()->as_var_string(extracted_value, filter->get_operation()));
+        REQUIRE("value" == extracted_value);
     }
 
     SECTION("Basic filter") {
-        stringstream basic_filter{"key:value"};
+        auto query = GENERATE("key:value", " key   : value ");
+        stringstream basic_filter{query};
         auto filter = std::dynamic_pointer_cast<FilterExpr>(parse_kql_expression(basic_filter));
         REQUIRE(nullptr != filter);
         REQUIRE(nullptr != filter->get_operand());
@@ -60,7 +64,8 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
     }
 
     SECTION("Basic NOT filter") {
-        stringstream basic_not{"not key : value"};
+        auto query = GENERATE("not key:value", " not key  : value ");
+        stringstream basic_not{query};
         auto not_filter = std::dynamic_pointer_cast<FilterExpr>(parse_kql_expression(basic_not));
         REQUIRE(nullptr != not_filter);
         REQUIRE(nullptr != not_filter->get_operand());
@@ -73,7 +78,15 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
     }
 
     SECTION("Basic AND expression") {
-        stringstream basic_and{"a:a and b:b"};
+        auto query = GENERATE(
+                "a:a and b:b",
+                "a  : a and  b  : b",
+                "a:a AND b:b",
+                "a  : a AND  b  : b",
+                "a:a aND b:b",
+                "a  : a aND  b  : b"
+        );
+        stringstream basic_and{query};
         auto and_expr = std::dynamic_pointer_cast<AndExpr>(parse_kql_expression(basic_and));
         REQUIRE(nullptr != and_expr);
         REQUIRE(false == and_expr->is_inverted());
@@ -100,7 +113,15 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
     }
 
     SECTION("Basic OR expression") {
-        stringstream basic_or{"a:a or b:b"};
+        auto query = GENERATE(
+                "a:a or b:b",
+                "a  : a or  b  : b",
+                "a:a OR b:b",
+                "a  : a OR  b  : b",
+                "a:a oR b:b",
+                "a  : a oR  b  : b"
+        );
+        stringstream basic_or{query};
         auto or_expr = std::dynamic_pointer_cast<OrExpr>(parse_kql_expression(basic_or));
         REQUIRE(nullptr != or_expr);
         REQUIRE(false == or_expr->is_inverted());
