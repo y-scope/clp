@@ -72,7 +72,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(true == and_expr->has_only_expression_operands());
         REQUIRE(2 == and_expr->get_num_operands());
         char c = 'a';
-        for (auto operand : and_expr->get_op_list()) {
+        for (const auto& operand : and_expr->get_op_list()) {
             std::string const str(1, c);
             auto filter = std::dynamic_pointer_cast<FilterExpr>(operand);
             std::string extracted_value;
@@ -96,7 +96,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(true == or_expr->has_only_expression_operands());
         REQUIRE(2 == or_expr->get_num_operands());
         char c = 'a';
-        for (auto operand : or_expr->get_op_list()) {
+        for (const auto& operand : or_expr->get_op_list()) {
             std::string const str(1, c);
             auto filter = std::dynamic_pointer_cast<FilterExpr>(operand);
             std::string extracted_value;
