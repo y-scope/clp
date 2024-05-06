@@ -26,11 +26,7 @@ public:
     SQLiteDB() : m_db_handle(nullptr) {}
 
     // Destructor
-    ~SQLiteDB() {
-        if (nullptr != m_db_handle) {
-            close();
-        }
-    }
+    ~SQLiteDB();
 
     // Methods
     void open(std::string const& path);
