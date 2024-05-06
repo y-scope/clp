@@ -107,9 +107,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 std::cerr << "  x - decompress" << std::endl;
                 std::cerr << "  s - search" << std::endl;
                 std::cerr << std::endl;
-                std::cerr << "Try "
-                          << " c --help OR"
-                          << " x --help OR"
+                std::cerr << "Try " << " c --help OR" << " x --help OR"
                           << " s --help for command-specific details." << std::endl;
 
                 po::options_description visible_options;
@@ -484,8 +482,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
                              R"( "level: INFO" and output to the results cache)"
                           << std::endl;
-                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
-                          << " " << cResultsCacheOutputHandlerName
+                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")" << " "
+                          << cResultsCacheOutputHandlerName
                           << " --uri mongodb://127.0.0.1:27017/test"
                              " --collection test"
                           << std::endl;
@@ -494,8 +492,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
                              R"( "level: INFO" and output to a network destination)"
                           << std::endl;
-                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
-                          << " " << cNetworkOutputHandlerName
+                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")" << " "
+                          << cNetworkOutputHandlerName
                           << " --host localhost"
                              " --port 18000"
                           << std::endl;
@@ -504,11 +502,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
                              R"( "level: INFO" and output perform a count aggregation)"
                           << std::endl;
-                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
-                          << " " << cReducerOutputHandlerName << " --count"
-                          << " --host localhost"
-                          << " --port 14009"
-                          << " --job-id 1" << std::endl;
+                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")" << " "
+                          << cReducerOutputHandlerName << " --count" << " --host localhost"
+                          << " --port 14009" << " --job-id 1" << std::endl;
 
                 po::options_description visible_options;
                 visible_options.add(general_options);

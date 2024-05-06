@@ -28,7 +28,7 @@ public:
     };
 
     // Constructors
-    Thread() : m_thread_running(false){};
+    Thread() : m_thread_running(false) {};
 
     // Destructor
     virtual ~Thread();
