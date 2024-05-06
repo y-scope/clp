@@ -5,6 +5,7 @@ on:
   pull_request:
   workflow_dispatch:
   schedule:
+    # Scheduled to run every midnight in UTC.
     - cron: "*0 0 * * *"
 
 concurrency:
