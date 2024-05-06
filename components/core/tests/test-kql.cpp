@@ -66,6 +66,9 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(FilterOperation::EQ == filter->get_operation());
         REQUIRE(1 == filter->get_column()->get_descriptor_list().size());
         REQUIRE(DescriptorToken{"key"} == *filter->get_column()->descriptor_begin());
+        std::string extracted_value;
+        REQUIRE(filter->get_operand()->as_var_string(extracted_value, filter->get_operation()));
+        REQUIRE("value" == extracted_value);
     }
 
     SECTION("Basic NOT filter") {
@@ -80,6 +83,10 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(FilterOperation::EQ == not_filter->get_operation());
         REQUIRE(1 == not_filter->get_column()->get_descriptor_list().size());
         REQUIRE(DescriptorToken{"key"} == *not_filter->get_column()->descriptor_begin());
+        std::string extracted_value;
+        REQUIRE(not_filter->get_operand()
+                        ->as_var_string(extracted_value, not_filter->get_operation()));
+        REQUIRE("value" == extracted_value);
     }
 
     SECTION("Incorrect NOT filter") {
@@ -91,12 +98,12 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
 
     SECTION("Basic AND expression") {
         auto query = GENERATE(
-                "a:a and b:b",
-                "a  : a and  b  : b",
-                "a:a AND b:b",
-                "a  : a AND  b  : b",
-                "a:a aND b:b",
-                "a  : a aND  b  : b"
+                "key1:value1 and key2:value2",
+                "key1  : value1 and  key2  : value2",
+                "key1:value1 AND key2:value2",
+                "key1  : value1 AND  key2  : value2",
+                "key1:value1 aND key2:value2",
+                "key1  : value1 aND  key2  : value2"
         );
         stringstream basic_and{query};
         auto and_expr = std::dynamic_pointer_cast<AndExpr>(parse_kql_expression(basic_and));
@@ -104,9 +111,8 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(false == and_expr->is_inverted());
         REQUIRE(true == and_expr->has_only_expression_operands());
         REQUIRE(2 == and_expr->get_num_operands());
-        char c = 'a';
+        int suffix_number = 1;
         for (auto const& operand : and_expr->get_op_list()) {
-            std::string const str(1, c);
             auto filter = std::dynamic_pointer_cast<FilterExpr>(operand);
             REQUIRE(nullptr != filter);
             REQUIRE(nullptr != filter->get_operand());
@@ -118,9 +124,11 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
             REQUIRE(true
                     == filter->get_operand()
                                ->as_var_string(extracted_value, filter->get_operation()));
-            REQUIRE(str == extracted_value);
-            REQUIRE(DescriptorToken{str} == *filter->get_column()->descriptor_begin());
-            ++c;
+            std::string key = "key" + std::to_string(suffix_number);
+            std::string value = "value" + std::to_string(suffix_number);
+            REQUIRE(value == extracted_value);
+            REQUIRE(DescriptorToken{key} == *filter->get_column()->descriptor_begin());
+            ++suffix_number;
         }
     }
 
@@ -139,12 +147,12 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
 
     SECTION("Basic OR expression") {
         auto query = GENERATE(
-                "a:a or b:b",
-                "a  : a or  b  : b",
-                "a:a OR b:b",
-                "a  : a OR  b  : b",
-                "a:a oR b:b",
-                "a  : a oR  b  : b"
+                "key1:value1 or key2:value2",
+                "key1  : value1 or  key2  : value2",
+                "key1:value1 OR key2:value2",
+                "key1  : value1 OR  key2  : value2",
+                "key1:value1 oR key2:value2",
+                "key1  : value1 oR  key2  : value2"
         );
         stringstream basic_or{query};
         auto or_expr = std::dynamic_pointer_cast<OrExpr>(parse_kql_expression(basic_or));
@@ -152,9 +160,8 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(false == or_expr->is_inverted());
         REQUIRE(true == or_expr->has_only_expression_operands());
         REQUIRE(2 == or_expr->get_num_operands());
-        char c = 'a';
+        int suffix_number = 1;
         for (auto const& operand : or_expr->get_op_list()) {
-            std::string const str(1, c);
             auto filter = std::dynamic_pointer_cast<FilterExpr>(operand);
             REQUIRE(nullptr != filter);
             REQUIRE(nullptr != filter->get_operand());
@@ -166,9 +173,11 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
             REQUIRE(true
                     == filter->get_operand()
                                ->as_var_string(extracted_value, filter->get_operation()));
-            REQUIRE(str == extracted_value);
-            REQUIRE(DescriptorToken{str} == *filter->get_column()->descriptor_begin());
-            ++c;
+            std::string key = "key" + std::to_string(suffix_number);
+            std::string value = "value" + std::to_string(suffix_number);
+            REQUIRE(value == extracted_value);
+            REQUIRE(DescriptorToken{key} == *filter->get_column()->descriptor_begin());
+            ++suffix_number;
         }
     }
 
