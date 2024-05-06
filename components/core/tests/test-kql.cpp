@@ -9,6 +9,7 @@
 #include "../src/clp_s/search/FilterExpr.hpp"
 #include "../src/clp_s/search/kql/kql.hpp"
 #include "../src/clp_s/search/OrExpr.hpp"
+#include "LogSuppressor.hpp"
 
 using clp_s::search::AndExpr;
 using clp_s::search::DescriptorToken;
@@ -22,8 +23,7 @@ using std::vector;
 
 TEST_CASE("Test parsing KQL", "[KQL]") {
     // Suppress logging
-    auto previous_logging_level = spdlog::default_logger()->level();
-    spdlog::default_logger()->set_level(spdlog::level::off);
+    LogSuppressor suppressor{};
 
     SECTION("Pure wildcard key queries") {
         auto query = GENERATE(
@@ -187,7 +187,4 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         auto failure = parse_kql_expression(incorrect_query);
         REQUIRE(nullptr == failure);
     }
-
-    // Re-enable logging
-    spdlog::default_logger()->set_level(previous_logging_level);
 }
