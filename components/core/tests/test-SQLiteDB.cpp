@@ -88,8 +88,8 @@ public:
 
     [[nodiscard]] auto get_columns() const -> std::vector<std::string> const& { return m_columns; }
 
-    [[nodiscard]] auto get_column_types(
-    ) const -> std::vector<std::pair<std::string, std::string>> const& {
+    [[nodiscard]] auto get_column_types() const
+            -> std::vector<std::pair<std::string, std::string>> const& {
         return m_column_types;
     }
 
