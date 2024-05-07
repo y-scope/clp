@@ -1,11 +1,6 @@
 name: "clp-lint"
 
-on:
-  push:
-  pull_request:
-  workflow_dispatch:
-  schedule:
-    - cron: "*/10 * * * *"
+on: ["pull_request", "push", "workflow_dispatch"]
 
 concurrency:
   group: "${{github.workflow}}-${{github.ref}}"
