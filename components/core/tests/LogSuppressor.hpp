@@ -1,5 +1,5 @@
 /**
- * A class that suppresses logs so long as it instantiated.
+ * A class that suppresses logs so long as it's instantiated.
  */
 class LogSuppressor {
 public:
