@@ -2,7 +2,7 @@
 #define GLT_VERSION_HPP
 
 namespace glt {
-constexpr char cVersion[] = "0.0.3-dev";
+constexpr char cVersion[] = "0.1.0";
 }  // namespace glt
 
 #endif  // GLT_VERSION_HPP

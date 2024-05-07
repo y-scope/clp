@@ -52,7 +52,7 @@ const Sidebar = ({
             <SidebarButton
                 icon={faCircleInfo}
                 label={"Documentation"}
-                link={"https://docs.yscope.com/clp/main/"}/>
+                link={"https://docs.yscope.com/clp/v0.1.0/"}/>
             <SidebarButton
                 icon={faMessage}
                 label={"Get Support"}
