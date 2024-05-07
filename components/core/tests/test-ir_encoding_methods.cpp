@@ -1,3 +1,5 @@
+#include <optional>
+
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <json/single_include/nlohmann/json.hpp>
 
@@ -8,6 +10,7 @@
 #include "../src/clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../src/clp/ir/LogEventDeserializer.hpp"
 #include "../src/clp/ir/types.hpp"
+#include "../src/clp/time_types.hpp"
 
 using clp::BufferReader;
 using clp::enum_to_underlying_type;
@@ -32,6 +35,7 @@ using clp::ir::four_byte_encoded_variable_t;
 using clp::ir::LogEventDeserializer;
 using clp::ir::VariablePlaceholder;
 using clp::size_checked_pointer_cast;
+using clp::UtcOffset;
 using std::chrono::duration_cast;
 using std::chrono::milliseconds;
 using std::chrono::system_clock;
@@ -40,7 +44,61 @@ using std::string;
 using std::string_view;
 using std::vector;
 
-static epoch_time_ms_t get_current_ts();
+namespace {
+[[nodiscard]] auto get_current_ts() -> epoch_time_ms_t {
+    return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+}
+
+/**
+ * Unstructured log event for testing purposes, consisting a message, a timestamp, and a UTC offset.
+ */
+class UnstructuredLogEvent {
+public:
+    UnstructuredLogEvent(std::string message, epoch_time_ms_t timestamp, UtcOffset utc_offset)
+            : m_message{std::move(message)},
+              m_timestamp{timestamp},
+              m_utc_offset{utc_offset} {}
+
+    [[nodiscard]] auto get_message() const -> std::string_view { return m_message; }
+
+    [[nodiscard]] auto get_timestamp() const -> epoch_time_ms_t { return m_timestamp; }
+
+    [[nodiscard]] auto get_utc_offset() const -> UtcOffset { return m_utc_offset; }
+
+private:
+    std::string m_message;
+    epoch_time_ms_t m_timestamp;
+    UtcOffset m_utc_offset;
+};
+
+/**
+ * @return Log events for testing purposes.
+ */
+[[nodiscard]] auto create_test_log_events() -> std::vector<UnstructuredLogEvent> {
+    std::vector<UnstructuredLogEvent> log_events;
+
+    log_events.emplace_back(
+            "Static <\text>, dictVar1, 123, 456.7, dictVar2, 987, 654.3, end of static text",
+            get_current_ts(),
+            UtcOffset{0}
+    );
+
+    log_events.emplace_back(
+            "Static <\text>, dictVar3, 355.2352512, 23953324532112, "
+            "python3.4.6, end of static text",
+            get_current_ts(),
+            UtcOffset{5 * 60 * 60}
+    );
+
+    log_events.emplace_back(
+            "Static text without variables",
+            get_current_ts(),
+            UtcOffset{-5 * 60 * 60}
+    );
+
+    return log_events;
+}
+}  // namespace
 
 /**
  * @tparam encoded_variable_t Type of the encoded variable
@@ -123,10 +181,6 @@ struct TimestampInfo {
  * @param ts_info Returns the timestamp info
  */
 static void set_timestamp_info(nlohmann::json const& metadata_json, TimestampInfo& ts_info);
-
-static epoch_time_ms_t get_current_ts() {
-    return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-}
 
 template <typename encoded_variable_t>
 bool match_encoding_type(bool is_four_bytes_encoding) {
@@ -584,25 +638,16 @@ TEMPLATE_TEST_CASE(
     ));
     size_t const encoded_preamble_end_pos = ir_buf.size();
 
-    string message;
-    epoch_time_ms_t ts;
     vector<string> reference_messages;
     vector<epoch_time_ms_t> reference_timestamps;
-
-    // First message:
-    message = "Static <\text>, dictVar1, 123, 456.7, dictVar2, 987, 654.3, end of static text";
-    ts = get_next_timestamp_for_test<TestType>();
-    REQUIRE(encode_message<TestType>(ts, message, logtype, ir_buf));
-    reference_messages.push_back(message);
-    reference_timestamps.push_back(ts);
-
-    // Second message:
-    message = "Static <\text>, dictVar3, 355.2352512, 23953324532112, "
-              "python3.4.6, end of static text";
-    ts = get_next_timestamp_for_test<TestType>();
-    REQUIRE(encode_message<TestType>(ts, message, logtype, ir_buf));
-    reference_messages.push_back(message);
-    reference_timestamps.push_back(ts);
+    for (auto const& log_event : create_test_log_events()) {
+        // we ignore the utc offsets.
+        auto const ts{log_event.get_timestamp()};
+        auto const message{log_event.get_message()};
+        REQUIRE(encode_message<TestType>(ts, message, logtype, ir_buf));
+        reference_messages.emplace_back(message.begin(), message.end());
+        reference_timestamps.push_back(ts);
+    }
 
     BufferReader complete_ir_buffer{
             size_checked_pointer_cast<char const>(ir_buf.data()),
@@ -669,46 +714,26 @@ TEMPLATE_TEST_CASE(
     ));
     size_t const encoded_preamble_end_pos = ir_buf.size();
 
-    string message;
-    epoch_time_ms_t ts;
-    vector<string> reference_messages;
-    vector<epoch_time_ms_t> reference_timestamps;
-    vector<clp::UtcOffset> reference_utc_offsets;
-
-    clp::UtcOffset utc_offset{0};
-    reference_utc_offsets.emplace_back(utc_offset);
-
-    // First message
-    message = "Static <\text>, dictVar1, 123, 456.7, dictVar2, 987, 654.3, end of static text";
-    ts = get_next_timestamp_for_test<TestType>();
-    REQUIRE(encode_message<TestType>(ts, message, logtype, ir_buf));
-    reference_messages.push_back(message);
-    reference_timestamps.push_back(ts);
-
-    utc_offset = clp::UtcOffset{std::chrono::seconds{-5 * 60 * 60}};
-    reference_utc_offsets.emplace_back(utc_offset);
-    clp::ffi::ir_stream::serialize_utc_offset_change(utc_offset, ir_buf);
-
-    // Second message
-    message = "Static <\text>, dictVar3, 355.2352512, 23953324532112, "
-              "python3.4.6, end of static text";
-    ts = get_next_timestamp_for_test<TestType>();
-    REQUIRE(encode_message<TestType>(ts, message, logtype, ir_buf));
-    reference_messages.push_back(message);
-    reference_timestamps.push_back(ts);
-
-    utc_offset = clp::UtcOffset{std::chrono::seconds{5 * 60 * 60}};
-    reference_utc_offsets.emplace_back(utc_offset);
-    clp::ffi::ir_stream::serialize_utc_offset_change(utc_offset, ir_buf);
-
-    // Third message
-    message = "Static <\text>, dictVar3, 355.2352512, 23953324532112, "
-              "python3.4.6, end of static text";
-    ts = get_next_timestamp_for_test<TestType>();
-    REQUIRE(encode_message<TestType>(ts, message, logtype, ir_buf));
-    reference_messages.push_back(message);
-    reference_timestamps.push_back(ts);
-
+    UtcOffset prev_utc_offset{0};
+    epoch_time_ms_t prev_ts{preamble_ts};
+    auto const log_events_to_serialize{create_test_log_events()};
+    std::vector<std::string> encoded_logtypes;
+    for (auto const& log_event : log_events_to_serialize) {
+        auto const ts{log_event.get_timestamp()};
+        auto const message{log_event.get_message()};
+        auto const utc_offset{log_event.get_utc_offset()};
+        auto ts_or_ts_delta{ts};
+        if constexpr (is_same_v<TestType, four_byte_encoded_variable_t>) {
+            ts_or_ts_delta -= prev_ts;
+            prev_ts = ts;
+        }
+        if (utc_offset != prev_utc_offset) {
+            clp::ffi::ir_stream::serialize_utc_offset_change(utc_offset, ir_buf);
+        }
+        REQUIRE(encode_message<TestType>(ts_or_ts_delta, message, logtype, ir_buf));
+        encoded_logtypes.emplace_back(logtype);
+        prev_utc_offset = utc_offset;
+    }
     ir_buf.push_back(clp::ffi::ir_stream::cProtocol::Eof);
 
     BufferReader complete_ir_buffer{
@@ -724,10 +749,16 @@ TEMPLATE_TEST_CASE(
     auto create_result = LogEventDeserializer<TestType>::create(complete_ir_buffer);
     REQUIRE(false == create_result.has_error());
     auto& log_event_deserializer = create_result.value();
-    for (size_t ix = 0; ix < reference_messages.size(); ix++) {
-        auto result = log_event_deserializer.deserialize_log_event();
+    size_t log_event_idx{0};
+    for (auto const& ref_log_event : log_events_to_serialize) {
+        auto result{log_event_deserializer.deserialize_log_event()};
         REQUIRE(false == result.has_error());
-        REQUIRE(log_event_deserializer.get_current_utc_offset() == reference_utc_offsets[ix]);
+        REQUIRE(log_event_deserializer.get_current_utc_offset() == ref_log_event.get_utc_offset());
+        auto const& log_event{result.value()};
+        REQUIRE(log_event.get_timestamp() == ref_log_event.get_timestamp());
+        // We only compare the logtype since decoding messages from logtype + variables is not yet
+        // supported by our public interfaces
+        REQUIRE(log_event.get_logtype() == encoded_logtypes.at(log_event_idx++));
     }
     auto result = log_event_deserializer.deserialize_log_event();
     REQUIRE(result.has_error());
