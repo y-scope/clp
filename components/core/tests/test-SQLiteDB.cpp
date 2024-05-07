@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <filesystem>
 #include <memory>
+#include <optional>
+#include <random>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -30,12 +32,21 @@ public:
         epochtime_t begin_ts,
         epochtime_t end_ts,
         size_t segment_id,
-        size_t segment_ts_pos)
+        size_t segment_ts_pos,
+        size_t segment_var_pos)
             : m_path{std::move(path)},
               m_begin_ts{begin_ts},
               m_end_ts{end_ts},
               m_segment_id{segment_id},
-              m_segment_ts_pos{segment_ts_pos} {}
+              m_segment_ts_pos{segment_ts_pos},
+              m_segment_var_pos{segment_var_pos} {}
+
+    Row(std::string path,
+        epochtime_t begin_ts,
+        epochtime_t end_ts,
+        size_t segment_id,
+        size_t segment_x_pos)
+            : Row(std::move(path), begin_ts, end_ts, segment_id, segment_x_pos, segment_x_pos) {}
 
     [[nodiscard]] auto get_path() const -> std::string const& { return m_path; }
 
@@ -47,9 +58,12 @@ public:
 
     [[nodiscard]] auto get_segment_ts_pos() const -> size_t { return m_segment_ts_pos; }
 
+    [[nodiscard]] auto get_segment_var_pos() const -> size_t { return m_segment_var_pos; }
+
     [[nodiscard]] auto operator==(Row const& rhs) const -> bool {
         return rhs.m_path == m_path && rhs.m_begin_ts == m_begin_ts && rhs.m_end_ts == m_end_ts
-               && rhs.m_segment_id == m_segment_id && rhs.m_segment_ts_pos == m_segment_ts_pos;
+               && rhs.m_segment_id == m_segment_id && rhs.m_segment_ts_pos == m_segment_ts_pos
+               && rhs.m_segment_var_pos == m_segment_var_pos;
     }
 
 private:
@@ -58,6 +72,7 @@ private:
     epochtime_t m_end_ts;
     size_t m_segment_id;
     size_t m_segment_ts_pos;
+    size_t m_segment_var_pos;
 };
 
 /**
@@ -70,6 +85,7 @@ public:
     static constexpr char const* cEndTs{"end_timestamp"};
     static constexpr char const* cSegmentId{"segment_id"};
     static constexpr char const* cSegmentTsPos{"segment_timestamp_position"};
+    static constexpr char const* cSegmentVarPos{"segment_variable_position"};
 
     TestTableSchema() {
         auto add_column = [&](std::string_view column_name, std::string_view type) -> void {
@@ -82,6 +98,7 @@ public:
         add_column(cEndTs, "INTEGER");
         add_column(cSegmentId, "INTEGER");
         add_column(cSegmentTsPos, "INTEGER");
+        add_column(cSegmentVarPos, "INTEGER");
     }
 
     [[nodiscard]] auto get_name() const -> std::string_view { return m_name; }
@@ -190,29 +207,53 @@ auto create_db(TestTableSchema const& table_schema, std::vector<Row> const& rows
     create_table(sqlite_db, table_schema);
     create_indices(sqlite_db, table_schema);
 
+    auto table_columns{table_schema.get_columns()};
+    // Shuffle table columns to test inserting with random ordering
+    // NOLINTNEXTLINE(cert-msc32-c, cert-msc51-cpp)
+    std::shuffle(table_columns.begin(), table_columns.end(), std::default_random_engine{});
+    std::unordered_map<std::string, int> placeholder_idx_map;
+    int idx{2};
+    std::optional<int> segment_x_pos_idx{std::nullopt};
+    fmt::memory_buffer placeholder_buf;
+    auto placeholder_buf_it{std::back_insert_iterator(placeholder_buf)};
+    bool is_first_placeholder{true};
+    for (auto const& column : table_columns) {
+        int placeholder_idx{};
+        if (TestTableSchema::cSegmentTsPos == column || TestTableSchema::cSegmentVarPos == column) {
+            // Ensure `segment_timestamp_position` and `segment_variable_position` always bind to
+            // the same value by assigning them the same placeholder index
+            if (segment_x_pos_idx.has_value()) {
+                placeholder_idx = segment_x_pos_idx.value();
+            } else {
+                placeholder_idx = idx++;
+                segment_x_pos_idx.emplace(placeholder_idx);
+            }
+        } else {
+            placeholder_idx = idx++;
+        }
+        if (is_first_placeholder) {
+            fmt::format_to(placeholder_buf_it, "?{}", placeholder_idx);
+            is_first_placeholder = false;
+        } else {
+            fmt::format_to(placeholder_buf_it, ",?{}", placeholder_idx);
+        }
+        placeholder_idx_map.emplace(column, placeholder_idx);
+    }
+
     // Insert rows into the table
     auto transaction_begin_stmt{sqlite_db.prepare_statement("BEGIN TRANSACTION")};
     auto transaction_end_stmt{sqlite_db.prepare_statement("END TRANSACTION")};
     fmt::memory_buffer stmt_buf;
     auto stmt_buf_it{std::back_inserter(stmt_buf)};
-    auto const& table_columns{table_schema.get_columns()};
     fmt::format_to(
             stmt_buf_it,
             "INSERT INTO {} ({}) VALUES ({})",
             table_schema.get_name(),
             clp::get_field_names_sql(table_columns),
-            clp::get_numbered_placeholders_sql(table_columns.size())
+            std::string{placeholder_buf.begin(), placeholder_buf.end()}
     );
     auto insert_stmt{sqlite_db.prepare_statement(stmt_buf.data(), stmt_buf.size())};
     stmt_buf.clear();
-
-    // Create indicies for each column in the order they are defined in the insert statement,
-    // counting from 1.
-    std::unordered_map<std::string, int> placeholder_idx_map;
-    int idx{1};
-    for (auto const& column : table_columns) {
-        placeholder_idx_map.emplace(column, idx++);
-    }
 
     for (auto const& row : rows) {
         transaction_begin_stmt.step();
@@ -246,6 +287,14 @@ auto create_db(TestTableSchema const& table_schema, std::vector<Row> const& rows
                 static_cast<int64_t>(row.get_segment_ts_pos())
         );
 
+        // We don't need to bind var pos explicitly since it has the same idx with ts pos
+        auto const seg_var_pos_placeholder_idx_it{
+                placeholder_idx_map.find(TestTableSchema::cSegmentVarPos)
+        };
+        REQUIRE((placeholder_idx_map.cend() != seg_var_pos_placeholder_idx_it));
+        REQUIRE((seg_ts_pos_placeholder_idx_it->second == seg_var_pos_placeholder_idx_it->second));
+        REQUIRE((row.get_segment_ts_pos() == row.get_segment_var_pos()));
+
         insert_stmt.step();
         insert_stmt.reset();
 
@@ -273,10 +322,21 @@ TEST_CASE("sqlite_db_basic", "[SQLiteDB]") {
     SQLiteDB sqlite_db;
     sqlite_db.open(test_db_path.string());
 
+    // Create indices for each column in the order they are defined in the insert statement,
+    // counting from 0.
+    auto table_columns{table_schema.get_columns()};
+    // Shuffle table columns to test selecting with random ordering
+    // NOLINTNEXTLINE(cert-msc32-c, cert-msc51-cpp)
+    std::shuffle(table_columns.begin(), table_columns.end(), std::default_random_engine{});
+    std::unordered_map<std::string, int> selected_column_idx;
+    size_t idx{0};
+    for (auto const& column : table_columns) {
+        selected_column_idx.emplace(column, idx++);
+    }
+
     // Read all the columns from db, sorted by the begin ts
     fmt::memory_buffer stmt_buf;
     auto stmt_buf_it{std::back_inserter(stmt_buf)};
-    auto const& table_columns{table_schema.get_columns()};
     fmt::format_to(
             stmt_buf_it,
             "SELECT {} FROM {} ORDER BY {} ASC",
@@ -286,14 +346,6 @@ TEST_CASE("sqlite_db_basic", "[SQLiteDB]") {
     );
     auto select_stmt{sqlite_db.prepare_statement(stmt_buf.data(), stmt_buf.size())};
     stmt_buf.clear();
-
-    // Create indicies for each column in the order they are defined in the insert statement,
-    // counting from 0.
-    std::unordered_map<std::string, int> selected_column_idx;
-    size_t idx{0};
-    for (auto const& column : table_columns) {
-        selected_column_idx.emplace(column, idx++);
-    }
 
     std::vector<Row> rows;
     while (true) {
@@ -325,7 +377,13 @@ TEST_CASE("sqlite_db_basic", "[SQLiteDB]") {
                 static_cast<size_t>(select_stmt.column_int64(seg_ts_pos_idx_it->second))
         };
 
-        rows.emplace_back(path, begin_ts, end_ts, seg_id, seg_ts_pos);
+        auto const seg_var_pos_idx_it{selected_column_idx.find(TestTableSchema::cSegmentVarPos)};
+        REQUIRE((selected_column_idx.cend() != seg_var_pos_idx_it));
+        size_t const seg_var_pos{
+                static_cast<size_t>(select_stmt.column_int64(seg_var_pos_idx_it->second))
+        };
+
+        rows.emplace_back(path, begin_ts, end_ts, seg_id, seg_ts_pos, seg_var_pos);
     }
 
     // Sort the reference rows by the begin ts
