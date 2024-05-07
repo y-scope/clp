@@ -12,7 +12,7 @@ constexpr int8_t LengthUByte = 0x11;
 constexpr int8_t LengthUShort = 0x12;
 
 constexpr char VersionKey[] = "VERSION";
-constexpr char VersionValue[] = "0.0.1";
+constexpr char VersionValue[] = "0.0.2";
 
 // The following regex can be used to validate a Semantic Versioning string. The source of the
 // regex can be found here: https://semver.org/
@@ -47,6 +47,8 @@ constexpr int8_t TimestampDeltaByte = 0x31;
 constexpr int8_t TimestampDeltaShort = 0x32;
 constexpr int8_t TimestampDeltaInt = 0x33;
 constexpr int8_t TimestampDeltaLong = 0x34;
+
+constexpr int8_t UtcOffsetChange = 0x41;
 }  // namespace Payload
 
 constexpr int8_t FourByteEncodingMagicNumber[]

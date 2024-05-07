@@ -6,6 +6,7 @@
 #include "../src/clp/ffi/ir_stream/decoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/encoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/protocol_constants.hpp"
+#include "../src/clp/ir/LogEventDeserializer.hpp"
 #include "../src/clp/ir/types.hpp"
 
 using clp::BufferReader;
@@ -28,6 +29,7 @@ using clp::ffi::wildcard_query_matches_any_encoded_var;
 using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::epoch_time_ms_t;
 using clp::ir::four_byte_encoded_variable_t;
+using clp::ir::LogEventDeserializer;
 using clp::ir::VariablePlaceholder;
 using clp::size_checked_pointer_cast;
 using std::chrono::duration_cast;
@@ -642,4 +644,92 @@ TEMPLATE_TEST_CASE(
         REQUIRE(timestamp == reference_timestamps[ix]);
     }
     REQUIRE(complete_ir_buffer.get_pos() == ir_buf.size());
+}
+
+// TODO Deduplicate parts copied from the test above.
+TEMPLATE_TEST_CASE(
+        "clp::ir::LogEventDeserializer",
+        "[clp][ir][LogEventDeserializer]",
+        four_byte_encoded_variable_t,
+        eight_byte_encoded_variable_t
+) {
+    vector<int8_t> ir_buf;
+    string logtype;
+
+    epoch_time_ms_t preamble_ts = get_current_ts();
+    constexpr char timestamp_pattern[] = "%Y-%m-%d %H:%M:%S,%3";
+    constexpr char timestamp_pattern_syntax[] = "yyyy-MM-dd HH:mm:ss";
+    constexpr char time_zone_id[] = "Asia/Tokyo";
+    REQUIRE(serialize_preamble<TestType>(
+            timestamp_pattern,
+            timestamp_pattern_syntax,
+            time_zone_id,
+            preamble_ts,
+            ir_buf
+    ));
+    size_t const encoded_preamble_end_pos = ir_buf.size();
+
+    string message;
+    epoch_time_ms_t ts;
+    vector<string> reference_messages;
+    vector<epoch_time_ms_t> reference_timestamps;
+    vector<clp::UtcOffset> reference_utc_offsets;
+
+    clp::UtcOffset utc_offset{0};
+    reference_utc_offsets.emplace_back(utc_offset);
+
+    // First message
+    message = "Static <\text>, dictVar1, 123, 456.7, dictVar2, 987, 654.3, end of static text";
+    ts = get_next_timestamp_for_test<TestType>();
+    REQUIRE(encode_message<TestType>(ts, message, logtype, ir_buf));
+    reference_messages.push_back(message);
+    reference_timestamps.push_back(ts);
+
+    utc_offset = clp::UtcOffset{std::chrono::seconds{-5 * 60 * 60}};
+    reference_utc_offsets.emplace_back(utc_offset);
+    clp::ffi::ir_stream::serialize_utc_offset_change(utc_offset, ir_buf);
+
+    // Second message
+    message = "Static <\text>, dictVar3, 355.2352512, 23953324532112, "
+              "python3.4.6, end of static text";
+    ts = get_next_timestamp_for_test<TestType>();
+    REQUIRE(encode_message<TestType>(ts, message, logtype, ir_buf));
+    reference_messages.push_back(message);
+    reference_timestamps.push_back(ts);
+
+    utc_offset = clp::UtcOffset{std::chrono::seconds{5 * 60 * 60}};
+    reference_utc_offsets.emplace_back(utc_offset);
+    clp::ffi::ir_stream::serialize_utc_offset_change(utc_offset, ir_buf);
+
+    // Third message
+    message = "Static <\text>, dictVar3, 355.2352512, 23953324532112, "
+              "python3.4.6, end of static text";
+    ts = get_next_timestamp_for_test<TestType>();
+    REQUIRE(encode_message<TestType>(ts, message, logtype, ir_buf));
+    reference_messages.push_back(message);
+    reference_timestamps.push_back(ts);
+
+    ir_buf.push_back(clp::ffi::ir_stream::cProtocol::Eof);
+
+    BufferReader complete_ir_buffer{
+            size_checked_pointer_cast<char const>(ir_buf.data()),
+            ir_buf.size()
+    };
+
+    bool is_four_bytes_encoding;
+    REQUIRE(get_encoding_type(complete_ir_buffer, is_four_bytes_encoding)
+            == IRErrorCode::IRErrorCode_Success);
+    REQUIRE(match_encoding_type<TestType>(is_four_bytes_encoding));
+
+    auto create_result = LogEventDeserializer<TestType>::create(complete_ir_buffer);
+    REQUIRE(false == create_result.has_error());
+    auto& log_event_deserializer = create_result.value();
+    for (size_t ix = 0; ix < reference_messages.size(); ix++) {
+        auto result = log_event_deserializer.deserialize_log_event();
+        REQUIRE(false == result.has_error());
+        REQUIRE(log_event_deserializer.get_current_utc_offset() == reference_utc_offsets[ix]);
+    }
+    auto result = log_event_deserializer.deserialize_log_event();
+    REQUIRE(result.has_error());
+    REQUIRE(std::errc::no_message_available == result.error());
 }

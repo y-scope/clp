@@ -90,6 +90,7 @@ set(
         ../StringReader.hpp
         ../Thread.cpp
         ../Thread.hpp
+        ../time_types.hpp
         ../TimestampPattern.cpp
         ../TimestampPattern.hpp
         ../TraceableException.hpp

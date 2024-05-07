@@ -361,6 +361,7 @@ set(SOURCE_FILES_unitTest
         src/clp/streaming_compression/zstd/Decompressor.hpp
         src/clp/StringReader.cpp
         src/clp/StringReader.hpp
+        src/clp/time_types.hpp
         src/clp/TimestampPattern.cpp
         src/clp/TimestampPattern.hpp
         src/clp/TraceableException.hpp

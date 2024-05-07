@@ -272,13 +272,21 @@ static IRErrorCode generic_deserialize_log_event(
         string& message,
         epoch_time_ms_t& timestamp
 ) {
+    encoded_tag_t encoded_tag{cProtocol::Eof};
+    if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
+        return IRErrorCode_Incomplete_IR;
+    }
+    if (cProtocol::Eof == encoded_tag) {
+        return IRErrorCode_Eof;
+    }
+
     message.clear();
 
     vector<encoded_variable_t> encoded_vars;
     vector<string> dict_vars;
     string logtype;
     if (auto error_code
-        = deserialize_log_event(reader, logtype, encoded_vars, dict_vars, timestamp);
+        = deserialize_log_event(reader, encoded_tag, logtype, encoded_vars, dict_vars, timestamp);
         IRErrorCode_Success != error_code)
     {
         return error_code;
@@ -351,19 +359,12 @@ static IRErrorCode deserialize_metadata(
 template <typename encoded_variable_t>
 auto deserialize_log_event(
         ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
         string& logtype,
         vector<encoded_variable_t>& encoded_vars,
         vector<string>& dict_vars,
         epoch_time_ms_t& timestamp_or_timestamp_delta
 ) -> IRErrorCode {
-    encoded_tag_t encoded_tag{cProtocol::Eof};
-    if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
-        return IRErrorCode_Incomplete_IR;
-    }
-    if (cProtocol::Eof == encoded_tag) {
-        return IRErrorCode_Eof;
-    }
-
     // Handle variables
     string var_str;
     bool is_encoded_var{false};
@@ -429,6 +430,13 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
         is_four_bytes_encoding = false;
     } else {
         return IRErrorCode_Corrupted_IR;
+    }
+    return IRErrorCode_Success;
+}
+
+IRErrorCode deserialize_tag(ReaderInterface& reader, encoded_tag_t& tag) {
+    if (ErrorCode_Success != reader.try_read_numeric_value(tag)) {
+        return IRErrorCode_Incomplete_IR;
     }
     return IRErrorCode_Success;
 }
@@ -503,6 +511,15 @@ IRProtocolErrorCode validate_protocol_version(std::string_view protocol_version)
     return IRProtocolErrorCode_Supported;
 }
 
+IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& utc_offset) {
+    int64_t serialized_utc_offset{};
+    if (false == deserialize_int(reader, serialized_utc_offset)) {
+        return IRErrorCode_Incomplete_IR;
+    }
+    utc_offset = UtcOffset{serialized_utc_offset};
+    return IRErrorCode_Success;
+}
+
 namespace four_byte_encoding {
 IRErrorCode
 deserialize_log_event(ReaderInterface& reader, string& message, epoch_time_ms_t& timestamp_delta) {
@@ -524,6 +541,7 @@ deserialize_log_event(ReaderInterface& reader, string& message, epoch_time_ms_t&
 // Explicitly declare specializations
 template auto deserialize_log_event<four_byte_encoded_variable_t>(
         ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
         string& logtype,
         vector<four_byte_encoded_variable_t>& encoded_vars,
         vector<string>& dict_vars,
@@ -532,6 +550,7 @@ template auto deserialize_log_event<four_byte_encoded_variable_t>(
 
 template auto deserialize_log_event<eight_byte_encoded_variable_t>(
         ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
         string& logtype,
         vector<eight_byte_encoded_variable_t>& encoded_vars,
         vector<string>& dict_vars,
