@@ -205,7 +205,7 @@ private:
      */
     bool evaluate_var_string_filter(
             FilterOperation op,
-            std::vector<VariableStringColumnReader*> const& reader,
+            std::vector<VariableStringColumnReader*> const& readers,
             std::unordered_set<int64_t>* matching_vars,
             std::shared_ptr<Literal> const& operand
     ) const;

@@ -145,9 +145,7 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column, int32_t node
     bool matched = false;
     while (false == work_list.empty()) {
         auto& cur = work_list.top();
-        int32_t cur_depth = std::get<0>(cur);
-        DescriptorList::iterator cur_it = std::get<1>(cur);
-        int32_t cur_node_id = std::get<2>(cur);
+        auto [cur_depth, cur_it, cur_node_id] = cur;
         work_list.pop();
         if (prev_level != cur_depth) {
             prev_level = cur_depth;
@@ -177,7 +175,8 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column, int32_t node
             accepted = true;
         } else if (empty_key) {
             accepted = true;
-        } else if (false == at_descriptor_list_end && cur_node.get_key_name() == cur_it->get_token())
+        } else if ((false == at_descriptor_list_end
+                    && cur_node.get_key_name() == cur_it->get_token()))
         {
             accepted = true;
         }
@@ -203,7 +202,8 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column, int32_t node
             m_column_to_descriptor[cur_node_id].insert(column);
             matched = true;
             continue;
-        } else if (next_at_descriptor_list_end && column->matches_type(node_to_literal_type(cur_node.get_type())))
+        } else if ((next_at_descriptor_list_end
+                    && column->matches_type(node_to_literal_type(cur_node.get_type()))))
         {
             if (false == column->is_unresolved_descriptor()) {
                 m_column_to_descriptor[cur_node_id].insert(column);
