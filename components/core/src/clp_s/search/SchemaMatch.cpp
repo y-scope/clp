@@ -161,7 +161,7 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column, int32_t node
 
         // Check if the current node is accepted
         auto const& cur_node = m_tree->get_node(cur_node_id);
-        bool empty_key = cur_node.get_key_name().empty();
+        bool is_key_name_empty = cur_node.get_key_name().empty();
         bool at_descriptor_list_end = cur_it == column->descriptor_end();
         auto next_it = cur_it;
         if (false == at_descriptor_list_end) {
@@ -173,7 +173,7 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column, int32_t node
 
         if (wildcard_descriptor) {
             accepted = true;
-        } else if (empty_key) {
+        } else if (is_key_name_empty) {
             accepted = true;
         } else if ((false == at_descriptor_list_end
                     && cur_node.get_key_name() == cur_it->get_token()))
@@ -221,7 +221,7 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column, int32_t node
 
         // Push nodes to the work list
         for (int32_t child_node_id : cur_node.get_children_ids()) {
-            if (empty_key) {
+            if (is_key_name_empty) {
                 // Don't advance the iterator when accepting an empty key
                 work_list.emplace(std::make_tuple(cur_depth + 1, cur_it, child_node_id));
             } else {

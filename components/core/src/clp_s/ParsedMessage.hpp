@@ -26,6 +26,7 @@ public:
     /**
      * Adds a value to the message for a given MST node ID.
      * @tparam T
+     * @param node_id
      * @param value
      */
     template <typename T>
@@ -36,6 +37,7 @@ public:
     /**
      * Adds a timestamp value and its encoding to the message for a given MST node ID.
      * @param node_id
+     * @param encoding_id
      * @param value
      */
     inline void add_value(int32_t node_id, uint64_t encoding_id, epochtime_t value) {

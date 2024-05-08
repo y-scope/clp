@@ -147,7 +147,7 @@ void ArchiveReader::append_unordered_reader_columns(
         bool should_marshal_records
 ) {
     int32_t mst_subtree_root_node_id = INT32_MAX;
-    size_t object_readers_begin = reader.get_column_size();
+    size_t object_begin_pos = reader.get_column_size();
     for (int32_t column_id : schema_ids) {
         if (Schema::schema_entry_is_unordered_object(column_id)) {
             continue;
@@ -194,7 +194,7 @@ void ArchiveReader::append_unordered_reader_columns(
     }
 
     if (should_marshal_records) {
-        reader.mark_unordered_object(object_readers_begin, mst_subtree_root_node_id, schema_ids);
+        reader.mark_unordered_object(object_begin_pos, mst_subtree_root_node_id, schema_ids);
     }
 }
 

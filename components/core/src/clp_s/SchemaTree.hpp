@@ -113,18 +113,17 @@ public:
     }
 
     /**
-     * Finds the root node for a subtree matching a given type given the root node for some subtree
-     * in which the subtree we are looking for can be found, and some descendent node of the subtree
-     * we are trying to find.
-     * @param subtree_root
-     * @param descendent
-     * @param subtree_type
-     * @return the root node ID for the subtree we are trying to find if it exists, otherwise -1
+     * Finds an ancestor node within a subtree that matches the given type. When multiple matching
+     * nodes exist, returns the one closest to the root node of the subtree.
+     * @param subtree_root_node The root node of the subtree
+     * @param node The node to start searching from
+     * @param subtree_type The type of the ancestor node to find
+     * @return The ID of the ancestor node if it exists, otherwise -1
      */
     [[nodiscard]] int32_t find_matching_subtree_root_in_subtree(
-            int32_t const subtree_root,
-            int32_t descendent,
-            NodeType subtree_type
+            int32_t const subtree_root_node,
+            int32_t node,
+            NodeType type
     ) const;
 
 private:

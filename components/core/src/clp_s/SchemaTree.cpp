@@ -54,17 +54,17 @@ size_t SchemaTree::store(std::string const& archives_dir, int compression_level)
 }
 
 int32_t SchemaTree::find_matching_subtree_root_in_subtree(
-        int32_t const subtree_root,
-        int32_t descendent,
-        NodeType subtree_type
+        int32_t const subtree_root_node,
+        int32_t node,
+        NodeType type
 ) const {
     int32_t earliest_match = -1;
-    while (subtree_root != descendent) {
-        auto const& node = get_node(descendent);
-        if (node.get_type() == subtree_type) {
-            earliest_match = descendent;
+    while (subtree_root_node != node) {
+        auto const& schema_node = get_node(node);
+        if (schema_node.get_type() == type) {
+            earliest_match = node;
         }
-        descendent = node.get_parent_id();
+        node = schema_node.get_parent_id();
     }
     return earliest_match;
 }

@@ -137,23 +137,23 @@ void Output::init(
 
     for (auto column_reader : column_readers) {
         auto column_id = column_reader->get_id();
-        if ((0 != m_wildcard_type_mask
-             && 0
-                        != (m_wildcard_type_mask
-                            & node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
+        if ((0
+             != (m_wildcard_type_mask
+                 & node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
             || m_match.schema_searches_against_column(schema_id, column_id))
         {
             ClpStringColumnReader* clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
             VariableStringColumnReader* var_reader
                     = dynamic_cast<VariableStringColumnReader*>(column_reader);
+            DateStringColumnReader* date_reader
+                    = dynamic_cast<DateStringColumnReader*>(column_reader);
             if (clp_reader != nullptr && clp_reader->get_type() == NodeType::ClpString) {
                 m_clp_string_readers[column_id].push_back(clp_reader);
             } else if (var_reader != nullptr && var_reader->get_type() == NodeType::VarString) {
                 m_var_string_readers[column_id].push_back(var_reader);
-            } else if (auto date_column_reader = dynamic_cast<DateStringColumnReader*>(column_reader))
-            {
+            } else if (nullptr != date_reader) {
                 // Datestring readers with a given column ID are guaranteed not to repeat
-                m_datestring_readers.emplace(column_id, date_column_reader);
+                m_datestring_readers.emplace(column_id, date_reader);
             } else {
                 m_basic_readers[column_id].push_back(column_reader);
             }

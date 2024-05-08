@@ -184,7 +184,7 @@ private:
      * Evaluates a clp string filter expression
      * @param op
      * @param q
-     * @param column_id
+     * @param readers
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
