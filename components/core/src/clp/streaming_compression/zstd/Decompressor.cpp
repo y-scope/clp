@@ -1,7 +1,8 @@
 #include "Decompressor.hpp"
 
-#include <algorithm>
 #include <sys/mman.h>
+
+#include <algorithm>
 
 #include "../../Defs.h"
 #include "../../spdlog_with_specializations.hpp"
@@ -210,11 +211,11 @@ ErrorCode Decompressor::open(std::string const& compressed_file_path) {
     m_compressed_file_fd = ::open(compressed_file_path.c_str(), O_RDONLY);
     if (-1 == m_compressed_file_fd) {
         SPDLOG_ERROR(
-            "streaming_compression::zstd::Decompressor: Unable to open the compressed file with "
-            "path: {}, error: {}-{}",
-            compressed_file_path.c_str(),
-            errno,
-            strerror(errno)
+                "streaming_compression::zstd::Decompressor: Unable to open the compressed file "
+                "with path: {}, error: {}-{}",
+                compressed_file_path.c_str(),
+                errno,
+                strerror(errno)
         );
         return ErrorCode_errno;
     }
@@ -231,15 +232,8 @@ ErrorCode Decompressor::open(std::string const& compressed_file_path) {
         return ErrorCode_errno;
     }
 
-    m_mem_mapped_compressed_file_buffer = static_cast<char *>(
-        mmap(
-            nullptr,
-            m_compressed_file_size,
-            PROT_READ,
-            MAP_PRIVATE,
-            m_compressed_file_fd,
-            0
-        )
+    m_mem_mapped_compressed_file_buffer = static_cast<char*>(
+            mmap(nullptr, m_compressed_file_size, PROT_READ, MAP_PRIVATE, m_compressed_file_fd, 0)
     );
     if (MAP_FAILED == m_mem_mapped_compressed_file_buffer) {
         SPDLOG_ERROR(
