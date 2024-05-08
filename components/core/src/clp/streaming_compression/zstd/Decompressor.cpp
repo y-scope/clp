@@ -1,8 +1,7 @@
 #include "Decompressor.hpp"
 
 #include <algorithm>
-
-#include <boost/filesystem.hpp>
+#include <sys/mman.h>
 
 #include "../../Defs.h"
 #include "../../spdlog_with_specializations.hpp"
@@ -182,10 +181,8 @@ void Decompressor::open(FileReader& file_reader, size_t file_read_buffer_capacit
 void Decompressor::close() {
     switch (m_input_type) {
         case InputType::MemoryMappedCompressedFile:
-            if (m_memory_mapped_compressed_file.is_open()) {
-                // An existing file is memory mapped by the decompressor
-                m_memory_mapped_compressed_file.close();
-            }
+            munmap(m_mem_mapped_compressed_file_buffer, m_compressed_file_size);
+            ::close(m_compressed_file_fd);
             break;
         case InputType::File:
             m_file_read_buffer.reset();
@@ -209,40 +206,54 @@ ErrorCode Decompressor::open(std::string const& compressed_file_path) {
     }
     m_input_type = InputType::MemoryMappedCompressedFile;
 
-    // Create memory mapping for compressed_file_path, use boost read only
-    // memory mapped file
-    boost::system::error_code boost_error_code;
-    size_t compressed_file_size
-            = boost::filesystem::file_size(compressed_file_path, boost_error_code);
-    if (boost_error_code) {
+    // Create memory mapping for compressed_file_path
+    m_compressed_file_fd = ::open(compressed_file_path.c_str(), O_RDONLY);
+    if (-1 == m_compressed_file_fd) {
         SPDLOG_ERROR(
-                "streaming_compression::zstd::Decompressor: Unable to obtain file size for "
-                "'{}' - {}.",
-                compressed_file_path.c_str(),
-                boost_error_code.message().c_str()
+            "streaming_compression::zstd::Decompressor: Unable to open the compressed file with "
+            "path: {}, error: {}-{}",
+            compressed_file_path.c_str(),
+            errno,
+            strerror(errno)
         );
-        return ErrorCode_Failure;
+        return ErrorCode_errno;
     }
 
-    boost::iostreams::mapped_file_params memory_map_params;
-    memory_map_params.path = compressed_file_path;
-    memory_map_params.flags = boost::iostreams::mapped_file::readonly;
-    memory_map_params.length = compressed_file_size;
-    // Try to map it to the same memory location as previous memory mapped
-    // file
-    memory_map_params.hint = m_memory_mapped_compressed_file.data();
-    m_memory_mapped_compressed_file.open(memory_map_params);
-    if (!m_memory_mapped_compressed_file.is_open()) {
+    m_compressed_file_size = lseek(m_compressed_file_fd, 0, SEEK_END);
+    if (-1 == m_compressed_file_size) {
         SPDLOG_ERROR(
-                "streaming_compression::zstd::Decompressor: Unable to memory map the "
-                "compressed file with path: {}",
-                compressed_file_path.c_str()
+                "streaming_compression::zstd::Decompressor: Unable to obtain file size with "
+                "path: {}, error: {}-{}",
+                compressed_file_path.c_str(),
+                errno,
+                strerror(errno)
         );
-        return ErrorCode_Failure;
+        return ErrorCode_errno;
+    }
+
+    m_mem_mapped_compressed_file_buffer = static_cast<char *>(
+        mmap(
+            nullptr,
+            m_compressed_file_size,
+            PROT_READ,
+            MAP_PRIVATE,
+            m_compressed_file_fd,
+            0
+        )
+    );
+    if (MAP_FAILED == m_mem_mapped_compressed_file_buffer) {
+        SPDLOG_ERROR(
+                "streaming_compression::zstd::Decompressor: Unable to memory map the compressed "
+                "file with path: {}, error: {}-{}",
+                compressed_file_path.c_str(),
+                errno,
+                strerror(errno)
+        );
+        return ErrorCode_errno;
     }
 
     // Configure input stream
-    m_compressed_stream_block = {m_memory_mapped_compressed_file.data(), compressed_file_size, 0};
+    m_compressed_stream_block = {m_mem_mapped_compressed_file_buffer, m_compressed_file_size, 0};
 
     reset_stream();
 

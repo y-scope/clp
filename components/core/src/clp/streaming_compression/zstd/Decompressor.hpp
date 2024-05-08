@@ -4,7 +4,6 @@
 #include <memory>
 #include <string>
 
-#include <boost/iostreams/device/mapped_file.hpp>
 #include <zstd.h>
 
 #include "../../FileReader.hpp"
@@ -125,7 +124,9 @@ private:
     // Compressed stream variables
     ZSTD_DStream* m_decompression_stream;
 
-    boost::iostreams::mapped_file_source m_memory_mapped_compressed_file;
+    int m_compressed_file_fd;
+    size_t m_compressed_file_size;
+    char* m_mem_mapped_compressed_file_buffer;
     FileReader* m_file_reader;
     size_t m_file_reader_initial_pos;
     std::unique_ptr<char[]> m_file_read_buffer;
