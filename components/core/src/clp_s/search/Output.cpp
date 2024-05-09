@@ -147,9 +147,9 @@ void Output::init(
                     = dynamic_cast<VariableStringColumnReader*>(column_reader);
             DateStringColumnReader* date_reader
                     = dynamic_cast<DateStringColumnReader*>(column_reader);
-            if (clp_reader != nullptr && clp_reader->get_type() == NodeType::ClpString) {
+            if (nullptr != clp_reader && clp_reader->get_type() == NodeType::ClpString) {
                 m_clp_string_readers[column_id].push_back(clp_reader);
-            } else if (var_reader != nullptr && var_reader->get_type() == NodeType::VarString) {
+            } else if (nullptr != var_reader && var_reader->get_type() == NodeType::VarString) {
                 m_var_string_readers[column_id].push_back(var_reader);
             } else if (nullptr != date_reader) {
                 // Datestring readers with a given column ID are guaranteed not to repeat
