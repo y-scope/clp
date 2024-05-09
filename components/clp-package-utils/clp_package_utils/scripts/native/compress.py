@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import logging
 import pathlib
 import shutil
@@ -46,12 +47,8 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
             f"FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id={job_id}"
         )
 
-    completion_query = (
-        f"SELECT duration, uncompressed_size, compressed_size "
-        f"FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id={job_id}"
-    )
-
     job_last_uncompressed_size = 0
+
     while True:
         db_cursor.execute(polling_query)
         results = db_cursor.fetchall()
@@ -63,37 +60,46 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
 
         job_row = results[0]
         job_status = job_row["status"]
-
-        if not no_progress_reporting:
-            job_uncompressed_size = job_row["uncompressed_size"]
-            job_compressed_size = job_row["compressed_size"]
-            if job_uncompressed_size > 0:
-                compression_ratio = float(job_uncompressed_size) / job_compressed_size
-                if job_last_uncompressed_size < job_uncompressed_size:
-                    logger.info(
-                        f"Compressed {pretty_size(job_uncompressed_size)} into "
-                        f"{pretty_size(job_compressed_size)} ({compression_ratio:.2f})"
-                    )
-                    job_last_uncompressed_size = job_uncompressed_size
+        current_time = datetime.datetime.now()
 
         if CompressionJobStatus.SUCCEEDED == job_status:
             # All tasks in the job is done
-            speed = 0
             if not no_progress_reporting:
-                db_cursor.execute(completion_query)
-                job_row = db_cursor.fetchone()
-                if job_row["duration"] and job_row["duration"] > 0:
-                    speed = job_row["uncompressed_size"] / job_row["duration"]
+                job_uncompressed_size = job_row["uncompressed_size"]
+                job_compressed_size = job_row["compressed_size"]
+                compression_speed = (
+                    job_uncompressed_size / (current_time - job_row["start_time"]).total_seconds()
+                )
+                compression_ratio = float(job_uncompressed_size) / job_compressed_size
                 logger.info(
-                    f"Compression finished. Runtime: {job_row['duration']}s. "
-                    f"Speed: {pretty_size(speed)}/s."
+                    f"Compression finished. "
+                    f"Compressed {pretty_size(job_uncompressed_size)} into "
+                    f"{pretty_size(job_compressed_size)} ({compression_ratio:.2f}). "
+                    f"Speed: {pretty_size(compression_speed)}/s."
                 )
             break  # Done
         if CompressionJobStatus.FAILED == job_status:
             # One or more tasks in the job has failed
             logger.error(f"Compression failed. {job_row['status_msg']}")
             break  # Done
-        if CompressionJobStatus.RUNNING == job_status or CompressionJobStatus.PENDING == job_status:
+
+        if CompressionJobStatus.RUNNING == job_status:
+            if not no_progress_reporting:
+                job_uncompressed_size = job_row["uncompressed_size"]
+                job_compressed_size = job_row["compressed_size"]
+
+                if job_last_uncompressed_size < job_uncompressed_size:
+                    compression_ratio = float(job_uncompressed_size) / job_compressed_size
+                    compression_speed = (job_uncompressed_size - job_last_uncompressed_size) / (
+                        current_time - job_row["start_time"]
+                    ).total_seconds()
+                    logger.info(
+                        f"Compressed {pretty_size(job_uncompressed_size)} into "
+                        f"{pretty_size(job_compressed_size)} ({compression_ratio:.2f}). "
+                        f"Speed: {pretty_size(compression_speed)}/s."
+                    )
+                    job_last_uncompressed_size = job_uncompressed_size
+        elif CompressionJobStatus.PENDING == job_status:
             pass  # Simply wait another iteration
         else:
             error_msg = f"Unhandled CompressionJobStatus: {job_status}"

@@ -228,9 +228,7 @@ def poll_running_jobs(db_conn, db_cursor):
     jobs_to_delete = []
     for job_id, job in scheduled_jobs.items():
         job_success = True
-        num_tasks_completed = 0
-        uncompressed_size = 0
-        compressed_size = 0
+        duration = 0.0
         error_message = ""
 
         try:
@@ -245,35 +243,12 @@ def poll_running_jobs(db_conn, db_cursor):
                     task_result = CompressionTaskFailureResult.parse_obj(task_result)
                     job_success = False
                     error_message += f"task {task_result.task_id}: {task_result.error_message}\n"
-                    update_compression_task_metadata(
-                        db_cursor,
-                        task_result.task_id,
-                        dict(
-                            start_time=task_result.start_time,
-                            status=task_result.status,
-                            duration=task_result.duration,
-                        ),
-                    )
                     logger.error(
                         f"Compression task job-{job_id}-task-{task_result.task_id} failed with"
                         f" error: {task_result.error_message}."
                     )
                 else:
                     task_result = CompressionTaskSuccessResult.parse_obj(task_result)
-                    num_tasks_completed += 1
-                    uncompressed_size += task_result.total_uncompressed_size
-                    compressed_size += task_result.total_compressed_size
-                    update_compression_task_metadata(
-                        db_cursor,
-                        task_result.task_id,
-                        dict(
-                            start_time=task_result.start_time,
-                            status=task_result.status,
-                            partition_uncompressed_size=task_result.total_uncompressed_size,
-                            partition_compressed_size=task_result.total_compressed_size,
-                            duration=task_result.duration,
-                        ),
-                    )
                     logger.info(
                         f"Compression task job-{job_id}-task-{task_result.task_id} completed in"
                         f" {task_result.duration} second(s)."
@@ -281,8 +256,6 @@ def poll_running_jobs(db_conn, db_cursor):
         except Exception as e:
             logger.error(f"Error while getting results for job {job_id}: {e}")
             job_success = False
-
-        db_conn.commit()
 
         if job_success:
             logger.info(f"Job {job_id} succeeded.")
@@ -292,9 +265,6 @@ def poll_running_jobs(db_conn, db_cursor):
                 dict(
                     status=CompressionJobStatus.SUCCEEDED,
                     duration=duration,
-                    uncompressed_size=uncompressed_size,
-                    compressed_size=compressed_size,
-                    num_tasks_completed=num_tasks_completed,
                 ),
             )
         else:
@@ -305,7 +275,6 @@ def poll_running_jobs(db_conn, db_cursor):
                 dict(
                     status=CompressionJobStatus.FAILED,
                     status_msg=error_message,
-                    num_tasks_completed=num_tasks_completed,
                 ),
             )
         db_conn.commit()
