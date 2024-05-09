@@ -21,7 +21,6 @@ from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
 from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
 
-
 # Setup logging
 logger = get_task_logger(__name__)
 
