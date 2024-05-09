@@ -2,10 +2,8 @@ import argparse
 import datetime
 import logging
 import pathlib
-import shutil
 import sys
 import time
-import uuid
 from contextlib import closing
 
 import brotli
