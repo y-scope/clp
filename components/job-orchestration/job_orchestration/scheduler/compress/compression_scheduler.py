@@ -27,8 +27,7 @@ from job_orchestration.scheduler.constants import CompressionJobStatus, Compress
 from job_orchestration.scheduler.job_config import ClpIoConfig
 from job_orchestration.scheduler.scheduler_data import (
     CompressionJob,
-    CompressionTaskFailureResult,
-    CompressionTaskSuccessResult,
+    CompressionTaskResult,
 )
 from pydantic import ValidationError
 
@@ -239,8 +238,8 @@ def poll_running_jobs(db_conn, db_cursor):
             duration = (datetime.datetime.now() - job.start_time).total_seconds()
             # Check for finished jobs
             for task_result in returned_results:
-                if not task_result["status"] == CompressionTaskStatus.SUCCEEDED:
-                    task_result = CompressionTaskFailureResult.parse_obj(task_result)
+                task_result = CompressionTaskResult.parse_obj(task_result)
+                if not task_result.status == CompressionTaskStatus.SUCCEEDED:
                     job_success = False
                     error_message += f"task {task_result.task_id}: {task_result.error_message}\n"
                     logger.error(
@@ -248,7 +247,6 @@ def poll_running_jobs(db_conn, db_cursor):
                         f" error: {task_result.error_message}."
                     )
                 else:
-                    task_result = CompressionTaskSuccessResult.parse_obj(task_result)
                     logger.info(
                         f"Compression task job-{job_id}-task-{task_result.task_id} completed in"
                         f" {task_result.duration} second(s)."
