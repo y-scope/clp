@@ -248,45 +248,18 @@ inline T2 bit_cast(T1 t1) {
 }
 
 /**
- * A span of memory where the underlying memory is aligned correctly for type T.
- *
- * This class is preferred over UnalignedMemSpan whenever we need a view into some memory, and we
- * know that it is aligned correctly for type T.
- * @tparam T
- */
-template <typename T>
-class Span {
-public:
-    Span() = default;
-    Span(T* begin, size_t size) : m_begin(begin), m_size(size){};
-
-    T* begin() { return m_begin; }
-
-    T* end() { return m_begin + m_size; }
-
-    size_t size() { return m_size; }
-
-    T& operator[](size_t i) { return m_begin[i]; }
-
-    Span<T> sub_span(size_t start, size_t size) { return {m_begin + start, size}; }
-
-private:
-    T* m_begin;
-    size_t m_size{};
-};
-
-/**
  * A span of memory where the underlying memory may not be aligned correctly for type T.
  *
  * This class should be used whenever we need a view into some memory, and we do not know whether it
- * is aligned correctly for type T.
+ * is aligned correctly for type T. If the alignment of the underlying memory is known std::span
+ * should be used instead.
  *
  * In C++ creating a pointer to objects of type T that is not correctly aligned for type T is
  * undefined behaviour, as is dereferencing such a pointer. This class avoids this undefined
  * behaviour by using memcpy (which any modern compiler should be able to optimize away).
  *
- * For any modern x86 platform the performance difference between using Span and UnalignedMemSpan
- * should be fairly minimal.
+ * For any modern x86 platform the performance difference between using std::span and
+ * UnalignedMemSpan should be fairly minimal.
  *
  * @tparam T
  */

@@ -269,7 +269,7 @@ void SchemaReader::generate_local_tree(int32_t global_id) {
 void SchemaReader::mark_unordered_object(
         size_t column_reader_start,
         int32_t mst_subtree_root,
-        Span<int32_t> schema
+        std::span<int32_t> schema
 ) {
     m_global_id_to_unordered_object.emplace(
             mst_subtree_root,
@@ -277,7 +277,7 @@ void SchemaReader::mark_unordered_object(
     );
 }
 
-int32_t SchemaReader::get_first_column_in_span(Span<int32_t> schema) {
+int32_t SchemaReader::get_first_column_in_span(std::span<int32_t> schema) {
     for (int32_t column_id : schema) {
         if (false == Schema::schema_entry_is_unordered_object(column_id)) {
             return column_id;

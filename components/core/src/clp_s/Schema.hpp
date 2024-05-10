@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <vector>
 
 #include "SchemaTree.hpp"
@@ -108,9 +109,8 @@ public:
     /**
      * @return a view into the ordered region of the underlying schema
      */
-    [[nodiscard]] Span<int32_t> get_ordered_schema_view() {
-        return m_num_ordered == 0 ? Span<int32_t>{nullptr, 0}
-                                  : Span<int32_t>{m_schema.begin().base(), m_num_ordered};
+    [[nodiscard]] std::span<int32_t> get_ordered_schema_view() {
+        return std::span<int32_t>{m_schema.begin(), m_num_ordered};
     }
 
     /**
@@ -118,11 +118,11 @@ public:
      * @param size
      * @return a view into the requested region of the schema
      */
-    [[nodiscard]] Span<int32_t> get_view(size_t i, size_t size) {
+    [[nodiscard]] std::span<int32_t> get_view(size_t i, size_t size) {
         if (i + size > m_schema.size()) {
             throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
         }
-        return Span<int32_t>{m_schema.begin().base() + i, size};
+        return std::span<int32_t>{m_schema.begin() + i, size};
     }
 
     /**

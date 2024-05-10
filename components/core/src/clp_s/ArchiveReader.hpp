@@ -3,6 +3,7 @@
 
 #include <map>
 #include <set>
+#include <span>
 #include <utility>
 
 #include <boost/filesystem.hpp>
@@ -155,7 +156,7 @@ private:
     void append_unordered_reader_columns(
             SchemaReader& reader,
             NodeType unordered_object_type,
-            Span<int32_t> schema_ids,
+            std::span<int32_t> schema_ids,
             bool should_marshal_records
     );
 

@@ -1,6 +1,7 @@
 #ifndef CLP_S_SCHEMAREADER_HPP
 #define CLP_S_SCHEMAREADER_HPP
 
+#include <span>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -78,7 +79,7 @@ public:
     void reset(
             std::shared_ptr<SchemaTree> schema_tree,
             int32_t schema_id,
-            Span<int32_t> ordered_schema,
+            std::span<int32_t> ordered_schema,
             uint64_t num_messages,
             bool should_marshal_records
     ) {
@@ -125,7 +126,7 @@ public:
     void mark_unordered_object(
             size_t column_reader_start,
             int32_t mst_subtree_root,
-            Span<int32_t> schema
+            std::span<int32_t> schema
     );
 
     /**
@@ -197,7 +198,7 @@ private:
      * @return the first column ID found in the given schema, or -1 if the schema contains no
      * columns
      */
-    static inline int32_t get_first_column_in_span(Span<int32_t> schema);
+    static inline int32_t get_first_column_in_span(std::span<int32_t> schema);
 
     /**
      * Generates a json string from the extracted values
@@ -212,7 +213,7 @@ private:
     int32_t m_schema_id;
     uint64_t m_num_messages;
     uint64_t m_cur_message;
-    Span<int32_t> m_ordered_schema;
+    std::span<int32_t> m_ordered_schema;
 
     std::unordered_map<int32_t, BaseColumnReader*> m_column_map;
     std::vector<BaseColumnReader*> m_columns;
@@ -232,7 +233,7 @@ private:
     bool m_should_marshal_records{true};
     bool m_serializer_initialized{false};
 
-    std::map<int32_t, std::pair<size_t, Span<int32_t>>> m_global_id_to_unordered_object;
+    std::map<int32_t, std::pair<size_t, std::span<int32_t>>> m_global_id_to_unordered_object;
 };
 }  // namespace clp_s
 
