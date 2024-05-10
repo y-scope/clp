@@ -1,4 +1,4 @@
-black>=*
-clang-format>=*
-ruff>=*
-yamllint>=*
+black>=24.4.2
+clang-format>=18.1.5
+ruff>=0.4.4
+yamllint>=1.35.1

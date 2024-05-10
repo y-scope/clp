@@ -249,24 +249,24 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to )"
                     "a network destination"
                  << endl;
-            cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")" << " "
-                 << static_cast<char const*>(cNetworkOutputHandlerName)
+            cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
+                 << " " << static_cast<char const*>(cNetworkOutputHandlerName)
                  << " --host localhost --port 18000" << endl;
             cerr << endl;
 
             cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and output the results )"
                     "by performing a count aggregation"
                  << endl;
-            cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")" << " "
-                 << static_cast<char const*>(cReducerOutputHandlerName) << " --count"
+            cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
+                 << " " << static_cast<char const*>(cReducerOutputHandlerName) << " --count"
                  << " --host localhost --port 14009 --job-id 1" << endl;
             cerr << endl;
 
             cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to)"
                     R"( mongodb://127.0.0.1:27017/test "result" collection )"
                  << endl;
-            cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")" << " "
-                 << static_cast<char const*>(cResultsCacheOutputHandlerName)
+            cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
+                 << " " << static_cast<char const*>(cResultsCacheOutputHandlerName)
                  << R"( --uri mongodb://127.0.0.1:27017/test --collection result)" << endl;
             cerr << endl;
 
