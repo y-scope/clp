@@ -27,7 +27,12 @@ from typing import Dict, List, Optional
 import celery
 import msgpack
 import pymongo
-from clp_py_utils.clp_config import CLP_METADATA_TABLE_PREFIX, CLPConfig, SEARCH_JOBS_TABLE_NAME, SEARCH_TASKS_TABLE_NAME
+from clp_py_utils.clp_config import (
+    CLP_METADATA_TABLE_PREFIX,
+    CLPConfig,
+    SEARCH_JOBS_TABLE_NAME,
+    SEARCH_TASKS_TABLE_NAME,
+)
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
@@ -175,11 +180,11 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
             else:
                 continue
             if set_job_status(
-                db_conn, 
-                job_id, 
-                SearchJobStatus.CANCELLED, 
+                db_conn,
+                job_id,
+                SearchJobStatus.CANCELLED,
                 prev_status=SearchJobStatus.CANCELLING,
-                duration=(datetime.datetime.now() - job.start_time).total_seconds()
+                duration=(datetime.datetime.now() - job.start_time).total_seconds(),
             ):
                 logger.info(f"Cancelled job {job_id}.")
             else:
@@ -355,13 +360,13 @@ def handle_pending_search_jobs(
             archives_for_search = get_archives_for_search(db_conn, search_config)
             if len(archives_for_search) == 0:
                 if set_job_status(
-                    db_conn, 
-                    job_id, 
-                    SearchJobStatus.SUCCEEDED, 
+                    db_conn,
+                    job_id,
+                    SearchJobStatus.SUCCEEDED,
                     SearchJobStatus.PENDING,
                     start_time=datetime.datetime.utcfromtimestamp(0),
                     num_archives_to_search=0,
-                    duration=0
+                    duration=0,
                 ):
                     logger.info(f"No matching archives, skipping job {job['job_id']}.")
                 continue
@@ -409,12 +414,12 @@ def handle_pending_search_jobs(
             )
             start_time = datetime.datetime.now()
             if set_job_status(
-                db_conn, 
-                job_id, 
-                SearchJobStatus.RUNNING, 
+                db_conn,
+                job_id,
+                SearchJobStatus.RUNNING,
                 SearchJobStatus.PENDING,
                 start_time=start_time,
-                num_archives_to_search=job.num_archives_to_search
+                num_archives_to_search=job.num_archives_to_search,
             ):
                 job.start_time = start_time
 
@@ -472,11 +477,11 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                     await job.reducer_handler_msg_queues.put_to_handler(msg)
                 del active_jobs[job_id]
                 set_job_status(
-                    db_conn, 
-                    job_id, 
-                    SearchJobStatus.FAILED, 
+                    db_conn,
+                    job_id,
+                    SearchJobStatus.FAILED,
                     SearchJobStatus.RUNNING,
-                    duration=(datetime.datetime.now() - job.start_time).total_seconds()
+                    duration=(datetime.datetime.now() - job.start_time).total_seconds(),
                 )
                 continue
 
@@ -494,7 +499,7 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                     task_id,
                     status=task_status,
                     start_time=task_result.start_time,
-                    duration=task_result.duration
+                    duration=task_result.duration,
                 )
                 if not task_status == SearchTaskStatus.SUCCEEDED:
                     new_job_status = SearchJobStatus.FAILED
@@ -519,11 +524,11 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                 job.state = InternalJobState.WAITING_FOR_DISPATCH
                 logger.info(f"Job {job_id} waiting for more archives to search.")
                 set_job_status(
-                    db_conn, 
-                    job_id, 
-                    SearchJobStatus.RUNNING, 
+                    db_conn,
+                    job_id,
                     SearchJobStatus.RUNNING,
-                    num_archives_searched=job.num_archives_searched
+                    SearchJobStatus.RUNNING,
+                    num_archives_searched=job.num_archives_searched,
                 )
                 continue
 
@@ -542,12 +547,12 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                     raise NotImplementedError(error_msg)
 
             if set_job_status(
-                db_conn, 
-                job_id, 
-                new_job_status, 
+                db_conn,
+                job_id,
+                new_job_status,
                 SearchJobStatus.RUNNING,
                 num_archives_searched=job.num_archives_searched,
-                duration=(datetime.datetime.now() - job.start_time).total_seconds()
+                duration=(datetime.datetime.now() - job.start_time).total_seconds(),
             ):
                 if new_job_status == SearchJobStatus.SUCCEEDED:
                     logger.info(f"Completed job {job_id}.")

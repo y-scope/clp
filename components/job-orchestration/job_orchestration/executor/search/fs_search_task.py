@@ -173,7 +173,7 @@ def search(
     # Close log files
     clo_log_file.close()
 
-    status = SearchTaskStatus.SUCCEEDED if search_successful else SearchJobStatus.FAILED 
+    status = SearchTaskStatus.SUCCEEDED if search_successful else SearchJobStatus.FAILED
     duration = (datetime.datetime.now() - start_time).total_seconds()
 
     return SearchTaskResult(
