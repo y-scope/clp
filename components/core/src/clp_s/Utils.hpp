@@ -248,7 +248,10 @@ inline T2 bit_cast(T1 t1) {
 }
 
 /**
- * A span of memory
+ * A span of memory where the underlying memory is aligned correctly for type T.
+ *
+ * This class is preferred over UnalignedSpan whenever we need a view into some memory, and we know
+ * that it is aligned correctly for type T.
  * @tparam T
  */
 template <typename T>
@@ -274,6 +277,17 @@ private:
 
 /**
  * A span of memory where the underlying memory may not be aligned correctly for type T.
+ *
+ * This class should be used whenever we need a view into some memory, and we do not know whether it
+ * is aligned correctly for type T.
+ *
+ * In C++ creating a pointer to objects of type T that is not correctly aligned for type T is
+ * undefined behaviour, as is dereferencing such a pointer. This class avoids this undefined
+ * behaviour by using memcpy (which any modern compiler should be able to optimize away).
+ *
+ * For any modern x86 platform the performance difference between using Span and UnalignedSpan
+ * should be fairly minimal.
+ *
  * @tparam T
  */
 template <typename T>
