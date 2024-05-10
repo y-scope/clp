@@ -41,7 +41,7 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
         )
     else:
         polling_query = (
-            f"SELECT status, status_msg, uncompressed_size, compressed_size "
+            f"SELECT start_time, status, status_msg, uncompressed_size, compressed_size "
             f"FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id={job_id}"
         )
 
@@ -88,9 +88,10 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
 
                 if job_last_uncompressed_size < job_uncompressed_size:
                     compression_ratio = float(job_uncompressed_size) / job_compressed_size
-                    compression_speed = (job_uncompressed_size - job_last_uncompressed_size) / (
-                        current_time - job_row["start_time"]
-                    ).total_seconds()
+                    compression_speed = (
+                        job_uncompressed_size
+                        / (current_time - job_row["start_time"]).total_seconds()
+                    )
                     logger.info(
                         f"Compressed {pretty_size(job_uncompressed_size)} into "
                         f"{pretty_size(job_compressed_size)} ({compression_ratio:.2f}). "
