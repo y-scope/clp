@@ -42,6 +42,7 @@ class SearchJob(BaseModel):
     start_time: Optional[datetime.datetime]
     num_archives_to_search: int
     num_archives_searched: int
+    current_task_ids: Optional[List[int]]
     remaining_archives_for_search: List[Dict[str, Any]]
     current_sub_job_async_task_result: Optional[Any]
     reducer_acquisition_task: Optional[asyncio.Task]
