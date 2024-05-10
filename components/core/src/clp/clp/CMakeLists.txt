@@ -153,7 +153,7 @@ set(
 )
 
 add_executable(clp ${CLP_SOURCES})
-target_compile_features(clp PRIVATE cxx_std_17)
+target_compile_features(clp PRIVATE cxx_std_20)
 target_include_directories(clp PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 target_link_libraries(clp
         PRIVATE

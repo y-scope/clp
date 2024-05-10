@@ -186,7 +186,7 @@ add_executable(
         ${CLP_S_SEARCH_SOURCES}
         ${REDUCER_SOURCES}
 )
-target_compile_features(clp-s PRIVATE cxx_std_17)
+target_compile_features(clp-s PRIVATE cxx_std_20)
 target_link_libraries(
         clp-s
         PRIVATE
