@@ -331,8 +331,8 @@ def compress(
                 job_id,
                 dict(
                     num_tasks_completed=1,
-                    total_uncompressed_size=uncompressed_size,
-                    total_compressed_size=compressed_size,
+                    uncompressed_size=uncompressed_size,
+                    compressed_size=compressed_size,
                 ),
             )
             db_conn.commit()
