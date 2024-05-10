@@ -49,3 +49,21 @@ class SearchJobStatus(IntEnum):
 
     def to_str(self) -> str:
         return str(self.name)
+
+
+class SearchTaskStatus(IntEnum):
+    PENDING = 0
+    RUNNING = auto()
+    SUCCEEDED = auto()
+    FAILED = auto()
+    CANCELLED = auto()
+
+    @staticmethod
+    def from_str(label: str) -> SearchTaskStatus:
+        return SearchTaskStatus[label.upper()]
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+    def to_str(self) -> str:
+        return str(self.name)

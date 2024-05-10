@@ -1,3 +1,4 @@
+import datetime
 import os
 import signal
 import subprocess
@@ -11,7 +12,7 @@ from clp_py_utils.clp_config import StorageEngine
 from clp_py_utils.clp_logging import set_logging_level
 from job_orchestration.executor.search.celery import app
 from job_orchestration.scheduler.job_config import SearchConfig
-from job_orchestration.scheduler.scheduler_data import SearchTaskResult
+from job_orchestration.scheduler.scheduler_data import SearchTaskResult, SearchTaskStatus
 
 # Setup logging
 logger = get_task_logger(__name__)
@@ -93,11 +94,12 @@ def make_command(
 def search(
     self: Task,
     job_id: str,
+    task_id: int,
     search_config_obj: dict,
     archive_id: str,
     results_cache_uri: str,
 ) -> Dict[str, Any]:
-    task_id = str(self.request.id)
+    start_time = datetime.datetime.now()
     clp_home = Path(os.getenv("CLP_HOME"))
     archive_directory = Path(os.getenv("CLP_ARCHIVE_OUTPUT_DIR"))
     clp_logs_dir = Path(os.getenv("CLP_LOGS_DIR"))
@@ -171,7 +173,12 @@ def search(
     # Close log files
     clo_log_file.close()
 
+    status = SearchTaskStatus.SUCCEEDED if search_successful else SearchJobStatus.FAILED 
+    duration = (datetime.datetime.now() - start_time).total_seconds()
+
     return SearchTaskResult(
-        success=search_successful,
+        status=status,
         task_id=task_id,
+        start_time=start_time,
+        duration=duration,
     ).dict()

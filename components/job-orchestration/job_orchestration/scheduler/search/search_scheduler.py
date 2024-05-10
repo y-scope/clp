@@ -16,6 +16,7 @@ TODO Address this limitation.
 import argparse
 import asyncio
 import contextlib
+import datetime
 import logging
 import os
 import pathlib
@@ -26,13 +27,13 @@ from typing import Dict, List, Optional
 import celery
 import msgpack
 import pymongo
-from clp_py_utils.clp_config import CLP_METADATA_TABLE_PREFIX, CLPConfig, SEARCH_JOBS_TABLE_NAME
+from clp_py_utils.clp_config import CLP_METADATA_TABLE_PREFIX, CLPConfig, SEARCH_JOBS_TABLE_NAME, SEARCH_TASKS_TABLE_NAME
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.search.fs_search_task import search
-from job_orchestration.scheduler.constants import SearchJobStatus
+from job_orchestration.scheduler.constants import SearchJobStatus, SearchTaskStatus
 from job_orchestration.scheduler.job_config import SearchConfig
 from job_orchestration.scheduler.scheduler_data import InternalJobState, SearchJob, SearchTaskResult
 from job_orchestration.scheduler.search.reducer_handler import (
@@ -174,7 +175,11 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
             else:
                 continue
             if set_job_status(
-                db_conn, job_id, SearchJobStatus.CANCELLED, prev_status=SearchJobStatus.CANCELLING
+                db_conn, 
+                job_id, 
+                SearchJobStatus.CANCELLED, 
+                prev_status=SearchJobStatus.CANCELLING,
+                duration=(datetime.datetime.now() - job.start_time).total_seconds()
             ):
                 logger.info(f"Cancelled job {job_id}.")
             else:
@@ -213,8 +218,41 @@ def get_archives_for_search(
     return archives_for_search
 
 
+def insert_search_tasks(db_conn, job_id, archive_ids: List[str]) -> List[int]:
+    task_ids = []
+    with contextlib.closing(db_conn.cursor()) as cursor:
+        for archive_id in archive_ids:
+            cursor.execute(
+                f"""
+                INSERT INTO {SEARCH_TASKS_TABLE_NAME}
+                (job_id, archive_id)
+                VALUES({job_id}, '{archive_id}')
+                """
+            )
+            task_ids.append(cursor.lastrowid)
+    db_conn.commit()
+    return task_ids
+
+
+def update_search_task_metadata(db_conn, task_id, **kwargs) -> None:
+    if not len(kwargs.items()):
+        logger.error("Must specify at least one field to update")
+        raise ValueError
+
+    field_set_expressions = [f'{k}="{v}"' for k, v in kwargs.items()]
+    query = f"""
+        UPDATE {SEARCH_TASKS_TABLE_NAME}
+        SET {", ".join(field_set_expressions)}
+        WHERE id='{task_id}'
+    """
+    with contextlib.closing(db_conn.cursor()) as cursor:
+        cursor.execute(query)
+    db_conn.commit()
+
+
 def get_task_group_for_job(
-    archives_for_search: List[Dict[str, any]],
+    archive_ids: List[str],
+    task_ids: List[int],
     job_id: str,
     search_config: SearchConfig,
     results_cache_uri: str,
@@ -223,22 +261,27 @@ def get_task_group_for_job(
     return celery.group(
         search.s(
             job_id=job_id,
-            archive_id=archive["archive_id"],
+            archive_id=archive_ids[ix],
+            task_id=task_ids[ix],
             search_config_obj=search_config_obj,
             results_cache_uri=results_cache_uri,
         )
-        for archive in archives_for_search
+        for ix in range(len(archive_ids))
     )
 
 
 def dispatch_search_job(
+    db_conn,
     job: SearchJob,
     archives_for_search: List[Dict[str, any]],
     results_cache_uri: str,
 ) -> None:
     global active_jobs
+    archive_ids = [archive["archive_id"] for archive in archives_for_search]
+    task_ids = insert_search_tasks(db_conn, job.id, archive_ids)
+
     task_group = get_task_group_for_job(
-        archives_for_search, job.id, job.search_config, results_cache_uri
+        archive_ids, task_ids, job.id, job.search_config, results_cache_uri
     )
     job.current_sub_job_async_task_result = task_group.apply_async()
     job.state = InternalJobState.RUNNING
@@ -312,7 +355,13 @@ def handle_pending_search_jobs(
             archives_for_search = get_archives_for_search(db_conn, search_config)
             if len(archives_for_search) == 0:
                 if set_job_status(
-                    db_conn, job_id, SearchJobStatus.SUCCEEDED, SearchJobStatus.PENDING
+                    db_conn, 
+                    job_id, 
+                    SearchJobStatus.SUCCEEDED, 
+                    SearchJobStatus.PENDING,
+                    start_time=datetime.datetime.utcfromtimestamp(0),
+                    num_archives_to_search=0,
+                    duration=0
                 ):
                     logger.info(f"No matching archives, skipping job {job['job_id']}.")
                 continue
@@ -321,6 +370,8 @@ def handle_pending_search_jobs(
                 id=job_id,
                 search_config=search_config,
                 state=InternalJobState.WAITING_FOR_DISPATCH,
+                num_archives_to_search=len(archives_for_search),
+                num_archives_searched=0,
                 remaining_archives_for_search=archives_for_search,
             )
 
@@ -352,11 +403,20 @@ def handle_pending_search_jobs(
                 archives_for_search = job.remaining_archives_for_search
                 job.remaining_archives_for_search = []
 
-            dispatch_search_job(job, archives_for_search, results_cache_uri)
+            dispatch_search_job(db_conn, job, archives_for_search, results_cache_uri)
             logger.info(
                 f"Dispatched job {job_id} with {len(archives_for_search)} archives to search."
             )
-            set_job_status(db_conn, job_id, SearchJobStatus.RUNNING, SearchJobStatus.PENDING)
+            start_time = datetime.datetime.now()
+            if set_job_status(
+                db_conn, 
+                job_id, 
+                SearchJobStatus.RUNNING, 
+                SearchJobStatus.PENDING,
+                start_time=start_time,
+                num_archives_to_search=job.num_archives_to_search
+            ):
+                job.start_time = start_time
 
     return reducer_acquisition_tasks
 
@@ -411,17 +471,32 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                     msg = ReducerHandlerMessage(ReducerHandlerMessageType.FAILURE)
                     await job.reducer_handler_msg_queues.put_to_handler(msg)
                 del active_jobs[job_id]
-                set_job_status(db_conn, job_id, SearchJobStatus.FAILED, SearchJobStatus.RUNNING)
+                set_job_status(
+                    db_conn, 
+                    job_id, 
+                    SearchJobStatus.FAILED, 
+                    SearchJobStatus.RUNNING,
+                    duration=(datetime.datetime.now() - job.start_time).total_seconds()
+                )
                 continue
 
             if returned_results is None:
                 continue
 
+            job.num_archives_searched += len(returned_results)
             new_job_status = SearchJobStatus.RUNNING
             for task_result_obj in returned_results:
                 task_result = SearchTaskResult.parse_obj(task_result_obj)
-                if not task_result.success:
-                    task_id = task_result.task_id
+                task_id = task_result.task_id
+                task_status = task_result.status
+                update_search_task_metadata(
+                    db_conn,
+                    task_id,
+                    status=task_status,
+                    start_time=task_result.start_time,
+                    duration=task_result.duration
+                )
+                if not task_status == SearchTaskStatus.SUCCEEDED:
                     new_job_status = SearchJobStatus.FAILED
                     logger.debug(f"Task {task_id} failed - result {task_result}.")
 
@@ -443,6 +518,13 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                 job.current_sub_job_async_task_result = None
                 job.state = InternalJobState.WAITING_FOR_DISPATCH
                 logger.info(f"Job {job_id} waiting for more archives to search.")
+                set_job_status(
+                    db_conn, 
+                    job_id, 
+                    SearchJobStatus.RUNNING, 
+                    SearchJobStatus.RUNNING,
+                    num_archives_searched=job.num_archives_searched
+                )
                 continue
 
             reducer_failed = False
@@ -459,7 +541,14 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                     error_msg = f"Unexpected msg_type: {msg.msg_type.name}"
                     raise NotImplementedError(error_msg)
 
-            if set_job_status(db_conn, job_id, new_job_status, SearchJobStatus.RUNNING):
+            if set_job_status(
+                db_conn, 
+                job_id, 
+                new_job_status, 
+                SearchJobStatus.RUNNING,
+                num_archives_searched=job.num_archives_searched,
+                duration=(datetime.datetime.now() - job.start_time).total_seconds()
+            ):
                 if new_job_status == SearchJobStatus.SUCCEEDED:
                     logger.info(f"Completed job {job_id}.")
                 elif reducer_failed:

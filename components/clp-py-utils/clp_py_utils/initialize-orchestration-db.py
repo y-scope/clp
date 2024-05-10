@@ -8,6 +8,7 @@ from job_orchestration.scheduler.constants import (
     CompressionJobStatus,
     CompressionTaskStatus,
     SearchJobStatus,
+    SearchTaskStatus,
 )
 from sql_adapter import SQL_Adapter
 
@@ -16,6 +17,7 @@ from clp_py_utils.clp_config import (
     COMPRESSION_TASKS_TABLE_NAME,
     Database,
     SEARCH_JOBS_TABLE_NAME,
+    SEARCH_TASKS_TABLE_NAME,
 )
 from clp_py_utils.core import read_yaml_config_file
 
@@ -96,9 +98,33 @@ def main(argv):
                     `id` INT NOT NULL AUTO_INCREMENT,
                     `status` INT NOT NULL DEFAULT '{SearchJobStatus.PENDING}',
                     `submission_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+                    `num_archives_to_search` INT NULL DEFAULT NULL,
+                    `num_archives_searched` INT NULL DEFAULT NULL,
+                    `start_time` DATETIME(3) NULL DEFAULT NULL,
+                    `duration` FLOAT NULL DEFAULT NULL,
                     `search_config` VARBINARY(60000) NOT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `JOB_STATUS` (`status`) USING BTREE
+                ) ROW_FORMAT=DYNAMIC
+                """
+            )
+
+            scheduling_db_cursor.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS `{SEARCH_TASKS_TABLE_NAME}` (
+                    `id` BIGINT NOT NULL AUTO_INCREMENT,
+                    `status` INT NOT NULL DEFAULT '{SearchTaskStatus.PENDING}',
+                    `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+                    `start_time` DATETIME(3) NULL DEFAULT NULL,
+                    `duration` FLOAT NULL DEFAULT NULL,
+                    `job_id` INT NOT NULL,
+                    `archive_id` VARCHAR(255) NULL DEFAULT NULL,
+                    PRIMARY KEY (`id`) USING BTREE,
+                    INDEX `job_id` (`job_id`) USING BTREE,
+                    INDEX `TASK_STATUS` (`status`) USING BTREE,
+                    INDEX `TASK_START_TIME` (`start_time`) USING BTREE,
+                    CONSTRAINT `search_tasks` FOREIGN KEY (`job_id`) 
+                    REFERENCES `search_jobs` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION
                 ) ROW_FORMAT=DYNAMIC
                 """
             )
