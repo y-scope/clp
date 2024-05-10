@@ -93,7 +93,7 @@ int64_t ClpStringColumnReader::get_encoded_id(uint64_t cur_message) {
     return ClpStringColumnWriter::get_encoded_log_dict_id(value);
 }
 
-UnalignedSpan<int64_t> ClpStringColumnReader::get_encoded_vars(uint64_t cur_message) {
+UnalignedMemSpan<int64_t> ClpStringColumnReader::get_encoded_vars(uint64_t cur_message) {
     auto value = m_logtypes[cur_message];
     auto logtype_id = ClpStringColumnWriter::get_encoded_log_dict_id(value);
     auto& entry = m_log_dict->get_entry(logtype_id);

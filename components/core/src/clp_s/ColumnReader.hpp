@@ -76,7 +76,7 @@ public:
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 
 private:
-    UnalignedSpan<int64_t> m_values;
+    UnalignedMemSpan<int64_t> m_values;
 };
 
 class FloatColumnReader : public BaseColumnReader {
@@ -98,7 +98,7 @@ public:
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 
 private:
-    UnalignedSpan<double> m_values;
+    UnalignedMemSpan<double> m_values;
 };
 
 class BooleanColumnReader : public BaseColumnReader {
@@ -120,7 +120,7 @@ public:
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 
 private:
-    UnalignedSpan<uint8_t> m_values;
+    UnalignedMemSpan<uint8_t> m_values;
 };
 
 class ClpStringColumnReader : public BaseColumnReader {
@@ -164,14 +164,14 @@ public:
      * @param cur_message
      * @return Encoded variables in a span
      */
-    UnalignedSpan<int64_t> get_encoded_vars(uint64_t cur_message);
+    UnalignedMemSpan<int64_t> get_encoded_vars(uint64_t cur_message);
 
 private:
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
     std::shared_ptr<LogTypeDictionaryReader> m_log_dict;
 
-    UnalignedSpan<uint64_t> m_logtypes;
-    UnalignedSpan<int64_t> m_encoded_vars;
+    UnalignedMemSpan<uint64_t> m_logtypes;
+    UnalignedMemSpan<int64_t> m_encoded_vars;
 
     bool m_is_array;
 };
@@ -206,7 +206,7 @@ public:
 private:
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
 
-    UnalignedSpan<uint64_t> m_variables;
+    UnalignedMemSpan<uint64_t> m_variables;
 };
 
 class DateStringColumnReader : public BaseColumnReader {
@@ -238,8 +238,8 @@ public:
 private:
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dict;
 
-    UnalignedSpan<int64_t> m_timestamps;
-    UnalignedSpan<int64_t> m_timestamp_encodings;
+    UnalignedMemSpan<int64_t> m_timestamps;
+    UnalignedMemSpan<int64_t> m_timestamp_encodings;
 };
 }  // namespace clp_s
 

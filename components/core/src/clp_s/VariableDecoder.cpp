@@ -6,7 +6,7 @@ namespace clp_s {
 bool VariableDecoder::decode_variables_into_message(
         LogTypeDictionaryEntry const& logtype_dict_entry,
         VariableDictionaryReader const& var_dict,
-        UnalignedSpan<int64_t> encoded_vars,
+        UnalignedMemSpan<int64_t> encoded_vars,
         std::string& decompressed_msg
 ) {
     size_t num_vars_in_logtype = logtype_dict_entry.get_num_vars();

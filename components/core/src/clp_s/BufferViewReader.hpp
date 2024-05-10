@@ -37,12 +37,12 @@ public:
     }
 
     template <typename T>
-    UnalignedSpan<T> read_unaligned_span(size_t length) {
+    UnalignedMemSpan<T> read_unaligned_span(size_t length) {
         size_t span_length_in_bytes = sizeof(T) * length;
         if (m_remaining_size < span_length_in_bytes) {
             throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
         }
-        UnalignedSpan<T> tmp{m_buffer, length};
+        UnalignedMemSpan<T> tmp{m_buffer, length};
         m_buffer += span_length_in_bytes;
         m_remaining_size -= span_length_in_bytes;
         return tmp;
