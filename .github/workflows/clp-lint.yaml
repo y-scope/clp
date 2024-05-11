@@ -1,6 +1,12 @@
 name: "clp-lint"
 
-on: ["pull_request", "push", "workflow_dispatch"]
+on:
+  pull_request:
+  push:
+  schedule:
+    # Run at midnight UTC every day with 15 minutes delay added to avoid high load periods
+    - cron: "0 15 * * *"
+  workflow_dispatch:
 
 concurrency:
   group: "${{github.workflow}}-${{github.ref}}"
