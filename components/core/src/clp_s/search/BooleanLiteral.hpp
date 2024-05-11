@@ -51,7 +51,7 @@ private:
     // Constructors
     BooleanLiteral() = default;
 
-    explicit BooleanLiteral(bool v) : m_v(v){};
+    explicit BooleanLiteral(bool v) : m_v(v) {};
 };
 }  // namespace clp_s::search
 

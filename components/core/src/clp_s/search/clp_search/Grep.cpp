@@ -366,7 +366,8 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
         } else {
             if (false == query_token.is_var()) {
                 logtype += query_token.get_value();
-            } else if (false == process_var_token(query_token, var_dict, ignore_case, sub_query, logtype))
+            } else if (false
+                       == process_var_token(query_token, var_dict, ignore_case, sub_query, logtype))
             {
                 return SubQueryMatchabilityResult::WontMatch;
             }

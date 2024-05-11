@@ -33,8 +33,8 @@ public:
      * - std::errc::protocol_not_supported if the IR stream contains an unsupported metadata format
      *   or uses an unsupported version
      */
-    static auto create(ReaderInterface& reader)
-            -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>>;
+    static auto create(ReaderInterface& reader
+    ) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>>;
 
     // Delete copy constructor and assignment
     LogEventDeserializer(LogEventDeserializer const&) = delete;
@@ -58,8 +58,8 @@ public:
      * - std::errc::result_out_of_range if the IR stream is truncated
      * - std::errc::result_out_of_range if the IR stream is corrupted
      */
-    [[nodiscard]] auto deserialize_log_event()
-            -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<encoded_variable_t>>;
+    [[nodiscard]] auto deserialize_log_event(
+    ) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<encoded_variable_t>>;
 
 private:
     // Constructors
@@ -74,8 +74,7 @@ private:
     [[no_unique_address]] std::conditional_t<
             std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
             epoch_time_ms_t,
-            EmptyType>
-            m_prev_msg_timestamp{};
+            EmptyType> m_prev_msg_timestamp{};
     ReaderInterface& m_reader;
 };
 }  // namespace clp::ir
