@@ -110,7 +110,7 @@ public:
      * @return a view into the ordered region of the underlying schema
      */
     [[nodiscard]] std::span<int32_t> get_ordered_schema_view() {
-        return std::span<int32_t>{m_schema.begin(), m_num_ordered};
+        return std::span<int32_t>{m_schema.data(), m_num_ordered};
     }
 
     /**
@@ -122,7 +122,7 @@ public:
         if (i + size > m_schema.size()) {
             throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
         }
-        return std::span<int32_t>{m_schema.begin() + i, size};
+        return std::span<int32_t>{m_schema.data() + i, size};
     }
 
     /**
