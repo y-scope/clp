@@ -98,7 +98,7 @@ tasks:
     cmds:
       - |-
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
-        yamllint \
+        yamllint --strict \
           .github \
           .yamllint.yml \
           components/core/.clang-format \
