@@ -104,6 +104,7 @@ tasks:
           components/core/.clang-format \
           components/core/config \
           components/package-template/src/etc \
+          docs \
           lint-tasks.yml \
           Taskfile.yml
 
