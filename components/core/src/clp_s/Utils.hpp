@@ -267,7 +267,7 @@ template <typename T>
 class UnalignedMemSpan {
 public:
     UnalignedMemSpan() = default;
-    UnalignedMemSpan(char* begin, size_t size) : m_begin(begin), m_size(size){};
+    UnalignedMemSpan(char* begin, size_t size) : m_begin(begin), m_size(size) {};
 
     size_t size() { return m_size; }
 

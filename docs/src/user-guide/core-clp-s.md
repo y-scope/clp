@@ -77,7 +77,7 @@ Usage:
 ```
 
 * `archives-dir` is a directory containing archives.
-* `kql-query` is a [KQL][1] query.
+* `kql-query` is a [KQL](reference-json-search-syntax) query.
 * `options` allow you to specify things like a specific archive (from within `archives-dir`) to
   search (`--archive-id <archive-id>`).
   * For a complete list, run `./clp-s s --help`
@@ -116,18 +116,11 @@ compressed data:**
 
 ## Current limitations
 
-* `clp-s` currently only supports *valid* ndjson logs; it does not handle ndjson logs with trailing
+* `clp-s` currently only supports *valid* JSON logs; it does not handle JSON logs with trailing
   commas or other JSON syntax errors.
 * Time zone information is not preserved.
 * The order of log events is not preserved.
 * The input directory structure is not preserved and during decompression all files are written to
   the same file.
-* The KQL implementation does not fully respect the {} object within array syntax. A matching record
-  will satisfy all of the conditions in the filter, but not necessarily on the same object in the
-  array. This means that filters like `"a": {"b": 0, "c": 0}` will match documents like
-  `{"a": [{"b": 0}, {"c": 0}]}` instead of matching only documents like `{"a": [{"b": 0, "c": 0}]}`
-* Searches on arrays must either be fully precise (no wildcard tokens in the key) or fully imprecise
-  (a single wildcard token). This means filters like `"*": "uuid"` and `"a.b.c": "uuid"` will search
-  inside of array columns, but filters like `"a.*": "uuid"` or `a.*.c: "uuid"` will not.
-
-[1]: https://www.elastic.co/guide/en/kibana/current/kuery-query.html
+* In addition, there are a few limitations, related to querying arrays, described in the search
+  syntax [reference](reference-json-search-syntax).

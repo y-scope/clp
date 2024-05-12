@@ -210,6 +210,46 @@ add_subdirectory(src/clp/make_dictionaries_readable)
 add_subdirectory(src/clp_s)
 add_subdirectory(src/reducer)
 
+set(SOURCE_FILES_clp_s_unitTest
+    src/clp_s/search/AndExpr.cpp
+    src/clp_s/search/AndExpr.hpp
+    src/clp_s/search/BooleanLiteral.cpp
+    src/clp_s/search/BooleanLiteral.hpp
+    src/clp_s/search/clp_search/Query.cpp
+    src/clp_s/search/clp_search/Query.hpp
+    src/clp_s/search/ColumnDescriptor.cpp
+    src/clp_s/search/ColumnDescriptor.hpp
+    src/clp_s/search/DateLiteral.cpp
+    src/clp_s/search/DateLiteral.hpp
+    src/clp_s/search/EmptyExpr.cpp
+    src/clp_s/search/EmptyExpr.hpp
+    src/clp_s/search/Expression.cpp
+    src/clp_s/search/Expression.hpp
+    src/clp_s/search/FilterExpr.cpp
+    src/clp_s/search/FilterExpr.hpp
+    src/clp_s/search/FilterOperation.hpp
+    src/clp_s/search/Integral.cpp
+    src/clp_s/search/Integral.hpp
+    src/clp_s/search/Literal.hpp
+    src/clp_s/search/NullLiteral.cpp
+    src/clp_s/search/NullLiteral.hpp
+    src/clp_s/search/OrExpr.cpp
+    src/clp_s/search/OrExpr.hpp
+    src/clp_s/search/OrOfAndForm.cpp
+    src/clp_s/search/OrOfAndForm.hpp
+    src/clp_s/search/SearchUtils.cpp
+    src/clp_s/search/SearchUtils.hpp
+    src/clp_s/search/StringLiteral.cpp
+    src/clp_s/search/StringLiteral.hpp
+    src/clp_s/search/Transformation.hpp
+    src/clp_s/search/Value.hpp
+    src/clp_s/SchemaTree.hpp
+    src/clp_s/TimestampPattern.cpp
+    src/clp_s/TimestampPattern.hpp
+    src/clp_s/Utils.cpp
+    src/clp_s/Utils.hpp
+)
+
 set(SOURCE_FILES_unitTest
         src/clp/BufferedFileReader.cpp
         src/clp/BufferedFileReader.hpp
@@ -378,12 +418,14 @@ set(SOURCE_FILES_unitTest
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
+        tests/LogSuppressor.hpp
         tests/test-BufferedFileReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
         tests/test-Grep.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp
+        tests/test-kql.cpp
         tests/test-main.cpp
         tests/test-math_utils.cpp
         tests/test-ParserWithUserSchema.cpp
@@ -395,7 +437,7 @@ set(SOURCE_FILES_unitTest
         tests/test-TimestampPattern.cpp
         tests/test-Utils.cpp
         )
-add_executable(unitTest ${SOURCE_FILES_unitTest})
+add_executable(unitTest ${SOURCE_FILES_unitTest} ${SOURCE_FILES_clp_s_unitTest})
 target_include_directories(unitTest
         PRIVATE
         ${CMAKE_SOURCE_DIR}/submodules
@@ -403,7 +445,9 @@ target_include_directories(unitTest
 target_link_libraries(unitTest
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
+        absl::flat_hash_map
         fmt::fmt
+        kql
         log_surgeon::log_surgeon
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient

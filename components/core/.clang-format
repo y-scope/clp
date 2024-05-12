@@ -18,8 +18,10 @@ AlignTrailingComments:
   Kind: "Never"
 AllowAllArgumentsOnNextLine: false
 AllowAllParametersOfDeclarationOnNextLine: false
+AllowBreakBeforeNoexceptSpecifier: "OnlyWithParen"
 AllowShortBlocksOnASingleLine: "Always"
 AllowShortCaseLabelsOnASingleLine: false
+AllowShortCompoundRequirementOnASingleLine: true
 AllowShortEnumsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: "Inline"
 AllowShortIfStatementsOnASingleLine: "Never"
@@ -146,16 +148,18 @@ SpaceBeforeParens: "ControlStatements"
 SpaceBeforeRangeBasedForLoopColon: true
 SpaceBeforeSquareBrackets: false
 SpaceInEmptyBlock: false
-SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 2
 SpacesInAngles: false
-SpacesInConditionalStatement: false
 SpacesInContainerLiterals: false
-SpacesInCStyleCastParentheses: false
 SpacesInLineCommentPrefix:
   Minimum: 1
   Maximum: -1
-SpacesInParentheses: false
+SpacesInParens: "Custom"
+SpacesInParensOptions:
+  InConditionalStatements: false
+  InCStyleCasts: false
+  InEmptyParentheses: false
+  Other: false
 SpacesInSquareBrackets: false
 Standard: "Latest"
 TabWidth: 4

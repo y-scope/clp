@@ -20,8 +20,11 @@ extensions = [
 # -- MyST extensions -----------------------------------------------------------
 # https://myst-parser.readthedocs.io/en/stable/syntax/optional.html
 myst_enable_extensions = [
+    "attrs_block",
     "colon_fence",
 ]
+
+myst_heading_anchors = 4
 
 # -- Sphinx autodoc options ----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#configuration
@@ -60,10 +63,15 @@ html_theme_options = {
     "footer_start": ["copyright"],
     "footer_center": [],
     "footer_end": ["theme-version"],
+    "navbar_start": ["navbar-logo", "version-switcher"],
     "navbar_end": ["navbar-icon-links", "theme-switcher"],
     "primary_sidebar_end": [],
     "secondary_sidebar_items": ["page-toc", "edit-this-page"],
     "show_prev_next": False,
+    "switcher": {
+        "json_url": "https://docs.yscope.com/_static/clp-versions.json",
+        "version_match": "main",
+    },
     "use_edit_page_button": True,
 }
 

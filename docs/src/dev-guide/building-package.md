@@ -12,9 +12,6 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
     extra configuration.
 * Python 3.8 or newer
 * python3-venv
-* [Node.js 14](https://nodejs.org/download/release/v14.21.3/) (Meteor.js only
-  [supports](https://docs.meteor.com/install#prereqs-node) Node.js versions >= 10 and <= 14)
-* [Meteor.js](https://docs.meteor.com/install.html#installation)
 * [Task](https://taskfile.dev/)
 
 ## Setup
@@ -33,21 +30,36 @@ components/core/tools/ubuntu-focal/install-all.sh
 
 ## Build
 
-To build the package as a tar ball, run;
+There are two flavours of the CLP package:
+
+1. `clp-json` for managing JSON logs
+2. `clp-text` for managing text logs
+
+:::{note}
+Both flavours contain the same binaries but are configured with different values for the
+`package.storage_engine` key.
+:::
+
+To build the package, run:
 
 ```shell
-task package-tar
+task package
 ```
 
-The built tar will be output in the `build` directory.
+The build will be in `build/clp-package` and defaults to using the storage engine for `clp-text`.
+
+To build a releasable tar of either flavour, run:
+
+```shell
+task clp-<flavour>-pkg-tar
+```
+
+where `<flavour>` is `json` or `text`.
+
+The tar will be written to `build/clp-<flavour>-<os>-<arch>-v<version>.tar.gz`, with appropriate
+values for the fields in angle brackets.
 
 ## Cleanup
-
-To clean up the package, run:
-
-```shell
-task clean-package
-```
 
 To clean up all build artifacts, run:
 

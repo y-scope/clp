@@ -90,6 +90,7 @@ const SearchControls = ({
         CLP_STORAGE_ENGINES.CLP === Meteor.settings.public.ClpStorageEngine ?
             "Enter a wildcard query..." :
             "Enter a KQL query...";
+
     return (
         <>
             <Form onSubmit={handleQuerySubmission}>
