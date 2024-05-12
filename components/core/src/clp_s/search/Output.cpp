@@ -146,7 +146,8 @@ void Output::init(
             } else if (var_reader != nullptr && var_reader->get_type() == NodeType::VARSTRING) {
                 m_var_string_readers[column.first] = var_reader;
                 m_other_columns.push_back(column.second);
-            } else if (auto date_column_reader = dynamic_cast<DateStringColumnReader*>(column.second))
+            } else if (auto date_column_reader
+                       = dynamic_cast<DateStringColumnReader*>(column.second))
             {
                 m_datestring_readers[column.first] = date_column_reader;
                 m_other_columns.push_back(column.second);
@@ -1091,7 +1092,10 @@ Output::constant_propagate(std::shared_ptr<Expression> const& expr, int32_t sche
             // trivially matching
             // FIXME: have an edgecase to handle with NEXISTS on pure wildcard columns
             return EvaluatedValue::True;
-        } else if (filter->get_column()->is_pure_wildcard() && filter->get_column()->matches_any(LiteralType::ClpStringT | LiteralType::VarStringT))
+        } else if (filter->get_column()->is_pure_wildcard()
+                   && filter->get_column()->matches_any(
+                           LiteralType::ClpStringT | LiteralType::VarStringT
+                   ))
         {
             auto wildcard = filter->get_column().get();
             bool has_var_string = false;

@@ -254,7 +254,7 @@ template <typename T>
 class Span {
 public:
     Span() = default;
-    Span(T* begin, size_t size) : m_begin(begin), m_size(size){};
+    Span(T* begin, size_t size) : m_begin(begin), m_size(size) {};
 
     T* begin() { return m_begin; }
 
