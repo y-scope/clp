@@ -264,9 +264,8 @@ auto create_db(TestTableSchema const& table_schema, vector<Row> const& rows) -> 
     stmt_buf.clear();
 
     // Insert rows into the table
+    transaction_begin_stmt.step();
     for (auto const& row : rows) {
-        transaction_begin_stmt.step();
-
         // Bind a value to each column using its corresponding parameter ID
         auto const path_param_id_it{column_name_to_param_id.find(TestTableSchema::cPath)};
         REQUIRE((column_name_to_param_id.cend() != path_param_id_it));
@@ -307,11 +306,10 @@ auto create_db(TestTableSchema const& table_schema, vector<Row> const& rows) -> 
 
         insert_stmt.step();
         insert_stmt.reset();
-
-        transaction_end_stmt.step();
-        transaction_begin_stmt.reset();
-        transaction_end_stmt.reset();
     }
+    transaction_end_stmt.step();
+    transaction_begin_stmt.reset();
+    transaction_end_stmt.reset();
 
     sqlite_db.close();
 }
