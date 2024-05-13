@@ -132,9 +132,9 @@ endif()
 # By default, CURL does not provide static libraries
 find_package(CURL REQUIRED)
 if(CURL_FOUND)
-    message(STATUS "Found curl ${CURL_VERSION_STRING}")
+    message(STATUS "Found CURL ${CURL_VERSION_STRING}")
 else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for curl")
+    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for CURL")
 endif()
 
 # Add log surgeon
