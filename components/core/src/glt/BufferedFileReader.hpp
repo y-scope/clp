@@ -41,11 +41,11 @@ public:
         // Constructors
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
                 : OperationFailed(
-                        error_code,
-                        filename,
-                        line_number,
-                        "BufferedFileReader operation failed"
-                ) {}
+                          error_code,
+                          filename,
+                          line_number,
+                          "BufferedFileReader operation failed"
+                  ) {}
 
         OperationFailed(
                 ErrorCode error_code,
@@ -127,8 +127,8 @@ public:
      * @return ErrorCode_NotInit if the file is not opened
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] auto try_peek_buffered_data(char const*& buf, size_t& peek_size) const
-            -> ErrorCode;
+    [[nodiscard]] auto
+    try_peek_buffered_data(char const*& buf, size_t& peek_size) const -> ErrorCode;
 
     /**
      * Peeks the remaining buffered content without advancing the read head.
@@ -191,8 +191,8 @@ public:
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] auto try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
-            -> ErrorCode override;
+    [[nodiscard]] auto
+    try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) -> ErrorCode override;
 
     /**
      * Tries to read up to an occurrence of the given delimiter
@@ -206,9 +206,12 @@ public:
      * @return Same as BufferReader::try_read_to_delimiter if it fails
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] auto
-    try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str)
-            -> ErrorCode override;
+    [[nodiscard]] auto try_read_to_delimiter(
+            char delim,
+            bool keep_delimiter,
+            bool append,
+            std::string& str
+    ) -> ErrorCode override;
 
 private:
     // Methods

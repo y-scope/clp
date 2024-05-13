@@ -71,10 +71,8 @@ bool Output::filter() {
         m_expr_clp_query.clear();
         m_expr_var_match_map.clear();
         m_expr = m_match.get_query_for_schema(schema_id)->copy();
-        m_wildcard_to_searched_columns.clear();
-        m_wildcard_to_searched_clpstrings.clear();
-        m_wildcard_to_searched_varstrings.clear();
-        m_wildcard_to_searched_datestrings.clear();
+        m_wildcard_to_searched_basic_columns.clear();
+        m_wildcard_columns.clear();
         m_schema = schema_id;
 
         populate_searched_wildcard_columns(m_expr);
@@ -87,20 +85,20 @@ bool Output::filter() {
 
         add_wildcard_columns_to_searched_columns();
 
-        auto reader = m_archive_reader->read_table(
+        auto& reader = m_archive_reader->read_table(
                 schema_id,
                 m_output_handler->should_output_timestamp(),
                 m_should_marshal_records
         );
-        reader->initialize_filter(this);
+        reader.initialize_filter(this);
 
         if (m_output_handler->should_output_timestamp()) {
             epochtime_t timestamp;
-            while (reader->get_next_message_with_timestamp(message, timestamp, this)) {
+            while (reader.get_next_message_with_timestamp(message, timestamp, this)) {
                 m_output_handler->write(message, timestamp);
             }
         } else {
-            while (reader->get_next_message(message, this)) {
+            while (reader.get_next_message(message, this)) {
                 m_output_handler->write(message);
             }
         }
@@ -127,72 +125,64 @@ bool Output::filter() {
 void Output::init(
         SchemaReader* reader,
         int32_t schema_id,
-        std::unordered_map<int32_t, BaseColumnReader*>& columns
+        std::vector<BaseColumnReader*> const& column_readers
 ) {
     m_reader = reader;
     m_schema = schema_id;
 
-    m_searched_columns.clear();
-    m_other_columns.clear();
+    m_clp_string_readers.clear();
+    m_var_string_readers.clear();
+    m_datestring_readers.clear();
+    m_basic_readers.clear();
 
-    for (auto& column : columns) {
-        ClpStringColumnReader* clp_reader = dynamic_cast<ClpStringColumnReader*>(column.second);
-        VariableStringColumnReader* var_reader
-                = dynamic_cast<VariableStringColumnReader*>(column.second);
-        if (m_match.schema_searches_against_column(schema_id, column.first)) {
-            if (clp_reader != nullptr && clp_reader->get_type() == NodeType::CLPSTRING) {
-                m_clp_string_readers[column.first] = clp_reader;
-                m_other_columns.push_back(column.second);
-            } else if (var_reader != nullptr && var_reader->get_type() == NodeType::VARSTRING) {
-                m_var_string_readers[column.first] = var_reader;
-                m_other_columns.push_back(column.second);
-            } else if (auto date_column_reader = dynamic_cast<DateStringColumnReader*>(column.second))
-            {
-                m_datestring_readers[column.first] = date_column_reader;
-                m_other_columns.push_back(column.second);
+    for (auto column_reader : column_readers) {
+        auto column_id = column_reader->get_id();
+        if ((0
+             != (m_wildcard_type_mask
+                 & node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
+            || m_match.schema_searches_against_column(schema_id, column_id))
+        {
+            ClpStringColumnReader* clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
+            VariableStringColumnReader* var_reader
+                    = dynamic_cast<VariableStringColumnReader*>(column_reader);
+            DateStringColumnReader* date_reader
+                    = dynamic_cast<DateStringColumnReader*>(column_reader);
+            if (nullptr != clp_reader && clp_reader->get_type() == NodeType::ClpString) {
+                m_clp_string_readers[column_id].push_back(clp_reader);
+            } else if (nullptr != var_reader && var_reader->get_type() == NodeType::VarString) {
+                m_var_string_readers[column_id].push_back(var_reader);
+            } else if (nullptr != date_reader) {
+                // Datestring readers with a given column ID are guaranteed not to repeat
+                m_datestring_readers.emplace(column_id, date_reader);
             } else {
-                m_searched_columns.push_back(column.second);
+                m_basic_readers[column_id].push_back(column_reader);
             }
-        } else {
-            m_other_columns.push_back(column.second);
         }
     }
 }
 
-bool Output::filter(
-        uint64_t cur_message,
-        std::map<int32_t, std::variant<int64_t, double, std::string, uint8_t>>& extracted_values
-) {
+std::string& Output::get_cached_decompressed_unstructured_array(int32_t column_id) {
+    auto it = m_extracted_unstructured_arrays.find(column_id);
+    if (m_extracted_unstructured_arrays.end() != it) {
+        return it->second;
+    }
+
+    // Unstructured arrays with the same column id can not appear multiple times in one schema
+    // in the current implementation.
+    auto rit = m_extracted_unstructured_arrays.emplace(
+            column_id,
+            std::get<std::string>(m_basic_readers[column_id][0]->extract_value(m_cur_message))
+    );
+    return rit.first->second;
+}
+
+bool Output::filter(uint64_t cur_message) {
     m_cur_message = cur_message;
-    m_cached_string_columns.clear();
-    for (auto* column : m_searched_columns) {
-        extracted_values[column->get_id()] = column->extract_value(cur_message);
-    }
-
-    // filter
-    if (false == evaluate(m_expr.get(), m_schema, extracted_values)) {
-        return false;
-    }
-
-    // We only need to extract all columns if we're actually marshalling records into JSON strings.
-    // TODO: consider getting rid of extracted_values entirely and just accessing the underlying
-    // columns directly once we have time to clean up search.
-    if (m_should_marshal_records) {
-        for (auto* column : m_other_columns) {
-            if (m_cached_string_columns.find(column->get_id()) == m_cached_string_columns.end()) {
-                extracted_values[column->get_id()] = column->extract_value(cur_message);
-            }
-        }
-    }
-
-    return true;
+    m_extracted_unstructured_arrays.clear();
+    return evaluate(m_expr.get(), m_schema);
 }
 
-bool Output::evaluate(
-        Expression* expr,
-        int32_t schema,
-        std::map<int32_t, std::variant<int64_t, double, std::string, uint8_t>>& extracted_values
-) {
+bool Output::evaluate(Expression* expr, int32_t schema) {
     if (m_expression_value == EvaluatedValue::True) {
         return true;
     }
@@ -232,13 +222,9 @@ bool Output::evaluate(
                 }
             case ExpressionType::Filter:
                 if (static_cast<FilterExpr*>(cur)->get_column()->is_pure_wildcard()) {
-                    ret = evaluate_wildcard_filter(
-                            static_cast<FilterExpr*>(cur),
-                            schema,
-                            extracted_values
-                    );
+                    ret = evaluate_wildcard_filter(static_cast<FilterExpr*>(cur), schema);
                 } else {
-                    ret = evaluate_filter(static_cast<FilterExpr*>(cur), schema, extracted_values);
+                    ret = evaluate_filter(static_cast<FilterExpr*>(cur), schema);
                 }
                 break;
             case ExpressionType::Or:
@@ -270,64 +256,53 @@ bool Output::evaluate(
     return ret;
 }
 
-bool Output::evaluate_wildcard_filter(
-        FilterExpr* expr,
-        int32_t schema,
-        std::map<int32_t, std::variant<int64_t, double, std::string, uint8_t>>& extracted_values
-) {
+bool Output::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
     auto literal = expr->get_operand();
     auto* column = expr->get_column().get();
     Query* q = m_expr_clp_query[expr];
     std::unordered_set<int64_t>* matching_vars = m_expr_var_match_map[expr];
     auto op = expr->get_operation();
-    for (int32_t column_id : m_wildcard_to_searched_clpstrings[column]) {
-        if (evaluate_clp_string_filter(op, q, column_id, literal, extracted_values)) {
-            return true;
+    if (column->matches_type(LiteralType::ClpStringT)) {
+        for (auto entry : m_clp_string_readers) {
+            if (evaluate_clp_string_filter(op, q, entry.second, literal)) {
+                return true;
+            }
         }
     }
 
-    for (int32_t column_id : m_wildcard_to_searched_varstrings[column]) {
-        if (evaluate_var_string_filter(op, m_var_string_readers[column_id], matching_vars, literal))
-        {
-            return true;
+    if (column->matches_type(LiteralType::VarStringT)) {
+        for (auto entry : m_var_string_readers) {
+            if (evaluate_var_string_filter(op, entry.second, matching_vars, literal)) {
+                return true;
+            }
         }
     }
 
-    for (int32_t column_id : m_wildcard_to_searched_datestrings[column]) {
-        if (evaluate_epoch_date_filter(op, m_datestring_readers[column_id], literal)) {
-            return true;
+    if (column->matches_type(LiteralType::EpochDateT)) {
+        for (auto entry : m_datestring_readers) {
+            if (evaluate_epoch_date_filter(op, entry.second, literal)) {
+                return true;
+            }
         }
     }
 
     m_maybe_number = expr->get_column()->matches_type(LiteralType::FloatT);
-    for (int32_t column_id : m_wildcard_to_searched_columns[column]) {
+    for (int32_t column_id : m_wildcard_to_searched_basic_columns[column]) {
         bool ret = false;
-        switch (node_to_literal_type(m_schema_tree->get_node(column_id)->get_type())) {
+        switch (node_to_literal_type(m_schema_tree->get_node(column_id).get_type())) {
             case LiteralType::IntegerT:
-                ret = evaluate_int_filter(
-                        op,
-                        std::get<int64_t>(extracted_values[column_id]),
-                        literal
-                );
+                ret = evaluate_int_filter(op, column_id, literal);
                 break;
             case LiteralType::FloatT:
-                ret = evaluate_float_filter(
-                        op,
-                        std::get<double>(extracted_values[column_id]),
-                        literal
-                );
+                ret = evaluate_float_filter(op, column_id, literal);
                 break;
             case LiteralType::BooleanT:
-                ret = evaluate_bool_filter(
-                        op,
-                        std::get<uint8_t>(extracted_values[column_id]),
-                        literal
-                );
+                ret = evaluate_bool_filter(op, column_id, literal);
                 break;
             case LiteralType::ArrayT:
                 ret = evaluate_wildcard_array_filter(
                         op,
-                        std::get<std::string>(extracted_values[column_id]),
+                        get_cached_decompressed_unstructured_array(column_id),
                         literal
                 );
                 break;
@@ -343,61 +318,40 @@ bool Output::evaluate_wildcard_filter(
     return false;
 }
 
-bool Output::evaluate_filter(
-        FilterExpr* expr,
-        int32_t schema,
-        std::map<int32_t, std::variant<int64_t, double, std::string, uint8_t>>& extracted_values
-) {
+bool Output::evaluate_filter(FilterExpr* expr, int32_t schema) {
     auto column = expr->get_column().get();
     int32_t column_id = column->get_column_id();
     auto literal = expr->get_operand();
     Query* q = nullptr;
-    ClpStringColumnReader* clp_reader = nullptr;
-    VariableStringColumnReader* var_reader = nullptr;
     std::unordered_set<int64_t>* matching_vars = nullptr;
     switch (column->get_literal_type()) {
         case LiteralType::IntegerT:
-            return evaluate_int_filter(
-                    expr->get_operation(),
-                    std::get<int64_t>(extracted_values[column_id]),
-                    literal
-            );
+            return evaluate_int_filter(expr->get_operation(), column_id, literal);
         case LiteralType::FloatT:
-            return evaluate_float_filter(
-                    expr->get_operation(),
-                    std::get<double>(extracted_values[column_id]),
-                    literal
-            );
+            return evaluate_float_filter(expr->get_operation(), column_id, literal);
         case LiteralType::ClpStringT:
             q = m_expr_clp_query[expr];
-            clp_reader = m_clp_string_readers[column_id];
             return evaluate_clp_string_filter(
                     expr->get_operation(),
                     q,
-                    column_id,
-                    literal,
-                    extracted_values
+                    m_clp_string_readers[column_id],
+                    literal
             );
         case LiteralType::VarStringT:
-            var_reader = m_var_string_readers[column_id];
             matching_vars = m_expr_var_match_map.at(expr);
             return evaluate_var_string_filter(
                     expr->get_operation(),
-                    var_reader,
+                    m_var_string_readers[column_id],
                     matching_vars,
                     literal
             );
         case LiteralType::BooleanT:
-            return evaluate_bool_filter(
-                    expr->get_operation(),
-                    std::get<uint8_t>(extracted_values[column_id]),
-                    literal
-            );
+            return evaluate_bool_filter(expr->get_operation(), column_id, literal);
         case LiteralType::ArrayT:
             return evaluate_array_filter(
                     expr->get_operation(),
                     column->get_unresolved_tokens(),
-                    std::get<std::string>(extracted_values[column_id]),
+                    get_cached_decompressed_unstructured_array(column_id),
                     literal
             );
         case LiteralType::EpochDateT:
@@ -416,7 +370,7 @@ bool Output::evaluate_filter(
 
 bool Output::evaluate_int_filter(
         FilterOperation op,
-        int64_t value,
+        int32_t column_id,
         std::shared_ptr<Literal> const& operand
 ) {
     if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
@@ -428,19 +382,29 @@ bool Output::evaluate_int_filter(
         return false;
     }
 
+    for (BaseColumnReader* reader : m_basic_readers[column_id]) {
+        int64_t value = std::get<int64_t>(reader->extract_value(m_cur_message));
+        if (evaluate_int_filter_core(op, value, op_value)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Output::evaluate_int_filter_core(FilterOperation op, int64_t value, int64_t operand) {
     switch (op) {
         case FilterOperation::EQ:
-            return value == op_value;
+            return value == operand;
         case FilterOperation::NEQ:
-            return value != op_value;
+            return value != operand;
         case FilterOperation::LT:
-            return value < op_value;
+            return value < operand;
         case FilterOperation::GT:
-            return value > op_value;
+            return value > operand;
         case FilterOperation::LTE:
-            return value <= op_value;
+            return value <= operand;
         case FilterOperation::GTE:
-            return value >= op_value;
+            return value >= operand;
         default:
             return false;
     }
@@ -448,7 +412,7 @@ bool Output::evaluate_int_filter(
 
 bool Output::evaluate_float_filter(
         FilterOperation op,
-        double value,
+        int32_t column_id,
         std::shared_ptr<Literal> const& operand
 ) {
     if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
@@ -460,19 +424,29 @@ bool Output::evaluate_float_filter(
         return false;
     }
 
+    for (BaseColumnReader* reader : m_basic_readers[column_id]) {
+        double value = std::get<double>(reader->extract_value(m_cur_message));
+        if (evaluate_float_filter_core(op, value, op_value)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Output::evaluate_float_filter_core(FilterOperation op, double value, double operand) {
     switch (op) {
         case FilterOperation::EQ:
-            return value == op_value;
+            return value == operand;
         case FilterOperation::NEQ:
-            return value != op_value;
+            return value != operand;
         case FilterOperation::LT:
-            return value < op_value;
+            return value < operand;
         case FilterOperation::GT:
-            return value > op_value;
+            return value > operand;
         case FilterOperation::LTE:
-            return value <= op_value;
+            return value <= operand;
         case FilterOperation::GTE:
-            return value >= op_value;
+            return value >= operand;
         default:
             return false;
     }
@@ -481,9 +455,8 @@ bool Output::evaluate_float_filter(
 bool Output::evaluate_clp_string_filter(
         FilterOperation op,
         Query* q,
-        int32_t column_id,
-        std::shared_ptr<Literal> const& operand,
-        std::map<int32_t, std::variant<int64_t, double, std::string, uint8_t>>& extracted_values
+        std::vector<ClpStringColumnReader*> const& readers,
+        std::shared_ptr<Literal> const& operand
 ) {
     if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
         return true;
@@ -493,45 +466,41 @@ bool Output::evaluate_clp_string_filter(
         return false;
     }
 
-    auto* reader = m_clp_string_readers[column_id];
-    int64_t id = reader->get_encoded_id(m_cur_message);
-    bool matched = false;
-
     if (q->search_string_matches_all()) {
         return op == FilterOperation::EQ;
     }
 
-    auto vars = reader->get_encoded_vars(m_cur_message);
-    for (auto const& subquery : q->get_sub_queries()) {
-        if (subquery.matches_logtype(id) && subquery.matches_vars(vars)) {
-            matched = true;
-
-            if (subquery.wildcard_match_required()) {
-                std::string decompressed_message
-                        = std::get<std::string>(reader->extract_value(m_cur_message));
-                matched = StringUtils::wildcard_match_unsafe(
-                        decompressed_message,
-                        q->get_search_string(),
-                        !q->get_ignore_case()
-                );
-                matched = (op == FilterOperation::EQ) == matched;
-                if (matched) {
-                    extracted_values[column_id] = std::move(decompressed_message);
-                    m_cached_string_columns.insert(column_id);
+    bool matched = false;
+    for (ClpStringColumnReader* reader : readers) {
+        int64_t id = reader->get_encoded_id(m_cur_message);
+        auto vars = reader->get_encoded_vars(m_cur_message);
+        for (auto const& subquery : q->get_sub_queries()) {
+            if (subquery.matches_logtype(id) && subquery.matches_vars(vars)) {
+                if (subquery.wildcard_match_required()) {
+                    std::string decompressed_message
+                            = std::get<std::string>(reader->extract_value(m_cur_message));
+                    matched = StringUtils::wildcard_match_unsafe(
+                            decompressed_message,
+                            q->get_search_string(),
+                            !q->get_ignore_case()
+                    );
+                } else {
+                    matched = true;
                 }
-                return matched;
+                break;
             }
+        }
 
-            break;
+        if ((op == FilterOperation::EQ) == matched) {
+            return true;
         }
     }
-
-    return (op == FilterOperation::EQ) == matched;
+    return false;
 }
 
 bool Output::evaluate_var_string_filter(
         FilterOperation op,
-        VariableStringColumnReader* reader,
+        std::vector<VariableStringColumnReader*> const& readers,
         std::unordered_set<int64_t>* matching_vars,
         std::shared_ptr<Literal> const& operand
 ) const {
@@ -539,16 +508,19 @@ bool Output::evaluate_var_string_filter(
         return true;
     }
 
-    int64_t id = reader->get_variable_id(m_cur_message);
-    bool matched = matching_vars->count(id);
-    switch (op) {
-        case FilterOperation::EQ:
-            return matched;
-        case FilterOperation::NEQ:
-            return !matched;
-        default:
-            return false;
+    if (FilterOperation::EQ != op && FilterOperation::NEQ != op) {
+        return false;
     }
+
+    for (VariableStringColumnReader* reader : readers) {
+        int64_t id = reader->get_variable_id(m_cur_message);
+        bool matched = matching_vars->count(id) > 0;
+
+        if ((FilterOperation::EQ == op) == matched) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool Output::evaluate_array_filter(
@@ -860,7 +832,7 @@ bool Output::evaluate_wildcard_array_filter(
 
 bool Output::evaluate_bool_filter(
         FilterOperation op,
-        bool value,
+        int32_t column_id,
         std::shared_ptr<Literal> const& operand
 ) {
     if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
@@ -872,14 +844,25 @@ bool Output::evaluate_bool_filter(
         return false;
     }
 
-    switch (op) {
-        case FilterOperation::EQ:
-            return value == op_value;
-        case FilterOperation::NEQ:
-            return value != op_value;
-        default:
-            return false;
+    bool rvalue = false;
+    for (BaseColumnReader* reader : m_basic_readers[column_id]) {
+        bool value = std::get<uint8_t>(reader->extract_value(m_cur_message));
+        switch (op) {
+            case FilterOperation::EQ:
+                rvalue = value == op_value;
+                break;
+            case FilterOperation::NEQ:
+                rvalue = value != op_value;
+                break;
+            default:
+                rvalue = false;
+                break;
+        }
+        if (rvalue) {
+            return true;
+        }
     }
+    return false;
 }
 
 void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
@@ -973,47 +956,31 @@ void Output::populate_searched_wildcard_columns(std::shared_ptr<Expression> cons
         if (false == col->is_pure_wildcard()) {
             return;
         }
+        m_wildcard_columns.push_back(col);
+        LiteralTypeBitmask matching_types{0};
         for (int32_t node : (*m_schemas)[m_schema]) {
-            auto tree_node_type = m_schema_tree->get_node(node)->get_type();
+            if (Schema::schema_entry_is_unordered_object(node)) {
+                continue;
+            }
+            auto tree_node_type = m_schema_tree->get_node(node).get_type();
             if (col->matches_type(node_to_literal_type(tree_node_type))) {
-                if (tree_node_type == NodeType::CLPSTRING) {
-                    m_wildcard_to_searched_clpstrings[col].push_back(node);
-                } else if (tree_node_type == NodeType::VARSTRING) {
-                    m_wildcard_to_searched_varstrings[col].push_back(node);
-                } else if (tree_node_type == NodeType::DATESTRING) {
-                    m_wildcard_to_searched_datestrings[col].push_back(node);
-                } else {
-                    // Arrays and basic types
-                    m_wildcard_to_searched_columns[col].push_back(node);
+                auto literal_type = node_to_literal_type(tree_node_type);
+                matching_types |= literal_type;
+                if (NodeType::ClpString != tree_node_type && NodeType::VarString != tree_node_type
+                    && NodeType::DateString != tree_node_type)
+                {
+                    m_wildcard_to_searched_basic_columns[col].insert(node);
                 }
             }
         }
+        col->set_matching_types(matching_types);
     }
 }
 
 void Output::add_wildcard_columns_to_searched_columns() {
-    for (auto& e : m_wildcard_to_searched_clpstrings) {
-        for (int32_t node : e.second) {
-            m_match.add_searched_column_to_schema(m_schema, node);
-        }
-    }
-
-    for (auto& e : m_wildcard_to_searched_varstrings) {
-        for (int32_t node : e.second) {
-            m_match.add_searched_column_to_schema(m_schema, node);
-        }
-    }
-
-    for (auto& e : m_wildcard_to_searched_datestrings) {
-        for (int32_t node : e.second) {
-            m_match.add_searched_column_to_schema(m_schema, node);
-        }
-    }
-
-    for (auto& e : m_wildcard_to_searched_columns) {
-        for (int32_t node : e.second) {
-            m_match.add_searched_column_to_schema(m_schema, node);
-        }
+    m_wildcard_type_mask = 0;
+    for (ColumnDescriptor* wildcard : m_wildcard_columns) {
+        m_wildcard_type_mask |= wildcard->get_matching_types();
     }
 }
 
@@ -1091,15 +1058,20 @@ Output::constant_propagate(std::shared_ptr<Expression> const& expr, int32_t sche
             // trivially matching
             // FIXME: have an edgecase to handle with NEXISTS on pure wildcard columns
             return EvaluatedValue::True;
-        } else if (filter->get_column()->is_pure_wildcard() && filter->get_column()->matches_any(LiteralType::ClpStringT | LiteralType::VarStringT))
+        } else if (filter->get_column()->is_pure_wildcard()
+                   && filter->get_column()->matches_any(
+                           LiteralType::ClpStringT | LiteralType::VarStringT
+                   ))
         {
             auto wildcard = filter->get_column().get();
             bool has_var_string = false;
             bool matches_var_string = false;
             bool has_clp_string = false;
             bool matches_clp_string = false;
-            bool has_other = !m_wildcard_to_searched_columns[wildcard].empty()
-                             || !m_wildcard_to_searched_datestrings[wildcard].empty();
+            constexpr LiteralTypeBitmask other_types = LiteralType::ArrayT | cIntegralTypes
+                                                       | LiteralType::NullT | LiteralType::BooleanT
+                                                       | LiteralType::EpochDateT;
+            bool has_other = wildcard->matches_any(other_types);
             std::string filter_string;
             bool valid
                     = filter->get_operand()->as_var_string(filter_string, filter->get_operation())
@@ -1113,23 +1085,23 @@ Output::constant_propagate(std::shared_ptr<Expression> const& expr, int32_t sche
             }
             if (filter->get_column()->matches_type(LiteralType::ClpStringT)) {
                 m_expr_clp_query[expr.get()] = &m_string_query_map.at(filter_string);
-                has_clp_string = !m_wildcard_to_searched_clpstrings[wildcard].empty();
+                has_clp_string = wildcard->matches_type(LiteralType::ClpStringT);
                 matches_clp_string
                         = !m_expr_clp_query.at(expr.get())->get_sub_queries().empty()
                           || m_expr_clp_query.at(expr.get())->search_string_matches_all();
             }
             if (filter->get_column()->matches_type(LiteralType::VarStringT)) {
                 m_expr_var_match_map[expr.get()] = &m_string_var_match_map.at(filter_string);
-                has_var_string = !m_wildcard_to_searched_varstrings[wildcard].empty();
+                has_var_string = wildcard->matches_type(LiteralType::VarStringT);
                 matches_var_string = !m_expr_var_match_map.at(expr.get())->empty();
             }
 
             if (filter->get_operation() == FilterOperation::EQ) {
                 if (false == matches_clp_string) {
-                    m_wildcard_to_searched_clpstrings[wildcard].clear();
+                    wildcard->remove_matching_type(LiteralType::ClpStringT);
                 }
                 if (false == matches_var_string) {
-                    m_wildcard_to_searched_varstrings[wildcard].clear();
+                    wildcard->remove_matching_type(LiteralType::VarStringT);
                 }
 
                 if (has_other) {
@@ -1212,6 +1184,15 @@ bool Output::evaluate_epoch_date_filter(
         DateStringColumnReader* reader,
         std::shared_ptr<Literal>& operand
 ) {
-    return evaluate_int_filter(op, reader->get_encoded_time(m_cur_message), operand);
+    if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
+        return true;
+    }
+
+    int64_t op_value;
+    if (false == operand->as_int(op_value, op)) {
+        return false;
+    }
+
+    return evaluate_int_filter_core(op, reader->get_encoded_time(m_cur_message), op_value);
 }
 }  // namespace clp_s::search

@@ -138,7 +138,7 @@ set(
 )
 
 add_executable(clo ${CLO_SOURCES} ${REDUCER_SOURCES})
-target_compile_features(clo PRIVATE cxx_std_17)
+target_compile_features(clo PRIVATE cxx_std_20)
 target_include_directories(clo PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 target_link_libraries(clo
         PRIVATE

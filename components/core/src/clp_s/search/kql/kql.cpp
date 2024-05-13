@@ -28,9 +28,6 @@ using namespace kql;
 
 namespace clp_s::search::kql {
 class ErrorListener : public BaseErrorListener {
-private:
-    bool m_error = false;
-
 public:
     void syntaxError(
             Recognizer* recognizer,
@@ -41,9 +38,16 @@ public:
             std::exception_ptr e
     ) override {
         m_error = true;
+        m_error_message = msg;
     }
 
     bool error() const { return m_error; }
+
+    std::string const& message() const { return m_error_message; }
+
+private:
+    bool m_error{false};
+    std::string m_error_message;
 };
 
 class ParseTreeVisitor : public KqlBaseVisitor {
@@ -227,17 +231,19 @@ std::shared_ptr<Expression> parse_kql_expression(std::istream& in) {
 
     ANTLRInputStream input(in);
     KqlLexer lexer(&input);
+    lexer.removeErrorListeners();
     lexer.addErrorListener(&lexer_error_listener);
     CommonTokenStream tokens(&lexer);
     KqlParser parser(&tokens);
+    parser.removeErrorListeners();
     parser.addErrorListener(&parser_error_listener);
     KqlParser::StartContext* tree = parser.start();
 
     if (lexer_error_listener.error()) {
-        SPDLOG_ERROR("Lexer error");
+        SPDLOG_ERROR("Lexer error: {}", lexer_error_listener.message());
         return {};
     } else if (parser_error_listener.error()) {
-        SPDLOG_ERROR("Parser error");
+        SPDLOG_ERROR("Parser error: {}", parser_error_listener.message());
         return {};
     }
 
