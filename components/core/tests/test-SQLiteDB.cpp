@@ -21,6 +21,11 @@
 
 using epochtime_t = int64_t;
 using clp::SQLiteDB;
+using std::pair;
+using std::string;
+using std::string_view;
+using std::unordered_map;
+using std::vector;
 
 namespace {
 /**
@@ -28,7 +33,7 @@ namespace {
  */
 class Row {
 public:
-    Row(std::string path,
+    Row(string path,
         epochtime_t begin_ts,
         epochtime_t end_ts,
         size_t segment_id,
@@ -41,14 +46,14 @@ public:
               m_segment_ts_pos{segment_ts_pos},
               m_segment_var_pos{segment_var_pos} {}
 
-    Row(std::string path,
+    Row(string path,
         epochtime_t begin_ts,
         epochtime_t end_ts,
         size_t segment_id,
         size_t segment_x_pos)
             : Row(std::move(path), begin_ts, end_ts, segment_id, segment_x_pos, segment_x_pos) {}
 
-    [[nodiscard]] auto get_path() const -> std::string const& { return m_path; }
+    [[nodiscard]] auto get_path() const -> string const& { return m_path; }
 
     [[nodiscard]] auto get_begin_ts() const -> epochtime_t { return m_begin_ts; }
 
@@ -67,7 +72,7 @@ public:
     }
 
 private:
-    std::string m_path;
+    string m_path;
     epochtime_t m_begin_ts;
     epochtime_t m_end_ts;
     size_t m_segment_id;
@@ -88,7 +93,7 @@ public:
     static constexpr char const* cSegmentVarPos{"segment_variable_position"};
 
     TestTableSchema() {
-        auto add_column = [&](std::string_view column_name, std::string_view type) -> void {
+        auto add_column = [&](string_view column_name, string_view type) -> void {
             m_columns.emplace_back(column_name);
             m_column_types.emplace_back(column_name, type);
         };
@@ -101,19 +106,18 @@ public:
         add_column(cSegmentVarPos, "INTEGER");
     }
 
-    [[nodiscard]] auto get_name() const -> std::string_view { return m_name; }
+    [[nodiscard]] auto get_name() const -> string_view { return m_name; }
 
-    [[nodiscard]] auto get_columns() const -> std::vector<std::string> const& { return m_columns; }
+    [[nodiscard]] auto get_columns() const -> vector<string> const& { return m_columns; }
 
-    [[nodiscard]] auto get_column_types() const
-            -> std::vector<std::pair<std::string, std::string>> const& {
+    [[nodiscard]] auto get_column_types() const -> vector<pair<string, string>> const& {
         return m_column_types;
     }
 
 private:
-    std::string m_name{"CLP_TEST_TABLE"};
-    std::vector<std::string> m_columns;
-    std::vector<std::pair<std::string, std::string>> m_column_types;
+    string m_name{"CLP_TEST_TABLE"};
+    vector<string> m_columns;
+    vector<pair<string, string>> m_column_types;
 };
 
 /**
@@ -195,7 +199,7 @@ auto create_indices(SQLiteDB& db, TestTableSchema const& table_schema) -> void {
  * @param table_schema
  * @param rows
  */
-auto create_db(TestTableSchema const& table_schema, std::vector<Row> const& rows) -> void {
+auto create_db(TestTableSchema const& table_schema, vector<Row> const& rows) -> void {
     auto const db_path{get_test_db_abs_path()};
     if (std::filesystem::exists(db_path)) {
         REQUIRE((std::filesystem::remove(db_path)));
@@ -211,7 +215,7 @@ auto create_db(TestTableSchema const& table_schema, std::vector<Row> const& rows
     // Shuffle table columns to test inserting with random ordering
     // NOLINTNEXTLINE(cert-msc32-c, cert-msc51-cpp)
     std::shuffle(table_columns.begin(), table_columns.end(), std::default_random_engine{});
-    std::unordered_map<std::string, int> placeholder_idx_map;
+    unordered_map<string, int> placeholder_idx_map;
     int idx{2};
     std::optional<int> segment_x_pos_idx{std::nullopt};
     fmt::memory_buffer placeholder_buf;
@@ -250,7 +254,7 @@ auto create_db(TestTableSchema const& table_schema, std::vector<Row> const& rows
             "INSERT INTO {} ({}) VALUES ({})",
             table_schema.get_name(),
             clp::get_field_names_sql(table_columns),
-            std::string{placeholder_buf.begin(), placeholder_buf.end()}
+            string{placeholder_buf.begin(), placeholder_buf.end()}
     );
     auto insert_stmt{sqlite_db.prepare_statement(stmt_buf.data(), stmt_buf.size())};
     stmt_buf.clear();
@@ -308,7 +312,7 @@ auto create_db(TestTableSchema const& table_schema, std::vector<Row> const& rows
 }  // namespace
 
 TEST_CASE("sqlite_db_basic", "[SQLiteDB]") {
-    std::vector<Row> ref_rows{
+    vector<Row> ref_rows{
             // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
             {"0.log", 1000, 2000, 0, 0},
             {"1.log", 1200, 1800, 0, 30},
@@ -328,7 +332,7 @@ TEST_CASE("sqlite_db_basic", "[SQLiteDB]") {
     // Shuffle table columns to test selecting with random ordering
     // NOLINTNEXTLINE(cert-msc32-c, cert-msc51-cpp)
     std::shuffle(table_columns.begin(), table_columns.end(), std::default_random_engine{});
-    std::unordered_map<std::string, int> selected_column_idx;
+    unordered_map<string, int> selected_column_idx;
     size_t idx{0};
     for (auto const& column : table_columns) {
         selected_column_idx.emplace(column, idx++);
@@ -347,14 +351,14 @@ TEST_CASE("sqlite_db_basic", "[SQLiteDB]") {
     auto select_stmt{sqlite_db.prepare_statement(stmt_buf.data(), stmt_buf.size())};
     stmt_buf.clear();
 
-    std::vector<Row> rows;
+    vector<Row> rows;
     while (true) {
         select_stmt.step();
         if (false == select_stmt.is_row_ready()) {
             break;
         }
 
-        std::string path;
+        string path;
         auto const path_idx_it{selected_column_idx.find(TestTableSchema::cPath)};
         REQUIRE((selected_column_idx.cend() != path_idx_it));
         select_stmt.column_string(path_idx_it->second, path);
