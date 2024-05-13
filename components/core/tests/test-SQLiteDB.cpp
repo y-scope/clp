@@ -2,7 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
-#include <memory>
+#include <iterator>
 #include <random>
 #include <string>
 #include <string_view>
@@ -16,7 +16,6 @@
 
 #include "../src/clp/database_utils.hpp"
 #include "../src/clp/SQLiteDB.hpp"
-#include "../src/clp/SQLitePreparedStatement.hpp"
 
 using epochtime_t = int64_t;
 using clp::SQLiteDB;
