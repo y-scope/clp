@@ -250,13 +250,15 @@ def run_clp(
     # Close stderr log file
     stderr_log_file.close()
 
+    worker_output = {
+        "total_uncompressed_size": total_uncompressed_size,
+        "total_compressed_size": total_compressed_size,
+    }
     if compression_successful:
-        return compression_successful, {
-            "total_uncompressed_size": total_uncompressed_size,
-            "total_compressed_size": total_compressed_size,
-        }
+        return CompressionTaskStatus.SUCCEEDED, worker_output
     else:
-        return compression_successful, {"error_message": f"See logs {stderr_log_path}"}
+        worker_output["error_message"] = f"See logs {stderr_log_path}"
+        return CompressionTaskStatus.FAILED, worker_output
 
 
 @app.task(bind=True)
@@ -288,7 +290,7 @@ def compress(
     ) as db_cursor:
         start_time = datetime.datetime.now()
         logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")
-        compression_successful, worker_output = run_clp(
+        compression_task_status, worker_output = run_clp(
             clp_io_config,
             pathlib.Path(clp_home_str),
             pathlib.Path(data_dir_str),
@@ -305,46 +307,29 @@ def compress(
         duration = (datetime.datetime.now() - start_time).total_seconds()
         logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
 
-        if compression_successful:
-            uncompressed_size = worker_output["total_uncompressed_size"]
-            compressed_size = worker_output["total_compressed_size"]
+        update_compression_task_metadata(
+            db_cursor,
+            task_id,
+            dict(
+                start_time=start_time,
+                status=compression_task_status,
+                partition_uncompressed_size=worker_output["total_uncompressed_size"],
+                partition_compressed_size=worker_output["total_compressed_size"],
+                duration=duration,
+            ),
+        )
+        db_conn.commit()
 
-            update_compression_task_metadata(
-                db_cursor,
-                task_id,
-                dict(
-                    start_time=start_time,
-                    status=CompressionTaskStatus.SUCCEEDED,
-                    partition_uncompressed_size=uncompressed_size,
-                    partition_compressed_size=compressed_size,
-                    duration=duration,
-                ),
-            )
-            db_conn.commit()
+        compression_task_result = CompressionTaskResult(
+            task_id=task_id,
+            status=compression_task_status,
+            duration=duration,
+        )
 
+        if CompressionTaskStatus.SUCCEEDED == compression_task_status:
             increment_compression_job_metadata(db_cursor, job_id, dict(num_tasks_completed=1))
             db_conn.commit()
-
-            return CompressionTaskResult(
-                task_id=task_id,
-                status=CompressionTaskStatus.SUCCEEDED,
-                duration=duration,
-            ).dict()
         else:
-            update_compression_task_metadata(
-                db_cursor,
-                task_id,
-                dict(
-                    start_time=start_time,
-                    status=CompressionTaskStatus.FAILED,
-                    duration=duration,
-                ),
-            )
-            db_conn.commit()
+            compression_task_result.error_message = worker_output["error_message"]
 
-            return CompressionTaskResult(
-                task_id=task_id,
-                status=CompressionTaskStatus.FAILED,
-                duration=duration,
-                error_message=worker_output["error_message"],
-            ).dict()
+        return compression_task_result.dict()
