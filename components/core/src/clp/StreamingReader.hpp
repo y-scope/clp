@@ -93,7 +93,6 @@ public:
     static auto deinit() -> void;
 
     /**
-     * Constructor.
      * @param buffer_pool_size Total number of buffers available for fetching.
      * @param buffer_size The size of each data buffer.
      */
@@ -266,7 +265,7 @@ private:
     /**
      * This class implements clp::Thread to fetch data using CURL.
      */
-    class TransferThread : public clp::Thread {
+    class TransferThread : public Thread {
     public:
         // Constructor
         TransferThread(StreamingReader& reader, size_t offset, bool disable_caching)
@@ -276,13 +275,12 @@ private:
 
     private:
         // Methods implementing `clp::Thread`
-        auto thread_method() -> void override final;
+        auto thread_method() -> void final;
 
         StreamingReader& m_reader;
         size_t m_offset;
         bool m_disable_caching;
     };
-    friend class TransferThread;
 
     static constexpr uint32_t cConditionVariableTimeoutMilliSecond{50};
 

@@ -40,14 +40,14 @@ private:
 };
 
 /**
- * This class wraps the C implementation of the Curl string list. It provides a cleaner interface to
- * manage the life cycle of the object with proper error handling.
+ * A C++ wrapper for libcurl's string linked list (curl_slist).
  */
 class CurlStringList {
 public:
     // Constructors
     CurlStringList() = default;
 
+    // Disable copy/move constructors/assignment operators
     CurlStringList(CurlStringList const&) = delete;
     CurlStringList(CurlStringList&&) = delete;
     auto operator=(CurlStringList const&) -> CurlStringList& = delete;
@@ -60,7 +60,7 @@ public:
     /**
      * Appends a string to the end of the list.
      * @param str
-     * @throw CurlOperationFailed if append operation failed.
+     * @throw CurlOperationFailed if the append operation failed.
      */
     auto append(std::string_view str) -> void {
         auto* list_after_appending{curl_slist_append(m_list, str.data())};
@@ -88,10 +88,6 @@ private:
  */
 class CurlDownloadHandler {
 public:
-    using ProgressCallbackType
-            = std::function<int(void*, curl_off_t, curl_off_t, curl_off_t, curl_off_t)>;
-    using WriteCallbackType = std::function<size_t(char*, size_t, size_t, void*)>;
-
     // Constructor
     CurlDownloadHandler(
             StreamingReader& reader,
@@ -104,9 +100,8 @@ public:
 
     // Methods
     /**
-     * Downloads the data. This function returns when the download ends or failed. The status will
-     * be indicated in the return value.
-     * @return error code returned fro the underlying `curl_easy_perform`.
+     * Downloads the data. This function returns when the download completes or fails.
+     * @return Same as `curl_easy_perform`.
      */
     [[nodiscard]] auto download() -> CURLcode { return curl_easy_perform(m_handler.get()); }
 
@@ -120,11 +115,11 @@ private:
     };
 
     /**
-     * Wrapper of `curl_easy_setopt`.
+     * Sets the given CURL option for this handler.
      * @tparam ValueType
      * @param option
      * @param value
-     * @throw CurlOperationFailed if an error happened.
+     * @throw CurlOperationFailed if an error occurs.
      */
     template <typename ValueType>
     auto set_option(CURLoption option, ValueType value) -> void {
@@ -138,10 +133,9 @@ private:
 };
 
 /**
- * Note: this function must have C linkage since it is a libcurl callback function.
  * libcurl progress callback used only to determine whether to abort the current transfer.
- * Doc: https://curl.se/libcurl/c/CURLOPT_XFERINFOFUNCTION.html
- * @param reader_ptr A pointer to an instance of this class.
+ * NOTE: This function must have C linkage to be a libcurl callback.
+ * @param reader_ptr A pointer to a `StreamingReader`.
  * @param dltotal Unused
  * @param dlnow Unused
  * @param ultotal Unused
@@ -159,14 +153,14 @@ extern "C" auto curl_download_progress_callback(
 }
 
 /**
- * Note: this function must have C linkage since it is a libcurl callback function.
- * Write-back callback. This is how the data is written into the fetching buffer.
- * Doc: https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html
- * @param ptr A pointer to an instance of StreamingReader.
- * @param size Number of bytes of the input data.
- * @param nmemb
- * @param reader_ptr A pointer pointing to an instance of StreamingReader.
- * @return Number of bytes transferred (fetched).
+ * libcurl write callback that writes downloaded data into the fetching buffer.
+ * NOTE: This function must have C linkage to be a libcurl callback.
+ * @param ptr The downloaded data
+ * @param size Always 1
+ * @param nmemb The number of bytes downloaded
+ * @param reader_ptr A pointer to a `StreamingReader`.
+ * @return On success, the number of bytes processed. If this is less than `nmemb`, the download
+ * will be aborted.
  */
 extern "C" auto
 curl_download_write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr) -> size_t {
