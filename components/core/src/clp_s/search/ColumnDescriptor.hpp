@@ -176,6 +176,11 @@ public:
     LiteralType get_literal_type() const { return static_cast<LiteralType>(m_flags); }
 
     /**
+     * @return a bitmask indicating all of the matching types for this column.
+     */
+    LiteralTypeBitmask get_matching_types() const { return m_flags; }
+
+    /**
      * Whether the list of Descriptor's contains any wildcards
      * @return true if the descriptor contains any wildcards that need to be resolved
      */
@@ -224,6 +229,11 @@ private:
      * set the appropriate flags.
      */
     void check_and_set_unresolved_descriptor_flag();
+
+    /**
+     * Scans the list of descriptors to eliminate any series of multiple wildcards in a row.
+     */
+    void simplify_descriptor_wildcards();
 };
 }  // namespace clp_s::search
 

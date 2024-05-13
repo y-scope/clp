@@ -288,13 +288,13 @@ MetadataDB::FileIterator::FileIterator(
         segment_id_t segment_id
 )
         : Iterator(get_files_select_statement(
-                db,
-                begin_timestamp,
-                end_timestamp,
-                file_path,
-                in_specific_segment,
-                segment_id
-        )) {}
+                  db,
+                  begin_timestamp,
+                  end_timestamp,
+                  file_path,
+                  in_specific_segment,
+                  segment_id
+          )) {}
 
 MetadataDB::EmptyDirectoryIterator::EmptyDirectoryIterator(SQLiteDB& db)
         : Iterator(get_empty_directories_select_statement(db)) {}

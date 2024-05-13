@@ -4,6 +4,7 @@
 #include <string>
 #include <variant>
 
+#include "BufferViewReader.hpp"
 #include "DictionaryReader.hpp"
 #include "SchemaTree.hpp"
 #include "TimestampDictionaryReader.hpp"
@@ -21,23 +22,21 @@ public:
     };
 
     // Constructor
-    BaseColumnReader(std::string name, int32_t id) : m_name(std::move(name)), m_id(id) {}
+    BaseColumnReader(int32_t id) : m_id(id) {}
 
     // Destructor
     virtual ~BaseColumnReader() = default;
 
     /**
-     * Reads the column from the disk
-     * @param decompressor
+     * Reads the column from a shared buffer.
+     * @param buffer
      * @param num_messages
      */
-    virtual void load(ZstdDecompressor& decompressor, uint64_t num_messages) = 0;
-
-    std::string get_name() const { return m_name; }
+    virtual void load(BufferViewReader& reader, uint64_t num_messages) = 0;
 
     int32_t get_id() const { return m_id; }
 
-    virtual NodeType get_type() { return NodeType::UNKNOWN; }
+    virtual NodeType get_type() { return NodeType::Unknown; }
 
     /**
      * Extracts a value of the column
@@ -55,23 +54,21 @@ public:
     virtual void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) = 0;
 
 private:
-    std::string m_name;
     int32_t m_id;
 };
 
 class Int64ColumnReader : public BaseColumnReader {
 public:
     // Constructor
-    explicit Int64ColumnReader(std::string name, int32_t id)
-            : BaseColumnReader(std::move(name), id) {}
+    explicit Int64ColumnReader(int32_t id) : BaseColumnReader(id) {}
 
     // Destructor
     ~Int64ColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
-    void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
+    void load(BufferViewReader& reader, uint64_t num_messages) override;
 
-    NodeType get_type() override { return NodeType::INTEGER; }
+    NodeType get_type() override { return NodeType::Integer; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
@@ -79,22 +76,21 @@ public:
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 
 private:
-    std::unique_ptr<int64_t[]> m_values;
+    UnalignedMemSpan<int64_t> m_values;
 };
 
 class FloatColumnReader : public BaseColumnReader {
 public:
     // Constructor
-    explicit FloatColumnReader(std::string name, int32_t id)
-            : BaseColumnReader(std::move(name), id) {}
+    explicit FloatColumnReader(int32_t id) : BaseColumnReader(id) {}
 
     // Destructor
     ~FloatColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
-    void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
+    void load(BufferViewReader& reader, uint64_t num_messages) override;
 
-    NodeType get_type() override { return NodeType::FLOAT; }
+    NodeType get_type() override { return NodeType::Float; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
@@ -102,22 +98,21 @@ public:
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 
 private:
-    std::unique_ptr<double[]> m_values;
+    UnalignedMemSpan<double> m_values;
 };
 
 class BooleanColumnReader : public BaseColumnReader {
 public:
     // Constructor
-    explicit BooleanColumnReader(std::string name, int32_t id)
-            : BaseColumnReader(std::move(name), id) {}
+    explicit BooleanColumnReader(int32_t id) : BaseColumnReader(id) {}
 
     // Destructor
     ~BooleanColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
-    void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
+    void load(BufferViewReader& reader, uint64_t num_messages) override;
 
-    NodeType get_type() override { return NodeType::BOOLEAN; }
+    NodeType get_type() override { return NodeType::Boolean; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
@@ -125,20 +120,19 @@ public:
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 
 private:
-    std::unique_ptr<uint8_t[]> m_values;
+    UnalignedMemSpan<uint8_t> m_values;
 };
 
 class ClpStringColumnReader : public BaseColumnReader {
 public:
     // Constructor
     ClpStringColumnReader(
-            std::string const& name,
             int32_t id,
             std::shared_ptr<VariableDictionaryReader> var_dict,
             std::shared_ptr<LogTypeDictionaryReader> log_dict,
             bool is_array = false
     )
-            : BaseColumnReader(name, id),
+            : BaseColumnReader(id),
               m_var_dict(std::move(var_dict)),
               m_log_dict(std::move(log_dict)),
               m_is_array(is_array) /*, encoded_vars_index_(0)*/ {}
@@ -147,9 +141,11 @@ public:
     ~ClpStringColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
-    void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
+    void load(BufferViewReader& reader, uint64_t num_messages) override;
 
-    NodeType get_type() override { return m_is_array ? NodeType::ARRAY : NodeType::CLPSTRING; }
+    NodeType get_type() override {
+        return m_is_array ? NodeType::UnstructuredArray : NodeType::ClpString;
+    }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
@@ -168,15 +164,14 @@ public:
      * @param cur_message
      * @return Encoded variables in a span
      */
-    Span<int64_t> get_encoded_vars(uint64_t cur_message);
+    UnalignedMemSpan<int64_t> get_encoded_vars(uint64_t cur_message);
 
 private:
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
     std::shared_ptr<LogTypeDictionaryReader> m_log_dict;
 
-    std::unique_ptr<int64_t[]> m_logtypes;
-    std::unique_ptr<int64_t[]> m_encoded_vars;
-    // size_t encoded_vars_index_;
+    UnalignedMemSpan<uint64_t> m_logtypes;
+    UnalignedMemSpan<int64_t> m_encoded_vars;
 
     bool m_is_array;
 };
@@ -184,21 +179,17 @@ private:
 class VariableStringColumnReader : public BaseColumnReader {
 public:
     // Constructor
-    VariableStringColumnReader(
-            std::string const& name,
-            int32_t id,
-            std::shared_ptr<VariableDictionaryReader> var_dict
-    )
-            : BaseColumnReader(name, id),
+    VariableStringColumnReader(int32_t id, std::shared_ptr<VariableDictionaryReader> var_dict)
+            : BaseColumnReader(id),
               m_var_dict(std::move(var_dict)) {}
 
     // Destructor
     ~VariableStringColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
-    void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
+    void load(BufferViewReader& reader, uint64_t num_messages) override;
 
-    NodeType get_type() override { return NodeType::VARSTRING; }
+    NodeType get_type() override { return NodeType::VarString; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
@@ -215,27 +206,23 @@ public:
 private:
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
 
-    std::unique_ptr<int64_t[]> m_variables;
+    UnalignedMemSpan<uint64_t> m_variables;
 };
 
 class DateStringColumnReader : public BaseColumnReader {
 public:
     // Constructor
-    DateStringColumnReader(
-            std::string const& name,
-            int32_t id,
-            std::shared_ptr<TimestampDictionaryReader> timestamp_dict
-    )
-            : BaseColumnReader(name, id),
+    DateStringColumnReader(int32_t id, std::shared_ptr<TimestampDictionaryReader> timestamp_dict)
+            : BaseColumnReader(id),
               m_timestamp_dict(std::move(timestamp_dict)) {}
 
     // Destructor
     ~DateStringColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
-    void load(ZstdDecompressor& decompressor, uint64_t num_messages) override;
+    void load(BufferViewReader& reader, uint64_t num_messages) override;
 
-    NodeType get_type() override { return NodeType::DATESTRING; }
+    NodeType get_type() override { return NodeType::DateString; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
     ) override;
@@ -251,8 +238,8 @@ public:
 private:
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dict;
 
-    std::unique_ptr<int64_t[]> m_timestamps;
-    std::unique_ptr<int64_t[]> m_timestamp_encodings;
+    UnalignedMemSpan<int64_t> m_timestamps;
+    UnalignedMemSpan<int64_t> m_timestamp_encodings;
 };
 }  // namespace clp_s
 

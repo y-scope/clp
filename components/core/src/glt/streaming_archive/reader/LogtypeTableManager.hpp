@@ -25,7 +25,7 @@ public:
         }
     };
 
-    LogtypeTableManager() : m_is_open(false){};
+    LogtypeTableManager() : m_is_open(false) {};
 
     /**
      * Open the concated variable segment file and metadata associated with the segment

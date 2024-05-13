@@ -24,42 +24,35 @@ public:
     void set_id(int32_t schema_id) { m_schema_id = schema_id; }
 
     /**
-     * Adds an int64_t value to the message for a given MST node ID.
+     * Adds a value to the message for a given MST node ID.
+     * @tparam T
      * @param node_id
      * @param value
      */
-    inline void add_value(int32_t node_id, int64_t value) { m_message.emplace(node_id, value); }
-
-    /**
-     * Adds a double value to the message for a given MST node ID.
-     * @param node_id
-     * @param value
-     */
-    inline void add_value(int32_t node_id, double value) { m_message.emplace(node_id, value); }
-
-    /**
-     * Adds a string value to the message for a given MST node ID.
-     * @param node_id
-     * @param value
-     */
-    inline void add_value(int32_t node_id, std::string const& value) {
+    template <typename T>
+    inline void add_value(int32_t node_id, T const& value) {
         m_message.emplace(node_id, value);
     }
 
     /**
-     * Adds a boolean value to the message for a given MST node ID.
-     * @param node_id
-     * @param value
-     */
-    inline void add_value(int32_t node_id, bool value) { m_message.emplace(node_id, value); }
-
-    /**
      * Adds a timestamp value and its encoding to the message for a given MST node ID.
      * @param node_id
+     * @param encoding_id
      * @param value
      */
     inline void add_value(int32_t node_id, uint64_t encoding_id, epochtime_t value) {
         m_message.emplace(node_id, std::make_pair(encoding_id, value));
+    }
+
+    /**
+     * Adds a value to the unordered region of the message. The order in which unordered values are
+     * added to the message must match the order in which the corresponding MST node IDs are added
+     * to the unordered region of the schema.
+     * @param value
+     */
+    template <typename T>
+    inline void add_unordered_value(T const& value) {
+        m_unordered_message.emplace_back(value);
     }
 
     /**
@@ -68,6 +61,7 @@ public:
     void clear() {
         m_schema_id = -1;
         m_message.clear();
+        m_unordered_message.clear();
     }
 
     /**
@@ -75,9 +69,15 @@ public:
      */
     std::map<int32_t, variable_t>& get_content() { return m_message; }
 
+    /**
+     * @return the unordered content of the message
+     */
+    std::vector<variable_t>& get_unordered_content() { return m_unordered_message; }
+
 private:
     int32_t m_schema_id;
     std::map<int32_t, variable_t> m_message;
+    std::vector<variable_t> m_unordered_message;
 };
 }  // namespace clp_s
 

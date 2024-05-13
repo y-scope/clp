@@ -1,23 +1,22 @@
 #include "ColumnReader.hpp"
 
+#include "BufferViewReader.hpp"
 #include "ColumnWriter.hpp"
-#include "Utils.hpp"
 #include "VariableDecoder.hpp"
 
 namespace clp_s {
-void Int64ColumnReader::load(ZstdDecompressor& decompressor, uint64_t num_messages) {
-    m_values = std::make_unique<int64_t[]>(num_messages);
-
-    decompressor.try_read_exact_length(
-            reinterpret_cast<char*>(m_values.get()),
-            num_messages * sizeof(int64_t)
-    );
+void Int64ColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+    m_values = reader.read_unaligned_span<int64_t>(num_messages);
 }
 
 std::variant<int64_t, double, std::string, uint8_t> Int64ColumnReader::extract_value(
         uint64_t cur_message
 ) {
     return m_values[cur_message];
+}
+
+void FloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+    m_values = reader.read_unaligned_span<double>(num_messages);
 }
 
 void Int64ColumnReader::extract_string_value_into_buffer(
@@ -27,19 +26,14 @@ void Int64ColumnReader::extract_string_value_into_buffer(
     buffer.append(std::to_string(m_values[cur_message]));
 }
 
-void FloatColumnReader::load(ZstdDecompressor& decompressor, uint64_t num_messages) {
-    m_values = std::make_unique<double[]>(num_messages);
-
-    decompressor.try_read_exact_length(
-            reinterpret_cast<char*>(m_values.get()),
-            num_messages * sizeof(double)
-    );
-}
-
 std::variant<int64_t, double, std::string, uint8_t> FloatColumnReader::extract_value(
         uint64_t cur_message
 ) {
     return m_values[cur_message];
+}
+
+void BooleanColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+    m_values = reader.read_unaligned_span<uint8_t>(num_messages);
 }
 
 void FloatColumnReader::extract_string_value_into_buffer(
@@ -49,19 +43,16 @@ void FloatColumnReader::extract_string_value_into_buffer(
     buffer.append(std::to_string(m_values[cur_message]));
 }
 
-void BooleanColumnReader::load(ZstdDecompressor& decompressor, uint64_t num_messages) {
-    m_values = std::make_unique<uint8_t[]>(num_messages);
-
-    decompressor.try_read_exact_length(
-            reinterpret_cast<char*>(m_values.get()),
-            num_messages * sizeof(uint8_t)
-    );
-}
-
 std::variant<int64_t, double, std::string, uint8_t> BooleanColumnReader::extract_value(
         uint64_t cur_message
 ) {
     return m_values[cur_message];
+}
+
+void ClpStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+    m_logtypes = reader.read_unaligned_span<uint64_t>(num_messages);
+    size_t encoded_vars_length = reader.read_value<size_t>();
+    m_encoded_vars = reader.read_unaligned_span<int64_t>(encoded_vars_length);
 }
 
 void BooleanColumnReader::extract_string_value_into_buffer(
@@ -69,27 +60,6 @@ void BooleanColumnReader::extract_string_value_into_buffer(
         std::string& buffer
 ) {
     buffer.append(0 == m_values[cur_message] ? "false" : "true");
-}
-
-void ClpStringColumnReader::load(ZstdDecompressor& decompressor, uint64_t num_messages) {
-    size_t encoded_vars_length;
-
-    m_logtypes = std::make_unique<int64_t[]>(num_messages);
-    decompressor.try_read_exact_length(
-            reinterpret_cast<char*>(m_logtypes.get()),
-            num_messages * sizeof(int64_t)
-    );
-
-    auto error_code = decompressor.try_read_numeric_value(encoded_vars_length);
-    if (ErrorCodeSuccess != error_code) {
-        throw OperationFailed(error_code, __FILENAME__, __LINE__);
-    }
-
-    m_encoded_vars = std::make_unique<int64_t[]>(encoded_vars_length);
-    decompressor.try_read_exact_length(
-            reinterpret_cast<char*>(m_encoded_vars.get()),
-            encoded_vars_length * sizeof(int64_t)
-    );
 }
 
 std::variant<int64_t, double, std::string, uint8_t> ClpStringColumnReader::extract_value(
@@ -113,7 +83,7 @@ void ClpStringColumnReader::extract_string_value_into_buffer(
     }
 
     int64_t encoded_vars_offset = ClpStringColumnWriter::get_encoded_offset(value);
-    Span<int64_t> encoded_vars(&m_encoded_vars[encoded_vars_offset], entry.get_num_vars());
+    auto encoded_vars = m_encoded_vars.sub_span(encoded_vars_offset, entry.get_num_vars());
 
     VariableDecoder::decode_variables_into_message(entry, *m_var_dict, encoded_vars, buffer);
 }
@@ -123,9 +93,9 @@ int64_t ClpStringColumnReader::get_encoded_id(uint64_t cur_message) {
     return ClpStringColumnWriter::get_encoded_log_dict_id(value);
 }
 
-Span<int64_t> ClpStringColumnReader::get_encoded_vars(uint64_t cur_message) {
+UnalignedMemSpan<int64_t> ClpStringColumnReader::get_encoded_vars(uint64_t cur_message) {
     auto value = m_logtypes[cur_message];
-    int64_t logtype_id = ClpStringColumnWriter::get_encoded_log_dict_id(value);
+    auto logtype_id = ClpStringColumnWriter::get_encoded_log_dict_id(value);
     auto& entry = m_log_dict->get_entry(logtype_id);
 
     // It should be initialized before because we are searching on this field
@@ -135,15 +105,11 @@ Span<int64_t> ClpStringColumnReader::get_encoded_vars(uint64_t cur_message) {
 
     int64_t encoded_vars_offset = ClpStringColumnWriter::get_encoded_offset(value);
 
-    return {&m_encoded_vars[encoded_vars_offset], entry.get_num_vars()};
+    return m_encoded_vars.sub_span(encoded_vars_offset, entry.get_num_vars());
 }
 
-void VariableStringColumnReader::load(ZstdDecompressor& decompressor, uint64_t num_messages) {
-    m_variables = std::make_unique<int64_t[]>(num_messages);
-    decompressor.try_read_exact_length(
-            reinterpret_cast<char*>(m_variables.get()),
-            num_messages * sizeof(int64_t)
-    );
+void VariableStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+    m_variables = reader.read_unaligned_span<uint64_t>(num_messages);
 }
 
 std::variant<int64_t, double, std::string, uint8_t> VariableStringColumnReader::extract_value(
@@ -163,18 +129,9 @@ int64_t VariableStringColumnReader::get_variable_id(uint64_t cur_message) {
     return m_variables[cur_message];
 }
 
-void DateStringColumnReader::load(ZstdDecompressor& decompressor, uint64_t num_messages) {
-    m_timestamps = std::make_unique<int64_t[]>(num_messages);
-    m_timestamp_encodings = std::make_unique<int64_t[]>(num_messages);
-
-    decompressor.try_read_exact_length(
-            reinterpret_cast<char*>(m_timestamps.get()),
-            num_messages * sizeof(int64_t)
-    );
-    decompressor.try_read_exact_length(
-            reinterpret_cast<char*>(m_timestamp_encodings.get()),
-            num_messages * sizeof(int64_t)
-    );
+void DateStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+    m_timestamps = reader.read_unaligned_span<int64_t>(num_messages);
+    m_timestamp_encodings = reader.read_unaligned_span<int64_t>(num_messages);
 }
 
 std::variant<int64_t, double, std::string, uint8_t> DateStringColumnReader::extract_value(

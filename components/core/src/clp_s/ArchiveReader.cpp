@@ -41,6 +41,7 @@ void ArchiveReader::read_metadata() {
         int32_t schema_id;
         uint64_t num_messages;
         size_t table_offset;
+        size_t uncompressed_size;
 
         if (auto error = m_table_metadata_decompressor.try_read_numeric_value(schema_id);
             ErrorCodeSuccess != error)
@@ -60,7 +61,13 @@ void ArchiveReader::read_metadata() {
             throw OperationFailed(error, __FILENAME__, __LINE__);
         }
 
-        m_id_to_table_metadata[schema_id] = {num_messages, table_offset};
+        if (auto error = m_table_metadata_decompressor.try_read_numeric_value(uncompressed_size);
+            ErrorCodeSuccess != error)
+        {
+            throw OperationFailed(error, __FILENAME__, __LINE__);
+        }
+
+        m_id_to_table_metadata[schema_id] = {num_messages, table_offset, uncompressed_size};
         m_schema_ids.push_back(schema_id);
     }
     m_table_metadata_decompressor.close();
@@ -74,7 +81,7 @@ void ArchiveReader::read_dictionaries_and_metadata() {
     read_metadata();
 }
 
-std::unique_ptr<SchemaReader> ArchiveReader::read_table(
+SchemaReader& ArchiveReader::read_table(
         int32_t schema_id,
         bool should_extract_timestamp,
         bool should_marshal_records
@@ -85,93 +92,156 @@ std::unique_ptr<SchemaReader> ArchiveReader::read_table(
         throw OperationFailed(ErrorCodeFileNotFound, __FILENAME__, __LINE__);
     }
 
-    auto schema_reader
+    auto& schema_reader
             = create_schema_reader(schema_id, should_extract_timestamp, should_marshal_records);
 
     m_tables_file_reader.try_seek_from_begin(m_id_to_table_metadata[schema_id].offset);
     m_tables_decompressor.open(m_tables_file_reader, cDecompressorFileReadBufferCapacity);
-    schema_reader->load(m_tables_decompressor);
-    m_tables_decompressor.close();
+    schema_reader.load(m_tables_decompressor, m_id_to_table_metadata[schema_id].uncompressed_size);
+    m_tables_decompressor.close_for_reuse();
     return schema_reader;
 }
 
-BaseColumnReader*
-ArchiveReader::append_reader_column(std::unique_ptr<SchemaReader>& reader, int32_t column_id) {
+BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int32_t column_id) {
     BaseColumnReader* column_reader = nullptr;
-    auto node = m_schema_tree->get_node(column_id);
-    std::string key_name = node->get_key_name();
-    switch (node->get_type()) {
-        case NodeType::INTEGER:
-            column_reader = new Int64ColumnReader(key_name, column_id);
+    auto const& node = m_schema_tree->get_node(column_id);
+    switch (node.get_type()) {
+        case NodeType::Integer:
+            column_reader = new Int64ColumnReader(column_id);
             break;
-        case NodeType::FLOAT:
-            column_reader = new FloatColumnReader(key_name, column_id);
+        case NodeType::Float:
+            column_reader = new FloatColumnReader(column_id);
             break;
-        case NodeType::CLPSTRING:
-            column_reader = new ClpStringColumnReader(key_name, column_id, m_var_dict, m_log_dict);
+        case NodeType::ClpString:
+            column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict);
             break;
-        case NodeType::VARSTRING:
-            column_reader = new VariableStringColumnReader(key_name, column_id, m_var_dict);
+        case NodeType::VarString:
+            column_reader = new VariableStringColumnReader(column_id, m_var_dict);
             break;
-        case NodeType::BOOLEAN:
-            column_reader = new BooleanColumnReader(key_name, column_id);
+        case NodeType::Boolean:
+            column_reader = new BooleanColumnReader(column_id);
             break;
-        case NodeType::ARRAY:
-            column_reader = new ClpStringColumnReader(
-                    key_name,
-                    column_id,
-                    m_var_dict,
-                    m_array_dict,
-                    true
-            );
+        case NodeType::UnstructuredArray:
+            column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_array_dict, true);
             break;
-        case NodeType::DATESTRING:
-            column_reader = new DateStringColumnReader(key_name, column_id, m_timestamp_dict);
+        case NodeType::DateString:
+            column_reader = new DateStringColumnReader(column_id, m_timestamp_dict);
             break;
-        case NodeType::OBJECT:
-        case NodeType::NULLVALUE:
-            reader->append_column(column_id);
-            break;
-        case NodeType::UNKNOWN:
+        // No need to push columns without associated object readers into the SchemaReader.
+        case NodeType::Object:
+        case NodeType::NullValue:
+        case NodeType::Unknown:
             break;
     }
 
     if (column_reader) {
-        reader->append_column(column_reader);
+        reader.append_column(column_reader);
     }
     return column_reader;
 }
 
-std::unique_ptr<SchemaReader> ArchiveReader::create_schema_reader(
+void ArchiveReader::append_unordered_reader_columns(
+        SchemaReader& reader,
+        NodeType unordered_object_type,
+        std::span<int32_t> schema_ids,
+        bool should_marshal_records
+) {
+    int32_t mst_subtree_root_node_id = INT32_MAX;
+    size_t object_begin_pos = reader.get_column_size();
+    for (int32_t column_id : schema_ids) {
+        if (Schema::schema_entry_is_unordered_object(column_id)) {
+            continue;
+        }
+        BaseColumnReader* column_reader = nullptr;
+        auto const& node = m_schema_tree->get_node(column_id);
+        if (INT32_MAX == mst_subtree_root_node_id) {
+            mst_subtree_root_node_id = m_schema_tree->find_matching_subtree_root_in_subtree(
+                    -1,
+                    column_id,
+                    unordered_object_type
+            );
+        }
+        switch (node.get_type()) {
+            case NodeType::Integer:
+                column_reader = new Int64ColumnReader(column_id);
+                break;
+            case NodeType::Float:
+                column_reader = new FloatColumnReader(column_id);
+                break;
+            case NodeType::ClpString:
+                column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict);
+                break;
+            case NodeType::VarString:
+                column_reader = new VariableStringColumnReader(column_id, m_var_dict);
+                break;
+            case NodeType::Boolean:
+                column_reader = new BooleanColumnReader(column_id);
+                break;
+            // UnstructuredArray and DateString currently aren't supported as part of any unordered
+            // object, so we disregard them here
+            case NodeType::UnstructuredArray:
+            case NodeType::DateString:
+            // No need to push columns without associated object readers into the SchemaReader.
+            case NodeType::Object:
+            case NodeType::NullValue:
+            case NodeType::Unknown:
+                break;
+        }
+
+        if (column_reader) {
+            reader.append_unordered_column(column_reader);
+        }
+    }
+
+    if (should_marshal_records) {
+        reader.mark_unordered_object(object_begin_pos, mst_subtree_root_node_id, schema_ids);
+    }
+}
+
+SchemaReader& ArchiveReader::create_schema_reader(
         int32_t schema_id,
         bool should_extract_timestamp,
         bool should_marshal_records
 ) {
-    auto reader = std::make_unique<SchemaReader>(
+    auto& schema = (*m_schema_map)[schema_id];
+    m_schema_reader.reset(
             m_schema_tree,
             schema_id,
+            schema.get_ordered_schema_view(),
             m_id_to_table_metadata[schema_id].num_messages,
             should_marshal_records
     );
     auto timestamp_column_ids = m_timestamp_dict->get_authoritative_timestamp_column_ids();
 
-    for (int32_t column_id : (*m_schema_map)[reader->get_schema_id()]) {
-        BaseColumnReader* column_reader = append_reader_column(reader, column_id);
+    for (size_t i = 0; i < schema.size(); ++i) {
+        int32_t column_id = schema[i];
+        if (Schema::schema_entry_is_unordered_object(column_id)) {
+            size_t length = Schema::get_unordered_object_length(column_id);
+            append_unordered_reader_columns(
+                    m_schema_reader,
+                    Schema::get_unordered_object_type(column_id),
+                    schema.get_view(i + 1, length),
+                    should_marshal_records
+            );
+            i += length;
+            continue;
+        }
+        BaseColumnReader* column_reader = append_reader_column(m_schema_reader, column_id);
 
         if (should_extract_timestamp && column_reader && timestamp_column_ids.count(column_id) > 0)
         {
-            reader->mark_column_as_timestamp(column_reader);
+            m_schema_reader.mark_column_as_timestamp(column_reader);
         }
     }
-    return reader;
+    return m_schema_reader;
 }
 
 void ArchiveReader::store(FileWriter& writer) {
     std::string message;
 
     for (auto& [id, table_metadata] : m_id_to_table_metadata) {
-        auto schema_reader = read_table(id, false, true);
-        while (schema_reader->get_next_message(message)) {
+        auto& schema_reader = read_table(id, false, true);
+        while (schema_reader.get_next_message(message)) {
             writer.write(message.c_str(), message.length());
         }
     }
