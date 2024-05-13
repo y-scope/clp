@@ -258,7 +258,7 @@ auto create_db(TestTableSchema const& table_schema, vector<Row> const& rows) -> 
             "INSERT INTO {} ({}) VALUES ({})",
             table_schema.get_name(),
             clp::get_field_names_sql(table_columns),
-            string{param_id_buf.begin(), param_id_buf.end()}
+            fmt::to_string(param_id_buf)
     );
     auto insert_stmt{sqlite_db.prepare_statement(stmt_buf.data(), stmt_buf.size())};
     stmt_buf.clear();
