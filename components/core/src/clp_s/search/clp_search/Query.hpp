@@ -137,7 +137,7 @@ public:
      * @param vars
      * @return true if matched, false otherwise
      */
-    bool matches_vars(Span<int64_t> vars) const;
+    bool matches_vars(UnalignedMemSpan<int64_t> vars) const;
 
 private:
     // Variables

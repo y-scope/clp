@@ -39,7 +39,7 @@ set(
 )
 
 add_executable(reducer-server ${REDUCER_SOURCES})
-target_compile_features(reducer-server PRIVATE cxx_std_17)
+target_compile_features(reducer-server PRIVATE cxx_std_20)
 target_include_directories(reducer-server PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 target_link_libraries(reducer-server
         PRIVATE

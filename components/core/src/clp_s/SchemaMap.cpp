@@ -28,7 +28,8 @@ size_t SchemaMap::store(std::string const& archives_dir, int compression_level) 
     for (auto const& schema_mapping : m_schema_map) {
         auto const& schema = schema_mapping.first;
         schema_map_compressor.write_numeric_value(schema_mapping.second);
-        schema_map_compressor.write_numeric_value(schema.size());
+        schema_map_compressor.write_numeric_value(static_cast<uint32_t>(schema.size()));
+        schema_map_compressor.write_numeric_value(static_cast<uint32_t>(schema.get_num_ordered()));
         for (int32_t mst_node_id : schema) {
             schema_map_compressor.write_numeric_value(mst_node_id);
         }

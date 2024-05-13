@@ -6,17 +6,6 @@ yaml-files:
   - "*.yaml"
   - "*.yml"
 
-ignore: |
-  .lint-venv/
-  build/
-  components/core/build/
-  components/core/cmake-build-debug/
-  components/core/cmake-build-release/
-  components/core/submodules/
-  components/core/third-party/
-  components/webui/node_modules/
-  components/webui/linter/node_modules/
-
 rules:
   anchors:
     forbid-duplicated-anchors: true

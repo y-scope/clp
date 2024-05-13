@@ -20,6 +20,15 @@ void SQLiteDB::open(string const& path) {
     }
 }
 
+SQLiteDB::~SQLiteDB() {
+    if (nullptr == m_db_handle) {
+        return;
+    }
+    if (false == close()) {
+        SPDLOG_WARN("Failed to close underlying SQLite database - this may cause a memory leak.");
+    }
+}
+
 bool SQLiteDB::close() {
     auto return_value = sqlite3_close(m_db_handle);
     if (SQLITE_BUSY == return_value) {

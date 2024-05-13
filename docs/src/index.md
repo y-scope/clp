@@ -10,11 +10,11 @@ includes purpose-built web interfaces for searching and viewing the compressed l
 
 # Benchmarks
 
-:::{image} _static/clp-json-benchmark.png
+:::{image} clp-json-benchmark.png
 :alt: CLP Benchmark on JSON Logs
 :::
 
-:::{image} _static/clp-unstructured-benchmark.png
+:::{image} clp-unstructured-benchmark.png
 :alt: CLP Benchmark on Unstructured Logs
 :::
 
@@ -34,7 +34,7 @@ searched without indexes). More details about our experimental methodology can b
 
 # System Overview
 
-:::{image} _static/clp-complete-solution.png
+:::{image} clp-complete-solution.png
 :alt: CLP systems overview
 :::
 

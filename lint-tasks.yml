@@ -2,7 +2,7 @@ version: "3"
 
 vars:
   G_LINTER_NODEJS_BUILD_DIR: "{{.G_BUILD_DIR}}/linter-nodejs"
-  G_LINTER_NODEJS_BIN_DIR: "{{.G_LINTER_NODEJS_BUILD_DIR}}/node/bin"
+  G_LINTER_NODEJS_BIN_DIR: "{{.G_LINTER_NODEJS_BUILD_DIR}}/bin"
   G_LINT_VENV_DIR: "{{.G_BUILD_DIR}}/lint-venv"
 
 tasks:
@@ -98,7 +98,15 @@ tasks:
     cmds:
       - |-
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
-        yamllint .
+        yamllint --strict \
+          .github \
+          .yamllint.yml \
+          components/core/.clang-format \
+          components/core/config \
+          components/package-template/src/etc \
+          docs \
+          lint-tasks.yml \
+          Taskfile.yml
 
   cpp:
     internal: true
@@ -146,26 +154,12 @@ tasks:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_LINTER_NODEJS_BUILD_DIR}}"
-    deps:
-      - ":init"
-      - task: ":validate-checksum"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
     cmds:
       - task: ":nodejs"
         vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           NODEJS_VERSION: "latest"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-      # This command must be last
-      - task: ":compute-checksum"
-        vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-    sources:
-      - "{{.ROOT_DIR}}/Taskfile.yml"
-      - "{{.TASKFILE}}"
-    generates: ["{{.CHECKSUM_FILE}}"]
 
   linter-node-modules:
     internal: true

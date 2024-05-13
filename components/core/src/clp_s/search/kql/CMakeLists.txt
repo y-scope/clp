@@ -23,6 +23,6 @@ add_library(
         kql.cpp
         kql.hpp
 )
-target_compile_features(kql PRIVATE cxx_std_17)
+target_compile_features(kql PRIVATE cxx_std_20)
 target_include_directories(kql PRIVATE ${ANTLR_KqlParser_OUTPUT_DIR})
 target_link_libraries(kql PRIVATE antlr4_static Boost::filesystem)

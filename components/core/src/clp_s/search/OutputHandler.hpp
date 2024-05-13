@@ -30,7 +30,7 @@ public:
     // Constructors
     explicit OutputHandler(bool should_output_timestamp, bool should_marshal_records)
             : m_should_output_timestamp(should_output_timestamp),
-              m_should_marshal_records(should_marshal_records){};
+              m_should_marshal_records(should_marshal_records) {};
 
     // Destructor
     virtual ~OutputHandler() = default;

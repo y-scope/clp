@@ -3,6 +3,7 @@
 
 #include <map>
 #include <set>
+#include <stack>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -48,6 +49,12 @@ public:
     bool filter();
 
 private:
+    enum class ExpressionType {
+        And,
+        Or,
+        Filter
+    };
+
     std::shared_ptr<ArchiveReader> m_archive_reader;
     std::shared_ptr<Expression> m_expr;
     SchemaMatch& m_match;
@@ -56,10 +63,6 @@ private:
     bool m_should_marshal_records{true};
 
     // variables for the current schema being filtered
-    std::vector<BaseColumnReader*> m_searched_columns;
-    std::vector<BaseColumnReader*> m_other_columns;
-    std::set<int32_t> m_cached_string_columns;
-
     int32_t m_schema;
     SchemaReader* m_reader;
 
@@ -75,71 +78,75 @@ private:
     std::map<std::string, std::unordered_set<int64_t>> m_string_var_match_map;
     std::unordered_map<Expression*, Query*> m_expr_clp_query;
     std::unordered_map<Expression*, std::unordered_set<int64_t>*> m_expr_var_match_map;
-    std::unordered_map<int32_t, ClpStringColumnReader*> m_clp_string_readers;
-    std::unordered_map<int32_t, VariableStringColumnReader*> m_var_string_readers;
+    std::unordered_map<int32_t, std::vector<ClpStringColumnReader*>> m_clp_string_readers;
+    std::unordered_map<int32_t, std::vector<VariableStringColumnReader*>> m_var_string_readers;
     std::unordered_map<int32_t, DateStringColumnReader*> m_datestring_readers;
+    std::unordered_map<int32_t, std::vector<BaseColumnReader*>> m_basic_readers;
+    std::unordered_map<int32_t, std::string> m_extracted_unstructured_arrays;
     uint64_t m_cur_message;
     EvaluatedValue m_expression_value;
 
-    std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_clpstrings;
-    std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_varstrings;
-    std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_datestrings;
-    std::map<ColumnDescriptor*, std::vector<int32_t>> m_wildcard_to_searched_columns;
+    std::vector<ColumnDescriptor*> m_wildcard_columns;
+    std::map<ColumnDescriptor*, std::set<int32_t>> m_wildcard_to_searched_basic_columns;
+    LiteralTypeBitmask m_wildcard_type_mask{0};
+
+    std::stack<
+            std::pair<ExpressionType, OpList::iterator>,
+            std::vector<std::pair<ExpressionType, OpList::iterator>>>
+            m_expression_state;
 
     simdjson::ondemand::parser m_array_parser;
     std::string m_array_search_string;
     bool m_maybe_string, m_maybe_number;
 
     /**
-     * Initializes the variables. It is init is called once for each schema after which filter
-     * is called once for every message in the schema
+     * Initializes the variables. Init is called once for each schema after which filter is called
+     * once for every message in the schema
      * @param reader
      * @param schema_id
-     * @param columns
+     * @param column_readers
      */
     void init(
             SchemaReader* reader,
             int32_t schema_id,
-            std::unordered_map<int32_t, BaseColumnReader*>& columns
+            std::vector<BaseColumnReader*> const& column_readers
     ) override;
 
     /**
      * Evaluates an expression
      * @param expr
      * @param schema
-     * @param extracted_values
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate(
-            Expression* expr,
-            int32_t schema,
-            std::map<int32_t, std::variant<int64_t, double, std::string, uint8_t>>& extracted_values
-    );
+    bool evaluate(Expression* expr, int32_t schema);
 
     /**
      * Evaluates a filter expression
      * @param expr
      * @param schema
-     * @param extracted_values
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_filter(
-            FilterExpr* expr,
-            int32_t schema,
-            std::map<int32_t, std::variant<int64_t, double, std::string, uint8_t>>& extracted_values
-    );
+    bool evaluate_filter(FilterExpr* expr, int32_t schema);
 
     /**
      * Evaluates a wildcard filter expression
      * @param expr
      * @param schema
-     * @param extracted_values
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_wildcard_filter(
-            FilterExpr* expr,
-            int32_t schema,
-            std::map<int32_t, std::variant<int64_t, double, std::string, uint8_t>>& extracted_values
+    bool evaluate_wildcard_filter(FilterExpr* expr, int32_t schema);
+
+    /**
+     * Evaluates a int filter expression
+     * @param op
+     * @param column_id
+     * @param operand
+     * @return true if the expression evaluates to true, false otherwise
+     */
+    bool evaluate_int_filter(
+            FilterOperation op,
+            int32_t column_id,
+            std::shared_ptr<Literal> const& operand
     );
 
     /**
@@ -149,37 +156,43 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    static bool
-    evaluate_int_filter(FilterOperation op, int64_t value, std::shared_ptr<Literal> const& operand);
+    static bool evaluate_int_filter_core(FilterOperation op, int64_t value, int64_t operand);
 
     /**
      * Evaluates a float filter expression
+     * @param op
+     * @param column_id
+     * @param operand
+     * @return true if the expression evaluates to true, false otherwise
+     */
+    bool evaluate_float_filter(
+            FilterOperation op,
+            int32_t column_id,
+            std::shared_ptr<Literal> const& operand
+    );
+
+    /**
+     * Evaluates the core of a float filter expression
      * @param op
      * @param value
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    static bool evaluate_float_filter(
-            FilterOperation op,
-            double value,
-            std::shared_ptr<Literal> const& operand
-    );
+    static bool evaluate_float_filter_core(FilterOperation op, double value, double operand);
 
     /**
      * Evaluates a clp string filter expression
      * @param op
      * @param q
-     * @param column_id
+     * @param readers
      * @param operand
-     * @param extracted_values
      * @return true if the expression evaluates to true, false otherwise
      */
     bool evaluate_clp_string_filter(
             FilterOperation op,
             Query* q,
-            int32_t column_id,
-            std::shared_ptr<Literal> const& operand,
-            std::map<int32_t, std::variant<int64_t, double, std::string, uint8_t>>& extracted_values
+            std::vector<ClpStringColumnReader*> const& readers,
+            std::shared_ptr<Literal> const& operand
     );
 
     /**
@@ -192,7 +205,7 @@ private:
      */
     bool evaluate_var_string_filter(
             FilterOperation op,
-            VariableStringColumnReader* reader,
+            std::vector<VariableStringColumnReader*> const& readers,
             std::unordered_set<int64_t>* matching_vars,
             std::shared_ptr<Literal> const& operand
     ) const;
@@ -318,12 +331,15 @@ private:
     /**
      * Evaluates a bool filter expression
      * @param op
-     * @param value
+     * @param column_id
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    static bool
-    evaluate_bool_filter(FilterOperation op, bool value, std::shared_ptr<Literal> const& operand);
+    bool evaluate_bool_filter(
+            FilterOperation op,
+            int32_t column_id,
+            std::shared_ptr<Literal> const& operand
+    );
 
     /**
      * Populates the string queries
@@ -351,11 +367,20 @@ private:
      */
     void add_wildcard_columns_to_searched_columns();
 
+    /**
+     * Gets the cached decompressed structured array for the current message stored in the column
+     * column_id. Decompressing array fields can be expensive, so this interface allows us to
+     * decompress lazily, and decompress the field only once.
+     *
+     * Note: the string is returned by reference to allow our array search code to adjust the string
+     * so that we have enough padding for simdjson.
+     * @param column_id
+     * @return the string representing the unstructured array stored in the column column_id
+     */
+    std::string& get_cached_decompressed_unstructured_array(int32_t column_id);
+
     // Methods inherited from FilterClass
-    bool filter(
-            uint64_t cur_message,
-            std::map<int32_t, std::variant<int64_t, double, std::string, uint8_t>>& extracted_values
-    ) override;
+    bool filter(uint64_t cur_message) override;
 };
 }  // namespace clp_s::search
 

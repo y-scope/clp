@@ -40,8 +40,9 @@ public:
     /**
      * Stores the columns to disk.
      * @param compressor
+     * @return the uncompressed in-memory size of the table
      */
-    void store(ZstdCompressor& compressor);
+    [[nodiscard]] size_t store(ZstdCompressor& compressor);
 
     /**
      * Closes the schema writer.
@@ -55,6 +56,7 @@ private:
     uint64_t m_num_messages;
 
     std::vector<BaseColumnWriter*> m_columns;
+    std::vector<BaseColumnWriter*> m_unordered_columns;
 };
 }  // namespace clp_s
 
