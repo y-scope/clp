@@ -139,7 +139,7 @@ endif()
 
 # Find and setup libcurl
 # By default, CURL does not provide static libraries
-find_package(CURL REQUIRED)
+find_package(CURL 7.76.1 REQUIRED)
 if(CURL_FOUND)
     message(STATUS "Found curl ${CURL_VERSION_STRING}")
 else()

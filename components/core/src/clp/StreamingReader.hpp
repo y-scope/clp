@@ -53,7 +53,7 @@ public:
     /**
      * Enum defining the states of the reader.
      */
-    enum class StatusCode : uint8_t {
+    enum class State : uint8_t {
         // NotInit: The reader is not initialized with a source URL.
         NotInit = 0,
         // Failed: The reader has failed to stream data from the source URL.
@@ -74,10 +74,10 @@ public:
      * These static members defines the default connection timeout and operation timeout.
      * Please refer to the libcurl documentation for more details:
      * ConnectionTimeout: https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
-     * OperationTimeout: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
+     * OverallTimeout: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
      */
     static constexpr uint32_t cDefaultConnectionTimeout{10};  // Seconds
-    static constexpr uint32_t cDefaultOperationTimeout{45};  // Seconds
+    static constexpr uint32_t cDefaultOverallTimeout{45};  // Seconds
 
     /**
      * Initializes the underlying libcurl functionalities globally. It should be called before
@@ -100,20 +100,13 @@ public:
     explicit StreamingReader(
             size_t buffer_pool_size = cDefaultBufferPoolSize,
             size_t buffer_size = cDefaultBufferSize
-    )
-            : m_buffer_pool_size{std::max(cMinBufferPoolSize, buffer_pool_size)},
-              m_buffer_size{std::max(cMinBufferPoolSize, buffer_size)} {
-        for (size_t i = 0; i < m_buffer_pool_size; ++i) {
-            // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
-            m_buffer_pool.emplace_back(std::make_unique<char[]>(m_buffer_size));
-        }
-    }
+    );
 
     /**
      * Destructor.
      */
     virtual ~StreamingReader() {
-        if (StatusCode::NotInit == get_status_code()) {
+        if (State::NotInit == get_status_code()) {
             return;
         }
         // We must ensure the transfer has been terminated before we cleanup the allocated
@@ -140,9 +133,9 @@ public:
      * @return ErrorCode_NotInit if the reader is not opened yet.
      * @return ErrorCode_Success on success.
      */
-    [[nodiscard]] auto try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
-            -> ErrorCode override {
-        if (StatusCode::NotInit == get_status_code()) {
+    [[nodiscard]] auto
+    try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) -> ErrorCode override {
+        if (State::NotInit == get_status_code()) {
             return ErrorCode_NotInit;
         }
         return read_from_fetched_buffers(num_bytes_to_read, num_bytes_read, buf);
@@ -158,7 +151,7 @@ public:
      * @return ErrorCode_Success on success.
      */
     [[nodiscard]] auto try_seek_from_begin(size_t pos) -> ErrorCode override {
-        if (StatusCode::NotInit == get_status_code()) {
+        if (State::NotInit == get_status_code()) {
             return ErrorCode_NotInit;
         }
         if (pos < m_file_pos) {
@@ -184,7 +177,7 @@ public:
      * @return ErrorCode_Success on success.
      */
     [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override {
-        if (StatusCode::NotInit == get_status_code()) {
+        if (State::NotInit == get_status_code()) {
             return ErrorCode_NotInit;
         }
         pos = m_file_pos;
@@ -208,7 +201,7 @@ public:
      * Closes the current data transfer and resets the buffer state.
      */
     auto close() -> void {
-        if (StatusCode::NotInit == get_status_code()) {
+        if (State::NotInit == get_status_code()) {
             return;
         }
         terminate_current_transfer();
@@ -227,12 +220,12 @@ public:
 
     /**
      * Sets the operation timeout in seconds. This values determines the maximum time a transfer
-     * can take. The default value is set to `cDefaultOperationTimeout`.
+     * can take. The default value is set to `cDefaultOverallTimeout`.
      * Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
-     * @param operation_timeout_in_sec
+     * @param overall_timeout_in_sec
      */
-    auto set_operation_timeout(uint32_t operation_timeout_in_sec) -> void {
-        m_operation_timeout = operation_timeout_in_sec;
+    auto set_overall_timeout(uint32_t overall_timeout_in_sec) -> void {
+        m_overall_timeout = overall_timeout_in_sec;
     }
 
     /**
@@ -271,7 +264,7 @@ public:
 
 private:
     /**
-     * This class implements clp::Thread to fetch data as a daemon thread.
+     * This class implements clp::Thread to fetch data using CURL.
      */
     class TransferThread : public clp::Thread {
     public:
@@ -370,13 +363,15 @@ private:
      * @return ErrorCode_EndOfFile if the buffer doesn't contain any more data.
      * @return ErrorCode_Success on success.
      */
-    [[nodiscard]] auto
-    read_from_fetched_buffers(size_t num_bytes_to_read, size_t& num_bytes_read, char* dst)
-            -> ErrorCode;
+    [[nodiscard]] auto read_from_fetched_buffers(
+            size_t num_bytes_to_read,
+            size_t& num_bytes_read,
+            char* dst
+    ) -> ErrorCode;
 
-    auto set_status_code(StatusCode code) -> void { m_status_code.store(code); }
+    auto set_status_code(State code) -> void { m_status_code.store(code); }
 
-    [[nodiscard]] auto get_status_code() -> StatusCode { return m_status_code.load(); }
+    [[nodiscard]] auto get_status_code() -> State { return m_status_code.load(); }
 
     std::string m_src_url;
     size_t m_file_pos{0};
@@ -388,7 +383,7 @@ private:
     size_t m_fetching_buffer_pos{0};
 
     uint32_t m_connection_timeout{cDefaultConnectionTimeout};
-    uint32_t m_operation_timeout{cDefaultOperationTimeout};
+    uint32_t m_overall_timeout{cDefaultOverallTimeout};
 
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
     std::vector<std::unique_ptr<char[]>> m_buffer_pool;
@@ -402,7 +397,7 @@ private:
 
     std::unique_ptr<TransferThread> m_transfer_thread{nullptr};
     std::atomic<bool> m_transfer_aborted{false};
-    std::atomic<StatusCode> m_status_code{StatusCode::NotInit};
+    std::atomic<State> m_status_code{State::NotInit};
     std::optional<CURLcode> m_curl_return_code{std::nullopt};
 };
 }  // namespace clp

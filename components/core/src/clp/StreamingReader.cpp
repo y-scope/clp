@@ -45,21 +45,16 @@ private:
  */
 class CurlStringList {
 public:
-    // Constructor
+    // Constructors
     CurlStringList() = default;
 
-    // Copy/Move constructors
     CurlStringList(CurlStringList const&) = delete;
     CurlStringList(CurlStringList&&) = delete;
     auto operator=(CurlStringList const&) -> CurlStringList& = delete;
     auto operator=(CurlStringList&&) -> CurlStringList& = delete;
 
     // Destructor
-    ~CurlStringList() {
-        if (nullptr != m_list) {
-            curl_slist_free_all(m_list);
-        }
-    }
+    ~CurlStringList() { curl_slist_free_all(m_list); }
 
     // Methods
     /**
@@ -78,9 +73,9 @@ public:
 
     [[nodiscard]] auto get_raw_list() const -> struct curl_slist* { return m_list; }
 
-    [[nodiscard]] auto get_list_size() const -> size_t { return m_size; }
+    [[nodiscard]] auto get_size() const -> size_t { return m_size; }
 
-    [[nodiscard]] auto is_empty() const -> bool { return 0 == get_list_size(); }
+    [[nodiscard]] auto is_empty() const -> bool { return 0 == get_size(); }
 
 private:
     size_t m_size{0};
@@ -102,7 +97,7 @@ public:
             StreamingReader& reader,
             std::string_view src_url,
             long connection_timeout,
-            long operation_timeout,
+            long overall_timeout,
             size_t offset,
             bool disable_caching
     );
@@ -121,11 +116,7 @@ private:
      */
     class CurlHandlerDeleter {
     public:
-        auto operator()(CURL* curl_handler) -> void {
-            if (nullptr != curl_handler) {
-                curl_easy_cleanup(curl_handler);
-            }
-        }
+        auto operator()(CURL* curl_handler) -> void { curl_easy_cleanup(curl_handler); }
     };
 
     /**
@@ -142,20 +133,9 @@ private:
         }
     }
 
-    CurlStringList m_http_header_list;
+    CurlStringList m_http_headers;
     std::unique_ptr<CURL, CurlHandlerDeleter> m_handler;
 };
-
-/**
- * Casts the given ptr to a StreamingReader object. This wrapper function is used to silence
- * clang-tidy warnings.
- * @param ptr The address of a StreamingReader object.
- * @return a StreamingReader type pointer.
- */
-[[nodiscard]] auto get_reader(void* ptr) -> StreamingReader* {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    return reinterpret_cast<StreamingReader*>(ptr);
-}
 
 /**
  * Note: this function must have C linkage since it is a libcurl callback function.
@@ -175,7 +155,7 @@ extern "C" auto curl_download_progress_callback(
         [[maybe_unused]] curl_off_t ultotal,
         [[maybe_unused]] curl_off_t ulnow
 ) -> int {
-    return get_reader(reader_ptr)->is_transfer_aborted() ? 1 : 0;
+    return static_cast<StreamingReader*>(reader_ptr)->is_transfer_aborted() ? 1 : 0;
 }
 
 /**
@@ -188,16 +168,16 @@ extern "C" auto curl_download_progress_callback(
  * @param reader_ptr A pointer pointing to an instance of StreamingReader.
  * @return Number of bytes transferred (fetched).
  */
-extern "C" auto curl_download_write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr)
-        -> size_t {
-    return get_reader(reader_ptr)->write_to_fetching_buffer({ptr, size * nmemb});
+extern "C" auto
+curl_download_write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr) -> size_t {
+    return static_cast<StreamingReader*>(reader_ptr)->write_to_fetching_buffer({ptr, size * nmemb});
 }
 
 CurlDownloadHandler::CurlDownloadHandler(
         StreamingReader& reader,
         std::string_view src_url,
         long connection_timeout,
-        long operation_timeout,
+        long overall_timeout,
         size_t offset,
         bool disable_caching
 )
@@ -206,33 +186,33 @@ CurlDownloadHandler::CurlDownloadHandler(
         throw CurlOperationFailed(ErrorCode_Failure, __FILE__, __LINE__, CURLE_FAILED_INIT);
     }
 
-    // Setup src url.
+    // Set up src url
     set_option(CURLOPT_URL, src_url.data());
 
-    // Setup progress callback.
+    // Set up progress callback
     set_option(CURLOPT_XFERINFOFUNCTION, curl_download_progress_callback);
     set_option(CURLOPT_XFERINFODATA, static_cast<void*>(&reader));
     set_option(CURLOPT_NOPROGRESS, 0);
 
-    // Setup write callback.
+    // Set up write callback
     set_option(CURLOPT_WRITEFUNCTION, curl_download_write_callback);
     set_option(CURLOPT_WRITEDATA, static_cast<void*>(&reader));
 
-    // Setup timeout.
+    // Set up timeout
     set_option(CURLOPT_CONNECTTIMEOUT, connection_timeout);
-    set_option(CURLOPT_TIMEOUT, operation_timeout);
+    set_option(CURLOPT_TIMEOUT, overall_timeout);
 
-    // Setup http headers.
+    // Set up http headers
     if (0 != offset) {
         std::string const range{"Range: bytes=" + std::to_string(offset) + "-"};
-        m_http_header_list.append(range);
+        m_http_headers.append(range);
     }
     if (disable_caching) {
-        m_http_header_list.append("Cache-Control: no-cache");
-        m_http_header_list.append("Pragma: no-cache");
+        m_http_headers.append("Cache-Control: no-cache");
+        m_http_headers.append("Pragma: no-cache");
     }
-    if (false == m_http_header_list.is_empty()) {
-        set_option(CURLOPT_HTTPHEADER, m_http_header_list.get_raw_list());
+    if (false == m_http_headers.is_empty()) {
+        set_option(CURLOPT_HTTPHEADER, m_http_headers.get_raw_list());
     }
 }
 }  // namespace
@@ -244,19 +224,19 @@ auto StreamingReader::TransferThread::thread_method() -> void {
                 m_reader,
                 m_reader.m_src_url,
                 static_cast<long>(m_reader.m_connection_timeout),
-                static_cast<long>(m_reader.m_operation_timeout),
+                static_cast<long>(m_reader.m_overall_timeout),
                 m_offset,
                 m_disable_caching
         };
         retval = curl_handler.download();
     } catch (CurlOperationFailed const& ex) {
         m_reader.m_curl_return_code = ex.get_curl_err();
-        m_reader.set_status_code(StatusCode::Failed);
+        m_reader.set_status_code(State::Failed);
         return;
     }
 
     m_reader.commit_fetching_buffer();
-    m_reader.set_status_code((CURLE_OK == retval) ? StatusCode::Finished : StatusCode::Failed);
+    m_reader.set_status_code((CURLE_OK == retval) ? State::Finished : State::Failed);
     m_reader.m_curl_return_code = retval;
 }
 
@@ -278,8 +258,8 @@ auto StreamingReader::deinit() -> void {
     m_initialized = false;
 }
 
-auto StreamingReader::write_to_fetching_buffer(StreamingReader::BufferView data_to_write)
-        -> size_t {
+auto StreamingReader::write_to_fetching_buffer(StreamingReader::BufferView data_to_write
+) -> size_t {
     auto const num_bytes_to_write{data_to_write.size()};
     try {
         while (false == data_to_write.empty()) {
@@ -302,21 +282,30 @@ auto StreamingReader::write_to_fetching_buffer(StreamingReader::BufferView data_
     return num_bytes_to_write;
 }
 
+StreamingReader::StreamingReader(size_t buffer_pool_size, size_t buffer_size)
+        : m_buffer_pool_size{std::max(cMinBufferPoolSize, buffer_pool_size)},
+          m_buffer_size{std::max(cMinBufferPoolSize, buffer_size)} {
+    for (size_t i = 0; i < m_buffer_pool_size; ++i) {
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
+        m_buffer_pool.emplace_back(std::make_unique<char[]>(m_buffer_size));
+    }
+}
+
 auto StreamingReader::open(std::string_view src_url, size_t offset, bool disable_caching) -> void {
     if (false == m_initialized) {
         throw OperationFailed(ErrorCode_NotReady, __FILE__, __LINE__);
     }
-    if (StatusCode::NotInit != get_status_code()) {
+    if (State::NotInit != get_status_code()) {
         throw OperationFailed(ErrorCode_NotReady, __FILE__, __LINE__);
     }
     m_src_url = src_url;
-    set_status_code(StatusCode::InProgress);
+    set_status_code(State::InProgress);
     m_transfer_thread = std::make_unique<TransferThread>(std::ref(*this), offset, disable_caching);
     m_transfer_thread->start();
 }
 
 auto StreamingReader::terminate_current_transfer() -> void {
-    if (StatusCode::InProgress != get_status_code()) {
+    if (State::InProgress != get_status_code()) {
         while (is_transfer_thread_running()) {
         }
     } else {
@@ -455,7 +444,7 @@ auto StreamingReader::get_buffer_to_fetch(BufferView& fetching_buffer) -> bool {
 }
 
 auto StreamingReader::reset() -> void {
-    if (StatusCode::NotInit == get_status_code()) {
+    if (State::NotInit == get_status_code()) {
         return;
     }
 
@@ -475,7 +464,7 @@ auto StreamingReader::reset() -> void {
 
     m_transfer_thread.reset();
     m_transfer_aborted.store(false);
-    set_status_code(StatusCode::NotInit);
+    set_status_code(State::NotInit);
     m_curl_return_code.reset();
 }
 

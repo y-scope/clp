@@ -19,7 +19,7 @@ static constexpr char cTestUrl[]{
 [[nodiscard]] auto get_ref_file_abs_path() -> std::filesystem::path {
     std::filesystem::path const file_path{__FILE__};
     auto const test_root_path{file_path.parent_path()};
-    return test_root_path / "test_network_reader_src/random.log";
+    return test_root_path / "test_network_reader_src" / "random.log";
 }
 
 /**
